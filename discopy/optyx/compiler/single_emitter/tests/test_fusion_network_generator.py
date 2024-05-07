@@ -3,7 +3,7 @@ import pytest
 from optyx.compiler import OpenGraph
 
 from optyx.compiler.single_emitter.fusion_network import (
-    compiler_to_fusion_network,
+    compile_to_fusion_network,
 )
 
 from optyx.graph6 import read_graph6
@@ -36,15 +36,17 @@ def test_compiler_fuzz(num_vertices: int):
 
     for graph in graphs:
         og = OpenGraph(graph, meas, inputs, outputs)
-        assert compile_and_decompile(og)
+        assert compile_and_decompile(og, inputs, outputs)
 
 
 # Compiles an open graph into a fusion network, and converts it back into an
 # open graph again to verify correctness.
-def compile_and_decompile(g: OpenGraph) -> bool:
-    fn = compiler_to_fusion_network(g)
+def compile_and_decompile(
+    g: OpenGraph, inputs: list[int], outputs: list[int]
+) -> bool:
+    fn = compile_to_fusion_network(g)
 
-    g_reconstructed = sfn_to_open_graph(fn)
+    g_reconstructed = sfn_to_open_graph(fn, inputs, outputs)
     g_reconstructed.perform_z_deletions()
 
     return g == g_reconstructed

@@ -1,0 +1,37 @@
+import pytest
+
+from optyx.compiler import OpenGraph, Measurement
+
+from optyx.compiler.full_stack import (
+    compile_to_semm,
+    decompile_from_semm,
+)
+
+from optyx.graph6 import read_graph6
+
+
+# Generate many random graphs and confirm all of them can be compiled and
+# reconstructed correctly.
+# NOTE: This fails when the graph only contains one node since our graph
+# structure only stores a dictionary of edges so it doesn't contain any
+# information in this case. This would require refactoring the graph
+# datastructure
+@pytest.mark.parametrize("num_vertices", range(2, 8))
+def test_fuzz_full_stack_compiler(num_vertices: int):
+    with open(f"graph_data/graph{num_vertices}c.g6", "rb") as f:
+        lines = f.readlines()
+
+    graphs = read_graph6(lines)
+    meas = [Measurement(i) for i in range(num_vertices)]
+
+    # This choice of inputs and outputs is completely arbitary.
+    # Should write more tests with different inputs and output combinations
+    inputs = [0]
+    outputs = [num_vertices - 1]
+
+    for graph in graphs:
+        og = OpenGraph(graph, meas, inputs, outputs)
+        ins = compile_to_semm(og)
+        og_reconstructed = decompile_from_semm(ins, inputs, outputs)
+
+        assert og == og_reconstructed
