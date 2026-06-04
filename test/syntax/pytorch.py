@@ -51,7 +51,6 @@ def test_from_torch_hypergraph_direct():
     assert isinstance(hypergraph, Hypergraph)
     assert len(hypergraph.boxes) > 0
 
-@mark.skip(reason="Infinite loop in hypergraph.py simplification (causality vs monogamousity). Handing over to Alexis.")
 def test_from_torch_hypergraph_simplify_loop():
     """
     Documents the infinite looping problem in simplification. A Residual block with an add and a copy 
