@@ -11,16 +11,17 @@ Example
 >>> import torch.nn as nn
 >>> from discopy.pytorch import from_torch
 >>> class SimpleMHA(nn.Module):
->>>     def __init__(self):
->>>         super().__init__()
->>>         self.attention = nn.MultiheadAttention(embed_dim=256, num_heads=8)
-
->>>     def forward(self, query, key, value):
->>>         return self.attention(query, key, value)[0]
-
->>> model = SimpleLinearModel()
+...     def __init__(self):
+...         super().__init__()
+...         self.attention = nn.MultiheadAttention(embed_dim=256, num_heads=8)
+...
+...     def forward(self, query, key, value):
+...         return self.attention(query, key, value)[0]
+...
+>>> model = SimpleMHA()
 >>> diagram = from_torch(model)
->>> diagram.draw()
+>>> print(diagram)
+Copy(C, 4) >> query @ C @ C @ C >> T @ key @ C @ C >> T @ T @ value @ C >> T @ T @ T @ param_attention >> attention >> Swap(T, T) >> proj_getitem
 """
 
 from collections.abc import Callable
