@@ -6,7 +6,7 @@ torch = pytest.importorskip("torch")
 import torch.nn as nn
 
 from discopy.markov import Diagram, Hypergraph
-from discopy.pytorch import from_torch
+from discopy.pytorch import from_torch, C, P, T, Add, Copy, InitParam, Linear, Placeholder, Swap
 
 
 # --- Models for Testing ---
@@ -51,9 +51,12 @@ def test_from_torch_hypergraph_direct():
     assert isinstance(hypergraph, Hypergraph)
     assert len(hypergraph.boxes) > 0
 
-def test_from_torch_hypergraph_simplify_loop():
+def test_from_torch_hypergraph_simplify():
     """
-    Documents the infinite looping problem in simplification. A Residual block with an add and a copy 
-    causes simplify() to loop endlessly when bypassing the 2D layout.
+    Verify that the hypergraph is correctly simplified.
+
+    This also actss as a regression test, as hypergraph simplification was found to
+    loop indefinitely in this situation.
     """
-    _ = from_torch(ResidualBlock(), as_hypergraph=True)
+    hypergraph = from_torch(ResidualBlock(), as_hypergraph=True)
+    assert hypergraph.to_diagram() == Copy(C) >> (Placeholder('x') @ C) >> (Copy(T) @ C) >> (T @ T @ InitParam('param_linear')) >> (T @ Swap(T, P)) >> (Linear('linear') @ T) >> Swap(T, T) >> Add('add')
