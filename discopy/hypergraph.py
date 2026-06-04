@@ -734,7 +734,10 @@ class Hypergraph(Composable, Whiskerable, NamedGeneric['category', 'functor']):
             boxes = boxes[:depth] + [self.category.ar.spider_factory(
                 len(input_wires), len(output_wires), typ)] + boxes[depth:]
             offsets = self.offsets[:depth] + (None, ) + self.offsets[depth:]
-            ports = tuple(sorted(input_wires)) + tuple(sorted(output_wires))
+            port_key = lambda port: (
+                getattr(self.ports[port], "i", port), port)
+            ports = tuple(sorted(input_wires, key=port_key))\
+                + tuple(sorted(output_wires, key=port_key))
             for j, port in enumerate(ports):
                 f_wires[port] = len(spider_types) + j
             i = len(self.dom) + len(
