@@ -683,6 +683,30 @@ def test_tensor_then():
     ) @ to_hypergraph(g)
 
 
+def test_generalized_components():
+    from discopy.symmetric import Ty, Box, CMap as M
+
+    a, b, w, x, y, z = map(Ty, "abwxyz")
+    f = M.from_box(Box("f", a, x @ y))
+    g = M.from_box(Box("g", b, z @ w))
+    disconnected = f @ g
+    begin, components, end = disconnected._generalized_components()
+    assert components == (f, g)
+    assert begin >> M.tensor(*components) >> end == disconnected
+    assert disconnected.connected_components == [disconnected]
+
+    swap_middle = M.id(x) @ M.swap(y, z) @ M.id(w)
+    non_contiguous = disconnected >> swap_middle
+    begin, components, end = non_contiguous._generalized_components()
+    assert components == (f, g)
+    assert begin >> M.tensor(*components) >> end == non_contiguous
+    assert end != Permutation.id(len(end))
+    assert M.permutation(Permutation((1, 0)), x @ y).dom == x @ y
+    assert M.permutation(Permutation((1, 0)), x @ y).cod == y @ x
+    assert Permutation.from_transpositions([(0, 2)]) == (2, 1, 0)
+    assert Permutation.from_cycles([(0, 2, 1)]) == (2, 0, 1)
+
+
 def test_then_tensor():
     from discopy.compact import Ty, Box, CMap as M
     x1, x2, y1, y2, z = map(Ty, ["x1", "x2", "y1", "y2", "z"])

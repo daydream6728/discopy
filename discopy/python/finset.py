@@ -108,7 +108,7 @@ class Permutation(Function, SymmetricCategory):
     def __init__(self, inside=(), size: int | None = None):
         inside = tuple(inside)
         if size is None:
-            size = len(inside)
+            size = max(inside, default=-1) + 1
         if len(inside) != size:
             raise ValueError
         if sorted(inside) != list(range(size)):
@@ -147,11 +147,15 @@ class Permutation(Function, SymmetricCategory):
     identity = id
 
     @classmethod
-    def from_cycles(cls, cycles: Cycles, size: int) -> Self:
+    def from_cycles(cls, cycles: Cycles, size: int | None = None) -> Self:
         """ Build a permutation from cycles. """
+        cycles = tuple(map(tuple, cycles))
+        if size is None:
+            size = max(sum((tuple(cycle) for cycle in cycles), ()),
+                       default=-1) + 1
         result = list(range(size))
         seen = set()
-        for cycle in map(tuple, cycles):
+        for cycle in cycles:
             if len(set(cycle)) != len(cycle):
                 raise ValueError
             for i in cycle:
@@ -163,8 +167,12 @@ class Permutation(Function, SymmetricCategory):
         return cls(result, size)
 
     @classmethod
-    def from_transpositions(cls, transpositions: Cycles, size: int) -> Self:
+    def from_transpositions(
+            cls, transpositions: Cycles, size: int | None = None) -> Self:
         """ Build a permutation from disjoint 2-cycles. """
+        transpositions = tuple(map(tuple, transpositions))
+        if size is None:
+            size = max(sum(transpositions, ()), default=-1) + 1
         result = list(range(size))
         seen = set()
         for left, right in transpositions:
@@ -203,6 +211,13 @@ class Permutation(Function, SymmetricCategory):
 
     def then(self, other: Self) -> Self:
         """ Return ``self ; other``, i.e. ``result[i] == other[self[i]]``. """
+        if not isinstance(other, Function):
+            permutation_factory = getattr(type(other), "permutation", None)
+            if permutation_factory is not None:
+                inverse = self.dagger()
+                dom = other.dom[:0].tensor(*[
+                    other.dom[inverse[i]] for i in range(len(self))])
+                return permutation_factory(self, dom).then(other)
         other = type(self)(other, len(self))
         elems = (other[self[i]] for i in range(len(self)))
         return type(self)(elems, len(self))

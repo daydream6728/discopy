@@ -48,7 +48,7 @@ from io import BytesIO
 from math import lcm
 import shutil
 import subprocess
-from typing import Any, TYPE_CHECKING, Callable, ClassVar, Literal
+from typing import Any, TYPE_CHECKING, ClassVar, Literal
 
 from discopy import messages
 from discopy.cat import Ob
@@ -64,7 +64,6 @@ from discopy.utils import (
 
 if TYPE_CHECKING:
     from discopy.monoidal import Ob, Ty, Diagram, Box, Functor
-    from discopy.biclosed import Term
 
 
 class PortKind(StrEnum):
@@ -480,25 +479,43 @@ class CMap[C0: Pregroup, C1: CMap](
     @property
     def connected_components(self) -> list[CMap]:
         """ The connected components, with the boundary component first. """
+        _, components, _ = self._generalized_components(boundary=True)
+        return list(components)
+
+    def _generalized_components(
+            self, boundary: bool = False
+        ) -> tuple[Permutation, tuple[CMap, ...], Permutation]:
+        """
+        Generalized components with boundary permutations.
+
+        If ``boundary`` is true, the boundary apex is considered as a connector.
+        The first permutation reorders the domain ports into component order,
+        the second reorders component codomain ports back into codomain order.
+        """
+        class ComponentMap(type(self)):
+            require_planar = False
+            require_connected = False
+
         if not self.n_ports:
             # Avoid recursively rebuilding the same portless component.
             if len(self.boxes) + len(self.scalars) <= 1:
-                return [self]
+                return Permutation.id(0), (self, ), Permutation.id(0)
             components = [
-                type(self)(
+                ComponentMap(
                     self.ob(), self.ob(), (box, ), (),
                     offsets=(offset, ))
                 for box, offset in zip(self.boxes, self.offsets)]
             components += [
-                type(self)(self.ob(), self.ob(), (), (), scalars=(scalar, ))
+                ComponentMap(
+                    self.ob(), self.ob(), (), (), scalars=(scalar, ))
                 for scalar in self.scalars]
-            return components
+            return Permutation.id(0), tuple(components), Permutation.id(0)
 
-        component_of = self.edges.coequalizer(self.orientation)
-        boundary = set(range(len(self.dom))) | set(range(
-            self.n_ports - len(self.cod), self.n_ports))
-        boundary_component = component_of[next(iter(boundary))]\
-            if boundary else None
+        orientation = self.orientation if boundary else self.node
+        component_of = self.edges.coequalizer(orientation)
+        inputs = set(range(len(self.dom)))
+        outputs = set(range(self.n_ports - len(self.cod), self.n_ports))
+        boundary_ports = inputs | outputs
 
         ports_by_component: dict[int, list[int]] = {}
         for port, component in component_of.items():
@@ -518,48 +535,79 @@ class CMap[C0: Pregroup, C1: CMap](
                 box_index, box))
             offsets_by_component.setdefault(component, []).append(offset)
 
-        if len(ports_by_component) == 1 and not portless_boxes\
-                and not self.scalars:
-            return [self]
-
-        def make_component(component: int) -> CMap:
-            dom = self.dom if component == boundary_component else self.ob()
-            cod = self.cod if component == boundary_component else self.ob()
+        def make_component(component: int) -> tuple[
+                CMap, tuple[int, ...], tuple[int, ...]]:
+            input_ports = [
+                port for port in sorted(inputs)
+                if component_of[port] == component]
+            output_ports = [
+                port for port in sorted(outputs)
+                if component_of[port] == component]
+            dom = self.dom[:0].tensor(*[
+                self.dom[self.ports[port].i] for port in input_ports])
+            cod = self.cod[:0].tensor(*[
+                self.cod[self.ports[port].i] for port in output_ports])
             boxes = tuple(box for _, box in boxes_by_component.get(
                 component, ()))
             offsets = tuple(offsets_by_component.get(component, ()))
 
-            kept_ports = []
-            if component == boundary_component:
-                kept_ports += list(range(len(self.dom)))
+            kept_ports = list(input_ports)
             for box_index, _ in boxes_by_component.get(component, ()):
                 kept_ports += list(self._box_port_indices[box_index])
-            if component == boundary_component:
-                kept_ports += list(range(
-                    self.n_ports - len(self.cod), self.n_ports))
+            kept_ports += list(output_ports)
             mapping = {old: new for new, old in enumerate(kept_ports)}
             edges = Permutation.from_transpositions(
                 ((mapping[i], mapping[j])
                  for i, j in enumerate(self.edges)
                  if i < j and i in mapping and j in mapping),
                 len(kept_ports))
-            return type(self)(dom, cod, boxes, edges, offsets=offsets)
+            return (
+                ComponentMap(dom, cod, boxes, edges, offsets=offsets),
+                tuple(input_ports),
+                tuple(output_ports))
 
         ordered_components = sorted(
             ports_by_component,
             key=lambda component: (
-                component != boundary_component,
+                not any(port in boundary_ports for port in ports_by_component[
+                    component]),
+                min((port for port in ports_by_component[component]
+                     if port in outputs), default=self.n_ports),
+                min((port for port in ports_by_component[component]
+                     if port in inputs), default=self.n_ports),
                 min(ports_by_component[component])))
-        components = [make_component(component)
-                      for component in ordered_components]
-        components += [
-            type(self)(
-                self.ob(), self.ob(), (box, ), (), offsets=(offset, ))
+        component_data = [make_component(component)
+                          for component in ordered_components]
+        component_data += [
+            (
+                ComponentMap(
+                    self.ob(), self.ob(), (box, ), (),
+                    offsets=(offset, )),
+                (), ())
             for _, box, offset in portless_boxes]
-        components += [
-            type(self)(self.ob(), self.ob(), (), (), scalars=(scalar, ))
+        component_data += [
+            (
+                ComponentMap(
+                    self.ob(), self.ob(), (), (), scalars=(scalar, )),
+                (), ())
             for scalar in self.scalars]
-        return components
+
+        components = tuple(component for component, _, _ in component_data)
+        component_inputs = sum((
+            list(input_ports)
+            for _, input_ports, _ in component_data), [])
+        component_outputs = sum((
+            list(output_ports)
+            for _, _, output_ports in component_data), [])
+
+        output_position = {
+            port: index for index, port in enumerate(component_outputs)}
+        return (
+            Permutation(component_inputs, len(self.dom)),
+            components,
+            Permutation(
+                [output_position[port] for port in sorted(outputs)],
+                len(self.cod)))
 
     def splice(
             self, edges: Permutation,
@@ -762,6 +810,19 @@ class CMap[C0: Pregroup, C1: CMap](
         return cls(dom, cod, (), edge)
 
     @classmethod
+    def permutation(cls, perm: Permutation, dom: Ty) -> CMap:
+        """ A typed permutation encoded as boundary wiring. """
+        assert not cls.require_planar
+        perm = Permutation(perm)
+        if len(perm) != len(dom):
+            raise AxiomError(messages.TYPE_ERROR.format(len(dom), len(perm)))
+        cod = dom[:0].tensor(*[dom[i] for i in perm])
+        edges = Permutation.from_transpositions(
+            ((source, len(dom) + target)
+             for target, source in enumerate(perm)))
+        return cls(dom, cod, (), edges)
+
+    @classmethod
     def cups(cls, left: Ty, right: Ty) -> CMap:
         """ A cup encoded as boundary wiring between adjoint types. """
         if not getattr(left, "r", left[::-1]) == right:
@@ -883,6 +944,8 @@ class CMap[C0: Pregroup, C1: CMap](
         >>> scalar.scalars == (x,)
         True
         """
+        if isinstance(other, Permutation):
+            other = type(self).permutation(other, self.cod)
         if not self.cod == other.dom:
             raise AxiomError(messages.TYPE_ERROR.format(other.dom, self.cod))
         dom, cod = self.dom, other.cod
@@ -1139,109 +1202,168 @@ class CMap[C0: Pregroup, C1: CMap](
                 scan = scan[:i] + scan[j:j + 1] + scan[i:j] + scan[j + 1:]
         return diagram
 
-    def to_term(
-            self, input_names: Iterable[str] | None = None):
+    def _pop_root_with_sources(self):
         """
-        Recover a term by an oriented DFS from the root.
+        Pop the root box and keep enough boundary data for term recovery.
         """
         self.assert_rooted_map()
-        names = tuple(
-            (f"x{i}" for i in range(len(self.dom)))
-            if input_names is None else input_names)
-        if len(names) != len(self.dom):
+        if not self.boxes:
+            if len(self.dom) == 1 and self.n_ports == 2 and self.edges[0] == 1:
+                return None
             raise ValueError
 
-        def term_type(obj: Ty) -> Ty:
-            assert_isinstance(obj, self.category.ob)
-            return obj if hasattr(obj, "inside") else obj.ob(obj)
+        root_output = self.n_ports - 1
+        root_port = self.edges[root_output]
+        root_box_index = None
+        for index, box_ports in enumerate(self._box_port_indices):
+            if root_port in box_ports:
+                root_box_index = index
+                break
+        if root_box_index is None:
+            raise ValueError
 
-        cod = term_type(self.cod)
-        variable_factory = cod.variable_factory
-        constant_factory = cod.constant_factory
-        application_factory = cod.application_factory
-        abstraction_factory = cod.abstraction_factory
+        box = self.boxes[root_box_index]
+        box_ports = self._box_port_indices[root_box_index]
+        if self.ports[root_port].kind != PortKind.COD:
+            raise ValueError
+
         eval_factory = self.category.eval_factory
         coeval_factory = self.category.coeval_factory
+        artificial_inputs: list[int] = []
+        artificial_outputs: list[int] = []
 
-        variables = tuple(
-            variable_factory(name, term_type(obj))
-            for obj, name in zip(self.dom, names)
-        )
-        counter = len(variables)
-
-        def fresh(obj: Ty) -> Term:
-            nonlocal counter
-            variable = variable_factory(f"x{counter}", obj)
-            counter += 1
-            return variable
-
-        def box_index(port_index: int) -> int:
-            return next(
-                index for index, ports in enumerate(self._box_port_indices)
-                if port_index in ports)
-
-        def dfs(
-            port_idx: int,
-            bound_ports: dict[int, Term],
-            continuation: Callable[[Term], Term]
-        ) -> Term:
-            port_idx = self.edges[port_idx]
-            if port_idx in bound_ports:
-                return continuation(bound_ports[port_idx])
-
-            port = self.ports[port_idx]
-            if port.kind == PortKind.INPUT:
-                return continuation(variables[port.i])
-            if port.kind.is_boundary:
+        if isinstance(box, eval_factory):
+            if len(box.cod) != 1 or root_port not in box_ports:
                 raise ValueError
+            dom_ports = [
+                port for port in box_ports
+                if self.ports[port].kind == PortKind.DOM]
+            if len(dom_ports) != 2:
+                raise ValueError
+            func_port, arg_port = dom_ports if box.left\
+                else tuple(reversed(dom_ports))
+            artificial_outputs = [func_port, arg_port]
+        elif isinstance(box, coeval_factory):
+            dom_ports = [
+                port for port in box_ports
+                if self.ports[port].kind == PortKind.DOM]
+            cod_ports = [
+                port for port in box_ports
+                if self.ports[port].kind == PortKind.COD]
+            if len(dom_ports) != 1 or len(cod_ports) != 2\
+                    or root_port not in cod_ports:
+                raise ValueError
+            body_port, = dom_ports
+            parameter_port, = [
+                port for port in cod_ports if port != root_port]
+            artificial_outputs = [body_port]
+            artificial_inputs = [parameter_port]
+        else:
+            if len(box.cod) != 1:
+                raise ValueError
+            artificial_outputs = [
+                port for port in box_ports
+                if self.ports[port].kind == PortKind.DOM]
 
-            box_depth = box_index(port_idx)
-            box = self.boxes[box_depth]
-            box_ports = self._box_port_indices[box_depth]
+        input_ports = list(range(len(self.dom)))
+        if isinstance(box, coeval_factory) and artificial_inputs:
+            dom_ports = input_ports + artificial_inputs if box.left\
+                else artificial_inputs + input_ports
+        else:
+            dom_ports = input_ports + artificial_inputs
+        cod_ports = list(artificial_outputs)
 
-            if isinstance(box, eval_factory):
-                if port.kind != PortKind.COD or port.i != 0:
-                    raise ValueError
-                dom_ports = [
-                    i for i in box_ports if self.ports[i].kind == "dom"]
-                func_port, arg_port = dom_ports if box.left\
-                    else tuple(reversed(dom_ports))
-                return dfs(
-                    func_port,
-                    bound_ports,
-                    lambda func:
-                        dfs(
-                            arg_port,
-                            bound_ports,
-                            lambda arg:
-                                continuation(application_factory(
-                                    func, arg, left=not box.left))
-                        )
-                )
+        residual_dom = self.ob().tensor(*[
+            self.ports[port].obj for port in dom_ports])
+        residual_cod = self.ob().tensor(*[
+            self.ports[port].obj for port in cod_ports])
+        residual_boxes = tuple(
+            old_box for index, old_box in enumerate(self.boxes)
+            if index != root_box_index)
+        residual_offsets = tuple(
+            offset for index, offset in enumerate(self.offsets)
+            if index != root_box_index)
 
-            if isinstance(box, coeval_factory):
-                cod = term_type(self.ports[port_idx].obj)
-                if port.kind != PortKind.COD or not cod.is_exp:
-                    raise ValueError
-                body_port, = [
-                    i for i in box_ports if self.ports[i].kind == PortKind.DOM]
-                parameter_port, = [
-                    i for i in box_ports
-                    if self.ports[i].kind == PortKind.COD and i != port_idx]
-                variable = fresh(cod.exponent)
-                return dfs(
-                    body_port,
-                    bound_ports | {parameter_port: variable},
-                    lambda body: continuation(abstraction_factory(
-                        variable, body, left=not box.left)))
+        old_to_new: dict[int, int] = {}
+        input_sources: dict[int, tuple[str, int]] = {}
+        new_index = 0
+        for port in dom_ports:
+            old_to_new[port] = new_index
+            input_sources[new_index] = (
+                ("input", self.ports[port].i)
+                if port < len(self.dom) else ("artificial", port))
+            new_index += 1
+        for index, ports in enumerate(self._box_port_indices):
+            if index == root_box_index:
+                continue
+            if not ports:
+                raise ValueError
+            for port in ports:
+                old_to_new[port] = new_index
+                new_index += 1
+        output_indices = {}
+        for output_index, port in enumerate(cod_ports):
+            old_to_new[port] = new_index
+            output_indices[new_index] = output_index
+            new_index += 1
 
-            if port.kind == PortKind.COD and not box.dom and len(box.cod) == 1:
-                return continuation(constant_factory(
-                    box.name, term_type(box.cod)))
+        edge_pairs = []
+        for left, right in enumerate(self.edges):
+            if left > right:
+                continue
+            if left in old_to_new and right in old_to_new:
+                edge_pairs.append((old_to_new[left], old_to_new[right]))
+            elif left in old_to_new or right in old_to_new:
+                raise ValueError
+        residual_edges = Permutation.from_transpositions(
+            edge_pairs, new_index)
 
+        class RootPoppedMap(type(self)):
+            require_planar = False
+            require_connected = False
+
+        residual = RootPoppedMap(
+            residual_dom, residual_cod, residual_boxes, residual_edges,
+            offsets=residual_offsets)
+
+        if not artificial_outputs:
+            if residual.n_ports or residual.boxes or residual.scalars:
+                raise ValueError
+            return box, (), ()
+
+        begin, residual_components, end =\
+            residual._generalized_components(boundary=False)
+        if tuple(end) != tuple(range(len(artificial_outputs))):
             raise ValueError
 
-        return dfs(self.n_ports - 1, {}, lambda term: term)
+        components, sources = [], []
+        input_start = 0
+        for component in residual_components:
+            if len(component.cod) != 1:
+                raise ValueError
+            component_inputs = tuple(begin)[
+                input_start:input_start + len(component.dom)]
+            input_start += len(component.dom)
+            sources.append(tuple(
+                input_sources[port] for port in component_inputs))
+            components.append(type(self)(
+                component.dom, component.cod, component.boxes,
+                component.edges, offsets=component.offsets,
+                scalars=component.scalars))
+        if input_start != len(begin) or len(components) != len(
+                artificial_outputs):
+            raise ValueError
+        return box, tuple(components), tuple(sources)
+
+    def pop_root(self) -> tuple[Box, tuple[CMap, ...]] | None:
+        """
+        Pop the root box and return the resulting rooted components.
+        """
+        result = self._pop_root_with_sources()
+        if result is None:
+            return None
+        box, components, _ = result
+        return box, components
 
     def assert_rooted_map(self):
         if len(self.cod) != 1:

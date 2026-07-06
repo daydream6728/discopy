@@ -1,6 +1,8 @@
 from __future__ import annotations
+from discopy import closed
 from discopy.utils import AxiomError
 
+import pytest
 from pytest import raises
 
 from discopy.closed import (
@@ -137,7 +139,7 @@ def test_term_to_map_with_constants():
     assert cmap.dom == X
     assert cmap.cod == Y
     assert [type(box) for box in cmap.boxes] == [Constant, Eval]
-    assert cmap.to_term(["x"]) == application
+    assert cmap.to_term_dfs(["x"]) == application
 
     abstraction = Abstraction(x, application)
     cmap = abstraction.to_map()
@@ -145,6 +147,61 @@ def test_term_to_map_with_constants():
     assert cmap.cod == X >> Y
     assert [type(box) for box in cmap.boxes] == [Constant, Eval, Coeval]
     assert cmap.to_term() == abstraction
+
+
+def test_pop_root():
+    X, Y = map(Ty, "XY")
+    x = Variable("x", X)
+    f = Variable("f", X >> Y)
+
+    assert x.to_map().pop_root() is None
+
+    box, components = Application(f, x).to_map().pop_root()
+    assert isinstance(box, Eval)
+    assert components == (CMap.id(X >> Y), CMap.id(X))
+
+    box, components = Abstraction(x, Application(f, x)).to_map().pop_root()
+    assert isinstance(box, Coeval)
+    assert len(components) == 1
+    assert components[0].dom == (X >> Y) @ X
+    assert components[0].cod == Y
+    assert [type(box) for box in components[0].boxes] == [Eval]
+
+
+def test_to_term_cc():
+    X, Y, Z = map(Ty, "XYZ")
+    x = Variable("x", X)
+    f = Variable("f", X >> Y)
+    terms = [
+        X("c"),
+        x,
+        Application(f, x),
+        Abstraction(x, Application(f, x)),
+        X(lambda x: x),
+        (Y >> X)(lambda x: Y(lambda y: X(lambda z: z)(x(y)))),
+    ]
+    for term in terms:
+        cmap = term.to_map()
+        assert cmap.to_term_cc() == cmap.to_term(method="dfs")
+
+    unary = Box("f", X, Y).to_map().to_term_cc()
+    assert unary == Application(Constant("f", Y << X), Variable("x0", X))
+    binary = Box("g", X @ Y, cod=Z).to_map().to_term_cc()
+    assert binary == Application(
+        Application(Constant("g", (Z << Y) << X), Variable("x0", X)),
+        Variable("x1", Y))
+
+
+def test_pop_root_failures():
+    X, Y, Z = map(Ty, "XYZ")
+    with raises(ValueError):
+        CMap.id(X @ Y).pop_root()
+    from discopy.compact import Ty as CompactTy, CMap as CompactCMap
+    U = CompactTy("U")
+    with raises(ValueError):
+        CompactCMap(U, U, (), (1, 0), scalars=(U, )).pop_root()
+    with raises(ValueError):
+        Box("bad", X, Y @ Z).to_map().pop_root()
 
 
 def test_term_to_map_identity():
@@ -192,17 +249,31 @@ def test_term_to_map_open_terms_use_domain_boundary():
     assert_rooted_map(cmap, (X >> Y) @ X, Y, vertices=1)
     assert isinstance(cmap.boxes[0], Eval)
     assert [port.kind for port in cmap.ports[:2]] == ["input", "input"]
-    assert cmap.to_term(["f", "x"]) == application
+    assert cmap.to_term_dfs(["f", "x"]) == application
 
 
-def test_whiteboard_term():
+@pytest.mark.parametrize(
+    "to_term",
+    [
+        closed.CMap.to_term_dfs,
+        closed.CMap.to_term_cc,
+    ]
+)
+def test_whiteboard_term(to_term):
     X, Y, Z = map(Ty, "XYZ")
     term = (Y >> X)(lambda x: Y(lambda y: X(lambda z: z)(x(y))))
     assert term.cod == (Y >> X) >> (Y >> X)
-    assert term == term.to_map().to_term()
+    assert term == to_term(term.to_map())
 
 
-def test_petersen_term():
+@pytest.mark.parametrize(
+    "to_term",
+    [
+        closed.CMap.to_term_dfs,
+        closed.CMap.to_term_cc,
+    ]
+)
+def test_petersen_term(to_term):
     r"""
     -- typechecks: https://play.haskell.org/saved/7Yl6teux
     petersen :: (((t1 -> t0) -> t5) -> t6)
@@ -237,5 +308,5 @@ def test_petersen_term():
     assert len(cmap.ports) == 34
     assert_rooted_map(cmap, Ty(), petersen.cod, vertices=11)
 
-    roundtrip = cmap.to_term()
+    roundtrip = to_term(cmap)
     assert petersen == roundtrip
