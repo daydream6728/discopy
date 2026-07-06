@@ -50,7 +50,7 @@ Axioms
 
 from __future__ import annotations
 from dataclasses import dataclass
-from typing import ClassVar
+from typing import Dict, ClassVar
 
 from discopy import cat, monoidal, biclosed, markov
 from discopy.abc import ClosedCategory
@@ -175,7 +175,8 @@ class Hypergraph(markov.Hypergraph):
 
 class CMap(biclosed.CMap):
     functor = Functor
-    require_planar = True
+    require_planar = False
+    require_acyclic = True
 
 
 Diagram.hypergraph_factory = Hypergraph
@@ -241,7 +242,7 @@ class Variable(biclosed.Variable, TermBase):
             for x in context.inside])
 
 
-class Application(biclosed.Application, TermBase):
+class Application(TermBase, biclosed.Application):
     def __check_dom__(self, func, args, left):
         self.overlap = set(func.freevars).intersection(args.freevars)
         self.freevars = list(set(func.freevars + args.freevars))\
@@ -264,7 +265,7 @@ class Application(biclosed.Application, TermBase):
             >> func @ args >> evaluate
 
 
-class Abstraction(biclosed.Abstraction, TermBase):
+class Abstraction(TermBase, biclosed.Abstraction):
     def __check_dom__(self):
         self.freevars = [x for x in self.body.freevars if x != self.var]
         return self.ob().tensor(*[x.cod for x in self.freevars])

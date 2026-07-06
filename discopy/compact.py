@@ -142,6 +142,8 @@ class Hypergraph(symmetric.Hypergraph):
 
 class CMap(symmetric.CMap):
     functor = Functor
+    require_oriented = False
+    require_connected = False
 
 
 Id = Diagram.id

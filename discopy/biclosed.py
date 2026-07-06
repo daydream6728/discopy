@@ -61,9 +61,10 @@ Axioms
 from __future__ import annotations
 
 from abc import abstractmethod
-from inspect import signature
+from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Callable, ClassVar, Self, Iterable
+from inspect import signature
+from typing import Callable, ClassVar, Self
 
 from discopy import cat, monoidal, messages
 from discopy.abc import BiclosedCategory
@@ -108,24 +109,6 @@ class Ty(monoidal.Ty):
 
     def __rshift__(self, other):
         return other.under(self)
-
-    def __call__(self, arg):
-        if isinstance(arg, str):
-            return self.constant_factory(arg, self)
-        elif isinstance(arg, Callable):
-            parameters = dict(signature(arg).parameters)
-            left = False
-            if "left" in parameters:
-                left_param = parameters.pop("left")
-                left = left_param.default
-                if not isinstance(left, bool):
-                    raise NotImplementedError
-            varnames = list(parameters.keys())
-            if len(varnames) != 1:
-                raise NotImplementedError
-            var = self.variable_factory(varnames[0], self)
-            return self.abstraction_factory(var, arg(var), left)
-        raise ValueError
 
     def __call__(self, arg):
         if isinstance(arg, str):
@@ -422,6 +405,13 @@ class Sum(monoidal.Sum, Box):
     """
 
 
+Id = Diagram.id
+Diagram.curry_factory = Curry
+Diagram.eval_factory = Eval
+Diagram.coeval_factory = Coeval
+Diagram.sum_factory = Sum
+
+
 class Functor(monoidal.Functor):
     """
     A biclosed functor is a monoidal functor
@@ -461,14 +451,71 @@ class Functor(monoidal.Functor):
 
 class CMap(monoidal.CMap):
     functor = Functor
+    require_acyclic = False
+
+    def ignore_forward_edge(self, source_depth: int, target_depth: int):
+        coeval_factory = getattr(self.category, "coeval_factory", None)
+        return coeval_factory is not None and (
+            isinstance(self.boxes[source_depth], coeval_factory)
+            or isinstance(self.boxes[target_depth], coeval_factory))
+
+    def curry(self, n=1, left=False) -> Self:
+        """
+        Curry a combinatorial map using the closed structure of the host
+        category, without relying on closed structure which isn't necessarily
+        available.
+
+        Parameters:
+            n : The number of objects to curry.
+            left : Whether to curry on the left or right.
+        """
+        if n < 0 or n > len(self.dom):
+            raise ValueError
+        if not n:
+            return self
+
+        base = self.cod
+        if left:
+            exponent = self.dom[len(self.dom) - n:]
+            exp = base << exponent
+            coev = type(self).from_box(
+                self.category.coeval_factory(exp, left=True))
+            return (self >> coev).trace(n, left=False)
+
+        exponent = self.dom[:n]
+        exp = exponent >> base
+        coev = type(self).from_box(
+            self.category.coeval_factory(exp, left=False))
+        return (self >> coev).trace(n, left=True)
+
+    def uncurry(self, n=1, left=False) -> Self:
+        """
+        Uncurry a combinatorial map using the evaluation box of the host
+        category.
+
+        Parameters:
+            n : The number of objects to uncurry.
+            left : Whether to uncurry on the left or right.
+        """
+        if n < 0:
+            raise ValueError
+        if not n:
+            return self
+        if not self.cod.is_exp:
+            raise ValueError
+
+        exponent = self.cod.exponent
+        if n < len(exponent):
+            raise ValueError
+
+        ev = type(self).from_box(self.category.eval_factory(self.cod, left))
+        result = self @ type(self).id(exponent) >> ev if left\
+            else type(self).id(exponent) @ self >> ev
+        remaining = n - len(exponent)
+        return result if not remaining else result.uncurry(remaining, left)
 
 
-Id = Diagram.id
 Diagram.map_factory = CMap
-Diagram.curry_factory = Curry
-Diagram.eval_factory = Eval
-Diagram.coeval_factory = Coeval
-Diagram.sum_factory = Sum
 
 
 class TermBase(Box):
@@ -600,7 +647,7 @@ class Constant(TermBase):
         return factory_name(type(self)) + f"({self.name!r}, {self.cod!r})"
 
     def __str__(self):
-        return f"{self.cod}({self.name!r})"
+        return f"{self.cod!s}({self.name!r})"
 
     def alpha_key(self, substitution):
         return ("constant", self.cod, self.name)
@@ -662,7 +709,7 @@ class Application(TermBase):
         assert_isinstance(func, TermBase)
         assert_isinstance(args, TermBase)
         if not func.cod.is_exp:
-            raise TypeError
+            raise TypeError(f"Expected {Exp}, got {type(func.cod)}")
         self.func, self.args, self.left = func, args, left
         if self.func.cod.exponent != self.args.cod:
             raise ValueError(
