@@ -98,7 +98,8 @@ def test_eliminate_swaps():
     diagram = Id(x @ y).swap(x, y).swap(y, x)
     assert diagram == diagram.to_map().to_diagram().normal_form()
 
-    diagram = Id(x @ y @ w @ z).swap(x @ y, w @ z).swap(w @ z, x @ y).normal_form()
+    diagram = Id(x @ y @ w @ z)\
+        .swap(x @ y, w @ z).swap(w @ z, x @ y).normal_form()
     assert diagram == diagram.to_map().to_diagram().normal_form()
 
     f, g = Box("f", x, z), Box("g", y, w)
@@ -166,7 +167,7 @@ def test_diagram_to_map_structure_and_errors():
     mx, my = map(monoidal.Ty, "xy")
     f = monoidal.Box("f", mx, my)
     assert monoidal.CMap.require_planar is True
-    assert monoidal.CMap.require_acyclic is True
+    assert monoidal.CMap.require_causal is True
     assert monoidal.CMap.require_oriented is True
     assert monoidal.CMap.require_connected is True
     assert f.to_map() == monoidal.CMap.from_box(f)
@@ -177,7 +178,7 @@ def test_diagram_to_map_structure_and_errors():
 
     sx, sy = map(symmetric.Ty, "xy")
     assert symmetric.CMap.require_planar is False
-    assert symmetric.CMap.require_acyclic is False
+    assert symmetric.CMap.require_causal is False
     assert symmetric.CMap.require_oriented is True
     assert symmetric.CMap.require_connected is True
     assert symmetric.Swap(sx, sy).to_map() == symmetric.CMap.swap(sx, sy)
@@ -186,7 +187,7 @@ def test_diagram_to_map_structure_and_errors():
     cup = compact.Cup(cx, cx.r)
     cap = compact.Cap(cx.r, cx)
     assert compact.CMap.require_planar is False
-    assert compact.CMap.require_acyclic is False
+    assert compact.CMap.require_causal is False
     assert compact.CMap.require_oriented is False
     assert compact.CMap.require_connected is False
     assert symmetric.CMap.from_diagram(cup).boxes == (cup, )
@@ -196,7 +197,7 @@ def test_diagram_to_map_structure_and_errors():
     tx = traced.Ty("x")
     traced_box = traced.Box("f", tx, tx)
     assert traced.CMap.require_planar is True
-    assert traced.CMap.require_acyclic is False
+    assert traced.CMap.require_causal is False
     assert traced.CMap.require_oriented is True
     assert traced.CMap.require_connected is True
     assert traced.Trace(traced_box).to_map() == traced_box.to_map().trace()
@@ -209,11 +210,12 @@ def test_diagram_to_map_structure_and_errors():
     cx, cy = map(closed.Ty, "xy")
     ev = closed.Eval(cy << cx)
     assert closed.CMap.require_planar is False
-    assert closed.CMap.require_acyclic is True
+    assert closed.CMap.require_causal is False
     assert closed.CMap.require_oriented is True
     assert closed.CMap.require_connected is True
     assert ev.to_map() == closed.CMap.ev(cy, cx, left=False)
     assert ev.to_map().boxes == (ev, )
+    assert closed.Box("f", cx, cx).to_map().trace()
 
     mx = markov.Ty("x")
     copy = markov.Copy(mx, 2)
@@ -225,8 +227,8 @@ def test_diagram_to_map_structure_and_errors():
     assert spider.to_map() == frobenius.CMap.spiders(1, 2, fx)
 
     x, y = map(compact.Ty, "xy")
-    assert to_hypergraph(compact.CMap.swap(x, y)) == compact.CMap.category.swap(
-        x, y).to_hypergraph()
+    assert to_hypergraph(compact.CMap.swap(x, y))\
+        == compact.CMap.category.swap(x, y).to_hypergraph()
     assert compact.CMap.cups(x, x.r).dom == x @ x.r
     assert compact.CMap.caps(x.r, x).cod == x.r @ x
     with raises(AxiomError):
@@ -267,8 +269,7 @@ def test_diagram_to_map_structure_and_errors():
     x = closed.Ty("x")
     f = closed.Box("f", x, x)
     g = closed.Box("g", x, x)
-    with raises(AxiomError):
-        closed.CMap(closed.Ty(), closed.Ty(), (f, g), (3, 2, 1, 0))
+    assert closed.CMap(closed.Ty(), closed.Ty(), (f, g), (3, 2, 1, 0))
 
     x = traced.Ty("x")
     with raises(AxiomError):
@@ -289,14 +290,95 @@ def test_diagram_to_map_structure_and_errors():
         closed.CMap.category.ev(y, x), )
 
     x = markov.Ty("x")
-    assert markov.CMap.copy(x, 2).boxes == (markov.CMap.category.copy(x, 2), )
-    assert markov.CMap.merge(x, 2).boxes == (markov.CMap.category.merge(x, 2), )
+    assert markov.CMap.copy(x, 2).boxes == (
+        markov.CMap.category.copy(x, 2), )
+    assert markov.CMap.merge(x, 2).boxes == (
+        markov.CMap.category.merge(x, 2), )
     assert markov.CMap.discard(x).boxes == (markov.CMap.category.copy(x, 0), )
 
     x = frobenius.Ty("x")
     assert frobenius.CMap.spiders(1, 2, x).boxes == (
         frobenius.Diagram.spiders(1, 2, x), )
     assert frobenius.Diagram.map_factory is frobenius.CMap
+
+
+@pytest.mark.parametrize(
+    "module",
+    [
+        compact,
+        closed,
+        biclosed,
+    ]
+)
+def test_curry_uncurry_roundtrip(module):
+    x, y, z = map(module.Ty, "xyz")
+    f = module.Box("f", x @ y, z)
+    cmap = f.to_map()
+
+    assert cmap.curry(n=0).uncurry(n=0) == cmap
+    with raises(ValueError):
+        cmap.curry(n=3)
+    with raises(ValueError):
+        cmap.uncurry(n=2)
+
+    if module is compact:
+        assert cmap.curry().uncurry() == cmap
+        assert cmap.curry(left=True).uncurry(left=True) == cmap
+        assert cmap.curry(n=2, left=True).uncurry(n=2, left=True) == cmap
+        return
+
+    right = cmap.curry()
+    assert right.dom == y
+    assert right.cod == x >> z
+    assert right.boxes == (
+        f, module.Diagram.coeval_factory(x >> z, left=False))
+    assert f.curry().to_map() == right
+
+    left = cmap.curry(left=True)
+    assert left.dom == x
+    assert left.cod == z << y
+    assert left.boxes == (
+        f, module.Diagram.coeval_factory(z << y, left=True))
+    assert f.curry(left=True).to_map() == left
+
+    h = module.Box("h", y, x >> z)
+    uncurried = h.to_map().uncurry()
+    assert uncurried.dom == x @ y
+    assert uncurried.cod == z
+    assert uncurried.boxes == (
+        h, module.Diagram.eval_factory(x >> z, left=False))
+    assert h.uncurry().to_map() == uncurried
+
+    w = module.Ty("w")
+    k = module.Box("k", x @ y @ z, w)
+    right_two = k.to_map().curry(n=2).uncurry(n=2)
+    assert right_two.dom == x @ y @ z
+    assert right_two.cod == w
+    assert right_two.boxes == (
+        k,
+        module.Diagram.coeval_factory(x @ y >> w, left=False),
+        module.Diagram.eval_factory(x @ y >> w, left=False))
+
+    left_two = k.to_map().curry(n=2, left=True).uncurry(
+        n=2, left=True)
+    assert left_two.dom == x @ y @ z
+    assert left_two.cod == w
+    assert left_two.boxes == (
+        k,
+        module.Diagram.coeval_factory(w << y @ z, left=True),
+        module.Diagram.eval_factory(w << y @ z, left=True))
+
+    right_nested = k.to_map().curry().curry().uncurry(n=2)
+    assert right_nested.dom == x @ y @ z
+    assert right_nested.cod == w
+
+    left_nested = k.to_map().curry(left=True).curry(
+        left=True).uncurry(n=2, left=True)
+    assert left_nested.dom == x @ y @ z
+    assert left_nested.cod == w
+
+    with raises(ValueError):
+        k.to_map().curry(n=2).uncurry()
 
 
 def test_trace():
@@ -439,7 +521,8 @@ def test_zipping_cups_and_caps():
         return id @ cap @ cap @ cap @ cap >> cup @ cup @ cup @ cup @ id
 
     assert zipping_expr(D, x).to_map() == zipping_expr(M, x) == M.id(x)
-    assert zipping_expr(D, x @ y).to_map() == zipping_expr(M, x @ y) == M.id(x @ y)
+    assert zipping_expr(D, x @ y).to_map()\
+        == zipping_expr(M, x @ y) == M.id(x @ y)
 
 
 def test_scalar_is_not_eliminated():
@@ -487,7 +570,8 @@ def test_hypergraph_to_map():
     assert to_hypergraph(f.to_map()) == f
 
     fx = frobenius.Ty("x")
-    assert frobenius.Hypergraph.spiders(1, 2, fx).to_map() == frobenius.CMap.spiders(1, 2, fx)
+    assert frobenius.Hypergraph.spiders(1, 2, fx).to_map()\
+        == frobenius.CMap.spiders(1, 2, fx)
 
 
 def test_then():
@@ -495,7 +579,8 @@ def test_then():
 
     x, y, z, w = map(Ty, "xyzw")
     f, g, h = [
-        M.from_box(box) for box in [Box("f", x, y), Box("g", y, z), Box("h", z, w)]
+        M.from_box(box) for box in [
+            Box("f", x, y), Box("g", y, z), Box("h", z, w)]
     ]
     assert ((f >> g) >> h) == (f >> (g >> h))
     assert (f >> M.id(y)) == f
@@ -611,8 +696,7 @@ def test_then_tensor():
 
 def test_euler_characteristic():
     from discopy import closed, compact
-    # from discopy.closed import Ty, Box, CMap as M
-    # from discopy.compact import Ty as CTy, Box as CBox
+
     x, y = map(closed.Ty, "xy")
     assert closed.CMap.id().is_planar
     wire = closed.CMap.id(x)
