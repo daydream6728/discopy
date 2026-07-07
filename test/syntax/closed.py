@@ -250,30 +250,20 @@ def test_term_to_map_open_terms_use_domain_boundary():
     assert isinstance(cmap.boxes[0], Eval)
     assert [port.kind for port in cmap.ports[:2]] == ["input", "input"]
     assert cmap.to_term_dfs(["f", "x"]) == application
+    assert cmap.to_term_cc(["f", "x"]) == application
+    assert cmap.to_term(method="cc", input_names=["f", "x"]) == application
 
 
-@pytest.mark.parametrize(
-    "to_term",
-    [
-        closed.CMap.to_term_dfs,
-        closed.CMap.to_term_cc,
-    ]
-)
-def test_whiteboard_term(to_term):
+@pytest.mark.parametrize("method", ["cc", "dfs"])
+def test_whiteboard_term(method):
     X, Y, Z = map(Ty, "XYZ")
     term = (Y >> X)(lambda x: Y(lambda y: X(lambda z: z)(x(y))))
     assert term.cod == (Y >> X) >> (Y >> X)
-    assert term == to_term(term.to_map())
+    assert term == term.to_map().to_term(method=method)
 
 
-@pytest.mark.parametrize(
-    "to_term",
-    [
-        closed.CMap.to_term_dfs,
-        closed.CMap.to_term_cc,
-    ]
-)
-def test_petersen_term(to_term):
+@pytest.mark.parametrize("method", ["cc", "dfs"])
+def test_petersen_term(method):
     r"""
     -- typechecks: https://play.haskell.org/saved/7Yl6teux
     petersen :: (((t1 -> t0) -> t5) -> t6)
@@ -308,5 +298,5 @@ def test_petersen_term(to_term):
     assert len(cmap.ports) == 34
     assert_rooted_map(cmap, Ty(), petersen.cod, vertices=11)
 
-    roundtrip = to_term(cmap)
+    roundtrip = cmap.to_term(method=method)
     assert petersen == roundtrip

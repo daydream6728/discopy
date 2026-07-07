@@ -454,13 +454,22 @@ class Functor(monoidal.Functor):
 
 class CMap(monoidal.CMap):
     functor = Functor
+    require_planar = True
+    require_connected = True
+    require_causal = False
     require_acyclic = False
 
-    def to_term_cc(self) -> Term:
+    def to_term_cc(
+            self, input_names: Iterable[str] | None = None) -> Term:
         """
-        Recover a term by iteratively popping root boxes.
+        Recover a term by popping roots and recursing on components.
         """
         self.assert_rooted_map()
+        names = tuple(
+            (f"x{i}" for i in range(len(self.dom)))
+            if input_names is None else input_names)
+        if len(names) != len(self.dom):
+            raise ValueError
 
         def term_type(obj: Ty) -> Ty:
             assert_isinstance(obj, self.category.ob)
@@ -474,76 +483,52 @@ class CMap(monoidal.CMap):
         eval_factory = self.category.eval_factory
         coeval_factory = self.category.coeval_factory
 
-        counter = len(self.dom)
+        popped = self._pop_root_with_sources()
+        if popped is None:
+            if len(names) != 1:
+                raise ValueError
+            return variable_factory(names[0], term_type(self.dom[0]))
 
-        def fresh(obj: Ty) -> Term:
-            nonlocal counter
-            variable = variable_factory(f"x{counter}", obj)
-            counter += 1
-            return variable
+        box, components, sources = popped
 
-        variables = tuple(
-            variable_factory(f"x{i}", term_type(obj))
-            for i, obj in enumerate(self.dom))
-        stack = [("enter", 0, self, variables)]
-        pending, results, next_id = {}, {}, 1
+        def child_names(component_sources) -> tuple[str, ...]:
+            return tuple(
+                names[source_index]
+                for source_kind, source_index in component_sources
+                if source_kind == "input")
 
-        while stack:
-            tag, frame_id, cmap, frame_vars = stack.pop()
-            if tag == "exit":
-                box, child_ids, binder = pending.pop(frame_id)
-                children = [results.pop(child_id) for child_id in child_ids]
-                if isinstance(box, eval_factory):
-                    term = application_factory(
-                        children[0], children[1], left=not box.left)
-                elif isinstance(box, coeval_factory):
-                    term = abstraction_factory(
-                        binder, children[0], left=not box.left)
-                else:
-                    packed_type = term_type(box.cod)
-                    for obj in reversed(box.dom):
-                        packed_type = packed_type << term_type(obj)
-                    term = constant_factory(box.name, packed_type)
-                    for child in children:
-                        term = application_factory(term, child)
-                results[frame_id] = term
-                continue
+        if isinstance(box, eval_factory):
+            if len(components) != 2:
+                raise ValueError
+            func, arg = (
+                component.to_term_cc(child_names(component_sources))
+                for component, component_sources in zip(components, sources))
+            return application_factory(func, arg, left=not box.left)
 
-            popped = cmap._pop_root_with_sources()
-            if popped is None:
-                if len(frame_vars) != 1:
-                    raise ValueError
-                results[frame_id] = frame_vars[0]
-                continue
+        if isinstance(box, coeval_factory):
+            if len(components) != 1:
+                raise ValueError
+            component, = components
+            component_sources, = sources
+            parameter_port, = [
+                source_index for source_kind, source_index in component_sources
+                if source_kind == "artificial"]
+            binder = variable_factory(
+                f"x{len(self.dom)}", term_type(self.ports[parameter_port].obj))
+            body_names = tuple(
+                names[source_index] if source_kind == "input" else binder.name
+                for source_kind, source_index in component_sources)
+            body = component.to_term_cc(body_names)
+            return abstraction_factory(binder, body, left=not box.left)
 
-            box, components, sources = popped
-            binder = None
-            if isinstance(box, coeval_factory):
-                parameter_port, = [
-                    source_index for source_kind, source_index in sources[0]
-                    if source_kind == "artificial"]
-                binder = fresh(term_type(cmap.ports[parameter_port].obj))
-
-            child_ids = []
-            child_frames = []
-            for component, component_sources in zip(components, sources):
-                child_id = next_id
-                next_id += 1
-                child_ids.append(child_id)
-                child_vars = []
-                for source_kind, source_index in component_sources:
-                    if source_kind == "input":
-                        child_vars.append(frame_vars[source_index])
-                    else:
-                        child_vars.append(binder)
-                child_frames.append((
-                    "enter", child_id, component, tuple(child_vars)))
-
-            pending[frame_id] = (box, child_ids, binder)
-            stack.append(("exit", frame_id, cmap, frame_vars))
-            stack.extend(reversed(child_frames))
-
-        return results.pop(0)
+        packed_type = term_type(box.cod)
+        for obj in reversed(box.dom):
+            packed_type = packed_type << term_type(obj)
+        term = constant_factory(box.name, packed_type)
+        for component, component_sources in zip(components, sources):
+            term = application_factory(
+                term, component.to_term_cc(child_names(component_sources)))
+        return term
 
     def to_term_dfs(
             self, input_names: Iterable[str] | None = None):
@@ -649,12 +634,15 @@ class CMap(monoidal.CMap):
 
         return dfs(self.n_ports - 1, {}, lambda term: term)
 
-    def to_term(self, method: Literal["dfs", "cc"] = "cc") -> Term:
+    def to_term(
+            self,
+            method: Literal["dfs", "cc"] = "cc",
+            input_names: Iterable[str] | None = None) -> Term:
         """ Recover a term from the rooted map. """
         if method == "cc":
-            return self.to_term_cc()
+            return self.to_term_cc(input_names)
         if method == "dfs":
-            return self.to_term_dfs()
+            return self.to_term_dfs(input_names)
         raise ValueError
 
     def ignore_forward_edge(self, source_depth: int, target_depth: int):

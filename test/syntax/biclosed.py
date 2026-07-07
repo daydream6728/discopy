@@ -82,16 +82,18 @@ def test_term_from_map():
     f, x_var = Variable('f', y << x), Variable('x', x)
     g, var = Variable('g', x >> y), Variable('x0', x)
 
-    assert CMap.from_box(Eval(y << x)).to_term_dfs(['f', 'x']) == f(x_var)
-    assert CMap.from_box(Eval(x >> y)).to_term_dfs(['x', 'g'])\
-        == x_var(g, left=True)
+    for method in ["cc", "dfs"]:
+        assert CMap.from_box(Eval(y << x)).to_term(
+            method, ['f', 'x']) == f(x_var)
+        assert CMap.from_box(Eval(x >> y)).to_term(
+            method, ['x', 'g']) == x_var(g, left=True)
 
     cmap = CMap.id(x).plug_input(0, Coeval(x << x), x << x)
     assert cmap.to_term() == Abstraction(var, var)
 
 
-@pytest.mark.parametrize("to_term", [CMap.to_term_dfs, CMap.to_term_cc])
-def test_term_from_map_roundtrip(to_term):
+@pytest.mark.parametrize("method", ["cc", "dfs"])
+def test_term_from_map_roundtrip(method):
     x, y = Ty('x'), Ty('y')
     x0 = Variable("x0", x)
     terms = [
@@ -102,7 +104,7 @@ def test_term_from_map_roundtrip(to_term):
         x(lambda x0, left=True: x0),
     ]
     for term in terms:
-        assert to_term(term.to_map()) == term
+        assert term.to_map().to_term(method) == term
 
 
 def test_to_rigid():
