@@ -87,7 +87,7 @@ def test_from_box_and_to_hypergraph():
 
 
 def test_eliminate_swaps():
-    from discopy.compact import Ty, Id, Box
+    from discopy.compact import Ty, Id, Box, Swap
 
     x, y, w, z = map(Ty, "xyzw")
 
@@ -100,8 +100,11 @@ def test_eliminate_swaps():
 
     f, g = Box("f", x, z), Box("g", y, w)
 
+    # These swaps cancel, so the map is planar and routing eliminates them.
     diagram = Id(x @ y).swap(x, y) >> g @ x >> Id(w @ x).swap(w, x) >> f @ w
-    assert diagram == diagram.to_map().to_diagram().normal_form()
+    routed = diagram.to_map().to_diagram()
+    assert not any(isinstance(box, Swap) for box in routed.boxes)
+    assert routed.to_map() == diagram.to_map()
     assert diagram.to_map() == diagram.to_hypergraph().to_diagram().to_map()
 
 
@@ -257,8 +260,8 @@ def test_diagram_to_map_structure_and_errors():
     # Disconnected scalar boxes are now a valid monoidal tensor.
     s = monoidal.Box("s", monoidal.Ty(), monoidal.Ty())
     t = monoidal.Box("t", monoidal.Ty(), monoidal.Ty())
-    assert monoidal.CMap(monoidal.Ty(), monoidal.Ty(), (s, t), ()).to_diagram()\
-        == s @ t
+    scalars = monoidal.CMap(monoidal.Ty(), monoidal.Ty(), (s, t), ())
+    assert scalars.to_diagram() == s @ t
     x = closed.Ty("x")
     f = closed.Box("f", x, x)
     g = closed.Box("g", x, x)
@@ -372,6 +375,71 @@ def test_curry_uncurry_roundtrip(module):
 
     with raises(ValueError):
         k.to_map().curry(n=2).uncurry()
+
+
+def test_make_oriented():
+    from discopy.compact import Ty, Box, CMap as M
+
+    x, y = map(Ty, "xy")
+    assert M.from_box(Box("f", x, y)).make_oriented().is_oriented
+
+    cup, cap = M.cups(x, x.r), M.caps(x.r, x)
+    assert not cup.is_oriented and cup.make_oriented().is_oriented
+    assert not cap.is_oriented and cap.make_oriented().is_oriented
+    assert cup.make_oriented().boxes == (M.category.cup_factory(x, x.r), )
+    assert cap.make_oriented().boxes == (M.category.cap_factory(x.r, x), )
+    for m in [cup, cap, M.cups(x @ y, (x @ y).r)]:
+        assert m.make_oriented().to_diagram().to_map() == m
+
+
+def test_make_causal():
+    from discopy import compact, symmetric, traced
+
+    x, y = map(compact.Ty, "xy")
+    f = compact.Box("f", x @ y, x @ y).to_map()
+    assert not f.trace().is_causal
+    assert f.trace().make_causal().is_causal
+    for m in [f.trace(), f.trace(left=True),
+              compact.CMap.id(x).trace(),
+              compact.Box("h", x, x).to_map().trace()]:
+        assert m.make_causal().is_causal
+        assert m.make_causal().to_diagram().to_map() == m
+
+    # A trace box is introduced when the category has no cups or caps.
+    for module in [symmetric, traced]:
+        z = module.Ty("z")
+        traced_map = module.Box("g", z @ z, z @ z).to_map().trace()
+        assert not traced_map.is_causal
+        diagram = traced_map.to_diagram()
+        assert isinstance(diagram.boxes[0], module.Diagram.trace_factory)
+        assert diagram.to_map() == traced_map
+
+
+def test_make_planar():
+    from discopy.compact import Ty, Box, CMap as M, Swap
+
+    x, y, z, w = map(Ty, "xyzw")
+
+    # A planar map is returned unchanged, with no swap box introduced.
+    for planar in [
+            Box("f", x, y).to_map(),
+            Box("f", x, y).to_map() @ Box("g", z, w).to_map(),
+            M.cups(x, x.r),
+            Box("f", x @ y, x @ y).to_map().trace()]:
+        assert planar.is_planar
+        assert planar.make_planar() == planar
+        assert not any(isinstance(b, Swap) for b in planar.make_planar().boxes)
+
+    # A planar map is routed without any swap box.
+    assert not any(isinstance(b, Swap) for b in (
+        Box("f", x, y).to_map() @ Box("g", z, w).to_map()).to_diagram().boxes)
+
+    # A crossing becomes a swap box.
+    swap = M.swap(x, y)
+    assert not swap.is_planar
+    assert swap.make_planar().is_planar
+    assert swap.make_planar().boxes == (M.category.swap(x, y), )
+    assert swap.make_planar().to_diagram().to_map() == swap
 
 
 def test_trace():
