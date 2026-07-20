@@ -138,8 +138,6 @@ class Functor(symmetric.Functor, ribbon.Functor):
 
 class CMap(symmetric.CMap):
     category = Diagram
-    require_oriented = False
-    require_connected = False
 
 
 Id = Diagram.id

@@ -459,8 +459,6 @@ class Functor(monoidal.Functor):
 class CMap(monoidal.CMap):
     category = Diagram
 
-    require_causal = False
-
     def curry(self, n=1, left=False) -> Self:
         """
         Curry a combinatorial map using the closed structure of the host

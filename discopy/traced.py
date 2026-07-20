@@ -262,7 +262,6 @@ class Functor(monoidal.Functor):
 
 class CMap(monoidal.CMap):
     category = Diagram
-    require_causal = False
 
 
 Diagram.functor_factory = Functor

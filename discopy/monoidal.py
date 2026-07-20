@@ -1507,10 +1507,6 @@ class Match:
 
 class CMap(cmap.CMap):
     category = Diagram
-    require_planar = True
-    require_causal = True
-    require_oriented = True
-    require_connected = True
 
 
 Diagram.draw = drawing.draw

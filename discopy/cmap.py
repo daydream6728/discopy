@@ -48,7 +48,8 @@ from typing import Any, TYPE_CHECKING, ClassVar, Literal
 
 from discopy import messages, hypergraph
 from discopy.cat import Ob
-from discopy.abc import CompactCategory, NamedGeneric, Pregroup
+from discopy.abc import (
+    CompactCategory, NamedGeneric, Pregroup, SymmetricCategory)
 from discopy.python.finset import Permutation
 from discopy.utils import (
     AxiomError,
@@ -144,29 +145,24 @@ class CMap[C0: Pregroup, C1: CMap](
     node, whose signature is the dagger of the that of the overall map.
 
     By default, `CMap` defines the free compact category over a set of boxes,
-    but we also want to be able to encode weaker structure, disallowing cups
-    and caps or even traced structure altogether.
-    We therefore further distinguish port sides by assigning a negative
-    polarity on domain ports and a positive polarity on codomain ports
-    by equipping the map with a polarity assignment
-    :math:`m : P \rightarrow \{-1, +1\}`.
+    but the same data structure encodes weaker structure, disallowing cups and
+    caps or even traced structure altogether.
+    We distinguish port sides by assigning a negative polarity on domain ports
+    and a positive polarity on codomain ports, so that the polarity of an edge
+    records whether it is a plain wire, a cup or a cap.
 
-    Four knobs are available to restrict the structure:
+    Which of these are allowed is not fixed at initialisation. Following
+    :class:`discopy.hypergraph.Hypergraph`, a `CMap` is type-parametrised by a
+    :class:`Diagram` class and only the type compatibility of its wires is
+    checked eagerly. The structure of the map is validated lazily by
+    :meth:`to_diagram`: when the map uses wiring the host category cannot
+    represent (cups, caps or traces), it forgets its orientation to a
+    :class:`Hypergraph` and reuses :meth:`Hypergraph.make_monogamous` and
+    :meth:`Hypergraph.make_causal` to introduce explicit cup, cap and trace
+    boxes, just like :meth:`Hypergraph.to_diagram`.
 
-    * ``require_planar``: the port orientation give us a way to easily compute
-      whether the map is planar by computing its component-wise Euler
-      characteristic, i.e. disallow swaps;
-    * ``require_causal``: checks that the edges are in causal order, i.e.
-      they link positive ports to negative ports with higher rank, i.e. no
-      traced wires;
-    * ``require_oriented``: checks that we connect positive to negative wires,
-      and disallow same-polarity pairings, i.e. we can enforce
-      :math:`e; m = -m` to disallow cups and caps;
-    * ``require_connected``: ensures the map forms a single connected component
-
-    Note that ``require_causal`` implies ``require_oriented`` since cups and
-    caps give rise to traced structure. We can therefore represent the
-    categorical structures we can guarantee by the following diagram:
+    The categorical structures we can guarantee for a given host category are
+    summarised by the following diagram:
 
     .. tikz::
         :align: center
@@ -258,10 +254,6 @@ class CMap[C0: Pregroup, C1: CMap](
     """
 
     category: ClassVar[Diagram] = None
-    require_planar: ClassVar[bool] = True
-    require_causal: ClassVar[bool] = False
-    require_oriented: ClassVar[bool] = False
-    require_connected: ClassVar[bool] = False
     functor = classproperty(lambda cls: cls.category.functor_factory)
     ob = classproperty(lambda cls: cls.category.ob)
 
@@ -437,7 +429,14 @@ class CMap[C0: Pregroup, C1: CMap](
         return tuple(reversed(inputs)) + outputs
 
     def validate(self):
-        """ Validate the edges involution, wires and required planarity. """
+        """
+        Validate that the edges form a fixpoint-free involution and that each
+        wire connects type-compatible ports.
+
+        Contrary to :class:`Hypergraph`, the structure of the map (planarity,
+        orientation, causality) is not checked here but lazily by
+        :meth:`to_diagram`.
+        """
         ports = self.ports
         if not self.edges.is_fixpoint_free_involution():
             raise ValueError
@@ -446,15 +445,6 @@ class CMap[C0: Pregroup, C1: CMap](
             if i > j:
                 continue
             type(self).validate_wire(ports[i], ports[j])
-
-        if self.require_causal:
-            self.validate_forward_edges(ports)
-
-        if self.require_planar and not self.is_planar:
-            raise AxiomError(messages.NOT_PLANAR.format(self))
-
-        if self.require_connected and len(self.connected_components) != 1:
-            raise AxiomError(messages.NOT_CONNECTED.format(self))
 
     @property
     def connected_components(self) -> list[CMap]:
@@ -469,7 +459,7 @@ class CMap[C0: Pregroup, C1: CMap](
                     offsets=(offset, ))
                 for box, offset in zip(self.boxes, self.offsets)]
             components += [
-                type(self)(self.ob(), self.ob(), (), (), scalars=(scalar, ))
+                type(self)(self.ob(), self.ob(), (), (), loops=(scalar, ))
                 for scalar in self.loops]
             return components
 
@@ -599,53 +589,43 @@ class CMap[C0: Pregroup, C1: CMap](
         Validate type compatibility for a wire between two ports.
 
         Raises:
-            AxiomError : If the types or orientations are incompatible.
+            AxiomError : If the types are incompatible.
         """
         if source.kind.is_positive and target.kind.is_negative:
             cls.validate_equal_types(source, target)
         elif target.kind.is_positive and source.kind.is_negative:
             cls.validate_equal_types(target, source)
-        elif cls.require_oriented:
-            raise AxiomError
         else:
             cls.validate_adjoint_types(source, target)
 
-    def validate_forward_edges(self, ports: list[Port]):
-        """ Validate that box-to-box causal wires are acyclic. """
-        graph = {i: set() for i in range(len(self.boxes))}
+    @property
+    def is_oriented(self) -> bool:
+        """
+        Whether every edge connects a positive to a negative port, i.e. the map
+        has no cups or caps.
 
-        def has_path(source: int, target: int) -> bool:
-            todo, seen = [source], set()
-            while todo:
-                node = todo.pop()
-                if node == target:
-                    return True
-                if node in seen:
-                    continue
-                seen.add(node)
-                todo.extend(graph[node])
-            return False
+        >>> from discopy.compact import Ty, Box, CMap
+        >>> x = Ty("x")
+        >>> assert Box("f", x, x).to_map().is_oriented
+        >>> assert not CMap.cups(x, x.r).is_oriented
+        """
+        ports = self.ports
+        return all(
+            ports[i].kind.is_positive != ports[j].kind.is_positive
+            for i, j in enumerate(self.edges) if i < j)
 
-        for i, j in enumerate(self.edges):
-            if i > j:
-                continue
-            left, right = ports[i], ports[j]
-            if left.kind.is_positive and right.kind.is_negative:
-                source, target = left, right
-            elif right.kind.is_positive and left.kind.is_negative:
-                source, target = right, left
-            else:
-                continue
-            if source.kind != PortKind.COD or target.kind != PortKind.DOM:
-                continue
-            source_depth = int(source.depth + 0.5)
-            target_depth = int(target.depth - 0.5)
-            if source_depth == target_depth:
-                continue
-            if has_path(target_depth, source_depth):
-                raise AxiomError(messages.NOT_TRACEABLE.format(
-                    source, target))
-            graph[source_depth].add(target_depth)
+    @property
+    def is_causal(self) -> bool:
+        """
+        Whether the map can be downgraded to a diagram without cups, caps or
+        traces, i.e. its underlying :class:`Hypergraph` is causal.
+
+        >>> from discopy.compact import Ty, Box, CMap
+        >>> x = Ty("x")
+        >>> assert Box("f", x, x).to_map().is_causal
+        >>> assert not CMap.id(x).trace().is_causal
+        """
+        return self.to_hypergraph().is_causal
 
     def __repr__(self):
         def port_repr(index, port):
@@ -1052,19 +1032,39 @@ class CMap[C0: Pregroup, C1: CMap](
 
     def to_diagram(self) -> Diagram:
         """
-        Downgrade to a diagram directly, preserving box orientation.
+        Downgrade to a diagram, preserving box orientation.
 
-        The construction scans the currently open wire labels from left to
-        right. For each box, it swaps boundary wires until the box domain wires
-        are adjacent at the requested offset, applies the box, and replaces
+        When the map is causal, i.e. it has no cups, caps or traces, the
+        construction scans the currently open wire labels from left to right:
+        for each box, it swaps boundary wires until the box domain wires are
+        adjacent at the requested offset, applies the box, and replaces
         consumed domain labels by the box codomain labels.
 
-        >>> from discopy.compact import Ty, Box
+        Otherwise, the map forgets its orientation to a :class:`Hypergraph` and
+        reuses :meth:`Hypergraph.to_diagram` to introduce explicit cup, cap and
+        trace boxes for the wiring the host category cannot represent.
+
+        >>> from discopy.compact import Ty, Box, CMap
         >>> x, y = map(Ty, "xy")
         >>> cmap = Box("f", x, y).to_map()
         >>> cmap.to_diagram().to_map() == cmap
         True
+        >>> cup = CMap.cups(x, x.r)
+        >>> assert not cup.is_causal
+        >>> print(cup.to_diagram())
+        Cup(x, x.r)
+        >>> assert cup.to_diagram().to_map() == cup
         """
+        hypergraph = self.to_hypergraph()
+        if not hypergraph.is_causal:
+            if getattr(self.category, "trace_factory", None) is None\
+                    and getattr(self.category, "cup_factory", None) is None:
+                raise AxiomError(messages.NO_STRUCTURE_TO_DOWNGRADE.format(
+                    factory_name(self.category)))
+            return hypergraph.to_diagram()
+        if not self.is_planar and not issubclass(
+                self.category, SymmetricCategory):
+            raise AxiomError(messages.NOT_PLANAR.format(self))
         edge_wire = {}
         for i, j in enumerate(self.edges):
             if i <= j:
