@@ -36,3 +36,25 @@ def test_prompts():
 def test_rigid_prompt():
     p = Prompt[rigid.Diagram, rigid.Box]("say it", rigid.Ty('x'), rigid.Ty())
     assert p.l.z == -1 and p.r.z == 1
+
+
+def step(text, dom, cod, tool=None):
+    return {"text": text, "dom": dom, "cod": cod, "tool": tool}
+
+
+def test_from_layers():
+    layers = [[step("", ["x"], ["z"], "mix")], [step("finish", ["z"], ["y"])]]
+    built = D.from_layers(x, layers, [mix])
+    assert built == D.lift(mix) >> P("finish", z, y)
+    assert isinstance(built, D) and built.prompts == [P("finish", z, y)]
+
+
+def test_from_layers_parallel():
+    layers = [[step("left", ["x"], ["z"]), step("right", ["y"], ["x"])]]
+    assert D.from_layers(x @ y, layers)\
+        == P("left", x, z) @ P("right", y, x)
+
+
+def test_from_layers_does_not_compose():
+    with raises(AxiomError):
+        D.from_layers(x, [[step("", ["y"], ["x"], "back")]], [back])
