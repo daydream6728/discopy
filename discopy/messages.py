@@ -31,3 +31,6 @@ WRONG_COD = "Expected inside.cod == {}, got {} instead."
 COMPLEX_TYPE_HAS_NO_ATTR = "{!r} object of length != 1 has no attribute {!r}"
 NO_STRUCTURE_TO_DOWNGRADE = \
     "{} has no spiders, cups or caps to draw this hypergraph."
+PROMPTS_TO_REFINE = "{} has prompts left to refine."
+PLAN_DID_NOT_END = "{} still has prompts after {} rounds."
+NO_REFINEMENT = "Expected a refinement, got {} instead."
