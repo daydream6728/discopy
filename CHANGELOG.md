@@ -51,6 +51,12 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   hierarchy below symmetric: traced, Markov, closed, feedback, compact and
   hypergraph ([#558](https://github.com/discopy/discopy/issues/558),
   refactoring [#325](https://github.com/discopy/discopy/pull/325)).
+- `discopy.agentic`, the free category on prompts over any underlying
+  category: `Agentic[C]` is a subclass of `C` whose boxes can also be a
+  `Prompt`, i.e. a hole labelled by a task in natural language. A prompt
+  refines into layers of tools and finer prompts by calling a large
+  language model, a diagram refines every prompt in parallel and `plan`
+  iterates until nothing is left to refine, downgrading the result to `C`.
 - The pivotal structure of `Rep(H)`: `HopfAlgebra.drinfeld_element`,
   `pivotal_element` and `ribbon_element`, cached single tensors named after
   the literature (Reshetikhin–Turaev; Kassel; Radford), with pivotal cups

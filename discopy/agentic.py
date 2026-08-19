@@ -1,6 +1,78 @@
 # -*- coding: utf-8 -*-
 
-""" Diagrams with prompts as holes. """
+"""
+Diagrams with prompts as holes, i.e. planning as diagram refinement.
+
+Given an underlying `category` C, an agentic diagram is a diagram in C where
+some of the boxes are a :class:`Prompt`, i.e. a hole labelled by a task in
+natural language. Thus :class:`Agentic` is the free C-category on the
+prompts, it comes with:
+
+* an inclusion :meth:`Diagram.lift` from C, i.e. any diagram is agentic,
+* its partial inverse :meth:`Diagram.downgrade`, defined on the diagrams
+  with no prompt left,
+* a refinement :meth:`Prompt.refine`, which calls a large language model to
+  replace one prompt by an agentic diagram of tools and finer prompts,
+* its extension :meth:`Diagram.refine`, the functor which refines every
+  prompt in parallel and is the identity on the boxes of C,
+* the iteration :meth:`Diagram.plan`, which refines until no prompt is left
+  then downgrades the result to C.
+
+Refinement lands in `Agentic[C]` rather than in C so that a plan can be made
+of subplans, i.e. it need not bottom out in one step. It bottoms out when the
+model answers with `tools`, i.e. boxes of C.
+
+Summary
+-------
+
+.. autosummary::
+    :template: class.rst
+    :nosignatures:
+    :toctree:
+
+    Diagram
+    Prompt
+    Agentic
+
+Example
+-------
+
+The tools are the boxes of the underlying category, here a recipe:
+
+>>> from discopy.symmetric import Ty, Box, Diagram as D
+>>> egg, flour, batter, cake = map(Ty, ("egg", "flour", "batter", "cake"))
+>>> mix, bake = Box("mix", egg @ flour, batter), Box("bake", batter, cake)
+>>> task = Prompt[D]("make a cake", egg @ flour, cake)
+
+We stub the language model with a client answering a fixed list of layers,
+so that this example stays offline and deterministic:
+
+>>> from types import SimpleNamespace as N
+>>> def stub(*answers):
+...     answers = iter(answers)
+...     create = lambda **params: N(content=[
+...         N(type="tool_use", input={"layers": next(answers)})])
+...     return N(messages=N(create=create))
+>>> step = lambda text, dom, cod, tool=None: {
+...     "text": text, "dom": dom, "cod": cod, "tool": tool}
+
+The first answer refines the task into a prompt and a tool, the second one
+refines the remaining prompt into a tool, so that the plan takes two rounds:
+
+>>> client = stub(
+...     [[step("mix the ingredients", ["egg", "flour"], ["batter"])],
+...      [step("", ["batter"], ["cake"], "bake")]],
+...     [[step("", ["egg", "flour"], ["batter"], "mix")]])
+>>> plan = task.plan(tools=[mix, bake], client=client)
+>>> assert plan == mix >> bake and isinstance(plan, D)
+
+>>> from discopy.monoidal import Equation
+>>> Equation(task, plan, symbol="$\\\\mapsto$").draw(
+...     doctest="docs/_static/agentic/plan.svg")
+
+.. image:: /_static/agentic/plan.svg
+    :align: center
+"""
 
 from __future__ import annotations
 
@@ -277,6 +349,15 @@ class Agentic:
         category : The underlying category, i.e. a `Diagram` subclass.
         box : Its class of boxes, `monoidal.Box` by default, which the
             prompts subclass, e.g. `rigid.Box` for prompts with adjoints.
+
+    Example
+    -------
+    >>> from discopy import rigid, symmetric
+    >>> assert Agentic[symmetric.Diagram] is Agentic[symmetric.Diagram]
+    >>> assert issubclass(Agentic[symmetric.Diagram], symmetric.Diagram)
+    >>> assert Prompt[symmetric.Diagram].factory is Agentic[symmetric.Diagram]
+    >>> Prompt[rigid.Diagram, rigid.Box]('say it', rigid.Ty(), rigid.Ty())
+    agentic.Prompt[rigid.Diagram, rigid.Box]('say it', rigid.Ty(), rigid.Ty())
     """
     cache = dict()
 
