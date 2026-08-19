@@ -58,6 +58,13 @@ def test_from_layers_parallel():
         == P("left", x, z) @ P("right", y, x)
 
 
+def test_from_layers_identity_step():
+    layers = [[step("", ["x"], ["z"], "mix"), step("", ["y"], ["y"])],
+              [step("", ["z"], ["y"], "ice"), step("", ["y"], ["x"], "back")]]
+    assert D.from_layers(x @ y, layers, [mix, ice, back])\
+        == D.lift(mix) @ y >> D.lift(ice) @ D.lift(back)
+
+
 def test_from_layers_does_not_compose():
     with raises(AxiomError):
         D.from_layers(x, [[step("", ["y"], ["x"], "back")]], [back])

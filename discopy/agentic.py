@@ -139,7 +139,9 @@ class Diagram:
     def from_step(cls, step: dict, toolbox: dict) -> Diagram:
         """
         One step of an answer as a box, i.e. a tool if it has a `"tool"` name
-        in `toolbox` and a prompt with types `"dom"` and `"cod"` otherwise.
+        in `toolbox`, the identity if it has neither a tool nor a `"text"`,
+        i.e. wires passing through, and a prompt with types `"dom"` and
+        `"cod"` otherwise.
 
         Parameters:
             step : The step, i.e. its `"text"`, `"dom"`, `"cod"` and `"tool"`.
@@ -147,6 +149,8 @@ class Diagram:
         """
         if step.get("tool"):
             return cls.lift(toolbox[step["tool"]])
+        if not step["text"]:
+            return cls.id(cls.ob(*step["dom"]))
         return cls.prompt_factory(
             step["text"], cls.ob(*step["dom"]), cls.ob(*step["cod"]))
 
@@ -239,7 +243,10 @@ class Prompt:
         " tool name. The inputs of the first layer must be the inputs of the"
         " task, the outputs of the last layer its outputs, and the outputs"
         " of each layer the inputs of the next one, in order and with"
-        " repetition.")
+        " repetition. Every input of a layer must be consumed by one of its"
+        " steps: for the inputs that this layer leaves untouched, add a step"
+        " with an empty task and an empty tool, whose inputs and outputs are"
+        " those wires passing through unchanged.")
     schema = {
         "name": "refine",
         "description": "Refine a task into layers of parallel steps.",
