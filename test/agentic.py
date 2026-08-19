@@ -101,3 +101,47 @@ def test_query_default_client(monkeypatch):
     client = stub({"Task: do it": layers})
     monkeypatch.setitem(sys.modules, "anthropic", N(Anthropic=lambda: client))
     assert P("do it", x, z).query([mix]) == layers
+
+
+def test_refine():
+    client = stub({"Task: do it": [
+        [step("", ["x"], ["z"], "mix")], [step("finish", ["z"], ["y"])]]})
+    assert P("do it", x, y).refine([mix], client=client)\
+        == D.lift(mix) >> P("finish", z, y)
+
+
+def test_refine_wrong_cod():
+    client = stub({"Task: do it": [[step("", ["x"], ["z"], "mix")]]})
+    with raises(AxiomError):
+        P("do it", x, y).refine([mix], client=client)
+
+
+def test_diagram_refine_is_parallel():
+    p, q = P("do it", x, y), P("do it again", y, x)
+    diagram = p >> q >> P("do it", x, y)
+    client = stub({
+        "Task: do it": [[step("", ["x"], ["z"], "mix")],
+                        [step("finish", ["z"], ["y"])]],
+        "Task: do it again": [[step("", ["y"], ["x"], "back")]]})
+    image = diagram.refine(tools=[mix, back], client=client)
+    assert len(client.calls) == 2  # one call per prompt up to repetition
+    assert image.prompts == [P("finish", z, y)]
+    assert D.lift(mix).refine() == D.lift(mix)  # no prompt, no call
+
+
+def test_plan():
+    diagram = P("do it", x, y) >> P("do it again", y, x)
+    client = stub({
+        "Task: do it": [[step("", ["x"], ["z"], "mix")],
+                        [step("", ["z"], ["y"], "ice")]],
+        "Task: do it again": [[step("", ["y"], ["x"], "back")]]})
+    result = diagram.plan(tools=[mix, ice, back], client=client)
+    assert type(result) is symmetric.Diagram
+    assert result == mix >> ice >> back
+
+
+def test_plan_did_not_end():
+    client = stub({"Task: do it": [[step("do it", ["x"], ["y"])]]})
+    with raises(AxiomError):
+        P("do it", x, y).plan(max_rounds=3, tools=[], client=client)
+    assert len(client.calls) == 3

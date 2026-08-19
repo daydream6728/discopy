@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 from functools import reduce
 
 from discopy import messages, monoidal
@@ -25,6 +26,8 @@ class Diagram:
             downgrade
             from_step
             from_layers
+            refine
+            plan
     """
     category = monoidal.Diagram
     prompt_factory = None
@@ -95,6 +98,46 @@ class Diagram:
             [cls.from_step(step, toolbox) for step in layer]),
             layers, cls.id(dom))
 
+    def refine(self, **params) -> Diagram:
+        """
+        One round of refinement, i.e. the functor which sends every prompt to
+        :meth:`Prompt.refine` and every other box to itself. The calls to the
+        model are made in parallel, once for each prompt up to repetition.
+
+        Parameters:
+            params : Passed on to :meth:`Prompt.refine`.
+        """
+        prompts = self.prompts
+        if not prompts:
+            return self
+        with ThreadPoolExecutor(len(prompts)) as executor:
+            images = executor.map(
+                lambda prompt: prompt.refine(**params), prompts)
+        ar_map = dict(zip(prompts, images))
+        return self.functor_factory(
+            ob_map=lambda x: x, ar_map=lambda box: ar_map.get(box, box),
+            dom=self.factory, cod=self.factory)(self)
+
+    def plan(self, max_rounds: int = 8, **params) -> category:
+        """
+        Refine a diagram until there is no prompt left, then downgrade it to
+        the underlying category.
+
+        Parameters:
+            max_rounds : The maximum number of rounds of refinement.
+            params : Passed on to :meth:`refine`.
+
+        Raises:
+            AxiomError : Whenever there are prompts left after `max_rounds`.
+        """
+        diagram = self
+        for _ in range(max_rounds):
+            if not diagram.prompts:
+                return diagram.downgrade()
+            diagram = diagram.refine(**params)
+        raise AxiomError(
+            messages.PLAN_DID_NOT_END.format(diagram, max_rounds))
+
 
 class Prompt:
     """
@@ -112,6 +155,7 @@ class Prompt:
 
             question
             query
+            refine
     """
     model = "claude-opus-5"
     max_tokens = 16000
@@ -200,6 +244,25 @@ class Prompt:
             if block.type == "tool_use":
                 return block.input["layers"]
         raise ValueError(messages.NO_REFINEMENT.format(answer))
+
+    def refine(self, tools=(), **params) -> Diagram:
+        """
+        Call :meth:`query` then assemble the answer into an agentic diagram
+        with the same domain and codomain, i.e. one step of planning.
+
+        Parameters:
+            tools : The boxes of the underlying category to choose from.
+            params : Passed on to :meth:`query`.
+
+        Raises:
+            AxiomError : Whenever the answer does not have the right types,
+                i.e. two consecutive layers or the last one do not compose.
+        """
+        image = self.factory.from_layers(
+            self.dom, self.query(tools, **params), tools)
+        if image.cod != self.cod:
+            raise AxiomError(messages.WRONG_COD.format(self.cod, image.cod))
+        return image
 
     def __class_getitem__(cls, values) -> type:
         return Agentic[values].prompt_factory
