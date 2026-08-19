@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 
+import sys
+from types import SimpleNamespace as N
+
 from pytest import raises
 
 from discopy import rigid, symmetric
@@ -58,3 +61,43 @@ def test_from_layers_parallel():
 def test_from_layers_does_not_compose():
     with raises(AxiomError):
         D.from_layers(x, [[step("", ["y"], ["x"], "back")]], [back])
+
+
+def stub(answers):
+    """ A client answering one list of layers per task, recording calls. """
+    calls = []
+
+    def create(**params):
+        calls.append(params)
+        task = params["messages"][0]["content"].splitlines()[0]
+        return N(content=[N(type="text"), N(
+            type="tool_use", input={"layers": answers[task]})])
+    return N(messages=N(create=create), calls=calls)
+
+
+def test_question():
+    assert P("do it", x, y).question([mix]) == (
+        "Task: do it\nTypes: ['x'] -> ['y']\nTool mix: ['x'] -> ['z']")
+
+
+def test_query():
+    layers = [[step("", ["x"], ["z"], "mix")]]
+    client = stub({"Task: do it": layers})
+    assert P("do it", x, y).query([mix], client=client) == layers
+    params, = client.calls
+    assert params["tool_choice"] == {"type": "tool", "name": "refine"}
+    assert params["model"] == P.model and params["tools"] == [P.schema]
+
+
+def test_query_no_refinement():
+    client = N(messages=N(create=lambda **params: N(content=[N(
+        type="text")])))
+    with raises(ValueError):
+        P("do it", x, y).query(client=client)
+
+
+def test_query_default_client(monkeypatch):
+    layers = [[step("", ["x"], ["z"], "mix")]]
+    client = stub({"Task: do it": layers})
+    monkeypatch.setitem(sys.modules, "anthropic", N(Anthropic=lambda: client))
+    assert P("do it", x, z).query([mix]) == layers

@@ -55,11 +55,13 @@ dev = [
 docs = ["discopy[docs]"]
 quantum = ["discopy[quantum]"]
 grammar = ["discopy[grammar]"]
+llm = ["discopy[llm]"]
 all = [
     { include-group = "dev" },
     { include-group = "docs" },
     { include-group = "quantum" },
     { include-group = "grammar" },
+    { include-group = "llm" },
 ]
 
 [project.optional-dependencies]
@@ -79,6 +81,9 @@ quantum = [
 ]
 grammar = [
     "nltk",
+]
+llm = [
+    "anthropic",
 ]
 test = [
     "discopy[grammar,quantum]",

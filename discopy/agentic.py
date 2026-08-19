@@ -105,7 +105,102 @@ class Prompt:
         name : The task to perform, i.e. the prompt itself.
         dom : The domain of the prompt, i.e. its input.
         cod : The codomain of the prompt, i.e. its output.
+
+    .. admonition:: Summary
+
+        .. autosummary::
+
+            question
+            query
     """
+    model = "claude-opus-5"
+    max_tokens = 16000
+    instructions = (
+        "You are refining a string diagram, i.e. a plan whose boxes are"
+        " tasks with typed inputs and outputs. Break the task you are given"
+        " into layers of parallel steps, using one of the tools available"
+        " whenever it does the job and a finer task otherwise, with an empty"
+        " tool name. The inputs of the first layer must be the inputs of the"
+        " task, the outputs of the last layer its outputs, and the outputs"
+        " of each layer the inputs of the next one, in order and with"
+        " repetition.")
+    schema = {
+        "name": "refine",
+        "description": "Refine a task into layers of parallel steps.",
+        "strict": True,
+        "input_schema": {
+            "type": "object",
+            "additionalProperties": False,
+            "required": ["layers"],
+            "properties": {"layers": {
+                "type": "array",
+                "description": "The layers of the refined diagram.",
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "additionalProperties": False,
+                        "required": ["text", "dom", "cod", "tool"],
+                        "properties": {
+                            "text": {
+                                "type": "string",
+                                "description": "The task of the step, empty"
+                                               " if it is a tool."},
+                            "dom": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                                "description": "Its input types."},
+                            "cod": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                                "description": "Its output types."},
+                            "tool": {
+                                "type": "string",
+                                "description": "The name of the tool, empty"
+                                               " if the step is a task."
+                            }}}}}}}}
+
+    def question(self, tools=()) -> str:
+        """
+        The message sent to the model, i.e. the task, its types and the tools.
+
+        Parameters:
+            tools : The boxes of the underlying category to choose from.
+        """
+        types = lambda box: (
+            f"{[str(x) for x in box.dom]} -> {[str(x) for x in box.cod]}")
+        return "\n".join([f"Task: {self.name}", f"Types: {types(self)}"]
+                         + [f"Tool {tool.name}: {types(tool)}"
+                            for tool in tools])
+
+    def query(self, tools=(), client=None, model: str = None
+              ) -> list[list[dict]]:
+        """
+        Ask a large language model for the layers refining a prompt, i.e. the
+        only call with a side effect in this module.
+
+        Parameters:
+            tools : The boxes of the underlying category to choose from.
+            client : An `anthropic.Anthropic` client, the default needs the
+                environment variable `ANTHROPIC_API_KEY`.
+            model : The name of the model, :attr:`model` by default.
+
+        Raises:
+            ValueError : Whenever the model answers with no refinement.
+        """
+        if client is None:
+            from anthropic import Anthropic
+            client = Anthropic()
+        answer = client.messages.create(
+            model=model or self.model, max_tokens=self.max_tokens,
+            system=self.instructions, tools=[self.schema],
+            tool_choice={"type": "tool", "name": self.schema["name"]},
+            messages=[{"role": "user", "content": self.question(tools)}])
+        for block in answer.content:
+            if block.type == "tool_use":
+                return block.input["layers"]
+        raise ValueError(messages.NO_REFINEMENT.format(answer))
+
     def __class_getitem__(cls, values) -> type:
         return Agentic[values].prompt_factory
 
