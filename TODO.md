@@ -20,3 +20,4 @@
 - [x] Drop the `BENCH_FLAGS=bench:smoke` no-op
 - [x] Render the scaling plot as SVG rather than PNG
 - [x] Render the report for the head commit on every run
+- [ ] Demo: revert the artificial regression once the bot has been shown

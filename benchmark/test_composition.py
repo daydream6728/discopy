@@ -90,13 +90,15 @@ def test_foliation_diagram(n):
       sizes(10, 20, 50, 100, full=(200, 500, 1000)))
 def test_series_diagram(n):
     box = generator.not_box(symmetric.Box)
-    return lambda: generator.repeated(lambda a, b: a.then(b), box, n)
+    # DEMO: twice the work, to show the comparison flag a regression.
+    return lambda: generator.repeated(lambda a, b: a.then(b), box, 2 * n)
 
 
 @case("Hypergraph", "k-fold series", sizes(10, 20, 50, full=(100, 200)))
 def test_series_hypergraph(n):
     hbox = generator.not_box(symmetric.Box).to_hypergraph()
-    return lambda: generator.repeated(lambda a, b: a.then(b), hbox, n)
+    # DEMO: half the work, to show the comparison flag a speedup.
+    return lambda: generator.repeated(lambda a, b: a.then(b), hbox, n // 2)
 
 
 @case("CMap", "k-fold series", sizes(10, 20, 50, full=(100, 200)))
