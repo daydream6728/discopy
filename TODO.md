@@ -7,4 +7,5 @@
 - [x] `discopy.python.owl.Query`, the special case of a SPARQL body
 - [x] `discopy.python.owl.Eval`, the evaluation functor to `discopy.python`, and `lift` the other way
 - [x] `owlready2` as a `semantic` extra, `--skip-extra` support, docs and changelog
+- [x] `Function.validate`, the hook where a call meets the reasoner
 - [x] tests and doctests, `pflake8 discopy` and `coverage run -m pytest`

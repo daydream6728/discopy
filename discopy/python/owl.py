@@ -75,6 +75,7 @@ class Function(function.Function, MarkovCategory):
         .. autosummary::
 
             eval
+            validate
             id
             then
             tensor
@@ -144,10 +145,23 @@ class Function(function.Function, MarkovCategory):
         return multiplicative.Function(
             lambda *xs: self.inside(world, *xs), self.dom, self.cod)
 
+    @staticmethod
+    def validate(world: World):
+        """
+        Check a world against the schema it is typed by, i.e. run HermiT on
+        it. Assign to this to use another reasoner or other options, e.g.
+        ``ignore_unsupported_datatypes`` for ontologies with annotations
+        outside the OWL 2 datatype map.
+
+        Parameters:
+            world : The world to check.
+        """
+        sync_reasoner_hermit(world, debug=0)
+
     def __call__(self, world: World, *xs):
         result = self.eval(world)(*xs)
         if self.reasoning:
-            sync_reasoner_hermit(world, debug=0)
+            self.validate(world)
         return result
 
     @classmethod
