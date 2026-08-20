@@ -7,3 +7,4 @@
 - [x] Calling the model: `question` and `query`
 - [x] Refinement and planning: `Prompt.refine`, `Diagram.refine`, `Diagram.plan`
 - [x] Docs, changelog and a green CI
+- [x] `lift_structure`, so that a plan can have swaps and copies in it

@@ -5,7 +5,7 @@ from types import SimpleNamespace as N
 
 from pytest import raises
 
-from discopy import rigid, symmetric
+from discopy import markov, rigid, symmetric
 from discopy.agentic import Agentic, Prompt
 from discopy.utils import AxiomError
 
@@ -152,3 +152,32 @@ def test_plan_did_not_end():
     with raises(AxiomError):
         P("do it", x, y).plan(max_rounds=3, tools=[], client=client)
     assert len(client.calls) == 3
+
+
+M = Agentic[markov.Diagram]
+a, b = markov.Ty("a"), markov.Ty("b")
+f, copy = markov.Box("f", a, b), markov.Copy(a)
+
+
+def test_lift_structure():
+    assert issubclass(M.copy_factory, markov.Copy) and issubclass(M.copy_factory, M)
+    assert isinstance(M.copy(a, 3), M) and isinstance(M.swap(a, b), M)
+    assert M.braid_factory is M.swap_factory  # still reads swap_factory
+    assert not issubclass(M.layer_factory, M)  # a layer is not a diagram
+
+
+def test_plan_with_plumbing():
+    """ Refining a diagram with a copy in it, i.e. what needs the lifting. """
+    client = stub({
+        "Task: do it twice": [
+            [step("", ["a"], ["a", "a"], "Copy(a)")],
+            [step("both of them", ["a", "a"], ["b", "b"])]],
+        "Task: both of them": [
+            [step("", ["a"], ["b"], "f"), step("", ["a"], ["b"], "f")]]})
+    task = Prompt[markov.Diagram]("do it twice", a, b @ b)
+    halfway = task.refine(tools=[f, copy], client=client)
+    assert isinstance(halfway.boxes[0], markov.Copy)
+    assert halfway.prompts == [Prompt[markov.Diagram]("both of them", a @ a, b @ b)]
+    plan = task.plan(tools=[f, copy], client=client)  # refines past the copy
+    assert type(plan) is markov.Diagram and plan == copy >> f @ f
+    assert {type(box) for box in plan.boxes} == {markov.Box, markov.Copy}

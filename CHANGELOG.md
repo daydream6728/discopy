@@ -153,6 +153,12 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
+- `discopy.agentic` supports the structural boxes of its underlying
+  category: `Agentic[C]` now points every `*_factory` of `C` that generates
+  a diagram of `C` at a subclass of both that box and itself, so a swap or a
+  copy composes with a prompt instead of raising `TypeError`, and
+  `Diagram.downgrade` is a functor into `C` so the plan it returns is made
+  of `C`'s own boxes again.
 - `build.yml` timeouts and a bounded, retried Graphviz install
   ([#591](https://github.com/discopy/discopy/issues/591)).
 - `frobenius.Diagram.unfuse`'s doctest no longer sets `Spider.color = "red"`
