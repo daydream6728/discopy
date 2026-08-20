@@ -816,6 +816,7 @@ docs = [
     { name = "jinja2" },
     { name = "marimo" },
     { name = "myst-parser" },
+    { name = "owlready2" },
     { name = "pytket" },
     { name = "sphinx" },
     { name = "sphinx-book-theme" },
@@ -842,12 +843,16 @@ quantum = [
     { name = "torch", version = "2.13.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'linux'" },
     { name = "torch", version = "2.13.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform == 'linux'" },
 ]
+semantic = [
+    { name = "owlready2" },
+]
 test = [
     { name = "coverage" },
     { name = "jax" },
     { name = "jaxlib" },
     { name = "marimo" },
     { name = "nltk" },
+    { name = "owlready2" },
     { name = "pennylane" },
     { name = "pennylane-qiskit" },
     { name = "pylint" },
@@ -867,7 +872,7 @@ test = [
 [package.dev-dependencies]
 all = [
     { name = "coverage" },
-    { name = "discopy", extra = ["docs", "grammar", "quantum"] },
+    { name = "discopy", extra = ["docs", "grammar", "quantum", "semantic"] },
     { name = "marimo" },
     { name = "polars" },
     { name = "pylint" },
@@ -893,11 +898,14 @@ grammar = [
 quantum = [
     { name = "discopy", extra = ["quantum"] },
 ]
+semantic = [
+    { name = "discopy", extra = ["semantic"] },
+]
 
 [package.metadata]
 requires-dist = [
     { name = "coverage", marker = "extra == 'test'" },
-    { name = "discopy", extras = ["grammar", "quantum"], marker = "extra == 'test'" },
+    { name = "discopy", extras = ["grammar", "quantum", "semantic"], marker = "extra == 'test'" },
     { name = "ipykernel", marker = "extra == 'docs'", specifier = "==6.23.*" },
     { name = "ipython", marker = "extra == 'docs'" },
     { name = "jax", marker = "extra == 'quantum'" },
@@ -910,6 +918,8 @@ requires-dist = [
     { name = "networkx" },
     { name = "nltk", marker = "extra == 'grammar'" },
     { name = "numpy" },
+    { name = "owlready2", marker = "extra == 'docs'" },
+    { name = "owlready2", marker = "extra == 'semantic'" },
     { name = "pennylane", marker = "extra == 'quantum'", specifier = ">=0.45.0" },
     { name = "pennylane-qiskit", marker = "extra == 'quantum'", specifier = ">=0.45.0" },
     { name = "pillow" },
@@ -933,7 +943,7 @@ requires-dist = [
     { name = "torch", marker = "sys_platform == 'linux' and extra == 'quantum'", index = "https://download.pytorch.org/whl/cpu" },
     { name = "torch", marker = "sys_platform != 'linux' and extra == 'quantum'" },
 ]
-provides-extras = ["quantum", "grammar", "test", "docs"]
+provides-extras = ["quantum", "grammar", "semantic", "test", "docs"]
 
 [package.metadata.requires-dev]
 all = [
@@ -941,6 +951,7 @@ all = [
     { name = "discopy", extras = ["docs"] },
     { name = "discopy", extras = ["grammar"] },
     { name = "discopy", extras = ["quantum"] },
+    { name = "discopy", extras = ["semantic"] },
     { name = "marimo" },
     { name = "polars" },
     { name = "pylint" },
@@ -960,6 +971,7 @@ dev = [
 docs = [{ name = "discopy", extras = ["docs"] }]
 grammar = [{ name = "discopy", extras = ["grammar"] }]
 quantum = [{ name = "discopy", extras = ["quantum"] }]
+semantic = [{ name = "discopy", extras = ["semantic"] }]
 
 [[package]]
 name = "docutils"
@@ -2367,6 +2379,12 @@ sdist = { url = "https://files.pythonhosted.org/packages/8c/b9/2ac072041e899a52f
 wheels = [
     { url = "https://files.pythonhosted.org/packages/23/cd/066e86230ae37ed0be70aae89aabf03ca8d9f39c8aea0dec8029455b5540/opt_einsum-3.4.0-py3-none-any.whl", hash = "sha256:69bb92469f86a1565195ece4ac0323943e83477171b91d24c35afe028a90d7cd", size = 71932, upload-time = "2024-09-26T14:33:23.039Z" },
 ]
+
+[[package]]
+name = "owlready2"
+version = "0.51"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/c5/46/27a21b73ab3cf85ed8b09fdfeda1cc6abcee715d3435eca543495ef79539/owlready2-0.51.tar.gz", hash = "sha256:65adebc79ff6abdd2a0bde8d3aac21c6beed8699bf1e7c849d30eba9c513795e", size = 27435504, upload-time = "2026-06-22T10:51:38.882Z" }
 
 [[package]]
 name = "packaging"
@@ -3898,13 +3916,13 @@ resolution-markers = [
     "python_full_version < '3.13' and sys_platform != 'linux'",
 ]
 dependencies = [
-    { name = "filelock" },
-    { name = "fsspec" },
-    { name = "jinja2" },
-    { name = "networkx" },
-    { name = "setuptools" },
-    { name = "sympy" },
-    { name = "typing-extensions" },
+    { name = "filelock", marker = "sys_platform != 'linux'" },
+    { name = "fsspec", marker = "sys_platform != 'linux'" },
+    { name = "jinja2", marker = "sys_platform != 'linux'" },
+    { name = "networkx", marker = "sys_platform != 'linux'" },
+    { name = "setuptools", marker = "sys_platform != 'linux'" },
+    { name = "sympy", marker = "sys_platform != 'linux'" },
+    { name = "typing-extensions", marker = "sys_platform != 'linux'" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c4/3a/ed0f4d4d1dcde03bced7aac9a28e800abcdc0cbd06b6775044c9fbd877b7/torch-2.13.0-cp312-cp312-macosx_14_0_arm64.whl", hash = "sha256:2fe228aba290d14b9f31b049be550dbd469c3fd3013d7a19705b30454da97027", size = 111213045, upload-time = "2026-07-08T16:05:22.997Z" },
@@ -3927,13 +3945,13 @@ resolution-markers = [
     "python_full_version < '3.13' and sys_platform == 'linux'",
 ]
 dependencies = [
-    { name = "filelock" },
-    { name = "fsspec" },
-    { name = "jinja2" },
-    { name = "networkx" },
-    { name = "setuptools" },
-    { name = "sympy" },
-    { name = "typing-extensions" },
+    { name = "filelock", marker = "sys_platform == 'linux'" },
+    { name = "fsspec", marker = "sys_platform == 'linux'" },
+    { name = "jinja2", marker = "sys_platform == 'linux'" },
+    { name = "networkx", marker = "sys_platform == 'linux'" },
+    { name = "setuptools", marker = "sys_platform == 'linux'" },
+    { name = "sympy", marker = "sys_platform == 'linux'" },
+    { name = "typing-extensions", marker = "sys_platform == 'linux'" },
 ]
 wheels = [
     { url = "https://download-r2.pytorch.org/whl/cpu/torch-2.13.0%2Bcpu-cp312-cp312-linux_s390x.whl", hash = "sha256:ffadde149901c8afa138daa38d898264003cfcf1a3336ca5cd964b5af227d867", upload-time = "2026-07-08T19:28:41Z" },

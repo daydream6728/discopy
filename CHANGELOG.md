@@ -51,6 +51,14 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   hierarchy below symmetric: traced, Markov, closed, feedback, compact and
   hypergraph ([#558](https://github.com/discopy/discopy/issues/558),
   refactoring [#325](https://github.com/discopy/discopy/pull/325)).
+- The category of Python functions typed by an OWL ontology,
+  `discopy.python.owl`: objects are tuples of `owlready2` classes, morphisms
+  are functions taking the `World` they read and write as their first
+  argument, and every call is validated against the schema by a local HermiT
+  invocation. `Query` is the special case of a function whose body is a
+  SPARQL query, `Eval` is the evaluation functor to `discopy.python` at a
+  given world and `lift` the inclusion the other way. It needs the new
+  `semantic` extra, i.e. `owlready2` and a Java runtime.
 - The pivotal structure of `Rep(H)`: `HopfAlgebra.drinfeld_element`,
   `pivotal_element` and `ribbon_element`, cached single tensors named after
   the literature (Reshetikhin–Turaev; Kassel; Radford), with pivotal cups

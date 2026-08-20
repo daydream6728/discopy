@@ -55,11 +55,13 @@ dev = [
 docs = ["discopy[docs]"]
 quantum = ["discopy[quantum]"]
 grammar = ["discopy[grammar]"]
+semantic = ["discopy[semantic]"]
 all = [
     { include-group = "dev" },
     { include-group = "docs" },
     { include-group = "quantum" },
     { include-group = "grammar" },
+    { include-group = "semantic" },
 ]
 
 [project.optional-dependencies]
@@ -80,8 +82,12 @@ quantum = [
 grammar = [
     "nltk",
 ]
+semantic = [
+    # Ships HermiT, whose invocation needs a Java runtime.
+    "owlready2",
+]
 test = [
-    "discopy[grammar,quantum]",
+    "discopy[grammar,quantum,semantic]",
     "coverage",
     "marimo",
     "pyproject-flake8",
@@ -94,6 +100,7 @@ docs  = [
     "jinja2 == 3.1.*",
     "marimo",
     "myst-parser == 2.0.*",
+    "owlready2",
     # executed by marimo when rendering the notebooks at docs build time
     "pytket",
     "sympy",

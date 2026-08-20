@@ -11,7 +11,8 @@ import pytest
 from _pytest.doctest import DoctestItem
 
 
-UNIMPORTABLE = ("discopy/quantum/pennylane.py", "discopy/quantum/tk.py")
+UNIMPORTABLE = ("discopy/quantum/pennylane.py", "discopy/quantum/tk.py",
+                "discopy/python/owl.py")
 
 
 def pytest_addoption(parser):
