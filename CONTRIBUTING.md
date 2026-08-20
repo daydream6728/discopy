@@ -60,6 +60,10 @@ uv run coverage run -m pytest
 uv run coverage report -m
 ```
 
+The `semantic` extra also needs a Java runtime on the `PATH`: `discopy.python.owl`
+validates with HermiT, which `owlready2` ships as a jar. Any JDK will do, e.g.
+[Temurin](https://adoptium.net/).
+
 Without the extras installed, run `uv run pytest --skip-extra` to skip what needs them.
 
 ## Run the benchmarks
