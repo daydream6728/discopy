@@ -977,18 +977,25 @@ def swrl(equation: frobenius.Equation, ontology: Ontology) -> list[Imp]:
 
 def assertions(individual, entity: PropertyClass) -> list:
     """
-    What an individual has for a property, as a list either way.
+    What an individual has for a property and for the properties under it,
+    as a list either way.
 
     `owlready2` gives a list for the properties that can hold several values
-    and the value itself for the functional ones.
+    and the value itself for the functional ones, and it does not walk the
+    property hierarchy on its own -- but a value of a subproperty is a value
+    of the property, which is the difference between an amount that has a
+    measurement reference and one that only has a currency.
 
     Parameters:
         individual : The `owlready2` individual.
         entity : The property to read off it.
     """
-    values = getattr(individual, entity.python_name, None)
-    return [] if values is None else\
-        list(values) if isinstance(values, list) else [values]
+    result = []
+    for name in [entity, *entity.descendants()]:
+        values = getattr(individual, name.python_name, None)
+        result += [] if values is None else\
+            list(values) if isinstance(values, list) else [values]
+    return list(dict.fromkeys(result))
 
 
 def meets(values: list, restriction: Restriction) -> bool:
@@ -1021,6 +1028,10 @@ def unmet(individual, kind: ThingClass) -> list:
     The restrictions of a class, and of the classes above it, that an
     individual does not meet.
 
+    A restriction whose filler is not a class the world knows is left
+    alone: an ontology loaded without its imports is full of them, and a
+    requirement nothing can be an instance of is not one to hold anybody to.
+
     Parameters:
         individual : The `owlready2` individual.
         kind : The class it is meant to be one of.
@@ -1042,7 +1053,8 @@ def unmet(individual, kind: ThingClass) -> list:
         restriction for parent in [kind, *kind.ancestors()]
         for restriction in getattr(parent, "is_a", [])
         if isinstance(restriction, Restriction)
-        and isinstance(restriction.property, PropertyClass)]
+        and isinstance(restriction.property, PropertyClass)
+        and isinstance(restriction.value, type)]
     return sorted({
         restriction for restriction in restrictions
         if not meets(assertions(individual, restriction.property),

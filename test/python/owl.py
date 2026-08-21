@@ -319,7 +319,7 @@ def kennel():
     with result:
         class Person(Thing): pass
         class Dog(Thing): pass
-        class owns(Person >> Dog): pass
+        class owns(Person >> Dog): pass  # noqa: F811
         class barksAt(Dog >> Person): pass
         class hasName(Dog >> str, DataProperty, FunctionalProperty): pass
         Dog.is_a.append(barksAt.some(Person))
@@ -405,3 +405,22 @@ def test_a_function_checks_what_it_inserts(kennel):
         return dog
 
     assert Function(complete, str, kennel.Dog)(world, "rex").hasName == "Rex"
+
+
+def test_assertions_walk_the_property_hierarchy(kennel):
+    with kennel:
+        class knows(kennel.Person >> Thing): pass
+        class owns(kennel.Person >> kennel.Dog): pass
+        owns.is_a.append(knows)
+        alice, rex = kennel.Person("alice"), kennel.Dog("rex")
+    alice.owns.append(rex)
+    assert assertions(alice, knows) == [rex]  # what it owns, it knows
+
+
+def test_unmet_leaves_an_unresolved_filler_alone(kennel):
+    with kennel:
+        class hasVet(kennel.Dog >> Thing): pass
+        fido = kennel.Dog("fido")
+    kennel.Dog.is_a.append(hasVet.some("http://elsewhere.org#Vet"))
+    fido.hasName, fido.barksAt = "Fido", [kennel.Person("bob")]
+    assert unmet(fido, kennel.Dog) == []

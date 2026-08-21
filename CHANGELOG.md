@@ -80,7 +80,10 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `Function.check` is the run-time half, holding an individual a call
   returns to the restrictions its class carries -- which an open-world
   reasoner cannot do, since a monetary amount with no currency is not a
-  contradiction but an amount whose currency is not written down yet.
+  contradiction but an amount whose currency is not written down yet. It
+  counts a value of a subproperty as a value of the property, and leaves
+  alone a restriction whose filler is not a class the world knows, which an
+  ontology loaded without its imports is full of.
 - The pivotal structure of `Rep(H)`: `HopfAlgebra.drinfeld_element`,
   `pivotal_element` and `ribbon_element`, cached single tensors named after
   the literature (Reshetikhin–Turaev; Kassel; Radford), with pivotal cups
