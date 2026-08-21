@@ -81,6 +81,12 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   than a box, and a coercion is not an atom but the same individual seen at
   two predicates, so the round trip is exact up to the names of the
   variables.
+- `discopy.agentic`, the free category on prompts over any underlying
+  category: `Agentic[C]` is a subclass of `C` whose boxes can also be a
+  `Prompt`, i.e. a hole labelled by a task in natural language. A prompt
+  refines into layers of tools and finer prompts by calling a large
+  language model, a diagram refines every prompt in parallel and `plan`
+  iterates until nothing is left to refine, downgrading the result to `C`.
 - The pivotal structure of `Rep(H)`: `HopfAlgebra.drinfeld_element`,
   `pivotal_element` and `ribbon_element`, cached single tensors named after
   the literature (Reshetikhin–Turaev; Kassel; Radford), with pivotal cups
@@ -177,6 +183,17 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
+- `discopy.agentic` supports the structural boxes of its underlying
+  category: `Agentic[C]` now points every `*_factory` of `C` that generates
+  a diagram of `C` at a subclass of both that box and itself, so a swap or a
+  copy composes with a prompt instead of raising `TypeError`, and
+  `Diagram.downgrade` is a functor into `C` so the plan it returns is made
+  of `C`'s own boxes again. A lifted generator goes on subclassing the
+  image of its parent, so that a copy of no legs is still a discard.
+- `discopy.agentic.Diagram.structural` builds the plumbing a step asks for
+  by name -- `copy`, `merge`, `discard`, `swap` -- out of the types it is
+  asked for it at, so an agent always has it and never has to be handed it
+  in `tools`.
 - `build.yml` timeouts and a bounded, retried Graphviz install
   ([#591](https://github.com/discopy/discopy/issues/591)).
 - `frobenius.Diagram.unfuse`'s doctest no longer sets `Spider.color = "red"`

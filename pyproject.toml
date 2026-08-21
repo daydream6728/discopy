@@ -56,12 +56,14 @@ docs = ["discopy[docs]"]
 quantum = ["discopy[quantum]"]
 grammar = ["discopy[grammar]"]
 semantic = ["discopy[semantic]"]
+llm = ["discopy[llm]"]
 all = [
     { include-group = "dev" },
     { include-group = "docs" },
     { include-group = "quantum" },
     { include-group = "grammar" },
     { include-group = "semantic" },
+    { include-group = "llm" },
 ]
 
 [project.optional-dependencies]
@@ -85,6 +87,9 @@ grammar = [
 semantic = [
     # Ships HermiT, whose invocation needs a Java runtime.
     "owlready2",
+]
+llm = [
+    "anthropic",
 ]
 test = [
     "discopy[grammar,quantum,semantic]",
