@@ -14,4 +14,7 @@
 - [x] a domain of definition on each end of a relation, and
       `Diagram.validate` checking composites against it with HermiT
 - [x] `Function.check`, holding inserted individuals to their codomain
+- [x] the 2-category: predicates as objects, queries as morphisms,
+      `Rule` as the 2-cells, and coercion where they do not meet
+- [ ] move the world-passing `Function` half to the wiki's toolbox.py
 - [x] tests and doctests, `pflake8 discopy` and `coverage run -m pytest`

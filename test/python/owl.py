@@ -6,127 +6,121 @@ from pytest import fixture, importorskip, mark, raises
 
 importorskip("owlready2")
 
-from owlready2 import (
-    JAVA_EXE, AllDisjoint, ClassAtom, FunctionalProperty, Imp,
-    IndividualPropertyAtom, InverseFunctionalProperty,
-    OwlReadyInconsistentOntologyError, PropertyChain, PropertyClass,
-    DataProperty, ReflexiveProperty, SameIndividualAtom,
-    SymmetricProperty, Thing,
-    ThingClass, TransitiveProperty, World)
+from owlready2 import (  # noqa: E402
+    JAVA_EXE, ClassAtom, DataProperty, FunctionalProperty, Imp,
+    InverseFunctionalProperty, PropertyChain, PropertyClass,
+    ReflexiveProperty, SymmetricProperty, Thing, ThingClass,
+    TransitiveProperty, World, sync_reasoner_hermit)
 
-from discopy.frobenius import Equation
-from discopy.utils import AxiomError
-from discopy.hypergraph import Hypergraph
-from discopy.python.owl import (
-    INCLUSION, THING, Diagram, Eval, Function, Query, atoms, box,
-    conjunction, declared, deterministic, drawable, implication, lift,
-    assertions, meets, rules, source, subsumes, swrl, target, unmet,
-    variable, variables)
-from discopy.python import Function as Py
+from discopy import frobenius  # noqa: E402
+from discopy.python.owl import (  # noqa: E402
+    INCLUSION, THING, Coercion, Diagram, Rule, atoms, box, coercion,
+    conjunction, declared, deterministic, drawable, implication, membership,
+    ob, parallel, predicates, reason, resolve, rules, subsumes, variable,
+    variables)
+from discopy.utils import AxiomError  # noqa: E402
 
 
 needs_java = mark.skipif(which(JAVA_EXE) is None, reason="HermiT needs Java.")
 
 
 @fixture
-def onto():
+def kennel():
     world = World()
-    result = world.get_ontology("http://discopy.org/test.owl")
+    result = world.get_ontology("http://discopy.org/kennel.owl")
     with result:
+        class Animal(Thing): pass
+        class Dog(Animal): pass
         class Person(Thing): pass
-        class Dog(Thing): pass
         class owns(Person >> Dog): pass
-        AllDisjoint([Person, Dog])
+        class barksAt(Dog >> Person): pass
+        class knows(Person >> Person, SymmetricProperty): pass
+        class descends(Dog >> Dog, TransitiveProperty): pass
+        class sameAs(Dog >> Dog, ReflexiveProperty): pass
+        class chip(Dog >> Person, FunctionalProperty): pass
+        class tag(Dog >> Person, InverseFunctionalProperty): pass
+        class ownedBy(Dog >> Person): pass
+        class named(Dog >> str, DataProperty): pass
+        class untyped(Thing >> Thing): pass
+        owns.inverse_property = ownedBy
+        Dog.is_a.append(barksAt.some(Person))
+        Dog.is_a.append(barksAt.only(Person))
+        Dog.is_a.append(chip.max(1, Person))
+        Dog.is_a.append(tag.exactly(1, Person))
+        Dog.is_a.append(owns.min(1, Dog))
+        Dog.is_a.append(owns.min(2, Dog))  # no rule for a cardinality of two
+        Dog.is_a.append(named.some(str))  # a datatype filler, so no rule
     return result
 
 
-def test_symmetric_monoidal(onto):
-    Person, Dog, world = onto.Person, onto.Dog, onto.world
-    alice, rex = Person("alice"), Dog("rex")
-    name = Function(lambda world, x: x.name, Person, str)
-    bark = Function(lambda world, x: "woof", Dog, str)
-    with Function.no_reasoning:
-        assert (Function.id(Person) >> name)(world, alice) == "alice"
-        assert (name @ bark)(world, alice, rex) == ("alice", "woof")
-        assert (Function.swap((Person, ), (Dog, )) >> bark @ name)(
-            world, alice, rex) == ("woof", "alice")
-        assert (Function.copy((Person, )) >> name @ name)(
-            world, alice) == ("alice", "alice")
-        assert (name @ Function.discard((Dog, )))(world, alice, rex) == "alice"
+def test_declared(kennel):
+    assert declared(kennel.Dog, ThingClass)
+    assert not declared(Thing, ThingClass)  # owl:Thing says nothing
+    assert not declared(TransitiveProperty, PropertyClass)
+    assert not declared(kennel.Dog, PropertyClass)
 
 
-def test_no_reasoning_restores(onto):
-    with raises(ValueError):
-        with Function.no_reasoning:
-            raise ValueError
-    assert Function.reasoning
+def test_ob(kennel):
+    assert ob(kennel.Dog) == frobenius.Ty("Dog")
+    assert ob() == ob(Thing) == ob("not an entity") == THING
+
+
+def test_box_is_typed_by_the_ontology(kennel):
+    assert (box(kennel.owns).dom, box(kennel.owns).cod) == (
+        ob(kennel.Person), ob(kennel.Dog))
+    assert box(kennel.untyped).dom == box(kennel.untyped).cod == THING
+    assert box(kennel.owns, THING, THING).dom == THING
+    assert membership(kennel.Dog) == coercion(THING, ob(kennel.Dog))
+    assert box(kennel.owns).data is kennel.owns
+
+
+def test_coercion(kennel):
+    assert coercion(THING, THING) == Diagram.id(THING)
+    assert isinstance(coercion(THING, ob(kennel.Dog)), Coercion)
+
+
+def test_then_coerces(kennel):
+    owns, barks = box(kennel.owns), box(kennel.barksAt)
+    assert (owns >> barks).coercions == []  # a dog is a dog
+    crooked = barks >> barks
+    assert [str(one.cod) for one in crooked.coercions] == ["Dog"]
+    assert (owns >> owns).coercions[0].dom == ob(kennel.Dog)
+
+
+def test_everywhere(kennel):
+    owns = box(kennel.owns)
+    assert owns.everywhere().dom == owns.everywhere().cod == THING
+    state = conjunction([], [])
+    assert state.everywhere() == state  # nothing to widen
+
+
+def test_parallel(kennel):
+    owns, knows = box(kennel.owns), box(kennel.knows)
+    assert parallel(owns, owns) == (owns, owns)
+    left, right = parallel(owns, knows)
+    assert left.dom == right.dom == THING
 
 
 @needs_java
-def test_hermit_validates_the_schema(onto):
-    Person, Dog, world = onto.Person, onto.Dog, onto.world
-    adopt = Function(
-        lambda world, x, y: x.owns.append(y) or x, (Person, Dog), Person)
-    assert adopt(world, Person("alice"), Dog("rex")).name == "alice"
-    confuse = Function(
-        lambda world, x: x.is_a.append(Dog) or x, Person, Person)
-    with raises(OwlReadyInconsistentOntologyError):
-        confuse(world, Person("bob"))
+def test_subsumes_and_validate(kennel):
+    world, owns = kennel.world, box(kennel.owns)
+    barks, chip = box(kennel.barksAt), box(kennel.chip)
+    assert (owns >> barks).validate(world) == owns >> barks
+    assert (barks >> owns).validate(world) == barks >> owns
+    reason(world)
+    assert subsumes(world, coercion(ob(kennel.Dog), ob(kennel.Animal)))
+    assert subsumes(world, coercion(ob(kennel.Dog), THING))
+    assert not subsumes(world, coercion(ob(kennel.Person), ob(kennel.Dog)))
+    assert not subsumes(world, coercion(THING, frobenius.Ty("Nowhere")))
+    with raises(AxiomError):
+        (barks >> barks).validate(world)  # a person is not a dog
+    assert (chip >> owns >> barks).coercions == []  # and this one is fine
 
 
-def test_query(onto):
-    Person, Dog, world = onto.Person, onto.Dog, onto.world
-    alice, rex = Person("alice"), Dog("rex")
-    alice.owns.append(rex)
-    owners = Query(
-        "SELECT ?x WHERE { ?x <http://discopy.org/test.owl#owns> ?y }",
-        (), Person)
-    strays = Query(
-        "SELECT ?x WHERE { ?x a <http://discopy.org/test.owl#Dog> ."
-        " ?x <http://discopy.org/test.owl#owns> ?y }", (), Dog)
-    with Function.no_reasoning:
-        assert owners(world) == alice
-        with raises(ValueError):
-            strays(world)
-    assert eval(repr(owners), dict(Query=Query, test=onto)) == owners
-
-
-def test_eval_is_functorial(onto):
-    Person, world = onto.Person, onto.world
-    alice, F = Person("alice"), Eval(world)
-    name = Function(lambda world, x: x.name, Person, str)
-    shout = lift(Py(str.upper, str, str))
-    with Function.no_reasoning:
-        assert F((Person, )) == (Person, )
-        assert F(name >> shout)(alice) == (F(name) >> F(shout))(alice)
-
-
-@fixture
-def rulebook():
-    world = World()
-    result = world.get_ontology("http://discopy.org/rules.owl")
-    with result:
-        class Place(Thing): pass
-        class Person(Thing): pass
-        class Citizen(Person): pass
-        class partOf(Place >> Place, TransitiveProperty): pass
-        class contains(Place >> Place): pass
-        class knows(Person >> Person, SymmetricProperty): pass
-        class livesIn(Person >> Place, FunctionalProperty): pass
-        class capitalOf(Place >> Place, InverseFunctionalProperty): pass
-        class isIn(Place >> Place, ReflexiveProperty): pass
-        class hasParent(Person >> Person): pass
-        class hasUncle(Person >> Person): pass
-        contains.inverse_property = partOf
-        hasUncle.property_chain.append(PropertyChain([hasParent, knows]))
-        Citizen.is_a.append(livesIn.some(Place))
-        Citizen.is_a.append(knows.only(Person))
-        Citizen.is_a.append(livesIn.max(1, Place))
-        Citizen.is_a.append(livesIn.exactly(1, Place))
-        Citizen.is_a.append(hasParent.min(1, Person))
-        Citizen.is_a.append(hasParent.min(2, Person))  # no rule for it
-        Citizen.is_a.append(livesIn.some(str))  # a datatype, so no rule
-    return result
+def test_deterministic(kennel):
+    single = deterministic(box(kennel.chip))
+    assert not single  # it is an axiom, not a theorem of the free category
+    assert single.terms[0].cod == ob(kennel.Person) ** 2
 
 
 def among(rule, rulebook):
@@ -135,117 +129,81 @@ def among(rule, rulebook):
                for other in rulebook)
 
 
-def test_box(rulebook):
-    assert box(rulebook.knows) == box(rulebook.knows)
-    assert box(rulebook.knows) != box(rulebook.contains)
-    assert box(rulebook.knows).data is rulebook.knows
-    assert box(rulebook.Place).dom == box(rulebook.Place).cod == THING
+def test_property_rules(kennel):
+    knows, owns = box(kennel.knows), box(kennel.owns)
+    descends, chip = box(kennel.descends), box(kennel.chip)
+    assert among(Rule(knows, knows.transpose()), rules(kennel.knows))
+    assert among(Rule(descends >> descends, descends, symbol=INCLUSION),
+                 rules(kennel.descends))
+    assert among(Rule(Diagram.id(ob(kennel.Dog)), box(kennel.sameAs),
+                      symbol=INCLUSION), rules(kennel.sameAs))
+    assert among(deterministic(chip), rules(kennel.chip))
+    assert among(deterministic(box(kennel.tag).transpose()),
+                 rules(kennel.tag))
+    assert among(Rule(*parallel(owns.transpose(), box(kennel.ownedBy))),
+                 rules(kennel.owns))
 
 
-def test_declared(rulebook):
-    assert declared(rulebook.Place, ThingClass)
-    assert not declared(Thing, ThingClass)  # owl:Thing says nothing
-    assert not declared(TransitiveProperty, PropertyClass)
-    assert not declared(rulebook.Place, PropertyClass)
+def test_property_rules_of_a_chain_and_a_parent(kennel):
+    with kennel:
+        class walks(kennel.Person >> kennel.Dog): pass
+        class strolls(kennel.Person >> kennel.Dog): pass
+        strolls.is_a.append(walks)
+        walks.property_chain.append(
+            PropertyChain([kennel.knows, kennel.owns]))
+        walks.equivalent_to.append(strolls)
+    assert among(Rule(*parallel(box(strolls), box(walks)), symbol=INCLUSION),
+                 rules(strolls))
+    assert among(Rule(*parallel(box(walks), box(strolls))), rules(walks))
+    assert any(["knows", "owns"] == [step.name for step in rule.terms[0].boxes
+                                     if step.data is not None]
+               for rule in rules(walks))
 
 
-def test_deterministic(rulebook):
-    single = deterministic(box(rulebook.livesIn))
-    assert not single  # it is an axiom, not a theorem of the free category
-    assert single.terms[0].cod == single.terms[1].cod == THING @ THING
+def test_class_rules(kennel):
+    dog, book = membership(kennel.Dog), rules(kennel.Dog)
+    barks, person = box(kennel.barksAt), ob(kennel.Person)
+    path = dog >> barks
+    assert among(Rule(*parallel(dog >> Diagram.discard(dog.cod),
+                                path >> Diagram.discard(person))), book)
+    assert among(Rule(*parallel(path, path)), book)  # the universal
+    assert among(deterministic(dog >> box(kennel.chip)), book)
+    assert len(book) == 6  # some, only, max, exactly twice, min one
 
 
-def test_property_rules(rulebook):
-    partOf, contains = box(rulebook.partOf), box(rulebook.contains)
-    knows, livesIn = box(rulebook.knows), box(rulebook.livesIn)
-    assert among(Equation(partOf >> partOf, partOf, symbol=INCLUSION),
-                 rules(rulebook.partOf))
-    assert among(Equation(knows, knows.transpose()), rules(rulebook.knows))
-    assert among(Equation(contains.transpose(), partOf),
-                 rules(rulebook.contains))
-    assert among(deterministic(livesIn), rules(rulebook.livesIn))
-    assert among(deterministic(box(rulebook.capitalOf).transpose()),
-                 rules(rulebook.capitalOf))
-    assert among(Equation(Diagram.id(THING), box(rulebook.isIn),
-                          symbol=INCLUSION), rules(rulebook.isIn))
-    assert among(Equation(box(rulebook.hasParent) >> knows,
-                          box(rulebook.hasUncle), symbol=INCLUSION),
-                 rules(rulebook.hasUncle))
-    assert among(Equation(box(rulebook.Person) >> livesIn, livesIn),
-                 rules(rulebook.livesIn))
-    assert among(Equation(livesIn >> box(rulebook.Place), livesIn),
-                 rules(rulebook.livesIn))
-
-
-def test_class_rules(rulebook):
-    citizen, person = box(rulebook.Citizen), box(rulebook.Person)
-    livesIn, place = box(rulebook.livesIn), box(rulebook.Place)
-    discard, book = Diagram.discard(THING), rules(rulebook.Citizen)
-    assert among(Equation(citizen >> person, citizen), book)
-    assert among(Equation(citizen >> discard,
-                          citizen >> livesIn >> place >> discard), book)
-    assert among(Equation(citizen >> box(rulebook.knows),
-                          citizen >> box(rulebook.knows) >> person), book)
-    assert among(deterministic(citizen >> livesIn), book)
-    assert among(Equation(citizen >> discard,
-                          citizen >> box(rulebook.hasParent) >> person
-                          >> discard), book)
-
-
-def test_equivalent_rules(rulebook):
-    with rulebook:
-        class Resident(Thing): pass
-        class residesIn(rulebook.Person >> rulebook.Place): pass
-    Resident.equivalent_to.append(rulebook.Citizen)
-    residesIn.equivalent_to.append(rulebook.livesIn)
-    assert among(Equation(box(Resident), box(rulebook.Citizen)),
-                 rules(Resident))
-    assert among(Equation(box(residesIn), box(rulebook.livesIn)),
-                 rules(residesIn))
-
-
-def test_rules_of_an_ontology(rulebook):
-    everything = rules(rulebook)
-    assert everything and all(
-        isinstance(rule, Equation) for rule in everything)
-    assert not any(rule for rule in everything)  # none of them are free
-    assert among(rules(rulebook.knows)[0], everything)
+def test_rules_of_an_ontology(kennel):
+    everything = rules(kennel)
+    assert everything and all(isinstance(rule, Rule) for rule in everything)
+    assert among(rules(kennel.knows)[0], everything)
     with raises(TypeError):
         rules("not an ontology")
 
 
+def test_typing_makes_a_universal_free(kennel):
+    """ `Dog barksAt only Person` says nothing once `barksAt` is typed by
+    its range, which is what having predicates as objects buys. """
+    universal, = [rule for rule in rules(kennel.Dog) if rule]
+    assert universal.terms[0] == universal.terms[1]
+    assert universal.terms[0].boxes[-1].data is kennel.barksAt
+
+
 @fixture
-def horn():
-    world = World()
-    result = world.get_ontology("http://discopy.org/horn.owl")
-    with result:
-        class Person(Thing): pass
-        class hasParent(Person >> Person): pass
-        class hasBrother(Person >> Person): pass
-        class hasUncle(Person >> Person): pass
-        class hasAge(Person >> int, DataProperty): pass
+def horn(kennel):
+    with kennel:
         uncles, adults = Imp(), Imp()
     uncles.set_as_rule(
-        "hasParent(?x, ?y), hasBrother(?y, ?z) -> hasUncle(?x, ?z)")
-    adults.set_as_rule("Person(?x), hasAge(?x, 18) -> Person(?x)")
-    return result
+        "Dog(?x), owns(?y, ?x), barksAt(?x, ?z) -> knows(?y, ?z)")
+    adults.set_as_rule("Dog(?x), named(?x, 'Rex') -> Dog(?x)")
+    return kennel
 
 
-def state(ontology, *wired):
-    """ A state with one box per (entity, source, target) triple. """
-    spiders = 1 + max(leg for _, *legs in wired for leg in legs)
-    return Hypergraph[Diagram](
-        dom=THING ** 0, cod=THING ** spiders,
-        boxes=tuple(box(entity) for entity, *_ in wired),
-        wires=((), tuple(((source, ), (target, )) for _, source, target
-                         in wired), tuple(range(spiders))),
-        spider_types=spiders * (THING, )).to_diagram()
+def only_drawable(ontology):
+    return next(rule for rule in ontology.rules() if drawable(rule))
 
 
 def test_drawable(horn):
-    uncles, adults = sorted(horn.rules(), key=drawable, reverse=True)
-    assert drawable(uncles) and "hasUncle" in str(uncles)
-    assert not drawable(adults)  # a literal is not an individual
+    assert not all(map(drawable, horn.rules()))  # a literal is not a wire
+    assert drawable(only_drawable(horn))
 
 
 def test_variable(horn):
@@ -253,174 +211,64 @@ def test_variable(horn):
     assert variable("x0", horn) is not variable("x1", horn)
 
 
+def test_predicates_type_the_variables(horn):
+    rule = only_drawable(horn)
+    order = variables([*rule.body, *rule.head])
+    typed = predicates(rule.body, order)
+    assert [str(one) for one in typed.values()] == ["Dog", "Thing", "Thing"]
+
+
 def test_conjunction(horn):
-    uncles = next(rule for rule in horn.rules() if drawable(rule))
-    order = variables(uncles.body)
-    assert [name.name for name in order] == ["x", "y", "z"]
-    body = conjunction(uncles.body, order)
-    assert body.dom == THING ** 0 and body.cod == THING ** 3
-    assert set(body.to_hypergraph().boxes) == {
-        box(horn.hasParent), box(horn.hasBrother)}
+    rule = only_drawable(horn)
+    order = variables([*rule.body, *rule.head])
+    body = conjunction(rule.body, order)
+    assert body.dom == THING ** 0 and len(body.cod) == 3
+    assert [step.name for step in body.boxes if not isinstance(
+        step, (Coercion, frobenius.Spider, frobenius.Swap, frobenius.Cup,
+               frobenius.Cap))] == ["owns", "barksAt"]  # Dog is a wire now
 
 
-def test_conjunction_of_a_class_is_a_loop(horn):
+def test_conjunction_keeps_a_second_class_as_a_box(horn):
     order = [variable("x", horn)]
-    atom = ClassAtom(namespace=horn)
-    atom.class_predicate, atom.arguments = horn.Person, order
-    graph = conjunction([atom], order).to_hypergraph()
-    assert graph.wires[1] == (((0, ), (0, )), )  # both legs, one spider
+    both = [ClassAtom(namespace=horn), ClassAtom(namespace=horn)]
+    for atom, entity in zip(both, (horn.Dog, horn.Animal)):
+        atom.class_predicate, atom.arguments = entity, order
+    assert conjunction(both, order).cod == THING  # two of them, so untyped
+    assert len(conjunction(both, order).to_hypergraph().boxes) == 2
 
 
-def test_implication(horn):
-    rule = implication(next(r for r in horn.rules() if drawable(r)))
+def test_implication_round_trip(horn):
+    rule = implication(only_drawable(horn))
     assert rule.symbols[0] == INCLUSION and not rule
-    assert all(term.dom == THING ** 0 for term in rule.terms)
-    assert rule.terms[0].cod == rule.terms[1].cod == THING ** 3
-
-
-def test_swrl_round_trip(horn):
-    uncles = next(rule for rule in horn.rules() if drawable(rule))
-    written, = swrl(implication(uncles), horn)
+    written, = rule.swrl(horn)
     assert str(written) == (
-        "hasParent(?x0, ?x1), hasBrother(?x1, ?x2) -> hasUncle(?x0, ?x2)")
-    assert str(swrl(implication(written), horn)[0]) == str(written)
+        "Dog(?x0), owns(?x1, ?x0), barksAt(?x0, ?x2) -> knows(?x1, ?x2)")
+    assert str(implication(written).swrl(horn)[0]) == str(written)
 
 
-def test_swrl_of_an_equation_is_two_rules(horn):
-    parent = state(horn, (horn.hasParent, 0, 1))
-    uncle = state(horn, (horn.hasUncle, 0, 1))
-    there, back = swrl(Equation(parent, uncle), horn)
-    assert str(there) == "hasParent(?x0, ?x1) -> hasUncle(?x0, ?x1)"
-    assert str(back) == "hasUncle(?x0, ?x1) -> hasParent(?x0, ?x1)"
-
-
-def test_swrl_of_a_class_across_two_wires(horn):
-    across = state(horn, (horn.Person, 0, 1))
-    rule, = swrl(Equation(across, across, symbol=INCLUSION), horn)
-    assert [type(atom).__name__ for atom in rule.body] == [
-        "ClassAtom", "SameIndividualAtom"]
+def test_an_equation_is_two_rules(horn):
+    rule = only_drawable(horn)
+    order = variables(rule.body)
+    owns = conjunction([rule.body[1]], order)
+    barks = conjunction([rule.body[2]], order)
+    there, back = Rule(*parallel(owns, barks)).swrl(horn)
+    assert str(there).split(" -> ")[1] == str(back).split(" -> ")[0]
+    assert str(back).split(" -> ")[1] == str(there).split(" -> ")[0]
 
 
 def test_atoms_needs_a_state(horn):
     with raises(ValueError):
-        atoms(box(horn.hasParent), [], horn)
+        atoms(box(horn.owns), [], horn)
 
 
-def test_rules_includes_the_ontologys_own(horn):
-    uncles = next(rule for rule in horn.rules() if drawable(rule))
-    assert implication(uncles).terms in [
-        rule.terms for rule in rules(horn)]
-
-
-@fixture
-def kennel():
-    world = World()
-    result = world.get_ontology("http://discopy.org/kennel.owl")
-    with result:
-        class Person(Thing): pass
-        class Dog(Thing): pass
-        class owns(Person >> Dog): pass  # noqa: F811
-        class barksAt(Dog >> Person): pass
-        class hasName(Dog >> str, DataProperty, FunctionalProperty): pass
-        Dog.is_a.append(barksAt.some(Person))
-        Dog.is_a.append(hasName.exactly(1, str))
-    return result
-
-
-def test_source_and_target(kennel):
-    assert source(box(kennel.owns)) == [kennel.Person]
-    assert target(box(kennel.owns)) == [kennel.Dog]
-    assert source(box(kennel.Dog)) == []  # a test is defined on everything
-    assert target(box(kennel.Dog)) == [kennel.Dog]
+def test_resolve(horn):
+    assert resolve(THING, horn) is None
+    assert resolve(frobenius.Ty("Nowhere"), horn) is None
+    assert resolve(ob(horn.Dog), horn) is horn.Dog
 
 
 @needs_java
-def test_subsumes(kennel):
-    world = kennel.world
-    assert subsumes(world, [kennel.Dog], [])  # everything is a Thing
-    assert subsumes(world, [kennel.Dog], [kennel.Dog])
-    assert not subsumes(world, [kennel.Dog], [kennel.Person])
-
-
-@needs_java
-def test_validate_a_diagram(kennel):
-    world, owns = kennel.world, box(kennel.owns)
-    barks = box(kennel.barksAt)
-    assert (owns >> barks).validate(world) == owns >> barks
-    assert (box(kennel.Person) >> owns).incoherent(world) == []
-    with raises(AxiomError):
-        (barks >> barks).validate(world)  # a person is not a dog
-    with raises(AxiomError):
-        (box(kennel.Dog) >> owns).validate(world)
-
-
-def test_assertions(kennel):
-    with kennel:
-        rex, alice = kennel.Dog("rex"), kennel.Person("alice")
-    rex.hasName = "Rex"  # functional, so not a list
-    rex.barksAt.append(alice)
-    assert assertions(rex, kennel.hasName) == ["Rex"]
-    assert assertions(rex, kennel.barksAt) == [alice]
-    assert assertions(alice, kennel.owns) == []
-
-
-def test_meets(kennel):
-    with kennel:
-        rex, alice = kennel.Dog("rex"), kennel.Person("alice")
-    assert not meets([], kennel.barksAt.some(kennel.Person))
-    assert meets([alice], kennel.barksAt.some(kennel.Person))
-    assert not meets([alice], kennel.barksAt.min(2, kennel.Person))
-    assert meets([alice], kennel.barksAt.max(1, kennel.Person))
-    assert meets([alice], kennel.barksAt.exactly(1, kennel.Person))
-    assert not meets([rex], kennel.barksAt.only(kennel.Person))
-    assert meets([alice], kennel.barksAt.value(alice))  # nothing to count
-
-
-def test_unmet_and_check(kennel):
-    with kennel:
-        rex = kennel.Dog("rex")
-    assert len(unmet(rex, kennel.Dog)) == 2  # no name, barks at nobody
-    with raises(AxiomError):
-        Function.check(rex, kennel.Dog)
-    Function.check(rex, str)  # not a class, so nothing to meet
-    Function.check("rex", kennel.Dog)  # not an individual either
-
-
-@needs_java
-def test_a_function_checks_what_it_inserts(kennel):
-    world = kennel.world
-
-    def inside(state, name):
-        with kennel:
-            return kennel.Dog(name)
-
-    adopt = Function(inside, str, kennel.Dog)
-    with raises(AxiomError):
-        adopt(world, "fido")  # a dog with no name and nobody to bark at
-
-    def complete(state, name):
-        with kennel:
-            dog, owner = kennel.Dog(name), kennel.Person(f"{name}-owner")
-        dog.hasName, dog.barksAt = name.title(), [owner]
-        return dog
-
-    assert Function(complete, str, kennel.Dog)(world, "rex").hasName == "Rex"
-
-
-def test_assertions_walk_the_property_hierarchy(kennel):
-    with kennel:
-        class knows(kennel.Person >> Thing): pass
-        class owns(kennel.Person >> kennel.Dog): pass
-        owns.is_a.append(knows)
-        alice, rex = kennel.Person("alice"), kennel.Dog("rex")
-    alice.owns.append(rex)
-    assert assertions(alice, knows) == [rex]  # what it owns, it knows
-
-
-def test_unmet_leaves_an_unresolved_filler_alone(kennel):
-    with kennel:
-        class hasVet(kennel.Dog >> Thing): pass
-        fido = kennel.Dog("fido")
-    kennel.Dog.is_a.append(hasVet.some("http://elsewhere.org#Vet"))
-    fido.hasName, fido.barksAt = "Fido", [kennel.Person("bob")]
-    assert unmet(fido, kennel.Dog) == []
+def test_reason(kennel):
+    reason(kennel.world)
+    assert issubclass(kennel.Dog, kennel.Animal)
+    sync_reasoner_hermit(kennel.world, debug=0)  # the default is HermiT

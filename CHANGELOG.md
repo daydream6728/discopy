@@ -59,31 +59,28 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   SPARQL query, `Eval` is the evaluation functor to `discopy.python` at a
   given world and `lift` the inclusion the other way. It needs the new
   `semantic` extra, i.e. `owlready2` and a Java runtime.
-- `discopy.python.owl.rules`, which compiles the axioms of an ontology into
-  `discopy.frobenius.Equation`: a property becomes a box on a wire of
-  individuals and a class the partial identity testing membership, so an
-  inverse is a transpose, symmetry is being one's own transpose, a
-  functional property is one that commutes with copying, and an existential
-  restriction is an equation between two discards. Frobenius is the home
-  because an OWL property is a relation, and `Equation.__bool__` compares up
-  to the hypergraph axioms, i.e. it reports whether an axiom says anything
-  the free category did not already. The rules an ontology carries itself go
-  both ways: a SWRL rule is a Horn clause over atoms, i.e. a conjunctive
-  query on each side of an arrow, and a conjunctive query is a hypergraph
-  whose wires are its variables. `implication` reads one as an inclusion of
-  states, `swrl` writes an equation back as one or two rules, so a rule can
-  be drawn, rewritten as a diagram and put where a reasoner will run it.
-  There is one wire because OWL is single-sorted, so what a relation is
-  defined on rides along as a predicate: `source` and `target` read it off
-  `rdfs:domain` and `rdfs:range`, and `Diagram.validate` asks HermiT whether
-  what comes out of one box is subsumed by what the next is defined on.
-  `Function.check` is the run-time half, holding an individual a call
-  returns to the restrictions its class carries -- which an open-world
-  reasoner cannot do, since a monetary amount with no currency is not a
-  contradiction but an amount whose currency is not written down yet. It
-  counts a value of a subproperty as a value of the property, and leaves
-  alone a restriction whose filler is not a class the world knows, which an
-  ontology loaded without its imports is full of.
+- `discopy.python.owl` is the 2-category of an ontology: its objects are
+  predicates, i.e. classes, with `THING` the one everything satisfies; its
+  morphisms are queries, i.e. diagrams of properties in a hypergraph
+  category, where the spiders are the variables a conjunctive query shares;
+  and its 2-morphisms are `Rule`, an inclusion or an equation between two
+  queries, which is what a SWRL rule is and what an axiom compiles to.
+  Frobenius is the home because an OWL property is a relation, not a
+  function.
+  Composing never fails, since OWL is single-sorted: `Diagram.then` inserts
+  the `coercion` between what one query lands in and what the next is
+  defined on, and `Diagram.validate` asks HermiT which of those were free.
+  A coercion that is not free is a filter, which is the honest reading of
+  `rdfs:domain` -- OWL makes it an entailment rather than a constraint.
+  Typing the boxes by domain and range is what retires the axioms that were
+  equations before: a subclass is a coercion being free, and a universal
+  restriction whose filler is the range says nothing at all.
+  `implication` reads a SWRL rule as a 2-cell and `Rule.swrl` writes one
+  back, so a rule can be drawn, rewritten as a diagram and put where a
+  reasoner will run it. A class atom is the type of its variable rather
+  than a box, and a coercion is not an atom but the same individual seen at
+  two predicates, so the round trip is exact up to the names of the
+  variables.
 - The pivotal structure of `Rep(H)`: `HopfAlgebra.drinfeld_element`,
   `pivotal_element` and `ribbon_element`, cached single tensors named after
   the literature (Reshetikhin–Turaev; Kassel; Radford), with pivotal cups
