@@ -9,4 +9,6 @@
 - [x] `owlready2` as a `semantic` extra, `--skip-extra` support, docs and changelog
 - [x] `Function.validate`, the hook where a call meets the reasoner
 - [x] `rules`, compiling OWL axioms into `frobenius.Equation`
+- [x] `implication` and `swrl`, the round trip with the ontology's own
+      SWRL rules
 - [x] tests and doctests, `pflake8 discopy` and `coverage run -m pytest`

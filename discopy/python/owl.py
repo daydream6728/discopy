@@ -42,6 +42,12 @@ Summary
         rules
         declared
         deterministic
+        conjunction
+        implication
+        atoms
+        swrl
+        variable
+        variables
 
 The schema itself can be read as syntax rather than as a type: :func:`rules`
 compiles the axioms of an ontology into :class:`discopy.frobenius.Equation`,
@@ -49,6 +55,15 @@ i.e. a property becomes a box and what OWL says about it becomes an equation
 between diagrams. Frobenius is the right home because an OWL property is a
 relation, not a function, and the category of relations is a hypergraph
 category whose spiders are copying and discarding.
+
+That includes the rules an ontology carries itself: a `SWRL`_ rule is a Horn
+clause over atoms, i.e. a conjunctive query on each side of an arrow, and a
+conjunctive query is a hypergraph -- its variables are the wires, its atoms
+the boxes and the variables it shares the spiders. :func:`implication` reads
+one as an inclusion of states and :func:`swrl` writes one back, so a rule can
+be drawn, rewritten as a diagram and put where a reasoner will run it.
+
+.. _SWRL: https://www.w3.org/submissions/SWRL/
 """
 
 from __future__ import annotations
@@ -57,13 +72,13 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 
 from owlready2 import (
-    EXACTLY, MAX, MIN, ONLY, SOME, FunctionalProperty,
-    InverseFunctionalProperty, Ontology, PropertyClass, ReflexiveProperty,
-    SymmetricProperty, ThingClass, TransitiveProperty, World,
-    sync_reasoner_hermit)
+    EXACTLY, MAX, MIN, ONLY, SOME, ClassAtom, FunctionalProperty, Imp,
+    IndividualPropertyAtom, InverseFunctionalProperty, Ontology,
+    PropertyClass, ReflexiveProperty, SameIndividualAtom, SymmetricProperty,
+    ThingClass, TransitiveProperty, Variable, World, sync_reasoner_hermit)
 from owlready2.class_construct import Restriction
 
-from discopy import frobenius
+from discopy import frobenius, messages
 from discopy.abc import MarkovCategory
 from discopy.python import function, multiplicative
 from discopy.python.multiplicative import Ty
@@ -569,7 +584,195 @@ def rules(entity, ob: frobenius.Ty = THING) -> list[frobenius.Equation]:
     """
     if isinstance(entity, Ontology):
         return [rule for other in [*entity.classes(), *entity.properties()]
-                for rule in rules(other, ob)]
+                for rule in rules(other, ob)] + [
+            implication(rule, ob)
+            for rule in entity.rules() if drawable(rule)]
     assert_isinstance(entity, (ThingClass, PropertyClass))
     return (class_rules if isinstance(entity, ThingClass)
             else property_rules)(entity, ob)
+
+
+def drawable(rule: Imp) -> bool:
+    """
+    Whether every atom of a SWRL rule is a box on a wire, i.e. a class or an
+    object property applied to variables.
+
+    Builtins, datatypes and constants are the atoms with nowhere to go: a
+    literal is not an individual, so it is not a wire of this category.
+
+    Parameters:
+        rule : The SWRL rule.
+    """
+    return all(
+        isinstance(atom, (ClassAtom, IndividualPropertyAtom))
+        and all(isinstance(argument, Variable) for argument in atom.arguments)
+        for atom in [*rule.body, *rule.head])
+
+
+def variable(name: str, ontology: Ontology) -> Variable:
+    """
+    The SWRL variable of a name, made if it is not there already.
+
+    `owlready2` keeps variables as individuals of the ``urn:swrl#``
+    namespace, so two rules that both talk about ``?x0`` talk about the same
+    one and it can only be made once.
+
+    Parameters:
+        name : The name of the variable, without the question mark.
+        ontology : The ontology to make it in.
+    """
+    return Variable(name, namespace=ontology.get_namespace("urn:swrl#"))
+
+
+def variables(atoms: list) -> list:
+    """
+    The variables of a list of SWRL atoms, in the order they first appear.
+
+    Parameters:
+        atoms : The atoms.
+    """
+    return list(dict.fromkeys(
+        argument for atom in atoms for argument in atom.arguments))
+
+
+def conjunction(atoms: list, order: list, ob: frobenius.Ty = THING
+                ) -> frobenius.Diagram:
+    """
+    A conjunction of SWRL atoms as a state with one wire per variable.
+
+    A conjunctive query is a hypergraph: the variables are its spiders, the
+    atoms are its boxes, and a variable two atoms share is the spider they
+    are both wired to. An atom about one variable, i.e. a class, has both of
+    its legs on the same spider, which is what makes it a test rather than a
+    step.
+
+    Parameters:
+        atoms : The atoms of the conjunction.
+        order : The variables, i.e. the wires of the state in order.
+        ob : The wire they are relations on.
+    """
+    spider, wires = {name: i for i, name in enumerate(order)}, []
+    for atom in atoms:
+        legs = [spider[argument] for argument in atom.arguments]
+        wires.append(((legs[0], ), (legs[-1], )))
+    return frobenius.Hypergraph(
+        dom=ob ** 0, cod=ob ** len(order),
+        boxes=tuple(box(atom.class_predicate or atom.property_predicate, ob)
+                    for atom in atoms),
+        wires=((), tuple(wires), tuple(range(len(order)))),
+        spider_types=len(order) * (ob, )).to_diagram()
+
+
+def implication(rule: Imp, ob: frobenius.Ty = THING) -> frobenius.Equation:
+    """
+    A SWRL rule as an inclusion between the states of its body and its head.
+
+    Both sides are drawn on every variable of the rule, so that they are
+    parallel and the inclusion says what the rule says: every assignment
+    satisfying the body satisfies the head.
+
+    Parameters:
+        rule : The SWRL rule.
+        ob : The wire its relations are on.
+
+    Example
+    -------
+    >>> from owlready2 import Imp, Thing, World
+    >>> onto = World().get_ontology("http://discopy.org/owl.owl")
+    >>> with onto:
+    ...     class Person(Thing): pass
+    ...     class hasParent(Person >> Person): pass
+    ...     class hasAncestor(Person >> Person): pass
+    ...     rule = Imp()
+    >>> _ = rule.set_as_rule(
+    ...     "hasParent(?x, ?y), hasAncestor(?y, ?z) -> hasAncestor(?x, ?z)")
+    >>> assert not implication(rule)  # it is a rule, not a tautology
+    >>> assert implication(rule).symbols[0] == INCLUSION
+    """
+    order = variables([*rule.body, *rule.head])
+    return frobenius.Equation(
+        conjunction(rule.body, order, ob),
+        conjunction(rule.head, order, ob), symbol=INCLUSION)
+
+
+def atoms(state: frobenius.Diagram, shared: list, ontology: Ontology) -> list:
+    """
+    The SWRL atoms of a state, i.e. the inverse of :func:`conjunction`.
+
+    Reading a diagram back is reading its hypergraph: every spider is a
+    variable, every box an atom on the spiders its legs are wired to. A
+    class whose legs are on two different spiders is a test and an equality
+    at once, so it comes back as two atoms.
+
+    Parameters:
+        state : The diagram, whose domain must be empty.
+        shared : The variables of its outputs, in order.
+        ontology : The ontology to build the atoms in.
+    """
+    assert_isinstance(state, frobenius.Diagram)
+    if state.dom:
+        raise ValueError(messages.WRONG_DOM.format(state.dom[:0], state.dom))
+    graph, result = state.to_hypergraph(), []
+    names = {}
+    for position, spider in enumerate(graph.wires[2]):
+        names.setdefault(spider, shared[position])
+    for generator, (dom, cod) in zip(graph.boxes, graph.wires[1]):
+        legs = [names.setdefault(spider, variable(f"v{spider}", ontology))
+                for spider in (dom[0], cod[0])]
+        if isinstance(generator.data, ThingClass):
+            atom = ClassAtom(namespace=ontology)
+            atom.class_predicate, atom.arguments = generator.data, legs[:1]
+            result.append(atom)
+            if dom[0] == cod[0]:
+                continue
+            atom = SameIndividualAtom(namespace=ontology)
+        else:
+            atom = IndividualPropertyAtom(namespace=ontology)
+            atom.property_predicate = generator.data
+        atom.arguments = legs
+        result.append(atom)
+    return result
+
+
+def swrl(equation: frobenius.Equation, ontology: Ontology) -> list[Imp]:
+    """
+    An equation between states as SWRL rules in an ontology, i.e. the
+    inverse of :func:`implication`.
+
+    An inclusion is one rule, from the term on the left to the one on the
+    right. An equation is two, one each way.
+
+    Parameters:
+        equation : The equation, whose terms are states with the same
+            outputs, i.e. the same variables in the same order.
+        ontology : The ontology to write the rules in.
+
+    Example
+    -------
+    >>> from owlready2 import Imp, Thing, World
+    >>> onto = World().get_ontology("http://discopy.org/owl.owl")
+    >>> with onto:
+    ...     class Person(Thing): pass
+    ...     class hasParent(Person >> Person): pass
+    ...     class hasAncestor(Person >> Person): pass
+    ...     rule = Imp()
+    >>> _ = rule.set_as_rule(
+    ...     "Person(?x), hasParent(?x, ?y) -> hasAncestor(?x, ?y)")
+    >>> written, = swrl(implication(rule), onto)
+    >>> print(written)
+    Person(?x0), hasParent(?x0, ?x1) -> hasAncestor(?x0, ?x1)
+    """
+    result = []
+    with ontology:
+        for index, term in enumerate(equation.terms[:-1]):
+            other, symbol = equation.terms[index + 1], equation.symbols[index]
+            pairs = [(term, other)] + (
+                [(other, term)] if symbol == "=" else [])
+            for body, head in pairs:
+                shared = [variable(f"x{position}", ontology)
+                          for position in range(len(body.cod))]
+                rule = Imp(namespace=ontology)
+                rule.body = atoms(body, shared, ontology)
+                rule.head = atoms(head, shared, ontology)
+                result.append(rule)
+    return result

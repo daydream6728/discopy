@@ -7,15 +7,18 @@ from pytest import fixture, importorskip, mark, raises
 importorskip("owlready2")
 
 from owlready2 import (
-    JAVA_EXE, AllDisjoint, FunctionalProperty, InverseFunctionalProperty,
+    JAVA_EXE, AllDisjoint, ClassAtom, FunctionalProperty, Imp,
+    IndividualPropertyAtom, InverseFunctionalProperty,
     OwlReadyInconsistentOntologyError, PropertyChain, PropertyClass,
-    ReflexiveProperty, SymmetricProperty, Thing, ThingClass,
-    TransitiveProperty, World)
+    DataProperty, ReflexiveProperty, SameIndividualAtom,
+    SymmetricProperty, Thing,
+    ThingClass, TransitiveProperty, World)
 
-from discopy.frobenius import Diagram, Equation
+from discopy.frobenius import Diagram, Equation, Hypergraph
 from discopy.python.owl import (
-    INCLUSION, THING, Eval, Function, Query, box, declared, deterministic,
-    lift, rules)
+    INCLUSION, THING, Eval, Function, Query, atoms, box, conjunction,
+    declared, deterministic, drawable, implication, lift, rules, swrl,
+    variable, variables)
 from discopy.python import Function as Py
 
 
@@ -206,3 +209,101 @@ def test_rules_of_an_ontology(rulebook):
     assert among(rules(rulebook.knows)[0], everything)
     with raises(TypeError):
         rules("not an ontology")
+
+
+@fixture
+def horn():
+    world = World()
+    result = world.get_ontology("http://discopy.org/horn.owl")
+    with result:
+        class Person(Thing): pass
+        class hasParent(Person >> Person): pass
+        class hasBrother(Person >> Person): pass
+        class hasUncle(Person >> Person): pass
+        class hasAge(Person >> int, DataProperty): pass
+        uncles, adults = Imp(), Imp()
+    uncles.set_as_rule(
+        "hasParent(?x, ?y), hasBrother(?y, ?z) -> hasUncle(?x, ?z)")
+    adults.set_as_rule("Person(?x), hasAge(?x, 18) -> Person(?x)")
+    return result
+
+
+def state(ontology, *wired):
+    """ A state with one box per (entity, source, target) triple. """
+    spiders = 1 + max(leg for _, *legs in wired for leg in legs)
+    return Hypergraph(
+        dom=THING ** 0, cod=THING ** spiders,
+        boxes=tuple(box(entity) for entity, *_ in wired),
+        wires=((), tuple(((source, ), (target, )) for _, source, target
+                         in wired), tuple(range(spiders))),
+        spider_types=spiders * (THING, )).to_diagram()
+
+
+def test_drawable(horn):
+    uncles, adults = sorted(horn.rules(), key=drawable, reverse=True)
+    assert drawable(uncles) and "hasUncle" in str(uncles)
+    assert not drawable(adults)  # a literal is not an individual
+
+
+def test_variable(horn):
+    assert variable("x0", horn) is variable("x0", horn)
+    assert variable("x0", horn) is not variable("x1", horn)
+
+
+def test_conjunction(horn):
+    uncles = next(rule for rule in horn.rules() if drawable(rule))
+    order = variables(uncles.body)
+    assert [name.name for name in order] == ["x", "y", "z"]
+    body = conjunction(uncles.body, order)
+    assert body.dom == THING ** 0 and body.cod == THING ** 3
+    assert set(body.to_hypergraph().boxes) == {
+        box(horn.hasParent), box(horn.hasBrother)}
+
+
+def test_conjunction_of_a_class_is_a_loop(horn):
+    order = [variable("x", horn)]
+    atom = ClassAtom(namespace=horn)
+    atom.class_predicate, atom.arguments = horn.Person, order
+    graph = conjunction([atom], order).to_hypergraph()
+    assert graph.wires[1] == (((0, ), (0, )), )  # both legs, one spider
+
+
+def test_implication(horn):
+    rule = implication(next(r for r in horn.rules() if drawable(r)))
+    assert rule.symbols[0] == INCLUSION and not rule
+    assert all(term.dom == THING ** 0 for term in rule.terms)
+    assert rule.terms[0].cod == rule.terms[1].cod == THING ** 3
+
+
+def test_swrl_round_trip(horn):
+    uncles = next(rule for rule in horn.rules() if drawable(rule))
+    written, = swrl(implication(uncles), horn)
+    assert str(written) == (
+        "hasParent(?x0, ?x1), hasBrother(?x1, ?x2) -> hasUncle(?x0, ?x2)")
+    assert str(swrl(implication(written), horn)[0]) == str(written)
+
+
+def test_swrl_of_an_equation_is_two_rules(horn):
+    parent = state(horn, (horn.hasParent, 0, 1))
+    uncle = state(horn, (horn.hasUncle, 0, 1))
+    there, back = swrl(Equation(parent, uncle), horn)
+    assert str(there) == "hasParent(?x0, ?x1) -> hasUncle(?x0, ?x1)"
+    assert str(back) == "hasUncle(?x0, ?x1) -> hasParent(?x0, ?x1)"
+
+
+def test_swrl_of_a_class_across_two_wires(horn):
+    across = state(horn, (horn.Person, 0, 1))
+    rule, = swrl(Equation(across, across, symbol=INCLUSION), horn)
+    assert [type(atom).__name__ for atom in rule.body] == [
+        "ClassAtom", "SameIndividualAtom"]
+
+
+def test_atoms_needs_a_state(horn):
+    with raises(ValueError):
+        atoms(box(horn.hasParent), [], horn)
+
+
+def test_rules_includes_the_ontologys_own(horn):
+    uncles = next(rule for rule in horn.rules() if drawable(rule))
+    assert implication(uncles).terms in [
+        rule.terms for rule in rules(horn)]

@@ -67,7 +67,12 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   restriction is an equation between two discards. Frobenius is the home
   because an OWL property is a relation, and `Equation.__bool__` compares up
   to the hypergraph axioms, i.e. it reports whether an axiom says anything
-  the free category did not already.
+  the free category did not already. The rules an ontology carries itself go
+  both ways: a SWRL rule is a Horn clause over atoms, i.e. a conjunctive
+  query on each side of an arrow, and a conjunctive query is a hypergraph
+  whose wires are its variables. `implication` reads one as an inclusion of
+  states, `swrl` writes an equation back as one or two rules, so a rule can
+  be drawn, rewritten as a diagram and put where a reasoner will run it.
 - The pivotal structure of `Rep(H)`: `HopfAlgebra.drinfeld_element`,
   `pivotal_element` and `ribbon_element`, cached single tensors named after
   the literature (Reshetikhin–Turaev; Kassel; Radford), with pivotal cups
