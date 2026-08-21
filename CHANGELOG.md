@@ -158,7 +158,12 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   a diagram of `C` at a subclass of both that box and itself, so a swap or a
   copy composes with a prompt instead of raising `TypeError`, and
   `Diagram.downgrade` is a functor into `C` so the plan it returns is made
-  of `C`'s own boxes again.
+  of `C`'s own boxes again. A lifted generator goes on subclassing the
+  image of its parent, so that a copy of no legs is still a discard.
+- `discopy.agentic.Diagram.structural` builds the plumbing a step asks for
+  by name -- `copy`, `merge`, `discard`, `swap` -- out of the types it is
+  asked for it at, so an agent always has it and never has to be handed it
+  in `tools`.
 - `build.yml` timeouts and a bounded, retried Graphviz install
   ([#591](https://github.com/discopy/discopy/issues/591)).
 - `frobenius.Diagram.unfuse`'s doctest no longer sets `Spider.color = "red"`

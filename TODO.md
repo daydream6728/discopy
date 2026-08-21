@@ -8,3 +8,4 @@
 - [x] Refinement and planning: `Prompt.refine`, `Diagram.refine`, `Diagram.plan`
 - [x] Docs, changelog and a green CI
 - [x] `lift_structure`, so that a plan can have swaps and copies in it
+- [x] `structural`, so the plumbing is always available to an agent

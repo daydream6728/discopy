@@ -181,3 +181,38 @@ def test_plan_with_plumbing():
     plan = task.plan(tools=[f, copy], client=client)  # refines past the copy
     assert type(plan) is markov.Diagram and plan == copy >> f @ f
     assert {type(box) for box in plan.boxes} == {markov.Box, markov.Copy}
+
+
+def test_lift_structure_keeps_the_hierarchy():
+    assert issubclass(M.discard_factory, M.copy_factory)
+    assert M.discard(a).downgrade() == markov.Diagram.discard(a)
+
+
+def test_structural():
+    for name, dom, cod, expected in [
+            ("copy", a, a @ a, markov.Copy(a)),
+            ("merge", a @ a, a, markov.Merge(a)),
+            ("discard", a, a[:0], markov.Diagram.discard(a)),
+            ("swap", a @ b, b @ a, markov.Swap(a, b))]:
+        assert M.structural(name, dom, cod).downgrade() == expected
+    for name, dom, cod in [
+            ("copy", a @ b, a), ("merge", a, a @ b), ("discard", a, a),
+            ("swap", a @ b, a @ b), ("bend", a, a)]:
+        with raises(KeyError):
+            M.structural(name, dom, cod)
+    with raises(KeyError):  # a symmetric category has no copy
+        D.structural("copy", x, x @ x)
+
+
+def test_plan_without_plumbing_in_the_toolbox():
+    """ The plumbing belongs to the category, not to whoever hands out the
+    tools, so an agent never has to be given it. """
+    client = stub({"Task: do it twice": [
+        [step("", ["a"], ["a", "a"], "copy")],
+        [step("", ["a"], ["b"], "f"), step("", ["a"], ["b"], "f")],
+        [step("", ["b", "b"], ["b", "b"], "swap")],
+        [step("", ["b"], [], "discard"), step("", ["b"], ["b"])]]})
+    plan = Prompt[markov.Diagram]("do it twice", a, b).plan(
+        tools=[f], client=client)
+    assert plan == markov.Copy(a) >> f @ f >> markov.Swap(b, b) \
+        >> markov.Diagram.discard(b) @ b

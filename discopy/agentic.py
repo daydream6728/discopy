@@ -106,6 +106,7 @@ class Diagram:
             prompts
             lift
             downgrade
+            structural
             from_step
             from_layers
             refine
@@ -152,18 +153,60 @@ class Diagram:
             dom=self.factory, cod=self.category)(self)
 
     @classmethod
+    def structural(cls, name: str, dom, cod) -> Diagram:
+        """
+        The plumbing a step asks for by name, built from the types it is
+        asked for at.
+
+        Copying, merging, discarding and swapping wires belong to the
+        category being planned in, not to the tools someone chose to hand
+        over, so an agent always has them and never has to be given them.
+
+        Parameters:
+            name : One of `"copy"`, `"merge"`, `"discard"` or `"swap"`.
+            dom : The inputs of the step.
+            cod : Its outputs.
+
+        Raises:
+            KeyError : Whenever the name is not one of the plumbing, or the
+                underlying category has no such morphism at those types.
+
+        Example
+        -------
+        >>> from discopy.markov import Copy, Diagram, Ty
+        >>> D, x = Agentic[Diagram], Ty('x')
+        >>> assert D.structural("copy", x, x @ x).downgrade() == Copy(x)
+        """
+        if hasattr(cls, name):
+            if name == "copy" and len(dom) == 1:
+                return cls.lift(cls.copy(dom, len(cod)))
+            if name == "merge" and len(cod) == 1:
+                return cls.lift(cls.merge(cod, len(dom)))
+            if name == "discard" and not cod:
+                return cls.lift(cls.discard(dom))
+            if name == "swap":
+                for i in range(1, len(dom)):
+                    if dom[i:] @ dom[:i] == cod:
+                        return cls.lift(cls.swap(dom[:i], dom[i:]))
+        raise KeyError(name)
+
+    @classmethod
     def from_step(cls, step: dict, toolbox: dict) -> Diagram:
         """
         One step of an answer as a box, i.e. a tool if it has a `"tool"` name
-        in `toolbox`, the identity if it has neither a tool nor a `"text"`,
-        i.e. wires passing through, and a prompt with types `"dom"` and
-        `"cod"` otherwise.
+        in `toolbox`, the plumbing if the name is one of :meth:`structural`,
+        the identity if it has neither a tool nor a `"text"`, i.e. wires
+        passing through, and a prompt with types `"dom"` and `"cod"`
+        otherwise.
 
         Parameters:
             step : The step, i.e. its `"text"`, `"dom"`, `"cod"` and `"tool"`.
             toolbox : The tools available, indexed by name.
         """
         if step.get("tool"):
+            if step["tool"] not in toolbox:
+                return cls.structural(
+                    step["tool"], cls.ob(*step["dom"]), cls.ob(*step["cod"]))
             return cls.lift(toolbox[step["tool"]])
         if not step["text"]:
             return cls.id(cls.ob(*step["dom"]))
@@ -262,7 +305,11 @@ class Prompt:
         " repetition. Every input of a layer must be consumed by one of its"
         " steps: for the inputs that this layer leaves untouched, add a step"
         " with an empty task and an empty tool, whose inputs and outputs are"
-        " those wires passing through unchanged.")
+        " those wires passing through unchanged."
+        " Copying, merging, discarding and swapping wires are always"
+        " available and are not tools: name one of them as the tool of a"
+        " step, i.e. `copy`, `merge`, `discard` or `swap`, with the inputs"
+        " and outputs you want it at and an empty task.")
     schema = {
         "name": "refine",
         "description": "Refine a task into layers of parallel steps.",
@@ -427,14 +474,21 @@ def lift_structure(diagram: type, category: type, name: str = "") -> None:
     >>> x = Ty('x')
     >>> assert isinstance(D.copy(x, 3), D) and isinstance(D.swap(x, x), D)
     """
-    images = {}
+    attributes, images = {}, {}
     for attribute in dir(category):
         if not attribute.endswith("_factory"):
             continue
         generator = getattr_static(category, attribute, None)
-        if not isinstance(generator, type)\
-                or not issubclass(generator, category):
-            continue
-        setattr(diagram, attribute, images.setdefault(generator, type(
-            generator.__name__ + name, (generator, diagram),
-            {"__module__": diagram.__module__})))
+        if isinstance(generator, type) and issubclass(generator, category):
+            attributes.setdefault(generator, []).append(attribute)
+    for generator in sorted(attributes, key=lambda cls: len(cls.__mro__)):
+        # A generator that subclasses another must go on subclassing its
+        # image, or the constructor tricks that one plays -- a copy of no
+        # legs is a discard -- return something of the wrong class.
+        parent = next((images[other] for other in generator.__mro__[1:]
+                       if other in images), diagram)
+        images[generator] = type(
+            generator.__name__ + name, (generator, parent),
+            {"__module__": diagram.__module__})
+        for attribute in attributes[generator]:
+            setattr(diagram, attribute, images[generator])
