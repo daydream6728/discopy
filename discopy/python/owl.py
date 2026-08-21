@@ -38,6 +38,17 @@ Summary
         :toctree:
 
         lift
+        box
+        rules
+        declared
+        deterministic
+
+The schema itself can be read as syntax rather than as a type: :func:`rules`
+compiles the axioms of an ontology into :class:`discopy.frobenius.Equation`,
+i.e. a property becomes a box and what OWL says about it becomes an equation
+between diagrams. Frobenius is the right home because an OWL property is a
+relation, not a function, and the category of relations is a hypergraph
+category whose spiders are copying and discarding.
 """
 
 from __future__ import annotations
@@ -45,13 +56,20 @@ from __future__ import annotations
 from contextlib import contextmanager
 from dataclasses import dataclass
 
-from owlready2 import World, sync_reasoner_hermit
+from owlready2 import (
+    EXACTLY, MAX, MIN, ONLY, SOME, FunctionalProperty,
+    InverseFunctionalProperty, Ontology, PropertyClass, ReflexiveProperty,
+    SymmetricProperty, ThingClass, TransitiveProperty, World,
+    sync_reasoner_hermit)
+from owlready2.class_construct import Restriction
 
+from discopy import frobenius
 from discopy.abc import MarkovCategory
 from discopy.python import function, multiplicative
 from discopy.python.multiplicative import Ty
 from discopy.utils import (
-    assert_iscomposable, classproperty, factory, untuplify)
+    assert_iscomposable, assert_isinstance, classproperty, factory,
+    untuplify)
 
 
 @factory
@@ -339,3 +357,219 @@ class Eval:
 
     def __call__(self, other: Ty | Function) -> Ty | multiplicative.Function:
         return other if isinstance(other, tuple) else other.eval(self.world)
+
+
+THING = frobenius.Ty("Thing")
+""" The wire of :func:`rules`, i.e. the individuals an ontology is about. """
+
+INCLUSION = "$\\sqsubseteq$"
+""" The symbol of the rules that are an inclusion rather than an equation. """
+
+OWL = "http://www.w3.org/2002/07/owl#"
+""" The namespace of OWL's own vocabulary, which says nothing on its own. """
+
+
+def declared(entity, kind: type) -> bool:
+    """
+    Whether an entity is one an ontology declared rather than one of OWL's
+    own, i.e. whether it is worth a box.
+
+    ``owl:Thing`` is every class and ``owl:TransitiveProperty`` is where
+    `owlready2` keeps a characteristic, so both turn up as parents without
+    being anything the ontology said.
+
+    Parameters:
+        entity : The candidate.
+        kind : The class it has to be, i.e. a class or a property.
+    """
+    return isinstance(entity, kind) and not entity.iri.startswith(OWL)
+
+
+def box(entity, ob: frobenius.Ty = THING) -> frobenius.Box:
+    """
+    An OWL entity as a box on the wire of individuals.
+
+    A property is the relation it holds, a class is the partial identity
+    that tests membership -- the same box either way, since a class is the
+    relation that relates its members to themselves.
+
+    Parameters:
+        entity : The `owlready2` class or property.
+        ob : The wire it is a relation on.
+
+    Example
+    -------
+    >>> from owlready2 import Thing, World
+    >>> with World().get_ontology("http://discopy.org/owl.owl"):
+    ...     class Person(Thing): pass
+    ...     class owns(Person >> Person): pass
+    >>> print(box(owns), box(Person))
+    owns Person
+    """
+    return frobenius.Box(entity.name, ob, ob, data=entity)
+
+
+def deterministic(relation: frobenius.Diagram, ob: frobenius.Ty = THING
+                  ) -> frobenius.Equation:
+    """
+    The equation saying a relation has at most one value, i.e. that it
+    commutes with copying.
+
+    Following the relation and then copying gives the pairs `(y, y)` for
+    `y` a value of `x`; copying and then following it twice gives every
+    pair `(y, y')` of values. The two are the same diagram exactly when
+    there was never more than one to begin with, which is what OWL calls a
+    functional property.
+
+    Parameters:
+        relation : The diagram to say it of.
+        ob : The wire it is a relation on.
+    """
+    copy = frobenius.Diagram.copy(ob)
+    return frobenius.Equation(relation >> copy, copy >> relation @ relation)
+
+
+def restriction_rules(test: frobenius.Diagram, restriction: Restriction,
+                      ob: frobenius.Ty = THING) -> list[frobenius.Equation]:
+    """
+    A class restriction as equations, i.e. what an ontology says the members
+    of a class do with one of their properties.
+
+    An existential says the class discards no more than what following the
+    property into the filler does, a universal says following the property
+    lands in the filler whether we ask for it or not, and a cardinality of
+    one says the property is :func:`deterministic` where the class holds.
+
+    Parameters:
+        test : The diagram testing membership of the class.
+        restriction : The `owlready2` restriction on it.
+        ob : The wire it is a relation on.
+    """
+    if not declared(restriction.value, ThingClass) or not declared(
+            restriction.property, PropertyClass):
+        return []  # a datatype filler or a property from a module not loaded
+    path = test >> box(restriction.property, ob)
+    filler, discard = box(restriction.value, ob), frobenius.Diagram.discard(ob)
+    exists = frobenius.Equation(
+        test >> discard, path >> filler >> discard)
+    if restriction.type == SOME or (
+            restriction.type == MIN and restriction.cardinality == 1):
+        return [exists]
+    if restriction.type == ONLY:
+        return [frobenius.Equation(path, path >> filler)]
+    if restriction.type == MAX and restriction.cardinality == 1:
+        return [deterministic(path, ob)]
+    if restriction.type == EXACTLY and restriction.cardinality == 1:
+        return [exists, deterministic(path, ob)]
+    return []
+
+
+def class_rules(entity: ThingClass, ob: frobenius.Ty = THING
+                ) -> list[frobenius.Equation]:
+    """
+    What an ontology says about a class, as equations.
+
+    Being a subclass is being oneself and then being the parent, i.e. the
+    two tests in a row are the narrower one.
+
+    Parameters:
+        entity : The `owlready2` class.
+        ob : The wire it is a relation on.
+    """
+    test, result = box(entity, ob), []
+    for parent in entity.is_a:
+        if declared(parent, ThingClass):
+            result.append(frobenius.Equation(test >> box(parent, ob), test))
+        elif isinstance(parent, Restriction):
+            result.extend(restriction_rules(test, parent, ob))
+    result.extend(frobenius.Equation(test, box(other, ob))
+                  for other in entity.equivalent_to
+                  if declared(other, ThingClass))
+    return result
+
+
+def property_rules(entity: PropertyClass, ob: frobenius.Ty = THING
+                   ) -> list[frobenius.Equation]:
+    """
+    What an ontology says about a property, as equations.
+
+    Its characteristics are the classical ones: an inverse is a transpose,
+    symmetry is being one's own transpose, transitivity is a composite
+    included in the relation, and being functional is
+    :func:`deterministic`. A domain and a range are the classes the relation
+    may be restricted to without losing anything.
+
+    Parameters:
+        entity : The `owlready2` property.
+        ob : The wire it is a relation on.
+    """
+    relation, result = box(entity, ob), []
+    result.extend(frobenius.Equation(relation, box(parent, ob),
+                                     symbol=INCLUSION)
+                  for parent in entity.is_a
+                  if declared(parent, PropertyClass))
+    if issubclass(entity, SymmetricProperty):
+        result.append(frobenius.Equation(relation, relation.transpose()))
+    if issubclass(entity, TransitiveProperty):
+        result.append(frobenius.Equation(
+            relation >> relation, relation, symbol=INCLUSION))
+    if issubclass(entity, ReflexiveProperty):
+        result.append(frobenius.Equation(
+            frobenius.Diagram.id(ob), relation, symbol=INCLUSION))
+    if issubclass(entity, FunctionalProperty):
+        result.append(deterministic(relation, ob))
+    if issubclass(entity, InverseFunctionalProperty):
+        result.append(deterministic(relation.transpose(), ob))
+    if entity.inverse_property is not None:
+        result.append(frobenius.Equation(
+            relation.transpose(), box(entity.inverse_property, ob)))
+    result.extend(frobenius.Equation(relation, box(other, ob))
+                  for other in entity.equivalent_to
+                  if declared(other, PropertyClass))
+    result.extend(frobenius.Equation(box(domain, ob) >> relation, relation)
+                  for domain in entity.domain
+                  if declared(domain, ThingClass))
+    result.extend(frobenius.Equation(relation >> box(image, ob), relation)
+                  for image in entity.range if declared(image, ThingClass))
+    result.extend(frobenius.Equation(
+        frobenius.Diagram.id(ob).then(
+            *[box(link, ob) for link in chain.properties]),
+        relation, symbol=INCLUSION) for chain in entity.get_property_chain())
+    return result
+
+
+def rules(entity, ob: frobenius.Ty = THING) -> list[frobenius.Equation]:
+    """
+    The axioms about an OWL entity as equations between diagrams.
+
+    Parameters:
+        entity : An `owlready2` ontology, class or property.
+        ob : The wire its relations are on.
+
+    Example
+    -------
+    >>> from owlready2 import Thing, TransitiveProperty, World
+    >>> onto = World().get_ontology("http://discopy.org/owl.owl")
+    >>> with onto:
+    ...     class Place(Thing): pass
+    ...     class partOf(Place >> Place, TransitiveProperty): pass
+    >>> for rule in rules(partOf):
+    ...     print(rule)
+    Equation(partOf >> partOf, partOf)
+    Equation(Place >> partOf, partOf)
+    Equation(partOf >> Place, partOf)
+
+    A rule that holds in the free hypergraph category is one the ontology
+    did not need to say, which is what :meth:`frobenius.Equation.__bool__`
+    reports:
+
+    >>> transitivity, domain, image = rules(partOf)
+    >>> assert not transitivity and not domain
+    >>> assert bool(frobenius.Equation(box(partOf), box(partOf)))
+    """
+    if isinstance(entity, Ontology):
+        return [rule for other in [*entity.classes(), *entity.properties()]
+                for rule in rules(other, ob)]
+    assert_isinstance(entity, (ThingClass, PropertyClass))
+    return (class_rules if isinstance(entity, ThingClass)
+            else property_rules)(entity, ob)

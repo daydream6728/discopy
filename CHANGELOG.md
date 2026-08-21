@@ -59,6 +59,15 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   SPARQL query, `Eval` is the evaluation functor to `discopy.python` at a
   given world and `lift` the inclusion the other way. It needs the new
   `semantic` extra, i.e. `owlready2` and a Java runtime.
+- `discopy.python.owl.rules`, which compiles the axioms of an ontology into
+  `discopy.frobenius.Equation`: a property becomes a box on a wire of
+  individuals and a class the partial identity testing membership, so an
+  inverse is a transpose, symmetry is being one's own transpose, a
+  functional property is one that commutes with copying, and an existential
+  restriction is an equation between two discards. Frobenius is the home
+  because an OWL property is a relation, and `Equation.__bool__` compares up
+  to the hypergraph axioms, i.e. it reports whether an axiom says anything
+  the free category did not already.
 - The pivotal structure of `Rep(H)`: `HopfAlgebra.drinfeld_element`,
   `pivotal_element` and `ribbon_element`, cached single tensors named after
   the literature (Reshetikhin–Turaev; Kassel; Radford), with pivotal cups
