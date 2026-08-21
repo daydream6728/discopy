@@ -14,10 +14,13 @@ from owlready2 import (
     SymmetricProperty, Thing,
     ThingClass, TransitiveProperty, World)
 
-from discopy.frobenius import Diagram, Equation, Hypergraph
+from discopy.frobenius import Equation
+from discopy.utils import AxiomError
+from discopy.hypergraph import Hypergraph
 from discopy.python.owl import (
-    INCLUSION, THING, Eval, Function, Query, atoms, box, conjunction,
-    declared, deterministic, drawable, implication, lift, rules, swrl,
+    INCLUSION, THING, Diagram, Eval, Function, Query, atoms, box,
+    conjunction, declared, deterministic, drawable, implication, lift,
+    assertions, meets, rules, source, subsumes, swrl, target, unmet,
     variable, variables)
 from discopy.python import Function as Py
 
@@ -231,7 +234,7 @@ def horn():
 def state(ontology, *wired):
     """ A state with one box per (entity, source, target) triple. """
     spiders = 1 + max(leg for _, *legs in wired for leg in legs)
-    return Hypergraph(
+    return Hypergraph[Diagram](
         dom=THING ** 0, cod=THING ** spiders,
         boxes=tuple(box(entity) for entity, *_ in wired),
         wires=((), tuple(((source, ), (target, )) for _, source, target
@@ -307,3 +310,98 @@ def test_rules_includes_the_ontologys_own(horn):
     uncles = next(rule for rule in horn.rules() if drawable(rule))
     assert implication(uncles).terms in [
         rule.terms for rule in rules(horn)]
+
+
+@fixture
+def kennel():
+    world = World()
+    result = world.get_ontology("http://discopy.org/kennel.owl")
+    with result:
+        class Person(Thing): pass
+        class Dog(Thing): pass
+        class owns(Person >> Dog): pass
+        class barksAt(Dog >> Person): pass
+        class hasName(Dog >> str, DataProperty, FunctionalProperty): pass
+        Dog.is_a.append(barksAt.some(Person))
+        Dog.is_a.append(hasName.exactly(1, str))
+    return result
+
+
+def test_source_and_target(kennel):
+    assert source(box(kennel.owns)) == [kennel.Person]
+    assert target(box(kennel.owns)) == [kennel.Dog]
+    assert source(box(kennel.Dog)) == []  # a test is defined on everything
+    assert target(box(kennel.Dog)) == [kennel.Dog]
+
+
+@needs_java
+def test_subsumes(kennel):
+    world = kennel.world
+    assert subsumes(world, [kennel.Dog], [])  # everything is a Thing
+    assert subsumes(world, [kennel.Dog], [kennel.Dog])
+    assert not subsumes(world, [kennel.Dog], [kennel.Person])
+
+
+@needs_java
+def test_validate_a_diagram(kennel):
+    world, owns = kennel.world, box(kennel.owns)
+    barks = box(kennel.barksAt)
+    assert (owns >> barks).validate(world) == owns >> barks
+    assert (box(kennel.Person) >> owns).incoherent(world) == []
+    with raises(AxiomError):
+        (barks >> barks).validate(world)  # a person is not a dog
+    with raises(AxiomError):
+        (box(kennel.Dog) >> owns).validate(world)
+
+
+def test_assertions(kennel):
+    with kennel:
+        rex, alice = kennel.Dog("rex"), kennel.Person("alice")
+    rex.hasName = "Rex"  # functional, so not a list
+    rex.barksAt.append(alice)
+    assert assertions(rex, kennel.hasName) == ["Rex"]
+    assert assertions(rex, kennel.barksAt) == [alice]
+    assert assertions(alice, kennel.owns) == []
+
+
+def test_meets(kennel):
+    with kennel:
+        rex, alice = kennel.Dog("rex"), kennel.Person("alice")
+    assert not meets([], kennel.barksAt.some(kennel.Person))
+    assert meets([alice], kennel.barksAt.some(kennel.Person))
+    assert not meets([alice], kennel.barksAt.min(2, kennel.Person))
+    assert meets([alice], kennel.barksAt.max(1, kennel.Person))
+    assert meets([alice], kennel.barksAt.exactly(1, kennel.Person))
+    assert not meets([rex], kennel.barksAt.only(kennel.Person))
+    assert meets([alice], kennel.barksAt.value(alice))  # nothing to count
+
+
+def test_unmet_and_check(kennel):
+    with kennel:
+        rex = kennel.Dog("rex")
+    assert len(unmet(rex, kennel.Dog)) == 2  # no name, barks at nobody
+    with raises(AxiomError):
+        Function.check(rex, kennel.Dog)
+    Function.check(rex, str)  # not a class, so nothing to meet
+    Function.check("rex", kennel.Dog)  # not an individual either
+
+
+@needs_java
+def test_a_function_checks_what_it_inserts(kennel):
+    world = kennel.world
+
+    def inside(state, name):
+        with kennel:
+            return kennel.Dog(name)
+
+    adopt = Function(inside, str, kennel.Dog)
+    with raises(AxiomError):
+        adopt(world, "fido")  # a dog with no name and nobody to bark at
+
+    def complete(state, name):
+        with kennel:
+            dog, owner = kennel.Dog(name), kennel.Person(f"{name}-owner")
+        dog.hasName, dog.barksAt = name.title(), [owner]
+        return dog
+
+    assert Function(complete, str, kennel.Dog)(world, "rex").hasName == "Rex"

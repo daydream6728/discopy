@@ -29,6 +29,8 @@ Summary
     Function
     Query
     Eval
+    Diagram
+    Box
 
 .. admonition:: Functions
 
@@ -39,6 +41,12 @@ Summary
 
         lift
         box
+        source
+        target
+        subsumes
+        assertions
+        meets
+        unmet
         rules
         declared
         deterministic
@@ -55,6 +63,14 @@ i.e. a property becomes a box and what OWL says about it becomes an equation
 between diagrams. Frobenius is the right home because an OWL property is a
 relation, not a function, and the category of relations is a hypergraph
 category whose spiders are copying and discarding.
+
+There is one wire, :data:`THING`, because OWL is single-sorted: a class is a
+unary predicate over one domain of individuals, not a sort. What a relation
+is defined on rides along as a predicate instead, :func:`source` and
+:func:`target` reading it off ``rdfs:domain`` and ``rdfs:range``, and
+:meth:`Diagram.validate` asks a reasoner whether each composite is coherent,
+i.e. whether what comes out of one box is subsumed by what the next is
+defined on.
 
 That includes the rules an ontology carries itself: a `SWRL`_ rule is a Horn
 clause over atoms, i.e. a conjunctive query on each side of an arrow, and a
@@ -73,9 +89,11 @@ from dataclasses import dataclass
 
 from owlready2 import (
     EXACTLY, MAX, MIN, ONLY, SOME, ClassAtom, FunctionalProperty, Imp,
+    Thing as Individual,
     IndividualPropertyAtom, InverseFunctionalProperty, Ontology,
     PropertyClass, ReflexiveProperty, SameIndividualAtom, SymmetricProperty,
     ThingClass, TransitiveProperty, Variable, World, sync_reasoner_hermit)
+from discopy.hypergraph import Hypergraph
 from owlready2.class_construct import Restriction
 
 from discopy import frobenius, messages
@@ -83,8 +101,8 @@ from discopy.abc import MarkovCategory
 from discopy.python import function, multiplicative
 from discopy.python.multiplicative import Ty
 from discopy.utils import (
-    assert_iscomposable, assert_isinstance, classproperty, factory,
-    untuplify)
+    AxiomError, assert_iscomposable, assert_isinstance, classproperty,
+    factory, tuplify, untuplify)
 
 
 @factory
@@ -109,6 +127,7 @@ class Function(function.Function, MarkovCategory):
 
             eval
             validate
+            check
             id
             then
             tensor
@@ -191,9 +210,39 @@ class Function(function.Function, MarkovCategory):
         """
         sync_reasoner_hermit(world, debug=0)
 
+    @staticmethod
+    def check(individual, kind: type):
+        """
+        Check one of the individuals a call is about to return against the
+        restrictions its class carries.
+
+        A reasoner works with an open world, so a monetary amount with no
+        currency is not a contradiction, it is one whose currency has not
+        been written down yet. That is the right answer about an ontology
+        and the wrong one about a function that has just claimed to build
+        an individual: what a class requires, its instances have to have.
+
+        Parameters:
+            individual : The value, ignored unless it is an OWL individual.
+            kind : The class of the codomain it came out of.
+
+        Raises:
+            AxiomError : Whenever a restriction of the class is unmet.
+        """
+        if not isinstance(kind, ThingClass)\
+                or not isinstance(individual, Individual):
+            return
+        broken = unmet(individual, kind)
+        if broken:
+            raise AxiomError(
+                f"{individual} does not meet"
+                f" {' and '.join(map(str, broken))}.")
+
     def __call__(self, world: World, *xs):
         result = self.eval(world)(*xs)
         if self.reasoning:
+            for individual, kind in zip(tuplify(result), self.cod):
+                self.check(individual, kind)
             self.validate(world)
         return result
 
@@ -400,13 +449,99 @@ def declared(entity, kind: type) -> bool:
     return isinstance(entity, kind) and not entity.iri.startswith(OWL)
 
 
-def box(entity, ob: frobenius.Ty = THING) -> frobenius.Box:
+@factory
+class Diagram(frobenius.Diagram):
     """
-    An OWL entity as a box on the wire of individuals.
+    A diagram of OWL relations on the wire of individuals.
+
+    There is one wire because OWL is single-sorted, so composing never
+    fails: what a relation is defined on is a predicate rather than a type,
+    and :meth:`validate` is where a reasoner is asked whether the composites
+    respect it.
+
+    .. admonition:: Summary
+
+        .. autosummary::
+
+            incoherent
+            validate
+    """
+    def incoherent(self, world: World) -> list[tuple]:
+        """
+        The connections a reasoner cannot justify, i.e. the pairs of boxes
+        wired together whose target is not subsumed by the next source.
+
+        Parameters:
+            world : The world whose ontologies say what is subsumed.
+        """
+        graph, result = self.to_hypergraph(), []
+        produced, consumed = {}, {}
+        for generator, (dom, cod) in zip(graph.boxes, graph.wires[1]):
+            for spider in cod:
+                produced.setdefault(spider, []).append(generator)
+            for spider in dom:
+                consumed.setdefault(spider, []).append(generator)
+        for spider, consumers in consumed.items():
+            result += [
+                (before, after) for before in produced.get(spider, [])
+                for after in consumers
+                if not subsumes(world, target(before), source(after))]
+        return result
+
+    def validate(self, world: World) -> Diagram:
+        """
+        Check the diagram against the ontologies of a world and return it,
+        i.e. the static half of what :meth:`Function.validate` does at run
+        time.
+
+        Parameters:
+            world : The world whose ontologies say what is subsumed.
+
+        Raises:
+            AxiomError : Whenever a connection cannot be justified.
+        """
+        broken = self.incoherent(world)
+        if broken:
+            raise AxiomError(" and ".join(
+                f"{target(before)} is not {source(after)}"
+                for before, after in broken))
+        return self
+
+
+class Box(frobenius.Box, Diagram):
+    """
+    An OWL entity as a box on the wire of individuals, i.e. a relation with
+    a domain of definition at each end.
 
     A property is the relation it holds, a class is the partial identity
     that tests membership -- the same box either way, since a class is the
     relation that relates its members to themselves.
+    """
+
+
+class Spider(frobenius.Spider, Box):
+    """ Copying, comparing and forgetting individuals. """
+
+
+class Swap(frobenius.Swap, Box):
+    """ Two wires of individuals crossing. """
+
+
+class Cup(frobenius.Cup, Box):
+    """ Bending an input into an output, i.e. taking a converse. """
+
+
+class Cap(frobenius.Cap, Box):
+    """ Bending an output into an input. """
+
+
+Diagram.spider_factory, Diagram.swap_factory = Spider, Swap
+Diagram.cup_factory, Diagram.cap_factory = Cup, Cap
+
+
+def box(entity, ob: frobenius.Ty = THING) -> Box:
+    """
+    An OWL entity as a :class:`Box`.
 
     Parameters:
         entity : The `owlready2` class or property.
@@ -421,10 +556,72 @@ def box(entity, ob: frobenius.Ty = THING) -> frobenius.Box:
     >>> print(box(owns), box(Person))
     owns Person
     """
-    return frobenius.Box(entity.name, ob, ob, data=entity)
+    return Box(entity.name, ob, ob, data=entity)
 
 
-def deterministic(relation: frobenius.Diagram, ob: frobenius.Ty = THING
+def source(generator: Box) -> list:
+    """
+    What a box is defined on, i.e. the predicates its inputs satisfy, whose
+    conjunction is meant and where the empty list is ``owl:Thing``.
+
+    A class is defined on everything, since testing a member of nothing in
+    particular is what a test is for. A property is defined on its
+    ``rdfs:domain``.
+
+    Parameters:
+        generator : The box, whose data is the entity it stands for.
+
+    Example
+    -------
+    >>> from owlready2 import Thing, World
+    >>> with World().get_ontology("http://discopy.org/owl.owl"):
+    ...     class Person(Thing): pass
+    ...     class Dog(Thing): pass
+    ...     class owns(Person >> Dog): pass
+    >>> assert source(box(owns)) == [Person] and target(box(owns)) == [Dog]
+    >>> assert source(box(Person)) == [] and target(box(Person)) == [Person]
+    """
+    entity = generator.data
+    return [] if isinstance(entity, ThingClass) else [
+        one for one in entity.domain if isinstance(one, ThingClass)]
+
+
+def target(generator: Box) -> list:
+    """
+    What comes out of a box, i.e. the predicates its outputs satisfy.
+
+    A class is what its own test lands in, a property lands in its
+    ``rdfs:range``.
+
+    Parameters:
+        generator : The box, whose data is the entity it stands for.
+    """
+    entity = generator.data
+    return [entity] if isinstance(entity, ThingClass) else [
+        one for one in entity.range if isinstance(one, ThingClass)]
+
+
+def subsumes(world: World, particular: list, general: list) -> bool:
+    """
+    Whether the ontologies of a world entail that one conjunction of
+    predicates is included in another, HermiT deciding.
+
+    The reasoner is run once and writes what it finds back into the class
+    hierarchy, so the question is asked of `owlready2` afterwards. A
+    conjunction is included in a predicate as soon as one of its conjuncts
+    is, which is sound if not complete.
+
+    Parameters:
+        world : The world whose ontologies say what is subsumed.
+        particular : The conjunction on the left.
+        general : The conjunction on the right.
+    """
+    Function.validate(world)
+    return all(any(issubclass(one, other) for one in particular)
+               for other in general)
+
+
+def deterministic(relation: Diagram, ob: frobenius.Ty = THING
                   ) -> frobenius.Equation:
     """
     The equation saying a relation has at most one value, i.e. that it
@@ -440,11 +637,11 @@ def deterministic(relation: frobenius.Diagram, ob: frobenius.Ty = THING
         relation : The diagram to say it of.
         ob : The wire it is a relation on.
     """
-    copy = frobenius.Diagram.copy(ob)
+    copy = Diagram.copy(ob)
     return frobenius.Equation(relation >> copy, copy >> relation @ relation)
 
 
-def restriction_rules(test: frobenius.Diagram, restriction: Restriction,
+def restriction_rules(test: Diagram, restriction: Restriction,
                       ob: frobenius.Ty = THING) -> list[frobenius.Equation]:
     """
     A class restriction as equations, i.e. what an ontology says the members
@@ -464,7 +661,7 @@ def restriction_rules(test: frobenius.Diagram, restriction: Restriction,
             restriction.property, PropertyClass):
         return []  # a datatype filler or a property from a module not loaded
     path = test >> box(restriction.property, ob)
-    filler, discard = box(restriction.value, ob), frobenius.Diagram.discard(ob)
+    filler, discard = box(restriction.value, ob), Diagram.discard(ob)
     exists = frobenius.Equation(
         test >> discard, path >> filler >> discard)
     if restriction.type == SOME or (
@@ -530,7 +727,7 @@ def property_rules(entity: PropertyClass, ob: frobenius.Ty = THING
             relation >> relation, relation, symbol=INCLUSION))
     if issubclass(entity, ReflexiveProperty):
         result.append(frobenius.Equation(
-            frobenius.Diagram.id(ob), relation, symbol=INCLUSION))
+            Diagram.id(ob), relation, symbol=INCLUSION))
     if issubclass(entity, FunctionalProperty):
         result.append(deterministic(relation, ob))
     if issubclass(entity, InverseFunctionalProperty):
@@ -547,7 +744,7 @@ def property_rules(entity: PropertyClass, ob: frobenius.Ty = THING
     result.extend(frobenius.Equation(relation >> box(image, ob), relation)
                   for image in entity.range if declared(image, ThingClass))
     result.extend(frobenius.Equation(
-        frobenius.Diagram.id(ob).then(
+        Diagram.id(ob).then(
             *[box(link, ob) for link in chain.properties]),
         relation, symbol=INCLUSION) for chain in entity.get_property_chain())
     return result
@@ -636,7 +833,7 @@ def variables(atoms: list) -> list:
 
 
 def conjunction(atoms: list, order: list, ob: frobenius.Ty = THING
-                ) -> frobenius.Diagram:
+                ) -> Diagram:
     """
     A conjunction of SWRL atoms as a state with one wire per variable.
 
@@ -655,7 +852,7 @@ def conjunction(atoms: list, order: list, ob: frobenius.Ty = THING
     for atom in atoms:
         legs = [spider[argument] for argument in atom.arguments]
         wires.append(((legs[0], ), (legs[-1], )))
-    return frobenius.Hypergraph(
+    return Hypergraph[Diagram](
         dom=ob ** 0, cod=ob ** len(order),
         boxes=tuple(box(atom.class_predicate or atom.property_predicate, ob)
                     for atom in atoms),
@@ -695,7 +892,7 @@ def implication(rule: Imp, ob: frobenius.Ty = THING) -> frobenius.Equation:
         conjunction(rule.head, order, ob), symbol=INCLUSION)
 
 
-def atoms(state: frobenius.Diagram, shared: list, ontology: Ontology) -> list:
+def atoms(state: Diagram, shared: list, ontology: Ontology) -> list:
     """
     The SWRL atoms of a state, i.e. the inverse of :func:`conjunction`.
 
@@ -709,7 +906,7 @@ def atoms(state: frobenius.Diagram, shared: list, ontology: Ontology) -> list:
         shared : The variables of its outputs, in order.
         ontology : The ontology to build the atoms in.
     """
-    assert_isinstance(state, frobenius.Diagram)
+    assert_isinstance(state, Diagram)
     if state.dom:
         raise ValueError(messages.WRONG_DOM.format(state.dom[:0], state.dom))
     graph, result = state.to_hypergraph(), []
@@ -776,3 +973,78 @@ def swrl(equation: frobenius.Equation, ontology: Ontology) -> list[Imp]:
                 rule.head = atoms(head, shared, ontology)
                 result.append(rule)
     return result
+
+
+def assertions(individual, entity: PropertyClass) -> list:
+    """
+    What an individual has for a property, as a list either way.
+
+    `owlready2` gives a list for the properties that can hold several values
+    and the value itself for the functional ones.
+
+    Parameters:
+        individual : The `owlready2` individual.
+        entity : The property to read off it.
+    """
+    values = getattr(individual, entity.python_name, None)
+    return [] if values is None else\
+        list(values) if isinstance(values, list) else [values]
+
+
+def meets(values: list, restriction: Restriction) -> bool:
+    """
+    Whether the values of a property meet one restriction on it, counting
+    what is asserted rather than what is consistent.
+
+    Parameters:
+        values : What the individual has for the restricted property.
+        restriction : The restriction, i.e. what its class requires of it.
+    """
+    filler = restriction.value
+    matching = [value for value in values if isinstance(value, filler)]\
+        if isinstance(filler, type) else values
+    if restriction.type == SOME:
+        return len(matching) >= 1
+    if restriction.type == MIN:
+        return len(matching) >= restriction.cardinality
+    if restriction.type == MAX:
+        return len(matching) <= restriction.cardinality
+    if restriction.type == EXACTLY:
+        return len(matching) == restriction.cardinality
+    if restriction.type == ONLY:
+        return len(matching) == len(values)
+    return True
+
+
+def unmet(individual, kind: ThingClass) -> list:
+    """
+    The restrictions of a class, and of the classes above it, that an
+    individual does not meet.
+
+    Parameters:
+        individual : The `owlready2` individual.
+        kind : The class it is meant to be one of.
+
+    Example
+    -------
+    >>> from owlready2 import Thing, World
+    >>> with World().get_ontology("http://discopy.org/owl.owl") as onto:
+    ...     class Currency(Thing): pass
+    ...     class Amount(Thing): pass
+    ...     class hasCurrency(Amount >> Currency): pass
+    ...     Amount.is_a.append(hasCurrency.exactly(1, Currency))
+    ...     price, euro = Amount("price"), Currency("EUR")
+    >>> assert unmet(price, Amount) == [hasCurrency.exactly(1, Currency)]
+    >>> price.hasCurrency = [euro]
+    >>> assert unmet(price, Amount) == []
+    """
+    restrictions = [
+        restriction for parent in [kind, *kind.ancestors()]
+        for restriction in getattr(parent, "is_a", [])
+        if isinstance(restriction, Restriction)
+        and isinstance(restriction.property, PropertyClass)]
+    return sorted({
+        restriction for restriction in restrictions
+        if not meets(assertions(individual, restriction.property),
+                     restriction)
+    }, key=str)

@@ -73,6 +73,14 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   whose wires are its variables. `implication` reads one as an inclusion of
   states, `swrl` writes an equation back as one or two rules, so a rule can
   be drawn, rewritten as a diagram and put where a reasoner will run it.
+  There is one wire because OWL is single-sorted, so what a relation is
+  defined on rides along as a predicate: `source` and `target` read it off
+  `rdfs:domain` and `rdfs:range`, and `Diagram.validate` asks HermiT whether
+  what comes out of one box is subsumed by what the next is defined on.
+  `Function.check` is the run-time half, holding an individual a call
+  returns to the restrictions its class carries -- which an open-world
+  reasoner cannot do, since a monetary amount with no currency is not a
+  contradiction but an amount whose currency is not written down yet.
 - The pivotal structure of `Rep(H)`: `HopfAlgebra.drinfeld_element`,
   `pivotal_element` and `ribbon_element`, cached single tensors named after
   the literature (Reshetikhin–Turaev; Kassel; Radford), with pivotal cups

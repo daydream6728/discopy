@@ -11,4 +11,7 @@
 - [x] `rules`, compiling OWL axioms into `frobenius.Equation`
 - [x] `implication` and `swrl`, the round trip with the ontology's own
       SWRL rules
+- [x] a domain of definition on each end of a relation, and
+      `Diagram.validate` checking composites against it with HermiT
+- [x] `Function.check`, holding inserted individuals to their codomain
 - [x] tests and doctests, `pflake8 discopy` and `coverage run -m pytest`
