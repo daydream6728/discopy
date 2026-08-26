@@ -169,6 +169,15 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   The comonoid and spider laws that no combinatorial map supplies are
   declared once on `cmap.CMap` rather than on each of `markov`, `closed`
   and `frobenius`.
+- The property matrix follows the parametrised `CMap`: `balanced.CMap` and
+  `pivotal.CMap` join the matrix as `cmap.CMap[balanced.Diagram]` and
+  `cmap.CMap[pivotal.Diagram]`, and the five `braid_naturality` cells that
+  xfailed on `CMap.to_diagram` refusing a traced box (#606) now pass.
+  Structure restorations attach to each alias — `compact` and `frobenius`
+  both restore currying and trace naturality — since subscripts do not
+  inherit from one another, and `balanced.CMap.braid_naturality` is
+  declared inapplicable: a map wires its braids symmetrically, which
+  balanced diagrams have no swaps to decode.
 - The property matrix is one parametrized test: every axiom of every
   carrier in `proptest.test_axioms.CARRIERS`, marked skip or xfail by
   its own verdict. Argument generation is dynamic dispatch on the axiom
