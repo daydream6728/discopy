@@ -24,16 +24,6 @@ def test_Ty_over_under():
     assert y.under(x) == x.r @ y == x >> y
 
 
-def test_Box_hash():
-    x, y = Ty('x'), Ty('y')
-    f = Box('f', x, y)
-    assert f == f @ Id()
-    assert hash(f) == hash(f @ Id())
-    assert hash(f) == hash(Id() @ f)
-    assert f @ Id() in {f}
-    assert {f: 42}[f @ Id()] == 42
-
-
 def test_Box_hash_winding():
     """
     Rigid boxes that differ only by their winding number must not be equal

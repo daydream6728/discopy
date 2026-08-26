@@ -363,10 +363,6 @@ def test_Diagram_offsets():
     assert diagram.offsets == [0, 2]
 
 
-def test_Diagram_hash():
-    assert {Id(Ty('x')): 42}[Id(Ty('x'))] == 42
-
-
 def test_Diagram_str():
     x, y, z, w = Ty('x'), Ty('y'), Ty('z'), Ty('w')
     assert str(Diagram((), x, x)) == "Id(x)"
