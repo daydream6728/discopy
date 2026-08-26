@@ -29,6 +29,29 @@ jobs:
     - name: Install
       run:
         uv sync --locked --group dev
+    - name: Restore the ledger from the latest artifact
+      continue-on-error: true
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        artifact=$(gh api \
+          "repos/${{ github.repository }}/actions/artifacts?name=proptest-ledger" \
+          --jq '[.artifacts[] | select(.expired | not)][0].id')
+        if [ -n "$artifact" ]; then
+          gh api \
+            "repos/${{ github.repository }}/actions/artifacts/$artifact/zip" \
+            > ledger.zip
+          mkdir -p .hypothesis
+          unzip -o ledger.zip -d .hypothesis
+          rm ledger.zip
+        fi
     - name: Run property tests
       run:
         uv run pytest proptest/ -vrxX
+    - name: Upload the ledger
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: proptest-ledger
+        path: .hypothesis/proptest-ledger.json
+        if-no-files-found: ignore

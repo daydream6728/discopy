@@ -14,7 +14,7 @@ from discopy import biclosed, cat, feedback, monoidal, traced
 from discopy.testing import (
     Atomic, Bifunctor, BoundaryConnected, ComposablePair, ComposableTriple,
     FeedbackJoining, FeedbackVanishing, HomogeneousMemory, HorizontalPair,
-    LeftCurrying, Natural, NonEmpty, RightCurrying, Small,
+    Ledger, LeftCurrying, Natural, NonEmpty, RightCurrying, Small,
     TraceDinaturalityLeft, TraceDinaturalityRight, TraceNaturalityLeft,
     TraceNaturalityRight, TraceSuperposing, axiom)
 from discopy.utils import AxiomError
@@ -255,3 +255,24 @@ def test_weaken():
     assert not weakened.broken
     small = find(weakened.strategy(), lambda args: True)
     assert isinstance(small[0], Small) and weakened(*small)
+
+
+def test_Ledger(tmp_path):
+    ledger = Ledger.load(tmp_path / "ledger.json")
+    assert ledger.budget("new") == Ledger.DEFAULT
+    assert ledger.budget("new", default=10) == 10
+    for _ in range(Ledger.STABLE):
+        ledger.record("stable", passed=True)
+    assert ledger.budget("stable") == Ledger.FLOOR
+    assert ledger.budget("stable", default=5) == 5
+    ledger.record("flaky", passed=True)
+    ledger.record("flaky", passed=False)
+    assert ledger.budget("flaky") == Ledger.BOOST
+    for _ in range(Ledger.WINDOW):
+        ledger.record("flaky", passed=True)
+    assert ledger.budget("flaky") == Ledger.FLOOR
+    assert len(ledger.history["flaky"]) == Ledger.WINDOW
+    ledger.save()
+    assert Ledger.load(ledger.path) == ledger
+    (tmp_path / "corrupt.json").write_text("{")
+    assert Ledger.load(tmp_path / "corrupt.json").history == {}

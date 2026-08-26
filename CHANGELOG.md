@@ -9,6 +9,18 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Added
 
+- Adaptive example budgets for the property suite: `discopy.testing.Ledger`
+  keeps each cell's recent pass/fail history in
+  `.hypothesis/proptest-ledger.json` and allocates its next budget from it —
+  100 examples when the history mixes passes and failures, since a
+  counterexample that is only sometimes found is where the search belongs,
+  10 after three straight passes with no failure in the ten-outcome window,
+  and the budget written in the cell's own `@settings` decorator otherwise,
+  so a fresh checkout runs exactly as before. `proptest/conftest.py` applies
+  and records this automatically for every Hypothesis cell in `proptest/`
+  and nothing outside it; the `proptest` workflow restores the newest
+  `proptest-ledger` artifact before running and uploads the updated ledger
+  after, so CI budgets converge across jobs.
 - A counterexample ledger and a property-first protocol: `PROPTEST.md`
   instructs agents to state laws before implementing, to record every
   counterexample found against a law in
