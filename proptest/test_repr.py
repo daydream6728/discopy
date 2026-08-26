@@ -8,6 +8,7 @@ from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from discopy import monoidal, tensor
+from discopy.python import function
 from discopy.utils import factory_name
 
 from proptest.test_axioms import CARRIERS
@@ -44,6 +45,10 @@ def carrier_parameters():
             marks = pytest.mark.xfail(reason=(
                 "A tensor with more than config.NUMPY_THRESHOLD entries "
                 "elides its array as a literal ellipsis."))
+        elif isinstance(carrier, type)\
+                and issubclass(carrier, function.Function):
+            marks = pytest.mark.xfail(
+                reason="A closure does not repr its body.")
         else:
             marks = ()
         yield pytest.param(carrier, marks=marks, id=factory_name(carrier))

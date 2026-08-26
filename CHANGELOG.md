@@ -45,6 +45,20 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   transparency property was considered and dropped: the strategies draw
   box names that are not Python identifiers, so the equality is not
   statable on generated diagrams.
+- The python carriers join the property matrix:
+  `python.multiplicative.Function` as a closed symmetric Markov semantic
+  carrier and `python.additive.Function` as a symmetric one, both over
+  the one-type universe `int` — a shared `python.function.Types` object
+  with a strategy of integer tuples, output-selection functions for the
+  multiplicative strategy and `finset`-style tag relabellings for the
+  additive one. A closure has no useful equality, so each carrier's
+  `equation_factory` compares extensionally, probing both sides on
+  canonical arguments — recursing through the exponentials with
+  canonical callables, so the currying laws are checked semantically.
+  The dagger laws are inapplicable (only an additive swap has a dagger),
+  a closure neither reprs nor pickles (expected failures), and
+  `additive.Function` gains the `@factory` it was missing, without which
+  its `ar` resolved to the base class of all python functions.
 - The tensor carriers join the property matrix: `frobenius.Dim` with a
   strategy of small dimensions, `tensor.Diagram` whose inherited
   frobenius strategy reaches its spiders, cups and caps out of the box,

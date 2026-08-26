@@ -24,7 +24,7 @@ from discopy import (
 from discopy import tensor
 from discopy.frobenius import Dim
 from discopy.matrix import Matrix
-from discopy.python import finset
+from discopy.python import additive, finset, multiplicative
 from discopy.testing import assert_verdict
 from discopy.utils import factory_name
 
@@ -50,7 +50,8 @@ CARRIERS = (
     frobenius.Ty, frobenius.Diagram, frobenius.Hypergraph, frobenius.CMap,
     frobenius.Functor,
     Dim, tensor.Diagram, tensor.Tensor[int],
-    Matrix[int], finset.Function, finset.Permutation)
+    Matrix[int], finset.Function, finset.Permutation,
+    additive.Function, multiplicative.Function)
 
 
 def axiom_parameters():
