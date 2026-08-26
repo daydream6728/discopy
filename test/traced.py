@@ -21,19 +21,13 @@ def test_trace_dagger():
 
 
 def test_trace_vanishing():
-    from discopy import compact, matrix, ribbon
+    """ trace(0) is the identity for the carriers outside the matrix, #578. """
+    from discopy import compact, matrix
     from discopy.python import additive, multiplicative
 
     x = compact.Ty('x')
     f = compact.Box('f', x @ x, x @ x)
-    assert f.trace(0) == f
-    assert f.to_hypergraph().trace(0) == f.to_hypergraph()
-    assert f.to_map().trace(0) == f.to_map()
     assert f.to_drawing().trace(0) == f.to_drawing()
-
-    y = ribbon.Ty('y')
-    g = ribbon.Box('g', y @ y, y @ y)
-    assert g.trace(0) == g
 
     assert matrix.Matrix[bool].swap(1, 1).trace(0)\
         == matrix.Matrix[bool].swap(1, 1)

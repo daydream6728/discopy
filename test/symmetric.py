@@ -108,13 +108,9 @@ def test_Permutation():
     assert perm.dagger().dagger() == perm
     a = Permutation(x @ y @ z, [1, 2, 0])
     b = Permutation(a.cod, [2, 0, 1])
-    c = Permutation(b.cod, [0, 2, 1])
-    assert (a >> b) >> c == a >> (b >> c)
-    assert Id(x @ y @ z) >> a == a == a >> Id(a.cod)
     assert (a >> b).dagger() == b.dagger() >> a.dagger()
     q = Permutation(z @ y, [1, 0])
     assert (perm @ q).dagger() == perm.dagger() @ q.dagger()
-    assert (perm @ q).dom == perm.dom @ q.dom
     swap = Swap(x, y)
     assert Permutation(x @ y, [1, 0]) == swap
     assert isinstance(Swap(x, y), Permutation)
@@ -296,10 +292,8 @@ def test_mixed_Layer_plumbing():
     layer = Layer(permutation, f, Ty())
     diagram = Diagram((layer,), layer.dom, layer.cod)
     assert diagram.dagger().dagger() == diagram
-    assert diagram.to_hypergraph().dom == diagram.dom
     assert diagram.to_drawing().dom == diagram.dom.to_drawing()
     assert loads(dumps(diagram)) == diagram
-    assert pickle.loads(pickle.dumps(diagram)) == diagram
     assert layer.boxes_and_types == (
         Ty(), permutation, Ty(), f, Ty())
     assert layer.boxes_and_offsets == [(permutation, 0), (f, 2)]

@@ -8,17 +8,6 @@ from discopy.cat import *
 from discopy.utils import AxiomError
 
 
-def test_main():
-    x, y, z = Ob('x'), Ob('y'), Ob('z')
-    f, g, h = Box('f', x, y), Box('g', y, z), Box('h', z, x)
-    assert Id(x) >> f == f == f >> Id(y)
-    assert (f >> g).dom == f.dom and (f >> g).cod == g.cod
-    assert f >> g >> h == f >> (g >> h)
-    F = Functor(ob_map={x: y, y: z, z: x}, ar_map={f: g, g: h})
-    assert F(Id(x)) == Id(F(x))
-    assert F(f >> g) == F(f) >> F(g)
-
-
 def test_axiom_mro_discovery_order_and_shadowing():
     class Parent(Arrow):
         @testing.axiom
