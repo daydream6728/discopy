@@ -9,6 +9,19 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Added
 
+- Ad-hoc property tests beside the axiom matrix, checking boolean
+  properties rather than structured equations, over the same carriers and
+  strategies: `proptest/test_conversion.py` checks that `to_diagram` is a
+  section of `to_hypergraph` and `to_map` preserving boundaries, and that
+  encoding through a map or directly gives the same hypergraph — except
+  for `markov`, `closed` and `frobenius`, whose copies and spiders only
+  the hypergraph encodes as spiders; `proptest/test_repr.py` checks
+  `eval(repr(x)) == x` in a fresh environment loading `from discopy
+  import *`; `proptest/test_pickle.py` checks that pickling roundtrips
+  every carrier, preserving its class. Decoding a trace, cup or cap can
+  need swaps that `traced`, `balanced` and `pivotal` do not have, and an
+  uncoloured `monoidal.Wire` reprs as the `cat.Ob` that `Ty` coerces:
+  those cells are expected failures.
 - An axiom is stated either of a carrier or of one of its elements: a body
   taking `cls` is a law of the category, one taking `self` a law of an
   element, whose receiver the property matrix generates like any other
@@ -371,6 +384,24 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
+- Pickling an instance of a subscripted `NamedGeneric` — a `Matrix[int]`,
+  `Tensor[float]`, `Hypergraph[...]` or `CMap[...]` — loads back with its
+  type parameter again: the `__setstate__` restoring the subscript was
+  defined on `NamedGeneric` itself, which the classes its subscripts
+  create do not inherit from, so every such instance unpickled as its
+  bare origin class — `Matrix[int]` came back as a `Matrix` with no
+  `dtype`, and comparing a loaded `Hypergraph` raised `AttributeError`.
+  `tensor.Box.__setstate__`, the one caller that worked around this by
+  invoking the method explicitly, now lets its `super` chain restore the
+  subscript.
+- `markov.Copy` and its subclasses, `Discard` included, can be unpickled:
+  `Copy.__new__` required the copied type as argument, which the pickle
+  protocol's bare `__new__(cls)` call does not pass.
+- `traced.Trace`, `biclosed.Eval`, `Coeval` and `Curry` (and their
+  subclasses in `closed`) satisfy `eval(repr(x)) == x`: `Trace` printed
+  `str` instead of `repr` of its argument, and the other three inherited
+  the `(name, dom, cod)` repr of `Box`, which their `__init__` does not
+  accept.
 - A `Cat`-valued functor applies to objects again: with `Functor.ob` now
   `abc.Category` rather than `type[Category]`, the image of an object may
   be a class implementing it, which `Functor.__call__` returns as is
