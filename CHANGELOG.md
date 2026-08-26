@@ -572,6 +572,16 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Project
 
+- The unit suite starts its purification: tests that restate cells of the
+  property matrix on hand-picked examples — the category axioms called
+  verbatim on maps, the then/tensor and interchange families, swap
+  elimination, cup-cap zipping, curry/uncurry and trace roundtrips,
+  functor preservation and permutation unitality — are deleted from
+  `test/`, keeping their validation raises, encoding pins and issue
+  regressions. Measured on this tree, `proptest/` alone covers 54% of
+  `discopy/` against 98% for the unit suite with its doctests: the gap is
+  the baseline the next phases ramp by enrolling new carriers and ad-hoc
+  properties, deleting each unit test as a property subsumes it.
 - The `TODO.md` rule of `RULES.md` is split in two: creation stays point 1,
   and a new point 2 has the agent delete its own `TODO.md` once every
   point is `[x]` or filed as an issue, taking the pull request out of draft:
