@@ -45,6 +45,26 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   transparency property was considered and dropped: the strategies draw
   box names that are not Python identifiers, so the equality is not
   statable on generated diagrams.
+- The property matrix searches the whole carrier by default, and a law
+  that only holds on a subspace says so: `Diagram.strategy`,
+  `Hypergraph.strategy` and `CMap.strategy` default to
+  `boundary_connected=False`, hypergraphs now reach isolated spiders and
+  maps reach loops beyond the image of `from_diagram`, and the
+  connectivity classes are tagged with `hypothesis.event` — at the
+  matrix budget of 25 examples, over half the draws carry closed
+  components. `Axiom.weaken(**subspaces)` states a law's restriction:
+  each named parameter is generated from a subspace wrapper that
+  validates membership on construction — `BoundaryConnected`, `Small`
+  and `HomogeneousMemory` in `discopy.testing` — and is unwrapped before
+  the body. The laws checked modulo `normal_form`, which is only defined
+  on connected diagrams, are weakened accordingly, and the audit of the
+  broken declarations records its verdicts: `Matrix` gains
+  `copy_cocommutativity_small` and `copy_counitality_small`, green below
+  dimension two, while `copy_monoidal_coherence` reaches dimension two
+  from atomic arguments, the `finset` swap laws would need a joint
+  equal-halves constraint that per-argument generation cannot state, and
+  `feedback_joining` is falsified even on homogeneous memory. The dead
+  `boundary_connected` parameter of `Layer.strategy` is removed.
 - The quantum carriers join the property matrix, pure Python only:
   `quantum.circuit.Circuit` with a wire strategy of bits, qubits and
   small qudits and the standard gates added to the box distribution, and
@@ -458,6 +478,9 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
+- `Diagram.foliation` falls back to merging layers when `to_hypergraph`
+  is partial — a boundary-disconnected pivotal diagram, whose rejection
+  is by design — instead of crashing.
 - The quantum cells caught five bugs, fixed here: `quantum.Swap` could
   not unpickle (`Box.__setstate__` demanded a mixedness the plumbing
   never stores); `Ket` and `Bra` inherited the `(name, dom, cod)` repr

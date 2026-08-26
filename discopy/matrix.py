@@ -47,7 +47,7 @@ from discopy.cat import (
     assert_iscomposable,
     assert_isparallel,
 )
-from discopy.testing import Natural, Strategy
+from discopy.testing import C0, Natural, Small, Strategy
 from discopy.utils import assert_isinstance, classproperty, unbiased
 
 if TYPE_CHECKING:
@@ -431,6 +431,14 @@ class Matrix(MarkovCategory, Strategy["Matrix"], NamedGeneric['dtype']):
 
     copy_monoidal_coherence = \
         MarkovCategory.copy_monoidal_coherence.failing(WRONG_COPY)
+
+    #: The copy laws hold below dimension two, where the coherence does
+    #: not: ``copy(x @ x)`` reaches dimension two from atomic ``x``.
+    copy_cocommutativity_small = \
+        MarkovCategory.copy_cocommutativity.weaken(x=Small[C0])
+
+    copy_counitality_small = \
+        MarkovCategory.copy_counitality.weaken(x=Small[C0])
 
 
 def array2string(array, **params):

@@ -95,8 +95,13 @@ def test_cmap_section(module, data):
 @given(data=st.data())
 @settings(max_examples=25, deadline=None)
 def test_cmap_hypergraph_agreement(module, data):
-    """ Encoding through a map or directly gives the same hypergraph. """
-    diagram = data.draw(module.Diagram.strategy())
+    """
+    Encoding through a map or directly gives the same hypergraph — on
+    the boundary-connected subspace for pivotal diagrams, whose
+    ``to_hypergraph`` rejects a disconnected diagram by design.
+    """
+    diagram = data.draw(module.Diagram.strategy(
+        boundary_connected=module is pivotal))
     assert diagram.to_map().to_hypergraph() == diagram.to_hypergraph()
 
 

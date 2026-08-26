@@ -7,7 +7,7 @@ import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
-from discopy import monoidal, rigid
+from discopy import monoidal, pivotal, ribbon, rigid
 from discopy.quantum import zx
 from discopy.utils import factory_name
 
@@ -44,8 +44,11 @@ DIAGRAMS = tuple(diagram_parameters())
 @given(data=st.data())
 @settings(max_examples=25, deadline=None)
 def test_normal_form(carrier, data):
-    """ Check that ``normal_form`` is an idempotent representative. """
-    diagram = data.draw(carrier.strategy())
+    """
+    Check that ``normal_form`` is an idempotent representative, on the
+    boundary-connected subspace where it is defined.
+    """
+    diagram = data.draw(carrier.strategy(boundary_connected=True))
     normal = diagram.normal_form()
     assert (normal.dom, normal.cod) == (diagram.dom, diagram.cod)
     assert normal.normal_form() == normal
@@ -57,8 +60,13 @@ def test_normal_form(carrier, data):
 @given(data=st.data())
 @settings(max_examples=25, deadline=None)
 def test_foliation(carrier, data):
-    """ Check that ``foliation`` is an idempotent representative. """
-    diagram = data.draw(carrier.strategy())
+    """
+    Check that ``foliation`` is an idempotent representative — on the
+    boundary-connected subspace for pivotal and ribbon diagrams, whose
+    ``to_hypergraph`` rejects a disconnected diagram by design.
+    """
+    diagram = data.draw(carrier.strategy(boundary_connected=carrier in (
+        pivotal.Diagram, ribbon.Diagram)))
     foliated = diagram.foliation()
     assert (foliated.dom, foliated.cod) == (diagram.dom, diagram.cod)
     assert foliated.foliation() == foliated

@@ -32,8 +32,12 @@ starts as properties. Before implementing anything, the branch's
 
 1. **State the laws.** Which equations define the new structure? Which
    level of `discopy/abc.py` do they belong to? Which existing axioms must
-   the new carrier inherit, weaken with `.modulo`, or declare
-   `.inapplicable`? Write this down before any implementation checkbox.
+   the new carrier inherit, compare `.modulo` a quotient, declare
+   `.inapplicable` — or `.weaken` to a subspace, generating a named
+   parameter from a membership-validating wrapper such as
+   `testing.BoundaryConnected`, so that a `.failing` law with a green
+   subspace shows one expected failure and one green cell? Write this
+   down before any implementation checkbox.
 2. **Scaffold the axioms.** Declare each law as an `Axiom` on the abstract
    base class — or an ad-hoc property in its `proptest/` file when it is a
    boolean rather than an equation — and enrol the carrier in `CARRIERS`.
