@@ -14,6 +14,7 @@ from hypothesis import strategies as st
 from discopy import (
     balanced,
     biclosed,
+    braided,
     closed,
     compact,
     feedback,
@@ -21,6 +22,8 @@ from discopy import (
     markov,
     monoidal,
     pivotal,
+    ribbon,
+    rigid,
     symmetric,
     traced,
 )
@@ -53,6 +56,13 @@ The levels whose two encodings agree: ``markov``, ``closed`` and ``frobenius``
 are left out because ``to_hypergraph`` encodes their copies and spiders as
 spiders while ``to_map`` keeps them as boxes.
 """
+
+ALL_LEVELS = levels(
+    monoidal, braided, traced, balanced, symmetric, biclosed, rigid,
+    pivotal, ribbon, compact, markov, closed, feedback, frobenius)
+
+SYMMETRIC_LEVELS = levels(
+    symmetric, compact, markov, closed, feedback, frobenius)
 
 
 @pytest.mark.parametrize("module", HYPERGRAPH_LEVELS)
@@ -88,3 +98,31 @@ def test_cmap_hypergraph_agreement(module, data):
     """ Encoding through a map or directly gives the same hypergraph. """
     diagram = data.draw(module.Diagram.strategy())
     assert diagram.to_map().to_hypergraph() == diagram.to_hypergraph()
+
+
+@pytest.mark.parametrize("module", ALL_LEVELS)
+@given(data=st.data())
+@settings(max_examples=25, deadline=None)
+def test_encode_decode(module, data):
+    """
+    ``decode`` undoes ``encode`` up to splitting layers in staircases,
+    which decompose plumbing into swaps from symmetric categories on, so
+    the comparison is up to the level's own equation.
+    """
+    diagram = data.draw(module.Diagram.strategy())
+    assert module.Diagram.equation_factory(
+        type(diagram).decode(*diagram.encode()), diagram.to_staircases())
+
+
+@pytest.mark.parametrize("module", SYMMETRIC_LEVELS)
+@given(data=st.data())
+@settings(max_examples=25, deadline=None)
+def test_permutation(module, data):
+    """ A permutation is inverted by its dagger and encoded by its swaps. """
+    typ = data.draw(module.Ty.strategy())
+    perm = module.Diagram.permutation(
+        data.draw(st.permutations(range(len(typ)))), typ)
+    assert (perm >> perm.dagger()).to_hypergraph()\
+        == module.Diagram.id(typ).to_hypergraph()
+    for box in perm.boxes:
+        assert box.to_swaps().to_hypergraph() == box.to_hypergraph()

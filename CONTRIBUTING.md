@@ -72,10 +72,13 @@ uv sync --group dev
 uv run pytest proptest/ -v
 ```
 
-Beside the axioms, `proptest/test_conversion.py`, `test_repr.py` and
-`test_pickle.py` check ad hoc boolean properties over the same carriers and
-strategies: roundtrips between `Diagram`, `Hypergraph` and `CMap`,
-`eval(repr(x)) == x` in a fresh environment, and pickling.
+Beside the axioms, `proptest/test_conversion.py`, `test_repr.py`,
+`test_pickle.py`, `test_serialisation.py`, `test_eq_hash.py` and
+`test_normal_form.py` check ad hoc boolean properties over the same carriers
+and strategies: roundtrips between `Diagram`, `Hypergraph` and `CMap`,
+`eval(repr(x)) == x` in a fresh environment, pickling, tree and JSON
+serialisation, hash consistency, and the idempotence of `normal_form` and
+`foliation`.
 
 Every cell of the matrix is one axiom of one carrier, and the `--axioms`
 flag selects cells by glob, which can be used for shorter, targeted tests.
