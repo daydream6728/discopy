@@ -612,6 +612,24 @@ class Dim(Ty):
 
     __str__ = __repr__
 
+    @classmethod
+    def strategy(cls, *, min_length=0, max_length=2, max_dim=3, **_):
+        """Generate small dimensions."""
+        from hypothesis import strategies as st
+
+        return st.lists(
+            st.integers(min_value=2, max_value=max_dim),
+            min_size=min_length, max_size=max_length).map(
+                lambda inside: cls(*inside))
+
+    def to_tree(self):
+        return {'factory': factory_name(type(self)),
+                'inside': list(self.inside)}
+
+    @classmethod
+    def from_tree(cls, tree):
+        return cls(*tree['inside'])
+
 
 class Layer(cat.Box, ColouredMonoid):
     """

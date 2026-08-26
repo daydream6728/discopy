@@ -119,6 +119,10 @@ class Dim(monoidal.Dim, Ty):
 
     l = r = property(lambda self: self.ar(*self.inside[::-1]))
 
+    def unwind(self):
+        """ A dimension carries no winding. """
+        return self
+
 
 @factory
 class Diagram(compact.Diagram, markov.Diagram, HypergraphCategory):

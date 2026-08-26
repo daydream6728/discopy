@@ -48,7 +48,7 @@ from discopy.cat import (
     assert_isparallel,
 )
 from discopy.testing import Natural, Strategy
-from discopy.utils import assert_isinstance, unbiased
+from discopy.utils import assert_isinstance, classproperty, unbiased
 
 if TYPE_CHECKING:
     import sympy
@@ -320,7 +320,7 @@ class Matrix(MarkovCategory, Strategy["Matrix"], NamedGeneric['dtype']):
         array[left:, :right] = Matrix.id(right).array
         return cls(array, dom, cod)
 
-    braid = swap
+    braid = classproperty(lambda cls: cls.swap)
 
     def transpose(self) -> Matrix:
         return type(self)(self.array.transpose(), self.cod, self.dom)
