@@ -22,6 +22,20 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   need swaps that `traced`, `balanced` and `pivotal` do not have, and an
   uncoloured `monoidal.Wire` reprs as the `cat.Ob` that `Ty` coerces:
   those cells are expected failures.
+- The dagger laws join the axiom matrix: `dagger_involution` and
+  `dagger_contravariance` on `abc.Category`, `dagger_monoidality` on
+  `abc.MonoidalCategory`. `monoidal.Diagram` checks monoidality modulo
+  `normal_form` — the premonoidal tensor biases the two sides by an
+  interchange — `symmetric.Diagram` restores the plain law, checked up to
+  hypergraph like the rest of its equations, and `cmap.CMap` checks it up
+  to the hypergraph the map encodes, since the dagger reverses the order
+  the boxes are stored in. The laws are inapplicable where there is no
+  dagger: functors, `python.finset.Function` (its `Permutation` restores
+  them), `rigid.Ty` and `rigid.Diagram` (`pivotal` restores them) and
+  feedback categories, whose delay is not reversible. An `eval(str(x))`
+  transparency property was considered and dropped: the strategies draw
+  box names that are not Python identifiers, so the equality is not
+  statable on generated diagrams.
 - Four more ad-hoc properties: `proptest/test_serialisation.py` decodes
   every carrier back from its tree and its JSON; `proptest/test_eq_hash.py`
   checks that whiskering by the unit is invisible to `==`, `hash` and
@@ -393,6 +407,13 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
+- `Copy.dagger` and `Merge.dagger` build through the level's
+  `merge_factory` and `copy_factory` instead of the bare markov classes,
+  and `closed` gains the `Merge` it was missing: the dagger of a
+  `closed.Copy` used to be a `markov.Merge` that closed diagrams reject.
+  `Feedback.dagger` raises `AxiomError` — the delay of its memory is not
+  reversible — where it used to crash with a `TypeError` from the generic
+  bubble reconstruction.
 - Tree serialisation of the structural boxes: `Trace`, `Feedback`,
   `Twist`, `Braid` with `is_dagger`, `Copy`, `Merge`, `Discard`,
   `Spider`, `Eval`, `Coeval` and `Curry` used to raise (or lose the
