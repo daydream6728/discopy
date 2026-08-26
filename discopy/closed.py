@@ -210,10 +210,6 @@ class Functor(biclosed.Functor, markov.Functor):
 
 CMap = cmap.CMap[Diagram]
 
-    braid_naturality = biclosed.CMap.braid_naturality.failing(
-        "``CMap.to_diagram`` fails on a traced box, see #606.")
-
-
 Diagram.functor_factory = Functor
 Hypergraph = hypergraph.Hypergraph[Diagram]
 Diagram.copy_factory = Copy

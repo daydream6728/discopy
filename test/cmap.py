@@ -1,7 +1,6 @@
 import shutil
 
 from hypothesis import find
-from hypothesis.errors import Unsatisfiable
 import pytest
 from pytest import raises
 
@@ -50,10 +49,11 @@ def test_CMap_strategy_preserves_subclass():
     assert type(cmap) is CustomCMap
 
 
-def test_connected_CMap_strategy_rejects_closed_components():
-    with raises(Unsatisfiable):
-        find(monoidal.CMap.strategy(
-            boundary_connected=False), lambda _: True)
+def test_CMap_strategy_generates_closed_components():
+    cmap = find(monoidal.CMap.strategy(boundary_connected=False),
+                lambda value: not value.to_hypergraph()
+                .is_boundary_connected)
+    assert not cmap.to_hypergraph().is_boundary_connected
 
 
 def test_M_init():

@@ -384,6 +384,9 @@ class DualRail(Functor):
 
 Diagram.functor_factory = Functor
 CMap = cmap.CMap[Diagram]
+CMap.braid_naturality = cmap.CMap.braid_naturality.inapplicable(
+    "A map wires its braids symmetrically, which balanced diagrams have "
+    "no swaps to decode.")
 Hypergraph = hypergraph.Hypergraph[Diagram]
 Diagram.braid_factory = Braid
 Diagram.twist_factory = Twist

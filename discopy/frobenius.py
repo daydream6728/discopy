@@ -63,7 +63,7 @@ from __future__ import annotations
 from collections.abc import Callable
 
 from discopy import (
-    monoidal, rigid, markov, compact, pivotal, cmap, hypergraph)
+    abc, monoidal, rigid, markov, compact, pivotal, cmap, hypergraph)
 from discopy.abc import HypergraphCategory
 from discopy.cat import factory
 from discopy.utils import assert_isatomic, deprecated_ob, factory_name
@@ -415,6 +415,10 @@ def coherence(cls: type, factory: Callable
 
 
 CMap = cmap.CMap[Diagram]
+CMap.currying_left = abc.BiclosedCategory.currying_left
+CMap.currying_right = abc.BiclosedCategory.currying_right
+CMap.trace_naturality_left = abc.TracedCategory.trace_naturality_left
+CMap.trace_naturality_right = abc.TracedCategory.trace_naturality_right
 
 Diagram.functor_factory = Functor
 Diagram.cup_factory, Diagram.cap_factory = Cup, Cap
