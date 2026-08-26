@@ -173,3 +173,15 @@ def test_curry_zero():
     x = Ty('x')
     f = Box('f', x @ x, x)
     assert f.curry(0) == f == f.curry(0, left=False)
+
+
+def test_strategy():
+    from discopy import testing
+
+    testing.assert_strategy_finds(Diagram, Cup, Cap)
+
+
+def test_axioms():
+    from discopy import testing
+
+    testing.assert_axioms(Ty, Diagram, Functor)

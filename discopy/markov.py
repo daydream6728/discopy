@@ -78,7 +78,7 @@ from discopy.abc import MarkovCategory
 from discopy.cat import factory
 from discopy.monoidal import Ty  # noqa: F401
 from discopy.utils import assert_isatomic, factory_name
-
+from discopy.testing import Atomic, C0, axiom
 
 Layer = symmetric.Layer
 
@@ -114,6 +114,7 @@ class Diagram(symmetric.Diagram, MarkovCategory):
 
     .. image:: /_static/markov/copy_and_apply.svg
     """
+
     @classmethod
     def spider_factory(cls, n_legs_in, n_legs_out, typ, phase=None):
         if phase is not None or 1 not in (n_legs_in, n_legs_out):
@@ -164,6 +165,20 @@ class Box(symmetric.Box, Diagram):
         dom (monoidal.Ty) : The domain of the box, i.e. its input.
         cod (monoidal.Ty) : The codomain of the box, i.e. its output.
     """
+
+    @classmethod
+    def strategy(cls, **params):
+        """Add copying and discarding to the inherited distribution."""
+        from hypothesis import strategies as st
+
+        base = super().strategy(**params)
+        factory = cls.ar.copy_factory
+        return cls.extend_strategy(
+            base, factory,
+            lambda factory: st.tuples(
+                cls.atomic_strategy(),
+                st.sampled_from((0, 2, 3))).map(
+                    lambda args: factory(*args)), **params)
 
 
 class Permutation(symmetric.Permutation, Box):
@@ -270,6 +285,7 @@ class Sum(symmetric.Sum, Box):
     """
 
 
+@factory
 class Functor(symmetric.Functor):
     """
     A Markov functor is a symmetric functor that preserves copies.
@@ -310,6 +326,13 @@ class Functor(symmetric.Functor):
             return self.cod.merge(self(other.cod), len(other.dom))
         return super().__call__(other)
 
+    @axiom
+    def markov(self, x: Atomic[C0]):
+        """ A Markov functor preserves the copy. """
+        x = x.value
+        return self.cod.equation_factory(
+            self(self.dom.copy(x)), self.cod.copy(self(x)))
+
 
 class CMap(symmetric.CMap):
     category = Diagram
@@ -330,3 +353,6 @@ Id = Diagram.id
 class Equation(symmetric.Equation):
     """ The :class:`symmetric.Equation` of Markov diagrams. """
     up_to = staticmethod(Diagram.to_hypergraph)
+
+
+Diagram.equation_factory = Equation

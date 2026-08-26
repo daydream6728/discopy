@@ -157,6 +157,7 @@ class Sum(markov.Sum, biclosed.Sum, Box):
     """
 
 
+@factory
 class Functor(biclosed.Functor, markov.Functor):
     """
     A closed functor is a markov functor
@@ -180,6 +181,9 @@ class Functor(biclosed.Functor, markov.Functor):
 class CMap(biclosed.CMap):
     category = Diagram
     require_planar = False
+
+    braid_naturality = biclosed.CMap.braid_naturality.failing(
+        "``CMap.to_diagram`` fails on a traced box, see #606.")
 
 
 Diagram.functor_factory = Functor
@@ -310,3 +314,6 @@ Ty.abstraction_factory = Abstraction
 
 class Equation(markov.Equation):
     """ The :class:`markov.Equation` of closed diagrams. """
+
+
+Diagram.equation_factory = Equation

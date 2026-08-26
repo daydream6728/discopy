@@ -41,20 +41,23 @@ from types import ModuleType
 from typing import Union, Literal as L, Callable, TYPE_CHECKING
 
 from discopy import monoidal, config, messages
-from discopy.abc import MonoidalCategory, NamedGeneric
+from discopy.abc import MarkovCategory, NamedGeneric
 from discopy.cat import (
     factory,
     assert_iscomposable,
     assert_isparallel,
 )
+from discopy.testing import Natural, Strategy
 from discopy.utils import assert_isinstance, unbiased
 
 if TYPE_CHECKING:
     import sympy
 
+WRONG_COPY = "``Matrix.copy(x, n)`` is wrong for ``x, n >= 2``, see #606."
+
 
 @factory
-class Matrix(MonoidalCategory, NamedGeneric['dtype']):
+class Matrix(MarkovCategory, Strategy["Matrix"], NamedGeneric['dtype']):
     """
     A matrix is an ``array`` with natural numbers as ``dom`` and ``cod``.
 
@@ -127,7 +130,23 @@ class Matrix(MonoidalCategory, NamedGeneric['dtype']):
            [0, 2],
            [0, 4]])
     """
-    ob = int
+    ob = Natural
+
+    @classmethod
+    def strategy(cls, *, dom=None, cod=None, max_size=3, max_entry=3):
+        """Generate matrices with entries in ``range(max_entry + 1)``."""
+        from hypothesis import strategies as st
+
+        factory = cls[cls.dtype or int]
+        sizes = st.integers(min_value=0, max_value=max_size)
+        entries = st.integers(min_value=0, max_value=max_entry)
+        return st.tuples(
+            sizes if dom is None else st.just(dom),
+            sizes if cod is None else st.just(cod)).flatmap(
+                lambda shape: st.lists(
+                    entries, min_size=shape[0] * shape[1],
+                    max_size=shape[0] * shape[1]).map(
+                        lambda array: factory(array, *shape)))
 
     def cast(self, dtype: type) -> Matrix:
         """
@@ -156,7 +175,7 @@ class Matrix(MonoidalCategory, NamedGeneric['dtype']):
     def __init__(self, array, dom: int, cod: int):
         assert_isinstance(dom, int)
         assert_isinstance(cod, int)
-        self.dom, self.cod = dom, cod
+        self.dom, self.cod = map(self.ob, (dom, cod))
         with backend() as np:
             self.array = np.array(array, dtype=self.dtype).reshape((dom, cod))
 
@@ -323,7 +342,7 @@ class Matrix(MonoidalCategory, NamedGeneric['dtype']):
         return type(self)(array, self.dom, self.cod)
 
     @classmethod
-    def copy(cls, x: int, n: int) -> Matrix:
+    def copy(cls, x: int, n: int = 2) -> Matrix:
         array = [[i + int(j % n * x) == j
                   for j in range(n * x)] for i in range(x)]
         return cls(array, x, n * x)
@@ -404,6 +423,14 @@ class Matrix(MonoidalCategory, NamedGeneric['dtype']):
         """ Gradient with respect to variables. """
         return self.map(lambda x:
                         getattr(x, "diff", lambda _: 0)(var, **params))
+
+    copy_cocommutativity = MarkovCategory.copy_cocommutativity.failing(
+        WRONG_COPY)
+
+    copy_counitality = MarkovCategory.copy_counitality.failing(WRONG_COPY)
+
+    copy_monoidal_coherence = \
+        MarkovCategory.copy_monoidal_coherence.failing(WRONG_COPY)
 
 
 def array2string(array, **params):

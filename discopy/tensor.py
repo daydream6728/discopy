@@ -329,6 +329,7 @@ class Tensor(Matrix):
         return result
 
 
+@factory
 class Functor(frobenius.Functor):
     """
     A tensor functor is a frobenius functor with a domain category ``dom``
@@ -909,3 +910,6 @@ Id = Diagram.id
 
 class Equation(frobenius.Equation):
     """ The :class:`frobenius.Equation` of tensor diagrams. """
+
+
+Diagram.equation_factory = Equation

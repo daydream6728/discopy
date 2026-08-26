@@ -66,6 +66,7 @@ from discopy import monoidal, rigid, markov, compact, pivotal, hypergraph
 from discopy.abc import HypergraphCategory
 from discopy.cat import factory
 from discopy.utils import assert_isatomic, deprecated_ob, factory_name
+from discopy.testing import Atomic, C0, axiom
 
 
 class Wire(pivotal.Wire):
@@ -76,6 +77,12 @@ class Wire(pivotal.Wire):
         name : The name of the object.
     """
     l = r = property(lambda self: self)
+
+    @classmethod
+    def strategy(cls, **params):
+        """Generate self-dual objects at winding zero."""
+        return rigid.Wire.strategy.__func__(
+            cls, min_winding=0, max_winding=0, **params)
 
 
 @factory
@@ -177,6 +184,21 @@ class Box(compact.Box, markov.Box, Diagram):
         dom (Ty) : The domain of the box, i.e. its input.
         cod (Ty) : The codomain of the box, i.e. its output.
     """
+
+    @classmethod
+    def strategy(cls, **params):
+        """Add spiders to the inherited box distribution."""
+        from hypothesis import strategies as st
+
+        base = super().strategy(**params)
+        factory = cls.ar.spider_factory
+        return cls.extend_strategy(
+            base, factory,
+            lambda factory: st.tuples(
+                st.sampled_from(
+                    ((0, 1), (1, 0), (1, 2), (2, 1), (2, 2))),
+                cls.atomic_strategy()).map(
+                    lambda args: factory(*args[0], args[1])), **params)
 
 
 class Cup(compact.Cup, Box):
@@ -287,6 +309,7 @@ class Bubble(monoidal.Bubble, Box):
     """
 
 
+@factory
 class Functor(compact.Functor, markov.Functor):
     """
     A hypergraph functor is a compact functor that preserves spiders.
@@ -307,6 +330,13 @@ class Functor(compact.Functor, markov.Functor):
         if isinstance(other, (markov.Copy, markov.Merge)):
             return markov.Functor.__call__(self, other)
         return compact.Functor.__call__(self, other)
+
+    @axiom
+    def frobenius(self, x: Atomic[C0]):
+        """ A hypergraph functor preserves the spiders. """
+        x = x.value
+        return self.cod.equation_factory(
+            self(self.dom.spiders(1, 2, x)), self.cod.spiders(1, 2, self(x)))
 
 
 def interleaving(cls: type, factory: Callable
@@ -402,4 +432,5 @@ class Equation(compact.Equation):
     up_to = staticmethod(Diagram.to_hypergraph)
 
 
+Diagram.equation_factory = Equation
 __getattr__ = deprecated_ob(__name__)

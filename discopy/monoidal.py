@@ -62,6 +62,8 @@ from warnings import warn
 
 from discopy import cat, drawing, hypergraph, cmap, messages
 from discopy.abc import ColouredMonoid, MonoidalCategory
+from discopy.testing import (
+    C1, GENERATORS, HorizontalPair, Strategy, axiom)
 from discopy.drawing import Drawing
 from discopy.config import (
     BOX_DRAWING_ATTRIBUTES, WIRE_DRAWING_ATTRIBUTES,
@@ -101,6 +103,14 @@ class Colour(cat.Ob):
         if self.label is not None:
             assert_isinstance(self.label, str)
 
+    @classmethod
+    def strategy(cls):
+        """Generate drawing colours."""
+        from hypothesis import strategies as st
+
+        return st.sampled_from(
+            ("white", "red", "green", "blue")).map(cls)
+
     @property
     def legend_label(self) -> str:
         """ The name shown for this colour in a drawing legend. """
@@ -134,6 +144,17 @@ class Wire(cat.Ob):
         self.is_dagger = is_dagger
         self.dom, self.cod = dom, cod
         super().__init__(name)
+
+    @classmethod
+    def strategy(cls, *, dom=white, cod=white):
+        """Generate named wires with optional exact colour boundaries."""
+        from hypothesis import strategies as st
+
+        return st.tuples(
+            st.sampled_from(GENERATORS),
+            st.just(dom), st.just(cod)).map(
+                lambda args: cls(
+                    args[0], dom=args[1], cod=args[2]))
 
     def __setstate__(self, state):
         state.setdefault('dom', white)
@@ -251,6 +272,33 @@ class Ty(cat.Ob, FreeMonoid):
     """
     ob = Colour
     generator_factory = Wire
+
+    @classmethod
+    def strategy(
+            cls, *, min_length=0, max_length=3,
+            dom=white, cod=white):
+        """Generate composable words of generating wires."""
+        from hypothesis import strategies as st
+
+        @st.composite
+        def words(sample):
+            source = white if dom is None else dom
+            target = white if cod is None else cod
+            minimum = max(min_length, int(source != target))
+            lengths = st.integers(
+                min_value=minimum, max_value=max_length)
+            if minimum <= 1 <= max_length:
+                lengths = st.one_of(st.just(1), lengths)
+            length = sample(lengths)
+            if not length:
+                return cls(dom=source, cod=target)
+            boundaries = [source] + [white] * (length - 1) + [target]
+            wires = [sample(cls.generator_factory.strategy(
+                dom=boundaries[i], cod=boundaries[i + 1]))
+                for i in range(length)]
+            return cls(*wires)
+
+        return words()
 
     def cast_wire(self, x: str | cat.Ob) -> cat.Ob:
         """
@@ -786,6 +834,74 @@ class Layer(cat.Box, ColouredMonoid):
     def generator(self):
         return self.boxes_or_types[0] if self.is_generator else None
 
+    @classmethod
+    def strategy(
+            cls, *, factory, types=None, dom=None, cod=None,
+            label=None, exclude=(), boundary_connected=True, max_boxes=2):
+        """Generate a layer of boxes matching optional exact boundaries."""
+        from hypothesis import strategies as st
+
+        types = factory.ob.strategy() if types is None else types
+        boxes = factory.box_factory
+        exclude = frozenset(exclude)
+
+        def fresh(strategy):
+            return strategy.filter(lambda box: box not in exclude)
+
+        if dom is None and cod is None:
+            return fresh(boxes.strategy(
+                types=types, label=label)).map(cls)
+
+        def free_layer(placement):
+            plumbing, boundaries = placement
+            return st.tuples(*(
+                fresh(boxes.free_strategy(
+                    types=types, dom=box_dom, cod=box_cod, label=label))
+                for box_dom, box_cod in boundaries)).map(
+                    lambda drawn: cls(*(
+                        part
+                        for typ, box in zip(plumbing, drawn)
+                        for part in (typ, box)), plumbing[-1]))
+
+        def decompositions(source, target, n_boxes):
+            """ Alternate shared types with the boundaries of each box. """
+            if not n_boxes:
+                if source == target:
+                    yield (source, ), ()
+                return
+            for i in range(min(len(source), len(target)) + 1):
+                if source[:i] != target[:i]:
+                    break
+                for j in range(len(source) - i + 1):
+                    for k in range(len(target) - i + 1):
+                        if not j and not k:
+                            continue
+                        for rest, pairs in decompositions(
+                                source[i + j:], target[i + k:], n_boxes - 1):
+                            yield (source[:i], ) + rest, (
+                                (source[i:i + j], target[i:i + k]), ) + pairs
+
+        if dom is None or cod is None:
+            boundary, is_dom = (dom, True) if dom is not None else (cod, False)
+            placements = [
+                ((boundary[:i], boundary[j:]),
+                 ((boundary[i:j], None) if is_dom
+                  else (None, boundary[i:j]), ))
+                for i in range(len(boundary) + 1)
+                for j in range(i, len(boundary) + 1)]
+        else:
+            placements = [
+                placement
+                for n_boxes in range(1, max_boxes + 1)
+                for placement in decompositions(dom, cod, n_boxes)]
+        if dom:
+            placements = [
+                placement for placement in placements
+                if all(box_dom for box_dom, _ in placement[1])]
+        guided = st.sampled_from(placements).flatmap(free_layer)\
+            if placements else st.nothing()
+        return guided
+
     def dagger(self) -> Layer:
         return type(self)(*(
             x if isinstance(x, Ty) else x.dagger() for x in self),
@@ -861,7 +977,8 @@ class Layer(cat.Box, ColouredMonoid):
 
 
 @factory
-class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
+class Diagram(
+        cat.Arrow, MonoidalCategory, RichDisplay, Strategy["Diagram"]):
     """
     A diagram is a tuple of composable layers :code:`inside` with a pair of
     types :code:`dom` and :code:`cod` as domain and codomain.
@@ -885,6 +1002,7 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
     """
     ob = Ty
     layer_factory = Layer
+    box_factory = None
 
     def __setstate__(self, state):
         if 'inside' not in state:  # Backward compatibility
@@ -901,6 +1019,58 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
                 if not layer.boxes:
                     raise ValueError(messages.LAYERS_MUST_HAVE_A_BOX)
         super().__init__(inside, dom, cod, _scan=_scan)
+
+    @classmethod
+    def strategy(
+            cls, *, types=None,
+            min_leaves=None, max_leaves=3,
+            boundary_connected=True, dom=None, cod=None):
+        """Generate diagrams by composing boundary-guided layers."""
+        from hypothesis import strategies as st
+
+        types = cls.ob.strategy(
+            min_length=int(boundary_connected)) if types is None else types
+
+        @st.composite
+        def diagrams(draw, dom=dom, cod=cod, boundary_connected=True):
+            minimum = 0 if min_leaves is None else min_leaves
+            if dom is not None and cod is not None and dom != cod:
+                minimum = max(1, minimum)
+            n_layers = draw(st.integers(
+                min_value=minimum, max_value=max_leaves))
+            if not n_layers:
+                source = dom if dom is not None else (
+                    cod if cod is not None else draw(types))
+                return cls((), source, source, _scan=False)
+            layers, boxes, source = [], set(), dom
+            for i in range(n_layers):
+                layers_at_boundary = cls.layer_factory.strategy(  # noqa: E501
+                    factory=cls, types=types, dom=source,
+                    cod=cod if i == n_layers - 1 else None,
+                    label=i, exclude=boxes,
+                    boundary_connected=boundary_connected)
+                layer = draw(layers_at_boundary)
+                layers.append(layer)
+                boxes.update(layer.boxes)
+                source = layer.cod
+            return cls(tuple(layers), layers[0].dom, layers[-1].cod,
+                       _scan=False)
+
+        connected = diagrams()
+        if boundary_connected:
+            return connected
+
+        @st.composite
+        def with_closed_components(draw):
+            result = draw(connected)
+            empty = cls.ob()
+            for _ in range(draw(st.integers(min_value=0, max_value=2))):
+                component = draw(diagrams(
+                    dom=empty, cod=empty, boundary_connected=False))
+                result @= component
+            return result
+
+        return with_closed_components()
 
     @property
     def size(self):
@@ -1328,8 +1498,10 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
             Whenever ``normalize`` yields the same rewrite steps twice, e.g.
             the diagram is not boundary-connected.
         """
+        diagram = self.to_staircases() if any(
+            len(layer.boxes) != 1 for layer in self.inside) else self
         cache = set()
-        for diagram in itertools.chain([self], self.normalize(**params)):
+        for diagram in itertools.chain([diagram], diagram.normalize(**params)):
             if str(diagram) in cache:
                 exception = NotImplementedError(
                     messages.NOT_CONNECTED.format(self))
@@ -1345,6 +1517,8 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
             boxes, offsets = map(from_tree, tree['boxes']), tree['offsets']
             return cls.decode(from_tree(tree['dom']), zip(boxes, offsets))
         return super().from_tree(tree)
+
+    bifunctoriality = MonoidalCategory.bifunctoriality.modulo(normal_form)
 
 
 class Box(cat.Box, Diagram):
@@ -1399,6 +1573,47 @@ class Box(cat.Box, Diagram):
         :align: center
     """
 
+    def __init_subclass__(cls, **params):
+        super().__init_subclass__(**params)
+        if cls.ar in cls.__bases__:
+            cls.ar.box_factory = cls
+
+    @classmethod
+    def strategy(cls, **params):
+        """Generate free boxes; subclasses add structural distributions."""
+        return cls.free_strategy(**params)
+
+    @classmethod
+    def free_strategy(
+            cls, *, types=None, dom=None, cod=None,
+            label=None):
+        """Generate a fresh free box with optional exact boundaries."""
+        from hypothesis import strategies as st
+
+        types = cls.ob.strategy() if types is None else types
+        doms = types if dom is None else st.just(dom)
+        cods = types if cod is None else st.just(cod)
+        names = st.uuids().map(
+            lambda name: f"{label}:{name}"
+            if label is not None else str(name))
+        return st.tuples(names, doms, cods).map(
+            lambda args: cls(*args))
+
+    @classmethod
+    def atomic_strategy(cls):
+        """Generate an atomic object of the box's object type."""
+        return cls.ob.strategy().filter(lambda obj: len(obj) == 1)
+
+    @classmethod
+    def extend_strategy(cls, base, factory, build, **params):
+        """Add a structural factory when it belongs to this box class."""
+        from hypothesis import strategies as st
+
+        return st.one_of(base, build(factory)) if not any(
+            params.get(boundary) is not None
+            for boundary in ("dom", "cod")) and (
+            isinstance(factory, type) and issubclass(factory, cls)) else base
+
     def __init__(self, name: str, dom: Ty, cod: Ty, **params):
         dom = dom if isinstance(dom, self.ob) else self.ob(dom)
         cod = cod if isinstance(cod, self.ob) else self.ob(cod)
@@ -1421,6 +1636,9 @@ class Box(cat.Box, Diagram):
 
     def to_drawing(self):
         return Drawing.from_box(self)
+
+
+Diagram.box_factory = Box
 
 
 class Sum(cat.Sum, Box):
@@ -1557,6 +1775,7 @@ class Bubble(cat.Bubble, Box):
         return getattr(Drawing, method)(*args, **kwargs)
 
 
+@factory
 class Functor(cat.Functor):
     """
     A monoidal functor is a functor that preserves the tensor product.
@@ -1680,6 +1899,12 @@ class Functor(cat.Functor):
             return other.to_drawing()
         return super().__call__(other)
 
+    @axiom
+    def monoidal(self, pair: HorizontalPair[C1]):
+        """ A monoidal functor preserves the tensor. """
+        f, g = pair
+        return self.cod.equation_factory(self(f @ g), self(f) @ self(g))
+
 
 @dataclass
 class Match:
@@ -1757,6 +1982,8 @@ class Equation(cat.Equation, RichDisplay):
         return self.to_drawing().draw(path=path, **params)
 
 
+Colour.equation_factory = cat.Equation
+Diagram.equation_factory = Equation
 Diagram.draw = drawing.draw
 Diagram.to_gif = drawing.to_gif
 

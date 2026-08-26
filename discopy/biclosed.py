@@ -70,10 +70,7 @@ from discopy.abc import BiclosedCategory
 from discopy.drawing import Drawing
 from discopy.cat import factory
 from discopy.utils import (
-    assert_isinstance,
-    deprecated_ob,
-    factory_name,
-    from_tree,
+    assert_isinstance, deprecated_ob, factory_name, from_tree
 )
 
 
@@ -318,6 +315,12 @@ class Diagram(monoidal.Diagram, BiclosedCategory):
     def to_drawing(self):
         return monoidal.Diagram.to_drawing(self, functor_factory=Functor)
 
+    currying_left = BiclosedCategory.currying_left.failing(
+        "Currying does not evaluate back, see #562.")
+
+    currying_right = BiclosedCategory.currying_right.failing(
+        "Currying does not evaluate back, see #562.")
+
 
 class Box(monoidal.Box, Diagram):
     """
@@ -328,6 +331,20 @@ class Box(monoidal.Box, Diagram):
         dom (Ty) : The domain of the box, i.e. its input.
         cod (Ty) : The codomain of the box, i.e. its output.
     """
+
+    @classmethod
+    def strategy(cls, **params):
+        """Add evaluations to the inherited box distribution."""
+        from hypothesis import strategies as st
+
+        base = super().strategy(**params)
+        factory = cls.ar.eval_factory
+        return cls.extend_strategy(
+            base, factory,
+            lambda _factory: st.tuples(
+                cls.atomic_strategy(), cls.atomic_strategy(),
+                st.booleans()).map(
+                    lambda args: cls.ar.ev(*args)), **params)
 
 
 class Eval(Box):
@@ -423,6 +440,7 @@ Diagram.coeval_factory = Coeval
 Diagram.sum_factory = Sum
 
 
+@factory
 class Functor(monoidal.Functor):
     """
     A biclosed functor is a monoidal functor
@@ -757,4 +775,5 @@ class Equation(monoidal.Equation):
     """ The :class:`monoidal.Equation` of biclosed diagrams. """
 
 
+Diagram.equation_factory = Equation
 __getattr__ = deprecated_ob(__name__)

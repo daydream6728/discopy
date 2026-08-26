@@ -41,3 +41,15 @@ def test_trace_vanishing():
 
     k = multiplicative.Function(lambda i, j: (i, j), (int, int), (int, int))
     assert k.trace(0) == k
+
+
+def test_strategy():
+    from discopy import testing
+
+    testing.assert_strategy_finds(Diagram, Trace)
+
+
+def test_axioms():
+    from discopy import testing
+
+    testing.assert_axioms(Diagram, Hypergraph, CMap, Functor)
