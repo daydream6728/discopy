@@ -57,6 +57,7 @@ def test_Sum():
 
 def test_scalar():
     assert scalar(1j)[::-1] == scalar(-1j)
+    assert repr(scalar(0.5)) == "quantum.zx.Scalar(0.5)"
 
 
 def test_Functor():

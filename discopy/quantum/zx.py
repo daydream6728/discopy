@@ -381,6 +381,9 @@ class Scalar(Box):
     def __str__(self):
         return f"scalar({format_number(self.data)})"
 
+    def __repr__(self):
+        return factory_name(type(self)) + f"({self.data!r})"
+
     def to_tree(self):
         return {'factory': factory_name(type(self)), 'data': self.data}
 
