@@ -520,6 +520,21 @@ class PRO(Ty):
         self.dom = self.cod = white
         cat.Ob.__init__(self, type(self).__name__)
 
+    @classmethod
+    def strategy(cls, *, min_length=0, max_length=3, **_):
+        """Generate small PRO types."""
+        from hypothesis import strategies as st
+
+        return st.integers(
+            min_value=min_length, max_value=max_length).map(cls)
+
+    def unwind(self):
+        """ A PRO type carries no winding. """
+        return self
+
+    identity_typing = Ty.identity_typing.inapplicable(
+        "A PRO is monochrome, its identity ignores the colours.")
+
     def __setstate__(self, state):
         if "n" not in state:
             state = {"n": len(state["_objects"])}
