@@ -54,6 +54,7 @@ from discopy.abc import (
     CompactCategory,
     HypergraphCategory,
     MarkovCategory,
+    MonoidalCategory,
     NamedGeneric,
     Pregroup,
     RigidCategory,
@@ -1835,6 +1836,11 @@ cycles of this map.
 
     copy_counitality = \
         MarkovCategory.copy_counitality.inapplicable(NO_COMONOIDS)
+
+    #: The dagger of a tensor reverses the order the boxes are stored in,
+    #: which the hypergraph the map encodes quotients away.
+    dagger_monoidality = MonoidalCategory.dagger_monoidality.modulo(
+        lambda term: term.to_hypergraph())
 
     frobenius = HypergraphCategory.frobenius.inapplicable(NO_SPIDERS)
 

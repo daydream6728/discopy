@@ -154,7 +154,7 @@ from collections.abc import Callable
 from typing import Iterator
 
 from discopy import cat, monoidal, biclosed, messages
-from discopy.abc import Pregroup, RigidCategory
+from discopy.abc import Category, Pregroup, RigidCategory
 from discopy.cat import factory
 from discopy.utils import (
     assert_isatomic,
@@ -281,6 +281,12 @@ class Ty(Pregroup, biclosed.Ty):
     """
     generator_factory = Wire
 
+    dagger_involution = Category.dagger_involution.inapplicable(
+        "Rigid types have no dagger, use pivotal instead.")
+
+    dagger_contravariance = Category.dagger_contravariance.inapplicable(
+        "Rigid types have no dagger, use pivotal instead.")
+
     def __setstate__(self, state):
         if '_z' in state:  # Backward compatibility
             del state['_z']
@@ -364,6 +370,9 @@ class Diagram(biclosed.Diagram, RigidCategory):
     """
     A rigid diagram is a biclosed diagram
     with :class:`Cup` and :class:`Cap` boxes.
+
+    Rigid cups and caps have no dagger, so the dagger laws do not apply
+    and :class:`pivotal.Diagram` restores them.
 
     Parameters:
         inside (tuple[Layer, ...]) : The layers of the diagram.
@@ -655,6 +664,15 @@ class Diagram(biclosed.Diagram, RigidCategory):
         return super().normal_form(**params)
 
     snake_equations = RigidCategory.snake_equations.modulo(normal_form)
+
+    dagger_involution = Category.dagger_involution.inapplicable(
+        "Rigid cups and caps have no dagger, use pivotal instead.")
+
+    dagger_contravariance = Category.dagger_contravariance.inapplicable(
+        "Rigid cups and caps have no dagger, use pivotal instead.")
+
+    dagger_monoidality = RigidCategory.dagger_monoidality.inapplicable(
+        "Rigid cups and caps have no dagger, use pivotal instead.")
 
 
 class Box(biclosed.Box, Diagram):

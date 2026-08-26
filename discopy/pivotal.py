@@ -96,6 +96,10 @@ class Ty(rigid.Ty):
     """
     generator_factory = Wire
 
+    dagger_involution = abc.Category.dagger_involution
+
+    dagger_contravariance = abc.Category.dagger_contravariance
+
 
 @factory
 class PRO(rigid.PRO, Ty):
@@ -123,6 +127,12 @@ class Diagram(rigid.Diagram, traced.Diagram, PivotalCategory):
         cod (Ty) : The codomain of the diagram, i.e. its output.
     """
     ob = Ty
+
+    dagger_involution = abc.Category.dagger_involution
+
+    dagger_contravariance = abc.Category.dagger_contravariance
+
+    dagger_monoidality = traced.Diagram.dagger_monoidality
 
     def dagger(self):
         """

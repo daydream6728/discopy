@@ -347,6 +347,8 @@ class Diagram(markov.Diagram, FeedbackCategory):
     ob = Ty
     layer_factory = Layer
 
+    dagger_monoidality = FeedbackCategory.dagger_monoidality
+
     def delay(self, n_steps=1):
         """ The delay of a feedback diagram. """
         dom, cod = self.dom.delay(n_steps), self.cod.delay(n_steps)
@@ -608,6 +610,10 @@ class Feedback(monoidal.Bubble, Box):
     def from_tree(cls, tree):
         return cls(from_tree(tree['arg']), mem=from_tree(tree['mem']))
 
+    def dagger(self):
+        raise AxiomError("Feedback has no dagger, "
+                         "the delay of its memory is not reversible.")
+
     def delay(self, n_steps=1):
         return type(self)(self.arg.delay(n_steps), mem=self.mem.delay(n_steps))
 
@@ -730,6 +736,10 @@ Diagram.copy_factory, Diagram.merge_factory = Copy, Merge
 Diagram.trace_factory, Diagram.discard_factory = Trace, Discard
 Diagram.feedback_factory, Diagram.followed_by = Feedback, FollowedBy
 Hypergraph = hypergraph.Hypergraph[Diagram]
+
+Hypergraph.dagger_involution = FeedbackCategory.dagger_involution
+Hypergraph.dagger_contravariance = FeedbackCategory.dagger_contravariance
+Hypergraph.dagger_monoidality = FeedbackCategory.dagger_monoidality
 Id = Diagram.id
 
 

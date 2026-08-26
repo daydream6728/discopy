@@ -30,6 +30,8 @@ from discopy.testing import Natural, Strategy
 WRONG_SWAP = \
     "``Function.swap`` returns the inverse permutation, see #606."
 
+NO_DAGGER = "Only a permutation has a dagger."
+
 
 @dataclass
 class Function(SymmetricCategory, Sequence, Strategy["Function"]):
@@ -173,6 +175,15 @@ class Function(SymmetricCategory, Sequence, Strategy["Function"]):
 
     hexagon_right = abc.BraidedCategory.hexagon_right.failing(WRONG_SWAP)
 
+    dagger_involution = abc.Category.dagger_involution.inapplicable(
+        NO_DAGGER)
+
+    dagger_contravariance = abc.Category.dagger_contravariance.inapplicable(
+        NO_DAGGER)
+
+    dagger_monoidality = abc.MonoidalCategory.dagger_monoidality.inapplicable(
+        NO_DAGGER)
+
 
 type Cycle = Iterable[int]
 type Cycles = Iterable[Cycle]
@@ -194,6 +205,12 @@ class Permutation(Function):
     True
     """
     ob = Natural
+
+    dagger_involution = abc.Category.dagger_involution
+
+    dagger_contravariance = abc.Category.dagger_contravariance
+
+    dagger_monoidality = abc.MonoidalCategory.dagger_monoidality
 
     @classmethod
     def strategy(

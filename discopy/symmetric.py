@@ -315,6 +315,8 @@ class Diagram(balanced.Diagram, SymmetricCategory):
     layer_factory = Layer
     twist_factory = classmethod(lambda cls, dom: cls.id(dom))
 
+    dagger_monoidality = abc.MonoidalCategory.dagger_monoidality
+
     @property
     def is_plumbing(self) -> bool:
         """ Whether one of the layers plumbs its wires non-trivially. """

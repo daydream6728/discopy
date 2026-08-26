@@ -185,6 +185,20 @@ class Category[C0, C1: Category](ABC):
         f, g = pair
         return cls.ob.equation_factory(f.then(g).cod, g.cod)
 
+    @axiom
+    def dagger_involution(
+            cls, f: C1) -> Equation[C1]:
+        """ The dagger is involutive. """
+        return cls.equation_factory(f.dagger().dagger(), f)
+
+    @axiom
+    def dagger_contravariance(
+            cls, pair: ComposablePair[C1]) -> Equation[C1]:
+        """ The dagger reverses composition. """
+        f, g = pair
+        return cls.equation_factory(
+            f.then(g).dagger(), g.dagger().then(f.dagger()))
+
     __rshift__ = __llshift__ = lambda self, other: self.then(other)
     __lshift__ = __lrshift__ = lambda self, other: other.then(self)
 
@@ -322,6 +336,14 @@ class MonoidalCategory[C0: ColouredMonoid, C1: MonoidalCategory](
         """ Codomain typing of tensor. """
         f, g = pair
         return cls.ob.equation_factory((f @ g).cod, f.cod @ g.cod)
+
+    @axiom
+    def dagger_monoidality(
+            cls, pair: HorizontalPair[C1]) -> Equation[C1]:
+        """ The dagger distributes over the tensor. """
+        f, g = pair
+        return cls.equation_factory(
+            (f @ g).dagger(), f.dagger() @ g.dagger())
 
 
 class TracedCategory[C0, C1](MonoidalCategory[C0, C1]):
@@ -880,6 +902,15 @@ class FeedbackCategory[C0, C1](MarkovCategory[C0, C1]):
         """ Vanishing of feedback over the unit. """
         f, unit = arguments
         return cls.equation_factory(f.feedback(mem=unit), f)
+
+    dagger_involution = Category.dagger_involution.inapplicable(
+        "The delay of a feedback category is not reversible.")
+
+    dagger_contravariance = Category.dagger_contravariance.inapplicable(
+        "The delay of a feedback category is not reversible.")
+
+    dagger_monoidality = MonoidalCategory.dagger_monoidality.inapplicable(
+        "The delay of a feedback category is not reversible.")
 
     @axiom
     def feedback_joining(

@@ -1520,6 +1520,9 @@ class Diagram(
 
     bifunctoriality = MonoidalCategory.bifunctoriality.modulo(normal_form)
 
+    dagger_monoidality = MonoidalCategory.dagger_monoidality.modulo(
+        normal_form)
+
 
 class Box(cat.Box, Diagram):
     """

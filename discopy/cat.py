@@ -1032,6 +1032,12 @@ class Functor(Category, Strategy["Functor"]):
         "left-hand map, and the identity functor enumerates none, so "
         "``id >> f`` forgets everything ``f`` does instead of being ``f``.")
 
+    dagger_involution = Category.dagger_involution.inapplicable(
+        "A functor has no dagger.")
+
+    dagger_contravariance = Category.dagger_contravariance.inapplicable(
+        "A functor has no dagger.")
+
     @axiom
     def identity_typing(cls):
         """
