@@ -9,6 +9,19 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Added
 
+- Ad-hoc property tests beside the axiom matrix, checking boolean
+  properties rather than structured equations, over the same carriers and
+  strategies: `proptest/test_conversion.py` checks that `to_diagram` is a
+  section of `to_hypergraph` and `to_map` preserving boundaries, and that
+  encoding through a map or directly gives the same hypergraph — except
+  for `markov`, `closed` and `frobenius`, whose copies and spiders only
+  the hypergraph encodes as spiders; `proptest/test_repr.py` checks
+  `eval(repr(x)) == x` in a fresh environment loading `from discopy
+  import *`; `proptest/test_pickle.py` checks that pickling roundtrips
+  every carrier, preserving its class. Decoding a trace, cup or cap can
+  need swaps that `traced`, `balanced` and `pivotal` do not have, and an
+  uncoloured `monoidal.Wire` reprs as the `cat.Ob` that `Ty` coerces:
+  those cells are expected failures.
 - An axiom is stated either of a carrier or of one of its elements: a body
   taking `cls` is a law of the category, one taking `self` a law of an
   element, whose receiver the property matrix generates like any other
@@ -64,6 +77,14 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - Declarative categorical axioms, validating argument shapes, and canonical
   Hypothesis strategies following the categorical class hierarchy. A dedicated
   workflow runs the property tests on `main`, manually, and on labelled PRs.
+- `Diagram.to_compact` and `CMap.to_compact`, bending curry bubbles into
+  coevaluation and feedback. Since a biclosed category has no trace, the
+  `biclosed` method lands in `CMap`, which is compact whatever hosts it,
+  while the `closed` one stays in diagrams. Unlike `rigid.to_rigid` and
+  `interaction.Int`, this keeps the exponential atomic and bends the wire
+  with `biclosed.Coeval`, the transpose of `Eval`, which a biclosed
+  category only has when its exponential is read at a reflexive object
+  ([#532](https://github.com/discopy/discopy/pull/532)).
 - A style review workflow: when a same-repo pull request leaves draft or
   gets the `style-review` label, one model request reads every changed
   Python file whole — with the package-local files they import as context —
@@ -161,6 +182,15 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   The comonoid and spider laws that no combinatorial map supplies are
   declared once on `cmap.CMap` rather than on each of `markov`, `closed`
   and `frobenius`.
+- The property matrix follows the parametrised `CMap`: `balanced.CMap` and
+  `pivotal.CMap` join the matrix as `cmap.CMap[balanced.Diagram]` and
+  `cmap.CMap[pivotal.Diagram]`, and the five `braid_naturality` cells that
+  xfailed on `CMap.to_diagram` refusing a traced box (#606) now pass.
+  Structure restorations attach to each alias — `compact` and `frobenius`
+  both restore currying and trace naturality — since subscripts do not
+  inherit from one another, and `balanced.CMap.braid_naturality` is
+  declared inapplicable: a map wires its braids symmetrically, which
+  balanced diagrams have no swaps to decode.
 - The property matrix is one parametrized test: every axiom of every
   carrier in `proptest.test_axioms.CARRIERS`, marked skip or xfail by
   its own verdict. Argument generation is dynamic dispatch on the axiom
@@ -199,6 +229,37 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   rather than lifting their types through `cls.id`, now that a body chooses
   its own equation factory rather than being handed one built from the arrow
   carrier.
+- `CMap` is aligned on `Hypergraph`. It is parameterised by a category as
+  `NamedGeneric["category"]` instead of carrying `require_*` flags, and it is
+  always compact whatever category hosts it, so every compact operation is
+  available when manipulating maps. The host category is asked for structure
+  only on the `to_diagram` downgrade path, i.e. in `make_monogamous`, which
+  needs cups and caps, and in `make_causal`, which reorders acyclic maps
+  without traces and only asks for traces when cycles or scalar loops remain,
+  cutting every backward wire and loop at once. Each box is placed where its
+  first domain wire already is, so the decoder no longer swaps that wire to
+  the front.
+  The predicates follow the `Hypergraph` names and are local conditions on
+  the edges, `__init__` takes a keyword `check`, and `curry`, `uncurry` and
+  `ev` come from the cups and caps of `abc.RigidCategory` when the host
+  category is rigid and stay explicit boxes otherwise, all three defaulting
+  `left` to `True` like the rest of the hierarchy. `CMap.eval` delegates to
+  the `eval` of the host category, e.g. contracting a tensor map in a
+  single `einsum`, instead of `tensor` grafting it onto its `CMap` alias
+  ([#532](https://github.com/discopy/discopy/pull/532),
+  [#560](https://github.com/discopy/discopy/issues/560)).
+- `uncurry` is defined once in `abc.BiclosedCategory`, in terms of a new
+  method `base_and_exponent` for the two objects that `ev` evaluates.
+  `abc.RigidCategory` and `cmap.CMap` override that method instead of
+  duplicating the composition with `ev`: a pregroup has no exponential
+  object, so its exponent is the `n` objects at the end resp. the start of
+  the codomain, dualised, and a map reads it off its wiring when the host
+  category is rigid ([#532](https://github.com/discopy/discopy/pull/532)).
+- `balanced` and `pivotal` export a `CMap` alias like the other levels of
+  the hierarchy ([#532](https://github.com/discopy/discopy/pull/532)).
+- `Hypergraph.to_diagram` raises `messages.NOT_RIGID/FROBENIUS/TRACED/...`
+  where it checks that the category has the wiring structure
+  ([#532](https://github.com/discopy/discopy/pull/532)).
 - `Swap` is now the two-wire transposition subclass of `Permutation`, and
   constructing `Permutation(x @ y, [1, 0])` returns a `Swap`. A swap is
   plumbing like any other permutation: it coalesces with its neighbours in
@@ -240,9 +301,10 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - The `tensor` module is refactored to go through `CMap` for `einsum`
   ([#402](https://github.com/discopy/discopy/pull/402)).
 - Add a `functor_factory` attribute to each `Diagram` class and remove
-  `hypergraph_factory`: `Hypergraph` is now a `NamedGeneric["category"]`
-  instead of a `NamedGeneric["functor"]`
-  ([#379](https://github.com/discopy/discopy/pull/379)).
+  `hypergraph_factory` and `map_factory`: `Hypergraph` and `CMap` are
+  parameterised directly as `NamedGeneric["category"]`
+  ([#379](https://github.com/discopy/discopy/pull/379),
+  [#532](https://github.com/discopy/discopy/pull/532)).
 - Documentation notebooks are migrated from Jupyter (`.ipynb`) to marimo
   markdown, with docs (`nbsphinx` → embedded marimo HTML) and CI
   (`nbmake` → `marimo export`) updated to match
@@ -322,6 +384,24 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
+- Pickling an instance of a subscripted `NamedGeneric` — a `Matrix[int]`,
+  `Tensor[float]`, `Hypergraph[...]` or `CMap[...]` — loads back with its
+  type parameter again: the `__setstate__` restoring the subscript was
+  defined on `NamedGeneric` itself, which the classes its subscripts
+  create do not inherit from, so every such instance unpickled as its
+  bare origin class — `Matrix[int]` came back as a `Matrix` with no
+  `dtype`, and comparing a loaded `Hypergraph` raised `AttributeError`.
+  `tensor.Box.__setstate__`, the one caller that worked around this by
+  invoking the method explicitly, now lets its `super` chain restore the
+  subscript.
+- `markov.Copy` and its subclasses, `Discard` included, can be unpickled:
+  `Copy.__new__` required the copied type as argument, which the pickle
+  protocol's bare `__new__(cls)` call does not pass.
+- `traced.Trace`, `biclosed.Eval`, `Coeval` and `Curry` (and their
+  subclasses in `closed`) satisfy `eval(repr(x)) == x`: `Trace` printed
+  `str` instead of `repr` of its argument, and the other three inherited
+  the `(name, dom, cod)` repr of `Box`, which their `__init__` does not
+  accept.
 - A `Cat`-valued functor applies to objects again: with `Functor.ob` now
   `abc.Category` rather than `type[Category]`, the image of an object may
   be a class implementing it, which `Functor.__call__` returns as is
@@ -349,6 +429,23 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   wrong order ([#606](https://github.com/discopy/discopy/issues/606)).
 - `Diagram.normal_form` expands multi-box layers into staircases before
   normalization, so connected foliated diagrams normalize without raising.
+- Pivotal diagram-to-map conversion now encodes cups and caps as `CMap`
+  wiring rather than keeping them as boxes
+  ([#532](https://github.com/discopy/discopy/pull/532)).
+- `CMap.cups` and `CMap.caps` now require the handedness of the host category,
+  i.e. `cups(x, x.r)` and `caps(x.r, x)`, so that these factories reject badly
+  oriented cups and caps, rather than fixing the handedness at downgrade time.
+  ([#532](https://github.com/discopy/discopy/pull/532)).
+- `Hypergraph.explicit_trace` and `CMap.explicit_trace` no longer mistake the
+  inherited `trace_factory` of a user-defined subclass for a class method,
+  which used to raise `AttributeError: type object 'Trace' has no attribute
+  '__func__'` ([#532](https://github.com/discopy/discopy/pull/532)).
+- `CMap.topological_order` raises `AxiomError` on a map with a directed
+  cycle, where it used to crash with `TypeError` on the `None` returned by
+  `box_ranks` ([#532](https://github.com/discopy/discopy/pull/532)).
+- `Hypergraph.to_diagram` no longer asks for swaps when one of their two
+  sides is empty, where the identity does
+  ([#532](https://github.com/discopy/discopy/pull/532)).
 - A boxless `monoidal.Layer` can no longer be placed inside a `Diagram`:
   `Diagram.__init__` raises `ValueError` for a layer with no box, restoring
   the invariant that every layer holds at least one box and that the identity

@@ -92,7 +92,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from discopy import abc, balanced, hypergraph, messages, monoidal, traced
+from discopy import abc, balanced, cmap, hypergraph, messages, monoidal
 from discopy.abc import SymmetricCategory
 from discopy.cat import factory
 from discopy.monoidal import Wire, Ty, PRO  # noqa: F401
@@ -287,12 +287,12 @@ class Diagram(balanced.Diagram, SymmetricCategory):
     >>> with raises(AxiomError) as err:
     ...     Diagram.from_callable(x, x @ x)(lambda x: (x, x))
     >>> print(err.value)
-    symmetric.Diagram has no spiders, cups or caps to draw this hypergraph.
+    symmetric.Diagram has no cups or caps for the wiring of this map.
 
     >>> with raises(AxiomError) as err:
     ...     Diagram.from_callable(x, Ty())(lambda x: ())
     >>> print(err.value)
-    symmetric.Diagram has no spiders, cups or caps to draw this hypergraph.
+    symmetric.Diagram has no cups or caps for the wiring of this map.
 
     Note
     ----
@@ -733,17 +733,10 @@ class Functor(balanced.Functor):
             self(self.dom.swap(x, y)), self.cod.swap(self(x), self(y)))
 
 
-class CMap(traced.CMap):
-    category = Diagram
-    require_planar = False
-    require_causal = False
-
-    braid_naturality = traced.CMap.braid_naturality.failing(
-        "``CMap.to_diagram`` fails on a traced box, see #606.")
+CMap = cmap.CMap[Diagram]
 
 
 Diagram.functor_factory = Functor
-Diagram.map_factory = CMap
 Hypergraph = hypergraph.Hypergraph[Diagram]
 Diagram.swap_factory = Swap
 Diagram.permutation_factory = Permutation

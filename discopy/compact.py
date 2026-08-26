@@ -56,7 +56,7 @@ Coherence
 
 from __future__ import annotations
 
-from discopy import abc, hypergraph, ribbon, rigid, symmetric
+from discopy import abc, cmap, hypergraph, ribbon, rigid, symmetric
 from discopy.abc import CompactCategory
 from discopy.cat import factory
 from discopy.utils import deprecated_ob
@@ -170,26 +170,17 @@ class Functor(symmetric.Functor, ribbon.Functor):
         return ribbon.Functor.__call__(self, other)
 
 
-class CMap(symmetric.CMap):
-    category = Diagram
-    require_oriented = False
-    require_connected = False
-
-    currying_left = abc.BiclosedCategory.currying_left
-
-    currying_right = abc.BiclosedCategory.currying_right
-
-    trace_naturality_left = abc.TracedCategory.trace_naturality_left
-
-    trace_naturality_right = abc.TracedCategory.trace_naturality_right
-
+CMap = cmap.CMap[Diagram]
+CMap.currying_left = abc.BiclosedCategory.currying_left
+CMap.currying_right = abc.BiclosedCategory.currying_right
+CMap.trace_naturality_left = abc.TracedCategory.trace_naturality_left
+CMap.trace_naturality_right = abc.TracedCategory.trace_naturality_right
 
 Id = Diagram.id
 
 Diagram.swap_factory = Swap
 Diagram.functor_factory = Functor
 Diagram.permutation_factory = Permutation
-Diagram.map_factory = CMap
 Hypergraph = hypergraph.Hypergraph[Diagram]
 Diagram.cup_factory, Diagram.cap_factory = Cup, Cap
 
