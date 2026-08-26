@@ -119,6 +119,63 @@ class NonEmpty[T](Strategy[T]):
         return factory.strategy(**params).filter(bool).map(cls)
 
 
+@dataclass(frozen=True)
+class Small[T](Strategy[T]):
+    """ An object of length at most one. """
+
+    value: T
+
+    def __post_init__(self):
+        if len(self.value) > 1:
+            raise ValueError("Expected an object of length at most one.")
+
+    @classmethod
+    def strategy(cls, *, factory, **params):
+        """Generate an object of length at most one."""
+        return resolve(factory, **params).filter(
+            lambda value: len(value) <= 1).map(cls)
+
+
+def is_boundary_connected(term) -> bool:
+    """
+    Whether the boundary of a term reaches every box, through its
+    hypergraph when it has one — falling back to the components of its
+    combinatorial map where the hypergraph is partial, e.g. on the
+    left-handed cups and caps of a rigid diagram.
+    """
+    if hasattr(term, "is_boundary_connected"):
+        return term.is_boundary_connected
+    try:
+        return term.to_hypergraph().is_boundary_connected
+    except (AxiomError, NotImplementedError):
+        return all(
+            len(component.dom) or len(component.cod)
+            for component in term.to_map().connected_components)
+
+
+@dataclass(frozen=True)
+class BoundaryConnected[T](Strategy[T]):
+    """
+    A term whose boundary reaches every box — a diagram, a hypergraph, a
+    combinatorial map, or a pasting diagram of them.
+    """
+
+    value: T
+
+    def __post_init__(self):
+        cells = self.value if isinstance(self.value, tuple)\
+            else (self.value, )
+        for cell in cells:
+            if not is_boundary_connected(cell):
+                raise ValueError("Expected a boundary-connected term.")
+
+    @classmethod
+    def strategy(cls, *, factory, **params):
+        """Generate from the factory restricted to connected terms."""
+        return resolve(
+            factory, boundary_connected=True, **params).map(cls)
+
+
 class PastingDiagram[T](Strategy[tuple[T, ...]], tuple[T, ...]):
     """ A rectangular grid with composable rows and columns. """
 
@@ -396,6 +453,33 @@ class FeedbackJoining[C0, C1](
         return st.tuples(objects, atomic, atomic).flatmap(arrows)
 
 
+class HomogeneousMemory[C0, C1](FeedbackJoining[C0, C1]):
+    """ A feedback arrow whose units of memory are all the same object. """
+
+    def __new__(cls, arrow: C1, memory: C0):
+        if any(memory[i:i + 1] != memory[:1] for i in range(len(memory))):
+            raise ValueError("Expected homogeneous memory.")
+        return super().__new__(cls, arrow, memory)
+
+    @classmethod
+    def strategy(cls, *, factory: type[C1]):
+        """Generate a feedback arrow with two units of the same memory."""
+        from hypothesis import strategies as st
+
+        object_type, arrow_type = factory.ob, factory
+        objects = object_type.strategy()
+        atomic = object_type.strategy().filter(lambda obj: len(obj) == 1)
+
+        def arrows(args):
+            obj, atom = args
+            memory = atom @ atom
+            return arrow_type.strategy(
+                dom=obj @ memory.delay(), cod=obj @ memory).map(
+                    lambda arrow: cls(arrow, memory))
+
+        return st.tuples(objects, atomic).flatmap(arrows)
+
+
 @dataclass(frozen=True, eq=False)
 class Relabelling(Mapping):
     """
@@ -494,7 +578,7 @@ class Axiom[T]:
     failure and lets the search find the counterexample.
     """
 
-    def __init__(self, equation, *, carrier=None, name=None):
+    def __init__(self, equation, *, carrier=None, name=None, subspaces=None):
         function = equation.__func__ if isinstance(equation, classmethod)\
             else equation
         self.equation = function
@@ -503,6 +587,7 @@ class Axiom[T]:
         self.carrier = carrier
         self.name = self.__name__ = name or function.__name__
         self.broken = "AxiomError" in function.__code__.co_names
+        self.subspaces = dict(subspaces or {})
         self.__doc__ = function.__doc__
 
     def __repr__(self):
@@ -523,7 +608,9 @@ class Axiom[T]:
 
     def bind(self, carrier: type[T]) -> Axiom[T]:
         """ Bind the axiom to a concrete carrier. """
-        return type(self)(self.equation, carrier=carrier, name=self.name)
+        return type(self)(
+            self.equation, carrier=carrier, name=self.name,
+            subspaces=self.subspaces)
 
     def __get__(self, instance, owner: type[T]) -> Axiom[T]:
         return self.bind(owner)
@@ -565,6 +652,24 @@ class Axiom[T]:
         law.__name__, law.__doc__ = self.name, reason
         return type(self)(law)
 
+    def weaken(self, **subspaces) -> Axiom[T]:
+        """
+        The same law quantified over a subspace of the named arguments,
+        e.g. ``bifunctoriality_connected =
+        MonoidalCategory.bifunctoriality.weaken(
+        square=BoundaryConnected[Bifunctor[C1]])``: each named parameter
+        is generated from its subspace strategy, whose wrapper validates
+        membership on construction — so a recorded counterexample replays
+        honestly — and is unwrapped before the body reads it. Assigned to
+        its own attribute beside a ``.failing`` declaration, it shows the
+        matrix one expected failure and one green cell instead of one
+        blanket expected failure.
+        """
+        result = type(self)(
+            self.equation, name=self.name,
+            subspaces=dict(self.subspaces, **subspaces))
+        return result
+
     def strategy(self) -> "st.SearchStrategy":
         """
         Generate the arguments the bound axiom expects.
@@ -583,6 +688,9 @@ class Axiom[T]:
             function, globals=function.__globals__, locals=scope,
             eval_str=True)
         annotations[self.receiver] = self.carrier
+        annotations.update({
+            name: substitute(annotation, scope)
+            for name, annotation in self.subspaces.items()})
         required = (
             parameter for parameter in self.parameters
             if parameter.default is inspect.Parameter.empty)
@@ -641,10 +749,13 @@ class Axiom[T]:
         signature = self.signature.replace(parameters=self.parameters)
         bound = signature.bind(*args, **kwargs)
         bound.apply_defaults()
+        arguments = {
+            name: value.value if name in self.subspaces else value
+            for name, value in bound.arguments.items()}
         if self.is_method:
-            return self.equation(**bound.arguments)
+            return self.equation(**arguments)
         return self.equation(
-            **{self.receiver: self.carrier, **bound.arguments})
+            **{self.receiver: self.carrier, **arguments})
 
 
 def axiom(equation) -> Axiom:
@@ -661,6 +772,19 @@ def resolve(annotation, **params) -> "st.SearchStrategy":
     if args := get_args(annotation):
         params["factory"] = args[-1]
     return origin.strategy(**params)
+
+
+def substitute(annotation, scope: dict):
+    """
+    Replace the :obj:`C0` and :obj:`C1` type variables of a subspace
+    annotation by the objects and arrows they stand for.
+    """
+    if isinstance(annotation, TypeVar):
+        return scope[annotation.__name__]
+    if args := get_args(annotation):
+        origin = get_origin(annotation)
+        return origin[tuple(substitute(arg, scope) for arg in args)]
+    return annotation
 
 
 def assert_axioms(*carriers) -> None:

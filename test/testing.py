@@ -12,10 +12,11 @@ from pytest import raises
 
 from discopy import biclosed, cat, feedback, monoidal, traced
 from discopy.testing import (
-    Atomic, Bifunctor, ComposablePair, ComposableTriple, FeedbackJoining,
-    FeedbackVanishing, HorizontalPair, LeftCurrying, Natural, NonEmpty,
-    RightCurrying, TraceDinaturalityLeft, TraceDinaturalityRight,
-    TraceNaturalityLeft, TraceNaturalityRight, TraceSuperposing, axiom)
+    Atomic, Bifunctor, BoundaryConnected, ComposablePair, ComposableTriple,
+    FeedbackJoining, FeedbackVanishing, HomogeneousMemory, HorizontalPair,
+    LeftCurrying, Natural, NonEmpty, RightCurrying, Small,
+    TraceDinaturalityLeft, TraceDinaturalityRight, TraceNaturalityLeft,
+    TraceNaturalityRight, TraceSuperposing, axiom)
 from discopy.utils import AxiomError
 
 
@@ -211,3 +212,46 @@ def test_inapplicable():
     assert unitality() is NotImplemented
     assert unitality.__doc__ == "No identities."
     assert not unitality.parameters and not unitality.broken
+
+
+def test_Small():
+    x = monoidal.Ty('x')
+    assert Small(x).value == x
+    with raises(ValueError):
+        Small(x @ x)
+    find(Small.strategy(factory=monoidal.Ty),
+         lambda value: len(value.value) == 1)
+
+
+def test_BoundaryConnected():
+    x = monoidal.Ty('x')
+    f = monoidal.Box('f', x, x)
+    scalar = monoidal.Box('s', monoidal.Ty(), monoidal.Ty())
+    assert BoundaryConnected(f).value == f
+    with raises(ValueError):
+        BoundaryConnected(f @ scalar)
+    find(BoundaryConnected.strategy(factory=monoidal.Diagram),
+         lambda value: bool(value.value.boxes))
+
+
+def test_HomogeneousMemory():
+    x, m = map(feedback.Ty, "xm")
+    f = feedback.Box('f', x @ (m @ m).delay(), x @ m @ m)
+    assert HomogeneousMemory(f, m @ m)
+    n = feedback.Ty('n')
+    g = feedback.Box('g', x @ (m @ n).delay(), x @ m @ n)
+    with raises(ValueError):
+        HomogeneousMemory(g, m @ n)
+    find(HomogeneousMemory.strategy(factory=feedback.Diagram),
+         lambda value: True)
+
+
+def test_weaken():
+    from discopy.matrix import Matrix
+
+    weakened, = (axiom for axiom in Matrix[int].axioms
+                 if axiom.name == "copy_cocommutativity_small")
+    assert weakened.subspaces
+    assert not weakened.broken
+    small = find(weakened.strategy(), lambda args: True)
+    assert isinstance(small[0], Small) and weakened(*small)
