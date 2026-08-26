@@ -22,6 +22,15 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   need swaps that `traced`, `balanced` and `pivotal` do not have, and an
   uncoloured `monoidal.Wire` reprs as the `cat.Ob` that `Ty` coerces:
   those cells are expected failures.
+- Four more ad-hoc properties: `proptest/test_serialisation.py` decodes
+  every carrier back from its tree and its JSON; `proptest/test_eq_hash.py`
+  checks that whiskering by the unit is invisible to `==`, `hash` and
+  dictionary lookups; `proptest/test_normal_form.py` checks that
+  `normal_form` and `foliation` are idempotent and preserve the diagram up
+  to hypergraph — expected failure on `rigid`, whose left-handed cups and
+  caps `to_hypergraph` rejects; and `test_conversion.py` gains
+  `decode(*encode())` up to staircases and the permutation laws, inverse
+  by dagger and encoding by swaps.
 - An axiom is stated either of a carrier or of one of its elements: a body
   taking `cls` is a law of the category, one taking `self` a law of an
   element, whose receiver the property matrix generates like any other
@@ -384,6 +393,20 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
+- Tree serialisation of the structural boxes: `Trace`, `Feedback`,
+  `Twist`, `Braid` with `is_dagger`, `Copy`, `Merge`, `Discard`,
+  `Spider`, `Eval`, `Coeval` and `Curry` used to raise (or lose the
+  dagger) on `to_tree`/`from_tree`, inheriting a serialisation whose
+  keys their `__init__` does not accept, so `dumps`/`loads` crashed on
+  any diagram containing one.
+- `Diagram.to_staircases` builds its layers with `functor_factory`
+  instead of the bare `monoidal.Functor`, which rebuilt a `Trace` as a
+  `monoidal.Bubble` that the level's diagram class then rejected — so
+  `foliation` crashed on any traced diagram.
+- `Hypergraph.to_graph` keys a spider node by the spider's own type
+  rather than the boundary's, which created a phantom, attributeless
+  node when a boundary wire reads an adjoint of its spider type — so
+  `hash` crashed with `KeyError: 'box'` on such hypergraphs.
 - Pickling an instance of a subscripted `NamedGeneric` — a `Matrix[int]`,
   `Tensor[float]`, `Hypergraph[...]` or `CMap[...]` — loads back with its
   type parameter again: the `__setstate__` restoring the subscript was
