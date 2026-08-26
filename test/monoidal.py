@@ -711,12 +711,18 @@ def test_strategy():
     second = find(
         Layer.strategy(**params, exclude=first.boxes), lambda value: True)
     assert not set(first.boxes).intersection(second.boxes)
-    connected = find(Diagram.strategy(), lambda value: True)
+    connected = find(
+        Diagram.strategy(boundary_connected=True), lambda value: True)
     assert connected.to_hypergraph().is_boundary_connected
     closed = find(
         Diagram.strategy(boundary_connected=False),
         lambda value: not value.to_hypergraph().is_boundary_connected)
     assert not closed.to_hypergraph().is_boundary_connected
+    components = find(
+        Diagram.strategy(boundary_connected=False),
+        lambda value: bool(value.boxes)
+        and len(value.to_map().connected_components) > 1)
+    assert len(components.to_map().connected_components) > 1
 
 
 def test_axioms():

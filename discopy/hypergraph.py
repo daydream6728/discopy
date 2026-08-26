@@ -192,9 +192,32 @@ class Hypergraph(
     ob = classproperty(lambda cls: cls.category.ob)
 
     @classmethod
-    def strategy(cls, **params):
-        """Generate hypergraphs through their associated diagram category."""
-        return cls.category.strategy(**params).map(cls.from_diagram)
+    def strategy(cls, *, boundary_connected=False, **params):
+        """
+        Generate hypergraphs through their associated diagram category,
+        with isolated spiders beyond the image of ``from_diagram``.
+        """
+        from hypothesis import event
+        from hypothesis import strategies as st
+
+        base = cls.category.strategy(
+            boundary_connected=boundary_connected, **params).map(
+            cls.from_diagram)
+        if boundary_connected:
+            return base
+
+        @st.composite
+        def with_isolated_spiders(draw):
+            result = draw(base)
+            n_spiders = draw(st.integers(min_value=0, max_value=2))
+            event(f"isolated spiders: {n_spiders}")
+            for _ in range(n_spiders):
+                typ = draw(cls.category.ob.strategy(
+                    min_length=1, max_length=1))
+                result @= cls.spiders(0, 0, typ)
+            return result
+
+        return with_isolated_spiders()
 
     def __init__(
             self, dom: Ty, cod: Ty, boxes: tuple[Box, ...],

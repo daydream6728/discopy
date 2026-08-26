@@ -63,7 +63,8 @@ from warnings import warn
 from discopy import cat, drawing, hypergraph, cmap, messages
 from discopy.abc import ColouredMonoid, MonoidalCategory
 from discopy.testing import (
-    C1, GENERATORS, HorizontalPair, Strategy, axiom)
+    Bifunctor, BoundaryConnected, C1, GENERATORS, HorizontalPair, Strategy,
+    axiom)
 from discopy.drawing import Drawing
 from discopy.config import (
     BOX_DRAWING_ATTRIBUTES, WIRE_DRAWING_ATTRIBUTES,
@@ -870,7 +871,7 @@ class Layer(cat.Box, ColouredMonoid):
     @classmethod
     def strategy(
             cls, *, factory, types=None, dom=None, cod=None,
-            label=None, exclude=(), boundary_connected=True, max_boxes=2):
+            label=None, exclude=(), max_boxes=2):
         """Generate a layer of boxes matching optional exact boundaries."""
         from hypothesis import strategies as st
 
@@ -1057,15 +1058,14 @@ class Diagram(
     def strategy(
             cls, *, types=None,
             min_leaves=None, max_leaves=3,
-            boundary_connected=True, dom=None, cod=None):
+            boundary_connected=False, dom=None, cod=None):
         """Generate diagrams by composing boundary-guided layers."""
         from hypothesis import strategies as st
 
-        types = cls.ob.strategy(
-            min_length=int(boundary_connected)) if types is None else types
+        types = cls.ob.strategy(min_length=1) if types is None else types
 
         @st.composite
-        def diagrams(draw, dom=dom, cod=cod, boundary_connected=True):
+        def diagrams(draw, dom=dom, cod=cod):
             minimum = 0 if min_leaves is None else min_leaves
             if dom is not None and cod is not None and dom != cod:
                 minimum = max(1, minimum)
@@ -1077,11 +1077,10 @@ class Diagram(
                 return cls((), source, source, _scan=False)
             layers, boxes, source = [], set(), dom
             for i in range(n_layers):
-                layers_at_boundary = cls.layer_factory.strategy(  # noqa: E501
+                layers_at_boundary = cls.layer_factory.strategy(
                     factory=cls, types=types, dom=source,
                     cod=cod if i == n_layers - 1 else None,
-                    label=i, exclude=boxes,
-                    boundary_connected=boundary_connected)
+                    label=i, exclude=boxes)
                 layer = draw(layers_at_boundary)
                 layers.append(layer)
                 boxes.update(layer.boxes)
@@ -1095,11 +1094,14 @@ class Diagram(
 
         @st.composite
         def with_closed_components(draw):
+            from hypothesis import event
+
             result = draw(connected)
             empty = cls.ob()
-            for _ in range(draw(st.integers(min_value=0, max_value=2))):
-                component = draw(diagrams(
-                    dom=empty, cod=empty, boundary_connected=False))
+            n_components = draw(st.integers(min_value=0, max_value=2))
+            event(f"closed components: {n_components}")
+            for _ in range(n_components):
+                component = draw(diagrams(dom=empty, cod=empty))
                 result @= component
             return result
 
@@ -1361,7 +1363,10 @@ class Diagram(
         left and right adjoints of an object differ. Otherwise this scans top
         to bottom and merges layers eagerly.
         """
-        graph = self.to_hypergraph()
+        try:
+            graph = self.to_hypergraph()
+        except NotImplementedError:
+            return self.merge_layers()
         if hasattr(self, "swap") and graph.is_monogamous and graph.is_causal\
                 and graph.is_boundary_connected and all(
                     getattr(obj, "l", obj) == getattr(obj, "r", obj)
@@ -1551,10 +1556,11 @@ class Diagram(
             return cls.decode(from_tree(tree['dom']), zip(boxes, offsets))
         return super().from_tree(tree)
 
-    bifunctoriality = MonoidalCategory.bifunctoriality.modulo(normal_form)
+    bifunctoriality = MonoidalCategory.bifunctoriality.modulo(
+        normal_form).weaken(square=BoundaryConnected[Bifunctor[C1]])
 
     dagger_monoidality = MonoidalCategory.dagger_monoidality.modulo(
-        normal_form)
+        normal_form).weaken(pair=BoundaryConnected[HorizontalPair[C1]])
 
 
 class Box(cat.Box, Diagram):

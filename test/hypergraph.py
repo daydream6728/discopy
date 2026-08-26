@@ -264,3 +264,7 @@ def test_strategy():
 
     hypergraph = find(H.strategy(max_leaves=1), lambda value: value.boxes)
     assert isinstance(hypergraph, H)
+    isolated = find(
+        H.strategy(boundary_connected=False),
+        lambda value: bool(value.scalar_spiders))
+    assert isolated.scalar_spiders

@@ -44,6 +44,12 @@ def test_CMap_strategy_generates_closed_components():
     assert not cmap.to_hypergraph().is_boundary_connected
 
 
+def test_CMap_strategy_generates_loops():
+    cmap = find(compact.CMap.strategy(boundary_connected=False),
+                lambda value: bool(value.loops))
+    assert cmap.loops
+
+
 def test_M_init():
     from discopy.compact import Ty, Box, CMap as M
     x, y = map(Ty, "xy")

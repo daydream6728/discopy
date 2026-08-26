@@ -236,11 +236,34 @@ class CMap[C0: Pregroup, C1: CMap](
     ob = classproperty(lambda cls: cls.category.ob)
 
     @classmethod
-    def strategy(cls, *, boundary_connected=True, **params):
-        """Generate maps through diagrams with optional closed components."""
-        return cls.category.strategy(
+    def strategy(cls, *, boundary_connected=False, **params):
+        """
+        Generate maps through diagrams, with loops beyond the image of
+        ``from_diagram``.
+        """
+        from hypothesis import event
+        from hypothesis import strategies as st
+
+        base = cls.category.strategy(
             boundary_connected=boundary_connected, **params).map(
             cls.from_diagram)
+        if boundary_connected:
+            return base
+
+        @st.composite
+        def with_loops(draw):
+            result = draw(base)
+            n_loops = draw(st.integers(min_value=0, max_value=2))
+            event(f"loops: {n_loops}")
+            for _ in range(n_loops):
+                typ = draw(cls.category.ob.strategy(
+                    min_length=1, max_length=1))
+                result @= cls(
+                    cls.category.ob(), cls.category.ob(), (), (),
+                    loops=(typ, ))
+            return result
+
+        return with_loops()
 
     @classproperty
     def axioms(cls):
