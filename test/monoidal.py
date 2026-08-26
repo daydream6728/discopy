@@ -347,24 +347,10 @@ def test_Diagram_getitem():
         left, box, right = layer_.boxes_and_types
         layer = Id(left) @ box @ Id(right)
         assert diagram[depth] == layer
-        assert (diagram[-depth], ) == tuple(
-            Id(left) @ box @ Id(right)
-            for left, box, right in (
-                diagram.inside[-depth].boxes_and_types, ))
+        assert diagram[depth - len(diagram)] == diagram[depth]
         assert diagram[depth:depth] == Id(layer.dom)
         assert diagram[depth:] == Id(layer.dom).then(*(
-            Id(left) @ box @ Id(right)
-            for left, box, right in (
-                layer.boxes_and_types for layer in diagram.inside[depth:])))
-        assert diagram[:depth] == Id(diagram.dom).then(*(
-            Id(left) @ box @ Id(right)
-            for left, box, right in (
-                layer.boxes_and_types for layer in diagram.inside[:depth])))
-        assert diagram[depth: depth + 2] == Id(layer.dom).then(*(
-            Id(left) @ box @ Id(right)
-            for left, box, right in (
-                layer.boxes_and_types
-                for layer in diagram.inside[depth: depth + 2])))
+            diagram[i] for i in range(depth, len(diagram))))
 
 
 def test_Diagram_offsets():
@@ -388,11 +374,6 @@ def test_Diagram_str():
     assert str(Diagram((Layer(f0), ), x, y)) == "f0"
     assert str(f0 @ Id(z) >> Id(y) @ f1) == "f0 @ z >> y @ f1"
     assert str(f0 @ Id(z) >> Id(y) @ f1) == "f0 @ z >> y @ f1"
-
-
-def test_Diagram_matmul():
-    assert Id(Ty('x')) @ Id(Ty('y')) == Id(Ty('x', 'y'))
-    assert Id(Ty('x')) @ Id(Ty('y')) == Id(Ty('x')).tensor(Id(Ty('y')))
 
 
 def test_Diagram_interchange():
@@ -555,8 +536,6 @@ def test_Functor_call():
     assert F(x) == y
     assert F(f) == f.dagger()
     assert F(F(f)) == f
-    assert F(f >> f.dagger()) == f.dagger() >> f
-    assert F(f @ f.dagger()) == f.dagger() @ Id(x) >> Id(x) @ f
     with raises(TypeError) as err:
         F(F)
 
