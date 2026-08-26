@@ -96,9 +96,14 @@ apply, and xfailed when the law is declared broken, each carrying its
 reason: pass `-rsxX` to list the skips, xfails and unexpected passes with
 their reasons, and `-x` to stop at the first genuine failure.
 
-To debug a failing law outside pytest, `Axiom.falsify` searches for a
-minimal counterexample — arguments for which the verdict fails — and raises
-`NoSuchExample` when it finds none:
+`proptest/test_counterexamples.py` replays every recorded counterexample —
+the bound axiom and the arguments a search once shrunk a failure to — so
+known bugs reproduce deterministically on every run. [PROPTEST.md](PROPTEST.md)
+describes the whole workflow: stating laws before implementing, debugging a
+failing cell, recording its counterexample and auditing a strategy that
+missed a bug. `Axiom.falsify`, which searches afresh for a shrunk
+counterexample and raises `NoSuchExample` when it finds none, remains for
+interactive exploration when no failure is in hand:
 
 ```shell
 uv run python -c 'from discopy import *

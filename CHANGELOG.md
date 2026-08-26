@@ -9,6 +9,15 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Added
 
+- A counterexample ledger and a property-first protocol: `PROPTEST.md`
+  instructs agents to state laws before implementing, to record every
+  counterexample found against a law in
+  `proptest/test_counterexamples.py` — the bound axiom and the arguments
+  the search shrunk the failure to, replayed deterministically on every
+  run and xfailed while the axiom is declared `.failing` — and to audit
+  the search strategy whenever a bug escapes it, by checking reach,
+  rarity and observation in turn. This supersedes `Axiom.falsify` as the
+  debugging entry point, which remains for interactive exploration.
 - Ad-hoc property tests beside the axiom matrix, checking boolean
   properties rather than structured equations, over the same carriers and
   strategies: `proptest/test_conversion.py` checks that `to_diagram` is a
