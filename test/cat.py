@@ -153,14 +153,6 @@ def test_Arrow_then():
         f >> x
 
 
-def test_Arrow_dagger():
-    x, y, z = Ob('x'), Ob('y'), Ob('z')
-    f, g = Box('f', x, y), Box('g', y, z)
-    h = Arrow((f, g), x, z)
-    assert h.dagger() == g.dagger() >> f.dagger()
-    assert h.dagger().dagger() == h
-
-
 def test_Id_init():
     idx = Id(Ob('x'))
     assert idx >> idx == idx

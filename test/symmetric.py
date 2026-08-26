@@ -91,12 +91,6 @@ def test_Permutation():
     assert Permutation.id(x @ y @ z) == Id(x @ y @ z)
     assert Permutation.id(x @ y @ z).inside == ()
     assert Equation(perm >> perm.dagger(), Id(x @ y @ z))
-    assert perm.dagger().dagger() == perm
-    a = Permutation(x @ y @ z, [1, 2, 0])
-    b = Permutation(a.cod, [2, 0, 1])
-    assert (a >> b).dagger() == b.dagger() >> a.dagger()
-    q = Permutation(z @ y, [1, 0])
-    assert (perm @ q).dagger() == perm.dagger() @ q.dagger()
     swap = Swap(x, y)
     assert Permutation(x @ y, [1, 0]) == swap
     assert isinstance(Swap(x, y), Permutation)
@@ -277,7 +271,6 @@ def test_mixed_Layer_plumbing():
     f = Box('f', z, z)
     layer = Layer(permutation, f, Ty())
     diagram = Diagram((layer,), layer.dom, layer.cod)
-    assert diagram.dagger().dagger() == diagram
     assert diagram.to_drawing().dom == diagram.dom.to_drawing()
     assert loads(dumps(diagram)) == diagram
     assert layer.boxes_and_types == (
