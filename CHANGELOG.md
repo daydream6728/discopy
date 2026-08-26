@@ -45,6 +45,15 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   transparency property was considered and dropped: the strategies draw
   box names that are not Python identifiers, so the equality is not
   statable on generated diagrams.
+- The tensor carriers join the property matrix: `frobenius.Dim` with a
+  strategy of small dimensions, `tensor.Diagram` whose inherited
+  frobenius strategy reaches its spiders, cups and caps out of the box,
+  and `Tensor[int]` with a `Matrix`-style strategy over `Dim` boundaries.
+  `Tensor` restores the three copy laws that `Matrix` declares broken
+  (#606): its copy is a correct spider. The one expected failure is
+  transparency — a tensor with more than `config.NUMPY_THRESHOLD` entries
+  elides its array as a literal ellipsis, so `eval(repr(x))` cannot
+  rebuild it.
 - A drawing smoke property, `proptest/test_drawing.py`: for every diagram
   carrier of the matrix, `to_drawing` preserves the boundary and both
   backends render a generated diagram without a baseline — Matplotlib on
@@ -424,6 +433,14 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
+- `Matrix.braid` is a `classproperty` reading `cls.swap` instead of a
+  static binding of `Matrix.swap`, so `Tensor.braid` dispatches to the
+  `Dim`-typed swap instead of crashing on `'Dim' object cannot be
+  interpreted as an integer`; `Tensor.copy` defaults `n=2` like the
+  `Matrix.copy` it overrides; `Dim` serialises to a tree (its atoms are
+  bare integers, which the type serialisation used to choke on); and
+  `Dim.unwind` returns itself, so the hypergraph of a tensor diagram no
+  longer crashes on an atom without a winding.
 - `Copy.dagger` and `Merge.dagger` build through the level's
   `merge_factory` and `copy_factory` instead of the bare markov classes,
   and `closed` gains the `Merge` it was missing: the dagger of a

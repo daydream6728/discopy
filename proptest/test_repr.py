@@ -7,7 +7,7 @@ import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
-from discopy import monoidal
+from discopy import monoidal, tensor
 from discopy.utils import factory_name
 
 from proptest.test_axioms import CARRIERS
@@ -16,6 +16,8 @@ IMPORTS = (
     "from discopy import *",
     "import numpy as np",
     "from discopy.matrix import Matrix",
+    "from discopy.tensor import Tensor",
+    "from discopy.frobenius import Dim",
     "from discopy.python.finset import Function, Permutation",
     "from discopy.testing import Relabelling, Relabelled",
 )
@@ -32,11 +34,18 @@ for statement in IMPORTS:
 
 
 def carrier_parameters():
-    """ One parameter per carrier, the uncoloured wire an expected failure. """
+    """ One parameter per carrier, the known violations expected failures. """
     for carrier in CARRIERS:
-        marks = pytest.mark.xfail(reason=(
-            "An uncoloured wire reprs as the cat.Ob that Ty coerces, "
-            "which Wire.__eq__ rejects.")) if carrier is monoidal.Wire else ()
+        if carrier is monoidal.Wire:
+            marks = pytest.mark.xfail(reason=(
+                "An uncoloured wire reprs as the cat.Ob that Ty coerces, "
+                "which Wire.__eq__ rejects."))
+        elif carrier is tensor.Tensor[int]:
+            marks = pytest.mark.xfail(reason=(
+                "A tensor with more than config.NUMPY_THRESHOLD entries "
+                "elides its array as a literal ellipsis."))
+        else:
+            marks = ()
         yield pytest.param(carrier, marks=marks, id=factory_name(carrier))
 
 
