@@ -143,10 +143,22 @@ guard the class of bugs and not just the recorded instance.
 ## CI
 
 The `proptest` workflow runs the suite on `main`, on manual dispatch, and
-on pull requests labelled `proptest`. The runner is fresh: nothing is
-remembered between runs, and a randomised run may find a failure the next
-run does not. The recording protocol is what makes CI reds actionable —
-when CI fails, paste the falsifying draws from the log into a record,
-reproduce locally, and proceed as above. Recorded counterexamples replay
-on every run of `proptest/`, so a fixed bug failing again fails every
-run, loudly, everywhere.
+on pull requests labelled `proptest`. GitHub Actions sets `CI=true`,
+which switches Hypothesis to its CI profile — `derandomize=True` and
+`print_blob=True` — so a CI run draws the same examples every time and a
+failure log carries everything needed to reproduce it, three ways:
+
+- `CI=true uv run pytest proptest/ --axioms '<cell>' -x` replays the
+  run's exact draws locally, derandomisation being machine-independent;
+- the `Draw N` lines of the report print full reprs — transparency makes
+  them the code that builds the counterexample, ready to paste into a
+  record — unlike the `assert ... where` lines above them, which pytest
+  clips;
+- the printed `@reproduce_failure(<version>, <blob>)` decorator replays
+  the exact choices under the Hypothesis that `uv.lock` pins.
+
+The flip side of derandomisation is that CI never searches new ground:
+exploration happens in local runs, which stay randomised and remember
+their failures in `.hypothesis`. Either way, record what CI finds —
+recorded counterexamples replay on every run of `proptest/`, so a fixed
+bug failing again fails every run, loudly, everywhere.
