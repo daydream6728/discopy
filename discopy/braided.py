@@ -65,7 +65,8 @@ from discopy.abc import BraidedCategory
 from discopy.cat import factory
 from discopy.monoidal import Ty, Match
 from discopy.utils import (
-    BinaryBoxConstructor, assert_isatomic, deprecated_ob, factory_name
+    BinaryBoxConstructor, assert_isatomic, deprecated_ob, factory_name,
+    from_tree
 )
 from discopy.testing import axiom
 
@@ -222,6 +223,15 @@ class Braid(BinaryBoxConstructor, Box):
 
     def dagger(self):
         return type(self)(self.right, self.left, not self.is_dagger)
+
+    def to_tree(self):
+        tree = super().to_tree()
+        return dict(tree, is_dagger=True) if self.is_dagger else tree
+
+    @classmethod
+    def from_tree(cls, tree):
+        left, right = map(from_tree, (tree['left'], tree['right']))
+        return cls(left, right, is_dagger='is_dagger' in tree)
 
 
 def hexagon(cls: type, factory: Callable) -> Callable[[Ty, Ty], Diagram]:

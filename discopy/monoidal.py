@@ -1266,7 +1266,7 @@ class Diagram(
         >>> print(diagram.foliation().to_staircases())
         f0 @ y >> y @ f1
         """
-        return Functor.id(self.ar)(self)
+        return self.functor_factory.id(self.ar)(self)
 
     def to_hypergraph(self) -> Hypergraph:
         """

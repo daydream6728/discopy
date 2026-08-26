@@ -391,6 +391,14 @@ class Eval(Box):
     def __repr__(self):
         return factory_name(type(self)) + f"({self.x!r}, left={self.left})"
 
+    def to_tree(self):
+        return {'factory': factory_name(type(self)),
+                'x': self.x.to_tree(), 'left': self.left}
+
+    @classmethod
+    def from_tree(cls, tree):
+        return cls(from_tree(tree['x']), tree['left'])
+
     @property
     def drawing_name(self):
         return "<<" if self.left else ">>"
@@ -427,6 +435,11 @@ class Coeval(Box):
         return self.eval_factory(self.x, self.left)
 
     __repr__ = Eval.__repr__
+    to_tree = Eval.to_tree
+
+    @classmethod
+    def from_tree(cls, tree):
+        return cls(from_tree(tree['x']), tree['left'])
 
 
 class Curry(monoidal.Bubble, Box):
@@ -462,6 +475,14 @@ class Curry(monoidal.Bubble, Box):
     def __repr__(self):
         return factory_name(type(self))\
             + f"({self.arg!r}, {self.n}, {self.left})"
+
+    def to_tree(self):
+        return {'factory': factory_name(type(self)),
+                'arg': self.arg.to_tree(), 'n': self.n, 'left': self.left}
+
+    @classmethod
+    def from_tree(cls, tree):
+        return cls(from_tree(tree['arg']), tree['n'], tree['left'])
 
     def to_drawing(self):
         if self.left:

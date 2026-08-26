@@ -1605,7 +1605,8 @@ class Hypergraph(
             (Node("input", i=i, obj=obj), dict(i=i, box=None))
             for i, obj in enumerate(self.dom))
         graph.add_edges_from(
-            (Node("input", i=i, obj=obj), Node("spider", i=j, obj=obj))
+            (Node("input", i=i, obj=obj),
+             Node("spider", i=j, obj=self.spider_types[j]))
             for i, (j, obj) in enumerate(
                 zip(self.dom_wires, self.dom)))
         for i, (box, (dom_wires, cod_wires)) in enumerate(
@@ -1628,7 +1629,8 @@ class Hypergraph(
             (Node("output", i=i, obj=obj), dict(i=i, box=None))
             for i, obj in enumerate(self.cod))
         graph.add_edges_from(
-            (Node("spider", i=j, obj=obj), Node("output", i=i, obj=obj))
+            (Node("spider", i=j, obj=self.spider_types[j]),
+             Node("output", i=i, obj=obj))
             for i, (j, obj) in enumerate(zip(self.cod_wires, self.cod)))
         return graph
 

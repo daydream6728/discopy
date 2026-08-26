@@ -66,7 +66,8 @@ from discopy import (
     abc, monoidal, rigid, markov, compact, pivotal, cmap, hypergraph)
 from discopy.abc import HypergraphCategory
 from discopy.cat import factory
-from discopy.utils import assert_isatomic, deprecated_ob, factory_name
+from discopy.utils import (
+    assert_isatomic, deprecated_ob, factory_name, from_tree)
 from discopy.testing import Atomic, C0, axiom
 
 
@@ -284,6 +285,17 @@ class Spider(Box):
     def phase(self):
         """ The phase of the spider. """
         return self.data
+
+    def to_tree(self):
+        tree = {'factory': factory_name(type(self)),
+                'n_legs_in': len(self.dom), 'n_legs_out': len(self.cod),
+                'typ': self.typ.to_tree()}
+        return tree if self.data is None else dict(tree, data=self.data)
+
+    @classmethod
+    def from_tree(cls, tree):
+        return cls(tree['n_legs_in'], tree['n_legs_out'],
+                   from_tree(tree['typ']), tree.get('data'))
 
     def __repr__(self):
         phase_repr = "" if self.phase is None \

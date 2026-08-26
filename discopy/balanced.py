@@ -40,7 +40,7 @@ from discopy.abc import BalancedCategory
 from discopy.cat import factory
 from discopy.monoidal import Colour, Ty  # noqa: F401
 from discopy.testing import axiom
-from discopy.utils import factory_name, assert_isatomic
+from discopy.utils import factory_name, from_tree, assert_isatomic
 
 
 @dataclass(frozen=True)
@@ -299,6 +299,15 @@ class Twist(Box):
 
     def dagger(self):
         return type(self)(self.dom, not self.is_dagger)
+
+    def to_tree(self):
+        tree = {'factory': factory_name(type(self)),
+                'dom': self.dom.to_tree()}
+        return dict(tree, is_dagger=True) if self.is_dagger else tree
+
+    @classmethod
+    def from_tree(cls, tree):
+        return cls(from_tree(tree['dom']), is_dagger='is_dagger' in tree)
 
 
 class Sum(braided.Sum, Box):

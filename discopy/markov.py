@@ -77,7 +77,7 @@ from discopy import symmetric, monoidal, cmap, hypergraph
 from discopy.abc import MarkovCategory
 from discopy.cat import factory
 from discopy.monoidal import Ty  # noqa: F401
-from discopy.utils import assert_isatomic, factory_name
+from discopy.utils import assert_isatomic, factory_name, from_tree
 from discopy.testing import Atomic, C0, axiom
 
 Layer = symmetric.Layer
@@ -240,6 +240,14 @@ class Copy(Box):
         return (
             factory_name(type(self)) + f"({repr(self.dom)}, {len(self.cod)})")
 
+    def to_tree(self):
+        return {'factory': factory_name(type(self)),
+                'x': self.dom.to_tree(), 'n': len(self.cod)}
+
+    @classmethod
+    def from_tree(cls, tree):
+        return cls(from_tree(tree['x']), tree['n'])
+
 
 class Merge(Box):
     """
@@ -261,6 +269,14 @@ class Merge(Box):
     def __repr__(self):
         return (
             factory_name(type(self)) + f"({repr(self.cod)}, {len(self.dom)})")
+
+    def to_tree(self):
+        return {'factory': factory_name(type(self)),
+                'x': self.cod.to_tree(), 'n': len(self.dom)}
+
+    @classmethod
+    def from_tree(cls, tree):
+        return cls(from_tree(tree['x']), tree['n'])
 
 
 class Discard(Copy):

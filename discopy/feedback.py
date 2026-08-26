@@ -151,7 +151,7 @@ from discopy.abc import FeedbackCategory
 from discopy.cat import factory
 from discopy.utils import (
     deprecated_ob,
-    factory, factory_name, assert_isinstance, AxiomError,
+    factory, factory_name, from_tree, assert_isinstance, AxiomError,
 )
 from discopy.testing import GENERATORS
 
@@ -599,6 +599,14 @@ class Feedback(monoidal.Bubble, Box):
         self.mem, self.left = mem, left
         monoidal.Bubble.__init__(self, arg, dom=dom, cod=cod)
         Box.__init__(self, self.name, dom, cod)
+
+    def to_tree(self):
+        return {'factory': factory_name(type(self)),
+                'arg': self.arg.to_tree(), 'mem': self.mem.to_tree()}
+
+    @classmethod
+    def from_tree(cls, tree):
+        return cls(from_tree(tree['arg']), mem=from_tree(tree['mem']))
 
     def delay(self, n_steps=1):
         return type(self)(self.arg.delay(n_steps), mem=self.mem.delay(n_steps))

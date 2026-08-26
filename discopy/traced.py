@@ -131,6 +131,7 @@ from discopy.cat import factory
 from discopy.monoidal import Ty  # noqa: F401
 from discopy.utils import (
     factory_name,
+    from_tree,
     assert_isinstance,
     assert_istraceable,
 )
@@ -257,6 +258,14 @@ class Trace(Box, monoidal.Bubble):
 
     def __repr__(self):
         return factory_name(type(self)) + f"({self.arg!r}, left={self.left})"
+
+    def to_tree(self):
+        return {'factory': factory_name(type(self)),
+                'arg': self.arg.to_tree(), 'left': self.left}
+
+    @classmethod
+    def from_tree(cls, tree):
+        return cls(from_tree(tree['arg']), left=tree['left'])
 
     def dagger(self):
         return self.arg.dagger().trace(left=self.left)
