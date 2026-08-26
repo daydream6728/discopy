@@ -229,7 +229,7 @@ class Copy(Box):
         Box.__init__(self, name, dom=x, cod=x ** n,
                      draw_as_spider=True, color="black", drawing_name="")
 
-    def __new__(cls, x: monoidal.Ty, n: int = 2):
+    def __new__(cls, x: monoidal.Ty = None, n: int = 2):
         return super().__new__(cls) if n else\
             cls.discard_factory.__new__(cls.discard_factory, x)
 

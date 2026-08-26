@@ -256,7 +256,7 @@ class Trace(Box, monoidal.Bubble):
         return self.name
 
     def __repr__(self):
-        return factory_name(type(self)) + f"({self.arg}, left={self.left})"
+        return factory_name(type(self)) + f"({self.arg!r}, left={self.left})"
 
     def dagger(self):
         return self.arg.dagger().trace(left=self.left)

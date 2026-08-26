@@ -388,6 +388,9 @@ class Eval(Box):
     def dagger(self) -> Coeval:
         return self.coeval_factory(self.x, self.left)
 
+    def __repr__(self):
+        return factory_name(type(self)) + f"({self.x!r}, left={self.left})"
+
     @property
     def drawing_name(self):
         return "<<" if self.left else ">>"
@@ -423,6 +426,8 @@ class Coeval(Box):
     def dagger(self) -> Eval:
         return self.eval_factory(self.x, self.left)
 
+    __repr__ = Eval.__repr__
+
 
 class Curry(monoidal.Bubble, Box):
     """
@@ -453,6 +458,10 @@ class Curry(monoidal.Bubble, Box):
 
     def __str__(self):
         return self.name
+
+    def __repr__(self):
+        return factory_name(type(self))\
+            + f"({self.arg!r}, {self.n}, {self.left})"
 
     def to_drawing(self):
         if self.left:
