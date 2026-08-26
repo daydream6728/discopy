@@ -1874,9 +1874,11 @@ class Functor(cat.Functor):
 
     def _map_atomic(self, key):
         result = self.ob_map[key]
-        cod_type = get_origin(self.cod.ob)
-        return result if isinstance(result, cod_type) else\
-            (result, ) if cod_type == tuple else self.cod.ob(result)
+        cod_type = get_origin(self.cod.ob) or self.cod.ob
+        if issubclass(cod_type, tuple):
+            return result if isinstance(result, tuple) else (result, )
+        return result if isinstance(result, cod_type)\
+            else self.cod.ob(result)
 
     def __call__(self, other):
         if isinstance(other, Colour):
