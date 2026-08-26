@@ -45,6 +45,14 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   transparency property was considered and dropped: the strategies draw
   box names that are not Python identifiers, so the equality is not
   statable on generated diagrams.
+- A drawing smoke property, `proptest/test_drawing.py`: for every diagram
+  carrier of the matrix, `to_drawing` preserves the boundary and both
+  backends render a generated diagram without a baseline — Matplotlib on
+  Agg into an in-memory buffer, TikZ into a throwaway file. No images are
+  compared: the committed documentation baselines remain the pixel tests,
+  this checks that layout and rendering never crash on the diagrams the
+  strategies reach — swaps, braids, cups, caps, spiders, bubbles and
+  traces included.
 - Four more ad-hoc properties: `proptest/test_serialisation.py` decodes
   every carrier back from its tree and its JSON; `proptest/test_eq_hash.py`
   checks that whiskering by the unit is invisible to `==`, `hash` and
