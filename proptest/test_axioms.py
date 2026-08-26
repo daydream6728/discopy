@@ -25,12 +25,14 @@ from discopy import tensor
 from discopy.frobenius import Dim
 from discopy.matrix import Matrix
 from discopy.python import additive, finset, multiplicative
+from discopy.quantum import circuit, zx
 from discopy.testing import assert_verdict
 from discopy.utils import factory_name
 
 CARRIERS = (
     cat.Arrow, cat.Functor,
-    monoidal.Wire, monoidal.Ty, monoidal.Diagram, monoidal.Hypergraph,
+    monoidal.Wire, monoidal.Ty, monoidal.PRO,
+    monoidal.Diagram, monoidal.Hypergraph,
     monoidal.CMap, monoidal.Functor,
     braided.Diagram, braided.Functor,
     traced.Diagram, traced.Hypergraph, traced.CMap, traced.Functor,
@@ -51,7 +53,8 @@ CARRIERS = (
     frobenius.Functor,
     Dim, tensor.Diagram, tensor.Tensor[int],
     Matrix[int], finset.Function, finset.Permutation,
-    additive.Function, multiplicative.Function)
+    additive.Function, multiplicative.Function,
+    circuit.Circuit, zx.Diagram)
 
 
 def axiom_parameters():

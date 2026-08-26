@@ -45,6 +45,17 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   transparency property was considered and dropped: the strategies draw
   box names that are not Python identifiers, so the equality is not
   statable on generated diagrams.
+- The quantum carriers join the property matrix, pure Python only:
+  `quantum.circuit.Circuit` with a wire strategy of bits, qubits and
+  small qudits and the standard gates added to the box distribution, and
+  `quantum.zx.Diagram` with Z and X spiders, the Hadamard and swaps over
+  `PRO` — which gains the strategy whose absence kept it out, and joins
+  the matrix itself, its `identity_typing` inapplicable since a PRO is
+  monochrome. The laws that a circuit realises physically are declared
+  inapplicable with their reasons: no cloning for the copy family, and
+  cups, caps and traces that are Bell preparations and effects — like
+  the Z and X spiders of ZX — equal to wiring only up to evaluation.
+  Complex gate data does not serialise to JSON, an expected failure.
 - The python carriers join the property matrix:
   `python.multiplicative.Function` as a closed symmetric Markov semantic
   carrier and `python.additive.Function` as a symmetric one, both over
@@ -447,6 +458,16 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
+- The quantum cells caught five bugs, fixed here: `quantum.Swap` could
+  not unpickle (`Box.__setstate__` demanded a mixedness the plumbing
+  never stores); `Ket` and `Bra` inherited the `(name, dom, cod)` repr
+  their bitstring `__init__` rejects; `zx.H` carried an unpicklable
+  lambda as its dagger and is now a `Hadamard` class, its own dagger;
+  `zx.Swap` reprs itself qualified instead of as a bare `SWAP` that
+  collides with the quantum gate, and `zx.Spider`, `Scalar` and
+  `Hadamard` serialise to trees; and `QuantumGate` normalises the signed
+  zeros of its complex data, whose reprs made numerically equal gates
+  compare unequal.
 - `Matrix.braid` is a `classproperty` reading `cls.swap` instead of a
   static binding of `Matrix.swap`, so `Tensor.braid` dispatches to the
   `Dim`-typed swap instead of crashing on `'Dim' object cannot be

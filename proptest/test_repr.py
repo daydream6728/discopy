@@ -9,6 +9,7 @@ from hypothesis import strategies as st
 
 from discopy import monoidal, tensor
 from discopy.python import function
+from discopy.quantum import zx
 from discopy.utils import factory_name
 
 from proptest.test_axioms import CARRIERS
@@ -16,6 +17,7 @@ from proptest.test_axioms import CARRIERS
 IMPORTS = (
     "from discopy import *",
     "import numpy as np",
+    "from discopy.quantum.gates import *",
     "from discopy.matrix import Matrix",
     "from discopy.tensor import Tensor",
     "from discopy.frobenius import Dim",
@@ -29,9 +31,23 @@ and ``finset`` print unqualified, and a generated functor relabels the
 generators through :class:`discopy.testing.Relabelling`.
 """
 
+EXTRA_IMPORTS = {zx.Diagram: "from discopy.quantum.zx import *"}
+"""
+The extra import a carrier's environment needs when it collides with the
+shared ones, e.g. the ZX generators shadow the quantum gates.
+"""
+
 ENVIRONMENT = {}
 for statement in IMPORTS:
     exec(statement, ENVIRONMENT)
+
+
+def environment(carrier):
+    """ The fresh environment a carrier's reprs evaluate in. """
+    env = dict(ENVIRONMENT)
+    if carrier in EXTRA_IMPORTS:
+        exec(EXTRA_IMPORTS[carrier], env)
+    return env
 
 
 def carrier_parameters():
@@ -60,4 +76,4 @@ def carrier_parameters():
 def test_repr(carrier, data):
     """ Check that ``repr`` evaluates back to the value it describes. """
     value = data.draw(carrier.strategy())
-    assert eval(repr(value), dict(ENVIRONMENT)) == value
+    assert eval(repr(value), environment(carrier)) == value

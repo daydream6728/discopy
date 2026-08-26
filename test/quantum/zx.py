@@ -189,3 +189,17 @@ def test_circuit2zx():
                 boxes_and_offsets=zip(
                     [SWAP, Z(1, 2), X(2, 1), scalar(2 ** 0.5), SWAP],
                     [1, 0, 1, 2, 1])))
+
+
+def test_strategy():
+    from discopy import testing
+    from discopy.quantum.zx import Diagram, Hadamard, Spider
+
+    testing.assert_strategy_finds(Diagram, Spider, Hadamard)
+
+
+def test_axioms():
+    from discopy import testing
+    from discopy.quantum.zx import Diagram
+
+    testing.assert_axioms(Diagram)

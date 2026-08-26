@@ -7,6 +7,7 @@ import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
+from discopy.quantum import circuit
 from discopy.utils import dumps, from_tree, loads, factory_name
 
 from proptest.test_axioms import CARRIERS
@@ -15,8 +16,13 @@ from proptest.test_axioms import CARRIERS
 def carrier_parameters():
     """ One parameter per carrier, skipping those without ``to_tree``. """
     for carrier in CARRIERS:
-        marks = () if hasattr(carrier, "to_tree")\
-            else pytest.mark.skip(reason="No tree serialisation.")
+        if not hasattr(carrier, "to_tree"):
+            marks = pytest.mark.skip(reason="No tree serialisation.")
+        elif carrier is circuit.Circuit:
+            marks = pytest.mark.xfail(reason=(
+                "Complex gate data does not serialise to JSON."))
+        else:
+            marks = ()
         yield pytest.param(carrier, marks=marks, id=factory_name(carrier))
 
 
