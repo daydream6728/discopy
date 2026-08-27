@@ -12,6 +12,7 @@ jobs:
   review:
     if: >
       github.event.pull_request.head.repo.full_name == github.repository
+      && vars.DISCOPY_BOT_APP_ID != ''
       && (github.event.action == 'ready_for_review'
           || github.event.label.name == 'style-review')
     runs-on: ubuntu-latest
