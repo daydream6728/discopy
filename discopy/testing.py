@@ -573,12 +573,13 @@ class Axiom[T]:
     known to be broken, and the equation itself otherwise.
 
     A law is broken when *some* argument is a counterexample, not every one,
-    so :attr:`broken` reads the verdict off the body before any argument is
+    so :attr:`broken` is declared by :meth:`failing` before any argument is
     generated — the property matrix marks such an axiom as an expected
     failure and lets the search find the counterexample.
     """
 
-    def __init__(self, equation, *, carrier=None, name=None, subspaces=None):
+    def __init__(self, equation, *, carrier=None, name=None, subspaces=None,
+                 broken=False):
         function = equation.__func__ if isinstance(equation, classmethod)\
             else equation
         self.equation = function
@@ -586,7 +587,7 @@ class Axiom[T]:
         self.receiver = next(iter(self.signature.parameters), None)
         self.carrier = carrier
         self.name = self.__name__ = name or function.__name__
-        self.broken = "AxiomError" in function.__code__.co_names
+        self.broken = broken
         self.subspaces = dict(subspaces or {})
         self.__doc__ = function.__doc__
 
@@ -610,7 +611,7 @@ class Axiom[T]:
         """ Bind the axiom to a concrete carrier. """
         return type(self)(
             self.equation, carrier=carrier, name=self.name,
-            subspaces=self.subspaces)
+            subspaces=self.subspaces, broken=self.broken)
 
     def __get__(self, instance, owner: type[T]) -> Axiom[T]:
         return self.bind(owner)
@@ -625,7 +626,7 @@ class Axiom[T]:
         @wraps(self.equation)
         def equation(*args, **kwargs):
             return self.equation(*args, **kwargs).modulo(up_to)
-        return type(self)(equation)
+        return type(self)(equation, broken=self.broken)
 
     def failing(self, reason: str) -> Axiom[T]:
         """
@@ -638,7 +639,7 @@ class Axiom[T]:
         def equation(*args, **kwargs):
             return AxiomError(reason, self.equation(*args, **kwargs))
         equation.__doc__ = reason
-        return type(self)(equation)
+        return type(self)(equation, broken=True)
 
     def inapplicable(self, reason: str) -> Axiom[T]:
         """
@@ -667,7 +668,7 @@ class Axiom[T]:
         """
         result = type(self)(
             self.equation, name=self.name,
-            subspaces=dict(self.subspaces, **subspaces))
+            subspaces=dict(self.subspaces, **subspaces), broken=self.broken)
         return result
 
     def strategy(self) -> "st.SearchStrategy":

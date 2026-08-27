@@ -134,7 +134,12 @@ class Matrix(MarkovCategory, Strategy["Matrix"], NamedGeneric['dtype']):
 
     @classmethod
     def strategy(cls, *, dom=None, cod=None, max_size=3, max_entry=3):
-        """Generate matrices with entries in ``range(max_entry + 1)``."""
+        """
+        Generate matrices with entries in ``range(max_entry + 1)``.
+
+        Small integers are exact elements of every ``dtype``, so the
+        equational cells stay free of rounding noise.
+        """
         from hypothesis import strategies as st
 
         factory = cls[cls.dtype or int]

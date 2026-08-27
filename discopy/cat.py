@@ -1024,7 +1024,9 @@ class Functor(Category, Strategy["Functor"]):
             return cls(labelling, Relabelled(labelling))
 
         return st.tuples(
-            *(st.sampled_from(atoms) for _ in atoms)).map(relabel)
+            *(st.sampled_from(atoms) for _ in atoms)).map(relabel).filter(
+                lambda functor: dom in (None, functor.dom)
+                and cod in (None, functor.cod))
 
     unitality = Category.unitality.failing(
         "Composition is unital only on the left: "

@@ -96,10 +96,11 @@ class Category[C0, C1: Category](ABC):
         """
         Construct an equation, using strict equality by default.
 
-        An axiom states which equality it means by choosing between
-        :meth:`cls.equation_factory`, i.e. on the nose, and
-        ``cls.equation_factory``, i.e. up to whatever quotient the class
-        defines, e.g. hypergraph isomorphism from symmetric categories on.
+        A class that quotients its equations overrides this, e.g. by
+        hypergraph isomorphism from symmetric categories on, so an axiom
+        built with it is checked up to whatever quotient the carrier
+        defines — and :meth:`discopy.testing.Axiom.modulo` weakens it
+        further.
         """
         from discopy.cat import Equation as CatEquation
         return CatEquation(*terms)

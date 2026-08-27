@@ -182,11 +182,7 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - Two axioms: `RigidCategory.rotate_contravariance`, i.e. rotation reverses
   composition, and `HypergraphCategory.spider_fusion`, i.e. two spiders
   connected by one leg fuse into one.
-- Axiom statuses now record the representation-level equality available to
-  combinatorial maps, and diagram/map strategies can generate closed
-  components on request. A `"strict"` axiom is checked on the nose, while a
-  `"setoid"` one is checked up to the category's `equation_factory`, i.e. up
-  to hypergraph from symmetric categories on.
+- Diagram and map strategies can generate closed components on request.
 - Declarative categorical axioms, validating argument shapes, and canonical
   Hypothesis strategies following the categorical class hierarchy. A dedicated
   workflow runs the property tests on `main`, manually, and on labelled PRs.
@@ -281,6 +277,18 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   ([#484](https://github.com/discopy/discopy/pull/484)).
 
 ### Changed
+
+- The last review round of the property-testing pull request
+  ([#347](https://github.com/discopy/discopy/pull/347)) is addressed:
+  `Axiom.broken` is an explicit flag set by `.failing` and propagated
+  through `bind`, `modulo` and `weaken`, instead of scanning the equation's
+  bytecode for the literal `AxiomError`; `Functor.strategy` honours the
+  `dom` and `cod` boundaries the pasting-diagram generators pass it instead
+  of silently ignoring them; and every `.failing` declaration now carries a
+  record in the counterexample ledger — one shrunk witness per declaration
+  site, thirteen new records — so a known-broken law fails deterministically
+  on every run instead of only when the 25-example search happens to redraw
+  its counterexample.
 
 - An axiom states its own verdict instead of deferring to a status table.
   A body returns `NotImplemented` when the structure does not apply, an
