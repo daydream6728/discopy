@@ -17,6 +17,7 @@ from proptest.test_axioms import CARRIERS
 IMPORTS = (
     "from discopy import *",
     "import numpy as np",
+    "from numpy import complex128, float64",
     "from discopy.quantum.gates import *",
     "from discopy.matrix import Matrix",
     "from discopy.tensor import Tensor",

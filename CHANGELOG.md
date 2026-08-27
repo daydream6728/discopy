@@ -45,6 +45,20 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   transparency property was considered and dropped: the strategies draw
   box names that are not Python identifiers, so the equality is not
   statable on generated diagrams.
+- The hopf carrier joins the property matrix:
+  `Intertwiner[Double(Algebra.cyclic(2))]`, the anyons of the toric
+  code, generating layered braids, twists and genuine intertwiner boxes
+  — diagonal anyon projections and zero maps — with every ribbon law
+  checked up to `hopf.semantics`, the tensor a diagram contracts to.
+  The matrix records the physics as declarations: `Rep(H)` is braided,
+  not symmetric — its swap is the braiding, whose square is the
+  monodromy — and Reidemeister 1 fails on a composite module, recorded
+  in the counterexample ledger. The ribbon classmethods now preserve
+  the module structure of their boundaries; the object discipline that
+  remains torn between modules and dimensions — `Intertwiner` is not
+  its own factory, and the hypergraph functor rejects
+  representation-typed cups — is declared where it bites and logged in
+  `BUGS.md`.
 - The property matrix searches the whole carrier by default, and a law
   that only holds on a subspace says so: `Diagram.strategy`,
   `Hypergraph.strategy` and `CMap.strategy` default to

@@ -21,7 +21,7 @@ from discopy import (
     symmetric,
     traced,
 )
-from discopy import tensor
+from discopy import hopf, tensor
 from discopy.frobenius import Dim
 from discopy.matrix import Matrix
 from discopy.python import additive, finset, multiplicative
@@ -54,7 +54,8 @@ CARRIERS = (
     Dim, tensor.Diagram, tensor.Tensor[int],
     Matrix[int], finset.Function, finset.Permutation,
     additive.Function, multiplicative.Function,
-    circuit.Circuit, zx.Diagram)
+    circuit.Circuit, zx.Diagram,
+    hopf.Intertwiner[hopf.Double(hopf.Algebra.cyclic(2))])
 
 
 def axiom_parameters():

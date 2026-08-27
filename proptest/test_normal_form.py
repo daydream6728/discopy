@@ -7,7 +7,7 @@ import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
-from discopy import monoidal, pivotal, ribbon, rigid
+from discopy import hopf, monoidal, pivotal, ribbon, rigid
 from discopy.quantum import zx
 from discopy.utils import factory_name
 
@@ -21,6 +21,10 @@ WRONG_SPIDER_FACTORY = pytest.mark.xfail(reason=(
     "The functor image of a spider is built by tensor's spider factory, "
     "which expects dimensions rather than PRO types."))
 
+REP_DUALS = pytest.mark.xfail(reason=(
+    "The hypergraph functor rebuilds a representation-typed cup or cap "
+    "whose adjoint is its dimension reversal, not the dual module."))
+
 
 def diagram_parameters(xfail=()):
     """ One parameter per diagram carrier, with per-test expected failures. """
@@ -31,13 +35,14 @@ def diagram_parameters(xfail=()):
         if carrier is rigid.Diagram:
             marks = PARTIAL_HYPERGRAPH
         elif carrier in xfail:
-            marks = WRONG_SPIDER_FACTORY
+            marks = xfail[carrier]
         else:
             marks = ()
         yield pytest.param(carrier, marks=marks, id=factory_name(carrier))
 
 
-DIAGRAMS = tuple(diagram_parameters())
+DIAGRAMS = tuple(diagram_parameters(xfail={
+    hopf.Intertwiner[hopf.Double(hopf.Algebra.cyclic(2))]: REP_DUALS}))
 
 
 @pytest.mark.parametrize("carrier", DIAGRAMS)
@@ -56,7 +61,9 @@ def test_normal_form(carrier, data):
 
 
 @pytest.mark.parametrize(
-    "carrier", tuple(diagram_parameters(xfail=(zx.Diagram, ))))
+    "carrier", tuple(diagram_parameters(xfail={
+        zx.Diagram: WRONG_SPIDER_FACTORY,
+        hopf.Intertwiner[hopf.Double(hopf.Algebra.cyclic(2))]: REP_DUALS})))
 @given(data=st.data())
 @settings(max_examples=25, deadline=None)
 def test_foliation(carrier, data):

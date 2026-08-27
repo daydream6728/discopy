@@ -83,6 +83,26 @@ Fixed by dispatching through `cls`.
   carriers' `Types`) made functors into python categories iterate a bare
   type.
 
+## An object discipline torn between modules and dimensions
+
+`hopf.Representation` is a `Dim` carrying an action, and the code mixes
+the two freely: generic diagram operations slice modules down to bare
+dimensions by design, while the module structure is needed wherever an
+action is read.
+
+- Fixed: the ribbon classmethods `Intertwiner.braid`, `twist`, `cups`
+  and `caps` returned plain dimension boundaries, dropping the module
+  structure their callers read the action from.
+- Open: `Intertwiner` is not its own factory — its `ar` resolves to the
+  plain tensor category, and making it one cascades into every generic
+  operation that builds dimension-boundaried composites — so the
+  arrow-quantified laws are declared inapplicable.
+- Open: the hypergraph functor rebuilds a representation-typed cup or
+  cap whose adjoint is its dimension reversal, not the dual module, so
+  `normal_form` and `foliation` cannot be checked up to hypergraph.
+- Open: a class subscripted by an algebra instance has no importable
+  factory name, so its trees cannot be decoded.
+
 ## Partial operations that crashed instead of degrading
 
 - `foliation` crashed where `to_hypergraph` is partial — traced diagrams
@@ -107,6 +127,12 @@ Fixed by dispatching through `cls`.
   trace, cup or cap at `traced`, `balanced` and `pivotal`, and
   `Hypergraph.cups`/`caps` accept only the right-adjoint orientation, so
   `to_hypergraph` is partial on rigid's left-handed cups and caps.
+- Reidemeister 1 fails semantically on a composite module of
+  `Rep(D(Z/2))`, recorded in the ledger on `V @ V`: the swap is the
+  braiding, and the pivotal correction of cups and caps fires on a
+  *structural* comparison of the pivotal element with the unit —
+  semantically equal but structurally distinct composites — flakily,
+  since the rebuilt dual actions compare structurally unstably.
 - An uncoloured `monoidal.Wire` reprs as the `cat.Ob` that `Ty` coerces,
   which its type-strict equality rejects.
 - A `Tensor` with more than `config.NUMPY_THRESHOLD` entries elides its

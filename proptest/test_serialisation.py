@@ -7,6 +7,7 @@ import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
+from discopy import hopf
 from discopy.quantum import circuit
 from discopy.utils import dumps, from_tree, loads, factory_name
 
@@ -21,6 +22,11 @@ def carrier_parameters():
         elif carrier is circuit.Circuit:
             marks = pytest.mark.xfail(reason=(
                 "Complex gate data does not serialise to JSON."))
+        elif carrier is hopf.Intertwiner[
+                hopf.Double(hopf.Algebra.cyclic(2))]:
+            marks = pytest.mark.skip(reason=(
+                "A class subscripted by an algebra instance has no "
+                "importable factory name."))
         else:
             marks = ()
         yield pytest.param(carrier, marks=marks, id=factory_name(carrier))
