@@ -69,8 +69,12 @@ pytest's default `testpaths`. Run them explicitly:
 
 ```shell
 uv sync --group dev
-uv run pytest proptest/ -v
+uv run pytest proptest/ -n auto -v
 ```
+
+The cells of the matrix are independent, so `-n auto`
+([pytest-xdist](https://pytest-xdist.readthedocs.io)) runs them on all
+cores; drop it to run serially, e.g. when debugging a single cell.
 
 Beside the axioms, `proptest/test_conversion.py`, `test_repr.py`,
 `test_pickle.py`, `test_serialisation.py`, `test_eq_hash.py`,
@@ -96,13 +100,6 @@ A cell is skipped when its axiom declares that the structure does not
 apply, and xfailed when the law is declared broken, each carrying its
 reason: pass `-rsxX` to list the skips, xfails and unexpected passes with
 their reasons, and `-x` to stop at the first genuine failure.
-
-Example budgets are adaptive: `proptest/conftest.py` keeps each cell's
-pass/fail history in `.hypothesis/proptest-ledger.json` — CI carries it
-between jobs as an artifact — and reallocates examples from long-stable
-cells to flaky ones, see the adaptive budgets section of
-[PROPTEST.md](PROPTEST.md). Repeated runs therefore get faster; delete
-the ledger to search every cell at its written budget again.
 
 `proptest/test_counterexamples.py` replays every recorded counterexample —
 the bound axiom and the arguments a search once shrunk a failure to — so

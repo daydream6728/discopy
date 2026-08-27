@@ -144,30 +144,6 @@ The audit is done when the search rediscovers the bug by itself: hold the
 fix back and watch the cell go red without help. Only then does the suite
 guard the class of bugs and not just the recorded instance.
 
-## Adaptive budgets
-
-The number of examples a cell generates is not fixed: it is allocated by
-`discopy.testing.Ledger`, the cross-run memory of the suite, from the
-cell's own recent pass/fail history — its last ten outcomes, local runs
-and CI runs each keeping their own ledger:
-
-- a **flaky** history, mixing passes and failures, searches with 100
-  examples: the counterexample is only sometimes found, so finding it
-  every run is where the budget goes;
-- a **stable** history, three straight passes and no failure in the
-  window, winds down to 10 examples — and back up the moment it fails;
-- any other cell — no history, too short a history, or deterministic
-  failures like the `.failing` xfails — keeps the budget written in its
-  `@settings` decorator, so a fresh checkout behaves exactly as the
-  decorators read, and a written budget below the floor (the drawing
-  smoke tests) is never raised except by flakiness.
-
-`proptest/conftest.py` applies and records all of this automatically:
-there is nothing to configure, and only `proptest/` is affected — the
-unit suite never loads it. The ledger is
-`.hypothesis/proptest-ledger.json`; deleting it resets every budget to
-the written defaults.
-
 ## CI
 
 The `proptest` workflow runs the suite on `main`, on manual dispatch, and
@@ -190,12 +166,3 @@ exploration happens in local runs, which stay randomised and remember
 their failures in `.hypothesis`. Either way, record what CI finds —
 recorded counterexamples replay on every run of `proptest/`, so a fixed
 bug failing again fails every run, loudly, everywhere.
-
-CI keeps its ledger across jobs as the `proptest-ledger` artifact: the
-workflow restores the newest one before running and uploads the updated
-ledger after, so budgets converge over consecutive CI runs the same way
-they do locally. A cell boosted by CI's ledger may search past the
-default budget, so a local replay of its draws can stop short of the
-failure; the printed `Draw N` reprs and `@reproduce_failure` blob are
-budget-independent. If the artifacts expire, the ledger starts afresh
-from the written defaults.

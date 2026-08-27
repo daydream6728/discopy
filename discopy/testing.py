@@ -3,12 +3,10 @@
 from __future__ import annotations
 
 import inspect
-import json
 from abc import ABC, abstractmethod
 from collections.abc import Mapping
 from dataclasses import dataclass
 from functools import wraps
-from pathlib import Path
 from typing import ClassVar, TypeVar, TYPE_CHECKING, get_args, get_origin
 
 from discopy.utils import AxiomError, assert_iscomposable
@@ -869,82 +867,3 @@ def declared_axioms(cls) -> dict[str, Axiom]:
         for name, value in base.__dict__.items()}
     return {name: value for name, value in visible.items()
             if isinstance(value, Axiom)}
-
-
-@dataclass
-class Ledger:
-    """
-    The cross-run memory of the property suite: the recent pass/fail
-    history of each cell, allocating the number of examples its next run
-    generates.
-
-    A cell whose history mixes passes and failures is flaky, so it searches
-    with :attr:`BOOST` examples; one that has passed :attr:`STABLE` runs in
-    a row without ever failing winds down to :attr:`FLOOR`; any other cell
-    keeps the ``default`` budget written in its decorator, so a cell with
-    no history behaves exactly as before the ledger existed. The history of
-    a cell keeps its last :attr:`WINDOW` outcomes, so a fixed flaky cell
-    winds down once its failures fall out of the window.
-
-    ``proptest/conftest.py`` reads and updates the ledger automatically,
-    locally in ``.hypothesis`` and across CI jobs as the
-    ``proptest-ledger`` artifact, see PROPTEST.md.
-
-    Example
-    -------
-    >>> from tempfile import mkdtemp
-    >>> ledger = Ledger.load(Path(mkdtemp()) / "ledger.json")
-    >>> ledger.budget("test_axiom[cat.Arrow.unitality]")
-    25
-    >>> for _ in range(3):
-    ...     ledger.record("stable", passed=True)
-    >>> ledger.budget("stable")
-    10
-    >>> ledger.record("flaky", passed=True)
-    >>> ledger.record("flaky", passed=False)
-    >>> ledger.budget("flaky")
-    100
-    >>> ledger.save()
-    >>> Ledger.load(ledger.path) == ledger
-    True
-    """
-    path: Path
-    history: dict[str, str]
-
-    FLOOR: ClassVar[int] = 10
-    DEFAULT: ClassVar[int] = 25
-    BOOST: ClassVar[int] = 100
-    STABLE: ClassVar[int] = 3
-    WINDOW: ClassVar[int] = 10
-
-    @classmethod
-    def load(cls, path: Path = Path(".hypothesis", "proptest-ledger.json")
-             ) -> Ledger:
-        """The ledger stored at ``path``, empty when there is none."""
-        try:
-            history = json.loads(path.read_text())
-        except (OSError, ValueError):
-            history = {}
-        return cls(path, history)
-
-    def record(self, cell: str, passed: bool) -> None:
-        """Append an outcome to a cell's history, keeping :attr:`WINDOW`."""
-        outcome = "P" if passed else "F"
-        self.history[cell] = (
-            self.history.get(cell, "") + outcome)[-self.WINDOW:]
-
-    def budget(self, cell: str, default: int = DEFAULT) -> int:
-        """The number of examples the next run of a cell generates."""
-        outcomes = self.history.get(cell, "")
-        if "P" in outcomes and "F" in outcomes:
-            return self.BOOST
-        if "F" not in outcomes and len(outcomes) >= self.STABLE:
-            return min(self.FLOOR, default)
-        return default
-
-    def save(self) -> None:
-        """Write the history to :attr:`path`, atomically."""
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        swap = self.path.with_suffix(".tmp")
-        swap.write_text(json.dumps(self.history, indent=2, sort_keys=True))
-        swap.replace(self.path)
