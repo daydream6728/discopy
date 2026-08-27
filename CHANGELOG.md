@@ -475,15 +475,16 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `ev`. Code relying on the old right-handed default should pass
   `left=False` explicitly
   ([#560](https://github.com/discopy/discopy/issues/560)).
-- Benchmarks compare two commits measured on the same runner rather than a
-  committed baseline, so no baseline is stored in the repository and no
-  normalisation is needed to account for the CPU model a GitHub-hosted runner
-  happens to give out. A pull request compares its head against its base, a
-  push to `main` against the branch before the push. The comparison goes to
-  the job summary and, on a pull request, to a comment listing the regressions
-  and speedups over 25%; a regression raises a warning annotation and never
-  fails the job, since a shared runner can push an unrelated case over the
-  threshold on noise alone.
+- The committed benchmark baseline is stored gzipped as
+  `benchmark/baseline.json.gz`, which `benchmark/report.py` reads
+  transparently.
+- The benchmark regression gate divides each case by the run-wide median
+  change rather than comparing raw medians, so that the CPU model a
+  GitHub-hosted runner happens to give out does not read as a regression. Its
+  default threshold is 25%.
+- Pull request benchmarks compare the base and head commits on the same runner
+  instead of using a normalised committed baseline. The job posts or updates a
+  pull request comment listing regressions and speedups over 25%.
 - Benchmark cases now use `pytest-benchmark`'s automatic calibration.
 - Every `monoidal.Wire` subclass named `Ob` is renamed to `Wire`: `rigid`,
   `braided`, `biclosed`, `pivotal`, `frobenius`, `feedback` and
