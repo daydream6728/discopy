@@ -9,6 +9,11 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Added
 
+- The property suite runs on all cores: `pytest-xdist` joins the `dev`
+  group and the `test` extra, the `proptest` workflow passes `-n auto`
+  with `-p no:benchmark` unloading the plugin that is incompatible with
+  it, and the cells of the matrix are independent so no test changes.
+
 - A counterexample ledger and a property-first protocol: `PROPTEST.md`
   instructs agents to state laws before implementing, to record every
   counterexample found against a law in

@@ -69,8 +69,14 @@ pytest's default `testpaths`. Run them explicitly:
 
 ```shell
 uv sync --group dev
-uv run pytest proptest/ -v
+uv run pytest proptest/ -n auto -p no:benchmark -v
 ```
+
+The cells of the matrix are independent, so `-n auto`
+([pytest-xdist](https://pytest-xdist.readthedocs.io)) runs them on all
+cores, with `-p no:benchmark` unloading the benchmark plugin that is
+incompatible with it; drop both to run serially, e.g. when debugging a
+single cell.
 
 Beside the axioms, `proptest/test_conversion.py`, `test_repr.py`,
 `test_pickle.py`, `test_serialisation.py`, `test_eq_hash.py`,

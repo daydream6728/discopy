@@ -31,4 +31,4 @@ jobs:
         uv sync --locked --group dev
     - name: Run property tests
       run:
-        uv run pytest proptest/ -vrxX
+        uv run pytest proptest/ -n auto -p no:benchmark -vrxX
