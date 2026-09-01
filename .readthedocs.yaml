@@ -10,6 +10,8 @@ build:
   os: ubuntu-22.04
   apt_packages:
     - graphviz
+    # HermiT is a jar, the ontologies notebook invokes it.
+    - default-jre
   tools:
     python: "3.12"
     # You can also specify other tool versions:

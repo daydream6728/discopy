@@ -1180,17 +1180,26 @@ class Axiom(cat.Equation):
              for term, symbol in zip(self.terms, symbols)),
             [])[:-1])
 
+    @property
+    def equation(self) -> frobenius.Equation:
+        """
+        The pictures of the terms with the symbol in between, an
+        :class:`frobenius.Equation` that knows how to display itself, see
+        :meth:`Relation.to_diagram`.
+        """
+        return frobenius.Equation(
+            *(term.to_diagram() for term in self.terms),
+            symbols=self.symbols)
+
     def draw(self, **params):
         """
         Draw the pictures of the terms with the symbol in between, see
-        :meth:`Relation.to_diagram`.
+        :attr:`equation`.
 
         Parameters:
             params : Passed to :meth:`frobenius.Equation.draw`.
         """
-        return frobenius.Equation(
-            *(term.to_diagram() for term in self.terms),
-            symbols=self.symbols).draw(**params)
+        return self.equation.draw(**params)
 
 
 def class_axioms(entity: ThingClass) -> list[Axiom]:
