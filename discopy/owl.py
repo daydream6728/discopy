@@ -50,7 +50,13 @@ Summary
         declared
         instances
         carrier
+        relations
+        satisfying
+        restricted
         extension
+        expr_world
+        class_axioms
+        property_axioms
         axioms
 
 .. _owlready2: https://owlready2.readthedocs.io/
@@ -79,11 +85,17 @@ from dataclasses import dataclass
 from itertools import product
 
 from owlready2 import (
-    Ontology, OwlReadyInconsistentOntologyError, Thing, ThingClass, World,
+    EXACTLY, HAS_SELF, MAX, MIN, ONLY, SOME, VALUE, And, Inverse, Not,
+    ObjectPropertyClass, OneOf, Ontology, Or,
+    OwlReadyInconsistentOntologyError, Restriction, Thing, ThingClass, World,
     sync_reasoner_hermit)
+from owlready2 import (
+    AsymmetricProperty, FunctionalProperty, InverseFunctionalProperty,
+    IrreflexiveProperty, ReflexiveProperty, SymmetricProperty,
+    TransitiveProperty)
 import owlready2
 
-from discopy import messages
+from discopy import cat, messages
 from discopy.abc import BooleanAllegory, SymmetricCategory
 from discopy.utils import (
     AxiomError, assert_iscomposable, assert_isinstance, assert_isparallel,
@@ -475,6 +487,18 @@ class Relation(BooleanAllegory, SymmetricCategory):
         """
         return cls((), dom, cod)
 
+    def domain(self) -> Relation:
+        """
+        The coreflexive relation on what a relation is actually defined on,
+        i.e. the partial identity on the tuples with at least one value.
+        """
+        return type(self)(
+            [(xs, xs) for xs, _ in self.inside], self.dom, self.dom)
+
+    def codomain(self) -> Relation:
+        """ The :meth:`domain` of the converse relation. """
+        return self.dagger().domain()
+
     def repeat(self) -> Relation:
         """
         The reflexive transitive closure of a relation on one type, i.e.
@@ -619,3 +643,322 @@ def consistent(world: World) -> bool:
         return True
     except OwlReadyInconsistentOntologyError:
         return False
+
+
+def relations(prop) -> dict:
+    """
+    The pairs an OWL property holds, grouped by subject; an
+    :class:`Inverse <owlready2.class_construct.Inverse>` groups its
+    property the other way around.
+
+    Parameters:
+        prop : The `owlready2` property, or the inverse of one.
+    """
+    if isinstance(prop, Inverse):
+        pairs = ((y, x) for x, ys in relations(prop.property).items()
+                 for y in ys)
+    else:
+        pairs = prop.get_relations()
+    result = {}
+    for x, y in pairs:
+        result.setdefault(x, set()).add(y)
+    return result
+
+
+def satisfying(expr, world: World) -> set:
+    """
+    The individuals satisfying an OWL class construct, i.e. its extension
+    in the closed world.
+
+    A universal or a maximum cardinality quantifies over every individual,
+    so an individual with no value at all satisfies both -- which is what
+    the open world would not let one conclude, and precisely what makes
+    this the *closed*-world reading.
+
+    Parameters:
+        expr : The `owlready2` class or class construct.
+        world : The world whose individuals quantifiers range over.
+
+    Raises:
+        NotImplementedError : On a construct outside the dictionary,
+            e.g. a datatype restriction.
+    """
+    if expr is Thing:
+        return set(instances(Thing, world))
+    if isinstance(expr, ThingClass):
+        return set(instances(expr))
+    if isinstance(expr, And):
+        return set.intersection(
+            *(satisfying(one, world) for one in expr.Classes))
+    if isinstance(expr, Or):
+        return set.union(*(satisfying(one, world) for one in expr.Classes))
+    if isinstance(expr, Not):
+        return satisfying(Thing, world) - satisfying(expr.Class, world)
+    if isinstance(expr, OneOf):
+        return set(expr.instances)
+    if isinstance(expr, Restriction):
+        return restricted(expr, world)
+    raise NotImplementedError(
+        f"{expr} is outside the dictionary of class constructs.")
+
+
+def restricted(expr: Restriction, world: World) -> set:
+    """
+    The individuals satisfying an OWL property restriction, the
+    :class:`Restriction <owlready2.class_construct.Restriction>` case of
+    :func:`satisfying`.
+
+    Parameters:
+        expr : The `owlready2` restriction.
+        world : The world whose individuals quantifiers range over.
+    """
+    pairs = relations(expr.property)
+    if expr.type == HAS_SELF:
+        return {x for x, ys in pairs.items() if x in ys}
+    if expr.type == VALUE:
+        return {x for x, ys in pairs.items() if expr.value in ys}
+    filler = satisfying(expr.value, world)
+    if expr.type == SOME:
+        return {x for x, ys in pairs.items() if ys & filler}
+    count = lambda x: len(pairs.get(x, set()) & filler)
+    if expr.type == ONLY:
+        return {x for x in satisfying(Thing, world)
+                if pairs.get(x, set()) <= filler}
+    if expr.type == MIN:
+        return {x for x in satisfying(Thing, world)
+                if count(x) >= expr.cardinality}
+    if expr.type == MAX:
+        return {x for x in satisfying(Thing, world)
+                if count(x) <= expr.cardinality}
+    assert expr.type == EXACTLY
+    return {x for x in satisfying(Thing, world)
+            if count(x) == expr.cardinality}
+
+
+def extension(expr, dom: ThingClass = None, world: World = None) -> Relation:
+    """
+    An OWL class construct as a coreflexive relation, i.e. the partial
+    identity on the individuals :func:`satisfying` it.
+
+    Parameters:
+        expr : The `owlready2` class or class construct.
+        dom : The OWL class to read it at, the construct itself when it is
+            named and ``owl:Thing`` otherwise.
+        world : The world whose individuals quantifiers range over,
+            resolved from ``expr`` or ``dom`` otherwise.
+
+    Example
+    -------
+    >>> from owlready2 import Thing, World
+    >>> onto = World().get_ontology("http://discopy.org/kennel.owl")
+    >>> with onto:
+    ...     class Dog(Thing): pass
+    ...     class Person(Thing): pass
+    ...     class owns(Person >> Dog): pass
+    ...     rex, ada, bob = Dog("rex"), Person("ada"), Person("bob")
+    ...     ada.owns = [rex]
+    >>> dog_owners = extension(onto.owns.some(onto.Dog))
+    >>> assert [x.name for (x, ), _ in dog_owners.inside] == ["ada"]
+    >>> assert dog_owners <= extension(onto.Person, dom=Thing)
+    """
+    if dom is None:
+        dom = expr if declared(expr, ThingClass) else Thing
+    world = world or expr_world(expr) or expr_world(dom)
+    inside = satisfying(expr, world) & set(instances(dom, world))
+    return Relation([2 * ((one, ), ) for one in inside], dom, dom)
+
+
+def expr_world(expr) -> World:
+    """
+    The world of the first named class or property inside an OWL class
+    construct, or ``None`` for ``owl:Thing`` alone.
+
+    Parameters:
+        expr : The `owlready2` class or class construct.
+    """
+    if declared(expr, ThingClass):
+        return expr.namespace.world
+    if isinstance(expr, (And, Or)):
+        return next((world for one in expr.Classes
+                     for world in [expr_world(one)] if world), None)
+    if isinstance(expr, Not):
+        return expr_world(expr.Class)
+    if isinstance(expr, OneOf):
+        return next((one.namespace.world for one in expr.instances), None)
+    if isinstance(expr, Restriction):
+        prop = expr.property
+        prop = prop.property if isinstance(prop, Inverse) else prop
+        return prop.namespace.world
+    return None
+
+
+class Axiom(cat.Equation):
+    """
+    What an ontology says about some parallel relations: an inclusion when
+    the symbol is :data:`INCLUSION`, an equation when it is ``"="``.
+
+    Casting to ``bool`` checks whether the loaded world satisfies the
+    axiom, which is decidable because the relations are finite; the open
+    world satisfies it by construction once :func:`reason` has run.
+
+    Parameters:
+        terms : The relations it relates.
+        symbol : :data:`INCLUSION` or ``"="``.
+        source : The `owlready2` entity or construct it came from.
+
+    Example
+    -------
+    >>> from owlready2 import Thing, World
+    >>> onto = World().get_ontology("http://discopy.org/kennel.owl")
+    >>> with onto:
+    ...     class Dog(Thing): pass
+    ...     class Person(Thing): pass
+    ...     class owns(Person >> Dog): pass
+    ...     rex, toto = Dog("rex"), Dog("toto")
+    ...     ada = Person("ada")
+    ...     ada.owns = [rex]
+    >>> owns = Relation.from_property(onto.owns)
+    >>> assert Axiom(owns.dagger() >> owns, Relation.id(onto.Dog))
+    >>> assert not Axiom(Relation.id(onto.Dog), owns.dagger() >> owns)
+    """
+    def __init__(self, *terms: Relation, symbol: str = INCLUSION,
+                 symbols=None, source=None):
+        super().__init__(*terms, symbol=symbol, symbols=symbols)
+        self.source = source
+
+    def __bool__(self):
+        return all(
+            left <= right if symbol == INCLUSION else left == right
+            for left, right, symbol
+            in zip(self.terms, self.terms[1:], self.symbols))
+
+    def __str__(self):
+        symbols = ["<=" if one == INCLUSION else one for one in self.symbols]
+        return " ".join(sum(
+            ([str(term), symbol]
+             for term, symbol in zip(self.terms, symbols)),
+            [])[:-1])
+
+
+def class_axioms(entity: ThingClass) -> list[Axiom]:
+    """
+    What an ontology says about a class, as :class:`Axiom` on relations
+    over ``owl:Thing``: one inclusion per superclass or restriction and
+    one equation per equivalence, skipping what is outside the dictionary.
+
+    Parameters:
+        entity : The `owlready2` class.
+    """
+    world = entity.namespace.world
+    left, result = extension(entity, Thing, world), []
+    for parents, symbol in ((entity.is_a, INCLUSION),
+                            (entity.equivalent_to, "=")):
+        for parent in parents:
+            if parent is Thing:
+                continue
+            try:
+                right = extension(parent, Thing, world)
+            except NotImplementedError:
+                continue
+            result.append(Axiom(
+                left, right, symbol=symbol, source=(entity, parent)))
+    return result
+
+
+def property_axioms(entity: ObjectPropertyClass) -> list[Axiom]:
+    """
+    What an ontology says about an object property, as :class:`Axiom` on
+    relations over ``owl:Thing``: its characteristics are the classical
+    ones -- an inverse is a converse, transitivity is a composite included
+    in the relation, functionality is the converse composite under the
+    identity -- and its domain and range bound its :meth:`Relation.domain`
+    and :meth:`Relation.codomain`.
+
+    Parameters:
+        entity : The `owlready2` object property.
+    """
+    world = entity.namespace.world
+    at_thing = lambda prop: Relation.from_property(prop, Thing, Thing)
+    relation, result = at_thing(entity), []
+    identity = Relation.id(Thing, world)
+    bottom = Relation.bottom((Thing, ), (Thing, ))
+    source = entity
+    result.extend(
+        Axiom(relation, at_thing(parent), source=source)
+        for parent in entity.is_a if declared(parent, ObjectPropertyClass))
+    result.extend(
+        Axiom(relation, at_thing(other), symbol="=", source=source)
+        for other in entity.equivalent_to
+        if declared(other, ObjectPropertyClass))
+    if entity.inverse_property is not None:
+        result.append(Axiom(relation.dagger(),
+                            at_thing(entity.inverse_property),
+                            symbol="=", source=source))
+    characteristics = (
+        (TransitiveProperty, relation >> relation, relation, INCLUSION),
+        (SymmetricProperty, relation.dagger(), relation, "="),
+        (AsymmetricProperty,
+         relation.meet(relation.dagger()), bottom, "="),
+        (ReflexiveProperty, identity, relation, INCLUSION),
+        (IrreflexiveProperty, relation.meet(identity), bottom, "="),
+        (FunctionalProperty,
+         relation.dagger() >> relation, identity, INCLUSION),
+        (InverseFunctionalProperty,
+         relation >> relation.dagger(), identity, INCLUSION))
+    result.extend(
+        Axiom(left, right, symbol=symbol, source=source)
+        for characteristic, left, right, symbol in characteristics
+        if issubclass(entity, characteristic))
+    result.extend(
+        Axiom(identity.then(*map(at_thing, chain.properties)), relation,
+              source=source)
+        for chain in entity.get_property_chain())
+    for classes, side in ((entity.domain, relation.domain()),
+                          (entity.range, relation.codomain())):
+        if len(classes) == 1 and declared(classes[0], ThingClass):
+            result.append(Axiom(
+                side, extension(classes[0], Thing, world), source=source))
+    return result
+
+
+def axioms(entity) -> list[Axiom]:
+    """
+    The axioms of an OWL entity, i.e. what an ontology says about the
+    relations it presents, compiled to :class:`Axiom` -- including, for a
+    whole ontology, one empty-intersection equation per pair of disjoint
+    classes.
+
+    Parameters:
+        entity : An `owlready2` ontology, class or object property.
+
+    Example
+    -------
+    >>> from owlready2 import Thing, World
+    >>> onto = World().get_ontology("http://discopy.org/kennel.owl")
+    >>> with onto:
+    ...     class Dog(Thing): pass
+    ...     class Person(Thing): pass
+    ...     class owns(Person >> Dog): pass
+    ...     rex, ada = Dog("rex"), Person("ada")
+    ...     ada.owns = [rex]
+    >>> assert all(axioms(onto))  # the loaded world satisfies its schema
+    """
+    if isinstance(entity, Ontology):
+        world = entity.world
+        result = [axiom for cls in entity.classes()
+                  for axiom in class_axioms(cls)]
+        result += [axiom for prop in entity.object_properties()
+                   for axiom in property_axioms(prop)]
+        bottom = Relation.bottom((Thing, ), (Thing, ))
+        result += [
+            Axiom(extension(left, Thing, world).meet(
+                extension(right, Thing, world)), bottom,
+                symbol="=", source=disjoint)
+            for disjoint in entity.disjoint_classes()
+            for index, left in enumerate(disjoint.entities)
+            for right in disjoint.entities[index + 1:]]
+        return result
+    if isinstance(entity, ThingClass):
+        return class_axioms(entity)
+    assert_isinstance(entity, ObjectPropertyClass)
+    return property_axioms(entity)

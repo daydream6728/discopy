@@ -15,10 +15,10 @@
 - [x] `discopy.owl.Relation`, the semantic category of an ontology's relations, with the
       `semantic` extra, `UNIMPORTABLE` and docs registration
 - [x] `reason`, `consistent` and `load`, delegating to HermiT and `owlready2`
-- [WIP] @claude-allegories-2026-09-01 11:00 `extension`, the closed-world semantics
-      of class constructs, and `Relation.sparql`
-- [ ] `Axiom` and `axioms`, compiling what an ontology says into checkable inclusions
-- [ ] drawing: `to_diagram` and friends, pictures derived from the ontology's own syntax
+- [x] `extension`, the closed-world semantics of class constructs, and `Relation.sparql`
+- [x] `Axiom` and `axioms`, compiling what an ontology says into checkable inclusions
+- [WIP] @claude-allegories-2026-09-01 11:30 drawing: `to_diagram` and friends,
+      pictures derived from the ontology's own syntax
 - [ ] FIBO fixtures in `test/fixtures/fibo/` with a demo ABox
 - [ ] the notebook `docs/notebooks/ontologies.md`, CI Java and `uv.lock`
 - [ ] changelog, lint, coverage and sign-off

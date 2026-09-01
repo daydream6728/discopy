@@ -7,11 +7,15 @@ from pytest import fixture, importorskip, mark, raises
 importorskip("owlready2")
 
 from owlready2 import (  # noqa: E402
-    JAVA_EXE, AllDisjoint, Thing, ThingClass, World)
+    JAVA_EXE, AllDisjoint, AsymmetricProperty, FunctionalProperty, Inverse,
+    InverseFunctionalProperty, IrreflexiveProperty, Not, OneOf,
+    PropertyChain, ReflexiveProperty, SymmetricProperty, Thing, ThingClass,
+    TransitiveProperty, World)
 
 from discopy.owl import (  # noqa: E402
-    Relation, carrier, consistent, declared, find_world, instances, load,
-    reason)
+    Axiom, Relation, axioms, carrier, class_axioms, consistent, declared,
+    expr_world, extension, find_world, instances, load, property_axioms,
+    reason, relations, satisfying)
 from discopy.utils import AxiomError  # noqa: E402
 
 
@@ -28,6 +32,7 @@ def kennel():
         class Person(Thing): pass
         class owns(Person >> Dog): pass
         class knows(Person >> Person): pass
+        class named(Dog >> str): pass
         rex, fido = Dog("rex"), Dog("fido")
         ada, bob = Person("ada"), Person("bob")
         ada.owns, bob.owns = [rex], [rex, fido]
@@ -207,6 +212,144 @@ def test_load(kennel, tmp_path):
                  world=World(), path=str(tmp_path))
     assert {one.name for one in again.individuals()}\
         == {one.name for one in kennel.individuals()}
+
+
+def test_relations(kennel):
+    assert relations(kennel.owns) == {
+        kennel.ada: {kennel.rex}, kennel.bob: {kennel.rex, kennel.fido}}
+    assert relations(Inverse(kennel.owns)) == {
+        kennel.rex: {kennel.ada, kennel.bob}, kennel.fido: {kennel.bob}}
+
+
+def test_satisfying_boolean_constructs(kennel):
+    world = kennel.world
+    people, dogs = satisfying(kennel.Person, world), set(
+        instances(kennel.Dog))
+    assert satisfying(Thing, world) == people | dogs | {
+        kennel.ada, kennel.bob, kennel.rex, kennel.fido}
+    assert satisfying(kennel.Person & kennel.Animal, world) == set()
+    assert satisfying(kennel.Person | kennel.Dog, world) == people | dogs
+    assert satisfying(Not(kennel.Person), world)\
+        == satisfying(Thing, world) - people
+    assert satisfying(OneOf([kennel.rex]), world) == {kennel.rex}
+    with raises(NotImplementedError):
+        satisfying("not a construct", world)
+
+
+def test_satisfying_restrictions(kennel):
+    world, owns, dog = kennel.world, kennel.owns, kennel.Dog
+    assert satisfying(owns.some(dog), world) == {kennel.ada, kennel.bob}
+    assert satisfying(owns.value(kennel.fido), world) == {kennel.bob}
+    assert satisfying(owns.min(2, dog), world) == {kennel.bob}
+    assert satisfying(owns.max(1, dog), world)\
+        == satisfying(Thing, world) - {kennel.bob}
+    assert satisfying(owns.exactly(1, dog), world) == {kennel.ada}
+    assert satisfying(owns.only(dog), world) == satisfying(Thing, world)
+    assert satisfying(kennel.knows.has_self(), world) == set()
+    with kennel:
+        kennel.ada.knows.append(kennel.ada)
+    assert satisfying(kennel.knows.has_self(), world) == {kennel.ada}
+    with raises(NotImplementedError):
+        satisfying(kennel.named.some(str), world)  # a datatype filler
+
+
+def test_extension(kennel):
+    assert extension(kennel.Dog) == Relation.id(kennel.Dog)
+    hoarders = extension(kennel.owns.min(2, kennel.Dog), dom=kennel.Person)
+    assert [x.name for (x, ), _ in hoarders.inside] == ["bob"]
+    assert extension(Thing, world=kennel.world)\
+        == Relation.id(Thing, kennel.world)
+
+
+def test_expr_world(kennel):
+    world = kennel.world
+    assert expr_world(kennel.Dog) is world
+    assert expr_world(kennel.Dog & Thing) is world
+    assert expr_world(Not(kennel.Dog)) is world
+    assert expr_world(OneOf([kennel.rex])) is world
+    assert expr_world(kennel.owns.some(Thing)) is world
+    assert expr_world(Inverse(kennel.owns).some(Thing)) is world
+    assert expr_world(Thing) is None
+    assert expr_world(OneOf([])) is None
+
+
+def test_axiom(kennel):
+    owns = Relation.from_property(kennel.owns)
+    single = Axiom(owns >> owns.dagger(), Relation.id(kennel.Person))
+    assert not single  # ada and bob share rex
+    assert str(Axiom(owns, owns, symbol="=")).count("=") == 1
+    assert "<=" in str(single)
+
+
+def test_class_axioms(kennel):
+    with kennel:
+        class Pet(Thing): pass
+        class Barker(Thing):
+            equivalent_to = [kennel.Dog]
+        kennel.Dog.is_a.append(Pet)
+        kennel.Dog.is_a.append(kennel.knows.some(Thing))  # dogs know nobody
+        kennel.Dog.is_a.append(kennel.named.some(str))  # not compiled
+    book = class_axioms(kennel.Dog)
+    sources = [axiom.source[1] for axiom in book]
+    assert Pet in sources and kennel.Animal in sources
+    assert not any(  # the datatype restriction is skipped
+        "named" in str(source) for source in sources)
+    broken = [axiom for axiom in book if not axiom]
+    assert [axiom.source[1] for axiom in broken]\
+        == [kennel.knows.some(Thing)]  # a named parent holds by search
+    assert all(class_axioms(Barker))  # so does an equivalence
+
+
+def test_property_axioms_characteristics(kennel):
+    with kennel:
+        class descends(kennel.Dog >> kennel.Dog, TransitiveProperty): pass
+        class near(kennel.Dog >> kennel.Dog, SymmetricProperty): pass
+        class above(kennel.Dog >> kennel.Dog, AsymmetricProperty): pass
+        class sameAs(kennel.Dog >> kennel.Dog, ReflexiveProperty): pass
+        class other(kennel.Dog >> kennel.Dog, IrreflexiveProperty): pass
+        class chip(kennel.Dog >> kennel.Person, FunctionalProperty): pass
+        class tag(kennel.Dog >> kennel.Person,
+                  InverseFunctionalProperty): pass
+    for prop in (descends, near, above, other, chip, tag):
+        assert all(property_axioms(prop))  # empty relations satisfy these
+    reflexivity, = [axiom for axiom in property_axioms(sameAs)
+                    if len(axiom.terms[0].inside)]
+    assert not reflexivity  # nothing is sameAs itself, closed world
+
+
+def test_property_axioms_structure(kennel):
+    with kennel:
+        class ownedBy(kennel.Dog >> kennel.Person): pass
+        class has(kennel.Person >> kennel.Dog): pass
+        class walksWith(kennel.Person >> kennel.Dog): pass
+        kennel.owns.is_a.append(has)
+        kennel.owns.equivalent_to.append(has)
+        ownedBy.inverse_property = kennel.owns
+        walksWith.property_chain.append(
+            PropertyChain([kennel.knows, kennel.owns]))
+    for x, ys in relations(kennel.owns).items():
+        for y in ys:
+            x.has.append(y)
+            y.ownedBy.append(x)
+    assert all(property_axioms(kennel.owns))
+    walks = property_axioms(walksWith)[0]  # the chain, then domain, range
+    assert not walks  # ada knows bob who owns fido, but walks with nobody
+    domain, range_ = [axiom for axiom in property_axioms(kennel.knows)
+                      if axiom.source is kennel.knows][-2:]
+    assert domain and range_
+
+
+def test_axioms(kennel):
+    with kennel:
+        AllDisjoint([kennel.Dog, kennel.Person])
+    book = axioms(kennel)
+    assert all(book)  # the kennel is a model of its own schema
+    assert any("=" in axiom.symbols for axiom in book)  # the disjointness
+    assert [str(one) for one in axioms(kennel.Dog)]\
+        == [str(one) for one in class_axioms(kennel.Dog)]
+    assert len(axioms(kennel.owns)) == len(property_axioms(kennel.owns))
+    with raises(TypeError):
+        axioms("not an entity")
 
 
 @needs_java
