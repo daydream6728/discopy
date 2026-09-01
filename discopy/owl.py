@@ -746,12 +746,16 @@ def preload(path: str, world: World):
 
     The declared IRI and the imports of each file are read off its
     ``owl:Ontology`` element; the imports between the files must not
-    form a cycle.
+    form a cycle. A missing directory raises rather than falling back
+    to the network, so a mistyped path fails here and not wherever the
+    live ontologies first disagree with the copy.
 
     Parameters:
         path : The directory holding ``.rdf`` or ``.owl`` files.
         world : The world to load them into.
     """
+    if not os.path.isdir(path):
+        raise FileNotFoundError(path)
     files, imports = {}, {}
     for root, _, names in sorted(os.walk(path)):
         for name in sorted(names):
@@ -788,7 +792,12 @@ def reason(world: World, infer_property_values: bool = True):
     Run `HermiT` on a world so that what it entails can be read off it:
     class membership, subsumption and, by default, property values.
 
-    Assign to this to use another reasoner or other options.
+    Assign to this to use another reasoner or other options. Note that
+    HermiT accepts only the datatypes of the OWL 2 map, while published
+    ontologies can range over others -- e.g. ``rdf:langString`` in the
+    OMG Commons that FIBO imports -- so reasoning about them wants a
+    curated copy, the way ``test/fixtures/fibo`` stands in for the
+    modules that trip HermiT.
 
     Parameters:
         world : The world to reason about.

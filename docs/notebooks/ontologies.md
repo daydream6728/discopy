@@ -47,19 +47,27 @@ corporate_control = load("https://spec.edmcouncil.org/fibo/ontology"
 ```
 
 Here we load the same modules from the copy checked into DisCoPy's test
-fixtures, so this notebook runs offline and reproducibly:
+fixtures, so this notebook runs offline and reproducibly — and it is not
+only about the network: HermiT accepts exactly the datatypes of the OWL 2
+map, while the live OMG Commons modules that FIBO imports range over
+`rdf:langString`, which is outside it, so reasoning about the live copy
+fails where the curated one works.
 
 ```python {.marimo}
+import os
+
 from owlready2 import Not, Thing, World
 
 from discopy.owl import (
     Relation, axioms, box, consistent, extension, load, point, to_diagram)
 
 FIBO = "https://spec.edmcouncil.org/fibo/ontology/"
+FIXTURES = os.path.join(str(mo.notebook_dir() or "."),
+                        "..", "..", "test", "fixtures", "fibo")
 world = World()
 corporate_control = load(
     FIBO + "BE/OwnershipAndControl/CorporateControl/",
-    world, path="../../test/fixtures/fibo")
+    world, path=FIXTURES)
 modules = [key for key in world.ontologies if key.startswith("http")]
 mo.md(f"Loaded **{len(list(world.classes()))} classes** and "
       f"**{len(list(world.properties()))} properties** "

@@ -228,6 +228,11 @@ def test_preload_skips_a_file_without_ontology(kennel, tmp_path):
         == {one.name for one in kennel.classes()}
 
 
+def test_preload_rejects_a_missing_directory(tmp_path):
+    with raises(FileNotFoundError):
+        load("http://x/a/", world=World(), path=str(tmp_path / "nowhere"))
+
+
 def test_preload_rejects_cycles(tmp_path):
     for name, other in (("a", "b"), ("b", "a")):
         (tmp_path / f"{name}.rdf").write_text(
