@@ -16,8 +16,8 @@ from discopy import frobenius  # noqa: E402
 from discopy.owl import (  # noqa: E402
     Axiom, Relation, axioms, box, carrier, class_axioms, combine,
     consistent, declared, expr_world, extension, find_world, instances,
-    load, ob, point, property_axioms, reason, relations, satisfying,
-    schema, to_diagram)
+    coercion, label, load, ob, parallel, point, property_axioms, reason,
+    relations, satisfying, schema, to_diagram)
 from discopy.utils import AxiomError  # noqa: E402
 
 
@@ -89,8 +89,9 @@ def test_id_then(kennel):
     knows = Relation.from_property(kennel.knows)
     assert (knows >> owns).inside == (((kennel.ada, ), (kennel.fido, )),
                                       ((kennel.ada, ), (kennel.rex, )))
+    assert not owns >> knows  # coerced through Dog ⊓ Person, which is empty
     with raises(AxiomError):
-        owns >> knows
+        owns >> Relation.id(())  # only an arity mismatch fails
 
 
 def test_tensor_whiskers_objects(kennel):
@@ -451,6 +452,76 @@ def test_axiom_draw(kennel, tmp_path):
         path=str(tmp_path / "some.png"))
 
 
+def test_label(kennel):
+    dog, person, owns = kennel.Dog, kennel.Person, kennel.owns
+    assert label(Thing) == "Thing" and label(dog) == "Dog"
+    assert label(owns) == "owns" and label(kennel.rex) == "rex"
+    assert label(Inverse(owns)) == "owns˘"
+    assert label(person & Not(owns.some(dog) | owns.value(kennel.rex)))\
+        == "Person ⊓ ¬(∃owns.Dog ⊔ ∃owns.{rex})"
+    assert label(owns.only(OneOf([kennel.rex]))) == "∀owns.{rex}"
+    assert label(kennel.knows.has_self()) == "∃knows.Self"
+    assert label(owns.min(2, dog)) == "≥2 owns.Dog"
+    assert label(owns.max(1, dog)) == "≤1 owns.Dog"
+    assert label(owns.exactly(1, dog)) == "=1 owns.Dog"
+    assert label(str) == "str" and label(42) == "42"
+
+
+def test_constructs_as_objects(kennel):
+    parents = kennel.owns.some(kennel.Dog)
+    assert instances(parents) == (kennel.ada, kennel.bob)
+    wire = Relation.id(parents)
+    assert wire == extension(parents) and len(wire.inside) == 2
+    assert wire.to_diagram() == frobenius.Id(frobenius.Ty("∃owns.Dog"))
+    assert Relation.top(parents, parents).neg()\
+        == Relation.bottom(parents, parents)
+    assert Relation.spiders(1, 0, parents).dom == (parents, )
+    assert find_world((parents, )) is kennel.world
+
+
+def test_coercion(kennel):
+    dog, animal, person = kennel.Dog, kennel.Animal, kennel.Person
+    assert coercion(dog, dog) == Relation.id(dog)
+    free = coercion(dog, animal)
+    assert free.domain() == Relation.id(dog)  # a dog is an animal
+    assert not coercion(dog, person)  # but not a person
+    assert free.to_diagram() == frobenius.Box(
+        "Animal", frobenius.Ty("Dog"), frobenius.Ty("Animal"))
+
+
+def test_then_coerces(kennel):
+    owns = Relation.from_property(kennel.owns)
+    ada = Relation.from_individual(kennel.ada, kennel.Person)
+    everyone = Relation.from_property(kennel.owns, Thing, Thing)
+    coerced = ada >> everyone  # a coercion Person -> Thing is inserted
+    assert coerced == ada >> coercion(kennel.Person, Thing) >> everyone
+    assert set(coerced.inside) == {((), (kennel.rex, ))}
+    assert "Thing" in [box.name for box in coerced.to_diagram().boxes]
+    two_dogs = owns >> coercion(kennel.Dog, kennel.Animal)
+    assert (ada >> owns >> two_dogs.dagger()).dom == ()  # auto-coerced
+
+
+def test_from_property_filters_to_its_boundary(kennel):
+    with kennel:
+        kennel.rex.knows = [kennel.ada]  # a dog outside knows' domain
+    at_schema = Relation.from_property(kennel.knows)
+    assert ((kennel.rex, ), (kennel.ada, )) not in at_schema.inside
+    at_thing = Relation.from_property(kennel.knows, Thing, Thing)
+    assert ((kennel.rex, ), (kennel.ada, )) in at_thing.inside
+    assert at_schema <= Relation.top(at_schema.dom, at_schema.cod)
+
+
+def test_parallel(kennel):
+    owns = Relation.from_property(kennel.owns)
+    knows = Relation.from_property(kennel.knows)
+    assert parallel(owns, owns) == (owns, owns)
+    left, right = parallel(owns, knows)
+    assert left.dom == right.dom == (Thing, )
+    assert left == Relation.from_property(kennel.owns, Thing, Thing)
+    with raises(AxiomError):
+        parallel(owns, Relation.id(()))
+
+
 FIBO = "https://spec.edmcouncil.org/fibo/ontology/"
 FIXTURES = "test/fixtures/fibo"
 
@@ -517,6 +588,16 @@ def test_market_control_chain(market):
     shell = Relation.from_individual(demo.shell_co, Thing)
     assert not alice >> web >> shell.dagger()  # not directly
     assert alice >> web.repeat() >> shell.dagger()  # but ultimately
+
+
+def test_fibo_compound_type(market):
+    world, demo, company, person, controls = market
+    controllers = controls.some(Thing)
+    wire = Relation.id(controllers)
+    assert [x.name for (x, ), _ in wire.inside]\
+        == ["acme_bank", "acme_holdings", "alice"]
+    assert wire.to_diagram()\
+        == frobenius.Id(frobenius.Ty("∃controls.Thing"))
 
 
 @needs_java

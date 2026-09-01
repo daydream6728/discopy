@@ -58,11 +58,14 @@ Summary
         class_axioms
         property_axioms
         axioms
+        label
         ob
         schema
         box
         point
         individual_class
+        coercion
+        parallel
         to_diagram
         restriction_diagram
         combine
@@ -149,20 +152,26 @@ def iris(individuals: tuple) -> tuple[str, ...]:
     return tuple(individual.iri for individual in individuals)
 
 
-def instances(cls: ThingClass, world: World = None) -> tuple:
+def instances(cls, world: World = None) -> tuple:
     """
-    The individuals of an OWL class, sorted by IRI.
+    The individuals of an OWL class or class construct, sorted by IRI.
 
-    A named class carries its own world; ``owl:Thing`` belongs to every
-    world at once, so its instances are read from the ``world`` given,
-    the default world otherwise.
+    A named class carries its own world and a construct finds one inside
+    itself with :func:`expr_world`; ``owl:Thing`` belongs to every world
+    at once, so its instances are read from the ``world`` given, the
+    default world otherwise. A construct is read closed-world with
+    :func:`satisfying`, which is what lets a compound class expression
+    stand as an object, i.e. type a wire.
 
     Parameters:
-        cls : The OWL class.
+        cls : The OWL class or class construct.
         world : The world to read ``owl:Thing`` from.
     """
-    generator = cls.instances(world=world) if world is not None\
-        else cls.instances()
+    if isinstance(cls, ThingClass):
+        generator = cls.instances(world=world) if world is not None\
+            else cls.instances()
+    else:
+        generator = satisfying(cls, world or expr_world(cls))
     return tuple(sorted(generator, key=lambda one: one.iri))
 
 
@@ -182,16 +191,18 @@ def carrier(typ: tuple, world: World = None) -> tuple:
 
 def find_world(*typs: tuple) -> World:
     """
-    The world of the first named class in some tuples of OWL classes, or
-    ``None`` when there is nothing but ``owl:Thing`` to ask.
+    The world of the first named class or class construct in some tuples
+    of OWL classes, or ``None`` when there is nothing but ``owl:Thing``
+    to ask.
 
     Parameters:
-        typs : The tuples of OWL classes.
+        typs : The tuples of OWL classes or class constructs.
     """
     for typ in typs:
         for cls in typ:
-            if declared(cls, ThingClass):
-                return cls.namespace.world
+            world = expr_world(cls)
+            if world is not None:
+                return world
     return None
 
 
@@ -272,8 +283,8 @@ class Relation(BooleanAllegory, SymmetricCategory):
 
     def __str__(self):
         name = getattr(self, "name", type(self).__name__)
-        dom = tuple(cls.name for cls in self.dom)
-        cod = tuple(cls.name for cls in self.cod)
+        dom = tuple(map(label, self.dom))
+        cod = tuple(map(label, self.cod))
         return f"{name} : {dom and str(dom) or '()'} "\
             f"-> {cod and str(cod) or '()'}"
 
@@ -303,12 +314,23 @@ class Relation(BooleanAllegory, SymmetricCategory):
         """
         The relational composition, i.e. pairs that share a middle.
 
+        Composing across two different predicates never fails: OWL is
+        single-sorted, so when the boundaries differ wire by wire the
+        :func:`coercion` between them is inserted -- the join restricts
+        to the individuals both predicates hold of, and the picture shows
+        a coercion box exactly where the predicate changes.
+
         Parameters:
             others : The relations to compose in sequence.
         """
         result = self
         for other in others:
             assert_isinstance(other, Relation)
+            if result.cod != other.dom\
+                    and len(result.cod) == len(other.dom):
+                other = type(self).id(()).tensor(*(
+                    coercion(source, target) for source, target
+                    in zip(result.cod, other.dom))).then(other)
             assert_iscomposable(result, other)
             targets = {}
             for ys, zs in other.inside:
@@ -589,6 +611,10 @@ class Relation(BooleanAllegory, SymmetricCategory):
         The relation an OWL property holds, from what ``rdfs:domain`` says
         it is defined on to what ``rdfs:range`` says it lands in.
 
+        The pairs are restricted to the carriers of the boundary, so that
+        reading a property at a narrower predicate filters what it holds
+        and the boundary stays honest; ``owl:Thing`` keeps everything.
+
         Parameters:
             prop : The `owlready2` property.
             dom : The domain to read it at, its ``rdfs:domain`` when it
@@ -598,7 +624,12 @@ class Relation(BooleanAllegory, SymmetricCategory):
         schema_dom, schema_cod = schema(prop)
         dom = tuplify(schema_dom if dom is None else dom)
         cod = tuplify(schema_cod if cod is None else cod)
-        result = cls(set(prop.get_relations()), dom, cod)
+        source, target = (
+            None if one is Thing else set(instances(one))
+            for one in (dom[0], cod[0]))
+        result = cls({(x, y) for x, y in prop.get_relations()
+                      if (source is None or x in source)
+                      and (target is None or y in target)}, dom, cod)
         result.name = prop.name
         result.diagram = frobenius.Box(prop.name, ob(dom), ob(cod))
         return result
@@ -786,6 +817,62 @@ def consistent(world: World) -> bool:
         return False
 
 
+def coercion(source, target, world: World = None) -> Relation:
+    """
+    The move between two predicates on the same individuals: the partial
+    identity relating what satisfies both, drawn as a box named after
+    where it goes -- and the identity where the two agree, which is what
+    :meth:`Relation.then` puts between two relations that do not meet.
+
+    Parameters:
+        source : The predicate to come from.
+        target : The predicate to go to.
+        world : The world to read ``owl:Thing`` from.
+
+    Example
+    -------
+    >>> from owlready2 import Thing, World
+    >>> onto = World().get_ontology("http://discopy.org/kennel.owl")
+    >>> with onto:
+    ...     class Animal(Thing): pass
+    ...     class Dog(Animal): pass
+    ...     rex = Dog("rex")
+    >>> assert coercion(onto.Dog, onto.Dog) == Relation.id(onto.Dog)
+    >>> free = coercion(onto.Dog, onto.Animal)
+    >>> assert free.domain() == Relation.id(onto.Dog)  # a dog is an animal
+    """
+    if source == target:
+        return Relation.id((source, ), world)
+    world = world or expr_world(source) or expr_world(target)
+    inside = set(instances(source, world)) & set(instances(target, world))
+    result = Relation([2 * ((one, ), ) for one in inside],
+                      (source, ), (target, ))
+    result.diagram = frobenius.Box(label(target), ob(source), ob(target))
+    return result
+
+
+def parallel(left: Relation, right: Relation) -> tuple:
+    """
+    Two relations as a parallel pair, widened to ``owl:Thing`` with
+    coercions on each wire if their boundaries differ -- which is what an
+    :class:`Axiom` between them needs.
+
+    Parameters:
+        left : One relation.
+        right : The other.
+    """
+    if left.is_parallel(right):
+        return left, right
+    world = find_world(left.dom, left.cod, right.dom, right.cod)
+    widen = lambda relation: (
+        Relation.id(len(relation.dom) * (Thing, ), world) >> relation
+        >> Relation.id(len(relation.cod) * (Thing, ), world))
+    left, right = widen(left), widen(right)
+    if not left.is_parallel(right):
+        raise AxiomError(messages.NOT_PARALLEL.format(left, right))
+    return left, right
+
+
 def combine(operation, *diagrams):
     """
     Apply an operation to some pictures, or give up: ``None`` -- a
@@ -799,18 +886,77 @@ def combine(operation, *diagrams):
         else operation(*diagrams)
 
 
-def ob(typ=None) -> frobenius.Ty:
+def label(entity) -> str:
     """
-    A tuple of OWL classes as a type with one wire per class, named after
-    them -- the predicates-as-objects reading of a boundary.
+    An OWL entity or class construct as a mathematician would write it on
+    the board: intersection is :math:`\\sqcap`, union :math:`\\sqcup`,
+    complement :math:`\\neg`, a quantifier follows its property, a
+    cardinality precedes it and an inverse takes a converse breve.
 
     Parameters:
-        typ : The OWL class or tuple of OWL classes, ``owl:Thing`` by
+        entity : The `owlready2` entity or class construct.
+
+    Example
+    -------
+    >>> from owlready2 import Thing, World
+    >>> onto = World().get_ontology("http://discopy.org/kennel.owl")
+    >>> with onto:
+    ...     class Dog(Thing): pass
+    ...     class Person(Thing): pass
+    ...     class owns(Person >> Dog): pass
+    ...     rex = Dog("rex")
+    >>> print(label(Person & Not(owns.some(Dog) | owns.value(rex))))
+    Person ⊓ ¬(∃owns.Dog ⊔ ∃owns.{rex})
+    >>> print(label(Inverse(owns).min(2, Person | Dog)))
+    ≥2 owns˘.(Person ⊔ Dog)
+    """
+    sub = lambda one: f"({label(one)})"\
+        if isinstance(one, (And, Or)) else label(one)
+    if entity is Thing:
+        return "Thing"
+    if isinstance(entity, (ThingClass, Thing)) or declared(
+            entity, owlready2.PropertyClass):
+        return entity.name
+    if isinstance(entity, Inverse):
+        return sub(entity.property) + "˘"
+    if isinstance(entity, And):
+        return " ⊓ ".join(map(sub, entity.Classes))
+    if isinstance(entity, Or):
+        return " ⊔ ".join(map(sub, entity.Classes))
+    if isinstance(entity, Not):
+        return "¬" + sub(entity.Class)
+    if isinstance(entity, OneOf):
+        return "{" + ", ".join(one.name for one in entity.instances) + "}"
+    if isinstance(entity, Restriction):
+        prop = label(entity.property)
+        if entity.type == HAS_SELF:
+            return f"∃{prop}.Self"
+        if entity.type == VALUE:
+            return f"∃{prop}.{{{entity.value.name}}}"
+        filler = sub(entity.value)
+        if entity.type == SOME:
+            return f"∃{prop}.{filler}"
+        if entity.type == ONLY:
+            return f"∀{prop}.{filler}"
+        symbol = {MIN: "≥", MAX: "≤", EXACTLY: "="}[entity.type]
+        return f"{symbol}{entity.cardinality} {prop}.{filler}"
+    if isinstance(entity, type):
+        return entity.__name__
+    return str(entity)
+
+
+def ob(typ=None) -> frobenius.Ty:
+    """
+    A tuple of OWL classes or class constructs as a type with one wire
+    per predicate, named by its :func:`label` -- the predicates-as-types
+    reading of a boundary.
+
+    Parameters:
+        typ : The predicate or tuple of predicates, ``owl:Thing`` by
             default.
     """
     typ = (Thing, ) if typ is None else tuplify(typ)
-    return frobenius.Ty(*(
-        "Thing" if one is Thing else one.name for one in typ))
+    return frobenius.Ty(*map(label, typ))
 
 
 def schema(prop) -> tuple:
@@ -1081,8 +1227,10 @@ def extension(expr, dom: ThingClass = None, world: World = None) -> Relation:
 
     Parameters:
         expr : The `owlready2` class or class construct.
-        dom : The OWL class to read it at, the construct itself when it is
-            named and ``owl:Thing`` otherwise.
+        dom : The predicate to read it at, the construct itself by
+            default -- an identity wire on the compound type; pass
+            ``owl:Thing`` to see its anatomy as boxes and bubbles
+            instead.
         world : The world whose individuals quantifiers range over,
             resolved from ``expr`` or ``dom`` otherwise.
 
@@ -1098,10 +1246,11 @@ def extension(expr, dom: ThingClass = None, world: World = None) -> Relation:
     ...     ada.owns = [rex]
     >>> dog_owners = extension(onto.owns.some(onto.Dog))
     >>> assert [x.name for (x, ), _ in dog_owners.inside] == ["ada"]
-    >>> assert dog_owners <= extension(onto.Person, dom=Thing)
+    >>> assert dog_owners == Relation.id(dog_owners.dom)  # its own type
+    >>> anatomy = extension(onto.owns.some(onto.Dog), dom=Thing)
+    >>> assert anatomy <= extension(onto.Person, dom=Thing)
     """
-    if dom is None:
-        dom = expr if declared(expr, ThingClass) else Thing
+    dom = expr if dom is None else dom
     world = world or expr_world(expr) or expr_world(dom)
     inside = satisfying(expr, world) & set(instances(dom, world))
     result = Relation([2 * ((one, ), ) for one in inside], dom, dom)

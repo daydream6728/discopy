@@ -83,16 +83,22 @@ chain_axiom = next(
 chain_axiom.equation
 ```
 
-Class expressions draw too. "A party that controls something but is not a
-for-profit corporation" is a *coreflexive* relation — a predicate read as
-a partial identity — built by composing the class test with a quantifier
-and a complement bubble:
+Class expressions draw too, and they can be read at two altitudes. "A
+party that controls something but is not a for-profit corporation" is a
+*coreflexive* relation — a predicate read as a partial identity. Read on
+`owl:Thing`, it shows its anatomy: the class test composed with a
+quantifier and a complement bubble. Read at its own type, the whole
+predicate is one wire, labeled the way a mathematician would write it —
+compound entities are objects too:
 
 ```python {.marimo}
 controls = world.search_one(iri=FIBO + "FND/Relations/Relations/controls")
 for_profit = world.search_one(
     iri=FIBO + "BE/LegalEntities/CorporateBodies/ForProfitCorporation")
-to_diagram(controls.some(Thing) & Not(for_profit), dom=Thing)
+expression = controls.some(Thing) & Not(for_profit)
+mo.hstack([
+    extension(expression, dom=Thing, world=world).to_diagram(),
+    extension(expression, world=world).to_diagram()])
 ```
 
 ## A small world of companies
@@ -129,6 +135,26 @@ facts
 Each column is one asserted fact, read top to bottom: a point, a property,
 a co-point — `controls(alice, acme_holdings)` and so on.
 <!---->
+Because predicates are types, the whole chain of control composes as one
+diagram with every wire labeled by its FIBO class — no membership boxes
+to read through. Where two predicates do not meet, composition inserts
+the coercion between them automatically, so a boundary change is always
+visible as a box:
+
+```python {.marimo}
+person_controls = Relation.from_property(
+    controls, natural_person, business_entity)
+company_controls = Relation.from_property(
+    controls, business_entity, business_entity)
+control_chain = (
+    Relation.from_individual(alice, natural_person)
+    >> person_controls >> company_controls >> company_controls
+    >> Relation.from_individual(shell, business_entity).dagger())
+mo.hstack([control_chain.to_diagram(),
+           mo.md("The scalar this diagram evaluates to is the truth "
+                 f"value of the chain: **{bool(control_chain)}**.")])
+```
+
 ## Closed world: relations as a runtime monitor
 
 Reading the `controls` property off the loaded world gives a finite

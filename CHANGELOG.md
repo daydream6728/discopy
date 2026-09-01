@@ -28,6 +28,15 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   with the FIBO fixtures of `test/fixtures/fibo` and the `ontologies`
   notebook, which pitches ontologies as guardrails for AI agents on
   FIBO's own ownership-and-control modules.
+  Predicates are types, compound ones included: any class construct can
+  stand as an object, so `extension` defaults to the identity wire on the
+  compound type, labelled in math notation by `label` — `Person ⊓
+  ∃owns.Dog` is one wire, its anatomy of boxes and bubbles one `dom=Thing`
+  away. Composing two relations that do not meet inserts the `coercion`
+  between their predicates, the partial identity drawn as a box named
+  after where it goes, `from_property` restricts a property to the
+  carriers of the boundary it is read at, and `parallel` widens two
+  relations to `owl:Thing` for an `Axiom` between them.
 - Abstract base classes for order-enriched categories in `discopy.abc`:
   `Poset`, `Lattice` and `BooleanAlgebra` for the structure of hom-sets,
   `DaggerCategory` for the converse, `Allegory` (Freyd & Scedrov) for a
