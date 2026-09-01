@@ -1,7 +1,11 @@
 ---
 title: Ontologies
 marimo-version: 0.23.14
----
+pyproject: |
+  requires-python: ">=3.11"
+  dependencies:
+    - "discopy @ git+https://github.com/daydream6728/discopy.git@feature/allegories"
+------
 
 ```python {.marimo}
 import marimo as mo
