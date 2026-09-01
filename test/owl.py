@@ -12,10 +12,12 @@ from owlready2 import (  # noqa: E402
     PropertyChain, ReflexiveProperty, SymmetricProperty, Thing, ThingClass,
     TransitiveProperty, World)
 
+from discopy import frobenius  # noqa: E402
 from discopy.owl import (  # noqa: E402
-    Axiom, Relation, axioms, carrier, class_axioms, consistent, declared,
-    expr_world, extension, find_world, instances, load, property_axioms,
-    reason, relations, satisfying)
+    Axiom, Relation, axioms, box, carrier, class_axioms, combine,
+    consistent, declared, expr_world, extension, find_world, instances,
+    load, ob, point, property_axioms, reason, relations, satisfying,
+    to_diagram)
 from discopy.utils import AxiomError  # noqa: E402
 
 
@@ -350,6 +352,71 @@ def test_axioms(kennel):
     assert len(axioms(kennel.owns)) == len(property_axioms(kennel.owns))
     with raises(TypeError):
         axioms("not an entity")
+
+
+def test_ob_box_point(kennel):
+    assert ob() == frobenius.Ty("Thing")
+    assert ob((kennel.Person, kennel.Dog)) == frobenius.Ty("Person", "Dog")
+    assert box(kennel.owns) == frobenius.Box(
+        "owns", frobenius.Ty("Person"), frobenius.Ty("Dog"))
+    assert box(Inverse(kennel.owns)) == box(kennel.owns).dagger()
+    assert point(kennel.rex).cod == frobenius.Ty("Dog")
+
+
+def test_to_diagram_constructs(kennel):
+    dog, person, thing = kennel.Dog, kennel.Person, frobenius.Ty("Thing")
+    assert to_diagram(kennel.rex) == point(kennel.rex)
+    assert to_diagram(kennel.owns) == box(kennel.owns)
+    assert to_diagram(dog) == frobenius.Id(frobenius.Ty("Dog"))
+    assert to_diagram(dog, dom=Thing)\
+        == frobenius.Box("Dog", thing, thing)
+    assert to_diagram(dog & person, dom=Thing)\
+        == to_diagram(dog, Thing) >> to_diagram(person, Thing)
+    union = to_diagram(dog | person, dom=Thing)
+    assert isinstance(union, frobenius.Bubble) and len(union.args) == 2
+    negation = to_diagram(Not(dog), dom=Thing)
+    assert isinstance(negation, frobenius.Bubble)
+    assert to_diagram(OneOf([kennel.rex]), dom=Thing).name == "{rex}"
+    with raises(NotImplementedError):
+        to_diagram(kennel.named.some(str), dom=Thing)
+
+
+def test_restriction_diagrams(kennel):
+    owns, dog = kennel.owns, kennel.Dog
+    for construct in (owns.some(dog), owns.only(dog),
+                      owns.value(kennel.rex), owns.min(2, dog),
+                      owns.max(1, dog), owns.exactly(1, dog),
+                      kennel.knows.has_self(), owns.min(0, dog)):
+        diagram = to_diagram(construct, dom=kennel.Person)
+        typ = frobenius.Ty("Person")
+        assert (diagram.dom, diagram.cod) == (typ, typ)
+
+
+def test_relation_pictures(kennel):
+    owns = Relation.from_property(kennel.owns)
+    knows = Relation.from_property(kennel.knows)
+    assert (knows >> owns).to_diagram()\
+        == knows.to_diagram() >> owns.to_diagram()
+    assert owns.dagger().to_diagram() == owns.to_diagram().dagger()
+    assert (owns @ knows).to_diagram()\
+        == owns.to_diagram() @ knows.to_diagram()
+    assert isinstance(owns.neg().to_diagram(), frobenius.Bubble)
+    assert isinstance(knows.repeat().to_diagram(), frobenius.Bubble)
+    assert owns.meet(owns).to_diagram().boxes  # copy, both, merge
+    assert isinstance(owns.join(owns.neg()).to_diagram(), frobenius.Bubble)
+    assert owns.domain().to_diagram().cod == frobenius.Ty("Person")
+    forgetful = Relation(owns.inside, owns.dom, owns.cod)  # no history
+    assert forgetful.diagram is None
+    assert forgetful.to_diagram() == frobenius.Box(
+        "?", frobenius.Ty("Person"), frobenius.Ty("Dog"))
+    assert (forgetful >> owns.dagger()).diagram is None
+    assert combine(lambda x: x, None) is None
+
+
+def test_axiom_draw(kennel, tmp_path):
+    axioms(kennel.knows)[0].draw(path=str(tmp_path / "axiom.png"))
+    extension(kennel.owns.some(kennel.Dog)).draw(
+        path=str(tmp_path / "some.png"))
 
 
 @needs_java

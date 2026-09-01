@@ -17,8 +17,8 @@
 - [x] `reason`, `consistent` and `load`, delegating to HermiT and `owlready2`
 - [x] `extension`, the closed-world semantics of class constructs, and `Relation.sparql`
 - [x] `Axiom` and `axioms`, compiling what an ontology says into checkable inclusions
-- [WIP] @claude-allegories-2026-09-01 11:30 drawing: `to_diagram` and friends,
-      pictures derived from the ontology's own syntax
-- [ ] FIBO fixtures in `test/fixtures/fibo/` with a demo ABox
+- [x] drawing: `to_diagram` and friends, pictures derived from the ontology's own syntax
+- [WIP] @claude-allegories-2026-09-01 12:00 FIBO fixtures in `test/fixtures/fibo/`
+      with a demo ABox
 - [ ] the notebook `docs/notebooks/ontologies.md`, CI Java and `uv.lock`
 - [ ] changelog, lint, coverage and sign-off
