@@ -419,6 +419,79 @@ def test_axiom_draw(kennel, tmp_path):
         path=str(tmp_path / "some.png"))
 
 
+FIBO = "https://spec.edmcouncil.org/fibo/ontology/"
+FIXTURES = "test/fixtures/fibo"
+
+
+def market_world():
+    world = World()
+    load(FIBO + "BE/OwnershipAndControl/CorporateControl/",
+         world, path=FIXTURES)
+    company = world.search_one(
+        iri=FIBO + "BE/LegalEntities/LegalPersons/BusinessEntity")
+    person = world.search_one(
+        iri=FIBO + "BE/LegalEntities/LegalPersons"
+        "/LegallyCompetentNaturalPerson")
+    controls = world.search_one(iri=FIBO + "FND/Relations/Relations"
+                                "/controls")
+    demo = world.get_ontology("http://discopy.org/market.owl")
+    with demo:
+        alice = person("alice")
+        holdings, bank, shell = map(
+            company, ("acme_holdings", "acme_bank", "shell_co"))
+        alice.controls = [holdings]
+        holdings.controls = [bank]
+        bank.controls = [shell]
+    return world, demo, company, person, controls
+
+
+@fixture(scope="module")
+def market():
+    return market_world()
+
+
+def test_fibo_chain_axiom(market):
+    world = market[0]
+    owning = world.search_one(iri="*hasDirectOwningEntity")
+    chain, = [axiom for axiom in property_axioms(owning)
+              if len(axiom.terms[0].to_diagram().boxes) == 2]
+    assert [box.name for box in chain.terms[0].to_diagram().boxes]\
+        == ["hasDirectOwnership", "hasOwningEntity"]
+    assert chain  # trivially, over an empty extension
+
+
+def test_fibo_axioms_hold(market):
+    world, demo, company, person, controls = market
+    onto = world.get_ontology(
+        FIBO + "BE/OwnershipAndControl/ControlParties/")
+    assert all(axioms(onto))
+
+
+def test_market_control_chain(market):
+    world, demo, company, person, controls = market
+    web = Relation.from_property(controls, dom=Thing, cod=Thing)
+    alice = Relation.from_individual(demo.alice, Thing)
+    shell = Relation.from_individual(demo.shell_co, Thing)
+    assert not alice >> web >> shell.dagger()  # not directly
+    assert alice >> web.repeat() >> shell.dagger()  # but ultimately
+
+
+@needs_java
+def test_market_safety():
+    world, demo, company, person, controls = market_world()  # a fresh one
+    corporate_bodies = FIBO + "BE/LegalEntities/CorporateBodies/"
+    for_profit = world.search_one(
+        iri=corporate_bodies + "ForProfitCorporation")
+    not_for_profit = world.search_one(
+        iri=corporate_bodies + "NotForProfitCorporation")
+    with demo:
+        demo.shell_co.is_a.append(for_profit)
+    assert consistent(world)  # so far so good
+    with demo:
+        demo.shell_co.is_a.append(not_for_profit)  # an agent's mistake
+    assert not consistent(world)  # HermiT knows the two are disjoint
+
+
 @needs_java
 def test_reason_classifies_individuals(kennel):
     with kennel:

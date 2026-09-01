@@ -89,6 +89,8 @@ owns : ('Person',) -> ('Dog',)
 
 from __future__ import annotations
 
+import os
+import re
 from dataclasses import dataclass
 from itertools import product
 
@@ -684,18 +686,70 @@ def load(iri: str, world: World = None, path: str = None) -> Ontology:
     Parameters:
         iri : The base IRI, i.e. the URL the ontology lives at.
         world : The world to load it into, the default world otherwise.
-        path : A local directory to resolve the IRI and its imports in
-            first, e.g. a checked-out copy when the URL is unreachable.
+        path : A local directory holding a copy of the ontology and its
+            imports, see :func:`preload` -- e.g. when the URL is
+            unreachable or the loading should not depend on it.
 
     Example
     -------
-    >>> onto = load("http://www.lesfleursdunormal.fr/static/_downloads"
-    ...             "/pizza_onto.owl")  # doctest: +SKIP
+    >>> iri = ("https://spec.edmcouncil.org/fibo/ontology"
+    ...        "/BE/OwnershipAndControl/OwnershipParties/")
+    >>> onto = load(iri)  # doctest: +SKIP
+    >>> from owlready2 import World
+    >>> onto = load(iri, World(), path="test/fixtures/fibo")
+    >>> onto.UltimateConsolidation
+    OwnershipParties.UltimateConsolidation
     """
-    if path is not None and path not in owlready2.onto_path:
-        owlready2.onto_path.append(path)
     world = world or owlready2.default_world
+    if path is not None:
+        preload(path, world)
     return world.get_ontology(iri).load()
+
+
+def preload(path: str, world: World):
+    """
+    Load every ontology file under a directory into a world, offline: the
+    files are read in dependency order, so an import between two of them
+    never asks the network, and an import that no file declares -- say,
+    an annotation vocabulary -- is stubbed as an empty ontology.
+
+    The declared IRI and the imports of each file are read off its
+    ``owl:Ontology`` element; the imports between the files must not
+    form a cycle.
+
+    Parameters:
+        path : The directory holding ``.rdf`` or ``.owl`` files.
+        world : The world to load them into.
+    """
+    files, imports = {}, {}
+    for root, _, names in sorted(os.walk(path)):
+        for name in sorted(names):
+            if not name.endswith((".rdf", ".owl")):
+                continue
+            full = os.path.join(root, name)
+            with open(full, encoding="utf-8") as handle:
+                text = handle.read()
+            match = re.search(r'<owl:Ontology rdf:about="([^"]+)"', text)
+            if match is None:
+                continue
+            files[match.group(1)] = full
+            imports[match.group(1)] = re.findall(
+                r'<owl:imports rdf:resource="([^"]+)"', text)
+    external = {dep for deps in imports.values() for dep in deps}\
+        - set(files)
+    for iri in sorted(external):
+        world.get_ontology(iri).loaded = True
+    remaining = dict(imports)
+    while remaining:
+        ready = [iri for iri, deps in sorted(remaining.items())
+                 if all(dep not in remaining for dep in deps)]
+        if not ready:
+            raise ValueError(messages.CYCLIC_IMPORTS.format(
+                ", ".join(sorted(remaining))))
+        for iri in ready:
+            world.get_ontology(
+                "file://" + os.path.abspath(files[iri])).load()
+            del remaining[iri]
 
 
 def reason(world: World, infer_property_values: bool = True):
@@ -893,6 +947,8 @@ def restriction_diagram(source: Restriction, dom: ThingClass
         dom : The predicate the restriction is read at.
     """
     typ, prop = ob(dom), source.property
+    if isinstance(prop, str):  # a reference left unresolved
+        raise NotImplementedError(messages.NOT_IN_DICTIONARY.format(source))
     _, target = schema(prop)
     arrow, target_typ = box(prop, dom, target), ob(target)
     spiders = frobenius.Diagram.spiders
@@ -992,6 +1048,9 @@ def restricted(expr: Restriction, world: World) -> set:
         expr : The `owlready2` restriction.
         world : The world whose individuals quantifiers range over.
     """
+    if isinstance(expr.property, str):  # a reference left unresolved
+        raise NotImplementedError(
+            messages.NOT_IN_DICTIONARY.format(expr))
     pairs = relations(expr.property)
     if expr.type == HAS_SELF:
         return {x for x, ys in pairs.items() if x in ys}
@@ -1070,7 +1129,7 @@ def expr_world(expr) -> World:
     if isinstance(expr, Restriction):
         prop = expr.property
         prop = prop.property if isinstance(prop, Inverse) else prop
-        return prop.namespace.world
+        return None if isinstance(prop, str) else prop.namespace.world
     return None
 
 
@@ -1206,7 +1265,9 @@ def property_axioms(entity: ObjectPropertyClass) -> list[Axiom]:
     result.extend(
         Axiom(identity.then(*map(at_thing, chain.properties)), relation,
               source=source)
-        for chain in entity.get_property_chain())
+        for chain in entity.get_property_chain()
+        if all(isinstance(step, ObjectPropertyClass)
+               for step in chain.properties))  # a step may be unresolved
     for classes, side in ((entity.domain, relation.domain()),
                           (entity.range, relation.codomain())):
         if len(classes) == 1 and declared(classes[0], ThingClass):

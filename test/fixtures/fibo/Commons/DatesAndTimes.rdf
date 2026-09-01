@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- A minimal stand-in for the OMG Commons DatesAndTimes module, which OMG
+     serves from www.omg.org only: just the datatype definition that the
+     FIBO fixtures range over, read as a datetime so that HermiT can load
+     them; the specification also allows a date alone, which is outside
+     the OWL 2 datatype map. -->
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+         xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+         xmlns:owl="http://www.w3.org/2002/07/owl#"
+         xml:base="https://www.omg.org/spec/Commons/DatesAndTimes/">
+	<owl:Ontology rdf:about="https://www.omg.org/spec/Commons/DatesAndTimes/"/>
+	<rdfs:Datatype rdf:about="https://www.omg.org/spec/Commons/DatesAndTimes/CombinedDateTime">
+		<owl:equivalentClass rdf:resource="http://www.w3.org/2001/XMLSchema#dateTime"/>
+	</rdfs:Datatype>
+</rdf:RDF>

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- A minimal stand-in for the OMG Commons TextDatatype module, which OMG
+     serves from www.omg.org only: just the datatype the FIBO fixtures
+     range over, read as a plain string so that HermiT can load them;
+     the specification also allows a language-tagged string. -->
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+         xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+         xmlns:owl="http://www.w3.org/2002/07/owl#"
+         xml:base="https://www.omg.org/spec/Commons/TextDatatype/">
+	<owl:Ontology rdf:about="https://www.omg.org/spec/Commons/TextDatatype/"/>
+	<rdfs:Datatype rdf:about="https://www.omg.org/spec/Commons/TextDatatype/Text">
+		<owl:equivalentClass rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+	</rdfs:Datatype>
+</rdf:RDF>

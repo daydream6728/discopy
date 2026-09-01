@@ -18,7 +18,7 @@
 - [x] `extension`, the closed-world semantics of class constructs, and `Relation.sparql`
 - [x] `Axiom` and `axioms`, compiling what an ontology says into checkable inclusions
 - [x] drawing: `to_diagram` and friends, pictures derived from the ontology's own syntax
-- [WIP] @claude-allegories-2026-09-01 12:00 FIBO fixtures in `test/fixtures/fibo/`
-      with a demo ABox
-- [ ] the notebook `docs/notebooks/ontologies.md`, CI Java and `uv.lock`
+- [x] FIBO fixtures in `test/fixtures/fibo/` with a demo ABox
+- [WIP] @claude-allegories-2026-09-01 13:00 the notebook `docs/notebooks/ontologies.md`,
+      CI Java and `uv.lock`
 - [ ] changelog, lint, coverage and sign-off
