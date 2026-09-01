@@ -9,15 +9,15 @@ importorskip("owlready2")
 from owlready2 import (  # noqa: E402
     JAVA_EXE, AllDisjoint, AsymmetricProperty, FunctionalProperty, Inverse,
     InverseFunctionalProperty, IrreflexiveProperty, Not, OneOf,
-    PropertyChain, ReflexiveProperty, SymmetricProperty, Thing, ThingClass,
-    TransitiveProperty, World)
+    PropertyChain, ReflexiveProperty, Restriction, SymmetricProperty,
+    Thing, ThingClass, TransitiveProperty, World)
 
 from discopy import frobenius  # noqa: E402
 from discopy.owl import (  # noqa: E402
     Axiom, Relation, axioms, box, carrier, class_axioms, combine,
     consistent, declared, expr_world, extension, find_world, instances,
     load, ob, point, property_axioms, reason, relations, satisfying,
-    to_diagram)
+    schema, to_diagram)
 from discopy.utils import AxiomError  # noqa: E402
 
 
@@ -202,6 +202,38 @@ def test_sparql(kennel):
         "SELECT ?x ?y WHERE { ?x <http://discopy.org/kennel.owl#owns> ?y . }",
         kennel.Person, kennel.Dog, kennel.world)
     assert owns == Relation.from_property(kennel.owns)
+
+
+def test_permutation_rejects(kennel):
+    with raises(ValueError):
+        Relation.permutation([0, 0], [(kennel.Dog, ), (kennel.Person, )])
+
+
+def test_schema_of_an_inverse(kennel):
+    assert schema(Inverse(kennel.owns)) == (kennel.Dog, kennel.Person)
+
+
+def test_to_diagram_rejects(kennel):
+    with raises(NotImplementedError):
+        to_diagram(42, dom=Thing)
+
+
+def test_preload_skips_a_file_without_ontology(kennel, tmp_path):
+    (tmp_path / "notes.rdf").write_text("just a note, no owl:Ontology")
+    kennel.save(file=str(tmp_path / "kennel.rdf"))
+    copy = load("http://discopy.org/kennel.owl",
+                world=World(), path=str(tmp_path))
+    assert {one.name for one in copy.classes()}\
+        == {one.name for one in kennel.classes()}
+
+
+def test_preload_rejects_cycles(tmp_path):
+    for name, other in (("a", "b"), ("b", "a")):
+        (tmp_path / f"{name}.rdf").write_text(
+            f'<owl:Ontology rdf:about="http://x/{name}/">\n'
+            f'<owl:imports rdf:resource="http://x/{other}/"/>')
+    with raises(ValueError):
+        load("http://x/a/", world=World(), path=str(tmp_path))
 
 
 def test_load(kennel, tmp_path):
@@ -465,6 +497,17 @@ def test_fibo_axioms_hold(market):
     onto = world.get_ontology(
         FIBO + "BE/OwnershipAndControl/ControlParties/")
     assert all(axioms(onto))
+
+
+def test_unresolved_restriction_is_outside_the_dictionary(market):
+    world = market[0]
+    stray = next(
+        parent for onto in list(world.ontologies.values())
+        for cls in onto.classes() for parent in cls.is_a
+        if isinstance(parent, Restriction)
+        and isinstance(parent.property, str))  # points into a stub
+    with raises(NotImplementedError):
+        to_diagram(stray, dom=Thing)
 
 
 def test_market_control_chain(market):

@@ -19,6 +19,5 @@
 - [x] `Axiom` and `axioms`, compiling what an ontology says into checkable inclusions
 - [x] drawing: `to_diagram` and friends, pictures derived from the ontology's own syntax
 - [x] FIBO fixtures in `test/fixtures/fibo/` with a demo ABox
-- [WIP] @claude-allegories-2026-09-01 13:00 the notebook `docs/notebooks/ontologies.md`,
-      CI Java and `uv.lock`
-- [ ] changelog, lint, coverage and sign-off
+- [x] the notebook `docs/notebooks/ontologies.md`, CI Java and `uv.lock`
+- [WIP] @claude-allegories-2026-09-01 14:00 changelog, lint, coverage and sign-off

@@ -9,6 +9,25 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Added
 
+- `discopy.owl`, the category of relations of an OWL ontology: `load`
+  pulls an ontology in from its base URL with `owlready2` (or offline
+  from a directory with `preload`), `Relation` reads classes, properties
+  and individuals off the loaded world as finite relations whose
+  composition, converse, meet, join and complement are the set operations
+  that define them, `extension` gives the closed-world semantics of every
+  class construct, and `axioms` compiles what the ontology says into
+  `Axiom`, an `Equation` between parallel relations that is decidable by
+  inclusion. Querying and reasoning are delegated: `Relation.sparql` to
+  `owlready2`'s native SPARQL engine, `reason` and `consistent` to
+  HermiT, whose entailments the same constructors then read. Every
+  relation carries an optional picture built from the ontology's own
+  syntax and propagated through every operation, so an axiom draws itself
+  as a `frobenius.Equation` — intersection is composition, union and
+  complement are bubbles, a quantifier follows its property and discards.
+  It ships as the `semantic` extra, i.e. `owlready2` plus a Java runtime,
+  with the FIBO fixtures of `test/fixtures/fibo` and the `ontologies`
+  notebook, which pitches ontologies as guardrails for AI agents on
+  FIBO's own ownership-and-control modules.
 - Abstract base classes for order-enriched categories in `discopy.abc`:
   `Poset`, `Lattice` and `BooleanAlgebra` for the structure of hom-sets,
   `DaggerCategory` for the converse, `Allegory` (Freyd & Scedrov) for a
