@@ -34,6 +34,12 @@ Summary
     RigidCategory
     PivotalCategory
     RibbonCategory
+    Poset
+    Lattice
+    BooleanAlgebra
+    DaggerCategory
+    Allegory
+    BooleanAllegory
     NamedGeneric
 """
 
@@ -596,6 +602,137 @@ class HypergraphCategory[C0, C1](
             n_legs_in : The number of legs in for each spider.
             n_legs_out : The number of legs out for each spider.
             typ : The type of the spiders.
+        """
+
+
+class Poset(ABC):
+    """
+    A poset is a class with a partial order ``<=`` on its elements.
+
+    A category whose parallel morphisms form a :class:`Poset` and whose
+    composition is monotone is enriched in posets, i.e. it is a locally
+    posetal bicategory: the 2-cells are the inequalities.
+    """
+    @abstractmethod
+    def __le__(self, other) -> bool:
+        """
+        Whether this element is below an ``other``, to be instantiated.
+
+        Parameters:
+            other : The other element.
+        """
+
+    __lt__ = lambda self, other: self <= other and self != other
+    __ge__ = lambda self, other: other <= self
+    __gt__ = lambda self, other: other < self
+
+
+class Lattice(Poset):
+    """
+    A lattice is a :class:`Poset` with methods :code:`meet` and :code:`join`
+    for the greatest lower and least upper bound of its elements, with
+    syntactic sugar :code:`&` and :code:`|`.
+    """
+    @abstractmethod
+    def meet(self, *others) -> Lattice:
+        """
+        The greatest lower bound of ``n >= 1`` elements, to be instantiated.
+
+        Parameters:
+            others : The other elements.
+        """
+
+    @abstractmethod
+    def join(self, *others) -> Lattice:
+        """
+        The least upper bound of ``n >= 1`` elements, to be instantiated.
+
+        Parameters:
+            others : The other elements.
+        """
+
+    __and__ = lambda self, other: self.meet(other)
+    __or__ = lambda self, other: self.join(other)
+
+
+class BooleanAlgebra(Lattice):
+    """
+    A Boolean algebra is a distributive :class:`Lattice` with a method
+    :code:`neg` for the complement of its elements, with syntactic sugar
+    :code:`~`.
+    """
+    @abstractmethod
+    def neg(self) -> BooleanAlgebra:
+        """ The complement of an element, to be instantiated. """
+
+    __invert__ = lambda self: self.neg()
+
+
+class DaggerCategory[C0, C1](Category[C0, C1]):
+    """
+    A dagger category is a :class:`Category` with a method :code:`dagger`
+    for an involution :code:`(x -> y) -> (y -> x)` which is the identity
+    on objects and contravariant on composition.
+    """
+    @abstractmethod
+    def dagger(self) -> C1:
+        """ The dagger of a morphism, to be instantiated. """
+
+
+class Allegory[C0, C1](DaggerCategory[C0, C1], Poset):
+    """
+    An allegory is a :class:`DaggerCategory` enriched in posets with a
+    :code:`meet` on each hom-set, satisfying the modular law
+    :code:`(r >> s).meet(t) <= r >> s.meet(r.dagger() >> t)`.
+
+    See Freyd & Scedrov, *Categories, Allegories* (1990). A unitary tabular
+    allegory is the same thing as a cartesian bicategory of relations, see
+    Carboni & Walters, *Cartesian bicategories I* (1987), where the meet is
+    given by the spiders of a :class:`HypergraphCategory`.
+    """
+    @abstractmethod
+    def meet(self, *others) -> C1:
+        """
+        The intersection of ``n >= 1`` parallel morphisms, to be
+        instantiated.
+
+        Parameters:
+            others : The other morphisms.
+        """
+
+
+class BooleanAllegory[C0, C1](Allegory[C0, C1], BooleanAlgebra):
+    """
+    A Boolean allegory is an :class:`Allegory` whose hom-sets are
+    :class:`BooleanAlgebra`, with classmethods :code:`top` and :code:`bottom`
+    for the greatest and least morphism between two objects.
+
+    Composition preserves joins on both sides, i.e. the category is enriched
+    in complete lattices: it is a quantaloid and each hom-set
+    :code:`(x, x)` is a quantale. This holds by construction in the
+    category of relations, so it is a property of the instances rather than
+    extra structure.
+    """
+    @classmethod
+    @abstractmethod
+    def top(cls, dom: C0, cod: C0) -> C1:
+        """
+        The greatest morphism between two objects, to be instantiated.
+
+        Parameters:
+            dom : The domain.
+            cod : The codomain.
+        """
+
+    @classmethod
+    @abstractmethod
+    def bottom(cls, dom: C0, cod: C0) -> C1:
+        """
+        The least morphism between two objects, to be instantiated.
+
+        Parameters:
+            dom : The domain.
+            cod : The codomain.
         """
 
 

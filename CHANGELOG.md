@@ -9,6 +9,13 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Added
 
+- Abstract base classes for order-enriched categories in `discopy.abc`:
+  `Poset`, `Lattice` and `BooleanAlgebra` for the structure of hom-sets,
+  `DaggerCategory` for the converse, `Allegory` (Freyd & Scedrov) for a
+  dagger category enriched in posets with local meets, and
+  `BooleanAllegory` for hom-sets that are Boolean algebras with `top` and
+  `bottom`, whose instances are quantaloids. The category of relations of
+  an OWL ontology, `discopy.owl`, implements them.
 - The style review can be asked for, and turned off, from the pull request
   itself: `@discopy review this` in a comment reviews it now, and the
   `no-style-review` label stops the automatic reviews on it, while the
