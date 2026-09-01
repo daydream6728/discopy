@@ -10,12 +10,13 @@
 > we don't need free diagrams, owl is a semantic category describing owl relations from a loaded ontology.
 > how is the categorical structure described? can you add Bicategory, Poset, etc... (do we need quantales?)
 
-- [WIP] @claude-allegories-2026-09-01 10:30 `discopy.abc`: `Poset`, `Lattice`,
-      `BooleanAlgebra`, `DaggerCategory`, `Allegory`, `BooleanAllegory`
-- [ ] `discopy.owl.Relation`, the semantic category of an ontology's relations, with the
+- [x] `discopy.abc`: `Poset`, `Lattice`, `BooleanAlgebra`, `DaggerCategory`,
+      `Allegory`, `BooleanAllegory`
+- [x] `discopy.owl.Relation`, the semantic category of an ontology's relations, with the
       `semantic` extra, `UNIMPORTABLE` and docs registration
-- [ ] `reason`, `consistent` and `load`, delegating to HermiT and `owlready2`
-- [ ] `extension`, the closed-world semantics of class constructs, and `Relation.sparql`
+- [x] `reason`, `consistent` and `load`, delegating to HermiT and `owlready2`
+- [WIP] @claude-allegories-2026-09-01 11:00 `extension`, the closed-world semantics
+      of class constructs, and `Relation.sparql`
 - [ ] `Axiom` and `axioms`, compiling what an ontology says into checkable inclusions
 - [ ] drawing: `to_diagram` and friends, pictures derived from the ontology's own syntax
 - [ ] FIBO fixtures in `test/fixtures/fibo/` with a demo ABox
