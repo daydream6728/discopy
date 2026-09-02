@@ -39,6 +39,7 @@ Summary
     BooleanAlgebra
     DaggerCategory
     Allegory
+    DistributiveAllegory
     BooleanAllegory
     NamedGeneric
 """
@@ -701,34 +702,43 @@ class Allegory[C0, C1](DaggerCategory[C0, C1], Poset):
         """
 
 
-class BooleanAllegory[C0, C1](Allegory[C0, C1], BooleanAlgebra):
+class DistributiveAllegory[C0, C1](Allegory[C0, C1], Lattice):
     """
-    A Boolean allegory is an :class:`Allegory` whose hom-sets are
-    :class:`BooleanAlgebra`, with classmethods :code:`top` and :code:`bottom`
-    for the greatest and least morphism between two objects.
+    A distributive allegory is an :class:`Allegory` whose hom-posets are
+    :class:`Lattice` with a least element :code:`bottom`, such that
+    composition preserves joins on both sides -- Freyd & Scedrov's
+    distributive allegories, i.e. categories enriched in join-semilattices.
 
-    Composition preserves joins on both sides, i.e. the category is enriched
-    in complete lattices: it is a quantaloid and each hom-set
-    :code:`(x, x)` is a quantale. This holds by construction in the
-    category of relations, so it is a property of the instances rather than
-    extra structure.
+    The join-preservation holds by construction in a category of
+    relations, so it is a property of the instances rather than extra
+    structure.
     """
     @classmethod
     @abstractmethod
-    def top(cls, dom: C0, cod: C0) -> C1:
+    def bottom(cls, dom: C0, cod: C0) -> C1:
         """
-        The greatest morphism between two objects, to be instantiated.
+        The least morphism between two objects, to be instantiated.
 
         Parameters:
             dom : The domain.
             cod : The codomain.
         """
 
+
+class BooleanAllegory[C0, C1](DistributiveAllegory[C0, C1], BooleanAlgebra):
+    """
+    A Boolean allegory is a :class:`DistributiveAllegory` whose hom-sets
+    are :class:`BooleanAlgebra`, with a classmethod :code:`top` for the
+    greatest morphism between two objects.
+
+    The category is then enriched in complete lattices: it is a quantaloid
+    and each hom-set :code:`(x, x)` is a quantale.
+    """
     @classmethod
     @abstractmethod
-    def bottom(cls, dom: C0, cod: C0) -> C1:
+    def top(cls, dom: C0, cod: C0) -> C1:
         """
-        The least morphism between two objects, to be instantiated.
+        The greatest morphism between two objects, to be instantiated.
 
         Parameters:
             dom : The domain.

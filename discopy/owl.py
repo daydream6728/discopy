@@ -1,30 +1,38 @@
 # -*- coding: utf-8 -*-
 
 """
-The category of relations of an OWL ontology.
+The category of relations of an OWL ontology, split at its predicates.
 
 An OWL property denotes a relation between individuals and an OWL class
-denotes a set of them, so a loaded ontology presents a category of finite
-relations: a :class:`BooleanAllegory`, i.e. a locally posetal bicategory
-whose 2-cells are the inclusions of relations, with converse, intersection,
-union and complement. This module implements it directly on the extensions
-that `owlready2`_ reads off a :class:`World <owlready2.namespace.World>`:
+denotes a predicate over one domain of individuals, so a loaded ontology
+presents two categories, one on top of the other:
 
-* its **objects** are tuples of OWL classes, with the empty tuple as
-  monoidal unit and ``owl:Thing`` as the class of all individuals;
-* its **morphisms** are :class:`Relation`, i.e. finite sets of pairs of
-  tuples of individuals, composed by relational composition;
-* its **2-morphisms** are the inclusions ``<=``, with :class:`Axiom`
-  recording what an ontology says as a pair of parallel relations.
+* :class:`Relation` is the underlying **single-sorted** category: its one
+  generating object is ``owl:Thing``, its objects are arities ``n`` read
+  as ``Thing ** n``, and its morphisms are finite relations between tuples
+  of individuals, composed by relational composition. It is a
+  :class:`DistributiveAllegory`: converse, meet, join and bottom -- but no
+  complement and no top, because OWL cannot say either of a property.
+  A predicate lives here as a **coreflexive** ``e <= id(1)``, which is
+  what :func:`extension` returns.
+* :class:`Query` is the **Karoubi envelope** of :class:`Relation`,
+  restricted to the coreflexives: its objects are tuples of predicates --
+  named classes or compound class constructs, labelled the way a
+  mathematician would write them -- and a morphism is a relation ``r``
+  normalised to ``e ; r ; f`` between the coreflexives of its boundary.
+  Composing two queries whose predicates do not meet asks `HermiT`_
+  whether one predicate is subsumed by the other and inserts the verdict
+  as a :class:`Coercion` in between -- a proof object, drawn as a box
+  exactly where the predicate changes.
 
-Everything an instance satisfies is closed-world with respect to the loaded
-world; the open world is one :func:`reason` away, a `HermiT`_ invocation
-that writes what the ontology entails back into the world, so the same
-constructors read the entailed relations afterwards. Composition, meet,
-join and complement are the set operations that define relations; anything
-that deserves the name of a query or a proof is delegated, to the `SPARQL`_
-engine of `owlready2`_ with :meth:`Relation.sparql` and to `HermiT`_ with
-:func:`reason` and :func:`consistent`.
+Everything is deductive: :func:`reason` writes what the ontology entails
+back into the world, the constructors read the entailed atoms, the algebra
+computes certain answers, and retrieval of a class construct classifies a
+scratch defined class with `HermiT`_ (:func:`deduced`), so a complement, a
+universal or a cardinality holds of an individual only when it is
+*provably* so. Querying and proving are delegated: :meth:`Relation.sparql`
+to `owlready2`_'s native SPARQL engine, :func:`reason`,
+:func:`consistent`, :func:`deduced` and :func:`subsumes` to `HermiT`_.
 
 Summary
 -------
@@ -35,6 +43,8 @@ Summary
     :toctree:
 
     Relation
+    Query
+    Coercion
     Axiom
 
 .. admonition:: Functions
@@ -45,16 +55,21 @@ Summary
         :toctree:
 
         load
+        preload
         reason
         consistent
+        deduced
+        dismiss
+        subsumes
         declared
         instances
         carrier
         relations
         satisfying
-        restricted
         extension
         expr_world
+        coercion
+        parallel
         class_axioms
         property_axioms
         axioms
@@ -64,15 +79,12 @@ Summary
         box
         point
         individual_class
-        coercion
-        parallel
         to_diagram
         restriction_diagram
         combine
 
 .. _owlready2: https://owlready2.readthedocs.io/
 .. _HermiT: http://www.hermit-reasoner.com/
-.. _SPARQL: https://www.w3.org/TR/sparql11-query/
 
 Example
 -------
@@ -84,35 +96,40 @@ Example
 ...     class owns(Person >> Dog): pass
 ...     rex, ada = Dog("rex"), Person("ada")
 ...     ada.owns = [rex]
->>> owns = Relation.from_property(onto.owns)
->>> print(owns)
+>>> web = Relation.from_property(onto.owns)
+>>> print(web)
+owns : Thing -> Thing
+>>> print(Query.from_property(onto.owns))
 owns : ('Person',) -> ('Dog',)
->>> assert owns.dagger() >> owns <= Relation.id(Dog)  # ownership is single
+>>> assert Query.from_property(onto.owns).relation <= web
 """
 
 from __future__ import annotations
 
 import os
 import re
+from contextlib import contextmanager
 from dataclasses import dataclass
 from itertools import product
+from types import new_class
 
 from owlready2 import (
     EXACTLY, HAS_SELF, MAX, MIN, ONLY, SOME, VALUE, And, Inverse, Not,
     ObjectPropertyClass, OneOf, Ontology, Or,
     OwlReadyInconsistentOntologyError, Restriction, Thing, ThingClass, World,
-    sync_reasoner_hermit)
+    destroy_entity, sync_reasoner_hermit)
 from owlready2 import (
     AsymmetricProperty, FunctionalProperty, InverseFunctionalProperty,
     IrreflexiveProperty, ReflexiveProperty, SymmetricProperty,
     TransitiveProperty)
+from owlready2.base import owl_equivalentclass
 import owlready2
 
 from discopy import cat, frobenius, messages
-from discopy.abc import BooleanAllegory, SymmetricCategory
+from discopy.abc import DistributiveAllegory, SymmetricCategory
 from discopy.utils import (
     AxiomError, assert_iscomposable, assert_isinstance, assert_isparallel,
-    factory, tuplify)
+    classproperty, factory, tuplify)
 
 
 OWL = "http://www.w3.org/2002/07/owl#"
@@ -123,6 +140,9 @@ INCLUSION = "$\\sqsubseteq$"
 
 NEGATION = "$\\neg$"
 """ The drawing name of the bubble for a complement. """
+
+SCRATCH = "http://discopy.org/scratch.owl"
+""" The ontology where :func:`deduced` puts its scratch defined classes. """
 
 
 def declared(entity, kind: type) -> bool:
@@ -154,74 +174,84 @@ def iris(individuals: tuple) -> tuple[str, ...]:
 
 def instances(cls, world: World = None) -> tuple:
     """
-    The individuals of an OWL class or class construct, sorted by IRI.
-
-    A named class carries its own world and a construct finds one inside
-    itself with :func:`expr_world`; ``owl:Thing`` belongs to every world
-    at once, so its instances are read from the ``world`` given, the
-    default world otherwise. A construct is read closed-world with
-    :func:`satisfying`, which is what lets a compound class expression
-    stand as an object, i.e. type a wire.
+    The individuals of an OWL class or class construct, sorted by IRI:
+    what is materialised for a named class -- the entailed members once
+    :func:`reason` has run -- and what `HermiT` :func:`deduced` for a
+    construct.
 
     Parameters:
         cls : The OWL class or class construct.
-        world : The world to read ``owl:Thing`` from.
+        world : The world to read ``owl:Thing`` from, resolved with
+            :func:`expr_world` otherwise.
     """
     if isinstance(cls, ThingClass):
         generator = cls.instances(world=world) if world is not None\
             else cls.instances()
-    else:
-        generator = satisfying(cls, world or expr_world(cls))
-    return tuple(sorted(generator, key=lambda one: one.iri))
+        return tuple(sorted(generator, key=lambda one: one.iri))
+    return deduced([cls], world or expr_world(cls))[0]
 
 
-def carrier(typ: tuple, world: World = None) -> tuple:
+def carrier(arity: int, world: World) -> tuple:
     """
-    The product of the instances of a tuple of OWL classes, i.e. the set of
-    tuples of individuals a wire of that type can carry.
+    The tuples of individuals a boundary of a given arity can carry, i.e.
+    the product of that many copies of the individuals of a world.
 
     Parameters:
-        typ : The tuple of OWL classes.
-        world : The world to read ``owl:Thing`` from, resolved from the
-            first named class of ``typ`` otherwise.
+        arity : The number of wires.
+        world : The world whose individuals the wires carry.
     """
-    world = world or find_world(typ)
-    return tuple(product(*(instances(cls, world) for cls in typ)))
+    return tuple(product(instances(Thing, world), repeat=arity))
 
 
-def find_world(*typs: tuple) -> World:
+def pairs_world(pairs) -> World:
     """
-    The world of the first named class or class construct in some tuples
-    of OWL classes, or ``None`` when there is nothing but ``owl:Thing``
-    to ask.
+    The world of the first individual in some pairs of tuples, or the
+    default world when there is none to ask.
 
     Parameters:
-        typs : The tuples of OWL classes or class constructs.
+        pairs : The pairs of tuples of individuals.
     """
-    for typ in typs:
-        for cls in typ:
-            world = expr_world(cls)
-            if world is not None:
-                return world
-    return None
+    for xs, ys in pairs:
+        for individual in xs + ys:
+            return individual.namespace.world
+    return owlready2.default_world
+
+
+def assert_isworld(left, right):
+    """
+    Raise :class:`AxiomError` when two relations live over different
+    worlds, i.e. in different categories.
+
+    Parameters:
+        left : One relation.
+        right : The other.
+    """
+    if left.world is not right.world:
+        raise AxiomError(messages.DIFFERENT_WORLDS.format(left, right))
 
 
 @factory
 @dataclass
-class Relation(BooleanAllegory, SymmetricCategory):
+class Relation(DistributiveAllegory, SymmetricCategory):
     """
-    A finite relation between products of OWL classes, read off a loaded
-    world.
+    A finite relation over the individuals of a world, in the
+    single-sorted category generated by ``owl:Thing``: the objects are
+    arities and every wire carries an individual.
 
     Parameters:
         inside : The extension, i.e. the pairs of tuples of individuals.
-        dom : The domain, a tuple of OWL classes.
-        cod : The codomain, a tuple of OWL classes.
+        dom : The number of input wires.
+        cod : The number of output wires.
+        world : The world the relation lives over, resolved from the first
+            individual of ``inside`` and the default world otherwise.
 
-    The extension is stored sorted by IRIs, so that equal relations compare
-    equal whatever order their pairs came in. Membership of the individuals
-    in the classes of the boundary is not checked: the constructors read
-    them off the world, so it holds by construction.
+    The extension is stored sorted by IRIs, so that equal relations
+    compare equal whatever order their pairs came in. What the extension
+    *means* is deductive: the constructors read the atoms a world holds --
+    the entailed ones once :func:`reason` has run -- and the algebra
+    computes certain answers, sound for entailment. There is no complement
+    and no greatest relation: OWL cannot say either of a property, which
+    is why this is a :class:`DistributiveAllegory` and not a Boolean one.
 
     .. admonition:: Summary
 
@@ -237,12 +267,11 @@ class Relation(BooleanAllegory, SymmetricCategory):
             caps
             meet
             join
-            neg
-            top
             bottom
+            domain
             repeat
+            split
             from_property
-            from_class
             from_individual
             sparql
 
@@ -257,36 +286,35 @@ class Relation(BooleanAllegory, SymmetricCategory):
     ...     rex, fido = Dog("rex"), Dog("fido")
     ...     ada, bob = Person("ada"), Person("bob")
     ...     ada.owns, bob.owns = [rex], [fido]
-    >>> owns = Relation.from_property(onto.owns)
-    >>> barks_at = owns.dagger() >> Relation.top((Person, ), (Person, ))
-    >>> assert barks_at == Relation.top((Dog, ), (Person, ))
-    >>> assert owns.meet(owns) == owns <= Relation.top((Person, ), (Dog, ))
-    >>> assert owns.neg().neg() == owns
+    >>> web = Relation.from_property(onto.owns)
+    >>> assert web.dagger().dagger() == web
+    >>> assert web.meet(web) == web <= web.join(web.dagger() >> web)
+    >>> assert Relation.id(1, onto.world) >> web == web
     """
     inside: tuple
-    dom: tuple
-    cod: tuple
+    dom: int
+    cod: int
+    world: World
 
-    ob = tuple
+    ob = int
 
-    def __init__(self, inside, dom: tuple, cod: tuple):
-        dom, cod = map(tuplify, (dom, cod))
+    def __init__(self, inside, dom: int, cod: int, world: World = None):
         pairs = {(tuplify(xs), tuplify(ys)) for xs, ys in inside}
         for xs, ys in pairs:
-            if (len(xs), len(ys)) != (len(dom), len(cod)):
+            if (len(xs), len(ys)) != (dom, cod):
                 raise AxiomError(messages.WRONG_ARITY.format(
-                    (len(dom), len(cod)), (xs, ys)))
+                    (dom, cod), (xs, ys)))
         self.inside = tuple(sorted(
             pairs, key=lambda pair: iris(pair[0] + pair[1])))
         self.dom, self.cod = dom, cod
+        self.world = world or pairs_world(self.inside)
         self.diagram = None
 
     def __str__(self):
         name = getattr(self, "name", type(self).__name__)
-        dom = tuple(map(label, self.dom))
-        cod = tuple(map(label, self.cod))
-        return f"{name} : {dom and str(dom) or '()'} "\
-            f"-> {cod and str(cod) or '()'}"
+        power = lambda arity: "()" if arity == 0\
+            else "Thing" if arity == 1 else f"Thing ** {arity}"
+        return f"{name} : {power(self.dom)} -> {power(self.cod)}"
 
     def __bool__(self):
         return bool(self.inside)
@@ -294,31 +322,27 @@ class Relation(BooleanAllegory, SymmetricCategory):
     def __le__(self, other) -> bool:
         assert_isinstance(other, Relation)
         assert_isparallel(self, other)
+        assert_isworld(self, other)
         return set(self.inside) <= set(other.inside)
 
     @classmethod
-    def id(cls, dom: tuple = (), world: World = None) -> Relation:
+    def id(cls, dom: int = 0, world: World = None) -> Relation:
         """
-        The identity relation, i.e. the diagonal on the instances.
+        The identity relation, i.e. the diagonal on the tuples.
 
         Parameters:
-            dom : The tuple of OWL classes.
-            world : The world to read ``owl:Thing`` from.
+            dom : The number of wires.
+            world : The world, the default world otherwise.
         """
-        dom = tuplify(dom)
-        result = cls([(xs, xs) for xs in carrier(dom, world)], dom, dom)
-        result.diagram = frobenius.Id(ob(dom))
+        world = world or owlready2.default_world
+        result = cls([(xs, xs) for xs in carrier(dom, world)],
+                     dom, dom, world)
+        result.diagram = frobenius.Id(ob(dom * (Thing, )))
         return result
 
     def then(self, *others: Relation) -> Relation:
         """
         The relational composition, i.e. pairs that share a middle.
-
-        Composing across two different predicates never fails: OWL is
-        single-sorted, so when the boundaries differ wire by wire the
-        :func:`coercion` between them is inserted -- the join restricts
-        to the individuals both predicates hold of, and the picture shows
-        a coercion box exactly where the predicate changes.
 
         Parameters:
             others : The relations to compose in sequence.
@@ -326,18 +350,15 @@ class Relation(BooleanAllegory, SymmetricCategory):
         result = self
         for other in others:
             assert_isinstance(other, Relation)
-            if result.cod != other.dom\
-                    and len(result.cod) == len(other.dom):
-                other = type(self).id(()).tensor(*(
-                    coercion(source, target) for source, target
-                    in zip(result.cod, other.dom))).then(other)
             assert_iscomposable(result, other)
+            assert_isworld(result, other)
             targets = {}
             for ys, zs in other.inside:
                 targets.setdefault(ys, []).append(zs)
-            step = type(self)(
+            step = self.factory(
                 {(xs, zs) for xs, ys in result.inside
-                 for zs in targets.get(ys, ())}, result.dom, other.cod)
+                 for zs in targets.get(ys, ())},
+                result.dom, other.cod, result.world)
             step.diagram = combine(
                 lambda left, right: left >> right,
                 result.diagram, other.diagram)
@@ -349,17 +370,17 @@ class Relation(BooleanAllegory, SymmetricCategory):
         The product of relations, i.e. pairs of pairs.
 
         Parameters:
-            others : The relations to tensor, tuples of OWL classes are
-                taken as identities.
+            others : The relations to tensor.
         """
         result = self
         for other in others:
-            if not isinstance(other, Relation):
-                other = type(self).id(other)
-            step = type(self)(
+            assert_isinstance(other, Relation)
+            assert_isworld(result, other)
+            step = self.factory(
                 {(xs + xs_, ys + ys_)
                  for xs, ys in result.inside for xs_, ys_ in other.inside},
-                result.dom + other.dom, result.cod + other.cod)
+                result.dom + other.dom, result.cod + other.cod,
+                result.world)
             step.diagram = combine(
                 lambda left, right: left @ right,
                 result.diagram, other.diagram)
@@ -367,59 +388,58 @@ class Relation(BooleanAllegory, SymmetricCategory):
         return result
 
     __matmul__ = tensor
-    __rmatmul__ = lambda self, other: type(self).id(other).tensor(self)
 
     def dagger(self) -> Relation:
         """ The converse relation, i.e. the pairs the other way around. """
-        result = type(self)(
-            [(ys, xs) for xs, ys in self.inside], self.cod, self.dom)
+        result = self.factory(
+            [(ys, xs) for xs, ys in self.inside],
+            self.cod, self.dom, self.world)
         result.diagram = combine(
             lambda diagram: diagram.dagger(), self.diagram)
         return result
 
     @classmethod
-    def swap(cls, left: tuple, right: tuple, world: World = None) -> Relation:
+    def swap(cls, left: int, right: int, world: World = None) -> Relation:
         """
-        The relation exchanging two tuples of OWL classes.
+        The relation exchanging two boundaries.
 
         Parameters:
-            left : The tuple of OWL classes on the left.
-            right : The tuple of OWL classes on the right.
-            world : The world to read ``owl:Thing`` from.
+            left : The number of wires on the left.
+            right : The number of wires on the right.
+            world : The world, the default world otherwise.
         """
-        left, right = map(tuplify, (left, right))
-        world = world or find_world(left, right)
+        world = world or owlready2.default_world
         result = cls([(xs + ys, ys + xs)
                       for xs in carrier(left, world)
                       for ys in carrier(right, world)],
-                     left + right, right + left)
-        result.diagram = frobenius.Diagram.swap(ob(left), ob(right))
+                     left + right, right + left, world)
+        result.diagram = frobenius.Diagram.swap(
+            ob(left * (Thing, )), ob(right * (Thing, )))
         return result
 
     @classmethod
     def permutation(cls, xs, doms, world: World = None) -> Relation:
         """
-        The relation permuting some tuples of OWL classes, with the same
-        convention as :meth:`abc.SymmetricCategory.permutation`: the
-        ``i``-th output is the ``xs[i]``-th input.
+        The relation permuting some boundaries, with the same convention
+        as :meth:`abc.SymmetricCategory.permutation`: the ``i``-th output
+        is the ``xs[i]``-th input.
 
         Parameters:
             xs : A permutation of ``range(len(doms))``.
-            doms : The tuples of OWL classes to permute.
-            world : The world to read ``owl:Thing`` from.
+            doms : The arities to permute.
+            world : The world, the default world otherwise.
         """
-        xs, doms = list(xs), [tuplify(dom) for dom in doms]
+        xs, doms = list(xs), list(doms)
         if sorted(xs) != list(range(len(doms))):
             raise ValueError
-        dom = sum(doms, ())
-        cod = sum((doms[x] for x in xs), ())
-        world = world or find_world(dom)
+        world = world or owlready2.default_world
         return cls([(sum(groups, ()), sum((groups[x] for x in xs), ()))
                     for groups in product(
-                        *(carrier(one, world) for one in doms))], dom, cod)
+                        *(carrier(one, world) for one in doms))],
+                   sum(doms), sum(doms), world)
 
     @classmethod
-    def spiders(cls, n_legs_in: int, n_legs_out: int, typ: tuple,
+    def spiders(cls, n_legs_in: int, n_legs_out: int, typ: int,
                 world: World = None) -> Relation:
         """
         The spider relation, i.e. tuples of individuals repeated on every
@@ -428,50 +448,51 @@ class Relation(BooleanAllegory, SymmetricCategory):
         Parameters:
             n_legs_in : The number of legs in.
             n_legs_out : The number of legs out.
-            typ : The tuple of OWL classes on each leg.
-            world : The world to read ``owl:Thing`` from.
+            typ : The number of wires on each leg.
+            world : The world, the default world otherwise.
         """
-        typ = tuplify(typ)
+        world = world or owlready2.default_world
         result = cls([(n_legs_in * xs, n_legs_out * xs)
                       for xs in carrier(typ, world)],
-                     n_legs_in * typ, n_legs_out * typ)
+                     n_legs_in * typ, n_legs_out * typ, world)
         result.diagram = frobenius.Diagram.spiders(
-            n_legs_in, n_legs_out, ob(typ))
+            n_legs_in, n_legs_out, ob(typ * (Thing, )))
         return result
 
     @classmethod
-    def copy(cls, typ: tuple, n: int = 2, world: World = None) -> Relation:
+    def copy(cls, typ: int, n: int = 2, world: World = None) -> Relation:
         """
         The relation copying every individual ``n`` times.
 
         Parameters:
-            typ : The tuple of OWL classes to copy.
+            typ : The number of wires to copy.
             n : The number of copies.
-            world : The world to read ``owl:Thing`` from.
+            world : The world, the default world otherwise.
         """
         return cls.spiders(1, n, typ, world)
 
     @classmethod
-    def cups(cls, left: tuple, right: tuple, world: World = None) -> Relation:
+    def cups(cls, left: int, right: int, world: World = None) -> Relation:
         """
-        The relation bending two wires into none; OWL classes are self-dual
-        so ``left`` and ``right`` must be equal.
+        The relation bending two boundaries into none; ``owl:Thing`` is
+        self-dual so ``left`` and ``right`` must be equal.
 
         Parameters:
-            left : The tuple of OWL classes on the left.
-            right : The same tuple of OWL classes.
-            world : The world to read ``owl:Thing`` from.
+            left : The number of wires on the left.
+            right : The same number of wires.
+            world : The world, the default world otherwise.
         """
-        left, right = map(tuplify, (left, right))
         if left != right:
             raise AxiomError(messages.NOT_ADJOINT.format(left, right))
+        world = world or owlready2.default_world
         result = cls([(xs + xs, ()) for xs in carrier(left, world)],
-                     left + right, ())
-        result.diagram = frobenius.Diagram.cups(ob(left), ob(right))
+                     left + right, 0, world)
+        result.diagram = frobenius.Diagram.cups(
+            ob(left * (Thing, )), ob(right * (Thing, )))
         return result
 
     @classmethod
-    def caps(cls, left: tuple, right: tuple, world: World = None) -> Relation:
+    def caps(cls, left: int, right: int, world: World = None) -> Relation:
         """ The dagger of :meth:`cups`. """
         return cls.cups(left, right, world).dagger()
 
@@ -486,14 +507,16 @@ class Relation(BooleanAllegory, SymmetricCategory):
         for other in others:
             assert_isinstance(other, Relation)
             assert_isparallel(self, other)
+            assert_isworld(self, other)
             pairs &= set(other.inside)
-        result = type(self)(pairs, self.dom, self.cod)
+        result = self.factory(pairs, self.dom, self.cod, self.world)
         diagrams = (self.diagram, ) + tuple(
             other.diagram for other in others)
+        typs = ob(self.dom * (Thing, )), ob(self.cod * (Thing, ))
         result.diagram = combine(lambda *inside: (
-            frobenius.Diagram.spiders(1, len(inside), ob(self.dom))
+            frobenius.Diagram.spiders(1, len(inside), typs[0])
             >> frobenius.Id().tensor(*inside)
-            >> frobenius.Diagram.spiders(len(inside), 1, ob(self.cod))
+            >> frobenius.Diagram.spiders(len(inside), 1, typs[1])
             if len(inside) > 1 else inside[0]), *diagrams)
         return result
 
@@ -508,78 +531,47 @@ class Relation(BooleanAllegory, SymmetricCategory):
         for other in others:
             assert_isinstance(other, Relation)
             assert_isparallel(self, other)
+            assert_isworld(self, other)
             pairs |= set(other.inside)
-        result = type(self)(pairs, self.dom, self.cod)
+        result = self.factory(pairs, self.dom, self.cod, self.world)
         diagrams = (self.diagram, ) + tuple(
             other.diagram for other in others)
+        typs = ob(self.dom * (Thing, )), ob(self.cod * (Thing, ))
         result.diagram = combine(lambda *inside: (
             frobenius.Bubble(
-                *inside, dom=ob(self.dom), cod=ob(self.cod),
-                drawing_name="$\\vee$")
+                *inside, dom=typs[0], cod=typs[1], drawing_name="$\\vee$")
             if len(inside) > 1 else inside[0]), *diagrams)
         return result
 
-    def neg(self, world: World = None) -> Relation:
-        """
-        The complement within the product of the carriers, called with
-        ``~``. This is closed-world negation: what the world does not hold
-        is taken to be false.
-
-        Parameters:
-            world : The world to read ``owl:Thing`` from.
-        """
-        result = type(self)(
-            set(type(self).top(self.dom, self.cod, world).inside)
-            - set(self.inside), self.dom, self.cod)
-        result.diagram = combine(
-            lambda diagram: diagram.bubble(drawing_name=NEGATION),
-            self.diagram)
-        return result
-
     @classmethod
-    def top(cls, dom: tuple, cod: tuple, world: World = None) -> Relation:
+    def bottom(cls, dom: int, cod: int, world: World = None) -> Relation:
         """
-        The greatest relation between two tuples of OWL classes, relating
-        every pair of tuples of instances.
+        The empty relation between two boundaries.
 
         Parameters:
-            dom : The domain.
-            cod : The codomain.
-            world : The world to read ``owl:Thing`` from.
+            dom : The number of input wires.
+            cod : The number of output wires.
+            world : The world, the default world otherwise.
         """
-        dom, cod = map(tuplify, (dom, cod))
-        world = world or find_world(dom, cod)
-        result = cls(product(carrier(dom, world), carrier(cod, world)),
-                     dom, cod)
-        result.diagram = frobenius.Diagram.spiders(1, 0, ob(dom))\
-            >> frobenius.Diagram.spiders(0, 1, ob(cod))
-        return result
-
-    @classmethod
-    def bottom(cls, dom: tuple, cod: tuple) -> Relation:
-        """
-        The empty relation between two tuples of OWL classes.
-
-        Parameters:
-            dom : The domain.
-            cod : The codomain.
-        """
-        dom, cod = map(tuplify, (dom, cod))
-        result = cls((), dom, cod)
-        result.diagram = frobenius.Box("$\\bot$", ob(dom), ob(cod))
+        result = cls((), dom, cod, world or owlready2.default_world)
+        result.diagram = frobenius.Box(
+            "$\\bot$", ob(dom * (Thing, )), ob(cod * (Thing, )))
         return result
 
     def domain(self) -> Relation:
         """
-        The coreflexive relation on what a relation is actually defined on,
-        i.e. the partial identity on the tuples with at least one value.
+        The coreflexive relation on what a relation is actually defined
+        on, i.e. the partial identity on the tuples with at least one
+        value.
         """
-        result = type(self)(
-            [(xs, xs) for xs, _ in self.inside], self.dom, self.dom)
+        result = self.factory(
+            [(xs, xs) for xs, _ in self.inside],
+            self.dom, self.dom, self.world)
+        typs = ob(self.dom * (Thing, )), ob(self.cod * (Thing, ))
         result.diagram = combine(lambda diagram: (
-            frobenius.Diagram.spiders(1, 2, ob(self.dom)) >> frobenius.Id(
-                ob(self.dom)) @ (diagram >> frobenius.Diagram.spiders(
-                    1, 0, ob(self.cod)))), self.diagram)
+            frobenius.Diagram.spiders(1, 2, typs[0]) >> frobenius.Id(
+                typs[0]) @ (diagram >> frobenius.Diagram.spiders(
+                    1, 0, typs[1]))), self.diagram)
         return result
 
     def codomain(self) -> Relation:
@@ -588,12 +580,12 @@ class Relation(BooleanAllegory, SymmetricCategory):
 
     def repeat(self) -> Relation:
         """
-        The reflexive transitive closure of a relation on one type, i.e.
-        the least reflexive and transitive relation above it.
+        The reflexive transitive closure of a relation on one boundary,
+        i.e. the least reflexive and transitive relation above it.
         """
         if self.dom != self.cod:
             raise AxiomError(messages.NOT_ENDO.format(self))
-        result = type(self).id(self.dom, find_world(self.dom)).join(self)
+        result = self.factory.id(self.dom, self.world).join(self)
         while True:
             step = result.join(result >> result)
             if step == result:
@@ -604,83 +596,80 @@ class Relation(BooleanAllegory, SymmetricCategory):
             self.diagram)
         return result
 
-    @classmethod
-    def from_property(cls, prop, dom: tuple = None, cod: tuple = None
-                      ) -> Relation:
+    def split(self, dom: tuple, cod: tuple) -> Query:
         """
-        The relation an OWL property holds, from what ``rdfs:domain`` says
-        it is defined on to what ``rdfs:range`` says it lands in.
+        The relation as a morphism of the Karoubi envelope, between the
+        predicates given -- normalised between their coreflexives, see
+        :class:`Query`.
 
-        The pairs are restricted to the carriers of the boundary, so that
-        reading a property at a narrower predicate filters what it holds
-        and the boundary stays honest; ``owl:Thing`` keeps everything.
+        Parameters:
+            dom : The tuple of predicates for the domain.
+            cod : The tuple of predicates for the codomain.
+        """
+        return Query(self, dom, cod)
+
+    @classmethod
+    def from_property(cls, prop, world: World = None) -> Relation:
+        """
+        The relation an OWL property holds of the individuals of a world:
+        the raw single-sorted reading, every pair at arity one -- see
+        :meth:`Query.from_property` for the reading typed by the schema.
 
         Parameters:
             prop : The `owlready2` property.
-            dom : The domain to read it at, its ``rdfs:domain`` when it
-                declares exactly one and ``owl:Thing`` otherwise.
-            cod : The codomain, likewise from ``rdfs:range``.
+            world : The world, the property's own otherwise.
         """
-        schema_dom, schema_cod = schema(prop)
-        dom = tuplify(schema_dom if dom is None else dom)
-        cod = tuplify(schema_cod if cod is None else cod)
-        source, target = (
-            None if one is Thing else set(instances(one))
-            for one in (dom[0], cod[0]))
-        result = cls({(x, y) for x, y in prop.get_relations()
-                      if (source is None or x in source)
-                      and (target is None or y in target)}, dom, cod)
+        world = world or prop.namespace.world
+        result = cls(set(prop.get_relations()), 1, 1, world)
         result.name = prop.name
-        result.diagram = frobenius.Box(prop.name, ob(dom), ob(cod))
+        result.diagram = frobenius.Box(prop.name, ob(), ob())
         return result
 
     @classmethod
-    def from_class(cls, entity: ThingClass, dom: tuple = None) -> Relation:
+    def from_individual(cls, individual) -> Relation:
         """
-        The coreflexive relation testing membership of an OWL class, i.e.
-        the partial identity on its instances.
-
-        Parameters:
-            entity : The `owlready2` class.
-            dom : The type to read it at, the class itself by default.
-        """
-        dom = (entity, ) if dom is None else tuplify(dom)
-        result = cls([2 * ((one, ), ) for one in instances(entity)],
-                     dom, dom)
-        result.name = entity.name
-        if len(dom) == 1:
-            result.diagram = to_diagram(entity, dom[0])
-        return result
-
-    @classmethod
-    def from_individual(cls, individual, cod: tuple = None) -> Relation:
-        """
-        An individual as a point, i.e. the relation from the monoidal unit
-        that holds of it alone.
+        An individual as a point, i.e. the relation from the monoidal
+        unit that holds of it alone.
 
         Parameters:
             individual : The `owlready2` individual.
-            cod : The type of the point, the first of the individual's
-                named classes by default.
         """
-        cod = tuplify(individual_class(individual) if cod is None else cod)
-        result = cls([((), (individual, ))], (), cod)
+        result = cls([((), (individual, ))], 0, 1,
+                     individual.namespace.world)
         result.name = individual.name
-        if len(cod) == 1:
-            result.diagram = point(individual, cod[0])
+        result.diagram = point(individual, Thing)
         return result
+
+    @classmethod
+    def sparql(cls, query: str, dom: int, cod: int, world: World
+               ) -> Relation:
+        """
+        The relation a SPARQL query defines, evaluated by the native
+        engine of `owlready2` on the materialised graph -- run
+        :func:`reason` first to query the entailed one. Each row is split
+        into a pair after the first ``dom`` variables.
+
+        Parameters:
+            query : The SPARQL query, with one variable per wire.
+            dom : The number of input wires.
+            cod : The number of output wires.
+            world : The world to ask.
+        """
+        return cls([(tuple(row[:dom]), tuple(row[dom:]))
+                    for row in world.sparql(query)], dom, cod, world)
 
     def to_diagram(self) -> "frobenius.Diagram":
         """
         The picture of a relation: the diagram of the syntax it was built
-        from when there is one, and a box named after it otherwise --
-        a relation is extensional, so a composite forgets its history
+        from when there is one, and a box named after it otherwise -- a
+        relation is extensional, so a composite forgets its history
         unless every part carried a picture.
         """
         if self.diagram is not None:
             return self.diagram
         return frobenius.Box(
-            getattr(self, "name", "?"), ob(self.dom), ob(self.cod))
+            getattr(self, "name", "?"),
+            ob(self.dom * (Thing, )), ob(self.cod * (Thing, )))
 
     def draw(self, **params):
         """
@@ -691,23 +680,587 @@ class Relation(BooleanAllegory, SymmetricCategory):
         """
         return self.to_diagram().draw(**params)
 
-    @classmethod
-    def sparql(cls, query: str, dom: tuple, cod: tuple, world: World
-               ) -> Relation:
+
+@factory
+@dataclass
+class Query(DistributiveAllegory, SymmetricCategory):
+    """
+    A morphism of the Karoubi envelope of :class:`Relation`, split at the
+    coreflexives: the boundaries are tuples of predicates -- named OWL
+    classes or compound class constructs, each the :func:`label` of its
+    wire -- and the relation ``inside`` is normalised to ``e ; inside ;
+    f`` between the coreflexives of the boundary, so that it only relates
+    individuals the predicates provably hold of.
+
+    Parameters:
+        inside : The underlying :class:`Relation`, at the boundary
+            arities.
+        dom : The tuple of predicates for the domain.
+        cod : The tuple of predicates for the codomain.
+        normalise : Whether to normalise between the boundary
+            coreflexives; the internal call sites pass ``False`` when the
+            invariant already holds.
+
+    Composing two queries whose predicates differ asks `HermiT` for the
+    subsumption between them, wire by wire, and inserts each verdict as a
+    :class:`Coercion` -- so ``>>`` runs entailment queries, a deliberate
+    exception to composition being pure, and :attr:`no_reasoning` is the
+    way to opt out. :meth:`validate` then raises on every coercion whose
+    subsumption failed or was never checked.
+
+    .. admonition:: Summary
+
+        .. autosummary::
+
+            id
+            then
+            tensor
+            dagger
+            meet
+            join
+            bottom
+            spiders
+            swap
+            cups
+            caps
+            domain
+            repeat
+            relation
+            at_thing
+            validate
+            from_property
+            from_class
+            from_individual
+
+    Example
+    -------
+    >>> from owlready2 import Thing, World
+    >>> onto = World().get_ontology("http://discopy.org/kennel.owl")
+    >>> with onto:
+    ...     class Dog(Thing): pass
+    ...     class Person(Thing): pass
+    ...     class owns(Person >> Dog): pass
+    ...     rex, ada = Dog("rex"), Person("ada")
+    ...     ada.owns = [rex]
+    >>> owns = Query.from_property(onto.owns)
+    >>> assert owns.relation.dom == owns.relation.cod == 1
+    >>> assert Query.id(owns.dom) >> owns == owns
+    >>> assert owns.at_thing() == owns.relation.split((Thing, ), (Thing, ))
+    """
+    inside: Relation
+    dom: tuple
+    cod: tuple
+
+    reasoning = True
+
+    def __init__(self, inside: Relation, dom: tuple, cod: tuple,
+                 normalise: bool = True):
+        assert_isinstance(inside, Relation)
+        dom, cod = map(tuplify, (dom, cod))
+        if (len(dom), len(cod)) != (inside.dom, inside.cod):
+            raise AxiomError(messages.WRONG_ARITY.format(
+                (inside.dom, inside.cod), (dom, cod)))
+        if normalise:
+            inside = boundary(dom, inside.world) >> inside\
+                >> boundary(cod, inside.world)
+        self.inside, self.dom, self.cod = inside, dom, cod
+        self.diagram = None
+
+    @property
+    def relation(self) -> Relation:
+        """ The underlying single-sorted relation, i.e. ``inside``. """
+        return self.inside
+
+    @property
+    def world(self) -> World:
+        """ The world the underlying relation lives over. """
+        return self.inside.world
+
+    @classproperty
+    @contextmanager
+    def no_reasoning(cls):
         """
-        The relation a SPARQL query defines, evaluated by the native engine
-        of `owlready2`: each row is split into a pair after the first
-        ``len(dom)`` variables.
+        A context manager under which composition skips the entailment
+        queries: the coercions it inserts carry ``entailed=None``, to be
+        checked by :meth:`validate` later.
+        """
+        tmp, cls.reasoning = cls.reasoning, False
+        try:
+            yield
+        finally:
+            cls.reasoning = tmp
+
+    def __str__(self):
+        name = getattr(self, "name", type(self).__name__)
+        dom = tuple(map(label, self.dom))
+        cod = tuple(map(label, self.cod))
+        return f"{name} : {dom and str(dom) or '()'} "\
+            f"-> {cod and str(cod) or '()'}"
+
+    def __bool__(self):
+        return bool(self.inside)
+
+    def __le__(self, other) -> bool:
+        assert_isinstance(other, Query)
+        assert_isparallel(self, other)
+        return self.inside <= other.inside
+
+    @classmethod
+    def id(cls, dom: tuple = (), world: World = None) -> Query:
+        """
+        The identity on a split object, i.e. the coreflexive of its
+        predicates.
 
         Parameters:
-            query : The SPARQL query, with one variable per wire.
-            dom : The domain, a tuple of OWL classes.
-            cod : The codomain, a tuple of OWL classes.
-            world : The world to ask.
+            dom : The tuple of predicates.
+            world : The world, resolved from the predicates otherwise.
+        """
+        dom = tuplify(dom)
+        world = world or find_world(dom) or owlready2.default_world
+        result = cls(boundary(dom, world), dom, dom, normalise=False)
+        result.diagram = frobenius.Id(ob(dom))
+        return result
+
+    def then(self, *others: Query) -> Query:
+        """
+        Compose queries; where the predicates of the boundary differ,
+        ask `HermiT` for the subsumption between them and insert the
+        verdict as a :class:`Coercion` in between.
+
+        Parameters:
+            others : The queries to compose in sequence.
+        """
+        result = self
+        for other in others:
+            assert_isinstance(other, Query)
+            if result.cod != other.dom:
+                if len(result.cod) != len(other.dom):
+                    assert_iscomposable(result, other)
+                middle = self.factory.id((), result.world).tensor(*(
+                    coercion(source, target, result.world)
+                    for source, target in zip(result.cod, other.dom)))
+                other = middle.then(other) if middle.cod != other.dom\
+                    else _compose(middle, other)
+            result = _compose(result, other)
+        return result
+
+    def tensor(self, *others: Query) -> Query:
+        """
+        The product of queries, concatenating their predicates.
+
+        Parameters:
+            others : The queries to tensor.
+        """
+        result = self
+        for other in others:
+            assert_isinstance(other, Query)
+            step = self.factory(
+                result.inside @ other.inside,
+                result.dom + other.dom, result.cod + other.cod,
+                normalise=False)
+            step.diagram = combine(
+                lambda left, right: left @ right,
+                result.diagram, other.diagram)
+            result = step
+        return result
+
+    __matmul__ = tensor
+
+    def dagger(self) -> Query:
+        """ The converse query, with the boundaries swapped. """
+        result = self.factory(
+            self.inside.dagger(), self.cod, self.dom, normalise=False)
+        result.diagram = combine(
+            lambda diagram: diagram.dagger(), self.diagram)
+        return result
+
+    def meet(self, *others: Query) -> Query:
+        """
+        The intersection of parallel queries, called with ``&``.
+
+        Parameters:
+            others : The other queries.
+        """
+        for other in others:
+            assert_isinstance(other, Query)
+            assert_isparallel(self, other)
+        result = self.factory(
+            self.inside.meet(*(other.inside for other in others)),
+            self.dom, self.cod, normalise=False)
+        result.diagram = combine(lambda *inside: (
+            frobenius.Diagram.spiders(1, len(inside), ob(self.dom))
+            >> frobenius.Id().tensor(*inside)
+            >> frobenius.Diagram.spiders(len(inside), 1, ob(self.cod))
+            if len(inside) > 1 else inside[0]),
+            self.diagram, *(other.diagram for other in others))
+        return result
+
+    def join(self, *others: Query) -> Query:
+        """
+        The union of parallel queries, called with ``|``.
+
+        Parameters:
+            others : The other queries.
+        """
+        for other in others:
+            assert_isinstance(other, Query)
+            assert_isparallel(self, other)
+        result = self.factory(
+            self.inside.join(*(other.inside for other in others)),
+            self.dom, self.cod, normalise=False)
+        result.diagram = combine(lambda *inside: (
+            frobenius.Bubble(*inside, dom=ob(self.dom), cod=ob(self.cod),
+                             drawing_name="$\\vee$")
+            if len(inside) > 1 else inside[0]),
+            self.diagram, *(other.diagram for other in others))
+        return result
+
+    @classmethod
+    def bottom(cls, dom: tuple, cod: tuple, world: World = None) -> Query:
+        """
+        The empty query between two tuples of predicates.
+
+        Parameters:
+            dom : The tuple of predicates for the domain.
+            cod : The tuple of predicates for the codomain.
+            world : The world, resolved from the predicates otherwise.
         """
         dom, cod = map(tuplify, (dom, cod))
-        return cls([(tuple(row[:len(dom)]), tuple(row[len(dom):]))
-                    for row in world.sparql(query)], dom, cod)
+        world = world or find_world(dom, cod) or owlready2.default_world
+        result = cls(Relation.bottom(len(dom), len(cod), world),
+                     dom, cod, normalise=False)
+        result.diagram = frobenius.Box("$\\bot$", ob(dom), ob(cod))
+        return result
+
+    @classmethod
+    def spiders(cls, n_legs_in: int, n_legs_out: int, typ: tuple,
+                world: World = None) -> Query:
+        """
+        The spiders on a tuple of predicates: the single-sorted spiders,
+        normalised between the coreflexives of the boundary.
+
+        Parameters:
+            n_legs_in : The number of legs in.
+            n_legs_out : The number of legs out.
+            typ : The tuple of predicates on each leg.
+            world : The world, resolved from the predicates otherwise.
+        """
+        typ = tuplify(typ)
+        world = world or find_world(typ) or owlready2.default_world
+        result = cls(
+            Relation.spiders(n_legs_in, n_legs_out, len(typ), world),
+            n_legs_in * typ, n_legs_out * typ)
+        result.diagram = frobenius.Diagram.spiders(
+            n_legs_in, n_legs_out, ob(typ))
+        return result
+
+    @classmethod
+    def copy(cls, typ: tuple, n: int = 2, world: World = None) -> Query:
+        """
+        The query copying every individual ``n`` times.
+
+        Parameters:
+            typ : The tuple of predicates to copy.
+            n : The number of copies.
+            world : The world, resolved from the predicates otherwise.
+        """
+        return cls.spiders(1, n, typ, world)
+
+    @classmethod
+    def swap(cls, left: tuple, right: tuple, world: World = None) -> Query:
+        """
+        The query exchanging two tuples of predicates.
+
+        Parameters:
+            left : The tuple of predicates on the left.
+            right : The tuple of predicates on the right.
+            world : The world, resolved from the predicates otherwise.
+        """
+        left, right = map(tuplify, (left, right))
+        world = world or find_world(left, right) or owlready2.default_world
+        result = cls(Relation.swap(len(left), len(right), world),
+                     left + right, right + left)
+        result.diagram = frobenius.Diagram.swap(ob(left), ob(right))
+        return result
+
+    @classmethod
+    def permutation(cls, xs, doms, world: World = None) -> Query:
+        """
+        The query permuting some tuples of predicates, the ``i``-th
+        output being the ``xs[i]``-th input.
+
+        Parameters:
+            xs : A permutation of ``range(len(doms))``.
+            doms : The tuples of predicates to permute.
+            world : The world, resolved from the predicates otherwise.
+        """
+        xs, doms = list(xs), [tuplify(dom) for dom in doms]
+        dom = sum(doms, ())
+        world = world or find_world(dom) or owlready2.default_world
+        return cls(Relation.permutation(
+            xs, [len(one) for one in doms], world),
+            dom, sum((doms[x] for x in xs), ()))
+
+    @classmethod
+    def cups(cls, left: tuple, right: tuple, world: World = None) -> Query:
+        """
+        The query bending two boundaries into none; predicates are
+        self-dual so ``left`` and ``right`` must be equal.
+
+        Parameters:
+            left : The tuple of predicates on the left.
+            right : The same tuple of predicates.
+            world : The world, resolved from the predicates otherwise.
+        """
+        left, right = map(tuplify, (left, right))
+        if left != right:
+            raise AxiomError(messages.NOT_ADJOINT.format(left, right))
+        world = world or find_world(left) or owlready2.default_world
+        result = cls(Relation.cups(len(left), len(right), world),
+                     left + right, ())
+        result.diagram = frobenius.Diagram.cups(ob(left), ob(right))
+        return result
+
+    @classmethod
+    def caps(cls, left: tuple, right: tuple, world: World = None) -> Query:
+        """ The dagger of :meth:`cups`. """
+        return cls.cups(left, right, world).dagger()
+
+    def domain(self) -> Query:
+        """
+        The coreflexive query on what a query is actually defined on.
+        """
+        result = self.factory(
+            self.inside.domain(), self.dom, self.dom, normalise=False)
+        result.diagram = combine(lambda diagram: (
+            frobenius.Diagram.spiders(1, 2, ob(self.dom)) >> frobenius.Id(
+                ob(self.dom)) @ (diagram >> frobenius.Diagram.spiders(
+                    1, 0, ob(self.cod)))), self.diagram)
+        return result
+
+    def codomain(self) -> Query:
+        """ The :meth:`domain` of the converse query. """
+        return self.dagger().domain()
+
+    def repeat(self) -> Query:
+        """
+        The reflexive transitive closure of a query on one boundary,
+        relative to the coreflexive of its predicates.
+        """
+        if self.dom != self.cod:
+            raise AxiomError(messages.NOT_ENDO.format(self))
+        result = self.factory.id(self.dom, self.world).join(self)
+        while True:
+            step = result.join(result >> result)
+            if step == result:
+                break
+            result = step
+        result.diagram = combine(
+            lambda diagram: diagram.bubble(drawing_name="$\\ast$"),
+            self.diagram)
+        return result
+
+    def at_thing(self) -> Query:
+        """
+        The query widened to ``owl:Thing`` on every wire -- the
+        conversion back down to the single-sorted reading, as a query.
+        """
+        result = self.factory(
+            self.inside, len(self.dom) * (Thing, ),
+            len(self.cod) * (Thing, ), normalise=False)
+        result.diagram = self.diagram
+        return result
+
+    @property
+    def coercions(self) -> list:
+        """ The coercions inside a query, without repetition. """
+        return list({
+            id(one.data): one.data
+            for one in getattr(self.to_diagram(), "boxes", [])
+            if isinstance(one.data, Coercion)}.values())
+
+    def validate(self) -> Query:
+        """
+        Check the proof objects of the coercions inside a query and
+        return it: a coercion never checked -- composed under
+        :attr:`no_reasoning` -- is checked now, and one whose subsumption
+        `HermiT` refuted raises.
+
+        Raises:
+            AxiomError : Whenever a coercion is not entailed.
+        """
+        lossy = []
+        for one in self.coercions:
+            if one.entailed is None:
+                one.entailed = subsumes(one.source, one.target, one.world)
+            if not one.entailed:
+                lossy.append(one)
+        if lossy:
+            raise AxiomError(" and ".join(
+                f"{label(one.source)} is not {label(one.target)}"
+                for one in lossy))
+        return self
+
+    @classmethod
+    def from_property(cls, prop, dom=None, cod=None) -> Query:
+        """
+        The query an OWL property defines, typed by what ``rdfs:domain``
+        and ``rdfs:range`` declare: the raw relation of
+        :meth:`Relation.from_property`, normalised between the
+        coreflexives of the schema.
+
+        Parameters:
+            prop : The `owlready2` property.
+            dom : The predicate to read it at, its ``rdfs:domain`` when
+                it declares exactly one and ``owl:Thing`` otherwise.
+            cod : The predicate it lands in, likewise from ``rdfs:range``.
+        """
+        schema_dom, schema_cod = schema(prop)
+        dom = schema_dom if dom is None else dom
+        cod = schema_cod if cod is None else cod
+        result = cls(Relation.from_property(prop), (dom, ), (cod, ))
+        result.name = prop.name
+        result.diagram = frobenius.Box(
+            prop.name, ob((dom, )), ob((cod, )))
+        return result
+
+    @classmethod
+    def from_class(cls, entity, dom=None) -> Query:
+        """
+        The coreflexive query testing membership of a predicate, read at
+        another one.
+
+        Parameters:
+            entity : The `owlready2` class or class construct.
+            dom : The predicate to read it at, the construct itself by
+                default -- in which case this is the identity on the
+                split object, see :meth:`id`.
+        """
+        dom = entity if dom is None else dom
+        world = expr_world(entity) or expr_world(dom)\
+            or owlready2.default_world
+        result = cls(extension(entity, world), (dom, ), (dom, ))
+        result.name = label(entity)
+        result.diagram = to_diagram(entity, dom)
+        return result
+
+    @classmethod
+    def from_individual(cls, individual, cod=None) -> Query:
+        """
+        An individual as a point, typed by its first named class.
+
+        Parameters:
+            individual : The `owlready2` individual.
+            cod : The predicate of the point, the individual's first
+                named class by default.
+        """
+        cod = individual_class(individual) if cod is None else cod
+        result = cls(Relation.from_individual(individual), (), (cod, ))
+        result.name = individual.name
+        result.diagram = point(individual, cod)
+        return result
+
+    def to_diagram(self) -> "frobenius.Diagram":
+        """
+        The picture of a query, with every wire labelled by its
+        predicate; a box named after it when the history is forgotten.
+        """
+        if self.diagram is not None:
+            return self.diagram
+        return frobenius.Box(
+            getattr(self, "name", "?"), ob(self.dom), ob(self.cod))
+
+    def draw(self, **params):
+        """
+        Draw the picture of a query, see :meth:`to_diagram`.
+
+        Parameters:
+            params : Passed to :meth:`frobenius.Diagram.draw`.
+        """
+        return self.to_diagram().draw(**params)
+
+
+def _compose(left: Query, right: Query) -> Query:
+    """ Strict composition of two queries with matching boundaries. """
+    result = left.factory(
+        left.inside >> right.inside, left.dom, right.cod, normalise=False)
+    result.diagram = combine(
+        lambda one, other: one >> other, left.diagram, right.diagram)
+    return result
+
+
+def boundary(preds: tuple, world: World) -> Relation:
+    """
+    The coreflexive of a tuple of predicates, i.e. the tensor of their
+    :func:`extension` -- the identity of the split object they present.
+
+    Parameters:
+        preds : The tuple of predicates.
+        world : The world whose individuals they hold of.
+    """
+    return Relation.id(0, world).tensor(*(
+        extension(pred, world) for pred in preds))
+
+
+class Coercion(Query):
+    """
+    The move between two predicates on the same individuals, carrying a
+    proof object: the partial identity relating what provably satisfies
+    both, together with `HermiT`'s verdict on whether the source is
+    subsumed by the target -- ``entailed`` is ``True`` for a free
+    coercion, ``False`` for a filter and ``None`` when composed under
+    :attr:`Query.no_reasoning`, to be settled by :meth:`Query.validate`.
+
+    Parameters:
+        source : The predicate to come from.
+        target : The predicate to go to.
+        world : The world, resolved from the predicates otherwise.
+    """
+    def __init__(self, source, target, world: World = None):
+        self.source, self.target = source, target
+        world = world or expr_world(source) or expr_world(target)\
+            or owlready2.default_world
+        inside = extension(source, world).meet(extension(target, world))
+        self.entailed = subsumes(source, target, world)\
+            if type(self).reasoning else None
+        super().__init__(inside, (source, ), (target, ), normalise=False)
+        self.name = label(target)
+        self.diagram = frobenius.Box(
+            label(target), ob((source, )), ob((target, )), data=self)
+
+
+def coercion(source, target, world: World = None) -> Query:
+    """
+    The move between two predicates: the identity where they agree and a
+    :class:`Coercion` otherwise, which is what :meth:`Query.then` puts
+    between two queries that do not meet.
+
+    Parameters:
+        source : The predicate to come from.
+        target : The predicate to go to.
+        world : The world, resolved from the predicates otherwise.
+    """
+    if source == target:
+        return Query.id((source, ), world)
+    return Coercion(source, target, world)
+
+
+def parallel(left: Query, right: Query) -> tuple:
+    """
+    Two queries as a parallel pair, widened to ``owl:Thing`` on every
+    wire if their boundaries differ -- which is what an :class:`Axiom`
+    between them needs.
+
+    Parameters:
+        left : One query.
+        right : The other.
+    """
+    if left.is_parallel(right):
+        return left, right
+    left, right = left.at_thing(), right.at_thing()
+    if not left.is_parallel(right):
+        raise AxiomError(messages.NOT_PARALLEL.format(left, right))
+    return left, right
 
 
 def load(iri: str, world: World = None, path: str = None) -> Ontology:
@@ -790,7 +1343,9 @@ def preload(path: str, world: World):
 def reason(world: World, infer_property_values: bool = True):
     """
     Run `HermiT` on a world so that what it entails can be read off it:
-    class membership, subsumption and, by default, property values.
+    class membership, subsumption and, by default, property values. This
+    is the semantics of the module -- the constructors read what
+    reasoning materialised, and nothing is concluded from absence.
 
     Assign to this to use another reasoner or other options. Note that
     HermiT accepts only the datatypes of the OWL 2 map, while published
@@ -826,60 +1381,219 @@ def consistent(world: World) -> bool:
         return False
 
 
-def coercion(source, target, world: World = None) -> Relation:
+def deduced(exprs, world: World) -> list:
     """
-    The move between two predicates on the same individuals: the partial
-    identity relating what satisfies both, drawn as a box named after
-    where it goes -- and the identity where the two agree, which is what
-    :meth:`Relation.then` puts between two relations that do not meet.
+    The individuals `HermiT` can prove each class construct holds of,
+    sorted by IRI: one scratch defined class per construct, equivalent to
+    it, classified by a single run of :func:`reason` and destroyed again
+    -- so a batch costs one reasoner call, not one per construct.
 
     Parameters:
-        source : The predicate to come from.
-        target : The predicate to go to.
-        world : The world to read ``owl:Thing`` from.
+        exprs : The `owlready2` class constructs.
+        world : The world whose ontologies say what is entailed.
+
+    Example
+    -------
+    >>> from owlready2 import AllDisjoint, Not, Thing, World
+    >>> onto = World().get_ontology("http://discopy.org/kennel.owl")
+    >>> with onto:
+    ...     class Dog(Thing): pass
+    ...     class Person(Thing): pass
+    ...     rex, ada = Dog("rex"), Person("ada")
+    >>> deduced([Not(onto.Dog)], onto.world)  # nothing is provably not
+    [()]
+    >>> with onto:
+    ...     _ = AllDisjoint([onto.Dog, onto.Person])
+    >>> deduced([Not(onto.Dog)], onto.world)
+    [(kennel.ada,)]
+    """
+    scratch = world.get_ontology(SCRATCH)
+    temps = []
+    with scratch:
+        for index, expr in enumerate(exprs):
+            temp = new_class(f"Deduced{index}", (Thing, ))
+            # A construct can only belong to one class, so clone it.
+            temp.equivalent_to = [expr.__deepcopy__()]
+            temps.append(temp)
+    reason(world)
+    results = [tuple(sorted(temp.instances(), key=lambda one: one.iri))
+               for temp in temps]
+    for temp in temps:
+        dismiss(temp, world)
+    return results
+
+
+def dismiss(temp: ThingClass, world: World):
+    """
+    Destroy a scratch defined class, first dropping every equivalence
+    triple about it across the world: the reasoner writes what it entails
+    into an ontology of its own, and `owlready2` trips over destroying an
+    entity still equivalent to a class construct.
+
+    Parameters:
+        temp : The scratch defined class.
+        world : The world it was classified in.
+    """
+    for onto in list(world.ontologies.values()):
+        onto._del_obj_triple_spo(temp.storid, owl_equivalentclass, None)
+        onto._del_obj_triple_spo(None, owl_equivalentclass, temp.storid)
+    destroy_entity(temp)
+
+
+def subsumes(left, right, world: World) -> bool:
+    """
+    Whether the ontologies of a world entail that one predicate is
+    subsumed by another, by asking `HermiT` -- the proof object a
+    :class:`Coercion` carries. A construct is classified through a
+    scratch defined class the way :func:`deduced` does.
+
+    Parameters:
+        left : The predicate to be subsumed.
+        right : The predicate to subsume it.
+        world : The world whose ontologies say what is entailed.
 
     Example
     -------
     >>> from owlready2 import Thing, World
     >>> onto = World().get_ontology("http://discopy.org/kennel.owl")
     >>> with onto:
-    ...     class Animal(Thing): pass
-    ...     class Dog(Animal): pass
-    ...     rex = Dog("rex")
-    >>> assert coercion(onto.Dog, onto.Dog) == Relation.id(onto.Dog)
-    >>> free = coercion(onto.Dog, onto.Animal)
-    >>> assert free.domain() == Relation.id(onto.Dog)  # a dog is an animal
+    ...     class Dog(Thing): pass
+    ...     class Person(Thing): pass
+    ...     class owns(Person >> Dog): pass
+    >>> assert subsumes(onto.Person & onto.owns.some(onto.Dog),
+    ...                 onto.Person, onto.world)
+    >>> assert not subsumes(onto.Person,
+    ...                     onto.Person & onto.owns.some(onto.Dog),
+    ...                     onto.world)
     """
-    if source == target:
-        return Relation.id((source, ), world)
-    world = world or expr_world(source) or expr_world(target)
-    inside = set(instances(source, world)) & set(instances(target, world))
-    result = Relation([2 * ((one, ), ) for one in inside],
-                      (source, ), (target, ))
-    result.diagram = frobenius.Box(label(target), ob(source), ob(target))
+    scratch, sides, temps = world.get_ontology(SCRATCH), [], []
+    with scratch:
+        for index, expr in enumerate((left, right)):
+            if expr is Thing or declared(expr, ThingClass):
+                sides.append(expr)
+            else:
+                temp = new_class(f"Subsumed{index}", (Thing, ))
+                # A construct can only belong to one class, so clone it.
+                temp.equivalent_to = [expr.__deepcopy__()]
+                sides.append(temp)
+                temps.append(temp)
+    reason(world)
+    result = issubclass(sides[0], sides[1])
+    for temp in temps:
+        dismiss(temp, world)
     return result
 
 
-def parallel(left: Relation, right: Relation) -> tuple:
+def relations(prop) -> dict:
     """
-    Two relations as a parallel pair, widened to ``owl:Thing`` with
-    coercions on each wire if their boundaries differ -- which is what an
-    :class:`Axiom` between them needs.
+    The pairs an OWL property holds, grouped by subject; an
+    :class:`Inverse <owlready2.class_construct.Inverse>` groups its
+    property the other way around.
 
     Parameters:
-        left : One relation.
-        right : The other.
+        prop : The `owlready2` property, or the inverse of one.
     """
-    if left.is_parallel(right):
-        return left, right
-    world = find_world(left.dom, left.cod, right.dom, right.cod)
-    widen = lambda relation: (
-        Relation.id(len(relation.dom) * (Thing, ), world) >> relation
-        >> Relation.id(len(relation.cod) * (Thing, ), world))
-    left, right = widen(left), widen(right)
-    if not left.is_parallel(right):
-        raise AxiomError(messages.NOT_PARALLEL.format(left, right))
-    return left, right
+    if isinstance(prop, Inverse):
+        pairs = ((y, x) for x, ys in relations(prop.property).items()
+                 for y in ys)
+    else:
+        pairs = prop.get_relations()
+    result = {}
+    for x, y in pairs:
+        result.setdefault(x, set()).add(y)
+    return result
+
+
+def satisfying(expr, world: World) -> set:
+    """
+    The individuals a predicate provably holds of: the materialised
+    members of a named class -- the entailed ones once :func:`reason` has
+    run -- and what `HermiT` :func:`deduced` for a construct. A
+    complement, a universal or a cardinality holds of an individual only
+    when the ontology entails it, never for want of information.
+
+    Parameters:
+        expr : The `owlready2` class or class construct.
+        world : The world whose ontologies say what is entailed.
+    """
+    if expr is Thing:
+        return set(instances(Thing, world))
+    if isinstance(expr, ThingClass):
+        return set(instances(expr))
+    return set(deduced([expr], world)[0])
+
+
+def extension(expr, world: World = None) -> Relation:
+    """
+    A predicate as a coreflexive of the single-sorted category: the
+    partial identity, at arity one, on the individuals :func:`satisfying`
+    it -- the idempotent that :class:`Query` splits.
+
+    Parameters:
+        expr : The `owlready2` class or class construct.
+        world : The world, resolved from ``expr`` otherwise.
+
+    Example
+    -------
+    >>> from owlready2 import Thing, World
+    >>> onto = World().get_ontology("http://discopy.org/kennel.owl")
+    >>> with onto:
+    ...     class Dog(Thing): pass
+    ...     class Person(Thing): pass
+    ...     class owns(Person >> Dog): pass
+    ...     rex, ada, bob = Dog("rex"), Person("ada"), Person("bob")
+    ...     ada.owns = [rex]
+    >>> dog_owners = extension(onto.owns.some(onto.Dog))
+    >>> assert [x.name for (x, ), _ in dog_owners.inside] == ["ada"]
+    >>> assert dog_owners <= extension(onto.Person)
+    """
+    world = world or expr_world(expr) or owlready2.default_world
+    result = Relation(
+        [2 * ((one, ), ) for one in satisfying(expr, world)], 1, 1, world)
+    result.name = label(expr)
+    result.diagram = to_diagram(expr, Thing)
+    return result
+
+
+def expr_world(expr) -> World:
+    """
+    The world of the first named class or property inside an OWL class
+    construct, or ``None`` for ``owl:Thing`` alone.
+
+    Parameters:
+        expr : The `owlready2` class or class construct.
+    """
+    if declared(expr, ThingClass):
+        return expr.namespace.world
+    if isinstance(expr, (And, Or)):
+        return next((world for one in expr.Classes
+                     for world in [expr_world(one)] if world), None)
+    if isinstance(expr, Not):
+        return expr_world(expr.Class)
+    if isinstance(expr, OneOf):
+        return next((one.namespace.world for one in expr.instances), None)
+    if isinstance(expr, Restriction):
+        prop = expr.property
+        prop = prop.property if isinstance(prop, Inverse) else prop
+        return None if isinstance(prop, str) else prop.namespace.world
+    return None
+
+
+def find_world(*typs: tuple) -> World:
+    """
+    The world of the first named class or property in some tuples of
+    predicates, or ``None`` when there is nothing but ``owl:Thing`` to
+    ask.
+
+    Parameters:
+        typs : The tuples of predicates.
+    """
+    for typ in typs:
+        for pred in typ:
+            world = expr_world(pred)
+            if world is not None:
+                return world
+    return None
 
 
 def combine(operation, *diagrams):
@@ -941,7 +1655,8 @@ def label(entity) -> str:
         if entity.type == HAS_SELF:
             return f"∃{prop}.Self"
         if entity.type == VALUE:
-            return f"∃{prop}.{{{entity.value.name}}}"
+            value = getattr(entity.value, "name", str(entity.value))
+            return f"∃{prop}.{{{value}}}"
         filler = sub(entity.value)
         if entity.type == SOME:
             return f"∃{prop}.{filler}"
@@ -1113,6 +1828,9 @@ def restriction_diagram(source: Restriction, dom: ThingClass
         return spiders(1, 2, typ)\
             >> box(prop, dom, dom) @ typ >> spiders(2, 1, typ)
     if source.type == VALUE:
+        if not isinstance(source.value, Thing):  # a literal, not a point
+            raise NotImplementedError(
+                messages.NOT_IN_DICTIONARY.format(source))
         return spiders(1, 2, typ) >> frobenius.Id(typ)\
             @ (box(prop, dom, individual_class(source.value))
                >> point(source.value).dagger())
@@ -1137,168 +1855,17 @@ def restriction_diagram(source: Restriction, dom: ThingClass
         source.cardinality + 1).bubble(drawing_name=NEGATION)
 
 
-def relations(prop) -> dict:
-    """
-    The pairs an OWL property holds, grouped by subject; an
-    :class:`Inverse <owlready2.class_construct.Inverse>` groups its
-    property the other way around.
-
-    Parameters:
-        prop : The `owlready2` property, or the inverse of one.
-    """
-    if isinstance(prop, Inverse):
-        pairs = ((y, x) for x, ys in relations(prop.property).items()
-                 for y in ys)
-    else:
-        pairs = prop.get_relations()
-    result = {}
-    for x, y in pairs:
-        result.setdefault(x, set()).add(y)
-    return result
-
-
-def satisfying(expr, world: World) -> set:
-    """
-    The individuals satisfying an OWL class construct, i.e. its extension
-    in the closed world.
-
-    A universal or a maximum cardinality quantifies over every individual,
-    so an individual with no value at all satisfies both -- which is what
-    the open world would not let one conclude, and precisely what makes
-    this the *closed*-world reading.
-
-    Parameters:
-        expr : The `owlready2` class or class construct.
-        world : The world whose individuals quantifiers range over.
-
-    Raises:
-        NotImplementedError : On a construct outside the dictionary,
-            e.g. a datatype restriction.
-    """
-    if expr is Thing:
-        return set(instances(Thing, world))
-    if isinstance(expr, ThingClass):
-        return set(instances(expr))
-    if isinstance(expr, And):
-        return set.intersection(
-            *(satisfying(one, world) for one in expr.Classes))
-    if isinstance(expr, Or):
-        return set.union(*(satisfying(one, world) for one in expr.Classes))
-    if isinstance(expr, Not):
-        return satisfying(Thing, world) - satisfying(expr.Class, world)
-    if isinstance(expr, OneOf):
-        return set(expr.instances)
-    if isinstance(expr, Restriction):
-        return restricted(expr, world)
-    raise NotImplementedError(messages.NOT_IN_DICTIONARY.format(expr))
-
-
-def restricted(expr: Restriction, world: World) -> set:
-    """
-    The individuals satisfying an OWL property restriction, the
-    :class:`Restriction <owlready2.class_construct.Restriction>` case of
-    :func:`satisfying`.
-
-    Parameters:
-        expr : The `owlready2` restriction.
-        world : The world whose individuals quantifiers range over.
-    """
-    if isinstance(expr.property, str):  # a reference left unresolved
-        raise NotImplementedError(
-            messages.NOT_IN_DICTIONARY.format(expr))
-    pairs = relations(expr.property)
-    if expr.type == HAS_SELF:
-        return {x for x, ys in pairs.items() if x in ys}
-    if expr.type == VALUE:
-        return {x for x, ys in pairs.items() if expr.value in ys}
-    filler = satisfying(expr.value, world)
-    if expr.type == SOME:
-        return {x for x, ys in pairs.items() if ys & filler}
-    count = lambda x: len(pairs.get(x, set()) & filler)
-    if expr.type == ONLY:
-        return {x for x in satisfying(Thing, world)
-                if pairs.get(x, set()) <= filler}
-    if expr.type == MIN:
-        return {x for x in satisfying(Thing, world)
-                if count(x) >= expr.cardinality}
-    if expr.type == MAX:
-        return {x for x in satisfying(Thing, world)
-                if count(x) <= expr.cardinality}
-    assert expr.type == EXACTLY
-    return {x for x in satisfying(Thing, world)
-            if count(x) == expr.cardinality}
-
-
-def extension(expr, dom: ThingClass = None, world: World = None) -> Relation:
-    """
-    An OWL class construct as a coreflexive relation, i.e. the partial
-    identity on the individuals :func:`satisfying` it.
-
-    Parameters:
-        expr : The `owlready2` class or class construct.
-        dom : The predicate to read it at, the construct itself by
-            default -- an identity wire on the compound type; pass
-            ``owl:Thing`` to see its anatomy as boxes and bubbles
-            instead.
-        world : The world whose individuals quantifiers range over,
-            resolved from ``expr`` or ``dom`` otherwise.
-
-    Example
-    -------
-    >>> from owlready2 import Thing, World
-    >>> onto = World().get_ontology("http://discopy.org/kennel.owl")
-    >>> with onto:
-    ...     class Dog(Thing): pass
-    ...     class Person(Thing): pass
-    ...     class owns(Person >> Dog): pass
-    ...     rex, ada, bob = Dog("rex"), Person("ada"), Person("bob")
-    ...     ada.owns = [rex]
-    >>> dog_owners = extension(onto.owns.some(onto.Dog))
-    >>> assert [x.name for (x, ), _ in dog_owners.inside] == ["ada"]
-    >>> assert dog_owners == Relation.id(dog_owners.dom)  # its own type
-    >>> anatomy = extension(onto.owns.some(onto.Dog), dom=Thing)
-    >>> assert anatomy <= extension(onto.Person, dom=Thing)
-    """
-    dom = expr if dom is None else dom
-    world = world or expr_world(expr) or expr_world(dom)
-    inside = satisfying(expr, world) & set(instances(dom, world))
-    result = Relation([2 * ((one, ), ) for one in inside], dom, dom)
-    result.diagram = to_diagram(expr, dom)
-    return result
-
-
-def expr_world(expr) -> World:
-    """
-    The world of the first named class or property inside an OWL class
-    construct, or ``None`` for ``owl:Thing`` alone.
-
-    Parameters:
-        expr : The `owlready2` class or class construct.
-    """
-    if declared(expr, ThingClass):
-        return expr.namespace.world
-    if isinstance(expr, (And, Or)):
-        return next((world for one in expr.Classes
-                     for world in [expr_world(one)] if world), None)
-    if isinstance(expr, Not):
-        return expr_world(expr.Class)
-    if isinstance(expr, OneOf):
-        return next((one.namespace.world for one in expr.instances), None)
-    if isinstance(expr, Restriction):
-        prop = expr.property
-        prop = prop.property if isinstance(prop, Inverse) else prop
-        return None if isinstance(prop, str) else prop.namespace.world
-    return None
-
-
 class Axiom(cat.Equation):
     """
-    What an ontology says about some parallel relations: an inclusion when
-    the symbol is :data:`INCLUSION`, an equation when it is ``"="``.
+    What an ontology says about some parallel relations: an inclusion
+    when the symbol is :data:`INCLUSION`, an equation when it is ``"="``.
 
-    Casting to ``bool`` checks whether the loaded world satisfies the
-    axiom, which is decidable because the relations are finite; the open
-    world satisfies it by construction once :func:`reason` has run.
+    Casting to ``bool`` checks the inclusion of the entailed extensions:
+    ``False`` is a sound refutation -- the world entails a concrete
+    counterexample pair -- while ``True`` says no entailed counterexample
+    exists, which is necessary for the axiom to be entailed but not
+    sufficient; :func:`subsumes` asks the exact question of two
+    predicates.
 
     Parameters:
         terms : The relations it relates.
@@ -1316,9 +1883,9 @@ class Axiom(cat.Equation):
     ...     rex, toto = Dog("rex"), Dog("toto")
     ...     ada = Person("ada")
     ...     ada.owns = [rex]
-    >>> owns = Relation.from_property(onto.owns)
-    >>> assert Axiom(owns.dagger() >> owns, Relation.id(onto.Dog))
-    >>> assert not Axiom(Relation.id(onto.Dog), owns.dagger() >> owns)
+    >>> web = Relation.from_property(onto.owns)
+    >>> assert Axiom(web.dagger() >> web, extension(onto.Dog))
+    >>> assert not Axiom(extension(onto.Dog), web.dagger() >> web)
     """
     def __init__(self, *terms: Relation, symbol: str = INCLUSION,
                  symbols=None, source=None):
@@ -1360,28 +1927,51 @@ class Axiom(cat.Equation):
         return self.equation.draw(**params)
 
 
-def class_axioms(entity: ThingClass) -> list[Axiom]:
+def coreflexive(expr, members: tuple, world: World) -> Relation:
+    """
+    The coreflexive of a predicate from members already retrieved, e.g.
+    by a batched :func:`deduced` -- what :func:`extension` computes when
+    it retrieves for itself.
+
+    Parameters:
+        expr : The `owlready2` class or class construct.
+        members : The individuals the predicate provably holds of.
+        world : The world they live in.
+    """
+    result = Relation([2 * ((one, ), ) for one in members], 1, 1, world)
+    result.name = label(expr)
+    result.diagram = to_diagram(expr, Thing)
+    return result
+
+
+def class_axioms(entity: ThingClass, retrieved: dict = None) -> list[Axiom]:
     """
     What an ontology says about a class, as :class:`Axiom` on relations
     over ``owl:Thing``: one inclusion per superclass or restriction and
-    one equation per equivalence, skipping what is outside the dictionary.
+    one equation per equivalence, skipping what is outside the
+    dictionary.
 
     Parameters:
         entity : The `owlready2` class.
+        retrieved : Members per construct already retrieved by a batched
+            :func:`deduced`, so that :func:`axioms` runs `HermiT` once
+            per ontology rather than once per construct.
     """
     world = entity.namespace.world
-    left, result = extension(entity, Thing, world), []
+    lookup = lambda expr: (
+        extension(expr, world) if retrieved is None
+        or isinstance(expr, ThingClass)
+        else coreflexive(expr, retrieved[id(expr)], world))
+    left, result = extension(entity, world), []
     for parents, symbol in ((entity.is_a, INCLUSION),
                             (entity.equivalent_to, "=")):
         for parent in parents:
-            if parent is Thing:
-                continue
-            try:
-                right = extension(parent, Thing, world)
-            except NotImplementedError:
+            if parent is Thing or not (
+                    isinstance(parent, ThingClass) or compilable(parent)):
                 continue
             result.append(Axiom(
-                left, right, symbol=symbol, source=(entity, parent)))
+                left, lookup(parent), symbol=symbol,
+                source=(entity, parent)))
     return result
 
 
@@ -1398,22 +1988,24 @@ def property_axioms(entity: ObjectPropertyClass) -> list[Axiom]:
         entity : The `owlready2` object property.
     """
     world = entity.namespace.world
-    at_thing = lambda prop: Relation.from_property(prop, Thing, Thing)
-    relation, result = at_thing(entity), []
-    identity = Relation.id(Thing, world)
-    bottom = Relation.bottom((Thing, ), (Thing, ))
+    relation, result = Relation.from_property(entity, world), []
+    identity = Relation.id(1, world)
+    bottom = Relation.bottom(1, 1, world)
     source = entity
     result.extend(
-        Axiom(relation, at_thing(parent), source=source)
+        Axiom(relation, Relation.from_property(parent, world),
+              source=source)
         for parent in entity.is_a if declared(parent, ObjectPropertyClass))
     result.extend(
-        Axiom(relation, at_thing(other), symbol="=", source=source)
+        Axiom(relation, Relation.from_property(other, world),
+              symbol="=", source=source)
         for other in entity.equivalent_to
         if declared(other, ObjectPropertyClass))
     if entity.inverse_property is not None:
-        result.append(Axiom(relation.dagger(),
-                            at_thing(entity.inverse_property),
-                            symbol="=", source=source))
+        result.append(Axiom(
+            relation.dagger(),
+            Relation.from_property(entity.inverse_property, world),
+            symbol="=", source=source))
     characteristics = (
         (TransitiveProperty, relation >> relation, relation, INCLUSION),
         (SymmetricProperty, relation.dagger(), relation, "="),
@@ -1430,8 +2022,9 @@ def property_axioms(entity: ObjectPropertyClass) -> list[Axiom]:
         for characteristic, left, right, symbol in characteristics
         if issubclass(entity, characteristic))
     result.extend(
-        Axiom(identity.then(*map(at_thing, chain.properties)), relation,
-              source=source)
+        Axiom(identity.then(*(
+            Relation.from_property(step, world)
+            for step in chain.properties)), relation, source=source)
         for chain in entity.get_property_chain()
         if all(isinstance(step, ObjectPropertyClass)
                for step in chain.properties))  # a step may be unresolved
@@ -1439,7 +2032,7 @@ def property_axioms(entity: ObjectPropertyClass) -> list[Axiom]:
                           (entity.range, relation.codomain())):
         if len(classes) == 1 and declared(classes[0], ThingClass):
             result.append(Axiom(
-                side, extension(classes[0], Thing, world), source=source))
+                side, extension(classes[0], world), source=source))
     return result
 
 
@@ -1448,7 +2041,9 @@ def axioms(entity) -> list[Axiom]:
     The axioms of an OWL entity, i.e. what an ontology says about the
     relations it presents, compiled to :class:`Axiom` -- including, for a
     whole ontology, one empty-intersection equation per pair of disjoint
-    classes.
+    classes. The class constructs of an ontology are retrieved by one
+    batched :func:`deduced`, so the whole compilation costs one `HermiT`
+    run.
 
     Parameters:
         entity : An `owlready2` ontology, class or object property.
@@ -1463,24 +2058,57 @@ def axioms(entity) -> list[Axiom]:
     ...     class owns(Person >> Dog): pass
     ...     rex, ada = Dog("rex"), Person("ada")
     ...     ada.owns = [rex]
-    >>> assert all(axioms(onto))  # the loaded world satisfies its schema
+    >>> assert all(axioms(onto))  # no entailed counterexample
     """
     if isinstance(entity, Ontology):
         world = entity.world
+        constructs = [
+            parent for cls in entity.classes()
+            for parents in (cls.is_a, cls.equivalent_to)
+            for parent in parents
+            if parent is not Thing
+            and not isinstance(parent, ThingClass) and compilable(parent)]
+        constructs += [
+            one for disjoint in entity.disjoint_classes()
+            for one in disjoint.entities
+            if not isinstance(one, ThingClass) and compilable(one)]
+        members = deduced(constructs, world) if constructs else []
+        retrieved = {id(expr): found
+                     for expr, found in zip(constructs, members)}
+        lookup = lambda expr: (
+            extension(expr, world) if isinstance(expr, ThingClass)
+            else coreflexive(expr, retrieved[id(expr)], world))
         result = [axiom for cls in entity.classes()
-                  for axiom in class_axioms(cls)]
+                  for axiom in class_axioms(cls, retrieved)]
         result += [axiom for prop in entity.object_properties()
                    for axiom in property_axioms(prop)]
-        bottom = Relation.bottom((Thing, ), (Thing, ))
+        bottom = Relation.bottom(1, 1, world)
         result += [
-            Axiom(extension(left, Thing, world).meet(
-                extension(right, Thing, world)), bottom,
-                symbol="=", source=disjoint)
+            Axiom(lookup(left).meet(lookup(right)), bottom,
+                  symbol="=", source=disjoint)
             for disjoint in entity.disjoint_classes()
             for index, left in enumerate(disjoint.entities)
-            for right in disjoint.entities[index + 1:]]
+            for right in disjoint.entities[index + 1:]
+            if (isinstance(left, ThingClass) or compilable(left))
+            and (isinstance(right, ThingClass) or compilable(right))]
         return result
     if isinstance(entity, ThingClass):
         return class_axioms(entity)
     assert_isinstance(entity, ObjectPropertyClass)
     return property_axioms(entity)
+
+
+def compilable(expr) -> bool:
+    """
+    Whether a class construct is inside the dictionary, i.e. whether
+    :func:`to_diagram` can draw it -- what :func:`axioms` checks before
+    sending it to a batched :func:`deduced`.
+
+    Parameters:
+        expr : The `owlready2` class or class construct.
+    """
+    try:
+        to_diagram(expr, Thing)
+        return True
+    except NotImplementedError:
+        return False

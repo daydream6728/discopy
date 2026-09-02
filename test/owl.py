@@ -11,13 +11,16 @@ from owlready2 import (  # noqa: E402
     InverseFunctionalProperty, IrreflexiveProperty, Not, OneOf,
     PropertyChain, ReflexiveProperty, Restriction, SymmetricProperty,
     Thing, ThingClass, TransitiveProperty, World)
+import owlready2  # noqa: E402
 
 from discopy import frobenius  # noqa: E402
 from discopy.owl import (  # noqa: E402
-    Axiom, Relation, axioms, box, carrier, class_axioms, combine,
-    consistent, declared, expr_world, extension, find_world, instances,
-    coercion, label, load, ob, parallel, point, property_axioms, reason,
-    relations, satisfying, schema, to_diagram)
+    SCRATCH, Axiom, Coercion, Query, Relation, axioms, boundary, box,
+    carrier, class_axioms, coercion, combine, compilable, consistent,
+    declared, deduced, expr_world, extension, find_world, individual_class,
+    instances, label, load, ob, pairs_world, parallel, point,
+    property_axioms, reason, relations, satisfying, schema, subsumes,
+    to_diagram)
 from discopy.utils import AxiomError  # noqa: E402
 
 
@@ -50,173 +53,523 @@ def test_declared(kennel):
 
 def test_instances_and_carrier(kennel):
     assert [one.name for one in instances(kennel.Dog)] == ["fido", "rex"]
-    assert instances(Thing, kennel.world) == tuple(sorted(
-        instances(kennel.Animal) + instances(kennel.Person),
-        key=lambda one: one.iri))
-    assert carrier((kennel.Person, kennel.Dog)) == tuple(
-        (person, dog) for person in instances(kennel.Person)
-        for dog in instances(kennel.Dog))
-    assert carrier(()) == ((), )
+    everyone = instances(Thing, kennel.world)
+    assert len(everyone) == 4
+    assert carrier(2, kennel.world) == tuple(
+        (x, y) for x in everyone for y in everyone)
+    assert carrier(0, kennel.world) == ((), )
 
 
-def test_find_world(kennel):
+def test_worlds(kennel):
+    assert pairs_world([((kennel.rex, ), ())]) is kennel.world
+    assert pairs_world([]) is owlready2.default_world
     assert find_world((Thing, kennel.Dog)) is kennel.world
     assert find_world((Thing, ), (Thing, )) is None
+    assert expr_world(Thing) is None
+    assert expr_world(OneOf([])) is None
+    assert expr_world(Not(kennel.Dog)) is kennel.world
+    assert expr_world(Inverse(kennel.owns).some(Thing)) is kennel.world
 
 
 def test_init_checks_arity(kennel):
     with raises(AxiomError):
-        Relation([((kennel.rex, ), ())], kennel.Dog, kennel.Person)
+        Relation([((kennel.rex, ), ())], 1, 1, kennel.world)
 
 
 def test_init_is_deterministic(kennel):
     pairs = [((kennel.ada, ), ()), ((kennel.bob, ), ())]
-    assert Relation(pairs, kennel.Person, ())\
-        == Relation(pairs[::-1], kennel.Person, ())
+    assert Relation(pairs, 1, 0, kennel.world)\
+        == Relation(pairs[::-1], 1, 0, kennel.world)
 
 
 def test_str_and_bool(kennel):
-    owns = Relation.from_property(kennel.owns)
-    assert str(owns) == "owns : ('Person',) -> ('Dog',)"
-    assert str(Relation.id(())) == "Relation : () -> ()"
-    assert Relation.id(()) and not Relation.bottom((), ())
+    web = Relation.from_property(kennel.owns)
+    assert str(web) == "owns : Thing -> Thing"
+    assert str(Relation.id(0, kennel.world)) == "Relation : () -> ()"
+    assert str(Relation.id(2, kennel.world))\
+        == "Relation : Thing ** 2 -> Thing ** 2"
+    assert Relation.id(0, kennel.world)
+    assert not Relation.bottom(0, 0, kennel.world)
 
 
 def test_id_then(kennel):
-    owns = Relation.from_property(kennel.owns)
-    assert Relation.id(kennel.Person) >> owns\
-        == owns == owns >> Relation.id(kennel.Dog)
+    web = Relation.from_property(kennel.owns)
+    identity = Relation.id(1, kennel.world)
+    assert identity >> web == web == web >> identity
     knows = Relation.from_property(kennel.knows)
-    assert (knows >> owns).inside == (((kennel.ada, ), (kennel.fido, )),
-                                      ((kennel.ada, ), (kennel.rex, )))
-    assert not owns >> knows  # coerced through Dog ⊓ Person, which is empty
+    assert (knows >> web).inside == (((kennel.ada, ), (kennel.fido, )),
+                                     ((kennel.ada, ), (kennel.rex, )))
     with raises(AxiomError):
-        owns >> Relation.id(())  # only an arity mismatch fails
+        web >> Relation.id(2, kennel.world)
+    with raises(AxiomError):
+        web >> Relation.id(1, World())  # a different world
 
 
-def test_tensor_whiskers_objects(kennel):
-    owns = Relation.from_property(kennel.owns)
-    assert owns @ (kennel.Dog, ) == owns @ Relation.id(kennel.Dog)
-    assert owns @ Relation.id(()) == owns
-
-
-def test_dagger_is_involutive_and_contravariant(kennel):
-    owns = Relation.from_property(kennel.owns)
+def test_tensor_and_dagger(kennel):
+    web = Relation.from_property(kennel.owns)
     knows = Relation.from_property(kennel.knows)
-    assert owns.dagger().dagger() == owns
-    assert (knows >> owns).dagger() == owns.dagger() >> knows.dagger()
+    assert (web @ knows).dom == 2
+    assert web.dagger().dagger() == web
+    assert (knows >> web).dagger() == web.dagger() >> knows.dagger()
+    with raises(AxiomError):
+        web @ Relation.id(1, World())
 
 
 def test_swap_and_permutation(kennel):
-    person, dog = (kennel.Person, ), (kennel.Dog, )
-    swap = Relation.swap(person, dog)
-    assert swap >> swap.dagger() == Relation.id(person + dog)
-    assert Relation.permutation([1, 0], [person, dog]) == swap
+    world = kennel.world
+    swap = Relation.swap(1, 1, world)
+    assert swap >> swap.dagger() == Relation.id(2, world)
+    assert Relation.permutation([1, 0], [1, 1], world) == swap
+    with raises(ValueError):
+        Relation.permutation([0, 0], [1, 1], world)
 
 
 def test_spiders(kennel):
-    dog = (kennel.Dog, )
-    assert Relation.spiders(1, 1, dog) == Relation.id(dog)
-    copy = Relation.copy(dog)
-    assert copy >> copy.dagger() == Relation.id(dog)  # special
-    assert copy >> Relation.copy(dog, 0) @ dog == Relation.id(dog)  # unital
+    world = kennel.world
+    assert Relation.spiders(1, 1, 1, world) == Relation.id(1, world)
+    copy = Relation.copy(1, 2, world)
+    assert copy >> copy.dagger() == Relation.id(1, world)  # special
+    assert copy >> Relation.copy(1, 0, world) @ Relation.id(1, world)\
+        == Relation.id(1, world)  # unital
 
 
 def test_cups_and_caps(kennel):
-    dog = (kennel.Dog, )
-    cup, cap = Relation.cups(dog, dog), Relation.caps(dog, dog)
-    snake = cap @ dog >> dog @ cup
-    assert snake == Relation.id(dog)
+    world = kennel.world
+    cup, cap = Relation.cups(1, 1, world), Relation.caps(1, 1, world)
+    snake = cap @ Relation.id(1, world) >> Relation.id(1, world) @ cup
+    assert snake == Relation.id(1, world)
     with raises(AxiomError):
-        Relation.cups(dog, (kennel.Person, ))
+        Relation.cups(1, 2, world)
 
 
-def test_lattice(kennel):
-    owns = Relation.from_property(kennel.owns)
-    top = Relation.top(owns.dom, owns.cod)
-    bottom = Relation.bottom(owns.dom, owns.cod)
-    assert owns.meet(top) == owns == owns.join(bottom)
-    assert (owns & ~owns) == bottom and (owns | ~owns) == top
-    assert bottom <= owns <= top and not top <= owns
+def test_lattice_and_poset(kennel):
+    web = Relation.from_property(kennel.owns)
+    knows = Relation.from_property(kennel.knows)
+    bottom = Relation.bottom(1, 1, kennel.world)
+    assert web.meet(web) == web == web.join(bottom)
+    assert (web & web.join(knows)) == web
+    assert bottom <= web <= (web | knows)
+    assert web < web.join(knows) and web.join(knows) > web
+    assert web >= web and not web <= bottom
     with raises(AxiomError):
-        owns <= Relation.id(kennel.Person)
+        web <= Relation.id(2, kennel.world)
     with raises(AxiomError):
-        owns.meet(Relation.id(kennel.Person))
-
-
-def test_poset(kennel):
-    owns = Relation.from_property(kennel.owns)
-    top = Relation.top(owns.dom, owns.cod)
-    assert owns < top and top > owns and top >= top
+        web.meet(Relation.id(1, World()))
+    with raises(AxiomError):
+        web.join(Relation.id(2, kennel.world))
 
 
 def test_modular_law(kennel):
     r = Relation.from_property(kennel.knows)
     s = Relation.from_property(kennel.owns)
-    t = Relation.top(r.dom, s.cod)
+    t = r >> s >> s.dagger() >> s
     assert (r >> s).meet(t) <= r >> s.meet(r.dagger() >> t)
 
 
-def test_neg_is_closed_world(kennel):
+def test_domain_and_repeat(kennel):
+    web = Relation.from_property(kennel.owns)
+    assert web.domain() <= Relation.id(1, kennel.world)
+    assert web.codomain() == web.dagger().domain()
     knows = Relation.from_property(kennel.knows)
-    strangers = knows.neg()
-    assert ((kennel.bob, ), (kennel.ada, )) in strangers.inside
-    assert knows.meet(strangers) == Relation.bottom(knows.dom, knows.cod)
-
-
-def test_repeat(kennel):
-    knows = Relation.from_property(kennel.knows)
-    knows_someone_who = knows.repeat()
-    assert Relation.id(kennel.Person) <= knows_someone_who
-    assert knows_someone_who >> knows_someone_who == knows_someone_who
+    closure = knows.repeat()
+    assert Relation.id(1, kennel.world) <= closure
+    assert closure >> closure == closure
     with raises(AxiomError):
-        Relation.from_property(kennel.owns).repeat()
-
-
-def test_from_property_defaults(kennel):
-    with kennel:
-        class untyped(Thing >> Thing): pass
-    assert Relation.from_property(untyped).dom == (Thing, )
-    owns = Relation.from_property(kennel.owns, dom=Thing, cod=Thing)
-    assert owns.dom == owns.cod == (Thing, )
-
-
-def test_from_class(kennel):
-    dogs = Relation.from_class(kennel.Dog)
-    assert dogs == Relation.id(kennel.Dog)
-    on_animals = Relation.from_class(kennel.Dog, dom=kennel.Animal)
-    assert on_animals.dom == (kennel.Animal, )
-    assert on_animals <= Relation.id(kennel.Animal)
-
-
-def test_from_individual(kennel):
-    rex = Relation.from_individual(kennel.rex)
-    assert rex.cod == (kennel.Dog, )  # the first named direct class by IRI
-    assert rex >> Relation.from_class(kennel.Dog) == rex
-    with kennel:
-        anonymous = Thing()
-    assert Relation.from_individual(anonymous).cod == (Thing, )
+        Relation.from_individual(kennel.rex).repeat()
 
 
 def test_sparql(kennel):
-    owns = Relation.sparql(
+    web = Relation.sparql(
         "SELECT ?x ?y WHERE { ?x <http://discopy.org/kennel.owl#owns> ?y . }",
-        kennel.Person, kennel.Dog, kennel.world)
-    assert owns == Relation.from_property(kennel.owns)
+        1, 1, kennel.world)
+    assert web == Relation.from_property(kennel.owns)
 
 
-def test_permutation_rejects(kennel):
-    with raises(ValueError):
-        Relation.permutation([0, 0], [(kennel.Dog, ), (kennel.Person, )])
+def test_pictures(kennel):
+    web = Relation.from_property(kennel.owns)
+    assert web.to_diagram() == frobenius.Box(
+        "owns", frobenius.Ty("Thing"), frobenius.Ty("Thing"))
+    forgetful = Relation(web.inside, 1, 1, kennel.world)
+    assert forgetful.diagram is None
+    assert forgetful.to_diagram().name == "?"
+    assert (forgetful >> web).diagram is None
+    assert combine(lambda x: x, None) is None
+    assert isinstance(web.repeat().to_diagram(), frobenius.Bubble)
+    assert isinstance(
+        web.join(web.dagger() >> web >> web.dagger()).to_diagram(),
+        frobenius.Bubble)
+    assert web.meet(web >> web.dagger() >> web).to_diagram().boxes
+    assert web.domain().to_diagram().dom == frobenius.Ty("Thing")
 
 
-def test_schema_of_an_inverse(kennel):
-    assert schema(Inverse(kennel.owns)) == (kennel.Dog, kennel.Person)
+def test_query_init(kennel):
+    web = Relation.from_property(kennel.owns)
+    with raises(AxiomError):
+        Query(web, (kennel.Person, ), (kennel.Dog, kennel.Dog))
+    typed = Query(web, (kennel.Person, ), (kennel.Dog, ))
+    assert typed.inside == web  # the schema boundary keeps every pair
+    assert typed.relation == typed.inside and typed.world is kennel.world
+    forgetful = Query(Relation(web.inside, 1, 1, kennel.world),
+                      (kennel.Person, ), (kennel.Dog, ))
+    assert forgetful.to_diagram().name == "?"  # no history to draw
 
 
-def test_to_diagram_rejects(kennel):
+def test_query_normalises(kennel):
+    web = Relation.from_property(kennel.owns)
+    at_dogs = Query(web, (kennel.Dog, ), (kennel.Dog, ))
+    assert not at_dogs.inside  # no dog owns anything
+    assert boundary((kennel.Dog, ), kennel.world)\
+        == extension(kennel.Dog).meet(extension(kennel.Dog))
+
+
+def test_query_id_and_conversions(kennel):
+    dogs = Query.id((kennel.Dog, ))
+    assert dogs.inside == extension(kennel.Dog)
+    assert dogs.at_thing() == dogs.inside.split((Thing, ), (Thing, ))
+    assert Query.id((), kennel.world).inside == Relation.id(0, kennel.world)
+    web = Query.from_property(kennel.owns)
+    assert Query.id(web.dom) >> web == web == web >> Query.id(web.cod)
+
+
+def test_query_str_and_bool(kennel):
+    web = Query.from_property(kennel.owns)
+    assert str(web) == "owns : ('Person',) -> ('Dog',)"
+    assert str(Query.id((), kennel.world)) == "Query : () -> ()"
+    assert web and not Query.bottom(web.dom, web.cod)
+
+
+def test_query_algebra(kennel):
+    web = Query.from_property(kennel.owns)
+    assert web.dagger().dagger() == web
+    assert (web @ web).dom == 2 * web.dom
+    assert web.meet(web) == web == web.join(
+        Query.bottom(web.dom, web.cod))
+    assert Query.bottom(web.dom, web.cod) <= web
+    assert web.domain() <= Query.id(web.dom)
+    assert web.codomain() == web.dagger().domain()
+    with raises(AxiomError):
+        web.meet(web.dagger())
+    with kennel:
+        carl = kennel.Person("carl")
+        kennel.bob.knows = [carl]  # so that the closure takes a step
+    knows = Query.from_property(kennel.knows)
+    closure = knows.repeat()
+    assert Query.id(knows.dom) <= closure == closure >> closure
+    with raises(AxiomError):
+        web.repeat()
+
+
+def test_query_structure(kennel):
+    person = (kennel.Person, )
+    dog = (kennel.Dog, )
+    assert Query.spiders(1, 1, person) == Query.id(person)
+    copy = Query.copy(person)
+    assert copy >> copy.dagger() == Query.id(person)
+    swap = Query.swap(person, dog)
+    assert swap >> swap.dagger() == Query.id(person + dog)
+    assert Query.permutation([1, 0], [person, dog]) == swap
+    cup, cap = Query.cups(dog, dog), Query.caps(dog, dog)
+    assert cap @ Query.id(dog) >> Query.id(dog) @ cup == Query.id(dog)
+    with raises(AxiomError):
+        Query.cups(dog, person)
+
+
+def test_query_composition_strict(kennel):
+    web = Query.from_property(kennel.owns)
+    knows = Query.from_property(kennel.knows)
+    assert (knows >> web).dom == knows.dom and (knows >> web).cod == web.cod
+    with raises(AxiomError):
+        web >> Query.id((), kennel.world)  # an arity mismatch still raises
+
+
+def test_query_composition_coerces(kennel):
+    web = Query.from_property(kennel.owns)
+    with Query.no_reasoning:
+        crooked = web >> web  # a dog is not a person
+        one, = crooked.coercions
+    assert isinstance(one, Coercion) and one.entailed is None
+    assert (one.source, one.target) == (kennel.Dog, kennel.Person)
+    assert not crooked  # no owned dog is an owner
+    assert Query.reasoning  # the switch is restored
+
+
+def test_coercion(kennel):
+    with Query.no_reasoning:
+        assert coercion(kennel.Dog, kennel.Dog) == Query.id((kennel.Dog, ))
+        free = coercion(kennel.Dog, kennel.Animal)
+    assert free.inside == extension(kennel.Dog)  # a dog is an animal
+
+
+def test_karoubi_splitting(kennel):
+    with Query.no_reasoning:
+        include = coercion(kennel.Dog, Thing)
+        project = coercion(Thing, kennel.Dog)
+    assert include >> project == Query.id((kennel.Dog, ))
+    assert project >> include\
+        == extension(kennel.Dog).split((Thing, ), (Thing, ))
+
+
+def test_parallel(kennel):
+    web = Query.from_property(kennel.owns)
+    knows = Query.from_property(kennel.knows)
+    assert parallel(web, web) == (web, web)
+    left, right = parallel(web, knows)
+    assert left.dom == right.dom == (Thing, )
+    with raises(AxiomError):
+        parallel(web, Query.id((), kennel.world))
+
+
+@needs_java
+def test_validate(kennel):
+    with Query.no_reasoning:
+        free = coercion(kennel.Dog, kennel.Animal)
+        crooked = Query.from_property(kennel.owns)\
+            >> Query.from_property(kennel.owns)
+    assert free.validate() == free and free.coercions[0].entailed
+    with raises(AxiomError):
+        crooked.validate()  # a dog is not a person
+
+
+@needs_java
+def test_coercion_carries_its_proof(kennel):
+    assert coercion(kennel.Dog, kennel.Animal).coercions[0].entailed
+    assert not coercion(kennel.Person, kennel.Dog).coercions[0].entailed
+
+
+@needs_java
+def test_deduced(kennel):
+    quiet, = deduced([Not(kennel.Person)], kennel.world)
+    assert quiet == ()  # nothing is provably not a person yet
+    with kennel:
+        AllDisjoint([kennel.Animal, kennel.Person])
+    loud, bounded = deduced(
+        [Not(kennel.Person), kennel.owns.max(1, kennel.Dog)], kennel.world)
+    assert {one.name for one in loud} == {"fido", "rex"}
+    assert {one.name for one in bounded} == {"fido", "rex"}  # dogs own not
+    scratch = kennel.world.get_ontology(SCRATCH)
+    assert not list(scratch.classes())  # the scratch classes are destroyed
+    assert instances(Not(kennel.Person), kennel.world) == loud
+
+
+@needs_java
+def test_subsumes(kennel):
+    owner = kennel.Person & kennel.owns.some(kennel.Dog)
+    assert subsumes(owner, kennel.Person, kennel.world)
+    assert not subsumes(kennel.Person, owner, kennel.world)
+    assert subsumes(kennel.Dog, kennel.Animal, kennel.world)
+    assert subsumes(kennel.Dog, Thing, kennel.world)
+    scratch = kennel.world.get_ontology(SCRATCH)
+    assert not list(scratch.classes())
+
+
+@needs_java
+def test_satisfying_is_deductive(kennel):
+    world = kennel.world
+    assert satisfying(kennel.Person, world) == {kennel.ada, kennel.bob}
+    assert satisfying(Thing, world) == set(instances(Thing, world))
+    assert satisfying(kennel.owns.some(kennel.Dog), world)\
+        == {kennel.ada, kennel.bob}
+    assert satisfying(kennel.owns.only(kennel.Dog), world)\
+        == set(instances(Thing, world))  # entailed by the declared range
+    with kennel:
+        AllDisjoint([kennel.Animal, kennel.Person])
+    assert satisfying(kennel.owns.max(1, kennel.Dog), world)\
+        == {kennel.fido, kennel.rex}  # only the dogs provably own so few
+
+
+@needs_java
+def test_extension_of_a_construct(kennel):
+    dog_owners = extension(kennel.owns.some(kennel.Dog))
+    assert dog_owners <= extension(kennel.Person)
+    assert dog_owners.name == "∃owns.Dog"
+    assert extension(Thing, kennel.world)\
+        == Relation.id(1, kennel.world)
+
+
+@needs_java
+def test_query_from_class_of_a_construct(kennel):
+    owner = kennel.Person & kennel.owns.some(kennel.Dog)
+    typed = Query.from_class(owner)
+    assert typed == Query.id((owner, ))
+    anatomy = Query.from_class(owner, dom=Thing)
+    assert anatomy.inside == typed.inside
+    assert len(anatomy.to_diagram().boxes) > 0
+
+
+def test_query_from_individual(kennel):
+    rex = Query.from_individual(kennel.rex)
+    assert rex.cod == (kennel.Dog, )  # the first named direct class by IRI
+    assert rex >> Query.id((kennel.Dog, )) == rex
+    with kennel:
+        anonymous = Thing()
+    assert Query.from_individual(anonymous).cod == (Thing, )
+    assert individual_class(anonymous) is Thing
+
+
+def test_axiom(kennel):
+    web = Relation.from_property(kennel.owns)
+    single = Axiom(web >> web.dagger(), Relation.id(1, kennel.world))
+    assert not single  # ada and bob share rex: an entailed counterexample
+    assert str(Axiom(web, web, symbol="=")).count("=") == 1
+    assert "<=" in str(single)
+
+
+def test_axiom_draw(kennel, tmp_path):
+    axioms(kennel.knows)[0].draw(path=str(tmp_path / "axiom.png"))
+    extension(kennel.Dog).draw(path=str(tmp_path / "class.png"))
+    Query.from_property(kennel.owns).draw(path=str(tmp_path / "query.png"))
+
+
+def test_class_axioms(kennel):
+    with kennel:
+        class Pet(Thing): pass
+        class Barker(Thing):
+            equivalent_to = [kennel.Dog]
+        kennel.Dog.is_a.append(Pet)
+        kennel.Dog.is_a.append(kennel.named.some(str))  # not compiled
+    book = class_axioms(kennel.Dog)
+    sources = [axiom.source[1] for axiom in book]
+    assert Pet in sources and kennel.Animal in sources
+    assert not any(  # the datatype restriction is skipped
+        "named" in str(source) for source in sources)
+    assert all(book)  # named parents hold by search
+    assert all(class_axioms(Barker))  # so does an equivalence
+
+
+@needs_java
+def test_class_axioms_of_a_construct_parent(kennel):
+    with kennel:
+        kennel.Dog.is_a.append(kennel.knows.some(Thing))
+    assert all(class_axioms(kennel.Dog))  # the schema entails itself:
+    # asserting the axiom is what makes every dog provably know someone
+
+
+@needs_java
+def test_candidate_axiom_refuted(kennel):
+    candidate = Axiom(extension(kennel.Person),
+                      extension(kennel.knows.some(Thing)))
+    assert not candidate  # bob is an entailed counterexample: a person
+    assert ((kennel.bob, ), (kennel.bob, ))\
+        in set(candidate.terms[0].inside) - set(candidate.terms[1].inside)
+
+
+def test_property_axioms_characteristics(kennel):
+    with kennel:
+        class descends(kennel.Dog >> kennel.Dog, TransitiveProperty): pass
+        class near(kennel.Dog >> kennel.Dog, SymmetricProperty): pass
+        class above(kennel.Dog >> kennel.Dog, AsymmetricProperty): pass
+        class sameAs(kennel.Dog >> kennel.Dog, ReflexiveProperty): pass
+        class other(kennel.Dog >> kennel.Dog, IrreflexiveProperty): pass
+        class chip(kennel.Dog >> kennel.Person, FunctionalProperty): pass
+        class tag(kennel.Dog >> kennel.Person,
+                  InverseFunctionalProperty): pass
+    for prop in (descends, near, above, other, chip, tag):
+        assert all(property_axioms(prop))  # empty relations satisfy these
+    reflexivity, = [axiom for axiom in property_axioms(sameAs)
+                    if len(axiom.terms[0].inside)]
+    assert not reflexivity  # nothing is provably sameAs itself
+
+
+def test_property_axioms_structure(kennel):
+    with kennel:
+        class ownedBy(kennel.Dog >> kennel.Person): pass
+        class has(kennel.Person >> kennel.Dog): pass
+        class walksWith(kennel.Person >> kennel.Dog): pass
+        kennel.owns.is_a.append(has)
+        kennel.owns.equivalent_to.append(has)
+        ownedBy.inverse_property = kennel.owns
+        walksWith.property_chain.append(
+            PropertyChain([kennel.knows, kennel.owns]))
+    for x, ys in relations(kennel.owns).items():
+        for y in ys:
+            x.has.append(y)
+            y.ownedBy.append(x)
+    assert all(property_axioms(kennel.owns))
+    walks = property_axioms(walksWith)[0]  # the chain, then domain, range
+    assert not walks  # ada knows bob who owns fido, but walks with nobody
+    domain, range_ = property_axioms(kennel.knows)[-2:]
+    assert domain and range_
+
+
+def test_relations_of_an_inverse(kennel):
+    assert relations(Inverse(kennel.owns)) == {
+        kennel.rex: {kennel.ada, kennel.bob}, kennel.fido: {kennel.bob}}
+
+
+@needs_java
+def test_axioms(kennel):
+    with kennel:
+        AllDisjoint([kennel.Dog, kennel.Person])
+        AllDisjoint([kennel.Animal, kennel.owns.some(kennel.Dog)])
+        kennel.Person.is_a.append(kennel.knows.only(kennel.Person))
+        kennel.Dog.is_a.append(kennel.named.some(str))  # not compiled
+    book = axioms(kennel)
+    assert any("=" in axiom.symbols for axiom in book)  # the disjointness
+    assert all(book)  # a consistent schema entails itself
+    assert [str(one) for one in axioms(kennel.Dog)]\
+        == [str(one) for one in class_axioms(kennel.Dog)]
+    assert len(axioms(kennel.owns)) == len(property_axioms(kennel.owns))
+    with raises(TypeError):
+        axioms("not an entity")
+
+
+def test_compilable(kennel):
+    assert compilable(kennel.owns.some(kennel.Dog))
+    assert not compilable(kennel.named.some(str))
+
+
+def test_label_ob_box_point(kennel):
+    rex, owns, dog = kennel.rex, kennel.owns, kennel.Dog
+    assert label(kennel.Person & Not(owns.some(dog) | owns.value(rex)))\
+        == "Person ⊓ ¬(∃owns.Dog ⊔ ∃owns.{rex})"
+    assert label(Inverse(owns).min(2, kennel.Person | dog))\
+        == "≥2 owns˘.(Person ⊔ Dog)"
+    assert label(owns.exactly(1, dog)) == "=1 owns.Dog"
+    assert label(owns.only(dog)) == "∀owns.Dog"
+    assert label(kennel.knows.has_self()) == "∃knows.Self"
+    assert label(OneOf([rex])) == "{rex}"
+    assert label(kennel.named.value("Rex")) == "∃named.{Rex}"
+    assert label(str) == "str" and label(42) == "42"
+    assert ob() == frobenius.Ty("Thing")
+    assert ob((kennel.Person, owns.some(dog)))\
+        == frobenius.Ty("Person", "∃owns.Dog")
+    assert box(owns) == frobenius.Box(
+        "owns", frobenius.Ty("Person"), frobenius.Ty("Dog"))
+    assert box(Inverse(owns)) == box(owns).dagger()
+    assert schema(Inverse(owns)) == (dog, kennel.Person)
+    assert point(rex).cod == frobenius.Ty("Dog")
+
+
+def test_to_diagram_constructs(kennel):
+    dog, person, thing = kennel.Dog, kennel.Person, frobenius.Ty("Thing")
+    assert to_diagram(kennel.rex) == point(kennel.rex)
+    assert to_diagram(kennel.owns) == box(kennel.owns)
+    assert to_diagram(dog) == frobenius.Id(frobenius.Ty("Dog"))
+    assert to_diagram(dog, dom=Thing)\
+        == frobenius.Box("Dog", thing, thing)
+    assert to_diagram(dog & person, dom=Thing)\
+        == to_diagram(dog, Thing) >> to_diagram(person, Thing)
+    union = to_diagram(dog | person, dom=Thing)
+    assert isinstance(union, frobenius.Bubble) and len(union.args) == 2
+    assert isinstance(to_diagram(Not(dog), dom=Thing), frobenius.Bubble)
+    assert to_diagram(OneOf([kennel.rex]), dom=Thing).name == "{rex}"
+    with raises(NotImplementedError):
+        to_diagram(kennel.named.some(str), dom=Thing)
+    with raises(NotImplementedError):
+        to_diagram(kennel.named.value(True), dom=Thing)  # a literal
     with raises(NotImplementedError):
         to_diagram(42, dom=Thing)
+
+
+def test_restriction_diagrams(kennel):
+    owns, dog = kennel.owns, kennel.Dog
+    for construct in (owns.some(dog), owns.only(dog),
+                      owns.value(kennel.rex), owns.min(2, dog),
+                      owns.max(1, dog), owns.exactly(1, dog),
+                      kennel.knows.has_self(), owns.min(0, dog)):
+        diagram = to_diagram(construct, dom=kennel.Person)
+        typ = frobenius.Ty("Person")
+        assert (diagram.dom, diagram.cod) == (typ, typ)
 
 
 def test_preload_skips_a_file_without_ontology(kennel, tmp_path):
@@ -246,285 +599,8 @@ def test_load(kennel, tmp_path):
     kennel.save(file=str(tmp_path / "kennel.owl"))
     copy = load("http://discopy.org/kennel.owl",
                 world=World(), path=str(tmp_path))
-    assert {one.name for one in copy.classes()}\
-        == {one.name for one in kennel.classes()}
-    again = load("http://discopy.org/kennel.owl",
-                 world=World(), path=str(tmp_path))
-    assert {one.name for one in again.individuals()}\
+    assert {one.name for one in copy.individuals()}\
         == {one.name for one in kennel.individuals()}
-
-
-def test_relations(kennel):
-    assert relations(kennel.owns) == {
-        kennel.ada: {kennel.rex}, kennel.bob: {kennel.rex, kennel.fido}}
-    assert relations(Inverse(kennel.owns)) == {
-        kennel.rex: {kennel.ada, kennel.bob}, kennel.fido: {kennel.bob}}
-
-
-def test_satisfying_boolean_constructs(kennel):
-    world = kennel.world
-    people, dogs = satisfying(kennel.Person, world), set(
-        instances(kennel.Dog))
-    assert satisfying(Thing, world) == people | dogs | {
-        kennel.ada, kennel.bob, kennel.rex, kennel.fido}
-    assert satisfying(kennel.Person & kennel.Animal, world) == set()
-    assert satisfying(kennel.Person | kennel.Dog, world) == people | dogs
-    assert satisfying(Not(kennel.Person), world)\
-        == satisfying(Thing, world) - people
-    assert satisfying(OneOf([kennel.rex]), world) == {kennel.rex}
-    with raises(NotImplementedError):
-        satisfying("not a construct", world)
-
-
-def test_satisfying_restrictions(kennel):
-    world, owns, dog = kennel.world, kennel.owns, kennel.Dog
-    assert satisfying(owns.some(dog), world) == {kennel.ada, kennel.bob}
-    assert satisfying(owns.value(kennel.fido), world) == {kennel.bob}
-    assert satisfying(owns.min(2, dog), world) == {kennel.bob}
-    assert satisfying(owns.max(1, dog), world)\
-        == satisfying(Thing, world) - {kennel.bob}
-    assert satisfying(owns.exactly(1, dog), world) == {kennel.ada}
-    assert satisfying(owns.only(dog), world) == satisfying(Thing, world)
-    assert satisfying(kennel.knows.has_self(), world) == set()
-    with kennel:
-        kennel.ada.knows.append(kennel.ada)
-    assert satisfying(kennel.knows.has_self(), world) == {kennel.ada}
-    with raises(NotImplementedError):
-        satisfying(kennel.named.some(str), world)  # a datatype filler
-
-
-def test_extension(kennel):
-    assert extension(kennel.Dog) == Relation.id(kennel.Dog)
-    hoarders = extension(kennel.owns.min(2, kennel.Dog), dom=kennel.Person)
-    assert [x.name for (x, ), _ in hoarders.inside] == ["bob"]
-    assert extension(Thing, world=kennel.world)\
-        == Relation.id(Thing, kennel.world)
-
-
-def test_expr_world(kennel):
-    world = kennel.world
-    assert expr_world(kennel.Dog) is world
-    assert expr_world(kennel.Dog & Thing) is world
-    assert expr_world(Not(kennel.Dog)) is world
-    assert expr_world(OneOf([kennel.rex])) is world
-    assert expr_world(kennel.owns.some(Thing)) is world
-    assert expr_world(Inverse(kennel.owns).some(Thing)) is world
-    assert expr_world(Thing) is None
-    assert expr_world(OneOf([])) is None
-
-
-def test_axiom(kennel):
-    owns = Relation.from_property(kennel.owns)
-    single = Axiom(owns >> owns.dagger(), Relation.id(kennel.Person))
-    assert not single  # ada and bob share rex
-    assert str(Axiom(owns, owns, symbol="=")).count("=") == 1
-    assert "<=" in str(single)
-
-
-def test_class_axioms(kennel):
-    with kennel:
-        class Pet(Thing): pass
-        class Barker(Thing):
-            equivalent_to = [kennel.Dog]
-        kennel.Dog.is_a.append(Pet)
-        kennel.Dog.is_a.append(kennel.knows.some(Thing))  # dogs know nobody
-        kennel.Dog.is_a.append(kennel.named.some(str))  # not compiled
-    book = class_axioms(kennel.Dog)
-    sources = [axiom.source[1] for axiom in book]
-    assert Pet in sources and kennel.Animal in sources
-    assert not any(  # the datatype restriction is skipped
-        "named" in str(source) for source in sources)
-    broken = [axiom for axiom in book if not axiom]
-    assert [axiom.source[1] for axiom in broken]\
-        == [kennel.knows.some(Thing)]  # a named parent holds by search
-    assert all(class_axioms(Barker))  # so does an equivalence
-
-
-def test_property_axioms_characteristics(kennel):
-    with kennel:
-        class descends(kennel.Dog >> kennel.Dog, TransitiveProperty): pass
-        class near(kennel.Dog >> kennel.Dog, SymmetricProperty): pass
-        class above(kennel.Dog >> kennel.Dog, AsymmetricProperty): pass
-        class sameAs(kennel.Dog >> kennel.Dog, ReflexiveProperty): pass
-        class other(kennel.Dog >> kennel.Dog, IrreflexiveProperty): pass
-        class chip(kennel.Dog >> kennel.Person, FunctionalProperty): pass
-        class tag(kennel.Dog >> kennel.Person,
-                  InverseFunctionalProperty): pass
-    for prop in (descends, near, above, other, chip, tag):
-        assert all(property_axioms(prop))  # empty relations satisfy these
-    reflexivity, = [axiom for axiom in property_axioms(sameAs)
-                    if len(axiom.terms[0].inside)]
-    assert not reflexivity  # nothing is sameAs itself, closed world
-
-
-def test_property_axioms_structure(kennel):
-    with kennel:
-        class ownedBy(kennel.Dog >> kennel.Person): pass
-        class has(kennel.Person >> kennel.Dog): pass
-        class walksWith(kennel.Person >> kennel.Dog): pass
-        kennel.owns.is_a.append(has)
-        kennel.owns.equivalent_to.append(has)
-        ownedBy.inverse_property = kennel.owns
-        walksWith.property_chain.append(
-            PropertyChain([kennel.knows, kennel.owns]))
-    for x, ys in relations(kennel.owns).items():
-        for y in ys:
-            x.has.append(y)
-            y.ownedBy.append(x)
-    assert all(property_axioms(kennel.owns))
-    walks = property_axioms(walksWith)[0]  # the chain, then domain, range
-    assert not walks  # ada knows bob who owns fido, but walks with nobody
-    domain, range_ = [axiom for axiom in property_axioms(kennel.knows)
-                      if axiom.source is kennel.knows][-2:]
-    assert domain and range_
-
-
-def test_axioms(kennel):
-    with kennel:
-        AllDisjoint([kennel.Dog, kennel.Person])
-    book = axioms(kennel)
-    assert all(book)  # the kennel is a model of its own schema
-    assert any("=" in axiom.symbols for axiom in book)  # the disjointness
-    assert [str(one) for one in axioms(kennel.Dog)]\
-        == [str(one) for one in class_axioms(kennel.Dog)]
-    assert len(axioms(kennel.owns)) == len(property_axioms(kennel.owns))
-    with raises(TypeError):
-        axioms("not an entity")
-
-
-def test_ob_box_point(kennel):
-    assert ob() == frobenius.Ty("Thing")
-    assert ob((kennel.Person, kennel.Dog)) == frobenius.Ty("Person", "Dog")
-    assert box(kennel.owns) == frobenius.Box(
-        "owns", frobenius.Ty("Person"), frobenius.Ty("Dog"))
-    assert box(Inverse(kennel.owns)) == box(kennel.owns).dagger()
-    assert point(kennel.rex).cod == frobenius.Ty("Dog")
-
-
-def test_to_diagram_constructs(kennel):
-    dog, person, thing = kennel.Dog, kennel.Person, frobenius.Ty("Thing")
-    assert to_diagram(kennel.rex) == point(kennel.rex)
-    assert to_diagram(kennel.owns) == box(kennel.owns)
-    assert to_diagram(dog) == frobenius.Id(frobenius.Ty("Dog"))
-    assert to_diagram(dog, dom=Thing)\
-        == frobenius.Box("Dog", thing, thing)
-    assert to_diagram(dog & person, dom=Thing)\
-        == to_diagram(dog, Thing) >> to_diagram(person, Thing)
-    union = to_diagram(dog | person, dom=Thing)
-    assert isinstance(union, frobenius.Bubble) and len(union.args) == 2
-    negation = to_diagram(Not(dog), dom=Thing)
-    assert isinstance(negation, frobenius.Bubble)
-    assert to_diagram(OneOf([kennel.rex]), dom=Thing).name == "{rex}"
-    with raises(NotImplementedError):
-        to_diagram(kennel.named.some(str), dom=Thing)
-
-
-def test_restriction_diagrams(kennel):
-    owns, dog = kennel.owns, kennel.Dog
-    for construct in (owns.some(dog), owns.only(dog),
-                      owns.value(kennel.rex), owns.min(2, dog),
-                      owns.max(1, dog), owns.exactly(1, dog),
-                      kennel.knows.has_self(), owns.min(0, dog)):
-        diagram = to_diagram(construct, dom=kennel.Person)
-        typ = frobenius.Ty("Person")
-        assert (diagram.dom, diagram.cod) == (typ, typ)
-
-
-def test_relation_pictures(kennel):
-    owns = Relation.from_property(kennel.owns)
-    knows = Relation.from_property(kennel.knows)
-    assert (knows >> owns).to_diagram()\
-        == knows.to_diagram() >> owns.to_diagram()
-    assert owns.dagger().to_diagram() == owns.to_diagram().dagger()
-    assert (owns @ knows).to_diagram()\
-        == owns.to_diagram() @ knows.to_diagram()
-    assert isinstance(owns.neg().to_diagram(), frobenius.Bubble)
-    assert isinstance(knows.repeat().to_diagram(), frobenius.Bubble)
-    assert owns.meet(owns).to_diagram().boxes  # copy, both, merge
-    assert isinstance(owns.join(owns.neg()).to_diagram(), frobenius.Bubble)
-    assert owns.domain().to_diagram().cod == frobenius.Ty("Person")
-    forgetful = Relation(owns.inside, owns.dom, owns.cod)  # no history
-    assert forgetful.diagram is None
-    assert forgetful.to_diagram() == frobenius.Box(
-        "?", frobenius.Ty("Person"), frobenius.Ty("Dog"))
-    assert (forgetful >> owns.dagger()).diagram is None
-    assert combine(lambda x: x, None) is None
-
-
-def test_axiom_draw(kennel, tmp_path):
-    axioms(kennel.knows)[0].draw(path=str(tmp_path / "axiom.png"))
-    extension(kennel.owns.some(kennel.Dog)).draw(
-        path=str(tmp_path / "some.png"))
-
-
-def test_label(kennel):
-    dog, person, owns = kennel.Dog, kennel.Person, kennel.owns
-    assert label(Thing) == "Thing" and label(dog) == "Dog"
-    assert label(owns) == "owns" and label(kennel.rex) == "rex"
-    assert label(Inverse(owns)) == "owns˘"
-    assert label(person & Not(owns.some(dog) | owns.value(kennel.rex)))\
-        == "Person ⊓ ¬(∃owns.Dog ⊔ ∃owns.{rex})"
-    assert label(owns.only(OneOf([kennel.rex]))) == "∀owns.{rex}"
-    assert label(kennel.knows.has_self()) == "∃knows.Self"
-    assert label(owns.min(2, dog)) == "≥2 owns.Dog"
-    assert label(owns.max(1, dog)) == "≤1 owns.Dog"
-    assert label(owns.exactly(1, dog)) == "=1 owns.Dog"
-    assert label(str) == "str" and label(42) == "42"
-
-
-def test_constructs_as_objects(kennel):
-    parents = kennel.owns.some(kennel.Dog)
-    assert instances(parents) == (kennel.ada, kennel.bob)
-    wire = Relation.id(parents)
-    assert wire == extension(parents) and len(wire.inside) == 2
-    assert wire.to_diagram() == frobenius.Id(frobenius.Ty("∃owns.Dog"))
-    assert Relation.top(parents, parents).neg()\
-        == Relation.bottom(parents, parents)
-    assert Relation.spiders(1, 0, parents).dom == (parents, )
-    assert find_world((parents, )) is kennel.world
-
-
-def test_coercion(kennel):
-    dog, animal, person = kennel.Dog, kennel.Animal, kennel.Person
-    assert coercion(dog, dog) == Relation.id(dog)
-    free = coercion(dog, animal)
-    assert free.domain() == Relation.id(dog)  # a dog is an animal
-    assert not coercion(dog, person)  # but not a person
-    assert free.to_diagram() == frobenius.Box(
-        "Animal", frobenius.Ty("Dog"), frobenius.Ty("Animal"))
-
-
-def test_then_coerces(kennel):
-    owns = Relation.from_property(kennel.owns)
-    ada = Relation.from_individual(kennel.ada, kennel.Person)
-    everyone = Relation.from_property(kennel.owns, Thing, Thing)
-    coerced = ada >> everyone  # a coercion Person -> Thing is inserted
-    assert coerced == ada >> coercion(kennel.Person, Thing) >> everyone
-    assert set(coerced.inside) == {((), (kennel.rex, ))}
-    assert "Thing" in [box.name for box in coerced.to_diagram().boxes]
-    two_dogs = owns >> coercion(kennel.Dog, kennel.Animal)
-    assert (ada >> owns >> two_dogs.dagger()).dom == ()  # auto-coerced
-
-
-def test_from_property_filters_to_its_boundary(kennel):
-    with kennel:
-        kennel.rex.knows = [kennel.ada]  # a dog outside knows' domain
-    at_schema = Relation.from_property(kennel.knows)
-    assert ((kennel.rex, ), (kennel.ada, )) not in at_schema.inside
-    at_thing = Relation.from_property(kennel.knows, Thing, Thing)
-    assert ((kennel.rex, ), (kennel.ada, )) in at_thing.inside
-    assert at_schema <= Relation.top(at_schema.dom, at_schema.cod)
-
-
-def test_parallel(kennel):
-    owns = Relation.from_property(kennel.owns)
-    knows = Relation.from_property(kennel.knows)
-    assert parallel(owns, owns) == (owns, owns)
-    left, right = parallel(owns, knows)
-    assert left.dom == right.dom == (Thing, )
-    assert left == Relation.from_property(kennel.owns, Thing, Thing)
-    with raises(AxiomError):
-        parallel(owns, Relation.id(()))
 
 
 FIBO = "https://spec.edmcouncil.org/fibo/ontology/"
@@ -563,16 +639,43 @@ def test_fibo_chain_axiom(market):
     owning = world.search_one(iri="*hasDirectOwningEntity")
     chain, = [axiom for axiom in property_axioms(owning)
               if len(axiom.terms[0].to_diagram().boxes) == 2]
-    assert [box.name for box in chain.terms[0].to_diagram().boxes]\
+    assert [one.name for one in chain.terms[0].to_diagram().boxes]\
         == ["hasDirectOwnership", "hasOwningEntity"]
     assert chain  # trivially, over an empty extension
 
 
-def test_fibo_axioms_hold(market):
+def test_market_control_chain(market):
     world, demo, company, person, controls = market
-    onto = world.get_ontology(
-        FIBO + "BE/OwnershipAndControl/ControlParties/")
-    assert all(axioms(onto))
+    web = Relation.from_property(controls, world)
+    alice = Relation.from_individual(demo.alice)
+    shell = Relation.from_individual(demo.shell_co)
+    assert not alice >> web >> shell.dagger()  # not directly
+    assert alice >> web.repeat() >> shell.dagger()  # but ultimately
+
+
+def test_market_typed_chain(market):
+    world, demo, company, person, controls = market
+    with Query.no_reasoning:
+        chain = (Query.from_individual(demo.alice, person)
+                 >> Query.from_property(controls, person, company)
+                 >> Query.from_property(controls, company, company)
+                 >> Query.from_property(controls, company, company)
+                 >> Query.from_individual(demo.shell_co, company).dagger())
+    assert chain and not chain.coercions  # the predicates all meet
+    boxes = chain.to_diagram().boxes
+    assert [one.name for one in boxes[1:-1]] == 3 * ["controls"]
+
+
+@needs_java
+def test_market_validates_a_typed_chain(market):
+    world, demo, company, person, controls = market
+    with Query.no_reasoning:
+        sloppy = (Query.from_property(controls, person, company)
+                  >> Query.from_property(controls, person, company))
+    one, = sloppy.coercions
+    assert (one.source, one.target) == (company, person)
+    with raises(AxiomError):
+        sloppy.validate()  # a company is not a natural person
 
 
 def test_unresolved_restriction_is_outside_the_dictionary(market):
@@ -586,23 +689,12 @@ def test_unresolved_restriction_is_outside_the_dictionary(market):
         to_diagram(stray, dom=Thing)
 
 
-def test_market_control_chain(market):
-    world, demo, company, person, controls = market
-    web = Relation.from_property(controls, dom=Thing, cod=Thing)
-    alice = Relation.from_individual(demo.alice, Thing)
-    shell = Relation.from_individual(demo.shell_co, Thing)
-    assert not alice >> web >> shell.dagger()  # not directly
-    assert alice >> web.repeat() >> shell.dagger()  # but ultimately
-
-
-def test_fibo_compound_type(market):
-    world, demo, company, person, controls = market
-    controllers = controls.some(Thing)
-    wire = Relation.id(controllers)
-    assert [x.name for (x, ), _ in wire.inside]\
-        == ["acme_bank", "acme_holdings", "alice"]
-    assert wire.to_diagram()\
-        == frobenius.Id(frobenius.Ty("∃controls.Thing"))
+@needs_java
+def test_fibo_axioms_hold():
+    world, demo, company, person, controls = market_world()
+    onto = world.get_ontology(
+        FIBO + "BE/OwnershipAndControl/ControlParties/")
+    assert all(axioms(onto))  # no entailed counterexample
 
 
 @needs_java
@@ -626,10 +718,11 @@ def test_reason_classifies_individuals(kennel):
     with kennel:
         class DogOwner(Thing):
             equivalent_to = [kennel.Person & kennel.owns.some(kennel.Dog)]
-    assert not Relation.from_class(DogOwner)  # not asserted
+    assert not Relation(  # not asserted
+        [2 * ((one, ), ) for one in DogOwner.instances()],
+        1, 1, kennel.world)
     reason(kennel.world)
-    assert Relation.from_class(DogOwner, dom=kennel.Person)\
-        == Relation.id(kennel.Person)  # but entailed: every person owns
+    assert extension(DogOwner) == extension(kennel.Person)
 
 
 @needs_java
