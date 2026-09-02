@@ -506,11 +506,22 @@ def test_axioms(kennel):
     book = axioms(kennel)
     assert any("=" in axiom.symbols for axiom in book)  # the disjointness
     assert all(book)  # a consistent schema entails itself
+    assert [str(one) for one in axioms(kennel.world)]\
+        == [str(one) for one in book]  # scratch and inferences skipped
     assert [str(one) for one in axioms(kennel.Dog)]\
         == [str(one) for one in class_axioms(kennel.Dog)]
     assert len(axioms(kennel.owns)) == len(property_axioms(kennel.owns))
     with raises(TypeError):
         axioms("not an entity")
+
+
+def test_class_axioms_skip_a_scratch_parent(kennel):
+    scratch = kennel.world.get_ontology(SCRATCH)
+    with scratch:
+        class Leaked(Thing): pass
+    kennel.Dog.is_a.append(Leaked)  # a reasoner write-back would do this
+    sources = [axiom.source[1] for axiom in class_axioms(kennel.Dog)]
+    assert Leaked not in sources and kennel.Animal in sources
 
 
 def test_compilable(kennel):
@@ -695,6 +706,13 @@ def test_fibo_axioms_hold():
     onto = world.get_ontology(
         FIBO + "BE/OwnershipAndControl/ControlParties/")
     assert all(axioms(onto))  # no entailed counterexample
+
+
+@needs_java
+def test_the_whole_rule_book():
+    world = market_world()[0]
+    book = axioms(world)  # every loaded module, one batched deduction
+    assert len(book) > 500 and all(book)
 
 
 @needs_java

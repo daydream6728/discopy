@@ -72,6 +72,8 @@ Summary
         parallel
         class_axioms
         property_axioms
+        disjoint_axioms
+        constructs_of
         axioms
         label
         ob
@@ -612,15 +614,17 @@ class Relation(DistributiveAllegory, SymmetricCategory):
     def from_property(cls, prop, world: World = None) -> Relation:
         """
         The relation an OWL property holds of the individuals of a world:
-        the raw single-sorted reading, every pair at arity one -- see
-        :meth:`Query.from_property` for the reading typed by the schema.
+        the raw single-sorted reading, every pair at arity one, deduced
+        as in :func:`relations` -- see :meth:`Query.from_property` for
+        the reading typed by the schema.
 
         Parameters:
             prop : The `owlready2` property.
             world : The world, the property's own otherwise.
         """
         world = world or prop.namespace.world
-        result = cls(set(prop.get_relations()), 1, 1, world)
+        result = cls({(x, y) for x, ys in relations(prop).items()
+                      for y in ys}, 1, 1, world)
         result.name = prop.name
         result.diagram = frobenius.Box(prop.name, ob(), ob())
         return result
@@ -1381,12 +1385,28 @@ def consistent(world: World) -> bool:
         return False
 
 
+BATCH = 32
+"""
+How many scratch defined classes :func:`deduced` gives one `HermiT` run:
+classification cost grows quickly with the number of defined classes, so
+a large batch is cut into runs of this size.
+"""
+
+fresh = iter(range(10 ** 12)).__next__
+"""
+The next number that no scratch defined class of this process has worn
+yet: recreating a destroyed entity under the same IRI resurrects stale
+state that the reasoner's write-back then cannot resolve.
+"""
+
+
 def deduced(exprs, world: World) -> list:
     """
     The individuals `HermiT` can prove each class construct holds of,
     sorted by IRI: one scratch defined class per construct, equivalent to
-    it, classified by a single run of :func:`reason` and destroyed again
-    -- so a batch costs one reasoner call, not one per construct.
+    it, classified by a run of :func:`reason` shared with up to
+    :data:`BATCH` others and destroyed again -- so a batch costs a few
+    reasoner calls, not one per construct.
 
     Parameters:
         exprs : The `owlready2` class constructs.
@@ -1407,11 +1427,15 @@ def deduced(exprs, world: World) -> list:
     >>> deduced([Not(onto.Dog)], onto.world)
     [(kennel.ada,)]
     """
+    exprs = list(exprs)
+    if len(exprs) > BATCH:
+        return [found for start in range(0, len(exprs), BATCH)
+                for found in deduced(exprs[start:start + BATCH], world)]
     scratch = world.get_ontology(SCRATCH)
     temps = []
     with scratch:
-        for index, expr in enumerate(exprs):
-            temp = new_class(f"Deduced{index}", (Thing, ))
+        for expr in exprs:
+            temp = new_class(f"Deduced{fresh()}", (Thing, ))
             # A construct can only belong to one class, so clone it.
             temp.equivalent_to = [expr.__deepcopy__()]
             temps.append(temp)
@@ -1468,11 +1492,11 @@ def subsumes(left, right, world: World) -> bool:
     """
     scratch, sides, temps = world.get_ontology(SCRATCH), [], []
     with scratch:
-        for index, expr in enumerate((left, right)):
+        for expr in (left, right):
             if expr is Thing or declared(expr, ThingClass):
                 sides.append(expr)
             else:
-                temp = new_class(f"Subsumed{index}", (Thing, ))
+                temp = new_class(f"Subsumed{fresh()}", (Thing, ))
                 # A construct can only belong to one class, so clone it.
                 temp.equivalent_to = [expr.__deepcopy__()]
                 sides.append(temp)
@@ -1486,7 +1510,9 @@ def subsumes(left, right, world: World) -> bool:
 
 def relations(prop) -> dict:
     """
-    The pairs an OWL property holds, grouped by subject; an
+    The pairs an OWL property holds, grouped by subject: its own and
+    those of the subproperties below it, which every pair entails but
+    `owlready2` does not materialise upward; an
     :class:`Inverse <owlready2.class_construct.Inverse>` groups its
     property the other way around.
 
@@ -1497,7 +1523,8 @@ def relations(prop) -> dict:
         pairs = ((y, x) for x, ys in relations(prop.property).items()
                  for y in ys)
     else:
-        pairs = prop.get_relations()
+        pairs = (pair for sub in prop.descendants()
+                 for pair in sub.get_relations())
     result = {}
     for x, y in pairs:
         result.setdefault(x, set()).add(y)
@@ -1949,7 +1976,8 @@ def class_axioms(entity: ThingClass, retrieved: dict = None) -> list[Axiom]:
     What an ontology says about a class, as :class:`Axiom` on relations
     over ``owl:Thing``: one inclusion per superclass or restriction and
     one equation per equivalence, skipping what is outside the
-    dictionary.
+    dictionary and the scratch classes a reasoner run may have written
+    back among the parents, which are never rules of the knowledge base.
 
     Parameters:
         entity : The `owlready2` class.
@@ -1966,8 +1994,10 @@ def class_axioms(entity: ThingClass, retrieved: dict = None) -> list[Axiom]:
     for parents, symbol in ((entity.is_a, INCLUSION),
                             (entity.equivalent_to, "=")):
         for parent in parents:
-            if parent is Thing or not (
-                    isinstance(parent, ThingClass) or compilable(parent)):
+            if isinstance(parent, ThingClass):
+                if parent is Thing or parent.iri.startswith(SCRATCH):
+                    continue
+            elif not compilable(parent):
                 continue
             result.append(Axiom(
                 left, lookup(parent), symbol=symbol,
@@ -2036,17 +2066,78 @@ def property_axioms(entity: ObjectPropertyClass) -> list[Axiom]:
     return result
 
 
-def axioms(entity) -> list[Axiom]:
+def disjoint_axioms(ontology: Ontology, retrieved: dict = None)\
+        -> list[Axiom]:
     """
-    The axioms of an OWL entity, i.e. what an ontology says about the
-    relations it presents, compiled to :class:`Axiom` -- including, for a
-    whole ontology, one empty-intersection equation per pair of disjoint
-    classes. The class constructs of an ontology are retrieved by one
-    batched :func:`deduced`, so the whole compilation costs one `HermiT`
-    run.
+    The disjointness declarations of an ontology, as one
+    empty-intersection equation per pair of disjoint classes, skipping
+    the pairs with a member outside the dictionary.
 
     Parameters:
-        entity : An `owlready2` ontology, class or object property.
+        ontology : The `owlready2` ontology.
+        retrieved : Members per construct already retrieved by a batched
+            :func:`deduced`, see :func:`class_axioms`.
+    """
+    world = ontology.world
+    lookup = lambda expr: (
+        extension(expr, world)
+        if retrieved is None or isinstance(expr, ThingClass)
+        else coreflexive(expr, retrieved[id(expr)], world))
+    bottom = Relation.bottom(1, 1, world)
+    return [
+        Axiom(lookup(left).meet(lookup(right)), bottom,
+              symbol="=", source=disjoint)
+        for disjoint in ontology.disjoint_classes()
+        for index, left in enumerate(disjoint.entities)
+        for right in disjoint.entities[index + 1:]
+        if (isinstance(left, ThingClass) or compilable(left))
+        and (isinstance(right, ThingClass) or compilable(right))]
+
+
+def constructs_of(ontology: Ontology) -> list:
+    """
+    The class constructs an ontology's axioms mention -- the parents and
+    equivalents of its classes and the members of its disjointness
+    declarations -- filtered to the :func:`compilable` ones, i.e. what
+    :func:`axioms` sends to a batched :func:`deduced`.
+
+    Parameters:
+        ontology : The `owlready2` ontology.
+    """
+    result = [
+        parent for cls in ontology.classes()
+        for parents in (cls.is_a, cls.equivalent_to)
+        for parent in parents
+        if parent is not Thing
+        and not isinstance(parent, ThingClass) and compilable(parent)]
+    result += [
+        one for disjoint in ontology.disjoint_classes()
+        for one in disjoint.entities
+        if not isinstance(one, ThingClass) and compilable(one)]
+    return result
+
+
+def axioms(entity, retrieved: dict = None) -> list[Axiom]:
+    """
+    The rules of a loaded knowledge base, compiled to :class:`Axiom` --
+    each a :class:`cat.Equation` between relations, whose
+    :attr:`Axiom.equation` draws itself. An entity gives what the
+    ontology says about it, an ontology every rule it declares --
+    including one empty-intersection equation per pair of disjoint
+    classes -- and a whole :class:`World <owlready2.namespace.World>`
+    the rules of every ontology loaded into it, each class and property
+    compiled once however many modules mention it. The class constructs
+    are retrieved by one batched :func:`deduced`, so a whole world costs
+    a few `HermiT` runs, not one per rule. SWRL rules are not compiled:
+    FIBO's ownership-and-control modules declare none, and they wait on
+    data properties.
+
+    Parameters:
+        entity : An `owlready2` world, ontology, class or object
+            property.
+        retrieved : Members per construct already retrieved by a batched
+            :func:`deduced`, the way the world branch hands them to the
+            ontology branch.
 
     Example
     -------
@@ -2059,39 +2150,43 @@ def axioms(entity) -> list[Axiom]:
     ...     rex, ada = Dog("rex"), Person("ada")
     ...     ada.owns = [rex]
     >>> assert all(axioms(onto))  # no entailed counterexample
+    >>> assert len(axioms(onto.world)) == len(axioms(onto))
     """
-    if isinstance(entity, Ontology):
-        world = entity.world
-        constructs = [
-            parent for cls in entity.classes()
-            for parents in (cls.is_a, cls.equivalent_to)
-            for parent in parents
-            if parent is not Thing
-            and not isinstance(parent, ThingClass) and compilable(parent)]
-        constructs += [
-            one for disjoint in entity.disjoint_classes()
-            for one in disjoint.entities
-            if not isinstance(one, ThingClass) and compilable(one)]
-        members = deduced(constructs, world) if constructs else []
+    if isinstance(entity, World):
+        ontologies = [
+            onto for iri, onto in entity.ontologies.items()
+            if iri.startswith("http")
+            and not iri.startswith((SCRATCH, "http://inferrences/"))]
+        constructs = list({id(construct): construct
+                           for onto in ontologies
+                           for construct in constructs_of(onto)}.values())
+        members = deduced(constructs, entity) if constructs else []
         retrieved = {id(expr): found
                      for expr, found in zip(constructs, members)}
-        lookup = lambda expr: (
-            extension(expr, world) if isinstance(expr, ThingClass)
-            else coreflexive(expr, retrieved[id(expr)], world))
+        classes = {cls.iri: cls
+                   for onto in ontologies for cls in onto.classes()}
+        properties = {
+            prop.iri: prop
+            for onto in ontologies for prop in onto.object_properties()}
+        result = [axiom for cls in classes.values()
+                  for axiom in class_axioms(cls, retrieved)]
+        result += [axiom for prop in properties.values()
+                   for axiom in property_axioms(prop)]
+        result += [axiom for onto in ontologies
+                   for axiom in disjoint_axioms(onto, retrieved)]
+        return result
+    if isinstance(entity, Ontology):
+        world = entity.world
+        if retrieved is None:
+            constructs = constructs_of(entity)
+            members = deduced(constructs, world) if constructs else []
+            retrieved = {id(expr): found
+                         for expr, found in zip(constructs, members)}
         result = [axiom for cls in entity.classes()
                   for axiom in class_axioms(cls, retrieved)]
         result += [axiom for prop in entity.object_properties()
                    for axiom in property_axioms(prop)]
-        bottom = Relation.bottom(1, 1, world)
-        result += [
-            Axiom(lookup(left).meet(lookup(right)), bottom,
-                  symbol="=", source=disjoint)
-            for disjoint in entity.disjoint_classes()
-            for index, left in enumerate(disjoint.entities)
-            for right in disjoint.entities[index + 1:]
-            if (isinstance(left, ThingClass) or compilable(left))
-            and (isinstance(right, ThingClass) or compilable(right))]
-        return result
+        return result + disjoint_axioms(entity, retrieved)
     if isinstance(entity, ThingClass):
         return class_axioms(entity)
     assert_isinstance(entity, ObjectPropertyClass)

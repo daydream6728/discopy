@@ -37,7 +37,10 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   native engine. `axioms` compiles what the ontology says into `Axiom`,
   whose truth is the absence of an entailed counterexample — a
   consistent schema entails itself, and a `False` axiom exhibits a
-  concrete entailed witness. Every relation carries an optional picture
+  concrete entailed witness — an entity, an ontology, or a whole `World`
+  at once, the rules of every loaded module retrieved by one batched
+  `deduced` and displayed as the notebook's expandable rule book.
+  Every relation carries an optional picture
   built from the ontology's own syntax and propagated through every
   operation, so an axiom draws itself as a `frobenius.Equation` —
   intersection is composition, union and complement are bubbles, a

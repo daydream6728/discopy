@@ -230,23 +230,48 @@ mo.md(f"SPARQL and the property extension agree: "
       f"**{sparql_web == web}**.")
 ```
 
-And every axiom of the ontology compiles to a decidable check on these
-finite relations: ``bool(axiom)`` asks whether the world entails a
-*counterexample*. A consistent ontology entails none of its own — the
-schema entails itself — so the interesting questions are about
-candidates:
+HermiT also decides candidate rules exactly, not just the declared ones:
 
 ```python {.marimo}
-rule_book = axioms(world.get_ontology(
-    FIBO + "BE/OwnershipAndControl/ControlParties/"))
 candidate = subsumes(
     business_entity & controls.some(Thing), business_entity, world)
 converse = subsumes(
     business_entity, business_entity & controls.some(Thing), world)
-mo.md(f"All **{len(rule_book)}** compiled axioms of ControlParties hold "
-      f"— no entailed counterexample. And HermiT decides candidates "
-      f"exactly: a controlling business entity is a business entity "
+mo.md(f"A controlling business entity is a business entity "
       f"(**{candidate}**), but not conversely (**{converse}**).")
+```
+
+## The whole rule book
+
+Every axiom of the knowledge base compiles to a decidable check on these
+finite relations: ``bool(axiom)`` asks whether the world entails a
+*counterexample*, and a consistent ontology entails none of its own — the
+schema entails itself. `axioms(world)` compiles the rules of **every**
+loaded FIBO module at once, retrieving all their class constructs in one
+batched deduction:
+
+```python {.marimo}
+rule_book = axioms(world)
+mo.md(f"The rule book of the loaded knowledge base: "
+      f"**{len(rule_book)}** axioms, each a `discopy` `Equation` — "
+      f"and every one holds: **{all(rule_book)}**.")
+```
+
+Each rule draws itself from the ontology's own syntax: intersection is
+composition, union is a bubble, a quantifier follows its property. Two
+showpieces — a bilateral agreement has *exactly two* party roles, and an
+affiliate is *either* a majority controlling party *or* a controlled one
+— then the whole book, every rule expandable:
+
+```python {.marimo}
+showpieces = [rule for rule in rule_book
+              if "=2 hasPartyRole" in str(rule)
+              or "⊔ ControlledParty" in str(rule)]
+mo.vstack(
+    [rule.equation for rule in showpieces]
+    + [mo.accordion({
+        f"{index}. {rule}": mo.lazy(lambda rule=rule: rule.equation)
+        for index, rule in enumerate(rule_book, 1)})])
 ```
 
 ## What the open world will not let you conclude
