@@ -2,10 +2,11 @@
 title: Ontologies
 marimo-version: 0.23.14
 pyproject: |
-  requires-python: ">=3.11"
-  dependencies:
-    - "discopy @ git+https://github.com/daydream6728/discopy.git@feature/allegories"
-------
+  requires-python = ">=3.11"
+  dependencies = [
+      "discopy @ git+https://github.com/daydream6728/discopy.git@feature/allegories",
+  ]
+---
 
 ```python {.marimo}
 import marimo as mo
@@ -25,19 +26,27 @@ what exists and what is possible, written by the people who know. The
 (FIBO) is two decades of that consensus for finance, maintained by the EDM
 Council and used across the industry.
 
-This notebook reads an ontology as what it mathematically is: a **category
-of relations** — an allegory, in the sense of Freyd & Scedrov — where
+This notebook reads an ontology as what it mathematically is: two
+categories, one split on top of the other, with
+[HermiT](http://www.hermit-reasoner.com/) as the only judge of truth.
 
-- every OWL class and property is a *finite relation* between individuals,
-- composition, intersection, union and complement are the set operations
-  that define relations, so checking an axiom is deciding an inclusion,
-- every relation draws itself as a *string diagram*, and
-- the open world is one [HermiT](http://www.hermit-reasoner.com/) call
-  away.
+- `Relation` is the **single-sorted category of relations**: one
+  generating object, `owl:Thing`; objects are arities; morphisms are
+  finite relations between tuples of individuals — an *allegory* in the
+  sense of Freyd & Scedrov, with converse, intersection and union but no
+  complement, because OWL cannot say the complement of a property.
+- `Query` is its **Karoubi envelope**, split at the predicates: wires are
+  typed by OWL classes — compound expressions included, written the way a
+  mathematician would — and composing two queries whose predicates do not
+  meet asks HermiT whether one is subsumed by the other, inserting the
+  verdict as a **coercion**: a proof object, drawn as a box exactly where
+  the predicate changes.
 
-One object, three faces: pictures for humans, relational algebra for
-runtime monitors, description logic for auditors. That is the pitch — the
-rest of the notebook is the demo, on FIBO itself.
+Everything is deductive. Nothing is concluded from absence: a complement,
+a universal or a cardinality holds of an individual only when the
+ontology *entails* it. That is the pitch — pictures for humans, algebra
+for machines, proofs for auditors — and the rest of the notebook is the
+demo, on FIBO itself.
 <!---->
 ## Loading FIBO from its base URL
 
@@ -63,7 +72,7 @@ import os
 from owlready2 import Not, Thing, World
 
 from discopy.owl import (
-    Relation, axioms, box, consistent, extension, load, point, to_diagram)
+    Query, Relation, axioms, consistent, extension, load, reason, subsumes)
 
 FIBO = "https://spec.edmcouncil.org/fibo/ontology/"
 FIXTURES = os.path.join(str(mo.notebook_dir() or "."),
@@ -97,27 +106,28 @@ chain_axiom.equation
 
 Class expressions draw too, and they can be read at two altitudes. "A
 party that controls something but is not a for-profit corporation" is a
-*coreflexive* relation — a predicate read as a partial identity. Read on
-`owl:Thing`, it shows its anatomy: the class test composed with a
-quantifier and a complement bubble. Read at its own type, the whole
-predicate is one wire, labeled the way a mathematician would write it —
-compound entities are objects too:
+predicate; read on `owl:Thing`, its picture shows its anatomy — the class
+test composed with a quantifier and a complement bubble — while read at
+its own type, the whole predicate is one wire of the split category,
+labelled the way a mathematician would write it. Both readings are the
+*same* coreflexive relation, and computing it already calls HermiT: its
+members are the individuals *provably* satisfying the expression.
 
 ```python {.marimo}
 controls = world.search_one(iri=FIBO + "FND/Relations/Relations/controls")
 for_profit = world.search_one(
     iri=FIBO + "BE/LegalEntities/CorporateBodies/ForProfitCorporation")
 expression = controls.some(Thing) & Not(for_profit)
-mo.hstack([
-    extension(expression, dom=Thing, world=world).to_diagram(),
-    extension(expression, world=world).to_diagram()])
+mo.hstack([Query.from_class(expression, dom=Thing).to_diagram(),
+           Query.from_class(expression).to_diagram()])
 ```
 
 ## A small world of companies
 
 Now some facts for the axioms to bite on: a person and three companies in
 a chain of control, the kind of structure a compliance team unravels every
-day.
+day. After asserting them we `reason` once, so that everything read from
+now on is what the ontology *entails*, not merely what was typed in.
 
 ```python {.marimo}
 business_entity = world.search_one(
@@ -134,108 +144,140 @@ with market:
     holdings.controls = [bank]
     bank.controls = [shell]
     shell.is_a.append(for_profit)
+reason(world)
 facts = mo.hstack([
-    point(subject, natural_person if subject is alice else business_entity)
-    >> box(controls, natural_person if subject is alice
-           else business_entity, business_entity)
-    >> point(target, business_entity).dagger()
+    Query.from_individual(subject)
+    >> Query.from_property(controls, subject.is_a[0], business_entity)
+    >> Query.from_individual(target, business_entity).dagger()
     for subject, target in [
         (alice, holdings), (holdings, bank), (bank, shell)]])
 facts
 ```
 
-Each column is one asserted fact, read top to bottom: a point, a property,
-a co-point — `controls(alice, acme_holdings)` and so on.
-<!---->
-Because predicates are types, the whole chain of control composes as one
-diagram with every wire labeled by its FIBO class — no membership boxes
-to read through. Where two predicates do not meet, composition inserts
-the coercion between them automatically, so a boundary change is always
-visible as a box:
+Each column is one entailed fact, read top to bottom: a point, a property,
+a co-point — `controls(alice, acme_holdings)` and so on. Because the
+predicates of consecutive boundaries meet, no coercion was needed; the
+whole chain of control composes as one diagram of the split category, and
+the scalar it evaluates to is its truth value:
 
 ```python {.marimo}
-person_controls = Relation.from_property(
-    controls, natural_person, business_entity)
-company_controls = Relation.from_property(
-    controls, business_entity, business_entity)
-control_chain = (
-    Relation.from_individual(alice, natural_person)
-    >> person_controls >> company_controls >> company_controls
-    >> Relation.from_individual(shell, business_entity).dagger())
-mo.hstack([control_chain.to_diagram(),
-           mo.md("The scalar this diagram evaluates to is the truth "
-                 f"value of the chain: **{bool(control_chain)}**.")])
+chain = (Query.from_individual(alice)
+         >> Query.from_property(controls, natural_person, business_entity)
+         >> Query.from_property(controls, business_entity, business_entity)
+         >> Query.from_property(controls, business_entity, business_entity)
+         >> Query.from_individual(shell, business_entity).dagger())
+mo.hstack([chain.to_diagram(),
+           mo.md("The chain of control holds: "
+                 f"**{bool(chain)}** — and it has "
+                 f"**{len(chain.coercions)}** coercions: every hand-off "
+                 "stayed within its predicate.")])
 ```
 
-## Closed world: relations as a runtime monitor
+## Composition that runs the reasoner
 
-Reading the `controls` property off the loaded world gives a finite
-relation. Composition is relational composition, so "who ultimately
-controls whom" is the reflexive transitive closure — no query language,
-just the algebra:
+Now the sloppy version: an agent wires the second hop as if the
+controller were still a natural person. The predicates of the boundary
+do not meet, so composition asks HermiT whether `BusinessEntity` is
+subsumed by `LegallyCompetentNaturalPerson` — and inserts the verdict as
+a coercion box exactly where the hand-off happens:
 
 ```python {.marimo}
-web = Relation.from_property(controls, dom=Thing, cod=Thing)
-alice_point = Relation.from_individual(alice, Thing)
-shell_point = Relation.from_individual(shell, Thing)
+sloppy = (Query.from_property(controls, natural_person, business_entity)
+          >> Query.from_property(controls, natural_person, business_entity))
+proof, = sloppy.coercions
+try:
+    sloppy.validate()
+    verdict = "validated"
+except Exception as error:
+    verdict = f"**rejected**: {error}"
+mo.hstack([sloppy.to_diagram(),
+           mo.md("HermiT's proof object says the coercion is entailed: "
+                 f"**{proof.entailed}**, so `validate()` {verdict}.")])
+```
+
+The box in the middle is not decoration: it is where a proof was owed,
+and the proof failed. A well-typed pipeline of agent tools carries its
+own audit trail — every predicate change is visible and certified, or
+visibly *not*.
+<!---->
+## Certain answers from entailed facts
+
+Underneath every query sits the single-sorted relation over the entailed
+atoms. Composition is relational composition, so "who ultimately controls
+whom" is the reflexive transitive closure — algebra, not a query
+language, and sound for entailment because every atom it starts from is
+entailed:
+
+```python {.marimo}
+web = Relation.from_property(controls, world)
+alice_point = Relation.from_individual(alice)
+shell_point = Relation.from_individual(shell)
 directly = bool(alice_point >> web >> shell_point.dagger())
 ultimately = bool(alice_point >> web.repeat() >> shell_point.dagger())
 mo.md(f"Does alice control shell_co directly? **{directly}**. "
       f"Ultimately, through the chain? **{ultimately}**.")
 ```
 
-The same extension is available to anything that speaks SPARQL, evaluated
-by owlready2's native engine — the two agree by construction:
+The same relation is available to anything that speaks SPARQL, evaluated
+by owlready2's native engine on the materialised graph — the two agree by
+construction:
 
 ```python {.marimo}
 sparql_web = Relation.sparql(
     "SELECT ?x ?y WHERE { ?x <" + controls.iri + "> ?y . }",
-    Thing, Thing, world)
+    1, 1, world)
 mo.md(f"SPARQL and the property extension agree: "
-      f"**{sparql_web == Relation.from_property(controls)}**.")
+      f"**{sparql_web == web}**.")
 ```
 
-And every axiom of the ontology is now a *decidable* check on finite
-relations — a runtime monitor that costs set operations, not a theorem
-prover:
+And every axiom of the ontology compiles to a decidable check on these
+finite relations: ``bool(axiom)`` asks whether the world entails a
+*counterexample*. A consistent ontology entails none of its own — the
+schema entails itself — so the interesting questions are about
+candidates:
 
 ```python {.marimo}
 rule_book = axioms(world.get_ontology(
     FIBO + "BE/OwnershipAndControl/ControlParties/"))
-mo.md(f"The loaded world satisfies **{sum(map(bool, rule_book))} of "
-      f"{len(rule_book)}** compiled axioms of the ControlParties module.")
+candidate = subsumes(
+    business_entity & controls.some(Thing), business_entity, world)
+converse = subsumes(
+    business_entity, business_entity & controls.some(Thing), world)
+mo.md(f"All **{len(rule_book)}** compiled axioms of ControlParties hold "
+      f"— no entailed counterexample. And HermiT decides candidates "
+      f"exactly: a controlling business entity is a business entity "
+      f"(**{candidate}**), but not conversely (**{converse}**).")
 ```
 
-Class expressions evaluate closed-world too: "controls at least two
-things" holds of nobody in our little market, and DisCoPy computes it by
-counting, not by proving:
+## What the open world will not let you conclude
+
+Deduction cuts both ways: it also *refuses* conclusions. Nothing in our
+market is provably **not** a for-profit corporation — being a natural
+person does not prove it, absence of paperwork does not prove it — and
+nobody provably controls at most one thing, because nothing rules out
+control edges we have not heard of:
 
 ```python {.marimo}
-hoarders = extension(controls.min(2, Thing), dom=Thing, world=world)
-controllers = extension(controls.some(Thing), dom=Thing, world=world)
-mo.md(f"Individuals controlling something: "
-      f"**{[str(x.name) for (x, ), _ in controllers.inside]}** — "
-      f"controlling at least two things: "
-      f"**{[str(x.name) for (x, ), _ in hoarders.inside]}**.")
+provably_not = extension(Not(for_profit), world)
+bounded = extension(controls.max(1, Thing), world)
+mo.md(f"Individuals provably ¬ForProfitCorporation: "
+      f"**{[str(x.name) for (x, ), _ in provably_not.inside]}** — "
+      f"provably controlling at most one thing: "
+      f"**{[str(x.name) for (x, ), _ in bounded.inside]}**. "
+      "The open world answers *unknown*, and DisCoPy will not launder "
+      "*unknown* into *false*.")
 ```
 
-## Open world: the reasoner as an audit trail
+## Open world = safety
 
-Closed-world checks are fast, but they only see what is written. The open
-world is where an ontology earns its keep: HermiT checks that the facts
-*could be true* of any world satisfying all of FIBO's axioms — including
-the ones nobody thought to monitor.
-
-Our world is consistent so far:
+The reasoner earns its keep when an agent acts. Suppose one, optimising a
+tax position, proposes to reclassify `shell_co` as a not-for-profit
+corporation. The assertion itself looks harmless — it is one triple:
 
 ```python {.marimo}
 ok_before = consistent(world)
 mo.md(f"HermiT says the market is consistent: **{ok_before}**.")
 ```
-
-Now an AI agent, optimising a tax position, proposes to reclassify
-`shell_co` as a not-for-profit corporation. The assertion itself looks
-harmless — it is one triple:
 
 ```python {.marimo}
 assert ok_before
@@ -258,17 +300,19 @@ prover with twenty years of tooling behind it.
 
 - **Agent safety is a semantics problem.** An agent's action is safe
   relative to a world model; an ontology makes that model explicit,
-  standard and checkable. The same `Relation` objects give a cheap
-  closed-world monitor for every action and an open-world proof when it
-  counts.
-- **The math keeps everyone honest.** Relations form an allegory: the
-  laws of composition, converse, intersection and complement are theorems
-  about the implementation (`discopy.abc` states them, the test suite
-  checks them). Diagrams are not illustrations — they *are* the terms.
+  standard and checkable, and deduction never mistakes missing data for
+  evidence. Consistency rejects bad writes; subsumption certifies every
+  hand-off between tools.
+- **The math keeps everyone honest.** The relations form a distributive
+  allegory, its Karoubi envelope splits every predicate into a type, and
+  the coercions carry the proofs — `discopy.abc` states the laws, the
+  test suite checks them. Diagrams are not illustrations: they *are* the
+  terms, and the box where a predicate changes is exactly where a proof
+  is owed.
 - **Nothing here is bespoke.** FIBO is maintained by the EDM Council;
-  reasoning is delegated to HermiT; queries to SPARQL. DisCoPy is the
-  thin categorical interface that makes them compose — and draw.
+  proving is delegated to HermiT; querying to SPARQL. DisCoPy is the thin
+  categorical interface that makes them compose — and draw.
 
 Next steps: data properties and literals as extra generating objects,
-richer SPARQL round trips, and the Karoubi splitting that makes every
-class an object of its own.
+richer SPARQL round trips, and tabulations — reifying any relation as a
+split object of its own.

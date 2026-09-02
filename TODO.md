@@ -8,11 +8,12 @@
 > between them. in the latter, allow sequential composition to run HermiT entailment
 > queries and insert the resulting proof object as a coercion in-between.
 
-- [ ] `abc.DistributiveAllegory`, with `BooleanAllegory` re-based on it
-- [ ] Layer 0: `Relation` single-sorted (`ob = int`, explicit world), `neg` and `top`
+- [x] `abc.DistributiveAllegory`, with `BooleanAllegory` re-based on it
+- [x] Layer 0: `Relation` single-sorted (`ob = int`, explicit world), `neg` and `top`
       removed, `deduced`, `subsumes` and the deductive `satisfying`/`extension`
-- [ ] Layer 1: `Query`, the Karoubi envelope — normalization, `Coercion` proof objects
+- [x] Layer 1: `Query`, the Karoubi envelope — normalization, `Coercion` proof objects
       in `then`, `no_reasoning`, `validate`, conversions and constructors
-- [ ] axioms over Layer 0, tests reworked at 100% coverage
-- [ ] the notebook on one deductive semantics, with the proof-carrying coercions
-- [ ] changelog, lint, `--skip-extra`, notebook check and sign-off
+- [x] axioms over Layer 0, tests reworked at 100% coverage
+- [x] the notebook on one deductive semantics, with the proof-carrying coercions
+- [WIP] @claude-allegories-2026-09-02 14:15 changelog, lint, `--skip-extra`,
+      notebook check and sign-off
