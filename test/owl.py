@@ -13,9 +13,9 @@ from owlready2 import (  # noqa: E402
     Thing, ThingClass, TransitiveProperty, World)
 import owlready2  # noqa: E402
 
-from discopy import frobenius  # noqa: E402
 from discopy.owl import (  # noqa: E402
-    SCRATCH, Axiom, Coercion, Query, Relation, axioms, boundary, box,
+    SCRATCH, Axiom, Box, Bubble, Coercion, Id, Query, Relation, Ty, Wire,
+    axioms, boundary, box,
     carrier, class_axioms, coercion, combine, compilable, consistent,
     declared, deduced, expr_world, extension, find_world, individual_class,
     instances, label, load, ob, pairs_world, parallel, point,
@@ -187,19 +187,19 @@ def test_sparql(kennel):
 
 def test_pictures(kennel):
     web = Relation.from_property(kennel.owns)
-    assert web.to_diagram() == frobenius.Box(
-        "owns", frobenius.Ty("Thing"), frobenius.Ty("Thing"))
+    assert web.to_diagram() == Box(
+        "owns", Ty("Thing"), Ty("Thing"), data=kennel.owns)
     forgetful = Relation(web.inside, 1, 1, kennel.world)
     assert forgetful.diagram is None
     assert forgetful.to_diagram().name == "?"
     assert (forgetful >> web).diagram is None
     assert combine(lambda x: x, None) is None
-    assert isinstance(web.repeat().to_diagram(), frobenius.Bubble)
+    assert isinstance(web.repeat().to_diagram(), Bubble)
     assert isinstance(
         web.join(web.dagger() >> web >> web.dagger()).to_diagram(),
-        frobenius.Bubble)
+        Bubble)
     assert web.meet(web >> web.dagger() >> web).to_diagram().boxes
-    assert web.domain().to_diagram().dom == frobenius.Ty("Thing")
+    assert web.domain().to_diagram().dom == Ty("Thing")
 
 
 def test_query_init(kennel):
@@ -541,28 +541,28 @@ def test_label_ob_box_point(kennel):
     assert label(OneOf([rex])) == "{rex}"
     assert label(kennel.named.value("Rex")) == "∃named.{Rex}"
     assert label(str) == "str" and label(42) == "42"
-    assert ob() == frobenius.Ty("Thing")
+    assert ob() == Ty("Thing") and ob().inside[0].entity is Thing
     assert ob((kennel.Person, owns.some(dog)))\
-        == frobenius.Ty("Person", "∃owns.Dog")
-    assert box(owns) == frobenius.Box(
-        "owns", frobenius.Ty("Person"), frobenius.Ty("Dog"))
+        == Ty("Person", "∃owns.Dog")
+    assert box(owns) == Box(
+        "owns", Ty("Person"), Ty("Dog"), data=owns)
     assert box(Inverse(owns)) == box(owns).dagger()
     assert schema(Inverse(owns)) == (dog, kennel.Person)
-    assert point(rex).cod == frobenius.Ty("Dog")
+    assert point(rex).cod == Ty("Dog") and point(rex).data is rex
 
 
 def test_to_diagram_constructs(kennel):
-    dog, person, thing = kennel.Dog, kennel.Person, frobenius.Ty("Thing")
+    dog, person, thing = kennel.Dog, kennel.Person, Ty("Thing")
     assert to_diagram(kennel.rex) == point(kennel.rex)
     assert to_diagram(kennel.owns) == box(kennel.owns)
-    assert to_diagram(dog) == frobenius.Id(frobenius.Ty("Dog"))
+    assert to_diagram(dog) == Id(Ty(Wire(dog)))
     assert to_diagram(dog, dom=Thing)\
-        == frobenius.Box("Dog", thing, thing)
+        == Box("Dog", thing, thing, data=dog)
     assert to_diagram(dog & person, dom=Thing)\
         == to_diagram(dog, Thing) >> to_diagram(person, Thing)
     union = to_diagram(dog | person, dom=Thing)
-    assert isinstance(union, frobenius.Bubble) and len(union.args) == 2
-    assert isinstance(to_diagram(Not(dog), dom=Thing), frobenius.Bubble)
+    assert isinstance(union, Bubble) and len(union.args) == 2
+    assert isinstance(to_diagram(Not(dog), dom=Thing), Bubble)
     assert to_diagram(OneOf([kennel.rex]), dom=Thing).name == "{rex}"
     with raises(NotImplementedError):
         to_diagram(kennel.named.some(str), dom=Thing)
@@ -579,7 +579,7 @@ def test_restriction_diagrams(kennel):
                       owns.max(1, dog), owns.exactly(1, dog),
                       kennel.knows.has_self(), owns.min(0, dog)):
         diagram = to_diagram(construct, dom=kennel.Person)
-        typ = frobenius.Ty("Person")
+        typ = Ty("Person")
         assert (diagram.dom, diagram.cod) == (typ, typ)
 
 

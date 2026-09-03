@@ -42,6 +42,17 @@ Summary
     :nosignatures:
     :toctree:
 
+    Wire
+    Ty
+    Diagram
+    Box
+    Cup
+    Cap
+    Permutation
+    Swap
+    Spider
+    Bubble
+    Functor
     Relation
     Query
     Coercion
@@ -232,6 +243,107 @@ def assert_isworld(left, right):
         raise AxiomError(messages.DIFFERENT_WORLDS.format(left, right))
 
 
+class Wire(frobenius.Wire):
+    """
+    A wire is labelled by a predicate: a named class, a class construct
+    or ``owl:Thing`` -- the split object of the Karoubi envelope that
+    :class:`Query` presents, displayed by :func:`label`.
+
+    Parameters:
+        entity : The `owlready2` class or class construct, or the name of
+            one when a diagram is rebuilt from its syntax alone.
+        z : The winding number, see :class:`rigid.Wire`.
+    """
+    def __init__(self, entity=Thing, z: int = 0):
+        self.entity = entity
+        name = entity if isinstance(entity, str) else label(entity)
+        super().__init__(name, z)
+
+
+@factory
+class Ty(frobenius.Ty):
+    """
+    A type is a tuple of predicates, one :class:`Wire` each -- the
+    objects of the Karoubi envelope; :func:`ob` builds one from raw
+    `owlready2` entities.
+
+    Parameters:
+        inside (tuple[Wire, ...]) : The predicates inside the type.
+    """
+    generator_factory = Wire
+
+
+@factory
+class Diagram(frobenius.Diagram):
+    """
+    A diagram is the syntax of a relation, read off the ontology's own:
+    a property is a :class:`Box` between the predicates of its schema, a
+    class construct the coreflexive that tests it, an individual a point
+    -- intersection is composition, union and complement are
+    :class:`Bubble`, a quantifier follows its property and discards.
+
+    Parameters:
+        inside (tuple[frobenius.Layer, ...]) : The layers of the diagram.
+        dom (Ty) : The domain of the diagram, i.e. its input.
+        cod (Ty) : The codomain of the diagram, i.e. its output.
+    """
+    ob = Ty
+
+
+class Box(frobenius.Box, Diagram):
+    """
+    A box is a generator of the syntax, carrying the `owlready2` entity
+    it denotes as ``data``: a property, a class or class construct
+    tested on a wire, an individual, or the :class:`Coercion` that
+    changes a predicate.
+
+    Parameters:
+        name : The name of the box.
+        dom : The domain of the box, i.e. its input.
+        cod : The codomain of the box, i.e. its output.
+    """
+
+
+class Cup(frobenius.Cup, Box):
+    """ A cup is a frobenius cup between predicate wires. """
+
+
+class Cap(frobenius.Cap, Box):
+    """ A cap is a frobenius cap between predicate wires. """
+
+
+class Permutation(frobenius.Permutation, Box):
+    """ A permutation of predicate wires. """
+
+
+class Swap(Permutation, frobenius.Swap, Box):
+    """ A swap of two predicate wires. """
+
+
+class Spider(frobenius.Spider, Box):
+    """ A spider on a predicate wire, i.e. copying and discarding. """
+
+
+class Bubble(frobenius.Bubble, Box):
+    """
+    A bubble around the syntax of a union or a complement, which the
+    allegory cannot evaluate -- OWL has no complement of a property --
+    so it is decoration on the coreflexive that HermiT retrieves whole.
+    """
+
+
+class Functor(frobenius.Functor):
+    """ A functor with the syntax of an ontology as domain. """
+    dom = cod = Diagram
+
+
+Diagram.cup_factory, Diagram.cap_factory = Cup, Cap
+Diagram.swap_factory, Diagram.spider_factory = Swap, Spider
+Diagram.permutation_factory = Permutation
+Diagram.bubble_factory = Bubble
+Id = Diagram.id
+
+
 @factory
 @dataclass
 class Relation(DistributiveAllegory, SymmetricCategory):
@@ -339,7 +451,7 @@ class Relation(DistributiveAllegory, SymmetricCategory):
         world = world or owlready2.default_world
         result = cls([(xs, xs) for xs in carrier(dom, world)],
                      dom, dom, world)
-        result.diagram = frobenius.Id(ob(dom * (Thing, )))
+        result.diagram = Id(ob(dom * (Thing, )))
         return result
 
     def then(self, *others: Relation) -> Relation:
@@ -415,7 +527,7 @@ class Relation(DistributiveAllegory, SymmetricCategory):
                       for xs in carrier(left, world)
                       for ys in carrier(right, world)],
                      left + right, right + left, world)
-        result.diagram = frobenius.Diagram.swap(
+        result.diagram = Diagram.swap(
             ob(left * (Thing, )), ob(right * (Thing, )))
         return result
 
@@ -457,7 +569,7 @@ class Relation(DistributiveAllegory, SymmetricCategory):
         result = cls([(n_legs_in * xs, n_legs_out * xs)
                       for xs in carrier(typ, world)],
                      n_legs_in * typ, n_legs_out * typ, world)
-        result.diagram = frobenius.Diagram.spiders(
+        result.diagram = Diagram.spiders(
             n_legs_in, n_legs_out, ob(typ * (Thing, )))
         return result
 
@@ -489,7 +601,7 @@ class Relation(DistributiveAllegory, SymmetricCategory):
         world = world or owlready2.default_world
         result = cls([(xs + xs, ()) for xs in carrier(left, world)],
                      left + right, 0, world)
-        result.diagram = frobenius.Diagram.cups(
+        result.diagram = Diagram.cups(
             ob(left * (Thing, )), ob(right * (Thing, )))
         return result
 
@@ -516,9 +628,9 @@ class Relation(DistributiveAllegory, SymmetricCategory):
             other.diagram for other in others)
         typs = ob(self.dom * (Thing, )), ob(self.cod * (Thing, ))
         result.diagram = combine(lambda *inside: (
-            frobenius.Diagram.spiders(1, len(inside), typs[0])
-            >> frobenius.Id().tensor(*inside)
-            >> frobenius.Diagram.spiders(len(inside), 1, typs[1])
+            Diagram.spiders(1, len(inside), typs[0])
+            >> Id().tensor(*inside)
+            >> Diagram.spiders(len(inside), 1, typs[1])
             if len(inside) > 1 else inside[0]), *diagrams)
         return result
 
@@ -540,7 +652,7 @@ class Relation(DistributiveAllegory, SymmetricCategory):
             other.diagram for other in others)
         typs = ob(self.dom * (Thing, )), ob(self.cod * (Thing, ))
         result.diagram = combine(lambda *inside: (
-            frobenius.Bubble(
+            Bubble(
                 *inside, dom=typs[0], cod=typs[1], drawing_name="$\\vee$")
             if len(inside) > 1 else inside[0]), *diagrams)
         return result
@@ -556,7 +668,7 @@ class Relation(DistributiveAllegory, SymmetricCategory):
             world : The world, the default world otherwise.
         """
         result = cls((), dom, cod, world or owlready2.default_world)
-        result.diagram = frobenius.Box(
+        result.diagram = Box(
             "$\\bot$", ob(dom * (Thing, )), ob(cod * (Thing, )))
         return result
 
@@ -571,8 +683,8 @@ class Relation(DistributiveAllegory, SymmetricCategory):
             self.dom, self.dom, self.world)
         typs = ob(self.dom * (Thing, )), ob(self.cod * (Thing, ))
         result.diagram = combine(lambda diagram: (
-            frobenius.Diagram.spiders(1, 2, typs[0]) >> frobenius.Id(
-                typs[0]) @ (diagram >> frobenius.Diagram.spiders(
+            Diagram.spiders(1, 2, typs[0]) >> Id(
+                typs[0]) @ (diagram >> Diagram.spiders(
                     1, 0, typs[1]))), self.diagram)
         return result
 
@@ -626,7 +738,7 @@ class Relation(DistributiveAllegory, SymmetricCategory):
         result = cls({(x, y) for x, ys in relations(prop).items()
                       for y in ys}, 1, 1, world)
         result.name = prop.name
-        result.diagram = frobenius.Box(prop.name, ob(), ob())
+        result.diagram = box(prop, Thing, Thing)
         return result
 
     @classmethod
@@ -662,7 +774,7 @@ class Relation(DistributiveAllegory, SymmetricCategory):
         return cls([(tuple(row[:dom]), tuple(row[dom:]))
                     for row in world.sparql(query)], dom, cod, world)
 
-    def to_diagram(self) -> "frobenius.Diagram":
+    def to_diagram(self) -> "Diagram":
         """
         The picture of a relation: the diagram of the syntax it was built
         from when there is one, and a box named after it otherwise -- a
@@ -671,7 +783,7 @@ class Relation(DistributiveAllegory, SymmetricCategory):
         """
         if self.diagram is not None:
             return self.diagram
-        return frobenius.Box(
+        return Box(
             getattr(self, "name", "?"),
             ob(self.dom * (Thing, )), ob(self.cod * (Thing, )))
 
@@ -680,7 +792,7 @@ class Relation(DistributiveAllegory, SymmetricCategory):
         Draw the picture of a relation, see :meth:`to_diagram`.
 
         Parameters:
-            params : Passed to :meth:`frobenius.Diagram.draw`.
+            params : Passed to :meth:`Diagram.draw`.
         """
         return self.to_diagram().draw(**params)
 
@@ -822,7 +934,7 @@ class Query(DistributiveAllegory, SymmetricCategory):
         dom = tuplify(dom)
         world = world or find_world(dom) or owlready2.default_world
         result = cls(boundary(dom, world), dom, dom, normalise=False)
-        result.diagram = frobenius.Id(ob(dom))
+        result.diagram = Id(ob(dom))
         return result
 
     def then(self, *others: Query) -> Query:
@@ -892,9 +1004,9 @@ class Query(DistributiveAllegory, SymmetricCategory):
             self.inside.meet(*(other.inside for other in others)),
             self.dom, self.cod, normalise=False)
         result.diagram = combine(lambda *inside: (
-            frobenius.Diagram.spiders(1, len(inside), ob(self.dom))
-            >> frobenius.Id().tensor(*inside)
-            >> frobenius.Diagram.spiders(len(inside), 1, ob(self.cod))
+            Diagram.spiders(1, len(inside), ob(self.dom))
+            >> Id().tensor(*inside)
+            >> Diagram.spiders(len(inside), 1, ob(self.cod))
             if len(inside) > 1 else inside[0]),
             self.diagram, *(other.diagram for other in others))
         return result
@@ -913,7 +1025,7 @@ class Query(DistributiveAllegory, SymmetricCategory):
             self.inside.join(*(other.inside for other in others)),
             self.dom, self.cod, normalise=False)
         result.diagram = combine(lambda *inside: (
-            frobenius.Bubble(*inside, dom=ob(self.dom), cod=ob(self.cod),
+            Bubble(*inside, dom=ob(self.dom), cod=ob(self.cod),
                              drawing_name="$\\vee$")
             if len(inside) > 1 else inside[0]),
             self.diagram, *(other.diagram for other in others))
@@ -933,7 +1045,7 @@ class Query(DistributiveAllegory, SymmetricCategory):
         world = world or find_world(dom, cod) or owlready2.default_world
         result = cls(Relation.bottom(len(dom), len(cod), world),
                      dom, cod, normalise=False)
-        result.diagram = frobenius.Box("$\\bot$", ob(dom), ob(cod))
+        result.diagram = Box("$\\bot$", ob(dom), ob(cod))
         return result
 
     @classmethod
@@ -954,7 +1066,7 @@ class Query(DistributiveAllegory, SymmetricCategory):
         result = cls(
             Relation.spiders(n_legs_in, n_legs_out, len(typ), world),
             n_legs_in * typ, n_legs_out * typ)
-        result.diagram = frobenius.Diagram.spiders(
+        result.diagram = Diagram.spiders(
             n_legs_in, n_legs_out, ob(typ))
         return result
 
@@ -984,7 +1096,7 @@ class Query(DistributiveAllegory, SymmetricCategory):
         world = world or find_world(left, right) or owlready2.default_world
         result = cls(Relation.swap(len(left), len(right), world),
                      left + right, right + left)
-        result.diagram = frobenius.Diagram.swap(ob(left), ob(right))
+        result.diagram = Diagram.swap(ob(left), ob(right))
         return result
 
     @classmethod
@@ -1022,7 +1134,7 @@ class Query(DistributiveAllegory, SymmetricCategory):
         world = world or find_world(left) or owlready2.default_world
         result = cls(Relation.cups(len(left), len(right), world),
                      left + right, ())
-        result.diagram = frobenius.Diagram.cups(ob(left), ob(right))
+        result.diagram = Diagram.cups(ob(left), ob(right))
         return result
 
     @classmethod
@@ -1037,8 +1149,8 @@ class Query(DistributiveAllegory, SymmetricCategory):
         result = self.factory(
             self.inside.domain(), self.dom, self.dom, normalise=False)
         result.diagram = combine(lambda diagram: (
-            frobenius.Diagram.spiders(1, 2, ob(self.dom)) >> frobenius.Id(
-                ob(self.dom)) @ (diagram >> frobenius.Diagram.spiders(
+            Diagram.spiders(1, 2, ob(self.dom)) >> Id(
+                ob(self.dom)) @ (diagram >> Diagram.spiders(
                     1, 0, ob(self.cod)))), self.diagram)
         return result
 
@@ -1124,8 +1236,7 @@ class Query(DistributiveAllegory, SymmetricCategory):
         cod = schema_cod if cod is None else cod
         result = cls(Relation.from_property(prop), (dom, ), (cod, ))
         result.name = prop.name
-        result.diagram = frobenius.Box(
-            prop.name, ob((dom, )), ob((cod, )))
+        result.diagram = box(prop, dom, cod)
         return result
 
     @classmethod
@@ -1164,14 +1275,14 @@ class Query(DistributiveAllegory, SymmetricCategory):
         result.diagram = point(individual, cod)
         return result
 
-    def to_diagram(self) -> "frobenius.Diagram":
+    def to_diagram(self) -> "Diagram":
         """
         The picture of a query, with every wire labelled by its
         predicate; a box named after it when the history is forgotten.
         """
         if self.diagram is not None:
             return self.diagram
-        return frobenius.Box(
+        return Box(
             getattr(self, "name", "?"), ob(self.dom), ob(self.cod))
 
     def draw(self, **params):
@@ -1179,7 +1290,7 @@ class Query(DistributiveAllegory, SymmetricCategory):
         Draw the picture of a query, see :meth:`to_diagram`.
 
         Parameters:
-            params : Passed to :meth:`frobenius.Diagram.draw`.
+            params : Passed to :meth:`Diagram.draw`.
         """
         return self.to_diagram().draw(**params)
 
@@ -1229,7 +1340,7 @@ class Coercion(Query):
             if type(self).reasoning else None
         super().__init__(inside, (source, ), (target, ), normalise=False)
         self.name = label(target)
-        self.diagram = frobenius.Box(
+        self.diagram = Box(
             label(target), ob((source, )), ob((target, )), data=self)
 
 
@@ -1696,18 +1807,18 @@ def label(entity) -> str:
     return str(entity)
 
 
-def ob(typ=None) -> frobenius.Ty:
+def ob(typ=None) -> Ty:
     """
-    A tuple of OWL classes or class constructs as a type with one wire
-    per predicate, named by its :func:`label` -- the predicates-as-types
-    reading of a boundary.
+    A tuple of OWL classes or class constructs as a type with one
+    :class:`Wire` per predicate -- the predicates-as-types reading of a
+    boundary.
 
     Parameters:
         typ : The predicate or tuple of predicates, ``owl:Thing`` by
             default.
     """
     typ = (Thing, ) if typ is None else tuplify(typ)
-    return frobenius.Ty(*map(label, typ))
+    return Ty(*map(Wire, typ))
 
 
 def schema(prop) -> tuple:
@@ -1728,7 +1839,7 @@ def schema(prop) -> tuple:
 
 
 def box(prop, dom: ThingClass = None, cod: ThingClass = None
-        ) -> frobenius.Diagram:
+        ) -> Diagram:
     """
     An OWL property as a box between predicates, an inverse as the dagger
     of its box.
@@ -1744,7 +1855,7 @@ def box(prop, dom: ThingClass = None, cod: ThingClass = None
     schema_dom, schema_cod = schema(prop)
     dom = schema_dom if dom is None else dom
     cod = schema_cod if cod is None else cod
-    return frobenius.Box(prop.name, ob(dom), ob(cod))
+    return Box(prop.name, ob(dom), ob(cod), data=prop)
 
 
 def individual_class(individual) -> ThingClass:
@@ -1761,7 +1872,7 @@ def individual_class(individual) -> ThingClass:
     return named[0] if named else Thing
 
 
-def point(individual, cod: ThingClass = None) -> frobenius.Box:
+def point(individual, cod: ThingClass = None) -> Box:
     """
     An individual as a state, i.e. a box from the monoidal unit into its
     predicate.
@@ -1772,10 +1883,10 @@ def point(individual, cod: ThingClass = None) -> frobenius.Box:
             class by default.
     """
     cod = individual_class(individual) if cod is None else cod
-    return frobenius.Box(individual.name, frobenius.Ty(), ob(cod))
+    return Box(individual.name, Ty(), ob(cod), data=individual)
 
 
-def to_diagram(source, dom: ThingClass = None) -> frobenius.Diagram:
+def to_diagram(source, dom: ThingClass = None) -> Diagram:
     """
     An OWL entity or class construct as a diagram, read off the syntax
     the ontology itself keeps: an individual is a :func:`point`, a
@@ -1811,28 +1922,28 @@ def to_diagram(source, dom: ThingClass = None) -> frobenius.Diagram:
         dom = source if declared(source, ThingClass) else Thing
     typ = ob(dom)
     if source is Thing or source is dom:
-        return frobenius.Id(typ)
+        return Id(typ)
     if isinstance(source, ThingClass):
-        return frobenius.Box(source.name, typ, typ)
+        return Box(source.name, typ, typ, data=source)
     if isinstance(source, And):
-        return frobenius.Id(typ).then(*(
+        return Id(typ).then(*(
             to_diagram(one, dom) for one in source.Classes))
     if isinstance(source, Or):
-        return frobenius.Bubble(
+        return Bubble(
             *(to_diagram(one, dom) for one in source.Classes),
             dom=typ, cod=typ, drawing_name="$\\vee$")
     if isinstance(source, Not):
         return to_diagram(source.Class, dom).bubble(drawing_name=NEGATION)
     if isinstance(source, OneOf):
         names = ", ".join(one.name for one in source.instances)
-        return frobenius.Box("{" + names + "}", typ, typ)
+        return Box("{" + names + "}", typ, typ, data=source)
     if isinstance(source, Restriction):
         return restriction_diagram(source, dom)
     raise NotImplementedError(messages.NOT_IN_DICTIONARY.format(source))
 
 
 def restriction_diagram(source: Restriction, dom: ThingClass
-                        ) -> frobenius.Diagram:
+                        ) -> Diagram:
     """
     An OWL property restriction as a coreflexive diagram, the
     :class:`Restriction <owlready2.class_construct.Restriction>` case of
@@ -1848,9 +1959,9 @@ def restriction_diagram(source: Restriction, dom: ThingClass
         raise NotImplementedError(messages.NOT_IN_DICTIONARY.format(source))
     _, target = schema(prop)
     arrow, target_typ = box(prop, dom, target), ob(target)
-    spiders = frobenius.Diagram.spiders
+    spiders = Diagram.spiders
     keep = lambda branch: spiders(1, 2, typ)\
-        >> frobenius.Id(typ) @ (branch >> spiders(1, 0, target_typ))
+        >> Id(typ) @ (branch >> spiders(1, 0, target_typ))
     if source.type == HAS_SELF:
         return spiders(1, 2, typ)\
             >> box(prop, dom, dom) @ typ >> spiders(2, 1, typ)
@@ -1858,7 +1969,7 @@ def restriction_diagram(source: Restriction, dom: ThingClass
         if not isinstance(source.value, Thing):  # a literal, not a point
             raise NotImplementedError(
                 messages.NOT_IN_DICTIONARY.format(source))
-        return spiders(1, 2, typ) >> frobenius.Id(typ)\
+        return spiders(1, 2, typ) >> Id(typ)\
             @ (box(prop, dom, individual_class(source.value))
                >> point(source.value).dagger())
     filler = to_diagram(source.value, target)
@@ -1867,11 +1978,11 @@ def restriction_diagram(source: Restriction, dom: ThingClass
     if source.type == ONLY:
         negated = filler.bubble(drawing_name=NEGATION)
         return keep(arrow >> negated).bubble(drawing_name=NEGATION)
-    at_least = lambda n: frobenius.Id(typ) if n == 0\
+    at_least = lambda n: Id(typ) if n == 0\
         else keep(arrow >> filler) if n == 1\
-        else spiders(1, n + 1, typ) >> frobenius.Id(typ) @ (
-            frobenius.Id().tensor(*(n * [arrow >> filler]))
-            >> frobenius.Box("$\\neq$", target_typ ** n, frobenius.Ty()))
+        else spiders(1, n + 1, typ) >> Id(typ) @ (
+            Id().tensor(*(n * [arrow >> filler]))
+            >> Box("$\\neq$", target_typ ** n, Ty()))
     if source.type == MIN:
         return at_least(source.cardinality)
     if source.type == MAX:
