@@ -1026,7 +1026,7 @@ class Query(DistributiveAllegory, SymmetricCategory):
             self.dom, self.cod, normalise=False)
         result.diagram = combine(lambda *inside: (
             Bubble(*inside, dom=ob(self.dom), cod=ob(self.cod),
-                             drawing_name="$\\vee$")
+                   drawing_name="$\\vee$")
             if len(inside) > 1 else inside[0]),
             self.diagram, *(other.diagram for other in others))
         return result
