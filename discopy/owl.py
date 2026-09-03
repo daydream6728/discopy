@@ -88,6 +88,7 @@ Summary
         axioms
         label
         ob
+        peel
         schema
         box
         point
@@ -127,8 +128,8 @@ from itertools import product
 from types import new_class
 
 from owlready2 import (
-    EXACTLY, HAS_SELF, MAX, MIN, ONLY, SOME, VALUE, And, Inverse, Not,
-    ObjectPropertyClass, OneOf, Ontology, Or,
+    EXACTLY, HAS_SELF, MAX, MIN, ONLY, SOME, VALUE, And, ClassConstruct,
+    Inverse, Not, ObjectPropertyClass, OneOf, Ontology, Or,
     OwlReadyInconsistentOntologyError, Restriction, Thing, ThingClass, World,
     destroy_entity, sync_reasoner_hermit)
 from owlready2 import (
@@ -342,6 +343,26 @@ Diagram.swap_factory, Diagram.spider_factory = Swap, Spider
 Diagram.permutation_factory = Permutation
 Diagram.bubble_factory = Bubble
 Id = Diagram.id
+
+
+def peel(layer) -> dict | None:
+    """
+    The predicates a layer tests, by wire position -- ``None`` unless
+    every box of the layer is a membership test on a single wire, i.e.
+    carries a class or class construct as ``data``. A layer of tests is
+    a coreflexive factor, which :meth:`Relation.typed` collapses into
+    the types of its wires.
+
+    Parameters:
+        layer : The layer of a :class:`Diagram`.
+    """
+    result = {}
+    for box, offset in layer.boxes_and_offsets:
+        if not isinstance(box.data, (ThingClass, ClassConstruct))\
+                or (len(box.dom), len(box.cod)) != (1, 1):
+            return None
+        result[offset] = box.data
+    return result
 
 
 @factory
@@ -721,6 +742,71 @@ class Relation(DistributiveAllegory, SymmetricCategory):
             cod : The tuple of predicates for the codomain.
         """
         return Query(self, dom, cod)
+
+    def typed(self) -> Query:
+        """
+        The relation as a morphism of the Karoubi envelope, its boundary
+        predicates read off its picture rather than given: a leading or
+        trailing membership test is a coreflexive factor, collapsed into
+        the type of its wire -- stacked tests meet -- and a wire with no
+        test stays at ``owl:Thing``. The picture certifies the factors,
+        so no normalisation and no reasoning is needed; a relation
+        without a picture is typed at ``owl:Thing`` throughout, and a
+        picture that is nothing but tests types both boundaries at once,
+        collapsing to the identity on its predicates.
+
+        Example
+        -------
+        >>> from owlready2 import Thing, World
+        >>> onto = World().get_ontology("http://discopy.org/kennel.owl")
+        >>> with onto:
+        ...     class Dog(Thing): pass
+        ...     class Person(Thing): pass
+        ...     class owns(Person >> Dog): pass
+        ...     rex, ada = Dog("rex"), Person("ada")
+        ...     ada.owns = [rex]
+        >>> web = Relation.from_property(onto.owns)
+        >>> person, dog = map(extension, (onto.Person, onto.Dog))
+        >>> chain = (person >> web >> dog).typed()
+        >>> print(chain)
+        Query : ('Person',) -> ('Dog',)
+        >>> assert chain.relation == person >> web >> dog
+        >>> assert web.typed() == web.split((Thing, ), (Thing, ))
+        >>> print(label((person >> person >> dog).typed().dom[0]))
+        Person ⊓ (Person ⊓ Dog)
+        """
+        layers = [] if self.diagram is None else list(self.diagram.inside)
+        dom_preds, cod_preds = {}, {}
+        while layers:
+            tests = peel(layers[-1])
+            if tests is None:
+                break
+            layers.pop()
+            for offset, expr in tests.items():
+                cod_preds[offset] = expr if offset not in cod_preds\
+                    else expr & cod_preds[offset]
+        while layers:
+            tests = peel(layers[0])
+            if tests is None:
+                break
+            layers.pop(0)
+            for offset, expr in tests.items():
+                dom_preds[offset] = expr if offset not in dom_preds\
+                    else dom_preds[offset] & expr
+        if not layers and self.diagram is not None:
+            for offset in set(dom_preds) | set(cod_preds):
+                both = [preds[offset] for preds in (dom_preds, cod_preds)
+                        if offset in preds]
+                dom_preds[offset] = cod_preds[offset]\
+                    = both[0] if len(both) == 1 else both[0] & both[1]
+        dom = tuple(
+            dom_preds.get(offset, Thing) for offset in range(self.dom))
+        cod = tuple(
+            cod_preds.get(offset, Thing) for offset in range(self.cod))
+        result = Query(self, dom, cod, normalise=False)
+        if not layers and self.diagram is not None:
+            result.diagram = Id(ob(dom))
+        return result
 
     @classmethod
     def from_property(cls, prop, world: World = None) -> Relation:

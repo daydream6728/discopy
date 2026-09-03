@@ -309,6 +309,35 @@ def test_karoubi_splitting(kennel):
         == extension(kennel.Dog).split((Thing, ), (Thing, ))
 
 
+def test_typed(kennel):
+    web = Relation.from_property(kennel.owns)
+    person, dog = extension(kennel.Person), extension(kennel.Dog)
+    chain = (person >> web >> dog).typed()
+    assert (chain.dom, chain.cod) == ((kennel.Person, ), (kennel.Dog, ))
+    assert chain.relation == person >> web >> dog
+    backwards = (person >> web >> dog).dagger().typed()
+    assert (backwards.dom, backwards.cod)\
+        == ((kennel.Dog, ), (kennel.Person, ))
+    whiskered = (web @ dog).typed()
+    assert (whiskered.dom, whiskered.cod)\
+        == ((Thing, Thing), (Thing, kennel.Dog))
+    both = (dog @ person).typed()  # nothing but tests: an identity
+    assert both.dom == both.cod == (kennel.Dog, kennel.Person)
+    assert both.to_diagram() == Id(ob(both.dom))
+    forgetful = Relation(web.inside, 1, 1, kennel.world)
+    assert forgetful.typed() == web.split((Thing, ), (Thing, ))
+
+
+def test_peel_keeps_wide_and_dataless_boxes(kennel):
+    wide = Box("wide", ob(2 * (Thing, )), ob(2 * (Thing, )),
+               data=kennel.Dog)
+    web = Relation.from_property(kennel.owns)
+    doubled = web @ web
+    doubled.diagram = doubled.to_diagram() >> wide
+    assert doubled.typed().cod == (Thing, Thing)  # not a single-wire test
+    assert web.repeat().typed().dom == (Thing, )  # a bubble has no data
+
+
 def test_parallel(kennel):
     web = Query.from_property(kennel.owns)
     knows = Query.from_property(kennel.knows)
