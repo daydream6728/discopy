@@ -230,6 +230,26 @@ mo.md(f"SPARQL and the property extension agree: "
       f"**{sparql_web == web}**.")
 ```
 
+And the two altitudes convert into each other without bookkeeping:
+`typed()` translates any single-sorted relation back up to a query,
+reading the boundary predicates off its own picture — a membership test
+composed at either end is a coreflexive factor, collapsed into the type
+of its wire, so nobody has to spell out `dom` and `cod`:
+
+```python {.marimo}
+fenced = extension(business_entity, world) >> web\
+    >> extension(business_entity, world)
+collapsed = fenced.typed()
+mo.hstack([fenced.to_diagram(), collapsed.to_diagram()],
+          justify="center")
+```
+
+```python {.marimo}
+mo.md(f"The tests became types: `{collapsed}` — "
+      f"and nothing extensional changed: "
+      f"**{collapsed.relation == fenced}**.")
+```
+
 HermiT also decides candidate rules exactly, not just the declared ones:
 
 ```python {.marimo}
@@ -258,10 +278,12 @@ mo.md(f"The rule book of the loaded knowledge base: "
 ```
 
 Each rule draws itself from the ontology's own syntax: intersection is
-composition, union is a bubble, a quantifier follows its property. Two
-showpieces — a bilateral agreement has *exactly two* party roles, and an
-affiliate is *either* a majority controlling party *or* a controlled one
-— then the whole book, every rule expandable:
+composition, union is a bubble, a quantifier follows its property — and
+a class axiom is read at its subject's own predicate, the subject a
+typed wire with the parent's anatomy drawn on it, the way a query would
+read it. Two showpieces — a bilateral agreement has *exactly two* party
+roles, and an affiliate is *either* a majority controlling party *or* a
+controlled one — then the whole book, every rule expandable:
 
 ```python {.marimo}
 showpieces = [rule for rule in rule_book

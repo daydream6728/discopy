@@ -40,11 +40,20 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   concrete entailed witness — an entity, an ontology, or a whole `World`
   at once, the rules of every loaded module retrieved by one batched
   `deduced` and displayed as the notebook's expandable rule book.
-  Every relation carries an optional picture
-  built from the ontology's own syntax and propagated through every
-  operation, so an axiom draws itself as a `frobenius.Equation` —
-  intersection is composition, union and complement are bubbles, a
-  quantifier follows its property and discards. It ships as the
+  The pictures are a diagram layer of the module's own: `Wire` wraps a
+  predicate and displays its `label`, `Ty`, `Box` and `Diagram` subclass
+  `frobenius` with the factory pattern, and every box carries the
+  `owlready2` entity it denotes as `data`. Each relation carries an
+  optional such picture built from the ontology's own syntax and
+  propagated through every operation, so an axiom draws itself as an
+  `Equation` — intersection is composition, union and complement are
+  bubbles, a quantifier follows its property and discards, and a class
+  axiom is read at its subject's own predicate, a typed wire with the
+  parent's anatomy drawn on it. `Relation.typed` translates any relation
+  up to the envelope with no boundary given: `peel` reads the predicates
+  off the picture, a leading or trailing membership test collapsing into
+  the type of its wire, and the result draws the splitting as the
+  Karoubi inclusions around the single-sorted middle. It ships as the
   `semantic` extra, i.e. `owlready2` plus a Java runtime, with the FIBO
   fixtures of `test/fixtures/fibo` and the `ontologies` notebook, which
   pitches ontologies as guardrails for AI agents on FIBO's own

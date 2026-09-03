@@ -753,7 +753,10 @@ class Relation(DistributiveAllegory, SymmetricCategory):
         so no normalisation and no reasoning is needed; a relation
         without a picture is typed at ``owl:Thing`` throughout, and a
         picture that is nothing but tests types both boundaries at once,
-        collapsing to the identity on its predicates.
+        collapsing to the identity on its predicates. The picture of the
+        result draws the splitting: the peeled tests become the
+        inclusions of the Karoubi envelope, between each typed boundary
+        wire and the single-sorted middle.
 
         Example
         -------
@@ -804,8 +807,20 @@ class Relation(DistributiveAllegory, SymmetricCategory):
         cod = tuple(
             cod_preds.get(offset, Thing) for offset in range(self.cod))
         result = Query(self, dom, cod, normalise=False)
-        if not layers and self.diagram is not None:
+        if self.diagram is None:
+            return result
+        if not layers:
             result.diagram = Id(ob(dom))
+            return result
+        include = lambda pred: Box(
+            label(pred), ob((pred, )), ob(), data=pred)
+        mid = Diagram(tuple(layers), layers[0].dom, layers[-1].cod)
+        result.diagram = Id().tensor(*(
+            include(dom_preds[offset]) if offset in dom_preds else Id(ob())
+            for offset in range(self.dom))) >> mid >> Id().tensor(*(
+                include(cod_preds[offset]).dagger()
+                if offset in cod_preds else Id(ob())
+                for offset in range(self.cod)))
         return result
 
     @classmethod
@@ -2175,6 +2190,10 @@ def class_axioms(entity: ThingClass, retrieved: dict = None) -> list[Axiom]:
     one equation per equivalence, skipping what is outside the
     dictionary and the scratch classes a reasoner run may have written
     back among the parents, which are never rules of the knowledge base.
+    The pictures read the axiom at the subject's own predicate, the way
+    a :class:`Query` would: the subject is a typed wire and the parent's
+    anatomy is drawn on it, while the truth stays extensional over
+    ``owl:Thing``.
 
     Parameters:
         entity : The `owlready2` class.
@@ -2188,6 +2207,7 @@ def class_axioms(entity: ThingClass, retrieved: dict = None) -> list[Axiom]:
         or isinstance(expr, ThingClass)
         else coreflexive(expr, retrieved[id(expr)], world))
     left, result = extension(entity, world), []
+    left.diagram = Id(ob((entity, )))
     for parents, symbol in ((entity.is_a, INCLUSION),
                             (entity.equivalent_to, "=")):
         for parent in parents:
@@ -2196,9 +2216,10 @@ def class_axioms(entity: ThingClass, retrieved: dict = None) -> list[Axiom]:
                     continue
             elif not compilable(parent):
                 continue
+            right = lookup(parent)
+            right.diagram = to_diagram(parent, dom=entity)
             result.append(Axiom(
-                left, lookup(parent), symbol=symbol,
-                source=(entity, parent)))
+                left, right, symbol=symbol, source=(entity, parent)))
     return result
 
 
