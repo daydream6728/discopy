@@ -129,7 +129,7 @@ from types import new_class
 
 from owlready2 import (
     EXACTLY, HAS_SELF, MAX, MIN, ONLY, SOME, VALUE, And, ClassConstruct,
-    Inverse, Not, ObjectPropertyClass, OneOf, Ontology, Or,
+    Inverse, Not, Nothing, ObjectPropertyClass, OneOf, Ontology, Or,
     OwlReadyInconsistentOntologyError, Restriction, Thing, ThingClass, World,
     destroy_entity, sync_reasoner_hermit)
 from owlready2 import (
@@ -1680,8 +1680,11 @@ def subsumes(left, right, world: World) -> bool:
     """
     Whether the ontologies of a world entail that one predicate is
     subsumed by another, by asking `HermiT` -- the proof object a
-    :class:`Coercion` carries. A construct is classified through a
-    scratch defined class the way :func:`deduced` does.
+    :class:`Coercion` carries. The question is put as unsatisfiability,
+    the one verdict `owlready2` writes back reliably: a scratch defined
+    class is made equivalent to the meet of ``left`` with the complement
+    of ``right``, and the subsumption is entailed exactly when the
+    reasoner leaves it equivalent to ``owl:Nothing``.
 
     Parameters:
         left : The predicate to be subsumed.
@@ -1690,33 +1693,29 @@ def subsumes(left, right, world: World) -> bool:
 
     Example
     -------
-    >>> from owlready2 import Thing, World
+    >>> from owlready2 import Nothing, Thing, World
     >>> onto = World().get_ontology("http://discopy.org/kennel.owl")
     >>> with onto:
     ...     class Dog(Thing): pass
     ...     class Person(Thing): pass
     ...     class owns(Person >> Dog): pass
+    ...     Person.is_a.append(owns.some(Dog))  # every person owns a dog
     >>> assert subsumes(onto.Person & onto.owns.some(onto.Dog),
     ...                 onto.Person, onto.world)
-    >>> assert not subsumes(onto.Person,
-    ...                     onto.Person & onto.owns.some(onto.Dog),
-    ...                     onto.world)
+    >>> assert subsumes(onto.Person, onto.owns.some(onto.Dog), onto.world)
+    >>> assert not subsumes(onto.Dog, onto.owns.some(onto.Dog), onto.world)
+    >>> assert subsumes(Nothing, onto.Dog, onto.world)
     """
-    scratch, sides, temps = world.get_ontology(SCRATCH), [], []
+    clone = lambda expr: (
+        expr if expr in (Thing, Nothing) or declared(expr, ThingClass)
+        else expr.__deepcopy__())
+    scratch = world.get_ontology(SCRATCH)
     with scratch:
-        for expr in (left, right):
-            if expr is Thing or declared(expr, ThingClass):
-                sides.append(expr)
-            else:
-                temp = new_class(f"Subsumed{fresh()}", (Thing, ))
-                # A construct can only belong to one class, so clone it.
-                temp.equivalent_to = [expr.__deepcopy__()]
-                sides.append(temp)
-                temps.append(temp)
+        probe = new_class(f"Subsumed{fresh()}", (Thing, ))
+        probe.equivalent_to = [clone(left) & Not(clone(right))]
     reason(world)
-    result = issubclass(sides[0], sides[1])
-    for temp in temps:
-        dismiss(temp, world)
+    result = Nothing in probe.equivalent_to
+    dismiss(probe, world)
     return result
 
 

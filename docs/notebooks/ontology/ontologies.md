@@ -76,7 +76,7 @@ from discopy.owl import (
 
 FIBO = "https://spec.edmcouncil.org/fibo/ontology/"
 FIXTURES = os.path.join(str(mo.notebook_dir() or "."),
-                        "..", "..", "test", "fixtures", "fibo")
+                        "..", "..", "..", "test", "fixtures", "fibo")
 world = World()
 corporate_control = load(
     FIBO + "BE/OwnershipAndControl/CorporateControl/",

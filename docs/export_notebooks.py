@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 """Render the marimo notebooks in ``docs/notebooks`` for the documentation.
 
-For every ``docs/notebooks/*.md`` marimo notebook this module:
+For every ``docs/notebooks/**/*.md`` marimo notebook this module:
 
 1. runs it and exports the *computed* result to a self-contained HTML file in
    ``docs/_static/notebooks/<name>.html`` (via ``marimo export html``), and
-2. writes a small reStructuredText page ``docs/notebooks/<name>.rst`` that
+2. writes a small reStructuredText page next to the notebook that
    embeds that HTML in an ``<iframe>`` so Sphinx picks it up in the toctree.
 
 Both artefacts are generated (they are *not* committed): ``conf.py`` calls
@@ -35,7 +35,7 @@ HTML_DIR = DOCS / "_static" / "notebooks"
 IFRAME = """\
 .. raw:: html
 
-    <iframe class="marimo-notebook" src="../_static/notebooks/{name}.html"
+    <iframe class="marimo-notebook" src="{root}_static/notebooks/{name}.html"
             title="{title}" loading="lazy"
             style="width: 100%; height: 90vh; border: none;"></iframe>
 """
@@ -45,8 +45,16 @@ FALLBACK = """\
 
     This notebook could not be rendered in this build (a dependency needed to
     execute it may be missing). You can read its source on GitHub:
-    `{name}.md <https://github.com/discopy/discopy/blob/main/docs/notebooks/{name}.md>`_.
+    `{name}.md <https://github.com/discopy/discopy/blob/main/docs/notebooks/{path}>`_.
 """
+
+
+def notebooks() -> list[Path]:
+    """The marimo notebooks under ``docs/notebooks``, subdirectories
+    included, skipping marimo's own cache directories."""
+    return sorted(
+        notebook for notebook in NOTEBOOKS.rglob("*.md")
+        if "__marimo__" not in notebook.parts)
 
 
 def title_of(notebook: Path) -> str:
@@ -72,15 +80,17 @@ def export(notebook: Path, *, check: bool) -> None:
         subprocess.run(
             [sys.executable, "-m", "marimo", "export", "html", notebook.name,
              "-o", str(output), "-f"],
-            cwd=NOTEBOOKS, check=True)
+            cwd=notebook.parent, check=True)
 
 
 def write_page(notebook: Path, *, rendered: bool) -> None:
-    """Write the reStructuredText page for ``notebook``."""
+    """Write the reStructuredText page next to ``notebook``."""
     title = title_of(notebook)
+    depth = len(notebook.relative_to(NOTEBOOKS).parts)
     body = (IFRAME if rendered else FALLBACK).format(
-        name=notebook.stem, title=title)
-    (NOTEBOOKS / f"{notebook.stem}.rst").write_text(
+        name=notebook.stem, title=title, root="../" * depth,
+        path=notebook.relative_to(NOTEBOOKS).as_posix())
+    notebook.with_suffix(".rst").write_text(
         f"{title}\n{'=' * len(title)}\n\n" + body)
 
 
@@ -90,7 +100,7 @@ def generate(*, strict: bool = False) -> None:
     When ``strict`` is false a notebook that fails to execute falls back to a
     link page instead of aborting the build.
     """
-    for notebook in sorted(NOTEBOOKS.glob("*.md")):
+    for notebook in notebooks():
         try:
             export(notebook, check=False)
             write_page(notebook, rendered=True)
@@ -109,8 +119,8 @@ def main() -> int:
     args = parser.parse_args()
 
     stems = set(args.notebooks)
-    selected = sorted(nb for nb in NOTEBOOKS.glob("*.md")
-                      if not stems or nb.stem in stems)
+    selected = [notebook for notebook in notebooks()
+                if not stems or notebook.stem in stems]
     if not selected:
         print("no matching notebooks found", file=sys.stderr)
         return 1

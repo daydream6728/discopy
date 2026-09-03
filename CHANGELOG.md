@@ -32,9 +32,10 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `validate` settles them, raising on every hand-off HermiT refutes.
   Retrieval and proof are delegated: `deduced` classifies scratch
   defined classes in one batched HermiT run, `subsumes` decides the
-  inclusion of two predicates, `reason` and `consistent` check worlds,
-  and `Relation.sparql` queries the materialised graph with `owlready2`'s
-  native engine. `axioms` compiles what the ontology says into `Axiom`,
+  inclusion of two predicates — put as an unsatisfiability probe, the
+  one verdict `owlready2` writes back reliably — `reason` and
+  `consistent` check worlds, and `Relation.sparql` queries the
+  materialised graph with `owlready2`'s native engine. `axioms` compiles what the ontology says into `Axiom`,
   whose truth is the absence of an entailed counterexample — a
   consistent schema entails itself, and a `False` axiom exhibits a
   concrete entailed witness — an entity, an ontology, or a whole `World`
@@ -55,9 +56,14 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   the type of its wire, and the result draws the splitting as the
   Karoubi inclusions around the single-sorted middle. It ships as the
   `semantic` extra, i.e. `owlready2` plus a Java runtime, with the FIBO
-  fixtures of `test/fixtures/fibo` and the `ontologies` notebook, which
-  pitches ontologies as guardrails for AI agents on FIBO's own
-  ownership-and-control modules.
+  fixtures of `test/fixtures/fibo` and two notebooks in
+  `docs/notebooks/ontology`: `ontologies`, which pitches ontologies as
+  guardrails for AI agents on FIBO's own ownership-and-control modules,
+  and `finance`, which computes asset and FX risk over a multi-currency
+  portfolio with units as predicates — HermiT proves the buckets
+  disjoint and exhaustive and refuses the query that mixes currencies,
+  while the plan's own wires refuse the conversion box that would; the
+  docs render notebooks from subdirectories of `docs/notebooks`.
 - Abstract base classes for order-enriched categories in `discopy.abc`:
   `Poset`, `Lattice` and `BooleanAlgebra` for the structure of hom-sets,
   `DaggerCategory` for the converse, `Allegory` (Freyd & Scedrov) for a

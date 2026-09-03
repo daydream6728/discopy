@@ -25,7 +25,8 @@ DisCoPy documentation
 
     notebooks/diagrams
     notebooks/examples
-    notebooks/ontologies
+    notebooks/ontology/ontologies
+    notebooks/ontology/finance
     notebooks/qnlp
     notebooks/diag-diff
     notebooks/21-05-03-tallcat

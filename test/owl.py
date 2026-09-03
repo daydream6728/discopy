@@ -8,7 +8,7 @@ importorskip("owlready2")
 
 from owlready2 import (  # noqa: E402
     JAVA_EXE, AllDisjoint, AsymmetricProperty, FunctionalProperty, Inverse,
-    InverseFunctionalProperty, IrreflexiveProperty, Not, OneOf,
+    InverseFunctionalProperty, IrreflexiveProperty, Not, Nothing, OneOf,
     PropertyChain, ReflexiveProperty, Restriction, SymmetricProperty,
     Thing, ThingClass, TransitiveProperty, World)
 import owlready2  # noqa: E402
@@ -298,6 +298,18 @@ def test_coercion(kennel):
         assert coercion(kennel.Dog, kennel.Dog) == Query.id((kennel.Dog, ))
         free = coercion(kennel.Dog, kennel.Animal)
     assert free.inside == extension(kennel.Dog)  # a dog is an animal
+
+
+@needs_java
+def test_subsumes_writes_back_reliably(kennel):
+    world = kennel.world
+    with kennel:
+        kennel.Person.is_a.append(kennel.owns.some(kennel.Dog))
+        _ = AllDisjoint([kennel.Dog, kennel.Person])
+    # a named class below a construct, which issubclass used to miss
+    assert subsumes(kennel.Person, kennel.owns.some(kennel.Dog), world)
+    assert subsumes(kennel.Dog & kennel.Person, Nothing, world)
+    assert not subsumes(kennel.Dog, kennel.owns.some(kennel.Dog), world)
 
 
 def test_karoubi_splitting(kennel):

@@ -31,6 +31,7 @@ __marimo__/
 docs/notebooks/layouts/
 # notebook pages rendered at docs build time (see docs/export_notebooks.py)
 docs/notebooks/*.rst
+docs/notebooks/*/*.rst
 docs/_static/notebooks/
 # drawings left behind by a failing drawing test (backend.temporary_path)
 docs/_static/*/_*.svg
