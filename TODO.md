@@ -15,8 +15,8 @@
 - [x] `discopy.owl` becomes a full discopy layer: `Wire` wraps a predicate,
       `Ty`, `Box`, `Diagram` subclass `frobenius` with the factory pattern,
       and `ob`/`box`/`point`/`to_diagram` build them instead of raw frobenius
-- [WIP] @claude-allegories-2026-09-03 13:15 `Relation.typed` reading boundary
-      predicates off the picture, no explicit dom and cod
-- [ ] the rule book displays typed query equations: class axioms at the
-      subject's predicate
+- [x] `Relation.typed` reading boundary predicates off the picture, no
+      explicit dom and cod
+- [WIP] @claude-allegories-2026-09-03 13:45 the rule book displays typed
+      query equations: class axioms at the subject's predicate
 - [ ] tests at 100% coverage, a notebook cell, changelog and sign-off
