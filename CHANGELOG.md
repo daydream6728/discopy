@@ -47,9 +47,12 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `owlready2` entity it denotes as `data`. Each relation carries an
   optional such picture built from the ontology's own syntax and
   propagated through every operation, so an axiom draws itself as an
-  `Equation` — intersection is composition, union and complement are
-  bubbles, a quantifier follows its property and discards, and a class
-  axiom is read at its subject's own predicate, a typed wire with the
+  `Equation` — intersection is composition, a quantifier follows its
+  property and discards, the complement is the one bubble of the
+  dictionary with a union drawn as its De Morgan dual (`demorgan`) and
+  a cardinality's inequality as complemented cups (`distinct`, the cup
+  being the equality test of a frobenius category), and a class axiom
+  is read at its subject's own predicate, a typed wire with the
   parent's anatomy drawn on it. `Relation.typed` translates any relation
   up to the envelope with no boundary given: `peel` reads the predicates
   off the picture, a leading or trailing membership test collapsing into

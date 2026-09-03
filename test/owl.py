@@ -602,7 +602,9 @@ def test_to_diagram_constructs(kennel):
     assert to_diagram(dog & person, dom=Thing)\
         == to_diagram(dog, Thing) >> to_diagram(person, Thing)
     union = to_diagram(dog | person, dom=Thing)
-    assert isinstance(union, Bubble) and len(union.args) == 2
+    assert isinstance(union, Bubble) and len(union.args) == 1
+    negated, = union.args  # the De Morgan dual: one bubble per class
+    assert sum(isinstance(one, Bubble) for one in negated.boxes) == 2
     assert isinstance(to_diagram(Not(dog), dom=Thing), Bubble)
     assert to_diagram(OneOf([kennel.rex]), dom=Thing).name == "{rex}"
     with raises(NotImplementedError):
@@ -617,8 +619,9 @@ def test_restriction_diagrams(kennel):
     owns, dog = kennel.owns, kennel.Dog
     for construct in (owns.some(dog), owns.only(dog),
                       owns.value(kennel.rex), owns.min(2, dog),
-                      owns.max(1, dog), owns.exactly(1, dog),
-                      kennel.knows.has_self(), owns.min(0, dog)):
+                      owns.min(3, dog), owns.max(1, dog),
+                      owns.exactly(1, dog), kennel.knows.has_self(),
+                      owns.min(0, dog)):
         diagram = to_diagram(construct, dom=kennel.Person)
         typ = Ty("Person")
         assert (diagram.dom, diagram.cod) == (typ, typ)

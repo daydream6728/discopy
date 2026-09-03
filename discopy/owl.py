@@ -89,6 +89,8 @@ Summary
         label
         ob
         peel
+        demorgan
+        distinct
         schema
         box
         point
@@ -363,6 +365,52 @@ def peel(layer) -> dict | None:
             return None
         result[offset] = box.data
     return result
+
+
+def demorgan(dom: Ty, cod: Ty, *inside: Diagram) -> Diagram:
+    """
+    The picture of a union as its De Morgan dual: one complement bubble
+    around the meet of the complemented pictures -- spiders around their
+    tensor -- so that the complement is the only bubble of the
+    dictionary.
+
+    Parameters:
+        dom : The domain of the pictures.
+        cod : The codomain of the pictures.
+        inside : The pictures to join.
+    """
+    return (Diagram.spiders(1, len(inside), dom) >> Id().tensor(*(
+        one.bubble(drawing_name=NEGATION) for one in inside))
+        >> Diagram.spiders(len(inside), 1, cod)
+        ).bubble(drawing_name=NEGATION)
+
+
+def distinct(arity: int, typ: Ty) -> Diagram:
+    """
+    The effect testing that some wires of one type are pairwise
+    distinct: the cup holds of two wires exactly when they agree, so a
+    pair is distinct under one complemented cup, and more wires are
+    copied by spiders and routed so that every pair meets its own --
+    the anatomy of a cardinality restriction, in place of an ad-hoc
+    inequality box.
+
+    Parameters:
+        arity : The number of wires, at least two.
+        typ : The type of each wire.
+    """
+    unequal = Diagram.cups(typ, typ).bubble(drawing_name=NEGATION)
+    if arity == 2:
+        return unequal
+    partners = [[other for other in range(arity) if other != wire]
+                for wire in range(arity)]
+    source = {(wire, other): wire * (arity - 1) + partners[wire].index(other)
+              for wire in range(arity) for other in partners[wire]}
+    legs = [leg for left in range(arity) for right in range(left + 1, arity)
+            for leg in ((left, right), (right, left))]
+    copies = Id().tensor(*(arity * [Diagram.spiders(1, arity - 1, typ)]))
+    return copies >> Diagram.permutation(
+        [source[leg] for leg in legs], copies.cod) >> Id().tensor(*(
+            (len(legs) // 2) * [unequal]))
 
 
 @factory
@@ -673,8 +721,7 @@ class Relation(DistributiveAllegory, SymmetricCategory):
             other.diagram for other in others)
         typs = ob(self.dom * (Thing, )), ob(self.cod * (Thing, ))
         result.diagram = combine(lambda *inside: (
-            Bubble(
-                *inside, dom=typs[0], cod=typs[1], drawing_name="$\\vee$")
+            demorgan(typs[0], typs[1], *inside)
             if len(inside) > 1 else inside[0]), *diagrams)
         return result
 
@@ -1126,8 +1173,7 @@ class Query(DistributiveAllegory, SymmetricCategory):
             self.inside.join(*(other.inside for other in others)),
             self.dom, self.cod, normalise=False)
         result.diagram = combine(lambda *inside: (
-            Bubble(*inside, dom=ob(self.dom), cod=ob(self.cod),
-                   drawing_name="$\\vee$")
+            demorgan(ob(self.dom), ob(self.cod), *inside)
             if len(inside) > 1 else inside[0]),
             self.diagram, *(other.diagram for other in others))
         return result
@@ -2029,9 +2075,9 @@ def to_diagram(source, dom: ThingClass = None) -> Diagram:
         return Id(typ).then(*(
             to_diagram(one, dom) for one in source.Classes))
     if isinstance(source, Or):
-        return Bubble(
-            *(to_diagram(one, dom) for one in source.Classes),
-            dom=typ, cod=typ, drawing_name="$\\vee$")
+        return Id(typ).then(*(
+            to_diagram(one, dom).bubble(drawing_name=NEGATION)
+            for one in source.Classes)).bubble(drawing_name=NEGATION)
     if isinstance(source, Not):
         return to_diagram(source.Class, dom).bubble(drawing_name=NEGATION)
     if isinstance(source, OneOf):
@@ -2082,7 +2128,7 @@ def restriction_diagram(source: Restriction, dom: ThingClass
         else keep(arrow >> filler) if n == 1\
         else spiders(1, n + 1, typ) >> Id(typ) @ (
             Id().tensor(*(n * [arrow >> filler]))
-            >> Box("$\\neq$", target_typ ** n, Ty()))
+            >> distinct(n, target_typ))
     if source.type == MIN:
         return at_least(source.cardinality)
     if source.type == MAX:

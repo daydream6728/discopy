@@ -278,7 +278,8 @@ mo.md(f"The rule book of the loaded knowledge base: "
 ```
 
 Each rule draws itself from the ontology's own syntax: intersection is
-composition, union is a bubble, a quantifier follows its property — and
+composition, a quantifier follows its property, complement is the one
+bubble with union as its De Morgan dual — and
 a class axiom is read at its subject's own predicate, the subject a
 typed wire with the parent's anatomy drawn on it, the way a query would
 read it. Two showpieces — a bilateral agreement has *exactly two* party
