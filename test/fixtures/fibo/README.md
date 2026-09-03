@@ -13,4 +13,8 @@ tests and the notebook never touch the network. The modules also import the
 [OMG Commons Ontology Library](https://www.omg.org/spec/Commons/), which OMG
 serves from `www.omg.org` only: those imports are not copied here and
 `discopy.owl.preload` stubs them as empty ontologies, which loses nothing the
-tests rely on -- annotation properties and upper-level parents.
+tests rely on -- annotation properties and upper-level parents -- except for
+the three minimal stand-ins under `Commons/`: the two datatypes the fixtures
+range over, read as their closest OWL 2 datatype so that HermiT accepts
+them, and the collection membership properties that make a `Portfolio`'s
+holdings queryable.

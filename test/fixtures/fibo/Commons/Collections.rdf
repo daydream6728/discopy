@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- A minimal stand-in for the OMG Commons Collections module, which OMG
+     serves from www.omg.org only: just the class and the two mutually
+     inverse membership properties that the FIBO fixtures restrict over,
+     so that a Portfolio's holdings can be queried as a property rather
+     than left as an unresolved reference into an empty stub. -->
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+         xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+         xmlns:owl="http://www.w3.org/2002/07/owl#"
+         xml:base="https://www.omg.org/spec/Commons/Collections/">
+	<owl:Ontology rdf:about="https://www.omg.org/spec/Commons/Collections/"/>
+	<owl:Class rdf:about="https://www.omg.org/spec/Commons/Collections/Collection">
+		<rdfs:label>collection</rdfs:label>
+	</owl:Class>
+	<owl:ObjectProperty rdf:about="https://www.omg.org/spec/Commons/Collections/comprises">
+		<rdfs:label>comprises</rdfs:label>
+		<owl:inverseOf rdf:resource="https://www.omg.org/spec/Commons/Collections/isMemberOf"/>
+	</owl:ObjectProperty>
+	<owl:ObjectProperty rdf:about="https://www.omg.org/spec/Commons/Collections/isMemberOf">
+		<rdfs:label>is member of</rdfs:label>
+	</owl:ObjectProperty>
+</rdf:RDF>

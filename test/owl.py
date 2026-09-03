@@ -749,6 +749,14 @@ def test_fibo_axioms_hold():
     assert all(axioms(onto))  # no entailed counterexample
 
 
+def test_fixtures_resolve_the_currency_module():
+    world = World()
+    load(FIBO + "FND/OwnershipAndControl/Ownership/", world, path=FIXTURES)
+    for iri in ("*CurrencyAmount/MonetaryAmount", "*CurrencyAmount/Currency",
+                "*Ownership/Portfolio", "*Collections/comprises"):
+        assert world.search_one(iri=iri) is not None
+
+
 @needs_java
 def test_the_whole_rule_book():
     world = market_world()[0]

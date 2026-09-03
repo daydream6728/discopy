@@ -60,10 +60,15 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `docs/notebooks/ontology`: `ontologies`, which pitches ontologies as
   guardrails for AI agents on FIBO's own ownership-and-control modules,
   and `finance`, which computes asset and FX risk over a multi-currency
-  portfolio with units as predicates — HermiT proves the buckets
-  disjoint and exhaustive and refuses the query that mixes currencies,
-  while the plan's own wires refuse the conversion box that would; the
-  docs render notebooks from subdirectories of `docs/notebooks`.
+  portfolio on FIBO's own `CurrencyAmount` and `Ownership` modules —
+  currency buckets are compound predicates, the definite-unit guarantee
+  is FIBO's own cardinality axiom, exchange rates are FIBO individuals
+  carried by the conversion boxes, HermiT proves the buckets disjoint
+  and exhaustive over the fund's declared mandate and refuses the query
+  that mixes currencies, while the plan's own wires refuse the
+  conversion box that would; the fixtures gain a minimal Commons
+  `Collections` stand-in so a portfolio's holdings are queryable, and
+  the docs render notebooks from subdirectories of `docs/notebooks`.
 - Abstract base classes for order-enriched categories in `discopy.abc`:
   `Poset`, `Lattice` and `BooleanAlgebra` for the structure of hom-sets,
   `DaggerCategory` for the converse, `Allegory` (Freyd & Scedrov) for a
