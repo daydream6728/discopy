@@ -535,21 +535,39 @@ class Shape:
             "model", self._pack,
             AR ** len(self.boxes) @ OB ** len(self.obs), MODEL)
 
+    @property
+    def is_chain(self) -> bool:
+        """
+        Whether the free boxes form a path of single-atom words covering
+        every generating object, so that :meth:`chain_sampling` applies.
+        """
+        if not self.boxes or self.derived:
+            return False
+        words = [
+            word for box in self.boxes for word in (box.dom, box.cod)]
+        if any(len(names(word)) != 1 for word in words):
+            return False
+        atoms = [names(self.boxes[0].dom)[0]] + [
+            names(box.cod)[0] for box in self.boxes]
+        return set(atoms) == set(self.obs) and all(
+            names(box.dom) + names(box.cod) == atoms[i:i + 2]
+            for i, box in enumerate(self.boxes))
+
     def chain_sampling(self, bound: tuple[str, ...] = ()) -> markov.Diagram:
         """
         The sampling plan of a chain of composable boxes, drawing each
         arrow with the boundary projected off the one before rather than
-        drawing the objects first — for carriers whose objects have no
-        strategy of their own, e.g. the functors of ``Cat``, whose objects
-        are categories.
+        drawing the objects first — what makes the derived strategy reach
+        carriers whose objects have no strategy of their own, e.g. the
+        functors of ``Cat``, whose objects are categories, and carriers
+        whose arrows do not reach every object, e.g. the words of a
+        coloured monoid.
         """
-        atoms = [names(self.boxes[0].dom)[0]] + [
-            names(box.cod)[0] for box in self.boxes]
-        if any(
-                names(box.dom) + names(box.cod) != atoms[i:i + 2]
-                for i, box in enumerate(self.boxes)):
+        if not self.is_chain:
             raise NotImplementedError(
                 "Projected sampling is only derived for chains.")
+        atoms = [names(self.boxes[0].dom)[0]] + [
+            names(box.cod)[0] for box in self.boxes]
         plan = markov.Id(OB ** len(bound))
         n_arrows = 0
         for i, box in enumerate(self.boxes):
@@ -614,8 +632,7 @@ class Shape:
                     bound.append(name)
                     values.append(value)
         ob_factory = carrier if not self.boxes else carrier.ob
-        plan = self.chain_sampling(tuple(bound))\
-            if self.boxes and not hasattr(ob_factory, "strategy")\
+        plan = self.chain_sampling(tuple(bound)) if self.is_chain\
             else self.sampling(tuple(bound))
         return sampler(carrier, ob_factory=ob_factory, **params)(
             plan)(*values)
