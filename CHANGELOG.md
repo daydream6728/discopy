@@ -16,8 +16,13 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   word, a delay in a feedback one — and an instance of it in a carrier is a
   `Model`, a functor out of the shape, whose typing is the one validation
   every shape class used to state in its own `__new__`. Sampling lives in
-  `Sample`, the Kleisli category of the `SearchStrategy` monad, a concrete
-  `MarkovCategory` where copy shares a drawn value; deriving a shape's
+  `Sample`, the Kleisli category of the `Search` monad — stated as a
+  `discopy.kleisli.monad.Monad` and hosted by
+  `discopy.kleisli.multiplicative.Channel`, so composition, tensor, copy
+  and whiskering all come from the Kleisli submodule and `shape` only adds
+  the swaps a `markov.Functor` asks for; the monad is commutative up to
+  distribution, which is what makes the premonoidal Kleisli category a
+  `MarkovCategory` where copy shares a drawn value. Deriving a shape's
   search strategy is two-stage the way `STYLE.md` wants composition pure
   and functor application effectful: `Shape.sampling()` builds a
   `markov.Diagram` plan — drawable like any diagram — and a

@@ -70,9 +70,11 @@ from typing import TYPE_CHECKING
 
 from discopy import markov, monoidal
 from discopy.abc import Category, MarkovCategory
+from discopy.kleisli.monad import Monad
+from discopy.kleisli.multiplicative import Channel, pack_value
+from discopy.python.function import Function
 from discopy.utils import (
-    AxiomError, assert_iscomposable, assert_isinstance, factory, tuplify,
-    untuplify)
+    AxiomError, assert_isinstance, factory, tuplify, untuplify)
 
 if TYPE_CHECKING:
     from hypothesis import strategies as st
@@ -82,18 +84,41 @@ Ty = tuple[type, ...]
 """ Kleisli arrows have tuples of types as input and output. """
 
 
-@factory
-class Sample(MarkovCategory):
+def search_monad() -> Monad:
     """
-    The Kleisli category of the ``SearchStrategy`` monad: a morphism takes
-    values in ``dom`` and returns a search strategy of values in ``cod``.
+    The ``SearchStrategy`` monad on the category of Python functions:
+    ``st.just`` is the unit, ``map`` the functorial action and flattening
+    with ``flatmap`` the multiplication — lawful up to distribution, which
+    is all sampling needs.
+    """
+    from hypothesis.strategies import SearchStrategy, just
 
-    Parameters:
-        inside : A callable from ``dom`` values to a ``SearchStrategy`` of
-            ``cod`` values, untuplified like a
-            :class:`discopy.python.Function`.
-        dom : The tuple of input types.
-        cod : The tuple of output types.
+    return Monad(
+        "Search",
+        ob_map=lambda X: SearchStrategy[X],
+        lift=lambda f: Function(
+            lambda s: s.map(f),
+            SearchStrategy[untuplify(f.dom)],
+            SearchStrategy[untuplify(f.cod)]),
+        unit_map=lambda X: Function(just, X, SearchStrategy[X]),
+        mult_map=lambda X: Function(
+            lambda ss: ss.flatmap(lambda s: s),
+            SearchStrategy[SearchStrategy[X]], SearchStrategy[X]))
+
+
+Search = search_monad()
+""" The monad whose Kleisli category the sampling plans evaluate in. """
+
+
+@factory
+class Sample(Channel[Search], MarkovCategory):
+    """
+    The Kleisli category of the :obj:`Search` monad with tuple as tensor:
+    a :class:`discopy.kleisli.multiplicative.Channel` whose morphisms take
+    values in ``dom`` and return a search strategy of values in ``cod``.
+    The canonical copy shares a drawn value, and the monad is commutative
+    up to distribution, which is what makes the premonoidal Kleisli
+    category a Markov one.
 
     Example
     -------
@@ -103,46 +128,18 @@ class Sample(MarkovCategory):
     >>> pair = Sample.copy((int, ), 2) >> add
     >>> assert find((dice >> pair)(), lambda n: n % 2 == 0) == 2
     """
-    inside: Callable
-    dom: Ty
-    cod: Ty
-
-    ob = Ty
-
-    def __init__(self, inside: Callable, dom: Ty, cod: Ty):
-        self.inside, self.dom, self.cod = inside, tuplify(dom), tuplify(cod)
-
-    def __call__(self, *xs) -> "st.SearchStrategy":
-        return self.inside(*xs)
-
     @classmethod
     def pure(cls, function: Callable, dom: Ty, cod: Ty) -> Sample:
         """ The unit of the monad, embedding a deterministic function. """
-        from hypothesis import strategies as st
+        from hypothesis.strategies import just
 
-        return cls(lambda *xs: st.just(function(*xs)), dom, cod)
+        return cls(
+            lambda *xs: just(pack_value(tuplify(function(*xs)))),
+            tuplify(dom), tuplify(cod))
 
     @classmethod
     def id(cls, dom: Ty = ()) -> Sample:
-        return cls.pure(lambda *xs: untuplify(xs), dom, dom)
-
-    def then(self, other: Sample) -> Sample:
-        """ Kleisli composition, i.e. ``flatmap``. """
-        assert_isinstance(other, type(self))
-        assert_iscomposable(self, other)
-        return type(self)(
-            lambda *xs: self(*xs).flatmap(
-                lambda ys: other(*tuplify(ys))), self.dom, other.cod)
-
-    def tensor(self, other: Sample) -> Sample:
-        """ Independent sampling, i.e. the strength ``st.tuples``. """
-        from hypothesis import strategies as st
-
-        def inside(*xs):
-            left, right = xs[:len(self.dom)], xs[len(self.dom):]
-            return st.tuples(self(*left), other(*right)).map(
-                lambda pair: untuplify(tuplify(pair[0]) + tuplify(pair[1])))
-        return type(self)(inside, self.dom + other.dom, self.cod + other.cod)
+        return super().id(tuplify(dom))
 
     @classmethod
     def swap(cls, x: Ty, y: Ty) -> Sample:
@@ -166,11 +163,6 @@ class Sample(MarkovCategory):
 
         return cls.pure(
             inside, sum(doms, ()), sum((doms[i] for i in xs), ()))
-
-    @classmethod
-    def copy(cls, x: Ty, n: int = 2) -> Sample:
-        """ Share a drawn value, i.e. the commutative comonoid. """
-        return cls.pure(lambda *xs: untuplify(n * xs), x, n * x)
 
     @classmethod
     def discard(cls, x: Ty) -> Sample:
