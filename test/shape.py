@@ -82,3 +82,62 @@ def test_Model_typing():
     with raises(AxiomError):
         Model(pair, monoidal.Diagram,
               obs={"x00": x, "x10": y, "x20": x}, ars={"f00": f, "f10": f})
+
+
+def test_TraceNaturality():
+    from discopy import symmetric
+    from discopy.shape import TraceNaturalityLeft
+    traced, u, sliding = find(
+        TraceNaturalityLeft.strategy(symmetric.Diagram), lambda _: True)
+    assert traced.dom == u @ sliding.cod and traced.cod == u @ sliding.dom
+    assert len(traced) >= 1 <= len(sliding)
+
+
+def test_TraceSuperposing():
+    from discopy import symmetric
+    from discopy.shape import TraceSuperposing
+    traced, obj = find(
+        TraceSuperposing.strategy(symmetric.Diagram), lambda _: True)
+    assert traced == symmetric.Id(traced.dom) and len(traced.dom) == 1
+
+
+def test_Currying():
+    from discopy import closed
+    from discopy.shape import LeftCurrying, RightCurrying
+    arrow, base, exponent = find(
+        LeftCurrying.strategy(closed.Diagram), lambda _: True)
+    assert arrow == closed.Diagram.ev(base, exponent, left=True)
+    arrow, base, exponent = find(
+        RightCurrying.strategy(closed.Diagram), lambda _: True)
+    assert arrow == closed.Diagram.ev(base, exponent, left=False)
+
+
+def test_Feedback():
+    from discopy import feedback
+    from discopy.shape import FeedbackJoining, FeedbackVanishing
+    arrow, unit = find(
+        FeedbackVanishing.strategy(feedback.Diagram), lambda _: True)
+    assert unit == feedback.Ty()
+    arrow, mem = find(
+        FeedbackJoining.strategy(feedback.Diagram), lambda _: True)
+    assert len(mem) == 2
+    assert arrow.dom[-2:] == mem.delay() and arrow.cod[-2:] == mem
+
+
+def test_sorted_objects():
+    from discopy.shape import Atomic, NonEmpty, Small
+    assert len(find(
+        Atomic.strategy(monoidal.Diagram), lambda _: True).value) == 1
+    assert len(find(
+        NonEmpty.strategy(monoidal.Diagram), lambda _: True).value) >= 1
+    assert len(find(
+        Small.strategy(monoidal.Diagram), lambda _: True).value) <= 1
+
+
+def test_Bifunctor():
+    from discopy.shape import Bifunctor
+    f, g, h, k = find(
+        Bifunctor.strategy(monoidal.Diagram),
+        lambda model: any(len(cell) for cell in model))
+    assert f.cod == h.dom and g.cod == k.dom
+    assert (f @ g >> h @ k).dom == f.dom @ g.dom

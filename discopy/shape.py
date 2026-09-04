@@ -186,7 +186,9 @@ def names(word) -> list[str]:
     with multiplicity, through whatever structure decorates them: a tensor,
     an exponential, a rotation or a delay.
     """
-    if hasattr(word, "base"):
+    from discopy import biclosed
+
+    if isinstance(word, biclosed.Exp):
         return names(word.base) + names(word.exponent)
     if hasattr(word, "inside"):
         return [name for obj in word.inside for name in names(obj)]
@@ -297,11 +299,20 @@ class Model:
                     f"The image of {box.name} has boundary "
                     f"{image.dom, image.cod}, expected {expected}.")
 
-    def __getitem__(self, name: str):
-        return self.ars[name] if name in self.ars else self.obs[name]
+    def __getitem__(self, key):
+        """ The image of a generator by name, or of a word. """
+        if not isinstance(key, str):
+            return send(key, self.obs, self.carrier)
+        return self.ars[key] if key in self.ars else self.obs[key]
 
     def __iter__(self):
-        return iter(self[name] for name in self.shape.exposed)
+        return iter(self[key] for key in self.shape.exposed)
+
+    @property
+    def value(self):
+        """ The single exposed image of a one-generator shape. """
+        image, = self
+        return image
 
     def __eq__(self, other):
         return isinstance(other, Model) and (
@@ -474,3 +485,142 @@ class Shape:
                     values.append(value)
         return sampler(carrier, **params)(
             self.sampling(tuple(bound)))(*values)
+
+
+class Padded:
+    """
+    A grid shape sampled one active row at a time, the others identities:
+    the degeneracy inserting identity rows, applied to the model after
+    sampling rather than built into the plan.
+    """
+    def __init__(self, n_rows: int, n_columns: int):
+        self.n_rows, self.n_columns = n_rows, n_columns
+        self.row = Shape.grid(1, n_columns)
+        self.full = Shape.grid(n_rows, n_columns)
+
+    def strategy(self, carrier, **params) -> "st.SearchStrategy[Model]":
+        """ Sample a single row and a position to insert it at. """
+        from hypothesis import strategies as st
+
+        def pad(args):
+            active, model = args
+            obs, ars = {}, {}
+            for j in range(self.n_columns):
+                source, target = model[f"x0{j}"], model[f"x1{j}"]
+                for i in range(self.n_rows + 1):
+                    obs[f"x{i}{j}"] = source if i <= active else target
+                for i in range(self.n_rows):
+                    ars[f"f{i}{j}"] = model[f"f0{j}"] if i == active\
+                        else carrier.id(obs[f"x{i}{j}"])
+            return Model(self.full, carrier, obs, ars)
+
+        return st.tuples(
+            st.integers(min_value=0, max_value=self.n_rows - 1),
+            self.row.strategy(carrier, **params)).map(pad)
+
+
+def sorted_object(**sort) -> Shape:
+    """ The shape of a single generating object of the given sort. """
+    return Shape((), obs=(monoidal.Ty("x"), ),
+                 exposed=("x", ), sorts={"x": sort})
+
+
+ComposablePair = Shape.grid(2, 1)
+ComposableTriple = Shape.grid(3, 1)
+HorizontalPair = Shape.grid(1, 2)
+Bifunctor = Padded(2, 2)
+
+Atomic = sorted_object(min_length=1, max_length=1)
+NonEmpty = sorted_object(min_length=1)
+Small = sorted_object(max_length=1)
+
+TraceSuperposing = Shape(
+    boxes=(monoidal.Box("traced", monoidal.Ty("u"), monoidal.Ty("u")), ),
+    obs=(monoidal.Ty("a"), ),
+    exposed=("traced", "a"),
+    sorts={"u": dict(min_length=1, max_length=1)},
+    derived={"traced": lambda carrier, obs: carrier.id(obs["u"])})
+
+TraceNaturalityLeft = Shape(
+    boxes=(
+        monoidal.Box(
+            "traced", monoidal.Ty("u", "b"), monoidal.Ty("u", "a")),
+        monoidal.Box("sliding", monoidal.Ty("a"), monoidal.Ty("b"))),
+    exposed=("traced", "u", "sliding"),
+    sorts={"u": dict(min_length=1),
+           "traced": dict(min_leaves=1), "sliding": dict(min_leaves=1)})
+
+TraceNaturalityRight = Shape(
+    boxes=(
+        monoidal.Box(
+            "traced", monoidal.Ty("b", "u"), monoidal.Ty("a", "u")),
+        monoidal.Box("sliding", monoidal.Ty("a"), monoidal.Ty("b"))),
+    exposed=("traced", "u", "sliding"),
+    sorts={"u": dict(min_length=1),
+           "traced": dict(min_leaves=1), "sliding": dict(min_leaves=1)})
+
+TraceDinaturalityLeft = Shape(
+    boxes=(
+        monoidal.Box(
+            "traced", monoidal.Ty("s", "p"), monoidal.Ty("t", "q")),
+        monoidal.Box("sliding", monoidal.Ty("t"), monoidal.Ty("s"))),
+    exposed=("traced", "sliding"),
+    sorts={"s": dict(min_length=1), "t": dict(min_length=1),
+           "traced": dict(min_leaves=1), "sliding": dict(min_leaves=1)})
+
+TraceDinaturalityRight = Shape(
+    boxes=(
+        monoidal.Box(
+            "traced", monoidal.Ty("p", "s"), monoidal.Ty("q", "t")),
+        monoidal.Box("sliding", monoidal.Ty("t"), monoidal.Ty("s"))),
+    exposed=("traced", "sliding"),
+    sorts={"s": dict(min_length=1), "t": dict(min_length=1),
+           "traced": dict(min_leaves=1), "sliding": dict(min_leaves=1)})
+
+
+def currying(left: bool) -> Shape:
+    """
+    The shape of an evaluation morphism: two atomic objects and the
+    derived cell evaluating the exponential of one by the other.
+    """
+    from discopy import closed
+
+    base, exponent = closed.Ty("base"), closed.Ty("exponent")
+    dom = (base << exponent) @ exponent if left\
+        else exponent @ (exponent >> base)
+    return Shape(
+        boxes=(closed.Box("arrow", dom, base), ),
+        exposed=("arrow", "base", "exponent"),
+        sorts={"base": dict(min_length=1, max_length=1),
+               "exponent": dict(min_length=1, max_length=1)},
+        derived={"arrow": lambda carrier, obs: carrier.ev(
+            obs["base"], obs["exponent"], left=left)})
+
+
+LeftCurrying = currying(left=True)
+RightCurrying = currying(left=False)
+
+
+def feedback_shapes() -> tuple[Shape, Shape, Shape]:
+    """ The vanishing, joining and homogeneous-memory feedback shapes. """
+    from discopy import feedback
+
+    def joining(memory: feedback.Ty) -> Shape:
+        obj = feedback.Ty("o")
+        return Shape(
+            boxes=(feedback.Box(
+                "arrow", obj @ memory.delay(), obj @ memory), ),
+            exposed=("arrow", memory),
+            sorts={name: dict(min_length=1, max_length=1)
+                   for name in names(memory)})
+
+    vanishing = Shape(
+        boxes=(feedback.Box(
+            "arrow", feedback.Ty("x"), feedback.Ty("y")), ),
+        exposed=("arrow", feedback.Ty()))
+    memory = feedback.Ty("m1") @ feedback.Ty("m2")
+    homogeneous = feedback.Ty("m") @ feedback.Ty("m")
+    return vanishing, joining(memory), joining(homogeneous)
+
+
+FeedbackVanishing, FeedbackJoining, HomogeneousMemory = feedback_shapes()
