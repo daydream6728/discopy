@@ -16,7 +16,7 @@
 > sampling as morphisms in the kleisli category, and search strategy
 > derivation as a functor between the two.
 
-- [ ] `Sample`, the Kleisli category of `hypothesis.strategies.SearchStrategy`,
+- [WIP] @e89cefa6-2026-09-04 `Sample`, the Kleisli category of `hypothesis.strategies.SearchStrategy`,
   as a concrete `MarkovCategory` in the `python.Function` mold, with `lift`
   embedding pure functions; tested on its own.
 - [ ] `Shape`, a monoidal computad presented in the doctrine's own free
