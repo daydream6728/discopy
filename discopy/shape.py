@@ -69,7 +69,7 @@ from functools import partial
 from typing import TYPE_CHECKING
 
 from discopy import markov, monoidal
-from discopy.abc import MarkovCategory
+from discopy.abc import Category, MarkovCategory
 from discopy.utils import (
     AxiomError, assert_iscomposable, assert_isinstance, factory, tuplify,
     untuplify)
@@ -90,7 +90,8 @@ class Sample(MarkovCategory):
 
     Parameters:
         inside : A callable from ``dom`` values to a ``SearchStrategy`` of
-            ``cod`` values, untuplified like a :class:`discopy.python.Function`.
+            ``cod`` values, untuplified like a
+            :class:`discopy.python.Function`.
         dom : The tuple of input types.
         cod : The tuple of output types.
 
@@ -250,7 +251,7 @@ class DrawAr(markov.Box):
         super().__init__(f"draw({name})", OB @ OB, AR)
 
 
-def sampler(carrier, **draw_params) -> markov.Functor:
+def sampler(carrier, ob_factory=None, **draw_params) -> markov.Functor:
     """
     The functor evaluating a sampling plan in the Kleisli category: draws
     become the carrier's primitive strategies, :class:`Pure` boxes go
@@ -258,11 +259,15 @@ def sampler(carrier, **draw_params) -> markov.Functor:
 
     Parameters:
         carrier : The class whose instances are sampled.
+        ob_factory : The class objects are drawn from, ``carrier.ob`` by
+            default.
         draw_params : Extra params passed to every arrow draw.
     """
+    ob_factory = carrier.ob if ob_factory is None else ob_factory
+
     def ar_map(box):
         if isinstance(box, DrawOb):
-            return lambda: carrier.ob.strategy(**box.sort)
+            return lambda: ob_factory.strategy(**box.sort)
         if isinstance(box, DrawAr):
             params = dict(draw_params, **box.sort)
             return lambda dom, cod: carrier.strategy(
@@ -372,6 +377,50 @@ class Shape:
     def __repr__(self):
         return f"Shape({list(self.boxes)!r})"
 
+    def __getitem__(self, carrier) -> Sampled:
+        """
+        Instantiate the shape at a carrier, as an axiom annotation like
+        ``ComposablePair[C1]`` resolves it — the carrier is the last
+        subscript, matching ``TraceSuperposing[C0, C1]``.
+        """
+        carrier = carrier[-1] if isinstance(carrier, tuple) else carrier
+        return Sampled(self, carrier)
+
+    def __call__(self, *values) -> Model:
+        """
+        A model from the images of the exposed generators, the remaining
+        objects read off the boundaries of the given arrows — the way a
+        recorded counterexample replays.
+        """
+        box_names = {box.name for box in self.boxes}
+        obs, ars = {}, {}
+        for key, value in zip(self.exposed, values, strict=True):
+            if not isinstance(key, str):
+                atoms = names(key)
+                if len(atoms) != len(value):
+                    raise ValueError(
+                        f"Cannot split {value} over the word {key}.")
+                obs.update({
+                    name: value[i:i + 1]
+                    for i, name in enumerate(atoms)})
+            elif key in box_names:
+                ars[key] = value
+            else:
+                obs[key] = value
+        for box in self.boxes:
+            if box.name not in ars:
+                raise ValueError(f"Missing the image of {box.name}.")
+            image = ars[box.name]
+            for word, boundary in (
+                    (box.dom, image.dom), (box.cod, image.cod)):
+                atoms = names(word)
+                if len(atoms) == 1 and atoms[0] not in obs:
+                    obs[atoms[0]] = boundary
+        carrier = next(
+            (type(value).ar for value in values
+             if isinstance(value, Category)), type(values[0]))
+        return Model(self, carrier, obs, ars)
+
     @classmethod
     def grid(cls, n_rows: int, n_columns: int) -> Shape:
         """
@@ -474,17 +523,53 @@ class Shape:
         The derived search strategy for models of the shape in the carrier:
         the :func:`sampler` functor applied to the :meth:`sampling` plan,
         then to the values of the bound params. Params the shape does not
-        declare are passed to every arrow draw.
+        declare are passed to every arrow draw. A shape with no boxes is
+        instantiated at the object factory itself, e.g. ``Atomic[C0]``.
         """
-        bound, values, draw_params = [], [], {}
+        bound, values = [], []
         for key in self.params:
             value = params.pop(key, None)
             if value is not None:
                 for name in self.params[key]:
                     bound.append(name)
                     values.append(value)
-        return sampler(carrier, **params)(
+        ob_factory = carrier if not self.boxes else None
+        return sampler(carrier, ob_factory=ob_factory, **params)(
             self.sampling(tuple(bound)))(*values)
+
+
+class Sampled:
+    """
+    A shape instantiated at a carrier, with the params its subspace
+    annotations have accumulated: what an axiom annotation resolves to.
+    """
+    def __init__(self, shape, carrier, params: Mapping | None = None):
+        self.shape, self.carrier = shape, carrier
+        self.params = dict(params or {})
+
+    def __repr__(self):
+        return f"{self.shape!r}[{self.carrier.__name__}]"
+
+    def strategy(self, **params) -> "st.SearchStrategy[Model]":
+        """ The derived strategy of the shape in the carrier. """
+        return self.shape.strategy(
+            self.carrier, **dict(self.params, **params))
+
+
+class Refined:
+    """
+    A subspace annotation adding draw params to the shape it subscripts,
+    e.g. ``BoundaryConnected[Bifunctor[C1]]``.
+    """
+    def __init__(self, **params):
+        self.params = params
+
+    def __getitem__(self, inner: Sampled) -> Sampled:
+        return Sampled(
+            inner.shape, inner.carrier, dict(inner.params, **self.params))
+
+
+BoundaryConnected = Refined(boundary_connected=True)
 
 
 class Padded:
@@ -497,6 +582,8 @@ class Padded:
         self.n_rows, self.n_columns = n_rows, n_columns
         self.row = Shape.grid(1, n_columns)
         self.full = Shape.grid(n_rows, n_columns)
+
+    __getitem__ = Shape.__getitem__
 
     def strategy(self, carrier, **params) -> "st.SearchStrategy[Model]":
         """ Sample a single row and a position to insert it at. """
@@ -581,15 +668,18 @@ TraceDinaturalityRight = Shape(
 def currying(left: bool) -> Shape:
     """
     The shape of an evaluation morphism: two atomic objects and the
-    derived cell evaluating the exponential of one by the other.
+    derived cell evaluating the exponential of one by the other. The words
+    are biclosed so that the exponential keeps its handedness, whatever
+    the carrier reads it as: an :class:`discopy.closed.Exp` or the
+    adjoints of a rigid type.
     """
-    from discopy import closed
+    from discopy import biclosed
 
-    base, exponent = closed.Ty("base"), closed.Ty("exponent")
+    base, exponent = biclosed.Ty("base"), biclosed.Ty("exponent")
     dom = (base << exponent) @ exponent if left\
         else exponent @ (exponent >> base)
     return Shape(
-        boxes=(closed.Box("arrow", dom, base), ),
+        boxes=(biclosed.Box("arrow", dom, base), ),
         exposed=("arrow", "base", "exponent"),
         sorts={"base": dict(min_length=1, max_length=1),
                "exponent": dict(min_length=1, max_length=1)},
@@ -624,3 +714,13 @@ def feedback_shapes() -> tuple[Shape, Shape, Shape]:
 
 
 FeedbackVanishing, FeedbackJoining, HomogeneousMemory = feedback_shapes()
+
+
+def catalog() -> dict:
+    """
+    The shapes by name, for evaluating axiom annotations: the scope
+    :meth:`discopy.testing.Axiom.strategy` injects beside ``C0, C1``.
+    """
+    return {
+        name: value for name, value in globals().items()
+        if isinstance(value, (Shape, Padded, Refined))}

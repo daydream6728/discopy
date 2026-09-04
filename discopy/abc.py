@@ -45,14 +45,17 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
-from typing import ClassVar, Generic, TypeVar
+from typing import ClassVar, Generic, TypeVar, TYPE_CHECKING
 
-from discopy.testing import (
-    Axiom, Atomic, Bifunctor, ComposablePair, ComposableTriple,
-    FeedbackJoining, FeedbackVanishing, HorizontalPair,
-    LeftCurrying, NonEmpty, RightCurrying, TraceDinaturalityLeft,
-    TraceDinaturalityRight, TraceNaturalityLeft, TraceNaturalityRight,
-    TraceSuperposing, axiom, declared_axioms)
+from discopy.testing import Axiom, axiom, declared_axioms
+
+if TYPE_CHECKING:
+    from discopy.shape import (
+        Atomic, Bifunctor, ComposablePair, ComposableTriple,
+        FeedbackJoining, FeedbackVanishing, HorizontalPair, LeftCurrying,
+        NonEmpty, RightCurrying, TraceDinaturalityLeft,
+        TraceDinaturalityRight, TraceNaturalityLeft, TraceNaturalityRight,
+        TraceSuperposing)
 from discopy.utils import classproperty, get_origin
 
 

@@ -62,9 +62,7 @@ from warnings import warn
 
 from discopy import cat, drawing, hypergraph, cmap, messages
 from discopy.abc import ColouredMonoid, MonoidalCategory
-from discopy.testing import (
-    Bifunctor, BoundaryConnected, C1, GENERATORS, HorizontalPair, Strategy,
-    axiom)
+from discopy.testing import GENERATORS, Strategy, axiom
 from discopy.drawing import Drawing
 from discopy.config import (
     BOX_DRAWING_ATTRIBUTES, WIRE_DRAWING_ATTRIBUTES,
@@ -83,6 +81,8 @@ from discopy.utils import (
 
 if TYPE_CHECKING:
     import sympy
+    from discopy.shape import HorizontalPair
+    from discopy.testing import C1
 
 
 @dataclass(frozen=True)
@@ -1557,10 +1557,10 @@ class Diagram(
         return super().from_tree(tree)
 
     bifunctoriality = MonoidalCategory.bifunctoriality.modulo(
-        normal_form).weaken(square=BoundaryConnected[Bifunctor[C1]])
+        normal_form).weaken(square="BoundaryConnected[Bifunctor[C1]]")
 
     dagger_monoidality = MonoidalCategory.dagger_monoidality.modulo(
-        normal_form).weaken(pair=BoundaryConnected[HorizontalPair[C1]])
+        normal_form).weaken(pair="BoundaryConnected[HorizontalPair[C1]]")
 
 
 class Box(cat.Box, Diagram):

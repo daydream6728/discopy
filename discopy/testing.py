@@ -7,9 +7,9 @@ from abc import ABC, abstractmethod
 from collections.abc import Mapping
 from dataclasses import dataclass
 from functools import wraps
-from typing import ClassVar, TypeVar, TYPE_CHECKING, get_args, get_origin
+from typing import TypeVar, TYPE_CHECKING, get_args, get_origin
 
-from discopy.utils import AxiomError, assert_iscomposable
+from discopy.utils import AxiomError
 
 if TYPE_CHECKING:
     from hypothesis import strategies as st
@@ -84,400 +84,6 @@ class Natural(int, Strategy["Natural"]):
         return st.one_of(
             st.just(1),
             st.integers(min_value=0, max_value=max_size)).map(cls)
-
-
-@dataclass(frozen=True)
-class Atomic[T](Strategy[T]):
-    """ An object containing exactly one generator. """
-
-    value: T
-
-    def __post_init__(self):
-        if len(self.value) != 1:
-            raise ValueError("Expected an atomic object.")
-
-    @classmethod
-    def strategy(cls, *, factory: type[T]):
-        """Generate an object containing exactly one generator."""
-        return factory.strategy().filter(
-            lambda value: len(value) == 1).map(cls)
-
-
-@dataclass(frozen=True)
-class NonEmpty[T](Strategy[T]):
-    """ A non-empty object. """
-
-    value: T
-
-    def __post_init__(self):
-        if not len(self.value):
-            raise ValueError("Expected a non-empty object.")
-
-    @classmethod
-    def strategy(cls, *, factory: type[T], **params):
-        """Generate a non-empty object."""
-        return factory.strategy(**params).filter(bool).map(cls)
-
-
-@dataclass(frozen=True)
-class Small[T](Strategy[T]):
-    """ An object of length at most one. """
-
-    value: T
-
-    def __post_init__(self):
-        if len(self.value) > 1:
-            raise ValueError("Expected an object of length at most one.")
-
-    @classmethod
-    def strategy(cls, *, factory, **params):
-        """Generate an object of length at most one."""
-        return resolve(factory, **params).filter(
-            lambda value: len(value) <= 1).map(cls)
-
-
-def is_boundary_connected(term) -> bool:
-    """
-    Whether the boundary of a term reaches every box, through its
-    hypergraph when it has one — falling back to the components of its
-    combinatorial map where the hypergraph is partial, e.g. on the
-    left-handed cups and caps of a rigid diagram.
-    """
-    if hasattr(term, "is_boundary_connected"):
-        return term.is_boundary_connected
-    try:
-        return term.to_hypergraph().is_boundary_connected
-    except (AxiomError, NotImplementedError):
-        return all(
-            len(component.dom) or len(component.cod)
-            for component in term.to_map().connected_components)
-
-
-@dataclass(frozen=True)
-class BoundaryConnected[T](Strategy[T]):
-    """
-    A term whose boundary reaches every box — a diagram, a hypergraph, a
-    combinatorial map, or a pasting diagram of them.
-    """
-
-    value: T
-
-    def __post_init__(self):
-        cells = self.value if isinstance(self.value, tuple)\
-            else (self.value, )
-        for cell in cells:
-            if not is_boundary_connected(cell):
-                raise ValueError("Expected a boundary-connected term.")
-
-    @classmethod
-    def strategy(cls, *, factory, **params):
-        """Generate from the factory restricted to connected terms."""
-        return resolve(
-            factory, boundary_connected=True, **params).map(cls)
-
-
-class PastingDiagram[T](Strategy[tuple[T, ...]], tuple[T, ...]):
-    """ A rectangular grid with composable rows and columns. """
-
-    n_rows: ClassVar[int]
-    n_columns: ClassVar[int]
-    n_active_rows: ClassVar[int] = 1
-
-    def __new__(cls, *cells: T):
-        if len(cells) != cls.n_rows * cls.n_columns:
-            raise ValueError("Expected one value per cell.")
-        for row in range(cls.n_rows - 1):
-            for column in range(cls.n_columns):
-                i = row * cls.n_columns + column
-                assert_iscomposable(cells[i], cells[i + cls.n_columns])
-        for row in range(cls.n_rows):
-            for column in range(cls.n_columns - 1):
-                i = row * cls.n_columns + column
-                cells[i] @ cells[i + 1]
-        return super().__new__(cls, cells)
-
-    @classmethod
-    def strategy(cls, *, factory: type[T], **params):
-        """Generate a grid column-by-column using composable boundaries."""
-        from hypothesis import strategies as st
-
-        dom, cod = params.pop("dom", None), params.pop("cod", None)
-
-        @st.composite
-        def pasting_diagram(draw):
-            active = draw(st.integers(
-                min_value=0,
-                max_value=cls.n_rows - cls.n_active_rows))
-            columns = []
-            for _ in range(cls.n_columns):
-                column, boundary = [], dom
-                for row in range(cls.n_active_rows):
-                    cell = draw(factory.strategy(
-                        dom=boundary,
-                        cod=cod if row == cls.n_active_rows - 1 else None,
-                        **params))
-                    column.append(cell)
-                    boundary = cell.cod
-                columns.append(
-                    active * [factory.id(column[0].dom)]
-                    + column
-                    + (cls.n_rows - active - cls.n_active_rows)
-                    * [factory.id(column[-1].cod)])
-            return cls(*(
-                columns[column][row]
-                for row in range(cls.n_rows)
-                for column in range(cls.n_columns)))
-
-        return pasting_diagram()
-
-
-class ComposablePair[T](PastingDiagram[T], tuple[T, T]):
-    """ Two morphisms composable from left to right. """
-
-    n_rows, n_columns = 2, 1
-    n_active_rows = 2
-
-
-class ComposableTriple[T](PastingDiagram[T], tuple[T, T, T]):
-    """ Three values composable from left to right. """
-
-    n_rows, n_columns = 3, 1
-    n_active_rows = 3
-
-
-class HorizontalPair[T](PastingDiagram[T], tuple[T, T]):
-    """ Two horizontally composable cells. """
-
-    n_rows, n_columns = 1, 2
-
-
-class Bifunctor[T](PastingDiagram[T], tuple[T, T, T, T]):
-    """ A two-by-two pasting diagram for bifunctoriality. """
-
-    n_rows = n_columns = 2
-
-
-class TraceSuperposing[C0, C1](
-        Strategy[tuple[C1, C0]], tuple[C1, C0]):
-    """ A traceable arrow and an object to superpose. """
-
-    def __new__(cls, traced: C1, obj: C0):
-        traced.trace()
-        return super().__new__(cls, (traced, obj))
-
-    @classmethod
-    def strategy(cls, *, factory: type[C1]):
-        """Generate a traceable identity and an arbitrary object."""
-        from hypothesis import strategies as st
-
-        object_type, arrow_type = factory.ob, factory
-        objects = object_type.strategy()
-        atomic = object_type.strategy().filter(lambda obj: len(obj) == 1)
-        return st.tuples(atomic, objects).map(
-            lambda pair: cls(arrow_type.id(pair[0]), pair[1]))
-
-
-class TraceSliding[C0, C1](
-        Strategy[tuple[C1, C0, C1]], tuple[C1, C0, C1]):
-    """ Arguments for trace sliding over an arbitrary traced type. """
-
-    left: ClassVar[bool]
-
-    def __new__(cls, traced: C1, obj: C0, sliding: C1):
-        traced_dom = obj @ sliding.cod if cls.left else sliding.cod @ obj
-        traced_cod = obj @ sliding.dom if cls.left else sliding.dom @ obj
-        if (traced.dom, traced.cod) != (traced_dom, traced_cod):
-            raise ValueError("Expected compatible trace sliding boundaries.")
-        return super().__new__(cls, (traced, obj, sliding))
-
-    @classmethod
-    def strategy(cls, *, factory: type[C1]):
-        """Generate non-trivial morphisms with compatible trace boundaries."""
-        from hypothesis import strategies as st
-
-        objects = factory.ob.strategy()
-        traced = factory.ob.strategy(min_length=1)
-
-        def morphisms(args):
-            obj, dom, cod = args
-            traced_dom = obj @ cod if cls.left else cod @ obj
-            traced_cod = obj @ dom if cls.left else dom @ obj
-            return st.tuples(
-                factory.strategy(
-                    dom=traced_dom, cod=traced_cod, min_leaves=1),
-                factory.strategy(dom=dom, cod=cod, min_leaves=1)).map(
-                    lambda pair: cls(pair[0], obj, pair[1]))
-
-        return st.tuples(traced, objects, objects).flatmap(morphisms)
-
-
-class TraceNaturalityLeft[C0, C1](TraceSliding[C0, C1]):
-    """ Arguments for left-oriented trace naturality. """
-
-    left = True
-
-
-class TraceNaturalityRight[C0, C1](TraceSliding[C0, C1]):
-    """ Arguments for right-oriented trace naturality. """
-
-    left = False
-
-
-class TraceDinaturality[C0, C1](
-        Strategy[tuple[C1, C1]], tuple[C1, C1]):
-    """ A traceable arrow and an arrow to slide around its trace. """
-
-    left: ClassVar[bool]
-
-    def __new__(cls, traced: C1, sliding: C1):
-        traced_in, traced_out = (
-            (traced.dom[:len(sliding.cod)], traced.cod[:len(sliding.dom)])
-            if cls.left else
-            (traced.dom[-len(sliding.cod):], traced.cod[-len(sliding.dom):]))
-        if (traced_in, traced_out) != (sliding.cod, sliding.dom):
-            raise ValueError("Expected compatible trace sliding boundaries.")
-        return super().__new__(cls, (traced, sliding))
-
-    @classmethod
-    def strategy(cls, *, factory: type[C1]):
-        """Generate an arrow sliding between two traced objects."""
-        from hypothesis import strategies as st
-
-        objects = factory.ob.strategy()
-        traced = factory.ob.strategy(min_length=1)
-
-        def arrows(args):
-            base, cobase, source, target = args
-            traced_dom = source @ base if cls.left else base @ source
-            traced_cod = target @ cobase if cls.left else cobase @ target
-            return st.tuples(
-                factory.strategy(
-                    dom=traced_dom, cod=traced_cod, min_leaves=1),
-                factory.strategy(
-                    dom=target, cod=source, min_leaves=1)).map(
-                        lambda pair: cls(*pair))
-
-        return st.tuples(objects, objects, traced, traced).flatmap(arrows)
-
-
-class TraceDinaturalityLeft[C0, C1](TraceDinaturality[C0, C1]):
-    """ Arguments for left-oriented trace dinaturality. """
-
-    left = True
-
-
-class TraceDinaturalityRight[C0, C1](TraceDinaturality[C0, C1]):
-    """ Arguments for right-oriented trace dinaturality. """
-
-    left = False
-
-
-class LeftCurrying[C0, C1](
-        Strategy[tuple[C1, C0, C0]], tuple[C1, C0, C0]):
-    """ Arguments for left currying followed by evaluation. """
-
-    left = True
-
-    def __new__(cls, arrow: C1, base: C0, exponent: C0):
-        exponential = base << exponent if cls.left else exponent >> base
-        arrow_dom = exponential @ exponent if cls.left\
-            else exponent @ exponential
-        if (arrow.dom, arrow.cod) != (arrow_dom, base):
-            raise ValueError("Expected an evaluation morphism.")
-        return super().__new__(cls, (arrow, base, exponent))
-
-    @classmethod
-    def strategy(cls, *, factory: type[C1]):
-        """Generate an evaluation suitable for left or right currying."""
-        from hypothesis import strategies as st
-
-        object_type, arrow_type = factory.ob, factory
-        objects = object_type.strategy().filter(lambda obj: len(obj) == 1)
-        return st.tuples(objects, objects).map(lambda pair: cls(
-            arrow_type.ev(*pair, left=cls.left), *pair))
-
-
-class RightCurrying[C0, C1](LeftCurrying[C0, C1]):
-    """ Arguments for right currying followed by evaluation. """
-
-    left = False
-
-
-class FeedbackVanishing[C0, C1](
-        Strategy[tuple[C1, C0]], tuple[C1, C0]):
-    """ A feedback arrow together with the monoidal unit. """
-
-    def __new__(cls, arrow: C1, unit: C0):
-        if len(unit):
-            raise ValueError("Expected the monoidal unit.")
-        arrow.feedback(mem=unit)
-        return super().__new__(cls, (arrow, unit))
-
-    @classmethod
-    def strategy(cls, *, factory: type[C1], **params):
-        """Generate a feedback arrow paired with the monoidal unit."""
-        object_type, arrow_type = factory.ob, factory
-        return arrow_type.strategy(**params).map(
-            lambda arrow: cls(arrow, object_type()))
-
-
-class FeedbackJoining[C0, C1](
-        Strategy[tuple[C1, C0]], tuple[C1, C0]):
-    """ A feedback arrow with at least two units of memory. """
-
-    def __new__(cls, arrow: C1, memory: C0):
-        if len(memory) < 2:
-            raise ValueError("Expected at least two units of memory.")
-        if arrow.dom[-len(memory):] != memory.delay():
-            raise ValueError("Expected the delayed memory in the domain.")
-        if arrow.cod[-len(memory):] != memory:
-            raise ValueError("Expected the memory in the codomain.")
-        return super().__new__(cls, (arrow, memory))
-
-    @classmethod
-    def strategy(cls, *, factory: type[C1]):
-        """Generate a feedback arrow with two units of memory."""
-        from hypothesis import strategies as st
-
-        object_type, arrow_type = factory.ob, factory
-        objects = object_type.strategy()
-        atomic = object_type.strategy().filter(lambda obj: len(obj) == 1)
-
-        def arrows(args):
-            obj, first, second = args
-            memory = first @ second
-            return arrow_type.strategy(
-                dom=obj @ memory.delay(), cod=obj @ memory).map(
-                    lambda arrow: cls(arrow, memory))
-
-        return st.tuples(objects, atomic, atomic).flatmap(arrows)
-
-
-class HomogeneousMemory[C0, C1](FeedbackJoining[C0, C1]):
-    """ A feedback arrow whose units of memory are all the same object. """
-
-    def __new__(cls, arrow: C1, memory: C0):
-        if any(memory[i:i + 1] != memory[:1] for i in range(len(memory))):
-            raise ValueError("Expected homogeneous memory.")
-        return super().__new__(cls, arrow, memory)
-
-    @classmethod
-    def strategy(cls, *, factory: type[C1]):
-        """Generate a feedback arrow with two units of the same memory."""
-        from hypothesis import strategies as st
-
-        object_type, arrow_type = factory.ob, factory
-        objects = object_type.strategy()
-        atomic = object_type.strategy().filter(lambda obj: len(obj) == 1)
-
-        def arrows(args):
-            obj, atom = args
-            memory = atom @ atom
-            return arrow_type.strategy(
-                dom=obj @ memory.delay(), cod=obj @ memory).map(
-                    lambda arrow: cls(arrow, memory))
-
-        return st.tuples(objects, atomic).flatmap(arrows)
 
 
 @dataclass(frozen=True, eq=False)
@@ -682,9 +288,11 @@ class Axiom[T]:
         """
         from hypothesis import strategies as st
 
+        from discopy import shape
+
         function = inspect.unwrap(self.equation)
         source = self.carrier.dom if self.is_method else self.carrier
-        scope = {"C0": source.ob, "C1": source.ar}
+        scope = dict(shape.catalog(), C0=source.ob, C1=source.ar)
         annotations = inspect.get_annotations(
             function, globals=function.__globals__, locals=scope,
             eval_str=True)
@@ -750,9 +358,7 @@ class Axiom[T]:
         signature = self.signature.replace(parameters=self.parameters)
         bound = signature.bind(*args, **kwargs)
         bound.apply_defaults()
-        arguments = {
-            name: value.value if name in self.subspaces else value
-            for name, value in bound.arguments.items()}
+        arguments = dict(bound.arguments)
         if self.is_method:
             return self.equation(**arguments)
         return self.equation(
@@ -765,7 +371,11 @@ def axiom(equation) -> Axiom:
 
 
 def resolve(annotation, **params) -> "st.SearchStrategy":
-    """ Resolve the strategy implemented by an annotated type. """
+    """ Resolve the strategy implemented by an annotated type or shape. """
+    from discopy import shape
+
+    if isinstance(annotation, shape.Sampled):
+        return annotation.strategy(**params)
     origin = get_origin(annotation) or annotation
     if not isinstance(origin, type) or not issubclass(origin, Strategy):
         raise TypeError(
@@ -778,8 +388,13 @@ def resolve(annotation, **params) -> "st.SearchStrategy":
 def substitute(annotation, scope: dict):
     """
     Replace the :obj:`C0` and :obj:`C1` type variables of a subspace
-    annotation by the objects and arrows they stand for.
+    annotation by the objects and arrows they stand for. A string is
+    evaluated lazily in the shape catalog, so that a module can weaken an
+    axiom without importing :mod:`discopy.shape` at import time.
     """
+    if isinstance(annotation, str):
+        from discopy import shape
+        return eval(annotation, dict(shape.catalog(), **scope))
     if isinstance(annotation, TypeVar):
         return scope[annotation.__name__]
     if args := get_args(annotation):

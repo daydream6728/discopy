@@ -78,7 +78,13 @@ from discopy.abc import MarkovCategory
 from discopy.cat import factory
 from discopy.monoidal import Ty  # noqa: F401
 from discopy.utils import assert_isatomic, factory_name, from_tree
-from discopy.testing import Atomic, C0, axiom
+from typing import TYPE_CHECKING
+
+from discopy.testing import axiom
+
+if TYPE_CHECKING:
+    from discopy.shape import Atomic
+    from discopy.testing import C0
 
 Layer = symmetric.Layer
 

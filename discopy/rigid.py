@@ -151,7 +151,7 @@ import copy
 
 from collections.abc import Callable
 
-from typing import Iterator
+from typing import Iterator, TYPE_CHECKING
 
 from discopy import cat, monoidal, biclosed, messages
 from discopy.abc import Category, Pregroup, RigidCategory
@@ -164,7 +164,11 @@ from discopy.utils import (
     deprecated_ob,
     factory_name,
 )
-from discopy.testing import Atomic, C0, GENERATORS, axiom
+from discopy.testing import GENERATORS, axiom
+
+if TYPE_CHECKING:
+    from discopy.shape import Atomic
+    from discopy.testing import C0
 
 
 class Wire(monoidal.Wire):

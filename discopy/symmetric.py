@@ -99,7 +99,13 @@ from discopy.monoidal import Wire, Ty, PRO  # noqa: F401
 from discopy.python import finset
 from discopy.utils import (
     AxiomError, assert_iscomposable, classproperty, factory_name, from_tree)
-from discopy.testing import Atomic, C0, axiom
+from typing import TYPE_CHECKING
+
+from discopy.testing import axiom
+
+if TYPE_CHECKING:
+    from discopy.shape import Atomic
+    from discopy.testing import C0
 
 
 class Layer(monoidal.Layer):
