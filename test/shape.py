@@ -141,3 +141,14 @@ def test_Bifunctor():
         lambda model: any(len(cell) for cell in model))
     assert f.cod == h.dom and g.cod == k.dom
     assert (f @ g >> h @ k).dom == f.dom @ g.dom
+
+
+def test_chain_projection():
+    from discopy.shape import ComposableTriple
+    F, G, H = find(
+        ComposableTriple.strategy(cat.Functor),
+        lambda model: all(functor.ob_map for functor in model))
+    assert (F >> G).cod == G.cod
+    with raises(NotImplementedError):
+        from discopy.shape import TraceNaturalityLeft
+        TraceNaturalityLeft.chain_sampling()
