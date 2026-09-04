@@ -125,13 +125,13 @@ def test_Feedback():
 
 
 def test_sorted_objects():
-    from discopy.shape import Atomic, NonEmpty, Small
+    from discopy.shape import Atomic, NonEmpty, Subsingleton
     assert len(find(
         Atomic.strategy(monoidal.Ty), lambda _: True).value) == 1
     assert len(find(
         NonEmpty.strategy(monoidal.Ty), lambda _: True).value) >= 1
     assert len(find(
-        Small.strategy(monoidal.Ty), lambda _: True).value) <= 1
+        Subsingleton.strategy(monoidal.Ty), lambda _: True).value) <= 1
 
 
 def test_Bifunctor():

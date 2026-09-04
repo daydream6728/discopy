@@ -11,6 +11,15 @@ balanced, symmetric, biclosed, rigid, pivotal, ribbon, compact, markov,
 closed, feedback, frobenius) in the matrix. `hopf` is deferred (see
 below). See the base branch's BUGS.md for the axiom-infrastructure slice.
 
+## Representation reads back one type down
+
+`monoidal.Wire.__repr__` prints a white wire as the plain `cat.Ob` of old
+dumps, which `Ty.cast_wire` upgrades inside a type but a bare `eval` does
+not, so `eval(repr(wire)) == wire` fails on the wire itself while holding
+for every type containing it. Surfaced by the `transparency` law of the
+base branch meeting this slice's carriers; open, declared on
+`monoidal.Wire`.
+
 ## Serialisation inherited with the wrong signature
 
 A structural box inherited `__repr__`, `to_tree` or `from_tree` from `Box`

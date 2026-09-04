@@ -1,237 +1,244 @@
-# -*- coding: utf-8 -*-
+""" DisCoPy's property-testing module in action. """
 
-"""
-One test for each shape of :mod:`discopy.shape` as the axioms use it: its
-constructor accepts valid images and rejects badly typed ones, and its
-derived search strategy reaches every shape of argument the axioms expect.
-Whether the axioms hold is checked over every category in ``proptest/``.
-"""
+from __future__ import annotations
 
 from hypothesis import find
+from hypothesis import strategies as st
 from pytest import raises
 
-from discopy import biclosed, cat, feedback, monoidal, traced
-from discopy.shape import (
-    Atomic, Bifunctor, BoundaryConnected, ComposablePair, ComposableTriple,
-    FeedbackJoining, FeedbackVanishing, HomogeneousMemory, HorizontalPair,
-    LeftCurrying, NonEmpty, RightCurrying, Small, TraceDinaturalityLeft,
-    TraceDinaturalityRight, TraceNaturalityLeft, TraceNaturalityRight,
-    TraceSuperposing)
-from discopy.testing import Natural, axiom
-from discopy.utils import AxiomError
+from discopy import cat, closed, feedback, rigid, symmetric, testing
+from discopy.abc import Equation as AbstractEquation
+from discopy.cat import Arrow, Box, Equation, Functor, Ob
+from discopy.shape import Atomic, ComposablePair, NonEmpty
+from discopy.testing import (
+    C0, C1, Axiom, AxiomFailure, Natural, Relabelling, Strategy,
+    assert_axioms, assert_strategy_finds, axiom, resolve)
+from discopy.utils import AxiomError, factory
 
 
-def test_Natural():
-    assert Natural(2) @ Natural(3) == 5 == len(Natural(5))
-    assert Natural.equation_factory(Natural(1), Natural(1))
+class TypeStrategy(Strategy):
+    """ Generate a type of length at most two over three atomic names. """
+
+    @classmethod
+    def strategy(cls, *, min_length=0):
+        return st.lists(
+            st.sampled_from("uvw"),
+            min_size=min_length, max_size=2).map(lambda names: cls(*names))
+
+
+class BoxStrategy(Strategy):
+    """ Generate a single generator box with the requested boundary. """
+
+    box_factory: type
+
+    @classmethod
+    def strategy(cls, *, dom=None, cod=None, **params):
+        doms = cls.ob.strategy() if dom is None else st.just(dom)
+        cods = cls.ob.strategy() if cod is None else st.just(cod)
+        return st.tuples(doms, cods).map(
+            lambda pair: cls.box_factory("f", *pair))
+
+
+@factory
+class TracedTy(TypeStrategy, symmetric.Ty):
+    """ The objects of a toy traced category. """
+
+
+@factory
+class TracedDiagram(BoxStrategy, symmetric.Diagram):
+    """ The arrows of a toy traced category. """
+    ob = TracedTy
+
+
+class TracedBox(symmetric.Box, TracedDiagram):
+    """ A generator of the toy traced category. """
+
+
+@factory
+class ClosedTy(TypeStrategy, closed.Ty):
+    """ The objects of a toy closed category. """
+
+
+@factory
+class ClosedDiagram(closed.Diagram):
+    """ The arrows of a toy closed category. """
+    ob = ClosedTy
+
+
+@factory
+class FeedbackTy(TypeStrategy, feedback.Ty):
+    """ The objects of a toy feedback category. """
+
+
+@factory
+class FeedbackDiagram(BoxStrategy, feedback.Diagram):
+    """ The arrows of a toy feedback category. """
+    ob = FeedbackTy
+
+
+class FeedbackBox(feedback.Box, FeedbackDiagram):
+    """ A generator of the toy feedback category. """
+
+
+TracedDiagram.box_factory = TracedBox
+FeedbackDiagram.box_factory = FeedbackBox
+
+
+def test_axioms():
+    assert_axioms(Arrow, Functor)
+
+
+def test_strategy():
+    assert_strategy_finds(TracedDiagram, TracedBox)
+    x, y = Ob('x'), Ob('y')
+    find(Ob.strategy(), lambda ob: ob.name == "a")
+    assert find(Arrow.strategy(dom=x, cod=x), lambda _: True) == Arrow.id(x)
+    assert find(Arrow.strategy(dom=x, cod=y), lambda _: True).cod == y
+    assert find(Arrow.strategy(dom=x), lambda _: True).dom == x
+    assert find(Arrow.strategy(cod=y), lambda _: True).cod == y
+    assert find(Box.strategy(dom=x), lambda _: True).dom == x
+
+
+def test_element_laws():
+    box = Box('f', Ob('x'), Ob('y'))
+    assert Arrow.transparency(box) and Arrow.pickling(box)
+    assert Arrow.serialisation(box)
+    assert Functor.serialisation() is NotImplemented
+    assert "transparency" in Natural.axioms
+    assert Natural.transparency(Natural(2)) and Natural.pickling(Natural(2))
+
+    class Bare(Natural):
+        """ A number whose representation prints its bare class name. """
+        def __repr__(self):
+            return f"Bare({int(self)})"
+
+        @classmethod
+        def environment(cls):
+            return {"Bare": cls}
+
+    assert Bare.transparency(Bare(2)) and "Bare" not in Natural.environment()
+    with raises(NameError):
+        eval(repr(Bare(2)), Natural.environment())
+
+
+def test_natural():
+    assert Natural() == 0 and Natural(2) @ Natural(3) == Natural(5)
+    assert len(Natural(3)) == 3
+    assert Natural(1).__matmul__("x") is NotImplemented
     with raises(ValueError):
         Natural(-1)
-    find(Natural.strategy(), lambda value: value == 0)
-    find(Natural.strategy(), lambda value: value > 1)
+    assert repr(Natural(2)) == "testing.Natural(2)"
+    assert eval(repr(Natural(2))) == testing.Natural(2)
+    assert Natural.equation_factory(Natural(1), Natural(1))
+    assert find(Natural.strategy(), lambda number: number == 1) == 1
+def test_relabelling():
+    x, y, z = Ob('x'), Ob('y'), Ob('z')
+    relabelling = Relabelling(((x, y), ))
+    assert relabelling[x] == y and relabelling[z] == z
+    assert relabelling[Box('f', x, z)] == Box('f', y, z)
+    assert list(relabelling) == [x] and len(relabelling) == 1
+    assert bool(Relabelling())
+    rigid_x, rigid_y = rigid.Ty('x'), rigid.Ty('y')
+    rotating = Relabelling(((rigid_x, rigid_y), ))
+    functor = rigid.Functor(rotating, rotating)
+    assert functor(rigid_x.l) == rigid_y.l and functor(rigid_x.r) == rigid_y.r
+    rotated = rigid.Box('f', rigid_x.r, rigid_x @ rigid_x)
+    assert rotating[rotated] == rigid.Box('f', rigid_y.r, rigid_y @ rigid_y)
+    assert functor(rotated >> rotated.dagger()) == functor(rotated)\
+        >> functor(rotated).dagger()
+    u, v = feedback.Ty('u'), feedback.Ty('v')
+    delaying = Relabelling(((u, v), ))
+    delayed = feedback.Box('g', u.delay(), u)
+    assert delaying[delayed] == feedback.Box('g', v.delay(), v)
+    assert feedback.Functor(delaying, delaying)(u.delay()) == v.delay()
 
 
-def test_Atomic():
-    x = monoidal.Ty('x')
-    assert Atomic(x).value == x
-    find(Atomic.strategy(monoidal.Ty), lambda model: len(model.value) == 1)
+def test_monoid_axioms():
+    x, y, z = TracedTy('u'), TracedTy('v'), TracedTy('w')
+    assert TracedTy.monoid_unitality(x)
+    assert TracedTy.monoid_associativity((x, y, z))
 
 
-def test_NonEmpty():
-    x = monoidal.Ty('x')
-    assert NonEmpty(x).value == x
-    find(NonEmpty.strategy(monoidal.Ty), lambda model: len(model.value) > 1)
-
-
-def test_Small():
-    x = monoidal.Ty('x')
-    assert Small(x).value == x
-    find(Small.strategy(monoidal.Ty), lambda model: len(model.value) == 1)
-
-
-def test_ComposablePair():
-    x, y = map(cat.Ob, "xy")
-    f, g = cat.Box('f', x, y), cat.Box('g', y, x)
-    assert tuple(ComposablePair(f, g)) == (f, g)
-    with raises(ValueError):
-        ComposablePair(f)
-    with raises(AxiomError):
-        ComposablePair(f, f)
-    find(ComposablePair.strategy(cat.Arrow),
-         lambda model: all(term.inside for term in model))
-
-
-def test_ComposableTriple():
-    x, y = map(cat.Ob, "xy")
-    f, g = cat.Box('f', x, y), cat.Box('g', y, x)
-    assert tuple(ComposableTriple(f, g, f)) == (f, g, f)
-    with raises(AxiomError):
-        ComposableTriple(f, f, f)
-    find(ComposableTriple.strategy(cat.Arrow),
-         lambda model: all(term.inside for term in model))
-
-
-def test_HorizontalPair():
-    x, y = map(monoidal.Ty, "xy")
-    f, g = monoidal.Box('f', x, y), monoidal.Box('g', y, x)
-    assert tuple(HorizontalPair(f, g)) == (f, g)
-    with raises(ValueError):
-        HorizontalPair(f)
-    find(HorizontalPair.strategy(monoidal.Diagram),
-         lambda model: all(term.boxes for term in model))
-
-
-def test_Bifunctor():
-    x, y = map(monoidal.Ty, "xy")
-    f, g = monoidal.Box('f', x, y), monoidal.Box('g', y, x)
-    assert tuple(Bifunctor(f, f, g, g)) == (f, f, g, g)
-    with raises(AxiomError):
-        Bifunctor(f, f, f, f)
-    find(Bifunctor.strategy(monoidal.Diagram),
-         lambda model: all(
-             cells[column].boxes or cells[column + 2].boxes
-             for cells in (tuple(model), ) for column in range(2)))
-
-
-def test_BoundaryConnected():
-    connected = BoundaryConnected[HorizontalPair[monoidal.Diagram]]
-    find(connected.strategy(),
-         lambda model: all(term.boxes for term in model))
-
-
-def test_TraceSuperposing():
-    x, y, z = map(traced.Ty, "xyz")
-    assert tuple(TraceSuperposing(traced.Id(x), y)) == (traced.Id(x), y)
-    with raises(AxiomError):
-        TraceSuperposing(traced.Box('f', x, y), z)
-    find(TraceSuperposing.strategy(traced.Diagram),
-         lambda model: len(tuple(model)[1]) > 1)
-
-
-def test_TraceNaturalityLeft():
-    x, y = map(traced.Ty, "xy")
-    f, g = traced.Box('f', x @ y, x @ x), traced.Box('g', x, y)
-    assert tuple(TraceNaturalityLeft(f, x, g)) == (f, x, g)
-    with raises(AxiomError):
-        TraceNaturalityLeft(traced.Id(x @ y), x, traced.Id(x))
-    find(TraceNaturalityLeft.strategy(traced.Diagram),
-         lambda model: tuple(model)[2].dom != tuple(model)[2].cod)
-
-
-def test_TraceNaturalityRight():
-    x, y = map(traced.Ty, "xy")
-    f, g = traced.Box('f', y @ x, x @ x), traced.Box('g', x, y)
-    assert tuple(TraceNaturalityRight(f, x, g)) == (f, x, g)
-    with raises(AxiomError):
-        TraceNaturalityRight(traced.Id(x @ y), x, traced.Id(y))
-    find(TraceNaturalityRight.strategy(traced.Diagram),
-         lambda model: tuple(model)[2].dom != tuple(model)[2].cod)
-
-
-def test_TraceDinaturalityLeft():
-    x, y, z = map(traced.Ty, "xyz")
-    f, g = traced.Box('f', x @ z, y @ z), traced.Box('g', y, x)
-    assert tuple(TraceDinaturalityLeft(f, g)) == (f, g)
-    with raises(AxiomError):
-        TraceDinaturalityLeft(g, f)
-    find(TraceDinaturalityLeft.strategy(traced.Diagram),
-         lambda model: tuple(model)[1].dom != tuple(model)[1].cod)
-
-
-def test_TraceDinaturalityRight():
-    x, y, z = map(traced.Ty, "xyz")
-    f, g = traced.Box('f', z @ x, z @ y), traced.Box('g', y, x)
-    assert tuple(TraceDinaturalityRight(f, g)) == (f, g)
-    with raises(AxiomError):
-        TraceDinaturalityRight(g, f)
-    traced_image, sliding = find(
-        TraceDinaturalityRight.strategy(traced.Diagram),
-        lambda model: tuple(model)[1].dom != tuple(model)[1].cod)
-    assert traced_image.dom[-len(sliding.cod):] == sliding.cod
-    assert traced_image.cod[-len(sliding.dom):] == sliding.dom
-
-
-def test_LeftCurrying():
-    x, y = map(biclosed.Ty, "xy")
-    evaluation = biclosed.Diagram.ev(x, y, left=True)
-    assert tuple(LeftCurrying(evaluation, x, y)) == (evaluation, x, y)
-    with raises(AxiomError):
-        LeftCurrying(evaluation, y, x)
-    find(LeftCurrying.strategy(biclosed.Diagram),
-         lambda model: tuple(model)[1] != tuple(model)[2])
-
-
-def test_RightCurrying():
-    x, y = map(biclosed.Ty, "xy")
-    evaluation = biclosed.Diagram.ev(x, y, left=False)
-    assert tuple(RightCurrying(evaluation, x, y)) == (evaluation, x, y)
-    with raises(AxiomError):
-        RightCurrying(evaluation, y, x)
-    find(RightCurrying.strategy(biclosed.Diagram),
-         lambda model: tuple(model)[1] != tuple(model)[2])
-
-
-def test_FeedbackVanishing():
-    x = feedback.Ty('x')
-    f, unit = feedback.Box('f', x, x), feedback.Ty()
-    assert tuple(FeedbackVanishing(f, unit)) == (f, unit)
-    with raises(ValueError):
-        FeedbackVanishing(f, x)
-    find(FeedbackVanishing.strategy(feedback.Diagram),
-         lambda model: tuple(model)[0].boxes)
-
-
-def test_FeedbackJoining():
-    x, y, z = map(feedback.Ty, "xyz")
-    memory = y @ z
-    f = feedback.Box('f', x @ memory.delay(), x @ memory)
-    assert tuple(FeedbackJoining(f, memory)) == (f, memory)
-    with raises(ValueError):
-        FeedbackJoining(f, feedback.Ty())
-    with raises(AxiomError):
-        FeedbackJoining(feedback.Box('g', x @ memory, x @ memory), memory)
-    with raises(AxiomError):
-        FeedbackJoining(
-            feedback.Box('g', x @ memory.delay(), x @ memory.delay()),
-            memory)
-    arrow, mem = find(FeedbackJoining.strategy(feedback.Diagram),
-                      lambda model: tuple(model)[1][:1] != tuple(model)[1][1:])
-    assert arrow.cod[-2:] == mem
-
-
-def test_HomogeneousMemory():
-    x, m = map(feedback.Ty, "xm")
-    f = feedback.Box('f', x @ (m @ m).delay(), x @ m @ m)
-    assert HomogeneousMemory(f, m @ m)
-    n = feedback.Ty('n')
-    g = feedback.Box('g', x @ (m @ n).delay(), x @ m @ n)
-    with raises(AxiomError):
-        HomogeneousMemory(g, m @ n)
-    find(HomogeneousMemory.strategy(feedback.Diagram), lambda model: True)
-
-
-def test_Axiom():
-    @axiom
-    def law(cls, f):
-        """ Not an equation. """
-        return cls.equation_factory(f)
-
-    assert repr(law) == "Axiom(law)"
-    assert [parameter.name for parameter in law.parameters] == ['f']
-    assert cat.Arrow.unitality.carrier is cat.Arrow
+def test_axiom_binding():
+    assert repr(Axiom(lambda cls: NotImplemented)) == "Axiom(<lambda>)"
+    assert eval(repr(Arrow.unitality)) == cat.Arrow.unitality
+    assert hash(Arrow.unitality) == hash(eval(repr(Arrow.unitality)))
+    assert Arrow.unitality != Functor.unitality
+    assert Functor.dagger_involution() is NotImplemented
     with raises(TypeError):
-        law(cat.Id(cat.Ob('x')))
-    assert law.bind(cat.Arrow)(cat.Id(cat.Ob('x')))
+        Axiom(lambda cls: NotImplemented)()
+    with raises(TypeError):
+        Axiom(lambda cls: NotImplemented).falsify()
+    with raises(TypeError):
+        Axiom(lambda cls: NotImplemented).strategy()
+    assert Axiom(classmethod(lambda cls: NotImplemented)).bind(Arrow)()\
+        is NotImplemented
+    box = Box('f', Ob('x'), Ob('y'))
+    assert Arrow.unitality(box)
+    broken = Arrow.unitality.weaken(f="Atomic[C1]").failing("Never holds.")
+    assert broken.subspaces == {"f": "Atomic[C1]"}
+    with raises(AxiomFailure) as failure:
+        broken(Atomic(box))
+    assert failure.value.equation
 
 
 def test_inapplicable():
-    class Carrier(cat.Arrow):
-        unitality = cat.Arrow.unitality.inapplicable("No identities.")
-
-    unitality, = (a for a in Carrier.axioms if a.name == "unitality")
-    assert unitality() is NotImplemented
-    assert unitality.__doc__ == "No identities."
-    assert not unitality.parameters and not unitality.broken
+    law = Arrow.unitality.inapplicable("No identities to cancel.")
+    assert law.name == "unitality"
+    assert law.__doc__ == "No identities to cancel."
+    assert law() is NotImplemented
 
 
-# test_weaken lands on split/4-matrix: Matrix[int] is the first carrier
-# whose axioms actually call Axiom.weaken.
+def test_modulo():
+    law = Arrow.unitality.modulo(lambda term: term.dom).bind(Arrow)
+    assert law(Box('f', Ob('x'), Ob('y')))
+
+
+def test_weaken():
+    from discopy.shape import Model
+    for subspace in ("Atomic[C1]", Atomic[TracedTy]):
+        law = TracedTy.monoid_unitality.weaken(x=subspace).bind(TracedTy)
+        assert law.modulo(lambda term: term).subspaces == law.subspaces
+        args = find(law.strategy(), lambda _: True)
+        assert isinstance(args[0], Model) and law(*args)
+
+
+def test_element_law():
+    @axiom
+    def preserves_identity(self, x: C0) -> AbstractEquation:
+        """ A functor preserves the identity on each object. """
+        return Equation(self(Arrow.id(x)), Arrow.id(self(x)))
+
+    law = preserves_identity.bind(Functor)
+    assert law.is_method
+    args = find(law.strategy(), lambda _: True)
+    assert law(*args)
+
+
+def test_falsify():
+    counterexample, = Functor.unitality.falsify()
+    assert isinstance(counterexample, Functor)
+
+
+def test_assert_axioms_refusal():
+    def refuse(cls, f: C1) -> AbstractEquation:
+        """ The equation never builds its terms. """
+        raise AxiomError
+
+    class Refusing(Arrow):
+        """ A carrier whose extra law refuses to build its terms. """
+
+    Refusing.refuse = Axiom(refuse).failing("The equation never builds.")
+    assert_axioms(Refusing)
+    assert Refusing.refuse.falsify()
+
+
+def test_axioms_of_carrier():
+    axioms = Functor.axioms
+    assert "unitality" in axioms and axioms["unitality"].broken
+
+    class Hidden(Arrow):
+        """ Assigning a non-axiom over an inherited law drops it. """
+        unitality = None
+
+    assert "unitality" not in Hidden.axioms

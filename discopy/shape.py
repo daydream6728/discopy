@@ -297,7 +297,10 @@ def sampler(carrier, ob_factory=None, **draw_params) -> markov.Functor:
 
     def ar_map(box):
         if isinstance(box, DrawOb):
-            return lambda: ob_factory.strategy(**box.sort)
+            sort = dict(box.sort)
+            keep = sort.pop("filter", None)
+            strategy = ob_factory.strategy(**sort)
+            return lambda: strategy.filter(keep) if keep else strategy
         if isinstance(box, DrawAr):
             params = dict(draw_params, **box.sort)
             return lambda *boundaries: carrier.strategy(
@@ -650,6 +653,11 @@ class Sampled:
     def __repr__(self):
         return f"{self.shape!r}[{self.carrier.__name__}]"
 
+    def __eq__(self, other):
+        return isinstance(other, Sampled) and (
+            self.shape, self.carrier, self.params) == (
+                other.shape, other.carrier, other.params)
+
     def strategy(self, **params) -> "st.SearchStrategy[Model]":
         """ The derived strategy of the shape in the carrier. """
         return self.shape.strategy(
@@ -721,9 +729,9 @@ ComposableTriple = Shape.grid(3, 1)
 HorizontalPair = Shape.grid(1, 2)
 Bifunctor = Padded(2, 2)
 
-Atomic = sorted_object(min_length=1, max_length=1)
-NonEmpty = sorted_object(min_length=1)
-Small = sorted_object(max_length=1)
+Atomic = sorted_object(filter=lambda value: len(value) == 1)
+NonEmpty = sorted_object(filter=bool)
+Subsingleton = sorted_object(filter=lambda value: len(value) <= 1)
 
 TraceSuperposing = Shape(
     boxes=(monoidal.Box("traced", monoidal.Ty("u"), monoidal.Ty("u")), ),

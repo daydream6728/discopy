@@ -1,18 +1,268 @@
-"""Data structures and strategies for property tests."""
+"""
+Property-based testing of the axioms with `Hypothesis
+<https://hypothesis.readthedocs.io>`_: a law is stated once as an
+:class:`Axiom` of an abstract base class, a carrier generates its own
+instances through :class:`Strategy`, and the matrix in ``proptest/``
+searches every cell for a counterexample.
+
+Summary
+-------
+
+.. autosummary::
+    :template: class.rst
+    :nosignatures:
+    :toctree:
+
+    Axiom
+    AxiomFailure
+    Strategy
+    Natural
+    Relabelling
+
+.. admonition:: Functions
+
+    .. autosummary::
+        :template: function.rst
+        :nosignatures:
+        :toctree:
+
+        axiom
+        resolve
+        substitute
+        assert_axioms
+        assert_strategy_finds
+
+How to develop DisCoPy against its property suite: state the laws before
+writing the implementation, let the matrix search for counterexamples,
+replay a failure deterministically, record the counterexample so the bug
+can never come back unnoticed, and audit the search strategy whenever a
+bug escapes it.
+
+The suite
+---------
+
+- ``proptest/test_axioms.py`` is the matrix: every :class:`Axiom` of every
+  carrier in ``CARRIERS``, one pytest cell per pair, arguments generated
+  by :meth:`Axiom.strategy` from the annotations of the law's own
+  parameters.
+- :class:`Strategy` states the laws of any type that generates its own
+  instances, whatever its level: :meth:`Strategy.transparency`,
+  :meth:`Strategy.pickling` and :meth:`Strategy.serialisation` are cells
+  of the matrix for every carrier, and a carrier whose representations
+  print bare names overrides :meth:`Strategy.environment` with the
+  namespace they read back in.
+- ``proptest/test_drawing.py`` and ``proptest/test_normal_form.py`` check
+  the remaining ad-hoc properties — drawing does not raise, a normal form
+  and a foliation are idempotent — over the diagram carriers.
+- ``proptest/test_counterexamples.py`` replays every recorded
+  counterexample deterministically — no generation, no search: the
+  matrix's explicit phase. Its memory is Hypothesis's example database,
+  ``.hypothesis`` on your machine and a workflow artifact on CI, which
+  every run reads before it searches.
+- Select cells by glob: ``uv run pytest proptest/ --axioms '<glob>'
+  -vrsxX``, with ``*`` as the only wildcard so brackets match themselves.
+  Recorded counterexamples carry the id of their matrix cell, so a glob
+  selects a law's search and its records together.
+- Each ``test/<module>.py`` gains a ``test_axioms`` dry run (one example
+  per axiom, see :func:`assert_axioms`) and a ``test_strategy`` checking
+  the strategy reaches the module's structural boxes, as its module's
+  carriers are enrolled: the fast loop before the full matrix.
+
+Properties before implementation
+--------------------------------
+
+A feature starts as mathematics, and the mathematics starts as
+properties. Before implementing anything, write the laws down — on an
+agent branch, as the first checkboxes of its ``TODO.md``:
+
+1. **State the laws.** Which equations define the new structure? Which
+   level of :mod:`discopy.abc` do they belong to? Which existing axioms
+   must the new carrier inherit, compare :meth:`Axiom.modulo` a quotient,
+   declare :meth:`Axiom.inapplicable` — or :meth:`Axiom.weaken` to a
+   subspace, generating a named parameter from a membership-validating
+   wrapper such as :class:`BoundaryConnected`, so that a
+   :meth:`Axiom.failing` law with a green subspace shows one expected
+   failure and one green cell? Write this down before any implementation.
+2. **Scaffold the axioms.** Declare each law as an :class:`Axiom` on the
+   abstract base class — or an ad-hoc property in its ``proptest/`` file
+   when it is a boolean rather than an equation — and enrol the carrier
+   in ``CARRIERS``. The body calls the operations the feature will
+   provide; until they exist, the cell fails. That is the red state of
+   the loop.
+3. **Reach the structure.** Extend the carrier's strategy so generated
+   terms actually contain the new boxes, and pin that with
+   :func:`assert_strategy_finds` in the module's ``test_strategy``. A
+   green cell whose strategy never generates the structure proves
+   nothing.
+4. **Implement until green**, on the dry run first, then the matrix.
+
+A property is meaningful when it quantifies over all terms of a carrier.
+Single behaviours — validation raises, error messages, encoding pins —
+stay as unit tests in ``test/``.
+
+Debugging a failing cell
+------------------------
+
+1. **Isolate it**: ``uv run pytest proptest/ --axioms '<carrier>.<law>'
+   -x -vrsxX``. Hypothesis reports the shrunk falsifying example as
+   labelled draws; on rerun the ``.hypothesis`` database replays it
+   first, so the failure is stable on your machine. A failure CI found is
+   in the artifact its run uploaded: with a ``GITHUB_TOKEN`` in the
+   environment the ``dev`` profile reads that database too, and the cell
+   fails for you the same way without a search.
+2. **Record it, then debug.** DisCoPy is transparent, so the printed
+   draws are valid Python building the exact counterexample. Paste them
+   into a record in ``proptest/test_counterexamples.py`` (format below)
+   before touching the implementation: the database remembers a failure
+   only under the Hypothesis ``uv.lock`` pins and only while an artifact
+   lives, while a record reproduces it on every machine, from a CI log
+   included, and stays as the pin once the bug is fixed.
+3. **Debug against the record**, not the search. In a REPL, call the
+   record's axiom on its arguments and inspect the returned
+   :class:`discopy.abc.Equation`'s sides. Do not reach for
+   :meth:`Axiom.falsify` to reproduce a known failure: it searches and
+   shrinks afresh each run and may land on a different counterexample, or
+   none. It remains only for interactive exploration when no failure is
+   in hand.
+4. **Fix the root cause.** The recorded cell flips green and stays as the
+   regression pin; there is nothing else to write.
+5. **Or file it.** If the fix is out of scope, open an issue, declare the
+   axiom ``.failing("<reason> (#<issue>)")`` where the carrier breaks it,
+   and keep the record: it xfails together with the axiom, strictly, so
+   the day the bug is fixed the record fails as an unexpected pass until
+   the :meth:`Axiom.failing` declaration is removed — at which point the
+   record is the pin. The search cell xfails too, without strictness:
+   whether a search finds a rare counterexample within its budget is not
+   a fact about the law.
+
+A counterexample against an ad-hoc property that has no :class:`Axiom`
+follows the same steps, except the record is a plain regression test in
+the module's ``test/`` file.
+
+Recording counterexamples
+-------------------------
+
+``proptest/test_counterexamples.py`` holds the records and their replay.
+A record is structured data: the bound axiom itself and the very
+arguments the search shrunk the failure to.
+
+.. code-block:: python
+
+    COUNTEREXAMPLES = (
+        Counterexample(
+            axiom=Matrix[int].copy_cocommutativity,
+            args=(2, ),
+            reason="Matrix.copy(x, n) is wrong for x, n >= 2 (#606)"),
+        ...)
+
+- ``axiom`` is the class attribute access, which binds the :class:`Axiom`
+  to its carrier — the same object the matrix checks, so a record can
+  never drift from the law it witnesses.
+- ``args`` are the generated arguments, one per draw, in draw order —
+  actual terms, not strings. Transparency is what lets the falsifying
+  draws be pasted verbatim; their reprs are module-qualified, so extend
+  the file's imports as records arrive.
+- ``reason`` says what broke and links the issue when there is one.
+
+The replay test marks a record xfail, strictly, exactly when its axiom is
+declared :meth:`Axiom.failing`, and checks the equation the axiom's
+:class:`AxiomFailure` carries, so the xfail is earned by the arguments
+falsifying the law in one of the two shapes :meth:`Axiom.falsify` counts:
+the equation is false, an assertion, or the implementation refuses to
+build its terms, an :class:`discopy.utils.AxiomError`. A fixed bug shows
+up as an unexpected pass, which strictness turns red, a typo'd record as
+an error rather than an expected failure, and a record never needs
+updating when the bug is fixed: only the ``.failing`` declaration moves.
+
+Never delete a record because it is inconvenient; a record only leaves
+when the law itself leaves the codebase.
+
+Auditing a strategy that missed a bug
+-------------------------------------
+
+A bug found outside the matrix — by hand, by a user, in the wild — while
+its law sat green is a coverage escape. The record pins the instance; the
+audit closes the class. Check three causes, in order:
+
+1. **Reach.** Can the strategy build the counterexample's shape at all?
+   Ask :func:`hypothesis.find` with the carrier's strategy and a
+   predicate for the shape — the structural box involved, the boundary,
+   the depth. :class:`hypothesis.errors.NoSuchExample` convicts the
+   strategy: extend it, then pin the reach in the module's
+   ``test_strategy``, with :func:`assert_strategy_finds` when the shape is
+   a box class and a bespoke ``find`` otherwise.
+2. **Rarity.** Reachable but starved: run the cell with
+   ``--hypothesis-show-statistics``, tagging the shape with
+   :func:`hypothesis.event` if need be, to see how often it is drawn, and
+   check with ``coverage run -m pytest proptest/`` that the buggy lines
+   are hit at all. A shape drawn much less than once per ``max_examples``
+   is invisible at the matrix's budget: rebalance the strategy's weights
+   or grow its size bounds rather than raising the budget.
+3. **Observation.** Drawn but not seen: the law compares its equation
+   :meth:`Axiom.modulo` a quotient that erases the difference, states
+   something weaker than what the bug violates, or the violated law was
+   never stated — in which case the fix is a new axiom, stated first as
+   in the feature protocol.
+
+The audit is done when the search rediscovers the bug by itself: hold the
+fix back and watch the cell go red without help. Only then does the suite
+guard the class of bugs and not just the recorded instance.
+
+Continuous integration
+----------------------
+
+The ``proptest`` workflow runs the suite on pull requests labelled
+``proptest``, on every push to ``main``, nightly, and on manual dispatch.
+``proptest/conftest.py`` registers three Hypothesis profiles, selected by
+``HYPOTHESIS_PROFILE``, over one example database,
+``.hypothesis/examples``:
+
+- ``pr``, on pull requests: a small budget of new examples after the
+  ``reuse`` phase has replayed every failure the database remembers, so a
+  known bug fails at once and a run is fast. The workflow fixes the seed
+  with ``--hypothesis-seed``, which keeps the database where
+  ``derandomize`` would drop it, so a pull request draws the same
+  examples every time: it is red for its own diff or for a failure the
+  artifact already holds, never for luck.
+- ``explore``, on ``main``, nightly and on dispatch: a large budget,
+  where new counterexamples come from.
+- ``dev``, the default elsewhere: a middling budget, and with a
+  ``GITHUB_TOKEN`` in the environment the local database is backed by
+  CI's, read-only, so what CI found replays on your machine.
+
+Every run downloads the database the previous run uploaded as the
+``hypothesis-example-db`` artifact and uploads its own afterwards,
+whether or not it passed — a failed run's artifact is the one holding the
+new counterexample. Hypothesis prunes what passes again and keeps what
+fails, so a failure found by one night's search fails every pull request
+until it is fixed or declared, with no one recording anything.
+
+Explore runs are randomised, so a red check on ``main`` or overnight is
+where a new bug surfaces: the shrunk draws in the log and the printed
+``@reproduce_failure(<version>, <blob>)`` decorator reproduce it under
+the Hypothesis ``uv.lock`` pins, and the artifact replays it on every
+pull request and, through the ``dev`` profile, on your machine.
+``--hypothesis-show-statistics`` is on, so the log of an explore run also
+says how often each shape was drawn, the input of a strategy audit.
+"""
 
 from __future__ import annotations
 
 import inspect
+import pickle
 from abc import ABC, abstractmethod
-from collections.abc import Mapping
-from dataclasses import dataclass
+from collections.abc import Callable, Mapping
+from dataclasses import KW_ONLY, dataclass, replace
 from functools import wraps
 from typing import TypeVar, TYPE_CHECKING
 
-from discopy.utils import AxiomError
+from discopy.utils import (
+    AxiomError, classproperty, dumps, factory_name, from_tree, loads)
 
 if TYPE_CHECKING:
     from hypothesis import strategies as st
+
+    from discopy.abc import Equation
 
 
 C0 = TypeVar("C0")
@@ -22,10 +272,13 @@ The object and arrow types of the carrier an axiom is bound to.
 
 An axiom annotates its arguments with these rather than with the concrete
 types of the module it is written in, so that a subclass inherits the
-override with its own types: :func:`proptest.strategies.arguments` rebinds
-both names to ``carrier.ob`` and ``carrier.ar`` when it evaluates the
-annotations. This is also why every module stating an axiom needs
+override with its own types: :meth:`Axiom.strategy` rebinds both names to
+``carrier.ob`` and ``carrier.ar`` when it evaluates the annotations. This
+is also why every module stating an axiom needs
 ``from __future__ import annotations``, which keeps them unevaluated.
+Rebinding happens through the ``locals`` of that evaluation because the
+:pep:`695` type parameters of :class:`discopy.abc.Category` live in a
+scope :func:`eval` cannot see, in globals or anywhere else.
 """
 
 
@@ -39,131 +292,18 @@ a functor that named just a few would compose to one defined nowhere else.
 """
 
 
-class Strategy[T](ABC):
+class AxiomFailure(AxiomError):
     """
-    A type with a canonical property-test strategy.
-    Using ``hypothesis``, we can get the default search strategy dispatch
-    through any object that defines a method called ``draw``, but this
-    would conflict with our existing ``draw`` methods, so we do it manually
-    with this custom trait.
+    A law declared broken, raised when the bound axiom is called: the
+    reason is the message and :attr:`equation` is the law evaluated on the
+    arguments, which a recorded counterexample must falsify.
     """
-
-    @classmethod
-    @abstractmethod
-    def strategy(cls, **params) -> "st.SearchStrategy[T]":  # pragma: no cover
-        """Build a strategy for instances of ``cls``."""
+    def __init__(self, reason: str, equation):
+        super().__init__(reason, equation)
+        self.equation = equation
 
 
-class Natural(int, Strategy["Natural"]):
-    """ A non-negative integer with tensor given by addition. """
-
-    def __new__(cls, value=0):
-        if not isinstance(value, int) or value < 0:
-            raise ValueError("Expected a non-negative integer.")
-        return super().__new__(cls, value)
-
-    def __matmul__(self, other):
-        return type(self)(self + other) if isinstance(other, int)\
-            else NotImplemented
-
-    __rmatmul__ = __matmul__
-    __len__ = lambda self: int(self)
-
-    @classmethod
-    def equation_factory(cls, *terms):
-        """ Construct an equation between natural numbers. """
-        from discopy.cat import Equation
-
-        return Equation(*terms)
-
-    @classmethod
-    def strategy(cls, *, max_size=3):
-        """Generate non-negative integers."""
-        from hypothesis import strategies as st
-
-        return st.one_of(
-            st.just(1),
-            st.integers(min_value=0, max_value=max_size)).map(cls)
-
-
-@dataclass(frozen=True, eq=False)
-class Relabelling(Mapping):
-    """
-    A map on the generators of a free category, sending the atoms it names to
-    a chosen object and every other one to itself.
-
-    It is a :class:`Mapping` rather than a closure so that functors built
-    from it can be composed and compared, which is what makes the axioms of
-    ``Cat`` itself checkable: :meth:`discopy.utils.MappingOrCallable.then`
-    composes by iterating the keys of the left-hand map, and equality
-    compares the wrapped maps. Iterating yields only the atoms it renames,
-    while looking one up is total, so a functor built from it applies to any
-    diagram and still composes to something comparable.
-    """
-    images: tuple[tuple[object, object], ...] = ()
-
-    def __getitem__(self, atom):
-        """
-        The image of an atomic object, carrying over whatever the atom does:
-        a rotation in a rigid category, a delay in a feedback one.
-        """
-        wire, = getattr(atom, "inside", (atom, ))
-        for key, image in self.images:
-            other, = getattr(key, "inside", (key, ))
-            if other.name == wire.name:
-                break
-        else:
-            return atom
-        turns = getattr(wire, "z", 0)
-        for _ in range(abs(turns)):
-            image = image.l if turns < 0 else image.r
-        steps = getattr(wire, "time_step", 0)
-        return image.delay(steps) if steps else image
-
-    def __iter__(self):
-        return iter([key for key, _ in self.images])
-
-    def __len__(self):
-        return len(self.images)
-
-    def __bool__(self):
-        """ A relabelling is total, even when it renames nothing. """
-        return True
-
-    def send(self, typ):
-        """ The image of an object, atom by atom. """
-        if not hasattr(typ, "inside"):
-            return self[typ]
-        return type(typ)().tensor(*(
-            self[typ[i:i + 1]] for i in range(len(typ))))
-
-
-@dataclass(frozen=True, eq=False)
-class Relabelled(Mapping):
-    """
-    Send each box to one of the same name on the relabelled boundary.
-
-    Boxes cannot be enumerated, so this iterates empty and two of them
-    compare equal as mappings do. That is what lets a functor built from a
-    :class:`Relabelling` be the unit of its own composition on the right.
-    """
-    objects: Relabelling
-
-    def __getitem__(self, box):
-        return type(box)(
-            box.name, self.objects.send(box.dom), self.objects.send(box.cod))
-
-    def __iter__(self):
-        return iter([])
-
-    def __len__(self):
-        return 0
-
-    def __bool__(self):
-        """ A relabelling is total, even though it enumerates nothing. """
-        return True
-
-
+@dataclass
 class Axiom[T]:
     """
     A categorical law, stated either of a carrier or of one of its elements.
@@ -173,10 +313,10 @@ class Axiom[T]:
     first parameter is ``self`` is a law of an element, e.g. a functor, so the
     element is generated too and the law reads as a method on it.
 
-    Calling a bound axiom returns its own verdict: :obj:`NotImplemented` when
-    the structure does not apply to the carrier, an
-    :class:`discopy.utils.AxiomError` wrapping the equation when the law is
-    known to be broken, and the equation itself otherwise.
+    Calling a bound axiom returns its own verdict: :obj:`NotImplemented`
+    when the structure does not apply to the carrier, and the equation
+    itself otherwise; a law declared broken raises an
+    :class:`AxiomFailure` carrying that equation instead of returning it.
 
     A law is broken when *some* argument is a counterexample, not every one,
     so :attr:`broken` is declared by :meth:`failing` before any argument is
@@ -184,21 +324,34 @@ class Axiom[T]:
     failure and lets the search find the counterexample.
     """
 
-    def __init__(self, equation, *, carrier=None, name=None, subspaces=None,
-                 broken=False):
-        function = equation.__func__ if isinstance(equation, classmethod)\
-            else equation
-        self.equation = function
-        self.signature = inspect.signature(function)
+    equation: Callable
+    _: KW_ONLY
+    carrier: type[T] = None
+    name: str = None
+    subspaces: dict = None
+    broken: bool = False
+
+    def __post_init__(self):
+        if isinstance(self.equation, classmethod):
+            self.equation = self.equation.__func__
+        self.signature = inspect.signature(self.equation)
         self.receiver = next(iter(self.signature.parameters), None)
-        self.carrier = carrier
-        self.name = self.__name__ = name or function.__name__
-        self.broken = broken
-        self.subspaces = dict(subspaces or {})
-        self.__doc__ = function.__doc__
+        self.name = self.name or self.equation.__name__
+        self.subspaces = dict(self.subspaces or {})
+        self.__doc__ = self.equation.__doc__
 
     def __repr__(self):
-        return f"Axiom({self.name})"
+        """
+        A bound axiom is the attribute of its carrier, e.g.
+        ``cat.Arrow.unitality``; an unbound one wraps a function and has no
+        transparent representation.
+        """
+        if self.carrier is None:
+            return f"Axiom({self.name})"
+        return f"{factory_name(self.carrier)}.{self.name}"
+
+    def __hash__(self):
+        return hash((self.equation, self.carrier, self.name))
 
     def __set_name__(self, owner, name):
         """
@@ -206,7 +359,7 @@ class Axiom[T]:
         override built with :meth:`modulo`, :meth:`failing` or
         :meth:`inapplicable` needs no name of its own.
         """
-        self.name = self.__name__ = name
+        self.name = name
 
     @property
     def is_method(self) -> bool:
@@ -215,9 +368,7 @@ class Axiom[T]:
 
     def bind(self, carrier: type[T]) -> Axiom[T]:
         """ Bind the axiom to a concrete carrier. """
-        return type(self)(
-            self.equation, carrier=carrier, name=self.name,
-            subspaces=self.subspaces, broken=self.broken)
+        return replace(self, carrier=carrier)
 
     def __get__(self, instance, owner: type[T]) -> Axiom[T]:
         return self.bind(owner)
@@ -232,20 +383,20 @@ class Axiom[T]:
         @wraps(self.equation)
         def equation(*args, **kwargs):
             return self.equation(*args, **kwargs).modulo(up_to)
-        return type(self)(equation, broken=self.broken)
+        return replace(self, equation=equation)
 
     def failing(self, reason: str) -> Axiom[T]:
         """
-        The same law declared broken, its equation wrapped in an
-        :class:`discopy.utils.AxiomError` with the reason as message and
-        documentation, e.g. ``braid_naturality =
+        The same law declared broken: calling it raises an
+        :class:`AxiomFailure` with the reason as message and the equation
+        evaluated on the arguments, e.g. ``braid_naturality =
         BraidedCategory.braid_naturality.failing("A free braid is a box.")``.
         """
         @wraps(self.equation)
         def equation(*args, **kwargs):
-            return AxiomError(reason, self.equation(*args, **kwargs))
+            raise AxiomFailure(reason, self.equation(*args, **kwargs))
         equation.__doc__ = reason
-        return type(self)(equation, broken=True)
+        return replace(self, equation=equation, broken=True)
 
     def inapplicable(self, reason: str) -> Axiom[T]:
         """
@@ -256,46 +407,55 @@ class Axiom[T]:
         """
         def law(cls):
             return NotImplemented
-        law.__name__, law.__doc__ = self.name, reason
-        return type(self)(law)
+        law.__doc__ = reason
+        return replace(self, equation=law, subspaces={}, broken=False)
 
     def weaken(self, **subspaces) -> Axiom[T]:
         """
         The same law quantified over a subspace of the named arguments,
         e.g. ``bifunctoriality_connected =
         MonoidalCategory.bifunctoriality.weaken(
-        square=BoundaryConnected[Bifunctor[C1]])``: each named parameter
-        is generated from its subspace strategy, whose wrapper validates
-        membership on construction — so a recorded counterexample replays
-        honestly — and is unwrapped before the body reads it. Assigned to
+        square="BoundaryConnected[Bifunctor[C1]]")``: each named parameter
+        is generated from its subspace shape, stated as a string evaluated
+        lazily in the shape catalog. Assigned to
         its own attribute beside a ``.failing`` declaration, it shows the
         matrix one expected failure and one green cell instead of one
         blanket expected failure.
         """
-        result = type(self)(
-            self.equation, name=self.name,
-            subspaces=dict(self.subspaces, **subspaces), broken=self.broken)
-        return result
+        return replace(self, subspaces=dict(self.subspaces, **subspaces))
 
-    def strategy(self) -> "st.SearchStrategy":
+    def strategy(self) -> st.SearchStrategy:
         """
         Generate the arguments the bound axiom expects.
 
         ``C0`` and ``C1`` resolve to the objects and arrows of the carrier,
         or of the carrier's domain for a law of an element: the arguments a
         functor is applied to live in the category it maps from, and its
-        codomain is reachable as ``self.cod`` from the body.
+        codomain is reachable as ``self.cod`` from the body. A carrier that
+        is no category, e.g. a type of objects, stands for both.
+
+        Only the parameters' annotations are evaluated: the law's return
+        annotation may name a type its module imports for checking only.
         """
         from hypothesis import strategies as st
 
+        if self.carrier is None:
+            raise TypeError(f"{self.name} is not bound to a class.")
+        function = inspect.unwrap(self.equation)
+        domain = getattr(self.carrier, "dom", None)
+        source = domain if self.is_method and isinstance(domain, type)\
+            else self.carrier
         from discopy import shape
 
-        function = inspect.unwrap(self.equation)
-        source = self.carrier.dom if self.is_method else self.carrier
-        scope = dict(shape.catalog(), C0=source.ob, C1=source.ar)
-        annotations = inspect.get_annotations(
-            function, globals=function.__globals__, locals=scope,
-            eval_str=True)
+        scope = dict(
+            shape.catalog(),
+            C0=getattr(source, "ob", source),
+            C1=getattr(source, "ar", source))
+        annotations = {
+            name: eval(annotation, function.__globals__, scope)
+            if isinstance(annotation, str) else annotation
+            for name, annotation in function.__annotations__.items()
+            if name != "return"}
         annotations[self.receiver] = self.carrier
         annotations.update({
             name: substitute(annotation, scope)
@@ -324,15 +484,12 @@ class Axiom[T]:
         """
         from hypothesis import find
 
-        if self.carrier is None:
-            raise TypeError(f"{self.name} is not bound to a class.")
-
         def refutes(args):
             try:
                 verdict = self(*args)
             except Exception:
                 return True
-            return verdict is not NotImplemented and not holds(verdict)
+            return verdict is not NotImplemented and not verdict
 
         return find(self.strategy(), refutes, **params)
 
@@ -358,7 +515,13 @@ class Axiom[T]:
         signature = self.signature.replace(parameters=self.parameters)
         bound = signature.bind(*args, **kwargs)
         bound.apply_defaults()
-        arguments = dict(bound.arguments)
+        from discopy import shape
+
+        arguments = {
+            name: value.value
+            if name in self.subspaces and isinstance(value, shape.Model)
+            and len(value.shape.exposed) == 1 else value
+            for name, value in bound.arguments.items()}
         if self.is_method:
             return self.equation(**arguments)
         return self.equation(
@@ -370,7 +533,199 @@ def axiom(equation) -> Axiom:
     return Axiom(equation)
 
 
-def resolve(annotation, **params) -> "st.SearchStrategy":
+def inherited_axioms(cls) -> dict[str, Axiom]:
+    """
+    The axioms inherited by ``cls``, by name, subclasses overriding bases.
+
+    Names are collected before they are filtered, so that assigning
+    anything that is not an axiom over an inherited one drops it
+    altogether, rather than restating it.
+    """
+    visible = {
+        name: value
+        for base in reversed(cls.__mro__)
+        for name, value in base.__dict__.items()}
+    return {name: value.bind(cls) for name, value in visible.items()
+            if isinstance(value, Axiom)}
+
+
+class Strategy[T](ABC):
+    """
+    A type with a canonical `search strategy
+    <https://hypothesis.readthedocs.io/en/latest/data.html>`_
+    generating its instances, and the laws every such type obeys: a term
+    reads back from its representation, its pickle and its tree.
+    """
+
+    axioms = classproperty(inherited_axioms)
+
+    @classmethod
+    @abstractmethod
+    def strategy(cls, **params) -> st.SearchStrategy[T]:
+        """
+        Build a strategy for instances of ``cls``.
+
+        An override that delegates to another strategy accepts
+        ``**params``, pops the parameters it consumes and forwards the
+        rest, so that a caller's bounds pass through unchanged and a
+        subclass overrides what a base popped just by passing it. A
+        terminal strategy instead declares exactly the parameters it
+        implements: a constraint it cannot honour fails loudly as an
+        unexpected keyword rather than being silently dropped.
+        """
+
+    @classmethod
+    def environment(cls) -> dict:
+        """
+        The namespace the representation of a term reads back in: the
+        public names of the package, as ``from discopy import *`` binds
+        them, so that a representation qualified by module such as
+        ``cat.Box('f', cat.Ob('x'), cat.Ob('y'))`` evaluates. A carrier
+        whose representations print bare names adds them.
+
+        The import is local because the package imports this module.
+        """
+        import discopy
+
+        return {name: value for name, value in vars(discopy).items()
+                if not name.startswith("_")}
+
+    @axiom
+    def transparency(self) -> Equation:
+        """
+        The representation of a term evaluates back to it, in the
+        :meth:`environment` of its type.
+
+        The import is local because :mod:`discopy.abc` imports this module
+        for its axioms, so the arrow between them cannot be reversed.
+        """
+        from discopy.abc import Equation
+
+        return Equation(eval(repr(self), type(self).environment()), self)
+
+    @axiom
+    def pickling(self) -> Equation:
+        """
+        A term loads back from its pickle, of the same class: the equation
+        is between the pairs of a class and a term, since a subscript of a
+        :class:`discopy.utils.NamedGeneric` is part of what a pickle keeps.
+        """
+        from discopy.abc import Equation
+
+        loaded = pickle.loads(pickle.dumps(self))
+        return Equation((type(loaded), loaded), (type(self), self))
+
+    @axiom
+    def serialisation(self) -> Equation:
+        """
+        A term decodes back from its tree and from the JSON of its tree.
+        A type without a tree declares the law inapplicable.
+        """
+        from discopy.abc import Equation
+
+        return Equation(from_tree(self.to_tree()), loads(dumps(self)), self)
+
+
+class Natural(int, Strategy["Natural"]):
+    """ A non-negative integer with tensor given by addition. """
+
+    def __new__(cls, value=0):
+        if not isinstance(value, int) or value < 0:
+            raise ValueError("Expected a non-negative integer.")
+        return super().__new__(cls, value)
+
+    def __matmul__(self, other):
+        return type(self)(self + other) if isinstance(other, int)\
+            else NotImplemented
+
+    __rmatmul__ = __matmul__
+    __len__ = lambda self: int(self)
+
+    def __repr__(self):
+        return factory_name(type(self)) + f"({int(self)})"
+
+    @classmethod
+    def equation_factory(cls, *terms):
+        """
+        Construct an equation between natural numbers.
+
+        The import is local because :mod:`discopy.abc` imports this module
+        for its axioms, so the arrow between them cannot be reversed.
+        """
+        from discopy.abc import Equation
+
+        return Equation(*terms)
+
+    @classmethod
+    def strategy(cls, *, max_size=3):
+        """Generate non-negative integers."""
+        from hypothesis import strategies as st
+
+        return st.one_of(
+            st.just(1),
+            st.integers(min_value=0, max_value=max_size)).map(cls)
+
+    serialisation = Strategy.serialisation.inapplicable(
+        "A natural number has no tree.")
+
+
+@dataclass(frozen=True, eq=False)
+class Relabelling(Mapping):
+    """
+    A map on the generators of a free category, sending the atoms it names to
+    a chosen object, every other atom to itself, and a box to one of the
+    same name on the relabelled boundary.
+
+    It is a :class:`Mapping` rather than a closure so that functors built
+    from it can be composed and compared, which is what makes the axioms of
+    ``Cat`` itself checkable: :meth:`discopy.utils.MappingOrCallable.then`
+    composes by iterating the keys of the left-hand map, and equality
+    compares the wrapped maps. Iterating yields only the atoms it renames,
+    while looking up is total, so a functor built from it as both its
+    object and its arrow map applies to any diagram and still composes to
+    something comparable.
+    """
+    images: tuple[tuple[object, object], ...] = ()
+
+    def __repr__(self):
+        return factory_name(type(self)) + f"(images={self.images!r})"
+
+    def __getitem__(self, key):
+        """
+        The image of an atom, looked up by name, or of a box, relabelled on
+        its boundary by the functor of the box's own category: a rotation or
+        a delay of an atom is that functor's business, e.g.
+        :class:`discopy.rigid.Functor`'s, on a box's boundary as on an
+        object.
+
+        The import is local because :mod:`discopy.cat` imports this module
+        for its strategies, so the arrow between them cannot be reversed.
+        """
+        from discopy.cat import Functor, Ob
+
+        if not isinstance(key, Ob):
+            functor = getattr(type(key), "functor_factory", Functor)
+            relabel = functor(self, self)
+            return type(key)(key.name, relabel(key.dom), relabel(key.cod))
+        wire, = getattr(key, "inside", (key, ))
+        for atom, image in self.images:
+            other, = getattr(atom, "inside", (atom, ))
+            if other.name == wire.name:
+                return image
+        return key
+
+    def __iter__(self):
+        return iter([atom for atom, _ in self.images])
+
+    def __len__(self):
+        return len(self.images)
+
+    def __bool__(self):
+        """ A relabelling is total, even when it renames nothing. """
+        return True
+
+
+def resolve(annotation, **params) -> st.SearchStrategy:
     """ Resolve the strategy implemented by an annotated type or shape. """
     from discopy import shape
 
@@ -383,15 +738,23 @@ def resolve(annotation, **params) -> "st.SearchStrategy":
     return annotation.strategy(**params)
 
 
-def substitute(annotation: str, scope: dict):
+def substitute(annotation, scope: dict):
     """
-    Evaluate a subspace annotation in the shape catalog and the scope
-    binding :obj:`C0` and :obj:`C1` — lazily, so that a module can weaken
-    an axiom without importing :mod:`discopy.shape` at import time.
+    Bind a subspace annotation to the scope of :obj:`C0` and :obj:`C1`: a
+    string is evaluated lazily in the shape catalog, so that a module can
+    weaken an axiom without importing :mod:`discopy.shape` at import time,
+    and a shape instantiated at a type variable is rebound to its value.
     """
     from discopy import shape
 
-    return eval(annotation, dict(shape.catalog(), **scope))
+    if isinstance(annotation, str):
+        return eval(annotation, dict(shape.catalog(), **scope))
+    if isinstance(annotation, shape.Sampled)\
+            and isinstance(annotation.carrier, TypeVar):
+        return shape.Sampled(
+            annotation.shape, scope[annotation.carrier.__name__],
+            annotation.params)
+    return annotation
 
 
 def assert_axioms(*carriers) -> None:
@@ -400,7 +763,7 @@ def assert_axioms(*carriers) -> None:
     run of the property tests in ``proptest/``.
 
     An axiom that does not apply is skipped, a broken one is only required
-    to state its :class:`discopy.utils.AxiomError` — one example need not
+    to raise its :class:`discopy.utils.AxiomError` — one example need not
     be a counterexample — and any other law must hold.
     """
     from hypothesis import Phase, find, settings
@@ -408,7 +771,7 @@ def assert_axioms(*carriers) -> None:
     single_shot = settings(
         max_examples=1, phases=(Phase.generate, ), database=None)
     for carrier in carriers:
-        for axiom in carrier.axioms:
+        for axiom in carrier.axioms.values():
             if not axiom.parameters and axiom() is NotImplemented:
                 continue
             args = find(
@@ -417,17 +780,14 @@ def assert_axioms(*carriers) -> None:
                 verdict = axiom(*args)
             except AxiomError:
                 assert axiom.broken, axiom
-                continue
-            if axiom.broken:
-                assert isinstance(verdict, AxiomError), axiom
             else:
-                assert holds(verdict), axiom
+                assert verdict is NotImplemented or verdict, axiom
 
 
-def assert_strategy_finds(carrier, *structures) -> None:
+def assert_strategy_finds(carrier, *structures: type) -> None:
     """
-    Check that the strategy of an arrow carrier generates a term containing
-    a box of each of the given structural classes.
+    Check that the strategy of an arrow carrier generates a term
+    containing a box of each of the given structural classes.
     """
     from hypothesis import find
 
@@ -435,42 +795,3 @@ def assert_strategy_finds(carrier, *structures) -> None:
         find(carrier.strategy(), lambda term: any(
             isinstance(box, structure)
             for box in getattr(term, "boxes", term.inside)))
-
-
-def assert_verdict(axiom: Axiom, verdict) -> None:
-    """
-    Assert the verdict a bound axiom returned for some arguments.
-
-    An :class:`discopy.utils.AxiomError` wraps the equation of a law that is
-    known to be broken — as its last argument, after an optional reason —
-    and carries none at all when the implementation refused to build its
-    terms. Either way the equation is asserted: it is :attr:`Axiom.broken`
-    that tells the runner to expect the failure.
-    """
-    assert holds(verdict)
-
-
-def holds(verdict) -> bool:
-    """
-    Whether a verdict asserts, unwrapping the equation a broken law carries
-    as the last argument of its :class:`discopy.utils.AxiomError`.
-    """
-    if isinstance(verdict, AxiomError):
-        verdict = verdict.args[-1] if verdict.args else False
-    return bool(verdict)
-
-
-def declared_axioms(cls) -> dict[str, Axiom]:
-    """
-    The axioms a class declares, by name, subclasses overriding bases.
-
-    Names are collected before they are filtered, so that assigning anything
-    that is not an axiom over an inherited one drops it altogether, rather
-    than restating it.
-    """
-    visible = {
-        name: value
-        for base in reversed(cls.__mro__)
-        for name, value in base.__dict__.items()}
-    return {name: value for name, value in visible.items()
-            if isinstance(value, Axiom)}

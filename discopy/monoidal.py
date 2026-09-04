@@ -157,6 +157,10 @@ class Wire(cat.Ob):
                 lambda args: cls(
                     args[0], dom=args[1], cod=args[2]))
 
+    transparency = Strategy.transparency.failing(
+        "A white wire prints as the plain cat.Ob of old dumps, which "
+        "cast_wire upgrades inside a type but a bare eval does not.")
+
     def __setstate__(self, state):
         state.setdefault('dom', white)
         state.setdefault('cod', white)
