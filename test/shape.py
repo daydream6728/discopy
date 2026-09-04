@@ -152,3 +152,36 @@ def test_chain_projection():
     with raises(NotImplementedError):
         from discopy.shape import TraceNaturalityLeft
         TraceNaturalityLeft.chain_sampling()
+
+
+def test_Sample_id():
+    assert find(Sample.id((int, ))(3), lambda value: value == 3) == 3
+
+
+def test_Model_functor():
+    pair = Shape.grid(2, 1)
+    model = find(pair.strategy(monoidal.Diagram), lambda _: True)
+    assert model.functor(pair.boxes[0]) == model["f00"]
+    assert model == model and model != pair
+    assert pair == Shape.grid(2, 1) and pair != model
+    assert repr(pair[monoidal.Diagram])
+
+
+def test_constructor_errors():
+    x = monoidal.Ty('x')
+    unexposed = Shape(
+        boxes=(monoidal.Box('f', x, x), ), exposed=('x', ))
+    with raises(ValueError):
+        unexposed(x)
+    wide = Shape(
+        boxes=(monoidal.Box('g', monoidal.Ty('a', 'b'), x), ))
+    with raises(AxiomError):
+        wide(monoidal.Box('h', x @ x, x))
+
+
+def test_send_rotation():
+    from discopy import rigid
+    from discopy.shape import send
+    images = {'u': rigid.Ty('a')}
+    assert send(rigid.Ty('u').r, images, rigid.Diagram) == rigid.Ty('a').r
+    assert send(rigid.Ty('u').l, images, rigid.Diagram) == rigid.Ty('a').l

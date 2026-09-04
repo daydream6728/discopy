@@ -7,7 +7,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Mapping
 from dataclasses import dataclass
 from functools import wraps
-from typing import TypeVar, TYPE_CHECKING, get_args, get_origin
+from typing import TypeVar, TYPE_CHECKING
 
 from discopy.utils import AxiomError
 
@@ -376,31 +376,22 @@ def resolve(annotation, **params) -> "st.SearchStrategy":
 
     if isinstance(annotation, shape.Sampled):
         return annotation.strategy(**params)
-    origin = get_origin(annotation) or annotation
-    if not isinstance(origin, type) or not issubclass(origin, Strategy):
+    if not isinstance(annotation, type)\
+            or not issubclass(annotation, Strategy):
         raise TypeError(
             f"Expected a Strategy annotation, got {annotation!r}.")
-    if args := get_args(annotation):
-        params["factory"] = args[-1]
-    return origin.strategy(**params)
+    return annotation.strategy(**params)
 
 
-def substitute(annotation, scope: dict):
+def substitute(annotation: str, scope: dict):
     """
-    Replace the :obj:`C0` and :obj:`C1` type variables of a subspace
-    annotation by the objects and arrows they stand for. A string is
-    evaluated lazily in the shape catalog, so that a module can weaken an
-    axiom without importing :mod:`discopy.shape` at import time.
+    Evaluate a subspace annotation in the shape catalog and the scope
+    binding :obj:`C0` and :obj:`C1` — lazily, so that a module can weaken
+    an axiom without importing :mod:`discopy.shape` at import time.
     """
-    if isinstance(annotation, str):
-        from discopy import shape
-        return eval(annotation, dict(shape.catalog(), **scope))
-    if isinstance(annotation, TypeVar):
-        return scope[annotation.__name__]
-    if args := get_args(annotation):
-        origin = get_origin(annotation)
-        return origin[tuple(substitute(arg, scope) for arg in args)]
-    return annotation
+    from discopy import shape
+
+    return eval(annotation, dict(shape.catalog(), **scope))
 
 
 def assert_axioms(*carriers) -> None:
