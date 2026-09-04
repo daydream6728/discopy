@@ -11,13 +11,13 @@ import tempfile
 
 import matplotlib
 import pytest
-from hypothesis import given, settings
+from hypothesis import given
 from hypothesis import strategies as st
 
 from discopy import monoidal
 from discopy.utils import factory_name
 
-from proptest.test_axioms import CARRIERS
+from proptest.carriers import CARRIERS
 
 matplotlib.use("Agg")
 
@@ -28,7 +28,6 @@ DIAGRAMS = tuple(
 
 @pytest.mark.parametrize("carrier", DIAGRAMS, ids=factory_name)
 @given(data=st.data())
-@settings(max_examples=10, deadline=None)
 def test_to_drawing(carrier, data):
     """ Check that the layout functor preserves the boundary. """
     diagram = data.draw(carrier.strategy())
@@ -39,7 +38,6 @@ def test_to_drawing(carrier, data):
 
 @pytest.mark.parametrize("carrier", DIAGRAMS, ids=factory_name)
 @given(data=st.data())
-@settings(max_examples=10, deadline=None)
 def test_draw(carrier, data):
     """ Check that both backends render a diagram without a baseline. """
     diagram = data.draw(carrier.strategy())

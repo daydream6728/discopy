@@ -39,31 +39,25 @@ Summary
     PivotalCategory
     RibbonCategory
     NamedGeneric
+    Equation
 """
 
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
-from typing import ClassVar, Generic, TypeVar
+from typing import Callable, ClassVar, TYPE_CHECKING
 
-from discopy.testing import (
-    Axiom, Atomic, Bifunctor, ComposablePair, ComposableTriple,
-    FeedbackJoining, FeedbackVanishing, HorizontalPair,
-    LeftCurrying, NonEmpty, RightCurrying, TraceDinaturalityLeft,
-    TraceDinaturalityRight, TraceNaturalityLeft, TraceNaturalityRight,
-    TraceSuperposing, axiom, declared_axioms)
-from discopy.utils import classproperty, get_origin
+from discopy.testing import axiom, inherited_axioms
+from discopy.utils import NamedGeneric, classproperty, factory_name
 
-
-class Equation[T](ABC):
-    """ The abstract interface for an equation between terms of type ``T``. """
-
-    terms: tuple[T, ...]
-
-    @abstractmethod
-    def __bool__(self) -> bool:
-        """ Whether all terms in the equation are equal. """
+if TYPE_CHECKING:
+    from discopy.shape import (
+        Atomic, Bifunctor, ComposablePair, ComposableTriple,
+        FeedbackJoining, FeedbackVanishing, HorizontalPair, LeftCurrying,
+        NonEmpty, RightCurrying, TraceDinaturalityLeft,
+        TraceDinaturalityRight, TraceNaturalityLeft, TraceNaturalityRight,
+        TraceSuperposing)
 
 
 class Category[C0, C1: Category](ABC):
@@ -93,7 +87,7 @@ class Category[C0, C1: Category](ABC):
     ar = classproperty(lambda cls: getattr(cls, "factory", cls))
 
     @classmethod
-    def equation_factory(cls, *terms):
+    def equation_factory(cls, *terms) -> Equation:
         """
         Construct an equation, using strict equality by default.
 
@@ -103,14 +97,9 @@ class Category[C0, C1: Category](ABC):
         defines — and :meth:`discopy.testing.Axiom.modulo` weakens it
         further.
         """
-        from discopy.cat import Equation as CatEquation
-        return CatEquation(*terms)
+        return Equation(*terms)
 
-    @classproperty
-    def axioms(cls) -> tuple[Axiom, ...]:
-        """ The ordered axioms inherited by ``cls``. """
-        return tuple(
-            value.bind(cls) for value in declared_axioms(cls).values())
+    axioms = classproperty(inherited_axioms)
 
     @classmethod
     @abstractmethod
@@ -1017,87 +1006,66 @@ class HypergraphCategory[C0, C1](
         """
 
 
-class NamedGeneric(Generic[TypeVar('T')]):
+class Equation(NamedGeneric["ar"]):
     """
-    A ``NamedGeneric`` is a ``Generic`` where the type parameter has a name.
+    An equation is a list of ``terms`` to be compared up to a function
+    ``up_to``, the identity by default.  Casting it to ``bool`` checks
+    whether its terms are all equal up to that function.
 
     Parameters:
-        attr : The name of the type parameter.
-
-    Note
-    ----
-    In a standard ``Generic`` class, the type parameter disappears when the
-    member of the class is instantiated, e.g.
-
-    >>> assert list[int]([1, 2, 3])\\
-    ...     == list[float]([1, 2, 3])\\
-    ...     == [1, 2, 3]
-
-    In a ``NamedGeneric``, the type parameter is attached to the members of the
-    class so that we have access to it.
+        terms : The terms of the equation.
+        symbol : The symbol between each pair of terms, ``"="`` by default.
+        symbols : The symbols between each pair of terms, overriding
+            ``symbol``; ``len(terms) * (symbol, )`` by default.
+        up_to : The function up to which ``bool(equation)`` compares its
+            terms, overriding the subclass' :attr:`up_to` if given.
 
     Example
     -------
+    The number of boxes inside an arrow is left unchanged by associativity,
+    so we can compare arrows up to the function that counts them modulo 2:
 
-    >>> from dataclasses import dataclass
-    >>> @dataclass
-    ... class L(NamedGeneric["dtype"]):
-    ...     inside: list
-    >>> assert L[int]([1, 2, 3]).dtype == int
-    >>> assert L[int]([1, 2, 3]) != L[float]([1, 2, 3])
+    >>> from discopy.cat import Ob, Box, Equation
+    >>> x = Ob('x')
+    >>> f, g = Box('f', x, x), Box('g', x, x)
+    >>> parity = lambda term: len(term.inside) % 2
+    >>> assert not Equation(f, f >> g >> g)
+    >>> assert Equation(f, f >> g >> g, up_to=parity)
     """
-    _cache = dict()
+    up_to = None
 
-    def __class_getitem__(_, attributes):
-        if not isinstance(attributes, tuple):
-            attributes = (attributes,)
+    def __init__(self, *terms, symbol="=", symbols=None, up_to=None):
+        self.terms = terms
+        self.symbols = tuple(symbols) if symbols is not None\
+            else len(terms) * (symbol, )
+        if up_to is not None:
+            self.up_to = up_to
 
-        G = Generic.__class_getitem__(tuple(map(TypeVar, attributes)))
+    def modulo(self, up_to: Callable) -> Equation:
+        """
+        The same equation compared up to the given function, rebinding
+        :attr:`up_to`, whose name the attribute already takes.
 
-        class Result(G):
-            def __class_getitem__(cls, values):
-                if hasattr(cls, "__is_named_generic__"):
-                    cls = cls.__bases__[0]
-                values = values if isinstance(values, tuple) else (values,)
-                cls_values = tuple(
-                    getattr(cls, attr, None) for attr in attributes)
-                if cls not in NamedGeneric._cache:
-                    NamedGeneric._cache[cls] = {cls_values: cls}
-                if values not in NamedGeneric._cache[cls]:
-                    origin = get_origin(cls)
+        >>> from discopy.cat import Ob, Box, Equation
+        >>> x = Ob('x')
+        >>> f, g = Box('f', x, x), Box('g', x, x)
+        >>> assert Equation(f >> g, g >> f).modulo(lambda _: True)
+        """
+        return type(self)(*self.terms, symbols=self.symbols, up_to=up_to)
 
-                    class C(origin):
-                        __is_named_generic__ = True
+    def __repr__(self):
+        """
+        >>> from discopy.cat import Ob, Box, Equation
+        >>> Equation(Box('f', Ob('x'), Ob('x')))
+        cat.Equation(cat.Box('f', cat.Ob('x'), cat.Ob('x')))
+        """
+        return factory_name(type(self))\
+            + f"({', '.join(map(repr, self.terms))})"
 
-                        # We need this to fix pickling of nested classes
-                        # https://stackoverflow.com/questions/1947904/how-can-i-pickle-a-dynamically-created-nested-class-in-python
-                        def __reduce__(self):
-                            func, args, data = super().__reduce__()
-                            # Check if class name is of the form:
-                            # *ClassName*[*type*]
-                            if '[' in args[0].__name__:
-                                args = (origin, ) + args[1:]
-                                data |= {"__class_getitem__values__": values}
-                            return func, args, data
+    def __str__(self):
+        return f"Equation({', '.join(map(str, self.terms))})"
 
-                    C.__module__ = origin.__module__
-                    names = [getattr(v, "__name__", str(v)) for v in values]
-                    C.__name__ = C.__qualname__ = origin.__name__\
-                        + f"[{', '.join(names)}]"
-                    C.__origin__ = cls
-                    for attr, value in zip(attributes, values):
-                        setattr(C, attr, value)
-                    NamedGeneric._cache[cls][values] = C
-                return NamedGeneric._cache[cls][values]
-
-            __name__ = __qualname__\
-                = f"NamedGeneric[{', '.join(map(repr, attributes))}]"
-
-        for attr in attributes:
-            setattr(Result, attr, getattr(Result, attr, None))
-        return Result
-
-    def __setstate__(self, state):
-        if "__class_getitem__values__" in state:
-            new_cls = self.__class__[state["__class_getitem__values__"]]
-            self.__class__ = new_cls
+    def __bool__(self):
+        terms = self.terms if self.up_to is None\
+            else list(map(self.up_to, self.terms))
+        return all(term == terms[0] for term in terms)

@@ -1,15 +1,18 @@
 """
 Deterministic replay of recorded counterexamples, the memory of the
-property suite: see PROPTEST.md for the recording protocol.
+property suite: :mod:`discopy.testing` documents the recording protocol.
 """
 
 from typing import NamedTuple
 
 import pytest
 
-from discopy import biclosed, braided, cat, compact, feedback, pivotal, ribbon
-from discopy.testing import Atomic, Axiom, Relabelled, Relabelling, assert_verdict
-from discopy.utils import factory_name
+from discopy import (
+    biclosed, braided, cat, compact, feedback, monoidal, pivotal, ribbon)
+from discopy.shape import Atomic
+from discopy.testing import (
+    GENERATORS, Axiom, AxiomFailure, Relabelling)
+from discopy.utils import AxiomError, factory_name
 
 
 class Counterexample(NamedTuple):
@@ -23,17 +26,30 @@ class Counterexample(NamedTuple):
 
 
 COLLAPSE = Relabelling(tuple(
-    (cat.Ob(name), cat.Ob("a")) for name in "abcde"))
+    (cat.Ob(name), cat.Ob("a")) for name in GENERATORS))
+"""
+The relabelling the search shrunk to: every generator sent to the first.
+
+It names all of them because every functor the strategy builds does, see
+:obj:`discopy.testing.GENERATORS`. The images are what shrinking landed on
+rather than what the bug needs — composing on the left forgets the functor
+whatever it relabels, so the identity relabelling is a counterexample too.
+"""
 
 MEMORY = feedback.Ty("a") @ feedback.Ty("b")
 
 COUNTEREXAMPLES = (
     Counterexample(
         axiom=cat.Functor.unitality,
-        args=(cat.Functor(ob_map=COLLAPSE, ar_map=Relabelled(COLLAPSE)), ),
+        args=(cat.Functor(ob_map=COLLAPSE, ar_map=COLLAPSE), ),
         reason="MappingOrCallable.then iterates the keys of the left-hand "
                "map and the identity functor enumerates none, so id >> f "
                "forgets everything f does."),
+    Counterexample(
+        axiom=monoidal.Wire.transparency,
+        args=(monoidal.Wire("a"), ),
+        reason="A white wire prints as the plain cat.Ob of old dumps, so "
+               "its repr reads back one type down."),
     Counterexample(
         axiom=braided.Diagram.braid_naturality,
         args=(braided.Box("f", braided.Ty("a"), braided.Ty("a")),
@@ -79,9 +95,15 @@ COUNTEREXAMPLES = (
 
 
 def counterexample_parameters():
-    """ One parameter per record, xfail while its axiom is declared broken. """
+    """
+    One parameter per record, a strict xfail while its axiom is declared
+    broken: the day the bug is fixed the record fails as an unexpected pass
+    until the ``.failing`` declaration moves.
+    """
     for axiom, args, reason in COUNTEREXAMPLES:
-        marks = pytest.mark.xfail(reason=reason) if axiom.broken else ()
+        marks = pytest.mark.xfail(
+            reason=reason, raises=(AssertionError, AxiomError), strict=True)\
+            if axiom.broken else ()
         yield pytest.param(
             axiom, args, marks=marks,
             id=f"{factory_name(axiom.carrier)}.{axiom.name}")
@@ -89,5 +111,14 @@ def counterexample_parameters():
 
 @pytest.mark.parametrize("axiom, args", counterexample_parameters())
 def test_counterexample(axiom, args):
-    """ Check an axiom on a recorded counterexample. """
-    assert_verdict(axiom, axiom(*args))
+    """
+    Check an axiom on a recorded counterexample.
+
+    A broken axiom's failure carries the equation, which the record must
+    falsify: its cell xfails while the bug stands and passes — visibly,
+    as an expected pass — the day the bug is fixed.
+    """
+    try:
+        assert axiom(*args)
+    except AxiomFailure as failure:
+        assert failure.equation

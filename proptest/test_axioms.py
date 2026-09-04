@@ -1,47 +1,12 @@
 """ Property tests for DisCoPy's principal categorical data structures. """
 
 import pytest
-from hypothesis import HealthCheck, given, settings
+from hypothesis import given, note
 from hypothesis import strategies as st
 
-from discopy import (
-    balanced,
-    biclosed,
-    braided,
-    cat,
-    closed,
-    compact,
-    feedback,
-    frobenius,
-    markov,
-    monoidal,
-    pivotal,
-    ribbon,
-    rigid,
-    symmetric,
-    traced,
-)
-from discopy.testing import assert_verdict
 from discopy.utils import factory_name
 
-CARRIERS = (
-    cat.Arrow, cat.Functor,
-    monoidal.Wire, monoidal.Ty, monoidal.PRO,
-    monoidal.Diagram, monoidal.Functor,
-    braided.Diagram, braided.Functor,
-    traced.Diagram, traced.Functor,
-    balanced.Diagram, balanced.Functor,
-    symmetric.Diagram, symmetric.Functor,
-    biclosed.Ty, biclosed.Diagram, biclosed.Functor,
-    rigid.Ty, rigid.Diagram, rigid.Functor,
-    pivotal.Ty, pivotal.Diagram, pivotal.Functor,
-    ribbon.Diagram, ribbon.Functor,
-    compact.Diagram, compact.Functor,
-    markov.Diagram, markov.Functor,
-    closed.Ty, closed.Diagram, closed.Functor,
-    feedback.Ty, feedback.Diagram, feedback.Functor,
-    frobenius.Ty, frobenius.Diagram, frobenius.Functor,
-)
+from proptest.carriers import CARRIERS
 
 
 def axiom_parameters():
@@ -51,9 +16,11 @@ def axiom_parameters():
     An axiom taking no argument states its verdict without one, so we ask it
     here: :obj:`NotImplemented` means the structure does not apply and the
     test is skipped rather than generating arguments it could not satisfy.
+    A carrier need not state laws at all: one enrolled for the ad-hoc
+    properties only, such as a type of wires, has no ``axioms``.
     """
     for carrier in CARRIERS:
-        for axiom in getattr(carrier, "axioms", ()):
+        for axiom in getattr(carrier, "axioms", {}).values():
             if not axiom.parameters and axiom() is NotImplemented:
                 marks = pytest.mark.skip(reason=axiom.__doc__.strip())
             elif axiom.broken:
@@ -67,9 +34,9 @@ def axiom_parameters():
 
 @pytest.mark.parametrize("axiom", axiom_parameters())
 @given(data=st.data())
-@settings(max_examples=25, deadline=None,
-          suppress_health_check=[HealthCheck.filter_too_much])
 def test_axiom(axiom, data):
     """ Check an axiom of a carrier against generated arguments. """
     args = data.draw(axiom.strategy(), label=axiom.name)
-    assert_verdict(axiom, axiom(*args))
+    verdict = axiom(*args)
+    note(verdict)
+    assert verdict

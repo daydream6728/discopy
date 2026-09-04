@@ -62,9 +62,7 @@ from warnings import warn
 
 from discopy import cat, drawing, hypergraph, cmap, messages
 from discopy.abc import ColouredMonoid, MonoidalCategory
-from discopy.testing import (
-    Bifunctor, BoundaryConnected, C1, GENERATORS, HorizontalPair, Strategy,
-    axiom)
+from discopy.testing import GENERATORS, Strategy, axiom
 from discopy.drawing import Drawing
 from discopy.config import (
     BOX_DRAWING_ATTRIBUTES, WIRE_DRAWING_ATTRIBUTES,
@@ -83,6 +81,8 @@ from discopy.utils import (
 
 if TYPE_CHECKING:
     import sympy
+    from discopy.shape import HorizontalPair
+    from discopy.testing import C1
 
 
 @dataclass(frozen=True)
@@ -156,6 +156,10 @@ class Wire(cat.Ob):
             st.just(dom), st.just(cod)).map(
                 lambda args: cls(
                     args[0], dom=args[1], cod=args[2]))
+
+    transparency = Strategy.transparency.failing(
+        "A white wire prints as the plain cat.Ob of old dumps, which "
+        "cast_wire upgrades inside a type but a bare eval does not.")
 
     def __setstate__(self, state):
         state.setdefault('dom', white)
@@ -1557,10 +1561,10 @@ class Diagram(
         return super().from_tree(tree)
 
     bifunctoriality = MonoidalCategory.bifunctoriality.modulo(
-        normal_form).weaken(square=BoundaryConnected[Bifunctor[C1]])
+        normal_form).weaken(square="BoundaryConnected[Bifunctor[C1]]")
 
     dagger_monoidality = MonoidalCategory.dagger_monoidality.modulo(
-        normal_form).weaken(pair=BoundaryConnected[HorizontalPair[C1]])
+        normal_form).weaken(pair="BoundaryConnected[HorizontalPair[C1]]")
 
 
 class Box(cat.Box, Diagram):

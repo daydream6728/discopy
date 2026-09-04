@@ -22,19 +22,18 @@ def test_axiom_mro_discovery_order_and_shadowing():
     class Shadow(Child):
         parent_law = None
 
-    names = tuple(axiom.name for axiom in Child.axioms)
+    names = tuple(Child.axioms)
     assert names[-2:] == ("parent_law", "child_law")
     assert len(names) == len(set(names))
-    assert "parent_law" not in {
-        axiom.name for axiom in Shadow.axioms}
+    assert "parent_law" not in Shadow.axioms
 
 
 def test_default_equation_factory():
     assert isinstance(
         abc.Category.__dict__["equation_factory"], classmethod)
     equation = abc.Category.equation_factory(0, 0)
-    assert isinstance(equation, abc.Equation)
-    assert isinstance(equation, Equation) and equation
+    assert isinstance(equation, abc.Equation) and equation
+    assert isinstance(Arrow.equation_factory(0, 0), Equation)
 
 
 def test_Ob():

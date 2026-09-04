@@ -9,6 +9,34 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Added
 
+- `discopy.shape`, reimplementing the property-testing shapes as finitely
+  presented categories: a `Shape` is a computad — generating boxes whose
+  `dom` and `cod` are words over generating objects, written in the free
+  category of the doctrine the shape needs, an exponential in a currying
+  word, a delay in a feedback one — and an instance of it in a carrier is a
+  `Model`, a functor out of the shape, whose typing is the one validation
+  every shape class used to state in its own `__new__`. Sampling lives in
+  `Sample`, the Kleisli category of the `Search` monad — stated as a
+  `discopy.kleisli.monad.Monad` and hosted by
+  `discopy.kleisli.multiplicative.Channel`, so composition, tensor, copy
+  and whiskering all come from the Kleisli submodule and `shape` only adds
+  the swaps a `markov.Functor` asks for; the monad is commutative up to
+  distribution, which is what makes the premonoidal Kleisli category a
+  `MarkovCategory` where copy shares a drawn value. Deriving a shape's
+  search strategy is two-stage the way `STYLE.md` wants composition pure
+  and functor application effectful: `Shape.sampling()` builds a
+  `markov.Diagram` plan — drawable like any diagram — and a
+  `markov.Functor` into `Sample` evaluates it, so every arrow is drawn
+  with fully determined boundaries and no rejection filtering outside the
+  sorts of the generators. `Shape.grid` derives the four pasting shapes
+  from nothing and the `Bifunctor` padding is a degeneracy applied after
+  sampling. The hand-written shape classes of `discopy.testing` are
+  deleted; `Axiom.strategy` injects the shape catalog into the annotation
+  scope, so the modules stating axioms no longer import the shapes at
+  runtime, and `monoidal`'s weakened subspaces are strings evaluated
+  lazily, which is what breaks the import cycle
+  ([#658](https://github.com/discopy/discopy/issues/658)).
+
 - The property matrix's search strategy is now recursive: `cat.Arrow` and
   `monoidal.Diagram` build composite paths/diagrams with
   `hypothesis.strategies.recursive`/an iterated layer search instead of
@@ -25,13 +53,135 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   law once on `discopy.abc.Category`/`ColouredMonoid` and every subclass
   inherits it; `.failing`/`.inapplicable` classify a law as broken or not
   applicable to a carrier, and `.modulo`/`.weaken` are defined (compare up
-  to a function, quantify over a named subspace) but not used yet. The
+  to a function, quantify over a named subspace) but not used yet. A
+  broken law raises `AxiomFailure` carrying its equation, which the
+  recorded-counterexample replay checks, so a record's xfail is earned by
+  its arguments falsifying the law and flips visibly when the bug is
+  fixed; `Axiom` is a dataclass whose classifiers derive one from another
+  with `dataclasses.replace`, so none of them drops a field — `.failing`
+  used to lose the subspaces a `.weaken` declared. The argument and
+  subspace wrappers are parameterised with `NamedGeneric["factory"]` like
+  `Hypergraph` and `Equation` — which moves `NamedGeneric` itself down to
+  `discopy.utils`, re-exported from `discopy.abc`, so `discopy.testing`
+  can use it — making a subscripted wrapper a class whose
+  `strategy(cls, **params)` matches the contract `Strategy.strategy` now
+  states, so a subspace annotation like `NonEmpty[ComposablePair[C1]]`
+  builds; an unbound axiom's `.strategy()` raises the same `TypeError`
+  as `.falsify` and calling it. The
   search itself is the canonical instantiation only — one atomic object or
   one free/generator box per parameter, no recursive or compound
   generation — wired up in `proptest/test_axioms.py`, enrolled so far for
   `cat.Arrow` and `cat.Functor`, and run by the new `proptest` GitHub
-  workflow on `main`, manual dispatch and PRs labelled `proptest`. See
-  [PROPTEST.md](PROPTEST.md) and [BUGS.md](BUGS.md).
+  workflow on PRs labelled `proptest`, on `main`, nightly and on manual
+  dispatch. `proptest/conftest.py` registers three Hypothesis profiles
+  over one example database, keyed per cell by node id: `pr` replays what
+  the database remembers and generates a few examples from a fixed seed,
+  `explore` searches with a large budget, and `dev` reads CI's database through a read-only
+  `GitHubArtifactDatabase` given a `GITHUB_TOKEN`. The workflow downloads
+  the database from the previous run's artifact and uploads its own after
+  every run, so a counterexample found by one night's search fails every
+  pull request until it is fixed or declared; a recorded counterexample
+  xfails strictly while its axiom is declared `.failing`, so a fixed bug
+  fails as an unexpected pass until the declaration moves. `Strategy`
+  states the laws of any type that generates its own instances, whatever
+  its level: `transparency`, `pickling` and `serialisation` are cells of
+  the matrix for every carrier — `eval(repr(x))`, the pickle and the tree
+  of a term read back to it, as `Equation`s like every other law — with
+  `Strategy.environment` for the namespace a representation reads back
+  in, which a carrier printing bare names overrides; the ad-hoc property
+  files for representations, pickling and serialisation are gone, and a
+  known violation is a `.failing` declaration on its carrier like any
+  other broken law. The workflow
+  for developing against the suite — laws stated before implementation,
+  a failing cell debugged, its counterexample recorded, a strategy that
+  missed a bug audited — is the documentation of `discopy.testing`,
+  which joins the API docs under its own `testing` page; `AGENTS.md`
+  points to it from `Where` rather than importing it into every agent's
+  context, and links its other documents rather than importing them with
+  the `@` syntax only `CLAUDE.md` is read with.
+- The style review keeps score. Every review it posts records the remarks
+  it made, hidden in its own body, so the next round can read them back
+  whole rather than parse its own prose. That next round is one request
+  as before: the model is shown the past remarks with the replies they
+  drew, alongside the revision it is reviewing, and says what became of
+  each — `accepted` when the file now does what the remark asked,
+  `declined` when someone answered that they would not do it, and neither
+  while nobody has answered and nothing has moved. Each review then
+  carries the tally of the remarks **it** made and no others, `3 style
+  remarks: 1 accepted / 1 declined / 1 still open` — or `all accepted`, a
+  state nothing is in being left out rather than counted at nought — so
+  that a review says how what it asked for landed, read where it asked
+  it. A round is scored by the ones that follow it, so the review being
+  posted carries no tally yet and every round already posted is written
+  again. A verdict that decided something survives a later round that
+  forgets it: each tally carries the verdicts it recorded, hidden beside
+  the line it shows, and a round merges its answers into them rather than
+  recomputing the lot — a remark accepted while its file was in the diff stays
+  accepted once the diff has moved on, where asking a model that can no
+  longer see that file made the tally oscillate. A round is one review and
+  says which round it is, so the reader sees how the review is landing
+  without counting them. The prompt is ordered from what never moves to
+  what moves every round — instructions, `STYLE.md`, context files, the
+  past remarks as a list that only grows at its end, and last the revision
+  under review — so that two rounds of one pull request share a prefix the
+  gateway can serve from its cache rather than reading again
+  ([#672](https://github.com/discopy/discopy/pull/672)).
+- The style review never posts a review of a revision that is gone. Its
+  concurrency group keyed on the event's action as well as the pull
+  request, so a push cancelled the round another push had started but not
+  one started by `ready_for_review` or by asking for it in a comment:
+  those ran on, and posted a review of the head they had read minutes
+  earlier, with line numbers belonging to a revision nobody could see any
+  more. The group is now the pull request alone, so a newer trigger
+  cancels the round in flight whatever started either of them, and
+  `post.py` re-reads the head before posting and stands down when it has
+  moved, leaving the review to the round that push starts. The base
+  branch advancing is not this and never was: a merge base does not move
+  when its target gains commits, so the diff both we and GitHub compute —
+  and every line number in it — is the same before and after
+  ([#672](https://github.com/discopy/discopy/pull/672)).
+- The style review comments on the diff, and says where it could not.
+  Whole files are what it reads to judge a change against the
+  conventions around it, not an invitation to review code the change
+  does not touch, so the prompt asks for findings on the lines the diff
+  adds and says that going outside them is allowed but discouraged —
+  for the case where what is wrong with a change is somewhere it did not
+  touch. Every remark is a comment on the line it is about wherever
+  GitHub takes one there, which is any line one of the diff's hunks
+  shows; a remark further out goes in the review body, as do the ones
+  past the ten-finding cap and, where GitHub refuses the inline comments
+  outright, all of them. Left as a review of the file at large, the
+  ten-finding cap went on code nobody was changing, and under the tally
+  above those remarks stayed open forever, since fixing them was out of
+  the pull request's scope
+  ([#673](https://github.com/discopy/discopy/issues/673)). The body also
+  names the changed files that did not fit one prompt — reviewed from
+  their diff alone, or not reviewed at all — where that was said in the
+  job's log and nowhere a reader would look, so a review with nothing to
+  say about a file it never read whole read exactly like one that had
+  read it.
+- A `workflows` job in `build.yml`, so that the code running our pull
+  requests is checked like the code it checks: `actionlint` over the
+  workflows, `pflake8` over `.github`, and `pytest .github/tests/*.py`
+  over the three scripts and the composite action, whose steps take a
+  strict subset of a workflow step's keys that `actionlint` does not
+  check. Three of the last five changes to `.github`
+  were fixing bugs in `.github`
+  ([#611](https://github.com/discopy/discopy/issues/611),
+  [#615](https://github.com/discopy/discopy/issues/615),
+  [#640](https://github.com/discopy/discopy/issues/640)), every one found
+  in production. On its first runs `actionlint` found the `style-review.yml`
+  bug below, and shellcheck the `A && B || C` in `benchmark.yml`'s summary
+  step, now an `if` ([#645](https://github.com/discopy/discopy/pull/645)).
+- `.github/actions/setup`, one composite action for installing uv, Python,
+  the project and, for the jobs that draw, Graphviz. The three `build.yml`
+  jobs called for it four times between them and the Graphviz incantation
+  was byte-identical twice. `benchmark.yml` keeps its own steps: it checks
+  out two arbitrary commits and one of them predates this action
+  ([#645](https://github.com/discopy/discopy/pull/645)).
+- `.github/dependabot.yml`, grouping the monthly GitHub Actions updates
+  into one pull request, now that every action is pinned by commit
+  ([#645](https://github.com/discopy/discopy/pull/645)).
 - The style review can be asked for, and turned off, from the pull request
   itself: `@discopy review this` in a comment reviews it now, and the
   `no-style-review` label stops the automatic reviews on it, while the
@@ -61,7 +211,16 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   model behind an OpenAI-compatible gateway, configured by the
   `STYLE_REVIEW_BASE_URL` and `STYLE_REVIEW_MODEL` repository variables and
   the `STYLE_REVIEW_API_KEY` secret
-  ([#608](https://github.com/discopy/discopy/pull/608)).
+  ([#608](https://github.com/discopy/discopy/pull/608)). The review prompt
+  now also carries the PR discussion so far — conversation comments,
+  diff comments and review summaries, merged chronologically by
+  `thread.py` from the three listings `history.py` already reads for the
+  tally — so a re-review references a resolved flag instead of re-raising
+  it, and weighs an author's reply as context about the discussion rather
+  than authority on the style itself
+  ([#620](https://github.com/discopy/discopy/pull/620);
+  [#619](https://github.com/discopy/discopy/issues/619) tracks the
+  long-term memory this is a prerequisite for).
 - Combinatorial map representation, `discopy.cmap`, encoding diagrams in
   compact categories as a permutation on the ports of each box
   ([#338](https://github.com/discopy/discopy/pull/338)).
@@ -104,6 +263,15 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   hierarchy below symmetric: traced, Markov, closed, feedback, compact and
   hypergraph ([#558](https://github.com/discopy/discopy/issues/558),
   refactoring [#325](https://github.com/discopy/discopy/pull/325)).
+- `discopy.kleisli`, the Kleisli category of a `Monad`, with the channel,
+  multiplicative and additive instances. `Monad` carries an optional
+  `iterate` operator, i.e. the structure of an Elgot monad, so that
+  `kleisli.additive.Channel.trace` is defined exactly for the monads that
+  supply one, with Dal Lago-Hoshino's token machines as a worked example
+  where conditioning is a trace. `kleisli.additive.Channel` declares itself
+  a `TracedCategory`, so whiskering on either side comes from
+  `MonoidalCategory`
+  ([#443](https://github.com/discopy/discopy/pull/443)).
 - `para.Symmetric` carries an optional coparameter space: a map is
   `inside : dom @ param -> cod @ copar` with `copar` empty by default, so
   parametric maps read as before, coparametric maps are the empty-`param`
@@ -123,6 +291,46 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   ([#484](https://github.com/discopy/discopy/pull/484)).
 
 ### Changed
+
+- The benchmark measures a pull request against its merge base rather
+  than the tip of its base branch. The head does not contain what landed
+  on `main` since it forked, so measuring against the tip charged the pull
+  request for everyone else's commits. `benchmark.yml` resolves it with one
+  `compare` call and records it as `previous` in the artifact metadata,
+  next to the `base` the comment still validates itself against
+  ([#645](https://github.com/discopy/discopy/pull/645)).
+- `benchmark-comment.yml` is 33 lines of YAML calling
+  `.github/scripts/benchmark_comment.py` rather than 140 lines of
+  JavaScript embedded in YAML. Nothing needed `actions/github-script`: the
+  event payload is a JSON file named by `GITHUB_EVENT_PATH` and the REST
+  API is `urllib`, which `.github/style-review/post.py` already talks to.
+  In Python it is lintable, testable and in the one language this
+  repository is written in; its validation is `unreadable`, `unattested`
+  and `mismatch`, three pure functions the tests state the refusals of.
+  The job also stopped taking the artifact's word for three things, since
+  the pull request can write it: the pull request number is checked to be
+  an integer before it reaches a URL rather than after, the merge base the
+  comment links is checked against one the job computes itself from two
+  commits it already trusts, and a run that lists no pull request of its
+  own -- one from a fork -- must name the single open pull request for its
+  head rather than any that shares its branch. A download that fails is no
+  longer silence: the job asks whether the artifact was staged at all, and
+  only then posts nothing
+  ([#645](https://github.com/discopy/discopy/pull/645)).
+- `build.yml` and `benchmark.yml` cancel a pull request's superseded runs
+  but let every commit on `main` finish, `cancel-in-progress` reading
+  `github.event_name == 'pull_request'`. Cancelling on `main` left commits
+  nothing ever built — `112b6036` is one — and threw away the pair of
+  measurements a benchmark run exists to produce
+  ([#645](https://github.com/discopy/discopy/pull/645)).
+- Every action is pinned by commit, not by moving tag, as
+  `benchmark-comment.yml` already pinned two of them; `build.yml` declares
+  `permissions: contents: read` like the other four workflows; and every
+  checkout sets `persist-credentials: false`
+  ([#645](https://github.com/discopy/discopy/pull/645)).
+- `build.yml` drops the `SRC_DIR` and `TEST_DIR` variables, which nothing
+  read, and the `tooling/uv-migration` push trigger, whose branch is gone
+  ([#645](https://github.com/discopy/discopy/pull/645)).
 
 - `CMap` is aligned on `Hypergraph`. It is parameterised by a category as
   `NamedGeneric["category"]` instead of carrying `require_*` flags, and it is
@@ -280,6 +488,21 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
+- `rigid.Diagram.functor_factory` is `rigid.Functor`: it inherited
+  `biclosed.Functor`, which does not rotate, so a box mapped through
+  it lost the rotation of its boundary.
+- `style-review.yml`'s hand-over to the correctness reviewer, and its
+  token generation, ran on every style review rather than the intended
+  ones. Both conditions were written as `if: >` folding a wrapped
+  `${{ ... }}` into a string with a trailing newline: with characters
+  around it the expression is no longer the whole value, so GitHub read a
+  non-empty string and took it as true. `@cubic-dev-ai review` was
+  therefore posted whatever the style review found, where it is meant to
+  wait for a clean one. [#634](https://github.com/discopy/discopy/pull/634)
+  rewrote both conditions and the shape survived, so the fix is applied to
+  its versions: written bare, as the file's other five conditions are
+  ([#645](https://github.com/discopy/discopy/pull/645)).
+
 - The style review no longer depends on a transition that may never
   happen. `ready_for_review` fires on the draft-to-ready edge alone, so a
   pull request whose `TODO.md` was deleted before it was ever opened went
@@ -329,6 +552,11 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   and `draw` raise. The check is gated on `_scan`, so the internal fast paths
   that build layers by construction are unaffected
   ([#599](https://github.com/discopy/discopy/issues/599)).
+- `kleisli.additive.Channel.trace(0)` no longer empties `dom` and `cod`:
+  the tenth `self.dom[:-n]` site of
+  [#578](https://github.com/discopy/discopy/issues/578), left to this
+  branch since `discopy.kleisli` was not yet on `main` when the other nine
+  were fixed by [#588](https://github.com/discopy/discopy/pull/588).
 - `review.py`'s style-review request: `ask` used to let a gateway
   `HTTPError` propagate without reading its body, so a 400 gave no clue
   whether it meant a dead model slug or an oversized prompt; it now prints
@@ -379,6 +607,47 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   run when the branch has already moved past the event it is handling,
   rather than drafting a head that no longer exists behind its back
   ([#640](https://github.com/discopy/discopy/issues/640)).
+- A style review that stands down calls nobody. `post.py` returns
+  before posting when the head has moved under it, and that return went
+  past `record`, leaving the `clean` output unset — which
+  `style-review.yml` reads as clean, since it withholds the correctness
+  reviewer on `clean == 'false'` alone. So a round that reviewed nothing
+  called `@cubic-dev-ai` on a head nobody had read, and the guard that
+  calls it once per pull request then made that permanent: the round the
+  push started found it already called and stood down in turn. Standing
+  down now records `clean=false`, which is the honest value — there is
+  something left to say about this pull request, just not by this round
+  ([#676](https://github.com/discopy/discopy/pull/676)).
+- The style review reads the gateway's answer again when the transfer is
+  cut short. A chunked response can end mid-body, and an
+  `IncompleteRead` four minutes in left
+  [#661](https://github.com/discopy/discopy/pull/661) with no review at
+  all; a connection reset or a timeout is the same failure, so `complete`
+  catches `URLError` and `TimeoutError` beside it. An `HTTPError` is the
+  gateway answering rather than the transfer failing — and a subclass of
+  `URLError`, so it would otherwise be caught — and is raised at once for
+  `ask` to print the body of. The attempts are capped at two, ten minutes
+  each, inside the job's own thirty
+  ([#671](https://github.com/discopy/discopy/pull/671), closed as
+  superseded but for this).
+- The notes naming what did not fit the style review's budget sit with
+  the changed files they describe rather than between the context files
+  and the past remarks. They name whatever was dropped, degraded or left
+  unreviewed *this* round, so in the prefix they rewrote its middle
+  whenever that set changed — costing the cache the remarks, the
+  discussion and the whole revision after them
+  ([#676](https://github.com/discopy/discopy/pull/676)).
+- `review.py`'s `assemble` raised when a changed file's full-file
+  `annotated` listing didn't fit `BUDGET`, crashing the whole
+  style-review step on a large diff. A changed file too big for that now
+  falls back to a plain, small-context `git diff` of just its hunks, the
+  same degrade already applied to imported context files; a file whose
+  diff still doesn't fit is reported as entirely unreviewed rather than
+  silently dropped. `style-review.yml`'s "Review the diff" step is now
+  named so the "Call the correctness reviewer" step can tell a crash
+  apart from a clean or a non-clean review, and says so in the comment
+  it posts instead of reading like either of those
+  ([#617](https://github.com/discopy/discopy/pull/617)).
 - `build.yml` timeouts and a bounded, retried Graphviz install
   ([#591](https://github.com/discopy/discopy/issues/591)).
 - `frobenius.Diagram.unfuse`'s doctest no longer sets `Spider.color = "red"`
