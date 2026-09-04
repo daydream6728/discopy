@@ -1,22 +1,23 @@
 # -*- coding: utf-8 -*-
 
 """
-One test for each argument generator of :mod:`discopy.testing`: it accepts
-valid arguments, rejects invalid ones, and its search strategy reaches every
-shape of argument the axioms expect. Whether the axioms hold is checked over
-every category in ``proptest/``.
+One test for each shape of :mod:`discopy.shape` as the axioms use it: its
+constructor accepts valid images and rejects badly typed ones, and its
+derived search strategy reaches every shape of argument the axioms expect.
+Whether the axioms hold is checked over every category in ``proptest/``.
 """
 
 from hypothesis import find
 from pytest import raises
 
 from discopy import biclosed, cat, feedback, monoidal, traced
-from discopy.testing import (
+from discopy.shape import (
     Atomic, Bifunctor, BoundaryConnected, ComposablePair, ComposableTriple,
     FeedbackJoining, FeedbackVanishing, HomogeneousMemory, HorizontalPair,
-    LeftCurrying, Natural, NonEmpty, RightCurrying, Small,
-    TraceDinaturalityLeft, TraceDinaturalityRight, TraceNaturalityLeft,
-    TraceNaturalityRight, TraceSuperposing, axiom)
+    LeftCurrying, NonEmpty, RightCurrying, Small, TraceDinaturalityLeft,
+    TraceDinaturalityRight, TraceNaturalityLeft, TraceNaturalityRight,
+    TraceSuperposing)
+from discopy.testing import Natural, axiom
 from discopy.utils import AxiomError
 
 
@@ -30,164 +31,182 @@ def test_Natural():
 
 
 def test_Atomic():
-    x, y = map(monoidal.Ty, "xy")
+    x = monoidal.Ty('x')
     assert Atomic(x).value == x
-    with raises(ValueError):
-        Atomic(x @ y)
-    find(Atomic.strategy(factory=monoidal.Ty),
-         lambda value: len(value.value) == 1)
+    find(Atomic.strategy(monoidal.Ty), lambda model: len(model.value) == 1)
 
 
 def test_NonEmpty():
     x = monoidal.Ty('x')
     assert NonEmpty(x).value == x
-    with raises(ValueError):
-        NonEmpty(monoidal.Ty())
-    find(NonEmpty.strategy(factory=monoidal.Ty),
-         lambda value: len(value.value) > 1)
+    find(NonEmpty.strategy(monoidal.Ty), lambda model: len(model.value) > 1)
+
+
+def test_Small():
+    x = monoidal.Ty('x')
+    assert Small(x).value == x
+    find(Small.strategy(monoidal.Ty), lambda model: len(model.value) == 1)
 
 
 def test_ComposablePair():
     x, y = map(cat.Ob, "xy")
     f, g = cat.Box('f', x, y), cat.Box('g', y, x)
-    assert ComposablePair(f, g) == (f, g)
+    assert tuple(ComposablePair(f, g)) == (f, g)
     with raises(ValueError):
         ComposablePair(f)
     with raises(AxiomError):
         ComposablePair(f, f)
-    find(ComposablePair.strategy(factory=cat.Arrow),
-         lambda value: all(term.inside for term in value))
+    find(ComposablePair.strategy(cat.Arrow),
+         lambda model: all(term.inside for term in model))
 
 
 def test_ComposableTriple():
     x, y = map(cat.Ob, "xy")
     f, g = cat.Box('f', x, y), cat.Box('g', y, x)
-    assert ComposableTriple(f, g, f) == (f, g, f)
+    assert tuple(ComposableTriple(f, g, f)) == (f, g, f)
     with raises(AxiomError):
         ComposableTriple(f, f, f)
-    find(ComposableTriple.strategy(factory=cat.Arrow),
-         lambda value: all(term.inside for term in value))
+    find(ComposableTriple.strategy(cat.Arrow),
+         lambda model: all(term.inside for term in model))
 
 
 def test_HorizontalPair():
     x, y = map(monoidal.Ty, "xy")
     f, g = monoidal.Box('f', x, y), monoidal.Box('g', y, x)
-    assert HorizontalPair(f, g) == (f, g)
+    assert tuple(HorizontalPair(f, g)) == (f, g)
     with raises(ValueError):
         HorizontalPair(f)
-    find(HorizontalPair.strategy(factory=monoidal.Diagram),
-         lambda value: all(term.boxes for term in value))
+    find(HorizontalPair.strategy(monoidal.Diagram),
+         lambda model: all(term.boxes for term in model))
 
 
 def test_Bifunctor():
     x, y = map(monoidal.Ty, "xy")
     f, g = monoidal.Box('f', x, y), monoidal.Box('g', y, x)
-    assert Bifunctor(f, f, g, g) == (f, f, g, g)
+    assert tuple(Bifunctor(f, f, g, g)) == (f, f, g, g)
     with raises(AxiomError):
         Bifunctor(f, f, f, f)
-    find(Bifunctor.strategy(factory=monoidal.Diagram),
-         lambda value: all(
-             value[column].boxes or value[column + 2].boxes
-             for column in range(2)))
+    find(Bifunctor.strategy(monoidal.Diagram),
+         lambda model: all(
+             cells[column].boxes or cells[column + 2].boxes
+             for cells in (tuple(model), ) for column in range(2)))
+
+
+def test_BoundaryConnected():
+    connected = BoundaryConnected[HorizontalPair[monoidal.Diagram]]
+    find(connected.strategy(),
+         lambda model: all(term.boxes for term in model))
 
 
 def test_TraceSuperposing():
     x, y, z = map(traced.Ty, "xyz")
-    assert TraceSuperposing(traced.Id(x), y) == (traced.Id(x), y)
+    assert tuple(TraceSuperposing(traced.Id(x), y)) == (traced.Id(x), y)
     with raises(AxiomError):
         TraceSuperposing(traced.Box('f', x, y), z)
-    find(TraceSuperposing.strategy(factory=traced.Diagram),
-         lambda value: len(value[1]) > 1)
+    find(TraceSuperposing.strategy(traced.Diagram),
+         lambda model: len(tuple(model)[1]) > 1)
 
 
 def test_TraceNaturalityLeft():
     x, y = map(traced.Ty, "xy")
     f, g = traced.Box('f', x @ y, x @ x), traced.Box('g', x, y)
-    assert TraceNaturalityLeft(f, x, g) == (f, x, g)
-    with raises(ValueError):
+    assert tuple(TraceNaturalityLeft(f, x, g)) == (f, x, g)
+    with raises(AxiomError):
         TraceNaturalityLeft(traced.Id(x @ y), x, traced.Id(x))
-    find(TraceNaturalityLeft.strategy(factory=traced.Diagram),
-         lambda value: value[2].dom != value[2].cod)
+    find(TraceNaturalityLeft.strategy(traced.Diagram),
+         lambda model: tuple(model)[2].dom != tuple(model)[2].cod)
 
 
 def test_TraceNaturalityRight():
     x, y = map(traced.Ty, "xy")
     f, g = traced.Box('f', y @ x, x @ x), traced.Box('g', x, y)
-    assert TraceNaturalityRight(f, x, g) == (f, x, g)
-    with raises(ValueError):
+    assert tuple(TraceNaturalityRight(f, x, g)) == (f, x, g)
+    with raises(AxiomError):
         TraceNaturalityRight(traced.Id(x @ y), x, traced.Id(y))
-    find(TraceNaturalityRight.strategy(factory=traced.Diagram),
-         lambda value: value[2].dom != value[2].cod)
+    find(TraceNaturalityRight.strategy(traced.Diagram),
+         lambda model: tuple(model)[2].dom != tuple(model)[2].cod)
 
 
 def test_TraceDinaturalityLeft():
     x, y, z = map(traced.Ty, "xyz")
     f, g = traced.Box('f', x @ z, y @ z), traced.Box('g', y, x)
-    assert TraceDinaturalityLeft(f, g) == (f, g)
-    with raises(ValueError):
+    assert tuple(TraceDinaturalityLeft(f, g)) == (f, g)
+    with raises(AxiomError):
         TraceDinaturalityLeft(g, f)
-    find(TraceDinaturalityLeft.strategy(factory=traced.Diagram),
-         lambda value: value[1].dom != value[1].cod)
+    find(TraceDinaturalityLeft.strategy(traced.Diagram),
+         lambda model: tuple(model)[1].dom != tuple(model)[1].cod)
 
 
 def test_TraceDinaturalityRight():
     x, y, z = map(traced.Ty, "xyz")
     f, g = traced.Box('f', z @ x, z @ y), traced.Box('g', y, x)
-    assert TraceDinaturalityRight(f, g) == (f, g)
-    with raises(ValueError):
+    assert tuple(TraceDinaturalityRight(f, g)) == (f, g)
+    with raises(AxiomError):
         TraceDinaturalityRight(g, f)
-    shape = find(TraceDinaturalityRight.strategy(factory=traced.Diagram),
-                 lambda value: value[1].dom != value[1].cod)
-    sliding = shape[1]
-    assert shape[0].dom[-len(sliding.cod):] == sliding.cod
-    assert shape[0].cod[-len(sliding.dom):] == sliding.dom
+    traced_image, sliding = find(
+        TraceDinaturalityRight.strategy(traced.Diagram),
+        lambda model: tuple(model)[1].dom != tuple(model)[1].cod)
+    assert traced_image.dom[-len(sliding.cod):] == sliding.cod
+    assert traced_image.cod[-len(sliding.dom):] == sliding.dom
 
 
 def test_LeftCurrying():
     x, y = map(biclosed.Ty, "xy")
     evaluation = biclosed.Diagram.ev(x, y, left=True)
-    assert LeftCurrying(evaluation, x, y) == (evaluation, x, y)
-    with raises(ValueError):
+    assert tuple(LeftCurrying(evaluation, x, y)) == (evaluation, x, y)
+    with raises(AxiomError):
         LeftCurrying(evaluation, y, x)
-    find(LeftCurrying.strategy(factory=biclosed.Diagram),
-         lambda value: value[1] != value[2])
+    find(LeftCurrying.strategy(biclosed.Diagram),
+         lambda model: tuple(model)[1] != tuple(model)[2])
 
 
 def test_RightCurrying():
     x, y = map(biclosed.Ty, "xy")
     evaluation = biclosed.Diagram.ev(x, y, left=False)
-    assert RightCurrying(evaluation, x, y) == (evaluation, x, y)
-    with raises(ValueError):
+    assert tuple(RightCurrying(evaluation, x, y)) == (evaluation, x, y)
+    with raises(AxiomError):
         RightCurrying(evaluation, y, x)
-    find(RightCurrying.strategy(factory=biclosed.Diagram),
-         lambda value: value[1] != value[2])
+    find(RightCurrying.strategy(biclosed.Diagram),
+         lambda model: tuple(model)[1] != tuple(model)[2])
 
 
 def test_FeedbackVanishing():
     x = feedback.Ty('x')
     f, unit = feedback.Box('f', x, x), feedback.Ty()
-    assert FeedbackVanishing(f, unit) == (f, unit)
+    assert tuple(FeedbackVanishing(f, unit)) == (f, unit)
     with raises(ValueError):
         FeedbackVanishing(f, x)
-    find(FeedbackVanishing.strategy(factory=feedback.Diagram),
-         lambda value: value[0].boxes)
+    find(FeedbackVanishing.strategy(feedback.Diagram),
+         lambda model: tuple(model)[0].boxes)
 
 
 def test_FeedbackJoining():
     x, y, z = map(feedback.Ty, "xyz")
     memory = y @ z
     f = feedback.Box('f', x @ memory.delay(), x @ memory)
-    assert FeedbackJoining(f, memory) == (f, memory)
+    assert tuple(FeedbackJoining(f, memory)) == (f, memory)
     with raises(ValueError):
         FeedbackJoining(f, feedback.Ty())
-    with raises(ValueError):
+    with raises(AxiomError):
         FeedbackJoining(feedback.Box('g', x @ memory, x @ memory), memory)
-    with raises(ValueError):
+    with raises(AxiomError):
         FeedbackJoining(
-            feedback.Box('g', x @ memory.delay(), x @ memory.delay()), memory)
-    shape = find(FeedbackJoining.strategy(factory=feedback.Diagram),
-                 lambda value: value[1][:1] != value[1][1:])
-    assert shape[0].cod[-2:] == shape[1]
+            feedback.Box('g', x @ memory.delay(), x @ memory.delay()),
+            memory)
+    arrow, mem = find(FeedbackJoining.strategy(feedback.Diagram),
+                      lambda model: tuple(model)[1][:1] != tuple(model)[1][1:])
+    assert arrow.cod[-2:] == mem
+
+
+def test_HomogeneousMemory():
+    x, m = map(feedback.Ty, "xm")
+    f = feedback.Box('f', x @ (m @ m).delay(), x @ m @ m)
+    assert HomogeneousMemory(f, m @ m)
+    n = feedback.Ty('n')
+    g = feedback.Box('g', x @ (m @ n).delay(), x @ m @ n)
+    with raises(AxiomError):
+        HomogeneousMemory(g, m @ n)
+    find(HomogeneousMemory.strategy(feedback.Diagram), lambda model: True)
 
 
 def test_Axiom():
@@ -212,38 +231,6 @@ def test_inapplicable():
     assert unitality() is NotImplemented
     assert unitality.__doc__ == "No identities."
     assert not unitality.parameters and not unitality.broken
-
-
-def test_Small():
-    x = monoidal.Ty('x')
-    assert Small(x).value == x
-    with raises(ValueError):
-        Small(x @ x)
-    find(Small.strategy(factory=monoidal.Ty),
-         lambda value: len(value.value) == 1)
-
-
-def test_BoundaryConnected():
-    x = monoidal.Ty('x')
-    f = monoidal.Box('f', x, x)
-    scalar = monoidal.Box('s', monoidal.Ty(), monoidal.Ty())
-    assert BoundaryConnected(f).value == f
-    with raises(ValueError):
-        BoundaryConnected(f @ scalar)
-    find(BoundaryConnected.strategy(factory=monoidal.Diagram),
-         lambda value: bool(value.value.boxes))
-
-
-def test_HomogeneousMemory():
-    x, m = map(feedback.Ty, "xm")
-    f = feedback.Box('f', x @ (m @ m).delay(), x @ m @ m)
-    assert HomogeneousMemory(f, m @ m)
-    n = feedback.Ty('n')
-    g = feedback.Box('g', x @ (m @ n).delay(), x @ m @ n)
-    with raises(ValueError):
-        HomogeneousMemory(g, m @ n)
-    find(HomogeneousMemory.strategy(factory=feedback.Diagram),
-         lambda value: True)
 
 
 # test_weaken lands on split/4-matrix: Matrix[int] is the first carrier

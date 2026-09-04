@@ -223,6 +223,34 @@ def send(word, images: Mapping[str, object], carrier):
     return image.delay(steps) if steps else image
 
 
+def infer(word, boundary, images: dict) -> None:
+    """
+    Read the image of a word's single unknown atom off a boundary, slicing
+    out the lengths of the known ones — how a replayed counterexample gets
+    the objects its exposed arrows do not name.
+    """
+    from discopy import biclosed
+
+    if not hasattr(word, "inside") or any(
+            isinstance(atom, biclosed.Exp) for atom in word.inside):
+        return
+    atoms = list(word.inside)
+    unknown = [i for i, atom in enumerate(atoms)
+               if atom.name not in images]
+    if len(unknown) != 1:
+        return
+    index = unknown[0]
+    atom = atoms[index]
+    if getattr(atom, "z", 0) or getattr(atom, "time_step", 0):
+        return
+    if len(atoms) == 1:
+        images[atom.name] = boundary
+        return
+    before = sum(len(images[a.name]) for a in atoms[:index])
+    after = sum(len(images[a.name]) for a in atoms[index + 1:])
+    images[atom.name] = boundary[before:len(boundary) - after]
+
+
 class Pure(markov.Box):
     """
     A deterministic box in a sampling plan: the image under the unit of the
@@ -243,12 +271,14 @@ class DrawOb(markov.Box):
 
 class DrawAr(markov.Box):
     """
-    Draw a carrier arrow between the two objects it takes as input, with
-    the params of the generator's sort.
+    Draw a carrier arrow between the objects it takes as input, with the
+    params of the generator's sort; ``sides`` says which of its boundaries
+    are constrained, both by default.
     """
-    def __init__(self, name: str, sort: Mapping | None = None):
-        self.sort = dict(sort or {})
-        super().__init__(f"draw({name})", OB @ OB, AR)
+    def __init__(self, name: str, sort: Mapping | None = None,
+                 sides: tuple[str, ...] = ("dom", "cod")):
+        self.sort, self.sides = dict(sort or {}), tuple(sides)
+        super().__init__(f"draw({name})", OB ** len(self.sides), AR)
 
 
 def sampler(carrier, ob_factory=None, **draw_params) -> markov.Functor:
@@ -270,8 +300,8 @@ def sampler(carrier, ob_factory=None, **draw_params) -> markov.Functor:
             return lambda: ob_factory.strategy(**box.sort)
         if isinstance(box, DrawAr):
             params = dict(draw_params, **box.sort)
-            return lambda dom, cod: carrier.strategy(
-                dom=dom, cod=cod, **params)
+            return lambda *boundaries: carrier.strategy(
+                **dict(zip(box.sides, boundaries)), **params)
         assert_isinstance(box, Pure)
         return Sample.pure(
             partial(box.function, carrier),
@@ -410,12 +440,17 @@ class Shape:
         for box in self.boxes:
             if box.name not in ars:
                 raise ValueError(f"Missing the image of {box.name}.")
-            image = ars[box.name]
-            for word, boundary in (
-                    (box.dom, image.dom), (box.cod, image.cod)):
-                atoms = names(word)
-                if len(atoms) == 1 and atoms[0] not in obs:
-                    obs[atoms[0]] = boundary
+        for _ in range(2):
+            for box in self.boxes:
+                image = ars[box.name]
+                for word, boundary in (
+                        (box.dom, image.dom), (box.cod, image.cod)):
+                    infer(word, boundary, obs)
+        missing = [name for name in self.obs if name not in obs]
+        if missing:
+            raise AxiomError(
+                f"Cannot infer the images of {missing} "
+                "from the given boundaries.")
         carrier = next(
             (type(value).ar for value in values
              if isinstance(value, Category)), type(values[0]))
@@ -500,6 +535,51 @@ class Shape:
             "model", self._pack,
             AR ** len(self.boxes) @ OB ** len(self.obs), MODEL)
 
+    def chain_sampling(self, bound: tuple[str, ...] = ()) -> markov.Diagram:
+        """
+        The sampling plan of a chain of composable boxes, drawing each
+        arrow with the boundary projected off the one before rather than
+        drawing the objects first — for carriers whose objects have no
+        strategy of their own, e.g. the functors of ``Cat``, whose objects
+        are categories.
+        """
+        atoms = [names(self.boxes[0].dom)[0]] + [
+            names(box.cod)[0] for box in self.boxes]
+        if any(
+                names(box.dom) + names(box.cod) != atoms[i:i + 2]
+                for i, box in enumerate(self.boxes)):
+            raise NotImplementedError(
+                "Projected sampling is only derived for chains.")
+        plan = markov.Id(OB ** len(bound))
+        n_arrows = 0
+        for i, box in enumerate(self.boxes):
+            sides = tuple(
+                side for side, atom in (
+                    ("dom", atoms[i]), ("cod", atoms[i + 1]))
+                if atom in bound or side == "dom" and i > 0)
+            step = DrawAr(box.name, self.sorts.get(box.name), sides)
+            trailing = len(plan.cod) - n_arrows - len(step.dom)
+            plan >>= markov.Id(AR ** n_arrows) @ step\
+                @ markov.Id(OB ** trailing)
+            n_arrows += 1
+            if i < len(self.boxes) - 1:
+                plan >>= markov.Id(AR ** (n_arrows - 1)) @ Pure(
+                    f"{box.name}.cod", lambda carrier, arrow: (
+                        arrow, arrow.cod), AR, AR @ OB)\
+                    @ markov.Id(OB ** (len(plan.cod) - n_arrows))
+        return plan >> Pure(
+            "model", self._pack_projected, AR ** len(self.boxes), MODEL)
+
+    def _pack_projected(self, carrier, *arrows):
+        ars = dict(zip((box.name for box in self.boxes), arrows))
+        obs: dict = {}
+        for _ in range(2):
+            for box in self.boxes:
+                image = ars[box.name]
+                infer(box.dom, image.dom, obs)
+                infer(box.cod, image.cod, obs)
+        return Model(self, carrier, obs, ars)
+
     def _word(self, word) -> Callable:
         group = names(word)
 
@@ -533,9 +613,12 @@ class Shape:
                 for name in self.params[key]:
                     bound.append(name)
                     values.append(value)
-        ob_factory = carrier if not self.boxes else None
+        ob_factory = carrier if not self.boxes else carrier.ob
+        plan = self.chain_sampling(tuple(bound))\
+            if self.boxes and not hasattr(ob_factory, "strategy")\
+            else self.sampling(tuple(bound))
         return sampler(carrier, ob_factory=ob_factory, **params)(
-            self.sampling(tuple(bound)))(*values)
+            plan)(*values)
 
 
 class Sampled:
@@ -584,6 +667,10 @@ class Padded:
         self.full = Shape.grid(n_rows, n_columns)
 
     __getitem__ = Shape.__getitem__
+
+    def __call__(self, *values) -> Model:
+        """ A model of the full grid, replayed without padding. """
+        return self.full(*values)
 
     def strategy(self, carrier, **params) -> "st.SearchStrategy[Model]":
         """ Sample a single row and a position to insert it at. """

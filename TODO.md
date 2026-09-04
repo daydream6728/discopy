@@ -16,24 +16,25 @@
 > sampling as morphisms in the kleisli category, and search strategy
 > derivation as a functor between the two.
 
-- [WIP] @e89cefa6-2026-09-04 `Sample`, the Kleisli category of `hypothesis.strategies.SearchStrategy`,
-  as a concrete `MarkovCategory` in the `python.Function` mold, with `lift`
-  embedding pure functions; tested on its own.
-- [ ] `Shape`, a monoidal computad presented in the doctrine's own free
+- [x] `Sample`, the Kleisli category of `hypothesis.strategies.SearchStrategy`,
+  as a concrete `MarkovCategory` in the `python.Function` mold, with `pure`
+  embedding deterministic functions; tested on its own.
+- [x] `Shape`, a monoidal computad presented in the doctrine's own free
   category, with `Model` as the doctrine's `Functor` out of it — typing the
   box images is the whole validation; models unpack in generator order.
-- [ ] `Shape.sampling() -> markov.Diagram`, the pure sampling plan, and
-  `Sampler(carrier): markov.Functor` into `Sample` evaluating it;
+- [x] `Shape.sampling() -> markov.Diagram`, the pure sampling plan, and
+  `sampler(carrier): markov.Functor` into `Sample` evaluating it;
   `ComposablePair` end-to-end.
-- [ ] `Shape.grid(n_rows, n_columns)` deriving `ComposablePair`,
+- [x] `Shape.grid(n_rows, n_columns)` deriving `ComposablePair`,
   `ComposableTriple`, `HorizontalPair` and `Bifunctor`; the `active`-row
   padding as a degeneracy applied after sampling.
-- [ ] The traced, closed and feedback shapes as presentations — words carry
+- [x] The traced, closed and feedback shapes as presentations — words carry
   the constraints, `ev` and identities as derived cells.
-- [ ] Sorts on generators (`Atomic`, `NonEmpty`, `Small`,
+- [x] Sorts on generators (`Atomic`, `NonEmpty`, `Small`,
   `BoundaryConnected`, `min_leaves`) as params to the primitive draws.
-- [ ] Wire `resolve` so `Axiom.strategy` annotations (`ComposablePair[C1]`)
+- [x] Wire `resolve` so `Axiom.strategy` annotations (`ComposablePair[C1]`)
   reach `Shape.__getitem__`; delete the hand-written `strategy()` and
   `__new__` validators as each shape ports.
-- [ ] Equivalence checks: derived strategies find the structures the old
-  ones found; a drawn `sampling()` doctest per shape; CHANGELOG entry.
+- [WIP] @e89cefa6-2026-09-04 Equivalence checks: derived strategies find the
+  structures the old ones found; the full suite and `proptest/` green;
+  CHANGELOG entry.

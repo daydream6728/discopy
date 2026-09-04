@@ -9,6 +9,29 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Added
 
+- `discopy.shape`, reimplementing the property-testing shapes as finitely
+  presented categories: a `Shape` is a computad — generating boxes whose
+  `dom` and `cod` are words over generating objects, written in the free
+  category of the doctrine the shape needs, an exponential in a currying
+  word, a delay in a feedback one — and an instance of it in a carrier is a
+  `Model`, a functor out of the shape, whose typing is the one validation
+  every shape class used to state in its own `__new__`. Sampling lives in
+  `Sample`, the Kleisli category of the `SearchStrategy` monad, a concrete
+  `MarkovCategory` where copy shares a drawn value; deriving a shape's
+  search strategy is two-stage the way `STYLE.md` wants composition pure
+  and functor application effectful: `Shape.sampling()` builds a
+  `markov.Diagram` plan — drawable like any diagram — and a
+  `markov.Functor` into `Sample` evaluates it, so every arrow is drawn
+  with fully determined boundaries and no rejection filtering outside the
+  sorts of the generators. `Shape.grid` derives the four pasting shapes
+  from nothing and the `Bifunctor` padding is a degeneracy applied after
+  sampling. The hand-written shape classes of `discopy.testing` are
+  deleted; `Axiom.strategy` injects the shape catalog into the annotation
+  scope, so the modules stating axioms no longer import the shapes at
+  runtime, and `monoidal`'s weakened subspaces are strings evaluated
+  lazily, which is what breaks the import cycle
+  ([#658](https://github.com/discopy/discopy/issues/658)).
+
 - The property matrix's search strategy is now recursive: `cat.Arrow` and
   `monoidal.Diagram` build composite paths/diagrams with
   `hypothesis.strategies.recursive`/an iterated layer search instead of
