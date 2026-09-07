@@ -328,7 +328,7 @@ class Diagram(balanced.Diagram, SymmetricCategory):
             @ tensor(right)
             >> head @ cls.permutation(
                 [x - 1 if x > i else x for x in xs[1:]],
-                left + right))
+                left + right))  # ty: ignore[unsupported-operator]
 
     @classmethod
     def from_permutation(cls, perm: Sequence[int],

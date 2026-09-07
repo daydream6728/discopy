@@ -607,7 +607,9 @@ class Stream[category](MonoidalCategory, NamedGeneric):
         def _later():
             return self.later.feedback(dom.later, cod.later, mem.later, False)
         mem = mem.delay() if _first_call else mem
-        return type(self)(self.now, dom, cod, mem @ self.mem, _later)
+        return type(self)(
+            self.now, dom, cod,
+            mem @ self.mem, _later)  # ty: ignore[unsupported-operator]
 
     followed_by = id
 

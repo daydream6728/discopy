@@ -323,7 +323,7 @@ class Drawing(TracedCategory, RichDisplay):
         assert self.height >= max(y for (_, y) in self.positions.values())
 
         assert set(self.positions.keys()) == set(self.nodes) == set(
-            self.dom_nodes + self.cod_nodes) + set(
+            self.dom_nodes + self.cod_nodes) | set(
                 self.box_dom_nodes + self.box_nodes + self.box_cod_nodes)
         assert all(isinstance(x, Point) for x in self.positions.values())
 

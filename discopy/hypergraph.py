@@ -1454,27 +1454,27 @@ class Hypergraph[category: Diagram](MonoidalCategory, NamedGeneric):
 
         for depth, (box, offset) in enumerate(zip(self.boxes, self.offsets)):
             dom_wires, cod_wires = self.box_wires[depth]
+            if offset is None:
+                offset = scan.index(dom_wires[0]) if box.dom else 0
             for i, obj in enumerate(box.dom):
                 j = scan.index(dom_wires[i])
-                if i == 0 and offset is None:
-                    offset = j
-                elif j != offset + i:
-                    flush()  # a swap is a layer of its own
-                    if j > offset + i:
-                        diagram >>= diagram.cod[:offset + i] @ swap(
-                            diagram.cod[offset + i:j], diagram.cod[j]
-                        ) @ diagram.cod[j + 1:]
-                        scan = (scan[:offset + i] + scan[j:j + 1]) + (
-                            scan[offset + i:j] + scan[j + 1:])
-                    else:
-                        diagram >>= diagram.cod[:j] @ swap(
-                            diagram.cod[j], diagram.cod[j + 1:offset + i]
-                        ) @ diagram.cod[offset + i:]
-                        scan = (scan[:j] + scan[j + 1:offset + i]) + (
-                            scan[j:j + 1] + scan[offset + i:])
-                        offset -= 1
-                    assert len(scan) == len(diagram.cod)
-            offset = 0 if offset is None else offset
+                if j == offset + i:
+                    continue
+                flush()  # a swap is a layer of its own
+                if j > offset + i:
+                    diagram >>= diagram.cod[:offset + i] @ swap(
+                        diagram.cod[offset + i:j], diagram.cod[j]
+                    ) @ diagram.cod[j + 1:]
+                    scan = (scan[:offset + i] + scan[j:j + 1]) + (
+                        scan[offset + i:j] + scan[j + 1:])
+                else:
+                    diagram >>= diagram.cod[:j] @ swap(
+                        diagram.cod[j], diagram.cod[j + 1:offset + i]
+                    ) @ diagram.cod[offset + i:]
+                    scan = (scan[:j] + scan[j + 1:offset + i]) + (
+                        scan[j:j + 1] + scan[offset + i:])
+                    offset -= 1
+                assert len(scan) == len(diagram.cod)
             if pending and offset < layer_right:
                 flush()
             if not pending:

@@ -1435,7 +1435,7 @@ class Box(cat.Box, Diagram):
     draw_as_measures: bool
     draw_as_controlled: bool
     controlled: Any
-    distance: int | None
+    distance: Any
     shape: str | None
     color: str
     drawing_name: str

@@ -328,7 +328,9 @@ class BinaryTerm(TermBase):
                 self.right.freevars):  # ty: ignore[invalid-argument-type]
             raise ValueError("Expected disjoint free variables.")
         object.__setattr__(
-            self, "freevars", self.left.freevars + self.right.freevars)
+            self, "freevars",
+            self.left.freevars
+            + self.right.freevars)  # ty: ignore[unsupported-operator]
         object.__setattr__(self, "dom", self.left.dom + self.right.dom)
 
     def __str__(self):

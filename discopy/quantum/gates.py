@@ -768,7 +768,8 @@ class Sqrt(Scalar):
     @property
     def array(self):
         with backend() as np:
-            return np.array(self.data ** .5)
+            return np.array(
+                self.data ** .5)  # ty: ignore[unsupported-operator]
 
     def dagger(self):
         return self

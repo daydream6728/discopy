@@ -23,9 +23,9 @@
       inline ignores
 - [x] Give the `abc` type variables Protocol upper bounds and clean up the
       `ClassVar[C0]` / dynamic `Generic` forms
-- [ ] Express the tower's covariant narrowing with `Self` and the bounded
+- [x] Express the tower's covariant narrowing with `Self` and the bounded
       type variables instead of unsound overrides
-- [ ] Re-enable the seven ignored rules one by one, fixing or locally
+- [x] Re-enable the seven ignored rules one by one, fixing or locally
       ignoring what surfaces, until `ty check` passes with the smallest
       possible rule ignore list
 - [ ] `pflake8`, full pytest, CHANGELOG entry, report

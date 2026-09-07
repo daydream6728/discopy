@@ -149,21 +149,16 @@ include = ["discopy"]
 [tool.ty.environment]
 python-version = "3.12"
 
-# The rules below are ignored because satisfying them needs architectural
-# changes; see CHANGELOG.md. In short: the factory-method pattern narrows
-# method signatures and return types covariantly down the tower
-# (invalid-method-override, invalid-return-type); NamedGeneric parameterises
-# classes at runtime, so `tensor.Box[complex]` and friends type as Unknown
-# and poison bases, operators and attributes (unsupported-operator,
-# unresolved-attribute); the abstract base classes in `abc` use type
-# variables for objects and arrows without protocol bounds, so calling
-# `len`, indexing or building them is untyped (invalid-argument-type,
-# invalid-type-form, invalid-type-arguments); and the drawing attributes
-# live on boxes only when a functor puts them there (unresolved-attribute).
+# Two rules stay off; see CHANGELOG.md. The factory-method pattern
+# narrows the signatures of `then`, `tensor` and their friends down the
+# tower, unsoundly but by design, and aligning them means changing runtime
+# APIs (invalid-method-override). Attribute access is dynamic by design in
+# about ninety places: the downgrade paths of Hypergraph and CMap ask the
+# host category for structure it may not have, Node holds arbitrary data,
+# and implementations are borrowed across levels (unresolved-attribute).
 [tool.ty.rules]
 invalid-method-override = "ignore"
 unresolved-attribute = "ignore"
-unsupported-operator = "ignore"
 
 [tool.pytest.ini_options]
 pythonpath = [
