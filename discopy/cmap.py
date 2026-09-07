@@ -222,7 +222,7 @@ class CMap[C0: Pregroup, C1: CMap](
         :align: center
     """
 
-    category: ClassVar[Diagram] = None
+    category: ClassVar[type[Diagram]] = None  # ty: ignore[invalid-assignment]
     functor = classproperty(lambda cls: cls.category.functor_factory)
     ob = classproperty(lambda cls: cls.category.ob)
 

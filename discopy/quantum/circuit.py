@@ -430,7 +430,7 @@ class Circuit(tensor.Diagram[complex]):
         if not mixed and not self.is_mixed:
             return super().to_tn(dtype=complex)
 
-        import tensornetwork as tn
+        import tensornetwork as tn  # ty: ignore[unresolved-import]
         from discopy.quantum.gates import (
             ClassicalGate, Copy, Match, Discard, Measure, Encode, SWAP)
         for box in self.boxes + [self]:

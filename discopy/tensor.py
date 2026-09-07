@@ -59,9 +59,9 @@ from discopy.utils import (
     factory_name, assert_isinstance, product, assert_isatomic)
 
 if TYPE_CHECKING:
-    import sympy
-    import tensornetwork
-    import quimb
+    import sympy  # ty: ignore[unresolved-import]
+    import tensornetwork  # ty: ignore[unresolved-import]
+    import quimb  # ty: ignore[unresolved-import]
 
 
 @factory
@@ -478,7 +478,7 @@ class Functor(frobenius.Functor):
             operands = [
                 x for pair in zip(arrays, indices) for x in pair]
             if next(fresh) > config.MAX_EINSUM_INDICES:
-                import opt_einsum
+                import opt_einsum  # ty: ignore[unresolved-import]
                 array = opt_einsum.contract(
                     *operands, output,
                     optimize=self.optimize, **self.params)
@@ -545,7 +545,7 @@ class Diagram(NamedGeneric['dtype'], frobenius.Diagram):
         >>> t_net = (vector >> vector[::-1]).to_quimb()  # doctest: +EXTRA
         >>> assert t_net.contract(preserve_tensor=True).data == 1
         """
-        import quimb.tensor as qtn
+        import quimb.tensor as qtn  # ty: ignore[unresolved-import]
         inputs = [
                 qtn.COPY_tensor(
                     d=getattr(dim, 'dim', dim),
@@ -605,7 +605,7 @@ class Diagram(NamedGeneric['dtype'], frobenius.Diagram):
         >>> assert node.name == "vector" and np.all(node.tensor == [0, 1])
         >>> assert output_edge_order == [node[0]]
         """
-        import tensornetwork as tn
+        import tensornetwork as tn  # ty: ignore[unresolved-import]
         if dtype is None:
             dtype = self.dtype
         nodes = [
@@ -883,7 +883,7 @@ class Bubble(monoidal.Bubble, Box):
         .. image:: /_static/tensor/chain-rule.svg
             :align: center
         """
-        from sympy import Symbol
+        from sympy import Symbol  # ty: ignore[unresolved-import]
         tmp = Symbol("tmp")
         name = "$\\frac{{\\partial {}}}{{\\partial {}}}$"
         return Spider(1, 2, self.dom)\

@@ -36,7 +36,7 @@ from inspect import isclass
 from itertools import chain
 
 import random
-from typing import Any, Iterable, Union, TYPE_CHECKING, Sequence
+from typing import Any, ClassVar, Iterable, Union, TYPE_CHECKING, Sequence
 
 import matplotlib.pyplot as plt
 
@@ -184,7 +184,7 @@ class Hypergraph(MonoidalCategory, NamedGeneric['category']):
     >>> assert (f @ g).n_spiders == 4
     >>> assert (f @ g).wires == ((0, 1), (((0,), (2,)), ((1,), (3,))), (2, 3))
     """
-    category = None
+    category: ClassVar[type[Diagram]] = None  # ty: ignore[invalid-assignment]
 
     functor = classproperty(lambda cls: cls.category.functor_factory)
     ob = classproperty(lambda cls: cls.category.ob)

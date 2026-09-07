@@ -44,18 +44,19 @@ class Function(Category):
             then
     """
     inside: Callable
-    dom: type
-    cod: type
+    dom: tuple[type, ...]
+    cod: tuple[type, ...]
 
     ob = tuple[type, ...]
     type_checking = True
 
-    def __init__(self, inside: Callable, dom: type, cod: type):
+    def __init__(self, inside: Callable,
+                 dom: type | tuple[type, ...], cod: type | tuple[type, ...]):
         dom, cod = map(tuplify, (dom, cod))
         self.inside, self.dom, self.cod = inside, dom, cod
 
     @classmethod
-    def id(cls, dom: type) -> Function:
+    def id(cls, dom: type | tuple[type, ...]) -> Function:
         """
         The identity function on a given tuple of types :code:`dom`.
 

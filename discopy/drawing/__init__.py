@@ -131,7 +131,7 @@ def to_gif(diagram, *diagrams, **params):  # pragma: no cover
         else:
             save(path)
         try:
-            from IPython.display import HTML
+            from IPython.display import HTML  # ty: ignore[unresolved-import]
             return HTML(f'<img src="{path}">')
         except ImportError:
             return f'<img src="{path}">'

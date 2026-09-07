@@ -57,7 +57,7 @@ from __future__ import annotations
 import itertools
 from dataclasses import dataclass, field
 from functools import cached_property
-from typing import ClassVar, Iterator, Callable, TYPE_CHECKING
+from typing import ClassVar, Iterator, Callable, Sequence, TYPE_CHECKING
 from warnings import warn
 
 from discopy import cat, drawing, hypergraph, cmap, messages
@@ -79,7 +79,7 @@ from discopy.utils import (
 )
 
 if TYPE_CHECKING:
-    import sympy
+    import sympy  # ty: ignore[unresolved-import]
 
 
 @dataclass(frozen=True)
@@ -1402,6 +1402,37 @@ class Box(cat.Box, Diagram):
     .. image:: /_static/monoidal/coloured-box.svg
         :align: center
     """
+
+    height: float
+    is_conjugate: bool
+    is_transpose: bool
+    bubble_opening: bool
+    bubble_closing: bool
+    frame_boundary: bool
+    frame_colour: str
+    draw_as_permutation: bool
+    permutation_indices: Sequence[int] | None
+    draw_as_braid: bool
+    draw_as_cup: bool
+    draw_as_cap: bool
+    draw_as_dual_rail_braid: bool
+    draw_as_dual_rail_twist: bool
+    draw_as_dual_rail_cup: bool
+    draw_as_dual_rail_cap: bool
+    draw_as_wires: bool
+    is_crossing: bool
+    draw_as_spider: bool
+    draw_as_brakets: bool
+    draw_as_discards: bool
+    draw_as_measures: bool
+    draw_as_controlled: bool
+    controlled: Box | None
+    distance: int | None
+    shape: str | None
+    color: str
+    drawing_name: str
+    no_label: bool
+    min_width: float
 
     def __init__(self, name: str, dom: Ty, cod: Ty, **params):
         dom = dom if isinstance(dom, self.ob) else self.ob(dom)

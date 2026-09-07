@@ -97,7 +97,7 @@ from discopy.utils import (  # noqa: F401
 )
 
 if TYPE_CHECKING:
-    import sympy
+    import sympy  # ty: ignore[unresolved-import]
 
 dumps, loads = utils.dumps, utils.loads
 
@@ -183,7 +183,7 @@ class FreeCategory(Category):
     signature without breaking the machinery below.
     """
 
-    generator_factory: ClassVar[type | None] = None
+    generator_factory: ClassVar[type] = None  # ty: ignore[invalid-assignment]
 
     def __init__(self, inside, dom, cod, _scan=True):
         ob = type(self).ob
@@ -569,7 +569,7 @@ class Box(Arrow):
     def lambdify(self, *symbols: "sympy.Symbol", **kwargs) -> Callable:
         if not any(x in self.free_symbols for x in symbols):
             return lambda *xs: self
-        from sympy import lambdify
+        from sympy import lambdify  # ty: ignore[unresolved-import]
         return lambda *xs: type(self)(
             self.name, self.dom, self.cod, is_dagger=self.is_dagger,
             data=lambdify(symbols, self.data, **kwargs)(*xs))

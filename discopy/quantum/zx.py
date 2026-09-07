@@ -89,7 +89,8 @@ class Diagram(tensor.Diagram[complex]):
         ...     6: {4: 1},
         ...     7: {5: 1}}
         """
-        from pyzx import Graph, VertexType, EdgeType
+        from pyzx import (  # ty: ignore[unresolved-import]
+            Graph, VertexType, EdgeType)
         graph, scan = Graph(), []
         for i, _ in enumerate(self.dom):
             node, hadamard = graph.add_vertex(VertexType.BOUNDARY), False
@@ -148,7 +149,7 @@ class Diagram(tensor.Diagram[complex]):
         * a boundary node is not in :code:`graph.inputs() + graph.outputs()`,
         * or :code:`set(graph.inputs()).intersection(graph.outputs())`.
         """
-        from pyzx import VertexType, EdgeType
+        from pyzx import VertexType, EdgeType  # ty: ignore[unresolved-import]
 
         def node2box(node, n_legs_in, n_legs_out):
             if graph.type(node) not in {VertexType.Z, VertexType.X}:

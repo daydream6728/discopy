@@ -49,10 +49,10 @@ associated weights should be passed to `eval()` as `symbols=` and
 from __future__ import annotations
 
 from itertools import product
-import pennylane as qml
-import sympy
-import torch
-from pytket import OpType
+import pennylane as qml  # ty: ignore[unresolved-import]
+import sympy  # ty: ignore[unresolved-import]
+import torch  # ty: ignore[unresolved-import]
+from pytket import OpType  # ty: ignore[unresolved-import]
 from typing import TYPE_CHECKING
 
 from discopy.quantum.gates import Scalar

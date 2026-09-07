@@ -580,7 +580,7 @@ class Parametrized(Box):
     @property
     def modules(self):
         if self.free_symbols:
-            import sympy
+            import sympy  # ty: ignore[unresolved-import]
             return sympy
         else:
             return get_backend()
@@ -590,7 +590,7 @@ class Parametrized(Box):
         return type(self)(data)
 
     def lambdify(self, *symbols, **kwargs):
-        from sympy import lambdify
+        from sympy import lambdify  # ty: ignore[unresolved-import]
         with backend() as np:
             data = lambdify(symbols, self.data, dict(kwargs, modules=np))
         return lambda *xs: type(self)(data(*xs))

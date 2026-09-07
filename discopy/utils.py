@@ -294,7 +294,7 @@ def rmap(func, data):
 
 def rsubs(data, *args):
     """ Substitute recursively along nested data. """
-    from sympy import lambdify
+    from sympy import lambdify  # ty: ignore[unresolved-import]
     if isinstance(args, Iterable) and not isinstance(args[0], Iterable):
         args = (args, )
     keys, values = zip(*args)

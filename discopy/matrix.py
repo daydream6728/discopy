@@ -50,7 +50,7 @@ from discopy.cat import (
 from discopy.utils import assert_isinstance, unbiased
 
 if TYPE_CHECKING:
-    import sympy
+    import sympy  # ty: ignore[unresolved-import]
 
 
 @factory
@@ -390,7 +390,7 @@ class Matrix(MonoidalCategory, NamedGeneric['dtype']):
 
     def lambdify(
             self, *symbols: "sympy.Symbol", dtype=None, **kwargs) -> Callable:
-        from sympy import lambdify
+        from sympy import lambdify  # ty: ignore[unresolved-import]
         with backend() as np:
             array = lambdify(
                 symbols, self.array.tolist(), modules=np.module, **kwargs)
@@ -439,22 +439,23 @@ class NumPy(Backend):
 class JAX(Backend):
     """ JAX backend. """
     def __init__(self):
-        import jax
+        import jax  # ty: ignore[unresolved-import]
         super().__init__(jax.numpy)
 
 
 class PyTorch(Backend):
     """ PyTorch backend. """
     def __init__(self):
-        import torch
+        import torch  # ty: ignore[unresolved-import]
         super().__init__(torch, array=torch.as_tensor)
 
 
 class TensorFlow(Backend):
     """ TensorFlow backend. """
     def __init__(self):
-        import tensorflow.experimental.numpy as tnp
-        from tensorflow.python.ops.numpy_ops import np_config
+        import tensorflow.experimental.numpy as tnp  # ty: ignore
+        from tensorflow.python.ops.numpy_ops import (  # ty: ignore
+            np_config)
         np_config.enable_numpy_behavior()
         super().__init__(tnp)
 
