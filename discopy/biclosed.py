@@ -82,7 +82,7 @@ from __future__ import annotations
 
 from abc import abstractmethod
 from inspect import signature
-from typing import Callable, ClassVar
+from typing import Callable, ClassVar, Self, overload
 
 from discopy import monoidal, cmap
 from discopy.abc import BiclosedCategory
@@ -117,7 +117,13 @@ class Ty(monoidal.Ty):
     application_factory: ClassVar[Callable[..., TermBase]]
     abstraction_factory: ClassVar[type[Abstraction]]
 
-    def __pow__(self, other: Ty) -> Ty:
+    @overload
+    def __pow__(self, other: int) -> Self: ...
+
+    @overload
+    def __pow__(self, other: Ty) -> Ty: ...
+
+    def __pow__(self, other):
         return self.exp(other) if isinstance(other, Ty)\
             else monoidal.Ty.__pow__(self, other)
 
@@ -560,7 +566,7 @@ class TermBase(Box):
     functor: ClassVar[Functor] = Functor.id(Diagram)
 
     @abstractmethod
-    def eval(functor: Functor | None = None) -> BiclosedCategory:
+    def eval(self, functor: Functor | None = None) -> BiclosedCategory:
         """
         The evaluation of a :class:`Functor` on a term gives a morphism in its
         codomain. By default, this is the identity functor on the free biclosed
@@ -586,7 +592,7 @@ class Constant(TermBase):
         inside (Diagram): The diagram which defines the constant.
         left (Optional[bool]): Whether the domain comes from the left or right.
     """
-    def __init__(self, name: Ty, cod: Ty, **kwargs):
+    def __init__(self, name: str, cod: Ty, **kwargs):
         super().__init__(name, dom=self.ob(), cod=cod, **kwargs)
         self.freevars = []
 

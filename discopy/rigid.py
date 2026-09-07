@@ -151,7 +151,7 @@ import copy
 
 from collections.abc import Callable
 
-from typing import ClassVar, Iterator
+from typing import ClassVar, Iterator, Self
 
 from discopy import cat, monoidal, biclosed, messages
 from discopy.abc import Pregroup, RigidCategory
@@ -204,12 +204,12 @@ class Wire(monoidal.Wire):
         raise AxiomError("Rigid types have no dagger, use pivotal instead.")
 
     @property
-    def l(self) -> Wire:
+    def l(self) -> Self:
         """ The left adjoint of the object. """
         return type(self)(self.name, self.z - 1, dom=self.cod, cod=self.dom)
 
     @property
-    def r(self) -> Wire:
+    def r(self) -> Self:
         """ The right adjoint of the object. """
         return type(self)(self.name, self.z + 1, dom=self.cod, cod=self.dom)
 
@@ -284,12 +284,12 @@ class Ty(Pregroup, biclosed.Ty):
             raise AxiomError(messages.NOT_RIGID_ADJOINT.format(self, other))
 
     @property
-    def l(self) -> Ty:
+    def l(self) -> Self:
         """ The left adjoint of the type. """
         return self.ar(*[x.l for x in self.inside[::-1]])
 
     @property
-    def r(self) -> Ty:
+    def r(self) -> Self:
         """ The right adjoint of the type. """
         return self.ar(*[x.r for x in self.inside[::-1]])
 

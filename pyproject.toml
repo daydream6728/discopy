@@ -161,7 +161,6 @@ python-version = "3.12"
 # invalid-type-form, invalid-type-arguments); and the drawing attributes
 # live on boxes only when a functor puts them there (unresolved-attribute).
 [tool.ty.rules]
-invalid-argument-type = "ignore"
 invalid-method-override = "ignore"
 invalid-return-type = "ignore"
 unresolved-attribute = "ignore"

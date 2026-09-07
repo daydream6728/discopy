@@ -13,6 +13,7 @@ from typing import (
     Callable,
     Mapping,
     Iterable,
+    Sequence,
     TypeVar,
     Any,
     Collection,
@@ -29,6 +30,7 @@ import discopy.messages as messages
 
 if TYPE_CHECKING:
     from discopy.monoidal import Ty, Diagram
+    from discopy.hypergraph import Hypergraph
     from discopy.abc import Category
 
 KT = TypeVar('KT')
@@ -60,10 +62,11 @@ class MappingOrCallable(Mapping[KT, VT]):
             | Callable[
                 [source], target])  # ty: ignore[invalid-type-form]
 
-    def __init__(self, mapping: MappingOrCallable[KT, VT]) -> None:
+    def __init__(self, mapping: Mapping[KT, VT] | Callable[[KT], VT]
+                 | MappingOrCallable[KT, VT]) -> None:
         while isinstance(mapping, MappingOrCallable):
             mapping = mapping.mapping
-        self.mapping = mapping
+        self.mapping: Any = mapping
 
     def __bool__(self) -> bool:
         return bool(self.mapping)
@@ -100,8 +103,8 @@ class MappingOrCallable(Mapping[KT, VT]):
     def __repr__(self):
         return repr(self.mapping)
 
-    def then(self, other: MappingOrCallable[VT, V2T]
-             ) -> MappingOrCallable[KT, V2T]:
+    def then(self, other: Mapping[VT, V2T] | Callable[[VT], V2T]
+             | MappingOrCallable[VT, V2T]) -> MappingOrCallable[KT, V2T]:
         """
         Returns the composition of the object with a dict or a Callable.
 
@@ -123,7 +126,7 @@ def get_origin(typ):
     return getattr(typ, "__origin__", typ)
 
 
-def product(xs: list, unit=1):
+def product(xs: Sequence, unit=1):
     """
     The left-fold product of a ``unit`` with list of ``xs``.
 
@@ -473,7 +476,7 @@ def tuplify(stuff: Any) -> tuple:
     return stuff if isinstance(stuff, tuple) else (stuff, )
 
 
-def untuplify(stuff: tuple) -> Any:
+def untuplify(stuff: Sequence) -> Any:
     """
     Takes the element out of a tuple if it has length 1, otherwise do nothing.
 
@@ -572,7 +575,7 @@ def assert_isatomic(typ: Ty, cls: type | None = None):
             factory_name(cls), len(typ)))
 
 
-def assert_istraceable(arg: Diagram, n=1, left=False):
+def assert_istraceable(arg: Diagram | Hypergraph, n=1, left=False):
     """ Raise :class:`AxiomError` if a diagram is not traceable. """
     traced_dom, traced_cod = (arg.dom[:n], arg.cod[:n]) if left\
         else (arg.dom[len(arg.dom) - n:], arg.cod[len(arg.cod) - n:])

@@ -895,6 +895,8 @@ class Box(tensor.Box[complex], Circuit):
 
 class Sum(tensor.Sum[complex], Box):
     """ Sums of circuits. """
+    terms: tuple[Circuit, ...]
+
     @property
     def is_mixed(self):
         return any(circuit.is_mixed for circuit in self.terms)

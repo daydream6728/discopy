@@ -243,7 +243,8 @@ class Abstraction(TermBase, biclosed.Abstraction):
     left: bool = False
 
     def __init__(self, var: Variable, body: Term, left: bool = False):
-        biclosed.Abstraction.__init__(self, var, body, left)
+        biclosed.Abstraction.__init__(
+            self, var, body, left)  # ty: ignore[invalid-argument-type]
         TermBase.__init__(self, self.name, self.dom, self.cod)
 
     def simplify(self):
@@ -321,7 +322,10 @@ class BinaryTerm(TermBase):
     right: Term
 
     def __post_init__(self):
-        if set(self.left.freevars).intersection(self.right.freevars):
+        if set(
+            self.left.freevars  # ty: ignore[invalid-argument-type]
+        ).intersection(
+                self.right.freevars):  # ty: ignore[invalid-argument-type]
             raise ValueError("Expected disjoint free variables.")
         object.__setattr__(
             self, "freevars", self.left.freevars + self.right.freevars)

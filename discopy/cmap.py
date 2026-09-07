@@ -224,15 +224,15 @@ class CMap[category: Diagram](CompactCategory, NamedGeneric):
     functor = classproperty(lambda cls: cls.category.functor_factory)
     ob = classproperty(lambda cls: cls.category.ob)
 
-    dom: Pregroup
-    cod: Pregroup
-    loops: tuple[Pregroup, ...]
+    dom: Ty
+    cod: Ty
+    loops: tuple[Ty, ...]
     edges: Permutation
 
     def __init__(
-            self, dom: Pregroup, cod: Pregroup, boxes: tuple[Box, ...],
+            self, dom: Ty, cod: Ty, boxes: tuple[Box, ...],
             edges: Iterable[int],
-            loops: tuple[Pregroup, ...] = (), *, check: bool = True):
+            loops: tuple[Ty, ...] = (), *, check: bool = True):
         assert_isinstance(dom, self.category.ob)
         assert_isinstance(cod, self.category.ob)
         for box in boxes:
@@ -1151,7 +1151,7 @@ class CMap[category: Diagram](CompactCategory, NamedGeneric):
 
     def plug_input(
             self, input_index: int, box: Box,
-            cod: Pregroup, root_index: int = 0) -> CMap:
+            cod: Ty, root_index: int = 0) -> CMap:
         """
         Plug an input boundary and the output root into a new box.
 

@@ -155,7 +155,7 @@ from discopy.utils import (
 
 
 @dataclass
-class Symmetric[category](SymmetricCategory, NamedGeneric):
+class Symmetric[category: symmetric.Diagram](SymmetricCategory, NamedGeneric):
     """
     A parametric map from `dom` to `cod` with parameter space `param` is a
     morphism `inside : dom @ param -> cod` in an underlying `category`,
@@ -186,8 +186,8 @@ class Symmetric[category](SymmetricCategory, NamedGeneric):
     dom: monoidal.Ty
     cod: monoidal.Ty
     inside: category
-    param: monoidal.Ty | None = None
-    copar: monoidal.Ty | None = None
+    param: monoidal.Ty = None  # ty: ignore[invalid-assignment]
+    copar: monoidal.Ty = None  # ty: ignore[invalid-assignment]
 
     def __post_init__(self):
         if self.param is None:
@@ -378,7 +378,8 @@ class Closed(Markov, ClosedCategory):
             exponent : The exponent of the exponential type.
             left : Whether to take the left or right evaluation.
         """
-        return cls.lift(cls.category.ev(base, exponent, left))
+        return cls.lift(cls.category.ev(
+            base, exponent, left))  # ty: ignore[invalid-argument-type]
 
     def curry(self, n: int = 1, left: bool = False) -> Closed:
         """
@@ -456,7 +457,8 @@ class Compact(Traced, CompactCategory):
             left : The left-hand side of the cups.
             right : Its adjoint, i.e. the right-hand side of the cups.
         """
-        return cls.lift(cls.category.cups(left, right))
+        return cls.lift(cls.category.cups(
+            left, right))  # ty: ignore[invalid-argument-type]
 
     @classmethod
     def caps(cls, left: monoidal.Ty, right: monoidal.Ty) -> Compact:
@@ -467,7 +469,8 @@ class Compact(Traced, CompactCategory):
             left : The left-hand side of the caps.
             right : Its adjoint, i.e. the right-hand side of the caps.
         """
-        return cls.lift(cls.category.caps(left, right))
+        return cls.lift(cls.category.caps(
+            left, right))  # ty: ignore[invalid-argument-type]
 
     ev = classmethod(Closed.ev.__func__)
     curry = Closed.curry
@@ -491,4 +494,5 @@ class Hypergraph(Compact, Markov, HypergraphCategory):
             n_legs_out : The number of legs out for each spider.
             typ : The type of the spiders.
         """
-        return cls.lift(cls.category.spiders(n_legs_in, n_legs_out, typ))
+        return cls.lift(cls.category.spiders(
+            n_legs_in, n_legs_out, typ))  # ty: ignore[invalid-argument-type]

@@ -520,7 +520,9 @@ class Tail(monoidal.Bubble, Box):
     second time step with the identity on the empty type at the first step.
     """
     def __init__(self, arg: Diagram, time_step=0):
-        Head.__init__(self, arg, time_step, _attr="tail")
+        Head.__init__(
+            self,  # ty: ignore[invalid-argument-type]
+            arg, time_step, _attr="tail")
 
     delay, reset, __repr__ = HeadOb.delay, HeadOb.reset, HeadOb.__repr__
     __str__ = Box.__str__

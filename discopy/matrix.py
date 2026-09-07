@@ -251,7 +251,8 @@ class Matrix[dtype](MonoidalCategory, NamedGeneric):
 
     def tensor(self, other: Matrix | None = None, *others: Matrix):
         if others or other is None:
-            return monoidal.Diagram.tensor(self, other, *others)
+            return monoidal.Diagram.tensor(
+                self, other, *others)  # ty: ignore[invalid-argument-type]
         assert_isinstance(other, type(self))
         dom, cod = self.dom + other.dom, self.cod + other.cod
         array = self.zero(dom, cod).array
@@ -410,7 +411,8 @@ def array2string(array, **params):
     """ Numpy array pretty print. """
     import numpy
     numpy.set_printoptions(threshold=config.NUMPY_THRESHOLD)
-    return numpy.array2string(array, **dict(params, separator=', '))\
+    params["separator"] = ', '
+    return numpy.array2string(array, **params)\
         .replace('[ ', '[').replace('  ', ' ')
 
 

@@ -82,7 +82,7 @@ COLOUR_DRAWING_ATTRIBUTES = {
 }
 
 # Default drawing parameters.
-DRAWING_DEFAULT = {
+DRAWING_DEFAULT: dict[str, Any] = {
     "fontsize": 12,
     "margins": (0, 0),
     "textpad": (2**-4, 2**-4),

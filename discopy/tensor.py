@@ -44,7 +44,7 @@ indices. Swaps, cups and caps become wiring while spiders stay as boxes.
 from __future__ import annotations
 
 from itertools import count
-from typing import TYPE_CHECKING, Sequence
+from typing import TYPE_CHECKING, Any, Callable, Mapping, Sequence
 
 from discopy import (
     cat, monoidal, rigid, frobenius, cmap, config)
@@ -150,7 +150,8 @@ class Tensor[dtype](Matrix[dtype]):
 
     def tensor(self, other: Tensor | None = None, *others: Tensor) -> Tensor:
         if other is None or others:
-            return Diagram.tensor(self, other, *others)
+            return Diagram.tensor(
+                self, other, *others)  # ty: ignore[invalid-argument-type]
         assert_isinstance(other, Tensor)
         dom, cod = self.dom @ other.dom, self.cod @ other.cod
         source = range(len(dom @ cod))
@@ -245,7 +246,8 @@ class Tensor[dtype](Matrix[dtype]):
             typ : The type of the spiders.
         """
         return frobenius.Diagram.spiders.__func__(
-            cls, n_legs_in, n_legs_out, typ, phase)
+            cls, n_legs_in, n_legs_out,  # ty: ignore[invalid-argument-type]
+            typ, phase)
 
     @classmethod
     def copy(cls, x: Dim, n: int) -> Tensor:
@@ -395,8 +397,9 @@ class Functor(frobenius.Functor):
     dom, cod = frobenius.Diagram, Tensor
 
     def __init__(
-            self, ob_map: dict[cat.Ob, Dim], ar_map: dict[cat.Box, list],
-            dom: type | None = None, dtype: type = float,
+            self, ob_map: Mapping[cat.Ob, Dim] | Callable[[cat.Ob], Dim],
+            ar_map: Mapping[cat.Box, Any] | Callable[[cat.Box], Any],
+            dom: type | None = None, dtype: type | None = float,
             optimize="greedy", **params):
         self.dtype, self.optimize, self.params = dtype, optimize, params
         cod = type(self).cod[dtype]

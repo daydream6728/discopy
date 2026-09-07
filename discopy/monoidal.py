@@ -58,7 +58,8 @@ import itertools
 from dataclasses import dataclass, field
 from functools import cached_property
 from typing import (
-    Any, ClassVar, Iterable, Iterator, Callable, Sequence, TYPE_CHECKING)
+    Any, ClassVar, Iterable, Iterator, Callable, Self, Sequence,
+    TYPE_CHECKING)
 from warnings import warn
 
 from discopy import cat, drawing, hypergraph, cmap, messages
@@ -358,7 +359,7 @@ class Ty(cat.Ob, FreeMonoid):
         for i in range(len(self)):
             yield self[i:i + 1]
 
-    def __pow__(self, n_times):
+    def __pow__(self, n_times: int) -> Self:
         assert_isinstance(n_times, int)
         if n_times <= 0:
             assert self.dom == self.cod
@@ -622,7 +623,8 @@ class Layer(cat.Box, ColouredMonoid):
             other : The type, box or layer to be tensored on either side.
         """
         return other if isinstance(other, (cls, cls.ob))\
-            else cls(other, normalise=False)
+            else cls(
+                other, normalise=False)  # ty: ignore[invalid-argument-type]
 
     @classmethod
     def unit(cls, colour: Colour | None = None) -> Ty:
@@ -1067,6 +1069,9 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
         then we set it to ``zip(boxes, offstes)``.
         """
         if boxes_and_offsets is None:
+            if boxes is None or offsets is None:
+                raise ValueError(
+                    "decode requires boxes_and_offsets or boxes and offsets")
             boxes_and_offsets = zip(boxes, offsets)
         diagram = cls.id(dom)
         for box, offset in boxes_and_offsets:

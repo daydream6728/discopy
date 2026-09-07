@@ -259,7 +259,9 @@ class Spider(tensor.Spider[complex], Box):
     """ Abstract spider box. """
 
     def __init__(self, n_legs_in, n_legs_out, phase=0):
-        super().__init__(n_legs_in, n_legs_out, PRO(1), phase)
+        super().__init__(
+            n_legs_in, n_legs_out,
+            PRO(1), phase)  # ty: ignore[invalid-argument-type]
         factory_str = type(self).__name__
         phase_str = f", {self.phase}" if self.phase else ""
         self.name = f"{factory_str}({n_legs_in}, {n_legs_out}{phase_str})"
@@ -396,7 +398,7 @@ H.draw_as_spider = True
 H.drawing_name, H.tikzstyle_name, = '', 'H'
 H.color, H.shape = "yellow", "rectangle"
 
-SWAP = Swap(PRO(1), PRO(1))
+SWAP = Swap(PRO(1), PRO(1))  # ty: ignore[invalid-argument-type]
 Diagram.swap_factory, Diagram.sum_factory = Swap, Sum
 Diagram.permutation_factory = Permutation
 Id = Diagram.id

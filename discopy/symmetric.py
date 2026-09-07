@@ -323,10 +323,12 @@ class Diagram(balanced.Diagram, SymmetricCategory):
                 slice(0, i), i, slice(i + 1, None)
             )
         )
-        return cls.swap(tensor(left), head) @ tensor(right)\
+        return (cls.swap(
+            tensor(left), head)  # ty: ignore[invalid-argument-type]
+            @ tensor(right)
             >> head @ cls.permutation(
                 [x - 1 if x > i else x for x in xs[1:]],
-                left + right)
+                left + right))
 
     @classmethod
     def from_permutation(cls, perm: Sequence[int],

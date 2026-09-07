@@ -317,7 +317,7 @@ class Hypergraph[category: Diagram](MonoidalCategory, NamedGeneric):
         return inputs + doms_and_cods + outputs
 
     def rebracket(
-            self, flat_wires: list[Spider], boxes=None, dom=None):
+            self, flat_wires: Sequence[Spider], boxes=None, dom=None):
         """
         Rebracket a flat list of :class:`Spider` into a proper :class:`Wiring`.
         """
@@ -888,7 +888,8 @@ class Hypergraph[category: Diagram](MonoidalCategory, NamedGeneric):
             flat_wires[i] = flat_wires[j] = spider
         spider_types.extend(old.loops)
         wires = cls.rebracket(
-            None, flat_wires, dom=old.dom, boxes=old.boxes)
+            None, flat_wires,  # ty: ignore[invalid-argument-type]
+            dom=old.dom, boxes=old.boxes)
         factory = cls[old.category]
         return factory(
             old.dom, old.cod, old.boxes, wires, tuple(spider_types))
@@ -1584,7 +1585,9 @@ class Hypergraph[category: Diagram](MonoidalCategory, NamedGeneric):
                 graph.successors(box_node), key=lambda node: node.i)))
         wires += tuple(map(
             predecessor, sorted(outputs, key=lambda node: node.i)))
-        wires = Hypergraph.rebracket(None, wires, dom=dom, boxes=boxes)
+        wires = Hypergraph.rebracket(
+            None, wires,  # ty: ignore[invalid-argument-type]
+            dom=dom, boxes=boxes)
         return cls(dom, cod, boxes, wires, spider_types, offsets)
 
     def to_graph(self) -> Graph:

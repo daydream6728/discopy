@@ -381,7 +381,8 @@ class Diagram[natural](RibbonCategory, NamedGeneric):
         .. image:: /_static/int/int-snake-equations.svg
             :align: center
         """
-        rigid.Ty.assert_isadjoint(left, right)
+        rigid.Ty.assert_isadjoint(
+            left, right)  # ty: ignore[invalid-argument-type]
         inside = cls.natural.id(left.positive + left.negative)
         return cls(inside, left @ right, type(left)())
 
@@ -394,7 +395,8 @@ class Diagram[natural](RibbonCategory, NamedGeneric):
             left : The left-hand side of the caps.
             right : The right-hand side of the caps.
         """
-        rigid.Ty.assert_isadjoint(right, left)
+        rigid.Ty.assert_isadjoint(
+            right, left)  # ty: ignore[invalid-argument-type]
         inside = cls.natural.id(left.negative + left.positive)
         return cls(inside, type(left)(), left @ right)
 
@@ -445,12 +447,16 @@ class Diagram[natural](RibbonCategory, NamedGeneric):
         .. image:: /_static/int/simplify.svg
             :align: center
         """
-        return type(self)(self.inside.simplify(), self.dom, self.cod)
+        return type(self)(
+            self.inside.simplify(),  # ty: ignore[invalid-argument-type]
+            self.dom, self.cod)
 
     @wraps(balanced.Diagram.naturality)
     def naturality(self, i: int, left=True, down=True, braid=None) -> Diagram:
         return type(self)(
-            self.inside.naturality(i, left, down, braid), self.dom, self.cod)
+            self.inside.naturality(
+                i, left, down, braid),  # ty: ignore[invalid-argument-type]
+            self.dom, self.cod)
 
     trace = traced.Diagram.trace
     trace_factory = classmethod(pivotal.Diagram.trace_factory.__func__)

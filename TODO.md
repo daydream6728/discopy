@@ -21,7 +21,7 @@
       subscripting class (`tensor`, `hypergraph`, `cmap`, `stream`, `para`,
       `interaction`, `hopf`, `quantum`) and drop the `inconsistent-mro`
       inline ignores
-- [ ] Give the `abc` type variables Protocol upper bounds and clean up the
+- [x] Give the `abc` type variables Protocol upper bounds and clean up the
       `ClassVar[C0]` / dynamic `Generic` forms
 - [ ] Express the tower's covariant narrowing with `Self` and the bounded
       type variables instead of unsound overrides

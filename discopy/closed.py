@@ -232,7 +232,7 @@ class TermBase(Box, biclosed.TermBase):
     """
     functor = Functor.id(Diagram)
 
-    def __call__(self, other):
+    def __call__(self: Term, other: Term) -> Application:
         return Application(self, other, left=False)
 
 
@@ -262,6 +262,7 @@ class Variable(TermBase, biclosed.Variable):
 class Application(TermBase, biclosed.Application):
     func: Term
     args: Term
+    freevars: list[Variable]
 
     def __check_dom__(self, func, args, left):
         self.overlap = set(func.freevars).intersection(args.freevars)

@@ -165,7 +165,8 @@ class ColouredMonoid[C0, C1: ColouredMonoid](Category[C0, C1]):
         Parameters:
             other : The object or morphism to be tensored on the left or right.
         """
-        return other if isinstance(other, cls) else cls.id(other)
+        return other if isinstance(other, cls)\
+            else cls.id(other)  # ty: ignore[invalid-argument-type]
 
     def __matmul__(self, other):
         return self.tensor(other)

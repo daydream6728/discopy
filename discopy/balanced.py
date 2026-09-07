@@ -178,8 +178,7 @@ class Diagram(braided.Diagram, traced.Diagram, BalancedCategory):
         .. image:: /_static/balanced/twist_dual_rail.svg
         """
         if width is None:
-            width = config.DRAWING_DEFAULT[  # ty: ignore[invalid-assignment]
-                "ribbon_width"]
+            width = config.DRAWING_DEFAULT["ribbon_width"]
         return self if not width\
             else self.dual_rail_factory(width, colour)(self)
 

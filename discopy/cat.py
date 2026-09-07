@@ -79,7 +79,7 @@ from __future__ import annotations
 
 from functools import total_ordering, cached_property
 from typing import (
-    Callable, ClassVar, Mapping, Iterable, TYPE_CHECKING)
+    Callable, ClassVar, Mapping, Iterable, Self, TYPE_CHECKING)
 
 from discopy import messages, utils
 from discopy.abc import Category
@@ -574,7 +574,7 @@ class Box(Arrow):
             self.name, self.dom, self.cod, is_dagger=self.is_dagger,
             data=lambdify(symbols, self.data, **kwargs)(*xs))
 
-    def dagger(self) -> Box:
+    def dagger(self) -> Self:
         return type(self)(
             self.name, self.cod, self.dom,
             data=self.data, is_dagger=not self.is_dagger)
@@ -652,8 +652,9 @@ class Sum(Box):
     ----
     The sum is non-commutative, i.e. :code:`Sum([f, g]) != Sum([g, f])`.
     """
-    def __init__(self, terms: tuple[Arrow, ...],
+    def __init__(self, terms: Iterable[Arrow],
                  dom: Ob | None = None, cod: Ob | None = None):
+        terms = tuple(terms)
         if not terms and (dom is None or cod is None):
             raise ValueError(messages.MISSING_TYPES_FOR_EMPTY_SUM)
         dom = terms[0].dom if dom is None else dom

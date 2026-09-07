@@ -88,7 +88,7 @@ class Function(MonoidalCategory, Sequence):
         inside = list(Permutation.swap(x, y))
         return Function(inside, x + y, x + y)
 
-    def is_swap(self) -> bool:
+    def is_swap(self: Function | Sequence[int]) -> bool:
         """
         Whether this is the permutation ``(1, 0)``, callable on a raw
         sequence as well as on a :class:`Function` with a two-wire domain.
@@ -217,7 +217,7 @@ class Permutation(Function, SymmetricCategory):
             result[left], result[right] = right, left
         return cls(result, size)
 
-    def cycles(self) -> Cycles:
+    def cycles(self) -> tuple[Cycle, ...]:
         """ Return the cycles of the permutation. """
         result, seen = [], set()
         for i in range(len(self)):
