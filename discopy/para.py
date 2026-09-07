@@ -144,6 +144,7 @@ Parametric maps compose like layers of a neural network, e.g. over
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Self
 
 from discopy import (
     monoidal, symmetric, markov, closed, feedback, compact, frobenius)
@@ -201,7 +202,7 @@ class Symmetric[category: symmetric.Diagram](SymmetricCategory, NamedGeneric):
             self.inside, self.category.id(self.cod + self.copar))
 
     @classmethod
-    def lift(cls, inside: category) -> Symmetric:
+    def lift(cls, inside: category) -> Self:
         """
         A morphism of the underlying category as a parametric map with the
         empty parameter space, i.e. the injection functor from a category

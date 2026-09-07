@@ -136,7 +136,7 @@ class ColouredMonoid[C0, C1: ColouredMonoid](Category[C0, C1]):
     @classmethod
     def id(cls, dom: C0 | None = None) -> C1:
         """The monoidal unit, i.e. the empty tensor ``cls()``."""
-        return cls()
+        return cls()  # ty: ignore[invalid-return-type]
 
     @classmethod
     def unit(cls, colour: C0 | None = None) -> C0 | C1:
@@ -165,8 +165,9 @@ class ColouredMonoid[C0, C1: ColouredMonoid](Category[C0, C1]):
         Parameters:
             other : The object or morphism to be tensored on the left or right.
         """
-        return other if isinstance(other, cls)\
-            else cls.id(other)  # ty: ignore[invalid-argument-type]
+        return (
+            other if isinstance(other, cls)  # ty: ignore[invalid-return-type]
+            else cls.id(other))  # ty: ignore[invalid-argument-type]
 
     def __matmul__(self, other):
         return self.tensor(other)
@@ -206,7 +207,8 @@ class MonoidalCategory[C0: ColouredMonoid, C1: MonoidalCategory](
         Parameters:
             other : The object or morphism to be tensored on the left or right.
         """
-        return other if isinstance(other, MonoidalCategory) else cls.id(other)
+        return (other if isinstance(  # ty: ignore[invalid-return-type]
+            other, MonoidalCategory) else cls.id(other))
 
     def __matmul__(self, other):
         return self.tensor(self.whisker(other))
@@ -332,7 +334,7 @@ class BiclosedCategory[
         if n < 0:
             raise ValueError
         if not n:
-            return self
+            return self  # ty: ignore[invalid-return-type]
         base, exponent = self.base_and_exponent(n, left)
         result = self @ exponent >> self.ev(base, exponent, True) if left\
             else exponent @ self >> self.ev(base, exponent, False)
@@ -405,7 +407,7 @@ class RigidCategory[C0: Pregroup, C1: RigidCategory](BiclosedCategory[C0, C1]):
         if n < 0 or n > len(self.dom):
             raise ValueError
         if not n:
-            return self
+            return self  # ty: ignore[invalid-return-type]
         if left:
             base, exponent = self.dom[:-n], self.dom[-n:]
             return base @ self.caps(exponent, exponent.l) >> self @ exponent.l

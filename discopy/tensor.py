@@ -44,7 +44,7 @@ indices. Swaps, cups and caps become wiring while spiders stay as boxes.
 from __future__ import annotations
 
 from itertools import count
-from typing import TYPE_CHECKING, Any, Callable, Mapping, Sequence
+from typing import TYPE_CHECKING, Any, Callable, Mapping, Self, Sequence
 
 from discopy import (
     cat, monoidal, rigid, frobenius, cmap, config)
@@ -137,7 +137,7 @@ class Tensor[dtype](Matrix[dtype]):
     def id(cls, dom=Dim(1)) -> Tensor:
         return cls(Matrix.id(product(dom.inside)).array, dom, dom)
 
-    def then(self, other: Tensor | None = None, *others: Tensor) -> Tensor:
+    def then(self, other: Tensor | None = None, *others: Tensor) -> Self:
         if other is None or others:
             return super().then(other, *others)
         assert_isinstance(other, type(self))
@@ -148,9 +148,10 @@ class Tensor[dtype](Matrix[dtype]):
                 else self.array * other.array
         return type(self)(array, self.dom, other.cod)
 
-    def tensor(self, other: Tensor | None = None, *others: Tensor) -> Tensor:
+    def tensor(
+            self, other: Tensor | None = None, *others: Tensor) -> Self:
         if other is None or others:
-            return Diagram.tensor(
+            return Diagram.tensor(  # ty: ignore[invalid-return-type]
                 self, other, *others)  # ty: ignore[invalid-argument-type]
         assert_isinstance(other, Tensor)
         dom, cod = self.dom @ other.dom, self.cod @ other.cod
@@ -246,8 +247,8 @@ class Tensor[dtype](Matrix[dtype]):
             typ : The type of the spiders.
         """
         return frobenius.Diagram.spiders.__func__(
-            cls, n_legs_in, n_legs_out,  # ty: ignore[invalid-argument-type]
-            typ, phase)
+            cls, n_legs_in,  # ty: ignore[invalid-argument-type]
+            n_legs_out, typ, phase)  # ty: ignore[invalid-return-type]
 
     @classmethod
     def copy(cls, x: Dim, n: int) -> Tensor:

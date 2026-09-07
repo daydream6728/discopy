@@ -54,6 +54,8 @@ We also have its dagger and its transpose:
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 from discopy import cat, cmap, rigid, traced
 from discopy.abc import PivotalCategory
 from discopy.cat import factory
@@ -117,6 +119,8 @@ class Diagram(rigid.Diagram, traced.Diagram, PivotalCategory):
         cod (Ty) : The codomain of the diagram, i.e. its output.
     """
     ob = Ty
+    cup_factory: ClassVar[type[Cup]]
+    cap_factory: ClassVar[type[Cap]]
 
     def dagger(self):
         """

@@ -471,7 +471,7 @@ class Diagram[natural](RibbonCategory, NamedGeneric):
     to_drawing = lambda self: self.inside.to_drawing()
 
 
-def Int(category: TracedCategory) -> RibbonCategory:
+def Int(category: type[TracedCategory]) -> type[Diagram]:
     """
     The Int construction, i.e. the free ribbon category on a given balanced
     traced `category`, with :class:`interaction.Ty` as objects and

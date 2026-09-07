@@ -55,7 +55,7 @@ class MappingOrCallable(Mapping[KT, VT]):
     assert len(g) == 1
     assert list(g) == [0]
     """
-    def __class_getitem__(_, args: tuple[type, type]) -> type:
+    def __class_getitem__(_, args: tuple[type, type]) -> Any:
         source, target = args
         return (
             Mapping[source, target]  # ty: ignore[invalid-type-form]

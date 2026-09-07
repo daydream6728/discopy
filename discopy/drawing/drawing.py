@@ -746,7 +746,8 @@ class Drawing(TracedCategory, RichDisplay):
         return result
 
     @unbiased
-    def then(self, other: Drawing, draw_step_by_step=False) -> Drawing:
+    def then(self, other: Drawing,
+             draw_step_by_step=False) -> Drawing | list[Drawing]:
         """
         Draw one diagram composed with another.
 

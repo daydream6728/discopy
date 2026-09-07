@@ -334,6 +334,7 @@ class Substitution:
             other = Substitution(
                 {k: v for k, v in self.inside.items() if k != term.var})
             return other(term)
+        return term
 
 
 Ty.variable_factory = Variable

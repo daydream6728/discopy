@@ -58,7 +58,7 @@ The hexagon equations hold on the nose.
 
 from __future__ import annotations
 
-from typing import ClassVar
+from typing import Any, ClassVar, Self
 
 from collections.abc import Callable
 
@@ -93,7 +93,7 @@ class Diagram(monoidal.Diagram, BraidedCategory):
     braid_factory: ClassVar[type[Braid]]
 
     @classmethod
-    def braid(cls, left: monoidal.Ty, right: monoidal.Ty) -> Diagram:
+    def braid(cls, left: monoidal.Ty, right: monoidal.Ty) -> Self:
         """
         The diagram braiding :code:`left` over :code:`right`.
 
@@ -159,7 +159,7 @@ class Diagram(monoidal.Diagram, BraidedCategory):
                       below=self[i + len(source):] if down else self[i + 1:],
                       left=left_wires[:-1] if left else left_wires,
                       right=right_wires if left else right_wires[1:])
-        return match.substitute(target)
+        return match.substitute(target)  # ty: ignore[invalid-return-type]
 
 
 class Box(monoidal.Box, Diagram):
@@ -206,7 +206,7 @@ class Braid(BinaryBoxConstructor, Box):
         return type(self)(self.right, self.left, not self.is_dagger)
 
 
-def hexagon(cls: type, factory: Callable) -> Callable[[Ty, Ty], Diagram]:
+def hexagon(cls: type, factory: Callable) -> Callable[[Ty, Ty], Any]:
     """
     Take a ``factory`` for braids of atomic types and extend it recursively.
 

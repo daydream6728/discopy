@@ -189,7 +189,7 @@ class Layer(monoidal.Layer):
             if perm == sorted(perm):
                 raise AxiomError(messages.NOT_MERGEABLE.format(self, other))
             return type(self)(first.permutation_factory(self.dom, perm))
-        return super().merge(other)
+        return super().merge(other)  # ty: ignore[invalid-return-type]
 
 
 @factory

@@ -46,7 +46,7 @@ def exp(base: Ty, exponent: Ty) -> Ty:
         base (python.Ty) : The base type.
         exponent (python.Ty) : The exponent type.
     """
-    return (
+    return (  # ty: ignore[invalid-return-type]
         Callable[list(exponent),  # ty: ignore[invalid-type-form]
                  tuple[base]], )  # ty: ignore[invalid-type-form]
 

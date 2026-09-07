@@ -151,7 +151,7 @@ import copy
 
 from collections.abc import Callable
 
-from typing import ClassVar, Iterator, Self
+from typing import Any, ClassVar, Iterator, Self
 
 from discopy import cat, monoidal, biclosed, messages
 from discopy.abc import Pregroup, RigidCategory
@@ -719,9 +719,9 @@ class Sum(biclosed.Sum, Box):
 
     def rotate(self, left=False) -> Sum:
         if left:
-            return self.sum_factory(
+            return self.sum_factory(  # ty: ignore[invalid-return-type]
                 tuple(term.l for term in self.terms), self.cod.l, self.dom.l)
-        return self.sum_factory(
+        return self.sum_factory(  # ty: ignore[invalid-return-type]
             tuple(term.r for term in self.terms), self.cod.r, self.dom.r)
 
 
@@ -854,7 +854,7 @@ class Functor(biclosed.Functor):
         return super().__call__(other)
 
 
-def nesting(cls: type, factory: Callable) -> Callable[[Ty, Ty], Diagram]:
+def nesting(cls: type, factory: Callable) -> Callable[[Ty, Ty], Any]:
     """
     Take a :code:`factory` for cups or caps of atomic types
     and extends it recursively.

@@ -162,7 +162,6 @@ python-version = "3.12"
 # live on boxes only when a functor puts them there (unresolved-attribute).
 [tool.ty.rules]
 invalid-method-override = "ignore"
-invalid-return-type = "ignore"
 unresolved-attribute = "ignore"
 unsupported-operator = "ignore"
 

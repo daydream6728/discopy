@@ -46,7 +46,7 @@ from functools import cached_property, reduce
 from inspect import isclass
 from io import BytesIO
 from math import inf, lcm
-from typing import TYPE_CHECKING, ClassVar, Literal
+from typing import TYPE_CHECKING, ClassVar, Literal, Self
 
 from discopy import hypergraph, messages
 from discopy.abc import (
@@ -420,7 +420,7 @@ class CMap[category: Diagram](CompactCategory, NamedGeneric):
                 factory_name(cls.category)))
 
     @property
-    def connected_components(self) -> list[CMap]:
+    def connected_components(self) -> list[Self]:
         """ The connected components, with the boundary component first. """
         if not self.n_ports:
             # Avoid recursively rebuilding the same portless component.
@@ -460,7 +460,7 @@ class CMap[category: Diagram](CompactCategory, NamedGeneric):
                 and not self.loops:
             return [self]
 
-        def make_component(component: int) -> CMap:
+        def make_component(component: int) -> Self:
             dom = self.dom if component == boundary_component else self.ob()
             cod = self.cod if component == boundary_component else self.ob()
             boxes = tuple(box for _, box in boxes_by_component.get(
