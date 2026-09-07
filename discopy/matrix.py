@@ -54,7 +54,7 @@ if TYPE_CHECKING:
 
 
 @factory
-class Matrix(MonoidalCategory, NamedGeneric['dtype']):
+class Matrix[dtype](MonoidalCategory, NamedGeneric):
     """
     A matrix is an ``array`` with natural numbers as ``dom`` and ``cod``.
 

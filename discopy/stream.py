@@ -174,7 +174,7 @@ from discopy.utils import (
 
 
 @dataclass
-class Ty(NamedGeneric['base']):
+class Ty[base](NamedGeneric):
     """
     A stream of types from some underlying class `base`.
 
@@ -297,7 +297,7 @@ class Ty(NamedGeneric['base']):
 
 
 @dataclass
-class Stream(MonoidalCategory, NamedGeneric['category']):
+class Stream[category](MonoidalCategory, NamedGeneric):
     """
     Monoidal streams over an underlying `category`.
 
@@ -345,8 +345,22 @@ class Stream(MonoidalCategory, NamedGeneric['category']):
     _later: Callable[
         [], Stream[category]] = None  # ty: ignore[invalid-assignment]
 
-    later, is_constant = Ty.later, Ty.is_constant
-    head, tail = Ty.head, Ty.tail
+    @property
+    def later(self) -> Stream:
+        """ The tail of a stream, or `self` if :meth:`is_constant`. """
+        return self if self.is_constant else self._later()
+
+    @property
+    def head(self) -> Stream:
+        """ The :meth:`singleton` over the first time step. """
+        return self.singleton(self.now)
+
+    tail = later
+
+    @property
+    def is_constant(self) -> bool:
+        """ Whether a stream is constant. """
+        return self._later is None
 
     def __init__(
             self, now: category,

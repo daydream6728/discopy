@@ -442,8 +442,9 @@ class Circuit(tensor.Diagram[complex]):
         diag = Id(self.dom)
         last_i = 0
         for i, box in enumerate(self.boxes):
-            if hasattr(box, '_decompose'):
-                decomp = box._decompose()
+            decompose = getattr(box, '_decompose', None)
+            if decompose is not None:
+                decomp = decompose()
                 diag >>= self[last_i:i]
                 left, _, right = self.inside[i].boxes_and_types
                 diag >>= Id(left) @ decomp @ Id(right)
@@ -838,7 +839,7 @@ class Circuit(tensor.Diagram[complex]):
             >> self.cod[:offset] @ gate @ self.cod[offset + len(gate.dom):]
 
 
-class Box(tensor.Box[complex], Circuit):  # ty: ignore[inconsistent-mro]
+class Box(tensor.Box[complex], Circuit):
     """
     A circuit box is a tensor box in a circuit diagram.
 
@@ -892,7 +893,7 @@ class Box(tensor.Box[complex], Circuit):  # ty: ignore[inconsistent-mro]
         return self if self.z is None else super().rotate(left)
 
 
-class Sum(tensor.Sum[complex], Box):  # ty: ignore[inconsistent-mro]
+class Sum(tensor.Sum[complex], Box):
     """ Sums of circuits. """
     @property
     def is_mixed(self):
@@ -926,8 +927,7 @@ class Sum(tensor.Sum[complex], Box):  # ty: ignore[inconsistent-mro]
         return [circuit.to_tk() for circuit in self.terms]
 
 
-class Permutation(  # ty: ignore[inconsistent-mro]
-        tensor.Permutation[complex], Box):
+class Permutation(tensor.Permutation[complex], Box):
     "A permutation in a quantum circuit."
 
     @property

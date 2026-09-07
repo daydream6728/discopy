@@ -65,7 +65,7 @@ if TYPE_CHECKING:
 
 
 @factory
-class Tensor(Matrix):
+class Tensor[dtype](Matrix[dtype]):
     """
     A tensor is a :class:`Matrix` with dimensions as domain and codomain and
     the Kronecker product as tensor.
@@ -491,7 +491,7 @@ class Functor(frobenius.Functor):
 
 
 @factory
-class Diagram(NamedGeneric['dtype'], frobenius.Diagram):
+class Diagram[dtype](NamedGeneric, frobenius.Diagram):
     """
     A tensor diagram is a frobenius diagram with tensor boxes.
 
@@ -683,7 +683,7 @@ class Diagram(NamedGeneric['dtype'], frobenius.Diagram):
 CMap = cmap.CMap[Diagram]
 
 
-class Box(frobenius.Box, Diagram):
+class Box[dtype](frobenius.Box, Diagram[dtype]):
     """
     A tensor box is a frobenius box with an array as data.
 
@@ -701,7 +701,6 @@ class Box(frobenius.Box, Diagram):
     """
 
     def __setstate__(self, state):
-        NamedGeneric.__setstate__(self, state)
         if "data" not in state and state.get("_array", None) is not None:
             state['data'] = state['_array']
             del state["_array"]
@@ -747,7 +746,7 @@ class Box(frobenius.Box, Diagram):
         return (self.name, self.dom, self.cod, self.dtype) + data
 
 
-class Cup(frobenius.Cup, Box):
+class Cup[dtype](frobenius.Cup, Box[dtype]):
     """
     A tensor cup is a frobenius cup in a tensor diagram.
 
@@ -757,7 +756,7 @@ class Cup(frobenius.Cup, Box):
     """
 
 
-class Cap(frobenius.Cap, Box):
+class Cap[dtype](frobenius.Cap, Box[dtype]):
     """
     A tensor cap is a frobenius cap in a tensor diagram.
 
@@ -767,7 +766,7 @@ class Cap(frobenius.Cap, Box):
     """
 
 
-class Permutation(frobenius.Permutation, Box):
+class Permutation[dtype](frobenius.Permutation, Box[dtype]):
     "A permutation in a tensor diagram."
 
     @property
@@ -777,7 +776,7 @@ class Permutation(frobenius.Permutation, Box):
         return Tensor.permutation(self.perm, doms).array
 
 
-class Swap(Permutation, frobenius.Swap, Box):
+class Swap[dtype](Permutation[dtype], frobenius.Swap, Box[dtype]):
     """
     A tensor swap is a frobenius swap in a tensor diagram.
 
@@ -787,7 +786,7 @@ class Swap(Permutation, frobenius.Swap, Box):
     """
 
 
-class Spider(frobenius.Spider, Box):
+class Spider[dtype](frobenius.Spider, Box[dtype]):
     """
     A tensor spider is a frobenius spider in a tensor diagram.
 
@@ -810,7 +809,7 @@ class Spider(frobenius.Spider, Box):
     """
 
 
-class Sum(monoidal.Sum, Box):
+class Sum[dtype](monoidal.Sum, Box[dtype]):
     """
     A formal sum of tensor diagrams with the same domain and codomain.
 
@@ -821,7 +820,7 @@ class Sum(monoidal.Sum, Box):
     """
 
 
-class Bubble(monoidal.Bubble, Box):
+class Bubble[dtype](monoidal.Bubble, Box[dtype]):
     """
     Bubble in a tensor diagram, applies a function elementwise.
 

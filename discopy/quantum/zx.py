@@ -221,7 +221,7 @@ class Diagram(tensor.Diagram[complex]):
         return diagram
 
 
-class Box(tensor.Box[complex], Diagram):  # ty: ignore[inconsistent-mro]
+class Box(tensor.Box[complex], Diagram):
     """
     A ZX box is a tensor box in a ZX diagram.
 
@@ -232,7 +232,7 @@ class Box(tensor.Box[complex], Diagram):  # ty: ignore[inconsistent-mro]
     """
 
 
-class Sum(tensor.Sum[complex], Box):  # ty: ignore[inconsistent-mro]
+class Sum(tensor.Sum[complex], Box):
     """
     A formal sum of ZX diagrams with the same domain and codomain.
 
@@ -243,13 +243,11 @@ class Sum(tensor.Sum[complex], Box):  # ty: ignore[inconsistent-mro]
     """
 
 
-class Permutation(  # ty: ignore[inconsistent-mro]
-        tensor.Permutation[complex], Box):
+class Permutation(tensor.Permutation[complex], Box):
     "A permutation in a ZX diagram."
 
 
-class Swap(  # ty: ignore[inconsistent-mro]
-        Permutation, tensor.Swap[complex], Box):
+class Swap(Permutation, tensor.Swap[complex], Box):
     """ Swap in a ZX diagram. """
     def __repr__(self):
         return "SWAP"
@@ -257,7 +255,7 @@ class Swap(  # ty: ignore[inconsistent-mro]
     __str__ = __repr__
 
 
-class Spider(tensor.Spider[complex], Box):  # ty: ignore[inconsistent-mro]
+class Spider(tensor.Spider[complex], Box):
     """ Abstract spider box. """
 
     def __init__(self, n_legs_in, n_legs_out, phase=0):
@@ -393,7 +391,7 @@ circuit2zx = quantum.circuit.Functor(
     dom=Circuit, cod=Diagram)
 
 H = Box('H', PRO(1), PRO(1))
-H.dagger = lambda: H
+H.dagger = lambda: H  # ty: ignore[invalid-assignment]
 H.draw_as_spider = True
 H.drawing_name, H.tikzstyle_name, = '', 'H'
 H.color, H.shape = "yellow", "rectangle"

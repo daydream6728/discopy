@@ -96,7 +96,7 @@ Mapping from :class:`Spider` to atomic :class:`frobenius.Ty`.
 """
 
 
-class Hypergraph(MonoidalCategory, NamedGeneric['category']):
+class Hypergraph[category: Diagram](MonoidalCategory, NamedGeneric):
     """
     A hypergraph is given by:
 

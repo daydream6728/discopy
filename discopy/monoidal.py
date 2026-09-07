@@ -58,7 +58,7 @@ import itertools
 from dataclasses import dataclass, field
 from functools import cached_property
 from typing import (
-    ClassVar, Iterable, Iterator, Callable, Sequence, TYPE_CHECKING)
+    Any, ClassVar, Iterable, Iterator, Callable, Sequence, TYPE_CHECKING)
 from warnings import warn
 
 from discopy import cat, drawing, hypergraph, cmap, messages
@@ -1428,7 +1428,7 @@ class Box(cat.Box, Diagram):
     draw_as_discards: bool
     draw_as_measures: bool
     draw_as_controlled: bool
-    controlled: Box | None
+    controlled: Any
     distance: int | None
     shape: str | None
     color: str

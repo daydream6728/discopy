@@ -125,9 +125,7 @@ class Port:
     side: Literal["up", "down"]
 
 
-class CMap[C0: Pregroup, C1: CMap](
-    CompactCategory[C0, C1], NamedGeneric['category']
-):
+class CMap[category: Diagram](CompactCategory, NamedGeneric):
     r"""
     An open combinatorial map, i.e. a diagram represented as a bijection
     between its ports.
@@ -226,15 +224,15 @@ class CMap[C0: Pregroup, C1: CMap](
     functor = classproperty(lambda cls: cls.category.functor_factory)
     ob = classproperty(lambda cls: cls.category.ob)
 
-    dom: C0
-    cod: C0
-    loops: tuple[C0, ...]
+    dom: Pregroup
+    cod: Pregroup
+    loops: tuple[Pregroup, ...]
     edges: Permutation
 
     def __init__(
-            self, dom: C0, cod: C0, boxes: tuple[Box, ...],
+            self, dom: Pregroup, cod: Pregroup, boxes: tuple[Box, ...],
             edges: Iterable[int],
-            loops: tuple[C0, ...] = (), *, check: bool = True):
+            loops: tuple[Pregroup, ...] = (), *, check: bool = True):
         assert_isinstance(dom, self.category.ob)
         assert_isinstance(cod, self.category.ob)
         for box in boxes:
@@ -1155,7 +1153,7 @@ class CMap[C0: Pregroup, C1: CMap](
 
     def plug_input(
             self, input_index: int, box: Box,
-            cod: C0, root_index: int = 0) -> CMap:
+            cod: Pregroup, root_index: int = 0) -> CMap:
         """
         Plug an input boundary and the output root into a new box.
 

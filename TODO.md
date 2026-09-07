@@ -17,7 +17,7 @@
 >    for `.l`/`.r` — and re-enable `invalid-argument-type`,
 >    `invalid-type-form`, `invalid-type-arguments`.)
 
-- [ ] Reimplement `NamedGeneric` on PEP 695 type parameters, port every
+- [x] Reimplement `NamedGeneric` on PEP 695 type parameters, port every
       subscripting class (`tensor`, `hypergraph`, `cmap`, `stream`, `para`,
       `interaction`, `hopf`, `quantum`) and drop the `inconsistent-mro`
       inline ignores

@@ -41,7 +41,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
-from typing import ClassVar, Generic, TypeVar
+from typing import ClassVar, TypeVar
 
 from discopy.utils import classproperty, get_origin
 
@@ -606,13 +606,10 @@ class HypergraphCategory[C0, C1](
         """
 
 
-class NamedGeneric(
-        Generic[TypeVar('T')]):  # ty: ignore[invalid-legacy-type-variable]
+class NamedGeneric:
     """
-    A ``NamedGeneric`` is a ``Generic`` where the type parameter has a name.
-
-    Parameters:
-        attr : The name of the type parameter.
+    A ``NamedGeneric`` is a ``Generic`` whose type parameters are attached by
+    name to the members of the class.
 
     Note
     ----
@@ -631,63 +628,55 @@ class NamedGeneric(
 
     >>> from dataclasses import dataclass
     >>> @dataclass
-    ... class L(NamedGeneric["dtype"]):
+    ... class L[dtype](NamedGeneric):
     ...     inside: list
     >>> assert L[int]([1, 2, 3]).dtype == int
     >>> assert L[int]([1, 2, 3]) != L[float]([1, 2, 3])
     """
     _cache = dict()
 
-    def __class_getitem__(_, attributes):
-        if not isinstance(attributes, tuple):
-            attributes = (attributes,)
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        for param in cls.__type_params__:
+            if not hasattr(cls, param.__name__):
+                setattr(cls, param.__name__, None)
 
-        G = Generic.__class_getitem__(tuple(map(TypeVar, attributes)))
+    def __class_getitem__(cls, values):
+        values = values if isinstance(values, tuple) else (values,)
+        if any(isinstance(value, TypeVar) for value in values):
+            return super().__class_getitem__(
+                values[0] if len(values) == 1 else values)
+        origin = get_origin(cls)
+        attributes = [param.__name__ for param in next(
+            c.__type_params__ for c in origin.__mro__ if c.__type_params__)]
+        cls_values = tuple(
+            getattr(origin, attr, None) for attr in attributes)
+        if origin not in NamedGeneric._cache:
+            NamedGeneric._cache[origin] = {cls_values: origin}
+        if values not in NamedGeneric._cache[origin]:
+            class C(origin):
+                # We need this to fix pickling of nested classes, see
+                # https://stackoverflow.com/questions/1947904
+                def __reduce__(self):
+                    func, args, data = super().__reduce__()
+                    # Check if class name is of the form ClassName[type]
+                    if '[' in args[0].__name__:
+                        args = (origin, ) + args[1:]
+                        data |= {"__class_getitem__values__": values}
+                    return func, args, data
 
-        class Result(G):
-            def __class_getitem__(cls, values):
-                if hasattr(cls, "__is_named_generic__"):
-                    cls = cls.__bases__[0]
-                values = values if isinstance(values, tuple) else (values,)
-                cls_values = tuple(
-                    getattr(cls, attr, None) for attr in attributes)
-                if cls not in NamedGeneric._cache:
-                    NamedGeneric._cache[cls] = {cls_values: cls}
-                if values not in NamedGeneric._cache[cls]:
-                    origin = get_origin(cls)
-
-                    class C(origin):
-                        __is_named_generic__ = True
-
-                        # We need this to fix pickling of nested classes
-                        # https://stackoverflow.com/questions/1947904/how-can-i-pickle-a-dynamically-created-nested-class-in-python
-                        def __reduce__(self):
-                            func, args, data = super().__reduce__()
-                            # Check if class name is of the form:
-                            # *ClassName*[*type*]
-                            if '[' in args[0].__name__:
-                                args = (origin, ) + args[1:]
-                                data |= {"__class_getitem__values__": values}
-                            return func, args, data
-
-                    C.__module__ = origin.__module__
-                    names = [getattr(v, "__name__", str(v)) for v in values]
-                    C.__name__ = C.__qualname__ = origin.__name__\
-                        + f"[{', '.join(names)}]"
-                    C.__origin__ = cls
-                    for attr, value in zip(attributes, values):
-                        setattr(C, attr, value)
-                    NamedGeneric._cache[cls][values] = C
-                return NamedGeneric._cache[cls][values]
-
-            __name__ = __qualname__\
-                = f"NamedGeneric[{', '.join(map(repr, attributes))}]"
-
-        for attr in attributes:
-            setattr(Result, attr, getattr(Result, attr, None))
-        return Result
+            C.__module__ = origin.__module__
+            names = [getattr(v, "__name__", str(v)) for v in values]
+            C.__name__ = C.__qualname__ = origin.__name__\
+                + f"[{', '.join(names)}]"
+            C.__origin__ = origin
+            for attr, value in zip(attributes, values):
+                setattr(C, attr, value)
+            NamedGeneric._cache[origin][values] = C
+        return NamedGeneric._cache[origin][values]
 
     def __setstate__(self, state):
         if "__class_getitem__values__" in state:
-            new_cls = self.__class__[state["__class_getitem__values__"]]
-            self.__class__ = new_cls
+            self.__class__ = self.__class__[
+                state["__class_getitem__values__"]]
+        super().__setstate__(state)
