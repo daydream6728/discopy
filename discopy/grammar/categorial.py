@@ -283,8 +283,8 @@ class TypeRaising(TermBase):
         self.base, self.child, self.freevars = base, child, child.freevars
         super().__init__(name, child.dom, cod)
 
-    def eval(self, **kwargs):
-        return self.simplify().eval(**kwargs)
+    def eval(self, functor=None):
+        return self.simplify().eval(functor)
 
     def __repr__(self):
         return factory_name(type(self)) + f"({self.base!r}, {self.child!r})"
@@ -333,8 +333,8 @@ class BinaryTerm(TermBase):
     def simplify(self):
         return type(self)(self.left.simplify(), self.right.simplify())
 
-    def eval(self, **kwargs):
-        return self.simplify().eval(**kwargs)
+    def eval(self, functor=None):
+        return self.simplify().eval(functor)
 
     def __repr__(self):
         return factory_name(type(self)) + f"({self.left!r}, {self.right!r})"

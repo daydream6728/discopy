@@ -221,7 +221,7 @@ class Diagram(tensor.Diagram[complex]):
         return diagram
 
 
-class Box(tensor.Box[complex], Diagram):
+class Box(tensor.Box[complex], Diagram):  # ty: ignore[inconsistent-mro]
     """
     A ZX box is a tensor box in a ZX diagram.
 
@@ -232,7 +232,7 @@ class Box(tensor.Box[complex], Diagram):
     """
 
 
-class Sum(tensor.Sum[complex], Box):
+class Sum(tensor.Sum[complex], Box):  # ty: ignore[inconsistent-mro]
     """
     A formal sum of ZX diagrams with the same domain and codomain.
 
@@ -243,11 +243,13 @@ class Sum(tensor.Sum[complex], Box):
     """
 
 
-class Permutation(tensor.Permutation[complex], Box):
+class Permutation(  # ty: ignore[inconsistent-mro]
+        tensor.Permutation[complex], Box):
     "A permutation in a ZX diagram."
 
 
-class Swap(Permutation, tensor.Swap[complex], Box):
+class Swap(  # ty: ignore[inconsistent-mro]
+        Permutation, tensor.Swap[complex], Box):
     """ Swap in a ZX diagram. """
     def __repr__(self):
         return "SWAP"
@@ -255,7 +257,7 @@ class Swap(Permutation, tensor.Swap[complex], Box):
     __str__ = __repr__
 
 
-class Spider(tensor.Spider[complex], Box):
+class Spider(tensor.Spider[complex], Box):  # ty: ignore[inconsistent-mro]
     """ Abstract spider box. """
 
     def __init__(self, n_legs_in, n_legs_out, phase=0):

@@ -9,6 +9,18 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Added
 
+- The codebase typechecks: `uv run --with ty ty check` passes, configured
+  by the `[tool.ty]` sections of `pyproject.toml`. A first annotation pass
+  declares the factory class attributes assigned after each class
+  definition, the box drawing attributes that :mod:`discopy.drawing` sets
+  on :class:`monoidal.Box`, and makes every parameter defaulting to
+  ``None`` optional. Seven rules stay off, each needing an architectural
+  change to satisfy: the factory-method pattern narrows signatures and
+  return types covariantly down the tower, `NamedGeneric` parameterises
+  classes at runtime so ``tensor.Box[complex]`` types as `Unknown`, and
+  the abstract base classes use type variables for objects and arrows
+  without protocol bounds. The lazy imports of optional dependencies and
+  forty-odd stragglers are ignored inline.
 - The style review can be asked for, and turned off, from the pull request
   itself: `@discopy review this` in a comment reviews it now, and the
   `no-style-review` label stops the automatic reviews on it, while the

@@ -67,7 +67,7 @@ class Ribbon(Colour):
     >>> assert Ribbon() == Ribbon("gray", width=0.25)
     """
     name: str = "gray"
-    width: float = None
+    width: float | None = None
 
     def __post_init__(self):
         super().__post_init__()
@@ -177,8 +177,9 @@ class Diagram(braided.Diagram, traced.Diagram, BalancedCategory):
 
         .. image:: /_static/balanced/twist_dual_rail.svg
         """
-        width = config.DRAWING_DEFAULT["ribbon_width"]\
-            if width is None else width
+        if width is None:
+            width = config.DRAWING_DEFAULT[  # ty: ignore[invalid-assignment]
+                "ribbon_width"]
         return self if not width\
             else self.dual_rail_factory(width, colour)(self)
 

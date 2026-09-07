@@ -2,6 +2,8 @@
 
 """ Discopy configuration. """
 
+from typing import Any, Callable
+
 from discopy.utils import text_width
 
 DEFAULT_BACKEND = 'numpy'
@@ -14,7 +16,7 @@ IGNORE_WARNINGS = [
 
 
 # Mapping from attribute to function from box to default value.
-BOX_DRAWING_ATTRIBUTES = {
+BOX_DRAWING_ATTRIBUTES: dict[str, Callable[[Any], Any]] = {
     "height": lambda _: 1,
     "is_conjugate": lambda _: False,
     "is_transpose": lambda _: False,

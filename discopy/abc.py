@@ -126,12 +126,15 @@ class ColouredMonoid[C0, C1: ColouredMonoid](Category[C0, C1]):
     that e.g. :class:`monoidal.Ty` can take colours as objects.
     """
     @classmethod
-    def id(cls, dom: C0 = None) -> C1:
+    def id(cls, dom: C0 = None) -> C1:  # ty: ignore[invalid-parameter-default]
         """The monoidal unit, i.e. the empty tensor ``cls()``."""
         return cls()
 
     @classmethod
-    def unit(cls, colour: C0 = None) -> C0 | C1:
+    def unit(
+            cls,
+            colour: C0 = None  # ty: ignore[invalid-parameter-default]
+    ) -> C0 | C1:
         """
         The unit at a colour, i.e. the identity on it.
 
@@ -381,9 +384,11 @@ class RigidCategory[C0: Pregroup, C1: RigidCategory](BiclosedCategory[C0, C1]):
         if not n:
             return self
         if left:
-            base, exponent = self.dom[:-n], self.dom[-n:]
+            base, exponent = (
+                self.dom[:-n], self.dom[-n:])  # ty: ignore[not-subscriptable]
             return base @ self.caps(exponent, exponent.l) >> self @ exponent.l
-        base, exponent = self.dom[n:], self.dom[:n]
+        base, exponent = (
+            self.dom[n:], self.dom[:n])  # ty: ignore[not-subscriptable]
         return self.caps(exponent.r, exponent) @ base >> exponent.r @ self
 
     def base_and_exponent(self, n: int, left: bool) -> tuple[C0, C0]:
@@ -398,8 +403,10 @@ class RigidCategory[C0: Pregroup, C1: RigidCategory](BiclosedCategory[C0, C1]):
         """
         if n > len(self.cod):
             raise ValueError
-        return (self.cod[:-n], self.cod[-n:].r) if left\
-            else (self.cod[n:], self.cod[:n].l)
+        if left:
+            return (self.cod[:-n],  # ty: ignore[not-subscriptable]
+                    self.cod[-n:].r)  # ty: ignore[not-subscriptable]
+        return self.cod[n:], self.cod[:n].l  # ty: ignore[not-subscriptable]
 
     def transpose(self, left: bool = False) -> C1:
         """
@@ -599,7 +606,8 @@ class HypergraphCategory[C0, C1](
         """
 
 
-class NamedGeneric(Generic[TypeVar('T')]):
+class NamedGeneric(
+        Generic[TypeVar('T')]):  # ty: ignore[invalid-legacy-type-variable]
     """
     A ``NamedGeneric`` is a ``Generic`` where the type parameter has a name.
 

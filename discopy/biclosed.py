@@ -114,7 +114,7 @@ class Ty(monoidal.Ty):
     under_factory: ClassVar[type[Exp]]
     variable_factory: ClassVar[type[Variable]]
     constant_factory: ClassVar[type[Constant]]
-    application_factory: ClassVar[type[Application]]
+    application_factory: ClassVar[Callable[..., TermBase]]
     abstraction_factory: ClassVar[type[Abstraction]]
 
     def __pow__(self, other: Ty) -> Ty:

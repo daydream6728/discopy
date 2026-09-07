@@ -225,7 +225,8 @@ class Hypergraph(MonoidalCategory, NamedGeneric['category']):
         first_occurrence = {}
         for index, spider in enumerate(flat_wires):
             first_occurrence.setdefault(spider, index)
-        relabeling = sorted(connected_spiders, key=first_occurrence.get)
+        relabeling = sorted(
+            connected_spiders, key=first_occurrence.__getitem__)
         relabeling += sorted(set(spider_types.keys()) - connected_spiders)
         self.spider_types = tuple(
             spider_types[s].unwind() for s in relabeling)
@@ -779,7 +780,8 @@ class Hypergraph(MonoidalCategory, NamedGeneric['category']):
         if len(order) != self.n_spiders - len(self.scalar_spiders):
             return None
 
-        box_order = sorted(range(len(self.boxes)), key=box_rank.__getitem__)
+        box_order = sorted(  # ty: ignore[no-matching-overload]
+            range(len(self.boxes)), key=box_rank.__getitem__)
         boxes = tuple(self.boxes[i] for i in box_order)
         wires = (
             tuple(canon[s] for s in self.dom_wires),
@@ -1531,7 +1533,7 @@ class Hypergraph(MonoidalCategory, NamedGeneric['category']):
                     outputs.append(spider)
                 return untuplify(outputs)
 
-            cls.category.__call__ = apply
+            cls.category.__call__ = apply  # ty: ignore[invalid-assignment]
             for i, obj in enumerate(dom):
                 input_node = Node("input", obj=obj, i=i)
                 input_spider = Node("spider", obj=obj, i=i)

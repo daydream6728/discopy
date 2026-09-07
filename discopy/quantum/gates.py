@@ -587,13 +587,14 @@ class Parametrized(Box):
 
     def subs(self, *args):
         data = rsubs(self.data, *args)
-        return type(self)(data)
+        return type(self)(data)  # ty: ignore[missing-argument]
 
     def lambdify(self, *symbols, **kwargs):
         from sympy import lambdify  # ty: ignore[unresolved-import]
         with backend() as np:
             data = lambdify(symbols, self.data, dict(kwargs, modules=np))
-        return lambda *xs: type(self)(data(*xs))
+        return lambda *xs: type(self)(  # ty: ignore[missing-argument]
+            data(*xs))
 
     def __str__(self):
         if isinstance(self, Controlled):

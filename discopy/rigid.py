@@ -610,7 +610,7 @@ class Diagram(biclosed.Diagram, RigidCategory):
                 yield _diagram
                 diagram = _diagram
         for _diagram in monoidal.Diagram.normalize(diagram, left=left):
-            yield _diagram
+            yield _diagram  # ty: ignore[invalid-yield]
 
     normalize = snake_removal
 

@@ -294,7 +294,7 @@ class Diagram(balanced.Diagram, SymmetricCategory):
 
     @classmethod
     def permutation(cls, xs: Sequence[int],
-                    doms: Sequence[monoidal.Ty] | None = None) -> Diagram:
+                    doms: Sequence | monoidal.Ty | None = None) -> Diagram:
         """
         The diagram that encodes a given permutation as a composition of
         swaps.
@@ -306,7 +306,8 @@ class Diagram(balanced.Diagram, SymmetricCategory):
                   default is :code:`PRO(len(xs))`.
         """
 
-        doms = PRO(len(xs)) if doms is None else doms
+        if doms is None:
+            doms = PRO(len(xs))
         size = len(doms)
         unit = type(doms)() if isinstance(doms, PRO) else cls.ob()
         tensor = lambda tys: unit.tensor(*tys)

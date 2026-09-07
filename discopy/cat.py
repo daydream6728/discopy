@@ -898,7 +898,8 @@ class Functor(Category):
             ob_map: Mapping[Ob, Ob] | Callable[[Ob], Ob] | None = None,
             ar_map: Mapping[Box, Arrow] | Callable[[Box], Arrow] | None = None,
             dom: type | None = None, cod: type | None = None):
-        self.dom, self.cod = dom or type(self).dom, cod or type(self).cod
+        self.dom, self.cod = (  # ty: ignore[invalid-assignment]
+            dom or type(self).dom, cod or type(self).cod)
         self.ob_map: MappingOrCallable[Ob, Ob] = MappingOrCallable(
             ob_map or {})
         self.ar_map: MappingOrCallable[Box, Arrow] = MappingOrCallable(

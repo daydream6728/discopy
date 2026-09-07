@@ -447,8 +447,10 @@ class Backend(ABC):
         around the crossing, matching the broken strands, so the ribbon going
         under is shadowed by the one going over.
         """
-        a, b = (self.braid_strand(*first, middle),
-                self.braid_strand(*second, middle))
+        a = self.braid_strand(
+            *first, middle)  # ty: ignore[too-many-positional-arguments]
+        b = self.braid_strand(
+            *second, middle)  # ty: ignore[too-many-positional-arguments]
         spans = [(0, 1)] if not gap else [(0, 0.5 - gap), (0.5 + gap, 1)]
         for t0, t1 in spans:
             a_sub, b_sub = (
@@ -1339,7 +1341,7 @@ class Matplotlib(Backend):
                 node_size=300 * params.get("nodesize", 1))
             if draw_box_labels:
                 labels = {node: node.box.drawing_name for node in nodes}
-                nx.draw_networkx_labels(*graph.inside, labels)
+                nx.draw_networkx_labels(*graph.inside, labels=labels)
         super().draw_spiders(graph, draw_box_labels)
 
     def output(self, path=None, show=True, **params):

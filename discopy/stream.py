@@ -185,18 +185,18 @@ class Ty(NamedGeneric['base']):
     """
     base = symmetric.Ty  # The underlying class of types.
 
-    now: base = None
-    _later: Callable[[], Ty[base]] = None
+    now: base = None  # ty: ignore[invalid-assignment]
+    _later: Callable[[], Ty[base]] = None  # ty: ignore[invalid-assignment]
 
     ob = classproperty(lambda cls: cls)
 
     def __init__(self, now: base | None = None,
                  _later: Callable[[], Ty[base]] | None = None):
         if is_tuple(self.base) and not isinstance(now, (tuple, type(None))):
-            now = (now, )
+            now = (now, )  # ty: ignore[invalid-assignment]
         now = now if isinstance(now, get_origin(self.base)) else (
             self.base() if now is None else self.base(now))
-        self.now, self._later = now, _later
+        self.now, self._later = now, _later  # ty: ignore[invalid-assignment]
 
     def __repr__(self):
         _later = "" if self.is_constant else f", _later={repr(self._later)}"
@@ -342,7 +342,8 @@ class Stream(MonoidalCategory, NamedGeneric['category']):
     dom: ob = None
     cod: ob = None
     mem: ob = None
-    _later: Callable[[], Stream[category]] = None
+    _later: Callable[
+        [], Stream[category]] = None  # ty: ignore[invalid-assignment]
 
     later, is_constant = Ty.later, Ty.is_constant
     head, tail = Ty.head, Ty.tail
@@ -374,7 +375,7 @@ class Stream(MonoidalCategory, NamedGeneric['category']):
                 raise ValueError(
                     "Constant streams should have constant dom, cod and mem")
         self.dom, self.cod, self.mem = dom, cod, mem
-        self.now, self._later = now, _later
+        self.now, self._later = now, _later  # ty: ignore[invalid-assignment]
 
     def check_later(self):
         """ Check that later has consistent domain, codomain and memory. """

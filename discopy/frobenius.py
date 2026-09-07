@@ -60,6 +60,8 @@ Speciality
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 from collections.abc import Callable
 
 from discopy import (
@@ -122,6 +124,7 @@ class Diagram(compact.Diagram, markov.Diagram, HypergraphCategory):
         dom (Ty) : The domain of the diagram, i.e. its input.
         cod (Ty) : The codomain of the diagram, i.e. its output.
     """
+    spider_factory: ClassVar[type[Spider]]
 
     ob = Ty
 
@@ -311,7 +314,7 @@ class Functor(compact.Functor, markov.Functor):
 
 
 def interleaving(cls: type, factory: Callable
-                 ) -> Callable[[int, int, Ty], Diagram]:
+                 ) -> Callable[..., Diagram]:
     """
     Take a ``factory`` for spiders of atomic types and extend it recursively.
 
@@ -340,7 +343,7 @@ def interleaving(cls: type, factory: Callable
 
 
 def coherence(cls: type, factory: Callable
-              ) -> Callable[[int, int, Ty], Diagram]:
+              ) -> Callable[..., Diagram]:
     """
     Take a ``factory`` for spiders with one or three legs of atomic types
     and extend it recursively to arbitrary spiders of atomic types.

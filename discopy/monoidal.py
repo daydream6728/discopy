@@ -57,7 +57,8 @@ from __future__ import annotations
 import itertools
 from dataclasses import dataclass, field
 from functools import cached_property
-from typing import ClassVar, Iterator, Callable, Sequence, TYPE_CHECKING
+from typing import (
+    ClassVar, Iterable, Iterator, Callable, Sequence, TYPE_CHECKING)
 from warnings import warn
 
 from discopy import cat, drawing, hypergraph, cmap, messages
@@ -475,9 +476,10 @@ class PRO(Ty):
     def __setstate__(self, state):
         if "n" not in state:
             state = {"n": len(state["_objects"])}
-        state.setdefault("dom", white)
-        state.setdefault("cod", white)
-        state.setdefault("name", type(self).__name__)
+        state.setdefault("dom", white)  # ty: ignore[no-matching-overload]
+        state.setdefault("cod", white)  # ty: ignore[no-matching-overload]
+        state.setdefault(  # ty: ignore[no-matching-overload]
+            "name", type(self).__name__)
         cat.Ob.__setstate__(self, state)
 
     @property
@@ -659,7 +661,7 @@ class Layer(cat.Box, ColouredMonoid):
                   for x in self.boxes_or_types]
         return pieces[0][:0].tensor(*pieces)
 
-    plumbing = Ty
+    plumbing: ClassVar[type | tuple[type, ...]] = Ty
 
     @staticmethod
     def check(inside):
@@ -1038,7 +1040,7 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
     def decode(
             cls,
             dom: Ty,
-            boxes_and_offsets: list[tuple[Box, int]] | None = None,
+            boxes_and_offsets: Iterable[tuple[Box, int]] | None = None,
             boxes: list[Box] | None = None,
             offsets: list[int] | None = None,
             cod: Ty | None = None) -> Diagram:
@@ -1681,7 +1683,8 @@ class Functor(cat.Functor):
             unit = result[:0] if isinstance(result, Ty) else self.cod.ob()
             return sum(other.n * [result], unit)
         if isinstance(other, Dim):
-            return sum([self.ob_map[x] for x in other], self.cod.ob())
+            return sum(  # ty: ignore[no-matching-overload]
+                [self.ob_map[x] for x in other], self.cod.ob())
         if isinstance(other, Ty):
             if not other.inside:
                 # Empty coloured identity: keep its (mapped) boundary colour.

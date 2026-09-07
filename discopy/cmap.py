@@ -1080,13 +1080,15 @@ class CMap[C0: Pregroup, C1: CMap](
             raise ValueError
 
         if left:
-            dom, cod = self.dom[n:], self.cod[n:]
+            dom, cod = (
+                self.dom[n:], self.cod[n:])  # ty: ignore[not-subscriptable]
             traced_inputs = range(n)
             traced_outputs = range(
                 self.n_ports - len(self.cod),
                 self.n_ports - len(self.cod) + n)
         else:
-            dom, cod = self.dom[:-n], self.cod[:-n]
+            dom, cod = (
+                self.dom[:-n], self.cod[:-n])  # ty: ignore[not-subscriptable]
             traced_inputs = range(len(dom), len(self.dom))
             traced_outputs = range(self.n_ports - n, self.n_ports)
 

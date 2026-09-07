@@ -260,6 +260,9 @@ class Variable(TermBase, biclosed.Variable):
 
 
 class Application(TermBase, biclosed.Application):
+    func: Term
+    args: Term
+
     def __check_dom__(self, func, args, left):
         self.overlap = set(func.freevars).intersection(args.freevars)
         self.freevars = list(dict.fromkeys(func.freevars + args.freevars))
@@ -282,6 +285,9 @@ class Application(TermBase, biclosed.Application):
 
 
 class Abstraction(TermBase, biclosed.Abstraction):
+    var: Variable
+    body: Term
+
     def __check_dom__(self):
         self.freevars = [x for x in self.body.freevars if x != self.var]
         return self.ob().tensor(*[x.cod for x in self.freevars])

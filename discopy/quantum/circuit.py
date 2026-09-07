@@ -105,7 +105,7 @@ class Wire(frobenius.Wire):
     @classmethod
     def from_tree(cls, tree: dict) -> Wire:
         dim, z = tree['dim'], tree.get('z', 0)
-        return cls(dim=dim, z=z)
+        return cls(dim=dim, z=z)  # ty: ignore[missing-argument]
 
     def to_tree(self) -> dict:
         return dict(dim=self.dim, **super().to_tree())
@@ -838,7 +838,7 @@ class Circuit(tensor.Diagram[complex]):
             >> self.cod[:offset] @ gate @ self.cod[offset + len(gate.dom):]
 
 
-class Box(tensor.Box[complex], Circuit):
+class Box(tensor.Box[complex], Circuit):  # ty: ignore[inconsistent-mro]
     """
     A circuit box is a tensor box in a circuit diagram.
 
@@ -892,7 +892,7 @@ class Box(tensor.Box[complex], Circuit):
         return self if self.z is None else super().rotate(left)
 
 
-class Sum(tensor.Sum[complex], Box):
+class Sum(tensor.Sum[complex], Box):  # ty: ignore[inconsistent-mro]
     """ Sums of circuits. """
     @property
     def is_mixed(self):
@@ -926,7 +926,8 @@ class Sum(tensor.Sum[complex], Box):
         return [circuit.to_tk() for circuit in self.terms]
 
 
-class Permutation(tensor.Permutation[complex], Box):
+class Permutation(  # ty: ignore[inconsistent-mro]
+        tensor.Permutation[complex], Box):
     "A permutation in a quantum circuit."
 
     @property

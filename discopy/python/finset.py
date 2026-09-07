@@ -18,7 +18,7 @@ Summary
 
 from __future__ import annotations
 from discopy.utils import assert_isinstance
-from typing import Iterable, Self, Any
+from typing import Iterable, Self, Any, overload
 from collections.abc import Sequence
 
 from dataclasses import dataclass
@@ -149,7 +149,13 @@ class Permutation(Function, SymmetricCategory):
     def __iter__(self):
         return (self[i] for i in range(self.cod))
 
-    def __getitem__(self, key: int) -> int:
+    @overload
+    def __getitem__(self, key: int) -> int: ...
+
+    @overload
+    def __getitem__(self, key: slice) -> tuple[int, ...]: ...
+
+    def __getitem__(self, key):
         if isinstance(key, slice):
             return tuple(self)[key]
         return super().__getitem__(key)
