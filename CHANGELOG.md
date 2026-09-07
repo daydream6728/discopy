@@ -14,13 +14,35 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   declares the factory class attributes assigned after each class
   definition, the box drawing attributes that :mod:`discopy.drawing` sets
   on :class:`monoidal.Box`, and makes every parameter defaulting to
-  ``None`` optional. Seven rules stay off, each needing an architectural
-  change to satisfy: the factory-method pattern narrows signatures and
-  return types covariantly down the tower, `NamedGeneric` parameterises
-  classes at runtime so ``tensor.Box[complex]`` types as `Unknown`, and
-  the abstract base classes use type variables for objects and arrows
-  without protocol bounds. The lazy imports of optional dependencies and
-  forty-odd stragglers are ignored inline.
+  ``None`` optional. The lazy imports of optional dependencies and the
+  remaining dynamic constructions are ignored inline. Two rules stay
+  off, documented in `pyproject.toml`: `invalid-method-override`, since
+  aligning the n-ary signatures that the tower narrows means changing
+  runtime APIs, and `unresolved-attribute`, since the downgrade paths of
+  `Hypergraph` and `CMap` ask the host category for structure behind
+  runtime guards, `Node` holds arbitrary data and implementations are
+  borrowed across levels.
+- `NamedGeneric` is reimplemented on PEP 695 type parameters: the
+  parameter is declared with the class syntax, e.g.
+  ``class Diagram[dtype]``, instead of a string subscript, so
+  typecheckers understand a specialisation like ``tensor.Box[complex]``
+  both as a value and as a base class. The runtime machinery is
+  unchanged: subscripting with a concrete value builds a cached subclass
+  carrying it as a class attribute, named and pickled as before, while
+  subscripting with a type variable, as in
+  ``class Box[dtype](Diagram[dtype])``, delegates to `Generic`.
+  `CMap` and `Stream` are parameterised by a category bounded by the
+  diagrams they host, para maps by a symmetric one, and `Stream` defines
+  its own `later`, `head`, `tail` and `is_constant` properties instead
+  of borrowing the descriptors of `Ty`.
+- The abstract base classes bound their type variables all the way down
+  the tower and declare the structure their methods assume: a length and
+  slices on the objects of a `ColouredMonoid` and the exponential
+  accessors on a `ResiduatedMonoid`. `Self` return types express the
+  covariance the tower used to assert: `Box.dagger`, the adjoints of
+  rigid types, the integer power of a monoidal type, braids built by the
+  hexagon equations, tensor compositions and the lifts of parametric
+  maps all land in the class of their caller.
 - The style review can be asked for, and turned off, from the pull request
   itself: `@discopy review this` in a comment reviews it now, and the
   `no-style-review` label stops the automatic reviews on it, while the
@@ -268,6 +290,19 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   ([#566](https://github.com/discopy/discopy/pull/566)).
 
 ### Fixed
+
+- Typechecking found four latent crashes: the abstract ``TermBase.eval``
+  stub was missing its ``self`` parameter, so ``self.eval()`` typed the
+  term as the functor; ``rigid`` raised with
+  ``messages.PERMUTATION_HAS_NO_OFFSET``, which was never defined and
+  would have crashed with `AttributeError` instead of the intended
+  error; an assertion of `Drawing` spelled set union with ``+`` and
+  would always have raised `TypeError` had it run; and a
+  `closed.Substitution` applied to a `Constant` fell through and
+  returned `None`. Substituting under an `Abstraction` still recurses
+  forever, left open as future work since fixing it means choosing
+  capture semantics. `Merge.dagger` now declares the `Copy` it returns
+  and `biclosed.Constant` the string name every caller passes.
 
 - The style review no longer depends on a transition that may never
   happen. `ready_for_review` fires on the draft-to-ready edge alone, so a
