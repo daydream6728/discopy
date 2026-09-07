@@ -249,7 +249,7 @@ class Matrix(MonoidalCategory, NamedGeneric['dtype']):
             array = np.matmul(self.array, other.array)
         return type(self)(array, self.dom, other.cod)
 
-    def tensor(self, other: Matrix = None, *others: Matrix):
+    def tensor(self, other: Matrix | None = None, *others: Matrix):
         if others or other is None:
             return monoidal.Diagram.tensor(self, other, *others)
         assert_isinstance(other, type(self))
@@ -422,7 +422,7 @@ class Backend:
         module : The main module of the backend.
         array : The array class of the backend.
     """
-    def __init__(self, module: ModuleType, array: type = None):
+    def __init__(self, module: ModuleType, array: type | None = None):
         self.module, self.array = module, array or module.array
 
     def __getattr__(self, attr):

@@ -221,7 +221,7 @@ Diagram.coeval_factory = Coeval
 Diagram.trace_factory = Trace
 Diagram.discard_factory = Discard
 Diagram.sum_factory = Sum
-Ty.exp_factory = Ty.under_factory = Ty.over_factory = staticmethod(Exp)
+Ty.exp_factory = Ty.under_factory = Ty.over_factory = Exp
 
 Id = Diagram.id
 

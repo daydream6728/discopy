@@ -191,8 +191,8 @@ class Hypergraph(MonoidalCategory, NamedGeneric['category']):
 
     def __init__(
             self, dom: Ty, cod: Ty, boxes: tuple[Box, ...],
-            wires: Wiring, spider_types: SpiderTypes = None,
-            offsets: tuple[int | None, ...] = None):
+            wires: Wiring, spider_types: SpiderTypes | None = None,
+            offsets: tuple[int | None, ...] | None = None):
         assert_isinstance(dom, self.category.ob)
         assert_isinstance(cod, self.category.ob)
         for box in boxes:

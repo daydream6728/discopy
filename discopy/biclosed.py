@@ -109,6 +109,13 @@ class Ty(monoidal.Ty):
     Applying a biclosed type to a callable yields a :class:`Abstraction`,
     applying it to a string yields a :class:`Constant`.
     """
+    exp_factory: ClassVar[type[Exp]]
+    over_factory: ClassVar[type[Exp]]
+    under_factory: ClassVar[type[Exp]]
+    variable_factory: ClassVar[type[Variable]]
+    constant_factory: ClassVar[type[Constant]]
+    application_factory: ClassVar[type[Application]]
+    abstraction_factory: ClassVar[type[Abstraction]]
 
     def __pow__(self, other: Ty) -> Ty:
         return self.exp(other) if isinstance(other, Ty)\
@@ -294,6 +301,9 @@ class Diagram(monoidal.Diagram, BiclosedCategory):
         dom (Ty) : The domain of the diagram, i.e. its input.
         cod (Ty) : The codomain of the diagram, i.e. its output.
     """
+    curry_factory: ClassVar[type[Curry]]
+    eval_factory: ClassVar[type[Eval]]
+    coeval_factory: ClassVar[type[Coeval]]
 
     ob = Ty
 
@@ -550,7 +560,7 @@ class TermBase(Box):
     functor: ClassVar[Functor] = Functor.id(Diagram)
 
     @abstractmethod
-    def eval(functor: Functor = None) -> BiclosedCategory:
+    def eval(functor: Functor | None = None) -> BiclosedCategory:
         """
         The evaluation of a :class:`Functor` on a term gives a morphism in its
         codomain. By default, this is the identity functor on the free biclosed

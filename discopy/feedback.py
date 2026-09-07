@@ -146,6 +146,8 @@ In the category of streams, this is just the identity.
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 from discopy import monoidal, braided, markov, hypergraph
 from discopy.abc import FeedbackCategory
 from discopy.utils import (
@@ -336,6 +338,8 @@ class Diagram(markov.Diagram, FeedbackCategory):
     """
     ob = Ty
     layer_factory = Layer
+    feedback_factory: ClassVar[type[Feedback]]
+    followed_by: ClassVar[type[FollowedBy]]
 
     def delay(self, n_steps=1):
         """ The delay of a feedback diagram. """

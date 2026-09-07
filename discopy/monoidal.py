@@ -57,7 +57,7 @@ from __future__ import annotations
 import itertools
 from dataclasses import dataclass, field
 from functools import cached_property
-from typing import Iterator, Callable, TYPE_CHECKING
+from typing import ClassVar, Iterator, Callable, TYPE_CHECKING
 from warnings import warn
 
 from discopy import cat, drawing, hypergraph, cmap, messages
@@ -180,8 +180,8 @@ class Wire(cat.Ob):
 class FreeMonoid(cat.FreeCategory, ColouredMonoid):
     """A free category whose composition is also its monoid product."""
 
-    def __init__(self, inside, dom: Colour = None, cod: Colour = None,
-                 _scan: bool = True):
+    def __init__(self, inside, dom: Colour | None = None,
+                 cod: Colour | None = None, _scan: bool = True):
         if dom is None:
             dom = inside[0].dom if inside else white
         if cod is None:
@@ -270,7 +270,7 @@ class Ty(cat.Ob, FreeMonoid):
             messages.TYPE_ERROR.format(self.generator_factory, type(x)))
 
     def __init__(self, *inside: str | cat.Ob,
-                 dom: Colour = None, cod: Colour = None,
+                 dom: Colour | None = None, cod: Colour | None = None,
                  _scan: bool = True, **kwargs):
         inside = kwargs.pop('inside', inside)
         if kwargs:
@@ -466,8 +466,8 @@ class PRO(Ty):
 
     >>> assert CX @ 2 >> 2 @ CX == CX @ CX
     """
-    def __init__(self, inside: int | tuple = 0, dom: Colour = None,
-                 cod: Colour = None, _scan: bool = True):
+    def __init__(self, inside: int | tuple = 0, dom: Colour | None = None,
+                 cod: Colour | None = None, _scan: bool = True):
         self.n = inside if isinstance(inside, int) else len(inside)
         self.dom = self.cod = white
         cat.Ob.__init__(self, type(self).__name__)
@@ -599,7 +599,7 @@ class Layer(cat.Box, ColouredMonoid):
     data, is_dagger = None, False
 
     @classmethod
-    def id(cls, dom: Ty = None) -> Layer:
+    def id(cls, dom: Ty | None = None) -> Layer:
         """
         There is no identity layer: a layer has at least one box, and a
         layer of empty plumbing would denote the identity diagram, which is
@@ -623,7 +623,7 @@ class Layer(cat.Box, ColouredMonoid):
             else cls(other, normalise=False)
 
     @classmethod
-    def unit(cls, colour: Colour = None) -> Ty:
+    def unit(cls, colour: Colour | None = None) -> Ty:
         """
         The unit of the layer product, i.e. the empty type on a colour.
 
@@ -885,6 +885,9 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
     """
     ob = Ty
     layer_factory = Layer
+    functor_factory: ClassVar[type[Functor]]
+    draw: ClassVar[Callable]
+    to_gif: ClassVar[Callable]
 
     def __setstate__(self, state):
         if 'inside' not in state:  # Backward compatibility
@@ -944,7 +947,8 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
 
         return decorator
 
-    def tensor(self, other: Diagram = None, *others: Diagram) -> Diagram:
+    def tensor(
+            self, other: Diagram | None = None, *others: Diagram) -> Diagram:
         """
         Parallel composition, called using :code:`@`.
 
@@ -1034,10 +1038,10 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
     def decode(
             cls,
             dom: Ty,
-            boxes_and_offsets: list[tuple[Box, int]] = None,
-            boxes: list[Box] = None,
-            offsets: list[int] = None,
-            cod: Ty = None) -> Diagram:
+            boxes_and_offsets: list[tuple[Box, int]] | None = None,
+            boxes: list[Box] | None = None,
+            offsets: list[int] | None = None,
+            cod: Ty | None = None) -> Diagram:
         """
         Turn a tuple of boxes and offsets into a diagram.
 
@@ -1514,9 +1518,9 @@ class Bubble(cat.Bubble, Box):
 
     def __init__(
             self, *args: Diagram,
-            drawing_name: str = None,
-            draw_as_frame: bool = None,
-            draw_as_square: bool = None,
+            drawing_name: str | None = None,
+            draw_as_frame: bool | None = None,
+            draw_as_square: bool | None = None,
             draw_vertically=False, **kwargs):
         cat.Bubble.__init__(self, *args, **kwargs)
         Box.__init__(self, self.name, self.dom, self.cod)

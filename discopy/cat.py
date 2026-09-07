@@ -79,7 +79,7 @@ from __future__ import annotations
 
 from functools import total_ordering, cached_property
 from typing import (
-    Callable, Mapping, Iterable, TYPE_CHECKING)
+    Callable, ClassVar, Mapping, Iterable, TYPE_CHECKING)
 
 from discopy import messages, utils
 from discopy.abc import Category
@@ -183,7 +183,7 @@ class FreeCategory(Category):
     signature without breaking the machinery below.
     """
 
-    generator_factory = None
+    generator_factory: ClassVar[type | None] = None
 
     def __init__(self, inside, dom, cod, _scan=True):
         ob = type(self).ob
@@ -299,6 +299,8 @@ class Arrow(FreeCategory):
     see :class:`monoidal.PRO`.
     """
     ob = Ob
+    sum_factory: ClassVar[type[Sum]]
+    bubble_factory: ClassVar[type[Bubble]]
 
     def __setstate__(self, state):
         if '_dom' in state:  # Backward compatibility
@@ -650,8 +652,8 @@ class Sum(Box):
     ----
     The sum is non-commutative, i.e. :code:`Sum([f, g]) != Sum([g, f])`.
     """
-    def __init__(
-            self, terms: tuple[Arrow, ...], dom: Ob = None, cod: Ob = None):
+    def __init__(self, terms: tuple[Arrow, ...],
+                 dom: Ob | None = None, cod: Ob | None = None):
         if not terms and (dom is None or cod is None):
             raise ValueError(messages.MISSING_TYPES_FOR_EMPTY_SUM)
         dom = terms[0].dom if dom is None else dom
@@ -750,8 +752,8 @@ class Bubble(Box):
     Raises:
         ValueError : When dom is None but all the args have the same dom.
     """
-    def __init__(self, *args: Arrow, dom: Ob = None, cod: Ob = None,
-                 name="", method="bubble", **kwargs):
+    def __init__(self, *args: Arrow, dom: Ob | None = None,
+                 cod: Ob | None = None, name="", method="bubble", **kwargs):
         dom, = set(arg.dom for arg in args) if dom is None else (dom, )
         cod, = set(arg.cod for arg in args) if cod is None else (cod, )
         self.args, self.method = args, method
@@ -855,7 +857,7 @@ class Functor(Category):
     dom = cod = Arrow
 
     @classmethod
-    def id(cls, dom: type = None) -> Functor:
+    def id(cls, dom: type | None = None) -> Functor:
         """
         The identity functor on a given category ``dom``.
 
@@ -895,7 +897,7 @@ class Functor(Category):
             self,
             ob_map: Mapping[Ob, Ob] | Callable[[Ob], Ob] | None = None,
             ar_map: Mapping[Box, Arrow] | Callable[[Box], Arrow] | None = None,
-            dom: type = None, cod: type = None):
+            dom: type | None = None, cod: type | None = None):
         self.dom, self.cod = dom or type(self).dom, cod or type(self).cod
         self.ob_map: MappingOrCallable[Ob, Ob] = MappingOrCallable(
             ob_map or {})

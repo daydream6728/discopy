@@ -190,8 +190,8 @@ class Ty(NamedGeneric['base']):
 
     ob = classproperty(lambda cls: cls)
 
-    def __init__(
-            self, now: base = None, _later: Callable[[], Ty[base]] = None):
+    def __init__(self, now: base | None = None,
+                 _later: Callable[[], Ty[base]] | None = None):
         if is_tuple(self.base) and not isinstance(now, (tuple, type(None))):
             now = (now, )
         now = now if isinstance(now, get_origin(self.base)) else (
@@ -352,7 +352,7 @@ class Stream(MonoidalCategory, NamedGeneric['category']):
             dom: ob = None,
             cod: ob = None,
             mem: ob = None,
-            _later: Callable[[], Stream[category]] = None):
+            _later: Callable[[], Stream[category]] | None = None):
         if dom is None or cod is None:
             if mem is not None or _later is not None:
                 raise ValueError(
@@ -398,8 +398,8 @@ class Stream(MonoidalCategory, NamedGeneric['category']):
 
     @classmethod
     def sequence(
-            cls, name: str, dom: Ty, cod: Ty, mem: Ty = None, n_steps: int = 0,
-            box_factory=symmetric.Box) -> Stream:
+            cls, name: str, dom: Ty, cod: Ty, mem: Ty | None = None,
+            n_steps: int = 0, box_factory=symmetric.Box) -> Stream:
         """
         Produce a stream of boxes indexed by a time step.
 
@@ -555,7 +555,8 @@ class Stream(MonoidalCategory, NamedGeneric['category']):
         return cls(now, dom, cod, _later=_later)
 
     def feedback(
-        self, dom: Ty = None, cod: Ty = None, mem: Ty = None, _first_call=True
+        self, dom: Ty | None = None, cod: Ty | None = None,
+        mem: Ty | None = None, _first_call=True
     ) -> Stream:
         """
         The delayed feedback of a monoidal stream.

@@ -137,7 +137,7 @@ class Tensor(Matrix):
     def id(cls, dom=Dim(1)) -> Tensor:
         return cls(Matrix.id(product(dom.inside)).array, dom, dom)
 
-    def then(self, other: Tensor = None, *others: Tensor) -> Tensor:
+    def then(self, other: Tensor | None = None, *others: Tensor) -> Tensor:
         if other is None or others:
             return super().then(other, *others)
         assert_isinstance(other, type(self))
@@ -148,7 +148,7 @@ class Tensor(Matrix):
                 else self.array * other.array
         return type(self)(array, self.dom, other.cod)
 
-    def tensor(self, other: Tensor = None, *others: Tensor) -> Tensor:
+    def tensor(self, other: Tensor | None = None, *others: Tensor) -> Tensor:
         if other is None or others:
             return Diagram.tensor(self, other, *others)
         assert_isinstance(other, Tensor)
@@ -396,7 +396,7 @@ class Functor(frobenius.Functor):
 
     def __init__(
             self, ob_map: dict[cat.Ob, Dim], ar_map: dict[cat.Box, list],
-            dom: type = None, dtype: type = float,
+            dom: type | None = None, dtype: type = float,
             optimize="greedy", **params):
         self.dtype, self.optimize, self.params = dtype, optimize, params
         cod = type(self).cod[dtype]
@@ -504,7 +504,7 @@ class Diagram(NamedGeneric['dtype'], frobenius.Diagram):
     """
     ob = Dim
 
-    def eval(self, dtype: type = None, optimize="greedy",
+    def eval(self, dtype: type | None = None, optimize="greedy",
              **params) -> Tensor:
         """
         Evaluate a tensor network as a :class:`Tensor`: call the
@@ -532,7 +532,7 @@ class Diagram(NamedGeneric['dtype'], frobenius.Diagram):
             dtype=dtype or getattr(self, "dtype", None),
             optimize=optimize, **params)(self)
 
-    def to_quimb(self, dtype: type = None) -> "quimb.tensor.Tensor":
+    def to_quimb(self, dtype: type | None = None) -> "quimb.tensor.Tensor":
         """
         Convert a tensor diagram to a quimb tensor.
 
@@ -587,7 +587,7 @@ class Diagram(NamedGeneric['dtype'], frobenius.Diagram):
         tensor_net = qtn.TensorNetwork(tensors)
         return tensor_net
 
-    def to_tn(self, dtype: type = None) -> tuple[
+    def to_tn(self, dtype: type | None = None) -> tuple[
             list["tensornetwork.Node"], list["tensornetwork.Edge"]]:
         """
         Convert a tensor diagram to :code:`tensornetwork`.

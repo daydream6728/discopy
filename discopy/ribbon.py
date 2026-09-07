@@ -127,7 +127,7 @@ class Diagram(pivotal.Diagram, balanced.Diagram, RibbonCategory):
         cup = self.cup_factory(self.cod[y - 1], self.cod[y])
         return self >> self.cod[:y - 1] @ cup @ self.cod[y + 1:]
 
-    def to_ribbons(self, width: float = None, colour="gray"):
+    def to_ribbons(self, width: float | None = None, colour="gray"):
         """
         Doubles every object and sends the twist to the braid, folding cups
         and caps into a single box.

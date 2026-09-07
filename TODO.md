@@ -5,8 +5,8 @@
 > ignore some of the diagnostics when typechecking would require a substantial architectural change
 > work until `ty check` succeeds then report and classify these problems along with a potential solution
 
-- [ ] Install `ty` and get a baseline of diagnostics on `discopy/`
-- [ ] Configure `ty` in `pyproject.toml` (paths, rules)
+- [x] Install `ty` and get a baseline of diagnostics on `discopy/`
+- [x] Configure `ty` in `pyproject.toml` (paths, rules)
 - [ ] First pass: add type annotations to functions across the codebase
 - [ ] Suppress (with `# ty: ignore` or rule config) diagnostics that would need substantial architectural change
 - [ ] Get `ty check` to succeed

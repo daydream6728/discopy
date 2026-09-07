@@ -187,7 +187,7 @@ class Circuit(tensor.Diagram[complex]):
     ob = Ty
 
     @classmethod
-    def id(cls, dom: int | Ty = None):
+    def id(cls, dom: int | Ty | None = None):
         """
         The identity circuit on a given domain.
 

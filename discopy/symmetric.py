@@ -90,6 +90,8 @@ Both sides foliate to the same single permutation.
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 from collections.abc import Sequence
 
 from discopy import monoidal, balanced, hypergraph, cmap, messages
@@ -264,6 +266,8 @@ class Diagram(balanced.Diagram, SymmetricCategory):
     >>> Permutation.swap_factory = Transposition
     >>> assert Permutation.braid_factory is Transposition
     """
+    swap_factory: ClassVar[type[Swap]]
+    permutation_factory: ClassVar[type[Permutation]]
     braid_factory = classproperty(lambda cls: cls.swap_factory)
     layer_factory = Layer
     twist_factory = classmethod(lambda cls, dom: cls.id(dom))
@@ -324,8 +328,8 @@ class Diagram(balanced.Diagram, SymmetricCategory):
                 left + right)
 
     @classmethod
-    def from_permutation(cls, perm: Sequence[int], dom: monoidal.Ty = None
-                         ) -> Diagram:
+    def from_permutation(cls, perm: Sequence[int],
+                         dom: monoidal.Ty | None = None) -> Diagram:
         """
         Encode a permutation natively when the category has a matching
         :class:`Permutation` factory. Descendant categories without one use
@@ -462,8 +466,8 @@ class Permutation(Box):
         :align: center
     """
 
-    def __new__(cls, dom: monoidal.Ty = None,
-                perm: Sequence[int] = None):
+    def __new__(cls, dom: monoidal.Ty | None = None,
+                perm: Sequence[int] | None = None):
         if dom is None or cls is cls.ar.swap_factory:
             return super().__new__(cls)
         factory = cls.ar.swap_factory\

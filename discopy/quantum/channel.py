@@ -174,7 +174,7 @@ class Channel(Tensor):
         assert_isinstance(dom, CQ)
         return cls(Tensor[cls.dtype].id(dom.to_dim()).array, dom, dom)
 
-    def then(self, other: Channel = None, *others: Channel) -> Channel:
+    def then(self, other: Channel | None = None, *others: Channel) -> Channel:
         if other is None or others:
             return super().then(other, *others)
         assert_isinstance(other, type(self))
@@ -184,7 +184,8 @@ class Channel(Tensor):
     def dagger(self) -> Channel:
         return type(self)(self.to_tensor().dagger().array, self.cod, self.dom)
 
-    def tensor(self, other: Channel = None, *others: Channel) -> Channel:
+    def tensor(
+            self, other: Channel | None = None, *others: Channel) -> Channel:
         if other is None or others:
             return super().tensor(other, *others)
         assert_isinstance(other, type(self))

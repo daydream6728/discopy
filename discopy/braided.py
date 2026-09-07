@@ -58,6 +58,8 @@ The hexagon equations hold on the nose.
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 from collections.abc import Callable
 
 from discopy import monoidal
@@ -88,6 +90,7 @@ class Diagram(monoidal.Diagram, BraidedCategory):
         dom (monoidal.Ty) : The domain of the diagram, i.e. its input.
         cod (monoidal.Ty) : The codomain of the diagram, i.e. its output.
     """
+    braid_factory: ClassVar[type[Braid]]
 
     @classmethod
     def braid(cls, left: monoidal.Ty, right: monoidal.Ty) -> Diagram:

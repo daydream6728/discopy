@@ -559,7 +559,7 @@ def assert_isparallel(left: Category, right: Category):
         raise AxiomError(messages.NOT_PARALLEL.format(left, right))
 
 
-def assert_isatomic(typ: Ty, cls: type = None):
+def assert_isatomic(typ: Ty, cls: type | None = None):
     """ Raise :class:`AxiomError` if a type does not have length one. """
     cls = cls or type(typ)
     assert_isinstance(typ, cls)

@@ -73,6 +73,8 @@ in the same diagram they automatically satisfy the :mod:`frobenius` axioms.
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 from discopy import symmetric, monoidal, cmap, hypergraph
 from discopy.abc import MarkovCategory
 from discopy.cat import factory
@@ -114,6 +116,10 @@ class Diagram(symmetric.Diagram, MarkovCategory):
 
     .. image:: /_static/markov/copy_and_apply.svg
     """
+    copy_factory: ClassVar[type[Copy]]
+    merge_factory: ClassVar[type[Merge]]
+    discard_factory: ClassVar[type[Discard]]
+
     @classmethod
     def spider_factory(cls, n_legs_in, n_legs_out, typ, phase=None):
         if phase is not None or 1 not in (n_legs_in, n_legs_out):

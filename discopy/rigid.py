@@ -151,7 +151,7 @@ import copy
 
 from collections.abc import Callable
 
-from typing import Iterator
+from typing import ClassVar, Iterator
 
 from discopy import cat, monoidal, biclosed, messages
 from discopy.abc import Pregroup, RigidCategory
@@ -380,6 +380,8 @@ class Diagram(biclosed.Diagram, RigidCategory):
     .. image:: /_static/rigid/curry.svg
         :align: center
     """
+    cup_factory: ClassVar[type[Cup]]
+    cap_factory: ClassVar[type[Cap]]
 
     ob = Ty
     layer_factory = Layer

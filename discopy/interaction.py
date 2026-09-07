@@ -107,7 +107,8 @@ class Ty(NamedGeneric['natural']):
     positive: natural
     negative: natural
 
-    def __init__(self, positive: natural = None, negative: natural = None):
+    def __init__(self, positive: natural | None = None,
+                 negative: natural | None = None):
         positive, negative = (
             self.natural() if x is None else x for x in (positive, negative))
         positive, negative = (
@@ -251,7 +252,7 @@ class Diagram(RibbonCategory, NamedGeneric['natural']):
         return type(self)(inside, dom, cod)
 
     @classmethod
-    def id(cls, dom: Ty = None) -> Diagram:
+    def id(cls, dom: Ty | None = None) -> Diagram:
         """
         The identity on an integer type.
 
