@@ -164,8 +164,6 @@ python-version = "3.12"
 invalid-argument-type = "ignore"
 invalid-method-override = "ignore"
 invalid-return-type = "ignore"
-invalid-type-arguments = "ignore"
-invalid-type-form = "ignore"
 unresolved-attribute = "ignore"
 unsupported-operator = "ignore"
 

@@ -899,7 +899,7 @@ class Hypergraph[category: Diagram](MonoidalCategory, NamedGeneric):
         """
         if not self.is_bijective:
             return self.make_bijective().to_map()
-        factory = cmap.CMap[self.category]
+        factory = cmap.CMap[self.category]  # ty: ignore[invalid-type-form]
         relabeling = Permutation(self._hypergraph_to_canonical())
         edges = Permutation(self.bijection).conjugate(relabeling)
         loops = tuple(self.spider_types[i] for i in self.scalar_spiders)
@@ -1495,7 +1495,8 @@ class Hypergraph[category: Diagram](MonoidalCategory, NamedGeneric):
         return diagram
 
     @classmethod
-    def from_callable(cls, dom: Ty, cod: Ty) -> Callable[Callable, Hypergraph]:
+    def from_callable(
+            cls, dom: Ty, cod: Ty) -> Callable[[Callable], Hypergraph]:
         """
         Turns an arbitrary Python function into a causal hypergraph.
 

@@ -145,7 +145,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from discopy import symmetric, markov, closed, feedback, compact, frobenius
+from discopy import (
+    monoidal, symmetric, markov, closed, feedback, compact, frobenius)
 from discopy.abc import (
     ClosedCategory, CompactCategory, FeedbackCategory, HypergraphCategory,
     MarkovCategory, NamedGeneric, SymmetricCategory, TracedCategory)
@@ -180,14 +181,13 @@ class Symmetric[category](SymmetricCategory, NamedGeneric):
             reparam
             recopar
     """
-    category = symmetric.Diagram
     ob = classproperty(lambda cls: cls.category.ob)
 
-    dom: ob
-    cod: ob
+    dom: monoidal.Ty
+    cod: monoidal.Ty
     inside: category
-    param: ob = None
-    copar: ob = None
+    param: monoidal.Ty | None = None
+    copar: monoidal.Ty | None = None
 
     def __post_init__(self):
         if self.param is None:
@@ -213,7 +213,7 @@ class Symmetric[category](SymmetricCategory, NamedGeneric):
         return cls(inside.dom, inside.cod, inside)
 
     @classmethod
-    def id(cls, dom: ob = None) -> Symmetric:
+    def id(cls, dom: monoidal.Ty | None = None) -> Symmetric:
         """
         The identity parametric map on `dom`, with empty parameter space.
 
@@ -262,7 +262,7 @@ class Symmetric[category](SymmetricCategory, NamedGeneric):
                           self.copar + other.copar)
 
     @classmethod
-    def swap(cls, left: ob, right: ob) -> Symmetric:
+    def swap(cls, left: monoidal.Ty, right: monoidal.Ty) -> Symmetric:
         """
         The swap of the underlying category, with empty parameter space.
 
@@ -311,6 +311,9 @@ class Symmetric[category](SymmetricCategory, NamedGeneric):
                           self.param, other.cod)
 
 
+Symmetric.category = symmetric.Diagram
+
+
 class Traced(Symmetric, TracedCategory):
     """
     Parametric maps over a traced symmetric underlying `category` form a
@@ -346,7 +349,7 @@ class Markov(Symmetric, MarkovCategory):
     category = markov.Diagram
 
     @classmethod
-    def copy(cls, x: Symmetric.ob, n: int = 2) -> Markov:
+    def copy(cls, x: monoidal.Ty, n: int = 2) -> Markov:
         """
         The copy of the underlying category, with empty parameter space.
 
@@ -365,7 +368,7 @@ class Closed(Markov, ClosedCategory):
     category = closed.Diagram
 
     @classmethod
-    def ev(cls, base: Symmetric.ob, exponent: Symmetric.ob, left: bool = True
+    def ev(cls, base: monoidal.Ty, exponent: monoidal.Ty, left: bool = True
            ) -> Closed:
         """
         The evaluation of the underlying category, with empty parameters.
@@ -414,8 +417,9 @@ class Feedback(Markov, FeedbackCategory):
         return type(self)(*(x.delay(n_steps) for x in (
             self.dom, self.cod, self.inside, self.param, self.copar)))
 
-    def feedback(self, dom: Symmetric.ob = None, cod: Symmetric.ob = None,
-                 mem: Symmetric.ob = None) -> Feedback:
+    def feedback(self, dom: monoidal.Ty | None = None,
+                 cod: monoidal.Ty | None = None,
+                 mem: monoidal.Ty | None = None) -> Feedback:
         """
         The feedback of the underlying category, with the parameters
         swapped out of the way the same as :meth:`Traced.trace`.
@@ -444,7 +448,7 @@ class Compact(Traced, CompactCategory):
     category = compact.Diagram
 
     @classmethod
-    def cups(cls, left: Symmetric.ob, right: Symmetric.ob) -> Compact:
+    def cups(cls, left: monoidal.Ty, right: monoidal.Ty) -> Compact:
         """
         The cups of the underlying category, with empty parameter space.
 
@@ -455,7 +459,7 @@ class Compact(Traced, CompactCategory):
         return cls.lift(cls.category.cups(left, right))
 
     @classmethod
-    def caps(cls, left: Symmetric.ob, right: Symmetric.ob) -> Compact:
+    def caps(cls, left: monoidal.Ty, right: monoidal.Ty) -> Compact:
         """
         The caps of the underlying category, with empty parameter space.
 
@@ -477,7 +481,7 @@ class Hypergraph(Compact, Markov, HypergraphCategory):
     category = frobenius.Diagram
 
     @classmethod
-    def spiders(cls, n_legs_in: int, n_legs_out: int, typ: Symmetric.ob
+    def spiders(cls, n_legs_in: int, n_legs_out: int, typ: monoidal.Ty
                 ) -> Hypergraph:
         """
         The spiders of the underlying category, with empty parameters.

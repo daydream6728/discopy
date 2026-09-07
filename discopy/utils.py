@@ -9,6 +9,7 @@ from functools import lru_cache, wraps
 from math import ceil
 from pathlib import Path
 from typing import (
+    Any,
     Callable,
     Mapping,
     Iterable,
@@ -54,7 +55,10 @@ class MappingOrCallable(Mapping[KT, VT]):
     """
     def __class_getitem__(_, args: tuple[type, type]) -> type:
         source, target = args
-        return Mapping[source, target] | Callable[[source], target]
+        return (
+            Mapping[source, target]  # ty: ignore[invalid-type-form]
+            | Callable[
+                [source], target])  # ty: ignore[invalid-type-form]
 
     def __init__(self, mapping: MappingOrCallable[KT, VT]) -> None:
         while isinstance(mapping, MappingOrCallable):
@@ -459,7 +463,7 @@ def text_width(text: str, fontsize=12, points_per_inch=72., grid=16):
     return ceil(width / points_per_inch * grid) / grid
 
 
-def tuplify(stuff: any) -> tuple:
+def tuplify(stuff: Any) -> tuple:
     """
     Turns anything into a tuple, do nothing if it is already.
 
@@ -469,7 +473,7 @@ def tuplify(stuff: any) -> tuple:
     return stuff if isinstance(stuff, tuple) else (stuff, )
 
 
-def untuplify(stuff: tuple) -> any:
+def untuplify(stuff: tuple) -> Any:
     """
     Takes the element out of a tuple if it has length 1, otherwise do nothing.
 

@@ -166,13 +166,15 @@ class Channel(Tensor):
 
     def to_tensor(self) -> Tensor:
         """ The underlying tensor of a channel. """
-        return Tensor[self.dtype](
+        return Tensor[self.dtype](  # ty: ignore[invalid-type-form]
             self.array, self.dom.to_dim(), self.cod.to_dim())
 
     @classmethod
     def id(cls, dom=CQ()) -> Channel:
         assert_isinstance(dom, CQ)
-        return cls(Tensor[cls.dtype].id(dom.to_dim()).array, dom, dom)
+        return cls(Tensor[
+            cls.dtype].id(dom.to_dim()).array,  # ty: ignore[invalid-type-form]
+            dom, dom)
 
     def then(self, other: Channel | None = None, *others: Channel) -> Channel:
         if other is None or others:
@@ -344,12 +346,14 @@ class Functor(tensor.Functor):
             return self.cod(scalar, CQ(), CQ())
         if not other.is_mixed and other.is_classical:
             dom, cod = self(other.dom).classical, self(other.cod).classical
-            return self.cod.single(
-                Tensor[self.dtype](other.array, dom, cod))
+            return self.cod.single(Tensor[
+                self.dtype](  # ty: ignore[invalid-type-form]
+                    other.array, dom, cod))
         if not other.is_mixed:
             dom, cod = self(other.dom).quantum, self(other.cod).quantum
-            return self.cod.double(
-                Tensor[self.dtype](other.array, dom, cod))
+            return self.cod.double(Tensor[
+                self.dtype](  # ty: ignore[invalid-type-form]
+                    other.array, dom, cod))
         if hasattr(other, "array"):
             return self.cod(other.array, self(other.dom), self(other.cod))
         return frobenius.Functor.__call__(self, other)

@@ -41,7 +41,8 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
-from typing import ClassVar, TypeVar
+from types import NoneType
+from typing import ClassVar, Self, TYPE_CHECKING, TypeVar
 
 from discopy.utils import classproperty, get_origin
 
@@ -63,8 +64,8 @@ class Category[C0, C1: Category](ABC):
     >>> assert List([1, 2]) >> List([3]) == List([1, 2, 3])
     >>> assert List([3]) << List([1, 2]) == List([1, 2, 3])
     """
-    ob: ClassVar[type[C0]]
-    factory: ClassVar[type[C1]]
+    ob: ClassVar[type]
+    factory: ClassVar[type]
     dom: C0
     cod: C0
 
@@ -125,16 +126,20 @@ class ColouredMonoid[C0, C1: ColouredMonoid](Category[C0, C1]):
     colour, i.e. :class:`type(None)`. We do not enforce this so
     that e.g. :class:`monoidal.Ty` can take colours as objects.
     """
+    if TYPE_CHECKING:
+        def __len__(self) -> int:
+            """ The number of generating objects inside, assumed free. """
+
+        def __getitem__(self, key) -> Self:
+            """ The slices of a free monoid, assumed to stay inside it. """
+
     @classmethod
-    def id(cls, dom: C0 = None) -> C1:  # ty: ignore[invalid-parameter-default]
+    def id(cls, dom: C0 | None = None) -> C1:
         """The monoidal unit, i.e. the empty tensor ``cls()``."""
         return cls()
 
     @classmethod
-    def unit(
-            cls,
-            colour: C0 = None  # ty: ignore[invalid-parameter-default]
-    ) -> C0 | C1:
+    def unit(cls, colour: C0 | None = None) -> C0 | C1:
         """
         The unit at a colour, i.e. the identity on it.
 
@@ -170,7 +175,7 @@ class ColouredMonoid[C0, C1: ColouredMonoid](Category[C0, C1]):
 
 
 # A monoid is a coloured monoid with a single, trivial colour.
-type Monoid[C1: ColouredMonoid] = ColouredMonoid[type(None), C1]
+type Monoid[C1: ColouredMonoid] = ColouredMonoid[NoneType, C1]
 
 
 class MonoidalCategory[C0: ColouredMonoid, C1: MonoidalCategory](
@@ -209,7 +214,8 @@ class MonoidalCategory[C0: ColouredMonoid, C1: MonoidalCategory](
         return self.whisker(other).tensor(self)
 
 
-class TracedCategory[C0, C1](MonoidalCategory[C0, C1]):
+class TracedCategory[C0: ColouredMonoid, C1: TracedCategory](
+        MonoidalCategory[C0, C1]):
     """
     A traced category is a :class:`MonoidalCategory` with a method
     :code:`trace` for the partial trace of a morphism over some objects.
@@ -233,7 +239,23 @@ class ResiduatedMonoid[C0, C1: ResiduatedMonoid](ColouredMonoid[C0, C1]):
     """
     A monoid is residuated when it comes with methods ``over`` and ``under``
     with syntactic sugar ``<<`` and ``>>``.
+
+    We also assume the exponential objects can be recognised and taken apart,
+    see :class:`biclosed.Exp`.
     """
+    if TYPE_CHECKING:
+        @property
+        def is_exp(self) -> bool:
+            """ Whether this is an exponential object. """
+
+        @property
+        def base(self) -> Self:
+            """ The base of an exponential object. """
+
+        @property
+        def exponent(self) -> Self:
+            """ The exponent of an exponential object. """
+
     @abstractmethod
     def over(self, other: C1) -> C1:
         """ The right-to-left exponential object ``self`` to the ``other``. """
@@ -384,11 +406,9 @@ class RigidCategory[C0: Pregroup, C1: RigidCategory](BiclosedCategory[C0, C1]):
         if not n:
             return self
         if left:
-            base, exponent = (
-                self.dom[:-n], self.dom[-n:])  # ty: ignore[not-subscriptable]
+            base, exponent = self.dom[:-n], self.dom[-n:]
             return base @ self.caps(exponent, exponent.l) >> self @ exponent.l
-        base, exponent = (
-            self.dom[n:], self.dom[:n])  # ty: ignore[not-subscriptable]
+        base, exponent = self.dom[n:], self.dom[:n]
         return self.caps(exponent.r, exponent) @ base >> exponent.r @ self
 
     def base_and_exponent(self, n: int, left: bool) -> tuple[C0, C0]:
@@ -404,9 +424,8 @@ class RigidCategory[C0: Pregroup, C1: RigidCategory](BiclosedCategory[C0, C1]):
         if n > len(self.cod):
             raise ValueError
         if left:
-            return (self.cod[:-n],  # ty: ignore[not-subscriptable]
-                    self.cod[-n:].r)  # ty: ignore[not-subscriptable]
-        return self.cod[n:], self.cod[:n].l  # ty: ignore[not-subscriptable]
+            return self.cod[:-n], self.cod[-n:].r
+        return self.cod[n:], self.cod[:n].l
 
     def transpose(self, left: bool = False) -> C1:
         """
@@ -436,14 +455,16 @@ class RigidCategory[C0: Pregroup, C1: RigidCategory](BiclosedCategory[C0, C1]):
             >> self.dom.r @ self.cups(self.cod, self.cod.r)
 
 
-class PivotalCategory[C0, C1](RigidCategory[C0, C1], TracedCategory[C0, C1]):
+class PivotalCategory[C0: Pregroup, C1: PivotalCategory](
+        RigidCategory[C0, C1], TracedCategory[C0, C1]):
     """
     A pivotal category is a :class:`RigidCategory` where the left and right
     adjoints coincide, hence it is also a :class:`TracedCategory`.
     """
 
 
-class BraidedCategory[C0, C1](MonoidalCategory[C0, C1]):
+class BraidedCategory[C0: ColouredMonoid, C1: BraidedCategory](
+        MonoidalCategory[C0, C1]):
     """
     A braided category is a :class:`MonoidalCategory` with a method
     :code:`braid` for the natural isomorphism :code:`x @ y -> y @ x`.
@@ -460,7 +481,8 @@ class BraidedCategory[C0, C1](MonoidalCategory[C0, C1]):
         """
 
 
-class SymmetricCategory[C0, C1](BraidedCategory[C0, C1]):
+class SymmetricCategory[C0: ColouredMonoid, C1: SymmetricCategory](
+        BraidedCategory[C0, C1]):
     """
     A symmetric category is a :class:`BraidedCategory` where the braid is its
     own inverse called :code:`swap` for the symmetry :code:`x @ y -> y @ x`.
@@ -497,7 +519,8 @@ class SymmetricCategory[C0, C1](BraidedCategory[C0, C1]):
         return cls.swap(left, right)
 
 
-class MarkovCategory[C0, C1](SymmetricCategory[C0, C1]):
+class MarkovCategory[C0: ColouredMonoid, C1: MarkovCategory](
+        SymmetricCategory[C0, C1]):
     """
     A Markov category is a :class:`SymmetricCategory` with methods
     :code:`copy` and :code:`merge` for the supply of commutative comonoids.
@@ -514,14 +537,16 @@ class MarkovCategory[C0, C1](SymmetricCategory[C0, C1]):
         """
 
 
-class ClosedCategory[C0, C1](BiclosedCategory[C0, C1], MarkovCategory[C0, C1]):
+class ClosedCategory[C0: ResiduatedMonoid, C1: ClosedCategory](
+        BiclosedCategory[C0, C1], MarkovCategory[C0, C1]):
     """
     A closed category is a symmetric :class:`BiclosedCategory`. We also assume
     it comes with copy and discard so it is also a :class:`MarkovCategory`.
     """
 
 
-class FeedbackCategory[C0, C1](MarkovCategory[C0, C1]):
+class FeedbackCategory[C0: ColouredMonoid, C1: FeedbackCategory](
+        MarkovCategory[C0, C1]):
     """
     A feedback category is a :class:`MarkovCategory` with a :code:`delay`
     endofunctor and a :code:`feedback` operator.
@@ -547,7 +572,7 @@ class FeedbackCategory[C0, C1](MarkovCategory[C0, C1]):
         """
 
 
-class BalancedCategory[C0, C1](
+class BalancedCategory[C0: ColouredMonoid, C1: BalancedCategory](
         BraidedCategory[C0, C1], TracedCategory[C0, C1]):
     """
     A balanced category is a :class:`BraidedCategory` and a
@@ -565,7 +590,7 @@ class BalancedCategory[C0, C1](
         """
 
 
-class RibbonCategory[C0, C1](
+class RibbonCategory[C0: Pregroup, C1: RibbonCategory](
         PivotalCategory[C0, C1], BalancedCategory[C0, C1]):
     """
     A ribbon category is a :class:`PivotalCategory` which is also a
@@ -573,7 +598,7 @@ class RibbonCategory[C0, C1](
     """
 
 
-class CompactCategory[C0, C1](
+class CompactCategory[C0: Pregroup, C1: CompactCategory](
         RibbonCategory[C0, C1], SymmetricCategory[C0, C1]):
     """
     A compact category is a :class:`RibbonCategory` which is also a
@@ -585,7 +610,7 @@ class CompactCategory[C0, C1](
         return cls.id(dom)
 
 
-class HypergraphCategory[C0, C1](
+class HypergraphCategory[C0: Pregroup, C1: HypergraphCategory](
         CompactCategory[C0, C1], MarkovCategory[C0, C1]):
     """
     A hypergraph category is a symmetric category with a supply of spiders,

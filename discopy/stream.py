@@ -183,10 +183,8 @@ class Ty[base](NamedGeneric):
         _later (Optional[Callable[[], Ty[base]]]) :
             A thunk for the tail of the stream, constant by default.
     """
-    base = symmetric.Ty  # The underlying class of types.
-
-    now: base = None  # ty: ignore[invalid-assignment]
-    _later: Callable[[], Ty[base]] = None  # ty: ignore[invalid-assignment]
+    now: base
+    _later: Callable[[], Ty[base]] | None
 
     ob = classproperty(lambda cls: cls)
 
@@ -196,7 +194,7 @@ class Ty[base](NamedGeneric):
             now = (now, )  # ty: ignore[invalid-assignment]
         now = now if isinstance(now, get_origin(self.base)) else (
             self.base() if now is None else self.base(now))
-        self.now, self._later = now, _later  # ty: ignore[invalid-assignment]
+        self.now, self._later = now, _later
 
     def __repr__(self):
         _later = "" if self.is_constant else f", _later={repr(self._later)}"
@@ -205,7 +203,7 @@ class Ty[base](NamedGeneric):
     @property
     def later(self) -> Ty:
         """ The tail of a stream, or `self` if :meth:`is_constant`. """
-        return self if self.is_constant else self._later()
+        return self if self._later is None else self._later()
 
     @property
     def head(self) -> Ty:
@@ -258,7 +256,8 @@ class Ty[base](NamedGeneric):
         x1 @ y1
         x2 @ y2
         """
-        now = sum([cls.base(f"{obj}{n_steps}") for obj in x], cls.base())
+        now = sum([cls.base(f"{obj}{n_steps}")
+                   for obj in x], cls.base())  # ty: ignore[not-iterable]
         return cls(now, _later=lambda: cls.sequence(x, n_steps + 1))
 
     @inductive
@@ -294,6 +293,10 @@ class Ty[base](NamedGeneric):
 
     __add__ = __matmul__ = symmetric.Ty.__matmul__
     __pow__ = symmetric.Ty.__pow__
+
+
+#: The underlying class of types of an unparameterised stream of types.
+Ty.base = symmetric.Ty
 
 
 @dataclass
@@ -335,20 +338,18 @@ class Stream[category](MonoidalCategory, NamedGeneric):
     >>> assert cod.later.now == later.cod.now
     >>> assert mem.later.now == later.mem.now
     """
-    category = symmetric.Diagram
     ob = classproperty(lambda cls: Ty[cls.category.ob])
 
     now: category
-    dom: ob = None
-    cod: ob = None
-    mem: ob = None
-    _later: Callable[
-        [], Stream[category]] = None  # ty: ignore[invalid-assignment]
+    dom: Ty
+    cod: Ty
+    mem: Ty
+    _later: Callable[[], Stream[category]] | None
 
     @property
     def later(self) -> Stream:
         """ The tail of a stream, or `self` if :meth:`is_constant`. """
-        return self if self.is_constant else self._later()
+        return self if self._later is None else self._later()
 
     @property
     def head(self) -> Stream:
@@ -364,9 +365,9 @@ class Stream[category](MonoidalCategory, NamedGeneric):
 
     def __init__(
             self, now: category,
-            dom: ob = None,
-            cod: ob = None,
-            mem: ob = None,
+            dom: Ty | None = None,
+            cod: Ty | None = None,
+            mem: Ty | None = None,
             _later: Callable[[], Stream[category]] | None = None):
         if dom is None or cod is None:
             if mem is not None or _later is not None:
@@ -389,7 +390,7 @@ class Stream[category](MonoidalCategory, NamedGeneric):
                 raise ValueError(
                     "Constant streams should have constant dom, cod and mem")
         self.dom, self.cod, self.mem = dom, cod, mem
-        self.now, self._later = now, _later  # ty: ignore[invalid-assignment]
+        self.now, self._later = now, _later
 
     def check_later(self):
         """ Check that later has consistent domain, codomain and memory. """
@@ -609,3 +610,7 @@ class Stream[category](MonoidalCategory, NamedGeneric):
         return type(self)(self.now, dom, cod, mem @ self.mem, _later)
 
     followed_by = id
+
+
+#: The underlying category of an unparameterised stream.
+Stream.category = symmetric.Diagram

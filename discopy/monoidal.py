@@ -922,7 +922,7 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
         return self.inside[0].generator if self.is_generator else None
 
     @classmethod
-    def from_callable(cls, dom: Ty, cod: Ty) -> Callable[Callable, Diagram]:
+    def from_callable(cls, dom: Ty, cod: Ty) -> Callable[[Callable], Diagram]:
         """
         Define a diagram using the standard syntax for Python functions.
 
@@ -1122,7 +1122,8 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
         >>> diagram = f0 @ f1.dagger() >> f0.dagger() @ f1
         >>> assert diagram.to_hypergraph().to_diagram() == diagram.foliation()
         """
-        graph = hypergraph.Hypergraph[type(self).ar].from_diagram(self)
+        graph = hypergraph.Hypergraph[
+            type(self).ar].from_diagram(self)  # ty: ignore[invalid-type-form]
         staircase = len(self.boxes) == len(self.inside)
         if staircase and len(graph.boxes) == len(self.boxes):
             offsets = tuple(

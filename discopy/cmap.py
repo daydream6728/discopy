@@ -1078,15 +1078,13 @@ class CMap[category: Diagram](CompactCategory, NamedGeneric):
             raise ValueError
 
         if left:
-            dom, cod = (
-                self.dom[n:], self.cod[n:])  # ty: ignore[not-subscriptable]
+            dom, cod = self.dom[n:], self.cod[n:]
             traced_inputs = range(n)
             traced_outputs = range(
                 self.n_ports - len(self.cod),
                 self.n_ports - len(self.cod) + n)
         else:
-            dom, cod = (
-                self.dom[:-n], self.cod[:-n])  # ty: ignore[not-subscriptable]
+            dom, cod = self.dom[:-n], self.cod[:-n]
             traced_inputs = range(len(dom), len(self.dom))
             traced_outputs = range(self.n_ports - n, self.n_ports)
 
@@ -1475,7 +1473,8 @@ cycles of this map.
         given by the edge permutation. See documentation of
         :func:``Hypergraph.from_map`` for an example.
         """
-        return hypergraph.Hypergraph[self.category].from_map(self)
+        return hypergraph.Hypergraph[
+            self.category].from_map(self)  # ty: ignore[invalid-type-form]
 
     def to_dot(
             self, engine="dot", seed=None, graph_attr=None,

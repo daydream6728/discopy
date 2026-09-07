@@ -38,7 +38,7 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 from types import ModuleType
-from typing import Union, Literal as L, Callable, TYPE_CHECKING
+from typing import Literal, Callable, TYPE_CHECKING
 
 from discopy import monoidal, config, messages
 from discopy.abc import MonoidalCategory, NamedGeneric
@@ -467,11 +467,11 @@ BACKENDS = {
     'tensorflow': TensorFlow,
 }
 
-BackendName = Union[tuple(L[x] for x in BACKENDS)]
+BackendName = Literal['numpy', 'jax', 'pytorch', 'tensorflow']
 
 
 @contextmanager
-def backend(name: BackendName = None,
+def backend(name: BackendName | None = None,
             _stack=[config.DEFAULT_BACKEND], _cache=dict()):
     """
     Context manager for matrix backend.
@@ -485,12 +485,12 @@ def backend(name: BackendName = None,
     ...     assert type(Matrix([0, 1, 1, 0], 2, 2).array).__module__\\
     ...         == 'jaxlib._jax'
     """
-    name = name or _stack[-1]
-    _stack.append(name)
+    chosen = name or _stack[-1]
+    _stack.append(chosen)
     try:
-        if name not in _cache:
-            _cache[name] = BACKENDS[name]()
-        yield _cache[name]
+        if chosen not in _cache:
+            _cache[chosen] = BACKENDS[chosen]()
+        yield _cache[chosen]
     finally:
         _stack.pop()
 
