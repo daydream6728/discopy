@@ -66,6 +66,7 @@ Summary
         :nosignatures:
         :toctree:
 
+        preserve_list_order
         load
         reason
         consistent
@@ -81,7 +82,6 @@ Summary
         parallel
         class_axioms
         property_axioms
-        disjoint_axioms
         axioms
         label
         ob
@@ -145,6 +145,7 @@ from owlapy.owl_axiom import (
     OWLTransitiveObjectPropertyAxiom)
 from owlapy.owl_individual import OWLNamedIndividual
 from owlapy.owl_ontology import SyncOntology
+from owlapy.owlapi_mapper import OWLAPIMapper
 from owlapy.owl_property import OWLObjectInverseOf, OWLObjectProperty
 from owlapy.owl_reasoner import SyncReasoner
 
@@ -166,6 +167,39 @@ INCLUSION = "$\\sqsubseteq$"
 
 NEGATION = "$\\neg$"
 """ The drawing name of the bubble for a complement. """
+
+
+def preserve_list_order():
+    """
+    Re-register `owlapy`_'s list mappers without their reversal:
+    ``OWLAPIMapper`` reverses every list it maps, both from Python to
+    Java and back, which keeps its own round trips looking consistent
+    while the ontology holds -- and `HermiT`_ reasons with -- every
+    property chain backwards, and a chain loaded from a file reads
+    backwards in Python. Dropping the reversal on both sides keeps the
+    round trips identical and puts
+    ``SubObjectPropertyOf(ObjectPropertyChain(r, s), t)``, i.e.
+    ``r ; s <= t``, the same way on both sides of the bridge.
+    """
+    array_list = jpype.JClass("java.util.ArrayList")
+
+    def from_java(self, items):
+        return [self.map_(item) for item in list(items)]
+
+    def to_java(self, items):
+        result = array_list()
+        for item in items or ():
+            result.add(self.map_(item))
+        return result
+
+    for kind in ("List", "Set", "LinkedHashSet", "ArrayList"):
+        OWLAPIMapper.map_.register(
+            jpype.JClass(f"java.util.{kind}"), from_java)
+    for kind in (list, set, frozenset, tuple):
+        OWLAPIMapper.map_.register(kind, to_java)
+
+
+preserve_list_order()
 
 
 def declared(entity, kind: type) -> bool:
@@ -231,7 +265,7 @@ class World:
         self.ontology = SyncOntology(iri.rstrip("#/"), load=False)
         self.retrieved = {}
         self._reasoner, self._graph = None, None
-        self._tbox, self._abox = None, None
+        self._tbox, self._rbox, self._abox = None, None, None
 
     def add(self, *axioms):
         """
@@ -244,7 +278,7 @@ class World:
         self.ontology.add_axiom(list(axioms))
         self.retrieved = {}
         self._reasoner, self._graph = None, None
-        self._tbox, self._abox = None, None
+        self._tbox, self._rbox, self._abox = None, None, None
 
     @property
     def reasoner(self) -> SyncReasoner:
@@ -360,10 +394,23 @@ class World:
         return None
 
     def tbox(self) -> tuple:
-        """ The schema axioms of the world, imports included. """
+        """
+        The class schema of the world, imports included -- `owlapi`
+        also files property domains, ranges and functionality here,
+        while the rest of the property schema is the :meth:`rbox`.
+        """
         if self._tbox is None:
             self._tbox = tuple(self.ontology.get_tbox_axioms())
         return self._tbox
+
+    def rbox(self) -> tuple:
+        """
+        The role schema of the world, imports included: subproperties,
+        inverses, chains and characteristics.
+        """
+        if self._rbox is None:
+            self._rbox = tuple(self.ontology.get_rbox_axioms())
+        return self._rbox
 
     def abox(self) -> tuple:
         """ The fact axioms of the world, imports included. """
@@ -1759,16 +1806,18 @@ def load(iri: str, path: str = None) -> World:
 
 def reason(world: World):
     """
-    Drop the world's reasoner so the next question builds a fresh one --
-    reasoning itself is on demand: every retrieval and every proof asks
-    the reasoner directly, and :meth:`World.add` already invalidates it,
-    so calling this is only needed after mutating the ontology behind
-    the world's back.
+    Drop the world's reasoner and memos so the next question builds a
+    fresh one -- reasoning itself is on demand: every retrieval and
+    every proof asks the reasoner directly, and :meth:`World.add`
+    already invalidates it, so calling this is only needed after
+    mutating the ontology behind the world's back.
 
     Parameters:
         world : The world to reason about anew.
     """
+    world.retrieved = {}
     world._reasoner, world._graph = None, None
+    world._tbox, world._rbox, world._abox = None, None, None
 
 
 def consistent(world: World) -> bool:
@@ -1840,8 +1889,8 @@ def subsumes(left, right, world: World) -> bool:
 def relations(prop, world: World) -> dict:
     """
     The pairs an OWL property provably holds, grouped by subject -- the
-    reasoner's property values, which follow subproperties, inverses and
-    chains; an :class:`OWLObjectInverseOf <owlapy.owl_property.\
+    reasoner's property values, which follow subproperties, inverses
+    and chains; an :class:`OWLObjectInverseOf <owlapy.owl_property.\
 OWLObjectInverseOf>` groups its property the other way around.
 
     Parameters:
@@ -2351,8 +2400,8 @@ def property_axioms(axiom, world: World) -> list[Axiom]:
                 for index, left in enumerate(operands)
                 for right in operands[index + 1:]]
     if isinstance(axiom, OWLInverseObjectPropertiesAxiom):
-        first, second = axiom.get_first_property(),\
-            axiom.get_second_property()
+        first = axiom.get_first_property()
+        second = axiom.get_second_property()
         if not (named(first) and named(second)):
             return []
         return [Axiom(web(first).dagger(), web(second), symbol="=",
@@ -2400,19 +2449,6 @@ def property_axioms(axiom, world: World) -> list[Axiom]:
     return []
 
 
-def disjoint_axioms(axiom, world: World) -> list[Axiom]:
-    """
-    A disjointness declaration as one empty-intersection equation per
-    pair of disjoint classes, see :func:`class_axioms` which dispatches
-    to it.
-
-    Parameters:
-        axiom : The `owlapy` disjointness axiom.
-        world : The world it belongs to.
-    """
-    return class_axioms(axiom, world)
-
-
 def axioms(entity, world: World = None) -> list[Axiom]:
     """
     The rules of a loaded knowledge base, compiled to :class:`Axiom` --
@@ -2443,7 +2479,7 @@ def axioms(entity, world: World = None) -> list[Axiom]:
     """
     if isinstance(entity, World):
         return [axiom
-                for declared_axiom in entity.tbox()
+                for declared_axiom in entity.tbox() + entity.rbox()
                 for axiom in class_axioms(declared_axiom, entity)
                 + property_axioms(declared_axiom, entity)]
     assert_isinstance(
