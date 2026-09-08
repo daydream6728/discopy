@@ -15,10 +15,13 @@
       `is_satisfiable` / `has_consistent_ontology` API; the pure-Python
       `RDFLibReasoner` retrieves the existential fragment correctly but is
       closed-world on complements and universals and decides no entailment
-- [WIP] @claude-allegories-2026-09-04 10:00 port `discopy.owl` to owlapy:
-      `SyncOntology` + a pluggable `AbstractOWLReasoner` replace `World`,
-      the oracle calls become direct reasoner calls -- no scratch classes,
-      no writeback -- and the dictionary reads owlapy class expressions
-- [ ] port the offline FIBO loading onto owlapi IRI mappers
-- [ ] port the tests and both notebooks, update the `semantic` extra
+- [x] port `discopy.owl` to owlapy: `World` wraps `SyncOntology` with a
+      lazy `SyncReasoner`, the oracle calls become direct reasoner calls
+      -- no scratch classes, no writeback -- and the dictionary reads
+      owlapy class expressions; retrievals and the tbox are memoised on
+      the world, dropped on `add`
+- [x] port the offline FIBO loading onto owlapi IRI mappers: `load`
+      returns a fresh `World`, `preload` is gone
+- [WIP] @claude-allegories-2026-09-08 12:00 port the tests and both
+      notebooks, update the `semantic` extra
 - [ ] changelog, validation and sign-off
