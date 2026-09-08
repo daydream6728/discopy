@@ -19,7 +19,7 @@ from owlapy.class_expression import (  # noqa: E402
 from owlapy.iri import IRI  # noqa: E402
 from owlapy.owl_axiom import (  # noqa: E402
     OWLAsymmetricObjectPropertyAxiom, OWLClassAssertionAxiom,
-    OWLDisjointClassesAxiom, OWLEquivalentClassesAxiom,
+    OWLDeclarationAxiom, OWLDisjointClassesAxiom, OWLEquivalentClassesAxiom,
     OWLEquivalentObjectPropertiesAxiom, OWLFunctionalObjectPropertyAxiom,
     OWLInverseFunctionalObjectPropertyAxiom,
     OWLInverseObjectPropertiesAxiom, OWLIrreflexiveObjectPropertyAxiom,
@@ -49,6 +49,7 @@ def kennel():
     owns = world.owl_property("owns", person, dog)
     knows = world.owl_property("knows", person, person)
     named = OWLDataProperty(IRI.create(world.iri + "named"))
+    world.add(OWLDeclarationAxiom(named))
     rex, fido = (world.individual(name, dog) for name in ("rex", "fido"))
     ada, bob = (world.individual(name, person) for name in ("ada", "bob"))
     world.relate(ada, owns, rex)
@@ -72,9 +73,11 @@ def test_world_enumerates_its_signature(kennel):
         == ["Animal", "Dog", "Person"]
     assert [name_of(one) for one in world.object_properties()]\
         == ["knows", "owns"]
+    assert [name_of(one) for one in world.data_properties()] == ["named"]
     assert len(world.individuals()) == 4
     assert world.find("Dog") == kennel.Dog
     assert world.find("owns") == kennel.owns
+    assert world.find("named") == kennel.named
     assert world.find("rex") == kennel.rex
     assert world.find("Unicorn") is None
     assert any(isinstance(one, OWLSubClassOfAxiom) for one in world.tbox())

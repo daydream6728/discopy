@@ -67,6 +67,7 @@ Summary
         :toctree:
 
         preserve_list_order
+        map_decimal_literals
         load
         reason
         consistent
@@ -120,6 +121,7 @@ from __future__ import annotations
 import os
 from contextlib import contextmanager
 from dataclasses import dataclass
+from decimal import Decimal
 from itertools import product
 
 import jpype
@@ -144,9 +146,11 @@ from owlapy.owl_axiom import (
     OWLSubPropertyChainAxiom, OWLSymmetricObjectPropertyAxiom,
     OWLTransitiveObjectPropertyAxiom)
 from owlapy.owl_individual import OWLNamedIndividual
+from owlapy.owl_literal import OWLLiteral
 from owlapy.owl_ontology import SyncOntology
 from owlapy.owlapi_mapper import OWLAPIMapper
-from owlapy.owl_property import OWLObjectInverseOf, OWLObjectProperty
+from owlapy.owl_property import (
+    OWLDataProperty, OWLObjectInverseOf, OWLObjectProperty)
 from owlapy.owl_reasoner import SyncReasoner
 
 from discopy import cat, frobenius, messages
@@ -199,7 +203,35 @@ def preserve_list_order():
         OWLAPIMapper.map_.register(kind, to_java)
 
 
+def map_decimal_literals():
+    """
+    Register the ``xsd:decimal`` literals that `owlapy`_'s bridge lacks:
+    its literal mapper handles string, boolean, integer and double
+    literals only, while FIBO's monetary amounts and exchange rates
+    range over ``xsd:decimal`` -- and a double is not a decimal in
+    OWL 2, so writing one where the ontology declares the other makes
+    the world inconsistent. A Java literal of any other datatype maps
+    to its lexical form rather than raising.
+    """
+    literal_impl = jpype.JClass(
+        "uk.ac.manchester.cs.owl.owlapi.OWLLiteralImpl")
+
+    def to_java(self, literal):
+        return literal_impl(str(literal.get_literal()), None,
+                            self.map_(literal.get_datatype()))
+
+    def from_java(self, literal):
+        lexical = str(literal.getLiteral())
+        return OWLLiteral(Decimal(lexical))\
+            if str(literal.getDatatype().getIRI()).endswith("#decimal")\
+            else OWLLiteral(lexical)
+
+    OWLAPIMapper.map_.register(type(OWLLiteral(Decimal(0))), to_java)
+    OWLAPIMapper.map_.register(literal_impl, from_java)
+
+
 preserve_list_order()
+map_decimal_literals()
 
 
 def declared(entity, kind: type) -> bool:
@@ -373,6 +405,13 @@ class World:
                 "getObjectPropertiesInSignature", OWLObjectProperty)
             if declared(prop, OWLObjectProperty))
 
+    def data_properties(self) -> tuple:
+        """ The data properties of the world, imports included. """
+        return tuple(
+            prop for prop in self.signature(
+                "getDataPropertiesInSignature", OWLDataProperty)
+            if declared(prop, OWLDataProperty))
+
     def individuals(self) -> tuple:
         """ The named individuals of the world, imports included. """
         return self.signature(
@@ -387,7 +426,7 @@ class World:
             fragment : The end of the IRI, e.g. the short name.
         """
         for entities in (self.classes(), self.object_properties(),
-                         self.individuals()):
+                         self.data_properties(), self.individuals()):
             for entity in entities:
                 if entity.iri.as_str().endswith(fragment):
                     return entity

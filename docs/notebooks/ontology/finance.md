@@ -4,7 +4,7 @@ marimo-version: 0.23.14
 pyproject: |
   requires-python = ">=3.11"
   dependencies = [
-      "discopy @ git+https://github.com/daydream6728/discopy.git@feature/allegories",
+      "discopy[semantic] @ git+https://github.com/daydream6728/discopy.git@feature/allegory-owlapy",
   ]
 ---
 
@@ -43,13 +43,20 @@ predicates; here we put it to work.
 
 ```python {.marimo}
 import os
+from decimal import Decimal
 
-from owlready2 import AllDifferent, Nothing, OneOf, World
+from owlapy.class_expression import (
+    OWLObjectAllValuesFrom, OWLObjectHasValue, OWLObjectIntersectionOf,
+    OWLObjectOneOf, OWLObjectSomeValuesFrom, OWLObjectUnionOf)
+from owlapy.owl_axiom import (
+    OWLClassAssertionAxiom, OWLDataPropertyAssertionAxiom,
+    OWLDifferentIndividualsAxiom)
+from owlapy.owl_literal import OWLLiteral
 
 from discopy import python
 from discopy.owl import (
-    Box, Functor, Id, Query, axioms, extension, label, load, ob, reason,
-    subsumes)
+    Box, Functor, Id, Nothing, Query, axioms, extension, label, load,
+    name_of, ob, subsumes)
 from discopy.utils import AxiomError
 ```
 
@@ -63,10 +70,9 @@ FIBO's own; we define no schema of our own:
 FIBO = "https://spec.edmcouncil.org/fibo/ontology/"
 FIXTURES = os.path.join(str(mo.notebook_dir() or "."),
                         "..", "..", "..", "test", "fixtures", "fibo")
-world = World()
-ownership = load(
-    FIBO + "FND/OwnershipAndControl/Ownership/", world, path=FIXTURES)
-find = lambda module, name: world.search_one(iri=f"*{module}/{name}")
+world = load(
+    FIBO + "FND/OwnershipAndControl/Ownership/", path=FIXTURES)
+find = lambda module, name: world.find(f"{module}/{name}")
 Portfolio = find("Ownership", "Portfolio")
 Holding = find("Ownership", "Holding")
 hasAcquisitionPrice = find("Ownership", "hasAcquisitionPrice")
@@ -75,10 +81,14 @@ MonetaryPrice = find("CurrencyAmount", "MonetaryPrice")
 Currency = find("CurrencyAmount", "Currency")
 ExchangeRate = find("CurrencyAmount", "ExchangeRate")
 hasCurrency = find("CurrencyAmount", "hasCurrency")
+hasBaseCurrency = find("CurrencyAmount", "hasBaseCurrency")
+hasDealtCurrency = find("CurrencyAmount", "hasDealtCurrency")
+hasRateValue = find("CurrencyAmount", "hasRateValue")
+hasAmount = find("CurrencyAmount", "hasAmount")
 comprises = find("Collections", "comprises")
 isMemberOf = find("Collections", "isMemberOf")
-mo.md(f"Loaded **{len(list(world.classes()))} classes** and "
-      f"**{len(list(world.properties()))} properties** from "
+mo.md(f"Loaded **{len(world.classes())} classes** and "
+      f"**{len(world.object_properties())} properties** from "
       f"FIBO's foundations.")
 ```
 
@@ -95,30 +105,42 @@ inconsistent — the reasoner caught a modelling mistake before it could
 become a pricing one.
 
 ```python {.marimo}
-demo = world.get_ontology("http://discopy.org/portfolio.owl")
-with demo:
-    usd, eur, jpy = Currency("USD"), Currency("EUR"), Currency("JPY")
-    _ = AllDifferent([usd, eur, jpy])
-    eurusd, jpyusd = ExchangeRate("eurusd"), ExchangeRate("jpyusd")
-    eurusd.hasBaseCurrency, eurusd.hasDealtCurrency = [eur], [usd]
-    jpyusd.hasBaseCurrency, jpyusd.hasDealtCurrency = [jpy], [usd]
-    eurusd.hasRateValue, jpyusd.hasRateValue = [1.09], [0.0068]
-    holdings = []
-    for name, value, ccy in (("aapl", 4.2e6, usd), ("bund", 3.0e6, eur),
-                             ("toyota", 5.0e8, jpy),
-                             ("nestle", 1.1e6, eur)):
-        price = MonetaryPrice(name + "_price")
-        price.hasCurrency, price.hasAmount = [ccy], [value]
-        holding = Holding(name)
-        holding.hasAcquisitionPrice = [price]
-        holdings.append(holding)
-    macro = Portfolio("global_macro")
-    macro.comprises = holdings
-    macro.is_a.append(comprises.only(Holding & hasAcquisitionPrice.some(
-        MonetaryPrice & hasCurrency.some(OneOf([usd, eur, jpy])))))
-reason(world)
+usd, eur, jpy = (
+    world.individual(name, Currency) for name in ("USD", "EUR", "JPY"))
+world.add(OWLDifferentIndividualsAxiom([usd, eur, jpy]))
+rate_value = {}
+for name, base, dealt, value in (
+        ("eurusd", eur, usd, 1.09), ("jpyusd", jpy, usd, 0.0068)):
+    rate = world.individual(name, ExchangeRate)
+    world.relate(rate, hasBaseCurrency, base)
+    world.relate(rate, hasDealtCurrency, dealt)
+    world.add(OWLDataPropertyAssertionAxiom(  # xsd:decimal, per the range
+        rate, hasRateValue, OWLLiteral(Decimal(str(value)))))
+    rate_value[rate] = value
+eurusd, jpyusd = rate_value
+amount_of = {}
+holdings = []
+for name, value, ccy in (("aapl", 4.2e6, usd), ("bund", 3.0e6, eur),
+                         ("toyota", 5.0e8, jpy), ("nestle", 1.1e6, eur)):
+    price = world.individual(name + "_price", MonetaryPrice)
+    world.relate(price, hasCurrency, ccy)
+    world.add(OWLDataPropertyAssertionAxiom(
+        price, hasAmount, OWLLiteral(Decimal(str(value)))))
+    holding = world.individual(name, Holding)
+    world.relate(holding, hasAcquisitionPrice, price)
+    amount_of[holding] = value
+    holdings.append(holding)
+macro = world.individual("global_macro", Portfolio)
+world.relate(macro, comprises, *holdings)
+world.add(OWLClassAssertionAxiom(macro, OWLObjectAllValuesFrom(
+    comprises, OWLObjectIntersectionOf((
+        Holding, OWLObjectSomeValuesFrom(
+            hasAcquisitionPrice, OWLObjectIntersectionOf((
+                MonetaryPrice, OWLObjectSomeValuesFrom(
+                    hasCurrency, OWLObjectOneOf((usd, eur, jpy))))))))
+    )))
 mo.md(f"**{len(holdings)}** holdings, **2** exchange rates, "
-      "**1** mandate — and HermiT has classified the lot.")
+      "**1** mandate — and HermiT judges the lot.")
 ```
 
 ## Currency buckets are compound predicates
@@ -127,10 +149,12 @@ No bucket classes to declare: a bucket is a FIBO class construct, one
 wire in the Karoubi envelope, and HermiT retrieves its members —
 
 ```python {.marimo}
-priced = lambda ccy: MonetaryAmount & hasCurrency.value(ccy)
-bucket = lambda ccy: Holding & hasAcquisitionPrice.some(priced(ccy))
+priced = lambda ccy: OWLObjectIntersectionOf((
+    MonetaryAmount, OWLObjectHasValue(hasCurrency, ccy)))
+bucket = lambda ccy: OWLObjectIntersectionOf((
+    Holding, OWLObjectSomeValuesFrom(hasAcquisitionPrice, priced(ccy))))
 members = {ccy: sorted(
-    x.name for (x, ), _ in extension(bucket(ccy), world).inside)
+    name_of(x) for (x, ), _ in extension(bucket(ccy), world).inside)
     for ccy in (usd, eur, jpy)}
 mo.vstack([
     extension(bucket(eur), world).to_diagram(),
@@ -148,11 +172,13 @@ cardinality plus the currencies being pairwise different; the third from
 the portfolio's declared mandate:
 
 ```python {.marimo}
-definite = subsumes(MonetaryAmount, hasCurrency.some(Currency), world)
-no_mixing = subsumes(priced(eur) & priced(usd), Nothing, world)
+definite = subsumes(
+    MonetaryAmount, OWLObjectSomeValuesFrom(hasCurrency, Currency), world)
+no_mixing = subsumes(
+    OWLObjectIntersectionOf((priced(eur), priced(usd))), Nothing, world)
 coverage = subsumes(
-    isMemberOf.some(OneOf([macro])),
-    bucket(usd) | bucket(eur) | bucket(jpy), world)
+    OWLObjectSomeValuesFrom(isMemberOf, OWLObjectOneOf((macro, ))),
+    OWLObjectUnionOf((bucket(usd), bucket(eur), bucket(jpy))), world)
 mo.md(f"""
 | guarantee | statement | proved by |
 | --- | --- | --- |
@@ -169,8 +195,8 @@ EUR leg of the portfolio is one typed composition along FIBO's
 `comprises`, with the codomain annotation doing the filtering —
 
 ```python {.marimo}
-eur_leg = Query.from_property(comprises, Portfolio, bucket(eur))
-retrieved = sorted(y.name for (_, ), (y, ) in eur_leg.relation.inside)
+eur_leg = Query.from_property(comprises, world, Portfolio, bucket(eur))
+retrieved = sorted(name_of(y) for (_, ), (y, ) in eur_leg.relation.inside)
 mo.vstack([eur_leg.to_diagram(),
            mo.md(f"the EUR leg retrieves **{retrieved}**.")])
 ```
@@ -202,18 +228,19 @@ exposure times the FX volatility of its pair. (Toy numbers: standalone
 volatilities, no correlations, linear FX delta.)
 
 ```python {.marimo}
+currencies = {eurusd: (eur, usd), jpyusd: (jpy, usd)}
 risk = lambda ccy: Box(
     "asset risk", ob((bucket(ccy), )), ob((priced(ccy), )))
 net = lambda ccy: Box("net", ob((bucket(ccy), )), ob((priced(ccy), )))
 convert = lambda rate: Box(
-    f"×{rate.hasRateValue.first()}",
-    ob((priced(rate.hasBaseCurrency.first()), )),
-    ob((priced(rate.hasDealtCurrency.first()), )), data=rate)
+    f"×{rate_value[rate]}",
+    ob((priced(currencies[rate][0]), )),
+    ob((priced(currencies[rate][1]), )), data=rate)
 fx_vol = {eurusd: .08, jpyusd: .11}
 fx_risk = lambda rate: Box(
     f"fx risk ×{fx_vol[rate]}",
-    ob((priced(rate.hasBaseCurrency.first()), )),
-    ob((priced(rate.hasDealtCurrency.first()), )), data=rate)
+    ob((priced(currencies[rate][0]), )),
+    ob((priced(currencies[rate][1]), )), data=rate)
 add = lambda arity: Box(
     "+", ob(arity * (priced(usd), )), ob((priced(usd), )))
 
@@ -247,9 +274,8 @@ ontology's own individuals, volatilities from a market-data table:
 ```python {.marimo}
 volatility = {"aapl": .25, "bund": .06, "toyota": .22, "nestle": .15}
 values = lambda ccy: [
-    (one.hasAcquisitionPrice.first().hasAmount.first(),
-     volatility[one.name])
-    for one in holdings if one.name in members[ccy]]
+    (amount_of[one], volatility[name_of(one)])
+    for one in holdings if name_of(one) in members[ccy]]
 rule = lambda box: (
     (lambda *amounts: sum(amounts)) if box.name == "+"
     else (lambda leg: sum(abs(value) * sigma for value, sigma in leg))
@@ -257,9 +283,9 @@ rule = lambda box: (
     else (lambda leg: sum(value for value, _ in leg))
     if box.name == "net"
     else (lambda number: abs(number)
-          * fx_vol[box.data] * box.data.hasRateValue.first())
+          * fx_vol[box.data] * rate_value[box.data])
     if box.name.startswith("fx risk")
-    else (lambda number: number * box.data.hasRateValue.first()))
+    else (lambda number: number * rate_value[box.data]))
 run = Functor(
     ob_map=lambda typ: (list, )
     if typ.inside[0].name.startswith("Holding") else (float, ),

@@ -4,7 +4,7 @@ marimo-version: 0.23.14
 pyproject: |
   requires-python = ">=3.11"
   dependencies = [
-      "discopy @ git+https://github.com/daydream6728/discopy.git@feature/allegories",
+      "discopy[semantic] @ git+https://github.com/daydream6728/discopy.git@feature/allegory-owlapy",
   ]
 ---
 
@@ -50,13 +50,15 @@ demo, on FIBO itself.
 <!---->
 ## Loading FIBO from its base URL
 
-`discopy.owl.load` takes the IRI an ontology lives at and pulls it in with
-all its imports, using [owlready2](https://owlready2.readthedocs.io/):
+`discopy.owl.load` takes the IRI an ontology lives at and pulls it in
+with all its imports, through [owlapy](https://dice-group.github.io/owlapy/)
+and the [owlapi](https://owlcs.github.io/owlapi/) bridge it bundles —
+the same stack HermiT itself runs on:
 
 ```python
 from discopy.owl import load
-corporate_control = load("https://spec.edmcouncil.org/fibo/ontology"
-                         "/BE/OwnershipAndControl/CorporateControl/")
+world = load("https://spec.edmcouncil.org/fibo/ontology"
+             "/BE/OwnershipAndControl/CorporateControl/")
 ```
 
 Here we load the same modules from the copy checked into DisCoPy's test
@@ -69,22 +71,23 @@ fails where the curated one works.
 ```python {.marimo}
 import os
 
-from owlready2 import Not, Thing, World
+from owlapy.class_expression import (
+    OWLObjectComplementOf, OWLObjectIntersectionOf, OWLObjectMaxCardinality,
+    OWLObjectSomeValuesFrom)
+from owlapy.owl_axiom import OWLClassAssertionAxiom
 
 from discopy.owl import (
-    Query, Relation, axioms, consistent, extension, load, reason, subsumes)
+    Query, Relation, Thing, axioms, consistent, extension, individual_class,
+    load, name_of, subsumes)
 
 FIBO = "https://spec.edmcouncil.org/fibo/ontology/"
 FIXTURES = os.path.join(str(mo.notebook_dir() or "."),
                         "..", "..", "..", "test", "fixtures", "fibo")
-world = World()
-corporate_control = load(
-    FIBO + "BE/OwnershipAndControl/CorporateControl/",
-    world, path=FIXTURES)
-modules = [key for key in world.ontologies if key.startswith("http")]
-mo.md(f"Loaded **{len(list(world.classes()))} classes** and "
-      f"**{len(list(world.properties()))} properties** "
-      f"from {len(modules)} ontology modules.")
+world = load(
+    FIBO + "BE/OwnershipAndControl/CorporateControl/", path=FIXTURES)
+mo.md(f"Loaded **{len(world.classes())} classes** and "
+      f"**{len(world.object_properties())} properties**, "
+      "imports included.")
 ```
 
 ## What the ontology says, as pictures
@@ -97,9 +100,9 @@ named one. DisCoPy compiles every axiom to a pair of relations and draws
 it:
 
 ```python {.marimo}
-owning_entity = world.search_one(iri="*hasDirectOwningEntity")
+owning_entity = world.find("hasDirectOwningEntity")
 chain_axiom = next(
-    axiom for axiom in axioms(owning_entity)
+    axiom for axiom in axioms(owning_entity, world)
     if len(axiom.terms[0].to_diagram().boxes) == 2)
 chain_axiom.equation
 ```
@@ -114,41 +117,38 @@ labelled the way a mathematician would write it. Both readings are the
 members are the individuals *provably* satisfying the expression.
 
 ```python {.marimo}
-controls = world.search_one(iri=FIBO + "FND/Relations/Relations/controls")
-for_profit = world.search_one(
-    iri=FIBO + "BE/LegalEntities/CorporateBodies/ForProfitCorporation")
-expression = controls.some(Thing) & Not(for_profit)
-mo.hstack([Query.from_class(expression, dom=Thing).to_diagram(),
-           Query.from_class(expression).to_diagram()])
+controls = world.find("Relations/controls")
+for_profit = world.find("ForProfitCorporation")
+expression = OWLObjectIntersectionOf((
+    OWLObjectSomeValuesFrom(controls, Thing),
+    OWLObjectComplementOf(for_profit)))
+mo.hstack([Query.from_class(expression, world, dom=Thing).to_diagram(),
+           Query.from_class(expression, world).to_diagram()])
 ```
 
 ## A small world of companies
 
 Now some facts for the axioms to bite on: a person and three companies in
 a chain of control, the kind of structure a compliance team unravels every
-day. After asserting them we `reason` once, so that everything read from
-now on is what the ontology *entails*, not merely what was typed in.
+day. Adding them drops the world's reasoner, so everything read from now
+on is what the *new* ontology entails, not merely what was typed in.
 
 ```python {.marimo}
-business_entity = world.search_one(
-    iri=FIBO + "BE/LegalEntities/LegalPersons/BusinessEntity")
-natural_person = world.search_one(
-    iri=FIBO + "BE/LegalEntities/LegalPersons"
-    "/LegallyCompetentNaturalPerson")
-market = world.get_ontology("http://discopy.org/market.owl")
-with market:
-    alice = natural_person("alice")
-    holdings, bank, shell = map(
-        business_entity, ("acme_holdings", "acme_bank", "shell_co"))
-    alice.controls = [holdings]
-    holdings.controls = [bank]
-    bank.controls = [shell]
-    shell.is_a.append(for_profit)
-reason(world)
+business_entity = world.find("LegalPersons/BusinessEntity")
+natural_person = world.find("LegallyCompetentNaturalPerson")
+alice = world.individual("alice", natural_person)
+holdings, bank, shell = (
+    world.individual(name, business_entity)
+    for name in ("acme_holdings", "acme_bank", "shell_co"))
+world.relate(alice, controls, holdings)
+world.relate(holdings, controls, bank)
+world.relate(bank, controls, shell)
+world.add(OWLClassAssertionAxiom(shell, for_profit))
 facts = mo.hstack([
-    Query.from_individual(subject)
-    >> Query.from_property(controls, subject.is_a[0], business_entity)
-    >> Query.from_individual(target, business_entity).dagger()
+    Query.from_individual(subject, world)
+    >> Query.from_property(
+        controls, world, individual_class(subject, world), business_entity)
+    >> Query.from_individual(target, world, business_entity).dagger()
     for subject, target in [
         (alice, holdings), (holdings, bank), (bank, shell)]])
 facts
@@ -161,11 +161,15 @@ whole chain of control composes as one diagram of the split category, and
 the scalar it evaluates to is its truth value:
 
 ```python {.marimo}
-chain = (Query.from_individual(alice)
-         >> Query.from_property(controls, natural_person, business_entity)
-         >> Query.from_property(controls, business_entity, business_entity)
-         >> Query.from_property(controls, business_entity, business_entity)
-         >> Query.from_individual(shell, business_entity).dagger())
+chain = (
+    Query.from_individual(alice, world)
+    >> Query.from_property(
+        controls, world, natural_person, business_entity)
+    >> Query.from_property(
+        controls, world, business_entity, business_entity)
+    >> Query.from_property(
+        controls, world, business_entity, business_entity)
+    >> Query.from_individual(shell, world, business_entity).dagger())
 mo.hstack([chain.to_diagram(),
            mo.md("The chain of control holds: "
                  f"**{bool(chain)}** — and it has "
@@ -182,8 +186,10 @@ subsumed by `LegallyCompetentNaturalPerson` — and inserts the verdict as
 a coercion box exactly where the hand-off happens:
 
 ```python {.marimo}
-sloppy = (Query.from_property(controls, natural_person, business_entity)
-          >> Query.from_property(controls, natural_person, business_entity))
+sloppy = (
+    Query.from_property(controls, world, natural_person, business_entity)
+    >> Query.from_property(
+        controls, world, natural_person, business_entity))
 proof, = sloppy.coercions
 try:
     sloppy.validate()
@@ -210,21 +216,21 @@ entailed:
 
 ```python {.marimo}
 web = Relation.from_property(controls, world)
-alice_point = Relation.from_individual(alice)
-shell_point = Relation.from_individual(shell)
+alice_point = Relation.from_individual(alice, world)
+shell_point = Relation.from_individual(shell, world)
 directly = bool(alice_point >> web >> shell_point.dagger())
 ultimately = bool(alice_point >> web.repeat() >> shell_point.dagger())
 mo.md(f"Does alice control shell_co directly? **{directly}**. "
       f"Ultimately, through the chain? **{ultimately}**.")
 ```
 
-The same relation is available to anything that speaks SPARQL, evaluated
-by owlready2's native engine on the materialised graph — the two agree by
-construction:
+The asserted graph is available to anything that speaks SPARQL, evaluated
+by [rdflib](https://rdflib.readthedocs.io/) — and on `controls`, whose
+atoms are all asserted, it agrees with the entailed extension:
 
 ```python {.marimo}
 sparql_web = Relation.sparql(
-    "SELECT ?x ?y WHERE { ?x <" + controls.iri + "> ?y . }",
+    "SELECT ?x ?y WHERE { ?x <" + controls.iri.as_str() + "> ?y . }",
     1, 1, world)
 mo.md(f"SPARQL and the property extension agree: "
       f"**{sparql_web == web}**.")
@@ -253,10 +259,10 @@ mo.md(f"The tests became types: `{collapsed}` — "
 HermiT also decides candidate rules exactly, not just the declared ones:
 
 ```python {.marimo}
-candidate = subsumes(
-    business_entity & controls.some(Thing), business_entity, world)
-converse = subsumes(
-    business_entity, business_entity & controls.some(Thing), world)
+controlling = OWLObjectIntersectionOf((
+    business_entity, OWLObjectSomeValuesFrom(controls, Thing)))
+candidate = subsumes(controlling, business_entity, world)
+converse = subsumes(business_entity, controlling, world)
 mo.md(f"A controlling business entity is a business entity "
       f"(**{candidate}**), but not conversely (**{converse}**).")
 ```
@@ -267,8 +273,8 @@ Every axiom of the knowledge base compiles to a decidable check on these
 finite relations: ``bool(axiom)`` asks whether the world entails a
 *counterexample*, and a consistent ontology entails none of its own — the
 schema entails itself. `axioms(world)` compiles the rules of **every**
-loaded FIBO module at once, retrieving all their class constructs in one
-batched deduction:
+loaded FIBO module at once, class and property axioms alike, with one
+reasoner and one memoised retrieval per predicate:
 
 ```python {.marimo}
 rule_book = axioms(world)
@@ -306,12 +312,12 @@ nobody provably controls at most one thing, because nothing rules out
 control edges we have not heard of:
 
 ```python {.marimo}
-provably_not = extension(Not(for_profit), world)
-bounded = extension(controls.max(1, Thing), world)
+provably_not = extension(OWLObjectComplementOf(for_profit), world)
+bounded = extension(OWLObjectMaxCardinality(1, controls, Thing), world)
 mo.md(f"Individuals provably ¬ForProfitCorporation: "
-      f"**{[str(x.name) for (x, ), _ in provably_not.inside]}** — "
+      f"**{[name_of(x) for (x, ), _ in provably_not.inside]}** — "
       f"provably controlling at most one thing: "
-      f"**{[str(x.name) for (x, ), _ in bounded.inside]}**. "
+      f"**{[name_of(x) for (x, ), _ in bounded.inside]}**. "
       "The open world answers *unknown*, and DisCoPy will not launder "
       "*unknown* into *false*.")
 ```
@@ -329,10 +335,8 @@ mo.md(f"HermiT says the market is consistent: **{ok_before}**.")
 
 ```python {.marimo}
 assert ok_before
-not_for_profit = world.search_one(
-    iri=FIBO + "BE/LegalEntities/CorporateBodies/NotForProfitCorporation")
-with market:
-    shell.is_a.append(not_for_profit)
+not_for_profit = world.find("NotForProfitCorporation")
+world.add(OWLClassAssertionAxiom(shell, not_for_profit))
 ok_after = consistent(world)
 mo.md(f"HermiT says the market is still consistent: **{ok_after}** — "
       "FIBO declares for-profit and not-for-profit corporations "
