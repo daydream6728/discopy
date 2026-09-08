@@ -83,8 +83,9 @@ grammar = [
     "nltk",
 ]
 semantic = [
-    # Ships HermiT, whose invocation needs a Java runtime.
-    "owlready2",
+    # Bundles the owlapi jars, HermiT included; reasoning needs a Java
+    # runtime.
+    "owlapy",
 ]
 test = [
     "discopy[grammar,quantum,semantic]",
@@ -101,7 +102,7 @@ docs  = [
     "marimo",
     "myst-parser == 2.0.*",
     # executed by marimo when rendering the notebooks at docs build time
-    "owlready2",
+    "owlapy",
     "pytket",
     "sympy",
     "sphinx == 7.2.*",

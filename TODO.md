@@ -22,6 +22,11 @@
       the world, dropped on `add`
 - [x] port the offline FIBO loading onto owlapi IRI mappers: `load`
       returns a fresh `World`, `preload` is gone
-- [WIP] @claude-allegories-2026-09-08 12:00 port the tests and both
-      notebooks, update the `semantic` extra
-- [ ] changelog, validation and sign-off
+- [x] port the tests and both notebooks, update the `semantic` extra --
+      two owlapy bridge repairs came out of it: `preserve_list_order`
+      (the mapper reverses every java list, so HermiT reasoned with
+      every property chain backwards) and `map_decimal_literals` (no
+      `xsd:decimal` support, so FIBO amounts written as doubles made
+      the world inconsistent)
+- [WIP] @claude-allegories-2026-09-08 14:00 changelog, validation and
+      sign-off

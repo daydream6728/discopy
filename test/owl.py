@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from decimal import Decimal
 from shutil import which
 from types import SimpleNamespace
 
@@ -19,7 +20,8 @@ from owlapy.class_expression import (  # noqa: E402
 from owlapy.iri import IRI  # noqa: E402
 from owlapy.owl_axiom import (  # noqa: E402
     OWLAsymmetricObjectPropertyAxiom, OWLClassAssertionAxiom,
-    OWLDeclarationAxiom, OWLDisjointClassesAxiom, OWLEquivalentClassesAxiom,
+    OWLDataPropertyAssertionAxiom, OWLDeclarationAxiom,
+    OWLDisjointClassesAxiom, OWLEquivalentClassesAxiom,
     OWLEquivalentObjectPropertiesAxiom, OWLFunctionalObjectPropertyAxiom,
     OWLInverseFunctionalObjectPropertyAxiom,
     OWLInverseObjectPropertiesAxiom, OWLIrreflexiveObjectPropertyAxiom,
@@ -27,6 +29,7 @@ from owlapy.owl_axiom import (  # noqa: E402
     OWLSubObjectPropertyOfAxiom, OWLSubPropertyChainAxiom,
     OWLSymmetricObjectPropertyAxiom, OWLTransitiveObjectPropertyAxiom)
 from owlapy.owl_datatype import OWLDatatype  # noqa: E402
+from owlapy.owl_literal import OWLLiteral  # noqa: E402
 from owlapy.owl_property import (  # noqa: E402
     OWLDataProperty, OWLObjectInverseOf)
 from owlapy.vocab import XSDVocabulary  # noqa: E402
@@ -100,6 +103,20 @@ def test_instances_and_carrier(kennel):
     assert carrier(2, world) == tuple(
         (x, y) for x in everyone for y in everyone)
     assert carrier(0, world) == ((), )
+
+
+def test_decimal_literals_cross_the_bridge(kennel):
+    world = kennel.world
+    weight = OWLDataProperty(IRI.create(world.iri + "weight"))
+    world.add(OWLDeclarationAxiom(weight))
+    world.add(OWLDataPropertyAssertionAxiom(
+        kennel.rex, weight, OWLLiteral(Decimal("12.5"))))
+    assert consistent(world)  # a double here would clash with a range
+    assertion, = (axiom for axiom in world.abox()
+                  if isinstance(axiom, OWLDataPropertyAssertionAxiom))
+    assert assertion.get_object().to_python() == Decimal("12.5")
+    entailed, = world.reasoner.data_property_values(kennel.rex, weight)
+    assert float(entailed.to_python()) == 12.5
 
 
 def test_instances_are_memoised(kennel):
