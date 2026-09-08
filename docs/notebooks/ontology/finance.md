@@ -1,13 +1,12 @@
 ---
 title: Finance
 marimo-version: 0.23.14
-pyproject: |
+pyproject: |-
   requires-python = ">=3.11"
   dependencies = [
       "discopy[semantic] @ git+https://github.com/daydream6728/discopy.git@feature/allegory-owlapy",
   ]
 ---
-
 ```python {.marimo}
 import marimo as mo
 ```
