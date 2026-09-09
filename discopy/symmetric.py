@@ -303,8 +303,8 @@ class Diagram(balanced.Diagram, SymmetricCategory):
         """
 
         doms = Nat(len(xs)) if doms is None else doms
-        size = len(doms)
-        unit = type(doms)() if isinstance(doms, Nat) else cls.ob()
+        unit = doms[0][:0] if len(doms) else cls.ob()
+        doms, size = list(doms), len(doms)
         tensor = lambda tys: unit.tensor(*tys)
         dom = tensor(doms)
 
@@ -312,12 +312,7 @@ class Diagram(balanced.Diagram, SymmetricCategory):
         if xs.is_identity:
             return cls.id(dom)
         i = xs[0]
-        left, head, right = (
-            doms[slice]
-            for slice in (
-                slice(0, i), i, slice(i + 1, None)
-            )
-        )
+        left, head, right = doms[:i], doms[i], doms[i + 1:]
         return cls.swap(tensor(left), head) @ tensor(right)\
             >> head @ cls.permutation(
                 [x - 1 if x > i else x for x in xs[1:]],

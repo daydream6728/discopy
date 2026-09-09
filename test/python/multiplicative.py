@@ -48,3 +48,13 @@ def test_Functor_into_Function_folds_with_matmul():
     assert F(x @ x) == F(x) @ F(x) == monoidal.List[type](bool, bool)
     assert F(Ty()) == monoidal.List[type]()
     assert F(g)(True, True) is True and F(g)(True, False) is False
+
+
+def test_types_and_tuples_at_the_boundary():
+    # Function.ob is the free monoid List[type], but the constructors still
+    # take a bare type or a tuple of types and cast it (issue #728).
+    assert Function.swap(int, str).dom == Function.ob(int, str)
+    assert Function.copy((int, str), 3).cod == Function.ob(int, str) ** 3
+    assert Function.discard((int, )).cod == Function.ob()
+    assert Function.permutation([1, 0], [(int, ), (str, bool)]).cod\
+        == Function.ob(str, bool, int)

@@ -41,7 +41,7 @@ from types import ModuleType
 from typing import Union, Literal as L, Callable, TYPE_CHECKING
 
 from discopy import monoidal, config, messages
-from discopy.abc import MonoidalCategory, NamedGeneric
+from discopy.abc import MonoidalCategory, Nat, NamedGeneric
 from discopy.cat import (
     factory,
     assert_iscomposable,
@@ -88,7 +88,7 @@ class Matrix(MonoidalCategory, NamedGeneric['dtype']):
     For example:
 
     >>> Matrix[complex].id(1)
-    Matrix[complex]([1.+0.j], dom=1, cod=1)
+    Matrix[complex]([1.+0.j], dom=Nat(1), cod=Nat(1))
     >>> assert Matrix[complex].id(1) != Matrix[float].id(1)
 
     The default data type is determined by underlying array datastructure of
@@ -108,9 +108,9 @@ class Matrix(MonoidalCategory, NamedGeneric['dtype']):
     >>> m = Matrix([0, 1, 1, 0], 2, 2)
     >>> v = Matrix([0, 1], 1, 2)
     >>> v >> m >> v.dagger()
-    Matrix[int64]([0], dom=1, cod=1)
+    Matrix[int64]([0], dom=Nat(1), cod=Nat(1))
     >>> m + m
-    Matrix[int64]([0, 2, 2, 0], dom=2, cod=2)
+    Matrix[int64]([0, 2, 2, 0], dom=Nat(2), cod=Nat(2))
     >>> assert m.then(m, m, m, m) == m >> m >> m >> m >> m
 
     The monoidal product for :py:class:`.Matrix` is the direct sum:
@@ -120,14 +120,14 @@ class Matrix(MonoidalCategory, NamedGeneric['dtype']):
     array([[2],
            [4]])
     >>> x @ x
-    Matrix[int64]([2, 0, 4, 0, 0, 2, 0, 4], dom=4, cod=2)
+    Matrix[int64]([2, 0, 4, 0, 0, 2, 0, 4], dom=Nat(4), cod=Nat(2))
     >>> (x @ x).array
     array([[2, 0],
            [4, 0],
            [0, 2],
            [0, 4]])
     """
-    ob = int
+    ob = Nat
 
     def cast(self, dtype: type) -> Matrix:
         """
@@ -153,10 +153,8 @@ class Matrix(MonoidalCategory, NamedGeneric['dtype']):
                 return cls.__new__(cls[dtype], array, *args, **kwargs)
             return object.__new__(cls)
 
-    def __init__(self, array, dom: int, cod: int):
-        assert_isinstance(dom, int)
-        assert_isinstance(cod, int)
-        self.dom, self.cod = dom, cod
+    def __init__(self, array, dom: Nat, cod: Nat):
+        self.dom, self.cod = map(Nat.cast, (dom, cod))
         with backend() as np:
             self.array = np.array(array, dtype=self.dtype).reshape((dom, cod))
 
@@ -237,7 +235,9 @@ class Matrix(MonoidalCategory, NamedGeneric['dtype']):
     @classmethod
     def id(cls, dom=0) -> Matrix:
         with backend('numpy') as np:
-            return cls(np.identity(dom, dtype=cls.dtype or int), dom, dom)
+            dom = Nat.cast(dom)
+            return cls(
+                np.identity(len(dom), dtype=cls.dtype or int), dom, dom)
 
     twist = id
 
@@ -253,7 +253,7 @@ class Matrix(MonoidalCategory, NamedGeneric['dtype']):
         if others or other is None:
             return monoidal.Diagram.tensor(self, other, *others)
         assert_isinstance(other, type(self))
-        dom, cod = self.dom + other.dom, self.cod + other.cod
+        dom, cod = self.dom @ other.dom, self.cod @ other.cod
         array = self.zero(dom, cod).array
         array[:self.dom, :self.cod] = self.array
         array[self.dom:, self.cod:] = other.array
@@ -291,11 +291,12 @@ class Matrix(MonoidalCategory, NamedGeneric['dtype']):
         Example
         -------
         >>> Matrix.swap(1, 1)
-        Matrix[int64]([0, 1, 1, 0], dom=2, cod=2)
+        Matrix[int64]([0, 1, 1, 0], dom=Nat(2), cod=Nat(2))
         >>> Matrix.swap(2,1)
-        Matrix[int64]([0, 1, 0, 0, 0, 1, 1, 0, 0], dom=3, cod=3)
+        Matrix[int64]([0, 1, 0, 0, 0, 1, 1, 0, 0], dom=Nat(3), cod=Nat(3))
         """
-        dom = cod = left + right
+        left, right = map(Nat.cast, (left, right))
+        dom = cod = left @ right
         array = Matrix.zero(dom, cod).array
         array[:left, right:] = Matrix.id(left).array
         array[left:, :right] = Matrix.id(right).array
@@ -323,10 +324,11 @@ class Matrix(MonoidalCategory, NamedGeneric['dtype']):
         return type(self)(array, self.dom, self.cod)
 
     @classmethod
-    def copy(cls, x: int, n: int) -> Matrix:
+    def copy(cls, x: Nat, n: int) -> Matrix:
+        dom, x = Nat.cast(x), len(Nat.cast(x))
         array = [[i + int(j % n * x) == j
                   for j in range(n * x)] for i in range(x)]
-        return cls(array, x, n * x)
+        return cls(array, dom, dom ** n)
 
     @classmethod
     def discard(cls, x: int) -> Matrix:
@@ -352,9 +354,9 @@ class Matrix(MonoidalCategory, NamedGeneric['dtype']):
         Example
         -------
         >>> Matrix.basis(4, 2)
-        Matrix[int64]([0, 0, 1, 0], dom=1, cod=4)
+        Matrix[int64]([0, 0, 1, 0], dom=Nat(1), cod=Nat(4))
         """
-        return cls([[int(i == j) for j in range(x)]], x ** 0, x)
+        return cls([[int(i == j) for j in range(x)]], 1, x)
 
     def repeat(self) -> Matrix:
         """
@@ -363,12 +365,13 @@ class Matrix(MonoidalCategory, NamedGeneric['dtype']):
         Example
         -------
         >>> Matrix[bool]([0, 1, 1, 0], 2, 2).repeat()
-        Matrix[bool]([True, True, True, True], dom=2, cod=2)
+        Matrix[bool]([True, True, True, True], dom=Nat(2), cod=Nat(2))
         """
         if self.dtype != bool or self.dom != self.cod:
             raise TypeError(messages.MATRIX_REPEAT_ERROR)
         return sum(
-            self.id(self.dom).then(*n * [self]) for n in range(self.dom + 1))
+            self.id(self.dom).then(*n * [self])
+            for n in range(len(self.dom) + 1))
 
     def trace(self, n=1, left=False) -> Matrix:
         """
@@ -381,11 +384,12 @@ class Matrix(MonoidalCategory, NamedGeneric['dtype']):
         -------
         >>> assert Matrix[bool].swap(1, 1).trace() == Matrix[bool].id(1)
         """
+        dom, cod = self.dom[:len(self.dom) - n], self.cod[:len(self.cod) - n]
         A, B, C, D = (row >> self >> column
-                      for row in [self.id(self.dom - n) @ self.ones(n),
-                                  self.ones(self.dom - n) @ self.id(n)]
-                      for column in [self.id(self.cod - n) @ self.discard(n),
-                                     self.discard(self.cod - n) @ self.id(n)])
+                      for row in [self.id(dom) @ self.ones(n),
+                                  self.ones(dom) @ self.id(n)]
+                      for column in [self.id(cod) @ self.discard(n),
+                                     self.discard(cod) @ self.id(n)])
         return A + (B >> D.repeat() >> C)
 
     def lambdify(

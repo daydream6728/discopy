@@ -57,7 +57,7 @@ class Function(MonoidalCategory, Sequence):
     ob = Nat
 
     def __post_init__(self):
-        self.dom = self.dom if isinstance(self.dom, Nat) else Nat(self.dom)
+        self.dom = Nat.cast(self.dom)
         self.cod = self.cod if isinstance(self.cod, Nat) else Nat(self.cod)
         if isinstance(self.inside, dict):
             self.inside = [self.inside[i] for i in range(len(self.cod))]

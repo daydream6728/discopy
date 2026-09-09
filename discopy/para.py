@@ -136,7 +136,7 @@ Parametric maps compose like layers of a neural network, e.g. over
 ...     Function(lambda x, w, b: w * x + b, (float, ) * 3, (float, )),
 ...     param=(float, float))
 >>> network = layer >> layer
->>> assert network.param == (float, ) * 4
+>>> assert network.param == Function.ob(*(float, ) * 4)
 >>> network.inside(2., 3., 1., .5, 0.)
 3.5
 """
@@ -190,15 +190,14 @@ class Symmetric(SymmetricCategory, NamedGeneric['category']):
     copar: ob = None
 
     def __post_init__(self):
-        if self.param is None:
-            self.param = self.ob()
-        if self.copar is None:
-            self.copar = self.ob()
+        self.dom, self.cod, self.param, self.copar = (
+            self.category.id(self.ob() if x is None else x).dom
+            for x in (self.dom, self.cod, self.param, self.copar))
         assert_isinstance(self.inside, self.category)
         assert_iscomposable(
-            self.category.id(self.dom + self.param), self.inside)
+            self.category.id(self.dom @ self.param), self.inside)
         assert_iscomposable(
-            self.inside, self.category.id(self.cod + self.copar))
+            self.inside, self.category.id(self.cod @ self.copar))
 
     @classmethod
     def lift(cls, inside: category) -> Symmetric:
@@ -240,8 +239,8 @@ class Symmetric(SymmetricCategory, NamedGeneric['category']):
             >> other.inside @ self.copar\
             >> other.cod @ self.category.swap(other.copar, self.copar)
         return type(self)(self.dom, other.cod, inside,
-                          self.param + other.param,
-                          self.copar + other.copar)
+                          self.param @ other.param,
+                          self.copar @ other.copar)
 
     @unbiased
     def tensor(self, other: Symmetric) -> Symmetric:
@@ -257,9 +256,9 @@ class Symmetric(SymmetricCategory, NamedGeneric['category']):
         inside = self.dom @ self.category.swap(other.dom, self.param)\
             @ other.param >> self.inside @ other.inside >> self.cod\
             @ self.category.swap(self.copar, other.cod) @ other.copar
-        return type(self)(self.dom + other.dom, self.cod + other.cod,
-                          inside, self.param + other.param,
-                          self.copar + other.copar)
+        return type(self)(self.dom @ other.dom, self.cod @ other.cod,
+                          inside, self.param @ other.param,
+                          self.copar @ other.copar)
 
     @classmethod
     def swap(cls, left: ob, right: ob) -> Symmetric:
@@ -432,7 +431,7 @@ class Feedback(Markov, FeedbackCategory):
             >> self.inside >> cod @ self.category.swap(mem, self.copar)
         return type(self)(
             dom, cod,
-            inside.feedback(dom + self.param, cod + self.copar, mem),
+            inside.feedback(dom @ self.param, cod @ self.copar, mem),
             self.param, self.copar)
 
 

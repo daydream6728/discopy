@@ -55,7 +55,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import ClassVar, Generic, TypeVar
 
-from discopy.utils import classproperty, get_origin
+from discopy.utils import classproperty, factory_name, get_origin
 
 
 class Category[C0, C1: Category](ABC):
@@ -195,10 +195,25 @@ class Nat(Monoid["Nat"]):
     """
     n: int = 0
 
+    @classmethod
+    def cast(cls, n: int | Nat) -> Nat:
+        """ Cast a Python ``int`` into a natural number. """
+        return n if isinstance(n, cls) else cls(n)
+
     def tensor(self, *others: Nat) -> Nat:
         if any(not isinstance(other, Nat) for other in others):
             return NotImplemented  # This allows whiskering on the left.
         return type(self)(self.n + sum(other.n for other in others))
+
+    def __pow__(self, n_times: int) -> Nat:
+        """ The ``n_times``-fold tensor of a natural number. """
+        return type(self)(n_times * self.n)
+
+    def __repr__(self) -> str:
+        return factory_name(type(self)) + f"({self.n})"
+
+    def __str__(self) -> str:
+        return f"Nat({self.n})"
 
     def __len__(self) -> int:
         return self.n
@@ -539,7 +554,7 @@ class SymmetricCategory[C0, C1](BraidedCategory[C0, C1]):
         xs, doms = list(xs), list(doms)
         if list(range(len(doms))) != sorted(xs):
             raise ValueError
-        tensor = lambda objects: sum(objects, start=cls.ob())
+        tensor = lambda objects: cls.ob().tensor(*objects)
         result, done = cls.id(tensor(doms)), cls.ob()
         while xs != list(range(len(xs))):
             i = xs[0]

@@ -96,7 +96,8 @@ class Function(function.Function, ClosedCategory):
         def inside(*xs):
             left, right = xs[:len(self.dom)], xs[len(self.dom):]
             return untuplify(tuplify(self(*left)) + tuplify(other(*right)))
-        return Function(inside, self.dom + other.dom, self.cod + other.cod)
+        return Function(
+            inside, self.dom @ other.dom, self.cod @ other.cod)
 
     @staticmethod
     def swap(x, y) -> Function:
@@ -107,14 +108,17 @@ class Function(function.Function, ClosedCategory):
             x : The list of types on the left.
             y : The list of types on the right.
         """
+        x, y = map(Function.cast, (x, y))
+
         def inside(*xs):
             return untuplify(tuplify(xs)[len(x):] + tuplify(xs)[:len(x)])
-        return Function(inside, dom=x + y, cod=y + x)
+        return Function(inside, dom=x @ y, cod=y @ x)
 
     @classmethod
     def permutation(cls, xs, doms) -> Self:
         """ Permute blocks of arguments. """
-        doms, xs = list(doms), finset.Permutation(xs, len(doms))
+        doms = list(map(cls.cast, doms))
+        xs = finset.Permutation(xs, len(doms))
         offsets = [0]
         for dom in doms:
             offsets.append(offsets[-1] + len(dom))
@@ -124,8 +128,8 @@ class Function(function.Function, ClosedCategory):
                       for i in range(len(doms))]
             return untuplify(sum((blocks[i] for i in xs), ()))
 
-        dom = sum(doms, ())
-        cod = sum((doms[i] for i in xs), ())
+        dom = cls.ob().tensor(*doms)
+        cod = cls.ob().tensor(*(doms[i] for i in xs))
         return cls(inside, dom, cod)
 
     braid = swap
@@ -139,7 +143,8 @@ class Function(function.Function, ClosedCategory):
             x : The list of types to copy.
             n : The number of copies.
         """
-        return Function(lambda *xs: n * xs, dom=x, cod=n * x)
+        x = Function.cast(x)
+        return Function(lambda *xs: n * xs, dom=x, cod=x ** n)
 
     @staticmethod
     def discard(dom) -> Function:
@@ -162,11 +167,11 @@ class Function(function.Function, ClosedCategory):
             exponent : The input type.
             left : Whether to take the function on the left or right.
         """
+        exponent = Function.cast(exponent)
+        func = Function.exp(base, exponent)
         if left:
-            dom, cod = Function.exp(base, exponent) + exponent, base
-            return Function(lambda f, *xs: f(*xs), dom, cod)
-        dom, cod = exponent + Function.exp(base, exponent), base
-        return Function(lambda *xs: xs[-1](*xs[:-1]), dom, cod)
+            return Function(lambda f, *xs: f(*xs), func @ exponent, base)
+        return Function(lambda *xs: xs[-1](*xs[:-1]), exponent @ func, base)
 
     def curry(self, n=1, left=True) -> Function:
         """

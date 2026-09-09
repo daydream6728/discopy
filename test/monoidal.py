@@ -736,12 +736,14 @@ def test_List():
     # List[X] is a NamedGeneric on the generator type, cached like Hypergraph.
     assert List[int].generator_factory is int and List[int] is List[int]
     a, b = List[int](2, 3), List[int](4)
-    assert a @ b == a + b == List[int](2, 3, 4)
-    assert 2 * a == a @ a == List[int](2, 3, 2, 3)
+    assert a @ b == List[int](2, 3, 4)
+    assert a ** 2 == a @ a == List[int](2, 3, 2, 3) and a ** 0 == List[int]()
 
-    # A List has a tuple-like interface so it drops in for python.Function.ob.
-    assert () + a == a + () == a + (4,)[:0] == a
-    assert a + (4, ) == List[int](2, 3, 4)
+    # A List is a monoid: it tensors with @ and has no + as tensor.
+    with raises(TypeError):
+        a + b
+    with raises(TypeError):
+        2 * a
     assert len(a) == 2 and list(a) == [2, 3] and a.inside == (2, 3)
     assert a[0] == List[int](2) and a[1:] == List[int](3) and not a[:0]
     assert List[int]() == List[int]() != List[str]("x") != List[int](2)

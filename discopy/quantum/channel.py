@@ -119,8 +119,6 @@ class CQ:
     def __matmul__(self, other):
         return self.tensor(other) if isinstance(other, CQ) else NotImplemented
 
-    __add__ = __matmul__
-
     r = l = property(lambda self: CQ(self.classical[::-1], self.quantum[::-1]))
 
 

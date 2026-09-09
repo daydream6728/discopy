@@ -190,8 +190,7 @@ class List(
     is the free monoid on Python's ``type``.
 
     >>> assert List[int](2, 3) @ List[int](4) == List[int](2, 3, 4)
-    >>> assert List[int](2, 3) + List[int](4) == List[int](2, 3, 4)
-    >>> assert 2 * List[int](2, 3) == List[int](2, 3, 2, 3)
+    >>> assert List[int](2, 3) ** 2 == List[int](2, 3, 2, 3)
     >>> assert List[int](2, 3)[1:] == List[int](3) and not List[int]()
 
     A concrete monoid whose atoms carry no colour on either side, e.g. Python's
@@ -221,23 +220,12 @@ class List(
 
     then = tensor
 
-    def cast(self, other) -> List:
-        """ Embed an atom or a tuple of atoms into ``self``'s factory. """
-        if isinstance(other, self.ar):
-            return other
-        return self.ar(*other) if isinstance(other, tuple) else self.ar(other)
-
-    def __add__(self, other):
-        return self.tensor(self.cast(other))
-
-    def __radd__(self, other):
-        return self.cast(other).tensor(self)
-
-    def __mul__(self, n_times):
-        return self.tensor(*(n_times - 1) * [self]) if n_times > 0\
-            else self.ar()
-
-    __rmul__ = __mul__
+    def __pow__(self, n_times):
+        assert_isinstance(n_times, int)
+        if n_times <= 0:
+            assert self.dom == self.cod
+            return self.ar.id(self.dom)
+        return self.tensor(*(n_times - 1) * [self])
 
     def __eq__(self, other):
         return type(self) is type(other) and self.inside == other.inside\
@@ -409,13 +397,6 @@ class Ty(cat.Ob, List):
     def __iter__(self):
         for i in range(len(self)):
             yield self[i:i + 1]
-
-    def __pow__(self, n_times):
-        assert_isinstance(n_times, int)
-        if n_times <= 0:
-            assert self.dom == self.cod
-            return self.factory.id(self.dom)
-        return self.tensor(*(n_times - 1) * [self])
 
     def __setstate__(self, state):
         if 'inside' not in state and "_objects" in state:

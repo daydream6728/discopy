@@ -4,9 +4,10 @@ from discopy.interaction import *
 
 
 def test_Ty_repr():
-    t = Ty[int](positive=1, negative=2)
-    assert repr(t)\
-        == str(t) == "interaction.Ty[int](positive=1, negative=2)"
+    from discopy.abc import Nat
+    t = Ty[Nat](positive=1, negative=2)
+    assert repr(t) == (
+        "interaction.Ty[abc.Nat](positive=abc.Nat(1), negative=abc.Nat(2))")
 
 
 def test_Ty_str():

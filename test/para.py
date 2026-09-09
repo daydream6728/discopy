@@ -140,5 +140,5 @@ def test_copar_python():
     cell = Symmetric[Function](
         (float, ), (float, ), add, (float, ), (float, ))
     network = cell >> cell
-    assert network.param == network.copar == (float, float)
+    assert network.param == network.copar == Function.ob(float, float)
     assert network.inside(2., 1., 10.) == (13., 2., 3.)

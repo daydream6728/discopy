@@ -63,7 +63,7 @@ class Function(function.Function, SymmetricCategory):
         Parameters:
             other : The other function to compose in sequence.
         """
-        dom, cod = self.dom + other.dom, self.cod + other.cod
+        dom, cod = self.dom @ other.dom, self.cod @ other.cod
 
         def inside(obj, tag=0):
             if tag < len(self.dom):
@@ -90,16 +90,17 @@ class Function(function.Function, SymmetricCategory):
 
         def inside(obj, tag=0):
             new_tag = tag + len(y) if tag < len(x) else tag - len(x)
-            if len(x + y) == 1:
+            if len(x) + len(y) == 1:
                 assert new_tag == 0
                 return obj
             return (obj, new_tag)
-        return Function(inside, dom=x + y, cod=y + x, is_swap_of=(x, y))
+        return Function(inside, dom=x @ y, cod=y @ x, is_swap_of=(x, y))
 
     @classmethod
     def permutation(cls, xs, doms) -> Self:
         """ Permute the tags of a disjoint union. """
-        doms, xs = list(doms), finset.Permutation(xs, len(doms))
+        doms = list(map(cls.cast, doms))
+        xs = finset.Permutation(xs, len(doms))
         offsets = [0]
         for dom in doms:
             offsets.append(offsets[-1] + len(dom))
@@ -112,8 +113,8 @@ class Function(function.Function, SymmetricCategory):
                 + tag - offsets[block]
             return obj if offsets[-1] == 1 else (obj, new_tag)
 
-        dom = sum(doms, ())
-        cod = sum((doms[i] for i in xs), ())
+        dom = cls.ob().tensor(*doms)
+        cod = cls.ob().tensor(*(doms[i] for i in xs))
         return cls(inside, dom, cod)
 
     def dagger(self):
@@ -147,12 +148,14 @@ class Function(function.Function, SymmetricCategory):
 
     @staticmethod
     def merge(x, n=2) -> Function:
+        x = Function.cast(x)
+
         def inside(obj, tag=0):
             if len(x) == 1:
                 assert tag % len(x) == 0
                 return obj
             return (obj, tag % len(x))
-        return Function(inside, n * x, x)
+        return Function(inside, x ** n, x)
 
 
 Swap = Function.braid = Function.swap

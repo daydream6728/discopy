@@ -120,6 +120,44 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Changed
 
+- `+` is no longer a synonym for the monoidal product anywhere in the
+  package: every object monoid tensors with `@`, folds with `tensor` and
+  starts from `unit()`. `monoidal.List` loses `cast`, `__add__`, `__radd__`,
+  `__mul__` and `__rmul__` — the tuple-shaped interface it grew when
+  `python.Function.ob` became a `List[type]`, which also made
+  `Ty('a') + 'b'`, `sum(types, ())` and `Nat(2) + 3` silently coerce, the
+  very int-as-object accommodation that
+  [#727](https://github.com/discopy/discopy/pull/727) set out to remove. `Ty.__pow__` moves up to `List`, so `x ** n` is the
+  one way to take an `n`-fold tensor. The call sites follow:
+  `python.multiplicative` and `python.additive` cast their arguments once
+  with `Function.cast` and then use `@`; `abc.SymmetricCategory.permutation`,
+  `hypergraph.Hypergraph.from_graph` and `stream.Ty.sequence` fold with
+  `unit.tensor(*objects)` instead of `sum(objects, unit)`; `stream`, `para`,
+  `interaction` and `grammar.categorial` compose their types with `@`; and
+  the `__add__ = __matmul__` aliases of `interaction.Ty`, `stream.Ty` and
+  `quantum.channel.CQ` are gone. The `+` that remain are addition:
+  `cat.Sum`, `Matrix.__add__` and `Drawing.add`.
+- `matrix.Matrix.ob` is `abc.Nat` rather than a raw `int`, the last builtin
+  standing in for a monoid of objects, so that the direct sum of matrices is
+  `dom @ cod` like every other tensor. Python ints are still accepted
+  everywhere and cast at the boundary by the new `abc.Nat.cast`, which
+  `python.finset` now uses too; `abc.Nat` also gains `__pow__` and the
+  `Nat(3)` repr that `monoidal.Nat` already had, in place of the dataclass
+  default `Nat(n=3)`. A `Matrix` repr shows its objects, e.g.
+  `dom=Nat(2)`. `Matrix.basis` builds its one-dimensional domain as `1`
+  rather than `x ** 0`, which read as the unit of the wrong monoid.
+  This unblocks `interaction.Ty`, whose `natural` was `int` exactly because
+  `Matrix.ob` was: `interaction.Ty[int]` becomes `interaction.Ty[Nat]`
+  ([#728](https://github.com/discopy/discopy/issues/728),
+  [#709](https://github.com/discopy/discopy/issues/709)).
+- `symmetric.Diagram.permutation` normalises `doms` to a list of blocks and
+  reads its unit off the first one as `doms[0][:0]`, instead of asking
+  whether `doms` is a `Nat` to decide between `type(doms)()` and `cls.ob()`.
+  Slicing and rejoining that list is sequence concatenation, never a tensor.
+- `para.Symmetric` normalises `dom`, `cod`, `param` and `copar` through
+  `category.id(x).dom` in `__post_init__`, so a map built from raw Python
+  types carries the objects of its category rather than whatever the caller
+  passed.
 - `monoidal.FreeMonoid` is renamed `List` and parameterised as a
   `NamedGeneric["generator_factory"]`, so `List[X]` is the free monoid on a
   generator type `X` the way `Hypergraph[C]` is the hypergraph category over a

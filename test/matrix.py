@@ -46,3 +46,16 @@ def test_autotyping():
     with backend('pytorch'):
         assert Matrix([0.5, 0.5], dom=1, cod=2).dtype == torch.float32
 
+
+
+def test_Matrix_ob_is_Nat():
+    from discopy.abc import Nat
+
+    assert Matrix.ob is Nat and Nat.cast(2) == Nat.cast(Nat(2)) == Nat(2)
+
+    # Python ints are cast at the boundary, the objects are natural numbers.
+    m = Matrix([1, 0, 0, 1], 2, 2)
+    assert m.dom == m.cod == Nat(2)
+    assert (m @ m).dom == Nat(2) @ Nat(2) == Nat(4) == m.dom ** 2
+    with raises(TypeError):
+        m.dom + m.cod
