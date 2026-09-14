@@ -31,8 +31,15 @@ def test_read():
     assert read("C0", sorts) == Sort("C0")
     assert read("Atom[C0]", sorts) == Sort("C0", atomic=True)
     assert read("Self.dom.ob", sorts) == Sort("Self.dom.ob")
-    assert read("Self.dom.ob()", sorts) == Sort("Self.dom.ob()")
     assert read("Self.dom.ar[A, M]", sorts) == Hom(A, M, "Self.dom.ar")
+    assert A @ M == Tensor((A, M)) and 1 @ A == Tensor((Unit(), A))
+    assert (A << M) == Op("<<", A, M) and (1 >> A) == Op(">>", Unit(), A)
+    assert M.delay(2) == Call(M, "delay", (2, )) and M.r == Attr(M, "r")
+    assert Atom[Sort("C0")] == Sort("C0", atomic=True)
+    with raises(TypeError):
+        Atom[A]
+    with raises(AttributeError):
+        A.__wrapped__
     assert str(read("C1[A @ M.r, 1]", sorts)) == "C1[A @ M.r, 1]"
     with raises(TypeError):
         read("A ** 2", sorts)

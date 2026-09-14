@@ -68,16 +68,20 @@ Summary
 Reading a signature
 -------------------
 
-Annotations are deferred (:pep:`649`), so :func:`parse` reads them as the
-expressions they are written as, through :mod:`annotationlib`, and never
-evaluates them: ``C1[A, B]`` is a :class:`Hom` between the patterns of its
-two objects, ``X @ X.r`` a :class:`Tensor` of a :class:`Var` and an
-:class:`Attr`, ``1`` the :class:`Unit`. The bound of a type parameter is
-its :class:`Sort`: ``C0`` for any object, ``Atom[C0]`` for one with a
-single generator, ``Self.dom.ob`` for the objects a functor maps. The
-head of a sort or a hom, ``C0``, ``C1`` or ``Self.dom.ar``, is evaluated
-only once the rule is bound to a category, in the :attr:`Rule.scope`
-where ``Self`` is the category and ``C0``, ``C1`` its objects and arrows.
+Annotations are deferred (:pep:`649`), so :func:`parse` gets them from
+:mod:`annotationlib` as the strings they are written as and evaluates
+each in the environment of the sequent, see :func:`read`: the type
+parameters are :class:`Var` s, ``C0``, ``C1`` and ``Self`` are
+:class:`Sort` s and ``Atom`` marks a sort atomic. The patterns carry the
+operators, so that Python reads the expression: ``C1[A, B]`` subscripts a
+sort into a :class:`Hom`, ``X @ X.r`` is the :class:`Tensor` of a
+variable with its :class:`Attr`, ``M.delay()`` a :class:`Call`, ``X <<
+Y`` an :class:`Op` and ``1`` the :class:`Unit`. The bound of a type
+parameter is its sort: ``C0`` for any object, ``Atom[C0]`` for one with
+a single generator, ``Self.dom.ob`` for the objects a functor maps. The
+head of a sort or a hom is resolved only once the rule is bound to a
+category, in the :attr:`Rule.scope` where ``Self`` is the category and
+``C0``, ``C1`` its objects and arrows.
 
 Matching
 --------
@@ -103,7 +107,6 @@ the structure it axiomatises, a concrete diagram class may add more.
 """
 
 import annotationlib
-import ast
 import inspect
 import operator
 from abc import ABC, abstractmethod
@@ -134,10 +137,13 @@ class Atom:
     The sort of atomic objects: ``Atom[C0]`` in a signature stands for the
     objects of ``C0`` with exactly one generator.
 
-    >>> assert Atom[int] is Atom
+    >>> Atom[Sort("C0")]
+    Sort(head='C0', atomic=True)
     """
-    def __class_getitem__(cls, item):
-        return cls
+    def __class_getitem__(cls, sort):
+        if not isinstance(sort, Sort):
+            raise TypeError(f"Expected a sort, got {sort!r}.")
+        return replace(sort, atomic=True)
 
 
 type Substitution = dict[str, object]
@@ -149,25 +155,43 @@ type Match = tuple[Substitution, Residuals]
 class Sort:
     """
     The sort of an object variable: the instances of the type its ``head``
-    evaluates to in the scope of a bound rule, atomic or not.
+    resolves to in the scope of a bound rule, atomic or not. An attribute
+    of a sort is a longer head, ``Self.dom.ob``, and subscripting a sort
+    with two patterns is the :class:`Hom` between them.
 
     >>> print(Sort("C0", atomic=True))
     Atom[C0]
+    >>> Sort("Self").dom.ob
+    Sort(head='Self.dom.ob', atomic=False)
+    >>> print(Sort("C1")[Var('A', Sort()), 1])
+    C1[A, 1]
     """
 
     head: str = "C0"
     atomic: bool = False
 
-    def resolve(self, scope: dict, namespace: dict) -> type:
-        """ The type the head evaluates to. """
-        return eval(self.head, namespace, scope)
+    def __getattr__(self, name: str) -> Self:
+        if name.startswith("_"):
+            raise AttributeError(name)
+        return Sort(f"{self.head}.{name}", self.atomic)
 
-    def strategy(self, scope: dict, namespace: dict, types=None):
+    def __getitem__(self, key):
+        if not isinstance(key, tuple) or len(key) != 2:
+            raise TypeError(f"Expected a domain and a codomain, got {key}.")
+        dom, cod = key
+        return Hom(pattern(dom), pattern(cod), self.head)
+
+    def resolve(self, scope: dict) -> type:
+        """ The type the head stands for, a path from a root of the scope. """
+        root, *path = self.head.split(".")
+        return reduce(getattr, path, scope[root])
+
+    def strategy(self, scope: dict, types=None):
         """
         Generate an object of the sort, from ``types`` in place of the
         strategy of the objects ``C0`` when given.
         """
-        resolved = self.resolve(scope, namespace)
+        resolved = self.resolve(scope)
         base = types if types is not None and resolved is scope["C0"]\
             else resolved.strategy()
         return base.filter(lambda value: len(value) == 1)\
@@ -227,6 +251,43 @@ class Pattern(ABC):
         kept as a residual, checked once the variables are instantiated.
         """
         yield subst, residuals + ((self, value), )
+
+    def __matmul__(self, other):
+        return Tensor(factors(self) + factors(pattern(other)))
+
+    def __rmatmul__(self, other):
+        return Tensor(factors(pattern(other)) + factors(self))
+
+    def __lshift__(self, other):
+        return Op("<<", self, pattern(other))
+
+    def __rlshift__(self, other):
+        return Op("<<", pattern(other), self)
+
+    def __rshift__(self, other):
+        return Op(">>", self, pattern(other))
+
+    def __rrshift__(self, other):
+        return Op(">>", pattern(other), self)
+
+    def __getattr__(self, name: str):
+        if name.startswith("_"):
+            raise AttributeError(name)
+        return Attr(self, name)
+
+
+def pattern(value) -> Pattern:
+    """ A pattern as an operand: itself, or the unit for the literal ``1``. """
+    if isinstance(value, Pattern):
+        return value
+    if isinstance(value, int) and value == 1:
+        return Unit()
+    raise TypeError(f"Expected a pattern, got {value!r}.")
+
+
+def factors(value: Pattern) -> tuple:
+    """ The factors of a pattern as a tensor: itself, unless it is one. """
+    return value.factors if isinstance(value, Tensor) else (value, )
 
 
 @dataclass(frozen=True)
@@ -320,6 +381,9 @@ class Attr(Pattern):
     def variables(self):
         return self.base.variables
 
+    def __call__(self, *args):
+        return Call(self.base, self.name, args)
+
     def instantiate(self, subst, unit):
         return getattr(self.base.instantiate(subst, unit), self.name)
 
@@ -403,9 +467,9 @@ class Hom:
     def variables(self):
         return self.dom.variables + self.cod.variables
 
-    def resolve(self, scope: dict, namespace: dict) -> type:
-        """ The type the head evaluates to. """
-        return eval(self.head, namespace, scope)
+    def resolve(self, scope: dict) -> type:
+        """ The type the head stands for, see :meth:`Sort.resolve`. """
+        return Sort(self.head).resolve(scope)
 
     def instantiate(self, subst, unit) -> tuple:
         """ The domain and codomain under a substitution. """
@@ -447,16 +511,11 @@ class Sequent:
         return left + right
 
 
-def expression(source: str) -> ast.expr:
-    """ Parse a string as an expression. """
-    return ast.parse(source, mode="eval").body
-
-
-def read(node: ast.expr | str, sorts: dict[str, Sort]
-         ) -> Pattern | Sort | Hom:
+def read(annotation: str, sorts: dict[str, Sort]) -> Pattern | Sort | Hom:
     """
-    Read a pattern, a sort or a hom from an annotation, given the sorts of
-    the variables in scope.
+    Read a pattern, a sort or a hom from an annotation, evaluated in the
+    environment of the sequent: the variables in scope by name, ``C0``,
+    ``C1`` and ``Self`` as sorts, ``Atom`` marking a sort atomic.
 
     >>> sorts = {"X": Sort("C0", atomic=True)}
     >>> print(read("C1[X @ X.r, 1]", sorts))
@@ -468,47 +527,15 @@ def read(node: ast.expr | str, sorts: dict[str, Sort]
      ...
     TypeError: Cannot read a pattern from X ** 2.
     """
-    if isinstance(node, str):
-        node = expression(node)
-    factors = lambda pattern: pattern.factors\
-        if isinstance(pattern, Tensor) else (pattern, )
-    match node:
-        case ast.Name(id=name) if name in sorts:
-            return Var(name, sorts[name])
-        case ast.Name(id=name):
-            return Sort(name)
-        case ast.Constant(value=1):
-            return Unit()
-        case ast.BinOp(left=left, op=ast.MatMult(), right=right):
-            left, right = read_patterns(sorts, left, right)
-            return Tensor(factors(left) + factors(right))
-        case ast.BinOp(left=left, op=ast.LShift() | ast.RShift(), right=right):
-            symbol = "<<" if isinstance(node.op, ast.LShift) else ">>"
-            return Op(symbol, *read_patterns(sorts, left, right))
-        case ast.Attribute(value=value, attr=name):
-            base = read(value, sorts)
-            return Sort(ast.unparse(node)) if isinstance(base, Sort)\
-                else Attr(base, name)
-        case ast.Call(func=ast.Attribute(value=value, attr=name), args=args):
-            base = read(value, sorts)
-            if isinstance(base, Sort):
-                return Sort(ast.unparse(node))
-            return Call(base, name, tuple(map(ast.literal_eval, args)))
-        case ast.Subscript(value=value, slice=inner)\
-                if ast.unparse(value) == "Atom":
-            return Sort(ast.unparse(inner), atomic=True)
-        case ast.Subscript(value=value, slice=ast.Tuple(elts=[dom, cod])):
-            return Hom(*read_patterns(sorts, dom, cod), ast.unparse(value))
-    raise TypeError(f"Cannot read a pattern from {ast.unparse(node)}.")
-
-
-def read_patterns(sorts: dict, *nodes: ast.expr) -> tuple[Pattern, ...]:
-    """ Read patterns, refusing a sort or a hom where a pattern is due. """
-    patterns = tuple(read(node, sorts) for node in nodes)
-    for node, pattern in zip(nodes, patterns):
-        if not isinstance(pattern, Pattern):
-            raise TypeError(f"Expected a pattern, got {ast.unparse(node)}.")
-    return patterns
+    environment = {
+        "Atom": Atom, "C0": Sort("C0"), "C1": Sort("C1"), "Self": Sort("Self"),
+        **{name: Var(name, sort) for name, sort in sorts.items()}}
+    try:
+        value = eval(annotation, {"__builtins__": {}}, environment)
+    except Exception as error:
+        raise TypeError(
+            f"Cannot read a pattern from {annotation}.") from error
+    return value if isinstance(value, (Sort, Hom)) else pattern(value)
 
 
 def parse(function: Callable, conclusion: bool = True) -> Sequent:
@@ -654,11 +681,6 @@ class Rule[**P, T]:
             "C1": getattr(self.category, "ar", self.category)}
 
     @property
-    def namespace(self) -> dict:
-        """ The globals of the function, where the heads are evaluated. """
-        return inspect.unwrap(self.function).__globals__
-
-    @property
     def unit(self) -> Callable:
         """ The object type of the category, called to build the unit. """
         return self.scope["C0"]
@@ -697,8 +719,7 @@ class Rule[**P, T]:
         def bound(*names):
             for name in names:
                 if name not in subst:
-                    strategy = sorts[name].strategy(
-                        self.scope, self.namespace, types)
+                    strategy = sorts[name].strategy(self.scope, types)
                     subst[name] = draw(strategy, label=name)
 
         def side(pattern):
@@ -716,13 +737,13 @@ class Rule[**P, T]:
         for name, premise in self.sequent.premises.items():
             if isinstance(premise, Hom):
                 dom, cod = side(premise.dom), side(premise.cod)
-                category = premise.resolve(self.scope, self.namespace)
+                category = premise.resolve(self.scope)
                 term = draw(hom(category, dom, cod), label=name)
                 read_off(premise.dom, term.dom)
                 read_off(premise.cod, term.cod)
                 args.append(term)
             elif isinstance(premise, Sort):
-                strategy = premise.strategy(self.scope, self.namespace, types)
+                strategy = premise.strategy(self.scope, types)
                 args.append(draw(strategy, label=name))
             else:
                 bound(*premise.variables)

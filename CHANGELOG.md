@@ -17,8 +17,10 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   other: C1[C, D]) -> C1[A @ C, B @ D]` or `cups[X: Atom[C0]](cls, left:
   X, right: X.r) -> C1[X @ X.r, 1]`; an `@axiom` is a sequent with no
   conclusion, its premises the arguments of the property test. The
-  annotations are read deferred (PEP 649) through `annotationlib`, never
-  evaluated, and DisCoPy now requires Python 3.14. `monoidal.Diagram.strategy`
+  annotations are deferred (PEP 649): `annotationlib` hands them over as
+  written and each is evaluated in the environment of its sequent, where
+  the type parameters are pattern variables, so DisCoPy now requires
+  Python 3.14. `monoidal.Diagram.strategy`
   is a goal-directed search by those rules and generators: to build a
   diagram of a given type it picks a free box, a generator whose conclusion
   unifies with the goal, or a rule whose conclusion unifies and searches
