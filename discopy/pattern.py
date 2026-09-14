@@ -49,6 +49,7 @@ Summary
 
         parse
         read
+        cell
         declarations
 
 Reading a signature
@@ -719,6 +720,36 @@ class Declaration[**P, T]:
         """ The object type of the category, called to build the unit. """
         return self.scope["C0"]
 
+    def canonical(self) -> tuple:
+        """
+        The canonical arguments of the sequent, so that a declaration reads
+        as a schema: each variable an object named after it, each premise
+        a :func:`cell` named after its parameter — a box between the
+        boundaries a hom instantiates to, an object for a sort — and a
+        pattern instantiated on them.
+
+        >>> from discopy.abc import MonoidalCategory
+        >>> from discopy.monoidal import Diagram
+        >>> tensor = MonoidalCategory.tensor.bind(Diagram)
+        >>> for box in Declaration.canonical(tensor):
+        ...     print(f"{box}: {box.dom} -> {box.cod}")
+        self: A -> B
+        other: C -> D
+        """
+        subst = {
+            name: cell(sort.resolve(self.scope), name)
+            for name, sort in self.sequent.variables.items()}
+        args = []
+        for name, premise in self.sequent.premises.items():
+            if isinstance(premise, Hom):
+                dom, cod = premise.instantiate(subst, self.unit)
+                args.append(cell(premise.resolve(self.scope), name, dom, cod))
+            elif isinstance(premise, Sort):
+                args.append(cell(premise.resolve(self.scope), name))
+            else:
+                args.append(premise.instantiate(subst, self.unit))
+        return tuple(args)
+
     def generate(self, draw: Callable, hom: Callable, subst=None,
                  residuals: Residuals = (), types=None) -> tuple:
         """
@@ -782,6 +813,32 @@ class Declaration[**P, T]:
             bound(*pattern.variables)
             assume(pattern.instantiate(subst, self.unit) == value)
         return subst, tuple(args)
+
+
+def cell(factory: type, name: str, dom=None, cod=None):
+    """
+    A cell of a class named after a parameter or a variable: a box of the
+    class when it has a ``box_factory``, between ``dom`` and ``cod`` or
+    objects named ``x`` and ``y``; else its generator, wrapped into the
+    class when it is not one, e.g. a type of one wire; else a term of the
+    class of that name.
+
+    >>> from discopy.monoidal import Box, Colour, Diagram, Ty
+    >>> assert cell(Diagram, 'f') == Box('f', Ty('x'), Ty('y'))
+    >>> assert cell(Ty, 'A') == Ty('A')
+    >>> red, blue = Colour('red'), Colour('blue')
+    >>> assert cell(Ty, 'A', red, blue).dom == red
+    """
+    if hasattr(factory, "box_factory"):
+        dom = factory.ob("x") if dom is None else dom
+        cod = factory.ob("y") if cod is None else cod
+        return factory.box_factory(name, dom, cod)
+    if getattr(factory, "generator_factory", None) is not None:
+        boundaries = {} if dom is None else dict(dom=dom, cod=cod)
+        generator = factory.generator_factory(name, **boundaries)
+        return generator if isinstance(generator, factory)\
+            else factory(generator)
+    return factory(name)
 
 
 def declarations[D: Declaration](cls: type, kind: type[D],

@@ -1082,7 +1082,7 @@ class Functor(Category, Strategy["Functor"]):
         return AbstractEquation(f.then(g).cod, g.cod)
 
 
-Arrow.generator_factory = Box
+Arrow.generator_factory = Arrow.box_factory = Box
 
 
 @factory

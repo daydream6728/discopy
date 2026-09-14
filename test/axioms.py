@@ -8,13 +8,14 @@ from hypothesis import find
 from hypothesis.errors import NoSuchExample
 from pytest import raises
 
-from discopy import cat, feedback, monoidal, rigid
+from discopy import braided, cat, feedback, monoidal, rigid
 from discopy.abc import MonoidalCategory
 from discopy.axioms import (
     Axiom, AxiomFailure, Equation, Relabelling, assert_axioms, axiom)
 from discopy.cat import Arrow, Box, Functor, Ob
 from discopy.monoidal import Diagram
 from discopy.pattern import C1
+from discopy.utils import AxiomError
 
 
 def test_axioms():
@@ -74,8 +75,8 @@ def test_modulo():
 def test_weaken():
     law = Arrow.unitality.weaken(max_leaves=1).bind(Arrow)
     assert law.modulo(lambda term: term).params == law.params
-    args = find(law.strategy(), lambda _: True)
-    assert len(args[0].inside) <= 1 and law(*args)
+    equation = find(law.strategy(), lambda _: True)
+    assert equation and all(len(term.inside) <= 1 for term in equation.terms)
 
 
 def test_self_annotation():
@@ -85,8 +86,8 @@ def test_self_annotation():
         return Equation(cls.id(f.dom) >> f, f)
 
     law = absorbing.bind(Arrow)
-    args = find(law.strategy(), lambda _: True)
-    assert isinstance(args[0], Arrow) and law(*args)
+    equation = find(law.strategy(), lambda _: True)
+    assert isinstance(equation.terms[1], Arrow) and equation
 
 
 def test_falsify():
@@ -95,11 +96,11 @@ def test_falsify():
         """ Every arrow is an identity, which a box refutes. """
         return Equation(f, cls.id(f.dom))
 
-    counterexample, = trivial.bind(Arrow).falsify()
-    assert isinstance(counterexample, Arrow) and counterexample.inside
-    assert Arrow.unitality.failing("Never holds.").falsify()
-    with raises(NoSuchExample):
-        Arrow.associativity.falsify()
+    equation = trivial.bind(Arrow).falsify()
+    assert not equation and equation.terms[0].inside
+    for law in (Arrow.associativity, Arrow.unitality.failing("Declared.")):
+        with raises(NoSuchExample):
+            law.falsify()
 
 
 def test_axioms_of_category():
@@ -144,25 +145,22 @@ def test_functor_law():
             functor(cls.dom.id(x)), functor.cod.id(functor(x)))
 
     law = preserves_identity.bind(Functor)
-    functor, obj = find(law.strategy(), lambda _: True)
-    assert isinstance(functor, Functor) and isinstance(obj, Ob)
-    assert law(functor, obj)
+    equation = find(law.strategy(), lambda _: True)
+    assert equation and all(isinstance(t, Arrow) for t in equation.terms)
 
 
 def test_monoid_law():
     law = monoidal.Ty.unitality.weaken(max_length=1)
-    args = find(law.strategy(), lambda _: True)
-    assert len(args[0]) <= 1 and law(*args)
+    equation = find(law.strategy(), lambda _: True)
+    assert equation and all(len(term) <= 1 for term in equation.terms)
 
 
 def test_axiom():
     assert MonoidalCategory.bifunctoriality.parameters[0].name == "f"
     assert str(MonoidalCategory.bifunctoriality.sequent).startswith(
         "A: C0, B: C0, C: C0, D: C0, E: C0, F: C0 | f: C1[A, B]")
-    args = find(Diagram.bifunctoriality.strategy(), lambda _: True)
-    f, g, h, k = args
-    assert f.cod == h.dom and g.cod == k.dom
-    assert Diagram.bifunctoriality(*args)
+    equation = find(Diagram.bifunctoriality.strategy(), lambda _: True)
+    assert equation and len(equation.terms) == 2
     assert MonoidalCategory.tensor.sequent.conclusion is not None
     assert Axiom.concludes is False
     with raises(TypeError):
@@ -173,8 +171,8 @@ def test_axiom():
 
 def test_weaken_params():
     law = MonoidalCategory.bifunctoriality.weaken(max_depth=0).bind(Diagram)
-    args = find(law.strategy(), lambda _: True)
-    assert all(len(term.boxes) <= 1 for term in args)
+    equation = find(law.strategy(), lambda _: True)
+    assert equation and all(len(term.boxes) <= 4 for term in equation.terms)
     assert law.weaken(max_depth=1).params == {"max_depth": 1}
     assert law.modulo(lambda term: term).params == law.params
 
@@ -182,3 +180,24 @@ def test_weaken_params():
 def test_equation_of_axiom():
     x, y = monoidal.Ty('x'), monoidal.Ty('y')
     assert isinstance(Diagram.unitality(monoidal.Box("f", x, y)), Equation)
+
+
+def test_canonical():
+    equation = Diagram.bifunctoriality.canonical()
+    assert equation and str(equation.terms[0])\
+        == "f @ C >> B @ g >> h @ D >> E @ k"
+    assert str(Arrow.associativity.canonical())\
+        == "Equation(f >> g >> h, f >> g >> h)"
+    assert str(Diagram.tensor_unitality.canonical())\
+        == "Equation(Id(x @ y), Id(x @ y))"
+    assert Arrow.unitality.failing("Declared.").canonical()
+    assert not braided.Diagram.braid_naturality.canonical()
+    inapplicable = Arrow.unitality.inapplicable("No identities.")
+    assert inapplicable.canonical() is NotImplemented
+    with raises(TypeError, match="nothing to draw"):
+        inapplicable.draw()
+    assert str(rigid.Diagram.snake_equations.canonical().terms[1]) == "Id(x)"
+    cups = rigid.Diagram.generators["cups"].canonical()
+    assert cups == rigid.Cup(rigid.Ty('X'), rigid.Ty('X').r)
+    with raises(AxiomError):
+        feedback.Diagram.feedback_joining.canonical()

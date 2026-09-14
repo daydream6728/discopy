@@ -82,6 +82,18 @@ class Rule[**P, T](Declaration[P, T]):
         """ Unify the conclusion with a goal. """
         return self.sequent.conclusion.match(dom, cod)
 
+    def canonical(self) -> T:
+        """
+        The rule applied to its canonical arguments, so that it reads as a
+        schema: the term its implementation builds on a box per premise.
+
+        >>> from discopy.abc import MonoidalCategory
+        >>> from discopy.monoidal import Diagram
+        >>> print(MonoidalCategory.tensor.bind(Diagram).canonical())
+        self @ C >> B @ other
+        """
+        return getattr(self.category, self.name)(*super().canonical())
+
 
 class Generator(Rule):
     """

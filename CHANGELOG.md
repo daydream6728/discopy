@@ -37,7 +37,12 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `LeftCurrying`, `FeedbackJoining`...) are gone with them.
   `Axiom.weaken` now takes the parameters of the strategy of each hom
   premise, e.g. `weaken(boundary_connected=True)`, and recorded
-  counterexamples pass their arguments one per premise. The wider search
+  counterexamples pass their arguments one per premise. `Axiom.strategy`
+  generates the equations of the law rather than its arguments, so the
+  matrix draws an equation and asserts it; `Axiom.canonical` is the law
+  as a schema, its equation on a box per premise between objects named
+  after the variables, and `Axiom.draw` draws it — a rule's `canonical`
+  is the term it builds. The wider search
   found one escape, declared in the matrix: decoding a compact cap and
   cup in the `(x, x.r)` orientation around a box through a hypergraph
   permutes wires of the wrong type.

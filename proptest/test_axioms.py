@@ -34,7 +34,6 @@ def axiom_parameters():
 @given(data=st.data())
 def test_axiom(axiom, data):
     """ Check an axiom of a category against generated arguments. """
-    args = data.draw(axiom.strategy(), label=axiom.name)
-    verdict = axiom(*args)
-    note(verdict)
-    assert verdict
+    equation = data.draw(axiom.strategy(), label=axiom.name)
+    note(equation)
+    assert equation
