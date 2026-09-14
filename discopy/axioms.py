@@ -253,6 +253,8 @@ pull request and, through the ``shared`` profile, on your machine.
 says how often each shape was drawn, the input of a strategy audit.
 """
 
+from __future__ import annotations
+
 import pickle
 import sys
 from abc import ABC, abstractmethod

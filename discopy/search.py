@@ -68,20 +68,22 @@ Summary
 Reading a signature
 -------------------
 
-Annotations are deferred (:pep:`649`), so :func:`parse` gets them from
-:mod:`annotationlib` as the strings they are written as and evaluates
-each in the environment of the sequent, see :func:`read`: the type
-parameters are :class:`Var` s, ``C0``, ``C1`` and ``Self`` are
-:class:`Sort` s and ``Atom`` marks a sort atomic. The patterns carry the
-operators, so that Python reads the expression: ``C1[A, B]`` subscripts a
-sort into a :class:`Hom`, ``X @ X.r`` is the :class:`Tensor` of a
-variable with its :class:`Attr`, ``M.delay()`` a :class:`Call`, ``X <<
-Y`` an :class:`Op` and ``1`` the :class:`Unit`. The bound of a type
-parameter is its sort: ``C0`` for any object, ``Atom[C0]`` for one with
-a single generator, ``Self.dom.ob`` for the objects a functor maps. The
-head of a sort or a hom is resolved only once the rule is bound to a
-category, in the :attr:`Rule.scope` where ``Self`` is the category and
-``C0``, ``C1`` its objects and arrows.
+A module stating a rule defers its annotations with ``from __future__
+import annotations``, so that :func:`parse` finds each as the expression
+it is written as and evaluates it in the environment of the sequent, see
+:func:`read`: the type parameters are :class:`Var` s, ``C0``, ``C1`` and
+``Self`` are :class:`Sort` s and ``Atom`` marks a sort atomic. The
+patterns carry the operators, so that Python reads the expression:
+``C1[A, B]`` subscripts a sort into a :class:`Hom`, ``X @ X.r`` is the
+:class:`Tensor` of a variable with its :class:`Attr`, ``M.delay()`` a
+:class:`Call`, ``X << Y`` an :class:`Op` and ``1`` the :class:`Unit`.
+The bound of a type parameter is its sort, evaluated as Python does:
+``C0`` for any object — the type parameter of the class, or the
+:data:`C0` of this module in a class that has none — ``Atom[C0]`` for
+one with a single generator. The head of a sort or a hom is resolved
+only once the rule is bound to a category, in the :attr:`Rule.scope`
+where ``Self`` is the category and ``C0``, ``C1`` its objects and
+arrows.
 
 Matching
 --------
@@ -106,16 +108,18 @@ declaring its rules and generators: a level of :mod:`discopy.abc` adds
 the structure it axiomatises, a concrete diagram class may add more.
 """
 
-import annotationlib
+from __future__ import annotations
+
+import __future__
 import inspect
 import operator
 from abc import ABC, abstractmethod
-from annotationlib import Format
 from collections.abc import Callable, Iterator
 from dataclasses import KW_ONLY, dataclass, field, replace
 from functools import reduce, wraps
 from types import MethodType
-from typing import TYPE_CHECKING, ClassVar, Self, TypeVar
+from typing import TYPE_CHECKING, ClassVar, TypeVar
+from typing import Self as _Self
 
 from discopy.utils import AxiomError, factory_name
 
@@ -123,27 +127,28 @@ if TYPE_CHECKING:
     from hypothesis import strategies as st
 
 
-C0 = TypeVar("C0")
-C1 = TypeVar("C1")
-"""
-The object and arrow types of the category a rule is bound to, for a
-rule stated in a module rather than on a generic class of
-:mod:`discopy.abc`, where the class's own type parameters play the role.
-"""
-
-
 class Atom:
     """
     The sort of atomic objects: ``Atom[C0]`` in a signature stands for the
-    objects of ``C0`` with exactly one generator.
+    objects of ``C0`` with exactly one generator, whether ``C0`` is a sort
+    or the type parameter of the class stating the rule.
 
     >>> Atom[Sort("C0")]
     Sort(head='C0', atomic=True)
+    >>> Atom[TypeVar("C1")]
+    Sort(head='C1', atomic=True)
     """
-    def __class_getitem__(cls, sort):
-        if not isinstance(sort, Sort):
-            raise TypeError(f"Expected a sort, got {sort!r}.")
-        return replace(sort, atomic=True)
+    def __class_getitem__(cls, item):
+        return replace(sort(item), atomic=True)
+
+
+def sort(value) -> Sort:
+    """ A sort as written in a bound: itself, or a type parameter by name. """
+    if isinstance(value, Sort):
+        return value
+    if isinstance(value, TypeVar):
+        return Sort(value.__name__)
+    raise TypeError(f"Expected a sort, got {value!r}.")
 
 
 type Substitution = dict[str, object]
@@ -170,7 +175,7 @@ class Sort:
     head: str = "C0"
     atomic: bool = False
 
-    def __getattr__(self, name: str) -> Self:
+    def __getattr__(self, name: str) -> Sort:
         if name.startswith("_"):
             raise AttributeError(name)
         return Sort(f"{self.head}.{name}", self.atomic)
@@ -274,6 +279,14 @@ class Pattern(ABC):
         if name.startswith("_"):
             raise AttributeError(name)
         return Attr(self, name)
+
+
+C0, C1, Self = Sort("C0"), Sort("C1"), Sort("Self")
+"""
+The objects and arrows of the category a rule is bound to, and the
+category itself, in the environment its annotations are read in — and
+in a module stating a rule on a class with no type parameters of its own.
+"""
 
 
 def pattern(value) -> Pattern:
@@ -511,11 +524,13 @@ class Sequent:
         return left + right
 
 
-def read(annotation: str, sorts: dict[str, Sort]) -> Pattern | Sort | Hom:
+def read(annotation: str, sorts: dict[str, Sort],
+         namespace: dict = None) -> Pattern | Sort | Hom:
     """
     Read a pattern, a sort or a hom from an annotation, evaluated in the
     environment of the sequent: the variables in scope by name, ``C0``,
-    ``C1`` and ``Self`` as sorts, ``Atom`` marking a sort atomic.
+    ``C1`` and ``Self`` as sorts, ``Atom`` marking a sort atomic, over
+    the namespace of the function stating it.
 
     >>> sorts = {"X": Sort("C0", atomic=True)}
     >>> print(read("C1[X @ X.r, 1]", sorts))
@@ -528,10 +543,10 @@ def read(annotation: str, sorts: dict[str, Sort]) -> Pattern | Sort | Hom:
     TypeError: Cannot read a pattern from X ** 2.
     """
     environment = {
-        "Atom": Atom, "C0": Sort("C0"), "C1": Sort("C1"), "Self": Sort("Self"),
+        "Atom": Atom, "C0": C0, "C1": C1, "Self": Self,
         **{name: Var(name, sort) for name, sort in sorts.items()}}
     try:
-        value = eval(annotation, {"__builtins__": {}}, environment)
+        value = eval(annotation, dict(namespace or {}), environment)
     except Exception as error:
         raise TypeError(
             f"Cannot read a pattern from {annotation}.") from error
@@ -547,7 +562,8 @@ def parse(function: Callable, conclusion: bool = True) -> Sequent:
     ``self``, and is skipped.
 
     Parameters:
-        function : The function, with deferred annotations.
+        function : The function, stated under ``from __future__ import
+            annotations``: :class:`Rule` refuses one compiled without it.
         conclusion : Whether to read the return annotation.
 
     >>> def then[A: C0, B: C0, C: C0](
@@ -559,17 +575,22 @@ def parse(function: Callable, conclusion: bool = True) -> Sequent:
     A: C0, B: C0, C: C0 | self: C1[A, B], other: C1[B, C]
     """
     function = inspect.unwrap(function)
-    annotations = annotationlib.get_annotations(
-        function, format=Format.STRING)
+    deferred = __future__.annotations.compiler_flag
+    if not function.__code__.co_flags & deferred:
+        raise TypeError(
+            f"{function.__module__} states {function.__name__} without "
+            "`from __future__ import annotations`.")
     sorts = {
-        parameter.__name__: Sort() if parameter.evaluate_bound is None
-        else read(annotationlib.call_evaluate_function(
-            parameter.evaluate_bound, Format.STRING), {})
+        parameter.__name__: Sort() if parameter.__bound__ is None
+        else sort(parameter.__bound__)
         for parameter in function.__type_params__}
-    for name, sort in sorts.items():
-        if not isinstance(sort, Sort):
-            raise TypeError(f"Expected a sort for {name}, got {sort}.")
-    signature = inspect.signature(function, annotation_format=Format.STRING)
+    signature = inspect.signature(function)
+    annotations = {
+        name: parameter.annotation
+        for name, parameter in signature.parameters.items()
+        if parameter.annotation is not inspect.Parameter.empty}
+    if signature.return_annotation is not inspect.Signature.empty:
+        annotations["return"] = signature.return_annotation
     parameters = list(signature.parameters.values())
     if parameters and parameters[0].name not in annotations:
         parameters = parameters[1:]
@@ -582,8 +603,10 @@ def parse(function: Callable, conclusion: bool = True) -> Sequent:
         if name not in annotations:
             raise TypeError(
                 f"{function.__name__} states no pattern for {name}.")
-    premises = {name: read(annotations[name], sorts) for name in premises}
-    returns = read(annotations["return"], sorts)\
+    namespace = function.__globals__
+    premises = {
+        name: read(annotations[name], sorts, namespace) for name in premises}
+    returns = read(annotations["return"], sorts, namespace)\
         if conclusion and "return" in annotations else None
     if conclusion and not isinstance(returns, Hom):
         raise TypeError(f"{function.__name__} concludes no hom type.")
@@ -654,7 +677,7 @@ class Rule[**P, T]:
     def __hash__(self):
         return hash((self.function, self.category, self.name))
 
-    def bind(self, category: type[T]) -> Self:
+    def bind(self, category: type[T]) -> _Self:
         """ Bind the rule to a concrete category. """
         return replace(self, category=category)
 
@@ -825,10 +848,10 @@ class Axiom[**P, T](Rule[P, T]):
 
     __hash__ = Rule.__hash__
 
-    def __get__(self, instance, owner: type) -> Self:
+    def __get__(self, instance, owner: type) -> _Self:
         return self.bind(owner)
 
-    def modulo(self, up_to) -> Self:
+    def modulo(self, up_to) -> _Self:
         """
         The same law with its equation compared up to a function, so that a
         category weakens an inherited axiom in one statement, e.g. a diagram
@@ -841,7 +864,7 @@ class Axiom[**P, T](Rule[P, T]):
             return self.function(*args, **kwargs).modulo(up_to)
         return replace(self, function=equation)
 
-    def failing(self, reason: str) -> Self:
+    def failing(self, reason: str) -> _Self:
         """
         The same law declared broken: calling it raises an
         :class:`AxiomFailure` with the reason as message and the equation
@@ -854,7 +877,7 @@ class Axiom[**P, T](Rule[P, T]):
         equation.__doc__ = reason
         return replace(self, function=equation, broken=True)
 
-    def inapplicable(self, reason: str) -> Self:
+    def inapplicable(self, reason: str) -> _Self:
         """
         The same law declared not to apply to the category: it takes no
         argument and returns :obj:`NotImplemented`, with the reason as its
@@ -867,7 +890,7 @@ class Axiom[**P, T](Rule[P, T]):
         return replace(
             self, function=law, sequent=Sequent(), params={}, broken=False)
 
-    def weaken(self, **params) -> Self:
+    def weaken(self, **params) -> _Self:
         """
         The same law quantified over the subspace the given parameters cut
         out of the strategy of each hom premise, e.g.
@@ -885,9 +908,8 @@ class Axiom[**P, T](Rule[P, T]):
         The parameters whose arguments the property matrix generates: all
         but the first, which is the category.
         """
-        signature = inspect.signature(
-            self.function, annotation_format=Format.STRING)
-        return tuple(signature.parameters.values())[1:]
+        return tuple(
+            inspect.signature(self.function).parameters.values())[1:]
 
     def strategy(self, **params) -> st.SearchStrategy:
         """

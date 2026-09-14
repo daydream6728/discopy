@@ -1,5 +1,9 @@
 """ The sequent patterns, their matching and the search by rules. """
 
+from __future__ import annotations
+
+from typing import TypeVar
+
 from hypothesis import find
 from hypothesis import strategies as st
 from pytest import raises
@@ -36,6 +40,7 @@ def test_read():
     assert (A << M) == Op("<<", A, M) and (1 >> A) == Op(">>", Unit(), A)
     assert M.delay(2) == Call(M, "delay", (2, )) and M.r == Attr(M, "r")
     assert Atom[Sort("C0")] == Sort("C0", atomic=True)
+    assert Atom[TypeVar("C1")] == Sort("C1", atomic=True)
     with raises(TypeError):
         Atom[A]
     with raises(AttributeError):
@@ -70,6 +75,10 @@ def test_parse():
         ...
     with raises(TypeError):
         parse(unsorted, conclusion=False)
+    namespace, source = {}, "def eager(cls, f: int): ..."
+    exec(compile(source, "<eager>", "exec", dont_inherit=True), namespace)
+    with raises(TypeError, match="__future__"):
+        parse(namespace["eager"], conclusion=False)
 
 
 def test_match():
