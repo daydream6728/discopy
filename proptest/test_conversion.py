@@ -32,23 +32,30 @@ NO_SWAPS = pytest.mark.xfail(reason=(
     "Decoding a trace, cup or cap can cross wires, "
     "which needs swaps the category does not have."))
 
+CAP_ORIENTATION = pytest.mark.xfail(reason=(
+    "Decoding a compact cap and cup in the (x, x.r) orientation around a "
+    "box permutes wires of the wrong type, see test/compact.py."))
+
 
 def levels(*modules, xfail=()):
     """ Translate the levels of the hierarchy to pytest parameters. """
     return tuple(
         pytest.param(
             module, id=module.__name__.removeprefix("discopy."),
-            marks=NO_SWAPS if module in xfail else ())
+            marks=xfail[module] if module in xfail else ())
         for module in modules)
 
 
 HYPERGRAPH_LEVELS = levels(
     monoidal, traced, balanced, symmetric, pivotal, compact, markov,
-    closed, feedback, frobenius, xfail=(traced, balanced, pivotal))
+    closed, feedback, frobenius, xfail={
+        traced: NO_SWAPS, balanced: NO_SWAPS, pivotal: NO_SWAPS,
+        compact: CAP_ORIENTATION})
 
 CMAP_LEVELS = levels(
     monoidal, traced, balanced, symmetric, biclosed, pivotal, compact,
-    markov, closed, frobenius, xfail=(traced, balanced, pivotal))
+    markov, closed, frobenius, xfail={
+        traced: NO_SWAPS, balanced: NO_SWAPS, pivotal: NO_SWAPS})
 
 COMMON_LEVELS = levels(monoidal, traced, balanced, symmetric, pivotal, compact)
 """

@@ -1,6 +1,8 @@
+import pytest
 from pytest import raises
 
 from discopy.compact import *
+from discopy.utils import AxiomError
 
 
 def test_Cup_Cap_dagger():
@@ -76,3 +78,15 @@ def test_axioms():
     from discopy import axioms
 
     axioms.assert_axioms(Diagram, Functor)
+
+
+@pytest.mark.xfail(strict=True, raises=AxiomError, reason=(
+    "Decoding a cap and a cup in the (x, x.r) orientation around a box "
+    "permutes wires of the wrong type, a counterexample the rule-based "
+    "search found."))
+def test_hypergraph_cap_orientation():
+    a = Ty('a')
+    f = Box('f', a.r @ a, a.r @ a.r)
+    diagram = Cap(a, a.r) @ a >> a @ f >> Cup(a, a.r) @ a.r
+    assert diagram.to_hypergraph().to_diagram().to_hypergraph()\
+        == diagram.to_hypergraph()

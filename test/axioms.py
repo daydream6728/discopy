@@ -5,14 +5,12 @@ from __future__ import annotations
 from typing import Self
 
 from hypothesis import find
-from hypothesis import strategies as st
 from hypothesis.errors import NoSuchExample
 from pytest import raises
 
 from discopy import cat, feedback, monoidal, rigid
 from discopy.axioms import (
-    Axiom, AxiomFailure, Equation, Relabelling, Strategy, assert_axioms,
-    axiom)
+    C1, Axiom, AxiomFailure, Equation, Relabelling, assert_axioms, axiom)
 from discopy.cat import Arrow, Box, Functor, Ob
 
 

@@ -30,7 +30,10 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `LeftCurrying`, `FeedbackJoining`...) are gone with them.
   `Axiom.weaken` now takes the parameters of the strategy of each hom
   premise, e.g. `weaken(boundary_connected=True)`, and recorded
-  counterexamples pass their arguments one per premise.
+  counterexamples pass their arguments one per premise. The wider search
+  found one escape, declared in the matrix: decoding a compact cap and
+  cup in the `(x, x.r)` orientation around a box through a hypergraph
+  permutes wires of the wrong type.
 
 - The property matrix's search strategy is now recursive: `cat.Arrow` and
   `monoidal.Diagram` build composite paths/diagrams with
