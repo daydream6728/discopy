@@ -176,21 +176,6 @@ class Box(monoidal.Box, Diagram):
         cod (monoidal.Ty) : The codomain of the box, i.e. its output.
     """
 
-    @classmethod
-    def strategy(cls, **params):
-        """Add braids to the inherited box distribution."""
-        from hypothesis import strategies as st
-
-        base = super().strategy(**params)
-        factory = cls.ar.braid_factory
-        return cls.extend_strategy(
-            base, factory,
-            lambda factory: st.tuples(
-                cls.atomic_strategy(), cls.atomic_strategy(),
-                st.booleans()).map(
-                    lambda args: factory(*args[:2]).dagger() if args[2]
-                    else factory(*args[:2])), **params)
-
 
 class Braid(BinaryBoxConstructor, Box):
     """

@@ -91,11 +91,6 @@ def test_strategy():
     from discopy import axioms
 
     axioms.assert_strategy_finds(Diagram, Twist)
-    base = Box.free_strategy()
-    assert Box.extend_strategy(
-        base, Diagram.twist_factory,
-        lambda factory: Box.atomic_strategy().map(factory),
-        dom=Ty('x')) is base
 
 
 def test_axioms():

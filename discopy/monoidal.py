@@ -64,9 +64,8 @@ from warnings import warn
 
 from discopy import abc, cat, drawing, hypergraph, cmap, messages
 from discopy.abc import ColouredMonoid, MonoidalCategory
-from discopy.axioms import (
-    Square, BoundaryConnected, C1, GENERATORS, HorizontalPair, Strategy,
-    axiom)
+from discopy.axioms import GENERATORS, Strategy
+from discopy.search import axiom, search
 from discopy.drawing import Drawing
 from discopy.config import (
     BOX_DRAWING_ATTRIBUTES, WIRE_DRAWING_ATTRIBUTES,
@@ -874,74 +873,6 @@ class Layer(cat.Box, ColouredMonoid):
     def generator(self):
         return self.boxes_or_types[0] if self.is_generator else None
 
-    @classmethod
-    def strategy(
-            cls, *, factory, types=None, dom=None, cod=None,
-            label=None, exclude=(), max_boxes=2):
-        """Generate a layer of boxes matching optional exact boundaries."""
-        from hypothesis import strategies as st
-
-        types = factory.ob.strategy() if types is None else types
-        boxes = factory.box_factory
-        exclude = frozenset(exclude)
-
-        def fresh(strategy):
-            return strategy.filter(lambda box: box not in exclude)
-
-        if dom is None and cod is None:
-            return fresh(boxes.strategy(
-                types=types, label=label)).map(cls)
-
-        def free_layer(placement):
-            plumbing, boundaries = placement
-            return st.tuples(*(
-                fresh(boxes.free_strategy(
-                    types=types, dom=box_dom, cod=box_cod, label=label))
-                for box_dom, box_cod in boundaries)).map(
-                    lambda drawn: cls(*(
-                        part
-                        for typ, box in zip(plumbing, drawn)
-                        for part in (typ, box)), plumbing[-1]))
-
-        def decompositions(source, target, n_boxes):
-            """ Alternate shared types with the boundaries of each box. """
-            if not n_boxes:
-                if source == target:
-                    yield (source, ), ()
-                return
-            for i in range(min(len(source), len(target)) + 1):
-                if source[:i] != target[:i]:
-                    break
-                for j in range(len(source) - i + 1):
-                    for k in range(len(target) - i + 1):
-                        if not j and not k:
-                            continue
-                        for rest, pairs in decompositions(
-                                source[i + j:], target[i + k:], n_boxes - 1):
-                            yield (source[:i], ) + rest, (
-                                (source[i:i + j], target[i:i + k]), ) + pairs
-
-        if dom is None or cod is None:
-            boundary, is_dom = (dom, True) if dom is not None else (cod, False)
-            placements = [
-                ((boundary[:i], boundary[j:]),
-                 ((boundary[i:j], None) if is_dom
-                  else (None, boundary[i:j]), ))
-                for i in range(len(boundary) + 1)
-                for j in range(i, len(boundary) + 1)]
-        else:
-            placements = [
-                placement
-                for n_boxes in range(1, max_boxes + 1)
-                for placement in decompositions(dom, cod, n_boxes)]
-        if dom:
-            placements = [
-                placement for placement in placements
-                if all(box_dom for box_dom, _ in placement[1])]
-        guided = st.sampled_from(placements).flatmap(free_layer)\
-            if placements else st.nothing()
-        return guided
-
     def dagger(self) -> Layer:
         return type(self)(*(
             x if isinstance(x, Ty) else x.dagger() for x in self),
@@ -1061,57 +992,29 @@ class Diagram(
         super().__init__(inside, dom, cod, _scan=_scan)
 
     @classmethod
-    def strategy(
-            cls, *, types=None,
-            min_leaves=None, max_leaves=3,
-            boundary_connected=False, dom=None, cod=None):
-        """Generate diagrams by composing boundary-guided layers."""
-        from hypothesis import strategies as st
+    def strategy(cls, *, dom=None, cod=None, types=None, max_depth=3,
+                 boundary_connected=False):
+        """
+        Generate diagrams by the :attr:`rules` and :attr:`generators` of
+        the category, see :func:`discopy.search.search`: a subclass with
+        more structure declares it there and inherits the search.
 
-        types = cls.ob.strategy(min_length=1) if types is None else types
-
-        @st.composite
-        def diagrams(draw, dom=dom, cod=cod):
-            minimum = 0 if min_leaves is None else min_leaves
-            if dom is not None and cod is not None and dom != cod:
-                minimum = max(1, minimum)
-            n_layers = draw(st.integers(
-                min_value=minimum, max_value=max_leaves))
-            if not n_layers:
-                source = dom if dom is not None else (
-                    cod if cod is not None else draw(types))
-                return cls((), source, source, _scan=False)
-            layers, boxes, source = [], set(), dom
-            for i in range(n_layers):
-                layers_at_boundary = cls.layer_factory.strategy(
-                    factory=cls, types=types, dom=source,
-                    cod=cod if i == n_layers - 1 else None,
-                    label=i, exclude=boxes)
-                layer = draw(layers_at_boundary)
-                layers.append(layer)
-                boxes.update(layer.boxes)
-                source = layer.cod
-            return cls(tuple(layers), layers[0].dom, layers[-1].cod,
-                       _scan=False)
-
-        connected = diagrams()
-        if boundary_connected:
-            return connected
-
-        @st.composite
-        def with_closed_components(draw):
-            from hypothesis import event
-
-            result = draw(connected)
-            empty = cls.ob()
-            n_components = draw(st.integers(min_value=0, max_value=2))
-            event(f"closed components: {n_components}")
-            for _ in range(n_components):
-                component = draw(diagrams(dom=empty, cod=empty))
-                result @= component
-            return result
-
-        return with_closed_components()
+        Parameters:
+            dom : The domain of the diagrams, if any.
+            cod : The codomain of the diagrams, if any.
+            types : A strategy for the types, that of :attr:`ob` by default.
+            max_depth : The number of nested rules a diagram may apply.
+            boundary_connected : Whether to keep only the diagrams whose
+                boundary reaches every box, the subspace
+                :meth:`normal_form` is defined on.
+        """
+        diagrams = search(
+            cls, cls.box_factory.strategy,
+            dom=dom, cod=cod, types=types, max_depth=max_depth)
+        if not boundary_connected:
+            return diagrams
+        return diagrams.filter(
+            lambda diagram: diagram.to_map().is_boundary_connected)
 
     @property
     def size(self):
@@ -1563,10 +1466,10 @@ class Diagram(
         return super().from_tree(tree)
 
     bifunctoriality = MonoidalCategory.bifunctoriality.modulo(
-        normal_form).weaken(square=BoundaryConnected[Square[C1]])
+        normal_form).weaken(boundary_connected=True)
 
     dagger_monoidality = MonoidalCategory.dagger_monoidality.modulo(
-        normal_form).weaken(pair=BoundaryConnected[HorizontalPair[C1]])
+        normal_form).weaken(boundary_connected=True)
 
 
 class Box(cat.Box, Diagram):
@@ -1639,40 +1542,18 @@ class Box(cat.Box, Diagram):
             cls.ar.box_factory = cls
 
     @classmethod
-    def strategy(cls, **params):
-        """Generate free boxes; subclasses add structural distributions."""
-        return cls.free_strategy(**params)
-
-    @classmethod
-    def free_strategy(
-            cls, *, types=None, dom=None, cod=None,
-            label=None):
-        """Generate a fresh free box with optional exact boundaries."""
+    def strategy(cls, *, types=None, dom=None, cod=None):
+        """
+        Generate a fresh free box, the free generator of the search, with
+        optional exact boundaries.
+        """
         from hypothesis import strategies as st
 
         types = cls.ob.strategy() if types is None else types
         doms = types if dom is None else st.just(dom)
         cods = types if cod is None else st.just(cod)
-        names = st.uuids().map(
-            lambda name: f"{label}:{name}"
-            if label is not None else str(name))
-        return st.tuples(names, doms, cods).map(
-            lambda args: cls(*args))
-
-    @classmethod
-    def atomic_strategy(cls):
-        """Generate an atomic object of the box's object type."""
-        return cls.ob.strategy().filter(lambda obj: len(obj) == 1)
-
-    @classmethod
-    def extend_strategy(cls, base, factory, build, **params):
-        """Add a structural factory when it belongs to this box class."""
-        from hypothesis import strategies as st
-
-        return st.one_of(base, build(factory)) if not any(
-            params.get(boundary) is not None
-            for boundary in ("dom", "cod")) and (
-            isinstance(factory, type) and issubclass(factory, cls)) else base
+        names = st.uuids().map(str)
+        return st.tuples(names, doms, cods).map(lambda args: cls(*args))
 
     def __init__(self, name: str, dom: Ty, cod: Ty, **params):
         dom = dom if isinstance(dom, self.ob) else self.ob(dom)
@@ -1961,9 +1842,8 @@ class Functor(cat.Functor):
         return super().__call__(other)
 
     @axiom
-    def monoidal(cls, self: Self, pair: HorizontalPair[Self.dom.ar]):
+    def monoidal(cls, self: Self, f: Self.dom.ar, g: Self.dom.ar):
         """ A monoidal functor preserves the tensor. """
-        f, g = pair
         return self.cod.equation_factory(self(f @ g), self(f) @ self(g))
 
 

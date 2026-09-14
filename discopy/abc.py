@@ -12,8 +12,11 @@ the characteristic generator of its categorical structure as an
 Software dependencies between modules go top-to-bottom, left-to-right and
 forgetful functors between categories go the other way.
 
-Each class also declares its :func:`discopy.axioms.axiom` equations, which
-every free category inherits along with the structure they axiomatise:
+Each class declares its structure as :func:`discopy.search.rule` and
+:func:`discopy.search.generator` methods, whose signatures are the sequents
+the search for terms applies, and its :func:`discopy.search.axiom`
+equations, which every free category inherits along with the structure
+they axiomatise:
 :class:`Category` states the unitality and associativity of composition,
 the typing of its identities and composites, and the involution and
 contravariance of its dagger; a :class:`ColouredMonoid` inherits them as
@@ -53,18 +56,14 @@ Summary
     NamedGeneric
 """
 
-from __future__ import annotations
-
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import ClassVar
+from typing import ClassVar, Self
 
-from discopy.axioms import (
-    Atomic, Axiom, Equation, ComposablePair, ComposableTriple, FeedbackJoining,
-    FeedbackVanishing, HorizontalPair, LeftCurrying, NonEmpty,
-    RightCurrying, Square, TraceDinaturalityLeft, TraceDinaturalityRight,
-    TraceNaturalityLeft, TraceNaturalityRight, TraceSuperposing, axiom)
+from discopy.axioms import Equation
+from discopy.search import (
+    Atom, Axiom, Generator, Rule, axiom, declarations, generator, rule)
 from discopy.utils import NamedGeneric, classproperty  # noqa: F401
 
 
@@ -110,22 +109,29 @@ class Category[C0, C1: Category](ABC):
     @classproperty
     def axioms(cls) -> dict[str, Axiom]:
         """
-        The axioms inherited by ``cls``, by name, subclasses overriding bases.
-
-        Names are collected before they are filtered, so that assigning
-        anything that is not an axiom over an inherited one drops it
-        altogether, rather than restating it.
+        The axioms inherited by ``cls``, by name, subclasses overriding bases:
+        assigning anything that is not an axiom over an inherited one drops
+        it altogether, rather than restating it.
         """
-        visible = {
-            name: value
-            for base in reversed(cls.__mro__)
-            for name, value in base.__dict__.items()}
-        return {name: value.bind(cls) for name, value in visible.items()
-                if isinstance(value, Axiom)}
+        return declarations(cls, Axiom, shadowed=False)
+
+    @classproperty
+    def rules(cls) -> dict[str, Rule]:
+        """
+        The inference rules inherited by ``cls``, by name: a rule survives
+        the method implementing it, which the search calls by that name.
+        """
+        return declarations(cls, Rule)
+
+    @classproperty
+    def generators(cls) -> dict[str, Generator]:
+        """ The logical constants inherited by ``cls``, by name. """
+        return declarations(cls, Generator)
 
     @classmethod
+    @generator
     @abstractmethod
-    def id(cls, dom: C0) -> C1:
+    def id[A: C0](cls, dom: A) -> C1[A, A]:
         """
         Identity morphism on an object :code:`dom: C0`, to be instantiated.
 
@@ -133,10 +139,13 @@ class Category[C0, C1: Category](ABC):
             dom (C0) : The domain of an identity is also its codomain.
         """
 
+    @rule
     @abstractmethod
-    def then(self, *others: C1) -> C1:
+    def then[A: C0, B: C0, C: C0](
+            self: C1[A, B], other: C1[B, C]) -> C1[A, C]:
         """
-        Sequential composition of `n >= 1` morphisms, to be instantiated.
+        Sequential composition, to be instantiated: the rule composes two
+        morphisms, an implementation may take `n >= 1` of them.
 
         Parameters:
             other : The other morphism to compose sequentially.
@@ -152,7 +161,7 @@ class Category[C0, C1: Category](ABC):
         """
         return self.cod == other.dom
 
-    def is_parallel(self, other: Category) -> bool:
+    def is_parallel(self, other: Self) -> bool:
         """
         Whether two morphisms are parallel, i.e. they have the same
         domain and codomain.
@@ -170,10 +179,9 @@ class Category[C0, C1: Category](ABC):
             cls.id(f.dom).then(f), f, f.then(cls.id(f.cod)))
 
     @axiom
-    def associativity(
-            cls, triple: ComposableTriple[C1]) -> Equation[C1]:
+    def associativity[A: C0, B: C0, C: C0, D: C0](
+            cls, f: C1[A, B], g: C1[B, C], h: C1[C, D]) -> Equation[C1]:
         """ Associativity of composition. """
-        f, g, h = triple
         return cls.equation_factory(
             f.then(g).then(h), f.then(g.then(h)))
 
@@ -185,17 +193,15 @@ class Category[C0, C1: Category](ABC):
         return cls.ob.equation_factory(identity.dom, x, identity.cod)
 
     @axiom
-    def composition_dom_typing(
-            cls, pair: ComposablePair[C1]) -> Equation[C0]:
+    def composition_dom_typing[A: C0, B: C0, C: C0](
+            cls, f: C1[A, B], g: C1[B, C]) -> Equation[C0]:
         """ Domain typing of composition. """
-        f, g = pair
         return cls.ob.equation_factory(f.then(g).dom, f.dom)
 
     @axiom
-    def composition_cod_typing(
-            cls, pair: ComposablePair[C1]) -> Equation[C0]:
+    def composition_cod_typing[A: C0, B: C0, C: C0](
+            cls, f: C1[A, B], g: C1[B, C]) -> Equation[C0]:
         """ Codomain typing of composition. """
-        f, g = pair
         return cls.ob.equation_factory(f.then(g).cod, g.cod)
 
     @axiom
@@ -205,10 +211,9 @@ class Category[C0, C1: Category](ABC):
         return cls.equation_factory(f.dagger().dagger(), f)
 
     @axiom
-    def dagger_contravariance(
-            cls, pair: ComposablePair[C1]) -> Equation[C1]:
+    def dagger_contravariance[A: C0, B: C0, C: C0](
+            cls, f: C1[A, B], g: C1[B, C]) -> Equation[C1]:
         """ The dagger reverses composition. """
-        f, g = pair
         return cls.equation_factory(
             f.then(g).dagger(), g.dagger().then(f.dagger()))
 
@@ -284,7 +289,7 @@ class Nat(Monoid["Nat"]):
     """
     n: int = 0
 
-    def tensor(self, *others: Nat) -> Nat:
+    def tensor(self, *others: Self) -> Self:
         if any(not isinstance(other, Nat) for other in others):
             return NotImplemented  # This allows whiskering on the left.
         return type(self)(self.n + sum(other.n for other in others))
@@ -295,7 +300,7 @@ class Nat(Monoid["Nat"]):
     def __index__(self) -> int:
         return self.n
 
-    def __getitem__(self, key: int | slice) -> Nat:
+    def __getitem__(self, key: int | slice) -> Self:
         """
         Slicing a natural number reads it off as a sequence of ``1``'s.
 
@@ -318,11 +323,13 @@ class MonoidalCategory[C0: ColouredMonoid, C1: MonoidalCategory](
     This base class also implements syntactic sugar :code:`@` for whiskering.
     """
 
-    @classmethod
+    @rule
     @abstractmethod
-    def tensor(cls, *morphisms: C1) -> C1:
+    def tensor[A: C0, B: C0, C: C0, D: C0](
+            self: C1[A, B], other: C1[C, D]) -> C1[A @ C, B @ D]:
         """
-        Parallel composition of ``n >= 0`` morphisms, to be instantiated.
+        Parallel composition, to be instantiated: the rule tensors two
+        morphisms, an implementation may take ``n >= 0`` of them.
 
         Parameters:
             other : The other morphism to compose in parallel.
@@ -345,40 +352,36 @@ class MonoidalCategory[C0: ColouredMonoid, C1: MonoidalCategory](
         return self.whisker(other).tensor(self)
 
     @axiom
-    def bifunctoriality(
-            cls, square: Square[C1]) -> Equation[C1]:
+    def bifunctoriality[A: C0, B: C0, C: C0, D: C0, E: C0, F: C0](
+            cls, f: C1[A, B], g: C1[C, D], h: C1[B, E], k: C1[D, F]
+            ) -> Equation[C1]:
         """ Bifunctoriality of the tensor. """
-        f, g, h, k = square
         return cls.equation_factory(
             f @ g >> h @ k, (f >> h) @ (g >> k))
 
     @axiom
     def tensor_unitality(
-            cls, pair: HorizontalPair[C1]) -> Equation[C1]:
+            cls, x: C0, y: C0) -> Equation[C1]:
         """ Preservation of identities by tensor. """
-        x, y = (cell.dom for cell in pair)
         return cls.equation_factory(
             cls.id(x) @ cls.id(y), cls.id(x @ y))
 
     @axiom
     def tensor_dom_typing(
-            cls, pair: HorizontalPair[C1]) -> Equation[C0]:
+            cls, f: C1, g: C1) -> Equation[C0]:
         """ Domain typing of tensor. """
-        f, g = pair
         return cls.ob.equation_factory((f @ g).dom, f.dom @ g.dom)
 
     @axiom
     def tensor_cod_typing(
-            cls, pair: HorizontalPair[C1]) -> Equation[C0]:
+            cls, f: C1, g: C1) -> Equation[C0]:
         """ Codomain typing of tensor. """
-        f, g = pair
         return cls.ob.equation_factory((f @ g).cod, f.cod @ g.cod)
 
     @axiom
     def dagger_monoidality(
-            cls, pair: HorizontalPair[C1]) -> Equation[C1]:
+            cls, f: C1, g: C1) -> Equation[C1]:
         """ The dagger distributes over the tensor. """
-        f, g = pair
         return cls.equation_factory(
             (f @ g).dagger(), f.dagger() @ g.dagger())
 
@@ -409,6 +412,18 @@ class TracedCategory[C0, C1](MonoidalCategory[C0, C1]):
             left : Whether to trace the wires on the left or right.
         """
 
+    @rule
+    def trace_left[A: C0, B: C0, M: Atom[C0]](
+            self: C1[M @ A, M @ B]) -> C1[A, B]:
+        """ The trace of one wire on the left, as the search applies it. """
+        return self.trace(left=True)
+
+    @rule
+    def trace_right[A: C0, B: C0, M: Atom[C0]](
+            self: C1[A @ M, B @ M]) -> C1[A, B]:
+        """ The trace of one wire on the right, as the search applies it. """
+        return self.trace()
+
     @axiom
     def trace_vanishing(
             cls, f: C1) -> Equation[C1]:
@@ -417,44 +432,43 @@ class TracedCategory[C0, C1](MonoidalCategory[C0, C1]):
             f.trace(0), f, f.trace(0, left=True))
 
     @axiom
-    def trace_superposing_left(
-            cls, pair: TraceSuperposing[C1]) -> Equation[C1]:
+    def trace_superposing_left[A: C0, B: C0, M: Atom[C0]](
+            cls, f: C1[M @ A, M @ B], x: C0) -> Equation[C1]:
         """ Left-oriented superposing. """
-        f, obj = pair
         return cls.equation_factory(
-            (f @ obj).trace(left=True), f.trace(left=True) @ obj)
+            (f @ x).trace(left=True), f.trace(left=True) @ x)
 
     @axiom
-    def trace_superposing_right(
-            cls, pair: TraceSuperposing[C1]) -> Equation[C1]:
+    def trace_superposing_right[A: C0, B: C0, M: Atom[C0]](
+            cls, f: C1[A @ M, B @ M], x: C0) -> Equation[C1]:
         """ Right-oriented superposing. """
-        f, obj = pair
         return cls.equation_factory(
-            (obj @ f).trace(), obj @ f.trace())
+            (x @ f).trace(), x @ f.trace())
 
     @axiom
-    def trace_naturality_left(
-            cls, sliding: TraceNaturalityLeft[C1]) -> Equation[C1]:
+    def trace_naturality_left[M: Atom[C0], X: C0, A: C0, B: C0](
+            cls, x: M @ X, f: C1[M @ X @ B, M @ X @ A], g: C1[A, B]
+            ) -> Equation[C1]:
         """ Left-oriented trace naturality. """
-        f, x, g = sliding
         return cls.equation_factory(
             (x @ g).then(f).then(x @ g).trace(len(x), left=True),
             g.then(f.trace(len(x), left=True)).then(g))
 
     @axiom
-    def trace_naturality_right(
-            cls, sliding: TraceNaturalityRight[C1]) -> Equation[C1]:
+    def trace_naturality_right[M: Atom[C0], X: C0, A: C0, B: C0](
+            cls, x: M @ X, f: C1[B @ M @ X, A @ M @ X], g: C1[A, B]
+            ) -> Equation[C1]:
         """ Right-oriented trace naturality. """
-        f, x, g = sliding
         return cls.equation_factory(
             (g @ x).then(f).then(g @ x).trace(len(x)),
             g.then(f.trace(len(x))).then(g))
 
     @axiom
-    def trace_dinaturality_left(
-            cls, sliding: TraceDinaturalityLeft[C1]) -> Equation[C1]:
+    def trace_dinaturality_left[
+            M: Atom[C0], N: Atom[C0], S: C0, T: C0, A: C0, B: C0](
+            cls, f: C1[M @ S @ A, N @ T @ B], g: C1[N @ T, M @ S]
+            ) -> Equation[C1]:
         """ Left-oriented trace dinaturality. """
-        f, g = sliding
         source, target = g.cod, g.dom
         base, cobase = f.dom[len(source):], f.cod[len(target):]
         return cls.equation_factory(
@@ -462,13 +476,13 @@ class TracedCategory[C0, C1](MonoidalCategory[C0, C1]):
             (g @ base).then(f).trace(len(target), left=True))
 
     @axiom
-    def trace_dinaturality_right(
-            cls, sliding: TraceDinaturalityRight[C1]) -> Equation[C1]:
+    def trace_dinaturality_right[
+            M: Atom[C0], N: Atom[C0], S: C0, T: C0, A: C0, B: C0](
+            cls, f: C1[A @ M @ S, B @ N @ T], g: C1[N @ T, M @ S]
+            ) -> Equation[C1]:
         """ Right-oriented trace dinaturality. """
-        f, g = sliding
         source, target = g.cod, g.dom
-        base = f.dom[:-len(source)] if len(source) else f.dom
-        cobase = f.cod[:-len(target)] if len(target) else f.cod
+        base, cobase = f.dom[:-len(source)], f.cod[:-len(target)]
         return cls.equation_factory(
             f.then(cobase @ g).trace(len(source)),
             (base @ g).then(f).trace(len(target)))
@@ -504,10 +518,14 @@ class BiclosedCategory[
     exponentials :code`x << y` and :code`x >> y`.
     """
     @classmethod
+    @generator
     @abstractmethod
-    def ev(cls, base: C0, exponent: C0, left: bool = True) -> C1:
+    def ev[X: Atom[C0], Y: Atom[C0]](
+            cls, base: X, exponent: Y, left: bool = True
+            ) -> C1[(X << Y) @ Y, X]:
         """
-        The evaluation of an exponential type, to be instantiated.
+        The evaluation of an exponential type, to be instantiated: the
+        generator is the left evaluation, ``left=False`` the right one.
 
         Parameters:
             base : The base of the exponential type.
@@ -526,20 +544,18 @@ class BiclosedCategory[
         """
 
     @axiom
-    def currying_left(
-            cls, arguments: LeftCurrying[C1]) -> Equation[C1]:
+    def currying_left[X: C0, Y: Atom[C0], Z: C0](
+            cls, f: C1[X @ Y, Z]) -> Equation[C1]:
         """ Left currying followed by evaluation. """
-        f, base, exponent = arguments
         return cls.equation_factory(
-            cls.uncurry_composition(f, base, exponent, left=True), f)
+            cls.uncurry_composition(f, f.cod, f.dom[-1:], left=True), f)
 
     @axiom
-    def currying_right(
-            cls, arguments: RightCurrying[C1]) -> Equation[C1]:
+    def currying_right[Y: Atom[C0], X: C0, Z: C0](
+            cls, f: C1[Y @ X, Z]) -> Equation[C1]:
         """ Right currying followed by evaluation. """
-        f, base, exponent = arguments
         return cls.equation_factory(
-            cls.uncurry_composition(f, base, exponent, left=False), f)
+            cls.uncurry_composition(f, f.cod, f.dom[:1], left=False), f)
 
     @classmethod
     def uncurry_composition(
@@ -623,10 +639,12 @@ class RigidCategory[C0: Pregroup, C1: RigidCategory](BiclosedCategory[C0, C1]):
     object type and methods for :code:`cups` and :code:`caps`.
     """
     @classmethod
+    @generator
     @abstractmethod
-    def cups(cls, left: C0, right: C0) -> C1:
+    def cups[X: Atom[C0]](cls, left: X, right: X.r) -> C1[X @ X.r, 1]:
         """
-        The cups witnessing :code:`right` as the adjoint of :code:`left`.
+        The cups witnessing :code:`right` as the adjoint of :code:`left`:
+        as a rule, ``x @ x.r ⊢`` is a cup, ``x.l @ x`` included.
 
         Parameters:
             left : The left-hand side of the cups.
@@ -634,10 +652,12 @@ class RigidCategory[C0: Pregroup, C1: RigidCategory](BiclosedCategory[C0, C1]):
         """
 
     @classmethod
+    @generator
     @abstractmethod
-    def caps(cls, left: C0, right: C0) -> C1:
+    def caps[X: Atom[C0]](cls, left: X, right: X.l) -> C1[1, X @ X.l]:
         """
-        The caps witnessing :code:`right` as the adjoint of :code:`left`.
+        The caps witnessing :code:`right` as the adjoint of :code:`left`:
+        as a rule, ``⊢ x @ x.l`` is a cap, ``x.r @ x`` included.
 
         Parameters:
             left : The left-hand side of the caps.
@@ -655,20 +675,17 @@ class RigidCategory[C0: Pregroup, C1: RigidCategory](BiclosedCategory[C0, C1]):
         return cls.equation_factory(snake_r, cls.id(x), snake_l)
 
     @axiom
-    def caps_coherence(
-            cls, x: NonEmpty[C0],
-            y: NonEmpty[C0]) -> Equation[C1]:
+    def caps_coherence[M: Atom[C0], N: Atom[C0], X: C0, Y: C0](
+            cls, x: M @ X, y: N @ Y) -> Equation[C1]:
         """ Monoidal coherence of caps. """
-        x, y = x.value, y.value
         return cls.equation_factory(
             cls.caps(x @ y, (x @ y).l),
             cls.caps(x, x.l).then(x @ cls.caps(y, y.l) @ x.l))
 
     @axiom
-    def rotate_contravariance(
-            cls, pair: ComposablePair[C1]) -> Equation[C1]:
+    def rotate_contravariance[A: C0, B: C0, C: C0](
+            cls, f: C1[A, B], g: C1[B, C]) -> Equation[C1]:
         """ Rotation reverses composition. """
-        f, g = pair
         return cls.equation_factory(
             f.then(g).rotate(), g.rotate().then(f.rotate()))
 
@@ -775,8 +792,10 @@ class BraidedCategory[C0, C1](MonoidalCategory[C0, C1]):
     :code:`braid` for the natural isomorphism :code:`x @ y -> y @ x`.
     """
     @classmethod
+    @generator
     @abstractmethod
-    def braid(cls, left: C0, right: C0) -> C1:
+    def braid[X: Atom[C0], Y: Atom[C0]](
+            cls, left: X, right: Y) -> C1[X @ Y, Y @ X]:
         """
         The braid of two objects, to be instantiated.
 
@@ -787,22 +806,16 @@ class BraidedCategory[C0, C1](MonoidalCategory[C0, C1]):
 
     @axiom
     def hexagon_left(
-            cls, x: Atomic[C0],
-            y: Atomic[C0],
-            z: Atomic[C0]) -> Equation[C1]:
+            cls, x: Atom[C0], y: Atom[C0], z: Atom[C0]) -> Equation[C1]:
         """ The left hexagon equation. """
-        x, y, z = x.value, y.value, z.value
         return cls.equation_factory(
             cls.braid(x, y @ z),
             (cls.braid(x, y) @ z).then(y @ cls.braid(x, z)))
 
     @axiom
     def hexagon_right(
-            cls, x: Atomic[C0],
-            y: Atomic[C0],
-            z: Atomic[C0]) -> Equation[C1]:
+            cls, x: Atom[C0], y: Atom[C0], z: Atom[C0]) -> Equation[C1]:
         """ The right hexagon equation. """
-        x, y, z = x.value, y.value, z.value
         return cls.equation_factory(
             cls.braid(x @ y, z),
             (x @ cls.braid(y, z)).then(cls.braid(x, z) @ y))
@@ -830,8 +843,10 @@ class SymmetricCategory[C0, C1](BraidedCategory[C0, C1]):
     own inverse called :code:`swap` for the symmetry :code:`x @ y -> y @ x`.
     """
     @classmethod
+    @generator
     @abstractmethod
-    def swap(cls, left: C0, right: C0) -> C1:
+    def swap[X: Atom[C0], Y: Atom[C0]](
+            cls, left: X, right: Y) -> C1[X @ Y, Y @ X]:
         """
         The swap of two objects, to be instantiated.
 
@@ -881,8 +896,9 @@ class MarkovCategory[C0, C1](SymmetricCategory[C0, C1]):
     :code:`copy` and :code:`merge` for the supply of commutative comonoids.
     """
     @classmethod
+    @generator
     @abstractmethod
-    def copy(cls, x: C0, n: int = 2) -> C1:
+    def copy[X: Atom[C0]](cls, x: X, n: int = 2) -> C1[X, X @ X]:
         """
         Make :code:`n` copies of a given object :code:`x`.
 
@@ -890,6 +906,30 @@ class MarkovCategory[C0, C1](SymmetricCategory[C0, C1]):
             x : The object to copy.
             n : The number of copies.
         """
+
+    @classmethod
+    @generator
+    def discard[X: Atom[C0]](cls, x: X) -> C1[X, 1]:
+        """
+        Discard a given object :code:`x`, i.e. make no copy of it.
+
+        Parameters:
+            x : The object to discard.
+        """
+        return cls.copy(x, n=0)
+
+    @classmethod
+    @generator
+    def merge[X: Atom[C0]](cls, x: X, n: int = 2) -> C1[X @ X, X]:
+        """
+        Merge :code:`n` copies of a given object :code:`x`, the dagger of
+        :meth:`copy`.
+
+        Parameters:
+            x : The object to merge.
+            n : The number of copies.
+        """
+        return cls.copy(x, n).dagger()
 
     @axiom
     def copy_counitality(
@@ -954,11 +994,14 @@ class FeedbackCategory[C0, C1](MarkovCategory[C0, C1]):
             n_steps : The number of time steps to delay.
         """
 
+    @rule
     @abstractmethod
-    def feedback(
-            self, dom: C0 = None, cod: C0 = None, mem: C0 = None) -> C1:
+    def feedback[X: C0, Y: C0, M: Atom[C0]](
+            self: C1[X @ M.delay(), Y @ M],
+            dom: C0 = None, cod: C0 = None, mem: C0 = None) -> C1[X, Y]:
         """
-        The feedback operator on a morphism.
+        The feedback operator on a morphism: the rule feeds one wire of
+        memory back, an implementation may take more.
 
         Parameters:
             dom : The domain of the feedback.
@@ -968,10 +1011,9 @@ class FeedbackCategory[C0, C1](MarkovCategory[C0, C1]):
 
     @axiom
     def feedback_vanishing(
-            cls, arguments: FeedbackVanishing[C1]) -> Equation[C1]:
+            cls, f: C1) -> Equation[C1]:
         """ Vanishing of feedback over the unit. """
-        f, unit = arguments
-        return cls.equation_factory(f.feedback(mem=unit), f)
+        return cls.equation_factory(f.feedback(mem=cls.ob()), f)
 
     dagger_involution = Category.dagger_involution.inapplicable(
         "The delay of a feedback category is not reversible.")
@@ -983,12 +1025,11 @@ class FeedbackCategory[C0, C1](MarkovCategory[C0, C1]):
         "The delay of a feedback category is not reversible.")
 
     @axiom
-    def feedback_joining(
-            cls, arguments: FeedbackJoining[C1]) -> Equation[C1]:
+    def feedback_joining[X: C0, M: Atom[C0], N: Atom[C0]](
+            cls, f: C1[X @ (M @ N).delay(), X @ M @ N]) -> Equation[C1]:
         """ Joining nested feedback loops. """
-        f, mem = arguments
         return cls.equation_factory(
-            f.feedback(mem=mem), f.feedback().feedback())
+            f.feedback(mem=f.cod[-2:]), f.feedback().feedback())
 
 
 class BalancedCategory[C0, C1](
@@ -999,8 +1040,9 @@ class BalancedCategory[C0, C1](
     automorphism :code:`x -> x`.
     """
     @classmethod
+    @generator
     @abstractmethod
-    def twist(cls, dom: C0) -> C1:
+    def twist[X: Atom[C0]](cls, dom: X) -> C1[X, X]:
         """
         The twist on an object, to be instantiated.
 
@@ -1010,10 +1052,8 @@ class BalancedCategory[C0, C1](
 
     @axiom
     def balanced_twist(
-            cls, x: Atomic[C0],
-            y: Atomic[C0]) -> Equation[C1]:
+            cls, x: Atom[C0], y: Atom[C0]) -> Equation[C1]:
         """ Compatibility of the twist and braid. """
-        x, y = x.value, y.value
         return cls.equation_factory(
             cls.twist(x @ y),
             cls.braid(x, y).then(
@@ -1029,9 +1069,8 @@ class RibbonCategory[C0, C1](
     """
     @axiom
     def twist_as_trace(
-            cls, x: Atomic[C0]) -> Equation[C1]:
+            cls, x: Atom[C0]) -> Equation[C1]:
         """ The twist as both orientations of a traced braid. """
-        x = x.value
         braid = cls.braid(x, x)
         return cls.equation_factory(
             braid.trace(left=True), cls.twist(x), braid.trace())

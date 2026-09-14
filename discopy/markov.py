@@ -80,7 +80,7 @@ from discopy.abc import MarkovCategory
 from discopy.cat import factory
 from discopy.monoidal import Ty  # noqa: F401
 from discopy.utils import assert_isatomic, factory_name, from_tree
-from discopy.axioms import Atomic, axiom
+from discopy.axioms import Atom, axiom
 
 Layer = symmetric.Layer
 
@@ -137,17 +137,6 @@ class Diagram(symmetric.Diagram, MarkovCategory):
         return frobenius.Diagram.spiders.__func__(cls, 1, n, x)
 
     @classmethod
-    def merge(cls, x: monoidal.Ty, n=2) -> Diagram:
-        """
-        Merge :code:`n` copies of a given type :code:`x`.
-
-        Parameters:
-            x : The type to copy.
-            n : The number of copies.
-        """
-        return cls.copy(x, n).dagger()
-
-    @classmethod
     def discard(cls, x: monoidal.Ty, n=2) -> Diagram:
         """
         The discard of an atomic type :code:`x`.
@@ -167,20 +156,6 @@ class Box(symmetric.Box, Diagram):
         dom (monoidal.Ty) : The domain of the box, i.e. its input.
         cod (monoidal.Ty) : The codomain of the box, i.e. its output.
     """
-
-    @classmethod
-    def strategy(cls, **params):
-        """Add copying and discarding to the inherited distribution."""
-        from hypothesis import strategies as st
-
-        base = super().strategy(**params)
-        factory = cls.ar.copy_factory
-        return cls.extend_strategy(
-            base, factory,
-            lambda factory: st.tuples(
-                cls.atomic_strategy(),
-                st.sampled_from((0, 2, 3))).map(
-                    lambda args: factory(*args)), **params)
 
 
 class Permutation(symmetric.Permutation, Box):
@@ -345,9 +320,8 @@ class Functor(symmetric.Functor):
         return super().__call__(other)
 
     @axiom
-    def markov(cls, self: Self, x: Atomic[Self.dom.ob]):
+    def markov(cls, self: Self, x: Atom[Self.dom.ob]):
         """ A Markov functor preserves the copy. """
-        x = x.value
         return self.cod.equation_factory(
             self(self.dom.copy(x)), self.cod.copy(self(x)))
 

@@ -166,7 +166,7 @@ from discopy.utils import (
     deprecated_alias,
     factory_name,
 )
-from discopy.axioms import Atomic, GENERATORS, axiom
+from discopy.axioms import Atom, GENERATORS, axiom
 
 
 class Wire(monoidal.Wire):
@@ -668,6 +668,10 @@ class Diagram(biclosed.Diagram, RigidCategory):
 
     snake_equations = RigidCategory.snake_equations.modulo(normal_form)
 
+    currying_left = RigidCategory.currying_left.modulo(normal_form)
+
+    currying_right = RigidCategory.currying_right.modulo(normal_form)
+
     dagger_involution = Category.dagger_involution.inapplicable(
         "Rigid cups and caps have no dagger, use pivotal instead.")
 
@@ -697,19 +701,6 @@ class Box(biclosed.Box, Diagram):
     >>> assert f.r.l == f == f.l.r
     >>> assert f.l.l != f != f.r.r
     """
-
-    @classmethod
-    def strategy(cls, **params):
-        """Add cups and caps to the inherited box distribution."""
-        base = super().strategy(**params)
-        base = cls.extend_strategy(
-            base, cls.ar.cup_factory,
-            lambda factory: cls.atomic_strategy().map(
-                lambda obj: factory(obj, obj.r)), **params)
-        return cls.extend_strategy(
-            base, cls.ar.cap_factory,
-            lambda factory: cls.atomic_strategy().map(
-                lambda obj: factory(obj, obj.l)), **params)
 
     def __setstate__(self, state):
         if '_z' in state:  # Backward compatibility
@@ -904,16 +895,14 @@ class Functor(biclosed.Functor):
         return super().__call__(other)
 
     @axiom
-    def rigid_cups(cls, self: Self, x: Atomic[Self.dom.ob]):
+    def rigid_cups(cls, self: Self, x: Atom[Self.dom.ob]):
         """ A rigid functor preserves the cups. """
-        x = x.value
         return self.cod.equation_factory(
             self(self.dom.cups(x, x.r)), self.cod.cups(self(x), self(x.r)))
 
     @axiom
-    def rigid_caps(cls, self: Self, x: Atomic[Self.dom.ob]):
+    def rigid_caps(cls, self: Self, x: Atom[Self.dom.ob]):
         """ A rigid functor preserves the caps. """
-        x = x.value
         return self.cod.equation_factory(
             self(self.dom.caps(x.r, x)), self.cod.caps(self(x.r), self(x)))
 

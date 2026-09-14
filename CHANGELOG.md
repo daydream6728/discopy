@@ -9,6 +9,29 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Added
 
+- `discopy.search`: a category states its structure as sequents. A
+  `@rule` or `@generator` method of `discopy.abc` has a signature whose
+  type parameters are the variables and their sorts (`C0`, `Atom[C0]`),
+  whose parameters are the premises and whose return annotation is the
+  conclusion, e.g. `tensor[A: C0, B: C0, C: C0, D: C0](self: C1[A, B],
+  other: C1[C, D]) -> C1[A @ C, B @ D]` or `cups[X: Atom[C0]](cls, left:
+  X, right: X.r) -> C1[X @ X.r, 1]`; an `@axiom` is a sequent with no
+  conclusion, its premises the arguments of the property test. The
+  annotations are read deferred (PEP 649) through `annotationlib`, never
+  evaluated, and DisCoPy now requires Python 3.14. `monoidal.Diagram.strategy`
+  is a goal-directed search by those rules and generators: to build a
+  diagram of a given type it picks a free box, a generator whose conclusion
+  unifies with the goal, or a rule whose conclusion unifies and searches
+  its premises. Every level of the hierarchy inherits the search and tunes
+  it by declaring its structure — braids, cups and caps, evaluations,
+  traces, copies, discards and merges, twists, feedback loops — so the
+  `Box.strategy` overrides of every module and the wrapper strategies of
+  `discopy.axioms` (`Square`, `ComposableTriple`, `TraceSliding`,
+  `LeftCurrying`, `FeedbackJoining`...) are gone with them.
+  `Axiom.weaken` now takes the parameters of the strategy of each hom
+  premise, e.g. `weaken(boundary_connected=True)`, and recorded
+  counterexamples pass their arguments one per premise.
+
 - The property matrix's search strategy is now recursive: `cat.Arrow` and
   `monoidal.Diagram` build composite paths/diagrams with
   `hypothesis.strategies.recursive`/an iterated layer search instead of

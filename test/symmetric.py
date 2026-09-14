@@ -392,11 +392,10 @@ def test_strategy():
 
     axioms.assert_strategy_finds(Diagram, Swap)
     cod = Ty(*"xyz")
-    layer = find(Layer.strategy(factory=Diagram, cod=cod),
-                 lambda value: value.is_plumbing)
-    assert layer.cod == cod
-    permutation, = layer.boxes
-    assert isinstance(permutation, Permutation)
+    diagram = find(Diagram.strategy(cod=cod),
+                   lambda value: any(
+                       isinstance(box, Swap) for box in value.boxes))
+    assert diagram.cod == cod
 
 
 def test_axioms():

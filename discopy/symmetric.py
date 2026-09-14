@@ -101,7 +101,7 @@ from discopy.monoidal import Wire, Ty, Nat  # noqa: F401
 from discopy.python import finset
 from discopy.utils import (
     AxiomError, assert_iscomposable, classproperty, factory_name, from_tree)
-from discopy.axioms import Atomic, axiom
+from discopy.axioms import Atom, axiom
 
 
 class Layer(monoidal.Layer):
@@ -165,51 +165,6 @@ class Layer(monoidal.Layer):
         >>> assert not Layer(x, Box('f', x, y), y).is_plumbing
         """
         return any(isinstance(value, Permutation) for value in self)
-
-    @classmethod
-    def strategy(
-            cls, *, factory, types=None, dom=None, cod=None,
-            label=None, exclude=()):
-        """Add a simultaneous native permutation to ordinary layers."""
-        from hypothesis import strategies as st
-
-        exclude = frozenset(exclude)
-        base = super().strategy(
-            factory=factory, types=types, dom=dom, cod=cod,
-            label=label, exclude=exclude)
-        types = factory.ob.strategy() if types is None else types
-        permutation_factory = factory.permutation_factory
-
-        def from_dom(source, target=None):
-            if len(source) < 2 or (
-                    target is not None and len(source) != len(target)):
-                return st.nothing()
-
-            def matches(perm):
-                return not perm.is_identity and (
-                    target is None or target == source[:0].tensor(*(
-                        source[i] for i in perm)))
-
-            return finset.Permutation.strategy(dom=len(source)).filter(
-                matches).map(lambda perm: cls(
-                    permutation_factory(source, perm))).filter(
-                        lambda layer: not exclude.intersection(layer.boxes))
-
-        if dom is not None:
-            permutations = from_dom(dom, cod)
-        elif cod is not None:
-            def from_cod(perm):
-                inverse = perm.dagger()
-                source = cod[:0].tensor(*(cod[i] for i in inverse))
-                return cls(permutation_factory(source, perm))
-
-            permutations = finset.Permutation.strategy(dom=len(cod)).filter(
-                lambda perm: not perm.is_identity).map(from_cod)\
-                .filter(lambda layer: not exclude.intersection(layer.boxes))\
-                if len(cod) >= 2 else st.nothing()
-        else:
-            permutations = types.flatmap(from_dom)
-        return st.one_of(base, permutations)
 
     def merge(self, other: Layer) -> Layer:
         """
@@ -730,9 +685,8 @@ class Functor(balanced.Functor):
 
     @axiom
     def symmetric(
-            cls, self: Self, x: Atomic[Self.dom.ob], y: Atomic[Self.dom.ob]):
+            cls, self: Self, x: Atom[Self.dom.ob], y: Atom[Self.dom.ob]):
         """ A symmetric functor preserves the swap. """
-        x, y = x.value, y.value
         return self.cod.equation_factory(
             self(self.dom.swap(x, y)), self.cod.swap(self(x), self(y)))
 

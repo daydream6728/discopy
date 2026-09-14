@@ -425,30 +425,6 @@ class Box(markov.Box, Diagram):
     _time_step = 0
     time_step = property(lambda self: self._time_step)
 
-    @classmethod
-    def strategy(cls, **params):
-        """Add feedback boxes to the inherited distribution."""
-        from hypothesis import strategies as st
-
-        base = super().strategy(**params)
-        factory = cls.ar.feedback_factory
-        types = params.get("types")
-        types = cls.ob.strategy() if types is None else types
-
-        def feedbacks(factory):
-            def build(args):
-                memory, dom, cod = args
-                return cls.free_strategy(
-                    types=types,
-                    dom=dom @ memory.delay(), cod=cod @ memory).map(
-                        lambda arg: factory(arg, mem=memory))
-
-            return st.tuples(
-                cls.atomic_strategy(), types, types).flatmap(build)
-
-        return cls.extend_strategy(
-            base, factory, feedbacks, **params)
-
     def __init__(self, name, dom, cod, time_step: int = 0, **params):
         self._time_step, self._params = time_step, params
         markov.Box.__init__(self, name, dom, cod, **params)

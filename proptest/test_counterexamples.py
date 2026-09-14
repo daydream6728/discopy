@@ -8,8 +8,7 @@ from typing import NamedTuple
 import pytest
 
 from discopy import biclosed, braided, cat, feedback, pivotal, ribbon
-from discopy.axioms import (
-    GENERATORS, Atomic, Axiom, AxiomFailure, Relabelling)
+from discopy.axioms import GENERATORS, Axiom, AxiomFailure, Relabelling
 from discopy.utils import AxiomError, factory_name
 
 
@@ -50,15 +49,13 @@ COUNTEREXAMPLES = (
                "braid relations that free diagrams do not quotient by."),
     Counterexample(
         axiom=biclosed.Diagram.currying_left,
-        args=((biclosed.Eval(biclosed.Ty("a") << biclosed.Ty("a")),
-               biclosed.Ty("a"), biclosed.Ty("a")), ),
+        args=(biclosed.Eval(biclosed.Ty("a") << biclosed.Ty("a")), ),
         reason="A free currying is a bubble, equal to its evaluation only "
                "semantically."),
     Counterexample(
         axiom=biclosed.Diagram.currying_right,
-        args=((biclosed.Eval(
-                   biclosed.Ty("a") >> biclosed.Ty("a"), left=False),
-               biclosed.Ty("a"), biclosed.Ty("a")), ),
+        args=(biclosed.Eval(
+                  biclosed.Ty("a") >> biclosed.Ty("a"), left=False), ),
         reason="A free currying is a bubble, equal to its evaluation only "
                "semantically."),
     Counterexample(
@@ -68,13 +65,12 @@ COUNTEREXAMPLES = (
                "diagrams, already on the identity wire."),
     Counterexample(
         axiom=ribbon.Diagram.twist_as_trace,
-        args=(Atomic(pivotal.Ty("a")), ),
+        args=(pivotal.Ty("a"), ),
         reason="A free twist is a box, not the trace of a braid."),
     Counterexample(
         axiom=feedback.Diagram.feedback_joining,
-        args=((feedback.Box(
-                   "f", MEMORY[:1] @ MEMORY.delay(), MEMORY[:1] @ MEMORY),
-               MEMORY), ),
+        args=(feedback.Box(
+                  "f", MEMORY[:1] @ MEMORY.delay(), MEMORY[:1] @ MEMORY), ),
         reason="feedback.Diagram.feedback unrolls its memory in the wrong "
                "order (#606)"),
 )

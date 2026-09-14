@@ -70,7 +70,7 @@ from discopy.abc import HypergraphCategory
 from discopy.cat import factory
 from discopy.utils import (
     assert_isatomic, deprecated_alias, factory_name, from_tree)
-from discopy.axioms import Atomic, axiom
+from discopy.axioms import Atom, axiom
 
 
 class Wire(pivotal.Wire):
@@ -192,21 +192,6 @@ class Box(compact.Box, markov.Box, Diagram):
         dom (Ty) : The domain of the box, i.e. its input.
         cod (Ty) : The codomain of the box, i.e. its output.
     """
-
-    @classmethod
-    def strategy(cls, **params):
-        """Add spiders to the inherited box distribution."""
-        from hypothesis import strategies as st
-
-        base = super().strategy(**params)
-        factory = cls.ar.spider_factory
-        return cls.extend_strategy(
-            base, factory,
-            lambda factory: st.tuples(
-                st.sampled_from(
-                    ((0, 1), (1, 0), (1, 2), (2, 1), (2, 2))),
-                cls.atomic_strategy()).map(
-                    lambda args: factory(*args[0], args[1])), **params)
 
 
 class Cup(compact.Cup, Box):
@@ -351,9 +336,8 @@ class Functor(compact.Functor, markov.Functor):
         return compact.Functor.__call__(self, other)
 
     @axiom
-    def frobenius(cls, self: Self, x: Atomic[Self.dom.ob]):
+    def frobenius(cls, self: Self, x: Atom[Self.dom.ob]):
         """ A hypergraph functor preserves the spiders. """
-        x = x.value
         return self.cod.equation_factory(
             self(self.dom.spiders(1, 2, x)), self.cod.spiders(1, 2, self(x)))
 

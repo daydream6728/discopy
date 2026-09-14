@@ -12,7 +12,7 @@ name = "discopy"
 dynamic = ["version"]
 description = "The Python toolkit for computing with string diagrams."
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.14"
 license =  {file = "LICENSE"}
 keywords = [
     "category theory",
@@ -30,8 +30,6 @@ classifiers = [
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
     "Operating System :: OS Independent",
-    "Programming Language :: Python :: 3.12",
-    "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
     "Topic :: Scientific/Engineering"
 ]

@@ -22,10 +22,10 @@ def test_strategy():
     from discopy import axioms
 
     axioms.assert_strategy_finds(Diagram, Braid)
-    for is_dagger in (False, True):
-        box = find(Box.strategy(), lambda value: isinstance(value, Braid)
-                   and value.is_dagger == is_dagger)
-        assert box.is_dagger == is_dagger
+    x, y = Ty('x'), Ty('y')
+    braid = find(Diagram.strategy(dom=x @ y, cod=y @ x, max_depth=0),
+                 lambda value: isinstance(value, Braid))
+    assert braid == Braid(x, y)
 
 
 def test_axioms():

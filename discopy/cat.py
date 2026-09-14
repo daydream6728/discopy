@@ -84,7 +84,7 @@ from typing import (
 from discopy import messages, utils
 from discopy.abc import Category
 from discopy.axioms import (
-    C1, GENERATORS, ComposablePair, Equation as AbstractEquation, Relabelling,
+    C1, GENERATORS, Equation as AbstractEquation, Relabelling,
     Strategy, axiom)
 from discopy.utils import (  # noqa: F401
     factory,
@@ -1061,15 +1061,23 @@ class Functor(Category, Strategy["Functor"]):
         return AbstractEquation(identity.dom, cls.dom, identity.cod)
 
     @axiom
-    def composition_dom_typing(cls, pair: ComposablePair[C1]):
+    def associativity(cls, f: C1, g: C1, h: C1):
+        """
+        Associativity of the composition of functors.
+
+        The objects of ``Cat`` are categories, which the property matrix does
+        not generate, so this is stated of the endofunctors it does.
+        """
+        return AbstractEquation(f.then(g).then(h), f.then(g.then(h)))
+
+    @axiom
+    def composition_dom_typing(cls, f: C1, g: C1):
         """ Composition of functors preserves the source category. """
-        f, g = pair
         return AbstractEquation(f.then(g).dom, f.dom)
 
     @axiom
-    def composition_cod_typing(cls, pair: ComposablePair[C1]):
+    def composition_cod_typing(cls, f: C1, g: C1):
         """ Composition of functors preserves the target category. """
-        f, g = pair
         return AbstractEquation(f.then(g).cod, g.cod)
 
 

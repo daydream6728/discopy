@@ -78,9 +78,12 @@ def test_strategy():
     from discopy import axioms
 
     axioms.assert_strategy_finds(Diagram, Copy)
-    discard = find(Box.strategy(), lambda value:
-                   isinstance(value, Copy) and not value.cod)
-    assert not discard.cod
+    discard = find(Diagram.strategy(), lambda value: any(
+        isinstance(box, Copy) and not box.cod for box in value.boxes))
+    assert any(not box.cod for box in discard.boxes)
+    merge = find(Diagram.strategy(), lambda value: any(
+        isinstance(box, Merge) for box in value.boxes))
+    assert any(isinstance(box, Merge) for box in merge.boxes)
 
 
 def test_axioms():
