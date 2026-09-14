@@ -73,8 +73,8 @@
 > * in monoidal.diagram, implement an extensible search strategy that diagram subclasses with more structure can tune modularly, making use of generators and rules
 > * do not implement the TwoCategory/MonoidalCategory split, it was purely informative and simply motivates the higher dimensional matching that we ultimately want, for now you should focus on 1D diagrams.
 
-- [ ] `discopy.search`: typed sequent patterns, matching, parsing from a signature
-- [ ] `@rule`, `@generator` and the pattern-reading `@axiom`
+- [WIP] @7663789e-2026-09-14 15:24 `discopy.search`: typed sequent patterns, matching, parsing from a signature
+- [WIP] @7663789e-2026-09-14 15:24 `@rule`, `@generator` and the pattern-reading `@axiom`
 - [ ] Rewrite the `abc` axioms as sequents, declare the rules and generators
 - [ ] `monoidal.Diagram.strategy` as a rule-based search, subclass overrides removed
 - [ ] Tests, records, docs and changelog; `pflake8` and `pytest` green
