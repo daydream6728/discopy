@@ -9,7 +9,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Added
 
-- `discopy.search`: a category states its structure as sequents. A
+- `discopy.pattern` and `discopy.search`: a category states its
+  structure as sequents. A
   `@rule` or `@generator` method of `discopy.abc` has a signature whose
   type parameters are the variables and their sorts (`C0`, `Atom[C0]`),
   whose parameters are the premises and whose return annotation is the
@@ -20,7 +21,11 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   annotations are deferred with `from __future__ import annotations` and
   each is evaluated in the environment of its sequent, where the type
   parameters are pattern variables; the bound of a type parameter is
-  evaluated as Python does. DisCoPy now requires Python 3.14. `monoidal.Diagram.strategy`
+  evaluated as Python does, and bounds what the pattern may do: `X.l` and
+  `X.r` are patterns of a rigid category, whose objects are a `Pregroup`
+  with `l` and `r` now abstract properties, `X << Y` of a residuated one,
+  `M.d` of a feedback category, whose objects are the new
+  `abc.DelayedMonoid`. DisCoPy now requires Python 3.14. `monoidal.Diagram.strategy`
   is a goal-directed search by those rules and generators: to build a
   diagram of a given type it picks a free box, a generator whose conclusion
   unifies with the goal, or a rule whose conclusion unifies and searches

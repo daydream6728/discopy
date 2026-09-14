@@ -101,7 +101,8 @@ from discopy.monoidal import Wire, Ty, Nat  # noqa: F401
 from discopy.python import finset
 from discopy.utils import (
     AxiomError, assert_iscomposable, classproperty, factory_name, from_tree)
-from discopy.axioms import Atom, axiom
+from discopy.axioms import axiom
+from discopy.pattern import Atom
 
 
 class Layer(monoidal.Layer):

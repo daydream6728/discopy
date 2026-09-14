@@ -8,5 +8,6 @@ testing of the axioms, and how to develop against it.
     :template: module.rst
     :toctree: ../_api
 
+    discopy.pattern
     discopy.search
     discopy.axioms

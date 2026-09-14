@@ -166,7 +166,8 @@ from discopy.utils import (
     deprecated_alias,
     factory_name,
 )
-from discopy.axioms import Atom, GENERATORS, axiom
+from discopy.axioms import GENERATORS, axiom
+from discopy.pattern import Atom
 
 
 class Wire(monoidal.Wire):

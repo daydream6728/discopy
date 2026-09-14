@@ -83,8 +83,9 @@ from typing import (
 
 from discopy import messages, utils
 from discopy.abc import Category
+from discopy.pattern import C1
 from discopy.axioms import (
-    C1, GENERATORS, Equation as AbstractEquation, Relabelling,
+    GENERATORS, Equation as AbstractEquation, Relabelling,
     Strategy, axiom)
 from discopy.utils import (  # noqa: F401
     factory,

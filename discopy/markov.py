@@ -80,7 +80,8 @@ from discopy.abc import MarkovCategory
 from discopy.cat import factory
 from discopy.monoidal import Ty  # noqa: F401
 from discopy.utils import assert_isatomic, factory_name, from_tree
-from discopy.axioms import Atom, axiom
+from discopy.axioms import axiom
+from discopy.pattern import Atom
 
 Layer = symmetric.Layer
 

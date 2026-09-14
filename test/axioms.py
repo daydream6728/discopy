@@ -9,9 +9,12 @@ from hypothesis.errors import NoSuchExample
 from pytest import raises
 
 from discopy import cat, feedback, monoidal, rigid
+from discopy.abc import MonoidalCategory
 from discopy.axioms import (
-    C1, Axiom, AxiomFailure, Equation, Relabelling, assert_axioms, axiom)
+    Axiom, AxiomFailure, Equation, Relabelling, assert_axioms, axiom)
 from discopy.cat import Arrow, Box, Functor, Ob
+from discopy.monoidal import Diagram
+from discopy.pattern import C1
 
 
 def test_axioms():
@@ -150,3 +153,32 @@ def test_monoid_law():
     law = monoidal.Ty.unitality.weaken(max_length=1)
     args = find(law.strategy(), lambda _: True)
     assert len(args[0]) <= 1 and law(*args)
+
+
+def test_axiom():
+    assert MonoidalCategory.bifunctoriality.parameters[0].name == "f"
+    assert str(MonoidalCategory.bifunctoriality.sequent).startswith(
+        "A: C0, B: C0, C: C0, D: C0, E: C0, F: C0 | f: C1[A, B]")
+    args = find(Diagram.bifunctoriality.strategy(), lambda _: True)
+    f, g, h, k = args
+    assert f.cod == h.dom and g.cod == k.dom
+    assert Diagram.bifunctoriality(*args)
+    assert MonoidalCategory.tensor.sequent.conclusion is not None
+    assert Axiom.concludes is False
+    with raises(TypeError):
+        @axiom
+        def eager(cls, f):
+            """ An unannotated premise has no pattern. """
+
+
+def test_weaken_params():
+    law = MonoidalCategory.bifunctoriality.weaken(max_depth=0).bind(Diagram)
+    args = find(law.strategy(), lambda _: True)
+    assert all(len(term.boxes) <= 1 for term in args)
+    assert law.weaken(max_depth=1).params == {"max_depth": 1}
+    assert law.modulo(lambda term: term).params == law.params
+
+
+def test_equation_of_axiom():
+    x, y = monoidal.Ty('x'), monoidal.Ty('y')
+    assert isinstance(Diagram.unitality(monoidal.Box("f", x, y)), Equation)

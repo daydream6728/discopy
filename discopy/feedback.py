@@ -147,7 +147,7 @@ In the category of streams, this is just the identity.
 from __future__ import annotations
 
 from discopy import monoidal, braided, markov, hypergraph
-from discopy.abc import FeedbackCategory
+from discopy.abc import DelayedMonoid, FeedbackCategory
 from discopy.utils import (
     deprecated_alias,
     factory, factory_name, from_tree, assert_isinstance, AxiomError,
@@ -291,7 +291,7 @@ class TailOb(Wire):
 
 
 @factory
-class Ty(monoidal.Ty):
+class Ty(monoidal.Ty, DelayedMonoid):
     """ A feedback type is a monoidal type with `delay`, `head` and `tail`. """
     generator_factory = Wire
 
@@ -308,8 +308,6 @@ class Ty(monoidal.Ty):
     def tail(self):
         """ The tail of a feedback type, see :class:`TailOb`. """
         return type(self)(*(x.tail for x in self.inside if x.tail))
-
-    d = Wire.d
 
 
 class Layer(markov.Layer):

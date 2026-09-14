@@ -15,6 +15,8 @@ Summary
     :toctree:
 
     Equation
+    Axiom
+    AxiomFailure
     Strategy
     Relabelling
 
@@ -25,6 +27,7 @@ Summary
         :nosignatures:
         :toctree:
 
+        axiom
         assert_axioms
         assert_strategy_finds
 
@@ -255,15 +258,16 @@ says how often each shape was drawn, the input of a strategy audit.
 
 from __future__ import annotations
 
+import inspect
 import pickle
 import sys
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass
+from dataclasses import KW_ONLY, dataclass, field, replace
+from functools import wraps
 from typing import TYPE_CHECKING, Self
 
-from discopy.search import (  # noqa: F401
-    Atom, Axiom, AxiomFailure, C0, C1, axiom)
+from discopy.pattern import Declaration, Sequent
 from discopy.utils import (
     AxiomError,
     NamedGeneric,
@@ -352,6 +356,190 @@ class Equation(NamedGeneric["ar"]):
         terms = self.terms if self.up_to is None\
             else list(map(self.up_to, self.terms))
         return all(term == terms[0] for term in terms)
+
+
+class AxiomFailure(AxiomError):
+    """
+    A law declared broken, raised when the bound axiom is called: the
+    reason is the message and :attr:`equation` is the law evaluated on the
+    arguments, which a recorded counterexample must falsify.
+    """
+
+    def __init__(self, reason: str, equation):
+        super().__init__(reason, equation)
+        self.equation = equation
+
+
+@dataclass(repr=False)
+class Axiom[**P, T](Declaration[P, T]):
+    """
+    An axiom of a category: a sequent with no conclusion, whose premises
+    are the arguments of a property test, generated from their patterns.
+
+    The category is the class the axiom is bound to, e.g.
+    :class:`discopy.cat.Arrow` for the axioms of
+    :class:`discopy.abc.Category`. The axiom is a classmethod of it,
+    implicitly: its first parameter is the category and the remaining ones
+    are generated from their annotations — an object for the typing of
+    identities, three composable arrows for the associativity of
+    composition, a term of the category itself for
+    :meth:`Strategy.transparency`.
+
+    Calling a bound axiom returns its own verdict: :obj:`NotImplemented`
+    when the structure does not apply to the category, and the equation
+    itself otherwise; a law declared broken raises an
+    :class:`AxiomFailure` carrying that equation instead of returning it.
+
+    A law is broken when *some* argument is a counterexample, not every one,
+    so :attr:`broken` is declared by :meth:`failing` before any argument is
+    generated — the property matrix marks such an axiom as an expected
+    failure and lets the search find the counterexample.
+
+    Parameters:
+        function : The function stating the law, from the category and the
+            generated arguments to an :class:`Equation`, or to
+            :obj:`NotImplemented` when the structure does not apply.
+        params : The parameters :meth:`weaken` passes to the strategy of
+            every hom premise, restricting the law to a subspace.
+        broken : Whether the law is declared broken by :meth:`failing`.
+    """
+
+    _: KW_ONLY
+    params: dict = field(default_factory=dict)
+    broken: bool = False
+
+    concludes = False
+
+    __hash__ = Declaration.__hash__
+
+    def __get__(self, instance, owner: type) -> Self:
+        return self.bind(owner)
+
+    def modulo(self, up_to) -> Self:
+        """
+        The same law with its equation compared up to a function, so that a
+        category weakens an inherited axiom in one statement, e.g. a diagram
+        compares the interchange law up to its normal form:
+        ``Diagram.bifunctoriality = MonoidalCategory.bifunctoriality.modulo(
+        Diagram.normal_form)``.
+        """
+        @wraps(self.function)
+        def equation(*args, **kwargs):
+            return self.function(*args, **kwargs).modulo(up_to)
+        return replace(self, function=equation)
+
+    def failing(self, reason: str) -> Self:
+        """
+        The same law declared broken: calling it raises an
+        :class:`AxiomFailure` with the reason as message and the equation
+        evaluated on the arguments, e.g. ``braid_naturality =
+        BraidedCategory.braid_naturality.failing("A free braid is a box.")``.
+        """
+        @wraps(self.function)
+        def equation(*args, **kwargs):
+            raise AxiomFailure(reason, self.function(*args, **kwargs))
+        equation.__doc__ = reason
+        return replace(self, function=equation, broken=True)
+
+    def inapplicable(self, reason: str) -> Self:
+        """
+        The same law declared not to apply to the category: it takes no
+        argument and returns :obj:`NotImplemented`, with the reason as its
+        documentation, e.g. ``trace_vanishing =
+        TracedCategory.trace_vanishing.inapplicable("No trace.")``.
+        """
+        def law(cls):
+            return NotImplemented
+        law.__doc__ = reason
+        return replace(
+            self, function=law, sequent=Sequent(), params={}, broken=False)
+
+    def weaken(self, **params) -> Self:
+        """
+        The same law quantified over the subspace the given parameters cut
+        out of the strategy of each hom premise, e.g.
+        ``bifunctoriality.weaken(boundary_connected=True)`` on a diagram
+        category compares the interchange law on the diagrams its normal
+        form is defined for. Assigned to its own attribute beside a
+        ``.failing`` declaration, it shows the matrix one expected failure
+        and one green cell instead of one blanket expected failure.
+        """
+        return replace(self, params=dict(self.params, **params))
+
+    @property
+    def parameters(self) -> tuple[inspect.Parameter, ...]:
+        """
+        The parameters whose arguments the property matrix generates: all
+        but the first, which is the category.
+        """
+        return tuple(
+            inspect.signature(self.function).parameters.values())[1:]
+
+    def strategy(self, **params) -> st.SearchStrategy:
+        """
+        Generate the arguments the bound axiom expects: one per parameter,
+        from its pattern in the :attr:`scope` of the category. Keyword
+        arguments are passed to the strategy of each hom premise, after
+        those :meth:`weaken` declared.
+        """
+        from hypothesis import strategies as st
+
+        if self.category is None:
+            raise TypeError(f"{self.name} is not bound to a class.")
+        params = dict(self.params, **params)
+
+        def hom(category, dom, cod):
+            return category.strategy(dom=dom, cod=cod, **params)
+
+        @st.composite
+        def arguments(draw):
+            return self.generate(draw, hom)[1]
+
+        return arguments()
+
+    def falsify(self, **params) -> tuple:
+        """
+        Search for a shrunk counterexample to the bound axiom: arguments for
+        which the verdict fails — the equation is false, or the
+        implementation refuses to build its terms — raising
+        :class:`hypothesis.errors.NoSuchExample` when no counterexample is
+        found. Keyword arguments are passed to :func:`hypothesis.find`.
+
+        >>> from discopy.cat import Arrow
+        >>> Arrow.associativity.falsify()  # doctest: +ELLIPSIS
+        Traceback (most recent call last):
+         ...
+        hypothesis.errors.NoSuchExample: No examples found of condition ...
+        """
+        from hypothesis import find
+
+        def refutes(args):
+            try:
+                verdict = self(*args)
+            except AxiomFailure:
+                return True
+            return verdict is not NotImplemented and not verdict
+
+        return find(self.strategy(), refutes, **params)
+
+    def arguments(self, *args: P.args, **kwargs: P.kwargs) -> dict:
+        """ Bind the arguments to the :attr:`parameters` of the axiom. """
+        if self.category is None:
+            raise TypeError(f"{self.name} is not bound to a class.")
+        bound = inspect.Signature(self.parameters).bind(*args, **kwargs)
+        bound.apply_defaults()
+        return dict(bound.arguments)
+
+    def __call__(self, *args: P.args, **kwargs: P.kwargs):
+        return self.function(self.category, **self.arguments(*args, **kwargs))
+
+
+def axiom[**P, T](function: Callable[P, T]) -> Axiom[P, T]:
+    """
+    Decorate an equation as a categorical axiom: a classmethod of its
+    category, implicitly, whose remaining parameters are generated.
+    """
+    return Axiom(function)
 
 
 class Strategy[T](ABC):

@@ -1,128 +1,20 @@
-""" The sequent patterns, their matching and the search by rules. """
+""" The rules and generators of a category, and the search by them. """
 
 from __future__ import annotations
-
-from typing import TypeVar
 
 from hypothesis import find
 from hypothesis import strategies as st
 from pytest import raises
 
-from discopy import braided, monoidal, rigid, traced
-from discopy.abc import Category, MonoidalCategory
-from discopy.axioms import Equation
+from discopy import braided, rigid, traced
+from discopy.abc import Category
 from discopy.monoidal import Box, Diagram, Ty
-from discopy.search import (
-    C0, C1, Atom, Attr, Axiom, Call, Generator, Hom, Op, Rule, Sequent,
-    Sort, Tensor, Unit, Var, axiom, declarations, generator, parse, read,
-    rule, search)
+from discopy.pattern import C0, C1, declarations
+from discopy.search import Generator, Rule, generator, rule, search
 from discopy.utils import AxiomError
 
 
-x, y, z = map(Ty, "xyz")
-A, B = Var("A", Sort()), Var("B", Sort())
-M = Var("M", Sort(atomic=True))
-
-
-def test_read():
-    sorts = {"A": Sort(), "M": Sort(atomic=True)}
-    assert read("A @ M", sorts) == Tensor((A, M))
-    assert read("(A @ M) @ A", sorts) == Tensor((A, M, A))
-    assert read("1", sorts) == Unit()
-    assert read("M.r", sorts) == Attr(M, "r")
-    assert read("M.delay(2)", sorts) == Call(M, "delay", (2, ))
-    assert read("A << M", sorts) == Op("<<", A, M)
-    assert read("C0", sorts) == Sort("C0")
-    assert read("Atom[C0]", sorts) == Sort("C0", atomic=True)
-    assert read("Self.dom.ob", sorts) == Sort("Self.dom.ob")
-    assert read("Self.dom.ar[A, M]", sorts) == Hom(A, M, "Self.dom.ar")
-    assert A @ M == Tensor((A, M)) and 1 @ A == Tensor((Unit(), A))
-    assert (A << M) == Op("<<", A, M) and (1 >> A) == Op(">>", Unit(), A)
-    assert M.delay(2) == Call(M, "delay", (2, )) and M.r == Attr(M, "r")
-    assert Atom[Sort("C0")] == Sort("C0", atomic=True)
-    assert Atom[TypeVar("C1")] == Sort("C1", atomic=True)
-    with raises(TypeError):
-        Atom[A]
-    with raises(AttributeError):
-        A.__wrapped__
-    assert str(read("C1[A @ M.r, 1]", sorts)) == "C1[A @ M.r, 1]"
-    with raises(TypeError):
-        read("A ** 2", sorts)
-    with raises(TypeError):
-        read("C0 @ A", sorts)
-    with raises(TypeError):
-        read("C1[A]", sorts)
-
-
-def test_parse():
-    def then[A: C0, B: C0, C: C0](
-            self: C1[A, B], other: C1[B, C]) -> C1[A, C]:
-        ...
-    sequent = parse(then)
-    assert list(sequent.variables) == ["A", "B", "C"]
-    assert list(sequent.premises) == ["self", "other"]
-    assert str(sequent.conclusion) == "C1[A, C]"
-    assert parse(then, conclusion=False).conclusion is None
-
-    def law(cls, x: Atom[C0], n: int = 1, *args, **kwargs):
-        ...
-    assert list(parse(law, conclusion=False).premises) == ["x"]
-    assert str(parse(lambda cls: None, conclusion=False)) == ""
-    with raises(TypeError):
-        parse(law)
-
-    def unsorted[A: C1[A, A]](cls, f: A):
-        ...
-    with raises(TypeError):
-        parse(unsorted, conclusion=False)
-    namespace, source = {}, "def eager(cls, f: int): ..."
-    exec(compile(source, "<eager>", "exec", dont_inherit=True), namespace)
-    with raises(TypeError, match="__future__"):
-        parse(namespace["eager"], conclusion=False)
-
-
-def test_match():
-    assert list(A.match(None)) == [({}, ())]
-    assert [s for s, _ in Tensor((M, A)).match(x @ y)] == [
-        {"M": x, "A": y}]
-    assert list(Tensor((M, M)).match(x)) == []
-    assert list(Unit().match(x)) == []
-    assert list(Tensor((A, A)).match(x @ y)) == []
-    assert [s for s, _ in Tensor((A, A)).match(x @ x)] == [{"A": x}]
-    assert next(Attr(A, "r").match(rigid.Ty("x").r))[0] == {"A": rigid.Ty("x")}
-    subst, residuals = next(Op("<<", A, B).match(x))
-    assert subst == {} and residuals == ((Op("<<", A, B), x), )
-    subst, residuals = next(Call(M, "delay").match(x))
-    assert residuals == ((Call(M, "delay"), x), )
-
-
-def test_instantiate():
-    subst = {"A": x @ y, "M": z}
-    assert Tensor((A, M)).instantiate(subst, Ty) == x @ y @ z
-    assert Unit().instantiate(subst, Ty) == Ty()
-    assert Attr(M, "r").instantiate({"M": rigid.Ty("z")}, rigid.Ty)\
-        == rigid.Ty("z").r
-    assert Call(M, "delay").instantiate(
-        {"M": monoidal.Ty("z")}, Ty) == monoidal.Ty("z").delay()\
-        if hasattr(monoidal.Ty, "delay") else True
-    assert Hom(A, M).instantiate(subst, Ty) == (x @ y, z)
-    assert Tensor((A, M)).variables == ("A", "M")
-    assert Op("<<", A, M).variables == ("A", "M")
-
-
-def test_hom_match():
-    hom = Hom(Tensor((A, B)), A)
-    assert [s for s, _ in hom.match(x @ y, x)] == [{"A": x, "B": y}]
-    assert [s for s, _ in hom.match(None, x)] == [{"A": x}]
-    assert list(hom.match(x @ y, y)) == []
-
-
-def test_sequent_str():
-    assert str(Sequent()) == ""
-    assert str(Sequent({"A": Sort()}, {"f": Hom(A, A)}, Hom(A, A)))\
-        == "A: C0 | f: C1[A, A] ⊢ C1[A, A]"
-    assert str(Sequent(premises={"x": Sort("C0", atomic=True)}))\
-        == "x: Atom[C0]"
+x, y = Ty("x"), Ty("y")
 
 
 def test_rule():
@@ -188,30 +80,6 @@ def test_declarations():
     assert list(declarations(Category, Generator)) == ["id"]
 
 
-def test_axiom():
-    assert MonoidalCategory.bifunctoriality.parameters[0].name == "f"
-    assert str(MonoidalCategory.bifunctoriality.sequent).startswith(
-        "A: C0, B: C0, C: C0, D: C0, E: C0, F: C0 | f: C1[A, B]")
-    args = find(Diagram.bifunctoriality.strategy(), lambda _: True)
-    f, g, h, k = args
-    assert f.cod == h.dom and g.cod == k.dom
-    assert Diagram.bifunctoriality(*args)
-    assert MonoidalCategory.tensor.sequent.conclusion is not None
-    assert Axiom.concludes is False
-    with raises(TypeError):
-        @axiom
-        def eager(cls, f):
-            """ An unannotated premise has no pattern. """
-
-
-def test_weaken():
-    law = MonoidalCategory.bifunctoriality.weaken(max_depth=0).bind(Diagram)
-    args = find(law.strategy(), lambda _: True)
-    assert all(len(term.boxes) <= 1 for term in args)
-    assert law.weaken(max_depth=1).params == {"max_depth": 1}
-    assert law.modulo(lambda term: term).params == law.params
-
-
 def test_search():
     strategy = search(Diagram, Box.strategy, dom=x, cod=y, max_depth=2)
     term = find(strategy, lambda value: len(value.boxes) == 3)
@@ -241,7 +109,3 @@ def test_search_trace():
                     isinstance(box, traced.Trace) and len(box.arg.boxes) > 1
                     for box in value.boxes))
     assert (term.dom, term.cod) == (a, a)
-
-
-def test_equation_of_axiom():
-    assert isinstance(Diagram.unitality(Box("f", x, y)), Equation)

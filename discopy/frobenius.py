@@ -70,7 +70,8 @@ from discopy.abc import HypergraphCategory
 from discopy.cat import factory
 from discopy.utils import (
     assert_isatomic, deprecated_alias, factory_name, from_tree)
-from discopy.axioms import Atom, axiom
+from discopy.axioms import axiom
+from discopy.pattern import Atom
 
 
 class Wire(pivotal.Wire):

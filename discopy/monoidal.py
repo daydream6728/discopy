@@ -64,8 +64,8 @@ from warnings import warn
 
 from discopy import abc, cat, drawing, hypergraph, cmap, messages
 from discopy.abc import ColouredMonoid, MonoidalCategory
-from discopy.axioms import GENERATORS, Strategy
-from discopy.search import axiom, search
+from discopy.axioms import GENERATORS, Strategy, axiom
+from discopy.search import search
 from discopy.drawing import Drawing
 from discopy.config import (
     BOX_DRAWING_ATTRIBUTES, WIRE_DRAWING_ATTRIBUTES,

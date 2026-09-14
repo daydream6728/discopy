@@ -48,6 +48,7 @@ Summary
     PROP
     MarkovCategory
     ClosedCategory
+    DelayedMonoid
     FeedbackCategory
     BalancedCategory
     RibbonCategory
@@ -63,9 +64,9 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import ClassVar, Self
 
-from discopy.axioms import Equation
-from discopy.search import (
-    Atom, Axiom, Generator, Rule, axiom, declarations, generator, rule)
+from discopy.axioms import Axiom, Equation, axiom
+from discopy.pattern import Atom, declarations
+from discopy.search import Generator, Rule, generator, rule
 from discopy.utils import NamedGeneric, classproperty  # noqa: F401
 
 
@@ -619,8 +620,15 @@ class Pregroup[C0, C1: Pregroup](ResiduatedMonoid[C0, C1]):
     A pregroup is a residuated monoid where the left and right exponentials are
     given by tensoring with the chosen left and right duals for each object.
     """
-    l: C1
-    r: C1
+    @property
+    @abstractmethod
+    def l(self) -> C1:
+        """ The left adjoint, to be instantiated. """
+
+    @property
+    @abstractmethod
+    def r(self) -> C1:
+        """ The right adjoint, to be instantiated. """
 
     def over(self, other: C1) -> C1:
         return self @ other.l
@@ -982,10 +990,32 @@ class ClosedCategory[C0, C1](BiclosedCategory[C0, C1], MarkovCategory[C0, C1]):
     """
 
 
-class FeedbackCategory[C0, C1](MarkovCategory[C0, C1]):
+class DelayedMonoid[C0, C1: DelayedMonoid](ColouredMonoid[C0, C1]):
     """
-    A feedback category is a :class:`MarkovCategory` with a :code:`delay`
-    endofunctor and a :code:`feedback` operator.
+    A delayed monoid is a coloured monoid with a :meth:`delay` endomorphism,
+    the objects of a :class:`FeedbackCategory`: the memory it feeds back
+    is one time step later on the way in, shortened to :attr:`d`.
+    """
+    @abstractmethod
+    def delay(self, n_steps: int = 1) -> C1:
+        """
+        The delay of an object by some time steps, to be instantiated.
+
+        Parameters:
+            n_steps : The number of time steps to delay.
+        """
+
+    @property
+    def d(self) -> C1:
+        """ Syntactic sugar for :meth:`delay` by one time step. """
+        return self.delay()
+
+
+class FeedbackCategory[C0: DelayedMonoid, C1](MarkovCategory[C0, C1]):
+    """
+    A feedback category is a :class:`MarkovCategory` whose objects are a
+    :class:`DelayedMonoid`, with a :code:`delay` endofunctor and a
+    :code:`feedback` operator.
     """
     @abstractmethod
     def delay(self, n_steps: int = 1) -> C1:
@@ -999,7 +1029,7 @@ class FeedbackCategory[C0, C1](MarkovCategory[C0, C1]):
     @rule
     @abstractmethod
     def feedback[X: C0, Y: C0, M: Atom[C0]](
-            self: C1[X @ M.delay(), Y @ M],
+            self: C1[X @ M.d, Y @ M],
             dom: C0 = None, cod: C0 = None, mem: C0 = None) -> C1[X, Y]:
         """
         The feedback operator on a morphism: the rule feeds one wire of
@@ -1028,7 +1058,7 @@ class FeedbackCategory[C0, C1](MarkovCategory[C0, C1]):
 
     @axiom
     def feedback_joining[X: C0, M: Atom[C0], N: Atom[C0]](
-            cls, f: C1[X @ (M @ N).delay(), X @ M @ N]) -> Equation[C1]:
+            cls, f: C1[X @ (M @ N).d, X @ M @ N]) -> Equation[C1]:
         """ Joining nested feedback loops. """
         return cls.equation_factory(
             f.feedback(mem=f.cod[-2:]), f.feedback().feedback())
