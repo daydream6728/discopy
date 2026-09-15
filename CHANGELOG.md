@@ -9,73 +9,34 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Added
 
-- `discopy.pattern` and `discopy.search`: a category states its
-  structure as sequents. A
-  `@rule` or `@generator` method of `discopy.abc` has a signature whose
-  type parameters are the variables and their sorts (`C0`, `Atom[C0]`),
+- `discopy.pattern` and `discopy.search`: a category states its structure
+  as sequents. A `@rule` or `@generator` method of `discopy.abc` has a
+  signature whose type parameters are the variables and their sorts,
   whose parameters are the premises and whose return annotation is the
   conclusion, e.g. `tensor[A: C0, B: C0, C: C0, D: C0](self: C1[A, B],
   other: C1[C, D]) -> C1[A @ C, B @ D]` or `cups[X: Atom[C0]](cls, left:
   X, right: X.r) -> C1[X @ X.r, 1]`; an `@axiom` is a sequent with no
-  conclusion, its premises the arguments of the property test. The
-  annotations are deferred with `from __future__ import annotations` and
-  each is evaluated in the environment of its sequent, where the type
-  parameters are pattern variables; the bound of a type parameter is
-  evaluated as Python does, and bounds what the pattern may do: `X.l` and
-  `X.r` are patterns of a rigid category, whose objects are a `Pregroup`
-  with `l` and `r` now abstract properties, `X << Y` of a residuated one,
-  `M.d` of a feedback category, whose objects are the new
-  `abc.DelayedMonoid`. DisCoPy now requires Python 3.14. `monoidal.Diagram.strategy`
-  is a goal-directed search by those rules and generators: to build a
-  diagram of a given type it picks a free box, a generator whose conclusion
-  unifies with the goal, or a rule whose conclusion unifies and searches
-  its premises. Every level of the hierarchy inherits the search and tunes
-  it by declaring its structure — braids, cups and caps, evaluations,
-  traces, copies, discards and merges, twists, feedback loops — so the
+  conclusion. The bound of a type parameter bounds what its patterns may
+  do: `X.l` and `X.r` need a `Pregroup`, whose `l` and `r` are now
+  abstract properties, `X << Y` a `ResiduatedMonoid`, `M.d` the new
+  `abc.DelayedMonoid` that `feedback.Ty` is. `monoidal.Diagram.strategy`
+  is a goal-directed search by those rules and generators, which every
+  level of the hierarchy tunes by declaring its structure, so the
   `Box.strategy` overrides of every module and the wrapper strategies of
-  `discopy.axioms` (`Square`, `ComposableTriple`, `TraceSliding`,
-  `LeftCurrying`, `FeedbackJoining`...) are gone with them.
-  `Axiom.weaken` now takes the parameters of the strategy of each hom
-  premise, e.g. `weaken(boundary_connected=True)`, and recorded
-  counterexamples pass their arguments one per premise. `Axiom.strategy`
-  generates the equations of the law rather than its arguments, so the
-  matrix draws an equation and asserts it; `Axiom.canonical` is the law
-  as a schema, its equation on a box per premise between objects named
-  after the variables, and `Axiom.draw` draws it — a rule's `canonical`
-  is the term it builds. The wider search
-  found one escape, declared in the matrix: decoding a compact cap and
-  cup in the `(x, x.r)` orientation around a box through a hypergraph
-  permutes wires of the wrong type.
-
-- The property matrix's search strategy is now recursive: `cat.Arrow` and
-  `monoidal.Diagram` build composite paths/diagrams with
-  `hypothesis.strategies.recursive`/an iterated layer search instead of
-  the earlier canonical single instantiation, and every monoidal-derived
-  category (`braided`, `traced`, `balanced`, `symmetric`, `biclosed`,
-  `rigid`, `pivotal`, `ribbon`, `compact`, `markov`, `closed`, `feedback`,
-  `frobenius`) inherits it through a `Box.strategy` override — its own or
-  its base's, e.g. `closed` and `compact` inherit theirs — adding its
-  structural boxes (braids, cups and caps, copies, spiders, feedback
-  loops...) to the mix. Their axioms, stated in
-  `discopy.abc`, are enrolled in `proptest/`. The bugs the wider search
-  surfaced are fixed below, except one declared in the matrix —
+  `discopy.axioms` are gone. `Axiom.strategy` generates the equations of
+  the law, `Axiom.weaken` takes the parameters of the strategy of each hom
+  premise, `Axiom.canonical` is the law as a schema and `Axiom.draw` draws
+  it. DisCoPy now requires Python 3.14. The bugs the search surfaced are
+  fixed below, except three declared in the matrix:
   `feedback.Diagram.feedback` unrolls its memory in the wrong order
-  ([#606](https://github.com/discopy/discopy/issues/606)) — and one the
-  matrix cannot reach: an uncoloured `monoidal.Wire` reprs as the `cat.Ob`
-  that `Ty` coerces, which its type-strict equality rejects
-  ([#650](https://github.com/discopy/discopy/issues/650)). `Wire` is the
-  generating 1-cell of `Ty`, not a category, so it states no axioms and has
-  no cell to declare; `Ty` does not stand in for it, since `Ty.__init__`
-  coerces the `cat.Ob` back into a `Wire` and its own `transparency`
-  passes. The issue tracks it, not a declaration.
-  `compact.Diagram.rotate_contravariance` is no longer declared broken: it
-  was declared so because `to_hypergraph` dropped the rotation of a box,
-  which #716 fixed, and its recorded counterexample — two endomorphisms on
-  one type, precisely the case the old `rotate` got right by accident — no
-  longer falsifies it. The strict xfail xpassed and failed the run the day
-  the fix arrived, which is the mechanism the ledger was built for. A
-  thousand examples turn up no replacement, so the declaration and the
-  record are both removed rather than rewritten.
+  ([#606](https://github.com/discopy/discopy/issues/606)), decoding a
+  compact cap and cup in the `(x, x.r)` orientation around a box through
+  a hypergraph permutes wires of the wrong type, and one the matrix cannot
+  reach: an uncoloured `monoidal.Wire` reprs as the `cat.Ob` that `Ty`
+  coerces ([#650](https://github.com/discopy/discopy/issues/650)).
+  `compact.Diagram.rotate_contravariance` is no longer declared broken:
+  `to_hypergraph` dropped the rotation of a box, which #716 fixed, and a
+  thousand examples turn up no replacement for its recorded counterexample.
 - `discopy/axioms.py`, a Hypothesis-based property-testing module, home
   of `Equation` (formerly `discopy.abc.Equation`): a law is stated once
   on `discopy.abc.Category` and every subclass inherits

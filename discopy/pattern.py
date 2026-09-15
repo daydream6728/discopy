@@ -2,14 +2,9 @@
 Sequent patterns and their matching: the language in which a category
 states its rules, generators and axioms.
 
-A sequent is stated once on an abstract base class of :mod:`discopy.abc`,
-as the signature of a method: its type parameters are the variables and
-their sorts, its parameters the premises and its return annotation the
-conclusion. The tensor of a monoidal category is the rule ``f: C1[A, B],
-g: C1[C, D] ⊢ C1[A @ C, B @ D]``, the cups of a rigid category the
-generator ``x: X, y: X.r ⊢ C1[X @ X.r, 1]`` for an atomic ``X``, and an
-axiom is a sequent with no conclusion: its premises are the arguments
-generated for a property test.
+A sequent is the signature of a method on an abstract base class of
+:mod:`discopy.abc`: its type parameters are the variables and their
+sorts, its parameters the premises, its return annotation the conclusion.
 
 .. code-block:: python
 
@@ -19,6 +14,25 @@ generated for a property test.
         def tensor[A: C0, B: C0, C: C0, D: C0](
                 self: C1[A, B], other: C1[C, D]) -> C1[A @ C, B @ D]:
             ...
+
+The module stating it defers its annotations with ``from __future__
+import annotations``, and :func:`parse` evaluates each in an environment
+where the type parameters are :class:`Var` s, ``C0``, ``C1`` and ``Self``
+:class:`Sort` s and ``Atom`` marks a sort atomic: ``C1[A, B]`` is a
+:class:`Hom`, ``X @ X.r`` a :class:`Tensor` of a variable with its
+:class:`Attr`, ``X << Y`` an :class:`Op`, ``1`` the :class:`Unit`. The
+bound of a type parameter is its sort; a class's ``C0: Pregroup`` reaches
+the sort as its bound, so that ``X.l`` and ``X.r`` are patterns of a
+rigid category only, ``X << Y`` of a residuated one and ``M.d`` of one
+with a delay: the abstract classes bound the patterns without being
+imported here.
+
+A conclusion is matched against a goal, a pair of an optional domain and
+codomain, by unification over the free monoid of objects: a
+:class:`Tensor` splits the goal at every position, a :class:`Var` binds
+once, an adjoint ``X.r`` inverts to ``X``. What cannot be inverted, an
+exponential or a delay, is a residual equation checked once every
+variable is instantiated.
 
 Summary
 -------
@@ -51,45 +65,6 @@ Summary
         read
         cell
         declarations
-
-Reading a signature
--------------------
-
-A module stating a sequent defers its annotations with ``from __future__
-import annotations``, so that :func:`parse` finds each as the expression
-it is written as and evaluates it in the environment of the sequent, see
-:func:`read`: the type parameters are :class:`Var` s, ``C0``, ``C1`` and
-``Self`` are :class:`Sort` s and ``Atom`` marks a sort atomic. The
-patterns carry the operators, so that Python reads the expression:
-``C1[A, B]`` subscripts a sort into a :class:`Hom`, ``X @ X.r`` is the
-:class:`Tensor` of a variable with its :class:`Attr`, ``X << Y`` an
-:class:`Op` and ``1`` the :class:`Unit`. The bound of a type parameter is
-its sort, evaluated as Python does: ``C0`` for any object — the type
-parameter of the class, or the :data:`C0` of this module in a class that
-has none — ``Atom[C0]`` for one with a single generator. The head of a
-sort or a hom is resolved only once the declaration is bound to a
-category, in the :attr:`Declaration.scope` where ``Self`` is the category
-and ``C0``, ``C1`` its objects and arrows.
-
-The classes of :mod:`discopy.abc` bound what a pattern may do: a type
-parameter ``C0: Pregroup`` reaches a :class:`Sort` as its bound, so that
-``X.l`` and ``X.r`` are patterns of a rigid category and of no other,
-``X << Y`` of a residuated one, ``M.d`` of one with a delay, see
-:meth:`Pattern.member`. The bound flows in as a value, through the type
-parameter, which is how this module depends on the abstract classes
-without importing them.
-
-Matching
---------
-
-A conclusion is matched against a goal, a pair of an optional domain and
-codomain, by unification over the free monoid of objects: a
-:class:`Tensor` splits the goal at every position, a :class:`Var` binds
-once and compares afterwards, an adjoint ``X.r`` inverts to ``X`` as the
-left adjoint of the goal. What cannot be inverted, an exponential
-``X << Y`` or a delay ``M.d``, is kept as a residual equation and
-checked once every variable is instantiated. A match is a substitution
-together with its residuals.
 """
 
 from __future__ import annotations
@@ -102,7 +77,6 @@ from collections.abc import Callable, Iterator
 from dataclasses import KW_ONLY, dataclass, field, replace
 from functools import reduce
 from typing import TYPE_CHECKING, ClassVar, TypeVar
-from typing import Self as Self_
 
 from discopy.utils import factory_name
 
@@ -113,8 +87,7 @@ if TYPE_CHECKING:
 class Atom:
     """
     The sort of atomic objects: ``Atom[C0]`` in a signature stands for the
-    objects of ``C0`` with exactly one generator, whether ``C0`` is a sort
-    or the type parameter of the class stating the rule.
+    objects of ``C0`` with exactly one generator.
 
     >>> Atom[Sort("C0")]
     Sort(head='C0', atomic=True)
@@ -126,11 +99,7 @@ class Atom:
 
 
 def sort(value) -> Sort:
-    """
-    A sort as written in a bound: itself, or a type parameter by name,
-    bounded by what bounds the type parameter, e.g. :class:`abc.Pregroup`
-    for the ``C0`` of :class:`abc.RigidCategory`.
-    """
+    """ A sort as written in a bound: itself, or a type parameter by name. """
     if isinstance(value, Sort):
         return value
     if isinstance(value, TypeVar):
@@ -147,10 +116,9 @@ type Match = tuple[Substitution, Residuals]
 class Sort:
     """
     The sort of an object variable: the instances of the type its ``head``
-    resolves to in the scope of a bound rule, atomic or not, and the class
-    of :mod:`discopy.abc` bounding them when the sort is a type parameter
-    with a bound — what a pattern of the sort may do, see
-    :meth:`Pattern.member`. An attribute of a sort is a longer head,
+    resolves to in the scope of a bound declaration, atomic or not, and
+    the class of :mod:`discopy.abc` bounding them when the sort is that of
+    a bounded type parameter. An attribute of a sort is a longer head,
     ``Self.dom.ob``, and subscripting a sort with two patterns is the
     :class:`Hom` between them.
 
@@ -210,6 +178,14 @@ class Pattern(ABC):
     def variables(self) -> tuple[str, ...]:
         """ The names of the variables of the pattern, in order. """
 
+    @property
+    @abstractmethod
+    def bound(self) -> type[abc.ColouredMonoid] | None:
+        """
+        The class of :mod:`discopy.abc` bounding the objects the pattern
+        stands for, :obj:`None` when nothing does.
+        """
+
     @abstractmethod
     def instantiate(self, subst: Substitution, unit: Callable) -> object:
         """
@@ -255,65 +231,29 @@ class Pattern(ABC):
     def __rmatmul__(self, other):
         return Tensor(factors(pattern(other)) + factors(self))
 
-    @property
-    @abstractmethod
-    def bound(self) -> type[abc.ColouredMonoid] | None:
-        """
-        The class of :mod:`discopy.abc` bounding the objects the pattern
-        stands for, :obj:`None` when nothing does.
-        """
-
-    def member(self, name: str, *others: Pattern) -> str:
-        """
-        The name of a member the :attr:`bound` declares — of the pattern or
-        of the others it is combined with, the unit having none of its own
-        — e.g. ``l`` for a :class:`abc.Pregroup` or ``d`` for a
-        :class:`abc.DelayedMonoid`, refusing one it does not: a pattern
-        only does what its sort allows.
-
-        >>> from discopy.abc import Pregroup
-        >>> Var('X', Sort(bound=Pregroup)).l
-        Attr(base=Var(name='X', sort=Sort(head='C0', atomic=False)), name='l')
-        >>> Var('X', Sort()).l
-        Traceback (most recent call last):
-         ...
-        TypeError: X has no l: its objects are unbounded.
-        """
-        bound = next((
-            p.bound for p in (self, *others) if p.bound is not None), None)
-        if not hasattr(bound, name):
-            raise TypeError(f"{self} has no {name}: its objects are " + (
-                "unbounded." if bound is None
-                else f"bounded by {bound.__name__}."))
-        return name
-
     def __lshift__(self, other):
-        other = pattern(other)
-        return Op("<<", self, other, self.member("over", other))
+        return Op("<<", self, pattern(other))
 
     def __rlshift__(self, other):
-        other = pattern(other)
-        return Op("<<", other, self, self.member("over", other))
+        return Op("<<", pattern(other), self)
 
     def __rshift__(self, other):
-        other = pattern(other)
-        return Op(">>", self, other, self.member("under", other))
+        return Op(">>", self, pattern(other))
 
     def __rrshift__(self, other):
-        other = pattern(other)
-        return Op(">>", other, self, self.member("under", other))
+        return Op(">>", pattern(other), self)
 
     def __getattr__(self, name: str):
         if name.startswith("_"):
             raise AttributeError(name)
-        return Attr(self, self.member(name))
+        return Attr(self, name)
 
 
-C0, C1, Self = Sort("C0"), Sort("C1"), Sort("Self")
+C0, C1 = Sort("C0"), Sort("C1")
 """
-The objects and arrows of the category a rule is bound to, and the
-category itself, in the environment its annotations are read in — and
-in a module stating a rule on a class with no type parameters of its own.
+The objects and arrows of the category a declaration is bound to, in the
+environment its annotations are read in and in a module stating a rule on
+a class with no type parameters of its own.
 """
 
 
@@ -329,6 +269,26 @@ def pattern(value) -> Pattern:
 def factors(value: Pattern) -> tuple:
     """ The factors of a pattern as a tensor: itself, unless it is one. """
     return value.factors if isinstance(value, Tensor) else (value, )
+
+
+def member(bound: type | None, name: str, pattern: Pattern) -> None:
+    """
+    Check that the bound declares a member, e.g. ``l`` for a
+    :class:`abc.Pregroup` or ``d`` for a :class:`abc.DelayedMonoid`: a
+    pattern only does what the sort of its variables allows.
+
+    >>> from discopy.abc import Pregroup
+    >>> Var('X', Sort(bound=Pregroup)).l
+    Attr(base=Var(name='X', sort=Sort(head='C0', atomic=False)), name='l')
+    >>> Var('X', Sort()).l
+    Traceback (most recent call last):
+     ...
+    TypeError: X has no l: its objects are unbounded.
+    """
+    if not hasattr(bound, name):
+        objects = "unbounded" if bound is None\
+            else f"bounded by {bound.__name__}"
+        raise TypeError(f"{pattern} has no {name}: its objects are {objects}.")
 
 
 @dataclass(frozen=True)
@@ -419,7 +379,7 @@ class Tensor(Pattern):
 @dataclass(frozen=True)
 class Attr(Pattern):
     """
-    An attribute of a pattern, e.g. the adjoint ``X.r`` of a variable,
+    An attribute of a pattern its bound declares, e.g. the adjoint ``X.r``,
     inverted by the adjoint on the other side when matching.
     """
 
@@ -427,6 +387,9 @@ class Attr(Pattern):
     name: str
 
     INVERSE: ClassVar[dict] = {"l": "r", "r": "l"}
+
+    def __post_init__(self):
+        member(self.bound, self.name, self.base)
 
     @property
     def variables(self):
@@ -452,15 +415,20 @@ class Attr(Pattern):
 
 @dataclass(frozen=True)
 class Op(Pattern):
-    """ A binary operator between patterns, ``X << Y`` or ``X >> Y``. """
+    """
+    An exponential ``X << Y`` or ``X >> Y``, the ``over`` and ``under`` of
+    a residuated monoid.
+    """
 
     symbol: str
     left: Pattern
     right: Pattern
-    method: str = field(default="over", compare=False, repr=False)
 
     OPERATORS: ClassVar[dict] = {
-        "<<": operator.lshift, ">>": operator.rshift}
+        "<<": (operator.lshift, "over"), ">>": (operator.rshift, "under")}
+
+    def __post_init__(self):
+        member(self.bound, self.OPERATORS[self.symbol][1], self.left)
 
     @property
     def variables(self):
@@ -471,7 +439,7 @@ class Op(Pattern):
         return self.left.bound or self.right.bound
 
     def instantiate(self, subst, unit):
-        return self.OPERATORS[self.symbol](
+        return self.OPERATORS[self.symbol][0](
             self.left.instantiate(subst, unit),
             self.right.instantiate(subst, unit))
 
@@ -525,9 +493,9 @@ class Hom:
 @dataclass(frozen=True)
 class Sequent:
     """
-    A sequent: variables and their sorts, named premises and an optional
-    conclusion. A premise is a :class:`Hom` to generate, a :class:`Sort` to
-    generate, or a :class:`Pattern` to instantiate.
+    Variables and their sorts, named premises and an optional conclusion.
+    A premise is a :class:`Hom` to generate, a :class:`Sort` to generate,
+    or a :class:`Pattern` to instantiate.
 
     >>> from discopy.abc import MonoidalCategory
     >>> print(MonoidalCategory.tensor.sequent)
@@ -551,10 +519,8 @@ class Sequent:
 def read(annotation: str, sorts: dict[str, Sort],
          namespace: dict = None) -> Pattern | Sort | Hom:
     """
-    Read a pattern, a sort or a hom from an annotation, evaluated in the
-    environment of the sequent: the variables in scope by name, ``C0``,
-    ``C1`` and ``Self`` as sorts, ``Atom`` marking a sort atomic, over
-    the namespace of the function stating it.
+    Read a pattern, a sort or a hom from an annotation evaluated in the
+    environment of the sequent, over the namespace of the function.
 
     >>> from discopy.abc import Pregroup
     >>> sorts = {"X": Sort("C0", atomic=True, bound=Pregroup)}
@@ -568,10 +534,10 @@ def read(annotation: str, sorts: dict[str, Sort],
     TypeError: Cannot read a pattern from X ** 2.
     """
     environment = {
-        "Atom": Atom, "C0": C0, "C1": C1, "Self": Self,
+        "Atom": Atom, "C0": C0, "C1": C1, "Self": Sort("Self"),
         **{name: Var(name, sort) for name, sort in sorts.items()}}
     try:
-        value = eval(annotation, dict(namespace or {}), environment)
+        value = eval(annotation, namespace or {}, environment)
     except Exception as error:
         raise TypeError(
             f"Cannot read a pattern from {annotation}.") from error
@@ -580,16 +546,11 @@ def read(annotation: str, sorts: dict[str, Sort],
 
 def parse(function: Callable, conclusion: bool = True) -> Sequent:
     """
-    Read the sequent a function states with its signature: the bound of
-    each type parameter is the sort of a variable, the annotation of each
-    parameter without a default a premise, the return annotation the
-    conclusion. An unannotated first parameter is the receiver, ``cls`` or
-    ``self``, and is skipped.
-
-    Parameters:
-        function : The function, stated under ``from __future__ import
-            annotations``: :class:`Rule` refuses one compiled without it.
-        conclusion : Whether to read the return annotation.
+    The sequent a function states with its signature, deferred with
+    ``from __future__ import annotations``: the bound of each type
+    parameter the sort of a variable, each parameter without a default a
+    premise, the return annotation the conclusion when asked for. An
+    unannotated first parameter, ``cls`` or ``self``, is skipped.
 
     >>> def then[A: C0, B: C0, C: C0](
     ...         self: C1[A, B], other: C1[B, C]) -> C1[A, C]:
@@ -600,8 +561,7 @@ def parse(function: Callable, conclusion: bool = True) -> Sequent:
     A: C0, B: C0, C: C0 | self: C1[A, B], other: C1[B, C]
     """
     function = inspect.unwrap(function)
-    deferred = __future__.annotations.compiler_flag
-    if not function.__code__.co_flags & deferred:
+    if not function.__code__.co_flags & __future__.annotations.compiler_flag:
         raise TypeError(
             f"{function.__module__} states {function.__name__} without "
             "`from __future__ import annotations`.")
@@ -641,10 +601,9 @@ def parse(function: Callable, conclusion: bool = True) -> Sequent:
 @dataclass(repr=False)
 class Declaration[**P, T]:
     """
-    A sequent stated by a function, once on an abstract base class of
-    :mod:`discopy.abc` and inherited by every category below it: the base
-    of the rules and generators of :mod:`discopy.search` and of the axioms
-    of :mod:`discopy.axioms`, which :func:`declarations` collects.
+    A sequent stated by a function on an abstract base class and inherited
+    by every category below it: the base of the rules and generators of
+    :mod:`discopy.search` and of the axioms of :mod:`discopy.axioms`.
 
     Parameters:
         function : The function stating the sequent as its signature; a
@@ -696,8 +655,8 @@ class Declaration[**P, T]:
     def __hash__(self):
         return hash((self.function, self.category, self.name))
 
-    def bind(self, category: type[T]) -> Self_:
-        """ Bind the rule to a concrete category. """
+    def bind(self, category: type[T]) -> Declaration[P, T]:
+        """ Bind the declaration to a concrete category. """
         return replace(self, category=category)
 
     @property
@@ -722,16 +681,13 @@ class Declaration[**P, T]:
 
     def canonical(self) -> tuple:
         """
-        The canonical arguments of the sequent, so that a declaration reads
-        as a schema: each variable an object named after it, each premise
-        a :func:`cell` named after its parameter — a box between the
-        boundaries a hom instantiates to, an object for a sort — and a
-        pattern instantiated on them.
+        The canonical arguments of the sequent: each variable an object
+        named after it, each premise a :func:`cell` named after its
+        parameter, so that a declaration reads as a schema.
 
         >>> from discopy.abc import MonoidalCategory
         >>> from discopy.monoidal import Diagram
-        >>> tensor = MonoidalCategory.tensor.bind(Diagram)
-        >>> for box in Declaration.canonical(tensor):
+        >>> for box in MonoidalCategory.tensor.bind(Diagram).canonical():
         ...     print(f"{box}: {box.dom} -> {box.cod}")
         self: A -> B
         other: C -> D
@@ -756,11 +712,11 @@ class Declaration[**P, T]:
         Draw the arguments of the sequent inside a composite strategy, one
         premise at a time: a pattern is instantiated, a sort drawn, a hom
         drawn by ``hom(category, dom, cod)``. A variable is drawn from its
-        sort the first time a premise needs it — except a variable standing
-        alone on one side of a hom, which is left free for the search and
-        read off the term it finds, so that the search is guided by the
-        goal rather than by a draw. The residuals of a match are checked
-        once every variable is bound, rejecting the example otherwise.
+        sort the first time a premise needs it, except one standing alone
+        on a side of a hom, which is read off the term the search finds so
+        that the goal guides the search. The residuals of a match are
+        checked once every variable is bound, rejecting the example
+        otherwise.
 
         Parameters:
             draw : The draw function of a
@@ -817,27 +773,18 @@ class Declaration[**P, T]:
 
 def cell(factory: type, name: str, dom=None, cod=None):
     """
-    A cell of a class named after a parameter or a variable: a box of the
-    class when it has a ``box_factory``, between ``dom`` and ``cod`` or
-    objects named ``x`` and ``y``; else its generator, wrapped into the
-    class when it is not one, e.g. a type of one wire; else a term of the
-    class of that name.
+    A cell of a class named after a parameter or a variable: a box of a
+    class with a ``box_factory``, between ``dom`` and ``cod`` or objects
+    named ``x`` and ``y``, else an instance of the class of that name.
 
-    >>> from discopy.monoidal import Box, Colour, Diagram, Ty
+    >>> from discopy.monoidal import Box, Diagram, Ty
     >>> assert cell(Diagram, 'f') == Box('f', Ty('x'), Ty('y'))
     >>> assert cell(Ty, 'A') == Ty('A')
-    >>> red, blue = Colour('red'), Colour('blue')
-    >>> assert cell(Ty, 'A', red, blue).dom == red
     """
     if hasattr(factory, "box_factory"):
         dom = factory.ob("x") if dom is None else dom
         cod = factory.ob("y") if cod is None else cod
         return factory.box_factory(name, dom, cod)
-    if getattr(factory, "generator_factory", None) is not None:
-        boundaries = {} if dom is None else dict(dom=dom, cod=cod)
-        generator = factory.generator_factory(name, **boundaries)
-        return generator if isinstance(generator, factory)\
-            else factory(generator)
     return factory(name)
 
 
@@ -845,17 +792,10 @@ def declarations[D: Declaration](cls: type, kind: type[D],
                                  shadowed: bool = True) -> dict[str, D]:
     """
     The declarations of exactly a kind inherited by a class, bound to it and
-    keyed by name, subclasses overriding bases. A :class:`discopy.search.Rule`
-    survives a plain method assigned over it, which is its implementation;
-    a :class:`discopy.axioms.Axiom` does not, so assigning anything that is
-    not an axiom over an inherited law drops it altogether rather than
-    restating it.
-
-    Parameters:
-        cls : The class, e.g. :class:`discopy.monoidal.Diagram`.
-        kind : :class:`discopy.search.Rule`,
-            :class:`discopy.search.Generator` or :class:`discopy.axioms.Axiom`.
-        shadowed : Whether a plain override keeps the declaration.
+    keyed by name, subclasses overriding bases. A rule survives a plain
+    method assigned over it, its implementation; an axiom does not, so
+    assigning anything that is not an axiom over an inherited law drops it
+    rather than restating it.
 
     >>> from discopy.monoidal import Diagram
     >>> from discopy.search import Rule

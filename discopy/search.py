@@ -1,5 +1,10 @@
 """
-The search for diagrams by the rules and generators of their category.
+The search for diagrams by the rules and generators of their category: a
+:class:`Rule` is a :class:`discopy.pattern.Declaration` with a conclusion,
+a :class:`Generator` a rule with no hom among its premises, and
+:func:`search` builds a term of a goal type by choosing at each step a
+free box, a generator whose conclusion matches the goal, or a rule whose
+conclusion matches and whose premises are searched recursively.
 
 Summary
 -------
@@ -22,16 +27,6 @@ Summary
         rule
         generator
         search
-
-A :class:`Rule` is a :class:`discopy.pattern.Declaration` with a
-conclusion, an inference rule; a :class:`Generator` a rule with no hom
-among its premises, a logical constant. :func:`search` builds a term of a
-goal type by choosing, at each step, a free box, a generator whose
-conclusion matches the goal, or a rule whose conclusion matches and whose
-premises are searched recursively with one less unit of depth. A category
-tunes the search by declaring its rules and generators: a level of
-:mod:`discopy.abc` adds the structure it axiomatises, a concrete diagram
-class may add more.
 """
 
 from __future__ import annotations
@@ -53,16 +48,12 @@ if TYPE_CHECKING:
 @dataclass(repr=False)
 class Rule[**P, T](Declaration[P, T]):
     """
-    An inference rule of a category: a :class:`discopy.pattern.Declaration`
-    with a conclusion, stated once on an abstract base class and inherited
-    by every category below it.
-
-    The declaration and the implementation are decoupled by name: the
-    sequent is read from the declaration in :mod:`discopy.abc` while
-    :func:`search` calls the attribute of the same name on the category,
-    which a concrete class may override with its own method. Accessed on a
-    class, a rule binds to it; accessed on an instance, it behaves as the
-    method it decorates.
+    An inference rule of a category, a :class:`discopy.pattern.Declaration`
+    with a conclusion. The sequent is read from the declaration in
+    :mod:`discopy.abc` while :func:`search` calls the attribute of the same
+    name on the category, which a concrete class overrides with its own
+    method. Accessed on a class, a rule binds to it; on an instance, it
+    behaves as the method it decorates.
 
     >>> from discopy.abc import Category
     >>> print(Category.then)
@@ -81,18 +72,6 @@ class Rule[**P, T](Declaration[P, T]):
     def match(self, dom=None, cod=None) -> Iterator[Match]:
         """ Unify the conclusion with a goal. """
         return self.sequent.conclusion.match(dom, cod)
-
-    def canonical(self) -> T:
-        """
-        The rule applied to its canonical arguments, so that it reads as a
-        schema: the term its implementation builds on a box per premise.
-
-        >>> from discopy.abc import MonoidalCategory
-        >>> from discopy.monoidal import Diagram
-        >>> print(MonoidalCategory.tensor.bind(Diagram).canonical())
-        self @ C >> B @ other
-        """
-        return getattr(self.category, self.name)(*super().canonical())
 
 
 class Generator(Rule):
@@ -129,13 +108,12 @@ def search(category: type[abc.Category], free: Callable, *, dom=None, cod=None,
     either side free when :obj:`None`, is built as a free box, a
     :class:`Generator` whose conclusion matches, or below the depth bound a
     :class:`Rule` whose conclusion matches and whose premises are searched
-    recursively. A term the rule builds outside its declared conclusion is
-    an :class:`discopy.utils.AxiomError`: the declaration lies.
+    recursively. A term built outside the declared conclusion is an
+    :class:`discopy.utils.AxiomError`: the declaration lies.
 
     Parameters:
-        category : The class with the rules and generators, e.g.
-            :class:`discopy.monoidal.Diagram`.
-        free : A strategy factory ``free(dom=, cod=, types=)`` for a free
+        category : The class with the rules and generators.
+        free : A strategy factory ``free(dom=, cod=, types=)`` for the free
             generator of the category, e.g. the strategy of its boxes.
         dom : The domain of the goal, if any.
         cod : The codomain of the goal, if any.

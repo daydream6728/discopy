@@ -18,6 +18,8 @@ from discopy.pattern import (
 x, y, z = map(Ty, "xyz")
 A, B = Var("A", Sort()), Var("B", Sort())
 M = Var("M", Sort(atomic=True))
+X = Var("X", Sort(atomic=True, bound=Pregroup))
+D = Var("D", Sort(bound=DelayedMonoid))
 
 
 def test_read():
@@ -91,24 +93,23 @@ def test_match():
     assert list(Unit().match(x)) == []
     assert list(Tensor((A, A)).match(x @ y)) == []
     assert [s for s, _ in Tensor((A, A)).match(x @ x)] == [{"A": x}]
-    assert next(Attr(A, "r").match(rigid.Ty("x").r))[0] == {"A": rigid.Ty("x")}
-    subst, residuals = next(Op("<<", A, B).match(x))
-    assert subst == {} and residuals == ((Op("<<", A, B), x), )
-    subst, residuals = next(Attr(M, "d").match(x))
-    assert residuals == ((Attr(M, "d"), x), )
+    assert next(X.r.match(rigid.Ty("x").r))[0] == {"X": rigid.Ty("x")}
+    subst, residuals = next((X << X).match(x))
+    assert subst == {} and residuals == ((X << X, x), )
+    subst, residuals = next(D.d.match(x))
+    assert residuals == ((D.d, x), )
 
 
 def test_instantiate():
     subst = {"A": x @ y, "M": z}
     assert Tensor((A, M)).instantiate(subst, Ty) == x @ y @ z
     assert Unit().instantiate(subst, Ty) == Ty()
-    assert Attr(M, "r").instantiate({"M": rigid.Ty("z")}, rigid.Ty)\
-        == rigid.Ty("z").r
-    assert Attr(M, "d").instantiate(
-        {"M": feedback.Ty("z")}, feedback.Ty) == feedback.Ty("z").d
+    assert X.r.instantiate({"X": rigid.Ty("z")}, rigid.Ty) == rigid.Ty("z").r
+    assert D.d.instantiate({"D": feedback.Ty("z")}, feedback.Ty)\
+        == feedback.Ty("z").d
     assert Hom(A, M).instantiate(subst, Ty) == (x @ y, z)
     assert Tensor((A, M)).variables == ("A", "M")
-    assert Op("<<", A, M).variables == ("A", "M")
+    assert (X << M).variables == ("X", "M")
 
 
 def test_hom_match():
@@ -128,8 +129,6 @@ def test_sequent_str():
 
 def test_member():
     """ A pattern only does what the bound of its sort allows. """
-    X = Var("X", Sort(atomic=True, bound=Pregroup))
-    D = Var("D", Sort(bound=DelayedMonoid))
     assert X.l == Attr(X, "l") and X.r == Attr(X, "r")
     assert (X << X) == Op("<<", X, X) and (1 >> X) == Op(">>", Unit(), X)
     assert (1 >> X).bound is Pregroup and (X << 1) == Op("<<", X, Unit())
@@ -144,3 +143,5 @@ def test_member():
         D >> D
     with raises(TypeError, match="no d"):
         (A @ X).d
+    with raises(TypeError, match="no r"):
+        Attr(A, "r")

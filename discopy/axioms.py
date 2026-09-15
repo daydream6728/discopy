@@ -373,27 +373,19 @@ class AxiomFailure(AxiomError):
 @dataclass(repr=False)
 class Axiom[**P, T](Declaration[P, T]):
     """
-    An axiom of a category: a sequent with no conclusion, whose premises
-    are the arguments of a property test, generated from their patterns.
+    An axiom of a category: a :class:`discopy.pattern.Declaration` with no
+    conclusion, whose premises are the arguments of a property test. The
+    axiom is a classmethod of the category it is bound to, implicitly:
+    its first parameter is the category and the remaining ones are
+    generated from their patterns.
 
-    The category is the class the axiom is bound to, e.g.
-    :class:`discopy.cat.Arrow` for the axioms of
-    :class:`discopy.abc.Category`. The axiom is a classmethod of it,
-    implicitly: its first parameter is the category and the remaining ones
-    are generated from their annotations — an object for the typing of
-    identities, three composable arrows for the associativity of
-    composition, a term of the category itself for
-    :meth:`Strategy.transparency`.
-
-    Calling a bound axiom returns its own verdict: :obj:`NotImplemented`
-    when the structure does not apply to the category, and the equation
-    itself otherwise; a law declared broken raises an
-    :class:`AxiomFailure` carrying that equation instead of returning it.
-
-    A law is broken when *some* argument is a counterexample, not every one,
-    so :attr:`broken` is declared by :meth:`failing` before any argument is
-    generated — the property matrix marks such an axiom as an expected
-    failure and lets the search find the counterexample.
+    Calling a bound axiom returns its verdict: :obj:`NotImplemented` when
+    the structure does not apply to the category, the equation itself
+    otherwise; a law declared broken raises an :class:`AxiomFailure`
+    carrying that equation instead. A law is broken when *some* argument
+    is a counterexample, so :attr:`broken` is declared by :meth:`failing`
+    before any argument is generated: the property matrix marks such a
+    law as an expected failure and lets the search find the counterexample.
 
     Parameters:
         function : The function stating the law, from the category and the
@@ -477,10 +469,9 @@ class Axiom[**P, T](Declaration[P, T]):
 
     def equations(self, evaluate: Callable, **params) -> st.SearchStrategy:
         """
-        The law evaluated by a function of its arguments, drawn one per
-        parameter from its pattern in the :attr:`scope` of the category.
-        Keyword arguments are passed to the strategy of each hom premise,
-        after those :meth:`weaken` declared.
+        The law evaluated by a function of its arguments, drawn from their
+        patterns; keyword arguments are passed to the strategy of each hom
+        premise, after those :meth:`weaken` declared.
         """
         from hypothesis import strategies as st
 
@@ -499,10 +490,9 @@ class Axiom[**P, T](Declaration[P, T]):
 
     def strategy(self, **params) -> st.SearchStrategy[Equation]:
         """
-        Generate the equations the bound axiom states, the terms it is
-        checked on: a law declared broken raises its :class:`AxiomFailure`
-        from the draw, as it does from a call. Keyword arguments are those
-        of :meth:`equations`.
+        Generate the equations the bound axiom states: a law declared
+        broken raises its :class:`AxiomFailure` from the draw, as it does
+        from a call. Keyword arguments are those of :meth:`equations`.
 
         >>> from hypothesis import find
         >>> from discopy.cat import Arrow
@@ -513,11 +503,10 @@ class Axiom[**P, T](Declaration[P, T]):
 
     def falsify(self, **params) -> Equation:
         """
-        Search for a shrunk counterexample to the bound axiom: an equation
-        of the law that is false — the one a law declared broken raises is
-        checked rather than raised — raising
-        :class:`hypothesis.errors.NoSuchExample` when none is found.
-        Keyword arguments are passed to :func:`hypothesis.find`.
+        Search for a shrunk counterexample to the bound axiom, a false
+        equation of the law, raising :class:`hypothesis.errors.NoSuchExample`
+        when none is found. Keyword arguments are passed to
+        :func:`hypothesis.find`.
 
         >>> from discopy.cat import Arrow
         >>> Arrow.associativity.falsify()  # doctest: +ELLIPSIS
@@ -540,11 +529,9 @@ class Axiom[**P, T](Declaration[P, T]):
 
     def canonical(self) -> Equation:
         """
-        The law as a schema: its equation on the canonical arguments of
-        its sequent, each variable an object named after it and each
-        premise a box named after its parameter, the equation a law
-        declared broken raises included; an implementation refusing to
-        build the terms raises its :class:`discopy.utils.AxiomError`.
+        The law as a schema: its equation on the canonical arguments of its
+        sequent, a box per premise between objects named after the
+        variables, the equation a law declared broken raises included.
 
         >>> from discopy.cat import Arrow
         >>> print(Arrow.associativity.canonical())
@@ -557,8 +544,8 @@ class Axiom[**P, T](Declaration[P, T]):
 
     def draw(self, **params):
         """
-        Draw the :meth:`canonical` equation of the law, the parameters
-        those of :meth:`discopy.monoidal.Equation.draw`.
+        Draw the :meth:`canonical` equation of the law, the parameters those
+        of :meth:`discopy.monoidal.Equation.draw`.
 
         >>> from discopy.symmetric import Diagram
         >>> Diagram.bifunctoriality.draw(

@@ -198,6 +198,6 @@ def test_canonical():
         inapplicable.draw()
     assert str(rigid.Diagram.snake_equations.canonical().terms[1]) == "Id(x)"
     cups = rigid.Diagram.generators["cups"].canonical()
-    assert cups == rigid.Cup(rigid.Ty('X'), rigid.Ty('X').r)
+    assert cups == (rigid.Ty('X'), rigid.Ty('X').r)
     with raises(AxiomError):
         feedback.Diagram.feedback_joining.canonical()
