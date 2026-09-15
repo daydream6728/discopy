@@ -94,6 +94,8 @@ class Diagram(markov.Diagram, biclosed.Diagram, ClosedCategory):
     """
     ob = Ty
 
+    dagger_monoidality = biclosed.Diagram.dagger_monoidality
+
     @property
     def is_linear(self):
         return all(box.is_linear for box in self.boxes)

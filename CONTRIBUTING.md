@@ -92,14 +92,17 @@ apply, and xfailed when the law is declared broken, each carrying its
 reason: pass `-rsxX` to list the skips, xfails and unexpected passes with
 their reasons, and `-x` to stop at the first genuine failure.
 
-`proptest/conftest.py` registers three Hypothesis profiles over the
+`proptest/conftest.py` registers four Hypothesis profiles over the
 `.hypothesis/examples` database, selected by `HYPOTHESIS_PROFILE`: `dev`
 by default, `pr` for the small budget a pull request runs with, under a
 fixed `--hypothesis-seed` so that it draws the same examples every time,
-and `explore` for the large one `main` and the nightly run search with.
-A fourth, `shared`, is `dev` reading the database CI uploads as a workflow
-artifact, through a `GITHUB_TOKEN`, so a failure found on CI replays on
-your machine before any search; it reaches GitHub only when selected.
+`explore` for the large one `main` and the nightly run search with, and
+`fast` for the `dev` budget on one cell per declaration of a law, the
+category nearest the class declaring it, rather than on every category
+inheriting it. A fifth, `shared`, is `dev` reading the database CI
+uploads as a workflow artifact, through a `GITHUB_TOKEN`, so a failure
+found on CI replays on your machine before any search; it reaches GitHub
+only when selected.
 
 ```shell
 HYPOTHESIS_PROFILE=explore uv run pytest proptest/ -n auto -p no:benchmark

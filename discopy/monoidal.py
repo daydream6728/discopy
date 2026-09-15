@@ -1004,8 +1004,8 @@ class Diagram(
             cod : The codomain of the diagrams, if any.
             types : A strategy for the types, that of :attr:`ob` by default.
             max_depth : The number of nested rules a diagram may apply.
-            boundary_connected : Whether to keep only the diagrams whose
-                boundary reaches every box, the subspace
+            boundary_connected : Whether to keep only the diagrams that are
+                :attr:`is_boundary_connected`, the subspace
                 :meth:`normal_form` is defined on.
         """
         diagrams = search(
@@ -1013,8 +1013,46 @@ class Diagram(
             dom=dom, cod=cod, types=types, max_depth=max_depth)
         if not boundary_connected:
             return diagrams
-        return diagrams.filter(
-            lambda diagram: diagram.to_map().is_boundary_connected)
+        return diagrams.filter(lambda diagram: diagram.is_boundary_connected)
+
+    @property
+    def is_boundary_connected(self) -> bool:
+        """
+        Whether the boundary reaches every box, i.e. each box is connected
+        to the domain or the codomain by wires, through other boxes.
+
+        >>> x = Ty('x')
+        >>> f, s = Box('f', x, x), Box('s', Ty(), Ty())
+        >>> assert f.is_boundary_connected and Id(Ty()).is_boundary_connected
+        >>> assert not s.is_boundary_connected
+        >>> assert not (f @ s).is_boundary_connected
+        """
+        parents = {}
+
+        def find(component):
+            while parents.get(component, component) != component:
+                component = parents[component]
+            return component
+
+        def union(*components):
+            for component in components[1:]:
+                parents[find(component)] = find(components[0])
+
+        boxes, wires = [], len(self.dom) * ["boundary"]
+        for i, layer in enumerate(self.inside):
+            outputs, position = [], 0
+            for item in layer:
+                width = len(item.dom) if isinstance(item, Box) else len(item)
+                inputs = wires[position:position + width]
+                position += width
+                if isinstance(item, Box):
+                    union((i, position), *inputs)
+                    boxes.append((i, position))
+                    inputs = len(item.cod) * [(i, position)]
+                outputs += inputs
+            wires = outputs
+        union("boundary", *wires)
+        return all(find(box) == find("boundary") for box in boxes)
 
     @property
     def size(self):

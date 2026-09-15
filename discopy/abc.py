@@ -65,7 +65,7 @@ from dataclasses import dataclass
 from typing import ClassVar, Self
 
 from discopy.axioms import Axiom, Equation, axiom
-from discopy.pattern import Atom, declarations
+from discopy.pattern import Atom, Bool, declarations
 from discopy.search import Generator, Rule, generator, rule
 from discopy.utils import NamedGeneric, classproperty  # noqa: F401
 
@@ -523,12 +523,11 @@ class BiclosedCategory[
     @classmethod
     @generator
     @abstractmethod
-    def ev[X: Atom[C0], Y: Atom[C0]](
-            cls, base: X, exponent: Y, left: bool = True
-            ) -> C1[(X << Y) @ Y, X]:
+    def ev[X: Atom[C0], Y: Atom[C0], L: Bool](
+            cls, base: X, exponent: Y, left: L = True
+            ) -> C1[L[(X << Y) @ Y, Y @ (Y >> X)], X]:
         """
-        The evaluation of an exponential type, to be instantiated: the
-        generator is the left evaluation, ``left=False`` the right one.
+        The evaluation of an exponential type, to be instantiated.
 
         Parameters:
             base : The base of the exponential type.
@@ -536,10 +535,14 @@ class BiclosedCategory[
             left : Whether to take the left or right evaluation.
         """
 
+    @rule
     @abstractmethod
-    def curry(self, n: int = 1, left: bool = True) -> C1:
+    def curry[X: C0, Y: Atom[C0], Z: C0, L: Bool](
+            self: C1[L[X @ Y, Y @ X], Z], n: int = 1, left: L = True
+            ) -> C1[X, L[Z << Y, Y >> Z]]:
         """
-        The currying of a morphism, to be instantiated.
+        The currying of a morphism, to be instantiated: the rule curries
+        one object, an implementation may curry ``n``.
 
         Parameters:
             n : The number of objects to curry.
@@ -813,6 +816,19 @@ class BraidedCategory[C0, C1](MonoidalCategory[C0, C1]):
             left : The object on the left of the braid.
             right : The object on the right of the braid.
         """
+
+    @classmethod
+    @generator
+    def braid_inverse[X: Atom[C0], Y: Atom[C0]](
+            cls, left: X, right: Y) -> C1[Y @ X, X @ Y]:
+        """
+        The inverse of the braid of two objects, crossing the other way.
+
+        Parameters:
+            left : The object on the left of the braid.
+            right : The object on the right of the braid.
+        """
+        return cls.braid(left, right).dagger()
 
     @axiom
     def hexagon_left(

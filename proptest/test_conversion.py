@@ -29,7 +29,7 @@ from discopy import (
 )
 
 NO_SWAPS = pytest.mark.xfail(reason=(
-    "Decoding a trace, cup or cap can cross wires, "
+    "Decoding a trace, cup, cap or curry can cross wires, "
     "which needs swaps the category does not have."))
 
 CAP_ORIENTATION = pytest.mark.xfail(reason=(
@@ -55,7 +55,8 @@ HYPERGRAPH_LEVELS = levels(
 CMAP_LEVELS = levels(
     monoidal, traced, balanced, symmetric, biclosed, pivotal, compact,
     markov, closed, frobenius, xfail={
-        traced: NO_SWAPS, balanced: NO_SWAPS, pivotal: NO_SWAPS})
+        traced: NO_SWAPS, balanced: NO_SWAPS, biclosed: NO_SWAPS,
+        pivotal: NO_SWAPS})
 
 COMMON_LEVELS = levels(monoidal, traced, balanced, symmetric, pivotal, compact)
 """

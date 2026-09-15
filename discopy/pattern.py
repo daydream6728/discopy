@@ -20,8 +20,10 @@ import annotations``, and :func:`parse` evaluates each in an environment
 where the type parameters are :class:`Var` s, ``C0``, ``C1`` and ``Self``
 :class:`Sort` s and ``Atom`` marks a sort atomic: ``C1[A, B]`` is a
 :class:`Hom`, ``X @ X.r`` a :class:`Tensor` of a variable with its
-:class:`Attr`, ``X << Y`` an :class:`Op`, ``1`` the :class:`Unit`. The
-bound of a type parameter is its sort; a class's ``C0: Pregroup`` reaches
+:class:`Attr`, ``X << Y`` an :class:`Op`, ``1`` the :class:`Unit`, and
+``L[X, Y]`` for a variable ``L: Bool`` the :class:`Choice` of one or the
+other, e.g. the left or right evaluation. The bound of a type parameter
+is its sort; a class's ``C0: Pregroup`` reaches
 the sort as its bound, so that ``X.l`` and ``X.r`` are patterns of a
 rigid category only, ``X << Y`` of a residuated one and ``M.d`` of one
 with a delay: the abstract classes bound the patterns without being
@@ -48,7 +50,9 @@ Summary
     Tensor
     Attr
     Op
+    Choice
     Sort
+    Bool
     Hom
     Sequent
     Atom
@@ -102,6 +106,8 @@ def sort(value) -> Sort:
     """ A sort as written in a bound: itself, or a type parameter by name. """
     if isinstance(value, Sort):
         return value
+    if isinstance(value, type) and issubclass(value, Sort):
+        return value()
     if isinstance(value, TypeVar):
         return Sort(value.__name__, bound=value.__bound__)
     raise TypeError(f"Expected a sort, got {value!r}.")
@@ -164,6 +170,24 @@ class Sort:
 
     def __str__(self):
         return f"Atom[{self.head}]" if self.atomic else self.head
+
+
+@dataclass(frozen=True)
+class Bool(Sort):
+    """
+    The sort of a boolean variable ``L: Bool``, the :class:`Choice` between
+    two patterns ``L[then, otherwise]``; canonically :obj:`True`.
+    """
+
+    head: str = "Bool"
+
+    def resolve(self, scope: dict) -> type:
+        return bool
+
+    def strategy(self, scope: dict, types=None):
+        from hypothesis import strategies as st
+
+        return st.booleans()
 
 
 class Pattern(ABC):
@@ -316,6 +340,12 @@ class Var(Pattern):
         elif not self.sort.atomic or len(value) == 1:
             yield dict(subst, **{self.name: value}), residuals
 
+    def __getitem__(self, key):
+        if not isinstance(self.sort, Bool):
+            raise TypeError(f"{self} is no boolean to choose by.")
+        then, otherwise = key
+        return Choice(self, pattern(then), pattern(otherwise))
+
     def __str__(self):
         return self.name
 
@@ -448,6 +478,39 @@ class Op(Pattern):
 
 
 @dataclass(frozen=True)
+class Choice(Pattern):
+    """
+    The choice ``L[then, otherwise]`` of a pattern by a boolean variable,
+    matching a value by either branch and binding the variable to which.
+    """
+
+    var: Var
+    then: Pattern
+    otherwise: Pattern
+
+    @property
+    def variables(self):
+        return (self.var.name, ) + self.then.variables\
+            + self.otherwise.variables
+
+    @property
+    def bound(self):
+        return self.then.bound or self.otherwise.bound
+
+    def instantiate(self, subst, unit):
+        branch = self.then if subst[self.var.name] else self.otherwise
+        return branch.instantiate(subst, unit)
+
+    def unify(self, value, subst, residuals):
+        for choice, branch in ((True, self.then), (False, self.otherwise)):
+            for subst_, residuals_ in self.var.unify(choice, subst, residuals):
+                yield from branch.unify(value, subst_, residuals_)
+
+    def __str__(self):
+        return f"{self.var}[{self.then}, {self.otherwise}]"
+
+
+@dataclass(frozen=True)
 class Hom:
     """
     The type ``head[dom, cod]`` of the morphisms between two patterns.
@@ -495,7 +558,8 @@ class Sequent:
     """
     Variables and their sorts, named premises and an optional conclusion.
     A premise is a :class:`Hom` to generate, a :class:`Sort` to generate,
-    or a :class:`Pattern` to instantiate.
+    or a :class:`Pattern` to instantiate; those with a default are passed
+    by keyword.
 
     >>> from discopy.abc import MonoidalCategory
     >>> print(MonoidalCategory.tensor.sequent)
@@ -507,6 +571,7 @@ class Sequent:
     variables: dict[str, Sort] = field(default_factory=dict)
     premises: dict[str, Pattern | Sort | Hom] = field(default_factory=dict)
     conclusion: Hom | None = None
+    keywords: frozenset[str] = frozenset()
 
     def __str__(self):
         context = ", ".join(f"{n}: {s}" for n, s in self.variables.items())
@@ -534,7 +599,7 @@ def read(annotation: str, sorts: dict[str, Sort],
     TypeError: Cannot read a pattern from X ** 2.
     """
     environment = {
-        "Atom": Atom, "C0": C0, "C1": C1, "Self": Sort("Self"),
+        "Atom": Atom, "Bool": Bool, "C0": C0, "C1": C1, "Self": Sort("Self"),
         **{name: Var(name, sort) for name, sort in sorts.items()}}
     try:
         value = eval(annotation, namespace or {}, environment)
@@ -549,7 +614,8 @@ def parse(function: Callable, conclusion: bool = True) -> Sequent:
     The sequent a function states with its signature, deferred with
     ``from __future__ import annotations``: the bound of each type
     parameter the sort of a variable, each parameter without a default a
-    premise, the return annotation the conclusion when asked for. An
+    premise — with one, only if annotated by a variable, e.g. ``left: L =
+    True`` — the return annotation the conclusion when asked for. An
     unannotated first parameter, ``cls`` or ``self``, is skipped.
 
     >>> def then[A: C0, B: C0, C: C0](
@@ -588,14 +654,19 @@ def parse(function: Callable, conclusion: bool = True) -> Sequent:
         if name not in annotations:
             raise TypeError(
                 f"{function.__name__} states no pattern for {name}.")
+    keywords = frozenset(
+        parameter.name for parameter in parameters
+        if parameter.default is not inspect.Parameter.empty
+        and annotations.get(parameter.name) in sorts)
     namespace = function.__globals__
     premises = {
-        name: read(annotations[name], sorts, namespace) for name in premises}
+        name: read(annotations[name], sorts, namespace)
+        for name in premises + sorted(keywords)}
     returns = read(annotations["return"], sorts, namespace)\
         if conclusion and "return" in annotations else None
     if conclusion and not isinstance(returns, Hom):
         raise TypeError(f"{function.__name__} concludes no hom type.")
-    return Sequent(sorts, premises, returns)
+    return Sequent(sorts, premises, returns, keywords)
 
 
 @dataclass(repr=False)
@@ -679,44 +750,46 @@ class Declaration[**P, T]:
         """ The object type of the category, called to build the unit. """
         return self.scope["C0"]
 
-    def canonical(self) -> tuple:
+    def canonical(self) -> dict:
         """
-        The canonical arguments of the sequent: each variable an object
-        named after it, each premise a :func:`cell` named after its
+        The canonical arguments of the sequent, by name: each variable an
+        object named after it, each premise a :func:`cell` named after its
         parameter, so that a declaration reads as a schema.
 
         >>> from discopy.abc import MonoidalCategory
         >>> from discopy.monoidal import Diagram
-        >>> for box in MonoidalCategory.tensor.bind(Diagram).canonical():
-        ...     print(f"{box}: {box.dom} -> {box.cod}")
+        >>> tensor = MonoidalCategory.tensor.bind(Diagram)
+        >>> for name, box in tensor.canonical().items():
+        ...     print(f"{name}: {box.dom} -> {box.cod}")
         self: A -> B
         other: C -> D
         """
         subst = {
             name: cell(sort.resolve(self.scope), name)
             for name, sort in self.sequent.variables.items()}
-        args = []
+        args = {}
         for name, premise in self.sequent.premises.items():
             if isinstance(premise, Hom):
                 dom, cod = premise.instantiate(subst, self.unit)
-                args.append(cell(premise.resolve(self.scope), name, dom, cod))
+                args[name] = cell(premise.resolve(self.scope), name, dom, cod)
             elif isinstance(premise, Sort):
-                args.append(cell(premise.resolve(self.scope), name))
+                args[name] = cell(premise.resolve(self.scope), name)
             else:
-                args.append(premise.instantiate(subst, self.unit))
-        return tuple(args)
+                args[name] = premise.instantiate(subst, self.unit)
+        return args
 
     def generate(self, draw: Callable, hom: Callable, subst=None,
                  residuals: Residuals = (), types=None) -> tuple:
         """
-        Draw the arguments of the sequent inside a composite strategy, one
-        premise at a time: a pattern is instantiated, a sort drawn, a hom
-        drawn by ``hom(category, dom, cod)``. A variable is drawn from its
-        sort the first time a premise needs it, except one standing alone
-        on a side of a hom, which is read off the term the search finds so
-        that the goal guides the search. The residuals of a match are
-        checked once every variable is bound, rejecting the example
-        otherwise.
+        Draw the arguments of the sequent inside a composite strategy, by
+        name and one premise at a time: a pattern is instantiated, a sort
+        drawn, a hom drawn by ``hom(category, dom, cod)`` — a premise of
+        the sort of the arrows, ``f: C1``, being the hom with both sides
+        free. A variable is drawn from its sort the first time a premise
+        needs it, except one standing alone on a side of a hom, which is
+        read off the term the search finds so that the goal guides the
+        search. The residuals of a match are checked once every variable
+        is bound, rejecting the example otherwise.
 
         Parameters:
             draw : The draw function of a
@@ -750,7 +823,7 @@ class Declaration[**P, T]:
                 assume(not pattern.sort.atomic or len(value) == 1)
                 subst[pattern.name] = value
 
-        args = []
+        args = {}
         for name, premise in self.sequent.premises.items():
             if isinstance(premise, Hom):
                 dom, cod = side(premise.dom), side(premise.cod)
@@ -758,17 +831,21 @@ class Declaration[**P, T]:
                 term = draw(hom(category, dom, cod), label=name)
                 read_off(premise.dom, term.dom)
                 read_off(premise.cod, term.cod)
-                args.append(term)
+                args[name] = term
+            elif isinstance(premise, Sort)\
+                    and premise.resolve(self.scope) is self.scope["C1"]:
+                arrows = hom(self.scope["C1"], None, None)
+                args[name] = draw(arrows, label=name)
             elif isinstance(premise, Sort):
                 strategy = premise.strategy(self.scope, types)
-                args.append(draw(strategy, label=name))
+                args[name] = draw(strategy, label=name)
             else:
                 bound(*premise.variables)
-                args.append(premise.instantiate(subst, self.unit))
+                args[name] = premise.instantiate(subst, self.unit)
         for pattern, value in residuals:
             bound(*pattern.variables)
             assume(pattern.instantiate(subst, self.unit) == value)
-        return subst, tuple(args)
+        return subst, args
 
 
 def cell(factory: type, name: str, dom=None, cod=None):

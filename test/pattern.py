@@ -11,8 +11,8 @@ from discopy.abc import (
     DelayedMonoid, FeedbackCategory, Pregroup, ResiduatedMonoid)
 from discopy.monoidal import Ty
 from discopy.pattern import (
-    C0, C1, Atom, Attr, Hom, Op, Sequent, Sort, Tensor, Unit, Var, parse,
-    read)
+    C0, C1, Atom, Attr, Bool, Choice, Hom, Op, Sequent, Sort, Tensor, Unit,
+    Var, parse, read)
 
 
 x, y, z = map(Ty, "xyz")
@@ -20,6 +20,7 @@ A, B = Var("A", Sort()), Var("B", Sort())
 M = Var("M", Sort(atomic=True))
 X = Var("X", Sort(atomic=True, bound=Pregroup))
 D = Var("D", Sort(bound=DelayedMonoid))
+L = Var("L", Bool())
 
 
 def test_read():
@@ -145,3 +146,28 @@ def test_member():
         (A @ X).d
     with raises(TypeError, match="no r"):
         Attr(A, "r")
+
+
+def test_choice():
+    """ A boolean variable chooses between two patterns. """
+    choice = L[A @ M, M @ A]
+    assert choice == Choice(L, A @ M, M @ A)
+    assert str(choice) == "L[A @ M, M @ A]"
+    assert choice.variables == ("L", "A", "M", "M", "A")
+    assert choice.instantiate({"L": True, "A": x @ y, "M": z}, Ty) == x @ y @ z
+    assert choice.instantiate({"L": False, "A": x, "M": z}, Ty) == z @ x
+    assert [s for s, _ in choice.match(x @ y)] == [
+        {"L": True, "A": x, "M": y}, {"L": False, "M": x, "A": y}]
+    assert [s for s, _ in choice.match(x @ y, {"L": False})]\
+        == [{"L": False, "M": x, "A": y}]
+    assert read("L[X, 1]", {"L": Bool(), "X": X.sort}) == L[X, 1]
+    with raises(TypeError):
+        A[X, 1]
+
+    def ev[X: Atom[C0], Y: Atom[C0], L: Bool](
+            cls, base: X, exponent: Y, left: L = True) -> C1[L[X @ Y, Y], X]:
+        ...
+    sequent = parse(ev)
+    assert list(sequent.premises) == ["base", "exponent", "left"]
+    assert sequent.keywords == {"left"}
+    assert sequent.variables["L"] == Bool()

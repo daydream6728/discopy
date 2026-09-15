@@ -26,6 +26,9 @@ def test_strategy():
     braid = find(Diagram.strategy(dom=x @ y, cod=y @ x, max_depth=0),
                  lambda value: isinstance(value, Braid))
     assert braid == Braid(x, y)
+    inverse = find(Diagram.strategy(dom=x @ y, cod=y @ x, max_depth=0),
+                   lambda value: isinstance(value, Braid) and value.is_dagger)
+    assert inverse == Braid(y, x).dagger()
 
 
 def test_axioms():

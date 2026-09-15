@@ -73,6 +73,17 @@ class Rule[**P, T](Declaration[P, T]):
         """ Unify the conclusion with a goal. """
         return self.sequent.conclusion.match(dom, cod)
 
+    def apply(self, arguments: dict) -> T:
+        """
+        The implementation of the rule on the category, applied to named
+        arguments: positionally, but for the premises with a default.
+        """
+        keywords = self.sequent.keywords
+        args = [value for name, value in arguments.items()
+                if name not in keywords]
+        kwargs = {name: arguments[name] for name in keywords}
+        return getattr(self.category, self.name)(*args, **kwargs)
+
 
 class Generator(Rule):
     """
@@ -149,7 +160,7 @@ def search(category: type[abc.Category], free: Callable, *, dom=None, cod=None,
         _, args = rule.generate(
             draw, lambda _, dom, cod: terms(dom, cod, depth - 1),
             subst=subst, residuals=residuals, types=types)
-        result = getattr(category, rule.name)(*args)
+        result = rule.apply(args)
         if dom is not None and result.dom != dom\
                 or cod is not None and result.cod != cod:
             raise AxiomError(

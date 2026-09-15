@@ -218,7 +218,7 @@ Continuous integration
 
 The ``proptest`` workflow runs the suite on pull requests labelled
 ``proptest``, on every push to ``main``, nightly, and on manual dispatch.
-``proptest/conftest.py`` registers three Hypothesis profiles, selected by
+``proptest/conftest.py`` registers four Hypothesis profiles, selected by
 ``HYPOTHESIS_PROFILE``, over one example database,
 ``.hypothesis/examples``:
 
@@ -233,6 +233,9 @@ The ``proptest`` workflow runs the suite on pull requests labelled
   where new counterexamples come from.
 - ``dev``, the default elsewhere: a middling budget over the local
   database alone.
+- ``fast``, the ``dev`` budget on one cell per declaration of a law: the
+  category nearest the class declaring it, rather than every category
+  inheriting it.
 - ``shared``, on request: the ``dev`` budget with the local database
   backed by CI's, read-only, through a ``GITHUB_TOKEN``, so what CI found
   replays on your machine. It reaches GitHub only when asked for, never
@@ -484,7 +487,7 @@ class Axiom[**P, T](Declaration[P, T]):
 
         @st.composite
         def arguments(draw):
-            return evaluate(*self.generate(draw, hom)[1])
+            return evaluate(**self.generate(draw, hom)[1])
 
         return arguments()
 
@@ -516,9 +519,9 @@ class Axiom[**P, T](Declaration[P, T]):
         """
         from hypothesis import find
 
-        def verdict(*args):
+        def verdict(**arguments):
             try:
-                return self(*args)
+                return self(**arguments)
             except AxiomFailure as failure:
                 return failure.equation
 
@@ -538,7 +541,7 @@ class Axiom[**P, T](Declaration[P, T]):
         Equation(f >> g >> h, f >> g >> h)
         """
         try:
-            return self(*super().canonical())
+            return self(**super().canonical())
         except AxiomFailure as failure:
             return failure.equation
 
@@ -559,7 +562,7 @@ class Axiom[**P, T](Declaration[P, T]):
             raise TypeError(f"{self} does not apply, so has nothing to draw.")
         return equation.draw(**params)
 
-    def arguments(self, *args: P.args, **kwargs: P.kwargs) -> dict:
+    def arguments(self, /, *args: P.args, **kwargs: P.kwargs) -> dict:
         """ Bind the arguments to the :attr:`parameters` of the axiom. """
         if self.category is None:
             raise TypeError(f"{self.name} is not bound to a class.")
@@ -567,7 +570,7 @@ class Axiom[**P, T](Declaration[P, T]):
         bound.apply_defaults()
         return dict(bound.arguments)
 
-    def __call__(self, *args: P.args, **kwargs: P.kwargs):
+    def __call__(self, /, *args: P.args, **kwargs: P.kwargs):
         return self.function(self.category, **self.arguments(*args, **kwargs))
 
 

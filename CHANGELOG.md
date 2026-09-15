@@ -23,7 +23,16 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   is a goal-directed search by those rules and generators, which every
   level of the hierarchy tunes by declaring its structure, so the
   `Box.strategy` overrides of every module and the wrapper strategies of
-  `discopy.axioms` are gone. `Axiom.strategy` generates the equations of
+  `discopy.axioms` are gone. A variable `L: Bool` chooses between two
+  patterns, `L[then, otherwise]`, so that `ev` and `curry` are one
+  declaration for both sides; `BraidedCategory.braid_inverse` and
+  `symmetric.Diagram.cycle`, a native permutation of any length, are
+  generators too; a curried diagram has no dagger, so `biclosed.Diagram`
+  declares the dagger laws inapplicable as `rigid` does, and its right
+  curries join the maps that cannot be decoded without swaps.
+  `monoidal.Diagram.is_boundary_connected` reads connectivity off the
+  layers, defined on every diagram. The `fast` Hypothesis profile runs
+  the matrix on one cell per declaration of a law. `Axiom.strategy` generates the equations of
   the law, `Axiom.weaken` takes the parameters of the strategy of each hom
   premise, `Axiom.canonical` is the law as a schema and `Axiom.draw` draws
   it. DisCoPy now requires Python 3.14. The bugs the search surfaced are

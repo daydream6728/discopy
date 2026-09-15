@@ -85,10 +85,11 @@ from inspect import signature
 from typing import Callable, ClassVar
 
 from discopy import monoidal, cmap
-from discopy.abc import BiclosedCategory
+from discopy.abc import BiclosedCategory, Category
 from discopy.drawing import Drawing
 from discopy.cat import factory
 from discopy.utils import (
+    AxiomError,
     assert_isinstance, deprecated_alias, factory_name, from_tree
 )
 
@@ -337,6 +338,15 @@ class Diagram(monoidal.Diagram, BiclosedCategory):
     def to_drawing(self):
         return monoidal.Diagram.to_drawing(self, functor_factory=Functor)
 
+    dagger_involution = Category.dagger_involution.inapplicable(
+        "A curried diagram has no dagger.")
+
+    dagger_contravariance = Category.dagger_contravariance.inapplicable(
+        "A curried diagram has no dagger.")
+
+    dagger_monoidality = BiclosedCategory.dagger_monoidality.inapplicable(
+        "A curried diagram has no dagger.")
+
     currying_left = BiclosedCategory.currying_left.failing(
         "Currying does not evaluate back, see #562.")
 
@@ -454,6 +464,9 @@ class Curry(monoidal.Bubble, Box):
         monoidal.Bubble.__init__(
             self, arg, dom=dom, cod=cod, drawing_name="$\\Lambda$")
         Box.__init__(self, name, dom, cod)
+
+    def dagger(self) -> Curry:
+        raise AxiomError("A curried diagram has no dagger.")
 
     def __str__(self):
         return self.name

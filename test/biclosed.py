@@ -1,5 +1,7 @@
 from discopy.biclosed import *
 from discopy import cat
+from discopy.utils import AxiomError
+import pytest
 from pytest import raises
 
 
@@ -138,12 +140,31 @@ def test_to_compact():
 
 
 def test_strategy():
+    from hypothesis import find
+
     from discopy import axioms
 
-    axioms.assert_strategy_finds(Diagram, Eval)
+    axioms.assert_strategy_finds(Diagram, Eval, Curry)
+    x, y = Ty('x'), Ty('y')
+    for left, dom in ((True, (x << y) @ y), (False, y @ (y >> x))):
+        evaluation = find(Diagram.strategy(dom=dom, cod=x, max_depth=0),
+                          lambda value: isinstance(value, Eval))
+        assert evaluation == Diagram.ev(x, y, left=left)
+    curried = find(Diagram.strategy(dom=x, cod=y >> x),
+                   lambda value: isinstance(value.boxes[0], Curry))
+    assert curried.cod == y >> x
 
 
 def test_axioms():
     from discopy import axioms
 
     axioms.assert_axioms(Ty, Diagram, Functor)
+
+
+@pytest.mark.xfail(strict=True, raises=AxiomError, reason=(
+    "The map of a right curry of a composite is decoded through swaps "
+    "the planar category does not have, a limitation the search found."))
+def test_to_map_right_curry():
+    a = Ty('a')
+    g, f = Box('g', Ty(), a), Box('f', a @ a, a)
+    (g @ a @ a >> a @ f).curry(left=False).to_map()

@@ -396,6 +396,10 @@ def test_strategy():
                    lambda value: any(
                        isinstance(box, Swap) for box in value.boxes))
     assert diagram.cod == cod
+    native = find(Diagram.strategy(cod=cod, max_depth=0),
+                  lambda value: isinstance(value, Permutation)
+                  and len(value.dom) == 3)
+    assert native.cod == cod and native == Diagram.cycle(cod[2], cod[:2])
 
 
 def test_axioms():
