@@ -65,7 +65,7 @@ from dataclasses import dataclass
 from typing import ClassVar, Self
 
 from discopy.axioms import Axiom, Equation, axiom
-from discopy.pattern import Atom, Bool, declarations
+from discopy.pattern import Atom, Bool, Unit, declarations
 from discopy.search import Generator, Rule, generator, rule
 from discopy.utils import NamedGeneric, classproperty  # noqa: F401
 
@@ -396,7 +396,7 @@ class PRO[C1: PRO](MonoidalCategory[Nat, C1]):
     """
 
 
-class TracedCategory[C0, C1](MonoidalCategory[C0, C1]):
+class TracedCategory[C0: ColouredMonoid, C1](MonoidalCategory[C0, C1]):
     """
     A traced category is a :class:`MonoidalCategory` with a method
     :code:`trace` for the partial trace of a morphism over some objects.
@@ -654,10 +654,11 @@ class RigidCategory[C0: Pregroup, C1: RigidCategory](BiclosedCategory[C0, C1]):
     @classmethod
     @generator
     @abstractmethod
-    def cups[X: Atom[C0]](cls, left: X, right: X.r) -> C1[X @ X.r, 1]:
+    def cups[X: Atom[C0]](
+            cls, left: X, right: X.r) -> C1[X @ X.r, Unit[C0]]:
         """
         The cups witnessing :code:`right` as the adjoint of :code:`left`:
-        as a rule, ``x @ x.r ⊢`` is a cup, ``x.l @ x`` included.
+        as a rule, ``x @ x.r ⊢ 1`` is a cup, ``x.l @ x`` included.
 
         Parameters:
             left : The left-hand side of the cups.
@@ -667,10 +668,11 @@ class RigidCategory[C0: Pregroup, C1: RigidCategory](BiclosedCategory[C0, C1]):
     @classmethod
     @generator
     @abstractmethod
-    def caps[X: Atom[C0]](cls, left: X, right: X.l) -> C1[1, X @ X.l]:
+    def caps[X: Atom[C0]](
+            cls, left: X, right: X.l) -> C1[Unit[C0], X @ X.l]:
         """
         The caps witnessing :code:`right` as the adjoint of :code:`left`:
-        as a rule, ``⊢ x @ x.l`` is a cap, ``x.r @ x`` included.
+        as a rule, ``1 ⊢ x @ x.l`` is a cap, ``x.r @ x`` included.
 
         Parameters:
             left : The left-hand side of the caps.
@@ -776,7 +778,8 @@ class RigidCategory[C0: Pregroup, C1: RigidCategory](BiclosedCategory[C0, C1]):
             >> self.dom.r @ self.cups(self.cod, self.cod.r)
 
 
-class PivotalCategory[C0, C1](RigidCategory[C0, C1], TracedCategory[C0, C1]):
+class PivotalCategory[C0: Pregroup, C1](
+        RigidCategory[C0, C1], TracedCategory[C0, C1]):
     """
     A pivotal category is a :class:`RigidCategory` where the left and right
     adjoints coincide, hence it is also a :class:`TracedCategory`.
@@ -799,7 +802,7 @@ class PivotalCategory[C0, C1](RigidCategory[C0, C1], TracedCategory[C0, C1]):
         return cls.equation_factory(left_transpose, right_transpose)
 
 
-class BraidedCategory[C0, C1](MonoidalCategory[C0, C1]):
+class BraidedCategory[C0: ColouredMonoid, C1](MonoidalCategory[C0, C1]):
     """
     A braided category is a :class:`MonoidalCategory` with a method
     :code:`braid` for the natural isomorphism :code:`x @ y -> y @ x`.
@@ -863,7 +866,7 @@ class PROB[C1: PROB](PRO[C1], BraidedCategory[Nat, C1]):
     """
 
 
-class SymmetricCategory[C0, C1](BraidedCategory[C0, C1]):
+class SymmetricCategory[C0: ColouredMonoid, C1](BraidedCategory[C0, C1]):
     """
     A symmetric category is a :class:`BraidedCategory` where the braid is its
     own inverse called :code:`swap` for the symmetry :code:`x @ y -> y @ x`.
@@ -916,7 +919,7 @@ class PROP[C1: PROP](PROB[C1], SymmetricCategory[Nat, C1]):
     """
 
 
-class MarkovCategory[C0, C1](SymmetricCategory[C0, C1]):
+class MarkovCategory[C0: ColouredMonoid, C1](SymmetricCategory[C0, C1]):
     """
     A Markov category is a :class:`SymmetricCategory` with methods
     :code:`copy` and :code:`merge` for the supply of commutative comonoids.
@@ -935,7 +938,7 @@ class MarkovCategory[C0, C1](SymmetricCategory[C0, C1]):
 
     @classmethod
     @generator
-    def discard[X: Atom[C0]](cls, x: X) -> C1[X, 1]:
+    def discard[X: Atom[C0]](cls, x: X) -> C1[X, Unit[C0]]:
         """
         Discard a given object :code:`x`, i.e. make no copy of it.
 
@@ -999,7 +1002,8 @@ class MarkovCategory[C0, C1](SymmetricCategory[C0, C1]):
                 x @ cls.swap(x, x) @ x))
 
 
-class ClosedCategory[C0, C1](BiclosedCategory[C0, C1], MarkovCategory[C0, C1]):
+class ClosedCategory[C0: ResiduatedMonoid, C1](
+        BiclosedCategory[C0, C1], MarkovCategory[C0, C1]):
     """
     A closed category is a symmetric :class:`BiclosedCategory`. We also assume
     it comes with copy and discard so it is also a :class:`MarkovCategory`.
@@ -1080,7 +1084,7 @@ class FeedbackCategory[C0: DelayedMonoid, C1](MarkovCategory[C0, C1]):
             f.feedback(mem=f.cod[-2:]), f.feedback().feedback())
 
 
-class BalancedCategory[C0, C1](
+class BalancedCategory[C0: ColouredMonoid, C1](
         BraidedCategory[C0, C1], TracedCategory[C0, C1]):
     """
     A balanced category is a :class:`BraidedCategory` and a
@@ -1109,7 +1113,7 @@ class BalancedCategory[C0, C1](
                     cls.braid(y, x)))
 
 
-class RibbonCategory[C0, C1](
+class RibbonCategory[C0: Pregroup, C1](
         PivotalCategory[C0, C1], BalancedCategory[C0, C1]):
     """
     A ribbon category is a :class:`PivotalCategory` which is also a
@@ -1124,7 +1128,7 @@ class RibbonCategory[C0, C1](
             braid.trace(left=True), cls.twist(x), braid.trace())
 
 
-class CompactCategory[C0, C1](
+class CompactCategory[C0: Pregroup, C1](
         RibbonCategory[C0, C1], SymmetricCategory[C0, C1]):
     """
     A compact category is a :class:`RibbonCategory` which is also a
@@ -1152,7 +1156,7 @@ class CompactCategory[C0, C1](
             cls.cups(x, x.r))
 
 
-class HypergraphCategory[C0, C1](
+class HypergraphCategory[C0: Pregroup, C1](
         CompactCategory[C0, C1], MarkovCategory[C0, C1]):
     """
     A hypergraph category is a symmetric category with a supply of spiders,

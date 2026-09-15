@@ -23,7 +23,12 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   is a goal-directed search by those rules and generators, which every
   level of the hierarchy tunes by declaring its structure, so the
   `Box.strategy` overrides of every module and the wrapper strategies of
-  `discopy.axioms` are gone. A variable `L: Bool` chooses between two
+  `discopy.axioms` are gone. A pattern class is generic in the colours and
+  objects it stands in, its objects bounded by the level it needs —
+  `Unit[C0]` and `Tensor` a `ColouredMonoid`, `Adjoint` a `Pregroup`,
+  `Delay` a `DelayedMonoid`, `Exp` a `ResiduatedMonoid` — so every
+  monoidal level of `discopy.abc` now bounds its objects. A variable
+  `L: Bool` chooses between two
   patterns, `L[then, otherwise]`, so that `ev` and `curry` are one
   declaration for both sides; `BraidedCategory.braid_inverse` and
   `symmetric.Diagram.cycle`, a native permutation of any length, are

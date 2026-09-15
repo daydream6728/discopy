@@ -8,7 +8,7 @@ sorts, its parameters the premises, its return annotation the conclusion.
 
 .. code-block:: python
 
-    class MonoidalCategory[C0, C1](Category[C0, C1]):
+    class MonoidalCategory[C0: ColouredMonoid, C1](Category[C0, C1]):
         @rule
         @abstractmethod
         def tensor[A: C0, B: C0, C: C0, D: C0](
@@ -20,14 +20,19 @@ import annotations``, and :func:`parse` evaluates each in an environment
 where the type parameters are :class:`Var` s, ``C0``, ``C1`` and ``Self``
 :class:`Sort` s and ``Atom`` marks a sort atomic: ``C1[A, B]`` is a
 :class:`Hom`, ``X @ X.r`` a :class:`Tensor` of a variable with its
-:class:`Attr`, ``X << Y`` an :class:`Op`, ``1`` the :class:`Unit`, and
-``L[X, Y]`` for a variable ``L: Bool`` the :class:`Choice` of one or the
-other, e.g. the left or right evaluation. The bound of a type parameter
-is its sort; a class's ``C0: Pregroup`` reaches
-the sort as its bound, so that ``X.l`` and ``X.r`` are patterns of a
-rigid category only, ``X << Y`` of a residuated one and ``M.d`` of one
-with a delay: the abstract classes bound the patterns without being
-imported here.
+:class:`Adjoint`, ``M.d`` a :class:`Delay`, ``X << Y`` an :class:`Exp`,
+``Unit[C0]`` the :class:`Unit` and ``L[X, Y]`` for ``L: Bool`` the
+:class:`Choice` of one or the other.
+
+A pattern is generic in the colours ``C0`` and the objects ``C1`` of the
+monoid it stands in, and the bound of ``C1`` is the least structure the
+pattern needs: a :class:`Tensor` needs a :class:`abc.ColouredMonoid`, an
+:class:`Adjoint` a :class:`abc.Pregroup`, a :class:`Delay` a
+:class:`abc.DelayedMonoid`. A variable's sort carries the bound of the
+type parameter it comes from, ``C0: Pregroup`` on the class stating the
+rule, and a pattern refuses a variable whose sort is bounded below what
+it needs. Those bounds are the classes of :mod:`discopy.abc`, evaluated
+lazily, so that this module imports it while it imports this one.
 
 A conclusion is matched against a goal, a pair of an optional domain and
 codomain, by unification over the free monoid of objects: a
@@ -48,14 +53,15 @@ Summary
     Var
     Unit
     Tensor
-    Attr
-    Op
+    Adjoint
+    Delay
+    Exp
     Choice
+    Hom
     Sort
     Bool
-    Hom
-    Sequent
     Atom
+    Sequent
     Declaration
 
 .. admonition:: Functions
@@ -80,37 +86,10 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterator
 from dataclasses import KW_ONLY, dataclass, field, replace
 from functools import reduce
-from typing import TYPE_CHECKING, ClassVar, TypeVar
+from typing import ClassVar, Literal, TypeVar
 
+from discopy import abc
 from discopy.utils import factory_name
-
-if TYPE_CHECKING:
-    from discopy import abc
-
-
-class Atom:
-    """
-    The sort of atomic objects: ``Atom[C0]`` in a signature stands for the
-    objects of ``C0`` with exactly one generator.
-
-    >>> Atom[Sort("C0")]
-    Sort(head='C0', atomic=True)
-    >>> Atom[TypeVar("C1")]
-    Sort(head='C1', atomic=True)
-    """
-    def __class_getitem__(cls, item):
-        return replace(sort(item), atomic=True)
-
-
-def sort(value) -> Sort:
-    """ A sort as written in a bound: itself, or a type parameter by name. """
-    if isinstance(value, Sort):
-        return value
-    if isinstance(value, type) and issubclass(value, Sort):
-        return value()
-    if isinstance(value, TypeVar):
-        return Sort(value.__name__, bound=value.__bound__)
-    raise TypeError(f"Expected a sort, got {value!r}.")
 
 
 type Substitution = dict[str, object]
@@ -132,8 +111,9 @@ class Sort:
     Atom[C0]
     >>> Sort("Self").dom.ob
     Sort(head='Self.dom.ob', atomic=False)
-    >>> print(Sort("C1")[Var('A', Sort()), 1])
-    C1[A, 1]
+    >>> X = Var('X', Sort(bound=abc.ColouredMonoid))
+    >>> print(Sort("C1")[X, Unit[X.sort]])
+    C1[X, Unit[C0]]
     """
 
     head: str = "C0"
@@ -190,13 +170,70 @@ class Bool(Sort):
         return st.booleans()
 
 
-class Pattern(ABC):
+class Atom:
     """
-    A pattern for the objects of a category, with variables to instantiate.
+    The sort of atomic objects: ``Atom[C0]`` in a signature stands for the
+    objects of ``C0`` with exactly one generator.
+
+    >>> Atom[Sort("C0")]
+    Sort(head='C0', atomic=True)
+    >>> Atom[TypeVar("C1")]
+    Sort(head='C1', atomic=True)
+    """
+    def __class_getitem__(cls, item):
+        return replace(sort(item), atomic=True)
+
+
+def sort(value) -> Sort:
+    """
+    A sort as written in a bound: itself, a type parameter by name and
+    bounded as it is, or a class of :mod:`discopy.abc` bounding the
+    objects, ``[A: ColouredMonoid]`` on a class with no type parameter.
+    """
+    if isinstance(value, Sort):
+        return value
+    if isinstance(value, TypeVar):
+        return Sort(value.__name__, bound=value.__bound__)
+    if isinstance(value, type) and issubclass(value, Sort):
+        return value()
+    if isinstance(value, type) and issubclass(value, abc.Category):
+        return Sort(bound=value)
+    raise TypeError(f"Expected a sort, got {value!r}.")
+
+
+def pattern(value) -> Pattern:
+    """ A pattern as an operand, refusing anything else. """
+    if not isinstance(value, Pattern):
+        raise TypeError(f"Expected a pattern, got {value!r}.")
+    return value
+
+
+class Pattern[C0, C1: abc.Category](ABC):
+    """
+    A pattern for the objects of a category, with variables to instantiate,
+    generic in the colours ``C0`` and objects ``C1`` of the monoid it
+    stands in: the bound of ``C1`` is the :meth:`level` the pattern needs.
 
     Matching a value yields every substitution unifying the pattern with it,
     each with the residual equations it could not invert.
     """
+    def __post_init__(self):
+        """
+        Check the objects the pattern stands for are bounded by its
+        :meth:`level`; a variable, a hom or a choice adds no structure to
+        its parts and skips the check.
+        """
+        bound, required = self.bound, self.level()
+        if bound is None or not issubclass(bound, required):
+            raise TypeError(f"{self} needs a {required.__name__}, its objects "
+                            + ("are unbounded." if bound is None
+                               else f"are bounded by {bound.__name__}."))
+
+    @classmethod
+    def level(cls) -> type[abc.Category]:
+        """ The bound of ``C1``, the least structure the pattern needs. """
+        return cls.__type_params__[1].__bound__
+
     @property
     @abstractmethod
     def variables(self) -> tuple[str, ...]:
@@ -228,8 +265,8 @@ class Pattern(ABC):
 
         >>> from discopy.monoidal import Ty
         >>> x, y = Ty('x'), Ty('y')
-        >>> A, B = Var('A', Sort()), Var('B', Sort())
-        >>> for subst, _ in Tensor((A, B)).match(x @ y):
+        >>> A, B = (Var(n, Sort(bound=abc.ColouredMonoid)) for n in "AB")
+        >>> for subst, _ in (A @ B).match(x @ y):
         ...     print(subst['A'], '|', subst['B'])
         Ty() | x @ y
         x | y
@@ -252,25 +289,18 @@ class Pattern(ABC):
     def __matmul__(self, other):
         return Tensor(factors(self) + factors(pattern(other)))
 
-    def __rmatmul__(self, other):
-        return Tensor(factors(pattern(other)) + factors(self))
-
     def __lshift__(self, other):
-        return Op("<<", self, pattern(other))
-
-    def __rlshift__(self, other):
-        return Op("<<", pattern(other), self)
+        return Exp("<<", self, pattern(other))
 
     def __rshift__(self, other):
-        return Op(">>", self, pattern(other))
-
-    def __rrshift__(self, other):
-        return Op(">>", pattern(other), self)
+        return Exp(">>", self, pattern(other))
 
     def __getattr__(self, name: str):
-        if name.startswith("_"):
-            raise AttributeError(name)
-        return Attr(self, name)
+        if name in ("l", "r"):
+            return Adjoint(self, name)
+        if name == "d":
+            return Delay(self)
+        raise AttributeError(name)
 
 
 C0, C1 = Sort("C0"), Sort("C1")
@@ -281,46 +311,26 @@ a class with no type parameters of its own.
 """
 
 
-def pattern(value) -> Pattern:
-    """ A pattern as an operand: itself, or the unit for the literal ``1``. """
-    if isinstance(value, Pattern):
-        return value
-    if isinstance(value, int) and value == 1:
-        return Unit()
-    raise TypeError(f"Expected a pattern, got {value!r}.")
-
-
 def factors(value: Pattern) -> tuple:
     """ The factors of a pattern as a tensor: itself, unless it is one. """
     return value.factors if isinstance(value, Tensor) else (value, )
 
 
-def member(bound: type | None, name: str, pattern: Pattern) -> None:
-    """
-    Check that the bound declares a member, e.g. ``l`` for a
-    :class:`abc.Pregroup` or ``d`` for a :class:`abc.DelayedMonoid`: a
-    pattern only does what the sort of its variables allows.
-
-    >>> from discopy.abc import Pregroup
-    >>> Var('X', Sort(bound=Pregroup)).l
-    Attr(base=Var(name='X', sort=Sort(head='C0', atomic=False)), name='l')
-    >>> Var('X', Sort()).l
-    Traceback (most recent call last):
-     ...
-    TypeError: X has no l: its objects are unbounded.
-    """
-    if not hasattr(bound, name):
-        objects = "unbounded" if bound is None\
-            else f"bounded by {bound.__name__}"
-        raise TypeError(f"{pattern} has no {name}: its objects are {objects}.")
+def common(*patterns: Pattern) -> type[abc.ColouredMonoid] | None:
+    """ The bound of the objects of patterns standing together, if all do. """
+    bounds = [pattern.bound for pattern in patterns]
+    return None if None in bounds else bounds[0]
 
 
 @dataclass(frozen=True)
-class Var(Pattern):
+class Var[C0, C1: abc.Category](Pattern[C0, C1]):
     """ A variable of a given sort. """
 
     name: str
     sort: Sort
+
+    def __post_init__(self):
+        pass
 
     @property
     def variables(self):
@@ -351,11 +361,24 @@ class Var(Pattern):
 
 
 @dataclass(frozen=True)
-class Unit(Pattern):
-    """ The monoidal unit, written ``1``. """
+class Unit[C0, C1: abc.ColouredMonoid](Pattern[C0, C1]):
+    """
+    The unit of a monoid of objects, ``Unit[C0]`` in a signature.
+
+    >>> Unit[Sort(bound=abc.ColouredMonoid)]
+    Unit(sort=Sort(head='C0', atomic=False))
+    """
+
+    sort: Sort
+
+    def __class_getitem__(cls, item):
+        return cls(sort(item))
 
     variables = ()
-    bound = None
+
+    @property
+    def bound(self):
+        return self.sort.bound
 
     def instantiate(self, subst, unit):
         return unit()
@@ -365,11 +388,11 @@ class Unit(Pattern):
             yield subst, residuals
 
     def __str__(self):
-        return "1"
+        return f"Unit[{self.sort}]"
 
 
 @dataclass(frozen=True)
-class Tensor(Pattern):
+class Tensor[C0, C1: abc.ColouredMonoid](Pattern[C0, C1]):
     """ The tensor of two or more patterns, flattened. """
 
     factors: tuple[Pattern, ...]
@@ -380,8 +403,7 @@ class Tensor(Pattern):
 
     @property
     def bound(self):
-        return next((
-            f.bound for f in self.factors if f.bound is not None), None)
+        return common(*self.factors)
 
     def instantiate(self, subst, unit):
         return reduce(operator.matmul, (
@@ -407,19 +429,16 @@ class Tensor(Pattern):
 
 
 @dataclass(frozen=True)
-class Attr(Pattern):
+class Adjoint[C0, C1: abc.Pregroup, S: Literal["l", "r"]](Pattern[C0, C1]):
     """
-    An attribute of a pattern its bound declares, e.g. the adjoint ``X.r``,
-    inverted by the adjoint on the other side when matching.
+    The left or right adjoint ``X.l`` or ``X.r`` of a pattern, inverted by
+    the adjoint on the other side when matching.
     """
 
     base: Pattern
-    name: str
+    side: S
 
     INVERSE: ClassVar[dict] = {"l": "r", "r": "l"}
-
-    def __post_init__(self):
-        member(self.bound, self.name, self.base)
 
     @property
     def variables(self):
@@ -430,35 +449,47 @@ class Attr(Pattern):
         return self.base.bound
 
     def instantiate(self, subst, unit):
-        return getattr(self.base.instantiate(subst, unit), self.name)
+        return getattr(self.base.instantiate(subst, unit), self.side)
 
     def unify(self, value, subst, residuals):
-        if self.name in self.INVERSE:
-            inverse = getattr(value, self.INVERSE[self.name])
-            yield from self.base.unify(inverse, subst, residuals)
-        else:
-            yield from super().unify(value, subst, residuals)
+        inverse = getattr(value, self.INVERSE[self.side])
+        yield from self.base.unify(inverse, subst, residuals)
 
     def __str__(self):
-        return f"{self.base}.{self.name}"
+        return f"{self.base}.{self.side}"
 
 
 @dataclass(frozen=True)
-class Op(Pattern):
-    """
-    An exponential ``X << Y`` or ``X >> Y``, the ``over`` and ``under`` of
-    a residuated monoid.
-    """
+class Delay[C0, C1: abc.DelayedMonoid](Pattern[C0, C1]):
+    """ The delay ``M.d`` of a pattern by one time step. """
 
-    symbol: str
+    base: Pattern
+
+    @property
+    def variables(self):
+        return self.base.variables
+
+    @property
+    def bound(self):
+        return self.base.bound
+
+    def instantiate(self, subst, unit):
+        return self.base.instantiate(subst, unit).d
+
+    def __str__(self):
+        return f"{self.base}.d"
+
+
+@dataclass(frozen=True)
+class Exp[C0, C1: abc.ResiduatedMonoid, S: Literal["<<", ">>"]](
+        Pattern[C0, C1]):
+    """ An exponential ``X << Y`` or ``X >> Y`` of two patterns. """
+
+    symbol: S
     left: Pattern
     right: Pattern
 
-    OPERATORS: ClassVar[dict] = {
-        "<<": (operator.lshift, "over"), ">>": (operator.rshift, "under")}
-
-    def __post_init__(self):
-        member(self.bound, self.OPERATORS[self.symbol][1], self.left)
+    OPERATORS: ClassVar[dict] = {"<<": operator.lshift, ">>": operator.rshift}
 
     @property
     def variables(self):
@@ -466,10 +497,10 @@ class Op(Pattern):
 
     @property
     def bound(self):
-        return self.left.bound or self.right.bound
+        return common(self.left, self.right)
 
     def instantiate(self, subst, unit):
-        return self.OPERATORS[self.symbol][0](
+        return self.OPERATORS[self.symbol](
             self.left.instantiate(subst, unit),
             self.right.instantiate(subst, unit))
 
@@ -478,7 +509,7 @@ class Op(Pattern):
 
 
 @dataclass(frozen=True)
-class Choice(Pattern):
+class Choice[C0, C1: abc.Category](Pattern[C0, C1]):
     """
     The choice ``L[then, otherwise]`` of a pattern by a boolean variable,
     matching a value by either branch and binding the variable to which.
@@ -488,6 +519,9 @@ class Choice(Pattern):
     then: Pattern
     otherwise: Pattern
 
+    def __post_init__(self):
+        pass
+
     @property
     def variables(self):
         return (self.var.name, ) + self.then.variables\
@@ -495,7 +529,7 @@ class Choice(Pattern):
 
     @property
     def bound(self):
-        return self.then.bound or self.otherwise.bound
+        return common(self.then, self.otherwise)
 
     def instantiate(self, subst, unit):
         branch = self.then if subst[self.var.name] else self.otherwise
@@ -511,19 +545,20 @@ class Choice(Pattern):
 
 
 @dataclass(frozen=True)
-class Hom:
+class Hom[C0, C1: abc.Category, A: C0, B: C0](Pattern[C0, C1]):
     """
-    The type ``head[dom, cod]`` of the morphisms between two patterns.
+    The type ``head[dom, cod]`` of the morphisms between two patterns,
+    matched against a goal: a pair of an optional domain and codomain.
 
     >>> from discopy.monoidal import Ty
-    >>> A, B = Var('A', Sort()), Var('B', Sort())
-    >>> hom = Hom(Tensor((A, B)), A)
+    >>> A, B = (Var(n, Sort(bound=abc.ColouredMonoid)) for n in "AB")
+    >>> hom = Hom(A @ B, A)
     >>> print(hom)
     C1[A @ B, A]
     >>> x, y = Ty('x'), Ty('y')
-    >>> [(str(s['A']), str(s['B'])) for s, _ in hom.match(x @ y, x)]
+    >>> [(str(s['A']), str(s['B'])) for s, _ in hom.match((x @ y, x))]
     [('x', 'y')]
-    >>> list(hom.match(x @ y, y))
+    >>> list(hom.match((x @ y, y)))
     []
     """
 
@@ -531,9 +566,16 @@ class Hom:
     cod: Pattern
     head: str = "C1"
 
+    def __post_init__(self):
+        pass
+
     @property
     def variables(self):
         return self.dom.variables + self.cod.variables
+
+    @property
+    def bound(self):
+        return common(self.dom, self.cod)
 
     def resolve(self, scope: dict) -> type:
         """ The type the head stands for, see :meth:`Sort.resolve`. """
@@ -544,10 +586,10 @@ class Hom:
         return (self.dom.instantiate(subst, unit),
                 self.cod.instantiate(subst, unit))
 
-    def match(self, dom=None, cod=None) -> Iterator[Match]:
-        """ Unify with a goal, either side of which may be free. """
-        for subst, residuals in self.dom.match(dom):
-            yield from self.cod.match(cod, subst, residuals)
+    def unify(self, value, subst, residuals):
+        dom, cod = value
+        for subst_, residuals_ in self.dom.match(dom, subst, residuals):
+            yield from self.cod.match(cod, subst_, residuals_)
 
     def __str__(self):
         return f"{self.head}[{self.dom}, {self.cod}]"
@@ -569,7 +611,7 @@ class Sequent:
     """
 
     variables: dict[str, Sort] = field(default_factory=dict)
-    premises: dict[str, Pattern | Sort | Hom] = field(default_factory=dict)
+    premises: dict[str, Pattern | Sort] = field(default_factory=dict)
     conclusion: Hom | None = None
     keywords: frozenset[str] = frozenset()
 
@@ -582,15 +624,15 @@ class Sequent:
 
 
 def read(annotation: str, sorts: dict[str, Sort],
-         namespace: dict = None) -> Pattern | Sort | Hom:
+         namespace: dict = None) -> Pattern | Sort:
     """
-    Read a pattern, a sort or a hom from an annotation evaluated in the
-    environment of the sequent, over the namespace of the function.
+    Read a pattern or a sort from an annotation evaluated in the
+    environment of the sequent, over the namespace of the function: the
+    ``C0`` of the environment is bounded as the variables of that sort are.
 
-    >>> from discopy.abc import Pregroup
-    >>> sorts = {"X": Sort("C0", atomic=True, bound=Pregroup)}
-    >>> print(read("C1[X @ X.r, 1]", sorts))
-    C1[X @ X.r, 1]
+    >>> sorts = {"X": Sort("C0", atomic=True, bound=abc.Pregroup)}
+    >>> print(read("C1[X @ X.r, Unit[C0]]", sorts))
+    C1[X @ X.r, Unit[C0]]
     >>> read("Atom[Self.dom.ob]", sorts)
     Sort(head='Self.dom.ob', atomic=True)
     >>> read("X ** 2", sorts)
@@ -598,15 +640,17 @@ def read(annotation: str, sorts: dict[str, Sort],
      ...
     TypeError: Cannot read a pattern from X ** 2.
     """
+    level = next((s.bound for s in sorts.values() if s.head == "C0"), None)
     environment = {
-        "Atom": Atom, "Bool": Bool, "C0": C0, "C1": C1, "Self": Sort("Self"),
+        "Atom": Atom, "Bool": Bool, "Unit": Unit, "Self": Sort("Self"),
+        "C0": Sort("C0", bound=level), "C1": C1,
         **{name: Var(name, sort) for name, sort in sorts.items()}}
     try:
         value = eval(annotation, namespace or {}, environment)
     except Exception as error:
         raise TypeError(
             f"Cannot read a pattern from {annotation}.") from error
-    return value if isinstance(value, (Sort, Hom)) else pattern(value)
+    return value if isinstance(value, Sort) else pattern(value)
 
 
 def parse(function: Callable, conclusion: bool = True) -> Sequent:

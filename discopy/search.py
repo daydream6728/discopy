@@ -71,7 +71,7 @@ class Rule[**P, T](Declaration[P, T]):
 
     def match(self, dom=None, cod=None) -> Iterator[Match]:
         """ Unify the conclusion with a goal. """
-        return self.sequent.conclusion.match(dom, cod)
+        return self.sequent.conclusion.match((dom, cod))
 
     def apply(self, arguments: dict) -> T:
         """
@@ -92,7 +92,7 @@ class Generator(Rule):
 
     >>> from discopy.abc import RigidCategory
     >>> print(RigidCategory.generators["cups"])
-    cups: X: Atom[C0] | left: X, right: X.r ⊢ C1[X @ X.r, 1]
+    cups: X: Atom[C0] | left: X, right: X.r ⊢ C1[X @ X.r, Unit[C0]]
     """
     def __post_init__(self):
         super().__post_init__()

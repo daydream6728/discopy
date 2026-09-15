@@ -7,9 +7,9 @@ from hypothesis import strategies as st
 from pytest import raises
 
 from discopy import braided, rigid, traced
-from discopy.abc import Category
+from discopy.abc import Category, ColouredMonoid
 from discopy.monoidal import Box, Diagram, Ty
-from discopy.pattern import C0, C1, declarations
+from discopy.pattern import C0, C1, Unit, declarations
 from discopy.search import Generator, Rule, generator, rule, search
 from discopy.utils import AxiomError
 
@@ -62,7 +62,7 @@ def test_generator():
     class Lying(Diagram):
         @classmethod
         @generator
-        def wrong[A: C0](cls, dom: A) -> C1[A, 1]:
+        def wrong[A: ColouredMonoid](cls, dom: A) -> C1[A, Unit[C0]]:
             """ A generator whose conclusion lies. """
             return cls.id(dom)
 

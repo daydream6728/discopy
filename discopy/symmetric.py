@@ -102,7 +102,7 @@ from discopy.python import finset
 from discopy.utils import (
     AxiomError, assert_iscomposable, classproperty, factory_name, from_tree)
 from discopy.axioms import axiom
-from discopy.pattern import C0, C1, Atom
+from discopy.pattern import C1, Atom
 from discopy.search import generator
 
 
@@ -332,7 +332,7 @@ class Diagram(balanced.Diagram, SymmetricCategory):
 
     @classmethod
     @generator
-    def cycle[X: Atom[C0], A: C0](cls, x: X, a: A) -> C1[X @ A, A @ X]:
+    def cycle[X: Atom[Ty], A: Ty](cls, x: X, a: A) -> C1[X @ A, A @ X]:
         """
         The permutation moving a wire past a type, a native
         :class:`Permutation` of any length.
