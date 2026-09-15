@@ -104,3 +104,14 @@ def test_axioms():
     from discopy import axioms
 
     axioms.assert_axioms(Diagram, Functor)
+
+
+def test_inverse_braid_rotation():
+    """ The half turn of an inverse braid keeps its crossing and its type. """
+    x, y = Ty('x'), Ty('y')
+    inverse = Braid(x, y).dagger()
+    assert inverse.rotate().is_dagger
+    assert (inverse.rotate().dom, inverse.rotate().cod)\
+        == (inverse.cod.r, inverse.dom.r)
+    f = Box('f', Ty(), inverse.dom)
+    assert (f >> inverse).rotate() == inverse.rotate() >> f.rotate()

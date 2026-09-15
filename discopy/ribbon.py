@@ -212,8 +212,7 @@ class Braid(balanced.Braid, Box):
 
     def rotate(self, left=False):
         del left
-        braid = type(self)(*self.cod.r)
-        return braid.dagger() if self.is_dagger else braid
+        return type(self)(*self.cod.r, is_dagger=self.is_dagger)
 
 
 class DualRailBraid(balanced.DualRailBraid, Box):

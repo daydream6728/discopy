@@ -34,7 +34,10 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `feedback_right`, abstract on their level and implemented by each
   diagram class, with `trace`, `ev`, `curry` and `feedback` untyped
   helpers taking `left`; a `Feedback` now takes its memory on the left
-  too. `BraidedCategory.braid_inverse` and
+  too. Two more bugs the search found are fixed: the rotation of an
+  inverse braid swapped its sides, and the foliation of a left trace
+  left two permutations unmerged, so `foliation` now merges the layers
+  it decodes from the hypergraph and is a function of it. `BraidedCategory.braid_inverse` and
   `symmetric.Diagram.cycle`, a native permutation of any length, are
   generators too; a curried diagram has no dagger, so `biclosed.Diagram`
   declares the dagger laws inapplicable as `rigid` does, and its right

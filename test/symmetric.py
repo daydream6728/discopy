@@ -406,3 +406,13 @@ def test_axioms():
     from discopy import axioms
 
     axioms.assert_axioms(Diagram, Functor)
+
+
+def test_foliation_of_left_trace():
+    """ A foliation is a function of the hypergraph, so it is idempotent. """
+    a = Ty('a')
+    diagram = Box('e', Ty(), a @ a @ a) @ a >> a @ a @ Box('f', a @ a, a)
+    for trace in (Trace(diagram, left=True), Trace(diagram)):
+        foliated = trace.foliation()
+        assert foliated.foliation() == foliated
+        assert foliated.to_hypergraph() == trace.to_hypergraph()
