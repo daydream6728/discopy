@@ -30,7 +30,8 @@ from collections.abc import Callable
 from typing import Self
 
 from discopy.abc import ClosedCategory
-from discopy.utils import assert_isinstance, tuplify, untuplify, factory
+from discopy.utils import (
+    assert_isinstance, tuplify, untuplify, factory, sided)
 from discopy.python import finset, function
 
 
@@ -172,6 +173,11 @@ class Function(function.Function, ClosedCategory):
             return Function(lambda f, *xs: f(*xs), dom, cod)
         dom, cod = exponent + Function.exp(base, exponent), base
         return Function(lambda *xs: xs[-1](*xs[:-1]), dom, cod)
+
+    ev_left = staticmethod(lambda base, exponent: Function.ev(base, exponent))
+    ev_right = staticmethod(
+        lambda base, exponent: Function.ev(base, exponent, left=False))
+    curry_left, curry_right = sided("curry")
 
     def curry(self, n=1, left=True) -> Function:
         """

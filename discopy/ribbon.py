@@ -95,19 +95,28 @@ class Diagram(pivotal.Diagram, balanced.Diagram, RibbonCategory):
         cod (pivotal.Ty) : The codomain of the diagram, i.e. its output.
     """
 
-    def trace(self, n=1, left=False):
+    def trace_left(self, n=1):
         """
-        The trace of a ribbon diagram.
+        The trace of a ribbon diagram on the left, by caps and cups.
 
         Parameters:
             n : The number of wires to trace.
         """
         if not n:
             return self
-        if left:
-            return self.caps(self.dom[:n].r, self.dom[:n]) @ self.dom[n:]\
-                >> self.dom[:n].r @ self\
-                >> self.cups(self.cod[:n].r, self.cod[:n]) @ self.cod[n:]
+        return self.caps(self.dom[:n].r, self.dom[:n]) @ self.dom[n:]\
+            >> self.dom[:n].r @ self\
+            >> self.cups(self.cod[:n].r, self.cod[:n]) @ self.cod[n:]
+
+    def trace_right(self, n=1):
+        """
+        The trace of a ribbon diagram on the right, by caps and cups.
+
+        Parameters:
+            n : The number of wires to trace.
+        """
+        if not n:
+            return self
         return self.dom[:-n] @ self.caps(self.dom[-n:], self.dom[-n:].r)\
             >> self @ self.dom[-n:].r\
             >> self.cod[:-n] @ self.cups(self.cod[-n:], self.cod[-n:].r)

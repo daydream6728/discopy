@@ -20,9 +20,8 @@ import annotations``, and :func:`parse` evaluates each in an environment
 where the type parameters are :class:`Var` s, ``C0``, ``C1`` and ``Self``
 :class:`Sort` s and ``Atom`` marks a sort atomic: ``C1[A, B]`` is a
 :class:`Hom`, ``X @ X.r`` a :class:`Tensor` of a variable with its
-:class:`Adjoint`, ``M.d`` a :class:`Delay`, ``X << Y`` an :class:`Exp`,
-``Unit[C0]`` the :class:`Unit` and ``L[X, Y]`` for ``L: Bool`` the
-:class:`Choice` of one or the other.
+:class:`Adjoint`, ``M.d`` a :class:`Delay`, ``X << Y`` an :class:`Exp` and
+``Unit[C0]`` the :class:`Unit`.
 
 A pattern is generic in the colours ``C0`` and the objects ``C1`` of the
 monoid it stands in, and the bound of ``C1`` is the least structure the
@@ -56,10 +55,8 @@ Summary
     Adjoint
     Delay
     Exp
-    Choice
     Hom
     Sort
-    Bool
     Atom
     Sequent
     Declaration
@@ -152,24 +149,6 @@ class Sort:
         return f"Atom[{self.head}]" if self.atomic else self.head
 
 
-@dataclass(frozen=True)
-class Bool(Sort):
-    """
-    The sort of a boolean variable ``L: Bool``, the :class:`Choice` between
-    two patterns ``L[then, otherwise]``; canonically :obj:`True`.
-    """
-
-    head: str = "Bool"
-
-    def resolve(self, scope: dict) -> type:
-        return bool
-
-    def strategy(self, scope: dict, types=None):
-        from hypothesis import strategies as st
-
-        return st.booleans()
-
-
 class Atom:
     """
     The sort of atomic objects: ``Atom[C0]`` in a signature stands for the
@@ -220,8 +199,8 @@ class Pattern[C0, C1: abc.Category](ABC):
     def __post_init__(self):
         """
         Check the objects the pattern stands for are bounded by its
-        :meth:`level`; a variable, a hom or a choice adds no structure to
-        its parts and skips the check.
+        :meth:`level`; a variable or a hom adds no structure to its parts
+        and skips the check.
         """
         bound, required = self.bound, self.level()
         if bound is None or not issubclass(bound, required):
@@ -349,12 +328,6 @@ class Var[C0, C1: abc.Category](Pattern[C0, C1]):
                 yield subst, residuals
         elif not self.sort.atomic or len(value) == 1:
             yield dict(subst, **{self.name: value}), residuals
-
-    def __getitem__(self, key):
-        if not isinstance(self.sort, Bool):
-            raise TypeError(f"{self} is no boolean to choose by.")
-        then, otherwise = key
-        return Choice(self, pattern(then), pattern(otherwise))
 
     def __str__(self):
         return self.name
@@ -509,42 +482,6 @@ class Exp[C0, C1: abc.ResiduatedMonoid, S: Literal["<<", ">>"]](
 
 
 @dataclass(frozen=True)
-class Choice[C0, C1: abc.Category](Pattern[C0, C1]):
-    """
-    The choice ``L[then, otherwise]`` of a pattern by a boolean variable,
-    matching a value by either branch and binding the variable to which.
-    """
-
-    var: Var
-    then: Pattern
-    otherwise: Pattern
-
-    def __post_init__(self):
-        pass
-
-    @property
-    def variables(self):
-        return (self.var.name, ) + self.then.variables\
-            + self.otherwise.variables
-
-    @property
-    def bound(self):
-        return common(self.then, self.otherwise)
-
-    def instantiate(self, subst, unit):
-        branch = self.then if subst[self.var.name] else self.otherwise
-        return branch.instantiate(subst, unit)
-
-    def unify(self, value, subst, residuals):
-        for choice, branch in ((True, self.then), (False, self.otherwise)):
-            for subst_, residuals_ in self.var.unify(choice, subst, residuals):
-                yield from branch.unify(value, subst_, residuals_)
-
-    def __str__(self):
-        return f"{self.var}[{self.then}, {self.otherwise}]"
-
-
-@dataclass(frozen=True)
 class Hom[C0, C1: abc.Category, A: C0, B: C0](Pattern[C0, C1]):
     """
     The type ``head[dom, cod]`` of the morphisms between two patterns,
@@ -600,8 +537,7 @@ class Sequent:
     """
     Variables and their sorts, named premises and an optional conclusion.
     A premise is a :class:`Hom` to generate, a :class:`Sort` to generate,
-    or a :class:`Pattern` to instantiate; those with a default are passed
-    by keyword.
+    or a :class:`Pattern` to instantiate.
 
     >>> from discopy.abc import MonoidalCategory
     >>> print(MonoidalCategory.tensor.sequent)
@@ -613,7 +549,6 @@ class Sequent:
     variables: dict[str, Sort] = field(default_factory=dict)
     premises: dict[str, Pattern | Sort] = field(default_factory=dict)
     conclusion: Hom | None = None
-    keywords: frozenset[str] = frozenset()
 
     def __str__(self):
         context = ", ".join(f"{n}: {s}" for n, s in self.variables.items())
@@ -642,7 +577,7 @@ def read(annotation: str, sorts: dict[str, Sort],
     """
     level = next((s.bound for s in sorts.values() if s.head == "C0"), None)
     environment = {
-        "Atom": Atom, "Bool": Bool, "Unit": Unit, "Self": Sort("Self"),
+        "Atom": Atom, "Unit": Unit, "Self": Sort("Self"),
         "C0": Sort("C0", bound=level), "C1": C1,
         **{name: Var(name, sort) for name, sort in sorts.items()}}
     try:
@@ -658,8 +593,7 @@ def parse(function: Callable, conclusion: bool = True) -> Sequent:
     The sequent a function states with its signature, deferred with
     ``from __future__ import annotations``: the bound of each type
     parameter the sort of a variable, each parameter without a default a
-    premise — with one, only if annotated by a variable, e.g. ``left: L =
-    True`` — the return annotation the conclusion when asked for. An
+    premise, the return annotation the conclusion when asked for. An
     unannotated first parameter, ``cls`` or ``self``, is skipped.
 
     >>> def then[A: C0, B: C0, C: C0](
@@ -698,19 +632,14 @@ def parse(function: Callable, conclusion: bool = True) -> Sequent:
         if name not in annotations:
             raise TypeError(
                 f"{function.__name__} states no pattern for {name}.")
-    keywords = frozenset(
-        parameter.name for parameter in parameters
-        if parameter.default is not inspect.Parameter.empty
-        and annotations.get(parameter.name) in sorts)
     namespace = function.__globals__
     premises = {
-        name: read(annotations[name], sorts, namespace)
-        for name in premises + sorted(keywords)}
+        name: read(annotations[name], sorts, namespace) for name in premises}
     returns = read(annotations["return"], sorts, namespace)\
         if conclusion and "return" in annotations else None
     if conclusion and not isinstance(returns, Hom):
         raise TypeError(f"{function.__name__} concludes no hom type.")
-    return Sequent(sorts, premises, returns, keywords)
+    return Sequent(sorts, premises, returns)
 
 
 @dataclass(repr=False)

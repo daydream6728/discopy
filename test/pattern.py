@@ -12,8 +12,8 @@ from discopy.abc import (
     ResiduatedMonoid)
 from discopy.monoidal import Ty
 from discopy.pattern import (
-    C0, C1, Adjoint, Atom, Bool, Choice, Delay, Exp, Hom, Sequent, Sort,
-    Tensor, Unit, Var, parse, read)
+    C0, C1, Adjoint, Atom, Delay, Exp, Hom, Sequent, Sort, Tensor, Unit,
+    Var, parse, read)
 
 
 x, y, z = map(Ty, "xyz")
@@ -22,7 +22,6 @@ M = Var("M", Sort(atomic=True, bound=ColouredMonoid))
 X = Var("X", Sort(atomic=True, bound=Pregroup))
 D = Var("D", Sort(bound=DelayedMonoid))
 E = Var("E", Sort(bound=ResiduatedMonoid))
-L = Var("L", Bool())
 ONE = Unit(A.sort)
 
 
@@ -80,9 +79,9 @@ def test_parse():
         ...
     with raises(TypeError):
         parse(unsorted, conclusion=False)
-    assert str(parse(FeedbackCategory.feedback.function)) == (
+    assert str(parse(FeedbackCategory.feedback_right.function)) == (
         "X: C0, Y: C0, M: Atom[C0] | self: C1[X @ M.d, Y @ M] ⊢ C1[X, Y]")
-    assert FeedbackCategory.feedback.sequent.variables["M"].bound\
+    assert FeedbackCategory.feedback_left.sequent.variables["M"].bound\
         is DelayedMonoid
 
 
@@ -144,29 +143,3 @@ def test_level():
             build()
     with raises(AttributeError):
         A.z
-
-
-def test_choice():
-    """ A boolean variable chooses between two patterns. """
-    choice = L[A @ M, M @ A]
-    assert choice == Choice(L, A @ M, M @ A)
-    assert str(choice) == "L[A @ M, M @ A]"
-    assert choice.variables == ("L", "A", "M", "M", "A")
-    assert choice.instantiate({"L": True, "A": x @ y, "M": z}, Ty) == x @ y @ z
-    assert choice.instantiate({"L": False, "A": x, "M": z}, Ty) == z @ x
-    assert [s for s, _ in choice.match(x @ y)] == [
-        {"L": True, "A": x, "M": y}, {"L": False, "M": x, "A": y}]
-    assert [s for s, _ in choice.match(x @ y, {"L": False})]\
-        == [{"L": False, "M": x, "A": y}]
-    assert read("L[X, Unit[C0]]", {"L": Bool(), "X": X.sort})\
-        == L[X, Unit(Sort(bound=Pregroup))]
-    with raises(TypeError):
-        A[X, X]
-
-    def ev[X: Atom[C0], Y: Atom[C0], L: Bool](
-            cls, base: X, exponent: Y, left: L = True) -> C1[L[X, Y], X]:
-        ...
-    sequent = parse(ev)
-    assert list(sequent.premises) == ["base", "exponent", "left"]
-    assert sequent.keywords == {"left"}
-    assert sequent.variables["L"] == Bool()

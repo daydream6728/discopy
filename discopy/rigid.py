@@ -414,8 +414,10 @@ class Diagram(biclosed.Diagram, RigidCategory):
 
     to_drawing = monoidal.Diagram.to_drawing
 
-    ev = classmethod(RigidCategory.ev.__func__)
-    curry = RigidCategory.curry
+    ev_left = classmethod(RigidCategory.ev_left.__func__)
+    ev_right = classmethod(RigidCategory.ev_right.__func__)
+    curry_left = RigidCategory.curry_left
+    curry_right = RigidCategory.curry_right
 
     @classmethod
     def cups(cls, left: Ty, right: Ty) -> Diagram:

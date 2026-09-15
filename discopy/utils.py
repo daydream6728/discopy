@@ -670,6 +670,20 @@ def assert_istraceable(arg: Diagram, n=1, left=False):
             messages.NOT_TRACEABLE.format(traced_dom, traced_cod))
 
 
+def sided(name: str) -> tuple[Callable, Callable]:
+    """
+    The two sides of a method taking ``left``, as methods of their own, e.g.
+    ``trace_left, trace_right = sided("trace")``.
+
+    Parameters:
+        name : The name of the method taking ``left``.
+    """
+    def side(left: bool) -> Callable:
+        return lambda self, *args, **kwargs: getattr(self, name)(
+            *args, left=left, **kwargs)
+    return side(True), side(False)
+
+
 class classproperty(object):
     """ Adapted from https://stackoverflow.com/a/5192374/18783670 """
     def __init__(self, f):

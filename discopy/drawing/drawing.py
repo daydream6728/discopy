@@ -208,6 +208,7 @@ from discopy.config import BOX_DRAWING_ATTRIBUTES, TRANSPARENT
 from discopy.abc import TracedCategory
 from discopy.python import finset
 from discopy.utils import (
+    sided,
     assert_isinstance, assert_iscomposable, unbiased, factory, RichDisplay)
 
 if TYPE_CHECKING:
@@ -895,6 +896,8 @@ class Drawing(TracedCategory, RichDisplay):
             dom=self.dom @ other.dom, cod=self.cod @ other.cod, _check=False)
         result.width = x_shift + other.width
         return result
+
+    trace_left, trace_right = sided("trace")
 
     def trace(self, n=1, left=False) -> Drawing:
         from discopy.monoidal import Box, Ty

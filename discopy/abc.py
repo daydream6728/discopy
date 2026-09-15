@@ -65,7 +65,7 @@ from dataclasses import dataclass
 from typing import ClassVar, Self
 
 from discopy.axioms import Axiom, Equation, axiom
-from discopy.pattern import Atom, Bool, Unit, declarations
+from discopy.pattern import Atom, Unit, declarations
 from discopy.search import Generator, Rule, generator, rule
 from discopy.utils import NamedGeneric, classproperty  # noqa: F401
 
@@ -401,31 +401,42 @@ class TracedCategory[C0: ColouredMonoid, C1](MonoidalCategory[C0, C1]):
     A traced category is a :class:`MonoidalCategory` with a method
     :code:`trace` for the partial trace of a morphism over some objects.
     """
+    @rule
     @abstractmethod
+    def trace_left[A: C0, B: C0, M: Atom[C0]](
+            self: C1[M @ A, M @ B], n: int = 1) -> C1[A, B]:
+        """
+        The trace of ``n`` wires on the left, to be instantiated: as a
+        rule, one wire.
+
+        Parameters:
+            n : The number of objects to trace over.
+        """
+
+    @rule
+    @abstractmethod
+    def trace_right[A: C0, B: C0, M: Atom[C0]](
+            self: C1[A @ M, B @ M], n: int = 1) -> C1[A, B]:
+        """
+        The trace of ``n`` wires on the right, to be instantiated: as a
+        rule, one wire.
+
+        Parameters:
+            n : The number of objects to trace over.
+        """
+
     def trace(self, n: int = 1, left: bool = False) -> C1:
         """
-        The trace of a morphism, to be instantiated.
-
-        Tracing no object at all is the identity, i.e. the vanishing axiom
-        ``f.trace(0) == f``, see `nLab
+        The trace of a morphism on either side, :meth:`trace_left` or
+        :meth:`trace_right`. Tracing no object at all is the identity, i.e.
+        the vanishing axiom ``f.trace(0) == f``, see `nLab
         <https://ncatlab.org/nlab/show/traced+monoidal+category>`_.
 
         Parameters:
             n : The number of objects to trace over.
             left : Whether to trace the wires on the left or right.
         """
-
-    @rule
-    def trace_left[A: C0, B: C0, M: Atom[C0]](
-            self: C1[M @ A, M @ B]) -> C1[A, B]:
-        """ The trace of one wire on the left, as the search applies it. """
-        return self.trace(left=True)
-
-    @rule
-    def trace_right[A: C0, B: C0, M: Atom[C0]](
-            self: C1[A @ M, B @ M]) -> C1[A, B]:
-        """ The trace of one wire on the right, as the search applies it. """
-        return self.trace()
+        return self.trace_left(n) if left else self.trace_right(n)
 
     @axiom
     def trace_vanishing(
@@ -523,31 +534,76 @@ class BiclosedCategory[
     @classmethod
     @generator
     @abstractmethod
-    def ev[X: Atom[C0], Y: Atom[C0], L: Bool](
-            cls, base: X, exponent: Y, left: L = True
-            ) -> C1[L[(X << Y) @ Y, Y @ (Y >> X)], X]:
+    def ev_left[X: Atom[C0], Y: Atom[C0]](
+            cls, base: X, exponent: Y) -> C1[(X << Y) @ Y, X]:
         """
-        The evaluation of an exponential type, to be instantiated.
+        The left evaluation of an exponential type, to be instantiated.
+
+        Parameters:
+            base : The base of the exponential type.
+            exponent : The exponent of the exponential type.
+        """
+
+    @classmethod
+    @generator
+    @abstractmethod
+    def ev_right[X: Atom[C0], Y: Atom[C0]](
+            cls, base: X, exponent: Y) -> C1[Y @ (Y >> X), X]:
+        """
+        The right evaluation of an exponential type, to be instantiated.
+
+        Parameters:
+            base : The base of the exponential type.
+            exponent : The exponent of the exponential type.
+        """
+
+    @classmethod
+    def ev(cls, base: C0, exponent: C0, left: bool = True) -> C1:
+        """
+        The evaluation of an exponential type on either side,
+        :meth:`ev_left` or :meth:`ev_right`.
 
         Parameters:
             base : The base of the exponential type.
             exponent : The exponent of the exponential type.
             left : Whether to take the left or right evaluation.
         """
+        return (cls.ev_left if left else cls.ev_right)(base, exponent)
 
     @rule
     @abstractmethod
-    def curry[X: C0, Y: Atom[C0], Z: C0, L: Bool](
-            self: C1[L[X @ Y, Y @ X], Z], n: int = 1, left: L = True
-            ) -> C1[X, L[Z << Y, Y >> Z]]:
+    def curry_left[X: C0, Y: Atom[C0], Z: C0](
+            self: C1[X @ Y, Z], n: int = 1) -> C1[X, Z << Y]:
         """
-        The currying of a morphism, to be instantiated: the rule curries
-        one object, an implementation may curry ``n``.
+        The currying of ``n`` objects on the left, to be instantiated: as
+        a rule, one object.
+
+        Parameters:
+            n : The number of objects to curry.
+        """
+
+    @rule
+    @abstractmethod
+    def curry_right[Y: Atom[C0], X: C0, Z: C0](
+            self: C1[Y @ X, Z], n: int = 1) -> C1[X, Y >> Z]:
+        """
+        The currying of ``n`` objects on the right, to be instantiated: as
+        a rule, one object.
+
+        Parameters:
+            n : The number of objects to curry.
+        """
+
+    def curry(self, n: int = 1, left: bool = True) -> C1:
+        """
+        The currying of a morphism on either side, :meth:`curry_left` or
+        :meth:`curry_right`.
 
         Parameters:
             n : The number of objects to curry.
             left : Whether to curry on the left or right.
         """
+        return self.curry_left(n) if left else self.curry_right(n)
 
     @axiom
     def currying_left[X: C0, Y: Atom[C0], Z: C0](
@@ -705,33 +761,30 @@ class RigidCategory[C0: Pregroup, C1: RigidCategory](BiclosedCategory[C0, C1]):
             f.then(g).rotate(), g.rotate().then(f.rotate()))
 
     @classmethod
-    def ev(cls, base: C0, exponent: C0, left: bool = True) -> C1:
-        """
-        The evaluation of a rigid morphism is obtained using cups.
+    def ev_left(cls, base: C0, exponent: C0) -> C1:
+        """ The left evaluation of a rigid morphism is obtained using cups. """
+        return base @ cls.cups(exponent.l, exponent)
 
-        Parameters:
-            base : The base of the exponential type.
-            exponent : The exponent of the exponential type.
-            left : Whether to take the left or right evaluation.
-        """
-        return base @ cls.cups(exponent.l, exponent) if left\
-            else cls.cups(exponent, exponent.r) @ base
+    @classmethod
+    def ev_right(cls, base: C0, exponent: C0) -> C1:
+        """ The right evaluation of a rigid morphism, using cups. """
+        return cls.cups(exponent, exponent.r) @ base
 
-    def curry(self, n: int = 1, left: bool = True) -> C1:
-        """
-        The curry of a rigid morphism is obtained using caps.
-
-        Parameters:
-            n : The number of objects to curry.
-            left : Whether to curry on the left or right.
-        """
+    def curry_left(self, n: int = 1) -> C1:
+        """ The left curry of a rigid morphism is obtained using caps. """
         if n < 0 or n > len(self.dom):
             raise ValueError
         if not n:
             return self
-        if left:
-            base, exponent = self.dom[:-n], self.dom[-n:]
-            return base @ self.caps(exponent, exponent.l) >> self @ exponent.l
+        base, exponent = self.dom[:-n], self.dom[-n:]
+        return base @ self.caps(exponent, exponent.l) >> self @ exponent.l
+
+    def curry_right(self, n: int = 1) -> C1:
+        """ The right curry of a rigid morphism is obtained using caps. """
+        if n < 0 or n > len(self.dom):
+            raise ValueError
+        if not n:
+            return self
         base, exponent = self.dom[n:], self.dom[:n]
         return self.caps(exponent.r, exponent) @ base >> exponent.r @ self
 
@@ -1048,18 +1101,48 @@ class FeedbackCategory[C0: DelayedMonoid, C1](MarkovCategory[C0, C1]):
 
     @rule
     @abstractmethod
-    def feedback[X: C0, Y: C0, M: Atom[C0]](
-            self: C1[X @ M.d, Y @ M],
+    def feedback_left[X: C0, Y: C0, M: Atom[C0]](
+            self: C1[M.d @ X, M @ Y],
             dom: C0 = None, cod: C0 = None, mem: C0 = None) -> C1[X, Y]:
         """
-        The feedback operator on a morphism: the rule feeds one wire of
-        memory back, an implementation may take more.
+        The feedback of the memory on the left, to be instantiated: as a
+        rule, one wire of memory.
 
         Parameters:
             dom : The domain of the feedback.
             cod : The codomain of the feedback.
-            mem : The memory type to trace over.
+            mem : The memory type to feed back.
         """
+
+    @rule
+    @abstractmethod
+    def feedback_right[X: C0, Y: C0, M: Atom[C0]](
+            self: C1[X @ M.d, Y @ M],
+            dom: C0 = None, cod: C0 = None, mem: C0 = None) -> C1[X, Y]:
+        """
+        The feedback of the memory on the right, to be instantiated: as a
+        rule, one wire of memory.
+
+        Parameters:
+            dom : The domain of the feedback.
+            cod : The codomain of the feedback.
+            mem : The memory type to feed back.
+        """
+
+    def feedback(self, dom: C0 = None, cod: C0 = None, mem: C0 = None,
+                 left: bool = False) -> C1:
+        """
+        The feedback operator on either side, :meth:`feedback_left` or
+        :meth:`feedback_right`.
+
+        Parameters:
+            dom : The domain of the feedback.
+            cod : The codomain of the feedback.
+            mem : The memory type to feed back.
+            left : Whether the memory is on the left or right.
+        """
+        side = self.feedback_left if left else self.feedback_right
+        return side(dom, cod, mem)
 
     @axiom
     def feedback_vanishing(

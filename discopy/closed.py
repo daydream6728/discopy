@@ -101,8 +101,12 @@ class Diagram(markov.Diagram, biclosed.Diagram, ClosedCategory):
         return all(box.is_linear for box in self.boxes)
 
     @classmethod
-    def ev(cls, base: Ty, exponent: Ty, left: bool = True):
-        return cls.eval_factory(exponent >> base, left=left)
+    def ev_left(cls, base: Ty, exponent: Ty):
+        return cls.eval_factory(exponent >> base, left=True)
+
+    @classmethod
+    def ev_right(cls, base: Ty, exponent: Ty):
+        return cls.eval_factory(exponent >> base, left=False)
 
     def to_compact(self) -> Diagram:
         """

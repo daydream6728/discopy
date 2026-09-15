@@ -450,14 +450,17 @@ class Diagram(RibbonCategory, NamedGeneric['natural']):
         return type(self)(
             self.inside.naturality(i, left, down, braid), self.dom, self.cod)
 
-    trace = traced.Diagram.trace
+    trace_left = traced.Diagram.trace_left
+    trace_right = traced.Diagram.trace_right
     trace_factory = classmethod(pivotal.Diagram.trace_factory.__func__)
     transpose = rigid.Diagram.transpose
     # The remaining ribbon structure is derived from the concrete categories,
     # following the same idiom as `trace` and `transpose` above.
     twist = classmethod(balanced.Diagram.twist.__func__)
-    ev = classmethod(rigid.Diagram.ev.__func__)
-    curry = rigid.Diagram.curry
+    ev_left = classmethod(rigid.Diagram.ev_left.__func__)
+    ev_right = classmethod(rigid.Diagram.ev_right.__func__)
+    curry_left = rigid.Diagram.curry_left
+    curry_right = rigid.Diagram.curry_right
     conjugate = pivotal.Diagram.conjugate
     boxes = property(lambda self: self.inside.boxes)
     to_drawing = lambda self: self.inside.to_drawing()

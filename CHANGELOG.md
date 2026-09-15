@@ -27,10 +27,14 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   objects it stands in, its objects bounded by the level it needs —
   `Unit[C0]` and `Tensor` a `ColouredMonoid`, `Adjoint` a `Pregroup`,
   `Delay` a `DelayedMonoid`, `Exp` a `ResiduatedMonoid` — so every
-  monoidal level of `discopy.abc` now bounds its objects. A variable
-  `L: Bool` chooses between two
-  patterns, `L[then, otherwise]`, so that `ev` and `curry` are one
-  declaration for both sides; `BraidedCategory.braid_inverse` and
+  monoidal level of `discopy.abc` now bounds its objects. The sides of
+  a trace, an evaluation, a currying and a feedback are the typed
+  rules and generators, `trace_left` and `trace_right`, `ev_left` and
+  `ev_right`, `curry_left` and `curry_right`, `feedback_left` and
+  `feedback_right`, abstract on their level and implemented by each
+  diagram class, with `trace`, `ev`, `curry` and `feedback` untyped
+  helpers taking `left`; a `Feedback` now takes its memory on the left
+  too. `BraidedCategory.braid_inverse` and
   `symmetric.Diagram.cycle`, a native permutation of any length, are
   generators too; a curried diagram has no dagger, so `biclosed.Diagram`
   declares the dagger laws inapplicable as `rigid` does, and its right

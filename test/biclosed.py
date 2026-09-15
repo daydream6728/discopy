@@ -150,6 +150,10 @@ def test_strategy():
         evaluation = find(Diagram.strategy(dom=dom, cod=x, max_depth=0),
                           lambda value: isinstance(value, Eval))
         assert evaluation == Diagram.ev(x, y, left=left)
+    assert Diagram.ev(x, y) == Diagram.ev_left(x, y) == Eval(x << y)
+    assert Diagram.ev(x, y, left=False) == Diagram.ev_right(x, y)
+    f = Box('f', x @ y, x)
+    assert f.curry() == f.curry_left() and f.curry(left=False) == f.curry_right()
     curried = find(Diagram.strategy(dom=x, cod=y >> x),
                    lambda value: isinstance(value.boxes[0], Curry))
     assert curried.cod == y >> x

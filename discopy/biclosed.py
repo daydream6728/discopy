@@ -295,30 +295,23 @@ class Diagram(monoidal.Diagram, BiclosedCategory):
 
     ob = Ty
 
-    def curry(self, n=1, left=True) -> Diagram:
-        """
-        Wrapper around :class:`Curry` called by :class:`Functor`.
+    def curry_left(self, n=1) -> Diagram:
+        """ A :class:`Curry` into :class:`Over`, of ``n`` atomic types. """
+        return self.curry_factory(self, n, left=True)
 
-        Parameters:
-            n : The number of atomic types to curry.
-            left : Whether to curry on the left, i.e. into :class:`Over`,
-                or on the right, i.e. into :class:`Under`.
-        """
-        return self.curry_factory(self, n, left)
+    def curry_right(self, n=1) -> Diagram:
+        """ A :class:`Curry` into :class:`Under`, of ``n`` atomic types. """
+        return self.curry_factory(self, n, left=False)
 
     @classmethod
-    def ev(cls, base: Ty, exponent: Ty, left=True) -> Eval:
-        """
-        Wrapper around :class:`Eval` called by :class:`Functor`.
+    def ev_left(cls, base: Ty, exponent: Ty) -> Eval:
+        """ An :class:`Eval` from :class:`Over`. """
+        return cls.eval_factory(base << exponent)
 
-        Parameters:
-            base : The base of the exponential type to evaluate.
-            exponent : The exponent of the exponential type to evaluate.
-            left : Whether to evaluate on the left, i.e. from :class:`Over`,
-                or on the right, i.e. from :class:`Under`.
-        """
-        return cls.eval_factory(
-            base << exponent if left else exponent >> base)
+    @classmethod
+    def ev_right(cls, base: Ty, exponent: Ty) -> Eval:
+        """ An :class:`Eval` from :class:`Under`. """
+        return cls.eval_factory(exponent >> base)
 
     def to_compact(self) -> CMap:
         """

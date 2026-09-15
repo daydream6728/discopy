@@ -3,6 +3,7 @@ from random import choice, seed
 
 from discopy import *
 from discopy.feedback import *
+from discopy.utils import AxiomError
 
 
 def test_factories():
@@ -117,3 +118,18 @@ def test_axioms():
     from discopy import axioms
 
     axioms.assert_axioms(Ty, Diagram, Functor)
+
+
+def test_feedback_left():
+    x, y, m = map(Ty, "xym")
+    f = Box('f', m.d @ x, m @ y)
+    left = f.feedback(left=True)
+    assert left == f.feedback_left() == Feedback(f, left=True)
+    assert (left.dom, left.cod) == (x, y) and left.mem == m
+    assert str(left) == "(f).feedback(left=True)"
+    assert eval(repr(left)) == left and Feedback.from_tree(left.to_tree()) == left
+    assert left.delay().left and left.to_drawing()
+    with raises(AxiomError):
+        Feedback(f)
+    g = Box('g', (m @ m).d @ x, m @ m @ y)
+    assert g.feedback(mem=m @ m, left=True).dom == x

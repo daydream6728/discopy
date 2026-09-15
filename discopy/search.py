@@ -74,15 +74,8 @@ class Rule[**P, T](Declaration[P, T]):
         return self.sequent.conclusion.match((dom, cod))
 
     def apply(self, arguments: dict) -> T:
-        """
-        The implementation of the rule on the category, applied to named
-        arguments: positionally, but for the premises with a default.
-        """
-        keywords = self.sequent.keywords
-        args = [value for name, value in arguments.items()
-                if name not in keywords]
-        kwargs = {name: arguments[name] for name in keywords}
-        return getattr(self.category, self.name)(*args, **kwargs)
+        """ The implementation of the rule on the category, applied. """
+        return getattr(self.category, self.name)(*arguments.values())
 
 
 class Generator(Rule):

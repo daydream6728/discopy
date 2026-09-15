@@ -150,6 +150,7 @@ from discopy.abc import (
     ClosedCategory, CompactCategory, FeedbackCategory, HypergraphCategory,
     MarkovCategory, NamedGeneric, SymmetricCategory, TracedCategory)
 from discopy.utils import (
+    sided,
     assert_iscomposable, assert_isinstance, classproperty, unbiased)
 
 
@@ -316,6 +317,8 @@ class Traced(Symmetric, TracedCategory):
     Parametric maps over a traced symmetric underlying `category` form a
     traced category, with the parameters swapped out of the way.
     """
+    trace_left, trace_right = sided("trace")
+
     def trace(self, n: int = 1, left: bool = False) -> Traced:
         """
         The trace of a parametric map is the trace of the underlying
@@ -363,6 +366,9 @@ class Closed(Markov, ClosedCategory):
     category, currying with the parameters swapped out of the way.
     """
     category = closed.Diagram
+
+    ev_left, ev_right = map(classmethod, sided("ev"))
+    curry_left, curry_right = sided("curry")
 
     @classmethod
     def ev(cls, base: Symmetric.ob, exponent: Symmetric.ob, left: bool = True
@@ -413,6 +419,13 @@ class Feedback(Markov, FeedbackCategory):
         """
         return type(self)(*(x.delay(n_steps) for x in (
             self.dom, self.cod, self.inside, self.param, self.copar)))
+
+    def feedback_left(self, dom=None, cod=None, mem=None) -> Feedback:
+        raise NotImplementedError(
+            "A parametric feedback keeps its memory on the right.")
+
+    def feedback_right(self, dom=None, cod=None, mem=None) -> Feedback:
+        return self.feedback(dom, cod, mem)
 
     def feedback(self, dom: Symmetric.ob = None, cod: Symmetric.ob = None,
                  mem: Symmetric.ob = None) -> Feedback:
@@ -467,6 +480,8 @@ class Compact(Traced, CompactCategory):
 
     ev = classmethod(Closed.ev.__func__)
     curry = Closed.curry
+    ev_left, ev_right = map(classmethod, sided("ev"))
+    curry_left, curry_right = sided("curry")
 
 
 class Hypergraph(Compact, Markov, HypergraphCategory):

@@ -60,6 +60,7 @@ from discopy.abc import (
 from discopy.cat import Ob
 from discopy.python.finset import Permutation
 from discopy.utils import (
+    sided,
     AxiomError,
     assert_isatomic,
     assert_isinstance,
@@ -970,8 +971,13 @@ class CMap[C0: Pregroup, C1: CMap](
         wiring of cups when the host category is rigid.
         """
         if issubclass(cls.category, RigidCategory):
-            return super().ev(base, exponent, left)
+            rigid = super().ev_left if left else super().ev_right
+            return rigid(base, exponent)
         return cls.from_box(cls.category.ev(base, exponent, left))
+
+    ev_left, ev_right = map(classmethod, sided("ev"))
+    curry_left, curry_right = sided("curry")
+    trace_left, trace_right = sided("trace")
 
     def curry(self, n: int = 1, left: bool = True) -> CMap:
         """
@@ -994,7 +1000,7 @@ class CMap[C0: Pregroup, C1: CMap](
             :align: center
         """
         if issubclass(self.category, RigidCategory):
-            return super().curry(n, left)
+            return super().curry_left(n) if left else super().curry_right(n)
         if n < 0 or n > len(self.dom):
             raise ValueError
         if not n:

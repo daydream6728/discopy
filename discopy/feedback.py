@@ -113,19 +113,25 @@ Note
 Every traced symmetric category is a feedback category with a trivial delay:
 
 >>> from discopy import symmetric
->>> symmetric.Ty.delay = symmetric.Diagram.delay = lambda self: self
->>> symmetric.Diagram.feedback = lambda self, dom=None, cod=None, mem=None:\\
-...     self.trace(len(mem))
+>>> @factory
+... class TracedTy(symmetric.Ty):
+...     delay = lambda self, n_steps=1: self
+>>> @factory
+... class Traced(symmetric.Diagram):
+...     ob = TracedTy
+...     delay = lambda self, n_steps=1: self
+...     feedback = lambda self, dom=None, cod=None, mem=None, left=False:\\
+...         self.trace(len(mem), left)
+>>> class TracedBox(symmetric.Box, Traced):
+...     pass
 
 >>> F0 = Functor(
-...     ob_map=lambda x: symmetric.Ty(x.generator.name), ar_map={},
-...     cod=symmetric.Diagram)
+...     ob_map=lambda x: TracedTy(x.generator.name), ar_map={}, cod=Traced)
 >>> assert F0(x.delay()) == F0(x)
 
 >>> F = Functor(
 ...     ob_map=F0,
-...     ar_map=lambda f: symmetric.Box(f.name, F0(f.dom), F0(f.cod)),
-...     cod=symmetric.Diagram)
+...     ar_map=lambda f: TracedBox(f.name, F0(f.dom), F0(f.cod)), cod=Traced)
 >>> f = Box('f', x @ m.delay(), y @ m)
 >>> assert F(f.delay()) == F(f) and F(f.feedback()) == F(f).trace()
 
@@ -352,11 +358,20 @@ class Diagram(markov.Diagram, FeedbackCategory):
         inside = tuple(box.delay(n_steps) for box in self.inside)
         return type(self)(inside, dom, cod, _scan=False)
 
-    def feedback(self, dom=None, cod=None, mem=None):
-        """ Syntactic sugar for :class:`Feedback`. """
+    def feedback_left(self, dom=None, cod=None, mem=None):
+        """ A :class:`Feedback` of the memory on the left, wire by wire. """
+        if mem is None or len(mem) == 1:
+            return self.feedback_factory(
+                self, dom=dom, cod=cod, mem=mem, left=True)
+        return self if not mem\
+            else self.feedback_left(mem=mem[1:]).feedback_left()
+
+    def feedback_right(self, dom=None, cod=None, mem=None):
+        """ A :class:`Feedback` of the memory on the right, wire by wire. """
         if mem is None or len(mem) == 1:
             return self.feedback_factory(self, dom=dom, cod=cod, mem=mem)
-        return self if not mem else self.feedback(mem=mem[:-1]).feedback()
+        return self if not mem\
+            else self.feedback_right(mem=mem[:-1]).feedback_right()
 
     @classmethod
     def wait(cls, dom: Ty) -> Diagram:
@@ -564,44 +579,51 @@ class Feedback(monoidal.Bubble, Box):
         :align: center
     """
     def __init__(self, arg: Diagram, dom=None, cod=None, mem=None, left=False):
-        if left:
-            raise NotImplementedError
-        mem = arg.cod[-1:] if mem is None else mem
-        dom = arg.dom[:-len(mem)] if dom is None else dom
-        cod = arg.cod[:-len(mem)] if cod is None else cod
-        if arg.dom != dom @ mem.delay():
+        if mem is None:
+            mem = arg.cod[:1] if left else arg.cod[-1:]
+        if dom is None:
+            dom = arg.dom[len(mem):] if left else arg.dom[:-len(mem)]
+        if cod is None:
+            cod = arg.cod[len(mem):] if left else arg.cod[:-len(mem)]
+        if arg.dom != (mem.delay() @ dom if left else dom @ mem.delay()):
             raise AxiomError
-        if arg.cod != cod @ mem:
+        if arg.cod != (mem @ cod if left else cod @ mem):
             raise AxiomError
         self.mem, self.left = mem, left
         monoidal.Bubble.__init__(self, arg, dom=dom, cod=cod)
         Box.__init__(self, self.name, dom, cod)
 
     def to_tree(self):
-        return {'factory': factory_name(type(self)),
+        tree = {'factory': factory_name(type(self)),
                 'arg': self.arg.to_tree(), 'mem': self.mem.to_tree()}
+        return dict(tree, left=True) if self.left else tree
 
     @classmethod
     def from_tree(cls, tree):
-        return cls(from_tree(tree['arg']), mem=from_tree(tree['mem']))
+        return cls(from_tree(tree['arg']), mem=from_tree(tree['mem']),
+                   left=tree.get('left', False))
 
     def dagger(self):
         raise AxiomError("Feedback has no dagger, "
                          "the delay of its memory is not reversible.")
 
     def delay(self, n_steps=1):
-        return type(self)(self.arg.delay(n_steps), mem=self.mem.delay(n_steps))
+        return type(self)(
+            self.arg.delay(n_steps), mem=self.mem.delay(n_steps),
+            left=self.left)
 
     def __str__(self):
-        mem_name = "" if len(self.mem) == 1 else f"mem={self.mem}"
-        return f"({self.arg}).feedback({mem_name})"
+        params = ([] if len(self.mem) == 1 else [f"mem={self.mem}"])\
+            + (["left=True"] if self.left else [])
+        return f"({self.arg}).feedback({', '.join(params)})"
 
     def __repr__(self):
         arg, mem = map(repr, (self.arg, self.mem))
-        return factory_name(type(self)) + f"({arg}, mem={mem})"
+        left = ", left=True" if self.left else ""
+        return factory_name(type(self)) + f"({arg}, mem={mem}{left})"
 
     def to_drawing(self):
-        return self.arg.to_drawing().trace()
+        return self.arg.to_drawing().trace(left=self.left)
 
 
 class FollowedBy(Box):
@@ -699,8 +721,10 @@ class Functor(markov.Functor):
             arg = other.dom if other.is_dagger else other.cod
             return self.cod.followed_by(self(arg))
         if isinstance(other, Feedback) and hasattr(self.cod, "feedback"):
-            return self(other.arg).feedback(*map(self, (
-                other.dom, other.cod, other.mem)))
+            feedback, args = self(other.arg).feedback, map(self, (
+                other.dom, other.cod, other.mem))
+            return feedback(*args, left=True) if other.left\
+                else feedback(*args)
         return super().__call__(other)
 
 
