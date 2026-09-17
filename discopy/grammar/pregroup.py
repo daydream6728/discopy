@@ -60,6 +60,8 @@ class Ty(rigid.Ty):
     >>> n.assert_isadjoint(n.l)
     >>> n.assert_isadjoint(n.r)
     """
+    generator_factory = rigid.Wire
+
     def assert_isadjoint(self, other):
         """
         Raise ``AxiomError`` if two pregroup types are not adjoints.
@@ -222,9 +224,7 @@ class Word(thue.Word, Box):
         return f"Word({repr(self.name)}, {repr(self.cod)}{extra})"
 
 
-class Functor(frobenius.Functor):
-    """ A pregroup functor is a frobenius functor with a pregroup domain. """
-    dom = cod = Diagram
+Functor = Diagram.functor_factory
 
 
 def eager_parse(*words, target=Ty('s')):
@@ -262,6 +262,10 @@ def brute_force(*vocab, target=Ty('s')):
             test.append(words + (word, ))
 
 
+Exp, Over, Under = Ty.exp_factory, Ty.over_factory, Ty.under_factory
+TermBase, Constant, Variable, Application, Abstraction = (
+    Diagram.term_factory, Diagram.constant_factory, Diagram.variable_factory,
+    Diagram.application_factory, Diagram.abstraction_factory)
 Id = Diagram.id
 
 

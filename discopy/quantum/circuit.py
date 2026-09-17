@@ -855,6 +855,10 @@ class Circuit(tensor.Diagram[complex]):
     def swap_factory(cls):
         return Swap
 
+    @generator
+    def functor_factory(cls):
+        return Functor
+
 
 class Box(tensor.Box[complex], Circuit):
     """
@@ -1004,6 +1008,10 @@ Cap, Bubble, Eval, Coeval, Curry, Copy, Merge = (
     Circuit.coeval_factory, Circuit.curry_factory, Circuit.copy_factory,
     Circuit.merge_factory)
 bit, qubit = Ty(Digit(2)), Ty(Qudit(2))
+Exp, Over, Under = Ty.exp_factory, Ty.over_factory, Ty.under_factory
+TermBase, Constant, Variable, Application, Abstraction = (
+    Circuit.term_factory, Circuit.constant_factory, Circuit.variable_factory,
+    Circuit.application_factory, Circuit.abstraction_factory)
 Id = Circuit.id
 
 

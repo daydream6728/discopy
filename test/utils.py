@@ -107,7 +107,13 @@ def test_wire_tree_roundtrip():
 
 def test_generator():
     from discopy import cat, symmetric, markov, closed, compact, feedback
+    from discopy import biclosed, rigid, pivotal
+    from discopy.grammar import categorial
     assert cat.Arrow.generator_factory is cat.Box
+    assert closed.Wire.__bases__ == (biclosed.Wire, )
+    assert categorial.Over.ob is categorial.Ty
+    assert pivotal.Functor.dom is pivotal.Functor.cod is pivotal.Diagram
+    assert rigid.Nat.exp_factory is rigid.Exp
     assert symmetric.Diagram.swap_factory is symmetric.Swap
     assert closed.Swap.__bases__ == (
         markov.Swap, closed.Permutation, closed.Box, closed.Diagram)
@@ -149,8 +155,10 @@ def test_generator_exports(path):
     from discopy import cat
     module, name = path.rsplit(".", 1)
     D = getattr(import_module(f"discopy.{module}"), name)
-    for name in dir(D):
-        cls = getattr(D, name)
-        if name.endswith("_factory") and isinstance(cls, type)\
-                and issubclass(cls, cat.Arrow):
-            assert getattr(sys.modules[cls.__module__], cls.__name__) is cls
+    for owner in (D, D.ob):
+        for name in dir(owner):
+            cls = getattr(owner, name)
+            if name.endswith("_factory") and isinstance(cls, type)\
+                    and issubclass(cls, (cat.Ob, cat.Arrow, cat.Functor)):
+                assert getattr(sys.modules[cls.__module__], cls.__name__)\
+                    is cls

@@ -51,7 +51,7 @@ from dataclasses import dataclass
 import re
 
 from discopy import biclosed, cmap, messages
-from discopy.cat import factory
+from discopy.cat import factory, generator
 from discopy.grammar import thue
 from discopy.utils import (
     BinaryBoxConstructor,
@@ -65,16 +65,8 @@ class Ty(biclosed.Ty):
     "Base class for categorial grammar types."
 
 
-class Over(biclosed.Over):
-    "Categorial grammar type ``base << exponent``."
-
-    ob = Ty
-
-
-class Under(biclosed.Under):
-    "Categorial grammar type ``exponent >> base``."
-
-    ob = Ty
+Wire, Exp, Over, Under = (
+    Ty.generator_factory, Ty.exp_factory, Ty.over_factory, Ty.under_factory)
 
 
 @factory
@@ -83,6 +75,30 @@ class Diagram(biclosed.Diagram):
     A categorial diagram is a biclosed diagram with rules and words as boxes.
     """
     ob = Ty
+
+    @generator
+    def functor_factory(cls):
+        return Functor
+
+    @generator
+    def term_factory(cls):
+        return TermBase
+
+    @generator
+    def constant_factory(cls):
+        return Constant
+
+    @generator
+    def variable_factory(cls):
+        return Variable
+
+    @generator
+    def abstraction_factory(cls):
+        return Abstraction
+
+    application_factory = classmethod(
+        lambda cls, func, args, left=False:
+        BA(args, func) if left else FA(func, args))
 
     def to_pregroup(self):
         from discopy.grammar import pregroup
@@ -491,12 +507,8 @@ def tree2diagram(tree: dict, dom=Ty()) -> Diagram:
 
 
 Id = Diagram.id
-Diagram.functor_factory = Functor
 
-Ty.variable_factory = Variable
-Ty.constant_factory = Constant
-Ty.application_factory =\
-    lambda func, args, left=False: BA(args, func) if left else FA(func, args)
-Ty.abstraction_factory = Abstraction
-
-Ty.over_factory, Ty.under_factory = Over, Under
+Ty.variable_factory, Ty.constant_factory = (
+    Diagram.variable_factory, Diagram.constant_factory)
+Ty.application_factory, Ty.abstraction_factory = (
+    Diagram.application_factory, Diagram.abstraction_factory)

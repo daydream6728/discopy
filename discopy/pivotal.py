@@ -90,7 +90,9 @@ class Ty(rigid.Ty):
     Parameters:
         inside (Wire) : The objects inside the type.
     """
-    generator_factory = Wire
+    @generator
+    def generator_factory(cls):
+        return Wire
 
 
 @factory
@@ -258,21 +260,12 @@ Sum, Bubble, Eval, Coeval, Curry = (
     Diagram.coeval_factory, Diagram.curry_factory)
 
 
-class Functor(rigid.Functor):
-    """
-    A pivotal functor is a rigid functor on a pivotal category.
-
-    Parameters:
-        ob_map (Mapping[Ty, Ty]) :
-            Map from atomic :class:`Ty` to :code:`cod.ob`.
-        ar_map (Mapping[Box, Diagram]) : Map from :class:`Box` to :code:`cod`.
-        cod (Category) : The codomain of the functor.
-    """
-    dom = cod = Diagram
-
-
-Diagram.functor_factory = Functor
+Functor = Diagram.functor_factory
 CMap = cmap.CMap[Diagram]
+Exp, Over, Under = Ty.exp_factory, Ty.over_factory, Ty.under_factory
+TermBase, Constant, Variable, Application, Abstraction = (
+    Diagram.term_factory, Diagram.constant_factory, Diagram.variable_factory,
+    Diagram.application_factory, Diagram.abstraction_factory)
 Id = Diagram.id
 
 

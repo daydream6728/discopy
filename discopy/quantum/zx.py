@@ -385,4 +385,7 @@ H.drawing_name, H.tikzstyle_name, = '', 'H'
 H.color, H.shape = "yellow", "rectangle"
 
 SWAP = Swap(Nat(1), Nat(1))
+TermBase, Constant, Variable, Application, Abstraction = (
+    Diagram.term_factory, Diagram.constant_factory, Diagram.variable_factory,
+    Diagram.application_factory, Diagram.abstraction_factory)
 Id = Diagram.id

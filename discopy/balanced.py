@@ -184,6 +184,10 @@ class Diagram(braided.Diagram, traced.Diagram, BalancedCategory):
     def twist_factory(cls):
         return Twist
 
+    @generator
+    def functor_factory(cls):
+        return Functor
+
 
 Box, Braid = Diagram.generator_factory, Diagram.braid_factory
 
@@ -333,7 +337,6 @@ class DualRail(Functor):
         return super().__call__(other)
 
 
-Diagram.functor_factory = Functor
 CMap = cmap.CMap[Diagram]
 Hypergraph = hypergraph.Hypergraph[Diagram]
 Diagram.dual_rail_factory = DualRail

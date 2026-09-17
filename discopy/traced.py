@@ -176,6 +176,10 @@ class Diagram(monoidal.Diagram, TracedCategory):
     def trace_factory(cls):
         return Trace
 
+    @generator
+    def functor_factory(cls):
+        return Functor
+
 
 Box = Diagram.generator_factory
 
@@ -263,6 +267,5 @@ class Functor(monoidal.Functor):
 
 CMap = cmap.CMap[Diagram]
 
-Diagram.functor_factory = Functor
 Hypergraph = hypergraph.Hypergraph[Diagram]
 Id = Diagram.id

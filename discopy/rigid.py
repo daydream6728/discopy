@@ -265,7 +265,9 @@ class Ty(Pregroup, biclosed.Ty):
     >>> assert n.l.r == n == n.r.l
     >>> assert (s @ n).l == n.l @ s.l and (s @ n).r == n.r @ s.r
     """
-    generator_factory = Wire
+    @generator
+    def generator_factory(cls):
+        return Wire
 
     def __setstate__(self, state):
         if '_z' in state:  # Backward compatibility
@@ -657,6 +659,10 @@ class Diagram(biclosed.Diagram, RigidCategory):
     def cap_factory(cls):
         return Cap
 
+    @generator
+    def functor_factory(cls):
+        return Functor
+
 
 class Box(biclosed.Box, Diagram):
     """
@@ -906,8 +912,11 @@ def to_rigid(self):
 
 biclosed.Diagram.to_rigid = to_rigid
 
-Diagram.functor_factory = Functor
 
+Exp, Over, Under = Ty.exp_factory, Ty.over_factory, Ty.under_factory
+TermBase, Constant, Variable, Application, Abstraction = (
+    Diagram.term_factory, Diagram.constant_factory, Diagram.variable_factory,
+    Diagram.application_factory, Diagram.abstraction_factory)
 Id = Diagram.id
 
 

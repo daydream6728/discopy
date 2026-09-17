@@ -414,6 +414,10 @@ class Diagram(balanced.Diagram, SymmetricCategory):
     def swap_factory(cls):
         return Swap
 
+    @generator
+    def functor_factory(cls):
+        return Functor
+
 
 Box = Diagram.generator_factory
 
@@ -646,7 +650,6 @@ class Functor(balanced.Functor):
 
 CMap = cmap.CMap[Diagram]
 
-Diagram.functor_factory = Functor
 Hypergraph = hypergraph.Hypergraph[Diagram]
 Id = Diagram.id
 

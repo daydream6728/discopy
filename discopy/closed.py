@@ -61,6 +61,7 @@ from typing import Dict, ClassVar
 from discopy import cat, monoidal, biclosed, markov, cmap, hypergraph
 from discopy.abc import ClosedCategory
 from discopy.cat import factory, generator
+from discopy.utils import classproperty
 
 
 @factory
@@ -80,9 +81,17 @@ class Ty(biclosed.Ty):
     .. image:: /_static/closed/diagram.svg
         :align: center
     """
+    @generator
+    def exp_factory(cls):
+        return Exp
+
+    over_factory = under_factory = classproperty(lambda cls: cls.exp_factory)
 
 
-class Exp(biclosed.Exp):
+Wire = Ty.generator_factory
+
+
+class Exp(biclosed.Exp, Wire):
     "An exponential object in a markov category."
 
     ob = Ty
@@ -146,6 +155,30 @@ class Diagram(markov.Diagram, biclosed.Diagram, ClosedCategory):
     def eval_factory(cls):
         return Eval
 
+    @generator
+    def functor_factory(cls):
+        return Functor
+
+    @generator
+    def term_factory(cls):
+        return TermBase
+
+    @generator
+    def constant_factory(cls):
+        return Constant
+
+    @generator
+    def variable_factory(cls):
+        return Variable
+
+    @generator
+    def application_factory(cls):
+        return Application
+
+    @generator
+    def abstraction_factory(cls):
+        return Abstraction
+
 
 Box = Diagram.generator_factory
 
@@ -185,9 +218,7 @@ class Functor(biclosed.Functor, markov.Functor):
 CMap = cmap.CMap[Diagram]
 
 
-Diagram.functor_factory = Functor
 Hypergraph = hypergraph.Hypergraph[Diagram]
-Ty.exp_factory = Ty.under_factory = Ty.over_factory = staticmethod(Exp)
 
 Id = Diagram.id
 
@@ -295,10 +326,10 @@ class Substitution:
             return other(term)
 
 
-Ty.variable_factory = Variable
-Ty.constant_factory = Constant
-Ty.application_factory = Application
-Ty.abstraction_factory = Abstraction
+Ty.variable_factory, Ty.constant_factory = (
+    Diagram.variable_factory, Diagram.constant_factory)
+Ty.application_factory, Ty.abstraction_factory = (
+    Diagram.application_factory, Diagram.abstraction_factory)
 
 
 class Equation(markov.Equation):

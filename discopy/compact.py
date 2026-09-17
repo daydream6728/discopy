@@ -84,6 +84,10 @@ class Diagram(symmetric.Diagram, ribbon.Diagram, CompactCategory):
     def permutation_factory(cls):
         return Permutation
 
+    @generator
+    def functor_factory(cls):
+        return Functor
+
 
 Box, Cup, Cap = (
     Diagram.generator_factory, Diagram.cup_factory, Diagram.cap_factory)
@@ -130,9 +134,11 @@ class Functor(symmetric.Functor, ribbon.Functor):
 
 CMap = cmap.CMap[Diagram]
 
+TermBase, Constant, Variable, Application, Abstraction = (
+    Diagram.term_factory, Diagram.constant_factory, Diagram.variable_factory,
+    Diagram.application_factory, Diagram.abstraction_factory)
 Id = Diagram.id
 
-Diagram.functor_factory = Functor
 Hypergraph = hypergraph.Hypergraph[Diagram]
 
 

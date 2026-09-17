@@ -290,7 +290,10 @@ class Ty(cat.Ob, cat.FreeCategory, ColouredMonoid):
     >>> assert t[1:] == t[-2:] == Ty('y', 'z')
     """
     ob = Colour
-    generator_factory = Wire
+
+    @generator
+    def generator_factory(cls):
+        return Wire
 
     def cast_wire(self, x: str | cat.Ob) -> cat.Ob:
         """
@@ -298,13 +301,14 @@ class Ty(cat.Ob, cat.FreeCategory, ColouredMonoid):
 
         Old dumps and pickles used a plain ``cat.Ob``, with no colour, as
         the generators: upgrade it to ``Wire(x.name)`` for subclasses whose
-        generators are plain ``Wire``.
+        generators are built from a name alone.
         """
         if isinstance(x, self.generator_factory):
             return x
         if isinstance(x, str):
             return self.generator_factory(x)
-        if self.generator_factory is Wire and type(x) is cat.Ob:
+        if self.generator_factory.__init__ is Wire.__init__\
+                and type(x) is cat.Ob:
             return self.generator_factory(x.name)
         raise AxiomError(
             messages.TYPE_ERROR.format(self.generator_factory, type(x)))
@@ -317,7 +321,8 @@ class Ty(cat.Ob, cat.FreeCategory, ColouredMonoid):
             raise TypeError(f"Unexpected keyword arguments: {list(kwargs)}.")
         for obj in inside:
             assert_isinstance(obj, (str, self.generator_factory) + (
-                (cat.Ob, ) if self.generator_factory is Wire else ()))
+                (cat.Ob, ) if self.generator_factory.__init__ is Wire.__init__
+                else ()))
         inside = tuple(map(self.cast_wire, inside))
         if dom is None:
             dom = inside[0].dom if inside else transparent
@@ -954,6 +959,10 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
     @generator
     def bubble_factory(cls):
         return Bubble
+
+    @generator
+    def functor_factory(cls):
+        return Functor
 
     def __setstate__(self, state):
         if 'inside' not in state:  # Backward compatibility
@@ -1812,7 +1821,6 @@ class Equation(cat.Equation, RichDisplay):
 Diagram.draw = drawing.draw
 Diagram.to_gif = drawing.to_gif
 
-Diagram.functor_factory = Functor
 Hypergraph = hypergraph.Hypergraph[Diagram]
 Drawing.ob = Ty
 Id = Diagram.id

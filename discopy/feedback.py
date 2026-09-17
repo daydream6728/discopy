@@ -291,7 +291,9 @@ class TailOb(Wire):
 @factory
 class Ty(monoidal.Ty):
     """ A feedback type is a monoidal type with `delay`, `head` and `tail`. """
-    generator_factory = Wire
+    @generator
+    def generator_factory(cls):
+        return Wire
 
     def delay(self, n_steps=1):
         """ The delay of a feedback type by `n_steps`. """
@@ -427,6 +429,10 @@ class Diagram(markov.Diagram, FeedbackCategory):
     @generator
     def followed_by(cls):
         return FollowedBy
+
+    @generator
+    def functor_factory(cls):
+        return Functor
 
 
 class Box(markov.Box, Diagram):
@@ -695,7 +701,6 @@ class Functor(markov.Functor):
         return super().__call__(other)
 
 
-Diagram.functor_factory = Functor
 Hypergraph = hypergraph.Hypergraph[Diagram]
 Id = Diagram.id
 

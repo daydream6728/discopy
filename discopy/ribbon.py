@@ -162,6 +162,10 @@ class Diagram(pivotal.Diagram, balanced.Diagram, RibbonCategory):
     def twist_factory(cls):
         return Twist
 
+    @generator
+    def functor_factory(cls):
+        return Functor
+
 
 Box, Cup, Cap = (
     Diagram.generator_factory, Diagram.cup_factory, Diagram.cap_factory)
@@ -325,6 +329,9 @@ class DualRail(balanced.DualRail, Functor):
 
 Diagram.dual_rail_factory = DualRail
 
+TermBase, Constant, Variable, Application, Abstraction = (
+    Diagram.term_factory, Diagram.constant_factory, Diagram.variable_factory,
+    Diagram.application_factory, Diagram.abstraction_factory)
 Id = Diagram.id
 
 

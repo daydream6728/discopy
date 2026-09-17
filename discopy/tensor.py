@@ -707,6 +707,8 @@ class Diagram(NamedGeneric['dtype'], frobenius.Diagram):
     def bubble_factory(cls):
         return Bubble
 
+    functor_factory = frobenius.Functor
+
 
 CMap = cmap.CMap[Diagram]
 
@@ -866,6 +868,9 @@ class Bubble(frobenius.Bubble, Box):
             @ self.arg.grad(var) >> Spider(2, 1, self.cod)
 
 
+TermBase, Constant, Variable, Application, Abstraction = (
+    Diagram.term_factory, Diagram.constant_factory, Diagram.variable_factory,
+    Diagram.application_factory, Diagram.abstraction_factory)
 Id = Diagram.id
 
 

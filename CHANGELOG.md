@@ -25,7 +25,20 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   once, `feedback.Swap`, `Copy` and `Merge` keep only their `delay`, and
   `ribbon.Functor` recognises any `balanced.Braid`. `cat.Arrow`
   type-checks its boxes itself, `pivotal.Box` is a `traced.Box` and
-  `closed.Diagram.is_linear` reads its boxes.
+  `closed.Diagram.is_linear` reads its boxes. The same declaration serves
+  types, terms and functors: a `Ty` declares its wire, `biclosed.Ty` its
+  exponentials, `biclosed.Diagram` its terms with
+  `Ty.constant_factory = Diagram.constant_factory` linking the two at each
+  level, and every `Diagram` its `Functor`. A built class is tied to its
+  level by its root: it extends the level when the root is a subclass of
+  the owner, and the class attributes of the root equal to the owner are
+  lifted, so a built `Exp` has the level's `Ty` as `ob` and a built
+  `Functor` the level's `Diagram` as `dom` and `cod`. A generator is built
+  once per module, `Nat` and `Dim` sharing those of their `Ty`.
+  `categorial.Over` and `Under`, `pivotal.Functor` and `pregroup.Functor`
+  go, `biclosed.Ty` is made of the `biclosed.Wire` it never used, and the
+  braided, ribbon, pregroup and circuit diagrams have their own
+  `functor_factory` where they inherited a higher level's.
 - `monoidal.List`, the free monoid on a generator type: `List[X]` is a
   tuple of instances of `X` with concatenation as `tensor` and the empty
   list as unit, an `abc.Monoid` parameterised as

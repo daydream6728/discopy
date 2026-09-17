@@ -164,6 +164,10 @@ class Diagram(monoidal.Diagram, BraidedCategory):
     def braid_factory(cls):
         return Braid
 
+    @generator
+    def functor_factory(cls):
+        return Functor
+
 
 Box = Diagram.generator_factory
 

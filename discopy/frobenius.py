@@ -89,7 +89,9 @@ class Ty(pivotal.Ty):
     Parameters:
         inside (frobenius.Wire) : The objects inside the type.
     """
-    generator_factory = Wire
+    @generator
+    def generator_factory(cls):
+        return Wire
 
 
 @factory
@@ -173,6 +175,10 @@ class Diagram(compact.Diagram, markov.Diagram, HypergraphCategory):
     @generator
     def spider_factory(cls):
         return Spider
+
+    @generator
+    def functor_factory(cls):
+        return Functor
 
 
 Box, Cup, Cap, Permutation, Swap = (
@@ -349,8 +355,11 @@ def coherence(cls: type, factory: Callable
 
 CMap = cmap.CMap[Diagram]
 
-Diagram.functor_factory = Functor
 Hypergraph = hypergraph.Hypergraph[Diagram]
+Exp, Over, Under = Ty.exp_factory, Ty.over_factory, Ty.under_factory
+TermBase, Constant, Variable, Application, Abstraction = (
+    Diagram.term_factory, Diagram.constant_factory, Diagram.variable_factory,
+    Diagram.application_factory, Diagram.abstraction_factory)
 Id = Diagram.id
 
 

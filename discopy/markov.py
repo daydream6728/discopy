@@ -171,6 +171,10 @@ class Diagram(symmetric.Diagram, MarkovCategory):
     def discard_factory(cls):
         return Discard
 
+    @generator
+    def functor_factory(cls):
+        return Functor
+
 
 Box, Permutation, Swap, Trace = (
     Diagram.generator_factory, Diagram.permutation_factory,
@@ -284,7 +288,6 @@ class Functor(symmetric.Functor):
 
 CMap = cmap.CMap[Diagram]
 
-Diagram.functor_factory = Functor
 Hypergraph = hypergraph.Hypergraph[Diagram]
 Id = Diagram.id
 

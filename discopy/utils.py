@@ -684,8 +684,14 @@ class Generator:
         cls = cls.ar
         if cls not in self.cache:
             self.cache[cls] = self.root(cls) if cls is self.owner\
-                else self.build(cls)
+                else self.shared(cls) or self.build(cls)
         return self.cache[cls]
+
+    def shared(self, cls: type) -> type | None:
+        """ The generator of a base of ``cls`` defined in the same module. """
+        return next((getattr(base, self.name) for base in cls.__bases__
+                     if base.__module__ == cls.__module__
+                     and hasattr(base, self.name)), None)
 
     @property
     def parents(self) -> tuple[str, ...]:
@@ -703,9 +709,14 @@ class Generator:
             if isinstance(root := getattr(base, self.name, None), type))
         parents = [getattr(cls, name) for name in self.parents]
         root, *_ = roots
+        root_of_owner = self.root(self.owner)
+        level = (cls, ) if issubclass(root_of_owner, self.owner) else ()
+        attributes = {key: cls for key, value in vars(root_of_owner).items()
+                      if value is self.owner}
         references = " and ".join(
             f":class:`~{r.__module__}.{r.__name__}`" for r in roots)
-        return type(root.__name__, (*roots, *parents, cls), {
+        return type(root.__name__, (*roots, *parents, *level), {
+            **attributes,
             "__module__": cls.__module__,
             "__qualname__": root.__name__,
             "__doc__": f"A {references} in a "
@@ -719,9 +730,13 @@ def generator(root: Callable[[type], type]) -> Generator:
 
     On that category the attribute is that class. On any other category
     decorated with :func:`factory`, it is a subclass built on first access,
-    extending the attribute of each base, the generators of the category
-    that the class extends and the category itself, so that a module writes
-    ``Swap = Diagram.swap_factory``. A class attribute assigned by hand wins.
+    extending the attribute of each base and the generators of the category
+    that the class extends, so that a module writes
+    ``Swap = Diagram.swap_factory``. The level enters through the root: a
+    box extends the level's ``Diagram``, an ``Exp`` gets the level's ``Ty``
+    as ``ob`` and a ``Functor`` its ``Diagram`` as ``dom`` and ``cod``. A
+    generator is built once per module and a class attribute assigned by
+    hand wins.
 
     Example
     -------
