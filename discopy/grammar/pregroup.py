@@ -158,15 +158,15 @@ class Diagram(frobenius.Diagram):
     cups = classmethod(rigid.Diagram.cups.__func__)
     caps = classmethod(rigid.Diagram.caps.__func__)
 
-    @Generator()
+    @Generator
     def generator_factory(cls):
         return Box
 
-    @Generator("permutation_factory")
+    @Generator
     def swap_factory(cls):
         return Swap
 
-    @Generator()
+    @Generator
     def spider_factory(cls):
         return Spider
 

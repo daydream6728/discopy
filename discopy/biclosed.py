@@ -341,15 +341,15 @@ class Diagram(monoidal.Diagram, BiclosedCategory):
     def to_drawing(self):
         return monoidal.Diagram.to_drawing(self, functor_factory=Functor)
 
-    @Generator()
+    @Generator
     def eval_factory(cls):
         return Eval
 
-    @Generator()
+    @Generator
     def coeval_factory(cls):
         return Coeval
 
-    @Generator()
+    @Generator
     def curry_factory(cls):
         return Curry
 

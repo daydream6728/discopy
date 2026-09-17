@@ -180,7 +180,7 @@ class Diagram(braided.Diagram, traced.Diagram, BalancedCategory):
         return self if not width\
             else self.dual_rail_factory(width, colour)(self)
 
-    @Generator()
+    @Generator
     def twist_factory(cls):
         return Twist
 

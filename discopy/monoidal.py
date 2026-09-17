@@ -1403,15 +1403,15 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
             return cls.decode(from_tree(tree['dom']), zip(boxes, offsets))
         return super().from_tree(tree)
 
-    @Generator()
+    @Generator
     def generator_factory(cls):
         return Box
 
-    @Generator()
+    @Generator
     def sum_factory(cls):
         return Sum
 
-    @Generator()
+    @Generator
     def bubble_factory(cls):
         return Bubble
 

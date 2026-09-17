@@ -154,11 +154,11 @@ class Diagram(pivotal.Diagram, balanced.Diagram, RibbonCategory):
         """
         return self.to_braided(width, colour)
 
-    @Generator()
+    @Generator
     def braid_factory(cls):
         return Braid
 
-    @Generator()
+    @Generator
     def twist_factory(cls):
         return Twist
 

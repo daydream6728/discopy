@@ -170,7 +170,7 @@ class Diagram(compact.Diagram, markov.Diagram, HypergraphCategory):
             dom=Diagram, cod=Diagram)
         return F(self)
 
-    @Generator()
+    @Generator
     def spider_factory(cls):
         return Spider
 

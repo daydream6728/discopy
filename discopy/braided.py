@@ -160,7 +160,7 @@ class Diagram(monoidal.Diagram, BraidedCategory):
                       right=right_wires if left else right_wires[1:])
         return match.substitute(target)
 
-    @Generator()
+    @Generator
     def braid_factory(cls):
         return Braid
 

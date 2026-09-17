@@ -695,15 +695,15 @@ class Diagram(NamedGeneric['dtype'], frobenius.Diagram):
             result += Box(str(var), Dim(1), dim, onehot.array) @ self.grad(var)
         return result
 
-    @Generator()
+    @Generator
     def generator_factory(cls):
         return Box
 
-    @Generator()
+    @Generator
     def permutation_factory(cls):
         return Permutation
 
-    @Generator()
+    @Generator
     def bubble_factory(cls):
         return Bubble
 

@@ -80,7 +80,7 @@ class Diagram(symmetric.Diagram, ribbon.Diagram, CompactCategory):
     ob = Ty
     layer_factory = Layer
 
-    @Generator()
+    @Generator
     def permutation_factory(cls):
         return Permutation
 

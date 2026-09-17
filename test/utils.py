@@ -120,7 +120,7 @@ def test_factory_bases():
     assert closed.Swap.__bases__ == (
         markov.Swap, closed.Permutation, closed.Box, closed.Diagram)
     assert closed.Discard.__bases__ == (
-        markov.Discard, closed.Copy, closed.Box, closed.Diagram)
+        markov.Discard, closed.Copy, closed.Diagram)
     assert closed.Sum.__bases__ == (
         markov.Sum, biclosed.Sum, closed.Box, closed.Diagram)
     assert compact.Swap.__bases__ == (

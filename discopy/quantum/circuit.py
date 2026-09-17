@@ -838,19 +838,19 @@ class Circuit(tensor.Diagram[complex]):
         return self\
             >> self.cod[:offset] @ gate @ self.cod[offset + len(gate.dom):]
 
-    @Generator()
+    @Generator
     def generator_factory(cls):
         return Box
 
-    @Generator()
+    @Generator
     def sum_factory(cls):
         return Sum
 
-    @Generator()
+    @Generator
     def permutation_factory(cls):
         return Permutation
 
-    @Generator("permutation_factory")
+    @Generator
     def swap_factory(cls):
         return Swap
 

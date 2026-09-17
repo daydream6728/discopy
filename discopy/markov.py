@@ -159,15 +159,15 @@ class Diagram(symmetric.Diagram, MarkovCategory):
         """
         return cls.copy(x, 0)
 
-    @Generator()
+    @Generator
     def copy_factory(cls):
         return Copy
 
-    @Generator()
+    @Generator
     def merge_factory(cls):
         return Merge
 
-    @Generator("copy_factory")
+    @Generator
     def discard_factory(cls):
         return Discard
 

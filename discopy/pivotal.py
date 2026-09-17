@@ -180,15 +180,15 @@ class Diagram(rigid.Diagram, traced.Diagram, PivotalCategory):
             >> diagram @ traced_wire.r\
             >> cod @ cls.cup_factory(traced_wire, traced_wire.r)
 
-    @Generator()
+    @Generator
     def generator_factory(cls):
         return Box
 
-    @Generator()
+    @Generator
     def cup_factory(cls):
         return Cup
 
-    @Generator()
+    @Generator
     def cap_factory(cls):
         return Cap
 

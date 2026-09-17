@@ -406,11 +406,11 @@ class Diagram(balanced.Diagram, SymmetricCategory):
         """
         return self.to_hypergraph().depth()
 
-    @Generator()
+    @Generator
     def permutation_factory(cls):
         return Permutation
 
-    @Generator("permutation_factory")
+    @Generator
     def swap_factory(cls):
         return Swap
 

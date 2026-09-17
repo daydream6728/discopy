@@ -400,31 +400,31 @@ class Diagram(markov.Diagram, FeedbackCategory):
 
     d = Wire.d
 
-    @Generator()
+    @Generator
     def generator_factory(cls):
         return Box
 
-    @Generator()
+    @Generator
     def permutation_factory(cls):
         return Permutation
 
-    @Generator("permutation_factory")
+    @Generator
     def swap_factory(cls):
         return Swap
 
-    @Generator()
+    @Generator
     def copy_factory(cls):
         return Copy
 
-    @Generator()
+    @Generator
     def merge_factory(cls):
         return Merge
 
-    @Generator()
+    @Generator
     def feedback_factory(cls):
         return Feedback
 
-    @Generator()
+    @Generator
     def followed_by(cls):
         return FollowedBy
 

@@ -681,16 +681,12 @@ class Generator:
     other category decorated with :func:`factory`, it is a subclass of the
     generators of its bases that lives in the category, built on first
     access: it extends the value of the attribute on each base, then the
-    ``parents`` of the category, i.e. its box for every generator but the
-    box itself, then the category. It takes its name from the first base
-    generator and its module from the category, so that a module defines
-    it once as ``Swap = Diagram.swap_factory``. A class that is not a
-    factory, e.g. a box or a :class:`NamedGeneric` subscript, has the
-    generators of its factory.
-
-    Parameters:
-        parents : The names of the generators of the same category that
-            this one extends, e.g. ``"permutation_factory"`` for a swap.
+    :attr:`parents` lifted to the category, then the category itself. It
+    takes its name from the first base generator and its module from the
+    category, so that a module defines it once as
+    ``Swap = Diagram.swap_factory``. A class that is not a factory, e.g. a
+    box or a :class:`NamedGeneric` subscript, has the generators of its
+    factory.
 
     Example
     -------
@@ -712,17 +708,11 @@ class Generator:
     >>> assert Recipe.swap_factory.__bases__ == (
     ...     symmetric.Swap, Recipe.permutation_factory, Step, Recipe)
     """
-    def __init__(self, *parents: str):
-        self.parents = parents
-
-    def __call__(self, root: Callable[[type], type]) -> Generator:
+    def __init__(self, root: Callable[[type], type]):
         self.root = root
-        return self
 
     def __set_name__(self, owner: type, name: str):
         self.owner, self.name, self.cache = owner, name, {}
-        if name != "generator_factory":
-            self.parents += ("generator_factory", )
 
     def __get__(self, _, cls: type) -> type:
         cls = cls.ar
@@ -730,6 +720,20 @@ class Generator:
             self.cache[cls] = self.root(cls) if cls is self.owner\
                 else self.build(cls)
         return self.cache[cls]
+
+    @property
+    def parents(self) -> tuple[str, ...]:
+        """
+        The names of the generators of the owner that the root extends,
+        read off its bases: ``symmetric.Swap`` is a ``Permutation`` and a
+        ``Box``, so a swap built at any level below is a subclass of the
+        permutation and the box of that level.
+        """
+        root, names = self.root(self.owner), {
+            name for klass in self.owner.__mro__ for name, value
+            in vars(klass).items() if isinstance(value, Generator)}
+        return tuple(name for base in root.__bases__ for name in sorted(names)
+                     if getattr(self.owner, name) is base)
 
     def build(self, cls: type) -> type:
         """ The subclass of the generators of the bases of ``cls``. """

@@ -641,19 +641,19 @@ class Diagram(biclosed.Diagram, RigidCategory):
         """
         return super().normal_form(**params)
 
-    @Generator()
+    @Generator
     def generator_factory(cls):
         return Box
 
-    @Generator()
+    @Generator
     def sum_factory(cls):
         return Sum
 
-    @Generator()
+    @Generator
     def cup_factory(cls):
         return Cup
 
-    @Generator()
+    @Generator
     def cap_factory(cls):
         return Cap
 

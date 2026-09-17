@@ -172,7 +172,7 @@ class Diagram(monoidal.Diagram, TracedCategory):
     def to_drawing(self):
         return monoidal.Diagram.to_drawing(self, functor_factory=Functor)
 
-    @Generator()
+    @Generator
     def trace_factory(cls):
         return Trace
 

@@ -16,13 +16,14 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   returns `Swap` in `symmetric.Diagram`: on that class the attribute is
   the class itself, on any other class decorated with `@factory` it is a
   subclass built on first access, extending the value of the attribute
-  on each base of the class, then its `parents` — the box of the class
-  for every generator but the box, plus the generators it declares, e.g.
-  `@Generator("permutation_factory")` for a swap and `"copy_factory"`
-  for a discard — then the class itself, e.g. in `symmetric`:
+  on each base of the class, then the generators of the same level that
+  the root extends, lifted to the class — `symmetric.Swap` is a
+  `Permutation` and a `Box`, so every swap below is a subclass of the
+  permutation and the box of its level, and every discard of its copy —
+  then the class itself, e.g. in `symmetric`:
 
   ```python
-  @Generator("permutation_factory")
+  @Generator
   def swap_factory(cls):
       return Swap
   ```

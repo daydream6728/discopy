@@ -552,15 +552,15 @@ class Arrow(FreeCategory, Testable["Arrow"]):
         inside = tuple(map(from_tree, tree['inside']))
         return cls(inside, dom, cod, _scan=False)
 
-    @Generator()
+    @Generator
     def generator_factory(cls):
         return Box
 
-    @Generator()
+    @Generator
     def sum_factory(cls):
         return Sum
 
-    @Generator()
+    @Generator
     def bubble_factory(cls):
         return Bubble
 

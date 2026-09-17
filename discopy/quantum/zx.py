@@ -221,7 +221,7 @@ class Diagram(tensor.Diagram[complex]):
                 >> Id(target) @ hadamard @ Id(len(scan) - target - 1)
         return diagram
 
-    @Generator("permutation_factory")
+    @Generator
     def swap_factory(cls):
         return Swap
 
