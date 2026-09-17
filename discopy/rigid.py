@@ -156,7 +156,7 @@ from typing import Iterator
 
 from discopy import cat, monoidal, biclosed, messages
 from discopy.abc import Pregroup, RigidCategory
-from discopy.cat import factory, Generator
+from discopy.cat import factory, generator
 from discopy.utils import (
     assert_isatomic,
     assert_isinstance,
@@ -641,19 +641,19 @@ class Diagram(biclosed.Diagram, RigidCategory):
         """
         return super().normal_form(**params)
 
-    @Generator
+    @generator
     def generator_factory(cls):
         return Box
 
-    @Generator
+    @generator
     def sum_factory(cls):
         return Sum
 
-    @Generator
+    @generator
     def cup_factory(cls):
         return Cup
 
-    @Generator
+    @generator
     def cap_factory(cls):
         return Cap
 
@@ -818,7 +818,9 @@ class Cap(BinaryBoxConstructor, Box):
         raise AxiomError("Rigid caps have no dagger, use pivotal instead.")
 
 
-Bubble = Diagram.bubble_factory
+Bubble, Eval, Coeval, Curry = (
+    Diagram.bubble_factory, Diagram.eval_factory,
+    Diagram.coeval_factory, Diagram.curry_factory)
 
 
 class Functor(biclosed.Functor):

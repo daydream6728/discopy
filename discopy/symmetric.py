@@ -96,7 +96,7 @@ from collections.abc import Sequence
 
 from discopy import monoidal, balanced, hypergraph, cmap, messages
 from discopy.abc import SymmetricCategory
-from discopy.cat import factory, Generator
+from discopy.cat import factory, generator
 from discopy.monoidal import Wire, Ty, Nat  # noqa: F401
 from discopy.python import finset
 from discopy.utils import (
@@ -406,11 +406,11 @@ class Diagram(balanced.Diagram, SymmetricCategory):
         """
         return self.to_hypergraph().depth()
 
-    @Generator
+    @generator
     def permutation_factory(cls):
         return Permutation
 
-    @Generator
+    @generator
     def swap_factory(cls):
         return Swap
 

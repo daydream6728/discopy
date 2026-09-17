@@ -22,7 +22,6 @@ Summary
     Functor
     Transformation
     Equation
-    Generator
 
 .. admonition:: Functions
 
@@ -32,6 +31,7 @@ Summary
         :toctree:
 
         factory
+        generator
         dumps
         loads
 
@@ -87,7 +87,7 @@ from discopy.abc import Category
 from discopy.axioms import GENERATORS, Equation as AbstractEquation, Testable
 from discopy.utils import (  # noqa: F401
     factory,
-    Generator,
+    generator,
     factory_name,
     from_tree,
     rsubs,
@@ -304,6 +304,18 @@ class Arrow(FreeCategory, Testable["Arrow"]):
     automatically cast. This means one can use e.g. ``int`` instead of ``Ob``,
     see :class:`monoidal.Nat`.
     """
+    @generator
+    def generator_factory(cls):
+        return Box
+
+    @generator
+    def sum_factory(cls):
+        return Sum
+
+    @generator
+    def bubble_factory(cls):
+        return Bubble
+
     ob = Ob
 
     def __init__(self, inside, dom, cod, _scan=True):
@@ -551,18 +563,6 @@ class Arrow(FreeCategory, Testable["Arrow"]):
         dom, cod = map(from_tree, (tree['dom'], tree['cod']))
         inside = tuple(map(from_tree, tree['inside']))
         return cls(inside, dom, cod, _scan=False)
-
-    @Generator
-    def generator_factory(cls):
-        return Box
-
-    @Generator
-    def sum_factory(cls):
-        return Sum
-
-    @Generator
-    def bubble_factory(cls):
-        return Bubble
 
 
 @total_ordering

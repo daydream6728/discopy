@@ -60,7 +60,7 @@ from typing import Dict, ClassVar
 
 from discopy import cat, monoidal, biclosed, markov, cmap, hypergraph
 from discopy.abc import ClosedCategory
-from discopy.cat import factory, Generator
+from discopy.cat import factory, generator
 
 
 @factory
@@ -142,7 +142,7 @@ class Diagram(markov.Diagram, biclosed.Diagram, ClosedCategory):
     def to_drawing(self):
         return monoidal.Diagram.to_drawing(self, functor_factory=Functor)
 
-    @Generator
+    @generator
     def eval_factory(cls):
         return Eval
 

@@ -58,7 +58,7 @@ Coherence
 
 from discopy import symmetric, ribbon, rigid, cmap, hypergraph
 from discopy.abc import CompactCategory
-from discopy.cat import factory, Generator
+from discopy.cat import factory, generator
 from discopy.utils import deprecated_alias
 from discopy.pivotal import Wire, Ty  # noqa: F401
 
@@ -80,7 +80,7 @@ class Diagram(symmetric.Diagram, ribbon.Diagram, CompactCategory):
     ob = Ty
     layer_factory = Layer
 
-    @Generator
+    @generator
     def permutation_factory(cls):
         return Permutation
 
@@ -105,8 +105,9 @@ class Permutation(symmetric.Permutation, Box):
     r = property(lambda self: self.rotate(left=False))
 
 
-Swap, Sum, Bubble = (
-    Diagram.swap_factory, Diagram.sum_factory, Diagram.bubble_factory)
+Swap, Sum, Bubble, Eval, Coeval, Curry = (
+    Diagram.swap_factory, Diagram.sum_factory, Diagram.bubble_factory,
+    Diagram.eval_factory, Diagram.coeval_factory, Diagram.curry_factory)
 
 
 class Functor(symmetric.Functor, ribbon.Functor):

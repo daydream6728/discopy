@@ -39,7 +39,7 @@ from dataclasses import dataclass
 
 from discopy import config, monoidal, braided, traced, cmap, hypergraph
 from discopy.abc import BalancedCategory
-from discopy.cat import factory, Generator
+from discopy.cat import factory, generator
 from discopy.monoidal import Colour, Ty  # noqa: F401
 from discopy.utils import factory_name, assert_isatomic
 
@@ -180,7 +180,7 @@ class Diagram(braided.Diagram, traced.Diagram, BalancedCategory):
         return self if not width\
             else self.dual_rail_factory(width, colour)(self)
 
-    @Generator
+    @generator
     def twist_factory(cls):
         return Twist
 

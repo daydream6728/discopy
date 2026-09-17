@@ -72,7 +72,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 
 from discopy import messages, tensor, frobenius
-from discopy.cat import factory, Generator
+from discopy.cat import factory, generator
 from discopy.matrix import backend
 from discopy.tensor import Dim, Tensor
 from discopy.utils import assert_isinstance, deprecated_alias, factory_name
@@ -186,6 +186,7 @@ class Circuit(tensor.Diagram[complex]):
         cod (quantum.circuit.Ty) : The codomain of the circuit diagram.
     """
     ob = Ty
+    discard_factory = tensor.Discard
 
     @classmethod
     def id(cls, dom: int | Ty = None):
@@ -838,19 +839,19 @@ class Circuit(tensor.Diagram[complex]):
         return self\
             >> self.cod[:offset] @ gate @ self.cod[offset + len(gate.dom):]
 
-    @Generator
+    @generator
     def generator_factory(cls):
         return Box
 
-    @Generator
+    @generator
     def sum_factory(cls):
         return Sum
 
-    @Generator
+    @generator
     def permutation_factory(cls):
         return Permutation
 
-    @Generator
+    @generator
     def swap_factory(cls):
         return Swap
 
@@ -998,6 +999,10 @@ def bitstring2index(bitstring):
     return sum(value * 2 ** i for i, value in enumerate(bitstring[::-1]))
 
 
+Cap, Bubble, Eval, Coeval, Curry, Copy, Merge = (
+    Circuit.cap_factory, Circuit.bubble_factory, Circuit.eval_factory,
+    Circuit.coeval_factory, Circuit.curry_factory, Circuit.copy_factory,
+    Circuit.merge_factory)
 bit, qubit = Ty(Digit(2)), Ty(Qudit(2))
 Id = Circuit.id
 

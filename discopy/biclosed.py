@@ -88,7 +88,7 @@ from typing import Callable, ClassVar
 from discopy import monoidal, cmap
 from discopy.abc import BiclosedCategory
 from discopy.drawing import Drawing
-from discopy.cat import factory, Generator
+from discopy.cat import factory, generator
 from discopy.utils import (
     assert_isinstance,
     deprecated_alias,
@@ -341,15 +341,15 @@ class Diagram(monoidal.Diagram, BiclosedCategory):
     def to_drawing(self):
         return monoidal.Diagram.to_drawing(self, functor_factory=Functor)
 
-    @Generator
+    @generator
     def eval_factory(cls):
         return Eval
 
-    @Generator
+    @generator
     def coeval_factory(cls):
         return Coeval
 
-    @Generator
+    @generator
     def curry_factory(cls):
         return Curry
 

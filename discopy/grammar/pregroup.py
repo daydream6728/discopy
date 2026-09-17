@@ -35,7 +35,7 @@ Summary
 """
 
 from discopy import rigid, frobenius, messages
-from discopy.cat import factory, Generator
+from discopy.cat import factory, generator
 from discopy.utils import AxiomError, deprecated_alias
 from discopy.grammar import thue
 from discopy.rigid import Wire  # noqa: F401
@@ -158,15 +158,15 @@ class Diagram(frobenius.Diagram):
     cups = classmethod(rigid.Diagram.cups.__func__)
     caps = classmethod(rigid.Diagram.caps.__func__)
 
-    @Generator
+    @generator
     def generator_factory(cls):
         return Box
 
-    @Generator
+    @generator
     def swap_factory(cls):
         return Swap
 
-    @Generator
+    @generator
     def spider_factory(cls):
         return Spider
 
@@ -200,7 +200,10 @@ class Spider(frobenius.Spider, Box):
         return type(self)(len(self.cod), len(self.dom), typ, self.phase)
 
 
-Sum, Bubble = Diagram.sum_factory, Diagram.bubble_factory
+Sum, Bubble, Eval, Coeval, Curry, Copy, Merge, Discard = (
+    Diagram.sum_factory, Diagram.bubble_factory, Diagram.eval_factory,
+    Diagram.coeval_factory, Diagram.curry_factory, Diagram.copy_factory,
+    Diagram.merge_factory, Diagram.discard_factory)
 
 
 class Word(thue.Word, Box):

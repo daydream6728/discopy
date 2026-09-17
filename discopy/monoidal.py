@@ -70,7 +70,7 @@ from discopy.config import (
     COLOUR_DRAWING_ATTRIBUTES, TRANSPARENT)
 from discopy.utils import (
     factory,
-    Generator,
+    generator,
     factory_name,
     from_tree,
     assert_isinstance,
@@ -943,6 +943,18 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
     ob = Ty
     layer_factory = Layer
 
+    @generator
+    def generator_factory(cls):
+        return Box
+
+    @generator
+    def sum_factory(cls):
+        return Sum
+
+    @generator
+    def bubble_factory(cls):
+        return Bubble
+
     def __setstate__(self, state):
         if 'inside' not in state:  # Backward compatibility
             state |= {
@@ -1402,18 +1414,6 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
             boxes, offsets = map(from_tree, tree['boxes']), tree['offsets']
             return cls.decode(from_tree(tree['dom']), zip(boxes, offsets))
         return super().from_tree(tree)
-
-    @Generator
-    def generator_factory(cls):
-        return Box
-
-    @Generator
-    def sum_factory(cls):
-        return Sum
-
-    @Generator
-    def bubble_factory(cls):
-        return Bubble
 
 
 class Box(cat.Box, Diagram):

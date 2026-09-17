@@ -58,7 +58,7 @@ from __future__ import annotations
 
 from discopy import cat, cmap, rigid, traced
 from discopy.abc import PivotalCategory
-from discopy.cat import factory, Generator
+from discopy.cat import factory, generator
 from discopy.utils import deprecated_alias
 
 
@@ -180,15 +180,15 @@ class Diagram(rigid.Diagram, traced.Diagram, PivotalCategory):
             >> diagram @ traced_wire.r\
             >> cod @ cls.cup_factory(traced_wire, traced_wire.r)
 
-    @Generator
+    @generator
     def generator_factory(cls):
         return Box
 
-    @Generator
+    @generator
     def cup_factory(cls):
         return Cup
 
-    @Generator
+    @generator
     def cap_factory(cls):
         return Cap
 
@@ -253,7 +253,9 @@ class Cap(rigid.Cap, Box):
         return self.cup_factory(self.left, self.right)
 
 
-Sum, Bubble = Diagram.sum_factory, Diagram.bubble_factory
+Sum, Bubble, Eval, Coeval, Curry = (
+    Diagram.sum_factory, Diagram.bubble_factory, Diagram.eval_factory,
+    Diagram.coeval_factory, Diagram.curry_factory)
 
 
 class Functor(rigid.Functor):

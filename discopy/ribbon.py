@@ -81,7 +81,7 @@ cap becomes a ribbon folding back.
 
 from discopy import pivotal, balanced
 from discopy.abc import RibbonCategory
-from discopy.cat import factory, Generator
+from discopy.cat import factory, generator
 from discopy.pivotal import Ty, Nat  # noqa: F401
 
 
@@ -154,11 +154,11 @@ class Diagram(pivotal.Diagram, balanced.Diagram, RibbonCategory):
         """
         return self.to_braided(width, colour)
 
-    @Generator
+    @generator
     def braid_factory(cls):
         return Braid
 
-    @Generator
+    @generator
     def twist_factory(cls):
         return Twist
 
@@ -270,7 +270,9 @@ class Twist(balanced.Twist, Box):
         return self
 
 
-Sum, Bubble = Diagram.sum_factory, Diagram.bubble_factory
+Sum, Bubble, Eval, Coeval, Curry = (
+    Diagram.sum_factory, Diagram.bubble_factory, Diagram.eval_factory,
+    Diagram.coeval_factory, Diagram.curry_factory)
 
 
 class Functor(pivotal.Functor, balanced.Functor):

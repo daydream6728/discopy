@@ -26,7 +26,7 @@ Summary
 from math import pi
 
 from discopy import cat, rigid, tensor, quantum
-from discopy.cat import factory, Generator
+from discopy.cat import factory, generator
 from discopy.quantum.circuit import qubit, Circuit
 from discopy.quantum.gates import (
     Bra, Ket, Rz, Rx, CX, CZ, Controlled, format_number)
@@ -39,6 +39,7 @@ from discopy.utils import factory_name
 class Diagram(tensor.Diagram[complex]):
     """ ZX Diagram. """
     ob = Nat
+    spider_factory = tensor.Spider
 
     @staticmethod
     def swap(left, right):
@@ -221,14 +222,17 @@ class Diagram(tensor.Diagram[complex]):
                 >> Id(target) @ hadamard @ Id(len(scan) - target - 1)
         return diagram
 
-    @Generator
+    @generator
     def swap_factory(cls):
         return Swap
 
 
-Box, Sum, Permutation = (
-    Diagram.generator_factory, Diagram.sum_factory,
-    Diagram.permutation_factory)
+Box, Sum, Permutation, Cap, Bubble, Eval, Coeval, Curry, Copy, Merge, Discard\
+    = (Diagram.generator_factory, Diagram.sum_factory,
+       Diagram.permutation_factory, Diagram.cap_factory,
+       Diagram.bubble_factory, Diagram.eval_factory, Diagram.coeval_factory,
+       Diagram.curry_factory, Diagram.copy_factory, Diagram.merge_factory,
+       Diagram.discard_factory)
 
 
 class Swap(Permutation, tensor.Swap[complex], Box):

@@ -80,7 +80,7 @@ from __future__ import annotations
 
 from discopy import symmetric, monoidal, cmap, hypergraph
 from discopy.abc import MarkovCategory
-from discopy.cat import factory, Generator
+from discopy.cat import factory, generator
 from discopy.monoidal import Ty  # noqa: F401
 from discopy.utils import assert_isatomic, factory_name
 
@@ -159,15 +159,15 @@ class Diagram(symmetric.Diagram, MarkovCategory):
         """
         return cls.copy(x, 0)
 
-    @Generator
+    @generator
     def copy_factory(cls):
         return Copy
 
-    @Generator
+    @generator
     def merge_factory(cls):
         return Merge
 
-    @Generator
+    @generator
     def discard_factory(cls):
         return Discard
 

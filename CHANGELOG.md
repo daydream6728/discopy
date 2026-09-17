@@ -9,59 +9,23 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Added
 
-- The generators of a category are defined once, in the module that
-  introduces them, and built for every level below. `utils.Generator` is
-  a decorator declaring the factory of a generator as a method of the
-  `Diagram` introducing it, returning its class, e.g. `swap_factory`
-  returns `Swap` in `symmetric.Diagram`: on that class the attribute is
-  the class itself, on any other class decorated with `@factory` it is a
-  subclass built on first access, extending the value of the attribute
-  on each base of the class, then the generators of the same level that
-  the root extends, lifted to the class — `symmetric.Swap` is a
-  `Permutation` and a `Box`, so every swap below is a subclass of the
-  permutation and the box of its level, and every discard of its copy —
-  then the class itself, e.g. in `symmetric`:
-
-  ```python
-  @Generator
-  def swap_factory(cls):
-      return Swap
-  ```
-
-  The built class takes its name from the generator and its module from
-  the class, so that a level writes `Swap = Diagram.swap_factory` where it
-  used to write `class Swap(markov.Swap, Box)` and assign
-  `Diagram.swap_factory = Swap` at the bottom, and `closed.Swap` is a
-  `markov.Swap` that is a `closed.Permutation` and a `closed.Box`. A level
-  adding behaviour to a generator declares it again, e.g.
-  `compact.Permutation` rotates, and a class attribute assigned by hand
-  still wins, as `Recipe.swap_factory = CookingSwap` did. A class that is
-  not a factory, e.g. a box or a `NamedGeneric` subscript such as
-  `tensor.Diagram[complex]`, reads the factories of its `ar`. Fifty-six
-  trivial subclasses go, and the generators every level used to inherit
-  from the wrong one are now its own: `f.bubble()`, `f + f`, `f.trace()`,
-  `Diagram.copy(x)` and `Diagram.merge(x)` are diagrams of the level of
-  `f` at every level, where a symmetric bubble used to be a
-  `monoidal.Bubble`, a frobenius sum a `symmetric.Sum` that cannot rotate
-  and a closed merge a `markov.Merge`, none of which composes with the
-  diagram it came from; `markov.Copy.dagger` and `markov.Merge.dagger` go
-  through `merge_factory` and `copy_factory` for it. Every module exports
-  the generators its diagrams build by name. A root generator initialises
-  itself as a box of the level it is built in, through
-  `self.generator_factory.__init__` rather than the `Box` of its own
-  module, so `feedback.Swap`, `Copy` and `Merge` keep only their `delay`,
-  a compact swap has the winding number of a rigid box, `rigid.Box`
-  defaults `z` to zero once instead of six ribbon generators each, and
-  `ribbon.Functor` and `ribbon.DualRail` recognise any `balanced.Braid`, a
-  compact swap included, rather than only a `ribbon.Braid`. `cat.Arrow`
-  type-checks its boxes itself so that `monoidal.Diagram.generator_factory`
-  is `monoidal.Box` rather than `cat.Box`, `pivotal.Box` is a `traced.Box`
-  as `pivotal.Diagram` is a `traced.Diagram`, `tensor.Bubble` is a
-  `frobenius.Bubble`, `compact.Diagram` needs no `trace_factory` of its
-  own since its method resolution order reaches the pivotal one before the
-  traced generator, and `closed.Diagram.is_linear` reads its boxes rather
-  than an `is_linear` flag on `closed.Box` and `closed.Copy`, which are
-  built like the rest.
+- `utils.generator` declares the factory of a generator once, on the
+  `Diagram` that introduces it, as a method returning its class, e.g.
+  `swap_factory` returns `Swap` in `symmetric.Diagram`. Every level below
+  gets its own subclass built on first access, extending the swaps of its
+  bases, the generators its root extends (a swap is a permutation, a
+  discard a copy) and the level itself, so a module writes
+  `Swap = Diagram.swap_factory` in place of `class Swap(markov.Swap, Box)`
+  and `Diagram.swap_factory = Swap`; a level adding behaviour declares it
+  again and a class attribute assigned by hand still wins. Fifty-six
+  trivial subclasses go, and every generator a level builds (bubbles,
+  sums, traces, copies, merges, evaluations) is a diagram of that level
+  rather than of the level that introduced it. Roots initialise through
+  `self.generator_factory.__init__`, so `rigid.Box` defaults `z` to zero
+  once, `feedback.Swap`, `Copy` and `Merge` keep only their `delay`, and
+  `ribbon.Functor` recognises any `balanced.Braid`. `cat.Arrow`
+  type-checks its boxes itself, `pivotal.Box` is a `traced.Box` and
+  `closed.Diagram.is_linear` reads its boxes.
 - `monoidal.List`, the free monoid on a generator type: `List[X]` is a
   tuple of instances of `X` with concatenation as `tensor` and the empty
   list as unit, an `abc.Monoid` parameterised as

@@ -64,7 +64,7 @@ from typing import TYPE_CHECKING, Sequence
 
 from discopy import (
     cat, monoidal, rigid, frobenius, cmap, config)
-from discopy.cat import factory, Generator, assert_iscomposable
+from discopy.cat import factory, generator, assert_iscomposable
 from discopy.frobenius import Dim, Cup
 from discopy.matrix import (  # noqa: F401
     Matrix, backend, set_backend, get_backend,
@@ -695,15 +695,15 @@ class Diagram(NamedGeneric['dtype'], frobenius.Diagram):
             result += Box(str(var), Dim(1), dim, onehot.array) @ self.grad(var)
         return result
 
-    @Generator
+    @generator
     def generator_factory(cls):
         return Box
 
-    @Generator
+    @generator
     def permutation_factory(cls):
         return Permutation
 
-    @Generator
+    @generator
     def bubble_factory(cls):
         return Bubble
 
@@ -788,8 +788,10 @@ class Permutation(frobenius.Permutation, Box):
         return Tensor.permutation(self.perm, doms).array
 
 
-Swap, Spider, Sum = (
-    Diagram.swap_factory, Diagram.spider_factory, Diagram.sum_factory)
+Swap, Spider, Sum, Eval, Coeval, Curry, Copy, Merge, Discard = (
+    Diagram.swap_factory, Diagram.spider_factory, Diagram.sum_factory,
+    Diagram.eval_factory, Diagram.coeval_factory, Diagram.curry_factory,
+    Diagram.copy_factory, Diagram.merge_factory, Diagram.discard_factory)
 
 
 class Bubble(frobenius.Bubble, Box):

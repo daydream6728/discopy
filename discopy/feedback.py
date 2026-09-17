@@ -157,7 +157,7 @@ from discopy import monoidal, braided, markov, hypergraph
 from discopy.abc import FeedbackCategory
 from discopy.utils import (
     deprecated_alias,
-    factory, Generator, factory_name, assert_isinstance, AxiomError,
+    factory, generator, factory_name, assert_isinstance, AxiomError,
 )
 
 
@@ -400,31 +400,31 @@ class Diagram(markov.Diagram, FeedbackCategory):
 
     d = Wire.d
 
-    @Generator
+    @generator
     def generator_factory(cls):
         return Box
 
-    @Generator
+    @generator
     def permutation_factory(cls):
         return Permutation
 
-    @Generator
+    @generator
     def swap_factory(cls):
         return Swap
 
-    @Generator
+    @generator
     def copy_factory(cls):
         return Copy
 
-    @Generator
+    @generator
     def merge_factory(cls):
         return Merge
 
-    @Generator
+    @generator
     def feedback_factory(cls):
         return Feedback
 
-    @Generator
+    @generator
     def followed_by(cls):
         return FollowedBy
 
