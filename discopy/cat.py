@@ -304,6 +304,8 @@ class Arrow(FreeCategory, Testable["Arrow"]):
     automatically cast. This means one can use e.g. ``int`` instead of ``Ob``,
     see :class:`monoidal.Nat`.
     """
+    ob = Ob
+
     @generator
     def generator_factory(cls):
         return Box
@@ -315,8 +317,6 @@ class Arrow(FreeCategory, Testable["Arrow"]):
     @generator
     def bubble_factory(cls):
         return Bubble
-
-    ob = Ob
 
     def __init__(self, inside, dom, cod, _scan=True):
         if _scan:
