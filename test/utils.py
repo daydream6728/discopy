@@ -125,6 +125,21 @@ def test_generator():
     assert feedback.Swap(y, y).delay().dom == y.delay() @ y.delay()
 
 
+def test_Factory_alias():
+    """ A factory can be another factory of the same category. """
+    from discopy import symmetric, closed
+    assert symmetric.Diagram.braid_factory is symmetric.Swap
+    assert closed.Ty.over_factory is closed.Ty.under_factory is closed.Exp
+
+
+def test_Factory_outside_the_hierarchy():
+    """ A factory class with no generator in its bases keeps the root. """
+    from discopy import monoidal
+    from discopy.grammar import cfg
+    assert cfg.Rule.layer_factory is monoidal.Layer
+    assert cfg.Word.generator_factory is monoidal.Box
+
+
 def test_Factory_call():
     """ A factory taken out of its class calls the generator of its owner. """
     from discopy import symmetric

@@ -23,6 +23,8 @@ Summary
     Scalar
 """
 
+from typing import ClassVar
+
 from math import pi
 
 from discopy import cat, rigid, tensor, quantum
@@ -40,6 +42,7 @@ class Diagram(tensor.Diagram[complex]):
     """ ZX Diagram. """
     ob = Nat
     spider_factory = tensor.Spider
+    swap_factory: ClassVar[Factory[..., "Swap"]] = Factory.subclass("Swap")
 
     @staticmethod
     def swap(left, right):
@@ -239,9 +242,6 @@ class Swap(Permutation, tensor.Swap[complex], Box):
     __str__ = __repr__
 
 
-Diagram.swap_factory = Factory.subclass(Swap)
-
-
 class Spider(tensor.Spider[complex], Box):
     """ Abstract spider box. """
 
@@ -387,4 +387,5 @@ SWAP = Swap(Nat(1), Nat(1))
 TermBase, Constant, Variable, Application, Abstraction = (
     Diagram.term_factory, Diagram.constant_factory, Diagram.variable_factory,
     Diagram.application_factory, Diagram.abstraction_factory)
+Layer = Diagram.layer_factory
 Id = Diagram.id

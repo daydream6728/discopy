@@ -59,6 +59,8 @@ The hexagon equations hold on the nose.
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 from collections.abc import Callable
 
 from discopy import monoidal
@@ -90,6 +92,9 @@ class Diagram(monoidal.Diagram, BraidedCategory):
         dom (monoidal.Ty) : The domain of the diagram, i.e. its input.
         cod (monoidal.Ty) : The codomain of the diagram, i.e. its output.
     """
+    braid_factory: ClassVar[Factory[..., "Braid"]] = Factory.subclass("Braid")
+    functor_factory: ClassVar[Factory[..., "Functor"]]\
+        = Factory.subclass("Functor")
 
     @classmethod
     def braid(cls, left: monoidal.Ty, right: monoidal.Ty) -> Diagram:
@@ -197,9 +202,6 @@ class Braid(BinaryBoxConstructor, Box):
         return type(self)(self.right, self.left, not self.is_dagger)
 
 
-Diagram.braid_factory = Factory.subclass(Braid)
-
-
 def hexagon(cls: type, factory: Callable) -> Callable[[Ty, Ty], Diagram]:
     """
     Take a ``factory`` for braids of atomic types and extend it recursively.
@@ -247,9 +249,7 @@ class Functor(monoidal.Functor):
         return super().__call__(other)
 
 
-Diagram.functor_factory = Factory.subclass(Functor)
-
-
+Layer = Diagram.layer_factory
 Id = Diagram.id
 
 

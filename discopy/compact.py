@@ -56,6 +56,8 @@ Coherence
 ...     Cap(x, x.r) @ Cap(y, y.r) >> x @ Diagram.swap(x.r, y @ y.r))
 """
 
+from typing import ClassVar
+
 from discopy import symmetric, ribbon, rigid, cmap, hypergraph
 from discopy.abc import CompactCategory
 from discopy.cat import factory, Factory
@@ -78,7 +80,12 @@ class Diagram(symmetric.Diagram, ribbon.Diagram, CompactCategory):
         cod (pivotal.Ty) : The codomain of the diagram, i.e. its output.
     """
     ob = Ty
-    layer_factory = Layer
+    layer_factory: ClassVar[Factory[..., Layer]]\
+        = Factory.subclass(Layer)
+    permutation_factory: ClassVar[Factory[..., "Permutation"]]\
+        = Factory.subclass("Permutation")
+    functor_factory: ClassVar[Factory[..., "Functor"]]\
+        = Factory.subclass("Functor")
 
 
 Box, Cup, Cap = (
@@ -99,9 +106,6 @@ class Permutation(symmetric.Permutation, Box):
 
     l = property(lambda self: self.rotate(left=True))
     r = property(lambda self: self.rotate(left=False))
-
-
-Diagram.permutation_factory = Factory.subclass(Permutation)
 
 
 Swap, Sum, Bubble, Eval, Coeval, Curry = (
@@ -125,9 +129,6 @@ class Functor(symmetric.Functor, ribbon.Functor):
         if isinstance(other, (symmetric.Swap, symmetric.Permutation)):
             return symmetric.Functor.__call__(self, other)
         return ribbon.Functor.__call__(self, other)
-
-
-Diagram.functor_factory = Factory.subclass(Functor)
 
 
 CMap = cmap.CMap[Diagram]

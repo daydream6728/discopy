@@ -9,28 +9,35 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Added
 
-- `utils.Factory` declares the factory of a generator once, on the
-  `Diagram` that introduces it: `Diagram.swap_factory = Factory.subclass(Swap)`
-  in `symmetric`, or `generator_factory = Factory.subclass(Wire)` in the
-  body of `Ty` since the wire comes first. Every level below
+- `utils.Factory` declares the factory of a generator once, in the body of
+  the category that introduces it, e.g.
+  `swap_factory = Factory.subclass("Swap")` in `symmetric.Diagram`: a
+  generator defined further down is named by a forward reference, resolved
+  in the module of its category on first access, and a `ClassVar`
+  annotation says what the factory builds. Every level below
   gets its own subclass built on first access, extending the swaps of its
   bases, the generators its root extends (a swap is a permutation, a
   discard a copy) and the level itself, so a module writes
   `Swap = Diagram.swap_factory` in place of `class Swap(markov.Swap, Box)`
   and `Diagram.swap_factory = Swap`; a level adding behaviour declares it
   again, a factory that is behaviour rather than a class is a
-  `Factory.classmethod`, e.g. the trace of a pivotal diagram, and a class
-  attribute assigned by hand still wins. `Factory[**P, T]` is generic in
+  `Factory.classmethod`, e.g. the trace of a pivotal diagram, one that is
+  another factory of the same category a `Factory.alias`, e.g. the braid of
+  a symmetric category is its swap, and a class attribute assigned by hand
+  still wins. `Factory[**P, T]` is generic in
   the parameters of its generator and the instance it builds, `subclass`
-  and `classmethod` scoping their own so that a declaration carries the
-  signature of its root; `__get__` returns `Callable[P, T]` and `__call__`
+  and `classmethod` scoping their own, so that a declaration by class
+  carries the signature of its root and one by name the `ClassVar`
+  annotation beside it; `__get__` returns `Callable[P, T]` and `__call__`
   takes `P` to `T`, for a factory read off the class that declares it. Fifty-six
   trivial subclasses go, and every generator a level builds (bubbles,
   sums, traces, copies, merges, evaluations) is a diagram of that level
   rather than of the level that introduced it. Roots initialise through
-  `self.generator_factory.__init__`, so `rigid.Box` defaults `z` to zero
-  once, `feedback.Swap`, `Copy` and `Merge` keep only their `delay`, and
-  `ribbon.Functor` recognises any `balanced.Braid`. `cat.Arrow`
+  `self.generator_factory.__init__`, i.e. the box of the level they are
+  built in, so the six `z = 0` of the ribbon generators go where a braid
+  used to have no winding number of its own, `feedback.Swap`, `Copy` and
+  `Merge` keep only their `delay`, and `ribbon.Functor` recognises any
+  `balanced.Braid`. `cat.Arrow`
   type-checks its boxes itself, `pivotal.Box` is a `traced.Box` and
   `closed.Diagram.is_linear` reads its boxes. The same declaration serves
   types, terms and functors: a `Ty` declares its wire, `biclosed.Ty` its
@@ -45,7 +52,14 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `categorial.Over` and `Under`, `pivotal.Functor` and `pregroup.Functor`
   go, `biclosed.Ty` is made of the `biclosed.Wire` it never used, and the
   braided, ribbon, pregroup and circuit diagrams have their own
-  `functor_factory` where they inherited a higher level's.
+  `functor_factory` where they inherited a higher level's. `layer_factory`
+  is a `Factory` like the rest, so every level has its own `Layer` rather
+  than the one of the level that last added behaviour to it: a diagram
+  names its own layers when it serialises, and a layer built by hand from
+  a parent's class is not equal to one of the level below, as was already
+  the case for boxes. A factory class whose `ar` has no generator in its
+  bases, e.g. `grammar.cfg.Tree`, keeps the root of the declaration rather
+  than raising `ValueError`.
 - `monoidal.List`, the free monoid on a generator type: `List[X]` is a
   tuple of instances of `X` with concatenation as `tensor` and the empty
   list as unit, an `abc.Monoid` parameterised as

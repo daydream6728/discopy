@@ -58,7 +58,7 @@ from __future__ import annotations
 import itertools
 from dataclasses import dataclass, field
 from functools import cached_property
-from typing import Iterator, Callable, TYPE_CHECKING
+from typing import Callable, ClassVar, Iterator, TYPE_CHECKING
 from warnings import warn
 
 from discopy import abc, cat, drawing, hypergraph, cmap, messages
@@ -291,7 +291,7 @@ class Ty(cat.Ob, cat.FreeCategory, ColouredMonoid):
     """
     ob = Colour
 
-    generator_factory = Factory.subclass(Wire)
+    generator_factory: ClassVar[Factory[..., Wire]] = Factory.subclass(Wire)
 
     def cast_wire(self, x: str | cat.Ob) -> cat.Ob:
         """
@@ -944,7 +944,14 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
             normal_form
     """
     ob = Ty
-    layer_factory = Layer
+    layer_factory: ClassVar[Factory[..., Layer]]\
+        = Factory.subclass(Layer)
+    generator_factory: ClassVar[Factory[..., "Box"]] = Factory.subclass("Box")
+    sum_factory: ClassVar[Factory[..., "Sum"]] = Factory.subclass("Sum")
+    bubble_factory: ClassVar[Factory[..., "Bubble"]]\
+        = Factory.subclass("Bubble")
+    functor_factory: ClassVar[Factory[..., "Functor"]]\
+        = Factory.subclass("Functor")
 
     def __setstate__(self, state):
         if 'inside' not in state:  # Backward compatibility
@@ -1485,9 +1492,6 @@ class Box(cat.Box, Diagram):
         return Drawing.from_box(self)
 
 
-Diagram.generator_factory = Factory.subclass(Box)
-
-
 class Sum(cat.Sum, Box):
     """
     A sum is a tuple of diagrams :code:`terms`
@@ -1521,9 +1525,6 @@ class Sum(cat.Sum, Box):
         return self.sum_factory(terms, dom, cod)
 
     to_drawing = Diagram.to_drawing
-
-
-Diagram.sum_factory = Factory.subclass(Sum)
 
 
 class Bubble(cat.Bubble, Box):
@@ -1623,9 +1624,6 @@ class Bubble(cat.Bubble, Box):
         else:
             kwargs['draw_as_square'] = self.draw_as_square
         return getattr(Drawing, method)(*args, **kwargs)
-
-
-Diagram.bubble_factory = Factory.subclass(Bubble)
 
 
 class Functor(cat.Functor):
@@ -1736,9 +1734,6 @@ class Functor(cat.Functor):
         if isinstance(other, Bubble) and self.cod is Drawing:
             return other.to_drawing()
         return super().__call__(other)
-
-
-Diagram.functor_factory = Factory.subclass(Functor)
 
 
 @dataclass

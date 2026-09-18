@@ -34,6 +34,8 @@ Summary
         brute_force
 """
 
+from typing import ClassVar
+
 from discopy import rigid, frobenius, messages
 from discopy.cat import factory, Factory
 from discopy.utils import AxiomError, deprecated_alias
@@ -104,6 +106,10 @@ class Diagram(frobenius.Diagram):
     >>> assert F(sentence)
     """
     ob = Ty
+    generator_factory: ClassVar[Factory[..., "Box"]] = Factory.subclass("Box")
+    swap_factory: ClassVar[Factory[..., "Swap"]] = Factory.subclass("Swap")
+    spider_factory: ClassVar[Factory[..., "Spider"]]\
+        = Factory.subclass("Spider")
 
     def normal_form(self, **params):
         """
@@ -168,9 +174,6 @@ class Box(frobenius.Box, Diagram):
     rotate = rigid.Box.rotate
 
 
-Diagram.generator_factory = Factory.subclass(Box)
-
-
 Cup, Cap, Permutation = (
     Diagram.cup_factory, Diagram.cap_factory, Diagram.permutation_factory)
 
@@ -184,9 +187,6 @@ class Swap(Permutation, frobenius.Swap, Box):
                 type(self)(self.left.r, self.right.r))
 
 
-Diagram.swap_factory = Factory.subclass(Swap)
-
-
 class Spider(frobenius.Spider, Box):
     """
     A pregroup spider is a frobenius spider in a pregroup diagram.
@@ -194,9 +194,6 @@ class Spider(frobenius.Spider, Box):
     def rotate(self, left=False):
         typ = self.typ.l if left else self.typ.r
         return type(self)(len(self.cod), len(self.dom), typ, self.phase)
-
-
-Diagram.spider_factory = Factory.subclass(Spider)
 
 
 Sum, Bubble, Eval, Coeval, Curry, Copy, Merge, Discard = (
@@ -263,6 +260,7 @@ Exp, Over, Under = Ty.exp_factory, Ty.over_factory, Ty.under_factory
 TermBase, Constant, Variable, Application, Abstraction = (
     Diagram.term_factory, Diagram.constant_factory, Diagram.variable_factory,
     Diagram.application_factory, Diagram.abstraction_factory)
+Layer = Diagram.layer_factory
 Id = Diagram.id
 
 

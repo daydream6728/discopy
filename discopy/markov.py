@@ -78,14 +78,13 @@ in the same diagram they automatically satisfy the :mod:`frobenius` axioms.
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 from discopy import symmetric, monoidal, cmap, hypergraph
 from discopy.abc import MarkovCategory
 from discopy.cat import factory, Factory
 from discopy.monoidal import Ty  # noqa: F401
 from discopy.utils import assert_isatomic, factory_name
-
-
-Layer = symmetric.Layer
 
 
 @factory
@@ -119,6 +118,13 @@ class Diagram(symmetric.Diagram, MarkovCategory):
 
     .. image:: /_static/markov/copy_and_apply.svg
     """
+    copy_factory: ClassVar[Factory[..., "Copy"]] = Factory.subclass("Copy")
+    merge_factory: ClassVar[Factory[..., "Merge"]] = Factory.subclass("Merge")
+    discard_factory: ClassVar[Factory[..., "Discard"]]\
+        = Factory.subclass("Discard")
+    functor_factory: ClassVar[Factory[..., "Functor"]]\
+        = Factory.subclass("Functor")
+
     @Factory.classmethod
     def spider_factory(cls, n_legs_in, n_legs_out, typ, phase=None):
         if phase is not None or 1 not in (n_legs_in, n_legs_out):
@@ -192,9 +198,6 @@ class Copy(Box):
             factory_name(type(self)) + f"({repr(self.dom)}, {len(self.cod)})")
 
 
-Diagram.copy_factory = Factory.subclass(Copy)
-
-
 class Merge(Box):
     """
     The merge of an atomic type :code:`x` some :code:`n` number of times.
@@ -218,9 +221,6 @@ class Merge(Box):
             factory_name(type(self)) + f"({repr(self.cod)}, {len(self.dom)})")
 
 
-Diagram.merge_factory = Factory.subclass(Merge)
-
-
 class Discard(Copy):
     """
     The discard of an atomic type :code:`x`.
@@ -230,9 +230,6 @@ class Discard(Copy):
     """
     def __init__(self, x: monoidal.Ty, *args, **kwargs):
         super().__init__(x, 0)
-
-
-Diagram.discard_factory = Factory.subclass(Discard)
 
 
 Sum, Bubble = Diagram.sum_factory, Diagram.bubble_factory
@@ -279,12 +276,10 @@ class Functor(symmetric.Functor):
         return super().__call__(other)
 
 
-Diagram.functor_factory = Factory.subclass(Functor)
-
-
 CMap = cmap.CMap[Diagram]
 
 Hypergraph = hypergraph.Hypergraph[Diagram]
+Layer = Diagram.layer_factory
 Id = Diagram.id
 
 

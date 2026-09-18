@@ -80,6 +80,7 @@ from __future__ import annotations
 
 from functools import total_ordering, cached_property
 from typing import (
+    ClassVar,
     Callable, Mapping, Iterable, TYPE_CHECKING)
 
 from discopy import messages, utils
@@ -305,6 +306,10 @@ class Arrow(FreeCategory, Testable["Arrow"]):
     see :class:`monoidal.Nat`.
     """
     ob = Ob
+    generator_factory: ClassVar[Factory[..., "Box"]] = Factory.subclass("Box")
+    sum_factory: ClassVar[Factory[..., "Sum"]] = Factory.subclass("Sum")
+    bubble_factory: ClassVar[Factory[..., "Bubble"]]\
+        = Factory.subclass("Bubble")
 
     def __init__(self, inside, dom, cod, _scan=True):
         if _scan:
@@ -679,9 +684,6 @@ class Box(Arrow):
         return cls(name=name, dom=dom, cod=cod, data=data, is_dagger=is_dagger)
 
 
-Arrow.generator_factory = Factory.subclass(Box)
-
-
 class Sum(Box):
     """
     A sum is a tuple of arrows :code:`terms` with the same domain and codomain.
@@ -791,9 +793,6 @@ class Sum(Box):
         return cls(terms=terms, dom=dom, cod=cod)
 
 
-Arrow.sum_factory = Factory.subclass(Sum)
-
-
 class Bubble(Box):
     """
     A bubble is a box with arrow :code:`args` inside and an optional pair of
@@ -873,9 +872,6 @@ class Bubble(Box):
         args = [tree['arg']] if 'args' not in tree else tree['args']
         dom, cod = map(from_tree, (tree['dom'], tree['cod']))
         return cls(*map(from_tree, args), dom=dom, cod=cod)
-
-
-Arrow.bubble_factory = Factory.subclass(Bubble)
 
 
 @factory

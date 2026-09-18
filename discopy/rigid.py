@@ -152,7 +152,7 @@ import copy
 
 from collections.abc import Callable
 
-from typing import Iterator
+from typing import ClassVar, Iterator
 
 from discopy import cat, monoidal, biclosed, messages
 from discopy.abc import Pregroup, RigidCategory
@@ -265,7 +265,7 @@ class Ty(Pregroup, biclosed.Ty):
     >>> assert n.l.r == n == n.r.l
     >>> assert (s @ n).l == n.l @ s.l and (s @ n).r == n.r @ s.r
     """
-    generator_factory = Factory.subclass(Wire)
+    generator_factory: ClassVar[Factory[..., Wire]] = Factory.subclass(Wire)
 
     def __setstate__(self, state):
         if '_z' in state:  # Backward compatibility
@@ -384,12 +384,19 @@ class Diagram(biclosed.Diagram, RigidCategory):
     """
 
     ob = Ty
-    layer_factory = Layer
+    layer_factory: ClassVar[Factory[..., Layer]]\
+        = Factory.subclass(Layer)
 
     to_drawing = monoidal.Diagram.to_drawing
 
     ev = classmethod(RigidCategory.ev.__func__)
     curry = RigidCategory.curry
+    generator_factory: ClassVar[Factory[..., "Box"]] = Factory.subclass("Box")
+    sum_factory: ClassVar[Factory[..., "Sum"]] = Factory.subclass("Sum")
+    cup_factory: ClassVar[Factory[..., "Cup"]] = Factory.subclass("Cup")
+    cap_factory: ClassVar[Factory[..., "Cap"]] = Factory.subclass("Cap")
+    functor_factory: ClassVar[Factory[..., "Functor"]]\
+        = Factory.subclass("Functor")
 
     @classmethod
     def cups(cls, left: Ty, right: Ty) -> Diagram:
@@ -661,7 +668,6 @@ class Box(biclosed.Box, Diagram):
     >>> assert f.r.l == f == f.l.r
     >>> assert f.l.l != f != f.r.r
     """
-    z = 0
 
     def __setstate__(self, state):
         if '_z' in state:  # Backward compatibility
@@ -708,9 +714,6 @@ class Box(biclosed.Box, Diagram):
         return result
 
 
-Diagram.generator_factory = Factory.subclass(Box)
-
-
 class Sum(biclosed.Sum, Box):
     """
     A rigid sum is a biclosed sum that can be transposed.
@@ -727,9 +730,6 @@ class Sum(biclosed.Sum, Box):
                 tuple(term.l for term in self.terms), self.cod.l, self.dom.l)
         return self.sum_factory(
             tuple(term.r for term in self.terms), self.cod.r, self.dom.r)
-
-
-Diagram.sum_factory = Factory.subclass(Sum)
 
 
 class Cup(BinaryBoxConstructor, Box):
@@ -770,9 +770,6 @@ class Cup(BinaryBoxConstructor, Box):
         raise AxiomError("Rigid cups have no dagger, use pivotal instead.")
 
 
-Diagram.cup_factory = Factory.subclass(Cup)
-
-
 class Cap(BinaryBoxConstructor, Box):
     """
     The unit of the adjunction for an atomic type.
@@ -809,9 +806,6 @@ class Cap(BinaryBoxConstructor, Box):
         use a :class:`pivotal.Cap` instead.
         """
         raise AxiomError("Rigid caps have no dagger, use pivotal instead.")
-
-
-Diagram.cap_factory = Factory.subclass(Cap)
 
 
 Bubble, Eval, Coeval, Curry = (
@@ -870,9 +864,6 @@ class Functor(biclosed.Functor):
                 result = result.l if z < 0 else result.r
             return result
         return super().__call__(other)
-
-
-Diagram.functor_factory = Factory.subclass(Functor)
 
 
 def nesting(cls: type, factory: Callable) -> Callable[[Ty, Ty], Diagram]:

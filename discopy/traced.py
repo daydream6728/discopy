@@ -125,6 +125,8 @@ Dinaturality
 >>> assert sliding_left and sliding_right
 """
 
+from typing import ClassVar
+
 from discopy import monoidal, cmap, hypergraph
 from discopy.abc import TracedCategory
 from discopy.cat import factory, Factory
@@ -146,6 +148,10 @@ class Diagram(monoidal.Diagram, TracedCategory):
         dom (monoidal.Ty) : The domain of the diagram, i.e. its input.
         cod (monoidal.Ty) : The codomain of the diagram, i.e. its output.
     """
+    trace_factory: ClassVar[Factory[..., "Trace"]] = Factory.subclass("Trace")
+    functor_factory: ClassVar[Factory[..., "Functor"]]\
+        = Factory.subclass("Functor")
+
     def trace(self, n=1, left=False):
         """
         Feed ``n`` outputs back into inputs.
@@ -211,9 +217,6 @@ class Trace(Box, monoidal.Bubble):
         return self.ar.to_drawing(self)
 
 
-Diagram.trace_factory = Factory.subclass(Trace)
-
-
 Sum, Bubble = Diagram.sum_factory, Diagram.bubble_factory
 
 
@@ -260,10 +263,8 @@ class Functor(monoidal.Functor):
         return super().__call__(other)
 
 
-Diagram.functor_factory = Factory.subclass(Functor)
-
-
 CMap = cmap.CMap[Diagram]
 
 Hypergraph = hypergraph.Hypergraph[Diagram]
+Layer = Diagram.layer_factory
 Id = Diagram.id

@@ -92,6 +92,8 @@ Both sides foliate to the same single permutation.
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 from collections.abc import Sequence
 
 from discopy import monoidal, balanced, hypergraph, cmap, messages
@@ -100,7 +102,7 @@ from discopy.cat import factory, Factory
 from discopy.monoidal import Wire, Ty, Nat  # noqa: F401
 from discopy.python import finset
 from discopy.utils import (
-    AxiomError, assert_iscomposable, classproperty, factory_name, from_tree)
+    AxiomError, assert_iscomposable, factory_name, from_tree)
 
 
 class Layer(monoidal.Layer):
@@ -266,9 +268,15 @@ class Diagram(balanced.Diagram, SymmetricCategory):
     >>> Permutation.swap_factory = Transposition
     >>> assert Permutation.braid_factory is Transposition
     """
-    braid_factory = classproperty(lambda cls: cls.swap_factory)
-    layer_factory = Layer
+    braid_factory = Factory.alias("swap_factory")
+    layer_factory: ClassVar[Factory[..., Layer]]\
+        = Factory.subclass(Layer)
     twist_factory = Factory.classmethod(lambda cls, dom: cls.id(dom))
+    permutation_factory: ClassVar[Factory[..., "Permutation"]]\
+        = Factory.subclass("Permutation")
+    swap_factory: ClassVar[Factory[..., "Swap"]] = Factory.subclass("Swap")
+    functor_factory: ClassVar[Factory[..., "Functor"]]\
+        = Factory.subclass("Functor")
 
     @property
     def is_plumbing(self) -> bool:
@@ -558,9 +566,6 @@ class Permutation(Box):
         return f"Permutation({self.dom}, {list(self.perm)})"
 
 
-Diagram.permutation_factory = Factory.subclass(Permutation)
-
-
 Layer.plumbing = (monoidal.Ty, Permutation)
 
 
@@ -609,9 +614,6 @@ class Swap(Permutation, balanced.Braid, Box):
         return self.name
 
 
-Diagram.swap_factory = Factory.subclass(Swap)
-
-
 Trace, Sum, Bubble = (
     Diagram.trace_factory, Diagram.sum_factory, Diagram.bubble_factory)
 
@@ -640,9 +642,6 @@ class Functor(balanced.Functor):
                 doms = list(map(self, other.dom))
             return self.cod.ar.permutation(other.perm, doms)
         return super().__call__(other)
-
-
-Diagram.functor_factory = Factory.subclass(Functor)
 
 
 CMap = cmap.CMap[Diagram]

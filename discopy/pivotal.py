@@ -56,6 +56,8 @@ We also have its dagger and its transpose:
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 from discopy import cat, cmap, rigid, traced
 from discopy.abc import PivotalCategory
 from discopy.cat import factory, Factory
@@ -90,7 +92,7 @@ class Ty(rigid.Ty):
     Parameters:
         inside (Wire) : The objects inside the type.
     """
-    generator_factory = Factory.subclass(Wire)
+    generator_factory: ClassVar[Factory[..., Wire]] = Factory.subclass(Wire)
 
 
 @factory
@@ -119,6 +121,9 @@ class Diagram(rigid.Diagram, traced.Diagram, PivotalCategory):
         cod (Ty) : The codomain of the diagram, i.e. its output.
     """
     ob = Ty
+    generator_factory: ClassVar[Factory[..., "Box"]] = Factory.subclass("Box")
+    cup_factory: ClassVar[Factory[..., "Cup"]] = Factory.subclass("Cup")
+    cap_factory: ClassVar[Factory[..., "Cap"]] = Factory.subclass("Cap")
 
     def dagger(self):
         """
@@ -213,9 +218,6 @@ class Box(rigid.Box, traced.Box, Diagram):
         return result
 
 
-Diagram.generator_factory = Factory.subclass(Box)
-
-
 class Cup(rigid.Cup, Box):
     """
     A pivotal cup is a rigid cup of pivotal types.
@@ -228,9 +230,6 @@ class Cup(rigid.Cup, Box):
     def dagger(self) -> Cap:
         """ The dagger of a pivotal cup. """
         return self.cap_factory(self.left, self.right)
-
-
-Diagram.cup_factory = Factory.subclass(Cup)
 
 
 class Cap(rigid.Cap, Box):
@@ -247,9 +246,6 @@ class Cap(rigid.Cap, Box):
         return self.cup_factory(self.left, self.right)
 
 
-Diagram.cap_factory = Factory.subclass(Cap)
-
-
 Sum, Bubble, Eval, Coeval, Curry = (
     Diagram.sum_factory, Diagram.bubble_factory, Diagram.eval_factory,
     Diagram.coeval_factory, Diagram.curry_factory)
@@ -261,6 +257,7 @@ Exp, Over, Under = Ty.exp_factory, Ty.over_factory, Ty.under_factory
 TermBase, Constant, Variable, Application, Abstraction = (
     Diagram.term_factory, Diagram.constant_factory, Diagram.variable_factory,
     Diagram.application_factory, Diagram.abstraction_factory)
+Layer = Diagram.layer_factory
 Id = Diagram.id
 
 

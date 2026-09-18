@@ -60,7 +60,7 @@ indices. Swaps, cups and caps become wiring while spiders stay as boxes.
 from __future__ import annotations
 
 from itertools import count
-from typing import TYPE_CHECKING, Sequence
+from typing import ClassVar, Sequence, TYPE_CHECKING
 
 from discopy import (
     cat, monoidal, rigid, frobenius, cmap, config)
@@ -519,6 +519,11 @@ class Diagram(NamedGeneric['dtype'], frobenius.Diagram):
     vector[::-1] >> vector >> Dim(2) @ vector
     """
     ob = Dim
+    generator_factory: ClassVar[Factory[..., "Box"]] = Factory.subclass("Box")
+    permutation_factory: ClassVar[Factory[..., "Permutation"]]\
+        = Factory.subclass("Permutation")
+    bubble_factory: ClassVar[Factory[..., "Bubble"]]\
+        = Factory.subclass("Bubble")
 
     def eval(self, dtype: type = None, optimize="greedy",
              **params) -> Tensor:
@@ -765,9 +770,6 @@ class Box(frobenius.Box, Diagram):
         return (self.name, self.dom, self.cod, self.dtype) + data
 
 
-Diagram.generator_factory = Factory.subclass(Box)
-
-
 Cup, Cap = Diagram.cup_factory, Diagram.cap_factory
 
 
@@ -779,9 +781,6 @@ class Permutation(frobenius.Permutation, Box):
         doms = [Dim(getattr(dim.inside[0], 'dim', dim.inside[0]))
                 for dim in self.dom]
         return Tensor.permutation(self.perm, doms).array
-
-
-Diagram.permutation_factory = Factory.subclass(Permutation)
 
 
 Swap, Spider, Sum, Eval, Coeval, Curry, Copy, Merge, Discard = (
@@ -862,12 +861,10 @@ class Bubble(frobenius.Bubble, Box):
             @ self.arg.grad(var) >> Spider(2, 1, self.cod)
 
 
-Diagram.bubble_factory = Factory.subclass(Bubble)
-
-
 TermBase, Constant, Variable, Application, Abstraction = (
     Diagram.term_factory, Diagram.constant_factory, Diagram.variable_factory,
     Diagram.application_factory, Diagram.abstraction_factory)
+Layer = Diagram.layer_factory
 Id = Diagram.id
 
 

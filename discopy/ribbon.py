@@ -79,6 +79,8 @@ cap becomes a ribbon folding back.
     :align: center
 """
 
+from typing import ClassVar
+
 from discopy import pivotal, balanced
 from discopy.abc import RibbonCategory
 from discopy.cat import factory, Factory
@@ -95,6 +97,11 @@ class Diagram(pivotal.Diagram, balanced.Diagram, RibbonCategory):
         dom (pivotal.Ty) : The domain of the diagram, i.e. its input.
         cod (pivotal.Ty) : The codomain of the diagram, i.e. its output.
     """
+    braid_factory: ClassVar[Factory[..., "Braid"]] = Factory.subclass("Braid")
+    twist_factory: ClassVar[Factory[..., "Twist"]] = Factory.subclass("Twist")
+    functor_factory: ClassVar[Factory[..., "Functor"]]\
+        = Factory.subclass("Functor")
+
     def trace(self, n=1, left=False):
         """
         The trace of a ribbon diagram.
@@ -173,9 +180,6 @@ class Braid(balanced.Braid, Box):
         del left
         braid = type(self)(*self.cod.r)
         return braid.dagger() if self.is_dagger else braid
-
-
-Diagram.braid_factory = Factory.subclass(Braid)
 
 
 class DualRailBraid(balanced.DualRailBraid, Box):
@@ -265,9 +269,6 @@ class Twist(balanced.Twist, Box):
         return self
 
 
-Diagram.twist_factory = Factory.subclass(Twist)
-
-
 Sum, Bubble, Eval, Coeval, Curry = (
     Diagram.sum_factory, Diagram.bubble_factory, Diagram.eval_factory,
     Diagram.coeval_factory, Diagram.curry_factory)
@@ -289,9 +290,6 @@ class Functor(pivotal.Functor, balanced.Functor):
         if isinstance(other, balanced.Braid):
             return balanced.Functor.__call__(self, other)
         return pivotal.Functor.__call__(self, other)
-
-
-Diagram.functor_factory = Factory.subclass(Functor)
 
 
 class DualRail(balanced.DualRail, Functor):
@@ -329,6 +327,7 @@ Diagram.dual_rail_factory = DualRail
 TermBase, Constant, Variable, Application, Abstraction = (
     Diagram.term_factory, Diagram.constant_factory, Diagram.variable_factory,
     Diagram.application_factory, Diagram.abstraction_factory)
+Layer = Diagram.layer_factory
 Id = Diagram.id
 
 

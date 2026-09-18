@@ -34,6 +34,8 @@ The axiom for the twist holds on the nose.
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 from copy import copy
 from dataclasses import dataclass
 
@@ -131,6 +133,9 @@ class Diagram(braided.Diagram, traced.Diagram, BalancedCategory):
 
     .. _nLab: https://ncatlab.org/nlab/show/traced+monoidal+category)
     """
+    twist_factory: ClassVar[Factory[..., "Twist"]] = Factory.subclass("Twist")
+    functor_factory: ClassVar[Factory[..., "Functor"]]\
+        = Factory.subclass("Functor")
 
     @classmethod
     def twist(cls, dom: monoidal.Ty) -> Diagram:
@@ -266,9 +271,6 @@ class Twist(Box):
         return type(self)(self.dom, not self.is_dagger)
 
 
-Diagram.twist_factory = Factory.subclass(Twist)
-
-
 Trace, Sum, Bubble = (
     Diagram.trace_factory, Diagram.sum_factory, Diagram.bubble_factory)
 
@@ -292,9 +294,6 @@ class Functor(braided.Functor, traced.Functor):
         if isinstance(other, Trace):
             return traced.Functor.__call__(self, other)
         return braided.Functor.__call__(self, other)
-
-
-Diagram.functor_factory = Factory.subclass(Functor)
 
 
 class DualRail(Functor):
@@ -338,6 +337,7 @@ class DualRail(Functor):
 CMap = cmap.CMap[Diagram]
 Hypergraph = hypergraph.Hypergraph[Diagram]
 Diagram.dual_rail_factory = DualRail
+Layer = Diagram.layer_factory
 Id = Diagram.id
 
 

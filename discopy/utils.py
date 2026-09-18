@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import json
+import sys
 from functools import lru_cache, wraps
 from math import ceil
 from pathlib import Path
@@ -691,8 +692,9 @@ class Factory[**P, T]:
     ``Functor`` its ``Diagram`` as ``dom`` and ``cod``. A generator is built
     once per module and a class attribute assigned by hand wins.
     :meth:`classmethod` declares a factory that is behaviour rather than a
-    class, e.g. the trace of a pivotal diagram. A factory assigned after its
-    class is created finds its owner on first access.
+    class, e.g. the trace of a pivotal diagram, and :meth:`alias` one that
+    is another factory of the same category, e.g. the braid of a symmetric
+    category is its swap.
 
     Example
     -------
@@ -701,14 +703,28 @@ class Factory[**P, T]:
     >>> assert closed.Swap.__bases__ == (
     ...     markov.Swap, closed.Permutation, closed.Box, closed.Diagram)
     """
-    def __init__(self, root: Callable[P, T] = None,
-                 method: Callable[Concatenate[Any, P], T] = None):
-        self.root, self.method = root, method
+    def __init__(self, root: Callable[P, T] | str = None,
+                 method: Callable[Concatenate[Any, P], T] = None,
+                 aliased: str = None):
+        self.root, self.method, self.aliased = root, method, aliased
 
     @classmethod
-    def subclass[**Q, U](cls, root: Callable[Q, U]) -> Factory[Q, U]:
-        """ The factory building a subclass of ``root`` at every level. """
+    def subclass[**Q, U](cls, root: Callable[Q, U] | str) -> Factory[Q, U]:
+        """
+        The factory building a subclass of ``root`` at every level, given
+        either the class or its name in the module of the category that
+        declares the factory, so that a generator defined after its
+        category is still declared in the body of the class.
+        """
         return Factory(root=root)
+
+    @classmethod
+    def alias(cls, name: str) -> Factory[..., Any]:
+        """
+        The factory named ``name`` on the same category, e.g. the braid of
+        a symmetric category is its swap.
+        """
+        return Factory(aliased=name)
 
     @classmethod
     def classmethod[**Q, U](
@@ -719,13 +735,6 @@ class Factory[**P, T]:
     def __set_name__(self, owner: type, name: str):
         self.owner, self.name, self.cache = owner, name, {}
 
-    def locate(self, cls: type):
-        """ Find the owner and name of a factory assigned after creation. """
-        for klass in cls.__mro__:
-            for name, value in vars(klass).items():
-                if value is self:
-                    return self.__set_name__(klass, name)
-
     @overload
     def __get__(self, instance: None, cls: type) -> Callable[P, T]: ...
 
@@ -733,10 +742,12 @@ class Factory[**P, T]:
     def __get__(self, instance: object, cls: type) -> Callable[P, T]: ...
 
     def __get__(self, instance, cls: type) -> Callable[P, T]:
-        if not hasattr(self, "owner"):
-            self.locate(cls)
+        if self.aliased is not None:
+            return getattr(cls, self.aliased)
         if self.method is not None:
             return MethodType(self.method, cls)
+        if isinstance(self.root, str):
+            self.root = getattr(sys.modules[self.owner.__module__], self.root)
         cls = cls.ar
         if cls not in self.cache:
             self.cache[cls] = self.root if cls is self.owner\
@@ -750,8 +761,7 @@ class Factory[**P, T]:
         :meth:`__get__`, so this is reached only by a factory taken out of
         the class where it is declared.
         """
-        return self.root(*args, **kwargs) if self.method is None\
-            else self.method(self.owner, *args, **kwargs)
+        return self.__get__(None, self.owner)(*args, **kwargs)
 
     def shared(self, cls: type) -> type | None:
         """ The generator of a base of ``cls`` defined in the same module. """
@@ -770,10 +780,16 @@ class Factory[**P, T]:
                      if getattr(self.owner, name) is base)
 
     def build(self, cls: type) -> type:
-        """ The subclass of the generators of the bases of ``cls``. """
+        """
+        The subclass of the generators of the bases of ``cls``, or the root
+        itself when no base of ``cls`` has one, i.e. when ``cls`` is outside
+        the hierarchy of the category that declares the generator.
+        """
         roots = dict.fromkeys(
             root for base in cls.__bases__
             if isinstance(root := getattr(base, self.name, None), type))
+        if not roots:
+            return self.root
         parents = [getattr(cls, name) for name in self.parents]
         root, *_ = roots
         level = (cls, ) if issubclass(self.root, self.owner) else ()
