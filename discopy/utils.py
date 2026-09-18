@@ -11,6 +11,7 @@ from pathlib import Path
 from types import MethodType
 from typing import (
     Callable,
+    Concatenate,
     Generic,
     Mapping,
     Iterable,
@@ -18,6 +19,7 @@ from typing import (
     Any,
     Collection,
     NamedTuple,
+    overload,
     TYPE_CHECKING,
 )
 
@@ -673,10 +675,11 @@ class classproperty(object):
         return self.f(x)
 
 
-class Factory:
+class Factory[**P, T]:
     """
     The factory of a generator, e.g. ``Swap`` in ``symmetric.Diagram``,
-    declared once on the category that introduces it.
+    declared once on the category that introduces it, taking the parameters
+    ``P`` of the generator to an instance ``T`` of it.
 
     :meth:`subclass` declares the class of the generator: on that category
     the attribute is the class itself, on any other category decorated with
@@ -698,18 +701,20 @@ class Factory:
     >>> assert closed.Swap.__bases__ == (
     ...     markov.Swap, closed.Permutation, closed.Box, closed.Diagram)
     """
-    def __init__(self, root: type = None, method: Callable = None):
+    def __init__(self, root: Callable[P, T] = None,
+                 method: Callable[Concatenate[Any, P], T] = None):
         self.root, self.method = root, method
 
     @classmethod
-    def subclass(cls, root: type) -> Factory:
+    def subclass[**Q, U](cls, root: Callable[Q, U]) -> Factory[Q, U]:
         """ The factory building a subclass of ``root`` at every level. """
-        return cls(root=root)
+        return Factory(root=root)
 
     @classmethod
-    def classmethod(cls, method: Callable) -> Factory:
+    def classmethod[**Q, U](
+            cls, method: Callable[Concatenate[Any, Q], U]) -> Factory[Q, U]:
         """ The factory calling ``method`` on the category. """
-        return cls(method=method)
+        return Factory(method=method)
 
     def __set_name__(self, owner: type, name: str):
         self.owner, self.name, self.cache = owner, name, {}
@@ -721,7 +726,13 @@ class Factory:
                 if value is self:
                     return self.__set_name__(klass, name)
 
-    def __get__(self, _, cls: type) -> type:
+    @overload
+    def __get__(self, instance: None, cls: type) -> Callable[P, T]: ...
+
+    @overload
+    def __get__(self, instance: object, cls: type) -> Callable[P, T]: ...
+
+    def __get__(self, instance, cls: type) -> Callable[P, T]:
         if not hasattr(self, "owner"):
             self.locate(cls)
         if self.method is not None:
@@ -731,6 +742,16 @@ class Factory:
             self.cache[cls] = self.root if cls is self.owner\
                 else self.shared(cls) or self.build(cls)
         return self.cache[cls]
+
+    def __call__(self, *args: P.args, **kwargs: P.kwargs) -> T:
+        """
+        Call the factory of the category that declares it, e.g. the ``Swap``
+        of ``symmetric.Diagram``. Attribute access goes through
+        :meth:`__get__`, so this is reached only by a factory taken out of
+        the class where it is declared.
+        """
+        return self.root(*args, **kwargs) if self.method is None\
+            else self.method(self.owner, *args, **kwargs)
 
     def shared(self, cls: type) -> type | None:
         """ The generator of a base of ``cls`` defined in the same module. """

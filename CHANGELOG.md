@@ -20,7 +20,11 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   and `Diagram.swap_factory = Swap`; a level adding behaviour declares it
   again, a factory that is behaviour rather than a class is a
   `Factory.classmethod`, e.g. the trace of a pivotal diagram, and a class
-  attribute assigned by hand still wins. Fifty-six
+  attribute assigned by hand still wins. `Factory[**P, T]` is generic in
+  the parameters of its generator and the instance it builds, `subclass`
+  and `classmethod` scoping their own so that a declaration carries the
+  signature of its root; `__get__` returns `Callable[P, T]` and `__call__`
+  takes `P` to `T`, for a factory read off the class that declares it. Fifty-six
   trivial subclasses go, and every generator a level builds (bubbles,
   sums, traces, copies, merges, evaluations) is a diagram of that level
   rather than of the level that introduced it. Roots initialise through

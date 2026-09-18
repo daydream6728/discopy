@@ -125,6 +125,16 @@ def test_generator():
     assert feedback.Swap(y, y).delay().dom == y.delay() @ y.delay()
 
 
+def test_Factory_call():
+    """ A factory taken out of its class calls the generator of its owner. """
+    from discopy import symmetric
+    x = symmetric.Ty('x')
+    swap = vars(symmetric.Diagram)["swap_factory"]
+    twist = vars(symmetric.Diagram)["twist_factory"]
+    assert swap(x, x) == symmetric.Swap(x, x)
+    assert twist(x) == symmetric.Diagram.id(x)
+
+
 def test_generator_override():
     from discopy import symmetric, tensor
 
