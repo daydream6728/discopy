@@ -42,7 +42,7 @@ class Diagram(tensor.Diagram[complex]):
     """ ZX Diagram. """
     ob = Nat
     spider_factory = tensor.Spider
-    swap_factory: ClassVar[Factory[..., "Swap"]] = Factory.subclass("Swap")
+    swap_factory: ClassVar[Factory[..., "Swap"]]
 
     @staticmethod
     def swap(left, right):
@@ -240,6 +240,9 @@ class Swap(Permutation, tensor.Swap[complex], Box):
         return "SWAP"
 
     __str__ = __repr__
+
+
+Diagram.swap_factory = Factory.subclass(Swap)
 
 
 class Spider(tensor.Spider[complex], Box):

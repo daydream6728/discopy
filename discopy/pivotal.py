@@ -121,9 +121,9 @@ class Diagram(rigid.Diagram, traced.Diagram, PivotalCategory):
         cod (Ty) : The codomain of the diagram, i.e. its output.
     """
     ob = Ty
-    generator_factory: ClassVar[Factory[..., "Box"]] = Factory.subclass("Box")
-    cup_factory: ClassVar[Factory[..., "Cup"]] = Factory.subclass("Cup")
-    cap_factory: ClassVar[Factory[..., "Cap"]] = Factory.subclass("Cap")
+    generator_factory: ClassVar[Factory[..., "Box"]]
+    cup_factory: ClassVar[Factory[..., "Cup"]]
+    cap_factory: ClassVar[Factory[..., "Cap"]]
 
     def dagger(self):
         """
@@ -218,6 +218,9 @@ class Box(rigid.Box, traced.Box, Diagram):
         return result
 
 
+Diagram.generator_factory = Factory.subclass(Box)
+
+
 class Cup(rigid.Cup, Box):
     """
     A pivotal cup is a rigid cup of pivotal types.
@@ -232,6 +235,9 @@ class Cup(rigid.Cup, Box):
         return self.cap_factory(self.left, self.right)
 
 
+Diagram.cup_factory = Factory.subclass(Cup)
+
+
 class Cap(rigid.Cap, Box):
     """
     A pivotal cap is a rigid cap of pivotal types.
@@ -244,6 +250,9 @@ class Cap(rigid.Cap, Box):
     def dagger(self) -> Cup:
         """ The dagger of a pivotal cap. """
         return self.cup_factory(self.left, self.right)
+
+
+Diagram.cap_factory = Factory.subclass(Cap)
 
 
 Sum, Bubble, Eval, Coeval, Curry = (

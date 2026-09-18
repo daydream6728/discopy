@@ -148,9 +148,8 @@ class Diagram(monoidal.Diagram, TracedCategory):
         dom (monoidal.Ty) : The domain of the diagram, i.e. its input.
         cod (monoidal.Ty) : The codomain of the diagram, i.e. its output.
     """
-    trace_factory: ClassVar[Factory[..., "Trace"]] = Factory.subclass("Trace")
-    functor_factory: ClassVar[Factory[..., "Functor"]]\
-        = Factory.subclass("Functor")
+    trace_factory: ClassVar[Factory[..., "Trace"]]
+    functor_factory: ClassVar[Factory[..., "Functor"]]
 
     def trace(self, n=1, left=False):
         """
@@ -217,6 +216,9 @@ class Trace(Box, monoidal.Bubble):
         return self.ar.to_drawing(self)
 
 
+Diagram.trace_factory = Factory.subclass(Trace)
+
+
 Sum, Bubble = Diagram.sum_factory, Diagram.bubble_factory
 
 
@@ -261,6 +263,9 @@ class Functor(monoidal.Functor):
             n = len(self(other.arg.dom)) - len(self(other.dom))
             return self.cod.trace(self(other.arg), n, left=other.left)
         return super().__call__(other)
+
+
+Diagram.functor_factory = Factory.subclass(Functor)
 
 
 CMap = cmap.CMap[Diagram]

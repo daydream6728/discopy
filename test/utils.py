@@ -125,6 +125,29 @@ def test_generator():
     assert feedback.Swap(y, y).delay().dom == y.delay() @ y.delay()
 
 
+def test_Factory_late_binding():
+    """ A factory bound below its generator is inherited and locates itself. """
+    from discopy import cat, compact, frobenius
+    from discopy.utils import Factory
+
+    @factory
+    class Base(cat.Arrow):
+        pass
+
+    class Generator(cat.Box, Base):
+        pass
+
+    Base.generator_factory = Factory.subclass(Generator)
+
+    @factory
+    class Sub(Base):
+        pass
+
+    assert Sub.generator_factory is Generator is Base.generator_factory
+    assert compact.Diagram.cup_factory is compact.Cup
+    assert frobenius.Diagram.cap_factory is frobenius.Cap
+
+
 def test_Factory_alias():
     """ A factory can be another factory of the same category. """
     from discopy import symmetric, closed

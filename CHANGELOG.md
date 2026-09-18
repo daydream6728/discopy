@@ -9,12 +9,12 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Added
 
-- `utils.Factory` declares the factory of a generator once, in the body of
-  the category that introduces it, e.g.
-  `swap_factory = Factory.subclass("Swap")` in `symmetric.Diagram`: a
-  generator defined further down is named by a forward reference, resolved
-  in the module of its category on first access, and a `ClassVar`
-  annotation says what the factory builds. Every level below
+- `utils.Factory` declares the factory of a generator once, on the
+  category that introduces it: a `ClassVar` annotation in the body of
+  `symmetric.Diagram` says that its `swap_factory` builds a `Swap`, and
+  `Diagram.swap_factory = Factory.subclass(Swap)` binds it below the class
+  it names, `Factory.locate` finding the owner that
+  `__set_name__` never saw. Every level below
   gets its own subclass built on first access, extending the swaps of its
   bases, the generators its root extends (a swap is a permutation, a
   discard a copy) and the level itself, so a module writes
@@ -26,9 +26,9 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   a symmetric category is its swap, and a class attribute assigned by hand
   still wins. `Factory[**P, T]` is generic in
   the parameters of its generator and the instance it builds, `subclass`
-  and `classmethod` scoping their own, so that a declaration by class
-  carries the signature of its root and one by name the `ClassVar`
-  annotation beside it; `__get__` returns `Callable[P, T]` and `__call__`
+  and `classmethod` scoping their own, so that a binding carries the
+  signature of its root and a `ClassVar` spelling that signature out is
+  checked against it; `__get__` returns `Callable[P, T]` and `__call__`
   takes `P` to `T`, for a factory read off the class that declares it. Fifty-six
   trivial subclasses go, and every generator a level builds (bubbles,
   sums, traces, copies, merges, evaluations) is a diagram of that level

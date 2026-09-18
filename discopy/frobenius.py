@@ -128,10 +128,8 @@ class Diagram(compact.Diagram, markov.Diagram, HypergraphCategory):
     """
 
     ob = Ty
-    spider_factory: ClassVar[Factory[..., "Spider"]]\
-        = Factory.subclass("Spider")
-    functor_factory: ClassVar[Factory[..., "Functor"]]\
-        = Factory.subclass("Functor")
+    spider_factory: ClassVar[Factory[..., "Spider"]]
+    functor_factory: ClassVar[Factory[..., "Functor"]]
 
     @classmethod
     def caps(cls, left, right):
@@ -247,6 +245,9 @@ class Spider(Box):
             len(self.dom), len(self.cod), self.typ, self.phase)
 
 
+Diagram.spider_factory = Factory.subclass(Spider)
+
+
 Sum, Bubble, Eval, Coeval, Curry, Copy, Merge, Discard = (
     Diagram.sum_factory, Diagram.bubble_factory, Diagram.eval_factory,
     Diagram.coeval_factory, Diagram.curry_factory, Diagram.copy_factory,
@@ -273,6 +274,9 @@ class Functor(compact.Functor, markov.Functor):
         if isinstance(other, (markov.Copy, markov.Merge)):
             return markov.Functor.__call__(self, other)
         return compact.Functor.__call__(self, other)
+
+
+Diagram.functor_factory = Factory.subclass(Functor)
 
 
 def interleaving(cls: type, factory: Callable

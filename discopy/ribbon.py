@@ -97,10 +97,9 @@ class Diagram(pivotal.Diagram, balanced.Diagram, RibbonCategory):
         dom (pivotal.Ty) : The domain of the diagram, i.e. its input.
         cod (pivotal.Ty) : The codomain of the diagram, i.e. its output.
     """
-    braid_factory: ClassVar[Factory[..., "Braid"]] = Factory.subclass("Braid")
-    twist_factory: ClassVar[Factory[..., "Twist"]] = Factory.subclass("Twist")
-    functor_factory: ClassVar[Factory[..., "Functor"]]\
-        = Factory.subclass("Functor")
+    braid_factory: ClassVar[Factory[..., "Braid"]]
+    twist_factory: ClassVar[Factory[..., "Twist"]]
+    functor_factory: ClassVar[Factory[..., "Functor"]]
 
     def trace(self, n=1, left=False):
         """
@@ -180,6 +179,9 @@ class Braid(balanced.Braid, Box):
         del left
         braid = type(self)(*self.cod.r)
         return braid.dagger() if self.is_dagger else braid
+
+
+Diagram.braid_factory = Factory.subclass(Braid)
 
 
 class DualRailBraid(balanced.DualRailBraid, Box):
@@ -269,6 +271,9 @@ class Twist(balanced.Twist, Box):
         return self
 
 
+Diagram.twist_factory = Factory.subclass(Twist)
+
+
 Sum, Bubble, Eval, Coeval, Curry = (
     Diagram.sum_factory, Diagram.bubble_factory, Diagram.eval_factory,
     Diagram.coeval_factory, Diagram.curry_factory)
@@ -290,6 +295,9 @@ class Functor(pivotal.Functor, balanced.Functor):
         if isinstance(other, balanced.Braid):
             return balanced.Functor.__call__(self, other)
         return pivotal.Functor.__call__(self, other)
+
+
+Diagram.functor_factory = Factory.subclass(Functor)
 
 
 class DualRail(balanced.DualRail, Functor):

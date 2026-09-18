@@ -189,13 +189,11 @@ class Circuit(tensor.Diagram[complex]):
     """
     ob = Ty
     discard_factory = tensor.Discard
-    generator_factory: ClassVar[Factory[..., "Box"]] = Factory.subclass("Box")
-    sum_factory: ClassVar[Factory[..., "Sum"]] = Factory.subclass("Sum")
-    permutation_factory: ClassVar[Factory[..., "Permutation"]]\
-        = Factory.subclass("Permutation")
-    swap_factory: ClassVar[Factory[..., "Swap"]] = Factory.subclass("Swap")
-    functor_factory: ClassVar[Factory[..., "Functor"]]\
-        = Factory.subclass("Functor")
+    generator_factory: ClassVar[Factory[..., "Box"]]
+    sum_factory: ClassVar[Factory[..., "Sum"]]
+    permutation_factory: ClassVar[Factory[..., "Permutation"]]
+    swap_factory: ClassVar[Factory[..., "Swap"]]
+    functor_factory: ClassVar[Factory[..., "Functor"]]
 
     @classmethod
     def id(cls, dom: int | Ty = None):
@@ -903,6 +901,9 @@ class Box(tensor.Box[complex], Circuit):
         return self if self.z is None else super().rotate(left)
 
 
+Circuit.generator_factory = Factory.subclass(Box)
+
+
 class Sum(tensor.Sum[complex], Box):
     """ Sums of circuits. """
     @property
@@ -937,6 +938,9 @@ class Sum(tensor.Sum[complex], Box):
         return [circuit.to_tk() for circuit in self.terms]
 
 
+Circuit.sum_factory = Factory.subclass(Sum)
+
+
 class Permutation(tensor.Permutation[complex], Box):
     "A permutation in a quantum circuit."
 
@@ -949,6 +953,9 @@ class Permutation(tensor.Permutation[complex], Box):
     def is_classical(self):
         return not self.is_mixed\
             and all(isinstance(x.inside[0], Digit) for x in self.dom)
+
+
+Circuit.permutation_factory = Factory.subclass(Permutation)
 
 
 class Swap(Permutation, tensor.Swap, Box):
@@ -967,6 +974,9 @@ class Swap(Permutation, tensor.Swap, Box):
         return Tensor[complex].swap(Dim(left.dim), Dim(right.dim)).array
 
 
+Circuit.swap_factory = Factory.subclass(Swap)
+
+
 class Functor(frobenius.Functor):
     """ :class:`Circuit`-valued functor. """
     dom = cod = Circuit
@@ -976,6 +986,9 @@ class Functor(frobenius.Functor):
             ob_map = {x: qubit ** y if isinstance(y, int) else y
                       for x, y in ob_map.items()}
         super().__init__(ob_map, ar_map, dom=dom, cod=cod)
+
+
+Circuit.functor_factory = Factory.subclass(Functor)
 
 
 def index2bitstring(i: int, length: int) -> tuple[int, ...]:

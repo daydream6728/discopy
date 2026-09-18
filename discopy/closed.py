@@ -81,7 +81,7 @@ class Ty(biclosed.Ty):
         :align: center
     """
     over_factory = under_factory = Factory.alias("exp_factory")
-    exp_factory: ClassVar[Factory[..., "Exp"]] = Factory.subclass("Exp")
+    exp_factory: ClassVar[Factory[..., "Exp"]]
 
 
 Wire = Ty.generator_factory
@@ -96,6 +96,9 @@ class Exp(biclosed.Exp, Wire):
         return f"({self.exponent} >> {self.base})"
 
 
+Ty.exp_factory = Factory.subclass(Exp)
+
+
 @factory
 class Diagram(markov.Diagram, biclosed.Diagram, ClosedCategory):
     """
@@ -104,19 +107,13 @@ class Diagram(markov.Diagram, biclosed.Diagram, ClosedCategory):
     A diagram applied to another post-composes their tensor with an `Eval`.
     """
     ob = Ty
-    eval_factory: ClassVar[Factory[..., "Eval"]] = Factory.subclass("Eval")
-    functor_factory: ClassVar[Factory[..., "Functor"]]\
-        = Factory.subclass("Functor")
-    term_factory: ClassVar[Factory[..., "TermBase"]]\
-        = Factory.subclass("TermBase")
-    constant_factory: ClassVar[Factory[..., "Constant"]]\
-        = Factory.subclass("Constant")
-    variable_factory: ClassVar[Factory[..., "Variable"]]\
-        = Factory.subclass("Variable")
-    application_factory: ClassVar[Factory[..., "Application"]]\
-        = Factory.subclass("Application")
-    abstraction_factory: ClassVar[Factory[..., "Abstraction"]]\
-        = Factory.subclass("Abstraction")
+    eval_factory: ClassVar[Factory[..., "Eval"]]
+    functor_factory: ClassVar[Factory[..., "Functor"]]
+    term_factory: ClassVar[Factory[..., "TermBase"]]
+    constant_factory: ClassVar[Factory[..., "Constant"]]
+    variable_factory: ClassVar[Factory[..., "Variable"]]
+    application_factory: ClassVar[Factory[..., "Application"]]
+    abstraction_factory: ClassVar[Factory[..., "Abstraction"]]
 
     @property
     def is_linear(self):
@@ -169,6 +166,9 @@ class Eval(biclosed.Eval, Box):
     drawing_name = "__call__"
 
 
+Diagram.eval_factory = Factory.subclass(Eval)
+
+
 Coeval, Curry, Permutation, Swap, Trace, Copy, Merge, Discard, Sum, Bubble = (
     Diagram.coeval_factory, Diagram.curry_factory,
     Diagram.permutation_factory, Diagram.swap_factory, Diagram.trace_factory,
@@ -196,6 +196,9 @@ class Functor(biclosed.Functor, markov.Functor):
         return super().__call__(other)
 
 
+Diagram.functor_factory = Factory.subclass(Functor)
+
+
 CMap = cmap.CMap[Diagram]
 
 
@@ -215,6 +218,9 @@ class TermBase(Box, biclosed.TermBase):
         return Application(self, other, left=False)
 
 
+Diagram.term_factory = Factory.subclass(TermBase)
+
+
 type Term = Constant | Variable | Application | Abstraction
 
 
@@ -227,6 +233,9 @@ class Constant(TermBase, biclosed.Constant):
             functor)
 
 
+Diagram.constant_factory = Factory.subclass(Constant)
+
+
 class Variable(TermBase, biclosed.Variable):
     def eval(self, functor=None, context=None):
         functor = functor or self.functor
@@ -236,6 +245,9 @@ class Variable(TermBase, biclosed.Variable):
             functor.cod.id(functor(x.cod)) if x == self
             else functor.cod.discard(functor(x.cod))
             for x in context.inside])
+
+
+Diagram.variable_factory = Factory.subclass(Variable)
 
 
 class Application(TermBase, biclosed.Application):
@@ -260,6 +272,9 @@ class Application(TermBase, biclosed.Application):
             >> func @ args >> evaluate
 
 
+Diagram.application_factory = Factory.subclass(Application)
+
+
 class Abstraction(TermBase, biclosed.Abstraction):
     def __check_dom__(self):
         self.freevars = [x for x in self.body.freevars if x != self.var]
@@ -281,6 +296,9 @@ class Abstraction(TermBase, biclosed.Abstraction):
         p = [i] + [j for j in range(n) if j != i]
         doms = [self.ob(wire) for wire in body.dom.inside]
         return (body.permutation(p, doms).dagger() >> body).curry(left=False)
+
+
+Diagram.abstraction_factory = Factory.subclass(Abstraction)
 
 
 @dataclass

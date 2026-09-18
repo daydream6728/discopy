@@ -77,16 +77,11 @@ class Diagram(biclosed.Diagram):
     A categorial diagram is a biclosed diagram with rules and words as boxes.
     """
     ob = Ty
-    functor_factory: ClassVar[Factory[..., "Functor"]]\
-        = Factory.subclass("Functor")
-    term_factory: ClassVar[Factory[..., "TermBase"]]\
-        = Factory.subclass("TermBase")
-    constant_factory: ClassVar[Factory[..., "Constant"]]\
-        = Factory.subclass("Constant")
-    variable_factory: ClassVar[Factory[..., "Variable"]]\
-        = Factory.subclass("Variable")
-    abstraction_factory: ClassVar[Factory[..., "Abstraction"]]\
-        = Factory.subclass("Abstraction")
+    functor_factory: ClassVar[Factory[..., "Functor"]]
+    term_factory: ClassVar[Factory[..., "TermBase"]]
+    constant_factory: ClassVar[Factory[..., "Constant"]]
+    variable_factory: ClassVar[Factory[..., "Variable"]]
+    abstraction_factory: ClassVar[Factory[..., "Abstraction"]]
 
     @Factory.classmethod
     def application_factory(cls, func, args, left=False):
@@ -209,6 +204,9 @@ class Functor(biclosed.Functor):
         return super().__call__(other)
 
 
+Diagram.functor_factory = Factory.subclass(Functor)
+
+
 CMap = cmap.CMap[Diagram]
 
 
@@ -223,6 +221,9 @@ class TermBase(Box, biclosed.TermBase):
         return BA(self, other) if left else FA(self, other)
 
 
+Diagram.term_factory = Factory.subclass(TermBase)
+
+
 class Constant(TermBase, biclosed.Constant):
     def __init__(self, name: str, cod: Ty):
         biclosed.Constant.__init__(self, name, cod)
@@ -232,9 +233,15 @@ class Constant(TermBase, biclosed.Constant):
         return self
 
 
+Diagram.constant_factory = Factory.subclass(Constant)
+
+
 class Variable(TermBase, biclosed.Variable):
     def simplify(self):
         return self
+
+
+Diagram.variable_factory = Factory.subclass(Variable)
 
 
 class Abstraction(TermBase, biclosed.Abstraction):
@@ -248,6 +255,9 @@ class Abstraction(TermBase, biclosed.Abstraction):
 
     def simplify(self):
         return Abstraction(self.var, self.body.simplify(), self.left)
+
+
+Diagram.abstraction_factory = Factory.subclass(Abstraction)
 
 
 class FA(TermBase, biclosed.Application):

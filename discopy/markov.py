@@ -118,12 +118,10 @@ class Diagram(symmetric.Diagram, MarkovCategory):
 
     .. image:: /_static/markov/copy_and_apply.svg
     """
-    copy_factory: ClassVar[Factory[..., "Copy"]] = Factory.subclass("Copy")
-    merge_factory: ClassVar[Factory[..., "Merge"]] = Factory.subclass("Merge")
-    discard_factory: ClassVar[Factory[..., "Discard"]]\
-        = Factory.subclass("Discard")
-    functor_factory: ClassVar[Factory[..., "Functor"]]\
-        = Factory.subclass("Functor")
+    copy_factory: ClassVar[Factory[..., "Copy"]]
+    merge_factory: ClassVar[Factory[..., "Merge"]]
+    discard_factory: ClassVar[Factory[..., "Discard"]]
+    functor_factory: ClassVar[Factory[..., "Functor"]]
 
     @Factory.classmethod
     def spider_factory(cls, n_legs_in, n_legs_out, typ, phase=None):
@@ -198,6 +196,9 @@ class Copy(Box):
             factory_name(type(self)) + f"({repr(self.dom)}, {len(self.cod)})")
 
 
+Diagram.copy_factory = Factory.subclass(Copy)
+
+
 class Merge(Box):
     """
     The merge of an atomic type :code:`x` some :code:`n` number of times.
@@ -221,6 +222,9 @@ class Merge(Box):
             factory_name(type(self)) + f"({repr(self.cod)}, {len(self.dom)})")
 
 
+Diagram.merge_factory = Factory.subclass(Merge)
+
+
 class Discard(Copy):
     """
     The discard of an atomic type :code:`x`.
@@ -230,6 +234,9 @@ class Discard(Copy):
     """
     def __init__(self, x: monoidal.Ty, *args, **kwargs):
         super().__init__(x, 0)
+
+
+Diagram.discard_factory = Factory.subclass(Discard)
 
 
 Sum, Bubble = Diagram.sum_factory, Diagram.bubble_factory
@@ -274,6 +281,9 @@ class Functor(symmetric.Functor):
         if isinstance(other, Merge) and hasattr(self.cod, "merge"):
             return self.cod.merge(self(other.cod), len(other.dom))
         return super().__call__(other)
+
+
+Diagram.functor_factory = Factory.subclass(Functor)
 
 
 CMap = cmap.CMap[Diagram]

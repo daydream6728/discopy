@@ -5,7 +5,6 @@
 from __future__ import annotations
 
 import json
-import sys
 from functools import lru_cache, wraps
 from math import ceil
 from pathlib import Path
@@ -703,19 +702,14 @@ class Factory[**P, T]:
     >>> assert closed.Swap.__bases__ == (
     ...     markov.Swap, closed.Permutation, closed.Box, closed.Diagram)
     """
-    def __init__(self, root: Callable[P, T] | str = None,
+    def __init__(self, root: Callable[P, T] = None,
                  method: Callable[Concatenate[Any, P], T] = None,
                  aliased: str = None):
         self.root, self.method, self.aliased = root, method, aliased
 
     @classmethod
-    def subclass[**Q, U](cls, root: Callable[Q, U] | str) -> Factory[Q, U]:
-        """
-        The factory building a subclass of ``root`` at every level, given
-        either the class or its name in the module of the category that
-        declares the factory, so that a generator defined after its
-        category is still declared in the body of the class.
-        """
+    def subclass[**Q, U](cls, root: Callable[Q, U]) -> Factory[Q, U]:
+        """ The factory building a subclass of ``root`` at every level. """
         return Factory(root=root)
 
     @classmethod
@@ -735,6 +729,17 @@ class Factory[**P, T]:
     def __set_name__(self, owner: type, name: str):
         self.owner, self.name, self.cache = owner, name, {}
 
+    def locate(self, cls: type):
+        """
+        Find the owner and the name of a factory bound to its category
+        after the class is created, i.e. below the generator it declares,
+        so that :meth:`__set_name__` did not fire.
+        """
+        for klass in cls.__mro__:
+            for name, value in vars(klass).items():
+                if value is self:
+                    return self.__set_name__(klass, name)
+
     @overload
     def __get__(self, instance: None, cls: type) -> Callable[P, T]: ...
 
@@ -746,8 +751,8 @@ class Factory[**P, T]:
             return getattr(cls, self.aliased)
         if self.method is not None:
             return MethodType(self.method, cls)
-        if isinstance(self.root, str):
-            self.root = getattr(sys.modules[self.owner.__module__], self.root)
+        if not hasattr(self, "owner"):
+            self.locate(cls)
         cls = cls.ar
         if cls not in self.cache:
             self.cache[cls] = self.root if cls is self.owner\

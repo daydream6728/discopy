@@ -82,10 +82,8 @@ class Diagram(symmetric.Diagram, ribbon.Diagram, CompactCategory):
     ob = Ty
     layer_factory: ClassVar[Factory[..., Layer]]\
         = Factory.subclass(Layer)
-    permutation_factory: ClassVar[Factory[..., "Permutation"]]\
-        = Factory.subclass("Permutation")
-    functor_factory: ClassVar[Factory[..., "Functor"]]\
-        = Factory.subclass("Functor")
+    permutation_factory: ClassVar[Factory[..., "Permutation"]]
+    functor_factory: ClassVar[Factory[..., "Functor"]]
 
 
 Box, Cup, Cap = (
@@ -106,6 +104,9 @@ class Permutation(symmetric.Permutation, Box):
 
     l = property(lambda self: self.rotate(left=True))
     r = property(lambda self: self.rotate(left=False))
+
+
+Diagram.permutation_factory = Factory.subclass(Permutation)
 
 
 Swap, Sum, Bubble, Eval, Coeval, Curry = (
@@ -129,6 +130,9 @@ class Functor(symmetric.Functor, ribbon.Functor):
         if isinstance(other, (symmetric.Swap, symmetric.Permutation)):
             return symmetric.Functor.__call__(self, other)
         return ribbon.Functor.__call__(self, other)
+
+
+Diagram.functor_factory = Factory.subclass(Functor)
 
 
 CMap = cmap.CMap[Diagram]
