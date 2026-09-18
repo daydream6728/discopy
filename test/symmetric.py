@@ -190,7 +190,7 @@ def test_Layer_coalesces_plumbing():
         x, f, Permutation(y @ x @ y @ z, [0, 2, 1, 3]))
 
 
-def test_Layer_factory_ownership():
+def test_Layer_ownership():
     from discopy import compact, markov, symmetric
 
     for module in (compact, markov):
