@@ -192,8 +192,19 @@ class FreeCategory(Category):
     subclasses are free to expose a different, more user-friendly positional
     signature without breaking the machinery below. Subclasses check the
     type of what they put ``inside`` themselves, e.g. :class:`Arrow` its
-    ``generator_factory`` and :class:`discopy.monoidal.Diagram` its layers.
+    ``Box`` and :class:`discopy.monoidal.Diagram` its layers.
     """
+    @classmethod
+    def generates(cls, generator: type) -> type:
+        """
+        Declare ``generator`` as a generator of the category, bound under
+        its own name, e.g. ``@Diagram.generates`` above ``class Swap``.
+        """
+        binding = Generator.subclass(generator)
+        binding.__set_name__(cls, generator.__name__)
+        setattr(cls, generator.__name__, binding)
+        return generator
+
     def __init__(self, inside, dom, cod, _scan=True):
         ob = type(self).ob
         dom = dom if isinstance(dom, ob) else ob(dom)
@@ -306,14 +317,14 @@ class Arrow(FreeCategory, Testable["Arrow"]):
     see :class:`monoidal.Nat`.
     """
     ob = Ob
-    generator_factory: ClassVar[Generator[..., "Box"]]
-    sum_factory: ClassVar[Generator[..., "Sum"]]
-    bubble_factory: ClassVar[Generator[..., "Bubble"]]
+    Box: ClassVar[Generator[..., "Box"]]
+    Sum: ClassVar[Generator[..., "Sum"]]
+    Bubble: ClassVar[Generator[..., "Bubble"]]
 
     def __init__(self, inside, dom, cod, _scan=True):
         if _scan:
             for box in inside:
-                assert_isinstance(box, self.generator_factory)
+                assert_isinstance(box, self.Box)
         super().__init__(inside, dom, cod, _scan=_scan)
 
     @classmethod
@@ -334,7 +345,7 @@ class Arrow(FreeCategory, Testable["Arrow"]):
 
         def generators(dom=None, cod=None):
             """ Generator boxes between the given boundaries. """
-            return cls.generator_factory.strategy(
+            return cls.Box.strategy(
                 types=types, dom=dom, cod=cod)
 
         if dom is not None and cod is not None:
@@ -362,7 +373,7 @@ class Arrow(FreeCategory, Testable["Arrow"]):
         return ' >> '.join(map(str, self.inside)) or f"Id({self.dom})"
 
     def __add__(self, other):
-        return self.sum_factory((self, )) + other
+        return self.Sum((self, )) + other
 
     def __radd__(self, other):
         return self if other == 0 else NotImplemented
@@ -428,7 +439,7 @@ class Arrow(FreeCategory, Testable["Arrow"]):
         >>> assert Arrow.id('x') == Id('x') == Id(Ob('x'))
         """
         if any(isinstance(other, Sum) for other in others):
-            return self.sum_factory((self, )).then(*others)
+            return self.Sum((self, )).then(*others)
         return super().then(*others)
 
     @classmethod
@@ -440,11 +451,11 @@ class Arrow(FreeCategory, Testable["Arrow"]):
             dom : The domain of the empty sum.
             cod : The codomain of the empty sum.
         """
-        return cls.sum_factory((), dom, cod)
+        return cls.Sum((), dom, cod)
 
     def bubble(self, *args, **kwargs) -> Bubble:
         """ Unary operator on homsets. """
-        return self.bubble_factory(self, *args, **kwargs)
+        return self.Bubble(self, *args, **kwargs)
 
     @property
     def free_symbols(self) -> "set[sympy.Symbol]":
@@ -558,6 +569,7 @@ class Arrow(FreeCategory, Testable["Arrow"]):
 
 
 @total_ordering
+@Arrow.generates
 class Box(Arrow):
     """
     A box is an arrow with a :code:`name` and the tuple of just itself inside.
@@ -683,9 +695,7 @@ class Box(Arrow):
         return cls(name=name, dom=dom, cod=cod, data=data, is_dagger=is_dagger)
 
 
-Arrow.generator_factory = Generator.subclass(Box)
-
-
+@Arrow.generates
 class Sum(Box):
     """
     A sum is a tuple of arrows :code:`terms` with the same domain and codomain.
@@ -747,8 +757,8 @@ class Sum(Box):
     def __add__(self, other):
         assert_isparallel(self, other)
         other = other if isinstance(other, Sum)\
-            else self.sum_factory((other, ))
-        return self.sum_factory(self.terms + other.terms, self.dom, self.cod)
+            else self.Sum((other, ))
+        return self.Sum(self.terms + other.terms, self.dom, self.cod)
 
     def __iter__(self):
         for arrow in self.terms:
@@ -760,13 +770,13 @@ class Sum(Box):
     @unbiased
     def then(self, other):
         other = other if isinstance(other, Sum)\
-            else self.sum_factory((other, ))
+            else self.Sum((other, ))
         terms = tuple(f.then(g) for f in self.terms for g in other.terms)
-        return self.sum_factory(terms, self.dom, other.cod)
+        return self.Sum(terms, self.dom, other.cod)
 
     def dagger(self):
         terms = tuple(f.dagger() for f in self.terms)
-        return self.sum_factory(terms, self.cod, self.dom)
+        return self.Sum(terms, self.cod, self.dom)
 
     @property
     def free_symbols(self):
@@ -774,10 +784,10 @@ class Sum(Box):
 
     def subs(self, *args):
         terms = tuple(f.subs(*args) for f in self.terms)
-        return self.sum_factory(terms, self.dom, self.cod)
+        return self.Sum(terms, self.dom, self.cod)
 
     def lambdify(self, *symbols, **kwargs):
-        return lambda *xs: self.sum_factory(
+        return lambda *xs: self.Sum(
             tuple(box.lambdify(*symbols, **kwargs)(*xs) for box in self.terms),
             dom=self.dom, cod=self.cod)
 
@@ -795,9 +805,7 @@ class Sum(Box):
         return cls(terms=terms, dom=dom, cod=cod)
 
 
-Arrow.sum_factory = Generator.subclass(Sum)
-
-
+@Arrow.generates
 class Bubble(Box):
     """
     A bubble is a box with arrow :code:`args` inside and an optional pair of
@@ -877,9 +885,6 @@ class Bubble(Box):
         args = [tree['arg']] if 'args' not in tree else tree['args']
         dom, cod = map(from_tree, (tree['dom'], tree['cod']))
         return cls(*map(from_tree, args), dom=dom, cod=cod)
-
-
-Arrow.bubble_factory = Generator.subclass(Bubble)
 
 
 @factory

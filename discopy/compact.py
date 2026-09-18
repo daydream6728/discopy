@@ -80,16 +80,16 @@ class Diagram(symmetric.Diagram, ribbon.Diagram, CompactCategory):
         cod (pivotal.Ty) : The codomain of the diagram, i.e. its output.
     """
     ob = Ty
-    layer_factory: ClassVar[Generator[..., Layer]]\
-        = Generator.subclass(Layer)
-    permutation_factory: ClassVar[Generator[..., "Permutation"]]
-    functor_factory: ClassVar[Generator[..., "Functor"]]
+    Layer: ClassVar[Generator[..., Layer]] = Generator.subclass(Layer)
+    Permutation: ClassVar[Generator[..., "Permutation"]]
+    Functor: ClassVar[Generator[..., "Functor"]]
 
 
 Box, Cup, Cap = (
-    Diagram.generator_factory, Diagram.cup_factory, Diagram.cap_factory)
+    Diagram.Box, Diagram.Cup, Diagram.Cap)
 
 
+@Diagram.generates
 class Permutation(symmetric.Permutation, Box):
     """
     A compact permutation is a symmetric permutation in a compact category.
@@ -106,14 +106,12 @@ class Permutation(symmetric.Permutation, Box):
     r = property(lambda self: self.rotate(left=False))
 
 
-Diagram.permutation_factory = Generator.subclass(Permutation)
-
-
 Swap, Sum, Bubble, Eval, Coeval, Curry = (
-    Diagram.swap_factory, Diagram.sum_factory, Diagram.bubble_factory,
-    Diagram.eval_factory, Diagram.coeval_factory, Diagram.curry_factory)
+    Diagram.Swap, Diagram.Sum, Diagram.Bubble,
+    Diagram.Eval, Diagram.Coeval, Diagram.Curry)
 
 
+@Diagram.generates
 class Functor(symmetric.Functor, ribbon.Functor):
     """
     A compact functor is both a symmetric functor and a ribbon functor.
@@ -132,14 +130,11 @@ class Functor(symmetric.Functor, ribbon.Functor):
         return ribbon.Functor.__call__(self, other)
 
 
-Diagram.functor_factory = Generator.subclass(Functor)
-
-
 CMap = cmap.CMap[Diagram]
 
 TermBase, Constant, Variable, Application, Abstraction = (
-    Diagram.term_factory, Diagram.constant_factory, Diagram.variable_factory,
-    Diagram.application_factory, Diagram.abstraction_factory)
+    Diagram.TermBase, Diagram.Constant, Diagram.Variable,
+    Diagram.Application, Diagram.Abstraction)
 Id = Diagram.id
 
 Hypergraph = hypergraph.Hypergraph[Diagram]

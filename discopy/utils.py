@@ -598,10 +598,10 @@ def factory(cls):
     ...     ob = Qubit
 
     The boxes of a :code:`Circuit` are a subclass of both :class:`Box` and
-    :code:`Circuit`, built by :attr:`Arrow.generator_factory`, a
+    :code:`Circuit`, built by :attr:`Arrow.Box`, a
     :class:`Generator`.
 
-    >>> Gate = Circuit.generator_factory
+    >>> Gate = Circuit.Box
     >>> assert issubclass(Gate, Box) and issubclass(Gate, Circuit)
     >>> assert Gate.__name__ == "Box" and Gate.__module__ == Circuit.__module__
 
@@ -677,28 +677,29 @@ class classproperty(object):
 
 class Generator[**P, T]:
     """
-    The factory of a generator, e.g. ``Swap`` in ``symmetric.Diagram``,
-    declared once on the category that introduces it, taking the parameters
-    ``P`` of the generator to an instance ``T`` of it.
+    The generator of a category, bound under its own name, e.g. ``Swap``
+    on ``symmetric.Diagram``, and taking the parameters ``P`` of that class
+    to an instance ``T`` of it. :meth:`discopy.cat.FreeCategory.generates`
+    declares one at its class statement.
 
     :meth:`subclass` declares the class of the generator: on that category
     the attribute is the class itself, on any other category decorated with
     :func:`factory` it is a subclass built on first access, extending the
     attribute of each base and the generators of the category that the
-    class extends, so that a module writes ``Swap = Diagram.swap_factory``.
+    class extends, so that a module writes ``Swap = Diagram.Swap``.
     The level enters through the root: a box extends the level's
     ``Diagram``, an ``Exp`` gets the level's ``Ty`` as ``ob`` and a
     ``Functor`` its ``Diagram`` as ``dom`` and ``cod``. A generator is built
     once per module and a class attribute assigned by hand wins.
-    :meth:`classmethod` declares a factory that is behaviour rather than a
-    class, e.g. the trace of a pivotal diagram, and :meth:`alias` one that
-    is another factory of the same category, e.g. the braid of a symmetric
+    :meth:`classmethod` declares a generator that is behaviour rather than
+    a class, e.g. the trace of a pivotal diagram, and :meth:`alias` one that
+    is another generator of the same category, e.g. the braid of a symmetric
     category is its swap.
 
     Example
     -------
     >>> from discopy import symmetric, markov, closed
-    >>> assert symmetric.Diagram.swap_factory is symmetric.Swap
+    >>> assert symmetric.Diagram.Swap is symmetric.Swap
     >>> assert closed.Swap.__bases__ == (
     ...     markov.Swap, closed.Permutation, closed.Box, closed.Diagram)
     """
@@ -729,17 +730,6 @@ class Generator[**P, T]:
     def __set_name__(self, owner: type, name: str):
         self.owner, self.name, self.cache = owner, name, {}
 
-    def locate(self, cls: type):
-        """
-        Find the owner and the name of a factory bound to its category
-        after the class is created, i.e. below the generator it declares,
-        so that :meth:`__set_name__` did not fire.
-        """
-        for klass in cls.__mro__:
-            for name, value in vars(klass).items():
-                if value is self:
-                    return self.__set_name__(klass, name)
-
     @overload
     def __get__(self, instance: None, cls: type) -> Callable[P, T]: ...
 
@@ -751,8 +741,6 @@ class Generator[**P, T]:
             return getattr(cls, self.aliased)
         if self.method is not None:
             return MethodType(self.method, cls)
-        if not hasattr(self, "owner"):
-            self.locate(cls)
         cls = cls.ar
         if cls not in self.cache:
             self.cache[cls] = self.root if cls is self.owner\

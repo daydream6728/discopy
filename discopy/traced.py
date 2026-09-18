@@ -148,8 +148,8 @@ class Diagram(monoidal.Diagram, TracedCategory):
         dom (monoidal.Ty) : The domain of the diagram, i.e. its input.
         cod (monoidal.Ty) : The codomain of the diagram, i.e. its output.
     """
-    trace_factory: ClassVar[Generator[..., "Trace"]]
-    functor_factory: ClassVar[Generator[..., "Functor"]]
+    Trace: ClassVar[Generator[..., "Trace"]]
+    Functor: ClassVar[Generator[..., "Functor"]]
 
     def trace(self, n=1, left=False):
         """
@@ -172,15 +172,16 @@ class Diagram(monoidal.Diagram, TracedCategory):
         .. image:: /_static/traced/trace.svg
         """
         return self if n == 0\
-            else self.trace_factory(self, left).trace(n - 1, left)
+            else self.Trace(self, left).trace(n - 1, left)
 
     def to_drawing(self):
-        return monoidal.Diagram.to_drawing(self, functor_factory=Functor)
+        return monoidal.Diagram.to_drawing(self, functor=Functor)
 
 
-Box = Diagram.generator_factory
+Box = Diagram.Box
 
 
+@Diagram.generates
 class Trace(Box, monoidal.Bubble):
     """
     A trace is a diagram ``arg`` with an output wire fed back into an input.
@@ -201,7 +202,7 @@ class Trace(Box, monoidal.Bubble):
         dom, cod = (arg.dom[1:], arg.cod[1:]) if left\
             else (arg.dom[:-1], arg.cod[:-1])
         monoidal.Bubble.__init__(self, arg, dom=dom, cod=cod)
-        self.generator_factory.__init__(self, name, dom, cod)
+        self.Box.__init__(self, name, dom, cod)
 
     def __str__(self):
         return self.name
@@ -216,12 +217,10 @@ class Trace(Box, monoidal.Bubble):
         return self.ar.to_drawing(self)
 
 
-Diagram.trace_factory = Generator.subclass(Trace)
+Sum, Bubble = Diagram.Sum, Diagram.Bubble
 
 
-Sum, Bubble = Diagram.sum_factory, Diagram.bubble_factory
-
-
+@Diagram.generates
 class Functor(monoidal.Functor):
     """
     A traced functor is a monoidal functor that preserves traces.
@@ -265,11 +264,8 @@ class Functor(monoidal.Functor):
         return super().__call__(other)
 
 
-Diagram.functor_factory = Generator.subclass(Functor)
-
-
 CMap = cmap.CMap[Diagram]
 
 Hypergraph = hypergraph.Hypergraph[Diagram]
-Layer = Diagram.layer_factory
+Layer = Diagram.Layer
 Id = Diagram.id

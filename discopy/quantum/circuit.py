@@ -174,7 +174,7 @@ class Ty(frobenius.Ty):
     >>> print(bit ** 2 @ qubit ** 3)
     bit @ bit @ qubit @ qubit @ qubit
     """
-    generator_factory = Wire
+    Wire = Wire
 
 
 @factory
@@ -188,12 +188,12 @@ class Circuit(tensor.Diagram[complex]):
         cod (quantum.circuit.Ty) : The codomain of the circuit diagram.
     """
     ob = Ty
-    discard_factory = tensor.Discard
-    generator_factory: ClassVar[Generator[..., "Box"]]
-    sum_factory: ClassVar[Generator[..., "Sum"]]
-    permutation_factory: ClassVar[Generator[..., "Permutation"]]
-    swap_factory: ClassVar[Generator[..., "Swap"]]
-    functor_factory: ClassVar[Generator[..., "Functor"]]
+    Discard = tensor.Discard
+    Box: ClassVar[Generator[..., "Box"]]
+    Sum: ClassVar[Generator[..., "Sum"]]
+    Permutation: ClassVar[Generator[..., "Permutation"]]
+    Swap: ClassVar[Generator[..., "Swap"]]
+    Functor: ClassVar[Generator[..., "Functor"]]
 
     @classmethod
     def id(cls, dom: int | Ty = None):
@@ -797,7 +797,7 @@ class Circuit(tensor.Diagram[complex]):
         return super().permutation(perm, doms)
 
     @staticmethod
-    def cup_factory(left, right):
+    def Cup(left, right):
         from discopy.quantum.gates import CX, H, sqrt, Bra, Match, Discard
 
         if left == right == qubit:
@@ -807,7 +807,7 @@ class Circuit(tensor.Diagram[complex]):
         raise ValueError
 
     @staticmethod
-    def spider_factory(n_legs_in, n_legs_out, typ, phase=None):
+    def Spider(n_legs_in, n_legs_out, typ, phase=None):
         if phase is not None:
             raise NotImplementedError
 
@@ -847,6 +847,7 @@ class Circuit(tensor.Diagram[complex]):
             >> self.cod[:offset] @ gate @ self.cod[offset + len(gate.dom):]
 
 
+@Circuit.generates
 class Box(tensor.Box[complex], Circuit):
     """
     A circuit box is a tensor box in a circuit diagram.
@@ -901,9 +902,7 @@ class Box(tensor.Box[complex], Circuit):
         return self if self.z is None else super().rotate(left)
 
 
-Circuit.generator_factory = Generator.subclass(Box)
-
-
+@Circuit.generates
 class Sum(tensor.Sum[complex], Box):
     """ Sums of circuits. """
     @property
@@ -938,9 +937,7 @@ class Sum(tensor.Sum[complex], Box):
         return [circuit.to_tk() for circuit in self.terms]
 
 
-Circuit.sum_factory = Generator.subclass(Sum)
-
-
+@Circuit.generates
 class Permutation(tensor.Permutation[complex], Box):
     "A permutation in a quantum circuit."
 
@@ -955,9 +952,7 @@ class Permutation(tensor.Permutation[complex], Box):
             and all(isinstance(x.inside[0], Digit) for x in self.dom)
 
 
-Circuit.permutation_factory = Generator.subclass(Permutation)
-
-
+@Circuit.generates
 class Swap(Permutation, tensor.Swap, Box):
     """
     The logical swap of two circuit wires, i.e. plumbing.
@@ -974,9 +969,7 @@ class Swap(Permutation, tensor.Swap, Box):
         return Tensor[complex].swap(Dim(left.dim), Dim(right.dim)).array
 
 
-Circuit.swap_factory = Generator.subclass(Swap)
-
-
+@Circuit.generates
 class Functor(frobenius.Functor):
     """ :class:`Circuit`-valued functor. """
     dom = cod = Circuit
@@ -986,9 +979,6 @@ class Functor(frobenius.Functor):
             ob_map = {x: qubit ** y if isinstance(y, int) else y
                       for x, y in ob_map.items()}
         super().__init__(ob_map, ar_map, dom=dom, cod=cod)
-
-
-Circuit.functor_factory = Generator.subclass(Functor)
 
 
 def index2bitstring(i: int, length: int) -> tuple[int, ...]:
@@ -1006,15 +996,15 @@ def bitstring2index(bitstring):
 
 
 Cap, Bubble, Eval, Coeval, Curry, Copy, Merge = (
-    Circuit.cap_factory, Circuit.bubble_factory, Circuit.eval_factory,
-    Circuit.coeval_factory, Circuit.curry_factory, Circuit.copy_factory,
-    Circuit.merge_factory)
+    Circuit.Cap, Circuit.Bubble, Circuit.Eval,
+    Circuit.Coeval, Circuit.Curry, Circuit.Copy,
+    Circuit.Merge)
 bit, qubit = Ty(Digit(2)), Ty(Qudit(2))
-Exp, Over, Under = Ty.exp_factory, Ty.over_factory, Ty.under_factory
+Exp, Over, Under = Ty.Exp, Ty.Over, Ty.Under
 TermBase, Constant, Variable, Application, Abstraction = (
-    Circuit.term_factory, Circuit.constant_factory, Circuit.variable_factory,
-    Circuit.application_factory, Circuit.abstraction_factory)
-Layer = Circuit.layer_factory
+    Circuit.TermBase, Circuit.Constant, Circuit.Variable,
+    Circuit.Application, Circuit.Abstraction)
+Layer = Circuit.Layer
 Id = Circuit.id
 
 

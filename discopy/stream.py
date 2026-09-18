@@ -589,4 +589,4 @@ class Stream(MonoidalCategory, NamedGeneric['category']):
         mem = mem.delay() if _first_call else mem
         return type(self)(self.now, dom, cod, mem @ self.mem, _later)
 
-    followed_by = id
+    FollowedBy = id

@@ -265,8 +265,7 @@ class Ty(Pregroup, biclosed.Ty):
     >>> assert n.l.r == n == n.r.l
     >>> assert (s @ n).l == n.l @ s.l and (s @ n).r == n.r @ s.r
     """
-    generator_factory: ClassVar[Generator[..., Wire]]\
-        = Generator.subclass(Wire)
+    Wire: ClassVar[Generator[..., Wire]] = Generator.subclass(Wire)
 
     def __setstate__(self, state):
         if '_z' in state:  # Backward compatibility
@@ -385,18 +384,17 @@ class Diagram(biclosed.Diagram, RigidCategory):
     """
 
     ob = Ty
-    layer_factory: ClassVar[Generator[..., Layer]]\
-        = Generator.subclass(Layer)
+    Layer: ClassVar[Generator[..., Layer]] = Generator.subclass(Layer)
 
     to_drawing = monoidal.Diagram.to_drawing
 
     ev = classmethod(RigidCategory.ev.__func__)
     curry = RigidCategory.curry
-    generator_factory: ClassVar[Generator[..., "Box"]]
-    sum_factory: ClassVar[Generator[..., "Sum"]]
-    cup_factory: ClassVar[Generator[..., "Cup"]]
-    cap_factory: ClassVar[Generator[..., "Cap"]]
-    functor_factory: ClassVar[Generator[..., "Functor"]]
+    Box: ClassVar[Generator[..., "Box"]]
+    Sum: ClassVar[Generator[..., "Sum"]]
+    Cup: ClassVar[Generator[..., "Cup"]]
+    Cap: ClassVar[Generator[..., "Cap"]]
+    Functor: ClassVar[Generator[..., "Functor"]]
 
     @classmethod
     def cups(cls, left: Ty, right: Ty) -> Diagram:
@@ -416,7 +414,7 @@ class Diagram(biclosed.Diagram, RigidCategory):
         .. image:: /_static/rigid/cups.svg
             :align: center
         """
-        return nesting(cls, cls.cup_factory)(left, right)
+        return nesting(cls, cls.Cup)(left, right)
 
     @classmethod
     def caps(cls, left: Ty, right: Ty) -> Diagram:
@@ -436,7 +434,7 @@ class Diagram(biclosed.Diagram, RigidCategory):
         .. image:: /_static/rigid/caps.svg
             :align: center
         """
-        return nesting(cls, cls.cap_factory)(left, right)
+        return nesting(cls, cls.Cap)(left, right)
 
     def rotate(self, left=False):
         """
@@ -649,6 +647,7 @@ class Diagram(biclosed.Diagram, RigidCategory):
         return super().normal_form(**params)
 
 
+@Diagram.generates
 class Box(biclosed.Box, Diagram):
     """
     A rigid box is a biclosed box in a rigid diagram.
@@ -714,9 +713,7 @@ class Box(biclosed.Box, Diagram):
         return result
 
 
-Diagram.generator_factory = Generator.subclass(Box)
-
-
+@Diagram.generates
 class Sum(biclosed.Sum, Box):
     """
     A rigid sum is a biclosed sum that can be transposed.
@@ -729,15 +726,13 @@ class Sum(biclosed.Sum, Box):
 
     def rotate(self, left=False) -> Sum:
         if left:
-            return self.sum_factory(
+            return self.Sum(
                 tuple(term.l for term in self.terms), self.cod.l, self.dom.l)
-        return self.sum_factory(
+        return self.Sum(
             tuple(term.r for term in self.terms), self.cod.r, self.dom.r)
 
 
-Diagram.sum_factory = Generator.subclass(Sum)
-
-
+@Diagram.generates
 class Cup(BinaryBoxConstructor, Box):
     """
     The counit of the adjunction for an atomic type.
@@ -762,11 +757,11 @@ class Cup(BinaryBoxConstructor, Box):
         name = f"Cup({left}, {right})"
         dom, cod = left @ right, self.ob(dom=left.dom, cod=left.dom)
         BinaryBoxConstructor.__init__(self, left, right)
-        self.generator_factory.__init__(self, name, dom, cod, draw_as_cup=True)
+        self.Box.__init__(self, name, dom, cod, draw_as_cup=True)
 
     def rotate(self, left=False):
-        return self.cap_factory(self.right.l, self.left.l) if left\
-            else self.cap_factory(self.right.r, self.left.r)
+        return self.Cap(self.right.l, self.left.l) if left\
+            else self.Cap(self.right.r, self.left.r)
 
     def dagger(self):
         """
@@ -776,9 +771,7 @@ class Cup(BinaryBoxConstructor, Box):
         raise AxiomError("Rigid cups have no dagger, use pivotal instead.")
 
 
-Diagram.cup_factory = Generator.subclass(Cup)
-
-
+@Diagram.generates
 class Cap(BinaryBoxConstructor, Box):
     """
     The unit of the adjunction for an atomic type.
@@ -803,11 +796,11 @@ class Cap(BinaryBoxConstructor, Box):
         name = f"Cap({left}, {right})"
         dom, cod = self.ob(dom=left.dom, cod=left.dom), left @ right
         BinaryBoxConstructor.__init__(self, left, right)
-        self.generator_factory.__init__(self, name, dom, cod, draw_as_cap=True)
+        self.Box.__init__(self, name, dom, cod, draw_as_cap=True)
 
     def rotate(self, left=False):
-        return self.cup_factory(self.right.l, self.left.l) if left\
-            else self.cup_factory(self.right.r, self.left.r)
+        return self.Cup(self.right.l, self.left.l) if left\
+            else self.Cup(self.right.r, self.left.r)
 
     def dagger(self):
         """
@@ -817,14 +810,12 @@ class Cap(BinaryBoxConstructor, Box):
         raise AxiomError("Rigid caps have no dagger, use pivotal instead.")
 
 
-Diagram.cap_factory = Generator.subclass(Cap)
-
-
 Bubble, Eval, Coeval, Curry = (
-    Diagram.bubble_factory, Diagram.eval_factory,
-    Diagram.coeval_factory, Diagram.curry_factory)
+    Diagram.Bubble, Diagram.Eval,
+    Diagram.Coeval, Diagram.Curry)
 
 
+@Diagram.generates
 class Functor(biclosed.Functor):
     """
     A rigid functor is a biclosed functor that preserves cups and caps.
@@ -878,9 +869,6 @@ class Functor(biclosed.Functor):
         return super().__call__(other)
 
 
-Diagram.functor_factory = Generator.subclass(Functor)
-
-
 def nesting(cls: type, factory: Callable) -> Callable[[Ty, Ty], Diagram]:
     """
     Take a :code:`factory` for cups or caps of atomic types
@@ -912,10 +900,10 @@ def to_rigid(self):
 biclosed.Diagram.to_rigid = to_rigid
 
 
-Exp, Over, Under = Ty.exp_factory, Ty.over_factory, Ty.under_factory
+Exp, Over, Under = Ty.Exp, Ty.Over, Ty.Under
 TermBase, Constant, Variable, Application, Abstraction = (
-    Diagram.term_factory, Diagram.constant_factory, Diagram.variable_factory,
-    Diagram.application_factory, Diagram.abstraction_factory)
+    Diagram.TermBase, Diagram.Constant, Diagram.Variable,
+    Diagram.Application, Diagram.Abstraction)
 Id = Diagram.id
 
 

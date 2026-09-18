@@ -97,9 +97,9 @@ class Diagram(pivotal.Diagram, balanced.Diagram, RibbonCategory):
         dom (pivotal.Ty) : The domain of the diagram, i.e. its input.
         cod (pivotal.Ty) : The codomain of the diagram, i.e. its output.
     """
-    braid_factory: ClassVar[Generator[..., "Braid"]]
-    twist_factory: ClassVar[Generator[..., "Twist"]]
-    functor_factory: ClassVar[Generator[..., "Functor"]]
+    Braid: ClassVar[Generator[..., "Braid"]]
+    Twist: ClassVar[Generator[..., "Twist"]]
+    Functor: ClassVar[Generator[..., "Functor"]]
 
     def trace(self, n=1, left=False):
         """
@@ -131,9 +131,9 @@ class Diagram(pivotal.Diagram, balanced.Diagram, RibbonCategory):
             raise ValueError(f'Indices {x, y} are out of range.')
         x, y = min(x, y), max(x, y)
         for i in range(x, y - 1):
-            braid = self.braid_factory(self.cod[i], self.cod[i + 1])
+            braid = self.Braid(self.cod[i], self.cod[i + 1])
             self = self >> self.cod[:i] @ braid @ self.cod[i + 2:]
-        cup = self.cup_factory(self.cod[y - 1], self.cod[y])
+        cup = self.Cup(self.cod[y - 1], self.cod[y])
         return self >> self.cod[:y - 1] @ cup @ self.cod[y + 1:]
 
     def to_ribbons(self, width: float = None, colour="gray"):
@@ -162,9 +162,10 @@ class Diagram(pivotal.Diagram, balanced.Diagram, RibbonCategory):
 
 
 Box, Cup, Cap = (
-    Diagram.generator_factory, Diagram.cup_factory, Diagram.cap_factory)
+    Diagram.Box, Diagram.Cup, Diagram.Cap)
 
 
+@Diagram.generates
 class Braid(balanced.Braid, Box):
     """
     A ribbon braid is a balanced braid in a ribbon diagram.
@@ -179,9 +180,6 @@ class Braid(balanced.Braid, Box):
         del left
         braid = type(self)(*self.cod.r)
         return braid.dagger() if self.is_dagger else braid
-
-
-Diagram.braid_factory = Generator.subclass(Braid)
 
 
 class DualRailBraid(balanced.DualRailBraid, Box):
@@ -224,7 +222,7 @@ class DualRailCup(Box):
     def __init__(self, left, right, is_dagger=False):
         self.left, self.right = left, right
         name = type(self).__name__ + f"({left}, {right})"
-        self.generator_factory.__init__(
+        self.Box.__init__(
             self, name, left @ right, type(left)(),
             is_dagger=is_dagger, draw_as_dual_rail_cup=True)
 
@@ -244,7 +242,7 @@ class DualRailCap(Box):
     def __init__(self, left, right, is_dagger=False):
         self.left, self.right = left, right
         name = type(self).__name__ + f"({left}, {right})"
-        self.generator_factory.__init__(
+        self.Box.__init__(
             self, name, type(left)(), left @ right,
             is_dagger=is_dagger, draw_as_dual_rail_cap=True)
 
@@ -256,6 +254,7 @@ class DualRailCap(Box):
         return DualRailCup(self.left, self.right, not self.is_dagger)
 
 
+@Diagram.generates
 class Twist(balanced.Twist, Box):
     """
     Balanced twist in a ribbon category.
@@ -271,14 +270,12 @@ class Twist(balanced.Twist, Box):
         return self
 
 
-Diagram.twist_factory = Generator.subclass(Twist)
-
-
 Sum, Bubble, Eval, Coeval, Curry = (
-    Diagram.sum_factory, Diagram.bubble_factory, Diagram.eval_factory,
-    Diagram.coeval_factory, Diagram.curry_factory)
+    Diagram.Sum, Diagram.Bubble, Diagram.Eval,
+    Diagram.Coeval, Diagram.Curry)
 
 
+@Diagram.generates
 class Functor(pivotal.Functor, balanced.Functor):
     """
     A ribbon functor is both a pivotal functor and a balanced functor.
@@ -297,9 +294,6 @@ class Functor(pivotal.Functor, balanced.Functor):
         return pivotal.Functor.__call__(self, other)
 
 
-Diagram.functor_factory = Generator.subclass(Functor)
-
-
 class DualRail(balanced.DualRail, Functor):
     """
     The functor sending a ribbon diagram to its dual rail encoding, extending
@@ -312,8 +306,8 @@ class DualRail(balanced.DualRail, Functor):
     :meth:`Diagram.to_ribbons`
     """
     cod = Diagram
-    dual_rail_twist_factory = DualRailTwist
-    dual_rail_braid_factory = DualRailBraid
+    DualRailTwist = DualRailTwist
+    DualRailBraid = DualRailBraid
 
     def __call__(self, other):
         if isinstance(other, Cup):
@@ -330,12 +324,12 @@ class DualRail(balanced.DualRail, Functor):
         return super().__call__(other)
 
 
-Diagram.dual_rail_factory = DualRail
+Diagram.DualRail = DualRail
 
 TermBase, Constant, Variable, Application, Abstraction = (
-    Diagram.term_factory, Diagram.constant_factory, Diagram.variable_factory,
-    Diagram.application_factory, Diagram.abstraction_factory)
-Layer = Diagram.layer_factory
+    Diagram.TermBase, Diagram.Constant, Diagram.Variable,
+    Diagram.Application, Diagram.Abstraction)
+Layer = Diagram.Layer
 Id = Diagram.id
 
 

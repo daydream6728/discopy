@@ -62,7 +62,7 @@ class Ty(rigid.Ty):
     >>> n.assert_isadjoint(n.l)
     >>> n.assert_isadjoint(n.r)
     """
-    generator_factory = rigid.Wire
+    Wire = rigid.Wire
 
     def assert_isadjoint(self, other):
         """
@@ -106,9 +106,9 @@ class Diagram(frobenius.Diagram):
     >>> assert F(sentence)
     """
     ob = Ty
-    generator_factory: ClassVar[Generator[..., "Box"]]
-    swap_factory: ClassVar[Generator[..., "Swap"]]
-    spider_factory: ClassVar[Generator[..., "Spider"]]
+    Box: ClassVar[Generator[..., "Box"]]
+    Swap: ClassVar[Generator[..., "Swap"]]
+    Spider: ClassVar[Generator[..., "Spider"]]
 
     def normal_form(self, **params):
         """
@@ -166,6 +166,7 @@ class Diagram(frobenius.Diagram):
     caps = classmethod(rigid.Diagram.caps.__func__)
 
 
+@Diagram.generates
 class Box(frobenius.Box, Diagram):
     """
     A pregroup box is a frobenius box in a pregroup diagram.
@@ -173,13 +174,11 @@ class Box(frobenius.Box, Diagram):
     rotate = rigid.Box.rotate
 
 
-Diagram.generator_factory = Generator.subclass(Box)
-
-
 Cup, Cap, Permutation = (
-    Diagram.cup_factory, Diagram.cap_factory, Diagram.permutation_factory)
+    Diagram.Cup, Diagram.Cap, Diagram.Permutation)
 
 
+@Diagram.generates
 class Swap(Permutation, frobenius.Swap, Box):
     """
     A pregroup swap is a frobenius swap in a pregroup diagram.
@@ -189,9 +188,7 @@ class Swap(Permutation, frobenius.Swap, Box):
                 type(self)(self.left.r, self.right.r))
 
 
-Diagram.swap_factory = Generator.subclass(Swap)
-
-
+@Diagram.generates
 class Spider(frobenius.Spider, Box):
     """
     A pregroup spider is a frobenius spider in a pregroup diagram.
@@ -201,13 +198,10 @@ class Spider(frobenius.Spider, Box):
         return type(self)(len(self.cod), len(self.dom), typ, self.phase)
 
 
-Diagram.spider_factory = Generator.subclass(Spider)
-
-
 Sum, Bubble, Eval, Coeval, Curry, Copy, Merge, Discard = (
-    Diagram.sum_factory, Diagram.bubble_factory, Diagram.eval_factory,
-    Diagram.coeval_factory, Diagram.curry_factory, Diagram.copy_factory,
-    Diagram.merge_factory, Diagram.discard_factory)
+    Diagram.Sum, Diagram.Bubble, Diagram.Eval,
+    Diagram.Coeval, Diagram.Curry, Diagram.Copy,
+    Diagram.Merge, Diagram.Discard)
 
 
 class Word(thue.Word, Box):
@@ -217,7 +211,7 @@ class Word(thue.Word, Box):
     """
     def __init__(self, name: str, cod: rigid.Ty, dom: rigid.Ty = Ty(),
                  **params):
-        self.generator_factory.__init__(self, name, dom, cod, **params)
+        self.Box.__init__(self, name, dom, cod, **params)
 
     def __repr__(self):
         extra = f", dom={repr(self.dom)}" if self.dom else ""
@@ -226,7 +220,7 @@ class Word(thue.Word, Box):
         return f"Word({repr(self.name)}, {repr(self.cod)}{extra})"
 
 
-Functor = Diagram.functor_factory
+Functor = Diagram.Functor
 
 
 def eager_parse(*words, target=Ty('s')):
@@ -264,11 +258,11 @@ def brute_force(*vocab, target=Ty('s')):
             test.append(words + (word, ))
 
 
-Exp, Over, Under = Ty.exp_factory, Ty.over_factory, Ty.under_factory
+Exp, Over, Under = Ty.Exp, Ty.Over, Ty.Under
 TermBase, Constant, Variable, Application, Abstraction = (
-    Diagram.term_factory, Diagram.constant_factory, Diagram.variable_factory,
-    Diagram.application_factory, Diagram.abstraction_factory)
-Layer = Diagram.layer_factory
+    Diagram.TermBase, Diagram.Constant, Diagram.Variable,
+    Diagram.Application, Diagram.Abstraction)
+Layer = Diagram.Layer
 Id = Diagram.id
 
 

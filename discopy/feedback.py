@@ -293,9 +293,6 @@ class TailOb(Wire):
 @factory
 class Ty(monoidal.Ty):
     """ A feedback type is a monoidal type with `delay`, `head` and `tail`. """
-    generator_factory: ClassVar[Generator[..., Wire]]\
-        = Generator.subclass(Wire)
-
     def delay(self, n_steps=1):
         """ The delay of a feedback type by `n_steps`. """
         return type(self)(*(x.delay(n_steps) for x in self.inside))
@@ -311,6 +308,8 @@ class Ty(monoidal.Ty):
         return type(self)(*(x.tail for x in self.inside if x.tail))
 
     d = Wire.d
+
+    Wire: ClassVar[Generator[..., Wire]] = Generator.subclass(Wire)
 
 
 class Layer(markov.Layer):
@@ -345,16 +344,15 @@ class Diagram(markov.Diagram, FeedbackCategory):
         :align: center
     """
     ob = Ty
-    layer_factory: ClassVar[Generator[..., Layer]]\
-        = Generator.subclass(Layer)
-    generator_factory: ClassVar[Generator[..., "Box"]]
-    permutation_factory: ClassVar[Generator[..., "Permutation"]]
-    swap_factory: ClassVar[Generator[..., "Swap"]]
-    copy_factory: ClassVar[Generator[..., "Copy"]]
-    merge_factory: ClassVar[Generator[..., "Merge"]]
-    followed_by: ClassVar[Generator[..., "FollowedBy"]]
-    feedback_factory: ClassVar[Generator[..., "Feedback"]]
-    functor_factory: ClassVar[Generator[..., "Functor"]]
+    Layer: ClassVar[Generator[..., Layer]] = Generator.subclass(Layer)
+    Box: ClassVar[Generator[..., "Box"]]
+    Permutation: ClassVar[Generator[..., "Permutation"]]
+    Swap: ClassVar[Generator[..., "Swap"]]
+    Copy: ClassVar[Generator[..., "Copy"]]
+    Merge: ClassVar[Generator[..., "Merge"]]
+    FollowedBy: ClassVar[Generator[..., "FollowedBy"]]
+    Feedback: ClassVar[Generator[..., "Feedback"]]
+    Functor: ClassVar[Generator[..., "Functor"]]
 
     def delay(self, n_steps=1):
         """ The delay of a feedback diagram. """
@@ -365,7 +363,7 @@ class Diagram(markov.Diagram, FeedbackCategory):
     def feedback(self, dom=None, cod=None, mem=None):
         """ Syntactic sugar for :class:`Feedback`. """
         if mem is None or len(mem) == 1:
-            return self.feedback_factory(self, dom=dom, cod=cod, mem=mem)
+            return self.Feedback(self, dom=dom, cod=cod, mem=mem)
         return self if not mem else self.feedback(mem=mem[:-1]).feedback()
 
     @classmethod
@@ -413,6 +411,7 @@ class Diagram(markov.Diagram, FeedbackCategory):
     d = Wire.d
 
 
+@Diagram.generates
 class Box(markov.Box, Diagram):
     """
     A feedback box is a markov box in a feedback diagram.
@@ -459,9 +458,7 @@ class Box(markov.Box, Diagram):
         return markov.Box.setoid(self) + (self.time_step, )
 
 
-Diagram.generator_factory = Generator.subclass(Box)
-
-
+@Diagram.generates
 class Permutation(markov.Permutation, Box):
     "A permutation in a feedback diagram."
 
@@ -469,9 +466,7 @@ class Permutation(markov.Permutation, Box):
         return type(self)(self.dom.delay(n_steps), self.perm)
 
 
-Diagram.permutation_factory = Generator.subclass(Permutation)
-
-
+@Diagram.generates
 class Swap(Permutation, markov.Swap, Box):
     """
     The swap of feedback types :code:`left` and :code:`right`.
@@ -484,9 +479,7 @@ class Swap(Permutation, markov.Swap, Box):
         return type(self)(self.left.delay(n_steps), self.right.delay(n_steps))
 
 
-Diagram.swap_factory = Generator.subclass(Swap)
-
-
+@Diagram.generates
 class Copy(markov.Copy, Box):
     """
     The copy of an atomic type :code:`x` some :code:`n` number of times.
@@ -499,9 +492,7 @@ class Copy(markov.Copy, Box):
         return type(self)(self.dom.delay(n_steps), len(self.cod))
 
 
-Diagram.copy_factory = Generator.subclass(Copy)
-
-
+@Diagram.generates
 class Merge(markov.Merge, Box):
     """
     The merge of an atomic type :code:`x` some :code:`n` number of times.
@@ -514,12 +505,9 @@ class Merge(markov.Merge, Box):
         return type(self)(self.cod.delay(n_steps), len(self.dom))
 
 
-Diagram.merge_factory = Generator.subclass(Merge)
-
-
 Discard, Trace, Sum, Bubble = (
-    Diagram.discard_factory, Diagram.trace_factory,
-    Diagram.sum_factory, Diagram.bubble_factory)
+    Diagram.Discard, Diagram.Trace,
+    Diagram.Sum, Diagram.Bubble)
 
 
 class Head(monoidal.Bubble, Box):
@@ -531,7 +519,7 @@ class Head(monoidal.Bubble, Box):
         dom, cod = (
             getattr(x, _attr).delay(time_step) for x in [arg.dom, arg.cod])
         monoidal.Bubble.__init__(self, arg, dom=dom, cod=cod)
-        self.generator_factory.__init__(
+        self.Box.__init__(
             self, f"({arg}).{_attr}", self.dom, self.cod, time_step)
 
     delay, reset, __repr__ = HeadOb.delay, HeadOb.reset, HeadOb.__repr__
@@ -550,6 +538,7 @@ class Tail(monoidal.Bubble, Box):
     __str__ = Box.__str__
 
 
+@Diagram.generates
 class Feedback(monoidal.Bubble, Box):
     """
     Feedback is a bubble that takes a diagram from `dom @ mem.delay()` to
@@ -578,7 +567,7 @@ class Feedback(monoidal.Bubble, Box):
             raise AxiomError
         self.mem, self.left = mem, left
         monoidal.Bubble.__init__(self, arg, dom=dom, cod=cod)
-        self.generator_factory.__init__(self, self.name, dom, cod)
+        self.Box.__init__(self, self.name, dom, cod)
 
     def delay(self, n_steps=1):
         return type(self)(self.arg.delay(n_steps), mem=self.mem.delay(n_steps))
@@ -595,9 +584,7 @@ class Feedback(monoidal.Bubble, Box):
         return self.arg.to_drawing().trace()
 
 
-Diagram.feedback_factory = Generator.subclass(Feedback)
-
-
+@Diagram.generates
 class FollowedBy(Box):
     """
     The isomorphism between `x.head @ x.tail.delay()` and `x`.
@@ -647,9 +634,7 @@ class FollowedBy(Box):
         return type(self)(self.arg, self.is_dagger)
 
 
-Diagram.followed_by = Generator.subclass(FollowedBy)
-
-
+@Diagram.generates
 class Functor(markov.Functor):
     """
     A feedback functor is a markov one that preserves delay and feedback.
@@ -691,16 +676,13 @@ class Functor(markov.Functor):
             if hasattr(cod, attr):
                 return getattr(self(other.arg), attr)
         if isinstance(
-                other, FollowedBy) and hasattr(self.cod, "followed_by"):
+                other, FollowedBy) and hasattr(self.cod, "FollowedBy"):
             arg = other.dom if other.is_dagger else other.cod
-            return self.cod.followed_by(self(arg))
+            return self.cod.FollowedBy(self(arg))
         if isinstance(other, Feedback) and hasattr(self.cod, "feedback"):
             return self(other.arg).feedback(*map(self, (
                 other.dom, other.cod, other.mem)))
         return super().__call__(other)
-
-
-Diagram.functor_factory = Generator.subclass(Functor)
 
 
 Hypergraph = hypergraph.Hypergraph[Diagram]

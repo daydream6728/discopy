@@ -291,26 +291,25 @@ class Ty(cat.Ob, cat.FreeCategory, ColouredMonoid):
     """
     ob = Colour
 
-    generator_factory: ClassVar[Generator[..., Wire]]\
-        = Generator.subclass(Wire)
+    Wire: ClassVar[Generator[..., Wire]] = Generator.subclass(Wire)
 
     def cast_wire(self, x: str | cat.Ob) -> cat.Ob:
         """
-        Turn a constructor argument into a ``self.generator_factory``.
+        Turn a constructor argument into a ``self.Wire``.
 
         Old dumps and pickles used a plain ``cat.Ob``, with no colour, as
         the generators: upgrade it to ``Wire(x.name)`` for subclasses whose
         generators are built from a name alone.
         """
-        if isinstance(x, self.generator_factory):
+        if isinstance(x, self.Wire):
             return x
         if isinstance(x, str):
-            return self.generator_factory(x)
-        if self.generator_factory.__init__ is Wire.__init__\
+            return self.Wire(x)
+        if self.Wire.__init__ is Wire.__init__\
                 and type(x) is cat.Ob:
-            return self.generator_factory(x.name)
+            return self.Wire(x.name)
         raise AxiomError(
-            messages.TYPE_ERROR.format(self.generator_factory, type(x)))
+            messages.TYPE_ERROR.format(self.Wire, type(x)))
 
     def __init__(self, *inside: str | cat.Ob,
                  dom: Colour = None, cod: Colour = None,
@@ -319,8 +318,8 @@ class Ty(cat.Ob, cat.FreeCategory, ColouredMonoid):
         if kwargs:
             raise TypeError(f"Unexpected keyword arguments: {list(kwargs)}.")
         for obj in inside:
-            assert_isinstance(obj, (str, self.generator_factory) + (
-                (cat.Ob, ) if self.generator_factory.__init__ is Wire.__init__
+            assert_isinstance(obj, (str, self.Wire) + (
+                (cat.Ob, ) if self.Wire.__init__ is Wire.__init__
                 else ()))
         inside = tuple(map(self.cast_wire, inside))
         if dom is None:
@@ -454,7 +453,7 @@ class Ty(cat.Ob, cat.FreeCategory, ColouredMonoid):
         inside = tuple(map(from_tree, tree['inside']))
         # Old dumps used cat.Ob as the generators of monoidal.Ty.
         inside = tuple(
-            cls.generator_factory(x.name) if type(x) is cat.Ob else x
+            cls.Wire(x.name) if type(x) is cat.Ob else x
             for x in inside)
         if inside:
             return cls(*inside)
@@ -535,7 +534,7 @@ class Nat(abc.Nat, Ty):
 
     >>> assert CX @ 2 >> 2 @ CX == CX @ CX
     """
-    generator_factory = int
+    Wire = int
 
     def __init__(self, inside: int | tuple = 0, dom: Colour = None,
                  cod: Colour = None, _scan: bool = True):
@@ -599,7 +598,7 @@ class Dim(Ty):
     >>> Dim(1) @ Dim(2) @ Dim(3)
     Dim(2, 3)
     """
-    generator_factory = int
+    Wire = int
 
     def __init__(self, *inside: int, dom=None, cod=None, _scan=True, **kwargs):
         inside = kwargs.pop('inside', inside)
@@ -945,12 +944,11 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
             normal_form
     """
     ob = Ty
-    layer_factory: ClassVar[Generator[..., Layer]]\
-        = Generator.subclass(Layer)
-    generator_factory: ClassVar[Generator[..., "Box"]]
-    sum_factory: ClassVar[Generator[..., "Sum"]]
-    bubble_factory: ClassVar[Generator[..., "Bubble"]]
-    functor_factory: ClassVar[Generator[..., "Functor"]]
+    Layer: ClassVar[Generator[..., Layer]] = Generator.subclass(Layer)
+    Box: ClassVar[Generator[..., "Box"]]
+    Sum: ClassVar[Generator[..., "Sum"]]
+    Bubble: ClassVar[Generator[..., "Bubble"]]
+    Functor: ClassVar[Generator[..., "Functor"]]
 
     def __setstate__(self, state):
         if 'inside' not in state:  # Backward compatibility
@@ -1041,7 +1039,7 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
         if others:
             return self.tensor(other).tensor(*others)
         if isinstance(other, Sum):
-            return self.sum_factory((self, )).tensor(other)
+            return self.Sum((self, )).tensor(other)
         assert_isinstance(other, self.ar)
         assert_isinstance(self, other.ar)
         inside = tuple(layer @ other.dom for layer in self.inside)\
@@ -1137,12 +1135,12 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
             assert_iscomposable(diagram, cls.id(cod))
         return diagram
 
-    def to_drawing(self, functor_factory=None) -> Drawing:
+    def to_drawing(self, functor=None) -> Drawing:
         """ Called before :meth:`Diagram.draw`. """
         ob = ar = lambda x: x.to_drawing()
         dom = self.ar
         cod = Drawing
-        return (functor_factory or Functor)(ob, ar, dom, cod)(self)
+        return (functor or Functor)(ob, ar, dom, cod)(self)
 
     def to_map(self) -> CMap:
         """ Translate a diagram into a combinatorial map. """
@@ -1413,6 +1411,7 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
         return super().from_tree(tree)
 
 
+@Diagram.generates
 class Box(cat.Box, Diagram):
     """
     A box is a diagram with a :code:`name` and the layer of just itself inside.
@@ -1478,7 +1477,7 @@ class Box(cat.Box, Diagram):
                 setattr(self, attr, params.pop(attr))
         cat.Box.__init__(self, name, dom, cod, **params)
         inside = () if self.is_identity\
-            else (self.layer_factory(self, normalise=False), )
+            else (self.Layer(self, normalise=False), )
         Diagram.__init__(self, inside, dom, cod)
 
     is_identity = False
@@ -1491,9 +1490,7 @@ class Box(cat.Box, Diagram):
         return Drawing.from_box(self)
 
 
-Diagram.generator_factory = Generator.subclass(Box)
-
-
+@Diagram.generates
 class Sum(cat.Sum, Box):
     """
     A sum is a tuple of diagrams :code:`terms`
@@ -1521,17 +1518,15 @@ class Sum(cat.Sum, Box):
         if other is None or others:
             return Diagram.tensor(self, other, *others)
         other = other if isinstance(other, Sum)\
-            else self.sum_factory((other, ))
+            else self.Sum((other, ))
         dom, cod = self.dom @ other.dom, self.cod @ other.cod
         terms = tuple(f.tensor(g) for f in self.terms for g in other.terms)
-        return self.sum_factory(terms, dom, cod)
+        return self.Sum(terms, dom, cod)
 
     to_drawing = Diagram.to_drawing
 
 
-Diagram.sum_factory = Generator.subclass(Sum)
-
-
+@Diagram.generates
 class Bubble(cat.Bubble, Box):
     """
     A bubble is a box with diagrams :code:`args` inside and an optional pair of
@@ -1593,7 +1588,7 @@ class Bubble(cat.Bubble, Box):
             draw_as_square: bool = None,
             draw_vertically=False, **kwargs):
         cat.Bubble.__init__(self, *args, **kwargs)
-        self.generator_factory.__init__(self, self.name, self.dom, self.cod)
+        self.Box.__init__(self, self.name, self.dom, self.cod)
         self.drawing_name = "" if drawing_name is None else drawing_name
         self.draw_vertically = draw_vertically
         self.frame_colour = BOX_DRAWING_ATTRIBUTES['frame_colour'](self)
@@ -1631,9 +1626,7 @@ class Bubble(cat.Bubble, Box):
         return getattr(Drawing, method)(*args, **kwargs)
 
 
-Diagram.bubble_factory = Generator.subclass(Bubble)
-
-
+@Diagram.generates
 class Functor(cat.Functor):
     """
     A monoidal functor is a functor that preserves the tensor product.
@@ -1721,7 +1714,7 @@ class Functor(cat.Functor):
                 return self.cod.ob.id(self(other.dom))
             head, *tail = map(self, other.inside)
             return head.tensor(*tail)
-        if isinstance(other, self.dom.ob.generator_factory):
+        if isinstance(other, self.dom.ob.Wire):
             if isinstance(other, Wire) and other.is_dagger:
                 # Map a daggered coloured generator functorially: its image is
                 # the dagger of the image of the underlying generator.
@@ -1742,9 +1735,6 @@ class Functor(cat.Functor):
         if isinstance(other, Bubble) and self.cod is Drawing:
             return other.to_drawing()
         return super().__call__(other)
-
-
-Diagram.functor_factory = Generator.subclass(Functor)
 
 
 @dataclass

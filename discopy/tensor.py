@@ -190,7 +190,7 @@ class Tensor(Matrix):
         return type(self)(array, self.cod, self.dom)
 
     @classmethod
-    def cup_factory(cls, left: Dim, right: Dim) -> Tensor:
+    def Cup(cls, left: Dim, right: Dim) -> Tensor:
         assert_isinstance(left, Dim)
         assert_isinstance(right, Dim)
         left.assert_isadjoint(right)
@@ -198,7 +198,7 @@ class Tensor(Matrix):
 
     @classmethod
     def cups(cls, left: Dim, right: Dim) -> Tensor:
-        return rigid.nesting(cls, cls.cup_factory)(left, right)
+        return rigid.nesting(cls, cls.Cup)(left, right)
 
     @classmethod
     def caps(cls, left: Dim, right: Dim) -> Tensor:
@@ -233,8 +233,8 @@ class Tensor(Matrix):
         return cls(array, dom, cod)
 
     @classmethod
-    def spider_factory(cls, n_legs_in: int, n_legs_out: int,
-                       typ: Dim, phase=None) -> Tensor:
+    def Spider(cls, n_legs_in: int, n_legs_out: int,
+               typ: Dim, phase=None) -> Tensor:
         if phase is not None:
             raise NotImplementedError
         assert_isatomic(typ, Dim)
@@ -519,9 +519,9 @@ class Diagram(NamedGeneric['dtype'], frobenius.Diagram):
     vector[::-1] >> vector >> Dim(2) @ vector
     """
     ob = Dim
-    generator_factory: ClassVar[Generator[..., "Box"]]
-    permutation_factory: ClassVar[Generator[..., "Permutation"]]
-    bubble_factory: ClassVar[Generator[..., "Bubble"]]
+    Box: ClassVar[Generator[..., "Box"]]
+    Permutation: ClassVar[Generator[..., "Permutation"]]
+    Bubble: ClassVar[Generator[..., "Bubble"]]
 
     def eval(self, dtype: type = None, optimize="greedy",
              **params) -> Tensor:
@@ -660,7 +660,7 @@ class Diagram(NamedGeneric['dtype'], frobenius.Diagram):
     def grad(self, var, **params):
         """ Gradient with respect to :code:`var`. """
         if var not in self.free_symbols:
-            return self.sum_factory((), self.dom, self.cod)
+            return self.Sum((), self.dom, self.cod)
         left, box, right = self.inside[0].boxes_and_types
         tail = self[1:]
         t1 = self.id(left) @ box.grad(var, **params) @ self.id(right) >> tail
@@ -698,12 +698,13 @@ class Diagram(NamedGeneric['dtype'], frobenius.Diagram):
             result += Box(str(var), Dim(1), dim, onehot.array) @ self.grad(var)
         return result
 
-    functor_factory = frobenius.Functor
+    Functor = frobenius.Functor
 
 
 CMap = cmap.CMap[Diagram]
 
 
+@Diagram.generates
 class Box(frobenius.Box, Diagram):
     """
     A tensor box is a frobenius box with an array as data.
@@ -768,12 +769,10 @@ class Box(frobenius.Box, Diagram):
         return (self.name, self.dom, self.cod, self.dtype) + data
 
 
-Diagram.generator_factory = Generator.subclass(Box)
+Cup, Cap = Diagram.Cup, Diagram.Cap
 
 
-Cup, Cap = Diagram.cup_factory, Diagram.cap_factory
-
-
+@Diagram.generates
 class Permutation(frobenius.Permutation, Box):
     "A permutation in a tensor diagram."
 
@@ -784,15 +783,13 @@ class Permutation(frobenius.Permutation, Box):
         return Tensor.permutation(self.perm, doms).array
 
 
-Diagram.permutation_factory = Generator.subclass(Permutation)
-
-
 Swap, Spider, Sum, Eval, Coeval, Curry, Copy, Merge, Discard = (
-    Diagram.swap_factory, Diagram.spider_factory, Diagram.sum_factory,
-    Diagram.eval_factory, Diagram.coeval_factory, Diagram.curry_factory,
-    Diagram.copy_factory, Diagram.merge_factory, Diagram.discard_factory)
+    Diagram.Swap, Diagram.Spider, Diagram.Sum,
+    Diagram.Eval, Diagram.Coeval, Diagram.Curry,
+    Diagram.Copy, Diagram.Merge, Diagram.Discard)
 
 
+@Diagram.generates
 class Bubble(frobenius.Bubble, Box):
     """
     Bubble in a tensor diagram, applies a function elementwise.
@@ -865,13 +862,10 @@ class Bubble(frobenius.Bubble, Box):
             @ self.arg.grad(var) >> Spider(2, 1, self.cod)
 
 
-Diagram.bubble_factory = Generator.subclass(Bubble)
-
-
 TermBase, Constant, Variable, Application, Abstraction = (
-    Diagram.term_factory, Diagram.constant_factory, Diagram.variable_factory,
-    Diagram.application_factory, Diagram.abstraction_factory)
-Layer = Diagram.layer_factory
+    Diagram.TermBase, Diagram.Constant, Diagram.Variable,
+    Diagram.Application, Diagram.Abstraction)
+Layer = Diagram.Layer
 Id = Diagram.id
 
 

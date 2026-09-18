@@ -68,7 +68,7 @@ class Ty(biclosed.Ty):
 
 
 Wire, Exp, Over, Under = (
-    Ty.generator_factory, Ty.exp_factory, Ty.over_factory, Ty.under_factory)
+    Ty.Wire, Ty.Exp, Ty.Over, Ty.Under)
 
 
 @factory
@@ -77,14 +77,14 @@ class Diagram(biclosed.Diagram):
     A categorial diagram is a biclosed diagram with rules and words as boxes.
     """
     ob = Ty
-    functor_factory: ClassVar[Generator[..., "Functor"]]
-    term_factory: ClassVar[Generator[..., "TermBase"]]
-    constant_factory: ClassVar[Generator[..., "Constant"]]
-    variable_factory: ClassVar[Generator[..., "Variable"]]
-    abstraction_factory: ClassVar[Generator[..., "Abstraction"]]
+    Functor: ClassVar[Generator[..., "Functor"]]
+    TermBase: ClassVar[Generator[..., "TermBase"]]
+    Constant: ClassVar[Generator[..., "Constant"]]
+    Variable: ClassVar[Generator[..., "Variable"]]
+    Abstraction: ClassVar[Generator[..., "Abstraction"]]
 
     @Generator.classmethod
-    def application_factory(cls, func, args, left=False):
+    def Application(cls, func, args, left=False):
         return BA(args, func) if left else FA(func, args)
 
     def to_pregroup(self):
@@ -133,8 +133,8 @@ class Diagram(biclosed.Diagram):
 
 
 Box, Eval, Coeval, Curry, Sum, Bubble = (
-    Diagram.generator_factory, Diagram.eval_factory, Diagram.coeval_factory,
-    Diagram.curry_factory, Diagram.sum_factory, Diagram.bubble_factory)
+    Diagram.Box, Diagram.Eval, Diagram.Coeval,
+    Diagram.Curry, Diagram.Sum, Diagram.Bubble)
 
 
 class Word(thue.Word, Box):
@@ -159,7 +159,7 @@ class ForwardCrossedComposition(BinaryBoxConstructor, Box):
                 left, right, left.exponent, right.base))
         name = f"ForwardCrossedComposition({left}, {right})"
         dom, cod = left @ right, right.exponent >> left.base
-        self.generator_factory.__init__(self, name, dom, cod)
+        self.Box.__init__(self, name, dom, cod)
         BinaryBoxConstructor.__init__(self, left, right)
 
 
@@ -173,10 +173,11 @@ class BackwardCrossedComposition(BinaryBoxConstructor, Box):
                 left, right, left.base, right.exponent))
         name = f"BackwardCrossedComposition({left}, {right})"
         dom, cod = left @ right, right.base << left.exponent
-        self.generator_factory.__init__(self, name, dom, cod)
+        self.Box.__init__(self, name, dom, cod)
         BinaryBoxConstructor.__init__(self, left, right)
 
 
+@Diagram.generates
 class Functor(biclosed.Functor):
     """
     A categorial functor is a biclosed functor with a predefined mapping
@@ -204,12 +205,10 @@ class Functor(biclosed.Functor):
         return super().__call__(other)
 
 
-Diagram.functor_factory = Generator.subclass(Functor)
-
-
 CMap = cmap.CMap[Diagram]
 
 
+@Diagram.generates
 class TermBase(Box, biclosed.TermBase):
     """
     A term in the internal language of a categorial grammar.
@@ -221,9 +220,7 @@ class TermBase(Box, biclosed.TermBase):
         return BA(self, other) if left else FA(self, other)
 
 
-Diagram.term_factory = Generator.subclass(TermBase)
-
-
+@Diagram.generates
 class Constant(TermBase, biclosed.Constant):
     def __init__(self, name: str, cod: Ty):
         biclosed.Constant.__init__(self, name, cod)
@@ -233,17 +230,13 @@ class Constant(TermBase, biclosed.Constant):
         return self
 
 
-Diagram.constant_factory = Generator.subclass(Constant)
-
-
+@Diagram.generates
 class Variable(TermBase, biclosed.Variable):
     def simplify(self):
         return self
 
 
-Diagram.variable_factory = Generator.subclass(Variable)
-
-
+@Diagram.generates
 class Abstraction(TermBase, biclosed.Abstraction):
     var: Variable
     body: Term
@@ -255,9 +248,6 @@ class Abstraction(TermBase, biclosed.Abstraction):
 
     def simplify(self):
         return Abstraction(self.var, self.body.simplify(), self.left)
-
-
-Diagram.abstraction_factory = Generator.subclass(Abstraction)
 
 
 class FA(TermBase, biclosed.Application):
@@ -508,10 +498,10 @@ def tree2diagram(tree: dict, dom=Ty()) -> Diagram:
     return Id().tensor(*children) >> rule
 
 
-Layer = Diagram.layer_factory
+Layer = Diagram.Layer
 Id = Diagram.id
 
-Ty.variable_factory, Ty.constant_factory = (
-    Diagram.variable_factory, Diagram.constant_factory)
-Ty.application_factory, Ty.abstraction_factory = (
-    Diagram.application_factory, Diagram.abstraction_factory)
+Ty.Variable, Ty.Constant = (
+    Diagram.Variable, Diagram.Constant)
+Ty.Application, Ty.Abstraction = (
+    Diagram.Application, Diagram.Abstraction)

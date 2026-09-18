@@ -91,8 +91,7 @@ class Ty(pivotal.Ty):
     Parameters:
         inside (frobenius.Wire) : The objects inside the type.
     """
-    generator_factory: ClassVar[Generator[..., Wire]]\
-        = Generator.subclass(Wire)
+    Wire: ClassVar[Generator[..., Wire]] = Generator.subclass(Wire)
 
 
 @factory
@@ -129,8 +128,8 @@ class Diagram(compact.Diagram, markov.Diagram, HypergraphCategory):
     """
 
     ob = Ty
-    spider_factory: ClassVar[Generator[..., "Spider"]]
-    functor_factory: ClassVar[Generator[..., "Functor"]]
+    Spider: ClassVar[Generator[..., "Spider"]]
+    Functor: ClassVar[Generator[..., "Functor"]]
 
     @classmethod
     def caps(cls, left, right):
@@ -149,7 +148,7 @@ class Diagram(compact.Diagram, markov.Diagram, HypergraphCategory):
             typ : The type of the spiders.
             phases : The phase for each spider.
         """
-        return interleaving(cls, cls.spider_factory)(
+        return interleaving(cls, cls.Spider)(
             n_legs_in, n_legs_out, typ, phases)
 
     def unfuse(self) -> Diagram:
@@ -177,10 +176,11 @@ class Diagram(compact.Diagram, markov.Diagram, HypergraphCategory):
 
 
 Box, Cup, Cap, Permutation, Swap = (
-    Diagram.generator_factory, Diagram.cup_factory, Diagram.cap_factory,
-    Diagram.permutation_factory, Diagram.swap_factory)
+    Diagram.Box, Diagram.Cup, Diagram.Cap,
+    Diagram.Permutation, Diagram.Swap)
 
 
+@Diagram.generates
 class Spider(Box):
     """
     The spider with :code:`n_legs_in` and :code:`n_legs_out`
@@ -209,7 +209,7 @@ class Spider(Box):
         name = type(self).__name__\
             + f"({n_legs_in}, {n_legs_out}, {typ}{str_data})"
         dom, cod = typ ** n_legs_in, typ ** n_legs_out
-        self.generator_factory.__init__(
+        self.Box.__init__(
             self, name, dom, cod, data=data, **params)
         self.drawing_name = "" if not data else str(data)
 
@@ -246,15 +246,13 @@ class Spider(Box):
             len(self.dom), len(self.cod), self.typ, self.phase)
 
 
-Diagram.spider_factory = Generator.subclass(Spider)
-
-
 Sum, Bubble, Eval, Coeval, Curry, Copy, Merge, Discard = (
-    Diagram.sum_factory, Diagram.bubble_factory, Diagram.eval_factory,
-    Diagram.coeval_factory, Diagram.curry_factory, Diagram.copy_factory,
-    Diagram.merge_factory, Diagram.discard_factory)
+    Diagram.Sum, Diagram.Bubble, Diagram.Eval,
+    Diagram.Coeval, Diagram.Curry, Diagram.Copy,
+    Diagram.Merge, Diagram.Discard)
 
 
+@Diagram.generates
 class Functor(compact.Functor, markov.Functor):
     """
     A hypergraph functor is a compact functor that preserves spiders.
@@ -275,9 +273,6 @@ class Functor(compact.Functor, markov.Functor):
         if isinstance(other, (markov.Copy, markov.Merge)):
             return markov.Functor.__call__(self, other)
         return compact.Functor.__call__(self, other)
-
-
-Diagram.functor_factory = Generator.subclass(Functor)
 
 
 def interleaving(cls: type, factory: Callable
@@ -357,11 +352,11 @@ def coherence(cls: type, factory: Callable
 CMap = cmap.CMap[Diagram]
 
 Hypergraph = hypergraph.Hypergraph[Diagram]
-Exp, Over, Under = Ty.exp_factory, Ty.over_factory, Ty.under_factory
+Exp, Over, Under = Ty.Exp, Ty.Over, Ty.Under
 TermBase, Constant, Variable, Application, Abstraction = (
-    Diagram.term_factory, Diagram.constant_factory, Diagram.variable_factory,
-    Diagram.application_factory, Diagram.abstraction_factory)
-Layer = Diagram.layer_factory
+    Diagram.TermBase, Diagram.Constant, Diagram.Variable,
+    Diagram.Application, Diagram.Abstraction)
+Layer = Diagram.Layer
 Id = Diagram.id
 
 

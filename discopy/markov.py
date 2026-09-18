@@ -118,17 +118,17 @@ class Diagram(symmetric.Diagram, MarkovCategory):
 
     .. image:: /_static/markov/copy_and_apply.svg
     """
-    copy_factory: ClassVar[Generator[..., "Copy"]]
-    merge_factory: ClassVar[Generator[..., "Merge"]]
-    discard_factory: ClassVar[Generator[..., "Discard"]]
-    functor_factory: ClassVar[Generator[..., "Functor"]]
+    Copy: ClassVar[Generator[..., "Copy"]]
+    Merge: ClassVar[Generator[..., "Merge"]]
+    Discard: ClassVar[Generator[..., "Discard"]]
+    Functor: ClassVar[Generator[..., "Functor"]]
 
     @Generator.classmethod
-    def spider_factory(cls, n_legs_in, n_legs_out, typ, phase=None):
+    def Spider(cls, n_legs_in, n_legs_out, typ, phase=None):
         if phase is not None or 1 not in (n_legs_in, n_legs_out):
             raise ValueError
-        return cls.copy_factory(typ, n_legs_out) if n_legs_in == 1\
-            else cls.merge_factory(typ, n_legs_in)
+        return cls.Copy(typ, n_legs_out) if n_legs_in == 1\
+            else cls.Merge(typ, n_legs_in)
 
     @classmethod
     def copy(cls, x: monoidal.Ty, n=2) -> Diagram:
@@ -165,10 +165,11 @@ class Diagram(symmetric.Diagram, MarkovCategory):
 
 
 Box, Permutation, Swap, Trace = (
-    Diagram.generator_factory, Diagram.permutation_factory,
-    Diagram.swap_factory, Diagram.trace_factory)
+    Diagram.Box, Diagram.Permutation,
+    Diagram.Swap, Diagram.Trace)
 
 
+@Diagram.generates
 class Copy(Box):
     """
     The copy of an atomic type :code:`x` some :code:`n` number of times.
@@ -180,25 +181,23 @@ class Copy(Box):
     def __init__(self, x: monoidal.Ty, n: int = 2):
         assert_isatomic(x, monoidal.Ty)
         name = f"Copy({x}" + ("" if n == 2 else f", {n}") + ")"
-        self.generator_factory.__init__(
+        self.Box.__init__(
             self, name, dom=x, cod=x ** n,
             draw_as_spider=True, color="black", drawing_name="")
 
     def __new__(cls, x: monoidal.Ty, n: int = 2):
         return super().__new__(cls) if n else\
-            cls.discard_factory.__new__(cls.discard_factory, x)
+            cls.Discard.__new__(cls.Discard, x)
 
     def dagger(self) -> Merge:
-        return self.merge_factory(self.dom, len(self.cod))
+        return self.Merge(self.dom, len(self.cod))
 
     def __repr__(self):
         return (
             factory_name(type(self)) + f"({repr(self.dom)}, {len(self.cod)})")
 
 
-Diagram.copy_factory = Generator.subclass(Copy)
-
-
+@Diagram.generates
 class Merge(Box):
     """
     The merge of an atomic type :code:`x` some :code:`n` number of times.
@@ -210,21 +209,19 @@ class Merge(Box):
     def __init__(self, x: monoidal.Ty, n: int = 2):
         assert_isatomic(x, monoidal.Ty)
         name = f"Merge({x}" + ("" if n == 2 else f", {n}") + ")"
-        self.generator_factory.__init__(
+        self.Box.__init__(
             self, name, dom=x ** n, cod=x,
             draw_as_spider=True, color="black", drawing_name="")
 
     def dagger(self) -> Copy:
-        return self.copy_factory(self.cod, len(self.dom))
+        return self.Copy(self.cod, len(self.dom))
 
     def __repr__(self):
         return (
             factory_name(type(self)) + f"({repr(self.cod)}, {len(self.dom)})")
 
 
-Diagram.merge_factory = Generator.subclass(Merge)
-
-
+@Diagram.generates
 class Discard(Copy):
     """
     The discard of an atomic type :code:`x`.
@@ -236,12 +233,10 @@ class Discard(Copy):
         super().__init__(x, 0)
 
 
-Diagram.discard_factory = Generator.subclass(Discard)
+Sum, Bubble = Diagram.Sum, Diagram.Bubble
 
 
-Sum, Bubble = Diagram.sum_factory, Diagram.bubble_factory
-
-
+@Diagram.generates
 class Functor(symmetric.Functor):
     """
     A Markov functor is a symmetric functor that preserves copies.
@@ -283,13 +278,10 @@ class Functor(symmetric.Functor):
         return super().__call__(other)
 
 
-Diagram.functor_factory = Generator.subclass(Functor)
-
-
 CMap = cmap.CMap[Diagram]
 
 Hypergraph = hypergraph.Hypergraph[Diagram]
-Layer = Diagram.layer_factory
+Layer = Diagram.Layer
 Id = Diagram.id
 
 

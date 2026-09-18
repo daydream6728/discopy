@@ -41,8 +41,8 @@ from discopy.utils import factory_name
 class Diagram(tensor.Diagram[complex]):
     """ ZX Diagram. """
     ob = Nat
-    spider_factory = tensor.Spider
-    swap_factory: ClassVar[Generator[..., "Swap"]]
+    Spider = tensor.Spider
+    Swap: ClassVar[Generator[..., "Swap"]]
 
     @staticmethod
     def swap(left, right):
@@ -51,7 +51,7 @@ class Diagram(tensor.Diagram[complex]):
         return tensor.Diagram.swap.__func__(Diagram, left, right)
 
     @staticmethod
-    def cup_factory(left, right):
+    def Cup(left, right):
         del left, right
         return Z(2, 0)
 
@@ -227,22 +227,20 @@ class Diagram(tensor.Diagram[complex]):
 
 
 Box, Sum, Permutation, Cap, Bubble, Eval, Coeval, Curry, Copy, Merge, Discard\
-    = (Diagram.generator_factory, Diagram.sum_factory,
-       Diagram.permutation_factory, Diagram.cap_factory,
-       Diagram.bubble_factory, Diagram.eval_factory, Diagram.coeval_factory,
-       Diagram.curry_factory, Diagram.copy_factory, Diagram.merge_factory,
-       Diagram.discard_factory)
+    = (Diagram.Box, Diagram.Sum,
+       Diagram.Permutation, Diagram.Cap,
+       Diagram.Bubble, Diagram.Eval, Diagram.Coeval,
+       Diagram.Curry, Diagram.Copy, Diagram.Merge,
+       Diagram.Discard)
 
 
+@Diagram.generates
 class Swap(Permutation, tensor.Swap[complex], Box):
     """ Swap in a ZX diagram. """
     def __repr__(self):
         return "SWAP"
 
     __str__ = __repr__
-
-
-Diagram.swap_factory = Generator.subclass(Swap)
 
 
 class Spider(tensor.Spider[complex], Box):
@@ -388,7 +386,7 @@ H.color, H.shape = "yellow", "rectangle"
 
 SWAP = Swap(Nat(1), Nat(1))
 TermBase, Constant, Variable, Application, Abstraction = (
-    Diagram.term_factory, Diagram.constant_factory, Diagram.variable_factory,
-    Diagram.application_factory, Diagram.abstraction_factory)
-Layer = Diagram.layer_factory
+    Diagram.TermBase, Diagram.Constant, Diagram.Variable,
+    Diagram.Application, Diagram.Abstraction)
+Layer = Diagram.Layer
 Id = Diagram.id

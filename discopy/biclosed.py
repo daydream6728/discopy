@@ -110,23 +110,23 @@ class Ty(monoidal.Ty):
     Applying a biclosed type to a callable yields a :class:`Abstraction`,
     applying it to a string yields a :class:`Constant`.
     """
-    generator_factory: ClassVar[Generator[..., "Wire"]]
-    exp_factory: ClassVar[Generator[..., "Exp"]]
-    over_factory: ClassVar[Generator[..., "Over"]]
-    under_factory: ClassVar[Generator[..., "Under"]]
+    Wire: ClassVar[Generator[..., "Wire"]]
+    Exp: ClassVar[Generator[..., "Exp"]]
+    Over: ClassVar[Generator[..., "Over"]]
+    Under: ClassVar[Generator[..., "Under"]]
 
     def __pow__(self, other: Ty) -> Ty:
         return self.exp(other) if isinstance(other, Ty)\
             else monoidal.Ty.__pow__(self, other)
 
     def exp(self, other: Ty) -> Ty:
-        return self.ar(self.exp_factory(self, other))
+        return self.ar(self.Exp(self, other))
 
     def over(self, other: Ty) -> Ty:
-        return self.ar(self.over_factory(self, other))
+        return self.ar(self.Over(self, other))
 
     def under(self, other: Ty) -> Ty:
-        return self.ar(self.under_factory(self, other))
+        return self.ar(self.Under(self, other))
 
     def __lshift__(self, other):
         return self.over(other)
@@ -136,7 +136,7 @@ class Ty(monoidal.Ty):
 
     def __call__(self, arg):
         if isinstance(arg, str):
-            return self.constant_factory(arg, self)
+            return self.Constant(arg, self)
         elif isinstance(arg, Callable):
             parameters = dict(signature(arg).parameters)
             left = False
@@ -148,8 +148,8 @@ class Ty(monoidal.Ty):
             varnames = list(parameters.keys())
             if len(varnames) != 1:
                 raise NotImplementedError
-            var = self.variable_factory(varnames[0], self)
-            return self.abstraction_factory(var, arg(var), left)
+            var = self.Variable(varnames[0], self)
+            return self.Abstraction(var, arg(var), left)
         raise ValueError
 
     def __repr__(self):
@@ -205,6 +205,7 @@ class Ty(monoidal.Ty):
         return self.inside[0].exponent
 
 
+@Ty.generates
 class Wire(monoidal.Wire):
     """
     A biclosed object is a self-dagger :class:`monoidal.Wire`, i.e. its left
@@ -215,9 +216,7 @@ class Wire(monoidal.Wire):
         return self
 
 
-Ty.generator_factory = Generator.subclass(Wire)
-
-
+@Ty.generates
 class Exp(Wire):
     """
     A :code:`base` type to an :code:`exponent` type, called with :code:`**`.
@@ -267,9 +266,7 @@ class Exp(Wire):
         return self.base if isinstance(self, Under) else self.exponent
 
 
-Ty.exp_factory = Generator.subclass(Exp)
-
-
+@Ty.generates
 class Over(Exp):
     """
     An :code:`exponent` type over a :code:`base` type, called with :code:`<<`.
@@ -282,9 +279,7 @@ class Over(Exp):
         return f"({self.base} << {self.exponent})"
 
 
-Ty.over_factory = Generator.subclass(Over)
-
-
+@Ty.generates
 class Under(Exp):
     """
     A :code:`base` type under an :code:`exponent` type, called with :code:`>>`.
@@ -295,9 +290,6 @@ class Under(Exp):
     """
     def __str__(self):
         return f"({self.exponent} >> {self.base})"
-
-
-Ty.under_factory = Generator.subclass(Under)
 
 
 @factory
@@ -313,15 +305,15 @@ class Diagram(monoidal.Diagram, BiclosedCategory):
     """
 
     ob = Ty
-    eval_factory: ClassVar[Generator[..., "Eval"]]
-    coeval_factory: ClassVar[Generator[..., "Coeval"]]
-    curry_factory: ClassVar[Generator[..., "Curry"]]
-    functor_factory: ClassVar[Generator[..., "Functor"]]
-    term_factory: ClassVar[Generator[..., "TermBase"]]
-    constant_factory: ClassVar[Generator[..., "Constant"]]
-    variable_factory: ClassVar[Generator[..., "Variable"]]
-    application_factory: ClassVar[Generator[..., "Application"]]
-    abstraction_factory: ClassVar[Generator[..., "Abstraction"]]
+    Eval: ClassVar[Generator[..., "Eval"]]
+    Coeval: ClassVar[Generator[..., "Coeval"]]
+    Curry: ClassVar[Generator[..., "Curry"]]
+    Functor: ClassVar[Generator[..., "Functor"]]
+    TermBase: ClassVar[Generator[..., "TermBase"]]
+    Constant: ClassVar[Generator[..., "Constant"]]
+    Variable: ClassVar[Generator[..., "Variable"]]
+    Application: ClassVar[Generator[..., "Application"]]
+    Abstraction: ClassVar[Generator[..., "Abstraction"]]
 
     def curry(self, n=1, left=True) -> Diagram:
         """
@@ -332,7 +324,7 @@ class Diagram(monoidal.Diagram, BiclosedCategory):
             left : Whether to curry on the left, i.e. into :class:`Over`,
                 or on the right, i.e. into :class:`Under`.
         """
-        return self.curry_factory(self, n, left)
+        return self.Curry(self, n, left)
 
     @classmethod
     def ev(cls, base: Ty, exponent: Ty, left=True) -> Eval:
@@ -345,7 +337,7 @@ class Diagram(monoidal.Diagram, BiclosedCategory):
             left : Whether to evaluate on the left, i.e. from :class:`Over`,
                 or on the right, i.e. from :class:`Under`.
         """
-        return cls.eval_factory(
+        return cls.Eval(
             base << exponent if left else exponent >> base)
 
     def to_compact(self) -> CMap:
@@ -364,12 +356,13 @@ class Diagram(monoidal.Diagram, BiclosedCategory):
         return self.to_map().to_compact()
 
     def to_drawing(self):
-        return monoidal.Diagram.to_drawing(self, functor_factory=Functor)
+        return monoidal.Diagram.to_drawing(self, functor=Functor)
 
 
-Box = Diagram.generator_factory
+Box = Diagram.Box
 
 
+@Diagram.generates
 class Eval(Box):
     """
     The evaluation of an exponential type.
@@ -387,16 +380,14 @@ class Eval(Box):
         super().__init__("Eval" + str(x), dom, cod)
 
     def dagger(self) -> Coeval:
-        return self.coeval_factory(self.x, self.left)
+        return self.Coeval(self.x, self.left)
 
     @property
     def drawing_name(self):
         return "<<" if self.left else ">>"
 
 
-Diagram.eval_factory = Generator.subclass(Eval)
-
-
+@Diagram.generates
 class Coeval(Box):
     """
     The coevaluation of an exponential type, i.e. the dagger of :class:`Eval`.
@@ -425,12 +416,10 @@ class Coeval(Box):
         super().__init__("Coeval" + str(x), dom, cod)
 
     def dagger(self) -> Eval:
-        return self.eval_factory(self.x, self.left)
+        return self.Eval(self.x, self.left)
 
 
-Diagram.coeval_factory = Generator.subclass(Coeval)
-
-
+@Diagram.generates
 class Curry(monoidal.Bubble, Box):
     """
     The currying of a biclosed diagram.
@@ -456,27 +445,25 @@ class Curry(monoidal.Bubble, Box):
             dom, cod = arg.dom[n:], arg.dom[:n] >> arg.cod
         monoidal.Bubble.__init__(
             self, arg, dom=dom, cod=cod, drawing_name="$\\Lambda$")
-        self.generator_factory.__init__(self, name, dom, cod)
+        self.Box.__init__(self, name, dom, cod)
 
     def __str__(self):
         return self.name
 
     def to_drawing(self):
         if self.left:
-            f, e = self.arg, self.coeval_factory(self.cod, left=True)
+            f, e = self.arg, self.Coeval(self.cod, left=True)
             return (f >> e).to_drawing().trace()
-        f, e = self.arg, self.coeval_factory(self.cod)
+        f, e = self.arg, self.Coeval(self.cod)
         return (f >> e).to_drawing().trace(left=True)
 
 
-Diagram.curry_factory = Generator.subclass(Curry)
-
-
-Sum, Bubble = Diagram.sum_factory, Diagram.bubble_factory
-Layer = Diagram.layer_factory
+Sum, Bubble = Diagram.Sum, Diagram.Bubble
+Layer = Diagram.Layer
 Id = Diagram.id
 
 
+@Diagram.generates
 class Functor(monoidal.Functor):
     """
     A biclosed functor is a monoidal functor
@@ -514,12 +501,10 @@ class Functor(monoidal.Functor):
         return super().__call__(other)
 
 
-Diagram.functor_factory = Generator.subclass(Functor)
-
-
 CMap = cmap.CMap[Diagram]
 
 
+@Diagram.generates
 class TermBase(Box):
     """
     A term in the internal language of biclosed categories.
@@ -577,12 +562,10 @@ class TermBase(Box):
 
     def __call__(self, other, left=False):
         args = (other, self, left) if left else (self, other, left)
-        return self.cod.application_factory(*args)
+        return self.cod.Application(*args)
 
 
-Diagram.term_factory = Generator.subclass(TermBase)
-
-
+@Diagram.generates
 class Constant(TermBase):
     """
     A constant term of defined by a :class:`Diagram` with ``dom=X, cod=Y``.
@@ -612,9 +595,7 @@ class Constant(TermBase):
         return f"{self.cod!s}({self.name!r})"
 
 
-Diagram.constant_factory = Generator.subclass(Constant)
-
-
+@Diagram.generates
 class Variable(TermBase):
     """
     A variable with a string as name and a :class:`Ty`.
@@ -638,9 +619,7 @@ class Variable(TermBase):
     __repr__ = Constant.__repr__
 
 
-Diagram.variable_factory = Generator.subclass(Variable)
-
-
+@Diagram.generates
 class Application(TermBase):
     """
     The application either ``func(args)`` of a term ``func`` of type ``Y << X``
@@ -694,9 +673,7 @@ class Application(TermBase):
             else self.func.constants + self.args.constants
 
 
-Diagram.application_factory = Generator.subclass(Application)
-
-
+@Diagram.generates
 class Abstraction(TermBase):
     var: Variable
     body: Term
@@ -735,15 +712,12 @@ class Abstraction(TermBase):
         return self.body.constants
 
 
-Diagram.abstraction_factory = Generator.subclass(Abstraction)
-
-
 type Term = Constant | Variable | Application | Abstraction
 
-Ty.variable_factory, Ty.constant_factory = (
-    Diagram.variable_factory, Diagram.constant_factory)
-Ty.application_factory, Ty.abstraction_factory = (
-    Diagram.application_factory, Diagram.abstraction_factory)
+Ty.Variable, Ty.Constant = (
+    Diagram.Variable, Diagram.Constant)
+Ty.Application, Ty.Abstraction = (
+    Diagram.Application, Diagram.Abstraction)
 
 
 class Equation(monoidal.Equation):

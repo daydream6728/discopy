@@ -109,12 +109,12 @@ def test_generator():
     from discopy import cat, symmetric, markov, closed, compact, feedback
     from discopy import biclosed, rigid, pivotal
     from discopy.grammar import categorial
-    assert cat.Arrow.generator_factory is cat.Box
+    assert cat.Arrow.Box is cat.Box
     assert closed.Wire.__bases__ == (biclosed.Wire, )
     assert categorial.Over.ob is categorial.Ty
     assert pivotal.Functor.dom is pivotal.Functor.cod is pivotal.Diagram
-    assert rigid.Nat.exp_factory is rigid.Exp
-    assert symmetric.Diagram.swap_factory is symmetric.Swap
+    assert rigid.Nat.Exp is rigid.Exp
+    assert symmetric.Diagram.Swap is symmetric.Swap
     assert closed.Swap.__bases__ == (
         markov.Swap, closed.Permutation, closed.Box, closed.Diagram)
     assert closed.Discard.__bases__ == (
@@ -125,50 +125,48 @@ def test_generator():
     assert feedback.Swap(y, y).delay().dom == y.delay() @ y.delay()
 
 
-def test_Generator_late_binding():
-    """ A factory bound below its generator is inherited and locates itself. """
+def test_generates():
+    """ A category binds a generator under its own name, and is inherited. """
     from discopy import cat, compact, frobenius
-    from discopy.utils import Generator
 
     @factory
     class Base(cat.Arrow):
         pass
 
+    @Base.generates
     class Atom(cat.Box, Base):
         pass
-
-    Base.generator_factory = Generator.subclass(Atom)
 
     @factory
     class Sub(Base):
         pass
 
-    assert Sub.generator_factory is Atom is Base.generator_factory
-    assert compact.Diagram.cup_factory is compact.Cup
-    assert frobenius.Diagram.cap_factory is frobenius.Cap
+    assert Base.Atom is Atom is Sub.Atom
+    assert compact.Diagram.Cup is compact.Cup
+    assert frobenius.Diagram.Cap is frobenius.Cap
 
 
 def test_Generator_alias():
     """ A factory can be another factory of the same category. """
     from discopy import symmetric, closed
-    assert symmetric.Diagram.braid_factory is symmetric.Swap
-    assert closed.Ty.over_factory is closed.Ty.under_factory is closed.Exp
+    assert symmetric.Diagram.Braid is symmetric.Swap
+    assert closed.Ty.Over is closed.Ty.Under is closed.Exp
 
 
 def test_Generator_outside_the_hierarchy():
     """ A factory class with no generator in its bases keeps the root. """
     from discopy import monoidal
     from discopy.grammar import cfg
-    assert cfg.Rule.layer_factory is monoidal.Layer
-    assert cfg.Word.generator_factory is monoidal.Box
+    assert cfg.Rule.Layer is monoidal.Layer
+    assert cfg.Word.Box is monoidal.Box
 
 
 def test_Generator_call():
     """ A factory taken out of its class calls the generator of its owner. """
     from discopy import symmetric
     x = symmetric.Ty('x')
-    swap = vars(symmetric.Diagram)["swap_factory"]
-    twist = vars(symmetric.Diagram)["twist_factory"]
+    swap = vars(symmetric.Diagram)["Swap"]
+    twist = vars(symmetric.Diagram)["Twist"]
     assert swap(x, x) == symmetric.Swap(x, x)
     assert twist(x) == symmetric.Diagram.id(x)
 
@@ -183,10 +181,10 @@ def test_generator_override():
     class Step(symmetric.Box, Recipe):
         pass
 
-    Recipe.generator_factory = Step
-    assert Recipe.swap_factory.__bases__ == (
-        symmetric.Swap, Recipe.permutation_factory, Step, Recipe)
-    assert tensor.Diagram[complex].swap_factory is tensor.Swap
+    Recipe.Box = Step
+    assert Recipe.Swap.__bases__ == (
+        symmetric.Swap, Recipe.Permutation, Step, Recipe)
+    assert tensor.Diagram[complex].Swap is tensor.Swap
 
 
 @pytest.mark.parametrize("path", [

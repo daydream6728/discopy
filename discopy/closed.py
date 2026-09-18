@@ -80,13 +80,14 @@ class Ty(biclosed.Ty):
     .. image:: /_static/closed/diagram.svg
         :align: center
     """
-    over_factory = under_factory = Generator.alias("exp_factory")
-    exp_factory: ClassVar[Generator[..., "Exp"]]
+    Over = Under = Generator.alias("Exp")
+    Exp: ClassVar[Generator[..., "Exp"]]
 
 
-Wire = Ty.generator_factory
+Wire = Ty.Wire
 
 
+@Ty.generates
 class Exp(biclosed.Exp, Wire):
     "An exponential object in a markov category."
 
@@ -94,9 +95,6 @@ class Exp(biclosed.Exp, Wire):
 
     def __str__(self):
         return f"({self.exponent} >> {self.base})"
-
-
-Ty.exp_factory = Generator.subclass(Exp)
 
 
 @factory
@@ -107,13 +105,13 @@ class Diagram(markov.Diagram, biclosed.Diagram, ClosedCategory):
     A diagram applied to another post-composes their tensor with an `Eval`.
     """
     ob = Ty
-    eval_factory: ClassVar[Generator[..., "Eval"]]
-    functor_factory: ClassVar[Generator[..., "Functor"]]
-    term_factory: ClassVar[Generator[..., "TermBase"]]
-    constant_factory: ClassVar[Generator[..., "Constant"]]
-    variable_factory: ClassVar[Generator[..., "Variable"]]
-    application_factory: ClassVar[Generator[..., "Application"]]
-    abstraction_factory: ClassVar[Generator[..., "Abstraction"]]
+    Eval: ClassVar[Generator[..., "Eval"]]
+    Functor: ClassVar[Generator[..., "Functor"]]
+    TermBase: ClassVar[Generator[..., "TermBase"]]
+    Constant: ClassVar[Generator[..., "Constant"]]
+    Variable: ClassVar[Generator[..., "Variable"]]
+    Application: ClassVar[Generator[..., "Application"]]
+    Abstraction: ClassVar[Generator[..., "Abstraction"]]
 
     @property
     def is_linear(self):
@@ -122,7 +120,7 @@ class Diagram(markov.Diagram, biclosed.Diagram, ClosedCategory):
 
     @classmethod
     def ev(cls, base: Ty, exponent: Ty, left: bool = True):
-        return cls.eval_factory(exponent >> base, left=left)
+        return cls.Eval(exponent >> base, left=left)
 
     def to_compact(self) -> Diagram:
         """
@@ -155,27 +153,26 @@ class Diagram(markov.Diagram, biclosed.Diagram, ClosedCategory):
         return result
 
     def to_drawing(self):
-        return monoidal.Diagram.to_drawing(self, functor_factory=Functor)
+        return monoidal.Diagram.to_drawing(self, functor=Functor)
 
 
-Box = Diagram.generator_factory
+Box = Diagram.Box
 
 
+@Diagram.generates
 class Eval(biclosed.Eval, Box):
     "The evaluation of an exponential type."
     drawing_name = "__call__"
 
 
-Diagram.eval_factory = Generator.subclass(Eval)
-
-
 Coeval, Curry, Permutation, Swap, Trace, Copy, Merge, Discard, Sum, Bubble = (
-    Diagram.coeval_factory, Diagram.curry_factory,
-    Diagram.permutation_factory, Diagram.swap_factory, Diagram.trace_factory,
-    Diagram.copy_factory, Diagram.merge_factory, Diagram.discard_factory,
-    Diagram.sum_factory, Diagram.bubble_factory)
+    Diagram.Coeval, Diagram.Curry,
+    Diagram.Permutation, Diagram.Swap, Diagram.Trace,
+    Diagram.Copy, Diagram.Merge, Diagram.Discard,
+    Diagram.Sum, Diagram.Bubble)
 
 
+@Diagram.generates
 class Functor(biclosed.Functor, markov.Functor):
     """
     A closed functor is a markov functor
@@ -196,18 +193,16 @@ class Functor(biclosed.Functor, markov.Functor):
         return super().__call__(other)
 
 
-Diagram.functor_factory = Generator.subclass(Functor)
-
-
 CMap = cmap.CMap[Diagram]
 
 
 Hypergraph = hypergraph.Hypergraph[Diagram]
 
-Layer = Diagram.layer_factory
+Layer = Diagram.Layer
 Id = Diagram.id
 
 
+@Diagram.generates
 class TermBase(Box, biclosed.TermBase):
     """
     A term in the internal language of a closed category.
@@ -218,12 +213,10 @@ class TermBase(Box, biclosed.TermBase):
         return Application(self, other, left=False)
 
 
-Diagram.term_factory = Generator.subclass(TermBase)
-
-
 type Term = Constant | Variable | Application | Abstraction
 
 
+@Diagram.generates
 class Constant(TermBase, biclosed.Constant):
     def eval(self, functor=None, context=None):
         functor = functor or self.functor
@@ -233,9 +226,7 @@ class Constant(TermBase, biclosed.Constant):
             functor)
 
 
-Diagram.constant_factory = Generator.subclass(Constant)
-
-
+@Diagram.generates
 class Variable(TermBase, biclosed.Variable):
     def eval(self, functor=None, context=None):
         functor = functor or self.functor
@@ -247,9 +238,7 @@ class Variable(TermBase, biclosed.Variable):
             for x in context.inside])
 
 
-Diagram.variable_factory = Generator.subclass(Variable)
-
-
+@Diagram.generates
 class Application(TermBase, biclosed.Application):
     def __check_dom__(self, func, args, left):
         self.overlap = set(func.freevars).intersection(args.freevars)
@@ -272,9 +261,7 @@ class Application(TermBase, biclosed.Application):
             >> func @ args >> evaluate
 
 
-Diagram.application_factory = Generator.subclass(Application)
-
-
+@Diagram.generates
 class Abstraction(TermBase, biclosed.Abstraction):
     def __check_dom__(self):
         self.freevars = [x for x in self.body.freevars if x != self.var]
@@ -296,9 +283,6 @@ class Abstraction(TermBase, biclosed.Abstraction):
         p = [i] + [j for j in range(n) if j != i]
         doms = [self.ob(wire) for wire in body.dom.inside]
         return (body.permutation(p, doms).dagger() >> body).curry(left=False)
-
-
-Diagram.abstraction_factory = Generator.subclass(Abstraction)
 
 
 @dataclass
@@ -326,10 +310,10 @@ class Substitution:
             return other(term)
 
 
-Ty.variable_factory, Ty.constant_factory = (
-    Diagram.variable_factory, Diagram.constant_factory)
-Ty.application_factory, Ty.abstraction_factory = (
-    Diagram.application_factory, Diagram.abstraction_factory)
+Ty.Variable, Ty.Constant = (
+    Diagram.Variable, Diagram.Constant)
+Ty.Application, Ty.Abstraction = (
+    Diagram.Application, Diagram.Abstraction)
 
 
 class Equation(markov.Equation):

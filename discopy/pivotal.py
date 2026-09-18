@@ -92,8 +92,7 @@ class Ty(rigid.Ty):
     Parameters:
         inside (Wire) : The objects inside the type.
     """
-    generator_factory: ClassVar[Generator[..., Wire]]\
-        = Generator.subclass(Wire)
+    Wire: ClassVar[Generator[..., Wire]] = Generator.subclass(Wire)
 
 
 @factory
@@ -122,9 +121,9 @@ class Diagram(rigid.Diagram, traced.Diagram, PivotalCategory):
         cod (Ty) : The codomain of the diagram, i.e. its output.
     """
     ob = Ty
-    generator_factory: ClassVar[Generator[..., "Box"]]
-    cup_factory: ClassVar[Generator[..., "Cup"]]
-    cap_factory: ClassVar[Generator[..., "Cap"]]
+    Box: ClassVar[Generator[..., "Box"]]
+    Cup: ClassVar[Generator[..., "Cup"]]
+    Cap: ClassVar[Generator[..., "Cap"]]
 
     def dagger(self):
         """
@@ -167,7 +166,7 @@ class Diagram(rigid.Diagram, traced.Diagram, PivotalCategory):
         return self.rotate().dagger()
 
     @Generator.classmethod
-    def trace_factory(cls, diagram: Diagram, left=False):
+    def Trace(cls, diagram: Diagram, left=False):
         """
         The trace of a pivotal diagram is its pre- and post-composition with
         cups and caps to form a feedback loop.
@@ -179,14 +178,15 @@ class Diagram(rigid.Diagram, traced.Diagram, PivotalCategory):
         traced_wire = diagram.dom[:1] if left else diagram.dom[-1:]
         dom, cod = (diagram.dom[1:], diagram.cod[1:]) if left\
             else (diagram.dom[:-1], diagram.cod[:-1])
-        return cls.cap_factory(traced_wire.r, traced_wire) @ dom\
+        return cls.Cap(traced_wire.r, traced_wire) @ dom\
             >> traced_wire.r @ diagram\
-            >> cls.cup_factory(traced_wire.r, traced_wire) @ cod if left\
-            else dom @ cls.cap_factory(traced_wire, traced_wire.r)\
+            >> cls.Cup(traced_wire.r, traced_wire) @ cod if left\
+            else dom @ cls.Cap(traced_wire, traced_wire.r)\
             >> diagram @ traced_wire.r\
-            >> cod @ cls.cup_factory(traced_wire, traced_wire.r)
+            >> cod @ cls.Cup(traced_wire, traced_wire.r)
 
 
+@Diagram.generates
 class Box(rigid.Box, traced.Box, Diagram):
     """
     A pivotal box is a rigid and traced box in a pivotal diagram.
@@ -219,9 +219,7 @@ class Box(rigid.Box, traced.Box, Diagram):
         return result
 
 
-Diagram.generator_factory = Generator.subclass(Box)
-
-
+@Diagram.generates
 class Cup(rigid.Cup, Box):
     """
     A pivotal cup is a rigid cup of pivotal types.
@@ -233,12 +231,10 @@ class Cup(rigid.Cup, Box):
 
     def dagger(self) -> Cap:
         """ The dagger of a pivotal cup. """
-        return self.cap_factory(self.left, self.right)
+        return self.Cap(self.left, self.right)
 
 
-Diagram.cup_factory = Generator.subclass(Cup)
-
-
+@Diagram.generates
 class Cap(rigid.Cap, Box):
     """
     A pivotal cap is a rigid cap of pivotal types.
@@ -250,24 +246,21 @@ class Cap(rigid.Cap, Box):
 
     def dagger(self) -> Cup:
         """ The dagger of a pivotal cap. """
-        return self.cup_factory(self.left, self.right)
-
-
-Diagram.cap_factory = Generator.subclass(Cap)
+        return self.Cup(self.left, self.right)
 
 
 Sum, Bubble, Eval, Coeval, Curry = (
-    Diagram.sum_factory, Diagram.bubble_factory, Diagram.eval_factory,
-    Diagram.coeval_factory, Diagram.curry_factory)
+    Diagram.Sum, Diagram.Bubble, Diagram.Eval,
+    Diagram.Coeval, Diagram.Curry)
 
 
-Functor = Diagram.functor_factory
+Functor = Diagram.Functor
 CMap = cmap.CMap[Diagram]
-Exp, Over, Under = Ty.exp_factory, Ty.over_factory, Ty.under_factory
+Exp, Over, Under = Ty.Exp, Ty.Over, Ty.Under
 TermBase, Constant, Variable, Application, Abstraction = (
-    Diagram.term_factory, Diagram.constant_factory, Diagram.variable_factory,
-    Diagram.application_factory, Diagram.abstraction_factory)
-Layer = Diagram.layer_factory
+    Diagram.TermBase, Diagram.Constant, Diagram.Variable,
+    Diagram.Application, Diagram.Abstraction)
+Layer = Diagram.Layer
 Id = Diagram.id
 
 

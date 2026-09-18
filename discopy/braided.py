@@ -92,8 +92,8 @@ class Diagram(monoidal.Diagram, BraidedCategory):
         dom (monoidal.Ty) : The domain of the diagram, i.e. its input.
         cod (monoidal.Ty) : The codomain of the diagram, i.e. its output.
     """
-    braid_factory: ClassVar[Generator[..., "Braid"]]
-    functor_factory: ClassVar[Generator[..., "Functor"]]
+    Braid: ClassVar[Generator[..., "Braid"]]
+    Functor: ClassVar[Generator[..., "Functor"]]
 
     @classmethod
     def braid(cls, left: monoidal.Ty, right: monoidal.Ty) -> Diagram:
@@ -106,9 +106,9 @@ class Diagram(monoidal.Diagram, BraidedCategory):
 
         Note
         ----
-        This calls :func:`hexagon` and :attr:`braid_factory`.
+        This calls :func:`hexagon` and :attr:`Braid`.
         """
-        return hexagon(cls, cls.braid_factory)(left, right)
+        return hexagon(cls, cls.Braid)(left, right)
 
     def simplify(self) -> Diagram:
         """ Remove braids followed by their dagger. """
@@ -165,9 +165,10 @@ class Diagram(monoidal.Diagram, BraidedCategory):
         return match.substitute(target)
 
 
-Box = Diagram.generator_factory
+Box = Diagram.Box
 
 
+@Diagram.generates
 class Braid(BinaryBoxConstructor, Box):
     """
     The braiding of atomic types :code:`left` and :code:`right`.
@@ -188,7 +189,7 @@ class Braid(BinaryBoxConstructor, Box):
         name = type(self).__name__\
             + (f"({right}, {left})" if is_dagger else f"({left}, {right})")
         dom, cod = left @ right, right @ left
-        self.generator_factory.__init__(
+        self.Box.__init__(
             self, name, dom, cod, is_dagger=is_dagger, draw_as_braid=True)
         BinaryBoxConstructor.__init__(self, left, right)
 
@@ -199,9 +200,6 @@ class Braid(BinaryBoxConstructor, Box):
 
     def dagger(self):
         return type(self)(self.right, self.left, not self.is_dagger)
-
-
-Diagram.braid_factory = Generator.subclass(Braid)
 
 
 def hexagon(cls: type, factory: Callable) -> Callable[[Ty, Ty], Diagram]:
@@ -228,9 +226,10 @@ def hexagon(cls: type, factory: Callable) -> Callable[[Ty, Ty], Diagram]:
     return method
 
 
-Sum, Bubble = Diagram.sum_factory, Diagram.bubble_factory
+Sum, Bubble = Diagram.Sum, Diagram.Bubble
 
 
+@Diagram.generates
 class Functor(monoidal.Functor):
     """
     A braided functor is a monoidal functor that preserves braids.
@@ -251,10 +250,7 @@ class Functor(monoidal.Functor):
         return super().__call__(other)
 
 
-Diagram.functor_factory = Generator.subclass(Functor)
-
-
-Layer = Diagram.layer_factory
+Layer = Diagram.Layer
 Id = Diagram.id
 
 
