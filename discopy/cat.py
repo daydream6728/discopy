@@ -125,6 +125,10 @@ class Ob(Testable["Ob"]):
             del state["_name"]
         self.__dict__.update(state)
 
+    def image(self, functor):
+        """ How a functor maps the object, ``ob_map`` by default. """
+        return functor.generic(self)
+
     def __init__(self, name: str = ""):
         assert_isinstance(name, str)
         self.name = name
@@ -1015,12 +1019,24 @@ class Functor(Category):
         level above as boxes.
         """
         image = getattr(other, "image", None)
-        if image is None:
-            return self.generic(other)
-        declared = getattr(type(self).dom, type(other).__name__, None)
-        return image(self) if isinstance(declared, type) and (
-            isinstance(other, declared) or issubclass(declared, type(other)))\
-            else self.generic(other)
+        return self.generic(other) if image is None\
+            or not self.interprets(type(other)) else image(self)
+
+    def interprets(self, generator: type) -> bool:
+        """
+        Whether the functor lets a generator say how it is mapped, i.e.
+        whether its domain declares one of the same name.
+
+        A braid is an opaque box to a monoidal functor, which is how
+        :meth:`discopy.cmap.CMap.from_diagram` keeps the structure of the
+        level above the map as boxes.
+        """
+        dom = type(self).dom
+        declared = getattr(dom, generator.__name__, None)
+        if not isinstance(declared, type):
+            declared = getattr(dom.ob, generator.__name__, None)
+        return isinstance(declared, type) and (
+            issubclass(generator, declared) or issubclass(declared, generator))
 
     def generic(self, other):
         """
