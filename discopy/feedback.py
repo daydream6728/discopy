@@ -583,6 +583,12 @@ class Feedback(monoidal.Bubble, Box):
     def to_drawing(self):
         return self.arg.to_drawing().trace()
 
+    def image(self, functor):
+        if not hasattr(functor.cod, "feedback"):
+            return super().image(functor)
+        return functor(self.arg).feedback(
+            *map(functor, (self.dom, self.cod, self.mem)))
+
 
 @Diagram.generator
 class FollowedBy(Box):
@@ -633,6 +639,12 @@ class FollowedBy(Box):
     def reset(self):
         return type(self)(self.arg, self.is_dagger)
 
+    def image(self, functor):
+        if not hasattr(functor.cod, "FollowedBy"):
+            return super().image(functor)
+        return functor.cod.FollowedBy(
+            functor(self.dom if self.is_dagger else self.cod))
+
 
 @Diagram.generator
 class Functor(markov.Functor):
@@ -675,13 +687,6 @@ class Functor(markov.Functor):
             attr = "head" if isinstance(other, (HeadOb, Head)) else "tail"
             if hasattr(cod, attr):
                 return getattr(self(other.arg), attr)
-        if isinstance(
-                other, FollowedBy) and hasattr(self.cod, "FollowedBy"):
-            arg = other.dom if other.is_dagger else other.cod
-            return self.cod.FollowedBy(self(arg))
-        if isinstance(other, Feedback) and hasattr(self.cod, "feedback"):
-            return self(other.arg).feedback(*map(self, (
-                other.dom, other.cod, other.mem)))
         return super().__call__(other)
 
 
