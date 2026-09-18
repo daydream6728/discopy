@@ -288,11 +288,6 @@ class Functor(pivotal.Functor, balanced.Functor):
     """
     dom = cod = Diagram
 
-    def __call__(self, other):
-        if isinstance(other, balanced.Braid):
-            return balanced.Functor.__call__(self, other)
-        return pivotal.Functor.__call__(self, other)
-
 
 class DualRail(balanced.DualRail, Functor):
     """

@@ -58,7 +58,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import ClassVar, Dict
 
-from discopy import cat, monoidal, biclosed, markov, cmap, hypergraph
+from discopy import monoidal, biclosed, markov, cmap, hypergraph
 from discopy.abc import ClosedCategory
 from discopy.cat import factory, Generator
 
@@ -185,12 +185,6 @@ class Functor(biclosed.Functor, markov.Functor):
         cod (Category) : The codomain of the functor.
     """
     dom = cod = Diagram
-
-    def __call__(self, other):
-        if isinstance(other, (
-                cat.Ob, biclosed.Eval, biclosed.Coeval, biclosed.Curry)):
-            return biclosed.Functor.__call__(self, other)
-        return super().__call__(other)
 
 
 CMap = cmap.CMap[Diagram]

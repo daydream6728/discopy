@@ -124,11 +124,6 @@ class Functor(symmetric.Functor, ribbon.Functor):
     """
     dom = cod = Diagram
 
-    def __call__(self, other):
-        if isinstance(other, (symmetric.Swap, symmetric.Permutation)):
-            return symmetric.Functor.__call__(self, other)
-        return ribbon.Functor.__call__(self, other)
-
 
 CMap = cmap.CMap[Diagram]
 
