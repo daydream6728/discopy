@@ -752,7 +752,7 @@ def test_List():
         a[2]
 
     assert issubclass(List, abc.Monoid) and a.dom is a.cod is None
-    assert not issubclass(Ty, List) and Ty.Wire is Wire
+    assert not issubclass(Ty, List)
     assert all(issubclass(Ty, base)
                for base in (cat.Ob, cat.FreeCategory, abc.ColouredMonoid))
     assert Dim(2, 3)[::-1] == Dim(3, 2) and Dim(2, 3)[0] == Dim(2)

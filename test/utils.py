@@ -106,15 +106,13 @@ def test_wire_tree_roundtrip():
 
 
 def test_generator():
-    from discopy import cat, symmetric, markov, closed, compact, feedback
+    from discopy import symmetric, markov, closed, compact, feedback
     from discopy import biclosed, rigid, pivotal
     from discopy.grammar import categorial
-    assert cat.Arrow.Box is cat.Box
     assert closed.Wire.__bases__ == (biclosed.Wire, )
     assert categorial.Over.ob is categorial.Ty
     assert pivotal.Functor.dom is pivotal.Functor.cod is pivotal.Diagram
     assert rigid.Nat.Exp is rigid.Exp
-    assert symmetric.Diagram.Swap is symmetric.Swap
     assert closed.Swap.__bases__ == (
         markov.Swap, closed.Permutation, closed.Box, closed.Diagram)
     assert closed.Discard.__bases__ == (
@@ -127,7 +125,7 @@ def test_generator():
 
 def test_generates():
     """ A category binds a generator under its own name, and is inherited. """
-    from discopy import cat, compact, frobenius
+    from discopy import cat
 
     @factory
     class Base(cat.Arrow):
@@ -142,8 +140,6 @@ def test_generates():
         pass
 
     assert Base.Atom is Atom is Sub.Atom
-    assert compact.Diagram.Cup is compact.Cup
-    assert frobenius.Diagram.Cap is frobenius.Cap
 
 
 def test_Generator_alias():
@@ -172,18 +168,20 @@ def test_Generator_call():
 
 
 def test_generator_override():
-    from discopy import symmetric, tensor
+    """ A generator declared or assigned by hand wins over a built one. """
+    from discopy import monoidal, symmetric, tensor
 
     @factory
     class Recipe(symmetric.Diagram):
         pass
 
-    class Step(symmetric.Box, Recipe):
+    @Recipe.generates
+    class Box(symmetric.Box, Recipe):
         pass
 
-    Recipe.Box = Step
     assert Recipe.Swap.__bases__ == (
-        symmetric.Swap, Recipe.Permutation, Step, Recipe)
+        symmetric.Swap, Recipe.Permutation, Box, Recipe)
+    assert monoidal.Nat.Wire is monoidal.Dim.Wire is int
     assert tensor.Diagram[complex].Swap is tensor.Swap
 
 
@@ -198,13 +196,13 @@ def test_generator_exports(path):
     """ Every generator of a level is exported by the module defining it. """
     import sys
     from importlib import import_module
-    from discopy import cat
     module, name = path.rsplit(".", 1)
     D = getattr(import_module(f"discopy.{module}"), name)
     for owner in (D, D.ob):
-        for name in dir(owner):
-            cls = getattr(owner, name)
-            if name.endswith("_factory") and isinstance(cls, type)\
-                    and issubclass(cls, (cat.Ob, cat.Arrow, cat.Functor)):
+        names = {name for klass in owner.__mro__ for name, value
+                 in vars(klass).items() if isinstance(value, Generator)}
+        assert names
+        for name in names:
+            if isinstance(cls := getattr(owner, name), type):
                 assert getattr(sys.modules[cls.__module__], cls.__name__)\
                     is cls

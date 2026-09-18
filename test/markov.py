@@ -7,7 +7,7 @@ from discopy.markov import *
 from discopy import *
 
 
-def test_spider_factory():
+def test_Spider():
     with raises(ValueError):
         Diagram.Spider(2, 2, Ty('x'))
 
@@ -60,7 +60,6 @@ def test_neural_network():
 
 def test_Permutation():
     x, y, z = map(Ty, "xyz")
-    assert Diagram.Permutation is Permutation
     perm = Permutation(x @ y @ z, [2, 0, 1])
     assert isinstance(perm, Box) and perm.cod == z @ x @ y
     assert Equation(perm >> perm.dagger(), Id(x @ y @ z))

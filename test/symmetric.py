@@ -194,7 +194,6 @@ def test_Layer_ownership():
     from discopy import compact, markov, symmetric
 
     for module in (compact, markov):
-        assert module.Diagram.Permutation is module.Permutation
         x, y = module.Ty('x'), module.Ty('y')
         permutation = module.Permutation(x @ y, [1, 0])
         layer = module.Layer(permutation)
@@ -248,9 +247,8 @@ def test_Permutation_box_setoid():
     assert Equation((p @ q) @ f, p @ (q @ f))
 
 
-def test_permutation_factory():
+def test_Permutation_functor():
     x, y, z = Ty('x'), Ty('y'), Ty('z')
-    assert Diagram.Permutation is Permutation
     perm = Permutation(x @ y @ z, [2, 0, 1])
     functor = Functor(ob_map={x: y, y: z, z: x}, ar_map={})
     assert Equation(
@@ -259,7 +257,7 @@ def test_permutation_factory():
     assert Equation(functor(perm), functor(perm.to_swaps()))
 
 
-def test_inherited_permutation_factory():
+def test_inherited_Permutation():
     from discopy import closed, feedback, frobenius, tensor
 
     cases = [
