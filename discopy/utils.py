@@ -737,15 +737,28 @@ class Generator[**P, T]:
     def __get__(self, instance: object, cls: type) -> Callable[P, T]: ...
 
     def __get__(self, instance, cls: type) -> Callable[P, T]:
+        try:
+            return self.cache[cls]
+        except KeyError:
+            self.cache[cls] = generator = self.resolve(cls)
+            return generator
+
+    def resolve(self, cls: type) -> Callable[P, T]:
+        """
+        The generator of ``cls``, computed once and cached under both the
+        class it is read from and the category that keys it, so that a box
+        and its diagram get the same class rather than two equal ones.
+        """
         if self.aliased is not None:
             return getattr(cls, self.aliased)
         if self.method is not None:
             return MethodType(self.method, cls)
-        cls = cls.ar
-        if cls not in self.cache:
-            self.cache[cls] = self.root if cls is self.owner\
-                else self.shared(cls) or self.build(cls)
-        return self.cache[cls]
+        category = cls.ar
+        if (generator := self.cache.get(category)) is None:
+            self.cache[category] = generator = self.root\
+                if category is self.owner\
+                else self.shared(category) or self.build(category)
+        return generator
 
     def __call__(self, *args: P.args, **kwargs: P.kwargs) -> T:
         """

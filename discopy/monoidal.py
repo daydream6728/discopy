@@ -301,15 +301,14 @@ class Ty(cat.Ob, cat.FreeCategory, ColouredMonoid):
         the generators: upgrade it to ``Wire(x.name)`` for subclasses whose
         generators are built from a name alone.
         """
-        if isinstance(x, self.Wire):
+        wire = self.Wire
+        if isinstance(x, wire):
             return x
         if isinstance(x, str):
-            return self.Wire(x)
-        if self.Wire.__init__ is Wire.__init__\
-                and type(x) is cat.Ob:
-            return self.Wire(x.name)
-        raise AxiomError(
-            messages.TYPE_ERROR.format(self.Wire, type(x)))
+            return wire(x)
+        if wire.__init__ is Wire.__init__ and type(x) is cat.Ob:
+            return wire(x.name)
+        raise AxiomError(messages.TYPE_ERROR.format(wire, type(x)))
 
     def __init__(self, *inside: str | cat.Ob,
                  dom: Colour = None, cod: Colour = None,
@@ -317,10 +316,11 @@ class Ty(cat.Ob, cat.FreeCategory, ColouredMonoid):
         inside = kwargs.pop('inside', inside)
         if kwargs:
             raise TypeError(f"Unexpected keyword arguments: {list(kwargs)}.")
+        wire = self.Wire
+        expected = (str, wire) + (
+            (cat.Ob, ) if wire.__init__ is Wire.__init__ else ())
         for obj in inside:
-            assert_isinstance(obj, (str, self.Wire) + (
-                (cat.Ob, ) if self.Wire.__init__ is Wire.__init__
-                else ()))
+            assert_isinstance(obj, expected)
         inside = tuple(map(self.cast_wire, inside))
         if dom is None:
             dom = inside[0].dom if inside else transparent

@@ -323,8 +323,9 @@ class Arrow(FreeCategory, Testable["Arrow"]):
 
     def __init__(self, inside, dom, cod, _scan=True):
         if _scan:
+            generator = self.Box
             for box in inside:
-                assert_isinstance(box, self.Box)
+                assert_isinstance(box, generator)
         super().__init__(inside, dom, cod, _scan=_scan)
 
     @classmethod
