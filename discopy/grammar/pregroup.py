@@ -166,7 +166,7 @@ class Diagram(frobenius.Diagram):
     caps = classmethod(rigid.Diagram.caps.__func__)
 
 
-@Diagram.generates
+@Diagram.generator
 class Box(frobenius.Box, Diagram):
     """
     A pregroup box is a frobenius box in a pregroup diagram.
@@ -178,7 +178,7 @@ Cup, Cap, Permutation = (
     Diagram.Cup, Diagram.Cap, Diagram.Permutation)
 
 
-@Diagram.generates
+@Diagram.generator
 class Swap(Permutation, frobenius.Swap, Box):
     """
     A pregroup swap is a frobenius swap in a pregroup diagram.
@@ -188,7 +188,7 @@ class Swap(Permutation, frobenius.Swap, Box):
                 type(self)(self.left.r, self.right.r))
 
 
-@Diagram.generates
+@Diagram.generator
 class Spider(frobenius.Spider, Box):
     """
     A pregroup spider is a frobenius spider in a pregroup diagram.

@@ -168,7 +168,7 @@ class Diagram(monoidal.Diagram, BraidedCategory):
 Box = Diagram.Box
 
 
-@Diagram.generates
+@Diagram.generator
 class Braid(BinaryBoxConstructor, Box):
     """
     The braiding of atomic types :code:`left` and :code:`right`.
@@ -229,7 +229,7 @@ def hexagon(cls: type, factory: Callable) -> Callable[[Ty, Ty], Diagram]:
 Sum, Bubble = Diagram.Sum, Diagram.Bubble
 
 
-@Diagram.generates
+@Diagram.generator
 class Functor(monoidal.Functor):
     """
     A braided functor is a monoidal functor that preserves braids.

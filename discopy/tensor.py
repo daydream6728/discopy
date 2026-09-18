@@ -704,7 +704,7 @@ class Diagram(NamedGeneric['dtype'], frobenius.Diagram):
 CMap = cmap.CMap[Diagram]
 
 
-@Diagram.generates
+@Diagram.generator
 class Box(frobenius.Box, Diagram):
     """
     A tensor box is a frobenius box with an array as data.
@@ -772,7 +772,7 @@ class Box(frobenius.Box, Diagram):
 Cup, Cap = Diagram.Cup, Diagram.Cap
 
 
-@Diagram.generates
+@Diagram.generator
 class Permutation(frobenius.Permutation, Box):
     "A permutation in a tensor diagram."
 
@@ -789,7 +789,7 @@ Swap, Spider, Sum, Eval, Coeval, Curry, Copy, Merge, Discard = (
     Diagram.Copy, Diagram.Merge, Diagram.Discard)
 
 
-@Diagram.generates
+@Diagram.generator
 class Bubble(frobenius.Bubble, Box):
     """
     Bubble in a tensor diagram, applies a function elementwise.

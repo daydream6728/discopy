@@ -234,7 +234,7 @@ Box, Sum, Permutation, Cap, Bubble, Eval, Coeval, Curry, Copy, Merge, Discard\
        Diagram.Discard)
 
 
-@Diagram.generates
+@Diagram.generator
 class Swap(Permutation, tensor.Swap[complex], Box):
     """ Swap in a ZX diagram. """
     def __repr__(self):

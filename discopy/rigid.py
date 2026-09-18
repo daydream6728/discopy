@@ -647,7 +647,7 @@ class Diagram(biclosed.Diagram, RigidCategory):
         return super().normal_form(**params)
 
 
-@Diagram.generates
+@Diagram.generator
 class Box(biclosed.Box, Diagram):
     """
     A rigid box is a biclosed box in a rigid diagram.
@@ -713,7 +713,7 @@ class Box(biclosed.Box, Diagram):
         return result
 
 
-@Diagram.generates
+@Diagram.generator
 class Sum(biclosed.Sum, Box):
     """
     A rigid sum is a biclosed sum that can be transposed.
@@ -732,7 +732,7 @@ class Sum(biclosed.Sum, Box):
             tuple(term.r for term in self.terms), self.cod.r, self.dom.r)
 
 
-@Diagram.generates
+@Diagram.generator
 class Cup(BinaryBoxConstructor, Box):
     """
     The counit of the adjunction for an atomic type.
@@ -771,7 +771,7 @@ class Cup(BinaryBoxConstructor, Box):
         raise AxiomError("Rigid cups have no dagger, use pivotal instead.")
 
 
-@Diagram.generates
+@Diagram.generator
 class Cap(BinaryBoxConstructor, Box):
     """
     The unit of the adjunction for an atomic type.
@@ -815,7 +815,7 @@ Bubble, Eval, Coeval, Curry = (
     Diagram.Coeval, Diagram.Curry)
 
 
-@Diagram.generates
+@Diagram.generator
 class Functor(biclosed.Functor):
     """
     A rigid functor is a biclosed functor that preserves cups and caps.

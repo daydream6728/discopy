@@ -169,7 +169,7 @@ Box, Permutation, Swap, Trace = (
     Diagram.Swap, Diagram.Trace)
 
 
-@Diagram.generates
+@Diagram.generator
 class Copy(Box):
     """
     The copy of an atomic type :code:`x` some :code:`n` number of times.
@@ -197,7 +197,7 @@ class Copy(Box):
             factory_name(type(self)) + f"({repr(self.dom)}, {len(self.cod)})")
 
 
-@Diagram.generates
+@Diagram.generator
 class Merge(Box):
     """
     The merge of an atomic type :code:`x` some :code:`n` number of times.
@@ -221,7 +221,7 @@ class Merge(Box):
             factory_name(type(self)) + f"({repr(self.cod)}, {len(self.dom)})")
 
 
-@Diagram.generates
+@Diagram.generator
 class Discard(Copy):
     """
     The discard of an atomic type :code:`x`.
@@ -236,7 +236,7 @@ class Discard(Copy):
 Sum, Bubble = Diagram.Sum, Diagram.Bubble
 
 
-@Diagram.generates
+@Diagram.generator
 class Functor(symmetric.Functor):
     """
     A Markov functor is a symmetric functor that preserves copies.

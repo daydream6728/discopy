@@ -847,7 +847,7 @@ class Circuit(tensor.Diagram[complex]):
             >> self.cod[:offset] @ gate @ self.cod[offset + len(gate.dom):]
 
 
-@Circuit.generates
+@Circuit.generator
 class Box(tensor.Box[complex], Circuit):
     """
     A circuit box is a tensor box in a circuit diagram.
@@ -902,7 +902,7 @@ class Box(tensor.Box[complex], Circuit):
         return self if self.z is None else super().rotate(left)
 
 
-@Circuit.generates
+@Circuit.generator
 class Sum(tensor.Sum[complex], Box):
     """ Sums of circuits. """
     @property
@@ -937,7 +937,7 @@ class Sum(tensor.Sum[complex], Box):
         return [circuit.to_tk() for circuit in self.terms]
 
 
-@Circuit.generates
+@Circuit.generator
 class Permutation(tensor.Permutation[complex], Box):
     "A permutation in a quantum circuit."
 
@@ -952,7 +952,7 @@ class Permutation(tensor.Permutation[complex], Box):
             and all(isinstance(x.inside[0], Digit) for x in self.dom)
 
 
-@Circuit.generates
+@Circuit.generator
 class Swap(Permutation, tensor.Swap, Box):
     """
     The logical swap of two circuit wires, i.e. plumbing.
@@ -969,7 +969,7 @@ class Swap(Permutation, tensor.Swap, Box):
         return Tensor[complex].swap(Dim(left.dim), Dim(right.dim)).array
 
 
-@Circuit.generates
+@Circuit.generator
 class Functor(frobenius.Functor):
     """ :class:`Circuit`-valued functor. """
     dom = cod = Circuit

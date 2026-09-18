@@ -71,7 +71,7 @@ This can only be checked up to a functor into streams.
 
 >>> from discopy import stream
 >>> F0 = Functor(
-...     lambda x: stream.Ty.sequence(x.generator.name), cod=stream.Stream)
+...     lambda x: stream.Ty.sequence(x.atom.name), cod=stream.Stream)
 >>> F = Functor(
 ...     F0, lambda f: stream.Stream.sequence(f.name, F0(f.dom), F0(f.cod)),
 ...     cod=stream.Stream)
@@ -125,7 +125,7 @@ Every traced symmetric category is a feedback category with a trivial delay:
 ...     self.trace(len(mem))
 
 >>> F0 = Functor(
-...     ob_map=lambda x: symmetric.Ty(x.generator.name), ar_map={},
+...     ob_map=lambda x: symmetric.Ty(x.atom.name), ar_map={},
 ...     cod=symmetric.Diagram)
 >>> assert F0(x.delay()) == F0(x)
 
@@ -411,7 +411,7 @@ class Diagram(markov.Diagram, FeedbackCategory):
     d = Wire.d
 
 
-@Diagram.generates
+@Diagram.generator
 class Box(markov.Box, Diagram):
     """
     A feedback box is a markov box in a feedback diagram.
@@ -458,7 +458,7 @@ class Box(markov.Box, Diagram):
         return markov.Box.setoid(self) + (self.time_step, )
 
 
-@Diagram.generates
+@Diagram.generator
 class Permutation(markov.Permutation, Box):
     "A permutation in a feedback diagram."
 
@@ -466,7 +466,7 @@ class Permutation(markov.Permutation, Box):
         return type(self)(self.dom.delay(n_steps), self.perm)
 
 
-@Diagram.generates
+@Diagram.generator
 class Swap(Permutation, markov.Swap, Box):
     """
     The swap of feedback types :code:`left` and :code:`right`.
@@ -479,7 +479,7 @@ class Swap(Permutation, markov.Swap, Box):
         return type(self)(self.left.delay(n_steps), self.right.delay(n_steps))
 
 
-@Diagram.generates
+@Diagram.generator
 class Copy(markov.Copy, Box):
     """
     The copy of an atomic type :code:`x` some :code:`n` number of times.
@@ -492,7 +492,7 @@ class Copy(markov.Copy, Box):
         return type(self)(self.dom.delay(n_steps), len(self.cod))
 
 
-@Diagram.generates
+@Diagram.generator
 class Merge(markov.Merge, Box):
     """
     The merge of an atomic type :code:`x` some :code:`n` number of times.
@@ -538,7 +538,7 @@ class Tail(monoidal.Bubble, Box):
     __str__ = Box.__str__
 
 
-@Diagram.generates
+@Diagram.generator
 class Feedback(monoidal.Bubble, Box):
     """
     Feedback is a bubble that takes a diagram from `dom @ mem.delay()` to
@@ -584,7 +584,7 @@ class Feedback(monoidal.Bubble, Box):
         return self.arg.to_drawing().trace()
 
 
-@Diagram.generates
+@Diagram.generator
 class FollowedBy(Box):
     """
     The isomorphism between `x.head @ x.tail.delay()` and `x`.
@@ -634,7 +634,7 @@ class FollowedBy(Box):
         return type(self)(self.arg, self.is_dagger)
 
 
-@Diagram.generates
+@Diagram.generator
 class Functor(markov.Functor):
     """
     A feedback functor is a markov one that preserves delay and feedback.

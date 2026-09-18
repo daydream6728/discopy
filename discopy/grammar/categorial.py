@@ -177,7 +177,7 @@ class BackwardCrossedComposition(BinaryBoxConstructor, Box):
         BinaryBoxConstructor.__init__(self, left, right)
 
 
-@Diagram.generates
+@Diagram.generator
 class Functor(biclosed.Functor):
     """
     A categorial functor is a biclosed functor with a predefined mapping
@@ -208,7 +208,7 @@ class Functor(biclosed.Functor):
 CMap = cmap.CMap[Diagram]
 
 
-@Diagram.generates
+@Diagram.generator
 class TermBase(Box, biclosed.TermBase):
     """
     A term in the internal language of a categorial grammar.
@@ -220,7 +220,7 @@ class TermBase(Box, biclosed.TermBase):
         return BA(self, other) if left else FA(self, other)
 
 
-@Diagram.generates
+@Diagram.generator
 class Constant(TermBase, biclosed.Constant):
     def __init__(self, name: str, cod: Ty):
         biclosed.Constant.__init__(self, name, cod)
@@ -230,13 +230,13 @@ class Constant(TermBase, biclosed.Constant):
         return self
 
 
-@Diagram.generates
+@Diagram.generator
 class Variable(TermBase, biclosed.Variable):
     def simplify(self):
         return self
 
 
-@Diagram.generates
+@Diagram.generator
 class Abstraction(TermBase, biclosed.Abstraction):
     var: Variable
     body: Term

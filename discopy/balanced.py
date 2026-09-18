@@ -240,7 +240,7 @@ class DualRailTwist(braided.Box):
         return type(self)(self.dom, not self.is_dagger)
 
 
-@Diagram.generates
+@Diagram.generator
 class Twist(Box):
     """
     The twist on atomic type :code:`dom`.
@@ -275,7 +275,7 @@ Trace, Sum, Bubble = (
     Diagram.Trace, Diagram.Sum, Diagram.Bubble)
 
 
-@Diagram.generates
+@Diagram.generator
 class Functor(braided.Functor, traced.Functor):
     """
     A balanced functor is a braided functor that twists.

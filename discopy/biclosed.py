@@ -205,7 +205,7 @@ class Ty(monoidal.Ty):
         return self.inside[0].exponent
 
 
-@Ty.generates
+@Ty.generator
 class Wire(monoidal.Wire):
     """
     A biclosed object is a self-dagger :class:`monoidal.Wire`, i.e. its left
@@ -216,7 +216,7 @@ class Wire(monoidal.Wire):
         return self
 
 
-@Ty.generates
+@Ty.generator
 class Exp(Wire):
     """
     A :code:`base` type to an :code:`exponent` type, called with :code:`**`.
@@ -266,7 +266,7 @@ class Exp(Wire):
         return self.base if isinstance(self, Under) else self.exponent
 
 
-@Ty.generates
+@Ty.generator
 class Over(Exp):
     """
     An :code:`exponent` type over a :code:`base` type, called with :code:`<<`.
@@ -279,7 +279,7 @@ class Over(Exp):
         return f"({self.base} << {self.exponent})"
 
 
-@Ty.generates
+@Ty.generator
 class Under(Exp):
     """
     A :code:`base` type under an :code:`exponent` type, called with :code:`>>`.
@@ -362,7 +362,7 @@ class Diagram(monoidal.Diagram, BiclosedCategory):
 Box = Diagram.Box
 
 
-@Diagram.generates
+@Diagram.generator
 class Eval(Box):
     """
     The evaluation of an exponential type.
@@ -387,7 +387,7 @@ class Eval(Box):
         return "<<" if self.left else ">>"
 
 
-@Diagram.generates
+@Diagram.generator
 class Coeval(Box):
     """
     The coevaluation of an exponential type, i.e. the dagger of :class:`Eval`.
@@ -419,7 +419,7 @@ class Coeval(Box):
         return self.Eval(self.x, self.left)
 
 
-@Diagram.generates
+@Diagram.generator
 class Curry(monoidal.Bubble, Box):
     """
     The currying of a biclosed diagram.
@@ -463,7 +463,7 @@ Layer = Diagram.Layer
 Id = Diagram.id
 
 
-@Diagram.generates
+@Diagram.generator
 class Functor(monoidal.Functor):
     """
     A biclosed functor is a monoidal functor
@@ -504,7 +504,7 @@ class Functor(monoidal.Functor):
 CMap = cmap.CMap[Diagram]
 
 
-@Diagram.generates
+@Diagram.generator
 class TermBase(Box):
     """
     A term in the internal language of biclosed categories.
@@ -565,7 +565,7 @@ class TermBase(Box):
         return self.cod.Application(*args)
 
 
-@Diagram.generates
+@Diagram.generator
 class Constant(TermBase):
     """
     A constant term of defined by a :class:`Diagram` with ``dom=X, cod=Y``.
@@ -595,7 +595,7 @@ class Constant(TermBase):
         return f"{self.cod!s}({self.name!r})"
 
 
-@Diagram.generates
+@Diagram.generator
 class Variable(TermBase):
     """
     A variable with a string as name and a :class:`Ty`.
@@ -619,7 +619,7 @@ class Variable(TermBase):
     __repr__ = Constant.__repr__
 
 
-@Diagram.generates
+@Diagram.generator
 class Application(TermBase):
     """
     The application either ``func(args)`` of a term ``func`` of type ``Y << X``
@@ -673,7 +673,7 @@ class Application(TermBase):
             else self.func.constants + self.args.constants
 
 
-@Diagram.generates
+@Diagram.generator
 class Abstraction(TermBase):
     var: Variable
     body: Term

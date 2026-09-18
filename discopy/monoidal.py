@@ -359,14 +359,14 @@ class Ty(cat.Ob, cat.FreeCategory, ColouredMonoid):
             + f"({', '.join(map(repr, self.inside))})"
 
     @property
-    def is_generator(self) -> bool:
+    def is_atom(self) -> bool:
         """ Whether a type is a single generating object. """
         return len(self.inside) == 1
 
     @property
-    def generator(self) -> Wire:
-        """ The single object inside a generator type. """
-        return self.inside[0] if self.is_generator else None
+    def atom(self) -> Wire:
+        """ The single object inside an atomic type. """
+        return self.inside[0] if self.is_atom else None
 
     def count(self, obj: cat.Ob) -> int:
         """
@@ -838,13 +838,13 @@ class Layer(cat.Box, ColouredMonoid):
             normalise=False)
 
     @property
-    def is_generator(self):
+    def is_atom(self):
         return len(self.boxes_or_types) == 1\
             and isinstance(self.boxes_or_types[0], Box)
 
     @property
-    def generator(self):
-        return self.boxes_or_types[0] if self.is_generator else None
+    def atom(self):
+        return self.boxes_or_types[0] if self.is_atom else None
 
     def dagger(self) -> Layer:
         return type(self)(*(
@@ -971,14 +971,14 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
         return sum(box.size for box in self.inside)
 
     @property
-    def is_generator(self):
-        """ Whether a `Diagram` is a generator, i.e. a single box. """
-        return len(self) == 1 and self.inside[0].is_generator
+    def is_atom(self):
+        """ Whether a `Diagram` is an atom, i.e. a single box. """
+        return len(self) == 1 and self.inside[0].is_atom
 
     @property
-    def generator(self):
-        """ The single box in a generator `Diagram`. """
-        return self.inside[0].generator if self.is_generator else None
+    def atom(self):
+        """ The single box in an atomic `Diagram`. """
+        return self.inside[0].atom if self.is_atom else None
 
     @classmethod
     def from_callable(cls, dom: Ty, cod: Ty) -> Callable[Callable, Diagram]:
@@ -1411,7 +1411,7 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
         return super().from_tree(tree)
 
 
-@Diagram.generates
+@Diagram.generator
 class Box(cat.Box, Diagram):
     """
     A box is a diagram with a :code:`name` and the layer of just itself inside.
@@ -1490,7 +1490,7 @@ class Box(cat.Box, Diagram):
         return Drawing.from_box(self)
 
 
-@Diagram.generates
+@Diagram.generator
 class Sum(cat.Sum, Box):
     """
     A sum is a tuple of diagrams :code:`terms`
@@ -1526,7 +1526,7 @@ class Sum(cat.Sum, Box):
     to_drawing = Diagram.to_drawing
 
 
-@Diagram.generates
+@Diagram.generator
 class Bubble(cat.Bubble, Box):
     """
     A bubble is a box with diagrams :code:`args` inside and an optional pair of
@@ -1626,7 +1626,7 @@ class Bubble(cat.Bubble, Box):
         return getattr(Drawing, method)(*args, **kwargs)
 
 
-@Diagram.generates
+@Diagram.generator
 class Functor(cat.Functor):
     """
     A monoidal functor is a functor that preserves the tensor product.

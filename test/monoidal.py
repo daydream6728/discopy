@@ -135,9 +135,9 @@ def test_Ty_getitem():
 
 def test_Ty_generator():
     x = Ty('x')
-    assert x.is_generator and x.generator == Wire('x')
-    assert not (x @ x).is_generator and (x @ x).generator is None
-    assert not Ty().is_generator and Ty().generator is None
+    assert x.is_atom and x.atom == Wire('x')
+    assert not (x @ x).is_atom and (x @ x).atom is None
+    assert not Ty().is_atom and Ty().atom is None
 
 
 def test_Ty_pow():

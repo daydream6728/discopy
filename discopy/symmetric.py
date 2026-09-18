@@ -415,7 +415,7 @@ class Diagram(balanced.Diagram, SymmetricCategory):
 Box = Diagram.Box
 
 
-@Diagram.generates
+@Diagram.generator
 class Permutation(Box):
     """
     A permutation box, i.e. a :class:`Box` that reorders its input wires.
@@ -567,7 +567,7 @@ class Permutation(Box):
 Layer.plumbing = (monoidal.Ty, Permutation)
 
 
-@Diagram.generates
+@Diagram.generator
 class Swap(Permutation, balanced.Braid, Box):
     """
     The permutation ``[1, 0]`` of two atomic types.
@@ -617,7 +617,7 @@ Trace, Sum, Bubble = (
     Diagram.Trace, Diagram.Sum, Diagram.Bubble)
 
 
-@Diagram.generates
+@Diagram.generator
 class Functor(balanced.Functor):
     """
     A symmetric functor is a monoidal functor that preserves swaps.

@@ -87,7 +87,7 @@ class Ty(biclosed.Ty):
 Wire = Ty.Wire
 
 
-@Ty.generates
+@Ty.generator
 class Exp(biclosed.Exp, Wire):
     "An exponential object in a markov category."
 
@@ -159,7 +159,7 @@ class Diagram(markov.Diagram, biclosed.Diagram, ClosedCategory):
 Box = Diagram.Box
 
 
-@Diagram.generates
+@Diagram.generator
 class Eval(biclosed.Eval, Box):
     "The evaluation of an exponential type."
     drawing_name = "__call__"
@@ -172,7 +172,7 @@ Coeval, Curry, Permutation, Swap, Trace, Copy, Merge, Discard, Sum, Bubble = (
     Diagram.Sum, Diagram.Bubble)
 
 
-@Diagram.generates
+@Diagram.generator
 class Functor(biclosed.Functor, markov.Functor):
     """
     A closed functor is a markov functor
@@ -202,7 +202,7 @@ Layer = Diagram.Layer
 Id = Diagram.id
 
 
-@Diagram.generates
+@Diagram.generator
 class TermBase(Box, biclosed.TermBase):
     """
     A term in the internal language of a closed category.
@@ -216,7 +216,7 @@ class TermBase(Box, biclosed.TermBase):
 type Term = Constant | Variable | Application | Abstraction
 
 
-@Diagram.generates
+@Diagram.generator
 class Constant(TermBase, biclosed.Constant):
     def eval(self, functor=None, context=None):
         functor = functor or self.functor
@@ -226,7 +226,7 @@ class Constant(TermBase, biclosed.Constant):
             functor)
 
 
-@Diagram.generates
+@Diagram.generator
 class Variable(TermBase, biclosed.Variable):
     def eval(self, functor=None, context=None):
         functor = functor or self.functor
@@ -238,7 +238,7 @@ class Variable(TermBase, biclosed.Variable):
             for x in context.inside])
 
 
-@Diagram.generates
+@Diagram.generator
 class Application(TermBase, biclosed.Application):
     def __check_dom__(self, func, args, left):
         self.overlap = set(func.freevars).intersection(args.freevars)
@@ -261,7 +261,7 @@ class Application(TermBase, biclosed.Application):
             >> func @ args >> evaluate
 
 
-@Diagram.generates
+@Diagram.generator
 class Abstraction(TermBase, biclosed.Abstraction):
     def __check_dom__(self):
         self.freevars = [x for x in self.body.freevars if x != self.var]

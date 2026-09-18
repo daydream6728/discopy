@@ -1329,14 +1329,14 @@ class Hypergraph(MonoidalCategory, NamedGeneric['category']):
         return self
 
     @property
-    def is_generator(self):
-        """ Whether the hypergraph is a single generator. """
+    def is_atom(self):
+        """ Whether the hypergraph is a single generator, i.e. an atom. """
         return len(self.boxes) == 1 and self == self.from_box(self.boxes[0])
 
     @property
-    def generator(self):
-        """ Return the `f` from `Hypergraph.from_box(f)` if `is_generator`. """
-        return self.boxes[0] if self.is_generator else None
+    def atom(self):
+        """ Return the `f` from `Hypergraph.from_box(f)` if `is_atom`. """
+        return self.boxes[0] if self.is_atom else None
 
     @classmethod
     def from_box(cls, box: Box) -> Hypergraph:

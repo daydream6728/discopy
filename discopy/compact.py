@@ -89,7 +89,7 @@ Box, Cup, Cap = (
     Diagram.Box, Diagram.Cup, Diagram.Cap)
 
 
-@Diagram.generates
+@Diagram.generator
 class Permutation(symmetric.Permutation, Box):
     """
     A compact permutation is a symmetric permutation in a compact category.
@@ -111,7 +111,7 @@ Swap, Sum, Bubble, Eval, Coeval, Curry = (
     Diagram.Eval, Diagram.Coeval, Diagram.Curry)
 
 
-@Diagram.generates
+@Diagram.generator
 class Functor(symmetric.Functor, ribbon.Functor):
     """
     A compact functor is both a symmetric functor and a ribbon functor.

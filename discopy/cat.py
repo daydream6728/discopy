@@ -195,15 +195,15 @@ class FreeCategory(Category):
     ``Box`` and :class:`discopy.monoidal.Diagram` its layers.
     """
     @classmethod
-    def generates(cls, generator: type) -> type:
+    def generator(cls, root: type) -> type:
         """
-        Declare ``generator`` as a generator of the category, bound under
-        its own name, e.g. ``@Diagram.generates`` above ``class Swap``.
+        Declare ``root`` as a generator of the category, bound under its
+        own name, e.g. ``@Diagram.generator`` above ``class Swap``.
         """
-        binding = Generator.subclass(generator)
-        binding.__set_name__(cls, generator.__name__)
-        setattr(cls, generator.__name__, binding)
-        return generator
+        binding = Generator.subclass(root)
+        binding.__set_name__(cls, root.__name__)
+        setattr(cls, root.__name__, binding)
+        return root
 
     def __init__(self, inside, dom, cod, _scan=True):
         ob = type(self).ob
@@ -380,19 +380,19 @@ class Arrow(FreeCategory, Testable["Arrow"]):
         return self if other == 0 else NotImplemented
 
     @property
-    def is_generator(self):
-        """ Whether an `Arrow` is a generator, i.e. it has length 1. """
+    def is_atom(self):
+        """ Whether an `Arrow` is an atom, i.e. it has length 1. """
         return len(self.inside) == 1
 
     @property
-    def generator(self):
-        """ Returns the only box in an `Arrow` of length 1. """
-        return self.inside[0] if self.is_generator else None
+    def atom(self):
+        """ The only box in an `Arrow` of length 1, i.e. its generator. """
+        return self.inside[0] if self.is_atom else None
 
     def setoid(self):
         """
         Returns data that faithfully describes an `Arrow` making sure that
-        `self.generator.setoid == self.setoid` when `self.is_generator`.
+        `self.atom.setoid == self.setoid` when `self.is_atom`.
         This is used to define `Arrow.__eq__` and `Arrow.__hash__`.
 
         Abstract
@@ -413,10 +413,10 @@ class Arrow(FreeCategory, Testable["Arrow"]):
         functor application, is in fact a morphism of setoids, i.e. that it
         sends equal inputs to equal outputs.
         """
-        generator = self.generator
-        if generator is None:
+        atom = self.atom
+        if atom is None:
             return (self.inside, self.dom, self.cod)
-        return generator.setoid()
+        return atom.setoid()
 
     def __eq__(self, other):
         return isinstance(other, self.ar) and self.setoid() == other.setoid()
@@ -570,7 +570,7 @@ class Arrow(FreeCategory, Testable["Arrow"]):
 
 
 @total_ordering
-@Arrow.generates
+@Arrow.generator
 class Box(Arrow):
     """
     A box is an arrow with a :code:`name` and the tuple of just itself inside.
@@ -696,7 +696,7 @@ class Box(Arrow):
         return cls(name=name, dom=dom, cod=cod, data=data, is_dagger=is_dagger)
 
 
-@Arrow.generates
+@Arrow.generator
 class Sum(Box):
     """
     A sum is a tuple of arrows :code:`terms` with the same domain and codomain.
@@ -736,11 +736,12 @@ class Sum(Box):
         super().__init__(name, dom, cod)
 
     @property
-    def is_generator(self):
-        return len(self.terms) == 1 and self.terms[0].is_generator
+    def is_atom(self):
+        return len(self.terms) == 1 and self.terms[0].is_atom
 
-    def generator(self):
-        return self.terms[0].generator if self.is_generator else None
+    @property
+    def atom(self):
+        return self.terms[0].atom if self.is_atom else None
 
     def setoid(self):
         """ Ensure that a singleton sum is in fact equal to its only term. """
@@ -806,7 +807,7 @@ class Sum(Box):
         return cls(terms=terms, dom=dom, cod=cod)
 
 
-@Arrow.generates
+@Arrow.generator
 class Bubble(Box):
     """
     A bubble is a box with arrow :code:`args` inside and an optional pair of

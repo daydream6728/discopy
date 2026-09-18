@@ -186,7 +186,7 @@ class Diagram(rigid.Diagram, traced.Diagram, PivotalCategory):
             >> cod @ cls.Cup(traced_wire, traced_wire.r)
 
 
-@Diagram.generates
+@Diagram.generator
 class Box(rigid.Box, traced.Box, Diagram):
     """
     A pivotal box is a rigid and traced box in a pivotal diagram.
@@ -219,7 +219,7 @@ class Box(rigid.Box, traced.Box, Diagram):
         return result
 
 
-@Diagram.generates
+@Diagram.generator
 class Cup(rigid.Cup, Box):
     """
     A pivotal cup is a rigid cup of pivotal types.
@@ -234,7 +234,7 @@ class Cup(rigid.Cup, Box):
         return self.Cap(self.left, self.right)
 
 
-@Diagram.generates
+@Diagram.generator
 class Cap(rigid.Cap, Box):
     """
     A pivotal cap is a rigid cap of pivotal types.

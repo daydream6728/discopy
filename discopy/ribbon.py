@@ -165,7 +165,7 @@ Box, Cup, Cap = (
     Diagram.Box, Diagram.Cup, Diagram.Cap)
 
 
-@Diagram.generates
+@Diagram.generator
 class Braid(balanced.Braid, Box):
     """
     A ribbon braid is a balanced braid in a ribbon diagram.
@@ -254,7 +254,7 @@ class DualRailCap(Box):
         return DualRailCup(self.left, self.right, not self.is_dagger)
 
 
-@Diagram.generates
+@Diagram.generator
 class Twist(balanced.Twist, Box):
     """
     Balanced twist in a ribbon category.
@@ -275,7 +275,7 @@ Sum, Bubble, Eval, Coeval, Curry = (
     Diagram.Coeval, Diagram.Curry)
 
 
-@Diagram.generates
+@Diagram.generator
 class Functor(pivotal.Functor, balanced.Functor):
     """
     A ribbon functor is both a pivotal functor and a balanced functor.

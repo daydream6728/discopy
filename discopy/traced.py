@@ -181,7 +181,7 @@ class Diagram(monoidal.Diagram, TracedCategory):
 Box = Diagram.Box
 
 
-@Diagram.generates
+@Diagram.generator
 class Trace(Box, monoidal.Bubble):
     """
     A trace is a diagram ``arg`` with an output wire fed back into an input.
@@ -220,7 +220,7 @@ class Trace(Box, monoidal.Bubble):
 Sum, Bubble = Diagram.Sum, Diagram.Bubble
 
 
-@Diagram.generates
+@Diagram.generator
 class Functor(monoidal.Functor):
     """
     A traced functor is a monoidal functor that preserves traces.

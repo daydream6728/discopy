@@ -180,7 +180,7 @@ Box, Cup, Cap, Permutation, Swap = (
     Diagram.Permutation, Diagram.Swap)
 
 
-@Diagram.generates
+@Diagram.generator
 class Spider(Box):
     """
     The spider with :code:`n_legs_in` and :code:`n_legs_out`
@@ -252,7 +252,7 @@ Sum, Bubble, Eval, Coeval, Curry, Copy, Merge, Discard = (
     Diagram.Merge, Diagram.Discard)
 
 
-@Diagram.generates
+@Diagram.generator
 class Functor(compact.Functor, markov.Functor):
     """
     A hypergraph functor is a compact functor that preserves spiders.

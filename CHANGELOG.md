@@ -10,12 +10,17 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 ### Added
 
 - `utils.Generator` declares a generator once, on the category that
-  introduces it and under its own name: `@Diagram.generates` above
+  introduces it and under its own name: `@Diagram.generator` above
   `class Swap` in `symmetric` binds `Diagram.Swap`, with a `ClassVar`
   annotation for it in the body of `Diagram`. Naming the attribute after
   the class couples the two, so a category reads `cls.Swap` where it used
-  to read `cls.swap_factory` and `cat.FreeCategory.generates` needs no
-  name of its own. Every level below
+  to read `cls.swap_factory` and `cat.FreeCategory.generator` needs no
+  name of its own. That name was taken: the `generator` of an `Arrow`,
+  `Ty`, `Layer`, `Diagram`, `Sum` or `Hypergraph` -- the single box or
+  object of a term that has exactly one -- is now its `atom`, with
+  `is_generator` following as `is_atom`, which is what a term of length
+  one is. `Sum.atom` is a property like the other five, where it was a
+  method returning itself. Every level below
   gets its own subclass built on first access, extending the swaps of its
   bases, the generators its root extends (a swap is a permutation, a
   discard a copy) and the level itself, so a module writes

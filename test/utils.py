@@ -123,7 +123,7 @@ def test_generator():
     assert feedback.Swap(y, y).delay().dom == y.delay() @ y.delay()
 
 
-def test_generates():
+def test_generator_decorator():
     """ A category binds a generator under its own name, and is inherited. """
     from discopy import cat
 
@@ -131,7 +131,7 @@ def test_generates():
     class Base(cat.Arrow):
         pass
 
-    @Base.generates
+    @Base.generator
     class Atom(cat.Box, Base):
         pass
 
@@ -175,7 +175,7 @@ def test_generator_override():
     class Recipe(symmetric.Diagram):
         pass
 
-    @Recipe.generates
+    @Recipe.generator
     class Box(symmetric.Box, Recipe):
         pass
 

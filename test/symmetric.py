@@ -96,7 +96,7 @@ def test_Permutation():
     assert list(perm.perm) == [1, 2, 0]
     assert perm.inside == (Layer(perm),)
     assert perm.boxes == [perm] and perm.size == 0
-    assert perm.is_generator and perm.generator == perm
+    assert perm.is_atom and perm.atom == perm
     assert perm.encode() == (perm.dom, [(perm, 0)])
     assert Diagram.decode(*perm.encode()) == perm
     identity = Permutation(x @ y @ z, [0, 1, 2])

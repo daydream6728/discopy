@@ -679,7 +679,7 @@ class Generator[**P, T]:
     """
     The generator of a category, bound under its own name, e.g. ``Swap``
     on ``symmetric.Diagram``, and taking the parameters ``P`` of that class
-    to an instance ``T`` of it. :meth:`discopy.cat.FreeCategory.generates`
+    to an instance ``T`` of it. :meth:`discopy.cat.FreeCategory.generator`
     declares one at its class statement.
 
     :meth:`subclass` declares the class of the generator: on that category
