@@ -258,4 +258,7 @@ class Equation(monoidal.Equation):
     """ The :class:`monoidal.Equation` of braided diagrams. """
 
 
+Diagram.Equation = Equation
+
+
 __getattr__ = deprecated_alias(__name__, {"Ob": "Wire"})

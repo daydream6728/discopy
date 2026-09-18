@@ -1143,5 +1143,5 @@ class Equation(AbstractEquation[Arrow]):
     """
 
 
-Ob.equation_factory = Arrow.equation_factory = Equation
+Ob.Equation = Arrow.Equation = Equation
 Id = Arrow.id

@@ -268,4 +268,7 @@ class Equation(rigid.Equation):
     """ The :class:`rigid.Equation` of pivotal diagrams. """
 
 
+Diagram.Equation = Equation
+
+
 __getattr__ = deprecated_alias(__name__, {"Ob": "Wire", "PRO": "Nat"})

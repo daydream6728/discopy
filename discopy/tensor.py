@@ -871,3 +871,6 @@ Id = Diagram.id
 
 class Equation(frobenius.Equation):
     """ The :class:`frobenius.Equation` of tensor diagrams. """
+
+
+Diagram.Equation = Equation

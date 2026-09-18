@@ -1808,6 +1808,9 @@ class Equation(cat.Equation, RichDisplay):
         return self.to_drawing().draw(path=path, **params)
 
 
+Diagram.Equation = Equation
+
+
 Diagram.draw = drawing.draw
 Diagram.to_gif = drawing.to_gif
 

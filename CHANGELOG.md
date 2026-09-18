@@ -28,7 +28,12 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   hand still wins. Two slots name a role rather than a class, since they
   are read on whichever free monoid or category is at hand: the atoms of a
   `List` stay its `generator_factory`, and a stream still answers to
-  `FollowedBy`. `Generator[**P, T]` is generic in
+  `FollowedBy`. `abc.Category.equation_factory` becomes `Category.Equation`
+  and each level binds the `Equation` it declares, where every one of them
+  read `cat.Equation`: an axiom of a category that quotients its equations
+  is now checked up to that quotient, e.g. by hypergraph isomorphism from
+  `symmetric` on, as the slot always said it would be.
+  `Generator[**P, T]` is generic in
   the parameters of its generator and the instance it builds, `subclass`
   and `classmethod` scoping their own, so that a binding carries the
   signature of its root and a `ClassVar` spelling that signature out is

@@ -318,3 +318,6 @@ Ty.Application, Ty.Abstraction = (
 
 class Equation(markov.Equation):
     """ The :class:`markov.Equation` of closed diagrams. """
+
+
+Diagram.Equation = Equation
