@@ -272,7 +272,7 @@ class Twist(Box):
 
     def image(self, functor):
         return functor.cod.twist(functor(self.dom))\
-            if hasattr(functor.cod, "twist") else functor.generic(self)
+            if hasattr(functor.cod, "twist") else super().image(functor)
 
 
 Trace, Sum, Bubble = (

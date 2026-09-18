@@ -203,7 +203,7 @@ class Braid(BinaryBoxConstructor, Box):
 
     def image(self, functor):
         if self.is_dagger or not hasattr(functor.cod, "braid"):
-            return functor.generic(self)
+            return super().image(functor)
         return functor.cod.braid(functor(self.dom[0]), functor(self.dom[1]))
 
 

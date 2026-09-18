@@ -644,6 +644,16 @@ class Box(Arrow):
             self.name, self.dom, self.cod, is_dagger=self.is_dagger,
             data=lambdify(symbols, self.data, **kwargs)(*xs))
 
+    def image(self, functor):
+        """
+        How a functor maps the box, ``ar_map`` by default.
+
+        A generator overrides this and falls back on ``super().image``,
+        so that e.g. a swap is a swap where the codomain has one, else a
+        permutation, else a box.
+        """
+        return functor.generic(self)
+
     def dagger(self) -> Box:
         return type(self)(
             self.name, self.cod, self.dom,
@@ -1005,9 +1015,12 @@ class Functor(Category):
         level above as boxes.
         """
         image = getattr(other, "image", None)
-        return self.generic(other) if image is None or not isinstance(
-            other, getattr(type(self).dom, type(other).__name__, ()))\
-            else image(self)
+        if image is None:
+            return self.generic(other)
+        declared = getattr(type(self).dom, type(other).__name__, None)
+        return image(self) if isinstance(declared, type) and (
+            isinstance(other, declared) or issubclass(declared, type(other)))\
+            else self.generic(other)
 
     def generic(self, other):
         """

@@ -563,6 +563,13 @@ class Permutation(Box):
     def __str__(self):
         return f"Permutation({self.dom}, {list(self.perm)})"
 
+    def image(self, functor):
+        if not hasattr(functor.cod.ar, "permutation"):
+            return super().image(functor)
+        doms = functor(self.dom) if isinstance(self.dom, Nat)\
+            else list(map(functor, self.dom))
+        return functor.cod.ar.permutation(self.perm, doms)
+
 
 Layer.plumbing = (monoidal.Ty, Permutation)
 
@@ -612,6 +619,12 @@ class Swap(Permutation, balanced.Braid, Box):
     def __str__(self):
         return self.name
 
+    def image(self, functor):
+        if not hasattr(functor.cod.ar, "swap"):
+            return super().image(functor)
+        return functor.cod.ar.swap(
+            functor(self.dom[0]), functor(self.dom[1]))
+
 
 Trace, Sum, Bubble = (
     Diagram.Trace, Diagram.Sum, Diagram.Bubble)
@@ -630,18 +643,6 @@ class Functor(balanced.Functor):
             The codomain, :code:`Diagram` by default.
     """
     dom = cod = Diagram
-
-    def __call__(self, other):
-        if isinstance(other, Swap) and hasattr(self.cod.ar, "swap"):
-            return self.cod.ar.swap(self(other.dom[0]), self(other.dom[1]))
-        if isinstance(other, Permutation) and hasattr(
-                self.cod.ar, "permutation"):
-            if isinstance(other.dom, Nat):
-                doms = self(other.dom)
-            else:
-                doms = list(map(self, other.dom))
-            return self.cod.ar.permutation(other.perm, doms)
-        return super().__call__(other)
 
 
 CMap = cmap.CMap[Diagram]
