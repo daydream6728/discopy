@@ -83,7 +83,7 @@ from typing import ClassVar
 
 from discopy import pivotal, balanced
 from discopy.abc import RibbonCategory
-from discopy.cat import factory, Factory
+from discopy.cat import factory, Generator
 from discopy.pivotal import Ty, Nat  # noqa: F401
 
 
@@ -97,9 +97,9 @@ class Diagram(pivotal.Diagram, balanced.Diagram, RibbonCategory):
         dom (pivotal.Ty) : The domain of the diagram, i.e. its input.
         cod (pivotal.Ty) : The codomain of the diagram, i.e. its output.
     """
-    braid_factory: ClassVar[Factory[..., "Braid"]]
-    twist_factory: ClassVar[Factory[..., "Twist"]]
-    functor_factory: ClassVar[Factory[..., "Functor"]]
+    braid_factory: ClassVar[Generator[..., "Braid"]]
+    twist_factory: ClassVar[Generator[..., "Twist"]]
+    functor_factory: ClassVar[Generator[..., "Functor"]]
 
     def trace(self, n=1, left=False):
         """
@@ -181,7 +181,7 @@ class Braid(balanced.Braid, Box):
         return braid.dagger() if self.is_dagger else braid
 
 
-Diagram.braid_factory = Factory.subclass(Braid)
+Diagram.braid_factory = Generator.subclass(Braid)
 
 
 class DualRailBraid(balanced.DualRailBraid, Box):
@@ -271,7 +271,7 @@ class Twist(balanced.Twist, Box):
         return self
 
 
-Diagram.twist_factory = Factory.subclass(Twist)
+Diagram.twist_factory = Generator.subclass(Twist)
 
 
 Sum, Bubble, Eval, Coeval, Curry = (
@@ -297,7 +297,7 @@ class Functor(pivotal.Functor, balanced.Functor):
         return pivotal.Functor.__call__(self, other)
 
 
-Diagram.functor_factory = Factory.subclass(Functor)
+Diagram.functor_factory = Generator.subclass(Functor)
 
 
 class DualRail(balanced.DualRail, Functor):

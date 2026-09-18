@@ -74,7 +74,7 @@ from typing import ClassVar
 from collections.abc import Mapping
 
 from discopy import messages, tensor, frobenius
-from discopy.cat import factory, Factory
+from discopy.cat import factory, Generator
 from discopy.matrix import backend
 from discopy.tensor import Dim, Tensor
 from discopy.utils import assert_isinstance, deprecated_alias, factory_name
@@ -189,11 +189,11 @@ class Circuit(tensor.Diagram[complex]):
     """
     ob = Ty
     discard_factory = tensor.Discard
-    generator_factory: ClassVar[Factory[..., "Box"]]
-    sum_factory: ClassVar[Factory[..., "Sum"]]
-    permutation_factory: ClassVar[Factory[..., "Permutation"]]
-    swap_factory: ClassVar[Factory[..., "Swap"]]
-    functor_factory: ClassVar[Factory[..., "Functor"]]
+    generator_factory: ClassVar[Generator[..., "Box"]]
+    sum_factory: ClassVar[Generator[..., "Sum"]]
+    permutation_factory: ClassVar[Generator[..., "Permutation"]]
+    swap_factory: ClassVar[Generator[..., "Swap"]]
+    functor_factory: ClassVar[Generator[..., "Functor"]]
 
     @classmethod
     def id(cls, dom: int | Ty = None):
@@ -901,7 +901,7 @@ class Box(tensor.Box[complex], Circuit):
         return self if self.z is None else super().rotate(left)
 
 
-Circuit.generator_factory = Factory.subclass(Box)
+Circuit.generator_factory = Generator.subclass(Box)
 
 
 class Sum(tensor.Sum[complex], Box):
@@ -938,7 +938,7 @@ class Sum(tensor.Sum[complex], Box):
         return [circuit.to_tk() for circuit in self.terms]
 
 
-Circuit.sum_factory = Factory.subclass(Sum)
+Circuit.sum_factory = Generator.subclass(Sum)
 
 
 class Permutation(tensor.Permutation[complex], Box):
@@ -955,7 +955,7 @@ class Permutation(tensor.Permutation[complex], Box):
             and all(isinstance(x.inside[0], Digit) for x in self.dom)
 
 
-Circuit.permutation_factory = Factory.subclass(Permutation)
+Circuit.permutation_factory = Generator.subclass(Permutation)
 
 
 class Swap(Permutation, tensor.Swap, Box):
@@ -974,7 +974,7 @@ class Swap(Permutation, tensor.Swap, Box):
         return Tensor[complex].swap(Dim(left.dim), Dim(right.dim)).array
 
 
-Circuit.swap_factory = Factory.subclass(Swap)
+Circuit.swap_factory = Generator.subclass(Swap)
 
 
 class Functor(frobenius.Functor):
@@ -988,7 +988,7 @@ class Functor(frobenius.Functor):
         super().__init__(ob_map, ar_map, dom=dom, cod=cod)
 
 
-Circuit.functor_factory = Factory.subclass(Functor)
+Circuit.functor_factory = Generator.subclass(Functor)
 
 
 def index2bitstring(i: int, length: int) -> tuple[int, ...]:

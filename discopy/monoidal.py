@@ -70,7 +70,7 @@ from discopy.config import (
     COLOUR_DRAWING_ATTRIBUTES, TRANSPARENT)
 from discopy.utils import (
     factory,
-    Factory,
+    Generator,
     factory_name,
     from_tree,
     assert_isinstance,
@@ -291,7 +291,8 @@ class Ty(cat.Ob, cat.FreeCategory, ColouredMonoid):
     """
     ob = Colour
 
-    generator_factory: ClassVar[Factory[..., Wire]] = Factory.subclass(Wire)
+    generator_factory: ClassVar[Generator[..., Wire]]\
+        = Generator.subclass(Wire)
 
     def cast_wire(self, x: str | cat.Ob) -> cat.Ob:
         """
@@ -944,12 +945,12 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
             normal_form
     """
     ob = Ty
-    layer_factory: ClassVar[Factory[..., Layer]]\
-        = Factory.subclass(Layer)
-    generator_factory: ClassVar[Factory[..., "Box"]]
-    sum_factory: ClassVar[Factory[..., "Sum"]]
-    bubble_factory: ClassVar[Factory[..., "Bubble"]]
-    functor_factory: ClassVar[Factory[..., "Functor"]]
+    layer_factory: ClassVar[Generator[..., Layer]]\
+        = Generator.subclass(Layer)
+    generator_factory: ClassVar[Generator[..., "Box"]]
+    sum_factory: ClassVar[Generator[..., "Sum"]]
+    bubble_factory: ClassVar[Generator[..., "Bubble"]]
+    functor_factory: ClassVar[Generator[..., "Functor"]]
 
     def __setstate__(self, state):
         if 'inside' not in state:  # Backward compatibility
@@ -1490,7 +1491,7 @@ class Box(cat.Box, Diagram):
         return Drawing.from_box(self)
 
 
-Diagram.generator_factory = Factory.subclass(Box)
+Diagram.generator_factory = Generator.subclass(Box)
 
 
 class Sum(cat.Sum, Box):
@@ -1528,7 +1529,7 @@ class Sum(cat.Sum, Box):
     to_drawing = Diagram.to_drawing
 
 
-Diagram.sum_factory = Factory.subclass(Sum)
+Diagram.sum_factory = Generator.subclass(Sum)
 
 
 class Bubble(cat.Bubble, Box):
@@ -1630,7 +1631,7 @@ class Bubble(cat.Bubble, Box):
         return getattr(Drawing, method)(*args, **kwargs)
 
 
-Diagram.bubble_factory = Factory.subclass(Bubble)
+Diagram.bubble_factory = Generator.subclass(Bubble)
 
 
 class Functor(cat.Functor):
@@ -1743,7 +1744,7 @@ class Functor(cat.Functor):
         return super().__call__(other)
 
 
-Diagram.functor_factory = Factory.subclass(Functor)
+Diagram.functor_factory = Generator.subclass(Functor)
 
 
 @dataclass

@@ -22,7 +22,7 @@ Summary
     Functor
     Transformation
     Equation
-    Factory
+    Generator
 
 .. admonition:: Functions
 
@@ -88,7 +88,7 @@ from discopy.abc import Category
 from discopy.axioms import GENERATORS, Equation as AbstractEquation, Testable
 from discopy.utils import (  # noqa: F401
     factory,
-    Factory,
+    Generator,
     factory_name,
     from_tree,
     rsubs,
@@ -306,9 +306,9 @@ class Arrow(FreeCategory, Testable["Arrow"]):
     see :class:`monoidal.Nat`.
     """
     ob = Ob
-    generator_factory: ClassVar[Factory[..., "Box"]]
-    sum_factory: ClassVar[Factory[..., "Sum"]]
-    bubble_factory: ClassVar[Factory[..., "Bubble"]]
+    generator_factory: ClassVar[Generator[..., "Box"]]
+    sum_factory: ClassVar[Generator[..., "Sum"]]
+    bubble_factory: ClassVar[Generator[..., "Bubble"]]
 
     def __init__(self, inside, dom, cod, _scan=True):
         if _scan:
@@ -683,7 +683,7 @@ class Box(Arrow):
         return cls(name=name, dom=dom, cod=cod, data=data, is_dagger=is_dagger)
 
 
-Arrow.generator_factory = Factory.subclass(Box)
+Arrow.generator_factory = Generator.subclass(Box)
 
 
 class Sum(Box):
@@ -795,7 +795,7 @@ class Sum(Box):
         return cls(terms=terms, dom=dom, cod=cod)
 
 
-Arrow.sum_factory = Factory.subclass(Sum)
+Arrow.sum_factory = Generator.subclass(Sum)
 
 
 class Bubble(Box):
@@ -879,7 +879,7 @@ class Bubble(Box):
         return cls(*map(from_tree, args), dom=dom, cod=cod)
 
 
-Arrow.bubble_factory = Factory.subclass(Bubble)
+Arrow.bubble_factory = Generator.subclass(Bubble)
 
 
 @factory

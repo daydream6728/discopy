@@ -28,7 +28,7 @@ from typing import ClassVar
 from math import pi
 
 from discopy import cat, rigid, tensor, quantum
-from discopy.cat import factory, Factory
+from discopy.cat import factory, Generator
 from discopy.quantum.circuit import qubit, Circuit
 from discopy.quantum.gates import (
     Bra, Ket, Rz, Rx, CX, CZ, Controlled, format_number)
@@ -42,7 +42,7 @@ class Diagram(tensor.Diagram[complex]):
     """ ZX Diagram. """
     ob = Nat
     spider_factory = tensor.Spider
-    swap_factory: ClassVar[Factory[..., "Swap"]]
+    swap_factory: ClassVar[Generator[..., "Swap"]]
 
     @staticmethod
     def swap(left, right):
@@ -242,7 +242,7 @@ class Swap(Permutation, tensor.Swap[complex], Box):
     __str__ = __repr__
 
 
-Diagram.swap_factory = Factory.subclass(Swap)
+Diagram.swap_factory = Generator.subclass(Swap)
 
 
 class Spider(tensor.Spider[complex], Box):

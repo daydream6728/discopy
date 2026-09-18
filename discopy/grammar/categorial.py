@@ -53,7 +53,7 @@ from dataclasses import dataclass
 import re
 
 from discopy import biclosed, cmap, messages
-from discopy.cat import factory, Factory
+from discopy.cat import factory, Generator
 from discopy.grammar import thue
 from discopy.utils import (
     BinaryBoxConstructor,
@@ -77,13 +77,13 @@ class Diagram(biclosed.Diagram):
     A categorial diagram is a biclosed diagram with rules and words as boxes.
     """
     ob = Ty
-    functor_factory: ClassVar[Factory[..., "Functor"]]
-    term_factory: ClassVar[Factory[..., "TermBase"]]
-    constant_factory: ClassVar[Factory[..., "Constant"]]
-    variable_factory: ClassVar[Factory[..., "Variable"]]
-    abstraction_factory: ClassVar[Factory[..., "Abstraction"]]
+    functor_factory: ClassVar[Generator[..., "Functor"]]
+    term_factory: ClassVar[Generator[..., "TermBase"]]
+    constant_factory: ClassVar[Generator[..., "Constant"]]
+    variable_factory: ClassVar[Generator[..., "Variable"]]
+    abstraction_factory: ClassVar[Generator[..., "Abstraction"]]
 
-    @Factory.classmethod
+    @Generator.classmethod
     def application_factory(cls, func, args, left=False):
         return BA(args, func) if left else FA(func, args)
 
@@ -204,7 +204,7 @@ class Functor(biclosed.Functor):
         return super().__call__(other)
 
 
-Diagram.functor_factory = Factory.subclass(Functor)
+Diagram.functor_factory = Generator.subclass(Functor)
 
 
 CMap = cmap.CMap[Diagram]
@@ -221,7 +221,7 @@ class TermBase(Box, biclosed.TermBase):
         return BA(self, other) if left else FA(self, other)
 
 
-Diagram.term_factory = Factory.subclass(TermBase)
+Diagram.term_factory = Generator.subclass(TermBase)
 
 
 class Constant(TermBase, biclosed.Constant):
@@ -233,7 +233,7 @@ class Constant(TermBase, biclosed.Constant):
         return self
 
 
-Diagram.constant_factory = Factory.subclass(Constant)
+Diagram.constant_factory = Generator.subclass(Constant)
 
 
 class Variable(TermBase, biclosed.Variable):
@@ -241,7 +241,7 @@ class Variable(TermBase, biclosed.Variable):
         return self
 
 
-Diagram.variable_factory = Factory.subclass(Variable)
+Diagram.variable_factory = Generator.subclass(Variable)
 
 
 class Abstraction(TermBase, biclosed.Abstraction):
@@ -257,7 +257,7 @@ class Abstraction(TermBase, biclosed.Abstraction):
         return Abstraction(self.var, self.body.simplify(), self.left)
 
 
-Diagram.abstraction_factory = Factory.subclass(Abstraction)
+Diagram.abstraction_factory = Generator.subclass(Abstraction)
 
 
 class FA(TermBase, biclosed.Application):

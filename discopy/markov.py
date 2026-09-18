@@ -82,7 +82,7 @@ from typing import ClassVar
 
 from discopy import symmetric, monoidal, cmap, hypergraph
 from discopy.abc import MarkovCategory
-from discopy.cat import factory, Factory
+from discopy.cat import factory, Generator
 from discopy.monoidal import Ty  # noqa: F401
 from discopy.utils import assert_isatomic, factory_name
 
@@ -118,12 +118,12 @@ class Diagram(symmetric.Diagram, MarkovCategory):
 
     .. image:: /_static/markov/copy_and_apply.svg
     """
-    copy_factory: ClassVar[Factory[..., "Copy"]]
-    merge_factory: ClassVar[Factory[..., "Merge"]]
-    discard_factory: ClassVar[Factory[..., "Discard"]]
-    functor_factory: ClassVar[Factory[..., "Functor"]]
+    copy_factory: ClassVar[Generator[..., "Copy"]]
+    merge_factory: ClassVar[Generator[..., "Merge"]]
+    discard_factory: ClassVar[Generator[..., "Discard"]]
+    functor_factory: ClassVar[Generator[..., "Functor"]]
 
-    @Factory.classmethod
+    @Generator.classmethod
     def spider_factory(cls, n_legs_in, n_legs_out, typ, phase=None):
         if phase is not None or 1 not in (n_legs_in, n_legs_out):
             raise ValueError
@@ -196,7 +196,7 @@ class Copy(Box):
             factory_name(type(self)) + f"({repr(self.dom)}, {len(self.cod)})")
 
 
-Diagram.copy_factory = Factory.subclass(Copy)
+Diagram.copy_factory = Generator.subclass(Copy)
 
 
 class Merge(Box):
@@ -222,7 +222,7 @@ class Merge(Box):
             factory_name(type(self)) + f"({repr(self.cod)}, {len(self.dom)})")
 
 
-Diagram.merge_factory = Factory.subclass(Merge)
+Diagram.merge_factory = Generator.subclass(Merge)
 
 
 class Discard(Copy):
@@ -236,7 +236,7 @@ class Discard(Copy):
         super().__init__(x, 0)
 
 
-Diagram.discard_factory = Factory.subclass(Discard)
+Diagram.discard_factory = Generator.subclass(Discard)
 
 
 Sum, Bubble = Diagram.sum_factory, Diagram.bubble_factory
@@ -283,7 +283,7 @@ class Functor(symmetric.Functor):
         return super().__call__(other)
 
 
-Diagram.functor_factory = Factory.subclass(Functor)
+Diagram.functor_factory = Generator.subclass(Functor)
 
 
 CMap = cmap.CMap[Diagram]

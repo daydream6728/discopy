@@ -88,7 +88,7 @@ from typing import Callable, ClassVar
 from discopy import monoidal, cmap
 from discopy.abc import BiclosedCategory
 from discopy.drawing import Drawing
-from discopy.cat import factory, Factory
+from discopy.cat import factory, Generator
 from discopy.utils import (
     assert_isinstance,
     deprecated_alias,
@@ -110,10 +110,10 @@ class Ty(monoidal.Ty):
     Applying a biclosed type to a callable yields a :class:`Abstraction`,
     applying it to a string yields a :class:`Constant`.
     """
-    generator_factory: ClassVar[Factory[..., "Wire"]]
-    exp_factory: ClassVar[Factory[..., "Exp"]]
-    over_factory: ClassVar[Factory[..., "Over"]]
-    under_factory: ClassVar[Factory[..., "Under"]]
+    generator_factory: ClassVar[Generator[..., "Wire"]]
+    exp_factory: ClassVar[Generator[..., "Exp"]]
+    over_factory: ClassVar[Generator[..., "Over"]]
+    under_factory: ClassVar[Generator[..., "Under"]]
 
     def __pow__(self, other: Ty) -> Ty:
         return self.exp(other) if isinstance(other, Ty)\
@@ -215,7 +215,7 @@ class Wire(monoidal.Wire):
         return self
 
 
-Ty.generator_factory = Factory.subclass(Wire)
+Ty.generator_factory = Generator.subclass(Wire)
 
 
 class Exp(Wire):
@@ -267,7 +267,7 @@ class Exp(Wire):
         return self.base if isinstance(self, Under) else self.exponent
 
 
-Ty.exp_factory = Factory.subclass(Exp)
+Ty.exp_factory = Generator.subclass(Exp)
 
 
 class Over(Exp):
@@ -282,7 +282,7 @@ class Over(Exp):
         return f"({self.base} << {self.exponent})"
 
 
-Ty.over_factory = Factory.subclass(Over)
+Ty.over_factory = Generator.subclass(Over)
 
 
 class Under(Exp):
@@ -297,7 +297,7 @@ class Under(Exp):
         return f"({self.exponent} >> {self.base})"
 
 
-Ty.under_factory = Factory.subclass(Under)
+Ty.under_factory = Generator.subclass(Under)
 
 
 @factory
@@ -313,15 +313,15 @@ class Diagram(monoidal.Diagram, BiclosedCategory):
     """
 
     ob = Ty
-    eval_factory: ClassVar[Factory[..., "Eval"]]
-    coeval_factory: ClassVar[Factory[..., "Coeval"]]
-    curry_factory: ClassVar[Factory[..., "Curry"]]
-    functor_factory: ClassVar[Factory[..., "Functor"]]
-    term_factory: ClassVar[Factory[..., "TermBase"]]
-    constant_factory: ClassVar[Factory[..., "Constant"]]
-    variable_factory: ClassVar[Factory[..., "Variable"]]
-    application_factory: ClassVar[Factory[..., "Application"]]
-    abstraction_factory: ClassVar[Factory[..., "Abstraction"]]
+    eval_factory: ClassVar[Generator[..., "Eval"]]
+    coeval_factory: ClassVar[Generator[..., "Coeval"]]
+    curry_factory: ClassVar[Generator[..., "Curry"]]
+    functor_factory: ClassVar[Generator[..., "Functor"]]
+    term_factory: ClassVar[Generator[..., "TermBase"]]
+    constant_factory: ClassVar[Generator[..., "Constant"]]
+    variable_factory: ClassVar[Generator[..., "Variable"]]
+    application_factory: ClassVar[Generator[..., "Application"]]
+    abstraction_factory: ClassVar[Generator[..., "Abstraction"]]
 
     def curry(self, n=1, left=True) -> Diagram:
         """
@@ -394,7 +394,7 @@ class Eval(Box):
         return "<<" if self.left else ">>"
 
 
-Diagram.eval_factory = Factory.subclass(Eval)
+Diagram.eval_factory = Generator.subclass(Eval)
 
 
 class Coeval(Box):
@@ -428,7 +428,7 @@ class Coeval(Box):
         return self.eval_factory(self.x, self.left)
 
 
-Diagram.coeval_factory = Factory.subclass(Coeval)
+Diagram.coeval_factory = Generator.subclass(Coeval)
 
 
 class Curry(monoidal.Bubble, Box):
@@ -469,7 +469,7 @@ class Curry(monoidal.Bubble, Box):
         return (f >> e).to_drawing().trace(left=True)
 
 
-Diagram.curry_factory = Factory.subclass(Curry)
+Diagram.curry_factory = Generator.subclass(Curry)
 
 
 Sum, Bubble = Diagram.sum_factory, Diagram.bubble_factory
@@ -514,7 +514,7 @@ class Functor(monoidal.Functor):
         return super().__call__(other)
 
 
-Diagram.functor_factory = Factory.subclass(Functor)
+Diagram.functor_factory = Generator.subclass(Functor)
 
 
 CMap = cmap.CMap[Diagram]
@@ -580,7 +580,7 @@ class TermBase(Box):
         return self.cod.application_factory(*args)
 
 
-Diagram.term_factory = Factory.subclass(TermBase)
+Diagram.term_factory = Generator.subclass(TermBase)
 
 
 class Constant(TermBase):
@@ -612,7 +612,7 @@ class Constant(TermBase):
         return f"{self.cod!s}({self.name!r})"
 
 
-Diagram.constant_factory = Factory.subclass(Constant)
+Diagram.constant_factory = Generator.subclass(Constant)
 
 
 class Variable(TermBase):
@@ -638,7 +638,7 @@ class Variable(TermBase):
     __repr__ = Constant.__repr__
 
 
-Diagram.variable_factory = Factory.subclass(Variable)
+Diagram.variable_factory = Generator.subclass(Variable)
 
 
 class Application(TermBase):
@@ -694,7 +694,7 @@ class Application(TermBase):
             else self.func.constants + self.args.constants
 
 
-Diagram.application_factory = Factory.subclass(Application)
+Diagram.application_factory = Generator.subclass(Application)
 
 
 class Abstraction(TermBase):
@@ -735,7 +735,7 @@ class Abstraction(TermBase):
         return self.body.constants
 
 
-Diagram.abstraction_factory = Factory.subclass(Abstraction)
+Diagram.abstraction_factory = Generator.subclass(Abstraction)
 
 
 type Term = Constant | Variable | Application | Abstraction

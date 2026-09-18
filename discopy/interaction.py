@@ -79,7 +79,7 @@ from discopy.abc import RibbonCategory, TracedCategory, NamedGeneric
 from discopy.cat import assert_iscomposable
 from discopy.python import finset
 from discopy.utils import (
-    factory, Factory, classproperty, unbiased, assert_isinstance,
+    factory, Generator, classproperty, unbiased, assert_isinstance,
     factory_name)
 
 
@@ -456,7 +456,8 @@ class Diagram(RibbonCategory, NamedGeneric['natural']):
             self.inside.naturality(i, left, down, braid), self.dom, self.cod)
 
     trace = traced.Diagram.trace
-    trace_factory = Factory.classmethod(pivotal.Diagram.trace_factory.__func__)
+    trace_factory = Generator.classmethod(
+        pivotal.Diagram.trace_factory.__func__)
     transpose = rigid.Diagram.transpose
     # The remaining ribbon structure is derived from the concrete categories,
     # following the same idiom as `trace` and `transpose` above.

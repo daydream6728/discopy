@@ -599,7 +599,7 @@ def factory(cls):
 
     The boxes of a :code:`Circuit` are a subclass of both :class:`Box` and
     :code:`Circuit`, built by :attr:`Arrow.generator_factory`, a
-    :class:`Factory`.
+    :class:`Generator`.
 
     >>> Gate = Circuit.generator_factory
     >>> assert issubclass(Gate, Box) and issubclass(Gate, Circuit)
@@ -675,7 +675,7 @@ class classproperty(object):
         return self.f(x)
 
 
-class Factory[**P, T]:
+class Generator[**P, T]:
     """
     The factory of a generator, e.g. ``Swap`` in ``symmetric.Diagram``,
     declared once on the category that introduces it, taking the parameters
@@ -708,23 +708,23 @@ class Factory[**P, T]:
         self.root, self.method, self.aliased = root, method, aliased
 
     @classmethod
-    def subclass[**Q, U](cls, root: Callable[Q, U]) -> Factory[Q, U]:
+    def subclass[**Q, U](cls, root: Callable[Q, U]) -> Generator[Q, U]:
         """ The factory building a subclass of ``root`` at every level. """
-        return Factory(root=root)
+        return Generator(root=root)
 
     @classmethod
-    def alias(cls, name: str) -> Factory[..., Any]:
+    def alias(cls, name: str) -> Generator[..., Any]:
         """
         The factory named ``name`` on the same category, e.g. the braid of
         a symmetric category is its swap.
         """
-        return Factory(aliased=name)
+        return Generator(aliased=name)
 
     @classmethod
     def classmethod[**Q, U](
-            cls, method: Callable[Concatenate[Any, Q], U]) -> Factory[Q, U]:
+            cls, method: Callable[Concatenate[Any, Q], U]) -> Generator[Q, U]:
         """ The factory calling ``method`` on the category. """
-        return Factory(method=method)
+        return Generator(method=method)
 
     def __set_name__(self, owner: type, name: str):
         self.owner, self.name, self.cache = owner, name, {}
@@ -779,7 +779,7 @@ class Factory[**P, T]:
     def parents(self) -> tuple[str, ...]:
         """ The generators of the owner that the root extends. """
         names = {name for klass in self.owner.__mro__ for name, value
-                 in vars(klass).items() if isinstance(value, Factory)}
+                 in vars(klass).items() if isinstance(value, Generator)}
         return tuple(name for base in self.root.__bases__
                      for name in sorted(names)
                      if getattr(self.owner, name) is base)

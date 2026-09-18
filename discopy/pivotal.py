@@ -60,7 +60,7 @@ from typing import ClassVar
 
 from discopy import cat, cmap, rigid, traced
 from discopy.abc import PivotalCategory
-from discopy.cat import factory, Factory
+from discopy.cat import factory, Generator
 from discopy.utils import deprecated_alias
 
 
@@ -92,7 +92,8 @@ class Ty(rigid.Ty):
     Parameters:
         inside (Wire) : The objects inside the type.
     """
-    generator_factory: ClassVar[Factory[..., Wire]] = Factory.subclass(Wire)
+    generator_factory: ClassVar[Generator[..., Wire]]\
+        = Generator.subclass(Wire)
 
 
 @factory
@@ -121,9 +122,9 @@ class Diagram(rigid.Diagram, traced.Diagram, PivotalCategory):
         cod (Ty) : The codomain of the diagram, i.e. its output.
     """
     ob = Ty
-    generator_factory: ClassVar[Factory[..., "Box"]]
-    cup_factory: ClassVar[Factory[..., "Cup"]]
-    cap_factory: ClassVar[Factory[..., "Cap"]]
+    generator_factory: ClassVar[Generator[..., "Box"]]
+    cup_factory: ClassVar[Generator[..., "Cup"]]
+    cap_factory: ClassVar[Generator[..., "Cap"]]
 
     def dagger(self):
         """
@@ -165,7 +166,7 @@ class Diagram(rigid.Diagram, traced.Diagram, PivotalCategory):
         """
         return self.rotate().dagger()
 
-    @Factory.classmethod
+    @Generator.classmethod
     def trace_factory(cls, diagram: Diagram, left=False):
         """
         The trace of a pivotal diagram is its pre- and post-composition with
@@ -218,7 +219,7 @@ class Box(rigid.Box, traced.Box, Diagram):
         return result
 
 
-Diagram.generator_factory = Factory.subclass(Box)
+Diagram.generator_factory = Generator.subclass(Box)
 
 
 class Cup(rigid.Cup, Box):
@@ -235,7 +236,7 @@ class Cup(rigid.Cup, Box):
         return self.cap_factory(self.left, self.right)
 
 
-Diagram.cup_factory = Factory.subclass(Cup)
+Diagram.cup_factory = Generator.subclass(Cup)
 
 
 class Cap(rigid.Cap, Box):
@@ -252,7 +253,7 @@ class Cap(rigid.Cap, Box):
         return self.cup_factory(self.left, self.right)
 
 
-Diagram.cap_factory = Factory.subclass(Cap)
+Diagram.cap_factory = Generator.subclass(Cap)
 
 
 Sum, Bubble, Eval, Coeval, Curry = (

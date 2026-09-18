@@ -41,7 +41,7 @@ from dataclasses import dataclass
 
 from discopy import config, monoidal, braided, traced, cmap, hypergraph
 from discopy.abc import BalancedCategory
-from discopy.cat import factory, Factory
+from discopy.cat import factory, Generator
 from discopy.monoidal import Colour, Ty  # noqa: F401
 from discopy.utils import factory_name, assert_isatomic
 
@@ -133,8 +133,8 @@ class Diagram(braided.Diagram, traced.Diagram, BalancedCategory):
 
     .. _nLab: https://ncatlab.org/nlab/show/traced+monoidal+category)
     """
-    twist_factory: ClassVar[Factory[..., "Twist"]]
-    functor_factory: ClassVar[Factory[..., "Functor"]]
+    twist_factory: ClassVar[Generator[..., "Twist"]]
+    functor_factory: ClassVar[Generator[..., "Functor"]]
 
     @classmethod
     def twist(cls, dom: monoidal.Ty) -> Diagram:
@@ -270,7 +270,7 @@ class Twist(Box):
         return type(self)(self.dom, not self.is_dagger)
 
 
-Diagram.twist_factory = Factory.subclass(Twist)
+Diagram.twist_factory = Generator.subclass(Twist)
 
 
 Trace, Sum, Bubble = (
@@ -298,7 +298,7 @@ class Functor(braided.Functor, traced.Functor):
         return braided.Functor.__call__(self, other)
 
 
-Diagram.functor_factory = Factory.subclass(Functor)
+Diagram.functor_factory = Generator.subclass(Functor)
 
 
 class DualRail(Functor):

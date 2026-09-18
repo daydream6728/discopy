@@ -37,7 +37,7 @@ Summary
 from typing import ClassVar
 
 from discopy import rigid, frobenius, messages
-from discopy.cat import factory, Factory
+from discopy.cat import factory, Generator
 from discopy.utils import AxiomError, deprecated_alias
 from discopy.grammar import thue
 from discopy.rigid import Wire  # noqa: F401
@@ -106,9 +106,9 @@ class Diagram(frobenius.Diagram):
     >>> assert F(sentence)
     """
     ob = Ty
-    generator_factory: ClassVar[Factory[..., "Box"]]
-    swap_factory: ClassVar[Factory[..., "Swap"]]
-    spider_factory: ClassVar[Factory[..., "Spider"]]
+    generator_factory: ClassVar[Generator[..., "Box"]]
+    swap_factory: ClassVar[Generator[..., "Swap"]]
+    spider_factory: ClassVar[Generator[..., "Spider"]]
 
     def normal_form(self, **params):
         """
@@ -173,7 +173,7 @@ class Box(frobenius.Box, Diagram):
     rotate = rigid.Box.rotate
 
 
-Diagram.generator_factory = Factory.subclass(Box)
+Diagram.generator_factory = Generator.subclass(Box)
 
 
 Cup, Cap, Permutation = (
@@ -189,7 +189,7 @@ class Swap(Permutation, frobenius.Swap, Box):
                 type(self)(self.left.r, self.right.r))
 
 
-Diagram.swap_factory = Factory.subclass(Swap)
+Diagram.swap_factory = Generator.subclass(Swap)
 
 
 class Spider(frobenius.Spider, Box):
@@ -201,7 +201,7 @@ class Spider(frobenius.Spider, Box):
         return type(self)(len(self.cod), len(self.dom), typ, self.phase)
 
 
-Diagram.spider_factory = Factory.subclass(Spider)
+Diagram.spider_factory = Generator.subclass(Spider)
 
 
 Sum, Bubble, Eval, Coeval, Curry, Copy, Merge, Discard = (

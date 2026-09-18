@@ -9,11 +9,11 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Added
 
-- `utils.Factory` declares the factory of a generator once, on the
+- `utils.Generator` declares the factory of a generator once, on the
   category that introduces it: a `ClassVar` annotation in the body of
   `symmetric.Diagram` says that its `swap_factory` builds a `Swap`, and
-  `Diagram.swap_factory = Factory.subclass(Swap)` binds it below the class
-  it names, `Factory.locate` finding the owner that
+  `Diagram.swap_factory = Generator.subclass(Swap)` binds it below the class
+  it names, `Generator.locate` finding the owner that
   `__set_name__` never saw. Every level below
   gets its own subclass built on first access, extending the swaps of its
   bases, the generators its root extends (a swap is a permutation, a
@@ -21,10 +21,10 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `Swap = Diagram.swap_factory` in place of `class Swap(markov.Swap, Box)`
   and `Diagram.swap_factory = Swap`; a level adding behaviour declares it
   again, a factory that is behaviour rather than a class is a
-  `Factory.classmethod`, e.g. the trace of a pivotal diagram, one that is
-  another factory of the same category a `Factory.alias`, e.g. the braid of
+  `Generator.classmethod`, e.g. the trace of a pivotal diagram, one that is
+  another factory of the same category a `Generator.alias`, e.g. the braid of
   a symmetric category is its swap, and a class attribute assigned by hand
-  still wins. `Factory[**P, T]` is generic in
+  still wins. `Generator[**P, T]` is generic in
   the parameters of its generator and the instance it builds, `subclass`
   and `classmethod` scoping their own, so that a binding carries the
   signature of its root and a `ClassVar` spelling that signature out is
@@ -53,7 +53,7 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   go, `biclosed.Ty` is made of the `biclosed.Wire` it never used, and the
   braided, ribbon, pregroup and circuit diagrams have their own
   `functor_factory` where they inherited a higher level's. `layer_factory`
-  is a `Factory` like the rest, so every level has its own `Layer` rather
+  is a `Generator` like the rest, so every level has its own `Layer` rather
   than the one of the level that last added behaviour to it: a diagram
   names its own layers when it serialises, and a layer built by hand from
   a parent's class is not equal to one of the level below, as was already

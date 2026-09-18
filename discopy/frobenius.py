@@ -69,7 +69,7 @@ from collections.abc import Callable
 from discopy import (
     monoidal, rigid, markov, compact, pivotal, cmap, hypergraph)
 from discopy.abc import HypergraphCategory
-from discopy.cat import factory, Factory
+from discopy.cat import factory, Generator
 from discopy.utils import assert_isatomic, deprecated_alias, factory_name
 
 
@@ -91,7 +91,8 @@ class Ty(pivotal.Ty):
     Parameters:
         inside (frobenius.Wire) : The objects inside the type.
     """
-    generator_factory: ClassVar[Factory[..., Wire]] = Factory.subclass(Wire)
+    generator_factory: ClassVar[Generator[..., Wire]]\
+        = Generator.subclass(Wire)
 
 
 @factory
@@ -128,8 +129,8 @@ class Diagram(compact.Diagram, markov.Diagram, HypergraphCategory):
     """
 
     ob = Ty
-    spider_factory: ClassVar[Factory[..., "Spider"]]
-    functor_factory: ClassVar[Factory[..., "Functor"]]
+    spider_factory: ClassVar[Generator[..., "Spider"]]
+    functor_factory: ClassVar[Generator[..., "Functor"]]
 
     @classmethod
     def caps(cls, left, right):
@@ -245,7 +246,7 @@ class Spider(Box):
             len(self.dom), len(self.cod), self.typ, self.phase)
 
 
-Diagram.spider_factory = Factory.subclass(Spider)
+Diagram.spider_factory = Generator.subclass(Spider)
 
 
 Sum, Bubble, Eval, Coeval, Curry, Copy, Merge, Discard = (
@@ -276,7 +277,7 @@ class Functor(compact.Functor, markov.Functor):
         return compact.Functor.__call__(self, other)
 
 
-Diagram.functor_factory = Factory.subclass(Functor)
+Diagram.functor_factory = Generator.subclass(Functor)
 
 
 def interleaving(cls: type, factory: Callable

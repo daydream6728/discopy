@@ -125,37 +125,37 @@ def test_generator():
     assert feedback.Swap(y, y).delay().dom == y.delay() @ y.delay()
 
 
-def test_Factory_late_binding():
+def test_Generator_late_binding():
     """ A factory bound below its generator is inherited and locates itself. """
     from discopy import cat, compact, frobenius
-    from discopy.utils import Factory
+    from discopy.utils import Generator
 
     @factory
     class Base(cat.Arrow):
         pass
 
-    class Generator(cat.Box, Base):
+    class Atom(cat.Box, Base):
         pass
 
-    Base.generator_factory = Factory.subclass(Generator)
+    Base.generator_factory = Generator.subclass(Atom)
 
     @factory
     class Sub(Base):
         pass
 
-    assert Sub.generator_factory is Generator is Base.generator_factory
+    assert Sub.generator_factory is Atom is Base.generator_factory
     assert compact.Diagram.cup_factory is compact.Cup
     assert frobenius.Diagram.cap_factory is frobenius.Cap
 
 
-def test_Factory_alias():
+def test_Generator_alias():
     """ A factory can be another factory of the same category. """
     from discopy import symmetric, closed
     assert symmetric.Diagram.braid_factory is symmetric.Swap
     assert closed.Ty.over_factory is closed.Ty.under_factory is closed.Exp
 
 
-def test_Factory_outside_the_hierarchy():
+def test_Generator_outside_the_hierarchy():
     """ A factory class with no generator in its bases keeps the root. """
     from discopy import monoidal
     from discopy.grammar import cfg
@@ -163,7 +163,7 @@ def test_Factory_outside_the_hierarchy():
     assert cfg.Word.generator_factory is monoidal.Box
 
 
-def test_Factory_call():
+def test_Generator_call():
     """ A factory taken out of its class calls the generator of its owner. """
     from discopy import symmetric
     x = symmetric.Ty('x')

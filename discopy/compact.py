@@ -60,7 +60,7 @@ from typing import ClassVar
 
 from discopy import symmetric, ribbon, rigid, cmap, hypergraph
 from discopy.abc import CompactCategory
-from discopy.cat import factory, Factory
+from discopy.cat import factory, Generator
 from discopy.utils import deprecated_alias
 from discopy.pivotal import Wire, Ty  # noqa: F401
 
@@ -80,10 +80,10 @@ class Diagram(symmetric.Diagram, ribbon.Diagram, CompactCategory):
         cod (pivotal.Ty) : The codomain of the diagram, i.e. its output.
     """
     ob = Ty
-    layer_factory: ClassVar[Factory[..., Layer]]\
-        = Factory.subclass(Layer)
-    permutation_factory: ClassVar[Factory[..., "Permutation"]]
-    functor_factory: ClassVar[Factory[..., "Functor"]]
+    layer_factory: ClassVar[Generator[..., Layer]]\
+        = Generator.subclass(Layer)
+    permutation_factory: ClassVar[Generator[..., "Permutation"]]
+    functor_factory: ClassVar[Generator[..., "Functor"]]
 
 
 Box, Cup, Cap = (
@@ -106,7 +106,7 @@ class Permutation(symmetric.Permutation, Box):
     r = property(lambda self: self.rotate(left=False))
 
 
-Diagram.permutation_factory = Factory.subclass(Permutation)
+Diagram.permutation_factory = Generator.subclass(Permutation)
 
 
 Swap, Sum, Bubble, Eval, Coeval, Curry = (
@@ -132,7 +132,7 @@ class Functor(symmetric.Functor, ribbon.Functor):
         return ribbon.Functor.__call__(self, other)
 
 
-Diagram.functor_factory = Factory.subclass(Functor)
+Diagram.functor_factory = Generator.subclass(Functor)
 
 
 CMap = cmap.CMap[Diagram]

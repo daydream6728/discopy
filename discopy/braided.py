@@ -65,7 +65,7 @@ from collections.abc import Callable
 
 from discopy import monoidal
 from discopy.abc import BraidedCategory
-from discopy.cat import factory, Factory
+from discopy.cat import factory, Generator
 from discopy.monoidal import Ty, Match
 from discopy.utils import (
     assert_isatomic, BinaryBoxConstructor, deprecated_alias, factory_name)
@@ -92,8 +92,8 @@ class Diagram(monoidal.Diagram, BraidedCategory):
         dom (monoidal.Ty) : The domain of the diagram, i.e. its input.
         cod (monoidal.Ty) : The codomain of the diagram, i.e. its output.
     """
-    braid_factory: ClassVar[Factory[..., "Braid"]]
-    functor_factory: ClassVar[Factory[..., "Functor"]]
+    braid_factory: ClassVar[Generator[..., "Braid"]]
+    functor_factory: ClassVar[Generator[..., "Functor"]]
 
     @classmethod
     def braid(cls, left: monoidal.Ty, right: monoidal.Ty) -> Diagram:
@@ -201,7 +201,7 @@ class Braid(BinaryBoxConstructor, Box):
         return type(self)(self.right, self.left, not self.is_dagger)
 
 
-Diagram.braid_factory = Factory.subclass(Braid)
+Diagram.braid_factory = Generator.subclass(Braid)
 
 
 def hexagon(cls: type, factory: Callable) -> Callable[[Ty, Ty], Diagram]:
@@ -251,7 +251,7 @@ class Functor(monoidal.Functor):
         return super().__call__(other)
 
 
-Diagram.functor_factory = Factory.subclass(Functor)
+Diagram.functor_factory = Generator.subclass(Functor)
 
 
 Layer = Diagram.layer_factory

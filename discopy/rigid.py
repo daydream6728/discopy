@@ -156,7 +156,7 @@ from typing import ClassVar, Iterator
 
 from discopy import cat, monoidal, biclosed, messages
 from discopy.abc import Pregroup, RigidCategory
-from discopy.cat import factory, Factory
+from discopy.cat import factory, Generator
 from discopy.utils import (
     assert_isatomic,
     assert_isinstance,
@@ -265,7 +265,8 @@ class Ty(Pregroup, biclosed.Ty):
     >>> assert n.l.r == n == n.r.l
     >>> assert (s @ n).l == n.l @ s.l and (s @ n).r == n.r @ s.r
     """
-    generator_factory: ClassVar[Factory[..., Wire]] = Factory.subclass(Wire)
+    generator_factory: ClassVar[Generator[..., Wire]]\
+        = Generator.subclass(Wire)
 
     def __setstate__(self, state):
         if '_z' in state:  # Backward compatibility
@@ -384,18 +385,18 @@ class Diagram(biclosed.Diagram, RigidCategory):
     """
 
     ob = Ty
-    layer_factory: ClassVar[Factory[..., Layer]]\
-        = Factory.subclass(Layer)
+    layer_factory: ClassVar[Generator[..., Layer]]\
+        = Generator.subclass(Layer)
 
     to_drawing = monoidal.Diagram.to_drawing
 
     ev = classmethod(RigidCategory.ev.__func__)
     curry = RigidCategory.curry
-    generator_factory: ClassVar[Factory[..., "Box"]]
-    sum_factory: ClassVar[Factory[..., "Sum"]]
-    cup_factory: ClassVar[Factory[..., "Cup"]]
-    cap_factory: ClassVar[Factory[..., "Cap"]]
-    functor_factory: ClassVar[Factory[..., "Functor"]]
+    generator_factory: ClassVar[Generator[..., "Box"]]
+    sum_factory: ClassVar[Generator[..., "Sum"]]
+    cup_factory: ClassVar[Generator[..., "Cup"]]
+    cap_factory: ClassVar[Generator[..., "Cap"]]
+    functor_factory: ClassVar[Generator[..., "Functor"]]
 
     @classmethod
     def cups(cls, left: Ty, right: Ty) -> Diagram:
@@ -713,7 +714,7 @@ class Box(biclosed.Box, Diagram):
         return result
 
 
-Diagram.generator_factory = Factory.subclass(Box)
+Diagram.generator_factory = Generator.subclass(Box)
 
 
 class Sum(biclosed.Sum, Box):
@@ -734,7 +735,7 @@ class Sum(biclosed.Sum, Box):
             tuple(term.r for term in self.terms), self.cod.r, self.dom.r)
 
 
-Diagram.sum_factory = Factory.subclass(Sum)
+Diagram.sum_factory = Generator.subclass(Sum)
 
 
 class Cup(BinaryBoxConstructor, Box):
@@ -775,7 +776,7 @@ class Cup(BinaryBoxConstructor, Box):
         raise AxiomError("Rigid cups have no dagger, use pivotal instead.")
 
 
-Diagram.cup_factory = Factory.subclass(Cup)
+Diagram.cup_factory = Generator.subclass(Cup)
 
 
 class Cap(BinaryBoxConstructor, Box):
@@ -816,7 +817,7 @@ class Cap(BinaryBoxConstructor, Box):
         raise AxiomError("Rigid caps have no dagger, use pivotal instead.")
 
 
-Diagram.cap_factory = Factory.subclass(Cap)
+Diagram.cap_factory = Generator.subclass(Cap)
 
 
 Bubble, Eval, Coeval, Curry = (
@@ -877,7 +878,7 @@ class Functor(biclosed.Functor):
         return super().__call__(other)
 
 
-Diagram.functor_factory = Factory.subclass(Functor)
+Diagram.functor_factory = Generator.subclass(Functor)
 
 
 def nesting(cls: type, factory: Callable) -> Callable[[Ty, Ty], Diagram]:

@@ -159,7 +159,7 @@ from discopy import monoidal, braided, markov, hypergraph
 from discopy.abc import FeedbackCategory
 from discopy.utils import (
     deprecated_alias,
-    factory, Factory, factory_name, assert_isinstance, AxiomError,
+    factory, Generator, factory_name, assert_isinstance, AxiomError,
 )
 
 
@@ -293,7 +293,8 @@ class TailOb(Wire):
 @factory
 class Ty(monoidal.Ty):
     """ A feedback type is a monoidal type with `delay`, `head` and `tail`. """
-    generator_factory: ClassVar[Factory[..., Wire]] = Factory.subclass(Wire)
+    generator_factory: ClassVar[Generator[..., Wire]]\
+        = Generator.subclass(Wire)
 
     def delay(self, n_steps=1):
         """ The delay of a feedback type by `n_steps`. """
@@ -344,16 +345,16 @@ class Diagram(markov.Diagram, FeedbackCategory):
         :align: center
     """
     ob = Ty
-    layer_factory: ClassVar[Factory[..., Layer]]\
-        = Factory.subclass(Layer)
-    generator_factory: ClassVar[Factory[..., "Box"]]
-    permutation_factory: ClassVar[Factory[..., "Permutation"]]
-    swap_factory: ClassVar[Factory[..., "Swap"]]
-    copy_factory: ClassVar[Factory[..., "Copy"]]
-    merge_factory: ClassVar[Factory[..., "Merge"]]
-    followed_by: ClassVar[Factory[..., "FollowedBy"]]
-    feedback_factory: ClassVar[Factory[..., "Feedback"]]
-    functor_factory: ClassVar[Factory[..., "Functor"]]
+    layer_factory: ClassVar[Generator[..., Layer]]\
+        = Generator.subclass(Layer)
+    generator_factory: ClassVar[Generator[..., "Box"]]
+    permutation_factory: ClassVar[Generator[..., "Permutation"]]
+    swap_factory: ClassVar[Generator[..., "Swap"]]
+    copy_factory: ClassVar[Generator[..., "Copy"]]
+    merge_factory: ClassVar[Generator[..., "Merge"]]
+    followed_by: ClassVar[Generator[..., "FollowedBy"]]
+    feedback_factory: ClassVar[Generator[..., "Feedback"]]
+    functor_factory: ClassVar[Generator[..., "Functor"]]
 
     def delay(self, n_steps=1):
         """ The delay of a feedback diagram. """
@@ -458,7 +459,7 @@ class Box(markov.Box, Diagram):
         return markov.Box.setoid(self) + (self.time_step, )
 
 
-Diagram.generator_factory = Factory.subclass(Box)
+Diagram.generator_factory = Generator.subclass(Box)
 
 
 class Permutation(markov.Permutation, Box):
@@ -468,7 +469,7 @@ class Permutation(markov.Permutation, Box):
         return type(self)(self.dom.delay(n_steps), self.perm)
 
 
-Diagram.permutation_factory = Factory.subclass(Permutation)
+Diagram.permutation_factory = Generator.subclass(Permutation)
 
 
 class Swap(Permutation, markov.Swap, Box):
@@ -483,7 +484,7 @@ class Swap(Permutation, markov.Swap, Box):
         return type(self)(self.left.delay(n_steps), self.right.delay(n_steps))
 
 
-Diagram.swap_factory = Factory.subclass(Swap)
+Diagram.swap_factory = Generator.subclass(Swap)
 
 
 class Copy(markov.Copy, Box):
@@ -498,7 +499,7 @@ class Copy(markov.Copy, Box):
         return type(self)(self.dom.delay(n_steps), len(self.cod))
 
 
-Diagram.copy_factory = Factory.subclass(Copy)
+Diagram.copy_factory = Generator.subclass(Copy)
 
 
 class Merge(markov.Merge, Box):
@@ -513,7 +514,7 @@ class Merge(markov.Merge, Box):
         return type(self)(self.cod.delay(n_steps), len(self.dom))
 
 
-Diagram.merge_factory = Factory.subclass(Merge)
+Diagram.merge_factory = Generator.subclass(Merge)
 
 
 Discard, Trace, Sum, Bubble = (
@@ -594,7 +595,7 @@ class Feedback(monoidal.Bubble, Box):
         return self.arg.to_drawing().trace()
 
 
-Diagram.feedback_factory = Factory.subclass(Feedback)
+Diagram.feedback_factory = Generator.subclass(Feedback)
 
 
 class FollowedBy(Box):
@@ -646,7 +647,7 @@ class FollowedBy(Box):
         return type(self)(self.arg, self.is_dagger)
 
 
-Diagram.followed_by = Factory.subclass(FollowedBy)
+Diagram.followed_by = Generator.subclass(FollowedBy)
 
 
 class Functor(markov.Functor):
@@ -699,7 +700,7 @@ class Functor(markov.Functor):
         return super().__call__(other)
 
 
-Diagram.functor_factory = Factory.subclass(Functor)
+Diagram.functor_factory = Generator.subclass(Functor)
 
 
 Hypergraph = hypergraph.Hypergraph[Diagram]

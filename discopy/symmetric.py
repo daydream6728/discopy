@@ -98,7 +98,7 @@ from collections.abc import Sequence
 
 from discopy import monoidal, balanced, hypergraph, cmap, messages
 from discopy.abc import SymmetricCategory
-from discopy.cat import factory, Factory
+from discopy.cat import factory, Generator
 from discopy.monoidal import Wire, Ty, Nat  # noqa: F401
 from discopy.python import finset
 from discopy.utils import (
@@ -268,13 +268,13 @@ class Diagram(balanced.Diagram, SymmetricCategory):
     >>> Permutation.swap_factory = Transposition
     >>> assert Permutation.braid_factory is Transposition
     """
-    braid_factory = Factory.alias("swap_factory")
-    layer_factory: ClassVar[Factory[..., Layer]]\
-        = Factory.subclass(Layer)
-    twist_factory = Factory.classmethod(lambda cls, dom: cls.id(dom))
-    permutation_factory: ClassVar[Factory[..., "Permutation"]]
-    swap_factory: ClassVar[Factory[..., "Swap"]]
-    functor_factory: ClassVar[Factory[..., "Functor"]]
+    braid_factory = Generator.alias("swap_factory")
+    layer_factory: ClassVar[Generator[..., Layer]]\
+        = Generator.subclass(Layer)
+    twist_factory = Generator.classmethod(lambda cls, dom: cls.id(dom))
+    permutation_factory: ClassVar[Generator[..., "Permutation"]]
+    swap_factory: ClassVar[Generator[..., "Swap"]]
+    functor_factory: ClassVar[Generator[..., "Functor"]]
 
     @property
     def is_plumbing(self) -> bool:
@@ -564,7 +564,7 @@ class Permutation(Box):
         return f"Permutation({self.dom}, {list(self.perm)})"
 
 
-Diagram.permutation_factory = Factory.subclass(Permutation)
+Diagram.permutation_factory = Generator.subclass(Permutation)
 
 
 Layer.plumbing = (monoidal.Ty, Permutation)
@@ -615,7 +615,7 @@ class Swap(Permutation, balanced.Braid, Box):
         return self.name
 
 
-Diagram.swap_factory = Factory.subclass(Swap)
+Diagram.swap_factory = Generator.subclass(Swap)
 
 
 Trace, Sum, Bubble = (
@@ -648,7 +648,7 @@ class Functor(balanced.Functor):
         return super().__call__(other)
 
 
-Diagram.functor_factory = Factory.subclass(Functor)
+Diagram.functor_factory = Generator.subclass(Functor)
 
 
 CMap = cmap.CMap[Diagram]

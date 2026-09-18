@@ -129,7 +129,7 @@ from typing import ClassVar
 
 from discopy import monoidal, cmap, hypergraph
 from discopy.abc import TracedCategory
-from discopy.cat import factory, Factory
+from discopy.cat import factory, Generator
 from discopy.monoidal import Ty  # noqa: F401
 from discopy.utils import (
     factory_name,
@@ -148,8 +148,8 @@ class Diagram(monoidal.Diagram, TracedCategory):
         dom (monoidal.Ty) : The domain of the diagram, i.e. its input.
         cod (monoidal.Ty) : The codomain of the diagram, i.e. its output.
     """
-    trace_factory: ClassVar[Factory[..., "Trace"]]
-    functor_factory: ClassVar[Factory[..., "Functor"]]
+    trace_factory: ClassVar[Generator[..., "Trace"]]
+    functor_factory: ClassVar[Generator[..., "Functor"]]
 
     def trace(self, n=1, left=False):
         """
@@ -216,7 +216,7 @@ class Trace(Box, monoidal.Bubble):
         return self.ar.to_drawing(self)
 
 
-Diagram.trace_factory = Factory.subclass(Trace)
+Diagram.trace_factory = Generator.subclass(Trace)
 
 
 Sum, Bubble = Diagram.sum_factory, Diagram.bubble_factory
@@ -265,7 +265,7 @@ class Functor(monoidal.Functor):
         return super().__call__(other)
 
 
-Diagram.functor_factory = Factory.subclass(Functor)
+Diagram.functor_factory = Generator.subclass(Functor)
 
 
 CMap = cmap.CMap[Diagram]
