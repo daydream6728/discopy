@@ -109,7 +109,7 @@ link = cap >> x_3.r @ cap @ x_3 >> braid.r @ braid >> x_3.r @ cup @ x_3 >> cup
 class Kauffman(ribbon.Diagram):
     ob = ribbon.Nat
 
-Cup, Cap, Variable = Kauffman.cup_factory, Kauffman.cap_factory, Kauffman.generator_factory
+Cup, Cap, Variable = Kauffman.Cup, Kauffman.Cap, Kauffman.Box
 Kauffman.braid = lambda x, y: Variable('A', 0, 0) @ x @ y + (Cup(x, y) >> Variable('A', 0, 0).dagger() >> Cap(x, y))
 K = ribbon.Functor(ob_map=lambda _: 1, ar_map={}, cod=Kauffman)
 ribbon.Equation(link, K(link), symbol='$\\mapsto$')

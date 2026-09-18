@@ -31,9 +31,10 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   another generator of the same category a `Generator.alias`, e.g. the braid
   of a symmetric category is its swap, and a class attribute assigned by
   hand still wins. Two slots name a role rather than a class, since they
-  are read on whichever free monoid or category is at hand: the atoms of a
-  `List` stay its `generator_factory`, and a stream still answers to
-  `FollowedBy`. `abc.Category.equation_factory` becomes `Category.Equation`
+  are read on whichever free monoid or category is at hand: a stream
+  answers to `FollowedBy`, and a `List` names the class of its atoms
+  `Atom` where a `Ty` names its generators `Wire`, since `Atom` types
+  what a list is made of and `ob` what it goes between. `abc.Category.equation_factory` becomes `Category.Equation`
   and each level binds the `Equation` it declares, where every one of them
   read `cat.Equation`: an axiom of a category that quotients its equations
   is now checked up to that quotient, e.g. by hypergraph isomorphism from
@@ -77,7 +78,7 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - `monoidal.List`, the free monoid on a generator type: `List[X]` is a
   tuple of instances of `X` with concatenation as `tensor` and the empty
   list as unit, an `abc.Monoid` parameterised as
-  `NamedGeneric["generator_factory"]` the way `Hypergraph[C]` is the
+  `NamedGeneric["Atom"]` the way `Hypergraph[C]` is the
   hypergraph category over `C`. Free monoids come at three levels: `Ty`
   has arbitrary colours and generators, `List` a single colour and
   arbitrary generators, `Nat` a single colour and a single generator. A

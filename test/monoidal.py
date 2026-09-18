@@ -733,7 +733,7 @@ def test_List():
     from discopy import abc, monoidal
 
     # List[X] is a NamedGeneric on the generator type, cached like Hypergraph.
-    assert List[int].generator_factory is int and List[int] is List[int]
+    assert List[int].Atom is int and List[int] is List[int]
     a, b = List[int](2, 3), List[int](4)
     assert a @ b == List[int](2, 3, 4)
     with raises(TypeError):

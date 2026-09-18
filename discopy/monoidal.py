@@ -181,10 +181,10 @@ class Wire(cat.Ob):
         return cls(tree['name'], dom, cod, is_dagger='is_dagger' in tree)
 
 
-class List(Monoid, NamedGeneric['generator_factory']):
+class List(Monoid, NamedGeneric['Atom']):
     """
-    The free monoid on a ``generator_factory``, i.e. lists of its instances
-    with concatenation as :meth:`tensor` and the empty list as unit.
+    The free monoid on an ``Atom``, i.e. lists of its instances with
+    concatenation as :meth:`tensor` and the empty list as unit.
 
     ``List[X]`` is the free monoid on ``X`` the way ``Hypergraph[C]`` is the
     hypergraph category over a category ``C``, e.g. ``python.Function.ob``
@@ -202,6 +202,15 @@ class List(Monoid, NamedGeneric['generator_factory']):
     A list is a sequence of its length-one sublists, e.g.
     ``List[int](2, 3)[0] == List[int](2)``; the atoms themselves are its
     :attr:`inside`, e.g. ``List[int](2, 3).inside[0] == 2``.
+
+    Note
+    ----
+    ``Atom`` types what a list is made of, ``ob`` what it goes between:
+    a monoid has one object, so ``List.ob`` is :class:`type(None)` and
+    every list has ``dom = cod = None``.
+
+    >>> assert List[int].Atom is int and List[int].ob is type(None)
+    >>> assert List[int](2, 3).dom is List[int](2, 3).cod is None
     """
     ob = type(None)
     dom = cod = None
