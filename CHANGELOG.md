@@ -586,6 +586,19 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
+- `Stream[C].sequence` builds a box of `C` rather than a
+  `symmetric.Box`, which `Stream.__init__` then wrapped in a `C` diagram
+  of one foreign box, since its `box_factory` keyword defaulted to
+  `symmetric.Box` whatever the stream was parameterised over. It reads
+  `cls.category.Box` and the keyword goes, nothing having passed it.
+- Two docs notebooks call attributes that do not exist: the Kauffman
+  bracket of `examples.md` reads `Kauffman.Cup`, `Cap` and `Box` where
+  the slot rename left it on `cup_factory`, `cap_factory` and
+  `generator_factory`, and the cooking example of `diagrams.md` declares
+  the objects of its category with `ob` rather than a `ty_factory` that
+  never was an attribute, so the annotated `dom` and `cod` of a recipe
+  are `Ingredient` rather than a plain `cat.Ob`. No test runs the
+  notebooks, only the docs build does.
 - The marimo notebook previews in the docs follow the theme switch. The
   notebooks are exported with marimo's `system` theme and the docs relay
   the resolved theme into each notebook's iframe through marimo's
