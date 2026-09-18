@@ -39,7 +39,7 @@ from dataclasses import dataclass
 
 from discopy import config, monoidal, braided, traced, cmap, hypergraph
 from discopy.abc import BalancedCategory
-from discopy.cat import factory, generator
+from discopy.cat import factory, Factory
 from discopy.monoidal import Colour, Ty  # noqa: F401
 from discopy.utils import factory_name, assert_isatomic
 
@@ -180,14 +180,6 @@ class Diagram(braided.Diagram, traced.Diagram, BalancedCategory):
         return self if not width\
             else self.dual_rail_factory(width, colour)(self)
 
-    @generator
-    def twist_factory(cls):
-        return Twist
-
-    @generator
-    def functor_factory(cls):
-        return Functor
-
 
 Box, Braid = Diagram.generator_factory, Diagram.braid_factory
 
@@ -274,6 +266,9 @@ class Twist(Box):
         return type(self)(self.dom, not self.is_dagger)
 
 
+Diagram.twist_factory = Factory.subclass(Twist)
+
+
 Trace, Sum, Bubble = (
     Diagram.trace_factory, Diagram.sum_factory, Diagram.bubble_factory)
 
@@ -297,6 +292,9 @@ class Functor(braided.Functor, traced.Functor):
         if isinstance(other, Trace):
             return traced.Functor.__call__(self, other)
         return braided.Functor.__call__(self, other)
+
+
+Diagram.functor_factory = Factory.subclass(Functor)
 
 
 class DualRail(Functor):

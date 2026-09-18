@@ -63,7 +63,7 @@ from collections.abc import Callable
 
 from discopy import monoidal
 from discopy.abc import BraidedCategory
-from discopy.cat import factory, generator
+from discopy.cat import factory, Factory
 from discopy.monoidal import Ty, Match
 from discopy.utils import (
     assert_isatomic, BinaryBoxConstructor, deprecated_alias, factory_name)
@@ -160,14 +160,6 @@ class Diagram(monoidal.Diagram, BraidedCategory):
                       right=right_wires if left else right_wires[1:])
         return match.substitute(target)
 
-    @generator
-    def braid_factory(cls):
-        return Braid
-
-    @generator
-    def functor_factory(cls):
-        return Functor
-
 
 Box = Diagram.generator_factory
 
@@ -203,6 +195,9 @@ class Braid(BinaryBoxConstructor, Box):
 
     def dagger(self):
         return type(self)(self.right, self.left, not self.is_dagger)
+
+
+Diagram.braid_factory = Factory.subclass(Braid)
 
 
 def hexagon(cls: type, factory: Callable) -> Callable[[Ty, Ty], Diagram]:
@@ -250,6 +245,9 @@ class Functor(monoidal.Functor):
                 and hasattr(self.cod, "braid"):
             return self.cod.braid(self(other.dom[0]), self(other.dom[1]))
         return super().__call__(other)
+
+
+Diagram.functor_factory = Factory.subclass(Functor)
 
 
 Id = Diagram.id

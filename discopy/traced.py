@@ -127,7 +127,7 @@ Dinaturality
 
 from discopy import monoidal, cmap, hypergraph
 from discopy.abc import TracedCategory
-from discopy.cat import factory, generator
+from discopy.cat import factory, Factory
 from discopy.monoidal import Ty  # noqa: F401
 from discopy.utils import (
     factory_name,
@@ -172,14 +172,6 @@ class Diagram(monoidal.Diagram, TracedCategory):
     def to_drawing(self):
         return monoidal.Diagram.to_drawing(self, functor_factory=Functor)
 
-    @generator
-    def trace_factory(cls):
-        return Trace
-
-    @generator
-    def functor_factory(cls):
-        return Functor
-
 
 Box = Diagram.generator_factory
 
@@ -217,6 +209,9 @@ class Trace(Box, monoidal.Bubble):
 
     def to_drawing(self):
         return self.ar.to_drawing(self)
+
+
+Diagram.trace_factory = Factory.subclass(Trace)
 
 
 Sum, Bubble = Diagram.sum_factory, Diagram.bubble_factory
@@ -263,6 +258,9 @@ class Functor(monoidal.Functor):
             n = len(self(other.arg.dom)) - len(self(other.dom))
             return self.cod.trace(self(other.arg), n, left=other.left)
         return super().__call__(other)
+
+
+Diagram.functor_factory = Factory.subclass(Functor)
 
 
 CMap = cmap.CMap[Diagram]

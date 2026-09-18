@@ -81,7 +81,7 @@ cap becomes a ribbon folding back.
 
 from discopy import pivotal, balanced
 from discopy.abc import RibbonCategory
-from discopy.cat import factory, generator
+from discopy.cat import factory, Factory
 from discopy.pivotal import Ty, Nat  # noqa: F401
 
 
@@ -154,18 +154,6 @@ class Diagram(pivotal.Diagram, balanced.Diagram, RibbonCategory):
         """
         return self.to_braided(width, colour)
 
-    @generator
-    def braid_factory(cls):
-        return Braid
-
-    @generator
-    def twist_factory(cls):
-        return Twist
-
-    @generator
-    def functor_factory(cls):
-        return Functor
-
 
 Box, Cup, Cap = (
     Diagram.generator_factory, Diagram.cup_factory, Diagram.cap_factory)
@@ -185,6 +173,9 @@ class Braid(balanced.Braid, Box):
         del left
         braid = type(self)(*self.cod.r)
         return braid.dagger() if self.is_dagger else braid
+
+
+Diagram.braid_factory = Factory.subclass(Braid)
 
 
 class DualRailBraid(balanced.DualRailBraid, Box):
@@ -274,6 +265,9 @@ class Twist(balanced.Twist, Box):
         return self
 
 
+Diagram.twist_factory = Factory.subclass(Twist)
+
+
 Sum, Bubble, Eval, Coeval, Curry = (
     Diagram.sum_factory, Diagram.bubble_factory, Diagram.eval_factory,
     Diagram.coeval_factory, Diagram.curry_factory)
@@ -295,6 +289,9 @@ class Functor(pivotal.Functor, balanced.Functor):
         if isinstance(other, balanced.Braid):
             return balanced.Functor.__call__(self, other)
         return pivotal.Functor.__call__(self, other)
+
+
+Diagram.functor_factory = Factory.subclass(Functor)
 
 
 class DualRail(balanced.DualRail, Functor):

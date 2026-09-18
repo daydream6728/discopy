@@ -58,7 +58,7 @@ from __future__ import annotations
 
 from discopy import cat, cmap, rigid, traced
 from discopy.abc import PivotalCategory
-from discopy.cat import factory, generator
+from discopy.cat import factory, Factory
 from discopy.utils import deprecated_alias
 
 
@@ -90,9 +90,7 @@ class Ty(rigid.Ty):
     Parameters:
         inside (Wire) : The objects inside the type.
     """
-    @generator
-    def generator_factory(cls):
-        return Wire
+    generator_factory = Factory.subclass(Wire)
 
 
 @factory
@@ -162,7 +160,7 @@ class Diagram(rigid.Diagram, traced.Diagram, PivotalCategory):
         """
         return self.rotate().dagger()
 
-    @classmethod
+    @Factory.classmethod
     def trace_factory(cls, diagram: Diagram, left=False):
         """
         The trace of a pivotal diagram is its pre- and post-composition with
@@ -181,18 +179,6 @@ class Diagram(rigid.Diagram, traced.Diagram, PivotalCategory):
             else dom @ cls.cap_factory(traced_wire, traced_wire.r)\
             >> diagram @ traced_wire.r\
             >> cod @ cls.cup_factory(traced_wire, traced_wire.r)
-
-    @generator
-    def generator_factory(cls):
-        return Box
-
-    @generator
-    def cup_factory(cls):
-        return Cup
-
-    @generator
-    def cap_factory(cls):
-        return Cap
 
 
 class Box(rigid.Box, traced.Box, Diagram):
@@ -227,6 +213,9 @@ class Box(rigid.Box, traced.Box, Diagram):
         return result
 
 
+Diagram.generator_factory = Factory.subclass(Box)
+
+
 class Cup(rigid.Cup, Box):
     """
     A pivotal cup is a rigid cup of pivotal types.
@@ -241,6 +230,9 @@ class Cup(rigid.Cup, Box):
         return self.cap_factory(self.left, self.right)
 
 
+Diagram.cup_factory = Factory.subclass(Cup)
+
+
 class Cap(rigid.Cap, Box):
     """
     A pivotal cap is a rigid cap of pivotal types.
@@ -253,6 +245,9 @@ class Cap(rigid.Cap, Box):
     def dagger(self) -> Cup:
         """ The dagger of a pivotal cap. """
         return self.cup_factory(self.left, self.right)
+
+
+Diagram.cap_factory = Factory.subclass(Cap)
 
 
 Sum, Bubble, Eval, Coeval, Curry = (

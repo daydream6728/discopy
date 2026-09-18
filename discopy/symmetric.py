@@ -96,7 +96,7 @@ from collections.abc import Sequence
 
 from discopy import monoidal, balanced, hypergraph, cmap, messages
 from discopy.abc import SymmetricCategory
-from discopy.cat import factory, generator
+from discopy.cat import factory, Factory
 from discopy.monoidal import Wire, Ty, Nat  # noqa: F401
 from discopy.python import finset
 from discopy.utils import (
@@ -268,7 +268,7 @@ class Diagram(balanced.Diagram, SymmetricCategory):
     """
     braid_factory = classproperty(lambda cls: cls.swap_factory)
     layer_factory = Layer
-    twist_factory = classmethod(lambda cls, dom: cls.id(dom))
+    twist_factory = Factory.classmethod(lambda cls, dom: cls.id(dom))
 
     @property
     def is_plumbing(self) -> bool:
@@ -405,18 +405,6 @@ class Diagram(balanced.Diagram, SymmetricCategory):
         >>> assert (f >> f).depth() == 2 and (f >> f >> f).depth() == 3
         """
         return self.to_hypergraph().depth()
-
-    @generator
-    def permutation_factory(cls):
-        return Permutation
-
-    @generator
-    def swap_factory(cls):
-        return Swap
-
-    @generator
-    def functor_factory(cls):
-        return Functor
 
 
 Box = Diagram.generator_factory
@@ -570,6 +558,9 @@ class Permutation(Box):
         return f"Permutation({self.dom}, {list(self.perm)})"
 
 
+Diagram.permutation_factory = Factory.subclass(Permutation)
+
+
 Layer.plumbing = (monoidal.Ty, Permutation)
 
 
@@ -618,6 +609,9 @@ class Swap(Permutation, balanced.Braid, Box):
         return self.name
 
 
+Diagram.swap_factory = Factory.subclass(Swap)
+
+
 Trace, Sum, Bubble = (
     Diagram.trace_factory, Diagram.sum_factory, Diagram.bubble_factory)
 
@@ -646,6 +640,9 @@ class Functor(balanced.Functor):
                 doms = list(map(self, other.dom))
             return self.cod.ar.permutation(other.perm, doms)
         return super().__call__(other)
+
+
+Diagram.functor_factory = Factory.subclass(Functor)
 
 
 CMap = cmap.CMap[Diagram]

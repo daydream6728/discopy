@@ -64,7 +64,7 @@ from typing import TYPE_CHECKING, Sequence
 
 from discopy import (
     cat, monoidal, rigid, frobenius, cmap, config)
-from discopy.cat import factory, generator, assert_iscomposable
+from discopy.cat import factory, Factory, assert_iscomposable
 from discopy.frobenius import Dim, Cup
 from discopy.matrix import (  # noqa: F401
     Matrix, backend, set_backend, get_backend,
@@ -695,18 +695,6 @@ class Diagram(NamedGeneric['dtype'], frobenius.Diagram):
             result += Box(str(var), Dim(1), dim, onehot.array) @ self.grad(var)
         return result
 
-    @generator
-    def generator_factory(cls):
-        return Box
-
-    @generator
-    def permutation_factory(cls):
-        return Permutation
-
-    @generator
-    def bubble_factory(cls):
-        return Bubble
-
     functor_factory = frobenius.Functor
 
 
@@ -777,6 +765,9 @@ class Box(frobenius.Box, Diagram):
         return (self.name, self.dom, self.cod, self.dtype) + data
 
 
+Diagram.generator_factory = Factory.subclass(Box)
+
+
 Cup, Cap = Diagram.cup_factory, Diagram.cap_factory
 
 
@@ -788,6 +779,9 @@ class Permutation(frobenius.Permutation, Box):
         doms = [Dim(getattr(dim.inside[0], 'dim', dim.inside[0]))
                 for dim in self.dom]
         return Tensor.permutation(self.perm, doms).array
+
+
+Diagram.permutation_factory = Factory.subclass(Permutation)
 
 
 Swap, Spider, Sum, Eval, Coeval, Curry, Copy, Merge, Discard = (
@@ -866,6 +860,9 @@ class Bubble(frobenius.Bubble, Box):
                 func=lambda x: self.func(tmp).diff(tmp).subs(tmp, x),
                 drawing_name=name.format(self.drawing_name, var))\
             @ self.arg.grad(var) >> Spider(2, 1, self.cod)
+
+
+Diagram.bubble_factory = Factory.subclass(Bubble)
 
 
 TermBase, Constant, Variable, Application, Abstraction = (

@@ -60,7 +60,7 @@ from typing import Dict, ClassVar
 
 from discopy import cat, monoidal, biclosed, markov, cmap, hypergraph
 from discopy.abc import ClosedCategory
-from discopy.cat import factory, generator
+from discopy.cat import factory, Factory
 from discopy.utils import classproperty
 
 
@@ -81,10 +81,6 @@ class Ty(biclosed.Ty):
     .. image:: /_static/closed/diagram.svg
         :align: center
     """
-    @generator
-    def exp_factory(cls):
-        return Exp
-
     over_factory = under_factory = classproperty(lambda cls: cls.exp_factory)
 
 
@@ -98,6 +94,9 @@ class Exp(biclosed.Exp, Wire):
 
     def __str__(self):
         return f"({self.exponent} >> {self.base})"
+
+
+Ty.exp_factory = Factory.subclass(Exp)
 
 
 @factory
@@ -151,34 +150,6 @@ class Diagram(markov.Diagram, biclosed.Diagram, ClosedCategory):
     def to_drawing(self):
         return monoidal.Diagram.to_drawing(self, functor_factory=Functor)
 
-    @generator
-    def eval_factory(cls):
-        return Eval
-
-    @generator
-    def functor_factory(cls):
-        return Functor
-
-    @generator
-    def term_factory(cls):
-        return TermBase
-
-    @generator
-    def constant_factory(cls):
-        return Constant
-
-    @generator
-    def variable_factory(cls):
-        return Variable
-
-    @generator
-    def application_factory(cls):
-        return Application
-
-    @generator
-    def abstraction_factory(cls):
-        return Abstraction
-
 
 Box = Diagram.generator_factory
 
@@ -186,6 +157,9 @@ Box = Diagram.generator_factory
 class Eval(biclosed.Eval, Box):
     "The evaluation of an exponential type."
     drawing_name = "__call__"
+
+
+Diagram.eval_factory = Factory.subclass(Eval)
 
 
 Coeval, Curry, Permutation, Swap, Trace, Copy, Merge, Discard, Sum, Bubble = (
@@ -215,6 +189,9 @@ class Functor(biclosed.Functor, markov.Functor):
         return super().__call__(other)
 
 
+Diagram.functor_factory = Factory.subclass(Functor)
+
+
 CMap = cmap.CMap[Diagram]
 
 
@@ -233,6 +210,9 @@ class TermBase(Box, biclosed.TermBase):
         return Application(self, other, left=False)
 
 
+Diagram.term_factory = Factory.subclass(TermBase)
+
+
 type Term = Constant | Variable | Application | Abstraction
 
 
@@ -245,6 +225,9 @@ class Constant(TermBase, biclosed.Constant):
             functor)
 
 
+Diagram.constant_factory = Factory.subclass(Constant)
+
+
 class Variable(TermBase, biclosed.Variable):
     def eval(self, functor=None, context=None):
         functor = functor or self.functor
@@ -254,6 +237,9 @@ class Variable(TermBase, biclosed.Variable):
             functor.cod.id(functor(x.cod)) if x == self
             else functor.cod.discard(functor(x.cod))
             for x in context.inside])
+
+
+Diagram.variable_factory = Factory.subclass(Variable)
 
 
 class Application(TermBase, biclosed.Application):
@@ -278,6 +264,9 @@ class Application(TermBase, biclosed.Application):
             >> func @ args >> evaluate
 
 
+Diagram.application_factory = Factory.subclass(Application)
+
+
 class Abstraction(TermBase, biclosed.Abstraction):
     def __check_dom__(self):
         self.freevars = [x for x in self.body.freevars if x != self.var]
@@ -299,6 +288,9 @@ class Abstraction(TermBase, biclosed.Abstraction):
         p = [i] + [j for j in range(n) if j != i]
         doms = [self.ob(wire) for wire in body.dom.inside]
         return (body.permutation(p, doms).dagger() >> body).curry(left=False)
+
+
+Diagram.abstraction_factory = Factory.subclass(Abstraction)
 
 
 @dataclass

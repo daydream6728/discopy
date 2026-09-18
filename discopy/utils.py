@@ -8,6 +8,7 @@ import json
 from functools import lru_cache, wraps
 from math import ceil
 from pathlib import Path
+from types import MethodType
 from typing import (
     Callable,
     Generic,
@@ -596,7 +597,7 @@ def factory(cls):
 
     The boxes of a :code:`Circuit` are a subclass of both :class:`Box` and
     :code:`Circuit`, built by :attr:`Arrow.generator_factory`, a
-    :func:`generator`.
+    :class:`Factory`.
 
     >>> Gate = Circuit.generator_factory
     >>> assert issubclass(Gate, Box) and issubclass(Gate, Circuit)
@@ -672,34 +673,79 @@ class classproperty(object):
         return self.f(x)
 
 
-class Generator:
-    """ The descriptor behind :func:`generator`. """
-    def __init__(self, root: Callable[[type], type]):
-        self.root = root
+class Factory:
+    """
+    The factory of a generator, e.g. ``Swap`` in ``symmetric.Diagram``,
+    declared once on the category that introduces it.
+
+    :meth:`subclass` declares the class of the generator: on that category
+    the attribute is the class itself, on any other category decorated with
+    :func:`factory` it is a subclass built on first access, extending the
+    attribute of each base and the generators of the category that the
+    class extends, so that a module writes ``Swap = Diagram.swap_factory``.
+    The level enters through the root: a box extends the level's
+    ``Diagram``, an ``Exp`` gets the level's ``Ty`` as ``ob`` and a
+    ``Functor`` its ``Diagram`` as ``dom`` and ``cod``. A generator is built
+    once per module and a class attribute assigned by hand wins.
+    :meth:`classmethod` declares a factory that is behaviour rather than a
+    class, e.g. the trace of a pivotal diagram. A factory assigned after its
+    class is created finds its owner on first access.
+
+    Example
+    -------
+    >>> from discopy import symmetric, markov, closed
+    >>> assert symmetric.Diagram.swap_factory is symmetric.Swap
+    >>> assert closed.Swap.__bases__ == (
+    ...     markov.Swap, closed.Permutation, closed.Box, closed.Diagram)
+    """
+    def __init__(self, root: type = None, method: Callable = None):
+        self.root, self.method = root, method
+
+    @classmethod
+    def subclass(cls, root: type) -> Factory:
+        """ The factory building a subclass of ``root`` at every level. """
+        return cls(root=root)
+
+    @classmethod
+    def classmethod(cls, method: Callable) -> Factory:
+        """ The factory calling ``method`` on the category. """
+        return cls(method=method)
 
     def __set_name__(self, owner: type, name: str):
         self.owner, self.name, self.cache = owner, name, {}
 
+    def locate(self, cls: type):
+        """ Find the owner and name of a factory assigned after creation. """
+        for klass in cls.__mro__:
+            for name, value in vars(klass).items():
+                if value is self:
+                    return self.__set_name__(klass, name)
+
     def __get__(self, _, cls: type) -> type:
+        if not hasattr(self, "owner"):
+            self.locate(cls)
+        if self.method is not None:
+            return MethodType(self.method, cls)
         cls = cls.ar
         if cls not in self.cache:
-            self.cache[cls] = self.root(cls) if cls is self.owner\
+            self.cache[cls] = self.root if cls is self.owner\
                 else self.shared(cls) or self.build(cls)
         return self.cache[cls]
 
     def shared(self, cls: type) -> type | None:
         """ The generator of a base of ``cls`` defined in the same module. """
-        return next((getattr(base, self.name) for base in cls.__bases__
-                     if base.__module__ == cls.__module__
-                     and hasattr(base, self.name)), None)
+        return next((
+            root for base in cls.__bases__ if base.__module__ == cls.__module__
+            and isinstance(root := getattr(base, self.name, None), type)),
+            None)
 
     @property
     def parents(self) -> tuple[str, ...]:
         """ The generators of the owner that the root extends. """
-        root, names = self.root(self.owner), {
-            name for klass in self.owner.__mro__ for name, value
-            in vars(klass).items() if isinstance(value, Generator)}
-        return tuple(name for base in root.__bases__ for name in sorted(names)
+        names = {name for klass in self.owner.__mro__ for name, value
+                 in vars(klass).items() if isinstance(value, Factory)}
+        return tuple(name for base in self.root.__bases__
+                     for name in sorted(names)
                      if getattr(self.owner, name) is base)
 
     def build(self, cls: type) -> type:
@@ -709,9 +755,8 @@ class Generator:
             if isinstance(root := getattr(base, self.name, None), type))
         parents = [getattr(cls, name) for name in self.parents]
         root, *_ = roots
-        root_of_owner = self.root(self.owner)
-        level = (cls, ) if issubclass(root_of_owner, self.owner) else ()
-        attributes = {key: cls for key, value in vars(root_of_owner).items()
+        level = (cls, ) if issubclass(self.root, self.owner) else ()
+        attributes = {key: cls for key, value in vars(self.root).items()
                       if value is self.owner}
         references = " and ".join(
             f":class:`~{r.__module__}.{r.__name__}`" for r in roots)
@@ -721,31 +766,6 @@ class Generator:
             "__qualname__": root.__name__,
             "__doc__": f"A {references} in a "
                        f":class:`~{cls.__module__}.{cls.__name__}`."})
-
-
-def generator(root: Callable[[type], type]) -> Generator:
-    """
-    Declares the factory of a generator on the category that introduces it,
-    as a method returning its class, e.g. ``Swap`` in ``symmetric.Diagram``.
-
-    On that category the attribute is that class. On any other category
-    decorated with :func:`factory`, it is a subclass built on first access,
-    extending the attribute of each base and the generators of the category
-    that the class extends, so that a module writes
-    ``Swap = Diagram.swap_factory``. The level enters through the root: a
-    box extends the level's ``Diagram``, an ``Exp`` gets the level's ``Ty``
-    as ``ob`` and a ``Functor`` its ``Diagram`` as ``dom`` and ``cod``. A
-    generator is built once per module and a class attribute assigned by
-    hand wins.
-
-    Example
-    -------
-    >>> from discopy import symmetric, markov, closed
-    >>> assert symmetric.Diagram.swap_factory is symmetric.Swap
-    >>> assert closed.Swap.__bases__ == (
-    ...     markov.Swap, closed.Permutation, closed.Box, closed.Diagram)
-    """
-    return Generator(root)
 
 
 class Node:

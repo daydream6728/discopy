@@ -72,7 +72,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 
 from discopy import messages, tensor, frobenius
-from discopy.cat import factory, generator
+from discopy.cat import factory, Factory
 from discopy.matrix import backend
 from discopy.tensor import Dim, Tensor
 from discopy.utils import assert_isinstance, deprecated_alias, factory_name
@@ -839,26 +839,6 @@ class Circuit(tensor.Diagram[complex]):
         return self\
             >> self.cod[:offset] @ gate @ self.cod[offset + len(gate.dom):]
 
-    @generator
-    def generator_factory(cls):
-        return Box
-
-    @generator
-    def sum_factory(cls):
-        return Sum
-
-    @generator
-    def permutation_factory(cls):
-        return Permutation
-
-    @generator
-    def swap_factory(cls):
-        return Swap
-
-    @generator
-    def functor_factory(cls):
-        return Functor
-
 
 class Box(tensor.Box[complex], Circuit):
     """
@@ -914,6 +894,9 @@ class Box(tensor.Box[complex], Circuit):
         return self if self.z is None else super().rotate(left)
 
 
+Circuit.generator_factory = Factory.subclass(Box)
+
+
 class Sum(tensor.Sum[complex], Box):
     """ Sums of circuits. """
     @property
@@ -948,6 +931,9 @@ class Sum(tensor.Sum[complex], Box):
         return [circuit.to_tk() for circuit in self.terms]
 
 
+Circuit.sum_factory = Factory.subclass(Sum)
+
+
 class Permutation(tensor.Permutation[complex], Box):
     "A permutation in a quantum circuit."
 
@@ -960,6 +946,9 @@ class Permutation(tensor.Permutation[complex], Box):
     def is_classical(self):
         return not self.is_mixed\
             and all(isinstance(x.inside[0], Digit) for x in self.dom)
+
+
+Circuit.permutation_factory = Factory.subclass(Permutation)
 
 
 class Swap(Permutation, tensor.Swap, Box):
@@ -978,6 +967,9 @@ class Swap(Permutation, tensor.Swap, Box):
         return Tensor[complex].swap(Dim(left.dim), Dim(right.dim)).array
 
 
+Circuit.swap_factory = Factory.subclass(Swap)
+
+
 class Functor(frobenius.Functor):
     """ :class:`Circuit`-valued functor. """
     dom = cod = Circuit
@@ -987,6 +979,9 @@ class Functor(frobenius.Functor):
             ob_map = {x: qubit ** y if isinstance(y, int) else y
                       for x, y in ob_map.items()}
         super().__init__(ob_map, ar_map, dom=dom, cod=cod)
+
+
+Circuit.functor_factory = Factory.subclass(Functor)
 
 
 def index2bitstring(i: int, length: int) -> tuple[int, ...]:

@@ -80,7 +80,7 @@ from __future__ import annotations
 
 from discopy import symmetric, monoidal, cmap, hypergraph
 from discopy.abc import MarkovCategory
-from discopy.cat import factory, generator
+from discopy.cat import factory, Factory
 from discopy.monoidal import Ty  # noqa: F401
 from discopy.utils import assert_isatomic, factory_name
 
@@ -119,7 +119,7 @@ class Diagram(symmetric.Diagram, MarkovCategory):
 
     .. image:: /_static/markov/copy_and_apply.svg
     """
-    @classmethod
+    @Factory.classmethod
     def spider_factory(cls, n_legs_in, n_legs_out, typ, phase=None):
         if phase is not None or 1 not in (n_legs_in, n_legs_out):
             raise ValueError
@@ -159,22 +159,6 @@ class Diagram(symmetric.Diagram, MarkovCategory):
         """
         return cls.copy(x, 0)
 
-    @generator
-    def copy_factory(cls):
-        return Copy
-
-    @generator
-    def merge_factory(cls):
-        return Merge
-
-    @generator
-    def discard_factory(cls):
-        return Discard
-
-    @generator
-    def functor_factory(cls):
-        return Functor
-
 
 Box, Permutation, Swap, Trace = (
     Diagram.generator_factory, Diagram.permutation_factory,
@@ -208,6 +192,9 @@ class Copy(Box):
             factory_name(type(self)) + f"({repr(self.dom)}, {len(self.cod)})")
 
 
+Diagram.copy_factory = Factory.subclass(Copy)
+
+
 class Merge(Box):
     """
     The merge of an atomic type :code:`x` some :code:`n` number of times.
@@ -231,6 +218,9 @@ class Merge(Box):
             factory_name(type(self)) + f"({repr(self.cod)}, {len(self.dom)})")
 
 
+Diagram.merge_factory = Factory.subclass(Merge)
+
+
 class Discard(Copy):
     """
     The discard of an atomic type :code:`x`.
@@ -240,6 +230,9 @@ class Discard(Copy):
     """
     def __init__(self, x: monoidal.Ty, *args, **kwargs):
         super().__init__(x, 0)
+
+
+Diagram.discard_factory = Factory.subclass(Discard)
 
 
 Sum, Bubble = Diagram.sum_factory, Diagram.bubble_factory
@@ -284,6 +277,9 @@ class Functor(symmetric.Functor):
         if isinstance(other, Merge) and hasattr(self.cod, "merge"):
             return self.cod.merge(self(other.cod), len(other.dom))
         return super().__call__(other)
+
+
+Diagram.functor_factory = Factory.subclass(Functor)
 
 
 CMap = cmap.CMap[Diagram]

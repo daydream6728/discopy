@@ -35,7 +35,7 @@ Summary
 """
 
 from discopy import rigid, frobenius, messages
-from discopy.cat import factory, generator
+from discopy.cat import factory, Factory
 from discopy.utils import AxiomError, deprecated_alias
 from discopy.grammar import thue
 from discopy.rigid import Wire  # noqa: F401
@@ -160,24 +160,15 @@ class Diagram(frobenius.Diagram):
     cups = classmethod(rigid.Diagram.cups.__func__)
     caps = classmethod(rigid.Diagram.caps.__func__)
 
-    @generator
-    def generator_factory(cls):
-        return Box
-
-    @generator
-    def swap_factory(cls):
-        return Swap
-
-    @generator
-    def spider_factory(cls):
-        return Spider
-
 
 class Box(frobenius.Box, Diagram):
     """
     A pregroup box is a frobenius box in a pregroup diagram.
     """
     rotate = rigid.Box.rotate
+
+
+Diagram.generator_factory = Factory.subclass(Box)
 
 
 Cup, Cap, Permutation = (
@@ -193,6 +184,9 @@ class Swap(Permutation, frobenius.Swap, Box):
                 type(self)(self.left.r, self.right.r))
 
 
+Diagram.swap_factory = Factory.subclass(Swap)
+
+
 class Spider(frobenius.Spider, Box):
     """
     A pregroup spider is a frobenius spider in a pregroup diagram.
@@ -200,6 +194,9 @@ class Spider(frobenius.Spider, Box):
     def rotate(self, left=False):
         typ = self.typ.l if left else self.typ.r
         return type(self)(len(self.cod), len(self.dom), typ, self.phase)
+
+
+Diagram.spider_factory = Factory.subclass(Spider)
 
 
 Sum, Bubble, Eval, Coeval, Curry, Copy, Merge, Discard = (

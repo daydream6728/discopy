@@ -157,7 +157,7 @@ from discopy import monoidal, braided, markov, hypergraph
 from discopy.abc import FeedbackCategory
 from discopy.utils import (
     deprecated_alias,
-    factory, generator, factory_name, assert_isinstance, AxiomError,
+    factory, Factory, factory_name, assert_isinstance, AxiomError,
 )
 
 
@@ -291,9 +291,7 @@ class TailOb(Wire):
 @factory
 class Ty(monoidal.Ty):
     """ A feedback type is a monoidal type with `delay`, `head` and `tail`. """
-    @generator
-    def generator_factory(cls):
-        return Wire
+    generator_factory = Factory.subclass(Wire)
 
     def delay(self, n_steps=1):
         """ The delay of a feedback type by `n_steps`. """
@@ -402,38 +400,6 @@ class Diagram(markov.Diagram, FeedbackCategory):
 
     d = Wire.d
 
-    @generator
-    def generator_factory(cls):
-        return Box
-
-    @generator
-    def permutation_factory(cls):
-        return Permutation
-
-    @generator
-    def swap_factory(cls):
-        return Swap
-
-    @generator
-    def copy_factory(cls):
-        return Copy
-
-    @generator
-    def merge_factory(cls):
-        return Merge
-
-    @generator
-    def feedback_factory(cls):
-        return Feedback
-
-    @generator
-    def followed_by(cls):
-        return FollowedBy
-
-    @generator
-    def functor_factory(cls):
-        return Functor
-
 
 class Box(markov.Box, Diagram):
     """
@@ -481,11 +447,17 @@ class Box(markov.Box, Diagram):
         return markov.Box.setoid(self) + (self.time_step, )
 
 
+Diagram.generator_factory = Factory.subclass(Box)
+
+
 class Permutation(markov.Permutation, Box):
     "A permutation in a feedback diagram."
 
     def delay(self, n_steps=1):
         return type(self)(self.dom.delay(n_steps), self.perm)
+
+
+Diagram.permutation_factory = Factory.subclass(Permutation)
 
 
 class Swap(Permutation, markov.Swap, Box):
@@ -500,6 +472,9 @@ class Swap(Permutation, markov.Swap, Box):
         return type(self)(self.left.delay(n_steps), self.right.delay(n_steps))
 
 
+Diagram.swap_factory = Factory.subclass(Swap)
+
+
 class Copy(markov.Copy, Box):
     """
     The copy of an atomic type :code:`x` some :code:`n` number of times.
@@ -512,6 +487,9 @@ class Copy(markov.Copy, Box):
         return type(self)(self.dom.delay(n_steps), len(self.cod))
 
 
+Diagram.copy_factory = Factory.subclass(Copy)
+
+
 class Merge(markov.Merge, Box):
     """
     The merge of an atomic type :code:`x` some :code:`n` number of times.
@@ -522,6 +500,9 @@ class Merge(markov.Merge, Box):
     """
     def delay(self, n_steps=1):
         return type(self)(self.cod.delay(n_steps), len(self.dom))
+
+
+Diagram.merge_factory = Factory.subclass(Merge)
 
 
 Discard, Trace, Sum, Bubble = (
@@ -602,6 +583,9 @@ class Feedback(monoidal.Bubble, Box):
         return self.arg.to_drawing().trace()
 
 
+Diagram.feedback_factory = Factory.subclass(Feedback)
+
+
 class FollowedBy(Box):
     """
     The isomorphism between `x.head @ x.tail.delay()` and `x`.
@@ -649,6 +633,9 @@ class FollowedBy(Box):
 
     def reset(self):
         return type(self)(self.arg, self.is_dagger)
+
+
+Diagram.followed_by = Factory.subclass(FollowedBy)
 
 
 class Functor(markov.Functor):
@@ -699,6 +686,9 @@ class Functor(markov.Functor):
             return self(other.arg).feedback(*map(self, (
                 other.dom, other.cod, other.mem)))
         return super().__call__(other)
+
+
+Diagram.functor_factory = Factory.subclass(Functor)
 
 
 Hypergraph = hypergraph.Hypergraph[Diagram]

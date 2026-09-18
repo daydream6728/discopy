@@ -70,7 +70,7 @@ from discopy.config import (
     COLOUR_DRAWING_ATTRIBUTES, TRANSPARENT)
 from discopy.utils import (
     factory,
-    generator,
+    Factory,
     factory_name,
     from_tree,
     assert_isinstance,
@@ -291,9 +291,7 @@ class Ty(cat.Ob, cat.FreeCategory, ColouredMonoid):
     """
     ob = Colour
 
-    @generator
-    def generator_factory(cls):
-        return Wire
+    generator_factory = Factory.subclass(Wire)
 
     def cast_wire(self, x: str | cat.Ob) -> cat.Ob:
         """
@@ -948,22 +946,6 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
     ob = Ty
     layer_factory = Layer
 
-    @generator
-    def generator_factory(cls):
-        return Box
-
-    @generator
-    def sum_factory(cls):
-        return Sum
-
-    @generator
-    def bubble_factory(cls):
-        return Bubble
-
-    @generator
-    def functor_factory(cls):
-        return Functor
-
     def __setstate__(self, state):
         if 'inside' not in state:  # Backward compatibility
             state |= {
@@ -1503,6 +1485,9 @@ class Box(cat.Box, Diagram):
         return Drawing.from_box(self)
 
 
+Diagram.generator_factory = Factory.subclass(Box)
+
+
 class Sum(cat.Sum, Box):
     """
     A sum is a tuple of diagrams :code:`terms`
@@ -1536,6 +1521,9 @@ class Sum(cat.Sum, Box):
         return self.sum_factory(terms, dom, cod)
 
     to_drawing = Diagram.to_drawing
+
+
+Diagram.sum_factory = Factory.subclass(Sum)
 
 
 class Bubble(cat.Bubble, Box):
@@ -1635,6 +1623,9 @@ class Bubble(cat.Bubble, Box):
         else:
             kwargs['draw_as_square'] = self.draw_as_square
         return getattr(Drawing, method)(*args, **kwargs)
+
+
+Diagram.bubble_factory = Factory.subclass(Bubble)
 
 
 class Functor(cat.Functor):
@@ -1745,6 +1736,9 @@ class Functor(cat.Functor):
         if isinstance(other, Bubble) and self.cod is Drawing:
             return other.to_drawing()
         return super().__call__(other)
+
+
+Diagram.functor_factory = Factory.subclass(Functor)
 
 
 @dataclass

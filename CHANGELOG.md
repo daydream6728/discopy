@@ -9,15 +9,18 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Added
 
-- `utils.generator` declares the factory of a generator once, on the
-  `Diagram` that introduces it, as a method returning its class, e.g.
-  `swap_factory` returns `Swap` in `symmetric.Diagram`. Every level below
+- `utils.Factory` declares the factory of a generator once, on the
+  `Diagram` that introduces it: `Diagram.swap_factory = Factory.subclass(Swap)`
+  in `symmetric`, or `generator_factory = Factory.subclass(Wire)` in the
+  body of `Ty` since the wire comes first. Every level below
   gets its own subclass built on first access, extending the swaps of its
   bases, the generators its root extends (a swap is a permutation, a
   discard a copy) and the level itself, so a module writes
   `Swap = Diagram.swap_factory` in place of `class Swap(markov.Swap, Box)`
   and `Diagram.swap_factory = Swap`; a level adding behaviour declares it
-  again and a class attribute assigned by hand still wins. Fifty-six
+  again, a factory that is behaviour rather than a class is a
+  `Factory.classmethod`, e.g. the trace of a pivotal diagram, and a class
+  attribute assigned by hand still wins. Fifty-six
   trivial subclasses go, and every generator a level builds (bubbles,
   sums, traces, copies, merges, evaluations) is a diagram of that level
   rather than of the level that introduced it. Roots initialise through
