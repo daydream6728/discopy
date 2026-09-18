@@ -199,6 +199,7 @@ class FreeCategory(Category):
         """
         Declare ``root`` as a generator of the category, bound under its
         own name, e.g. ``@Diagram.generator`` above ``class Swap``.
+
         """
         binding = Generator.subclass(root)
         binding.__set_name__(cls, root.__name__)
@@ -994,6 +995,27 @@ class Functor(Category):
             + f"(ob_map={self.ob_map}, ar_map={self.ar_map}{cod_repr})"
 
     def __call__(self, other):
+        """
+        The image of ``other``, asking it first how it is mapped.
+
+        A generator says so itself with an ``image`` method, but only a
+        functor whose own category declares that generator listens: a
+        braid is an opaque box to a monoidal functor, which is how
+        :meth:`discopy.cmap.CMap.from_diagram` keeps the structure of the
+        level above as boxes.
+        """
+        image = getattr(other, "image", None)
+        return self.generic(other) if image is None or not isinstance(
+            other, getattr(type(self).dom, type(other).__name__, ()))\
+            else image(self)
+
+    def generic(self, other):
+        """
+        The image of a term that says nothing about how it is mapped, i.e.
+        the structure every functor preserves: an object goes through
+        ``ob_map``, a box through ``ar_map`` and an arrow is the
+        composite of the images of its boxes.
+        """
         if isinstance(other, Ob):
             result = self.ob_map[other]
             origin = get_origin(self.cod.ob)

@@ -201,6 +201,11 @@ class Braid(BinaryBoxConstructor, Box):
     def dagger(self):
         return type(self)(self.right, self.left, not self.is_dagger)
 
+    def image(self, functor):
+        if self.is_dagger or not hasattr(functor.cod, "braid"):
+            return functor.generic(self)
+        return functor.cod.braid(functor(self.dom[0]), functor(self.dom[1]))
+
 
 def hexagon(cls: type, factory: Callable) -> Callable[[Ty, Ty], Diagram]:
     """
@@ -242,12 +247,6 @@ class Functor(monoidal.Functor):
             The codomain, :code:`Diagram` by default.
     """
     dom = cod = Diagram
-
-    def __call__(self, other):
-        if isinstance(other, Braid) and not other.is_dagger\
-                and hasattr(self.cod, "braid"):
-            return self.cod.braid(self(other.dom[0]), self(other.dom[1]))
-        return super().__call__(other)
 
 
 Layer = Diagram.Layer

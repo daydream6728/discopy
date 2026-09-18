@@ -270,6 +270,10 @@ class Twist(Box):
     def dagger(self):
         return type(self)(self.dom, not self.is_dagger)
 
+    def image(self, functor):
+        return functor.cod.twist(functor(self.dom))\
+            if hasattr(functor.cod, "twist") else functor.generic(self)
+
 
 Trace, Sum, Bubble = (
     Diagram.Trace, Diagram.Sum, Diagram.Bubble)
@@ -288,13 +292,6 @@ class Functor(braided.Functor, traced.Functor):
             The codomain, :code:`Diagram` by default.
     """
     dom = cod = Diagram
-
-    def __call__(self, other):
-        if isinstance(other, Twist) and hasattr(self.cod, "twist"):
-            return self.cod.twist(self(other.dom))
-        if isinstance(other, Trace):
-            return traced.Functor.__call__(self, other)
-        return braided.Functor.__call__(self, other)
 
 
 class DualRail(Functor):
