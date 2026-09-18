@@ -234,19 +234,7 @@ def hexagon(cls: type, factory: Callable) -> Callable[[Ty, Ty], Diagram]:
 Sum, Bubble = Diagram.Sum, Diagram.Bubble
 
 
-@Diagram.generator
-class Functor(monoidal.Functor):
-    """
-    A braided functor is a monoidal functor that preserves braids.
-
-    Parameters:
-        ob_map (Mapping[monoidal.Ty, monoidal.Ty]) :
-            Map from :class:`monoidal.Ty` to :code:`cod.ob`.
-        ar_map (Mapping[Box, Diagram]) : Map from :class:`Box` to :code:`cod`.
-        cod (Category) :
-            The codomain, :code:`Diagram` by default.
-    """
-    dom = cod = Diagram
+Functor = Diagram.Functor
 
 
 Layer = Diagram.Layer

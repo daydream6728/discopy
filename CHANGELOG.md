@@ -75,6 +75,34 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   the case for boxes. A factory class whose `ar` has no generator in its
   bases, e.g. `grammar.cfg.Tree`, keeps the root of the declaration rather
   than raising `ValueError`.
+- A generator says how a functor maps it, with an `image` method on the
+  class that declares it, where every level of the hierarchy used to
+  test for it in its own `Functor.__call__`. `cat.Functor.__call__` is
+  the dispatcher, `generic` the structure every functor preserves
+  (`ob_map`, `ar_map` and the composite of a term's boxes) and
+  `interprets` the gate: a generator only speaks when the functor's own
+  domain declares one of the same name, so a braid is still an opaque
+  box to a monoidal functor, which is what
+  `CMap.from_diagram` relies on to keep the structure above the map's
+  level as boxes. `Box.image` and `Ob.image` are `ar_map` and `ob_map`,
+  so a generator falls back on `super().image` and the chain reads
+  itself: a swap is a swap where the codomain has one, else a
+  permutation, else a braid, else a box. Twenty-three generators declare
+  their image and the seven `Functor` classes that had nothing else to
+  say -- `braided`, `balanced`, `symmetric`, `compact`, `ribbon`,
+  `frobenius` and `closed` -- are built by the `Generator` machinery
+  rather than written by hand, as `Swap` and the rest already were. The
+  eleven branches that existed only to re-enter another level's functor
+  through a diamond, e.g. `compact` asking `symmetric` and `frobenius`
+  asking `markov`, go with them: a generator's own method resolution
+  reaches its declaration. What a functor keeps is what no generator
+  owns: the structural recursion over types, layers, sums and bubbles,
+  the rotation of a `rigid.Wire` or `Box` and the delay of a `feedback`
+  one -- names every level declares, which `interprets` cannot tell
+  apart -- and the reinterpretations of `hopf`, `channel`, `tensor` and
+  `categorial`. Seventy-seven `isinstance(other, ...)` tests across
+  eighteen functors become forty-seven, of which fourteen are the
+  structural recursion of `cat` and `monoidal`.
 - `monoidal.List`, the free monoid on a generator type: `List[X]` is a
   tuple of instances of `X` with concatenation as `tensor` and the empty
   list as unit, an `abc.Monoid` parameterised as

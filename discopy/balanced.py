@@ -279,19 +279,7 @@ Trace, Sum, Bubble = (
     Diagram.Trace, Diagram.Sum, Diagram.Bubble)
 
 
-@Diagram.generator
-class Functor(braided.Functor, traced.Functor):
-    """
-    A balanced functor is a braided functor that twists.
-
-    Parameters:
-        ob_map (Mapping[monoidal.Ty, monoidal.Ty]) :
-            Map from :class:`monoidal.Ty` to :code:`cod.ob`.
-        ar_map (Mapping[Box, Diagram]) : Map from :class:`Box` to :code:`cod`.
-        cod (Category) :
-            The codomain, :code:`Diagram` by default.
-    """
-    dom = cod = Diagram
+Functor = Diagram.Functor
 
 
 class DualRail(Functor):

@@ -256,19 +256,7 @@ Sum, Bubble, Eval, Coeval, Curry, Copy, Merge, Discard = (
     Diagram.Merge, Diagram.Discard)
 
 
-@Diagram.generator
-class Functor(compact.Functor, markov.Functor):
-    """
-    A hypergraph functor is a compact functor that preserves spiders.
-
-    Parameters:
-        ob_map (Mapping[Ty, Ty]) :
-            Map from atomic :class:`Ty` to :code:`cod.ob`.
-        ar_map (Mapping[Box, Diagram]) : Map from :class:`Box` to :code:`cod`.
-        cod (Category) : The codomain of the functor.
-    """
-
-    dom = cod = Diagram
+Functor = Diagram.Functor
 
 
 def interleaving(cls: type, factory: Callable

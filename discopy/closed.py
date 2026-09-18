@@ -172,19 +172,7 @@ Coeval, Curry, Permutation, Swap, Trace, Copy, Merge, Discard, Sum, Bubble = (
     Diagram.Sum, Diagram.Bubble)
 
 
-@Diagram.generator
-class Functor(biclosed.Functor, markov.Functor):
-    """
-    A closed functor is a markov functor
-    that preserves evaluation and currying.
-
-    Parameters:
-        ob_map (Mapping[Ty, Ty]) :
-            Map from atomic :class:`Ty` to :code:`cod.ob`.
-        ar_map (Mapping[Box, Diagram]) : Map from :class:`Box` to :code:`cod`.
-        cod (Category) : The codomain of the functor.
-    """
-    dom = cod = Diagram
+Functor = Diagram.Functor
 
 
 CMap = cmap.CMap[Diagram]
