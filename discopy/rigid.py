@@ -156,7 +156,7 @@ from typing import Any, ClassVar, Iterator, Self
 
 from discopy import cat, monoidal, biclosed, messages
 from discopy.abc import Category, Pregroup, RigidCategory
-from discopy.axioms import GENERATORS, Serialisable, connected
+from discopy.axioms import GENERATORS, Serialisable
 from discopy.cat import factory, Generator
 from discopy.utils import (
     assert_isatomic,
@@ -416,7 +416,12 @@ class Diagram(biclosed.Diagram, RigidCategory):
     to_drawing = monoidal.Diagram.to_drawing
 
     ev = classmethod(RigidCategory.ev.__func__)
+    ev_left = classmethod(RigidCategory.ev_left.__func__)
+    ev_right = classmethod(RigidCategory.ev_right.__func__)
     curry = RigidCategory.curry
+    curry_left = RigidCategory.curry_left
+    curry_right = RigidCategory.curry_right
+    base_and_exponent = RigidCategory.base_and_exponent
     Box: ClassVar[Generator]
     Sum: ClassVar[Generator]
     Cup: ClassVar[Generator]
@@ -676,10 +681,10 @@ class Diagram(biclosed.Diagram, RigidCategory):
     snake_equations = RigidCategory.snake_equations.modulo(normal_form)
 
     currying_left = RigidCategory.currying_left.modulo(
-        normal_form).weaken(connected)
+        normal_form).weaken(boundary_connected=True)
 
     currying_right = RigidCategory.currying_right.modulo(
-        normal_form).weaken(connected)
+        normal_form).weaken(boundary_connected=True)
 
     dagger_monoidality = RigidCategory.dagger_monoidality.inapplicable(
         "Rigid cups and caps have no dagger, use pivotal instead.")

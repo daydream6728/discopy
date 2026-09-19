@@ -897,6 +897,14 @@ class Drawing(TracedCategory, RichDisplay):
         result.width = x_shift + other.width
         return result
 
+    def trace_left(self, n=1):
+        """ The trace of ``n`` wires on the left, see :meth:`trace`. """
+        return self.trace(n, left=True)
+
+    def trace_right(self, n=1):
+        """ The trace of ``n`` wires on the right, see :meth:`trace`. """
+        return self.trace(n)
+
     def trace(self, n=1, left=False) -> Drawing:
         from discopy.monoidal import Box, Ty
         if n == 0:

@@ -350,6 +350,14 @@ class Diagram(monoidal.Diagram, BiclosedCategory):
     Application: ClassVar[Generator]
     Abstraction: ClassVar[Generator]
 
+    def curry_left(self, n=1):
+        """ The left currying of ``n`` objects, see :meth:`curry`. """
+        return self.curry(n, left=True)
+
+    def curry_right(self, n=1):
+        """ The right currying of ``n`` objects, see :meth:`curry`. """
+        return self.curry(n, left=False)
+
     def curry(self, n=1, left=True) -> Diagram:
         """
         Wrapper around :class:`Curry` called by :class:`Functor`.
@@ -360,6 +368,16 @@ class Diagram(monoidal.Diagram, BiclosedCategory):
                 or on the right, i.e. into :class:`Under`.
         """
         return self.Curry(self, n, left)
+
+    @classmethod
+    def ev_left(cls, base, exponent):
+        """ The left evaluation, see :meth:`ev`. """
+        return cls.ev(base, exponent, left=True)
+
+    @classmethod
+    def ev_right(cls, base, exponent):
+        """ The right evaluation, see :meth:`ev`. """
+        return cls.ev(base, exponent, left=False)
 
     @classmethod
     def ev(cls, base: Ty, exponent: Ty, left=True) -> Eval:

@@ -119,6 +119,16 @@ class Diagram(markov.Diagram, biclosed.Diagram, ClosedCategory):
         return not any(isinstance(box, markov.Copy) for box in self.boxes)
 
     @classmethod
+    def ev_left(cls, base, exponent):
+        """ The left evaluation, see :meth:`ev`. """
+        return cls.ev(base, exponent, left=True)
+
+    @classmethod
+    def ev_right(cls, base, exponent):
+        """ The right evaluation, see :meth:`ev`. """
+        return cls.ev(base, exponent, left=False)
+
+    @classmethod
     def ev(cls, base: Ty, exponent: Ty, left: bool = True):
         return cls.Eval(exponent >> base, left=left)
 

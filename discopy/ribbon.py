@@ -104,6 +104,14 @@ class Diagram(pivotal.Diagram, balanced.Diagram, RibbonCategory):
     serialisation = Serialisable.serialisation.failing(
         "The generic tree of a twist does not read back (#742).")
 
+    def trace_left(self, n=1):
+        """ The trace of ``n`` wires on the left, see :meth:`trace`. """
+        return self.trace(n, left=True)
+
+    def trace_right(self, n=1):
+        """ The trace of ``n`` wires on the right, see :meth:`trace`. """
+        return self.trace(n)
+
     def trace(self, n=1, left=False):
         """
         The trace of a ribbon diagram.

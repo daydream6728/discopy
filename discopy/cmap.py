@@ -938,6 +938,16 @@ class CMap[category: Diagram](CompactCategory, NamedGeneric):
         return cls.copy(typ, 0)
 
     @classmethod
+    def ev_left(cls, base, exponent):
+        """ The left evaluation, see :meth:`ev`. """
+        return cls.ev(base, exponent, left=True)
+
+    @classmethod
+    def ev_right(cls, base, exponent):
+        """ The right evaluation, see :meth:`ev`. """
+        return cls.ev(base, exponent, left=False)
+
+    @classmethod
     def ev(cls, base: Ty, exponent: Ty, left: bool = True) -> CMap:
         """
         Evaluation is kept as an explicit box by default, or comes from the
@@ -946,6 +956,14 @@ class CMap[category: Diagram](CompactCategory, NamedGeneric):
         if issubclass(cls.category, RigidCategory):
             return super().ev(base, exponent, left)
         return cls.from_box(cls.category.ev(base, exponent, left))
+
+    def curry_left(self, n=1):
+        """ The left currying of ``n`` objects, see :meth:`curry`. """
+        return self.curry(n, left=True)
+
+    def curry_right(self, n=1):
+        """ The right currying of ``n`` objects, see :meth:`curry`. """
+        return self.curry(n, left=False)
 
     def curry(self, n: int = 1, left: bool = True) -> CMap:
         """
@@ -1061,6 +1079,14 @@ class CMap[category: Diagram](CompactCategory, NamedGeneric):
         loops = self.loops + other.loops + new_scalars
         return type(self)(
             dom, cod, boxes, edge, loops=loops, check=False)
+
+    def trace_left(self, n=1):
+        """ The trace of ``n`` wires on the left, see :meth:`trace`. """
+        return self.trace(n, left=True)
+
+    def trace_right(self, n=1):
+        """ The trace of ``n`` wires on the right, see :meth:`trace`. """
+        return self.trace(n)
 
     def trace(self, n: int = 1, left: bool = False) -> CMap:
         """

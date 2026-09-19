@@ -378,6 +378,14 @@ class Matrix[dtype](MonoidalCategory, NamedGeneric):
         return sum(self.id(self.dom).then(*n * [self])
                    for n in range(index(self.dom) + 1))
 
+    def trace_left(self, n=1):
+        """ The trace of ``n`` wires on the left, see :meth:`trace`. """
+        return self.trace(n, left=True)
+
+    def trace_right(self, n=1):
+        """ The trace of ``n`` wires on the right, see :meth:`trace`. """
+        return self.trace(n)
+
     def trace(self, n=1, left=False) -> Matrix:
         """
         The trace of a Boolean matrix, computed with :meth:`Matrix.repeat`.

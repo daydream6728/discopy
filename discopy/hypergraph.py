@@ -534,6 +534,14 @@ class Hypergraph[category: Diagram](MonoidalCategory, NamedGeneric):
             return self.from_box(factory(self.to_diagram(), left))
         return factory.__func__(type(self), self, left)
 
+    def trace_left(self, n=1):
+        """ The trace of ``n`` wires on the left, see :meth:`trace`. """
+        return self.trace(n, left=True)
+
+    def trace_right(self, n=1):
+        """ The trace of ``n`` wires on the right, see :meth:`trace`. """
+        return self.trace(n)
+
     def trace(self, n=1, left=False):
         """
         The trace of a hypergraph is its pre- and post-composition with

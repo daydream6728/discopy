@@ -333,6 +333,14 @@ class Permutation(Function, PROP):
             for i in range(m + n))
         return cls(inside, m + n)
 
+    def trace_left(self, n=1):
+        """ The trace of ``n`` wires on the left, see :meth:`trace`. """
+        return self.trace(n, left=True)
+
+    def trace_right(self, n=1):
+        """ The trace of ``n`` wires on the right, see :meth:`trace`. """
+        return self.trace(n)
+
     def trace(self, n: int = 1, left: bool = False) -> Self:
         raise NotImplementedError
 

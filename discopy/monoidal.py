@@ -67,7 +67,7 @@ from discopy import abc, cat, drawing, hypergraph, cmap, messages
 from discopy.abc import (
     ColouredMonoid, Monoid, MonoidalCategory, NamedGeneric)
 from discopy.axioms import (
-    GENERATORS, Serialisable, connected, no_strategy, search)
+    GENERATORS, Serialisable, no_strategy, search)
 from discopy.drawing import Drawing
 from discopy.config import (
     BOX_DRAWING_ATTRIBUTES, WIRE_DRAWING_ATTRIBUTES,
@@ -90,7 +90,7 @@ if TYPE_CHECKING:
 
 
 @dataclass(frozen=True)
-class Colour(cat.Ob, abc.Colour):
+class Colour(cat.Ob):
     """
     A 0-cell, drawn using its matplotlib-compatible ``name``, by default
     :data:`discopy.config.TRANSPARENT` so that the page shows through.
@@ -1025,32 +1025,28 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
 
     @classmethod
     def strategy(
-            cls, *, types=None, dom=None, cod=None,
-            min_leaves=None, max_leaves=3, boundary_connected=False):
+            cls, *, types=None, dom=None, cod=None, max_depth=3,
+            boundary_connected=False):
         """
-        Generate diagrams by :func:`discopy.axioms.search` over the
-        :attr:`rules` of the category, tensored with up to two closed
-        components at the colour of their codomain unless
-        ``boundary_connected``.
-        """
-        from hypothesis import strategies as st
+        Generate diagrams by the :attr:`rules` and :attr:`generators` of
+        the category, see :func:`discopy.search.search`: a subclass with
+        more structure declares it there and inherits the search as is.
 
-        types = cls.ob.strategy(min_length=1) if types is None else types
+        Parameters:
+            dom : The domain of the diagrams, if any.
+            cod : The codomain of the diagrams, if any.
+            types : A strategy for the types, that of :attr:`ob` by default.
+            max_depth : The number of nested rules a diagram may apply.
+            boundary_connected : Whether to keep only the diagrams that are
+                :attr:`is_boundary_connected`, the subspace
+                :meth:`normal_form` is defined on.
+        """
         diagrams = search(
-            cls, types=types, dom=dom, cod=cod,
-            min_leaves=min_leaves, max_leaves=max_leaves)
-        if boundary_connected:
+            cls, cls.Box.strategy, dom=dom, cod=cod, types=types,
+            max_depth=max_depth)
+        if not boundary_connected:
             return diagrams
-
-        def closed(diagram):
-            unit = cls.ob(dom=diagram.cod.cod, cod=diagram.cod.cod)
-            scalars = search(
-                cls, types=types, dom=unit, cod=unit,
-                min_leaves=1, max_leaves=max_leaves)
-            return st.lists(scalars, max_size=2).map(
-                lambda components: diagram.tensor(*components))
-
-        return diagrams.flatmap(closed)
+        return diagrams.filter(lambda diagram: diagram.is_boundary_connected)
 
     def __setstate__(self, state):
         if 'inside' not in state:  # Backward compatibility
@@ -1071,20 +1067,43 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
     @property
     def is_boundary_connected(self) -> bool:
         """
-        Whether the boundary reaches every box, i.e. every connected
-        component of the map with a box or a loop has a port on the
-        boundary: the subspace a normal form is defined on. The map is
-        read rather than the hypergraph, which a left-handed cup has none
-        of.
+        Whether the boundary reaches every box, i.e. each box is connected
+        to the domain or the codomain by wires, through other boxes: the
+        subspace a normal form is defined on. Connectivity is read off the
+        layers, so it is defined on every diagram.
 
         >>> x = Ty('x')
-        >>> assert Box('f', x, x).is_boundary_connected
-        >>> assert not Box('s', Ty(), Ty()).is_boundary_connected
+        >>> f, s = Box('f', x, x), Box('s', Ty(), Ty())
+        >>> assert f.is_boundary_connected and Id(Ty()).is_boundary_connected
+        >>> assert not s.is_boundary_connected
+        >>> assert not (f @ s).is_boundary_connected
         """
-        return all(
-            len(component.dom) or len(component.cod)
-            for component in self.to_map().connected_components
-            if component.boxes or component.loops)
+        parents = {}
+
+        def find(component):
+            while parents.get(component, component) != component:
+                component = parents[component]
+            return component
+
+        def union(*components):
+            for component in components[1:]:
+                parents[find(component)] = find(components[0])
+
+        boxes, wires = [], len(self.dom) * ["boundary"]
+        for i, layer in enumerate(self.inside):
+            outputs, position = [], 0
+            for item in layer:
+                width = len(item.dom) if isinstance(item, Box) else len(item)
+                inputs = wires[position:position + width]
+                position += width
+                if isinstance(item, Box):
+                    union((i, position), *inputs)
+                    boxes.append((i, position))
+                    inputs = len(item.cod) * [(i, position)]
+                outputs += inputs
+            wires = outputs
+        union("boundary", *wires)
+        return all(find(box) == find("boundary") for box in boxes)
 
     @property
     def size(self):
@@ -1536,10 +1555,10 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
         return super().from_tree(tree)
 
     bifunctoriality = MonoidalCategory.bifunctoriality.modulo(
-        normal_form).weaken(connected)
+        normal_form).weaken(boundary_connected=True)
 
     dagger_monoidality = MonoidalCategory.dagger_monoidality.modulo(
-        normal_form).weaken(connected)
+        normal_form).weaken(boundary_connected=True)
 
 
 @Diagram.generator

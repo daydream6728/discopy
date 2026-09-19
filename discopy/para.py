@@ -322,6 +322,14 @@ class Traced(Symmetric, TracedCategory):
     Parametric maps over a traced symmetric underlying `category` form a
     traced category, with the parameters swapped out of the way.
     """
+    def trace_left(self, n=1):
+        """ The trace of ``n`` wires on the left, see :meth:`trace`. """
+        return self.trace(n, left=True)
+
+    def trace_right(self, n=1):
+        """ The trace of ``n`` wires on the right, see :meth:`trace`. """
+        return self.trace(n)
+
     def trace(self, n: int = 1, left: bool = False) -> Traced:
         """
         The trace of a parametric map is the trace of the underlying
@@ -371,6 +379,16 @@ class Closed(Markov, ClosedCategory):
     category = closed.Diagram
 
     @classmethod
+    def ev_left(cls, base, exponent):
+        """ The left evaluation, see :meth:`ev`. """
+        return cls.ev(base, exponent, left=True)
+
+    @classmethod
+    def ev_right(cls, base, exponent):
+        """ The right evaluation, see :meth:`ev`. """
+        return cls.ev(base, exponent, left=False)
+
+    @classmethod
     def ev(cls, base: monoidal.Ty, exponent: monoidal.Ty, left: bool = True
            ) -> Closed:
         """
@@ -383,6 +401,14 @@ class Closed(Markov, ClosedCategory):
         """
         return cls.lift(cls.category.ev(
             base, exponent, left))  # ty: ignore[invalid-argument-type]
+
+    def curry_left(self, n=1):
+        """ The left currying of ``n`` objects, see :meth:`curry`. """
+        return self.curry(n, left=True)
+
+    def curry_right(self, n=1):
+        """ The right currying of ``n`` objects, see :meth:`curry`. """
+        return self.curry(n, left=False)
 
     def curry(self, n: int = 1, left: bool = False) -> Closed:
         """

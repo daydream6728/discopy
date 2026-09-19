@@ -159,13 +159,12 @@ class Diagram(monoidal.Diagram, TracedCategory):
     serialisation = Serialisable.serialisation.failing(
         "The generic tree of a trace does not read back (#742).")
 
-    def trace(self, n=1, left=False):
+    def trace_left(self, n=1):
         """
-        Feed ``n`` outputs back into inputs.
+        Feed ``n`` outputs on the left back into inputs.
 
         Parameters:
             n : The number of output wires to feedback into inputs.
-            left : Whether to trace the wires on the left or right.
 
         Example
         -------
@@ -180,7 +179,17 @@ class Diagram(monoidal.Diagram, TracedCategory):
         .. image:: /_static/traced/trace.svg
         """
         return self if n == 0\
-            else self.Trace(self, left).trace(n - 1, left)
+            else self.Trace(self, left=True).trace_left(n - 1)
+
+    def trace_right(self, n=1):
+        """
+        Feed ``n`` outputs on the right back into inputs.
+
+        Parameters:
+            n : The number of output wires to feedback into inputs.
+        """
+        return self if n == 0\
+            else self.Trace(self, left=False).trace_right(n - 1)
 
     def to_drawing(self):
         return monoidal.Diagram.to_drawing(self, functor=Functor)

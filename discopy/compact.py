@@ -61,7 +61,7 @@ from typing import ClassVar
 from discopy import symmetric, ribbon, rigid, cmap, hypergraph
 from discopy.abc import (
     BiclosedCategory, CompactCategory, PivotalCategory, RibbonCategory)
-from discopy.axioms import Serialisable, connected
+from discopy.axioms import Serialisable
 from discopy.cat import factory, Generator
 from discopy.utils import deprecated_alias
 from discopy.pivotal import Wire, Ty  # noqa: F401
@@ -92,9 +92,9 @@ class Diagram(symmetric.Diagram, ribbon.Diagram, CompactCategory):
 
     twist_as_trace = RibbonCategory.twist_as_trace
 
-    currying_left = BiclosedCategory.currying_left.weaken(connected)
+    currying_left = BiclosedCategory.currying_left.weaken(boundary_connected=True)
 
-    currying_right = BiclosedCategory.currying_right.weaken(connected)
+    currying_right = BiclosedCategory.currying_right.weaken(boundary_connected=True)
 
 
 Box, Cup, Cap = (
