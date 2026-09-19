@@ -12,3 +12,25 @@
       bare-variable sequent annotations of `discopy.abc` respelled with
       `Hom`, operator patterns and equation verdicts staying `Annotated`
 - [ ] `ty check` green, `pflake8`, pytest, CHANGELOG
+
+> actually claude/proof-search-on-serde was an earlier experiment with
+> type annotations for proof search, another more advanced branch at
+> claude/diagram-search-strategies-766716 implements proper proof search
+> based on pattern sequents. can you update this branch with the new
+> setup? strive to unify as many concepts as possible into a single
+> coherent, typeable implementation of property testing. ideally, only
+> monoidal.Diagram should define a generic rule-based search strategy
+> and all the other free categories should inherit it as is, only being
+> extended with new rules.
+
+- [WIP] @session_01UrSNrBcfEnb46fFG9LYRPo-2026-09-19 21:05 Read
+      `claude/diagram-search-strategies-766716` in full — `pattern.py`,
+      `search.py`, `axioms.py`, the rule idiom of `monoidal` and each
+      level — and map its concepts onto this branch's
+- [ ] Design the unification: their search semantics under our typed
+      `Hom`/`Annotated` front-end, one generic rule-based strategy on
+      `monoidal.Diagram`, levels only adding rules
+- [ ] Merge the branch (append-only), resolve, implement the unified
+      design
+- [ ] `ty check` green, `pflake8`, pytest, proptest fast profile,
+      CHANGELOG
