@@ -11,11 +11,11 @@ from pathlib import Path
 from typing import (
     Any,
     Callable,
+    ClassVar,
     Mapping,
     Iterable,
     Sequence,
     TypeVar,
-    Any,
     Collection,
     NamedTuple,
     TYPE_CHECKING,
@@ -126,6 +126,103 @@ def get_origin(typ):
     return getattr(typ, "__origin__", typ)
 
 
+class NamedGeneric:
+    """
+    A ``NamedGeneric`` is a ``Generic`` whose type parameters are attached by
+    name to the members of the class.
+
+    Note
+    ----
+    In a standard ``Generic`` class, the type parameter disappears when the
+    member of the class is instantiated, e.g.
+
+    >>> assert list[int]([1, 2, 3])\\
+    ...     == list[float]([1, 2, 3])\\
+    ...     == [1, 2, 3]
+
+    In a ``NamedGeneric``, the type parameter is attached to the members of the
+    class so that we have access to it.
+
+    Example
+    -------
+
+    >>> from dataclasses import dataclass
+    >>> @dataclass
+    ... class L[dtype](NamedGeneric):
+    ...     inside: list
+    >>> assert L[int]([1, 2, 3]).dtype == int
+    >>> assert L[int]([1, 2, 3]) != L[float]([1, 2, 3])
+    """
+    _cache = dict()
+
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        for param in cls.__type_params__:
+            if not hasattr(cls, param.__name__):
+                setattr(cls, param.__name__, None)
+
+    def __class_getitem__(cls, values):
+        """
+        Subscripting with a value builds a subclass carrying it, while
+        subscripting with the class syntax's own type parameters, which
+        infer their variance, stays a plain ``Generic`` alias so that e.g.
+        ``class Box[dtype](Diagram[dtype])`` declares an ordinary subclass.
+        An explicit :class:`TypeVar` is a value like any other, standing for
+        a parameter that :func:`axioms.substitute` replaces later.
+        """
+        values = values if isinstance(values, tuple) else (values,)
+        if any(isinstance(value, TypeVar) and value.__infer_variance__
+               for value in values):
+            return super().__class_getitem__(
+                values[0] if len(values) == 1 else values)
+        origin = get_origin(cls)
+        for c in origin.__mro__:
+            if c.__type_params__:
+                attributes = [param.__name__ for param in c.__type_params__]
+                break
+        else:
+            raise TypeError(
+                f"{origin} has no type parameter to attach {values} to: "
+                "declare one with the class syntax, e.g. class C[name].")
+        cls_values = tuple(
+            getattr(origin, attr, None) for attr in attributes)
+        if origin not in NamedGeneric._cache:
+            NamedGeneric._cache[origin] = {cls_values: origin}
+        if values not in NamedGeneric._cache[origin]:
+            class C(origin):
+                def __reduce__(self):
+                    """
+                    Pickle a member of the subscripted class as a
+                    member of its origin carrying the values, since
+                    a class created inside a function cannot be
+                    found by name, see `how can I pickle a
+                    dynamically created nested class
+                    <https://stackoverflow.com/questions/1947904>`_.
+                    """
+                    func, args, data = super().__reduce__()
+                    # Check if class name is of the form ClassName[type]
+                    if '[' in args[0].__name__:
+                        args = (origin, ) + args[1:]
+                        data |= {"__class_getitem__values__": values}
+                    return func, args, data
+
+            C.__module__ = origin.__module__
+            names = [getattr(v, "__name__", str(v)) for v in values]
+            C.__name__ = C.__qualname__ = origin.__name__\
+                + f"[{', '.join(names)}]"
+            C.__origin__ = origin
+            for attr, value in zip(attributes, values):
+                setattr(C, attr, value)
+            NamedGeneric._cache[origin][values] = C
+        return NamedGeneric._cache[origin][values]
+
+    def __setstate__(self, state):
+        if "__class_getitem__values__" in state:
+            self.__class__ = self.__class__[
+                state["__class_getitem__values__"]]
+        super().__setstate__(state)
+
+
 def product(xs: Sequence, unit=1):
     """
     The left-fold product of a ``unit`` with list of ``xs``.
@@ -138,14 +235,15 @@ def product(xs: Sequence, unit=1):
     return unit if not xs else product(xs[1:], unit * xs[0])
 
 
-def deprecated_ob(module_name: str):
+def deprecated_alias(module_name: str, aliases: dict[str, str]):
     """
-    The module-level ``__getattr__`` of the modules whose ``Ob`` class was
-    renamed to ``Wire``, returning the new class with a
+    The module-level ``__getattr__`` of a module with one or more classes
+    that were renamed, returning each new class with a
     :class:`DeprecationWarning`.
 
     Parameters:
-        module_name : The ``__name__`` of the module deprecating its ``Ob``.
+        module_name : The ``__name__`` of the module deprecating names.
+        aliases : A mapping from each deprecated name to its new name.
 
     Example
     -------
@@ -153,19 +251,20 @@ def deprecated_ob(module_name: str):
     >>> from discopy import rigid
     >>> with warnings.catch_warnings(record=True) as w:
     ...     warnings.simplefilter("always")
-    ...     assert rigid.Ob is rigid.Wire
+    ...     assert rigid.PRO is rigid.Nat
     >>> print(w[-1].message)
-    discopy.rigid.Ob is deprecated, use discopy.rigid.Wire instead.
+    discopy.rigid.PRO is deprecated, use discopy.rigid.Nat instead.
     """
     def __getattr__(name):
-        if name == "Ob":
+        if name in aliases:
             import sys
             import warnings
+            new_name = aliases[name]
             warnings.warn(
-                f"{module_name}.Ob is deprecated, "
-                f"use {module_name}.Wire instead.",
+                f"{module_name}.{name} is deprecated, "
+                f"use {module_name}.{new_name} instead.",
                 DeprecationWarning, stacklevel=2)
-            return sys.modules[module_name].Wire
+            return getattr(sys.modules[module_name], new_name)
         raise AttributeError(
             f"module {module_name!r} has no attribute {name!r}")
     return __getattr__
@@ -318,16 +417,6 @@ def load_corpus(url):
     first_file = zip_file.namelist()[0]
     with zip_file.open(first_file) as f:
         return loads(f.read())
-
-
-def is_tuple(typ: type) -> bool:
-    """
-    Whether a given type is tuple or a paramaterised tuple.
-
-    Parameters:
-        typ : The type to check for equality with tuple.
-    """
-    return get_origin(typ) is tuple
 
 
 def assert_isinstance(object_, cls: type | tuple[type, ...]):

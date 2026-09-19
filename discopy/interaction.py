@@ -95,12 +95,13 @@ class Ty[natural](NamedGeneric):
     ----
     Integer types are parameterised by natural types, e.g.
 
-    >>> assert Ty == Ty[pivotal.Ty] and Ty[int].natural == int
+    >>> from discopy.abc import Nat
+    >>> assert Ty == Ty[pivotal.Ty] and Ty[Nat].natural == Nat
 
     The prefix operator ``-`` reverses positive and negative, e.g.
 
-    >>> x, y, z = map(Ty[int], [1, 2, 3])
-    >>> assert x @ -y @ z == Ty[int](1 + 3, 2)
+    >>> x, y, z = (Ty[Nat](Nat(n)) for n in (1, 2, 3))
+    >>> assert x @ -y @ z == Ty[Nat](Nat(1) @ Nat(3), Nat(2))
     """
     natural = pivotal.Ty
 
@@ -140,11 +141,12 @@ class Ty[natural](NamedGeneric):
         if any(not isinstance(other, Ty) for other in others):
             return NotImplemented
         unit = type(self).natural()
-        positive = sum([x.positive for x in (self, ) + others], unit)
-        negative = sum([x.negative for x in reversed((self, ) + others)], unit)
+        positive = unit.tensor(*(x.positive for x in (self, ) + others))
+        negative = unit.tensor(
+            *(x.negative for x in reversed((self, ) + others)))
         return type(self)(positive, negative)
 
-    __matmul__ = __add__ = tensor
+    __matmul__ = tensor
 
     def __neg__(self):
         positive, negative = self
@@ -172,11 +174,13 @@ class Diagram[natural](RibbonCategory, NamedGeneric):
     of boolean matrices with the direct sum has a trace given by reflexive
     transitive closure. We can use it to check the snake equations:
 
+    >>> from discopy.abc import Nat
     >>> from discopy.matrix import Matrix
-    >>> T, D = Ty[int], Diagram[Matrix[bool]]
-    >>> assert D.id(T(2, 2)).transpose()\\
-    ...     == D.id(T(2, 2))\\
-    ...     == D.id(T(2, 2)).transpose(left=True)
+    >>> T, D = Ty[Nat], Diagram[Matrix[bool]]
+    >>> two = T(Nat(2), Nat(2))
+    >>> assert D.id(two).transpose()\\
+    ...     == D.id(two)\\
+    ...     == D.id(two).transpose(left=True)
     """
     ar = classproperty(lambda cls: cls)
     natural = ribbon.Diagram
@@ -189,12 +193,12 @@ class Diagram[natural](RibbonCategory, NamedGeneric):
 
     def __init__(self, inside: natural, dom: Ty, cod: Ty):
         assert_isinstance(inside, self.natural)
-        if inside.dom != dom.positive + cod.negative:
+        if inside.dom != dom.positive @ cod.negative:
             raise ValueError(messages.WRONG_DOM.format(
-                dom.positive + cod.negative, inside.dom))
-        if inside.cod != cod.positive + dom.negative:
+                dom.positive @ cod.negative, inside.dom))
+        if inside.cod != cod.positive @ dom.negative:
             raise ValueError(messages.WRONG_COD.format(
-                cod.positive + dom.negative, inside.cod))
+                cod.positive @ dom.negative, inside.cod))
         self.inside, self.dom, self.cod = inside, dom, cod
 
     @unbiased
@@ -383,7 +387,7 @@ class Diagram[natural](RibbonCategory, NamedGeneric):
         """
         rigid.Ty.assert_isadjoint(
             left, right)  # ty: ignore[invalid-argument-type]
-        inside = cls.natural.id(left.positive + left.negative)
+        inside = cls.natural.id(left.positive @ left.negative)
         return cls(inside, left @ right, type(left)())
 
     @classmethod
@@ -397,7 +401,7 @@ class Diagram[natural](RibbonCategory, NamedGeneric):
         """
         rigid.Ty.assert_isadjoint(
             right, left)  # ty: ignore[invalid-argument-type]
-        inside = cls.natural.id(left.negative + left.positive)
+        inside = cls.natural.id(left.negative @ left.positive)
         return cls(inside, type(left)(), left @ right)
 
     def dagger(self):

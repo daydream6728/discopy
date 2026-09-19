@@ -97,7 +97,7 @@ from collections.abc import Sequence
 from discopy import monoidal, balanced, hypergraph, cmap, messages
 from discopy.abc import SymmetricCategory
 from discopy.cat import factory
-from discopy.monoidal import Wire, Ty, PRO  # noqa: F401
+from discopy.monoidal import Wire, Ty, Nat  # noqa: F401
 from discopy.python import finset
 from discopy.utils import (
     AxiomError, assert_iscomposable, classproperty, factory_name, from_tree)
@@ -303,13 +303,13 @@ class Diagram(balanced.Diagram, SymmetricCategory):
             xs : A permutation, as a sequence of integers or a
                  :class:`finset.Permutation`.
             dom : A type of the same length as :code:`xs`,
-                  default is :code:`PRO(len(xs))`.
+                  default is :code:`Nat(len(xs))`.
         """
 
         if doms is None:
-            doms = PRO(len(xs))
+            doms = Nat(len(xs))
         size = len(doms)
-        unit = type(doms)() if isinstance(doms, PRO) else cls.ob()
+        unit = type(doms)() if isinstance(doms, Nat) else cls.ob()
         tensor = lambda tys: unit.tensor(*tys)
         dom = tensor(doms)
 
@@ -323,12 +323,10 @@ class Diagram(balanced.Diagram, SymmetricCategory):
                 slice(0, i), i, slice(i + 1, None)
             )
         )
-        return (cls.swap(
-            tensor(left), head)  # ty: ignore[invalid-argument-type]
-            @ tensor(right)
+        rest = left @ right if isinstance(doms, monoidal.Ty) else left + right
+        return cls.swap(tensor(left), head) @ tensor(right)\
             >> head @ cls.permutation(
-                [x - 1 if x > i else x for x in xs[1:]],
-                left + right))  # ty: ignore[unsupported-operator]
+                [x - 1 if x > i else x for x in xs[1:]], rest)
 
     @classmethod
     def from_permutation(cls, perm: Sequence[int],
@@ -343,7 +341,7 @@ class Diagram(balanced.Diagram, SymmetricCategory):
             perm : A permutation, as a sequence of integers or a
                    :class:`finset.Permutation`.
             dom : A type of the same length as :code:`perm`,
-                  default is :code:`PRO(len(perm))`.
+                  default is :code:`Nat(len(perm))`.
 
         Examples
         --------
@@ -353,7 +351,7 @@ class Diagram(balanced.Diagram, SymmetricCategory):
         >>> assert Diagram.from_permutation(
         ...     [0, 1, 2], x @ y @ z) == Id(x @ y @ z)
         """
-        dom = PRO(len(perm)) if dom is None else dom
+        dom = Nat(len(perm)) if dom is None else dom
         perm = finset.Permutation(perm, len(dom))
         if perm.is_identity:
             return cls.id(dom)
@@ -520,7 +518,7 @@ class Permutation(Box):
         >>> perm = Permutation(x @ y @ z, [1, 2, 0])
         >>> assert Equation(perm.to_swaps(), perm)
         """
-        doms = self.dom if isinstance(self.dom, PRO)\
+        doms = self.dom if isinstance(self.dom, Nat)\
             else list(map(self.ob, self.dom.inside))
         return self.ar.permutation(self.perm, doms)
 
@@ -661,7 +659,7 @@ class Functor(balanced.Functor):
             return self.cod.ar.swap(self(other.dom[0]), self(other.dom[1]))
         if isinstance(other, Permutation) and hasattr(
                 self.cod.ar, "permutation"):
-            if isinstance(other.dom, PRO):
+            if isinstance(other.dom, Nat):
                 doms = self(other.dom)
             else:
                 doms = list(map(self, other.dom))

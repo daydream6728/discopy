@@ -151,7 +151,7 @@ from typing import ClassVar
 from discopy import monoidal, braided, markov, hypergraph
 from discopy.abc import FeedbackCategory
 from discopy.utils import (
-    deprecated_ob,
+    deprecated_alias,
     factory, factory_name, assert_isinstance, AxiomError,
 )
 
@@ -686,4 +686,4 @@ class Equation(markov.Equation):
     up_to = staticmethod(Diagram.to_hypergraph)
 
 
-__getattr__ = deprecated_ob(__name__)
+__getattr__ = deprecated_alias(__name__, {"Ob": "Wire"})

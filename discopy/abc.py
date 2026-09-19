@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
 The abstract base classes for categories.
 
@@ -14,6 +12,13 @@ the characteristic generator of its categorical structure as an
 Software dependencies between modules go top-to-bottom, left-to-right and
 forgetful functors between categories go the other way.
 
+Each class also declares its :func:`discopy.axioms.axiom` equations, which
+every free category inherits along with the structure they axiomatise:
+:class:`Category` states the unitality and associativity of composition,
+the typing of its identities and composites, and the involution and
+contravariance of its dagger; a :class:`ColouredMonoid` inherits them as
+the unitality and associativity of its product, its composition.
+
 Summary
 -------
 
@@ -23,17 +28,28 @@ Summary
     :toctree:
 
     Category
+    ColouredMonoid
+    Monoid
+    Nat
     MonoidalCategory
-    BraidedCategory
+    PRO
     TracedCategory
-    BalancedCategory
-    SymmetricCategory
-    MarkovCategory
-    FeedbackCategory
-    ClosedCategory
+    ResiduatedMonoid
+    BiclosedCategory
+    Pregroup
     RigidCategory
     PivotalCategory
+    BraidedCategory
+    PROB
+    SymmetricCategory
+    PROP
+    MarkovCategory
+    ClosedCategory
+    FeedbackCategory
+    BalancedCategory
     RibbonCategory
+    CompactCategory
+    HypergraphCategory
     NamedGeneric
 """
 
@@ -41,10 +57,13 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
+from dataclasses import dataclass
 from types import NoneType
-from typing import ClassVar, Self, TYPE_CHECKING, TypeVar
+from typing import ClassVar, Self, TYPE_CHECKING
 
-from discopy.utils import classproperty, get_origin
+from discopy.axioms import (
+    Axiom, ComposablePair, ComposableTriple, Equation, axiom)
+from discopy.utils import NamedGeneric, classproperty  # noqa: F401
 
 
 class Category[C0, C1: Category](ABC):
@@ -72,6 +91,35 @@ class Category[C0, C1: Category](ABC):
     #: Backward-compatible alias for :attr:`factory`, since types are
     #: themselves the objects of diagrams.
     ar = classproperty(lambda cls: getattr(cls, "factory", cls))
+
+    @classmethod
+    def equation_factory(cls, *terms) -> Equation:
+        """
+        Construct an equation, using strict equality by default.
+
+        A class that quotients its equations overrides this, e.g. by
+        hypergraph isomorphism from symmetric categories on, so an axiom
+        built with it is checked up to whatever quotient the category
+        defines — and :meth:`discopy.axioms.Axiom.modulo` weakens it
+        further.
+        """
+        return Equation(*terms)
+
+    @classproperty
+    def axioms(cls) -> dict[str, Axiom]:
+        """
+        The axioms inherited by ``cls``, by name, subclasses overriding bases.
+
+        Names are collected before they are filtered, so that assigning
+        anything that is not an axiom over an inherited one drops it
+        altogether, rather than restating it.
+        """
+        visible = {
+            name: value
+            for base in reversed(cls.__mro__)
+            for name, value in base.__dict__.items()}
+        return {name: value.bind(cls) for name, value in visible.items()
+                if isinstance(value, Axiom)}
 
     @classmethod
     @abstractmethod
@@ -111,6 +159,56 @@ class Category[C0, C1: Category](ABC):
             other : The other morphism.
         """
         return (self.dom, self.cod) == (other.dom, other.cod)
+
+    @axiom
+    def unitality(
+            cls, f: C1) -> Equation[C1]:
+        """ Left and right unitality of composition. """
+        return cls.equation_factory(
+            cls.id(f.dom).then(f), f, f.then(cls.id(f.cod)))
+
+    @axiom
+    def associativity(
+            cls, triple: ComposableTriple[C1]) -> Equation[C1]:
+        """ Associativity of composition. """
+        f, g, h = triple
+        return cls.equation_factory(
+            f.then(g).then(h), f.then(g.then(h)))
+
+    @axiom
+    def identity_typing(
+            cls, x: C0) -> Equation[C0]:
+        """ Typing of identity morphisms. """
+        identity = cls.id(x)
+        return cls.ob.equation_factory(identity.dom, x, identity.cod)
+
+    @axiom
+    def composition_dom_typing(
+            cls, pair: ComposablePair[C1]) -> Equation[C0]:
+        """ Domain typing of composition. """
+        f, g = pair
+        return cls.ob.equation_factory(f.then(g).dom, f.dom)
+
+    @axiom
+    def composition_cod_typing(
+            cls, pair: ComposablePair[C1]) -> Equation[C0]:
+        """ Codomain typing of composition. """
+        f, g = pair
+        return cls.ob.equation_factory(f.then(g).cod, g.cod)
+
+    @axiom
+    def dagger_involution(
+            cls, f: C1) -> Equation[C1]:
+        """ The dagger is involutive. """
+        return cls.equation_factory(f.dagger().dagger(), f)
+
+    @axiom
+    def dagger_contravariance(
+            cls, pair: ComposablePair[C1]) -> Equation[C1]:
+        """ The dagger reverses composition. """
+        f, g = pair
+        return cls.equation_factory(
+            f.then(g).dagger(), g.dagger().then(f.dagger()))
 
     __rshift__ = __llshift__ = lambda self, other: self.then(other)
     __lshift__ = __lrshift__ = lambda self, other: other.then(self)
@@ -158,6 +256,21 @@ class ColouredMonoid[C0, C1: ColouredMonoid](Category[C0, C1]):
         return self.tensor(*others)
 
     @classmethod
+    def cast(cls, atoms) -> C1:
+        """
+        The element of a tuple of atoms, or of a single atom; an element of
+        the monoid is unchanged.
+
+        Parameters:
+            atoms : An element, a tuple of atoms or a single atom.
+
+        >>> assert Nat.cast(2) == Nat(2) == Nat.cast(Nat(2))
+        """
+        if isinstance(atoms, cls):
+            return atoms
+        return cls(*atoms) if isinstance(atoms, tuple) else cls(atoms)
+
+    @classmethod
     def whisker(cls, other: C0 | C1) -> C1:
         """
         Do nothing if ``other`` is already a morphism else apply :meth:`id`.
@@ -176,8 +289,49 @@ class ColouredMonoid[C0, C1: ColouredMonoid](Category[C0, C1]):
         return self.whisker(other).tensor(self)
 
 
-# A monoid is a coloured monoid with a single, trivial colour.
-type Monoid[C1: ColouredMonoid] = ColouredMonoid[NoneType, C1]
+class Monoid[C1: Monoid](ColouredMonoid[NoneType, C1]):
+    """ A monoid is a coloured monoid with a single, trivial colour. """
+
+
+@dataclass
+class Nat(Monoid["Nat"]):
+    """
+    ``Nat`` is the free monoid on one generator, i.e. the natural numbers
+    with addition as tensor. It is also a sequence over its unary encoding:
+    :meth:`__len__` gives back the natural number itself and slicing reads
+    it off as a sequence of ``1``'s, e.g. ``Nat(3)[:1] == Nat(1)``.
+
+    Parameters:
+        n : The natural number.
+    """
+    n: int = 0
+
+    def tensor(self, *others: Nat) -> Nat:
+        if any(not isinstance(other, Nat) for other in others):
+            return NotImplemented  # This allows whiskering on the left.
+        return type(self)(self.n + sum(other.n for other in others))
+
+    def __len__(self) -> int:
+        return self.n
+
+    def __index__(self) -> int:
+        return self.n
+
+    def __str__(self) -> str:
+        return str(self.n)
+
+    def __getitem__(self, key: int | slice) -> Nat:
+        """
+        Slicing a natural number reads it off as a sequence of ``1``'s.
+
+        Parameters:
+            key : An integer or a slice.
+        """
+        if isinstance(key, slice):
+            return type(self)(len(range(self.n)[key]))
+        if key >= self.n or key < -self.n:
+            raise IndexError
+        return type(self)(1)
 
 
 class MonoidalCategory[C0: ColouredMonoid, C1: MonoidalCategory](
@@ -215,6 +369,13 @@ class MonoidalCategory[C0: ColouredMonoid, C1: MonoidalCategory](
 
     def __rmatmul__(self, other):
         return self.whisker(other).tensor(self)
+
+
+class PRO[C1: PRO](MonoidalCategory[Nat, C1]):
+    """
+    A PRO is a :class:`MonoidalCategory` whose objects are the natural
+    numbers :class:`Nat`, i.e. the free monoidal category on one generator.
+    """
 
 
 class TracedCategory[C0: ColouredMonoid, C1: TracedCategory](
@@ -484,6 +645,13 @@ class BraidedCategory[C0: ColouredMonoid, C1: BraidedCategory](
         """
 
 
+class PROB[C1: PROB](PRO[C1], BraidedCategory[Nat, C1]):
+    """
+    A PROB is a :class:`BraidedCategory` whose objects are the natural
+    numbers :class:`Nat`, i.e. the free braided category on one generator.
+    """
+
+
 class SymmetricCategory[C0: ColouredMonoid, C1: SymmetricCategory](
         BraidedCategory[C0, C1]):
     """
@@ -507,7 +675,7 @@ class SymmetricCategory[C0: ColouredMonoid, C1: SymmetricCategory](
         xs, doms = list(xs), list(doms)
         if list(range(len(doms))) != sorted(xs):
             raise ValueError
-        tensor = lambda objects: sum(objects, start=cls.ob())
+        tensor = lambda objects: cls.ob().tensor(*objects)
         result, done = cls.id(tensor(doms)), cls.ob()
         while xs != list(range(len(xs))):
             i = xs[0]
@@ -520,6 +688,13 @@ class SymmetricCategory[C0: ColouredMonoid, C1: SymmetricCategory](
     @classmethod
     def braid(cls, left: C0, right: C0) -> C1:
         return cls.swap(left, right)
+
+
+class PROP[C1: PROP](PROB[C1], SymmetricCategory[Nat, C1]):
+    """
+    A PROP is a :class:`SymmetricCategory` whose objects are the natural
+    numbers :class:`Nat`, i.e. the free symmetric category on one generator.
+    """
 
 
 class MarkovCategory[C0: ColouredMonoid, C1: MarkovCategory](
@@ -633,78 +808,3 @@ class HypergraphCategory[C0: Pregroup, C1: HypergraphCategory](
             typ : The type of the spiders.
         """
 
-
-class NamedGeneric:
-    """
-    A ``NamedGeneric`` is a ``Generic`` whose type parameters are attached by
-    name to the members of the class.
-
-    Note
-    ----
-    In a standard ``Generic`` class, the type parameter disappears when the
-    member of the class is instantiated, e.g.
-
-    >>> assert list[int]([1, 2, 3])\\
-    ...     == list[float]([1, 2, 3])\\
-    ...     == [1, 2, 3]
-
-    In a ``NamedGeneric``, the type parameter is attached to the members of the
-    class so that we have access to it.
-
-    Example
-    -------
-
-    >>> from dataclasses import dataclass
-    >>> @dataclass
-    ... class L[dtype](NamedGeneric):
-    ...     inside: list
-    >>> assert L[int]([1, 2, 3]).dtype == int
-    >>> assert L[int]([1, 2, 3]) != L[float]([1, 2, 3])
-    """
-    _cache = dict()
-
-    def __init_subclass__(cls, **kwargs):
-        super().__init_subclass__(**kwargs)
-        for param in cls.__type_params__:
-            if not hasattr(cls, param.__name__):
-                setattr(cls, param.__name__, None)
-
-    def __class_getitem__(cls, values):
-        values = values if isinstance(values, tuple) else (values,)
-        if any(isinstance(value, TypeVar) for value in values):
-            return super().__class_getitem__(
-                values[0] if len(values) == 1 else values)
-        origin = get_origin(cls)
-        attributes = [param.__name__ for param in next(
-            c.__type_params__ for c in origin.__mro__ if c.__type_params__)]
-        cls_values = tuple(
-            getattr(origin, attr, None) for attr in attributes)
-        if origin not in NamedGeneric._cache:
-            NamedGeneric._cache[origin] = {cls_values: origin}
-        if values not in NamedGeneric._cache[origin]:
-            class C(origin):
-                # We need this to fix pickling of nested classes, see
-                # https://stackoverflow.com/questions/1947904
-                def __reduce__(self):
-                    func, args, data = super().__reduce__()
-                    # Check if class name is of the form ClassName[type]
-                    if '[' in args[0].__name__:
-                        args = (origin, ) + args[1:]
-                        data |= {"__class_getitem__values__": values}
-                    return func, args, data
-
-            C.__module__ = origin.__module__
-            names = [getattr(v, "__name__", str(v)) for v in values]
-            C.__name__ = C.__qualname__ = origin.__name__\
-                + f"[{', '.join(names)}]"
-            C.__origin__ = origin
-            for attr, value in zip(attributes, values):
-                setattr(C, attr, value)
-            NamedGeneric._cache[origin][values] = C
-        return NamedGeneric._cache[origin][values]
-
-    def __setstate__(self, state):
-        if "__class_getitem__values__" in state:
-            self.__class__ = self.__class__[
-                state["__class_getitem__values__"]]
-        super().__setstate__(state)

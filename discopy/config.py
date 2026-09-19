@@ -104,6 +104,9 @@ DRAWING_DEFAULT: dict[str, Any] = {
     "svg_tol": 1,
 }
 
+# Both matplotlib and TikZ spell transparency this way.
+TRANSPARENT = "none"
+
 # Mapping from tikz colors to hexcodes.
 COLORS = {
     "white": '#ffffff',
