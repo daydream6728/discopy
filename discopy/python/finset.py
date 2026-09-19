@@ -74,6 +74,7 @@ class Function(MonoidalCategory, Sequence):
 
     @staticmethod
     def id(x: int | Nat = 0):
+        x = Nat(int(x))
         return Function(list(range(x)), x, x)
 
     def then(self, other: Function) -> Function:
@@ -90,7 +91,7 @@ class Function(MonoidalCategory, Sequence):
     def swap(x: int | Nat, y: int | Nat) -> Function:
         m, n = int(x), int(y)
         inside = list(Permutation.swap(m, n))
-        return Function(inside, m + n, m + n)
+        return Function(inside, Nat(m + n), Nat(m + n))
 
     def is_swap(self: Function | Sequence[int]) -> bool:
         """
@@ -108,12 +109,12 @@ class Function(MonoidalCategory, Sequence):
         dom = sum(int(d) for d in doms)
         if xs.is_identity:
             return Function.id(dom)
-        return Function(list(Permutation(xs, dom)), dom, dom)
+        return Function(list(Permutation(xs, dom)), Nat(dom), Nat(dom))
 
     @staticmethod
     def copy(x: int | Nat, n=2) -> Function:
         k = int(x)
-        return Function([i % k for i in range(n * k)], k, n * k)
+        return Function([i % k for i in range(n * k)], Nat(k), Nat(n * k))
 
 
 type Cycle = Iterable[int]
@@ -149,7 +150,7 @@ class Permutation(Function, PROP):
             raise ValueError(
                 messages.WRONG_PERMUTATION.format(size, len(inside))
             )
-        super().__init__(list(inside), size, size)
+        super().__init__(list(inside), Nat(size), Nat(size))
 
     def __iter__(self):
         return (self[i] for i in range(len(self)))

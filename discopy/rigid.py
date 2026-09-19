@@ -855,7 +855,7 @@ class Functor(biclosed.Functor):
         return super().__call__(other)
 
 
-def nesting(cls: type, factory: Callable) -> Callable[[Ty, Ty], Any]:
+def nesting(cls: type[Diagram], factory: Callable) -> Callable[[Ty, Ty], Any]:
     """
     Take a :code:`factory` for cups or caps of atomic types
     and extends it recursively.

@@ -1127,7 +1127,8 @@ class Equation(AbstractEquation[Arrow]):
     """
 
 
-Ob.equation_factory = Arrow.equation_factory = Equation
+Ob.equation_factory = Arrow.equation_factory \
+    = Equation  # ty: ignore[invalid-assignment]
 Arrow.sum_factory = Sum
 Arrow.bubble_factory = Bubble
 Id = Arrow.id

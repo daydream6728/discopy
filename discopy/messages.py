@@ -34,3 +34,5 @@ NOT_RIGID = "{} has no cups or caps for the wiring of this map."
 NOT_TRACED = "{} has no traces for the cycles of this map."
 NOT_SYMMETRIC = "{} has no swaps to downgrade this map."
 NOT_ACYCLIC = "{} has a directed cycle, its boxes cannot be ordered."
+PERMUTATION_HAS_NO_OFFSET = (
+    "A layer with a non-identity permutation has no single offset.")

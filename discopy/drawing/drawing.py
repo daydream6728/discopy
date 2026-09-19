@@ -350,9 +350,7 @@ class Drawing(TracedCategory, RichDisplay):
             for box in self.boxes))
         self.add_box_corners()
         self.frame_dual_rail()
-        return backend.draw(
-            self,  # ty: ignore[invalid-argument-type]
-            asymmetry=asymmetry, **params)
+        return backend.draw(self, asymmetry=asymmetry, **params)
 
     def frame_dual_rail(self, margin=0.5):
         """

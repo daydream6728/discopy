@@ -268,7 +268,10 @@ class ColouredMonoid[C0, C1: ColouredMonoid](Category[C0, C1]):
         """
         if isinstance(atoms, cls):
             return atoms
-        return cls(*atoms) if isinstance(atoms, tuple) else cls(atoms)
+        if isinstance(atoms, tuple):
+            return cls(*atoms)  # ty: ignore[invalid-return-type]
+        return cls(  # ty: ignore[invalid-return-type]
+            atoms)  # ty: ignore[too-many-positional-arguments]
 
     @classmethod
     def whisker(cls, other: C0 | C1) -> C1:
@@ -807,4 +810,3 @@ class HypergraphCategory[C0: Pregroup, C1: HypergraphCategory](
             n_legs_out : The number of legs out for each spider.
             typ : The type of the spiders.
         """
-

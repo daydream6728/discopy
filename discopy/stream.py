@@ -253,7 +253,9 @@ class Ty[base](NamedGeneric):
         x1 @ y1
         x2 @ y2
         """
-        now = cls.base().tensor(*(cls.base(f"{obj}{n_steps}") for obj in x))
+        now = cls.base().tensor(
+            *(cls.base(f"{obj}{n_steps}")
+              for obj in x))  # ty: ignore[not-iterable]
         return cls(now, _later=lambda: cls.sequence(x, n_steps + 1))
 
     @inductive

@@ -327,14 +327,14 @@ class Ty(cat.Ob, cat.FreeCategory, ColouredMonoid):
         cat.FreeCategory.__init__(self, inside, dom, cod, _scan)
         cat.Ob.__init__(self, type(self).__name__)
 
-    def tensor(self, *others: Ty) -> Ty:
+    def tensor(self, *others: Ty) -> Self:
         if any(not isinstance(other, self.factory) for other in others):
             return NotImplemented  # This allows whiskering on the left.
         return cat.FreeCategory.then(self, *others)
 
     then = tensor
 
-    def __pow__(self, n_times: int) -> Ty:
+    def __pow__(self, n_times: int) -> Self:
         assert_isinstance(n_times, int)
         if n_times <= 0:
             assert self.dom == self.cod
@@ -362,7 +362,7 @@ class Ty(cat.Ob, cat.FreeCategory, ColouredMonoid):
         return len(self.inside) == 1
 
     @property
-    def generator(self) -> Wire:
+    def generator(self) -> Wire | None:
         """ The single object inside a generator type. """
         return self.inside[0] if self.is_generator else None
 
@@ -533,6 +533,8 @@ class Nat(abc.Nat, Ty):
     >>> assert CX @ 2 >> 2 @ CX == CX @ CX
     """
     generator_factory = int
+    dom: Colour
+    cod: Colour
 
     def __init__(self, inside: int | tuple = 0, dom: Colour | None = None,
                  cod: Colour | None = None, _scan: bool = True):
@@ -543,9 +545,12 @@ class Nat(abc.Nat, Ty):
     def __setstate__(self, state):
         if "n" not in state:
             state = {"n": len(state["_objects"])}
-        state.setdefault("dom", transparent)
-        state.setdefault("cod", transparent)
-        state.setdefault("name", type(self).__name__)
+        state.setdefault(  # ty: ignore[no-matching-overload]
+            "dom", transparent)
+        state.setdefault(  # ty: ignore[no-matching-overload]
+            "cod", transparent)
+        state.setdefault(  # ty: ignore[no-matching-overload]
+            "name", type(self).__name__)
         cat.Ob.__setstate__(self, state)
 
     @property
@@ -612,7 +617,7 @@ class Dim(Ty):
             transparent if cod is None else cod, _scan=False)
         cat.Ob.__init__(self, type(self).__name__)
 
-    def __getitem__(self, key: int | slice) -> Dim:
+    def __getitem__(self, key: int | slice) -> Self:
         if isinstance(key, slice):
             return self.factory(*self.inside[key])
         return self.factory(self.inside[key])
@@ -824,7 +829,7 @@ class Layer(cat.Box, ColouredMonoid):
             return type(self)(
                 *type(self).normalise((other, self[0])), *self[1:],
                 normalise=False)
-        return other.tensor(self)
+        return other.tensor(self)  # ty: ignore[invalid-argument-type]
 
     @property
     def free_symbols(self) -> "set[sympy.Symbol]":
@@ -1733,7 +1738,9 @@ class Functor(cat.Functor):
         if isinstance(other, Colour):
             return self.colour_map[other] if self.colour_map else other
         if isinstance(other, Dim):
-            return self.cod.ob().tensor(*(self.ob_map[x] for x in other))
+            return self.cod.ob().tensor(
+                *(self.ob_map[x] for x  # ty: ignore[invalid-argument-type]
+                  in other))
         if isinstance(other, Nat):
             image = super().__call__(other.factory(1))
             return image[:0].tensor(*other.n * [image])

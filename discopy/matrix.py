@@ -154,7 +154,7 @@ class Matrix[dtype](MonoidalCategory, NamedGeneric):
                 return cls.__new__(cls[dtype], array, *args, **kwargs)
             return object.__new__(cls)
 
-    def __init__(self, array, dom: Nat, cod: Nat):
+    def __init__(self, array, dom: Nat | int, cod: Nat | int):
         dom, cod = (Nat(x) if isinstance(x, int) else x for x in (dom, cod))
         assert_isinstance(dom, Nat)
         assert_isinstance(cod, Nat)
@@ -273,7 +273,7 @@ class Matrix[dtype](MonoidalCategory, NamedGeneric):
         return self if other == 0 else self.__add__(other)
 
     @classmethod
-    def zero(cls, dom: Nat, cod: Nat) -> Matrix:
+    def zero(cls, dom: Nat | int, cod: Nat | int) -> Matrix:
         """
         Returns the zero matrix of a given shape.
 
@@ -286,7 +286,7 @@ class Matrix[dtype](MonoidalCategory, NamedGeneric):
                 (index(dom), index(cod)), dtype=cls.dtype or int), dom, cod)
 
     @classmethod
-    def swap(cls, left: Nat, right: Nat) -> Matrix:
+    def swap(cls, left: Nat | int, right: Nat | int) -> Matrix:
         """
         The matrix that swaps left and right dimensions.
 
@@ -330,22 +330,22 @@ class Matrix[dtype](MonoidalCategory, NamedGeneric):
         return type(self)(array, self.dom, self.cod)
 
     @classmethod
-    def copy(cls, x: Nat, n: int) -> Matrix:
+    def copy(cls, x: Nat | int, n: int) -> Matrix:
         x = index(x)
         array = [[i + int(j % n * x) == j
                   for j in range(n * x)] for i in range(x)]
         return cls(array, x, n * x)
 
     @classmethod
-    def discard(cls, x: Nat) -> Matrix:
+    def discard(cls, x: Nat | int) -> Matrix:
         return cls.copy(x, 0)
 
     @classmethod
-    def merge(cls, x: Nat, n: int) -> Matrix:
+    def merge(cls, x: Nat | int, n: int) -> Matrix:
         return cls.copy(x, n).dagger()
 
     @classmethod
-    def ones(cls, x: Nat) -> Matrix:
+    def ones(cls, x: Nat | int) -> Matrix:
         return cls.merge(x, 0)
 
     @classmethod

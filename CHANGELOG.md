@@ -29,8 +29,12 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   both as a value and as a base class. The runtime machinery is
   unchanged: subscripting with a concrete value builds a cached subclass
   carrying it as a class attribute, named and pickled as before, while
-  subscripting with a type variable, as in
-  ``class Box[dtype](Diagram[dtype])``, delegates to `Generic`.
+  subscripting with the class syntax's own parameters, as in
+  ``class Box[dtype](Diagram[dtype])``, delegates to `Generic`, and
+  subscripting with an explicit `TypeVar` builds the carrying subclass
+  that `axioms.substitute` replaces. `NamedGeneric` lives in
+  `discopy.utils` and `List`, `axioms.Equation` and `axioms.Grid`
+  declare their parameter with the class syntax too.
   `CMap` and `Stream` are parameterised by a category bounded by the
   diagrams they host, para maps by a symmetric one, and `Stream` defines
   its own `later`, `head`, `tail` and `is_constant` properties instead

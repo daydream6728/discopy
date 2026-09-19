@@ -376,7 +376,7 @@ class Eval(Box):
     Parameters:
         x : The exponential type to evaluate.
     """
-    def __init__(self, x: Exp, left=None):
+    def __init__(self, x: Ty, left=None):
         assert x.is_exp
         self.x = x
         exp = x.inside[0]
@@ -411,7 +411,7 @@ class Coeval(Box):
     """
     drawing_name = "lambda"
 
-    def __init__(self, x: Exp, left=None):
+    def __init__(self, x: Ty, left=None):
         assert x.is_exp
         self.x = x
         exp = x.inside[0]

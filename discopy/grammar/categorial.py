@@ -44,6 +44,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import re
+from typing import TYPE_CHECKING
 
 from discopy import biclosed, cmap, messages
 from discopy.cat import factory
@@ -213,6 +214,10 @@ CMap = cmap.CMap[Diagram]
 
 
 class TermBase(Box, biclosed.TermBase):
+    if TYPE_CHECKING:
+        def simplify(self) -> TermBase:
+            """ Recursively simplify the compositions of a term. """
+
     """
     A term in the internal language of a categorial grammar.
     """
@@ -253,6 +258,9 @@ class Abstraction(TermBase, biclosed.Abstraction):
 
 class FA(TermBase, biclosed.Application):
     "Application of type ``Y`` with subterms of type ``Y << X`` and ``X``."
+    func: Term
+    args: Term
+
     def __init__(self, func, args):
         biclosed.Application.__init__(self, func, args, left=False)
         TermBase.__init__(self, self.name, self.dom, self.cod)
@@ -263,6 +271,9 @@ class FA(TermBase, biclosed.Application):
 
 class BA(TermBase, biclosed.Application):
     "Application of type ``Y`` with subterms of type ``X`` and ``X >> Y``."
+    func: Term
+    args: Term
+
     def __init__(self, args, func):
         biclosed.Application.__init__(self, func, args, left=True)
         TermBase.__init__(self, self.name, self.dom, self.cod)
@@ -328,7 +339,9 @@ class BinaryTerm(TermBase):
                 self.right.freevars):  # ty: ignore[invalid-argument-type]
             raise ValueError("Expected disjoint free variables.")
         object.__setattr__(
-            self, "freevars", self.left.freevars + self.right.freevars)
+            self, "freevars",
+            self.left.freevars
+            + self.right.freevars)  # ty: ignore[unsupported-operator]
         object.__setattr__(self, "dom", self.left.dom @ self.right.dom)
 
     def __str__(self):

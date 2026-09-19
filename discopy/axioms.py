@@ -51,7 +51,10 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable
 from dataclasses import KW_ONLY, dataclass, replace
 from functools import wraps
-from typing import TYPE_CHECKING, ClassVar, Concatenate, Self, TypeVar
+from typing import TYPE_CHECKING, ClassVar, Self, TypeVar
+
+if TYPE_CHECKING:
+    from discopy.abc import Category
 
 from discopy.utils import (
     AxiomError,
@@ -216,11 +219,11 @@ class Axiom[**P, T]:
         broken : Whether the law is declared broken by :meth:`failing`.
     """
 
-    equation: Callable[Concatenate[type[T], P], Equation]
+    equation: Callable[..., Equation]
     _: KW_ONLY
-    category: type[T] = None
-    name: str = None
-    subspaces: dict = None
+    category: type[T] | None = None
+    name: str | None = None
+    subspaces: dict | None = None
     broken: bool = False
 
     def __post_init__(self):
@@ -304,7 +307,8 @@ class Axiom[**P, T]:
         matrix one expected failure and one green cell instead of one
         blanket expected failure.
         """
-        return replace(self, subspaces=dict(self.subspaces, **subspaces))
+        return replace(
+            self, subspaces=dict(self.subspaces or {}, **subspaces))
 
     @property
     def parameters(self) -> tuple[inspect.Parameter, ...]:
@@ -392,7 +396,7 @@ class Axiom[**P, T]:
         bound = inspect.Signature(self.parameters).bind(*args, **kwargs)
         bound.apply_defaults()
         return {
-            name: value.value if name in self.subspaces else value
+            name: value.value if name in (self.subspaces or {}) else value
             for name, value in bound.arguments.items()}
 
     def __call__(self, *args: P.args, **kwargs: P.kwargs) -> Equation[T]:
@@ -400,7 +404,7 @@ class Axiom[**P, T]:
 
 
 def axiom[**P, T](
-        equation: Callable[Concatenate[type[T], P], Equation]) -> Axiom[P, T]:
+        equation: Callable[..., Equation]) -> Axiom[P, T]:
     """
     Decorate an equation as a categorical axiom: a classmethod of its
     category, implicitly, whose remaining parameters are generated.
@@ -488,7 +492,7 @@ class Grid[factory](Testable, NamedGeneric, tuple):
     n_columns: ClassVar[int]
     n_active_rows: ClassVar[int] = 1
 
-    def __new__(cls, *cells: C1):
+    def __new__[C1: Category](cls, *cells: C1):
         if len(cells) != cls.n_rows * cls.n_columns:
             raise ValueError("Expected one value per cell.")
         for row in range(cls.n_rows - 1):
@@ -498,7 +502,7 @@ class Grid[factory](Testable, NamedGeneric, tuple):
         for row in range(cls.n_rows):
             for column in range(cls.n_columns - 1):
                 i = row * cls.n_columns + column
-                cells[i] @ cells[i + 1]
+                cells[i] @ cells[i + 1]  # ty: ignore[unsupported-operator]
         return super().__new__(cls, cells)
 
     @classmethod
@@ -538,14 +542,14 @@ class Grid[factory](Testable, NamedGeneric, tuple):
         return pasting_diagram()
 
 
-class ComposablePair(Grid):
+class ComposablePair[factory](Grid[factory]):
     """ Two morphisms composable from left to right. """
 
     n_rows, n_columns = 2, 1
     n_active_rows = 2
 
 
-class ComposableTriple(Grid):
+class ComposableTriple[factory](Grid[factory]):
     """ Three values composable from left to right. """
 
     n_rows, n_columns = 3, 1

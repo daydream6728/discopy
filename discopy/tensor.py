@@ -184,7 +184,9 @@ class Tensor[dtype](Matrix[dtype]):
 
     @classmethod
     def cups(cls, left: Dim, right: Dim) -> Tensor:
-        return rigid.nesting(cls, cls.cup_factory)(left, right)
+        return rigid.nesting(
+            cls,  # ty: ignore[invalid-argument-type]
+            cls.cup_factory)(left, right)
 
     @classmethod
     def caps(cls, left: Dim, right: Dim) -> Tensor:
@@ -710,8 +712,8 @@ class Box[dtype](frobenius.Box, Diagram[dtype]):
             del state["_array"]
         super().__setstate__(state)
         if self.dtype is None and self.data is not None:
-            self.data, self.dtype = self._get_data_dtype(self.data)
-            self.__class__ = self.__class__[self.dtype]
+            self.data, dtype = self._get_data_dtype(self.data)
+            self.__class__ = self.__class__[dtype]
 
     def __new__(
             cls, name=None, dom=None, cod=None, data=None, *args, **kwargs):

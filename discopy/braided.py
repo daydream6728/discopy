@@ -207,7 +207,7 @@ class Braid(BinaryBoxConstructor, Box):
         return type(self)(self.right, self.left, not self.is_dagger)
 
 
-def hexagon(cls: type, factory: Callable) -> Callable[[Ty, Ty], Any]:
+def hexagon(cls: type[Diagram], factory: Callable) -> Callable[[Ty, Ty], Any]:
     """
     Take a ``factory`` for braids of atomic types and extend it recursively.
 

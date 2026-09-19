@@ -45,7 +45,7 @@ from discopy.config import (  # noqa: F401
     TRANSPARENT)
 
 if TYPE_CHECKING:
-    from discopy.drawing import PlaneGraph
+    from discopy.drawing import Drawing
 
 
 MATPLOTLIB_RC = {
@@ -79,8 +79,8 @@ def matplotlib_context():
         yield
 
 
-def draw(graph: PlaneGraph, **params):
-    """ Load a :class:`Backend` and draw a :class:`PlaneGraph` on it. """
+def draw(graph: Drawing, **params):
+    """ Load a :class:`Backend` and draw a :class:`Drawing` on it. """
     aspect = params.get('aspect', 'auto' if 'figsize' in params else 'equal')
     if params.get('legend', False) and not params.get('to_tikz', False):
         colours = Backend.region_colours(graph)

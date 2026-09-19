@@ -313,7 +313,7 @@ class Functor(compact.Functor, markov.Functor):
         return compact.Functor.__call__(self, other)
 
 
-def interleaving(cls: type, factory: Callable
+def interleaving(cls: type[Diagram], factory: Callable
                  ) -> Callable[..., Diagram]:
     """
     Take a ``factory`` for spiders of atomic types and extend it recursively.
@@ -342,7 +342,7 @@ def interleaving(cls: type, factory: Callable
     return method
 
 
-def coherence(cls: type, factory: Callable
+def coherence(cls: type[Diagram], factory: Callable
               ) -> Callable[..., Diagram]:
     """
     Take a ``factory`` for spiders with one or three legs of atomic types

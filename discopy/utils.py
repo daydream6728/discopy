@@ -153,6 +153,18 @@ class NamedGeneric:
     >>> assert L[int]([1, 2, 3]).dtype == int
     >>> assert L[int]([1, 2, 3]) != L[float]([1, 2, 3])
     """
+    if TYPE_CHECKING:
+        #: The parameter names used in discopy, declared so that attribute
+        #: access typechecks; subscripting attaches the actual values.
+        dtype: ClassVar[Any]
+        category: ClassVar[Any]
+        base: ClassVar[Any]
+        natural: ClassVar[Any]
+        algebra: ClassVar[Any]
+        generator_factory: ClassVar[Any]
+        factory: ClassVar[Any]
+        ar: ClassVar[Any]
+
     _cache = dict()
 
     def __init_subclass__(cls, **kwargs):
@@ -684,6 +696,12 @@ class classproperty(object):
 
 class Node:
     """ Node in a :class:`networkx.Graph`, can hold arbitrary data. """
+    obj: Any
+    box: Any
+    i: int
+    j: int
+    x: float
+
     def __init__(self, kind, **data):
         self.kind, self.data = kind, data
         for key, value in data.items():

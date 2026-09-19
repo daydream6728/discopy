@@ -323,8 +323,12 @@ class Diagram(balanced.Diagram, SymmetricCategory):
                 slice(0, i), i, slice(i + 1, None)
             )
         )
-        rest = left @ right if isinstance(doms, monoidal.Ty) else left + right
-        return cls.swap(tensor(left), head) @ tensor(right)\
+        rest = (left @ right  # ty: ignore[unsupported-operator]
+                if isinstance(doms, monoidal.Ty)
+                else left + right)  # ty: ignore[unsupported-operator]
+        return cls.swap(
+            tensor(left), head  # ty: ignore[invalid-argument-type]
+        ) @ tensor(right)\
             >> head @ cls.permutation(
                 [x - 1 if x > i else x for x in xs[1:]], rest)
 
