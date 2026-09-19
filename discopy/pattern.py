@@ -96,7 +96,8 @@ from collections.abc import Callable, Iterator
 from dataclasses import KW_ONLY, dataclass, field, replace
 from functools import reduce
 from typing import (
-    Annotated, ClassVar, TypeAliasType, TypeVar, get_args, get_origin)
+    Annotated, ClassVar, Self, TypeAliasType, TypeVar, get_args,
+    get_origin)
 
 from discopy import abc
 from discopy.utils import factory_name
@@ -248,7 +249,8 @@ class Pattern[C0, C1: abc.Category](ABC):
     @classmethod
     def level(cls) -> type[abc.Category]:
         """ The bound of ``C1``, the least structure the pattern needs. """
-        return cls.__type_params__[1].__bound__
+        return cls.__type_params__[  # ty: ignore[invalid-return-type]
+            1].__bound__
 
     @property
     @abstractmethod
@@ -561,7 +563,7 @@ class Repeat[C0, C1: abc.ColouredMonoid](Pattern[C0, C1]):
 
 
 @dataclass(frozen=True)
-class HomType[C0, C1: abc.Category, A: C0, B: C0](Pattern[C0, C1]):
+class HomType[C0, C1: abc.Category](Pattern[C0, C1]):
     """
     The type ``head[dom, cod]`` of the morphisms between two patterns —
     what a ``Hom[C1, A, B]`` annotation evaluates to — matched against a
@@ -716,7 +718,7 @@ def read(annotation: str, sorts: dict[str, Sort | HomType],
     level = next((
         sort.bound for sort in sorts.values()
         if getattr(sort, "head", None) == "C0"), None)
-    environment = {
+    environment: dict[str, object] = {
         "Atom": Atom, "Count": Count, "Unit": Unit, "Self": Sort("Self"),
         "C0": Sort("C0", bound=level), "C1": C1,
         **{name: Var(name, sort) for name, sort in sorts.items()}}
@@ -810,7 +812,8 @@ def parse(function: Callable, owner: type | None = None,
         if conclusion and "return" in annotations else None
     if conclusion and not isinstance(returns, HomType):
         raise TypeError(f"{function.__name__} concludes no hom type.")
-    return Sequent(sorts, premises, returns)
+    return Sequent(
+        sorts, premises, returns if isinstance(returns, HomType) else None)
 
 
 @dataclass(repr=False)
@@ -883,8 +886,8 @@ class Declaration[**P, T]:
     def __hash__(self):
         return hash((self.function, self.category, self.name))
 
-    def bind(self, category: type[T],
-             owner: type | None = None) -> Declaration[P, T]:
+    def bind(self, category: type,
+             owner: type | None = None) -> Self:
         """ Bind the declaration to a concrete category. """
         return replace(
             self, category=category, owner=self.owner or owner)
@@ -1058,7 +1061,7 @@ def declarations[D: Declaration](cls: type, kind: type[D],
     >>> list(declarations(Diagram, Rule))
     ['then', 'tensor']
     """
-    result = {}
+    result: dict[str, D] = {}
     for base in reversed(cls.__mro__):
         for name, value in base.__dict__.items():
             value = value.__func__ if isinstance(value, classmethod) else value

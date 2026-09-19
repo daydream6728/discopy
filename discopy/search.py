@@ -66,10 +66,11 @@ class Rule[**P, T](Declaration[P, T]):
 
     __hash__ = Declaration.__hash__
 
-    def __get__(self, instance, owner: type[T]):
+    def __get__(self, instance, owner: type):
         declaring = next((
             base for base in owner.__mro__
-            if self.is_declared(base.__dict__.get(self.name))), None)
+            if self.is_declared(base.__dict__.get(self.name or ""))),
+            None)
         bound = self.bind(owner, owner=declaring)
         return bound if instance is None else MethodType(bound, instance)
 
@@ -87,7 +88,8 @@ class Rule[**P, T](Declaration[P, T]):
 
     def apply(self, arguments: dict) -> T:
         """ The implementation of the rule on the category, applied. """
-        return getattr(self.category, self.name)(*arguments.values())
+        return getattr(self.category, self.name or "")(
+            *arguments.values())
 
     def check(self, /, *args: P.args, **kwargs: P.kwargs) -> Substitution:
         """
@@ -213,7 +215,7 @@ def rule[**P, T](function: Callable[P, T]) -> Rule[P, T]:
     return Rule(function)
 
 
-def generator[**P, T](function: Callable[P, T]) -> Generator[P, T]:
+def generator[**P, T](function: Callable[P, T]) -> Generator:
     """ Decorate a method as a logical constant, its signature the sequent. """
     return Generator(function)
 

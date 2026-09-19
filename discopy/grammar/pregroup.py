@@ -240,7 +240,7 @@ Sum, Bubble, Eval, Coeval, Curry, Copy, Merge, Discard = (
     Diagram.Merge, Diagram.Discard)
 
 
-class Word(thue.Word, Box):  # ty: ignore[invalid-generic-class]
+class Word(thue.Word, Box):
     """
     A word is a rigid box with a ``name``, a grammatical type as ``cod`` and
     an optional domain ``dom``.

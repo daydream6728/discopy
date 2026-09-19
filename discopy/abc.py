@@ -108,7 +108,7 @@ class Category[C0, C1: Category](Testable, ABC):
     Equation: ClassVar[type[Equation]] = Equation
 
     @classproperty
-    def rules(cls) -> dict[str, Rule]:
+    def rules(cls: type) -> dict[str, Rule]:
         """
         The inference rules inherited by ``cls``, by name: the rule each
         structural method carries, see :func:`discopy.search.rule`, bound
@@ -120,7 +120,7 @@ class Category[C0, C1: Category](Testable, ABC):
         return declarations(cls, Rule)
 
     @classproperty
-    def generators(cls) -> dict[str, Generator]:
+    def generators(cls: type) -> dict[str, Generator]:
         """
         The logical constants inherited by ``cls``, by name: the rules
         the search builds in one step, see

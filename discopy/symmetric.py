@@ -96,7 +96,7 @@ from typing import ClassVar
 
 from collections.abc import Sequence
 
-from typing import Annotated, Any, Self
+from typing import Annotated, Any
 
 from discopy import monoidal, balanced, hypergraph, cmap, messages
 from discopy.abc import MonoidalCategory, SymmetricCategory
@@ -342,7 +342,7 @@ class Diagram(balanced.Diagram, SymmetricCategory):
     @generator
     def cycle[X: Atom, A](
             cls, x: Annotated[Ty, X], a: Annotated[Ty, A]
-    ) -> Annotated[Self, "X @ A", "A @ X"]:
+    ) -> Annotated[Diagram, "X @ A", "A @ X"]:
         """
         The permutation moving a wire past a type, a native
         :class:`Permutation` of any length.

@@ -439,7 +439,7 @@ class Testable[T](metaclass=ABCMeta):
             f"No search strategy implemented for {cls.__name__}")
 
     @classproperty
-    def axioms(cls) -> dict[str, Axiom]:
+    def axioms(cls: type) -> dict[str, Axiom]:
         """
         The axioms inherited by ``cls``, by name, subclasses overriding
         bases: assigning anything that is not an axiom over an inherited
@@ -543,7 +543,7 @@ class Axiom[**P, T](Declaration[P, T]):
     def __get__(self, instance, owner: type) -> Self:
         declaring = next((
             base for base in owner.__mro__
-            if base.__dict__.get(self.name) is self), None)
+            if base.__dict__.get(self.name or "") is self), None)
         return self.bind(owner, owner=declaring)
 
     def modulo(self, up_to) -> Self:

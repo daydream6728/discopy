@@ -18,9 +18,9 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   Annotated[C1, A, C]`, a kind is the bound, `def cups[X: Atom]`, the
   boundaries of a higher cell are declared on its binder, `def tensor[X,
   Y, A: Hom[C1, X, Y], ...]` mimicking the telescope `{A : C1 X Y}` of a
-  dependently typed language, its uses reading `self: Hom[C2, A, B]` —
+  dependently typed language, its uses reading `self: Hom[C1, A, B]` —
   `type Hom[C, A, B] = Annotated[C, A, B]`, which a typechecker reads
-  as a plain `C2` by substituting the base, so the laws typecheck on
+  as a plain `C1` by substituting the base, so the laws typecheck on
   the cells they compose; ty takes the subscripted alias as a bound
   where pyright expands it and refuses the type variables it finds, and
   mypy cannot scope sibling type parameters as alias arguments, ty
@@ -28,20 +28,52 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   pattern with an operator or a subscript on a type parameter is quoted
   like a forward reference, `-> Annotated[C1, "X @ X.r", ()]`, since a
   typechecker types the bare operator as one on `typing.TypeVar`.
-  `C0`, `C1` and `C2` name both the type parameters of the class stating
-  the law and the `Level` objects they evaluate to in the module scope.
-  `annotated` evaluates each annotation in the scope PEP 695 gives it —
-  the function's module for the globals and its `__type_params__` for
-  the metavariables, each name one `Var` carrying the kind its bound
-  declares, so unification across a declaration holds by construction:
-  the shadow scope that impersonated `C0`/`C1`/`C2`, the `Verdict`
-  stand-in for `Equation`, the `Prepared` metaclass injecting levels
-  into class bodies and the `metavariables` read off lazily evaluated
-  bounds are all gone, and the spelling typechecks where `def cups[X:
-  Atom[C0]](...) -> C1[X @ X.r, ()]` could not.
+  `C0` and `C1` name both the type parameters of the class stating the
+  law and the `Sort`s they evaluate to in the environment of a sequent.
+  `parse` evaluates each annotation in the scope PEP 695 gives it — the
+  function's module for the globals and its `__type_params__` for the
+  metavariables, each name one `Var` carrying the sort its bound
+  declares, so unification across a declaration holds by construction,
+  and the spelling typechecks where `def cups[X: Atom[C0]](...) ->
+  C1[X @ X.r, ()]` could not.
+- `discopy.pattern` and `discopy.search`, the proof search on pattern
+  sequents of the `diagram-search-strategies` branch unified with the
+  typed front-end of this one: a category states its structure as the
+  typed signatures of its methods — a metavariable is one of the
+  method's own PEP 695 type parameters, its sort the bound (`Atom`,
+  `Count`, an `abc` class, or `Hom[C1, X, Y]` for a higher cell),
+  `Hom[C1, A, B]` types as a plain `C1` and evaluates to the hom type
+  between two boundaries, and a pattern with an operator on a type
+  parameter is quoted in the metadata of `Annotated` — and `parse`
+  reads each sequent lazily in the environment of the class stating
+  it, whose objects bound the sorts. The pattern classes are generic
+  in the colours and objects they stand in, bounded by the least
+  structure each needs — `Unit[C0]` and `Tensor` a `ColouredMonoid`,
+  `Adjoint` a `Pregroup`, `Delay` the new `abc.DelayedMonoid` that
+  `feedback.Ty` is, `Exp` a `ResiduatedMonoid`, `Repeat` (`X ** N`)
+  the legs of a spider — and what matching cannot invert is a residual
+  equation checked once the variables are instantiated.
+  `monoidal.Diagram.strategy` is the one goal-directed search by the
+  `rules` and `generators` a category declares, every level inheriting
+  it as is: the sides of a trace, an evaluation, a currying and a
+  feedback are their own typed rules (`trace_left` and `trace_right`,
+  `ev_left` and `ev_right`, `curry_left` and `curry_right`,
+  `feedback_left` and `feedback_right`, with `trace`, `ev`, `curry`
+  and `feedback` helpers taking `left`, and a `Feedback` takes its
+  memory on the left too), `braid_inverse` and `symmetric.Diagram.cycle`
+  — a native permutation of any length — join the generators, a
+  fixed vocabulary is a dictionary of `Rule.constant` boxes (the words
+  of a pregroup grammar, the gates of a circuit), and a term built
+  outside its declared conclusion is an `AxiomError`. `cat.Arrow`
+  keeps a recursive path strategy and `cat.Functor` enrols in the
+  matrix with `Relabelling` endofunctors and its own classifications,
+  functor laws quantifying their functor with `Self` and their source
+  types with `Self.dom`. The `TwoCategory` levels, the goals-with-holes
+  search, the `Choice` patterns and the argument-shape wrappers of the
+  earlier experiments are retired.
 - `Rule.check` matches the arguments of a structural method against the
   sequent pattern its declaration states, the one mechanism behind the
-  manual shape assertions: `rigid.Diagram.rules["cups"].check(x, x.r)`
+  manual shape assertions: `rigid.Diagram.generators["cups"].check(x, x.r)`
   binds `{"X": x}` and raises `AxiomError` on `check(x, x.l)`. Adopting
   it in the ~60 constructors that call `assert_isatomic` and friends by
   hand is left as follow-up work, pending a cached `rules` lookup that
@@ -107,58 +139,6 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   handed over to the correctness reviewer. A pull request already open and
   not about to change had no trigger at all otherwise, since only a push
   reaches one ([#638](https://github.com/discopy/discopy/issues/638)).
-- The property matrix generates arrows by proof search: an inference
-  `Rule` of a category is stated on its abstract base class beside the
-  axioms, with `@rule` or `@leaf` in `discopy.axioms`, collected through
-  the MRO by the same walk as the axioms — `Testable.declarations`, shared
-  by `Testable.axioms` and `Category.rules` — and interpreted by
-  `axioms.search`, a size-indexed backward search from the sequent
-  `dom ⊢ cod` where every choice is a Hypothesis draw and every rule
-  application a Hypothesis event. `Category` states `identity`, `box` and
-  `cut`, `MonoidalCategory` `tensoring`, and each level its structural
-  leaf or rule — `braiding`, `twisting`, `permuting`, `cupping`,
-  `capping`, `evaluating`, `copying`, `spidering`, `tracing`,
-  `feeding_back` — with a `Rule.hint` for the boundary it fires on, which
-  `cut` draws its middle from; a level drops an inherited rule with
-  `Rule.inapplicable`, as it does an axiom. `cat.Arrow.strategy` is that
-  search where it gave a single box, and `monoidal.Diagram.strategy` is
-  it too, so every diagram level enrols in the matrix through
-  inheritance with its generator box, types and wires: `monoidal.Ty`
-  generates words of wires, `rigid.Wire` a winding number, `pivotal.Wire`
-  a parity, `frobenius.Wire` a self-dual wire and `feedback.Wire` a wire at
-  time zero; `Nat` and `Dim` generate small numbers. Only the generator
-  class of a level generates fresh boxes: a structural box such as a cup
-  is generated by the rules of its category inside a diagram, so
-  `monoidal.Box.strategy` raises for any other subclass, and the semantic
-  and grammatical modules opt out until they say how to generate their
-  own terms. The `filter_too_much` health check is no longer suppressed
-  in `proptest/conftest.py`, the search filtering nothing. See *Search
-  strategies as proof search* in the documentation of `discopy.axioms`.
-- Every axiom of `discopy.abc` is stated again beside the rules that
-  generate its structure, from `bifunctoriality` to `reidemeister_1_cup`,
-  quantified over shapes the search generates: `Atomic`, `NonEmpty`,
-  `BoundaryConnected`, `HorizontalPair`, `Square`, the trace superposing,
-  sliding and dinaturality shapes, the currying shapes and the feedback
-  shapes are `Testable` wrappers whose constructors enforce what their
-  laws need and whose strategies draw the boundaries first, then the
-  arrows through the constrained search, with neither `flatmap` nor
-  `filter`; `Diagram.strategy` takes `boundary_connected` and
-  `Diagram.is_boundary_connected` reads the hypergraph, a diagram with
-  none being outside the subspace where a normal form is defined. Every
-  module wires the `Equation` it defines as its `equation_factory`, so
-  the laws of a free symmetric category and above compare up to
-  hypergraph isomorphism, as they hold, where `main` defined the
-  quotients without using them. The classifications the free categories
-  force are declared where they were: interchange and dagger
-  monoidality modulo the normal form on connected diagrams, snakes and
-  the rigid currying modulo the normal form, a free trace is a box and a
-  free braid does not commute past one, the two transposes of a pivotal
-  diagram differ by a snake, the traced braid does not reduce to the
-  twist, feedback joining unrolls memory in the wrong order
-  ([#606](https://github.com/discopy/discopy/issues/606)) and currying
-  does not evaluate back
-  ([#562](https://github.com/discopy/discopy/issues/562)). Each level's
-  test file dry-runs its laws with `assert_axioms`.
 - A `fast` Hypothesis profile in `proptest/conftest.py`, the settings of
   `dev` under which the matrix keeps one cell per declaration of a law:
   the enrolled type nearest the class declaring it, so that a law is
@@ -171,141 +151,22 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   counterexample: the first one is enough to confirm the declaration, and
   `Axiom.falsify` shrinks one on demand, where the shrink of a single
   `#742` roundtrip took a hundred seconds of every run.
-- The sequent-pattern language is a strongly typed EDSL: `PatternBase`
-  is the base of every pattern, a `Testable` of the values it stands for
-  — matching binds its metavariables, instantiating reads them, its
-  strategy draws the unbound ones by kind — and `Pattern[T]` the closed
-  union of the concrete frozen dataclasses: `Var`, and the `Adjoint`,
-  `Delay` and `Exp` derived from one, are the `Item`s of a `Word`, the
-  pattern for one boundary that `Pattern` was; `Alternatives` joins
-  words; `Sequent` stands for the arrows between two boundaries and
-  `Hom` for the terms of a testable class, `C1[A, B]` and `C1` in the
-  annotations of a law; and `Signature` for the arguments of a law, one
-  pattern per parameter with the metavariables shared. `Op` and the
-  `pattern`, `sequent`, `sequents`, `matching` and `resolve` helpers are
-  gone, and every pattern draws through one composite strategy built
-  once, where a fresh `st.composite` inspected its function at every
-  draw, half the cost of generating an example.
-- The search proves goals with holes: an `axioms.Goal` is a sequent of
-  patterns over goal variables, one per atom of a boundary that is known
-  and a hole for what is not, with a fuel, the number of boxes left to
-  place, and a boundary left `None` is one hole, unconstrained, where
-  `search` used to draw it from the types before searching. A rule
-  aligns its conclusion with the goal, `axioms.alignments`: a type
-  variable takes any stretch of a boundary, splitting a hole where it
-  ends, an atom takes an atom or splits a hole, and what the rule has
-  already bound `axioms.unify`s with the rest, a hole absorbing what
-  faces it, bound when what it absorbed is known, an empty stretch
-  keeping the colour of its neighbours. The premises are proved in
-  sequence, the most constrained first, what each proof binds carried to
-  the next, so that a composition constrained on one side proves that
-  side first and the other from where it leads, and a tensor splits the
-  side it knows, the permutation, copy and spider rules of the level
-  shuffling, copying or fusing it before; a closed goal keeps drawing its
-  middle from the types and the hints, and the tables of `derivable`. The
-  procedural rules take a goal: the free box draws its holes from the
-  types, between the colours of the boundary it knows, and the
-  permutation shuffles the one boundary known when the other is free;
-  `Rule.applies` and a rule's `condition` take a goal, `Rule.matches` the
-  alignments and `Rule.instances` their values on a closed goal.
-- `abc.Category.generators`, the generators the search may invoke — the
-  rules of `rules` that build a box from no premise: a free box, the
-  structural boxes of the level, its permutations — collected like
-  `axioms` and adjusted by assigning a dictionary of rules on a class,
-  `Rule.constant(box)` giving the rule of one given box: it applies to
-  the sequent of the box, builds it and hints at the boundary it leaves
-  where its domain sits, so that a composition draws a middle it fires
-  on. `axioms.invoked` lists what the search runs, the structure of the
-  rules and the generators of the class. `pregroup.Diagram` is generated
-  by the words of `pregroup.VOCABULARY`, *Alice loves Bob*, and the cups
-  reducing them, so that `pregroup.Diagram.strategy()` draws grammatical
-  sentences, from the empty type to the sentence type by default, and
+- `abc.Category.generators`, the logical constants the search builds in
+  one step — the structural boxes of the level and the identity —
+  adjusted by assigning a dictionary of rules on a class,
+  `Rule.constant(box)` giving the rule of one given box.
+  `pregroup.Diagram` is generated by the words of `pregroup.VOCABULARY`,
+  *Alice loves Bob*, and the cups reducing them, so that
+  `pregroup.Diagram.strategy()` draws grammatical sentences, from the
+  empty type to the sentence type by default, and
   `quantum.circuit.Circuit` by the gates of `quantum.gates.GATES` that
   take no parameter and the swap, so that `Circuit.strategy(dom=qubit **
   2)` draws circuits on two qubits; a grammar or a gate set assigns its
-  own generators on a subclass. Neither traces, the search declaring the
-  trace inapplicable where it would unfold a loop, and neither is a cell
-  of the matrix: a category whose generators leave out the free box
-  fills only the sequents its vocabulary derives, not the ones a law
-  draws, and `proptest/test_axioms.py` keeps to the free categories. The
-  search draws the size of an arrow among those the sequent is
-  `axioms.derivable` with, where it drew any and rejected the dead ends.
-- Patterns work for 2-categorical shapes: `C0`, `C1` and `C2` are
-  `Level`s rather than type variables, `C1[R, G]` the `Sequent` of the
-  1-cells from the colour `R` to the colour `G`, and the bound of a type
-  parameter names them, `[X: C0, Y: C0, A: C1[X, Y]]`, a variable bounded
-  by a sequent matching and drawing its boundaries too, `Atom[C1[X,
-  Y]]` included. A law names the levels of the class declaring it, whose
-  last type parameter is the class itself and each one before the
-  objects of the next: `abc.TwoCategory[C0, C1, C2](Category[C1, C2])`
-  states the tensor rule and the axioms of the tensor —
-  `bifunctoriality`, `tensor_unitality`, `tensor_dom_typing`,
-  `tensor_cod_typing`, `dagger_monoidality` — on colours, 1-cells and
-  2-cells, and `MonoidalCategory[C0, C1](TwoCategory[Colour, C0, C1])`
-  inherits them with the real colours of its types, `abc.Colour` being
-  the 0-cells that `monoidal.Colour` implements: `Cells` resolves a
-  level through the type parameters the classes substitute for those of
-  their bases, `levels_of`, a concrete type ending the chain unless the
-  positional cells subclass it, and the category's `ob` chain from the
-  top otherwise. The free type variables of a word are drawn between the
-  colours their neighbours fix, so that it composes and the middle of a
-  composition is parallel to its ends. Crossing and bending wires and
-  taking exponentials need the colours to coincide, so
-  `BraidedCategory` and `BiclosedCategory` also subclass
-  `TwoCategory[NoneType, C0, C1]`, `NoneType` the one trivial colour,
-  which every category below them inherits. The metaclass
-  of `Testable`, `Prepared`, prepares every class body with the three
-  levels, since the type parameters of a class of the same names would
-  otherwise shadow them in a bound, a `TypeVar` being no pattern.
-- An axiom and a rule store their patterns: `Axiom.pattern` is the
-  `Signature` of the annotated parameters, built at decoration, and
-  `Axiom.result` the pattern the terms of its equation match, from a
-  return annotation `Equation[C2[A @ C, U @ V]]`; `Rule.conclusion` and
-  `Rule.pattern` are the sequent a structural method concludes and the
-  signature of its premises and arguments. Calling a law typechecks its
-  arguments against the pattern and the equation against the result,
-  raising `TypeError` on a mismatch, and a rule typechecks the proofs of
-  its premises and the cell it builds. `Axiom.owner` and `Rule.owner`
-  are the class declaring a law or a rule, set when the class is created
-  and kept by the copies its classifications make.
-- Everything a category states in `discopy.abc` is a rule, a generator
-  or an axiom: `leaf` is renamed `generator`, and `id`, `then` and
-  `tensor` carry the identity, composition and tensor rules themselves —
-  `then[A: C0, B: C0, C: C0](self: C1[A, B], other: C1[B, C]) -> C1[A,
-  C]`, the middle drawn from the types and the hints — where
-  `identity`, `cut`, `tensoring`, `splits` and `atoms` were; `box` and
-  `permuting` stay procedural, being a free generator and a shuffle. One
-  derivation serves every rule: a feasible match of the conclusion is
-  drawn, an identity premise allowed where the match makes one, the
-  boxes shared out, the unbound variables drawn, the proofs and the
-  built cell checked against their sequents. `Category.hints` is the
-  function `hints`, and `Rule.middles` the boundaries a rule hints at.
-  `monoidal.Diagram.strategy` tensors its closed components at the
-  colour of the diagram's codomain.
-- The structural rules are the structural methods: `@leaf` and `@rule`
-  mark the abstract method itself — `cups`, `caps`, `braid`, `twist`,
-  `ev`, `copy`, `spiders`, `trace` and `feedback` — reading the sequent
-  it concludes off its return annotation `C1[dom, cod]`, its premises off
-  the parameters annotated with a sequent, `self` included, and its
-  other arguments off their patterns, so that the search calls the
-  method of the category on what they stand for: `cupping`, `capping`,
-  `braiding`, `braiding_under`, `twisting`, `evaluating_left`,
-  `evaluating_right`, `copying`, `spidering`, `tracing_left`,
-  `tracing_right` and `feeding_back` are gone, the identity, box, cut,
-  tensoring and permuting rules staying procedural. A `Count`
-  metavariable repeats an item, `X ** N` for the legs of a spider or the
-  copies of a copy, and a `Bool` one chooses a boundary, `L[M @ A, A @
-  M]` for the side of a trace or of an evaluation, `Repeat` and `Choice`
-  in the pattern language. `Category.rules` reads the rule a method
-  carries through the MRO, `Rule.of`, a plain override keeping it and one
-  decorated with `inapplicable(reason)` dropping it, as the rigid
-  evaluation, the compact twist and the feedback trace do. The under
-  braid, the dagger of a braid rather than a method, is no longer
-  generated. The copy rule now reaches a single copy, ``x ⊢ x``, and
-  with it a bare `markov.Copy` at the top of a term, which does not
-  deep-copy for the reason it does not unpickle: `copying` is declared
-  failing beside `pickling` on markov diagrams
-  ([#742](https://github.com/discopy/discopy/issues/742)).
+  own generators on a subclass. Neither traces, both dropping the trace
+  rules on either side, and neither is a cell of the matrix: a category
+  whose generators are the `Constant` rules of a vocabulary fills only
+  the sequents that vocabulary derives, not the ones a law draws, and
+  `proptest/test_axioms.py` keeps to the free categories.
 - `Axiom.canonical`, the law as a schema: its equation on the canonical
   arguments of its pattern, each metavariable an object named after it
   and each arrow a box named after its parameter — `Equation(f >> g >>
@@ -319,66 +180,6 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   the one a law declared broken raises included, and finds none when a
   law declared broken holds on every example. The matrix and
   `assert_axioms` draw equations and assert them.
-- A law declares its metavariables as its type parameters, their kind as
-  the bound: `composition_cod_typing[A: C0, B: C0, C: C0](cls, f: C1[A,
-  B], g: C1[B, C])`, `hexagon_left[X: Atom[C0], Y: Atom[C0], Z:
-  Atom[C0]](cls, x: X, y: Y, z: Z)`, `feedback_joining[A: C0, P:
-  Pair[C0]](cls, f: C1[A @ P.d, A @ P], mem: P)` with `.d` the delay. A
-  rule reads its conclusion off its `dom` and `cod` annotations and its
-  premises off the others the same way, `tracing_left[A: C0, B: C0, M:
-  Atom[C0]](cls, dom: A, cod: B, f: C1[M @ A, M @ B])`, `|` joining
-  alternative patterns; the procedural rules take `applies=`. The
-  metavariables declared at the top of `discopy.abc` are gone.
-- A law's arguments are drawn from its annotations: `C1` stands for the
-  `Hom` of the category and `C1[A, B]` for the `Sequent` of its arrows
-  from `A` to `B`, a `Var` annotates an object of its kind, and
-  `Axiom.strategy` draws the metavariables of every annotation once, then
-  each arrow through the search of its sequent, so that `f: C1[A, B],
-  g: C1[B, C]` are composable and `f: C1[X @ A, X @ B]` shares its first
-  atom with `x: X`. Every axiom of `discopy.abc` reads that way,
-  `bifunctoriality(f: C1[A, B], g: C1[C, D], h: C1[B, U], k: C1[D, V])`
-  for one, and `Shape`, `Atomic`, `NonEmpty` and `BoundaryConnected` are
-  gone with the argument wrappers: `Axiom.weaken` takes a predicate on the
-  equation, `connected` for the laws compared modulo a normal form: a
-  `Subspace` carries the predicate and the parameters the category's
-  strategy draws inside it with, so an argument outside the subspace is
-  not drawn only to be rejected, which keeps the cost of a weakened law
-  where the argument wrappers had it.
-- A sequent-pattern language in `discopy.axioms`, shared by the rules
-  and the shapes: a `Var` stands for a type, an atom, a pair of atoms or
-  a non-empty type, its adjoints, delay and exponentials are derived
-  items, and `@` concatenates them into a `Pattern` for one boundary of a
-  sequent, which matches a type by binding its variables, backtracking
-  over the lengths a type variable may take and inverting an adjoint, a
-  delay or an exponential met before its variable, and instantiates from
-  bound values, drawing the unbound ones by kind. A leaf declares the
-  sequent patterns it concludes, `@leaf((X @ X.r, ()))` for a cup, and a
-  rule its conclusion and the named patterns of its premises,
-  `@rule(conclusion=(A, B), premises=dict(f=(M @ A, M @ B)))` for a
-  trace; the hint a cut draws its middle from is derived from the
-  conclusion, matched on either boundary of the sequent in any window
-  when its length is fixed, so the hand-written hints are gone. A `Shape`
-  declares the premises of a law as named patterns and what it returns:
-  `ComposablePair`, `Square`, the trace, currying and feedback shapes are
-  two-line declarations, with one generic constructor checking the
-  arguments and one generic strategy drawing them through the search,
-  where `Grid` and ten bespoke classes were; the superposing shape splits
-  into the left and right traceability its two laws need. `search` checks
-  that a rule builds the sequent it claims. Identity, box, cut, tensoring
-  and permuting, which split or shuffle arbitrarily, stay procedural.
-- The shapes that only ever drew one canonical term draw a real arrow
-  through the search: `TraceSuperposing` drew the identity on an atom and
-  the currying shapes the evaluation itself, so superposing was tested on
-  identities and currying on `ev` alone; they now draw any arrow
-  traceable on either side, resp. any arrow into the base with the
-  exponent at the end to curry. `FeedbackVanishing` is gone, the law
-  taking an arrow and the unit being a constant, and so is
-  `HomogeneousMemory`, which no law used. `BoundaryConnected` accepts a
-  shape of diagrams, and the rigid currying laws are weakened to it like
-  interchange is, the rigid normal form being partial on closed
-  components; from compact categories on, whose equations compare up to
-  hypergraph isomorphism, the plain law holds on connected arguments
-  where the normal form knows no swaps.
 - `feedback.Discard` and `closed.Merge`, the discard of a feedback
   diagram and the merge of a closed one: `feedback.Diagram.copy(x, 0)`
   built a `markov.Discard` and `closed.Diagram.copy(x).dagger()` a

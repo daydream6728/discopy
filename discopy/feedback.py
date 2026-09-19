@@ -554,7 +554,7 @@ Discard, Trace, Sum, Bubble = (
     Diagram.Sum, Diagram.Bubble)
 
 
-class Head(  # ty: ignore[invalid-generic-class]
+class Head(
         monoidal.Bubble, Box):
     """
     The head of a feedback diagram, interpreted as the first element followed
@@ -571,7 +571,7 @@ class Head(  # ty: ignore[invalid-generic-class]
     __str__ = Box.__str__
 
 
-class Tail(  # ty: ignore[invalid-generic-class]
+class Tail(
         monoidal.Bubble, Box):
     """
     The tail of a feedback diagram, interpreted as the stream starting from the
@@ -587,7 +587,7 @@ class Tail(  # ty: ignore[invalid-generic-class]
 
 
 @Diagram.generator
-class Feedback(  # ty: ignore[invalid-generic-class]
+class Feedback(
         monoidal.Bubble, Box):
     """
     Feedback is a bubble that takes a diagram from `dom @ mem.delay()` to
