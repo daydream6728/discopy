@@ -9,6 +9,44 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Added
 
+- The laws and rules of `discopy.axioms` state their sequent patterns in
+  the metadata of `typing.Annotated`, so one annotation carries both the
+  coarse type a typechecker reads and the pattern the runtime
+  interprets: a premise reads `f: Annotated[C1, A, B]`, a conclusion
+  `-> Annotated[C1, X @ X.r, ()]`, an object `x: Annotated[C0, Atom[X]]`
+  and a patterned verdict `-> Annotated[Equation[C2], A @ C, U @ V]`.
+  `C0`, `C1` and `C2` name both the type parameters of the class stating
+  the law and the `Level` objects they evaluate to in the module scope,
+  and the metavariables are module-level `Var` objects, `A` to `Z`,
+  unified by name across one declaration with the most specific kind
+  stated at any use-site — `Atom[X]` an atom, `NonEmpty[N]` a non-empty
+  type, `Count[N]` a number, `A[X, Y]` a cell between boundaries —
+  binding every occurrence. `annotated` evaluates each annotation once
+  in the globals of the function's own module: the shadow scope that
+  impersonated `C0`/`C1`/`C2`, the `Verdict` stand-in for `Equation`,
+  the `Prepared` metaclass injecting levels into class bodies and the
+  `metavariables` read off type-parameter bounds are all gone, and the
+  spelling typechecks where `def cups[X: Atom[C0]](...) -> C1[X @ X.r,
+  ()]` could not.
+- `Rule.check` matches the arguments of a structural method against the
+  sequent pattern its declaration states, the one mechanism behind the
+  manual shape assertions: `rigid.Diagram.rules["cups"].check(x, x.r)`
+  binds `{"X": x}` and raises `AxiomError` on `check(x, x.l)`. Adopting
+  it in the ~60 constructors that call `assert_isatomic` and friends by
+  hand is left as follow-up work, pending a cached `rules` lookup that
+  keeps the hot constructors fast and error-message parity with
+  `discopy.messages`.
+- The whole unified tree typechecks: `uv run --with ty ty check` passes
+  in the full development environment (`uv sync --dev --group all`, the
+  reference for typechecking now that the optional imports carry no
+  ignore comments), with the same two rules off as before, documented
+  in `pyproject.toml`. The `Generator` descriptor declares `Any` on
+  attribute access, since a typechecker takes only a class object or
+  `Any` for the base classes a module builds on it, and the
+  `FreeCategory.generator` decorator keeps the class it declares,
+  `type[U]` to `type[U]`, so every generated factory stays a class to
+  the typechecker.
+
 - The codebase typechecks: `uv run --with ty ty check` passes, configured
   by the `[tool.ty]` sections of `pyproject.toml`. A first annotation pass
   declares the factory class attributes assigned after each class
@@ -31,10 +69,10 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   carrying it as a class attribute, named and pickled as before, while
   subscripting with the class syntax's own parameters, as in
   ``class Box[dtype](Diagram[dtype])``, delegates to `Generic`, and
-  subscripting with an explicit `TypeVar` builds the carrying subclass
-  that `axioms.substitute` replaces. `NamedGeneric` lives in
-  `discopy.utils` and `List`, `axioms.Equation` and `axioms.Grid`
-  declare their parameter with the class syntax too.
+  subscripting with an explicit `TypeVar` builds a carrying subclass
+  like any other value. `NamedGeneric` lives in `discopy.utils` and
+  `List` and `axioms.Equation` declare their parameter with the class
+  syntax too.
   `CMap` and `Stream` are parameterised by a category bounded by the
   diagrams they host, para maps by a symmetric one, and `Stream` defines
   its own `later`, `head`, `tail` and `is_constant` properties instead
