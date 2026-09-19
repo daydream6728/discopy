@@ -18,11 +18,13 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   Annotated[C1, A, C]`, a kind is the bound, `def cups[X: Atom]`, the
   boundaries of a higher cell are declared on its binder, `def tensor[X,
   Y, A: Hom[C1, X, Y], ...]` mimicking the telescope `{A : C1 X Y}` of a
-  dependently typed language with its uses staying bare, `Annotated[C2,
-  A, B]` — `type Hom[C, A, B] = Annotated[object, C, A, B]`, a bound
-  form ty and pyright accept since the metadata is no part of the bound
-  type, while mypy alone cannot scope sibling type parameters as alias
-  arguments — and a
+  dependently typed language, its uses reading `self: Hom[C2, A, B]` —
+  `type Hom[C, A, B] = Annotated[C, A, B]`, which a typechecker reads
+  as a plain `C2` by substituting the base, so the laws typecheck on
+  the cells they compose; ty takes the subscripted alias as a bound
+  where pyright expands it and refuses the type variables it finds, and
+  mypy cannot scope sibling type parameters as alias arguments, ty
+  being the reference checker — and a
   pattern with an operator or a subscript on a type parameter is quoted
   like a forward reference, `-> Annotated[C1, "X @ X.r", ()]`, since a
   typechecker types the bare operator as one on `typing.TypeVar`.

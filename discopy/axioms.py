@@ -185,8 +185,8 @@ method's own :pep:`695` type parameters, their :class:`Kind` the bound,
 each name evaluating to one :class:`Var` shared across the declaration;
 the boundaries of a higher cell are declared on its binder, ``tensor[X,
 Y, A: Hom[C1, X, Y], ...]`` mimicking the telescope ``{A : C1 X Y}`` of
-a dependently typed language with its uses staying bare, see
-:data:`Hom` and :func:`bound_of`, and
+a dependently typed language, and its uses read :data:`Hom` too,
+``self: Hom[C2, A, B]``, see :func:`bound_of`, and
 a pattern with an operator or a subscript on a type parameter is quoted
 like a forward reference, since a typechecker types it as one on
 :class:`typing.TypeVar`: matching the conclusion
@@ -793,32 +793,40 @@ def bound_of(parameter: TypeVar, module: dict,
     for: a :class:`Kind`, ``def cups[X: Atom]``, the cells a higher one
     stands between, ``def tensor[X, Y, A: Hom[C1, X, Y]]`` mimicking
     the telescope ``{A : C1 X Y}`` of a dependently typed language —
-    :data:`Hom` unfolds to an ``Annotated`` whose base is a plain type,
-    since a bound may not contain a type variable, and whose metadata
-    name the level and its boundaries — and any object of the lowest
-    level when unbounded.
+    :data:`Hom` names the level and its boundaries, or a bare
+    ``Annotated[object, C1, X, Y]`` does, whose base a checker that
+    expands what it finds in a bound still accepts — and any object of
+    the lowest level when unbounded.
     """
     bound = parameter.__bound__
     if bound is None:
         return Level(0)
     if isinstance(bound, type) and issubclass(bound, Kind):
         return bound()
-    origin = get_origin(bound)
-    if isinstance(origin, TypeAliasType):
-        substitution = dict(zip(origin.__type_params__, get_args(bound)))
-        args = tuple(substitution.get(item, item)
-                     for item in get_args(origin.__value__))
-    elif origin is Annotated:
-        args = get_args(bound)
-    else:
+    args = unfold(bound)
+    if args is None:
         raise TypeError(
             f"{parameter} is bounded by {bound!r}, which is no kind.")
-    _, level, *boundaries = args
+    level, *boundaries = args if args[0] is not object else args[1:]
     level = module.get(getattr(level, "__name__", ""), level)
     dom, cod = (
         scope[item.__name__] if isinstance(item, TypeVar) else item
         for item in boundaries)
     return level[dom, cod]
+
+
+def unfold(annotation) -> tuple | None:
+    """
+    The arguments of an ``Annotated``, an alias such as :data:`Hom`
+    unfolded by substituting its arguments into its value, or
+    :obj:`None` for any other annotation.
+    """
+    origin = get_origin(annotation)
+    if isinstance(origin, TypeAliasType):
+        substitution = dict(zip(origin.__type_params__, get_args(annotation)))
+        return tuple(substitution.get(item, item)
+                     for item in get_args(origin.__value__))
+    return get_args(annotation) if origin is Annotated else None
 
 
 def interpret(annotation, module: dict | None = None,
@@ -842,9 +850,10 @@ def interpret(annotation, module: dict | None = None,
     if isinstance(annotation, type) and issubclass(annotation, Equation):
         carried = getattr(annotation, "ar", None)
         return carried if isinstance(carried, PatternBase) else None
-    if get_origin(annotation) is not Annotated:
+    args = unfold(annotation)
+    if args is None:
         return None
-    base, *metadata = get_args(annotation)
+    base, *metadata = args
     metadata = [
         eval(item, module or {}, scope or {}) if isinstance(item, str)
         else item for item in metadata]
@@ -3358,21 +3367,23 @@ types: the objects and arrows of a ``Category[C0, C1]``, the colours,
 types and diagrams of a ``TwoCategory[C0, C1, C2]``, each resolved by
 depth from the top in the category the law is bound to, see
 :class:`Cells`. The names double as the type parameters of the class
-stating the law, which a typechecker reads, so ``Annotated[C1, A, B]``
-types as a plain 1-cell and evaluates to the :class:`Sequent` from
+stating the law, which a typechecker reads, so ``Hom[C1, A, B]`` and
+the ``Annotated[C1, A, B]`` it unfolds to
+type as a plain 1-cell and evaluate to the :class:`Sequent` from
 ``A`` to ``B``, see :func:`interpret`. :data:`typing.Self` stands for
 the top itself, for a law of every term of a type whatever its level,
 such as :meth:`Serialisable.repr_transparency`.
 """
 
-type Hom[C, A, B] = Annotated[object, C, A, B]
+type Hom[C, A, B] = Annotated[C, A, B]
 """
-The bound declaring the cells a metavariable stands between: ``def
-tensor[X, Y, A: Hom[C1, X, Y], ...]`` binds ``A`` a 1-cell from ``X``
-to ``Y``, the telescope ``{A : C1 X Y}`` of a dependently typed
-language, see :func:`bound_of`. It unfolds to an ``Annotated`` whose
-base is ``object``, since a bound may not contain a type variable and
-the metadata is no part of the type.
+The cells from ``A`` to ``B`` at the level ``C``. It bounds a higher
+metavariable, ``def tensor[X, Y, A: Hom[C1, X, Y], ...]`` binding
+``A`` a 1-cell from ``X`` to ``Y`` as the telescope ``{A : C1 X Y}``
+of a dependently typed language, and annotates its uses, ``self:
+Hom[C2, A, B]``, which a typechecker reads as a plain ``C2`` by
+substituting the base, so the laws typecheck on the cells they
+compose, see :func:`unfold` and :func:`bound_of`.
 """
 
 GENERATORS = tuple("abcde")

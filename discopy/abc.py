@@ -106,7 +106,7 @@ class Category[C0, C1: Category](Testable, ABC):
     @classmethod
     @rule(boxes=0)
     @abstractmethod
-    def id[A](cls, dom: Annotated[C0, A]) -> Annotated[C1, A, A]:
+    def id[A](cls, dom: Annotated[C0, A]) -> Hom[C1, A, A]:
         """
         Identity morphism on an object :code:`dom: C0`, to be instantiated:
         as a rule, ``x ⊢ x`` with no box is the identity.
@@ -118,8 +118,8 @@ class Category[C0, C1: Category](Testable, ABC):
     @rule(boxes=0)
     @abstractmethod
     @unbiased
-    def then[A, B, C](self: Annotated[C1, A, B],
-                      other: Annotated[C1, B, C]) -> Annotated[C1, A, C]:
+    def then[A, B, C](self: Hom[C1, A, B],
+                      other: Hom[C1, B, C]) -> Hom[C1, A, C]:
         """
         Sequential composition of `n >= 1` morphisms, to be instantiated:
         as a rule, ``x ⊢ z`` is the composition of ``x ⊢ y`` and ``y ⊢
@@ -226,8 +226,8 @@ class Category[C0, C1: Category](Testable, ABC):
 
     @axiom
     def associativity[A, B, C, D](
-            cls, f: Annotated[C1, A, B], g: Annotated[C1, B, C],
-            h: Annotated[C1, C, D]) -> Equation[C1]:
+            cls, f: Hom[C1, A, B], g: Hom[C1, B, C],
+            h: Hom[C1, C, D]) -> Equation[C1]:
         """ Associativity of composition. """
         return cls.Equation(f.then(g).then(h), f.then(g.then(h)))
 
@@ -240,15 +240,15 @@ class Category[C0, C1: Category](Testable, ABC):
 
     @axiom
     def composition_dom_typing[A, B, C](
-            cls, f: Annotated[C1, A, B],
-            g: Annotated[C1, B, C]) -> Equation[C0]:
+            cls, f: Hom[C1, A, B],
+            g: Hom[C1, B, C]) -> Equation[C0]:
         """ Domain typing of composition. """
         return cls.ob.Equation(f.then(g).dom, f.dom)
 
     @axiom
     def composition_cod_typing[A, B, C](
-            cls, f: Annotated[C1, A, B],
-            g: Annotated[C1, B, C]) -> Equation[C0]:
+            cls, f: Hom[C1, A, B],
+            g: Hom[C1, B, C]) -> Equation[C0]:
         """ Codomain typing of composition. """
         return cls.ob.Equation(f.then(g).cod, g.cod)
 
@@ -260,8 +260,8 @@ class Category[C0, C1: Category](Testable, ABC):
 
     @axiom
     def dagger_contravariance[A, B, C](
-            cls, f: Annotated[C1, A, B],
-            g: Annotated[C1, B, C]) -> Equation[C1]:
+            cls, f: Hom[C1, A, B],
+            g: Hom[C1, B, C]) -> Equation[C1]:
         """ The dagger reverses composition. """
         return cls.Equation(f.then(g).dagger(), g.dagger().then(f.dagger()))
 
@@ -418,7 +418,7 @@ class TwoCategory[C0: Colour | None, C1: ColouredMonoid, C2: TwoCategory](
     def tensor[X, Y, Z,
                A: Hom[C1, X, Y], B: Hom[C1, X, Y],
                C: Hom[C1, Y, Z], D: Hom[C1, Y, Z]](
-            self: Annotated[C2, A, B], other: Annotated[C2, C, D]
+            self: Hom[C2, A, B], other: Hom[C2, C, D]
     ) -> Annotated[C2, "A @ C", "B @ D"]:
         """
         Parallel composition of ``n >= 0`` morphisms, to be instantiated:
@@ -437,8 +437,8 @@ class TwoCategory[C0: Colour | None, C1: ColouredMonoid, C2: TwoCategory](
     def bifunctoriality[
             X, Y, Z, A: Hom[C1, X, Y], B: Hom[C1, X, Y], U: Hom[C1, X, Y],
             C: Hom[C1, Y, Z], D: Hom[C1, Y, Z], V: Hom[C1, Y, Z]](
-            cls, f: Annotated[C2, A, B], g: Annotated[C2, C, D],
-            h: Annotated[C2, B, U], k: Annotated[C2, D, V]
+            cls, f: Hom[C2, A, B], g: Hom[C2, C, D],
+            h: Hom[C2, B, U], k: Hom[C2, D, V]
     ) -> Annotated[Equation[C2], "A @ C", "U @ V"]:
         """ Bifunctoriality of the tensor. """
         return cls.Equation(
@@ -457,7 +457,7 @@ class TwoCategory[C0: Colour | None, C1: ColouredMonoid, C2: TwoCategory](
     def tensor_dom_typing[
             X, Y, Z, A: Hom[C1, X, Y], B: Hom[C1, X, Y],
             C: Hom[C1, Y, Z], D: Hom[C1, Y, Z]](
-            cls, f: Annotated[C2, A, B], g: Annotated[C2, C, D]
+            cls, f: Hom[C2, A, B], g: Hom[C2, C, D]
     ) -> Annotated[Equation[C1], X, Z]:
         """ Domain typing of tensor. """
         return cls.ob.Equation((f @ g).dom, f.dom @ g.dom)
@@ -466,7 +466,7 @@ class TwoCategory[C0: Colour | None, C1: ColouredMonoid, C2: TwoCategory](
     def tensor_cod_typing[
             X, Y, Z, A: Hom[C1, X, Y], B: Hom[C1, X, Y],
             C: Hom[C1, Y, Z], D: Hom[C1, Y, Z]](
-            cls, f: Annotated[C2, A, B], g: Annotated[C2, C, D]
+            cls, f: Hom[C2, A, B], g: Hom[C2, C, D]
     ) -> Annotated[Equation[C1], X, Z]:
         """ Codomain typing of tensor. """
         return cls.ob.Equation((f @ g).cod, f.cod @ g.cod)
@@ -475,7 +475,7 @@ class TwoCategory[C0: Colour | None, C1: ColouredMonoid, C2: TwoCategory](
     def dagger_monoidality[
             X, Y, Z, A: Hom[C1, X, Y], B: Hom[C1, X, Y],
             C: Hom[C1, Y, Z], D: Hom[C1, Y, Z]](
-            cls, f: Annotated[C2, A, B], g: Annotated[C2, C, D]
+            cls, f: Hom[C2, A, B], g: Hom[C2, C, D]
     ) -> Annotated[Equation[C2], "B @ D", "A @ C"]:
         """ The dagger distributes over the tensor. """
         return cls.Equation(
@@ -530,7 +530,7 @@ class TracedCategory[C0: ColouredMonoid, C1: TracedCategory](
     def trace[A, B, M: Atom, L: Bool](
         self: Annotated[C1, "L[M @ A, A @ M]", "L[M @ B, B @ M]"],
         n: int = 1, left: Annotated[bool, L] = False
-    ) -> Annotated[C1, A, B]:
+    ) -> Hom[C1, A, B]:
         """
         The trace of a morphism, to be instantiated.
 
@@ -572,7 +572,7 @@ class TracedCategory[C0: ColouredMonoid, C1: TracedCategory](
     def trace_naturality_left[N: NonEmpty, A, B](
             cls, f: Annotated[C1, "N @ A", "N @ B"],
             x: Annotated[C0, N],
-            g: Annotated[C1, B, A]) -> Equation[C1]:
+            g: Hom[C1, B, A]) -> Equation[C1]:
         """ Left-oriented trace naturality. """
         return cls.Equation(
             (x @ g).then(f).then(x @ g).trace(len(x), left=True),
@@ -582,7 +582,7 @@ class TracedCategory[C0: ColouredMonoid, C1: TracedCategory](
     def trace_naturality_right[N: NonEmpty, A, B](
             cls, f: Annotated[C1, "A @ N", "B @ N"],
             x: Annotated[C0, N],
-            g: Annotated[C1, B, A]) -> Equation[C1]:
+            g: Hom[C1, B, A]) -> Equation[C1]:
         """ Right-oriented trace naturality. """
         return cls.Equation(
             (g @ x).then(f).then(g @ x).trace(len(x)),
@@ -591,7 +591,7 @@ class TracedCategory[C0: ColouredMonoid, C1: TracedCategory](
     @axiom
     def trace_dinaturality_left[N: NonEmpty, K: NonEmpty, A, B](
             cls, f: Annotated[C1, "N @ A", "K @ B"],
-            g: Annotated[C1, K, N]) -> Equation[C1]:
+            g: Hom[C1, K, N]) -> Equation[C1]:
         """ Left-oriented trace dinaturality. """
         source, target = g.cod, g.dom
         base, cobase = f.dom[len(source):], f.cod[len(target):]
@@ -602,7 +602,7 @@ class TracedCategory[C0: ColouredMonoid, C1: TracedCategory](
     @axiom
     def trace_dinaturality_right[N: NonEmpty, K: NonEmpty, A, B](
             cls, f: Annotated[C1, "A @ N", "B @ K"],
-            g: Annotated[C1, K, N]) -> Equation[C1]:
+            g: Hom[C1, K, N]) -> Equation[C1]:
         """ Right-oriented trace dinaturality. """
         source, target = g.cod, g.dom
         base = f.dom[:-len(source)] if len(source) else f.dom
@@ -913,8 +913,8 @@ class RigidCategory[C0: Pregroup, C1: RigidCategory](BiclosedCategory[C0, C1]):
 
     @axiom
     def rotate_contravariance[A, B, C](
-            cls, f: Annotated[C1, A, B],
-            g: Annotated[C1, B, C]) -> Equation[C1]:
+            cls, f: Hom[C1, A, B],
+            g: Hom[C1, B, C]) -> Equation[C1]:
         """ Rotation reverses composition. """
         return cls.Equation(
             f.then(g).rotate(), g.rotate().then(f.rotate()))
@@ -1200,7 +1200,7 @@ class FeedbackCategory[C0: ColouredMonoid, C1: FeedbackCategory](
     def feedback[A, B, M: Atom](
             self: Annotated[C1, "A @ M.d", "B @ M"],
             dom: Annotated[C0, A], cod: Annotated[C0, B],
-            mem: Annotated[C0, M]) -> Annotated[C1, A, B]:
+            mem: Annotated[C0, M]) -> Hom[C1, A, B]:
         """
         The feedback operator on a morphism: as a rule, ``x ⊢ y`` is the
         feedback of ``x @ m.delay() ⊢ y @ m`` over an atom.
@@ -1243,7 +1243,7 @@ class BalancedCategory[C0: ColouredMonoid, C1: BalancedCategory](
     @generator
     @abstractmethod
     def twist[X: Atom](
-            cls, dom: Annotated[C0, X]) -> Annotated[C1, X, X]:
+            cls, dom: Annotated[C0, X]) -> Hom[C1, X, X]:
         """
         The twist on an object, to be instantiated. As a rule, ``x ⊢ x``
         is a twist.
