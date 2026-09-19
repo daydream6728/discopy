@@ -93,9 +93,9 @@ def test_random_sentences():
     sentence = find(
         Diagram.strategy(min_leaves=5, max_leaves=5),
         lambda diagram: diagram.foliation().boxes[0].name == 'Bob')
-    assert sentence.foliation() == (
+    assert Diagram.Equation(sentence, (
         Word('Bob', n) @ Word('loves', n.r @ s @ n.l) @ Word('Alice', n)
-        >> Cup(n, n.r) @ s @ Cup(n.l, n)).foliation()
+        >> Cup(n, n.r) @ s @ Cup(n.l, n)))
     assert all(isinstance(box, (Word, Cup)) for box in sentence.boxes)
 
     class Sentence(Diagram):
