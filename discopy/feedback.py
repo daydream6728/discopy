@@ -314,9 +314,6 @@ class Ty(monoidal.Ty):
             **params,
             "dom": monoidal.transparent, "cod": monoidal.transparent})
 
-    generator_factory = Wire
-
-
     def delay(self, n_steps=1):
         """ The delay of a feedback type by `n_steps`. """
         return type(self)(*(x.delay(n_steps) for x in self.inside))
@@ -729,7 +726,6 @@ class Functor(markov.Functor):
         return super().__call__(other)
 
 
-
 Hypergraph = hypergraph.Hypergraph[Diagram]
 Id = Diagram.id
 
@@ -739,7 +735,7 @@ class Equation(markov.Equation):
     up_to = staticmethod(Diagram.to_hypergraph)
 
 
-Diagram.equation_factory = Diagram.Equation = Equation
+Diagram.Equation = Equation
 
 
 __getattr__ = deprecated_alias(__name__, {"Ob": "Wire"})

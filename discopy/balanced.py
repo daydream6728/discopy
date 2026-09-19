@@ -331,4 +331,4 @@ class Equation(braided.Equation):
     """ The :class:`braided.Equation` of balanced diagrams. """
 
 
-Diagram.equation_factory = Diagram.Equation = Equation
+Diagram.Equation = Equation

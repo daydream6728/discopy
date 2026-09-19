@@ -190,7 +190,6 @@ class Ty(frobenius.Ty):
             st.sampled_from([Qudit(2), Digit(2)]),
             min_size=min_length, max_size=max_length
         ).map(lambda wires: cls(*wires))
-    generator_factory = Wire
     Wire = Wire
 
 

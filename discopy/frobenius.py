@@ -105,7 +105,6 @@ class Ty(pivotal.Ty):
             **params,
             "dom": monoidal.transparent, "cod": monoidal.transparent})
 
-    generator_factory = Wire
     Wire: ClassVar[Generator[..., Wire]] = Generator.subclass(Wire)
 
 
@@ -141,7 +140,6 @@ class Diagram(compact.Diagram, markov.Diagram, HypergraphCategory):
         dom (Ty) : The domain of the diagram, i.e. its input.
         cod (Ty) : The codomain of the diagram, i.e. its output.
     """
-    spider_factory: ClassVar[type[Spider]]
     serialisation = Serialisable.serialisation.failing(
         "The generic tree of a spider does not read back (#742).")
     pickling = Serialisable.pickling
@@ -368,7 +366,7 @@ class Equation(compact.Equation):
     up_to = staticmethod(Diagram.to_hypergraph)
 
 
-Diagram.equation_factory = Diagram.Equation = Equation
+Diagram.Equation = Equation
 
 
 __getattr__ = deprecated_alias(__name__, {"Ob": "Wire", "PRO": "Nat"})

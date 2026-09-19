@@ -134,7 +134,7 @@ Three facts about this search:
   because the signature is open: a fresh box closes any hole. Deciding
   *equality* of the generated terms is the hard part — unknot-hard for
   braided categories :cite:`DelpeuchVicary21` — and that is the business
-  of each level's ``equation_factory``, not of the generator. Fixing the
+  of each level's ``Equation``, not of the generator. Fixing the
   signature first would make inhabitation the parsing problem, NP-complete
   for multiplicative linear logic :cite:`LincolnEtAl92` and the Lambek
   calculus :cite:`Pentus06`; a generator never needs to solve it, since it
@@ -3246,18 +3246,18 @@ def unit_of(cells: Cells, env: dict):
 def cell_named(factory: type, name: str, dom=None, cod=None):
     """
     A cell of a class named after a parameter or a variable: a box of the
-    class when it has a ``box_factory``, between ``dom`` and ``cod`` or
+    class when it has a ``Box``, between ``dom`` and ``cod`` or
     objects named ``x`` and ``y``; else its generator, wrapped into the
     class when it is not one, e.g. a type of one wire; else a term of the
     class of that name.
     """
-    if hasattr(factory, "box_factory"):
+    if hasattr(factory, "Box"):
         dom = factory.ob("x") if dom is None else dom
         cod = factory.ob("y") if cod is None else cod
-        return factory.box_factory(name, dom, cod)
-    if getattr(factory, "generator_factory", None) is not None:
+        return factory.Box(name, dom, cod)
+    if getattr(factory, "Wire", None) is not None:
         boundaries = {} if dom is None else dict(dom=dom, cod=cod)
-        generator = factory.generator_factory(name, **boundaries)
+        generator = factory.Wire(name, **boundaries)
         return generator if isinstance(generator, factory)\
             else factory(generator)
     return factory(name)

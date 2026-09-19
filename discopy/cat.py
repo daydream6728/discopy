@@ -189,8 +189,6 @@ class FreeCategory(Category):
         setattr(cls, root.__name__, binding)
         return root
 
-    generator_factory: ClassVar[type] = None  # ty: ignore[invalid-assignment]
-
     def __init__(self, inside, dom, cod, _scan=True):
         ob = type(self).ob
         dom = dom if isinstance(dom, ob) else ob(dom)
@@ -337,7 +335,7 @@ class Arrow(FreeCategory, Serialisable):
     def __repr__(self):
         if not self.inside:  # i.e. self is identity.
             return f"{factory_name(type(self))}.id({repr(self.dom)})"
-        if self.generator is self:
+        if self.atom is self:
             return super().__repr__()
         return f"{factory_name(self.ar)}(inside={repr(self.inside)}, " \
                f"dom={repr(self.dom)}, cod={repr(self.cod)})"
@@ -968,10 +966,6 @@ class Functor(Category):
         return result
 
 
-Arrow.generator_factory = Arrow.box_factory = Box
-
-
-
 @factory
 class Transformation(Category):
     """
@@ -1096,8 +1090,5 @@ class Equation(AbstractEquation[Arrow]):
     """
 
 
-Ob.equation_factory = Arrow.equation_factory \
-    = Equation  # ty: ignore[invalid-assignment]
-Arrow.sum_factory = Sum
-Arrow.bubble_factory = Bubble
+Ob.Equation = Arrow.Equation = Equation
 Id = Arrow.id

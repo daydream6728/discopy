@@ -311,4 +311,4 @@ class Equation(markov.Equation):
     """ The :class:`markov.Equation` of closed diagrams. """
 
 
-Diagram.equation_factory = Diagram.Equation = Equation
+Diagram.Equation = Equation

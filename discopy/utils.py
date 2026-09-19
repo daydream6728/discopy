@@ -249,10 +249,15 @@ class NamedGeneric:
         return NamedGeneric._cache[origin][values]
 
     def __setstate__(self, state):
-        if "__class_getitem__values__" in state:
+        if "__class_getitem__values__" in state:  # Backward compatibility
+            state = dict(state)
             self.__class__ = self.__class__[
-                state["__class_getitem__values__"]]
-        super().__setstate__(state)
+                state.pop("__class_getitem__values__")]
+        parent = super()
+        if hasattr(parent, "__setstate__"):
+            parent.__setstate__(state)
+        else:
+            self.__dict__.update(state)
 
 
 def product(xs: Sequence, unit=1):

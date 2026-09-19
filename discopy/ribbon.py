@@ -327,4 +327,4 @@ class Equation(pivotal.Equation):
     """ The :class:`pivotal.Equation` of ribbon diagrams. """
 
 
-Diagram.equation_factory = Diagram.Equation = Equation
+Diagram.Equation = Equation

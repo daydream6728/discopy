@@ -402,8 +402,6 @@ class Diagram(biclosed.Diagram, RigidCategory):
     .. image:: /_static/rigid/curry.svg
         :align: center
     """
-    cup_factory: ClassVar[type[Cup]]
-    cap_factory: ClassVar[type[Cap]]
     repr_transparency = Serialisable.repr_transparency
     serialisation = Serialisable.serialisation
 
@@ -953,7 +951,7 @@ class Equation(biclosed.Equation):
     """ The :class:`biclosed.Equation` of rigid diagrams. """
 
 
-Diagram.equation_factory = Diagram.Equation = Equation
+Diagram.Equation = Equation
 
 
 __getattr__ = deprecated_alias(__name__, {"Ob": "Wire", "PRO": "Nat"})

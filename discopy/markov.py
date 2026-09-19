@@ -297,4 +297,4 @@ class Equation(symmetric.Equation):
     up_to = staticmethod(Diagram.to_hypergraph)
 
 
-Diagram.equation_factory = Diagram.Equation = Equation
+Diagram.Equation = Equation

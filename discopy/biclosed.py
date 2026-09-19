@@ -333,9 +333,6 @@ class Diagram(monoidal.Diagram, BiclosedCategory):
         dom (Ty) : The domain of the diagram, i.e. its input.
         cod (Ty) : The codomain of the diagram, i.e. its output.
     """
-    curry_factory: ClassVar[type[Curry]]
-    eval_factory: ClassVar[type[Eval]]
-    coeval_factory: ClassVar[type[Coeval]]
     repr_transparency = Serialisable.repr_transparency.failing(
         "The generic representation of an evaluation does not read back "
         "(#742).")
@@ -780,7 +777,7 @@ class Equation(monoidal.Equation):
     """ The :class:`monoidal.Equation` of biclosed diagrams. """
 
 
-Diagram.equation_factory = Diagram.Equation = Equation
+Diagram.Equation = Equation
 
 
 __getattr__ = deprecated_alias(__name__, {"Ob": "Wire"})

@@ -347,7 +347,7 @@ class Ty(cat.Ob, cat.FreeCategory, ColouredMonoid):
                 return cls(dom=source, cod=target)
             colours = [source] + [transparent] * (length - 1) + [target]
             return cls(*(
-                draw(cls.generator_factory.strategy(
+                draw(cls.Wire.strategy(
                     dom=colours[i], cod=colours[i + 1]))
                 for i in range(length)))
 
@@ -594,7 +594,7 @@ class Nat(abc.Nat, Ty):
 
     >>> assert CX @ 2 >> 2 @ CX == CX @ CX
     """
-    generator_factory = Wire = int
+    Wire = int
     dom: Colour
     cod: Colour
 
@@ -1020,7 +1020,6 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
     Sum: ClassVar[Generator[..., "Sum"]]
     Bubble: ClassVar[Generator[..., "Bubble"]]
     Functor: ClassVar[Generator[..., "Functor"]]
-    functor_factory: ClassVar[type[Functor]]
     draw: ClassVar[Callable]
     to_gif: ClassVar[Callable]
 
@@ -1629,19 +1628,6 @@ class Box(cat.Box, Diagram):
     no_label: bool
     min_width: float
 
-    def __init_subclass__(cls, **params):
-        """
-        A subclass listing its diagram class among its bases is the
-        generator of that category, e.g. :class:`discopy.braided.Box` for
-        :class:`discopy.braided.Diagram`, so each level of the hierarchy
-        wires itself rather than repeating the assignment. This does not
-        fire for :class:`Box` itself, which is why ``Diagram.box_factory``
-        is assigned at the end of this module.
-        """
-        super().__init_subclass__(**params)
-        if cls.ar in cls.__bases__:
-            cls.ar.box_factory = cls
-
     @classmethod
     def strategy(cls, **params):
         """
@@ -1651,7 +1637,7 @@ class Box(cat.Box, Diagram):
         A box has no closed component, so it honours ``boundary_connected``
         by consuming it.
         """
-        if cls is not cls.ar.box_factory:
+        if cls is not cls.ar.Box:
             raise NotImplementedError(
                 f"No search strategy implemented for {cls.__name__}")
         params.pop("boundary_connected", None)
@@ -2001,17 +1987,13 @@ class Equation(cat.Equation, RichDisplay):
         return self.to_drawing().draw(path=path, **params)
 
 
-Colour.equation_factory = Colour.Equation = cat.Equation
-Diagram.equation_factory = Diagram.Equation = Equation
+Colour.Equation = cat.Equation
+Diagram.Equation = Equation
 
 
 Diagram.draw = drawing.draw
 Diagram.to_gif = drawing.to_gif
 
-Diagram.box_factory = Box
-Diagram.sum_factory = Sum
-Diagram.bubble_factory = Bubble
-Diagram.functor_factory = Functor
 Hypergraph = hypergraph.Hypergraph[Diagram]
 Drawing.ob = Ty
 Id = Diagram.id
