@@ -47,6 +47,7 @@ import re
 from typing import TYPE_CHECKING
 
 from discopy import biclosed, cmap, messages
+from discopy.axioms import no_strategy
 from discopy.cat import factory
 from discopy.grammar import thue
 from discopy.utils import (
@@ -58,6 +59,7 @@ from discopy.utils import (
 
 @factory
 class Ty(biclosed.Ty):
+    strategy = no_strategy
     "Base class for categorial grammar types."
 
 
@@ -78,6 +80,7 @@ class Diagram(biclosed.Diagram):
     """
     A categorial diagram is a biclosed diagram with rules and words as boxes.
     """
+    strategy = no_strategy
     ob = Ty
 
     def to_pregroup(self):
@@ -129,6 +132,7 @@ class Box(biclosed.Box, Diagram):
     """
     A categorial box is a grammar rule in a categorial diagram.
     """
+    strategy = no_strategy
 
 
 class Word(thue.Word, Box):

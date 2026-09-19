@@ -48,6 +48,7 @@ from typing import TYPE_CHECKING, Any, Callable, Mapping, Self, Sequence
 
 from discopy import (
     cat, monoidal, rigid, frobenius, cmap, config)
+from discopy.axioms import no_strategy
 from discopy.cat import factory, assert_iscomposable
 from discopy.frobenius import Dim, Cup
 from discopy.matrix import (  # noqa: F401
@@ -508,6 +509,7 @@ class Diagram[dtype](NamedGeneric, frobenius.Diagram):
     >>> print(diagram)
     vector[::-1] >> vector >> Dim(2) @ vector
     """
+    strategy = no_strategy
     ob = Dim
 
     def eval(self, dtype: type | None = None, optimize="greedy",
@@ -705,6 +707,7 @@ class Box[dtype](frobenius.Box, Diagram[dtype]):
     >>> b1.eval()
     Tensor[float64]([0.84193562, 0.91343221], dom=Dim(1), cod=Dim(2))
     """
+    strategy = no_strategy
 
     def __setstate__(self, state):
         if "data" not in state and state.get("_array", None) is not None:

@@ -162,6 +162,9 @@ class Diagram(monoidal.Diagram, BraidedCategory):
                       right=right_wires if left else right_wires[1:])
         return match.substitute(target)  # ty: ignore[invalid-return-type]
 
+    braid_naturality = BraidedCategory.braid_naturality.failing(
+        "A free braid does not commute past a box.")
+
 
 class Box(monoidal.Box, Diagram):
     """
@@ -188,6 +191,8 @@ class Braid(BinaryBoxConstructor, Box):
     :class:`Braid` is only defined for atomic types (i.e. of length 1).
     For complex types, use :meth:`Diagram.braid` instead.
     """
+    serialised_attrs = ('left', 'right', 'is_dagger')
+
     def __init__(self, left: monoidal.Ty, right: monoidal.Ty, is_dagger=False):
         assert_isatomic(left, monoidal.Ty)
         assert_isatomic(right, monoidal.Ty)
@@ -269,6 +274,9 @@ Id = Diagram.id
 
 class Equation(monoidal.Equation):
     """ The :class:`monoidal.Equation` of braided diagrams. """
+
+
+Diagram.equation_factory = Equation
 
 
 __getattr__ = deprecated_alias(__name__, {"Ob": "Wire"})

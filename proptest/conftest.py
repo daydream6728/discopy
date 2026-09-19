@@ -8,7 +8,7 @@ Under ``CI`` a registered profile inherits Hypothesis's ``ci`` defaults,
 
 import os
 
-from hypothesis import HealthCheck, settings
+from hypothesis import settings
 from hypothesis.database import (
     DirectoryBasedExampleDatabase, GitHubArtifactDatabase,
     MultiplexedDatabase, ReadOnlyDatabase)
@@ -20,8 +20,7 @@ previous run's artifact before the tests and uploaded after them.
 """
 
 COMMON = dict(
-    derandomize=False, database=LOCAL, deadline=None, print_blob=True,
-    suppress_health_check=[HealthCheck.filter_too_much])
+    derandomize=False, database=LOCAL, deadline=None, print_blob=True)
 
 
 PROFILE = os.environ.get("HYPOTHESIS_PROFILE", "dev")
@@ -29,6 +28,11 @@ PROFILE = os.environ.get("HYPOTHESIS_PROFILE", "dev")
 settings.register_profile("pr", max_examples=20, **COMMON)
 settings.register_profile("explore", max_examples=1000, **COMMON)
 settings.register_profile("dev", max_examples=100, **COMMON)
+settings.register_profile("fast", max_examples=100, derandomize=True, deadline=None, print_blob=True)
+"""
+The settings of ``dev`` for a matrix of one cell per declaration of a
+law, see ``once_per_declaration`` in ``test_axioms.py``.
+"""
 if PROFILE != "shared":
     settings.load_profile(PROFILE)
 

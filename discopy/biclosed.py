@@ -85,6 +85,7 @@ from inspect import signature
 from typing import Callable, ClassVar, Self, overload
 
 from discopy import monoidal, cmap
+from discopy.axioms import Serialisable, no_strategy
 from discopy.abc import BiclosedCategory
 from discopy.drawing import Drawing
 from discopy.cat import factory
@@ -232,6 +233,7 @@ class Exp(Wire):
         base : The base type.
         exponent : The exponent type.
     """
+    strategy = no_strategy
 
     ob = Ty
 
@@ -311,6 +313,11 @@ class Diagram(monoidal.Diagram, BiclosedCategory):
     curry_factory: ClassVar[type[Curry]]
     eval_factory: ClassVar[type[Eval]]
     coeval_factory: ClassVar[type[Coeval]]
+    repr_transparency = Serialisable.repr_transparency.failing(
+        "The generic representation of an evaluation does not read back "
+        "(#742).")
+    serialisation = Serialisable.serialisation.failing(
+        "The generic tree of an evaluation does not read back (#742).")
 
     ob = Ty
 
@@ -356,6 +363,12 @@ class Diagram(monoidal.Diagram, BiclosedCategory):
 
     def to_drawing(self):
         return monoidal.Diagram.to_drawing(self, functor_factory=Functor)
+
+    currying_left = BiclosedCategory.currying_left.failing(
+        "Currying does not evaluate back (#562).")
+
+    currying_right = BiclosedCategory.currying_right.failing(
+        "Currying does not evaluate back (#562).")
 
 
 class Box(monoidal.Box, Diagram):
@@ -743,6 +756,9 @@ Ty.over_factory, Ty.under_factory, Ty.exp_factory = Over, Under, Exp
 
 class Equation(monoidal.Equation):
     """ The :class:`monoidal.Equation` of biclosed diagrams. """
+
+
+Diagram.equation_factory = Equation
 
 
 __getattr__ = deprecated_alias(__name__, {"Ob": "Wire"})

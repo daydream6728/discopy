@@ -127,6 +127,7 @@ from typing import ClassVar
 
 from discopy import monoidal, cmap, hypergraph
 from discopy.abc import TracedCategory
+from discopy.axioms import Serialisable
 from discopy.cat import factory
 from discopy.monoidal import Ty  # noqa: F401
 from discopy.utils import (
@@ -134,6 +135,9 @@ from discopy.utils import (
     assert_isinstance,
     assert_istraceable,
 )
+
+
+FREE_TRACE = "A free trace is a box, not a rewrite."
 
 
 @factory
@@ -147,6 +151,10 @@ class Diagram(monoidal.Diagram, TracedCategory):
         cod (monoidal.Ty) : The codomain of the diagram, i.e. its output.
     """
     trace_factory: ClassVar[type["Trace"]]
+    repr_transparency = Serialisable.repr_transparency.failing(
+        "The generic representation of a trace does not read back (#742).")
+    serialisation = Serialisable.serialisation.failing(
+        "The generic tree of a trace does not read back (#742).")
 
     def trace(self, n=1, left=False):
         """
@@ -173,6 +181,24 @@ class Diagram(monoidal.Diagram, TracedCategory):
 
     def to_drawing(self):
         return monoidal.Diagram.to_drawing(self, functor_factory=Functor)
+
+    trace_dinaturality_left = \
+        TracedCategory.trace_dinaturality_left.inapplicable(FREE_TRACE)
+
+    trace_dinaturality_right = \
+        TracedCategory.trace_dinaturality_right.inapplicable(FREE_TRACE)
+
+    trace_naturality_left = \
+        TracedCategory.trace_naturality_left.inapplicable(FREE_TRACE)
+
+    trace_naturality_right = \
+        TracedCategory.trace_naturality_right.inapplicable(FREE_TRACE)
+
+    trace_superposing_left = \
+        TracedCategory.trace_superposing_left.inapplicable(FREE_TRACE)
+
+    trace_superposing_right = \
+        TracedCategory.trace_superposing_right.inapplicable(FREE_TRACE)
 
 
 class Box(monoidal.Box, Diagram):

@@ -154,7 +154,8 @@ from collections.abc import Callable
 from typing import Any, ClassVar, Iterator, Self
 
 from discopy import cat, monoidal, biclosed, messages
-from discopy.abc import Pregroup, RigidCategory
+from discopy.abc import Category, Pregroup, RigidCategory
+from discopy.axioms import GENERATORS, Serialisable, connected
 from discopy.cat import factory
 from discopy.utils import (
     assert_isatomic,
@@ -200,8 +201,22 @@ class Wire(monoidal.Wire):
         self.z = z
         super().__init__(name, dom, cod)
 
+    @classmethod
+    def strategy(
+            cls, *, dom=monoidal.transparent, cod=monoidal.transparent,
+            min_winding=-1, max_winding=1):
+        """Generate rigid wires with a bounded winding number."""
+        from hypothesis import strategies as st
+
+        return st.tuples(
+            st.sampled_from(GENERATORS),
+            st.integers(min_value=min_winding, max_value=max_winding)).map(
+                lambda args: cls(args[0], args[1], dom=dom, cod=cod))
+
     def dagger(self) -> Wire:
         raise AxiomError("Rigid types have no dagger, use pivotal instead.")
+
+    repr_transparency = Serialisable.repr_transparency
 
     @property
     def l(self) -> Self:
@@ -265,6 +280,11 @@ class Ty(Pregroup, biclosed.Ty):
     >>> assert (s @ n).l == n.l @ s.l and (s @ n).r == n.r @ s.r
     """
     generator_factory = Wire
+
+    dagger_involution = Category.dagger_involution.inapplicable(
+        "Rigid types have no dagger, use pivotal instead.")
+    dagger_contravariance = Category.dagger_contravariance.inapplicable(
+        "Rigid types have no dagger, use pivotal instead.")
 
     def __setstate__(self, state):
         if '_z' in state:  # Backward compatibility
@@ -383,9 +403,16 @@ class Diagram(biclosed.Diagram, RigidCategory):
     """
     cup_factory: ClassVar[type[Cup]]
     cap_factory: ClassVar[type[Cap]]
+    repr_transparency = Serialisable.repr_transparency
+    serialisation = Serialisable.serialisation
 
     ob = Ty
     layer_factory = Layer
+
+    dagger_involution = Category.dagger_involution.inapplicable(
+        "Rigid diagrams have no dagger, use pivotal instead.")
+    dagger_contravariance = Category.dagger_contravariance.inapplicable(
+        "Rigid diagrams have no dagger, use pivotal instead.")
 
     to_drawing = monoidal.Diagram.to_drawing
 
@@ -642,6 +669,17 @@ class Diagram(biclosed.Diagram, RigidCategory):
         """
         return super().normal_form(**params)
 
+    snake_equations = RigidCategory.snake_equations.modulo(normal_form)
+
+    currying_left = RigidCategory.currying_left.modulo(
+        normal_form).weaken(connected)
+
+    currying_right = RigidCategory.currying_right.modulo(
+        normal_form).weaken(connected)
+
+    dagger_monoidality = RigidCategory.dagger_monoidality.inapplicable(
+        "Rigid cups and caps have no dagger, use pivotal instead.")
+
 
 class Box(biclosed.Box, Diagram):
     """
@@ -661,7 +699,11 @@ class Box(biclosed.Box, Diagram):
     >>> assert f.l.z == -1 and f.z == 0 and f.r.z == 1
     >>> assert f.r.l == f == f.l.r
     >>> assert f.l.l != f != f.r.r
+    >>> from discopy.utils import dumps, loads
+    >>> assert loads(dumps(f.r)) == f.r
     """
+    z = 0
+    serialised_attrs = cat.Box.serialised_attrs + ('z', )
 
     def __setstate__(self, state):
         if '_z' in state:  # Backward compatibility
@@ -676,12 +718,6 @@ class Box(biclosed.Box, Diagram):
     def __str__(self):
         return cat.Box.__str__(self) if not self.z\
             else str(self.r) + '.l' if self.z < 0 else str(self.l) + '.r'
-
-    def __repr__(self):
-        if self.is_dagger:
-            return biclosed.Box.__repr__(self)
-        return biclosed.Box.__repr__(self)[:-1] + (
-            f', z={self.z})' if self.z else ')')
 
     def setoid(self):
         """
@@ -893,6 +929,9 @@ Id = Diagram.id
 
 class Equation(biclosed.Equation):
     """ The :class:`biclosed.Equation` of rigid diagrams. """
+
+
+Diagram.equation_factory = Equation
 
 
 __getattr__ = deprecated_alias(__name__, {"Ob": "Wire", "PRO": "Nat"})

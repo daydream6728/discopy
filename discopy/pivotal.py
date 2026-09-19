@@ -56,8 +56,8 @@ from __future__ import annotations
 
 from typing import ClassVar
 
-from discopy import cat, cmap, rigid, traced
-from discopy.abc import PivotalCategory
+from discopy import cat, cmap, monoidal, rigid, traced
+from discopy.abc import Category, PivotalCategory, TracedCategory
 from discopy.cat import factory
 from discopy.utils import deprecated_alias
 
@@ -72,6 +72,12 @@ class Wire(rigid.Wire):
     """
     l = r = property(lambda self: type(self)(
         self.name, (self.z + 1) % 2, dom=self.cod, cod=self.dom))
+
+    @classmethod
+    def strategy(cls, **params):
+        """Generate pivotal wires, whose winding number is a parity."""
+        return super().strategy(
+            **{"min_winding": 0, "max_winding": 1, **params})
 
     def dagger(self) -> Wire:
         """
@@ -91,6 +97,9 @@ class Ty(rigid.Ty):
         inside (Wire) : The objects inside the type.
     """
     generator_factory = Wire
+
+    dagger_involution = Category.dagger_involution
+    dagger_contravariance = Category.dagger_contravariance
 
 
 @factory
@@ -118,6 +127,9 @@ class Diagram(rigid.Diagram, traced.Diagram, PivotalCategory):
         dom (Ty) : The domain of the diagram, i.e. its input.
         cod (Ty) : The codomain of the diagram, i.e. its output.
     """
+    dagger_involution = Category.dagger_involution
+    dagger_contravariance = Category.dagger_contravariance
+
     ob = Ty
     cup_factory: ClassVar[type[Cup]]
     cap_factory: ClassVar[type[Cap]]
@@ -181,6 +193,16 @@ class Diagram(rigid.Diagram, traced.Diagram, PivotalCategory):
             else dom @ cls.cap_factory(traced_wire, traced_wire.r)\
             >> diagram @ traced_wire.r\
             >> cod @ cls.cup_factory(traced_wire, traced_wire.r)
+
+    pivotality = PivotalCategory.pivotality.failing(
+        "The two transposes differ by a snake the normal form does not "
+        "close.")
+
+    trace_superposing_left = TracedCategory.trace_superposing_left
+
+    trace_superposing_right = TracedCategory.trace_superposing_right
+
+    dagger_monoidality = monoidal.Diagram.dagger_monoidality
 
 
 class Box(rigid.Box, Diagram):
@@ -264,6 +286,9 @@ Id = Diagram.id
 
 class Equation(rigid.Equation):
     """ The :class:`rigid.Equation` of pivotal diagrams. """
+
+
+Diagram.equation_factory = Equation
 
 
 __getattr__ = deprecated_alias(__name__, {"Ob": "Wire", "PRO": "Nat"})

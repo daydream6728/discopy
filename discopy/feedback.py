@@ -149,7 +149,9 @@ from __future__ import annotations
 from typing import ClassVar
 
 from discopy import monoidal, braided, markov, hypergraph
+from discopy.axioms import GENERATORS, no_strategy
 from discopy.abc import FeedbackCategory
+from discopy.axioms import inapplicable
 from discopy.utils import (
     deprecated_alias,
     factory, factory_name, assert_isinstance, AxiomError,
@@ -173,6 +175,14 @@ class Wire(braided.Wire):
             raise NotImplementedError
         self.time_step, self.is_constant = time_step, is_constant
         super().__init__(name)
+
+    @classmethod
+    def strategy(cls, **params):
+        """Generate constant feedback wires at time zero, colours ignored."""
+        from hypothesis import strategies as st
+
+        del params
+        return st.sampled_from(GENERATORS).map(cls)
 
     def delay(self, n_steps=1):
         """ The delay of a feedback object. """
@@ -237,6 +247,8 @@ class HeadOb(Wire):
 
     Note the object `arg: Wire` cannot be itself a `HeadOb` or be delayed.
     """
+    strategy = no_strategy
+
     def __init__(self, arg: Wire, time_step: int = 0):
         assert_isinstance(arg, Wire)
         if isinstance(arg, HeadOb) or arg.time_step:
@@ -273,6 +285,8 @@ class TailOb(Wire):
     >>> x = Wire('x', is_constant=False)
     >>> assert x.tail == TailOb(x)
     """
+    strategy = no_strategy
+
     def __init__(self, arg: Wire, time_step: int = 0):
         assert_isinstance(arg, Wire)
         if isinstance(arg, HeadOb) or arg.is_constant or arg.time_step > 0:
@@ -286,6 +300,13 @@ class TailOb(Wire):
 @factory
 class Ty(monoidal.Ty):
     """ A feedback type is a monoidal type with `delay`, `head` and `tail`. """
+    @classmethod
+    def strategy(cls, **params):
+        """A feedback wire carries no colours: transparent words."""
+        return super().strategy(**{
+            **params,
+            "dom": monoidal.transparent, "cod": monoidal.transparent})
+
     generator_factory = Wire
 
     def delay(self, n_steps=1):
@@ -336,6 +357,11 @@ class Diagram(markov.Diagram, FeedbackCategory):
     .. image:: /_static/feedback/feedback-random-walk.svg
         :align: center
     """
+    trace = inapplicable(
+        "A feedback category feeds back rather than traces: the trace a "
+        "feedback diagram inherits from markov builds a markov.Trace that "
+        "is not a feedback diagram.")(markov.Diagram.trace)
+
     ob = Ty
     layer_factory = Layer
     feedback_factory: ClassVar[type[Feedback]]
@@ -396,6 +422,14 @@ class Diagram(markov.Diagram, FeedbackCategory):
         return Tail(self)
 
     d = Wire.d
+
+    dagger_monoidality = FeedbackCategory.dagger_monoidality.failing(
+        "The dagger of a feedback box is built by the generic constructor, "
+        "which Feedback does not take (#742).")
+
+    feedback_joining = FeedbackCategory.feedback_joining.failing(
+        "feedback unrolls heterogeneous memory in the wrong order, so it "
+        "refuses to build the joined loop at all (#606).")
 
 
 class Box(markov.Box, Diagram):
@@ -497,6 +531,15 @@ class Merge(markov.Merge, Box):
 
     def delay(self, n_steps=1):
         return type(self)(self.cod.delay(n_steps), len(self.dom))
+
+
+class Discard(markov.Discard, Copy):
+    """
+    A discard in a feedback diagram, i.e. a copy with no output.
+
+    Parameters:
+        x : The type to discard.
+    """
 
 
 class Head(monoidal.Bubble, Box):
@@ -676,6 +719,7 @@ Diagram.functor_factory = Functor
 Diagram.swap_factory = Swap
 Diagram.permutation_factory = Permutation
 Diagram.copy_factory, Diagram.merge_factory = Copy, Merge
+Diagram.discard_factory = Discard
 Diagram.feedback_factory, Diagram.followed_by = Feedback, FollowedBy
 Hypergraph = hypergraph.Hypergraph[Diagram]
 Id = Diagram.id
@@ -684,6 +728,9 @@ Id = Diagram.id
 class Equation(markov.Equation):
     """ The :class:`markov.Equation` of feedback diagrams. """
     up_to = staticmethod(Diagram.to_hypergraph)
+
+
+Diagram.equation_factory = Equation
 
 
 __getattr__ = deprecated_alias(__name__, {"Ob": "Wire"})

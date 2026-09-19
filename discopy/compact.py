@@ -55,7 +55,9 @@ Coherence
 """
 
 from discopy import symmetric, ribbon, rigid, cmap, hypergraph
-from discopy.abc import CompactCategory
+from discopy.abc import (
+    BiclosedCategory, CompactCategory, PivotalCategory, RibbonCategory)
+from discopy.axioms import Serialisable, connected
 from discopy.cat import factory
 from discopy.utils import deprecated_alias
 from discopy.pivotal import Wire, Ty  # noqa: F401
@@ -75,9 +77,19 @@ class Diagram(symmetric.Diagram, ribbon.Diagram, CompactCategory):
         dom (pivotal.Ty) : The domain of the diagram, i.e. its input.
         cod (pivotal.Ty) : The codomain of the diagram, i.e. its output.
     """
+    serialisation = Serialisable.serialisation
+
     ob = Ty
     layer_factory = Layer
     trace_factory = ribbon.Diagram.trace_factory
+
+    pivotality = PivotalCategory.pivotality
+
+    twist_as_trace = RibbonCategory.twist_as_trace
+
+    currying_left = BiclosedCategory.currying_left.weaken(connected)
+
+    currying_right = BiclosedCategory.currying_right.weaken(connected)
 
 
 class Box(symmetric.Box, ribbon.Box, Diagram):
@@ -169,6 +181,9 @@ Diagram.cup_factory, Diagram.cap_factory = Cup, Cap
 class Equation(symmetric.Equation):
     """ The :class:`symmetric.Equation` of compact diagrams. """
     up_to = staticmethod(Diagram.to_hypergraph)
+
+
+Diagram.equation_factory = Equation
 
 
 __getattr__ = deprecated_alias(__name__, {"Ob": "Wire"})

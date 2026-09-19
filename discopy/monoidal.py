@@ -66,6 +66,8 @@ from warnings import warn
 from discopy import abc, cat, drawing, hypergraph, cmap, messages
 from discopy.abc import (
     ColouredMonoid, Monoid, MonoidalCategory, NamedGeneric)
+from discopy.axioms import (
+    GENERATORS, Serialisable, connected, no_strategy, search)
 from discopy.drawing import Drawing
 from discopy.config import (
     BOX_DRAWING_ATTRIBUTES, WIRE_DRAWING_ATTRIBUTES,
@@ -87,7 +89,7 @@ if TYPE_CHECKING:
 
 
 @dataclass(frozen=True)
-class Colour(cat.Ob):
+class Colour(cat.Ob, abc.Colour):
     """
     A 0-cell, drawn using its matplotlib-compatible ``name``, by default
     :data:`discopy.config.TRANSPARENT` so that the page shows through.
@@ -100,6 +102,14 @@ class Colour(cat.Ob):
 
     name: str = TRANSPARENT
     label: "str | None" = field(default=None, compare=False)
+
+    @classmethod
+    def strategy(cls):
+        """Generate a colour, transparent or one of four."""
+        from hypothesis import strategies as st
+
+        return st.sampled_from(
+            (TRANSPARENT, "white", "red", "green", "blue")).map(cls)
 
     def __post_init__(self):
         assert_isinstance(self.name, str)
@@ -123,7 +133,7 @@ class Colour(cat.Ob):
 
     @classmethod
     def from_tree(cls, tree):
-        return cls(tree['name'], label=tree.get('label'))
+        return cls(tree.get('name', TRANSPARENT), label=tree.get('label'))
 
 
 transparent = Colour(TRANSPARENT)
@@ -131,6 +141,14 @@ transparent = Colour(TRANSPARENT)
 
 class Wire(cat.Ob):
     """A generating 1-cell with a colour on either side."""
+
+    @classmethod
+    def strategy(cls, *, dom=transparent, cod=transparent):
+        """Generate named wires with the given colours on either side."""
+        from hypothesis import strategies as st
+
+        return st.sampled_from(GENERATORS).map(
+            lambda name: cls(name, dom=dom, cod=cod))
 
     def __init__(self, name: str, dom: Colour = transparent,
                  cod: Colour = transparent, is_dagger: bool = False):
@@ -145,6 +163,10 @@ class Wire(cat.Ob):
         state.setdefault('cod', transparent)
         state.setdefault('is_dagger', False)
         super().__setstate__(state)
+
+    repr_transparency = Serialisable.repr_transparency.failing(
+        "An uncoloured wire reprs as the cat.Ob its type coerces, which its "
+        "type-strict equality rejects (#650).")
 
     def dagger(self):
         return type(self)(
@@ -292,6 +314,33 @@ class Ty(cat.Ob, cat.FreeCategory, ColouredMonoid):
     """
     ob = Colour
     generator_factory = Wire
+
+    @classmethod
+    def strategy(
+            cls, *, min_length=0, max_length=3,
+            dom=transparent, cod=transparent):
+        """
+        Generate words of wires, transparent between the given colours; a
+        colour left :obj:`None` is drawn, which is how the laws of the
+        category of colours a type is quantify over coloured words.
+        """
+        from hypothesis import strategies as st
+
+        @st.composite
+        def words(draw):
+            source = draw(cls.ob.strategy()) if dom is None else dom
+            target = draw(cls.ob.strategy()) if cod is None else cod
+            minimum = max(min_length, int(source != target))
+            length = draw(st.integers(min_value=minimum, max_value=max_length))
+            if not length:
+                return cls(dom=source, cod=target)
+            colours = [source] + [transparent] * (length - 1) + [target]
+            return cls(*(
+                draw(cls.generator_factory.strategy(
+                    dom=colours[i], cod=colours[i + 1]))
+                for i in range(length)))
+
+        return words()
 
     def cast_wire(self, x: str | cat.Ob) -> cat.Ob:
         """
@@ -536,6 +585,8 @@ class Nat(abc.Nat, Ty):
     dom: Colour
     cod: Colour
 
+    strategy = no_strategy
+
     def __init__(self, inside: int | tuple = 0, dom: Colour | None = None,
                  cod: Colour | None = None, _scan: bool = True):
         self.n = inside if isinstance(inside, int) else len(inside)
@@ -603,6 +654,8 @@ class Dim(Ty):
     """
     generator_factory = int
 
+    strategy = no_strategy
+
     def __init__(self, *inside: int, dom=None, cod=None, _scan=True, **kwargs):
         inside = kwargs.pop('inside', inside)
         if kwargs:
@@ -641,6 +694,7 @@ class Layer(cat.Box, ColouredMonoid):
             tensoring ``n`` layers takes linear rather than quadratic time.
     """
     ob = Ty
+    strategy = no_strategy
 
     def __setstate__(self, state):
         if 'boxes_or_types' not in state:
@@ -953,6 +1007,35 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
     draw: ClassVar[Callable]
     to_gif: ClassVar[Callable]
 
+    @classmethod
+    def strategy(
+            cls, *, types=None, dom=None, cod=None,
+            min_leaves=None, max_leaves=3, boundary_connected=False):
+        """
+        Generate diagrams by :func:`discopy.axioms.search` over the
+        :attr:`rules` of the category, tensored with up to two closed
+        components at the colour of their codomain unless
+        ``boundary_connected``.
+        """
+        from hypothesis import strategies as st
+
+        types = cls.ob.strategy(min_length=1) if types is None else types
+        diagrams = search(
+            cls, types=types, dom=dom, cod=cod,
+            min_leaves=min_leaves, max_leaves=max_leaves)
+        if boundary_connected:
+            return diagrams
+
+        def closed(diagram):
+            unit = cls.ob(dom=diagram.cod.cod, cod=diagram.cod.cod)
+            scalars = search(
+                cls, types=types, dom=unit, cod=unit,
+                min_leaves=1, max_leaves=max_leaves)
+            return st.lists(scalars, max_size=2).map(
+                lambda components: diagram.tensor(*components))
+
+        return diagrams.flatmap(closed)
+
     def __setstate__(self, state):
         if 'inside' not in state:  # Backward compatibility
             state |= {
@@ -968,6 +1051,24 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
                 if not layer.boxes:
                     raise ValueError(messages.LAYERS_MUST_HAVE_A_BOX)
         super().__init__(inside, dom, cod, _scan=_scan)
+
+    @property
+    def is_boundary_connected(self) -> bool:
+        """
+        Whether the boundary reaches every box, i.e. every connected
+        component of the map with a box or a loop has a port on the
+        boundary: the subspace a normal form is defined on. The map is
+        read rather than the hypergraph, which a left-handed cup has none
+        of.
+
+        >>> x = Ty('x')
+        >>> assert Box('f', x, x).is_boundary_connected
+        >>> assert not Box('s', Ty(), Ty()).is_boundary_connected
+        """
+        return all(
+            len(component.dom) or len(component.cod)
+            for component in self.to_map().connected_components
+            if component.boxes or component.loops)
 
     @property
     def size(self):
@@ -1412,11 +1513,17 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
 
     @classmethod
     def from_tree(cls, tree):
-        if "inside" not in tree:
+        if "boxes" in tree:  # Backward compatibility
             warn("Outdated dumps", DeprecationWarning)
             boxes, offsets = map(from_tree, tree['boxes']), tree['offsets']
             return cls.decode(from_tree(tree['dom']), zip(boxes, offsets))
         return super().from_tree(tree)
+
+    bifunctoriality = MonoidalCategory.bifunctoriality.modulo(
+        normal_form).weaken(connected)
+
+    dagger_monoidality = MonoidalCategory.dagger_monoidality.modulo(
+        normal_form).weaken(connected)
 
 
 class Box(cat.Box, Diagram):
@@ -1503,6 +1610,34 @@ class Box(cat.Box, Diagram):
     drawing_name: str
     no_label: bool
     min_width: float
+
+    def __init_subclass__(cls, **params):
+        """
+        A subclass listing its diagram class among its bases is the
+        generator of that category, e.g. :class:`discopy.braided.Box` for
+        :class:`discopy.braided.Diagram`, so each level of the hierarchy
+        wires itself rather than repeating the assignment. This does not
+        fire for :class:`Box` itself, which is why ``Diagram.box_factory``
+        is assigned at the end of this module.
+        """
+        super().__init_subclass__(**params)
+        if cls.ar in cls.__bases__:
+            cls.ar.box_factory = cls
+
+    @classmethod
+    def strategy(cls, **params):
+        """
+        Generate fresh boxes, for the generator class of a level only: a
+        structural box such as a cup is generated by the rules of its
+        category, inside a diagram, so its own strategy is left to raise.
+        A box has no closed component, so it honours ``boundary_connected``
+        by consuming it.
+        """
+        if cls is not cls.ar.box_factory:
+            raise NotImplementedError(
+                f"No search strategy implemented for {cls.__name__}")
+        params.pop("boundary_connected", None)
+        return super().strategy(**params)
 
     def __init__(self, name: str, dom: Ty, cod: Ty, **params):
         dom = dom if isinstance(dom, self.ob) else self.ob(dom)
@@ -1845,9 +1980,14 @@ class Equation(cat.Equation, RichDisplay):
         return self.to_drawing().draw(path=path, **params)
 
 
+Colour.equation_factory = cat.Equation
+Diagram.equation_factory = Equation
+
+
 Diagram.draw = drawing.draw
 Diagram.to_gif = drawing.to_gif
 
+Diagram.box_factory = Box
 Diagram.sum_factory = Sum
 Diagram.bubble_factory = Bubble
 Diagram.functor_factory = Functor

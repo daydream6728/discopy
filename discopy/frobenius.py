@@ -67,6 +67,7 @@ from collections.abc import Callable
 from discopy import (
     monoidal, rigid, markov, compact, pivotal, cmap, hypergraph)
 from discopy.abc import HypergraphCategory
+from discopy.axioms import Serialisable
 from discopy.cat import factory
 from discopy.utils import assert_isatomic, deprecated_alias, factory_name
 
@@ -80,6 +81,12 @@ class Wire(pivotal.Wire):
     """
     l = r = property(lambda self: self)
 
+    @classmethod
+    def strategy(cls, **params):
+        """Generate self-dual wires, at winding number zero."""
+        return super().strategy(
+            **{"min_winding": 0, "max_winding": 0, **params})
+
 
 @factory
 class Ty(pivotal.Ty):
@@ -89,6 +96,13 @@ class Ty(pivotal.Ty):
     Parameters:
         inside (frobenius.Wire) : The objects inside the type.
     """
+    @classmethod
+    def strategy(cls, **params):
+        """A self-dual wire has no colours to swap: transparent words."""
+        return super().strategy(**{
+            **params,
+            "dom": monoidal.transparent, "cod": monoidal.transparent})
+
     generator_factory = Wire
 
 
@@ -125,6 +139,9 @@ class Diagram(compact.Diagram, markov.Diagram, HypergraphCategory):
         cod (Ty) : The codomain of the diagram, i.e. its output.
     """
     spider_factory: ClassVar[type[Spider]]
+    serialisation = Serialisable.serialisation.failing(
+        "The generic tree of a spider does not read back (#742).")
+    pickling = Serialisable.pickling
 
     ob = Ty
 
@@ -401,6 +418,9 @@ Id = Diagram.id
 class Equation(compact.Equation):
     """ The :class:`compact.Equation` of Frobenius diagrams. """
     up_to = staticmethod(Diagram.to_hypergraph)
+
+
+Diagram.equation_factory = Equation
 
 
 __getattr__ = deprecated_alias(__name__, {"Ob": "Wire", "PRO": "Nat"})

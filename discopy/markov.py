@@ -77,6 +77,7 @@ from typing import ClassVar
 
 from discopy import symmetric, monoidal, cmap, hypergraph
 from discopy.abc import MarkovCategory
+from discopy.axioms import Serialisable
 from discopy.cat import factory
 from discopy.monoidal import Ty  # noqa: F401
 from discopy.utils import assert_isatomic, factory_name
@@ -119,6 +120,10 @@ class Diagram(symmetric.Diagram, MarkovCategory):
     copy_factory: ClassVar[type[Copy]]
     merge_factory: ClassVar[type[Merge]]
     discard_factory: ClassVar[type[Discard]]
+    pickling = Serialisable.pickling.failing(
+        "A copy does not unpickle, its __new__ wanting its type (#742).")
+    copying = Serialisable.copying.failing(
+        "A copy does not deep-copy, its __new__ wanting its type (#742).")
 
     @classmethod
     def spider_factory(cls, n_legs_in, n_legs_out, typ, phase=None):
@@ -226,7 +231,7 @@ class Copy(Box):
             cls.discard_factory.__new__(cls.discard_factory, x)
 
     def dagger(self) -> Merge:
-        return Merge(self.dom, len(self.cod))
+        return self.merge_factory(self.dom, len(self.cod))
 
     def __repr__(self):
         return (
@@ -248,7 +253,7 @@ class Merge(Box):
                      draw_as_spider=True, color="black", drawing_name="")
 
     def dagger(self) -> Copy:
-        return Copy(self.cod, len(self.dom))
+        return self.copy_factory(self.cod, len(self.dom))
 
     def __repr__(self):
         return (
@@ -334,3 +339,6 @@ Id = Diagram.id
 class Equation(symmetric.Equation):
     """ The :class:`symmetric.Equation` of Markov diagrams. """
     up_to = staticmethod(Diagram.to_hypergraph)
+
+
+Diagram.equation_factory = Equation
