@@ -96,8 +96,7 @@ from collections.abc import Callable, Iterator
 from dataclasses import KW_ONLY, dataclass, field, replace
 from functools import reduce
 from typing import (
-    Annotated, ClassVar, Literal, TypeAliasType, TypeVar, get_args,
-    get_origin)
+    Annotated, ClassVar, TypeAliasType, TypeVar, get_args, get_origin)
 
 from discopy import abc
 from discopy.utils import factory_name
@@ -238,13 +237,13 @@ class Pattern[C0, C1: abc.Category](ABC):
         """
         Check the objects the pattern stands for are bounded by its
         :meth:`level`; a variable or a hom adds no structure to its parts
-        and skips the check, as does a variable whose bound is unknown.
+        and skips the check.
         """
         bound, required = self.bound, self.level()
-        if bound is not None and not issubclass(bound, required):
-            raise TypeError(
-                f"{self} needs a {required.__name__}, its objects "
-                f"are bounded by {bound.__name__}.")
+        if bound is None or not issubclass(bound, required):
+            raise TypeError(f"{self} needs a {required.__name__}, its objects "
+                            + ("are unbounded." if bound is None
+                               else f"are bounded by {bound.__name__}."))
 
     @classmethod
     def level(cls) -> type[abc.Category]:
@@ -339,9 +338,9 @@ def factors(value: Pattern) -> tuple:
 
 
 def common(*patterns: Pattern) -> type | None:
-    """ The bound of the objects of patterns standing together, if any do. """
+    """ The bound of the objects of patterns standing together, if all do. """
     bounds = [pattern.bound for pattern in patterns]
-    return next((bound for bound in bounds if bound is not None), None)
+    return None if None in bounds else bounds[0]
 
 
 @dataclass(frozen=True)
@@ -639,6 +638,25 @@ class Sequent:
         return left + right
 
 
+def premises_of(function: Callable, missing: bool = False) -> list[str]:
+    """
+    The names of the premises a function states: its parameters without a
+    default, an unannotated first ``cls`` or ``self`` skipped — only the
+    ones without an annotation when ``missing``.
+    """
+    signature = inspect.signature(function)
+    parameters = list(signature.parameters.values())
+    if parameters and parameters[0].annotation is inspect.Parameter.empty:
+        parameters = parameters[1:]
+    return [
+        parameter.name for parameter in parameters
+        if parameter.default is inspect.Parameter.empty
+        and parameter.kind not in (
+            inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD)
+        and (not missing
+             or parameter.annotation is inspect.Parameter.empty)]
+
+
 def sort_of(parameter: TypeVar, level: type | None) -> Sort | HomType:
     """
     The sort a type parameter declares: an object of ``C0`` when
@@ -655,6 +673,8 @@ def sort_of(parameter: TypeVar, level: type | None) -> Sort | HomType:
         return Sort("C0", atomic=True, bound=level)
     if isinstance(bound, type) and issubclass(bound, Count):
         return Sort("Count")
+    if isinstance(bound, Sort):
+        return replace(bound, bound=bound.bound or level)
     origin = get_origin(bound)
     if isinstance(origin, TypeAliasType):
         substitution = dict(zip(origin.__type_params__, get_args(bound)))
@@ -670,32 +690,36 @@ def sort_of(parameter: TypeVar, level: type | None) -> Sort | HomType:
         f"{parameter} is bounded by {bound!r}, which is no sort.")
 
 
-def read(annotation: str, variables: dict[str, Var],
-         level: type | None = None,
+def read(annotation: str, sorts: dict[str, Sort | HomType],
          namespace: dict | None = None) -> Pattern | Sort:
     """
     Read a pattern or a sort from a deferred annotation, evaluated in the
     environment of the sequent over the namespace of the function: the
-    metavariables are :class:`Var` s, ``C0``, ``C1`` and ``Self`` sorts,
-    ``Hom`` builds the :class:`HomType` between two patterns and
-    ``Annotated`` reads its quoted metadata in the same environment.
+    metavariables are :class:`Var` s of the given sorts, ``C0``, ``C1``
+    and ``Self`` sorts — the ``C0`` of the environment bounded as the
+    variables of that sort are — ``Hom`` builds the :class:`HomType`
+    between two patterns and ``Annotated`` reads its quoted metadata in
+    the same environment.
 
     >>> sorts = {"X": Sort("C0", atomic=True, bound=abc.Pregroup)}
-    >>> variables = {name: Var(name, sort) for name, sort in sorts.items()}
-    >>> print(read('Annotated[C1, "X @ X.r", "Unit[C0]"]', variables))
+    >>> print(read('Annotated[C1, "X @ X.r", "Unit[C0]"]', sorts))
     C1[X @ X.r, Unit[C0]]
-    >>> print(read('Hom[C1, X, X]', variables))
+    >>> print(read('Hom[C1, X, X]', sorts))
     C1[X, X]
-    >>> read('Atom[Self.dom.ob]', variables)
+    >>> read('Atom[Self.dom.ob]', sorts)
     Sort(head='Self.dom.ob', atomic=True)
-    >>> read("X * 2", variables)
+    >>> read("X * 2", sorts)
     Traceback (most recent call last):
      ...
     TypeError: Cannot read a pattern from X * 2.
     """
+    level = next((
+        sort.bound for sort in sorts.values()
+        if getattr(sort, "head", None) == "C0"), None)
     environment = {
         "Atom": Atom, "Count": Count, "Unit": Unit, "Self": Sort("Self"),
-        "C0": Sort("C0", bound=level), "C1": C1, **variables}
+        "C0": Sort("C0", bound=level), "C1": C1,
+        **{name: Var(name, sort) for name, sort in sorts.items()}}
 
     def evaluate(item):
         if isinstance(item, str):
@@ -757,13 +781,16 @@ def parse(function: Callable, owner: type | None = None,
             f"{function.__module__} states {function.__name__} without "
             "`from __future__ import annotations`.")
     level = None
-    if owner is not None and getattr(owner, "__type_params__", ()):
-        bound = owner.__type_params__[0].__bound__
-        level = bound if isinstance(bound, type) else None
+    if owner is not None:
+        if getattr(owner, "__type_params__", ()):
+            bound = owner.__type_params__[0].__bound__
+            level = bound if isinstance(bound, type) else None
+        else:
+            level = getattr(owner, "ob", None)
+            level = level if isinstance(level, type) else None
     sorts = {
         parameter.__name__: sort_of(parameter, level)
         for parameter in function.__type_params__}
-    variables = {name: Var(name, sort) for name, sort in sorts.items()}
     signature = inspect.signature(function)
     annotations = {
         name: parameter.annotation
@@ -771,23 +798,15 @@ def parse(function: Callable, owner: type | None = None,
         if parameter.annotation is not inspect.Parameter.empty}
     if signature.return_annotation is not inspect.Signature.empty:
         annotations["return"] = signature.return_annotation
-    parameters = list(signature.parameters.values())
-    if parameters and parameters[0].name not in annotations:
-        parameters = parameters[1:]
-    premises = [
-        parameter.name for parameter in parameters
-        if parameter.default is inspect.Parameter.empty
-        and parameter.kind not in (
-            inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD)]
-    for name in premises:
-        if name not in annotations:
-            raise TypeError(
-                f"{function.__name__} states no pattern for {name}.")
+    for name in premises_of(function, missing=True):
+        raise TypeError(
+            f"{function.__name__} states no pattern for {name}.")
+    premises = premises_of(function)
     namespace = function.__globals__
     premises = {
-        name: read(annotations[name], variables, level, namespace)
+        name: read(annotations[name], sorts, namespace)
         for name in premises}
-    returns = read(annotations["return"], variables, level, namespace)\
+    returns = read(annotations["return"], sorts, namespace)\
         if conclusion and "return" in annotations else None
     if conclusion and not isinstance(returns, HomType):
         raise TypeError(f"{function.__name__} concludes no hom type.")
@@ -834,6 +853,8 @@ class Declaration[**P, T]:
                 "classmethod, not outside.")
         self.name = self.name or self.function.__name__
         self.__doc__ = self.function.__doc__
+        for name in premises_of(inspect.unwrap(self.function), missing=True):
+            raise TypeError(f"{self.name} states no pattern for {name}.")
 
     @property
     def sequent(self) -> Sequent:

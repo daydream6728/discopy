@@ -65,6 +65,7 @@ from collections.abc import Callable
 
 from discopy import monoidal
 from discopy.abc import BraidedCategory
+from discopy.axioms import Equation, axiom
 from discopy.cat import factory, Generator
 from discopy.monoidal import Ty, Match
 from discopy.utils import (
@@ -243,6 +244,23 @@ Functor = Diagram.Functor
 
 
 Layer = Diagram.Layer
+
+
+@axiom
+def braided(cls) -> Equation:
+    """
+    A braided functor preserves the braid, but only up to the braid
+    relations: the braid of a composite type is a chosen sequence of
+    crossings and a functor rebrackets it. Free braided diagrams compare
+    presentations, so the law is checkable from
+    :class:`discopy.symmetric.Diagram`'s functor on, whose equations
+    hold up to hypergraph isomorphism.
+    """
+    return NotImplemented
+
+
+Diagram.Functor.braided = braided
+
 Id = Diagram.id
 
 

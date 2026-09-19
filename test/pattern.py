@@ -12,8 +12,8 @@ from discopy.abc import (
     ResiduatedMonoid)
 from discopy.monoidal import Ty
 from discopy.pattern import (
-    C0, C1, Adjoint, Atom, Delay, Exp, Hom, Sequent, Sort, Tensor, Unit,
-    Var, parse, read)
+    C0, C1, Adjoint, Atom, Delay, Exp, HomType, Sequent, Sort, Tensor,
+    Unit, Var, parse, read)
 
 
 x, y, z = map(Ty, "xyz")
@@ -37,7 +37,7 @@ def test_read():
     assert read("C0", sorts) == Sort("C0")
     assert read("Atom[C0]", sorts) == Sort("C0", atomic=True)
     assert read("Self.dom.ob", sorts) == Sort("Self.dom.ob")
-    assert read("Self.dom.ar[A, M]", sorts) == Hom(A, M, "Self.dom.ar")
+    assert read("Self.dom.ar[A, M]", sorts) == HomType(A, M, "Self.dom.ar")
     assert str(read("C1[A @ M.r, Unit[C0]]", {"A": A.sort, "M": X.sort}))\
         == "C1[A @ M.r, Unit[C0]]"
     assert A @ M == Tensor((A, M)) and (E << M) == Exp("<<", E, M)
@@ -79,8 +79,8 @@ def test_parse():
         ...
     with raises(TypeError):
         parse(unsorted, conclusion=False)
-    assert str(parse(FeedbackCategory.feedback_right.function)) == (
-        "X: C0, Y: C0, M: Atom[C0] | self: C1[X @ M.d, Y @ M] ⊢ C1[X, Y]")
+    assert str(FeedbackCategory.feedback_right.sequent) == (
+        "A: C0, B: C0, M: Atom[C0] | self: C1[A @ M.d, B @ M] ⊢ C1[A, B]")
     assert FeedbackCategory.feedback_left.sequent.variables["M"].bound\
         is DelayedMonoid
 
@@ -106,12 +106,12 @@ def test_instantiate():
     assert X.r.instantiate({"X": rigid.Ty("z")}, rigid.Ty) == rigid.Ty("z").r
     assert D.d.instantiate({"D": feedback.Ty("z")}, feedback.Ty)\
         == feedback.Ty("z").d
-    assert Hom(A, M).instantiate(subst, Ty) == (x @ y, z)
+    assert HomType(A, M).instantiate(subst, Ty) == (x @ y, z)
     assert (A @ M).variables == ("A", "M") and (E << E).variables == ("E", "E")
 
 
 def test_hom_match():
-    hom = Hom(A @ B, A)
+    hom = HomType(A @ B, A)
     assert [s for s, _ in hom.match((x @ y, x))] == [{"A": x, "B": y}]
     assert [s for s, _ in hom.match((None, x))] == [{"A": x}]
     assert list(hom.match((x @ y, y))) == []
@@ -119,7 +119,7 @@ def test_hom_match():
 
 def test_sequent_str():
     assert str(Sequent()) == ""
-    assert str(Sequent({"A": Sort()}, {"f": Hom(A, A)}, Hom(A, A)))\
+    assert str(Sequent({"A": Sort()}, {"f": HomType(A, A)}, HomType(A, A)))\
         == "A: C0 | f: C1[A, A] ⊢ C1[A, A]"
     assert str(Sequent(premises={"x": Sort("C0", atomic=True)}))\
         == "x: Atom[C0]"

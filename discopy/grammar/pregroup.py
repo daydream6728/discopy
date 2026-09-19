@@ -140,7 +140,10 @@ class Diagram(frobenius.Diagram):
         return super().strategy(
             dom=dom, cod=cod, boundary_connected=True, **params)
 
-    trace = inapplicable("No loop in a sentence.")(frobenius.Diagram.trace)
+    trace_left = inapplicable("No loop in a sentence.")(
+        frobenius.Diagram.trace_left)
+    trace_right = inapplicable("No loop in a sentence.")(
+        frobenius.Diagram.trace_right)
 
     def normal_form(self, **params):
         """

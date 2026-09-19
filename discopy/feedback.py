@@ -157,7 +157,7 @@ from typing import ClassVar
 
 from discopy import monoidal, braided, markov, hypergraph
 from discopy.axioms import GENERATORS, no_strategy
-from discopy.abc import FeedbackCategory
+from discopy.abc import DelayedMonoid, FeedbackCategory
 from discopy.axioms import inapplicable
 from discopy.utils import (
     deprecated_alias,
@@ -305,7 +305,7 @@ class TailOb(Wire):
 
 
 @factory
-class Ty(monoidal.Ty):
+class Ty(monoidal.Ty, DelayedMonoid):
     """ A feedback type is a monoidal type with `delay`, `head` and `tail`. """
     @classmethod
     def strategy(cls, **params):
@@ -386,11 +386,19 @@ class Diagram(markov.Diagram, FeedbackCategory):
         inside = tuple(box.delay(n_steps) for box in self.inside)
         return type(self)(inside, dom, cod, _scan=False)
 
-    def feedback(self, dom=None, cod=None, mem=None):
-        """ Syntactic sugar for :class:`Feedback`. """
+    def feedback_left(self, dom=None, cod=None, mem=None):
+        """ A :class:`Feedback` of the memory on the left, wire by wire. """
+        if mem is None or len(mem) == 1:
+            return self.Feedback(self, dom=dom, cod=cod, mem=mem, left=True)
+        return self if not mem\
+            else self.feedback_left(mem=mem[1:]).feedback_left()
+
+    def feedback_right(self, dom=None, cod=None, mem=None):
+        """ A :class:`Feedback` of the memory on the right, wire by wire. """
         if mem is None or len(mem) == 1:
             return self.Feedback(self, dom=dom, cod=cod, mem=mem)
-        return self if not mem else self.feedback(mem=mem[:-1]).feedback()
+        return self if not mem\
+            else self.feedback_right(mem=mem[:-1]).feedback_right()
 
     @classmethod
     def wait(cls, dom: Ty) -> Diagram:
@@ -597,14 +605,15 @@ class Feedback(  # ty: ignore[invalid-generic-class]
         :align: center
     """
     def __init__(self, arg: Diagram, dom=None, cod=None, mem=None, left=False):
-        if left:
-            raise NotImplementedError
-        mem = arg.cod[-1:] if mem is None else mem
-        dom = arg.dom[:-len(mem)] if dom is None else dom
-        cod = arg.cod[:-len(mem)] if cod is None else cod
-        if arg.dom != dom @ mem.delay():
+        if mem is None:
+            mem = arg.cod[:1] if left else arg.cod[-1:]
+        if dom is None:
+            dom = arg.dom[len(mem):] if left else arg.dom[:-len(mem)]
+        if cod is None:
+            cod = arg.cod[len(mem):] if left else arg.cod[:-len(mem)]
+        if arg.dom != (mem.delay() @ dom if left else dom @ mem.delay()):
             raise AxiomError
-        if arg.cod != cod @ mem:
+        if arg.cod != (mem @ cod if left else cod @ mem):
             raise AxiomError
         self.mem, self.left = mem, left
         monoidal.Bubble.__init__(self, arg, dom=dom, cod=cod)

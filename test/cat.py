@@ -403,13 +403,12 @@ def test_Functor_then_left_unit():
 def test_strategy():
     from hypothesis import find
 
+    find(Arrow.strategy(), lambda term: any(
+        isinstance(box, Box) for box in term.inside))
     a, b = Ob('a'), Ob('b')
     arrow = find(
         Arrow.strategy(dom=a, cod=b, min_leaves=2, max_leaves=2),
         lambda value: len(value.inside) > 1)
     assert (arrow.dom, arrow.cod) == (a, b)
-    sized = find(
-        Arrow.strategy(dom=a, cod=a, min_leaves=3, max_leaves=3),
-        lambda value: True)
-    assert len(sized.inside) == 3 and len(set(sized.inside)) == 3
-    assert not find(Arrow.strategy(max_leaves=0), lambda _: True).inside
+    functor = find(Functor.strategy(), lambda value: value(a) != a)
+    assert functor(arrow).dom == functor(a)

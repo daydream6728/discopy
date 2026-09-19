@@ -92,9 +92,11 @@ class Diagram(symmetric.Diagram, ribbon.Diagram, CompactCategory):
 
     twist_as_trace = RibbonCategory.twist_as_trace
 
-    currying_left = BiclosedCategory.currying_left.weaken(boundary_connected=True)
+    currying_left = BiclosedCategory.currying_left.weaken(
+        boundary_connected=True)
 
-    currying_right = BiclosedCategory.currying_right.weaken(boundary_connected=True)
+    currying_right = BiclosedCategory.currying_right.weaken(
+        boundary_connected=True)
 
 
 Box, Cup, Cap = (

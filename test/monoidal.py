@@ -767,22 +767,25 @@ def test_strategy():
     from hypothesis import find
     from hypothesis import strategies as st
 
+    from discopy import axioms
+
+    axioms.assert_strategy_finds(Diagram, Box)
     x = Ty('x')
     find(Ty.strategy(), lambda value: len(value) == 2)
     composition = find(
-        Diagram.strategy(types=st.just(x), min_leaves=2, max_leaves=2),
-        lambda value: True)
-    assert len(composition.boxes) == 2 == len(set(composition.boxes))
-    state = find(
-        Diagram.strategy(dom=x, cod=x),
-        lambda value: any(not box.dom for box in value.boxes)
-        and value.to_hypergraph().is_boundary_connected)
-    assert (state.dom, state.cod) == (x, x)
-    scalar = find(
-        Diagram.strategy(),
-        lambda value: value.boxes
-        and not value.to_hypergraph().is_boundary_connected)
-    assert scalar.boxes
+        Diagram.strategy(types=st.just(x), max_depth=1),
+        lambda value: len(value.inside) == 2)
+    assert len(composition.boxes) == 2
+    assert len(set(composition.boxes)) == len(composition.boxes)
+    assert find(Diagram.strategy(dom=x, cod=x, max_depth=0),
+                lambda value: not value.boxes) == Id(x)
+    connected = find(
+        Diagram.strategy(boundary_connected=True), lambda value: True)
+    assert connected.is_boundary_connected
+    closed = find(
+        Diagram.strategy(boundary_connected=False),
+        lambda value: value.boxes and not value.is_boundary_connected)
+    assert not closed.is_boundary_connected
 
 
 def test_transparent_colour_serialisation():

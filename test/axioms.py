@@ -2,40 +2,20 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Self
+from typing import Self
 
 from hypothesis import find
 from hypothesis.errors import NoSuchExample
 from pytest import raises
 
-from discopy import biclosed, cat, feedback, monoidal, traced
+from discopy import braided, cat, feedback, monoidal, rigid
+from discopy.abc import MonoidalCategory
 from discopy.axioms import (
-    C0,
-    C1,
-    Atom,
-    Axiom,
-    AxiomFailure,
-    Cells,
-    Count,
-    Equation,
-    Goal,
-    Level,
-    Pair,
-    Testable,
-    Var,
-    assert_axioms,
-    axiom,
-    connected,
-    no_strategy,
-)
+    Axiom, AxiomFailure, Equation, Relabelling, assert_axioms, axiom)
 from discopy.cat import Arrow, Box, Functor, Ob
-from discopy.monoidal import Layer
+from discopy.monoidal import Diagram
+from discopy.pattern import C1
 from discopy.utils import AxiomError
-
-
-def loops(equation: Equation) -> bool:
-    """ The subspace of a law where every term is an endomorphism. """
-    return all(term.dom == term.cod for term in equation.terms)
 
 
 def test_axioms():
@@ -59,63 +39,6 @@ def test_strategy():
     assert find(Box.strategy(dom=x), lambda _: True).dom == x
 
 
-def test_annotated_sequents():
-    """ A law draws its arguments from the sequents its annotations give. """
-    @axiom
-    def composing[A, B, C](cls, f: Annotated[C1, A, B],
-                           g: Annotated[C1, B, C]) -> Equation:
-        """ The domain of a composite. """
-        return Equation(f.then(g).dom, f.dom)
-
-    law = composing.bind(Arrow)
-    f, g = find(
-        law.pattern.strategy(Arrow), lambda args: all(a.inside for a in args))
-    assert f.cod == g.dom and law(f, g)
-    assert list(law.pattern.match((f, g))) == [
-        {"A": f.dom, "B": f.cod, "C": g.cod}]
-    assert find(law.strategy(), lambda equation: equation)
-    x, y = Ob('x'), Ob('y')
-    assert law(Box('f', x, y), Box('g', y, x))
-    with raises(NoSuchExample):
-        law.falsify()
-
-    @axiom
-    def atoms[X: Atom, Y: Atom, T](
-            cls, x: Annotated[C0, X], y: Annotated[C0, Y],
-            t: Annotated[C0, T]) -> Equation:
-        """ Two atoms and a type. """
-        return Equation(len(x @ y), 2)
-
-    drawn = find(
-        atoms.bind(monoidal.Diagram).pattern.strategy(monoidal.Diagram),
-        lambda args: len(args[2]) > 1)
-    assert [len(value) for value in drawn[:2]] == [1, 1]
-
-    @axiom
-    def shared[X: Atom, A, B](
-            cls, f: Annotated[C1, "X @ A", "X @ B"],
-            x: Annotated[C0, X]) -> Equation:
-        """ A variable shared by an arrow and an object. """
-        return Equation(f.dom[:1], x)
-
-    law = shared.bind(monoidal.Diagram)
-    f, x = find(law.pattern.strategy(law.category), lambda args: args[0].boxes)
-    assert f.dom[:1] == x == f.cod[:1] and law(f, x)
-
-    @axiom
-    def delayed[A, P: Pair](
-            cls, f: Annotated[C1, "A @ P.d", "A @ P"],
-            mem: Annotated[C0, P]) -> Equation:
-        """ The delay written as ``.d``. """
-        return Equation(f.dom[-2:], mem.delay())
-
-    law = delayed.bind(feedback.Diagram)
-    f, mem = find(law.pattern.strategy(law.category), lambda args: args[0].boxes)
-    assert len(mem) == 2 and law(f, mem)
-    assert law.cells[0] is feedback.Ty and law.cells[1] is feedback.Diagram
-    assert Cells.of(feedback.Diagram)[0] is feedback.Ty
-
-
 def test_axiom_binding():
     assert repr(Axiom(lambda cls: NotImplemented)) == "Axiom(<lambda>)"
     assert eval(repr(Arrow.unitality)) == cat.Arrow.unitality
@@ -127,25 +50,14 @@ def test_axiom_binding():
         Axiom(lambda cls: NotImplemented).falsify()
     with raises(TypeError):
         Axiom(lambda cls: NotImplemented).strategy()
-    with raises(TypeError):
-        Axiom(lambda cls: NotImplemented).cells
     assert axiom(lambda cls: NotImplemented).bind(Arrow)() is NotImplemented
     box = Box('f', Ob('x'), Ob('y'))
     assert Arrow.unitality(box)
-    broken = Arrow.unitality.weaken(loops).failing("Never holds.")
-    assert broken.subspace is loops
-    loop = Box('g', Ob('x'), Ob('x'))
+    broken = Arrow.unitality.weaken(max_leaves=1).failing("Never holds.")
+    assert broken.params == {"max_leaves": 1}
     with raises(AxiomFailure) as failure:
-        broken(loop)
+        broken(box)
     assert failure.value.equation
-
-
-def test_deferred_annotations():
-    """ A law compiled without deferred annotations is refused. """
-    namespace, source = {}, "def eager(cls, f: int): return NotImplemented"
-    exec(compile(source, "<eager>", "exec", dont_inherit=True), namespace)
-    with raises(TypeError, match="__future__"):
-        axiom(namespace["eager"])
 
 
 def test_inapplicable():
@@ -161,18 +73,10 @@ def test_modulo():
 
 
 def test_weaken():
-    law = Arrow.unitality.weaken(loops).bind(Arrow)
-    assert law.modulo(lambda term: term).subspace is loops
-    equation = find(law.strategy(), lambda equation: equation.terms[1].inside)
-    f = equation.terms[1]
-    assert f.dom == f.cod and equation
-    x, y = monoidal.Ty('x'), monoidal.Ty('y')
-    box, scalar = monoidal.Box('f', x, y), monoidal.Box('s', x[:0], x[:0])
-    assert connected(Equation(box, box))
-    assert not connected(Equation(box, box @ scalar))
-    with raises(NoSuchExample):
-        find(monoidal.Diagram.bifunctoriality.strategy(), lambda eq: any(
-            not term.is_boundary_connected for term in eq.terms))
+    law = Arrow.unitality.weaken(max_leaves=1).bind(Arrow)
+    assert law.modulo(lambda term: term).params == law.params
+    equation = find(law.strategy(), lambda _: True)
+    assert equation and all(len(term.inside) <= 1 for term in equation.terms)
 
 
 def test_self_annotation():
@@ -192,34 +96,11 @@ def test_falsify():
         """ Every arrow is an identity, which a box refutes. """
         return Equation(f, cls.id(f.dom))
 
-    counterexample = trivial.bind(Arrow).falsify()
-    assert isinstance(counterexample, Equation) and not counterexample
-    assert counterexample.terms[0].inside
-    assert not trivial.bind(Arrow).failing("Boxes exist.").falsify()
-    with raises(NoSuchExample):
-        Arrow.unitality.failing("Never holds.").falsify()
-    with raises(NoSuchExample):
-        Arrow.associativity.falsify()
-
-
-def test_canonical():
-    """ A law reads as a schema on the canonical arguments of its pattern. """
-    A, B, C, D = map(Ob, "ABCD")
-    f, g, h = Box('f', A, B), Box('g', B, C), Box('h', C, D)
-    canonical = Arrow.associativity.canonical()
-    assert canonical and canonical.terms[0] == f >> g >> h
-    assert Arrow.associativity.pattern.canonical(Arrow) == (f, g, h)
-    assert Arrow.unitality.canonical().terms[1] == Box('f', Ob('x'), Ob('y'))
-    from discopy import symmetric
-    swap = symmetric.Diagram.swap_inverse.canonical()
-    assert swap and swap.terms[1] == symmetric.Id(
-        symmetric.Ty('x') @ symmetric.Ty('y'))
-    assert Arrow.unitality.failing("Never holds.").canonical()
-    assert Arrow.unitality.inapplicable("No units.").canonical()\
-        is NotImplemented
-    with raises(TypeError):
-        Arrow.unitality.inapplicable("No units.").draw()
-    assert monoidal.Diagram.tensor_dom_typing.canonical()
+    equation = trivial.bind(Arrow).falsify()
+    assert not equation and equation.terms[0].inside
+    for law in (Arrow.associativity, Arrow.unitality.failing("Declared.")):
+        with raises(NoSuchExample):
+            law.falsify()
 
 
 def test_axioms_of_category():
@@ -237,380 +118,106 @@ def test_axioms_of_category():
     assert "unitality" not in Hidden.axioms
 
 
-def test_no_strategy():
-    """ A class that does not generate its terms says so on `strategy`. """
-    with raises(NotImplementedError) as err:
-        Layer.strategy()
-    assert "No search strategy implemented for Layer" in str(err.value)
-
-    class Opted(Arrow):
-        """ A class that would inherit a strategy for the wrong terms. """
-        strategy = no_strategy
-
-    with raises(NotImplementedError):
-        Opted.strategy()
-    assert Opted.axioms["unitality"] == Opted.unitality
-
-
-def test_rules_are_inherited_and_bound():
-    """ A category collects its rules through the MRO, like its axioms. """
-    from discopy.axioms import Rule, search
-
-    assert set(Arrow.rules) == {"id", "then", "box"}
-    cut = Arrow.rules["then"]
-    assert isinstance(cut, Rule) and cut.category is Arrow
-    assert repr(cut) == "cat.Arrow.then" and cut.owner is not None
-    assert str(cut.conclusion) == "A ⊢ C" and str(cut.pattern) == (
-        "self: A ⊢ B, other: B ⊢ C")
-    x, y = Ob('x'), Ob('y')
-    arrow = find(
-        search(Arrow, dom=x, cod=y, min_leaves=3, max_leaves=3,
-               types=Ob.strategy()),
-        lambda _: True)
-    assert (arrow.dom, arrow.cod, len(arrow.inside)) == (x, y, 3)
-    assert find(
-        search(Arrow, dom=x, cod=x, max_leaves=0, types=Ob.strategy()),
-        lambda _: True) == Arrow.id(x)
+def test_Relabelling():
+    x, y, z = cat.Ob('x'), cat.Ob('y'), cat.Ob('z')
+    relabelling = Relabelling(((x, y), ))
+    assert relabelling[x] == y and relabelling[z] == z
+    assert list(relabelling) == [x] and len(relabelling) == 1
+    assert bool(Relabelling())
+    assert relabelling[cat.Box('f', x, x)] == cat.Box('f', y, y)
+    rigid_x, rigid_y = rigid.Ty('x'), rigid.Ty('y')
+    rotating = Relabelling(((rigid_x, rigid_y), ))
+    functor = rigid.Functor(rotating, rotating)
+    assert functor(rigid_x.l) == rigid_y.l and functor(rigid_x.r) == rigid_y.r
+    rotated = rigid.Box('f', rigid_x.r, rigid_x @ rigid_x)
+    assert rotating[rotated] == rigid.Box('f', rigid_y.r, rigid_y @ rigid_y)
+    delayed = Relabelling(((feedback.Ty('u'), feedback.Ty('v')), ))
+    delaying = feedback.Box('f', feedback.Ty('u').delay(), feedback.Ty('u'))
+    assert delayed[delaying] == feedback.Box(
+        'f', feedback.Ty('v').delay(), feedback.Ty('v'))
 
 
-def test_generators():
-    """ A class adjusts the generators its strategy invokes. """
-    from discopy import rigid
-    from discopy.axioms import Rule, invoked
-
-    assert set(Arrow.generators) == {"box"}
-    assert set(rigid.Diagram.generators) == {"box", "cups", "caps"}
-    assert set(rigid.Diagram.rules) > set(rigid.Diagram.generators)
-    x, y = Ob('x'), Ob('y')
-    f, g = Box('f', x, y), Box('g', y, x)
-
-    class Vocabulary(Arrow):
-        """ Arrows over two boxes, no free one. """
-        generators = {"f": Rule.constant(f), "g": Rule.constant(g)}
-
-    assert [rule.name for rule in invoked(Vocabulary)] == [
-        "id", "then", "f", "g"]
-    assert Vocabulary.generators["f"].applies(Vocabulary, Goal.of(x, y, 1))
-    assert not Vocabulary.generators["f"].applies(
-        Vocabulary, Goal.of(y, x, 1))
-    loop = find(
-        Vocabulary.strategy(dom=x, cod=x, min_leaves=4),
-        lambda arrow: len(arrow.inside) == 4)
-    assert loop == f >> g >> f >> g
-    bound = Vocabulary.generators["f"].bind(Vocabulary)
-    assert find(bound.middles(x, x, Ob.strategy()), lambda _: True) == y
-    with raises(NoSuchExample):
-        find(Vocabulary.strategy(dom=x, cod=y), lambda arrow: any(
-            box.name not in "fg" for box in arrow.inside))
-
-
-def test_open_goals():
-    """ A boundary left open is a hole the proof fills. """
-    from discopy import frobenius, markov, rigid, symmetric
-    from discopy.axioms import alignments
-
-    x, y = symmetric.Ty('x'), symmetric.Ty('y')
-    goal = Goal.of(x @ y, None, 1, symmetric.Ty())
-    assert str(goal) == "x @ y ⊢ ?" and not goal.closed and goal.free(goal.cod)
-    swapping = symmetric.Diagram.rules["permuting"]
-    assert swapping.applies(symmetric.Diagram, goal)
-    swapped = find(
-        symmetric.Diagram.strategy(dom=x @ y, max_leaves=1),
-        lambda diagram: any(
-            isinstance(box, symmetric.Swap) for box in diagram.boxes))
-    assert swapped.cod == y @ x
-    cupping = rigid.Diagram.rules["cups"]
-    x = rigid.Ty('x')
-    aligned = alignments(
-        cupping.conclusion, Goal.of(x @ x.r, None, 1, rigid.Ty()))
-    assert len(aligned) == 1
-    assert aligned[0][0]["X"].instantiate(aligned[0][1]) == x
-    assert find(
-        rigid.Diagram.strategy(dom=x @ x.r, max_leaves=1),
-        lambda diagram: any(isinstance(box, rigid.Cup) for box in diagram.boxes)
-    ) == rigid.Cup(x, x.r)
-    x = markov.Ty('x')
-    copied = find(
-        markov.Diagram.strategy(dom=x, max_leaves=1),
-        lambda diagram: any(
-            isinstance(box, markov.Copy) for box in diagram.boxes)
-        and diagram.cod == x @ x @ x)
-    assert copied == markov.Copy(x, 3)
-    x = frobenius.Ty('x')
-    fused = find(
-        frobenius.Diagram.strategy(dom=x @ x, max_leaves=1),
-        lambda diagram: any(
-            isinstance(box, frobenius.Spider) for box in diagram.boxes)
-        and diagram.cod == x)
-    assert fused == frobenius.Spider(2, 1, x)
-    composed = find(
-        Arrow.strategy(cod=Ob('y'), min_leaves=2, max_leaves=2),
-        lambda arrow: True)
-    assert composed.cod == Ob('y') and len(composed.inside) == 2
-
-
-def test_leaf_applies_only_on_its_shape():
-    """ A leaf is offered exactly when its pattern matches the sequent. """
-    from discopy.axioms import generator, inapplicable, search
-
-    class Toy(Arrow):
-        """ Loops on every object, and no composition. """
-        then = inapplicable("No composition.")(Arrow.then)
-
-        @classmethod
-        @generator
-        def loop[A](cls, dom: Annotated[C0, A]
-                    ) -> Annotated[C1, A, A]:
-            return Box('loop', dom, dom)
-
-    assert set(Toy.rules) == {"id", "then", "box", "loop"}
-    assert not Toy.rules["then"].applies(Toy, Goal.of(Ob('x'), Ob('x'), 2))
-    x, y = Ob('x'), Ob('y')
-    is_loop = lambda arrow: arrow.inside[0].name == 'loop'
-    find(search(Toy, dom=x, cod=x, min_leaves=1, max_leaves=1,
-                types=Ob.strategy()), is_loop)
-    with raises(NoSuchExample):
-        find(search(Toy, dom=x, cod=y, min_leaves=1, max_leaves=1,
-                    types=Ob.strategy()), is_loop)
-
-
-def test_rule_from_annotations():
-    """ A rule reads its conclusion and premises off its annotations. """
-    from discopy import traced
-    from discopy.axioms import rule
-
-    class Toy(traced.Diagram):
-        """ Traced diagrams with a rule of their own. """
-
-        @rule
-        def looping[A, B, M: Atom](
-                self: Annotated[C1, "M @ A", "M @ B"]
-        ) -> Annotated[C1, A, B]:
-            return self.trace(left=True)
-
-    looping = Toy.rules["looping"]
-    a, b = map(traced.Ty, "ab")
-    unit = traced.Ty()
-    assert looping.applies(Toy, Goal.of(a, b, 2, unit))
-    assert not looping.applies(Toy, Goal.of(a, b, 1, unit))
-    from discopy.axioms import search
-    looped = find(
-        search(Toy, dom=a, cod=b, min_leaves=2, max_leaves=2,
-               types=traced.Ty.strategy(min_length=1)),
-        lambda value: any(isinstance(box, traced.Trace) for box in value.boxes))
-    assert (looped.dom, looped.cod) == (a, b)
-
-
-def test_rules_from_patterns():
-    """ A pattern rule matches, builds, and hints at the sequent it needs. """
-    from discopy import braided, rigid, traced
-
-    x, y, z = map(rigid.Ty, "xyz")
-    cupping, unit = rigid.Diagram.rules["cups"], rigid.Ty()
-    assert cupping.applies(rigid.Diagram, Goal.of(x @ x.r, unit, 1, unit))
-    assert cupping.applies(rigid.Diagram, Goal.of(x.l @ x, unit, 1, unit))
-    assert not cupping.applies(rigid.Diagram, Goal.of(x @ y.r, unit, 1, unit))
-    assert not cupping.applies(rigid.Diagram, Goal.of(x @ x.r, unit, 2, unit))
-    types = rigid.Ty.strategy()
-    assert find(cupping.middles(x @ x.r, rigid.Ty(), types),
-                lambda middle: not middle) == rigid.Ty()
-    a, b, c = map(braided.Ty, "abc")
-    braiding = braided.Diagram.rules["braid"]
-    hinted = find(braiding.middles(a @ b @ c, c, types),
-                  lambda middle: middle == b @ a @ c)
-    assert hinted == b @ a @ c
-    tracing, unit = traced.Diagram.rules["trace"], traced.Ty()
-    assert tracing.applies(traced.Diagram, Goal.of(a, b, 2, unit))
-    assert not tracing.applies(traced.Diagram, Goal.of(a, b, 1, unit))
-    traced_arrow = find(
-        traced.Diagram.strategy(dom=a, cod=b, min_leaves=2, max_leaves=2),
-        lambda value: any(isinstance(box, traced.Trace) and box.left
-                          for box in value.boxes))
-    assert (traced_arrow.dom, traced_arrow.cod) == (a, b)
-
-
-def test_pattern_matching():
-    from discopy import rigid
-    from discopy.axioms import Var, Word
-
-    X, Y = Var.atom('X'), Var.atom('Y')
-    A, B = Var.type('A'), Var.type('B')
-    a, b, c = map(rigid.Ty, "abc")
-    assert isinstance(X @ X.r, Word) and (X @ X.r).fixed
-    assert str(X @ X.r) == "X @ X.r" and str(X @ X.r | Word()) == "X @ X.r | ()"
-    assert str(X.l) == "X.l" and str(X.d) == "X.d" and str(X >> Y) == "(X >> Y)"
-    assert list(X.match(a)) == [{"X": a}] and X.r.instantiate({"X": a}) == a.r
-    assert not (A @ X).fixed
-    assert list((X @ X.r).match(a @ a.r)) == [{"X": a}]
-    assert list((X @ X.r).match(a @ b.r)) == []
-    assert list((X @ X.l).match(a.r @ a)) == [{"X": a.r}]
-    assert list((X.r @ X).match(a.r @ a)) == [{"X": a}]
-    assert list((A @ X @ B).match(a @ b @ c)) == [
-        {"A": rigid.Ty(), "X": a, "B": b @ c},
-        {"A": a, "X": b, "B": c},
-        {"A": a @ b, "X": c, "B": rigid.Ty()}]
-    assert list((A @ A).match(a @ b @ a @ b)) == [{"A": a @ b}]
-    assert list(Word().match(rigid.Ty())) == [{}]
-    assert list((X @ Y).match(a)) == []
-    x = cat.Ob('x')
-    assert list(Word((A, )).match(x)) == [{"A": x}]
-
-
-def test_pattern_exponentials_and_delays():
-    from discopy import biclosed, feedback
-    from discopy.axioms import Var
-
-    B, E = Var.atom('B'), Var.atom('E')
-    x, y = map(biclosed.Ty, "xy")
-    assert list(((B << E) @ E).match((y << x) @ x)) == [{"B": y, "E": x}]
-    assert list(((B << E) @ E).match((y << x) @ y)) == []
-    assert list((E @ (E >> B)).match(x @ (x >> y))) == [{"E": x, "B": y}]
-    M, A = Var.pair('M'), Var.type('A')
-    u, v, w = map(feedback.Ty, "uvw")
-    assert list((A @ M.delay()).match(w @ (u @ v).delay())) == [
-        {"A": w, "M": u @ v}]
-    assert list((A @ M).match(w @ u @ v)) == [{"A": w, "M": u @ v}]
-
-
-def test_pattern_counts_and_choices():
-    """ A count repeats an item and a boolean chooses a boundary. """
-    from discopy import frobenius, rigid
-    from discopy.axioms import Bool, Var, inapplicable
-
-    X, Y = Var.atom('X'), Var.atom('Y')
-    N, L = Var('N', Count()), Var('L', Bool())
-    a, b = map(rigid.Ty, "ab")
-    assert list((X ** N).match(a @ a)) == [{"N": 2, "X": a}]
-    assert list((X ** N).match(a @ b)) == []
-    assert list((X ** N).match(rigid.Ty())) == [{"N": 0}]
-    assert (X ** N).instantiate({"X": a, "N": 3}) == a @ a @ a
-    assert str(X ** N) == "X ** N"
-    choice = L[X @ Y, Y @ X]
-    assert str(choice) == "L[X @ Y, Y @ X]"
-    assert list(choice.match(a @ b)) == [
-        {"L": True, "X": a, "Y": b}, {"L": False, "Y": a, "X": b}]
-    assert choice.instantiate({"L": False, "X": a, "Y": b}) == b @ a
-    with raises(TypeError):
-        X[X, Y]
-    spiders = frobenius.Diagram.rules["spiders"]
-    x, unit = frobenius.Ty('x'), frobenius.Ty()
-    assert spiders.applies(frobenius.Diagram, Goal.of(x @ x, x, 1, unit))
-    assert not spiders.applies(
-        frobenius.Diagram, Goal.of(x @ x, x @ frobenius.Ty('y'), 1, unit))
-
-    class Toy(Arrow):
-        """ A category dropping the cut by an inapplicable override. """
-        @inapplicable("Never composes.")
-        def then(self, *others):
-            return Arrow.then(self, *others)
-
-    assert not Toy.rules["then"].applies(Toy, Goal.of(Ob('x'), Ob('x'), 2))
-    assert Toy.rules["then"].__doc__ == "Never composes."
-
-
-def test_two_categorical_patterns():
-    """ A law of 2-categories names colours, types and diagrams by level. """
-    from types import NoneType
-    from discopy import abc, rigid
-    from discopy.monoidal import Colour, Diagram, Ty, Wire
-
-    law = Diagram.bifunctoriality
-    assert law.owner is abc.TwoCategory
-    assert law.cells.levels == (Colour, Ty, Diagram)
-    assert Cells.of(rigid.Diagram, abc.Category).levels == (
-        rigid.Ty, rigid.Diagram)
-    assert Cells.of(rigid.Diagram, abc.TwoCategory).levels == (
-        NoneType, rigid.Ty, rigid.Diagram)
-    assert str(law.result) == "A @ C ⊢ U @ V"
-    A = law.pattern.patterns["f"].dom.items[0]
-    assert str(A.boundaries) == "X ⊢ Y" and A.level == 1 and A.kind == "type"
-    assert [var.name for var in A.vars] == ["X", "Y", "A"]
-    r, g = Colour("red"), Colour("green")
-    x, y = Ty(Wire("x", r, g)), Ty(Wire("y", g, r))
-    assert list(A.match(x)) == [{"X": r, "Y": g, "A": x}]
-    tensor = Diagram.rules["tensor"]
-    assert tensor.owner is abc.TwoCategory and tensor.boxes == 0
-    matches = tensor.instances(Goal.of(x @ y, x @ y, 2, Ty()))
-    assert sorted(len(env["A"]) for env in matches) == [0, 1, 2]
-    assert all(env["A"].cod == env["B"].cod == env["C"].dom
-               for env in matches)
-
-    equation = find(
-        Diagram.tensor_dom_typing.strategy(),
-        lambda equation: equation.terms[0].dom != Ty().dom)
-    assert equation and equation.terms[0].dom == equation.terms[1].dom
-    assert Diagram.tensor_dom_typing.canonical()
-    with raises(NoSuchExample):
-        find(rigid.Diagram.tensor_dom_typing.strategy(),
-             lambda equation: equation.terms[0].dom != rigid.Ty().dom)
-
-
-def test_typechecking_on_call():
-    """ A law checks its arguments and its equation against its patterns. """
-    from discopy.monoidal import Box, Diagram, Ty
-
-    x, y = Ty('x'), Ty('y')
-    f, g = Box('f', x, y), Box('g', y, x)
-    assert Diagram.associativity(f, g, f)
-    with raises(TypeError, match="expects"):
-        Diagram.associativity(f, f, f)
-    with raises(TypeError, match="expects"):
-        Arrow.unitality(Ob('x'))
-
+def test_functor_law():
     @axiom
-    def lying[A, B](cls, f: Annotated[C1, A, B]
-                    ) -> Annotated[Equation[C1], A, A]:
-        """ States a sequent its terms do not have. """
-        return Equation(f, f)
+    def preserves_identity(cls, functor: Self, x: Self.dom.ob) -> Equation:
+        """ A functor preserves the identity on each object. """
+        return Equation(
+            functor(cls.dom.id(x)), functor.cod.id(functor(x)))
 
-    with raises(TypeError, match="states"):
-        lying.bind(Diagram)(f)
-    assert lying.bind(Diagram)(Box('h', x, x))
-    assert str(lying.pattern) == "f: A ⊢ B" and str(lying.result) == "A ⊢ A"
-    assert lying.owner is None and lying.bind(Diagram).cells[0] is Ty
+    law = preserves_identity.bind(Functor)
+    equation = find(law.strategy(), lambda _: True)
+    assert equation and all(isinstance(t, Arrow) for t in equation.terms)
+
+
+def test_monoid_law():
+    law = monoidal.Ty.unitality.weaken(max_length=1)
+    equation = find(law.strategy(), lambda _: True)
+    assert equation and all(len(term) <= 1 for term in equation.terms)
+
+
+def test_axiom():
+    assert MonoidalCategory.bifunctoriality.parameters[0].name == "f"
+    assert str(MonoidalCategory.bifunctoriality.sequent).startswith(
+        "A: C0, B: C0, C: C0, D: C0, U: C0, V: C0 | f: C1[A, B]")
+    equation = find(Diagram.bifunctoriality.strategy(), lambda _: True)
+    assert equation and len(equation.terms) == 2
+    assert MonoidalCategory.tensor.sequent.conclusion is not None
+    assert Axiom.concludes is False
+    with raises(TypeError):
+        @axiom
+        def eager(cls, f):
+            """ An unannotated premise has no pattern. """
+
+
+def test_weaken_params():
+    law = MonoidalCategory.bifunctoriality.weaken(max_depth=0).bind(Diagram)
+    equation = find(law.strategy(), lambda _: True)
+    assert equation and all(len(term.boxes) <= 4 for term in equation.terms)
+    assert law.weaken(max_depth=1).params == {"max_depth": 1}
+    assert law.modulo(lambda term: term).params == law.params
+
+
+def test_equation_of_axiom():
+    x, y = monoidal.Ty('x'), monoidal.Ty('y')
+    assert isinstance(Diagram.unitality(monoidal.Box("f", x, y)), Equation)
+
+
+def test_canonical():
+    equation = Diagram.bifunctoriality.canonical()
+    assert equation and str(equation.terms[0])\
+        == "f @ C >> B @ g >> h @ D >> U @ k"
+    assert str(Arrow.associativity.canonical())\
+        == "Equation(f >> g >> h, f >> g >> h)"
+    assert str(Diagram.tensor_unitality.canonical())\
+        == "Equation(Id(x @ y), Id(x @ y))"
+    assert Arrow.unitality.failing("Declared.").canonical()
+    assert not braided.Diagram.braid_naturality.canonical()
+    inapplicable = Arrow.unitality.inapplicable("No identities.")
+    assert inapplicable.canonical() is NotImplemented
+    with raises(TypeError, match="nothing to draw"):
+        inapplicable.draw()
+    assert str(rigid.Diagram.snake_equations.canonical().terms[1]) == "Id(x)"
+    cups = rigid.Diagram.generators["cups"].canonical()
+    assert cups == {"left": rigid.Ty('X'), "right": rigid.Ty('X').r}
+    with raises(AxiomError):
+        feedback.Diagram.feedback_joining.canonical()
 
 
 def test_rule_check():
-    """ A rule checks arguments against its pattern in one mechanism. """
-    from discopy import markov, rigid
-
-    x, y = rigid.Ty('x'), rigid.Ty('y')
-    cups = rigid.Diagram.rules["cups"]
-    assert cups.check(x, x.r) == {"X": x}
+    x = rigid.Ty('x')
+    assert rigid.Diagram.generators["cups"].check(x, x.r) == {"X": x}
     with raises(AxiomError):
-        cups.check(x, x.l)
-    with raises(AxiomError):
-        cups.check(x @ y, (x @ y).r)
-    copy = markov.Diagram.rules["copy"]
-    z = markov.Ty('z')
-    assert copy.check(z, 3) == {"X": z, "N": 3}
-    with raises(AxiomError):
-        copy.check(z @ z, 2)
-    with raises(TypeError):
-        rigid.Diagram.rules["box"].check(x)
+        rigid.Diagram.generators["cups"].check(x, x.l)
 
 
-def test_pattern_instantiation():
-    from discopy import rigid
-    from discopy.axioms import Var, Word
+def test_hom_binder():
+    from discopy.pattern import Hom, HomType
 
-    X, A = Var.atom('X'), Var.type('A')
-    a, b = map(rigid.Ty, "ab")
-    assert (A @ X @ X.r).instantiate({"A": a @ b, "X": a}) == a @ b @ a @ a.r
-    assert Word().instantiate({}, unit=rigid.Ty()) == rigid.Ty()
-    drawn = find(
-        (X @ X.r).strategy(rigid.Diagram), lambda value: len(value) == 2)
-    assert drawn[1:] == drawn[:1].r
-    assert find((A @ X).strategy(rigid.Diagram, {"X": a}),
-                lambda value: len(value) == 3)[2:] == a
+    @axiom
+    def whiskering[X, Y, A: Hom[C1, X, Y]](cls, a: Self, x: X) -> Equation:
+        """ A higher metavariable declares its boundaries on its binder. """
+        return Equation(a, a)
 
-def test_Equation_of_a_category():
-    """ An axiom compares up to the equation its category binds. """
-    from discopy import symmetric
-    x, y = symmetric.Ty('x'), symmetric.Ty('y')
-    f, g = symmetric.Box('f', x, x), symmetric.Box('g', y, y)
-    left, right = f @ g.dom >> f.cod @ g, f.dom @ g >> f @ g.cod
-    assert left != right and not cat.Equation(left, right)
-    assert symmetric.Diagram.Equation(left, right)
-    assert type(symmetric.Diagram.unitality(f)) is symmetric.Equation
-    assert type(symmetric.Diagram.identity_typing(x)) is cat.Equation
+    law = whiskering.bind(Arrow)
+    binder = law.sequent.variables["A"]
+    assert isinstance(binder, HomType) and str(binder) == "C1[X, Y]"

@@ -96,8 +96,11 @@ from typing import ClassVar
 
 from collections.abc import Sequence
 
+from typing import Annotated, Any, Self
+
 from discopy import monoidal, balanced, hypergraph, cmap, messages
 from discopy.abc import MonoidalCategory, SymmetricCategory
+from discopy.axioms import Atom, Equation, axiom, generator
 from discopy.cat import factory, Generator
 from discopy.monoidal import Wire, Ty, Nat  # noqa: F401
 from discopy.python import finset
@@ -334,6 +337,24 @@ class Diagram(balanced.Diagram, SymmetricCategory):
         ) @ tensor(right)\
             >> head @ cls.permutation(
                 [x - 1 if x > i else x for x in xs[1:]], rest)
+
+    @classmethod
+    @generator
+    def cycle[X: Atom, A](
+            cls, x: Annotated[Ty, X], a: Annotated[Ty, A]
+    ) -> Annotated[Self, "X @ A", "A @ X"]:
+        """
+        The permutation moving a wire past a type, a native
+        :class:`Permutation` of any length.
+
+        Parameters:
+            x : The wire to move.
+            a : The type to move it past.
+
+        >>> x, y, z = Ty('x'), Ty('y'), Ty('z')
+        >>> assert Diagram.cycle(x, y @ z) == Permutation(x @ y @ z, [1, 2, 0])
+        """
+        return cls.from_permutation([*range(1, len(a) + 1), 0], x @ a)
 
     @classmethod
     def from_permutation(cls, perm: Sequence[int],
@@ -645,6 +666,21 @@ Functor = Diagram.Functor
 CMap = cmap.CMap[Diagram]
 
 Hypergraph = hypergraph.Hypergraph[Diagram]
+
+
+@axiom
+def symmetric(
+        cls, functor: Annotated[Any, "Self"],
+        x: Annotated[Ty, "Atom[Self.dom.ob]"],
+        y: Annotated[Ty, "Atom[Self.dom.ob]"]) -> Equation:
+    """ A symmetric functor preserves the swap. """
+    return functor.cod.Equation(
+        functor(functor.dom.swap(x, y)),
+        functor.cod.swap(functor(x), functor(y)))
+
+
+Diagram.Functor.symmetric = symmetric
+
 Id = Diagram.id
 
 

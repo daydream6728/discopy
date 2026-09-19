@@ -245,8 +245,10 @@ class Circuit(tensor.Diagram[complex]):
             cls, dom=dom, cod=dom if cod is None else cod,
             boundary_connected=True, **params)
 
-    trace = inapplicable("A trace unfolds into kets and bras.")(
-        tensor.Diagram.trace)
+    trace_left = inapplicable("A trace unfolds into kets and bras.")(
+        tensor.Diagram.trace_left)
+    trace_right = inapplicable("A trace unfolds into kets and bras.")(
+        tensor.Diagram.trace_right)
 
     @classmethod
     def id(cls, dom: int | Ty | None = None):

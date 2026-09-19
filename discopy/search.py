@@ -35,12 +35,12 @@ from __future__ import annotations
 
 import inspect
 from collections.abc import Callable, Iterator
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from types import MethodType
 from typing import TYPE_CHECKING
 
 from discopy.pattern import (
-    Declaration, HomType, Match, Sequent, Sort, Substitution)
+    Declaration, HomType, Match, Sequent, Sort, Substitution, parse)
 from discopy.utils import AxiomError
 
 if TYPE_CHECKING:
@@ -149,13 +149,26 @@ class Generator(Rule):
 
     __hash__ = Declaration.__hash__
 
-    @property
-    def sequent(self) -> Sequent:
-        sequent = Declaration.sequent.fget(self)
+    def __post_init__(self):
+        super().__post_init__()
+        try:
+            sequent = parse(self.function)
+        except TypeError:
+            return  # Validated lazily, once the owner bounds the sorts.
+        self.validate(sequent)
+
+    @staticmethod
+    def validate(sequent: Sequent) -> None:
+        """ Refuse a premise the search would have to prove. """
         for name, premise in sequent.premises.items():
             if isinstance(premise, HomType):
                 raise TypeError(
                     f"A generator takes no hom premise, got {name}.")
+
+    @property
+    def sequent(self) -> Sequent:
+        sequent = Declaration.sequent.fget(self)
+        self.validate(sequent)
         return sequent
 
 

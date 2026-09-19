@@ -5,7 +5,7 @@ from hypothesis import Phase, given, note, settings
 from hypothesis import strategies as st
 
 from conftest import PROFILE
-from discopy.axioms import Axiom, Testable
+from discopy.axioms import Axiom, Constant, Testable
 from discopy.utils import factory_name
 
 
@@ -27,7 +27,8 @@ def types() -> tuple[type[Testable], ...]:
     class stating no law gets no cell: :class:`Testable` itself, and an
     axiom or a pattern, which generate their terms without stating laws.
     Nor does a category over a fixed vocabulary, whose
-    :attr:`discopy.abc.Category.generators` leave out the free box: the
+    :attr:`discopy.abc.Category.generators` are the
+    :class:`discopy.search.Constant` rules of its words or gates: the
     sentences of a pregroup grammar or the circuits over a gate set fill
     only the sequents their vocabulary derives, not the ones a law draws,
     and their laws are those of the free category they live in.
@@ -37,7 +38,9 @@ def types() -> tuple[type[Testable], ...]:
             testable.strategy()
         except NotImplementedError:
             return False
-        return "box" in getattr(testable, "generators", ("box", ))
+        generators = dict(getattr(testable, "generators", {}))
+        return not any(
+            isinstance(value, Constant) for value in generators.values())
 
     return tuple(sorted(
         (testable for testable in Testable.subclasses()
