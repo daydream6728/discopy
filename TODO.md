@@ -34,13 +34,13 @@
 > using advanced python typing techniques that typecheckers like ty
 > actually handle.
 
-- [ ] Validate the design against ty: `Annotated[C1, dom, cod]` with
+- [x] Validate the design against ty: `Annotated[C1, dom, cod]` with
       metavariables as pattern objects in the metadata, statically the
       coarse `C1` typing, at runtime the sequent
-- [ ] Merge `claude/proof-search-on-serde` into this branch and resolve
-- [ ] Unify with `claude/nifty-cray-b7mtqd`: take the `Generator`
+- [x] Merge `claude/proof-search-on-serde` into this branch and resolve
+- [WIP] @session_01UrSNrBcfEnb46fFG9LYRPo-2026-09-19 13:58 Unify with `claude/nifty-cray-b7mtqd`: take the `Generator`
       descriptor mechanism so factories are typed nested classes
-- [ ] Replace the eval-in-shadow-scope front end of `axioms` with the
+- [WIP] @session_01UrSNrBcfEnb46fFG9LYRPo-2026-09-19 13:58 Replace the eval-in-shadow-scope front end of `axioms` with the
       `Annotated` spelling: `annotated`, `metavariables`, `rule`,
       `generator` read type-parameter-faithful scopes, no `Level`
       impersonation of `C0`/`C1`/`C2`
