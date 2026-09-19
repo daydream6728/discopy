@@ -577,3 +577,14 @@ def test_pattern_instantiation():
     assert drawn[1:] == drawn[:1].r
     assert find((A @ X).strategy(rigid.Diagram, {"X": a}),
                 lambda value: len(value) == 3)[2:] == a
+
+def test_Equation_of_a_category():
+    """ An axiom compares up to the equation its category binds. """
+    from discopy import symmetric
+    x, y = symmetric.Ty('x'), symmetric.Ty('y')
+    f, g = symmetric.Box('f', x, x), symmetric.Box('g', y, y)
+    left, right = f @ g.dom >> f.cod @ g, f.dom @ g >> f @ g.cod
+    assert left != right and not cat.Equation(left, right)
+    assert symmetric.Diagram.Equation(left, right)
+    assert type(symmetric.Diagram.unitality(f)) is symmetric.Equation
+    assert type(symmetric.Diagram.identity_typing(x)) is cat.Equation

@@ -20,6 +20,8 @@ Summary
     Diagram
     Box
     Trace
+    Sum
+    Bubble
     Functor
 
 Axioms
@@ -128,7 +130,7 @@ from typing import ClassVar
 from discopy import monoidal, cmap, hypergraph
 from discopy.abc import TracedCategory
 from discopy.axioms import Serialisable
-from discopy.cat import factory
+from discopy.cat import factory, Generator
 from discopy.monoidal import Ty  # noqa: F401
 from discopy.utils import (
     factory_name,
@@ -150,7 +152,8 @@ class Diagram(monoidal.Diagram, TracedCategory):
         dom (monoidal.Ty) : The domain of the diagram, i.e. its input.
         cod (monoidal.Ty) : The codomain of the diagram, i.e. its output.
     """
-    trace_factory: ClassVar[type["Trace"]]
+    Trace: ClassVar[Generator[..., "Trace"]]
+    Functor: ClassVar[Generator[..., "Functor"]]
     repr_transparency = Serialisable.repr_transparency.failing(
         "The generic representation of a trace does not read back (#742).")
     serialisation = Serialisable.serialisation.failing(
@@ -177,10 +180,10 @@ class Diagram(monoidal.Diagram, TracedCategory):
         .. image:: /_static/traced/trace.svg
         """
         return self if n == 0\
-            else self.trace_factory(self, left).trace(n - 1, left)
+            else self.Trace(self, left).trace(n - 1, left)
 
     def to_drawing(self):
-        return monoidal.Diagram.to_drawing(self, functor_factory=Functor)
+        return monoidal.Diagram.to_drawing(self, functor=Functor)
 
     trace_dinaturality_left = \
         TracedCategory.trace_dinaturality_left.inapplicable(FREE_TRACE)
@@ -201,17 +204,10 @@ class Diagram(monoidal.Diagram, TracedCategory):
         TracedCategory.trace_superposing_right.inapplicable(FREE_TRACE)
 
 
-class Box(monoidal.Box, Diagram):
-    """
-    A traced box is a monoidal box in a traced diagram.
-
-    Parameters:
-        name (str) : The name of the box.
-        dom (monoidal.Ty) : The domain of the box, i.e. its input.
-        cod (monoidal.Ty) : The codomain of the box, i.e. its output.
-    """
+Box = Diagram.Box
 
 
+@Diagram.generator
 class Trace(Box, monoidal.Bubble):
     """
     A trace is a diagram ``arg`` with an output wire fed back into an input.
@@ -232,7 +228,7 @@ class Trace(Box, monoidal.Bubble):
         dom, cod = (arg.dom[1:], arg.cod[1:]) if left\
             else (arg.dom[:-1], arg.cod[:-1])
         monoidal.Bubble.__init__(self, arg, dom=dom, cod=cod)
-        Box.__init__(self, name, dom, cod)
+        self.Box.__init__(self, name, dom, cod)
 
     def __str__(self):
         return self.name
@@ -246,7 +242,15 @@ class Trace(Box, monoidal.Bubble):
     def to_drawing(self):
         return self.ar.to_drawing(self)
 
+    def image(self, functor):
+        n = len(functor(self.arg.dom)) - len(functor(self.dom))
+        return functor.cod.trace(functor(self.arg), n, left=self.left)
 
+
+Sum, Bubble = Diagram.Sum, Diagram.Bubble
+
+
+@Diagram.generator
 class Functor(monoidal.Functor):
     """
     A traced functor is a monoidal functor that preserves traces.
@@ -283,16 +287,9 @@ class Functor(monoidal.Functor):
     """
     dom = cod = Diagram
 
-    def __call__(self, other):
-        if isinstance(other, Trace):
-            n = len(self(other.arg.dom)) - len(self(other.dom))
-            return self.cod.trace(self(other.arg), n, left=other.left)
-        return super().__call__(other)
-
 
 CMap = cmap.CMap[Diagram]
 
-Diagram.functor_factory = Functor
-Diagram.trace_factory = Trace
 Hypergraph = hypergraph.Hypergraph[Diagram]
+Layer = Diagram.Layer
 Id = Diagram.id

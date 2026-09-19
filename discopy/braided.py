@@ -16,6 +16,7 @@ Summary
     Box
     Braid
     Sum
+    Bubble
     Functor
 
 .. admonition:: Functions
@@ -64,7 +65,7 @@ from collections.abc import Callable
 
 from discopy import monoidal
 from discopy.abc import BraidedCategory
-from discopy.cat import factory
+from discopy.cat import factory, Generator
 from discopy.monoidal import Ty, Match
 from discopy.utils import (
     assert_isatomic, BinaryBoxConstructor, deprecated_alias, factory_name)
@@ -91,7 +92,8 @@ class Diagram(monoidal.Diagram, BraidedCategory):
         dom (monoidal.Ty) : The domain of the diagram, i.e. its input.
         cod (monoidal.Ty) : The codomain of the diagram, i.e. its output.
     """
-    braid_factory: ClassVar[type[Braid]]
+    Braid: ClassVar[Generator[..., "Braid"]]
+    Functor: ClassVar[Generator[..., "Functor"]]
 
     @classmethod
     def braid(cls, left: monoidal.Ty, right: monoidal.Ty) -> Self:
@@ -104,9 +106,9 @@ class Diagram(monoidal.Diagram, BraidedCategory):
 
         Note
         ----
-        This calls :func:`hexagon` and :attr:`braid_factory`.
+        This calls :func:`hexagon` and :attr:`Braid`.
         """
-        return hexagon(cls, cls.braid_factory)(left, right)
+        return hexagon(cls, cls.Braid)(left, right)
 
     def simplify(self) -> Diagram:
         """ Remove braids followed by their dagger. """
@@ -166,17 +168,10 @@ class Diagram(monoidal.Diagram, BraidedCategory):
         "A free braid does not commute past a box.")
 
 
-class Box(monoidal.Box, Diagram):
-    """
-    A braided box is a monoidal box in a braided diagram.
-
-    Parameters:
-        name (str) : The name of the box.
-        dom (monoidal.Ty) : The domain of the box, i.e. its input.
-        cod (monoidal.Ty) : The codomain of the box, i.e. its output.
-    """
+Box = Diagram.Box
 
 
+@Diagram.generator
 class Braid(BinaryBoxConstructor, Box):
     """
     The braiding of atomic types :code:`left` and :code:`right`.
@@ -199,7 +194,7 @@ class Braid(BinaryBoxConstructor, Box):
         name = type(self).__name__\
             + (f"({right}, {left})" if is_dagger else f"({left}, {right})")
         dom, cod = left @ right, right @ left
-        Box.__init__(
+        self.Box.__init__(
             self, name, dom, cod, is_dagger=is_dagger, draw_as_braid=True)
         BinaryBoxConstructor.__init__(self, left, right)
 
@@ -210,6 +205,11 @@ class Braid(BinaryBoxConstructor, Box):
 
     def dagger(self):
         return type(self)(self.right, self.left, not self.is_dagger)
+
+    def image(self, functor):
+        if self.is_dagger or not hasattr(functor.cod, "braid"):
+            return super().image(functor)
+        return functor.cod.braid(functor(self.dom[0]), functor(self.dom[1]))
 
 
 def hexagon(cls: type[Diagram], factory: Callable) -> Callable[[Ty, Ty], Any]:
@@ -236,39 +236,13 @@ def hexagon(cls: type[Diagram], factory: Callable) -> Callable[[Ty, Ty], Any]:
     return method
 
 
-class Sum(monoidal.Sum, Box):
-    """
-    A braided sum is a monoidal sum and a braided box.
-
-    Parameters:
-        terms (tuple[Diagram, ...]) : The terms of the formal sum.
-        dom (Ty) : The domain of the formal sum.
-        cod (Ty) : The codomain of the formal sum.
-    """
+Sum, Bubble = Diagram.Sum, Diagram.Bubble
 
 
-class Functor(monoidal.Functor):
-    """
-    A braided functor is a monoidal functor that preserves braids.
-
-    Parameters:
-        ob_map (Mapping[monoidal.Ty, monoidal.Ty]) :
-            Map from :class:`monoidal.Ty` to :code:`cod.ob`.
-        ar_map (Mapping[Box, Diagram]) : Map from :class:`Box` to :code:`cod`.
-        cod (Category) :
-            The codomain, :code:`Diagram` by default.
-    """
-    dom = cod = Diagram
-
-    def __call__(self, other):
-        if isinstance(other, Braid) and not other.is_dagger\
-                and hasattr(self.cod, "braid"):
-            return self.cod.braid(self(other.dom[0]), self(other.dom[1]))
-        return super().__call__(other)
+Functor = Diagram.Functor
 
 
-Diagram.braid_factory = Braid
-Diagram.sum_factory = Sum
+Layer = Diagram.Layer
 Id = Diagram.id
 
 
@@ -276,7 +250,7 @@ class Equation(monoidal.Equation):
     """ The :class:`monoidal.Equation` of braided diagrams. """
 
 
-Diagram.equation_factory = Equation
+Diagram.equation_factory = Diagram.Equation = Equation
 
 
 __getattr__ = deprecated_alias(__name__, {"Ob": "Wire"})

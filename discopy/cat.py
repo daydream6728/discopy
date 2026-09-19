@@ -22,6 +22,7 @@ Summary
     Functor
     Transformation
     Equation
+    Generator
 
 .. admonition:: Functions
 
@@ -92,6 +93,7 @@ from discopy.axioms import (
 )
 from discopy.utils import (  # noqa: F401
     factory,
+    Generator,
     factory_name,
     from_tree,
     rsubs,
@@ -131,6 +133,10 @@ class Ob(Serialisable):
             del state["_name"]
         super().__setstate__(state)
 
+    def image(self, functor):
+        """ How a functor maps the object, ``ob_map`` by default. """
+        return functor.generic(self)
+
     def __init__(self, name: str = ""):
         assert_isinstance(name, str)
         self.name = name
@@ -161,15 +167,27 @@ class FreeCategory(Category):
 
     Note
     ----
-    Subclasses are assumed to have a ``generator_factory`` class attribute
-    for the type of the generators and an arrow factory ``ar`` whose
+    Subclasses are assumed to have an arrow factory ``ar`` whose
     constructor accepts ``inside``, ``dom``, ``cod`` and ``_scan`` as
     keyword arguments. New arrows are always built internally through that
     constructor by keyword (passing ``_scan=False`` to skip the
     composability check when it is guaranteed by construction), so that
     subclasses are free to expose a different, more user-friendly positional
-    signature without breaking the machinery below.
+    signature without breaking the machinery below. Subclasses check the
+    type of what they put ``inside`` themselves, e.g. :class:`Arrow` its
+    ``Box`` and :class:`discopy.monoidal.Diagram` its layers.
     """
+    @classmethod
+    def generator(cls, root: type) -> type:
+        """
+        Declare ``root`` as a generator of the category, bound under its
+        own name, e.g. ``@Diagram.generator`` above ``class Swap``.
+
+        """
+        binding = Generator.subclass(root)
+        binding.__set_name__(cls, root.__name__)
+        setattr(cls, root.__name__, binding)
+        return root
 
     generator_factory: ClassVar[type] = None  # ty: ignore[invalid-assignment]
 
@@ -179,14 +197,12 @@ class FreeCategory(Category):
         cod = cod if isinstance(cod, ob) else ob(cod)
         self.dom, self.cod, self.inside = dom, cod, tuple(inside)
         if _scan:
-            for generator in inside:
-                assert_isinstance(generator, self.generator_factory)
             previous = dom
-            for generator in inside:
-                if previous != generator.dom:
+            for arrow in inside:
+                if previous != arrow.dom:
                     raise utils.AxiomError(messages.NOT_COMPOSABLE.format(
-                        previous, generator, previous, generator.dom))
-                previous = generator.cod
+                        previous, arrow, previous, arrow.dom))
+                previous = arrow.cod
             if previous != cod:
                 raise utils.AxiomError(messages.NOT_COMPOSABLE.format(
                     previous, cod, previous, cod))
@@ -287,9 +303,17 @@ class Arrow(FreeCategory, Serialisable):
     see :class:`monoidal.Nat`.
     """
     ob = Ob
-    sum_factory: ClassVar[type[Sum]]
-    bubble_factory: ClassVar[type[Bubble]]
+    Box: ClassVar[Generator[..., "Box"]]
+    Sum: ClassVar[Generator[..., "Sum"]]
+    Bubble: ClassVar[Generator[..., "Bubble"]]
     serialised_attrs = ('inside', 'dom', 'cod')
+
+    def __init__(self, inside, dom, cod, _scan=True):
+        if _scan:
+            generator = self.Box
+            for box in inside:
+                assert_isinstance(box, generator)
+        super().__init__(inside, dom, cod, _scan=_scan)
 
     @classmethod
     def strategy(
@@ -322,25 +346,25 @@ class Arrow(FreeCategory, Serialisable):
         return ' >> '.join(map(str, self.inside)) or f"Id({self.dom})"
 
     def __add__(self, other):
-        return self.sum_factory((self, )) + other
+        return self.Sum((self, )) + other
 
     def __radd__(self, other):
         return self if other == 0 else NotImplemented
 
     @property
-    def is_generator(self):
-        """ Whether an `Arrow` is a generator, i.e. it has length 1. """
+    def is_atom(self):
+        """ Whether an `Arrow` is an atom, i.e. it has length 1. """
         return len(self.inside) == 1
 
     @property
-    def generator(self):
-        """ Returns the only box in an `Arrow` of length 1. """
-        return self.inside[0] if self.is_generator else None
+    def atom(self):
+        """ The only box in an `Arrow` of length 1, i.e. its generator. """
+        return self.inside[0] if self.is_atom else None
 
     def setoid(self):
         """
         Returns data that faithfully describes an `Arrow` making sure that
-        `self.generator.setoid == self.setoid` when `self.is_generator`.
+        `self.atom.setoid == self.setoid` when `self.is_atom`.
         This is used to define `Arrow.__eq__` and `Arrow.__hash__`.
 
         Abstract
@@ -361,10 +385,10 @@ class Arrow(FreeCategory, Serialisable):
         functor application, is in fact a morphism of setoids, i.e. that it
         sends equal inputs to equal outputs.
         """
-        generator = self.generator
-        if generator is None:
+        atom = self.atom
+        if atom is None:
             return (self.inside, self.dom, self.cod)
-        return generator.setoid()
+        return atom.setoid()
 
     def __eq__(self, other):
         return isinstance(other, self.ar) and self.setoid() == other.setoid()
@@ -388,7 +412,7 @@ class Arrow(FreeCategory, Serialisable):
         >>> assert Arrow.id('x') == Id('x') == Id(Ob('x'))
         """
         if any(isinstance(other, Sum) for other in others):
-            return self.sum_factory((self, )).then(*others)
+            return self.Sum((self, )).then(*others)
         return super().then(*others)
 
     @classmethod
@@ -400,11 +424,11 @@ class Arrow(FreeCategory, Serialisable):
             dom : The domain of the empty sum.
             cod : The codomain of the empty sum.
         """
-        return cls.sum_factory((), dom, cod)
+        return cls.Sum((), dom, cod)
 
     def bubble(self, *args, **kwargs) -> Bubble:
         """ Unary operator on homsets. """
-        return self.bubble_factory(self, *args, **kwargs)
+        return self.Bubble(self, *args, **kwargs)
 
     @property
     def free_symbols(self) -> "set[sympy.Symbol]":
@@ -471,6 +495,7 @@ class Arrow(FreeCategory, Serialisable):
 
 
 @total_ordering
+@Arrow.generator
 class Box(Arrow):
     """
     A box is an arrow with a :code:`name` and the tuple of just itself inside.
@@ -545,6 +570,16 @@ class Box(Arrow):
             self.name, self.dom, self.cod, is_dagger=self.is_dagger,
             data=lambdify(symbols, self.data, **kwargs)(*xs))
 
+    def image(self, functor):
+        """
+        How a functor maps the box, ``ar_map`` by default.
+
+        A generator overrides this and falls back on ``super().image``,
+        so that e.g. a swap is a swap where the codomain has one, else a
+        permutation, else a box.
+        """
+        return functor.generic(self)
+
     def dagger(self) -> Self:
         return type(self)(
             self.name, self.cod, self.dom,
@@ -576,6 +611,7 @@ class Box(Arrow):
         return self.name < other.name
 
 
+@Arrow.generator
 class Sum(Box):
     """
     A sum is a tuple of arrows :code:`terms` with the same domain and codomain.
@@ -619,11 +655,12 @@ class Sum(Box):
         super().__init__(name, dom, cod)
 
     @property
-    def is_generator(self):
-        return len(self.terms) == 1 and self.terms[0].is_generator
+    def is_atom(self):
+        return len(self.terms) == 1 and self.terms[0].is_atom
 
-    def generator(self):
-        return self.terms[0].generator if self.is_generator else None
+    @property
+    def atom(self):
+        return self.terms[0].atom if self.is_atom else None
 
     def setoid(self):
         """ Ensure that a singleton sum is in fact equal to its only term. """
@@ -641,8 +678,8 @@ class Sum(Box):
     def __add__(self, other):
         assert_isparallel(self, other)
         other = other if isinstance(other, Sum)\
-            else self.sum_factory((other, ))
-        return self.sum_factory(self.terms + other.terms, self.dom, self.cod)
+            else self.Sum((other, ))
+        return self.Sum(self.terms + other.terms, self.dom, self.cod)
 
     def __iter__(self):
         for arrow in self.terms:
@@ -654,13 +691,13 @@ class Sum(Box):
     @unbiased
     def then(self, other):
         other = other if isinstance(other, Sum)\
-            else self.sum_factory((other, ))
+            else self.Sum((other, ))
         terms = tuple(f.then(g) for f in self.terms for g in other.terms)
-        return self.sum_factory(terms, self.dom, other.cod)
+        return self.Sum(terms, self.dom, other.cod)
 
     def dagger(self):
         terms = tuple(f.dagger() for f in self.terms)
-        return self.sum_factory(terms, self.cod, self.dom)
+        return self.Sum(terms, self.cod, self.dom)
 
     @property
     def free_symbols(self):
@@ -668,14 +705,15 @@ class Sum(Box):
 
     def subs(self, *args):
         terms = tuple(f.subs(*args) for f in self.terms)
-        return self.sum_factory(terms, self.dom, self.cod)
+        return self.Sum(terms, self.dom, self.cod)
 
     def lambdify(self, *symbols, **kwargs):
-        return lambda *xs: self.sum_factory(
+        return lambda *xs: self.Sum(
             tuple(box.lambdify(*symbols, **kwargs)(*xs) for box in self.terms),
             dom=self.dom, cod=self.cod)
 
 
+@Arrow.generator
 class Bubble(Box):
     """
     A bubble is a box with arrow :code:`args` inside and an optional pair of
@@ -868,6 +906,42 @@ class Functor(Category):
             + f"(ob_map={self.ob_map}, ar_map={self.ar_map}{cod_repr})"
 
     def __call__(self, other):
+        """
+        The image of ``other``, asking it first how it is mapped.
+
+        A generator says so itself with an ``image`` method, but only a
+        functor whose own category declares that generator listens: a
+        braid is an opaque box to a monoidal functor, which is how
+        :meth:`discopy.cmap.CMap.from_diagram` keeps the structure of the
+        level above as boxes.
+        """
+        image = getattr(other, "image", None)
+        return self.generic(other) if image is None\
+            or not self.interprets(type(other)) else image(self)
+
+    def interprets(self, generator: type) -> bool:
+        """
+        Whether the functor lets a generator say how it is mapped, i.e.
+        whether its domain declares one of the same name.
+
+        A braid is an opaque box to a monoidal functor, which is how
+        :meth:`discopy.cmap.CMap.from_diagram` keeps the structure of the
+        level above the map as boxes.
+        """
+        dom = type(self).dom
+        declared = getattr(dom, generator.__name__, None)
+        if not isinstance(declared, type):
+            declared = getattr(dom.ob, generator.__name__, None)
+        return isinstance(declared, type) and (
+            issubclass(generator, declared) or issubclass(declared, generator))
+
+    def generic(self, other):
+        """
+        The image of a term that says nothing about how it is mapped, i.e.
+        the structure every functor preserves: an object goes through
+        ``ob_map``, a box through ``ar_map`` and an arrow is the
+        composite of the images of its boxes.
+        """
         if isinstance(other, Ob):
             result = self.ob_map[other]
             origin = get_origin(self.cod.ob)
@@ -895,6 +969,7 @@ class Functor(Category):
 
 
 Arrow.generator_factory = Arrow.box_factory = Box
+
 
 
 @factory

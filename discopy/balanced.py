@@ -15,7 +15,9 @@ Summary
     Box
     Braid
     Twist
+    Trace
     Sum
+    Bubble
     Functor
 
 Axioms
@@ -39,7 +41,7 @@ from dataclasses import dataclass
 
 from discopy import config, monoidal, braided, traced, cmap, hypergraph
 from discopy.abc import BalancedCategory
-from discopy.cat import factory
+from discopy.cat import factory, Generator
 from discopy.monoidal import Colour, Ty  # noqa: F401
 from discopy.utils import factory_name, assert_isatomic
 
@@ -131,8 +133,8 @@ class Diagram(braided.Diagram, traced.Diagram, BalancedCategory):
 
     .. _nLab: https://ncatlab.org/nlab/show/traced+monoidal+category)
     """
-    twist_factory: ClassVar[type[Twist]]
-    dual_rail_factory: ClassVar[type[DualRail]]
+    Twist: ClassVar[Generator[..., "Twist"]]
+    Functor: ClassVar[Generator[..., "Functor"]]
 
     @classmethod
     def twist(cls, dom: monoidal.Ty) -> Diagram:
@@ -144,12 +146,12 @@ class Diagram(braided.Diagram, traced.Diagram, BalancedCategory):
 
         Note
         ----
-        This calls :attr:`twist_factory`.
+        This calls :attr:`Twist`.
         """
         if len(dom) == 0:
             return cls.id()
         return cls.braid(dom[0], dom[1:])\
-            >> cls.twist(dom[1:]) @ cls.twist_factory(dom[0])\
+            >> cls.twist(dom[1:]) @ cls.Twist(dom[0])\
             >> cls.braid(dom[1:], dom[0])
 
     def to_braided(self, width: float | None = None, colour="gray"):
@@ -180,24 +182,10 @@ class Diagram(braided.Diagram, traced.Diagram, BalancedCategory):
         if width is None:
             width = config.DRAWING_DEFAULT["ribbon_width"]
         return self if not width\
-            else self.dual_rail_factory(width, colour)(self)
+            else self.DualRail(width, colour)(self)
 
 
-class Box(braided.Box, traced.Box, Diagram):
-    """
-    A braided box is a monoidal box in a braided diagram.
-
-    Parameters:
-        name (str) : The name of the box.
-        dom (monoidal.Ty) : The domain of the box, i.e. its input.
-        cod (monoidal.Ty) : The codomain of the box, i.e. its output.
-    """
-
-
-class Braid(braided.Braid, Box):
-    """
-    Braid in a balanced category.
-    """
+Box, Braid = Diagram.Box, Diagram.Braid
 
 
 class DualRailBraid(braided.Box):
@@ -216,7 +204,7 @@ class DualRailBraid(braided.Box):
     def __init__(self, left: monoidal.Ty, right: monoidal.Ty, is_dagger=False):
         self.left, self.right = left, right
         name = type(self).__name__ + f"({left}, {right})"
-        braided.Box.__init__(
+        self.Box.__init__(
             self, name, left @ right, right @ left,
             is_dagger=is_dagger, draw_as_dual_rail_braid=True)
 
@@ -240,7 +228,7 @@ class DualRailTwist(braided.Box):
     """
     def __init__(self, dom: monoidal.Ty, is_dagger=False):
         name = type(self).__name__ + f"({dom})"
-        braided.Box.__init__(
+        self.Box.__init__(
             self, name, dom, dom,
             is_dagger=is_dagger, draw_as_dual_rail_twist=True)
 
@@ -252,20 +240,7 @@ class DualRailTwist(braided.Box):
         return type(self)(self.dom, not self.is_dagger)
 
 
-class Trace(traced.Trace, Box):
-    """
-    A trace in a balanced category.
-
-    Parameters:
-        arg : The diagram to trace.
-        left : Whether to trace the wires on the left or right.
-
-    See also
-    --------
-    :meth:`Diagram.trace`
-    """
-
-
+@Diagram.generator
 class Twist(Box):
     """
     The twist on atomic type :code:`dom`.
@@ -284,7 +259,8 @@ class Twist(Box):
     def __init__(self, dom: monoidal.Ty, is_dagger=False):
         assert_isatomic(dom, monoidal.Ty)
         name = type(self).__name__ + f"({dom})"
-        Box.__init__(self, name, dom, dom, is_dagger=is_dagger)
+        self.Box.__init__(
+            self, name, dom, dom, is_dagger=is_dagger)
 
     def __repr__(self):
         if self.is_dagger:
@@ -294,37 +270,16 @@ class Twist(Box):
     def dagger(self):
         return type(self)(self.dom, not self.is_dagger)
 
-
-class Sum(braided.Sum, Box):
-    """
-    A balanced sum is a braided sum and a balanced box.
-
-    Parameters:
-        terms (tuple[Diagram, ...]) : The terms of the formal sum.
-        dom (Ty) : The domain of the formal sum.
-        cod (Ty) : The codomain of the formal sum.
-    """
+    def image(self, functor):
+        return functor.cod.twist(functor(self.dom))\
+            if hasattr(functor.cod, "twist") else super().image(functor)
 
 
-class Functor(braided.Functor, traced.Functor):
-    """
-    A balanced functor is a braided functor that twists.
+Trace, Sum, Bubble = (
+    Diagram.Trace, Diagram.Sum, Diagram.Bubble)
 
-    Parameters:
-        ob_map (Mapping[monoidal.Ty, monoidal.Ty]) :
-            Map from :class:`monoidal.Ty` to :code:`cod.ob`.
-        ar_map (Mapping[Box, Diagram]) : Map from :class:`Box` to :code:`cod`.
-        cod (Category) :
-            The codomain, :code:`Diagram` by default.
-    """
-    dom = cod = Diagram
 
-    def __call__(self, other):
-        if isinstance(other, Twist) and hasattr(self.cod, "twist"):
-            return self.cod.twist(self(other.dom))
-        if isinstance(other, Trace):
-            return traced.Functor.__call__(self, other)
-        return braided.Functor.__call__(self, other)
+Functor = Diagram.Functor
 
 
 class DualRail(Functor):
@@ -345,8 +300,8 @@ class DualRail(Functor):
     :meth:`Diagram.to_braided`
     """
     cod = braided.Diagram
-    dual_rail_twist_factory = DualRailTwist
-    dual_rail_braid_factory = DualRailBraid
+    DualRailTwist = DualRailTwist
+    DualRailBraid = DualRailBraid
 
     def __init__(self, width: float | None = None, colour="gray"):
         self.width = config.DRAWING_DEFAULT["ribbon_width"]\
@@ -358,21 +313,17 @@ class DualRail(Functor):
 
     def __call__(self, other):
         if isinstance(other, Twist):
-            return self.dual_rail_twist_factory(self(other.dom))
+            return self.DualRailTwist(self(other.dom))
         if isinstance(other, Braid):
-            return self.dual_rail_braid_factory(
+            return self.DualRailBraid(
                 self(other.left), self(other.right), other.is_dagger)
         return super().__call__(other)
 
 
-Diagram.functor_factory = Functor
 CMap = cmap.CMap[Diagram]
 Hypergraph = hypergraph.Hypergraph[Diagram]
-Diagram.braid_factory = Braid
-Diagram.twist_factory = Twist
-Diagram.trace_factory = Trace
-Diagram.sum_factory = Sum
-Diagram.dual_rail_factory = DualRail
+Diagram.DualRail = DualRail
+Layer = Diagram.Layer
 Id = Diagram.id
 
 
@@ -380,4 +331,4 @@ class Equation(braided.Equation):
     """ The :class:`braided.Equation` of balanced diagrams. """
 
 
-Diagram.equation_factory = Equation
+Diagram.equation_factory = Diagram.Equation = Equation

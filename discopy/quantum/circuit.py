@@ -18,6 +18,7 @@ Summary
     Circuit
     Box
     Sum
+    Permutation
     Swap
     Functor
 
@@ -68,11 +69,13 @@ Examples
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 from collections.abc import Mapping
 
 from discopy import messages, tensor, frobenius
 from discopy.axioms import Rule, inapplicable, no_strategy
-from discopy.cat import factory
+from discopy.cat import factory, Generator
 from discopy.matrix import backend
 from discopy.tensor import Dim, Tensor
 from discopy.utils import (
@@ -188,6 +191,7 @@ class Ty(frobenius.Ty):
             min_size=min_length, max_size=max_length
         ).map(lambda wires: cls(*wires))
     generator_factory = Wire
+    Wire = Wire
 
 
 @factory
@@ -201,6 +205,12 @@ class Circuit(tensor.Diagram[complex]):
         cod (quantum.circuit.Ty) : The codomain of the circuit diagram.
     """
     ob = Ty
+    Discard = tensor.Discard
+    Box: ClassVar[Generator[..., "Box"]]
+    Sum: ClassVar[Generator[..., "Sum"]]
+    Permutation: ClassVar[Generator[..., "Permutation"]]
+    Swap: ClassVar[Generator[..., "Swap"]]
+    Functor: ClassVar[Generator[..., "Functor"]]
 
     @classproperty
     def generators(cls) -> dict[str, Rule]:
@@ -842,7 +852,7 @@ class Circuit(tensor.Diagram[complex]):
         return super().permutation(perm, doms)
 
     @staticmethod
-    def cup_factory(left, right):
+    def Cup(left, right):
         from discopy.quantum.gates import CX, H, sqrt, Bra, Match, Discard
 
         if left == right == qubit:
@@ -852,7 +862,7 @@ class Circuit(tensor.Diagram[complex]):
         raise ValueError
 
     @staticmethod
-    def spider_factory(n_legs_in, n_legs_out, typ, phase=None):
+    def Spider(n_legs_in, n_legs_out, typ, phase=None):
         if phase is not None:
             raise NotImplementedError
 
@@ -892,6 +902,7 @@ class Circuit(tensor.Diagram[complex]):
             >> self.cod[:offset] @ gate @ self.cod[offset + len(gate.dom):]
 
 
+@Circuit.generator
 class Box(tensor.Box[complex], Circuit):
     """
     A circuit box is a tensor box in a circuit diagram.
@@ -946,6 +957,7 @@ class Box(tensor.Box[complex], Circuit):
         return self if self.z is None else super().rotate(left)
 
 
+@Circuit.generator
 class Sum(tensor.Sum[complex], Box):
     """ Sums of circuits. """
     terms: tuple[Circuit, ...]
@@ -982,6 +994,7 @@ class Sum(tensor.Sum[complex], Box):
         return [circuit.to_tk() for circuit in self.terms]
 
 
+@Circuit.generator
 class Permutation(tensor.Permutation[complex], Box):
     "A permutation in a quantum circuit."
 
@@ -996,6 +1009,7 @@ class Permutation(tensor.Permutation[complex], Box):
             and all(isinstance(x.inside[0], Digit) for x in self.dom)
 
 
+@Circuit.generator
 class Swap(Permutation, tensor.Swap, Box):
     """
     The logical swap of two circuit wires, i.e. plumbing.
@@ -1012,6 +1026,7 @@ class Swap(Permutation, tensor.Swap, Box):
         return Tensor[complex].swap(Dim(left.dim), Dim(right.dim)).array
 
 
+@Circuit.generator
 class Functor(frobenius.Functor):
     """ :class:`Circuit`-valued functor. """
     dom = cod = Circuit
@@ -1037,9 +1052,16 @@ def bitstring2index(bitstring):
     return sum(value * 2 ** i for i, value in enumerate(bitstring[::-1]))
 
 
-Circuit.swap_factory, Circuit.sum_factory = Swap, Sum
-Circuit.permutation_factory = Permutation
+Cap, Bubble, Eval, Coeval, Curry, Copy, Merge = (
+    Circuit.Cap, Circuit.Bubble, Circuit.Eval,
+    Circuit.Coeval, Circuit.Curry, Circuit.Copy,
+    Circuit.Merge)
 bit, qubit = Ty(Digit(2)), Ty(Qudit(2))
+Exp, Over, Under = Ty.Exp, Ty.Over, Ty.Under
+TermBase, Constant, Variable, Application, Abstraction = (
+    Circuit.TermBase, Circuit.Constant, Circuit.Variable,
+    Circuit.Application, Circuit.Abstraction)
+Layer = Circuit.Layer
 Id = Circuit.id
 
 

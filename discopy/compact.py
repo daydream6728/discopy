@@ -15,8 +15,10 @@ Summary
     Box
     Cup
     Cap
-    Swap
     Permutation
+    Swap
+    Sum
+    Bubble
     Functor
 
 Axioms
@@ -54,11 +56,13 @@ Coherence
 ...     Cap(x, x.r) @ Cap(y, y.r) >> x @ Diagram.swap(x.r, y @ y.r))
 """
 
+from typing import ClassVar
+
 from discopy import symmetric, ribbon, rigid, cmap, hypergraph
 from discopy.abc import (
     BiclosedCategory, CompactCategory, PivotalCategory, RibbonCategory)
 from discopy.axioms import Serialisable, connected
-from discopy.cat import factory
+from discopy.cat import factory, Generator
 from discopy.utils import deprecated_alias
 from discopy.pivotal import Wire, Ty  # noqa: F401
 
@@ -80,8 +84,9 @@ class Diagram(symmetric.Diagram, ribbon.Diagram, CompactCategory):
     serialisation = Serialisable.serialisation
 
     ob = Ty
-    layer_factory = Layer
-    trace_factory = ribbon.Diagram.trace_factory
+    Layer: ClassVar[Generator[..., Layer]] = Generator.subclass(Layer)
+    Permutation: ClassVar[Generator[..., "Permutation"]]
+    Functor: ClassVar[Generator[..., "Functor"]]
 
     pivotality = PivotalCategory.pivotality
 
@@ -92,37 +97,11 @@ class Diagram(symmetric.Diagram, ribbon.Diagram, CompactCategory):
     currying_right = BiclosedCategory.currying_right.weaken(connected)
 
 
-class Box(symmetric.Box, ribbon.Box, Diagram):
-    """
-    A compact box is a symmetric and ribbon box in a compact diagram.
-
-    Parameters:
-        name (str) : The name of the box.
-        dom (pivotal.Ty) : The domain of the box, i.e. its input.
-        cod (pivotal.Ty) : The codomain of the box, i.e. its output.
-    """
+Box, Cup, Cap = (
+    Diagram.Box, Diagram.Cup, Diagram.Cap)
 
 
-class Cup(ribbon.Cup, Box):
-    """
-    A compact cup is a ribbon cup in a compact diagram.
-
-    Parameters:
-        left (pivotal.Ty) : The atomic type.
-        right (pivotal.Ty) : Its adjoint.
-    """
-
-
-class Cap(ribbon.Cap, Box):
-    """
-    A compact cap is a ribbon cap in a compact diagram.
-
-    Parameters:
-        left (pivotal.Ty) : The atomic type.
-        right (pivotal.Ty) : Its adjoint.
-    """
-
-
+@Diagram.generator
 class Permutation(symmetric.Permutation, Box):
     """
     A compact permutation is a symmetric permutation in a compact category.
@@ -139,43 +118,22 @@ class Permutation(symmetric.Permutation, Box):
     r = property(lambda self: self.rotate(left=False))
 
 
-class Swap(Permutation, symmetric.Swap, ribbon.Braid, Box):
-    """
-    A compact swap is a symmetric swap and a ribbon braid.
-
-    Parameters:
-        left (pivotal.Ty) : The type on the top left and bottom right.
-        right (pivotal.Ty) : The type on the top right and bottom left.
-    """
+Swap, Sum, Bubble, Eval, Coeval, Curry = (
+    Diagram.Swap, Diagram.Sum, Diagram.Bubble,
+    Diagram.Eval, Diagram.Coeval, Diagram.Curry)
 
 
-class Functor(symmetric.Functor, ribbon.Functor):
-    """
-    A compact functor is both a symmetric functor and a ribbon functor.
-
-    Parameters:
-        ob_map (Mapping[pivotal.Ty, pivotal.Ty]) :
-            Map from atomic :class:`pivotal.Ty` to :code:`cod.ob`.
-        ar_map (Mapping[Box, Diagram]) : Map from :class:`Box` to :code:`cod`.
-        cod (Category) : The codomain of the functor.
-    """
-    dom = cod = Diagram
-
-    def __call__(self, other):
-        if isinstance(other, (symmetric.Swap, symmetric.Permutation)):
-            return symmetric.Functor.__call__(self, other)
-        return ribbon.Functor.__call__(self, other)
+Functor = Diagram.Functor
 
 
 CMap = cmap.CMap[Diagram]
 
+TermBase, Constant, Variable, Application, Abstraction = (
+    Diagram.TermBase, Diagram.Constant, Diagram.Variable,
+    Diagram.Application, Diagram.Abstraction)
 Id = Diagram.id
 
-Diagram.swap_factory = Swap
-Diagram.functor_factory = Functor
-Diagram.permutation_factory = Permutation
 Hypergraph = hypergraph.Hypergraph[Diagram]
-Diagram.cup_factory, Diagram.cap_factory = Cup, Cap
 
 
 class Equation(symmetric.Equation):
@@ -183,7 +141,7 @@ class Equation(symmetric.Equation):
     up_to = staticmethod(Diagram.to_hypergraph)
 
 
-Diagram.equation_factory = Equation
+Diagram.equation_factory = Diagram.Equation = Equation
 
 
 __getattr__ = deprecated_alias(__name__, {"Ob": "Wire"})

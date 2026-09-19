@@ -22,6 +22,7 @@ Summary
     Coeval
     Curry
     Sum
+    Bubble
     Functor
     CMap
     TermBase
@@ -88,7 +89,7 @@ from discopy import monoidal, cmap
 from discopy.axioms import Serialisable, no_strategy
 from discopy.abc import BiclosedCategory
 from discopy.drawing import Drawing
-from discopy.cat import factory
+from discopy.cat import factory, Generator
 from discopy.utils import (
     assert_isatomic,
     assert_isinstance,
@@ -111,13 +112,10 @@ class Ty(monoidal.Ty):
     Applying a biclosed type to a callable yields a :class:`Abstraction`,
     applying it to a string yields a :class:`Constant`.
     """
-    exp_factory: ClassVar[type[Exp]]
-    over_factory: ClassVar[type[Exp]]
-    under_factory: ClassVar[type[Exp]]
-    variable_factory: ClassVar[type[Variable]]
-    constant_factory: ClassVar[type[Constant]]
-    application_factory: ClassVar[Callable[..., TermBase]]
-    abstraction_factory: ClassVar[type[Abstraction]]
+    Wire: ClassVar[Generator[..., "Wire"]]
+    Exp: ClassVar[Generator[..., "Exp"]]
+    Over: ClassVar[Generator[..., "Over"]]
+    Under: ClassVar[Generator[..., "Under"]]
 
     @overload
     def __pow__(self, other: int) -> Self: ...
@@ -130,13 +128,13 @@ class Ty(monoidal.Ty):
             else monoidal.Ty.__pow__(self, other)
 
     def exp(self, other: Ty) -> Ty:
-        return self.ar(self.exp_factory(self, other))
+        return self.ar(self.Exp(self, other))
 
     def over(self, other: Ty) -> Ty:
-        return self.ar(self.over_factory(self, other))
+        return self.ar(self.Over(self, other))
 
     def under(self, other: Ty) -> Ty:
-        return self.ar(self.under_factory(self, other))
+        return self.ar(self.Under(self, other))
 
     def __lshift__(self, other):
         return self.over(other)
@@ -146,7 +144,7 @@ class Ty(monoidal.Ty):
 
     def __call__(self, arg):
         if isinstance(arg, str):
-            return self.constant_factory(arg, self)
+            return self.Constant(arg, self)
         elif isinstance(arg, Callable):
             parameters = dict(signature(arg).parameters)
             left = False
@@ -158,8 +156,8 @@ class Ty(monoidal.Ty):
             varnames = list(parameters.keys())
             if len(varnames) != 1:
                 raise NotImplementedError
-            var = self.variable_factory(varnames[0], self)
-            return self.abstraction_factory(var, arg(var), left)
+            var = self.Variable(varnames[0], self)
+            return self.Abstraction(var, arg(var), left)
         raise ValueError
 
     def __repr__(self):
@@ -215,6 +213,7 @@ class Ty(monoidal.Ty):
         return self.inside[0].exponent
 
 
+@Ty.generator
 class Wire(monoidal.Wire):
     """
     A biclosed object is a self-dagger :class:`monoidal.Wire`, i.e. its left
@@ -225,6 +224,7 @@ class Wire(monoidal.Wire):
         return self
 
 
+@Ty.generator
 class Exp(Wire):
     """
     A :code:`base` type to an :code:`exponent` type, called with :code:`**`.
@@ -274,7 +274,21 @@ class Exp(Wire):
     def right(self):
         return self.base if isinstance(self, Under) else self.exponent
 
+    def exponentiate(self, functor, attr):
+        """ The image under ``functor`` of an exponential spelt ``attr``. """
+        base, exponent = functor(self.base), functor(self.exponent)
+        if hasattr(base, attr):
+            return getattr(base, attr)(exponent)
+        if hasattr(functor.cod, attr):
+            return getattr(functor.cod, attr)(base, exponent)
+        return None
 
+    def image(self, functor):
+        result = self.exponentiate(functor, "exp")
+        return super().image(functor) if result is None else result
+
+
+@Ty.generator
 class Over(Exp):
     """
     An :code:`exponent` type over a :code:`base` type, called with :code:`<<`.
@@ -286,7 +300,12 @@ class Over(Exp):
     def __str__(self):
         return f"({self.base} << {self.exponent})"
 
+    def image(self, functor):
+        result = self.exponentiate(functor, "over")
+        return super().image(functor) if result is None else result
 
+
+@Ty.generator
 class Under(Exp):
     """
     A :code:`base` type under an :code:`exponent` type, called with :code:`>>`.
@@ -297,6 +316,10 @@ class Under(Exp):
     """
     def __str__(self):
         return f"({self.exponent} >> {self.base})"
+
+    def image(self, functor):
+        result = self.exponentiate(functor, "under")
+        return super().image(functor) if result is None else result
 
 
 @factory
@@ -320,6 +343,15 @@ class Diagram(monoidal.Diagram, BiclosedCategory):
         "The generic tree of an evaluation does not read back (#742).")
 
     ob = Ty
+    Eval: ClassVar[Generator[..., "Eval"]]
+    Coeval: ClassVar[Generator[..., "Coeval"]]
+    Curry: ClassVar[Generator[..., "Curry"]]
+    Functor: ClassVar[Generator[..., "Functor"]]
+    TermBase: ClassVar[Generator[..., "TermBase"]]
+    Constant: ClassVar[Generator[..., "Constant"]]
+    Variable: ClassVar[Generator[..., "Variable"]]
+    Application: ClassVar[Generator[..., "Application"]]
+    Abstraction: ClassVar[Generator[..., "Abstraction"]]
 
     def curry(self, n=1, left=True) -> Diagram:
         """
@@ -330,7 +362,7 @@ class Diagram(monoidal.Diagram, BiclosedCategory):
             left : Whether to curry on the left, i.e. into :class:`Over`,
                 or on the right, i.e. into :class:`Under`.
         """
-        return self.curry_factory(self, n, left)
+        return self.Curry(self, n, left)
 
     @classmethod
     def ev(cls, base: Ty, exponent: Ty, left=True) -> Eval:
@@ -343,7 +375,7 @@ class Diagram(monoidal.Diagram, BiclosedCategory):
             left : Whether to evaluate on the left, i.e. from :class:`Over`,
                 or on the right, i.e. from :class:`Under`.
         """
-        return cls.eval_factory(
+        return cls.Eval(
             base << exponent if left else exponent >> base)
 
     def to_compact(self) -> CMap:
@@ -362,7 +394,7 @@ class Diagram(monoidal.Diagram, BiclosedCategory):
         return self.to_map().to_compact()
 
     def to_drawing(self):
-        return monoidal.Diagram.to_drawing(self, functor_factory=Functor)
+        return monoidal.Diagram.to_drawing(self, functor=Functor)
 
     currying_left = BiclosedCategory.currying_left.failing(
         "Currying does not evaluate back (#562).")
@@ -371,17 +403,10 @@ class Diagram(monoidal.Diagram, BiclosedCategory):
         "Currying does not evaluate back (#562).")
 
 
-class Box(monoidal.Box, Diagram):
-    """
-    A biclosed box is a monoidal box in a biclosed diagram.
-
-    Parameters:
-        name (str) : The name of the box.
-        dom (Ty) : The domain of the box, i.e. its input.
-        cod (Ty) : The codomain of the box, i.e. its output.
-    """
+Box = Diagram.Box
 
 
+@Diagram.generator
 class Eval(Box):
     """
     The evaluation of an exponential type.
@@ -399,13 +424,20 @@ class Eval(Box):
         super().__init__("Eval" + str(x), dom, cod)
 
     def dagger(self) -> Coeval:
-        return self.coeval_factory(self.x, self.left)
+        return self.Coeval(self.x, self.left)
 
     @property
     def drawing_name(self):
         return "<<" if self.left else ">>"
 
+    def image(self, functor):
+        if not hasattr(functor.cod, "ev"):
+            return super().image(functor)
+        return functor.cod.ev(
+            functor(self.x.base), functor(self.x.exponent), self.left)
 
+
+@Diagram.generator
 class Coeval(Box):
     """
     The coevaluation of an exponential type, i.e. the dagger of :class:`Eval`.
@@ -434,9 +466,17 @@ class Coeval(Box):
         super().__init__("Coeval" + str(x), dom, cod)
 
     def dagger(self) -> Eval:
-        return self.eval_factory(self.x, self.left)
+        return self.Eval(self.x, self.left)
+
+    def image(self, functor):
+        if not hasattr(functor.cod, "ev"):
+            return super().image(functor)
+        return functor.cod.ev(
+            functor(self.x.base), functor(self.x.exponent),
+            self.left).dagger()
 
 
+@Diagram.generator
 class Curry(monoidal.Bubble, Box):
     """
     The currying of a biclosed diagram.
@@ -462,37 +502,31 @@ class Curry(monoidal.Bubble, Box):
             dom, cod = arg.dom[n:], arg.dom[:n] >> arg.cod
         monoidal.Bubble.__init__(
             self, arg, dom=dom, cod=cod, drawing_name="$\\Lambda$")
-        Box.__init__(self, name, dom, cod)
+        self.Box.__init__(self, name, dom, cod)
 
     def __str__(self):
         return self.name
 
     def to_drawing(self):
         if self.left:
-            f, e = self.arg, self.coeval_factory(self.cod, left=True)
+            f, e = self.arg, self.Coeval(self.cod, left=True)
             return (f >> e).to_drawing().trace()
-        f, e = self.arg, self.coeval_factory(self.cod)
+        f, e = self.arg, self.Coeval(self.cod)
         return (f >> e).to_drawing().trace(left=True)
 
-
-class Sum(monoidal.Sum, Box):
-    """
-    A biclosed sum is a monoidal sum and a biclosed box.
-
-    Parameters:
-        terms (tuple[Diagram, ...]) : The terms of the formal sum.
-        dom (Ty) : The domain of the formal sum.
-        cod (Ty) : The codomain of the formal sum.
-    """
+    def image(self, functor):
+        if not hasattr(functor.cod, "curry"):
+            return super().image(functor)
+        return functor.cod.curry(
+            functor(self.arg), len(functor(self.cod.exponent)), self.left)
 
 
+Sum, Bubble = Diagram.Sum, Diagram.Bubble
+Layer = Diagram.Layer
 Id = Diagram.id
-Diagram.curry_factory = Curry
-Diagram.eval_factory = Eval
-Diagram.coeval_factory = Coeval
-Diagram.sum_factory = Sum
 
 
+@Diagram.generator
 class Functor(monoidal.Functor):
     """
     A biclosed functor is a monoidal functor
@@ -507,22 +541,6 @@ class Functor(monoidal.Functor):
     dom = cod = Diagram
 
     def __call__(self, other):
-        if isinstance(other, TermBase):
-            return other.eval(self)
-        for cls, attr in [(Over, "over"), (Under, "under"), (Exp, "exp")]:
-            if isinstance(other, cls):
-                base, exponent = self(other.base), self(other.exponent)
-                if hasattr(base, attr):
-                    return getattr(base, attr)(exponent)
-                if hasattr(self.cod, attr):
-                    return getattr(self.cod, attr)(base, exponent)
-        if isinstance(other, Curry) and hasattr(self.cod, "curry"):
-            return self.cod.curry(
-                self(other.arg), len(self(other.cod.exponent)), other.left)
-        if isinstance(other, (Eval, Coeval)) and hasattr(self.cod, "ev"):
-            base, exponent, left = other.x.base, other.x.exponent, other.left
-            result = self.cod.ev(self(base), self(exponent), left)
-            return result.dagger() if isinstance(other, Coeval) else result
         if self.cod is Drawing:
             if isinstance(other, Ty) and other.inside == (other, ):
                 # Avoid infinite recursion when drawing.
@@ -533,9 +551,7 @@ class Functor(monoidal.Functor):
 CMap = cmap.CMap[Diagram]
 
 
-Diagram.functor_factory = Functor
-
-
+@Diagram.generator
 class TermBase(Box):
     """
     A term in the internal language of biclosed categories.
@@ -591,11 +607,15 @@ class TermBase(Box):
         "Drawing a term by evaluating it in the free biclosed category."
         return self.eval().draw(**kwargs)
 
+    def image(self, functor):
+        return self.eval(functor)
+
     def __call__(self, other, left=False):
         args = (other, self, left) if left else (self, other, left)
-        return self.cod.application_factory(*args)
+        return self.cod.Application(*args)
 
 
+@Diagram.generator
 class Constant(TermBase):
     """
     A constant term of defined by a :class:`Diagram` with ``dom=X, cod=Y``.
@@ -625,6 +645,7 @@ class Constant(TermBase):
         return f"{self.cod!s}({self.name!r})"
 
 
+@Diagram.generator
 class Variable(TermBase):
     """
     A variable with a string as name and an atomic :class:`Ty`.
@@ -654,6 +675,7 @@ class Variable(TermBase):
     __repr__ = Constant.__repr__
 
 
+@Diagram.generator
 class Application(TermBase):
     """
     The application either ``func(args)`` of a term ``func`` of type ``Y << X``
@@ -707,6 +729,7 @@ class Application(TermBase):
             else self.func.constants + self.args.constants
 
 
+@Diagram.generator
 class Abstraction(TermBase):
     var: Variable
     body: Term
@@ -747,18 +770,17 @@ class Abstraction(TermBase):
 
 type Term = Constant | Variable | Application | Abstraction
 
-Ty.variable_factory = Variable
-Ty.constant_factory = Constant
-Ty.application_factory = Application
-Ty.abstraction_factory = Abstraction
-Ty.over_factory, Ty.under_factory, Ty.exp_factory = Over, Under, Exp
+Ty.Variable, Ty.Constant = (
+    Diagram.Variable, Diagram.Constant)
+Ty.Application, Ty.Abstraction = (
+    Diagram.Application, Diagram.Abstraction)
 
 
 class Equation(monoidal.Equation):
     """ The :class:`monoidal.Equation` of biclosed diagrams. """
 
 
-Diagram.equation_factory = Equation
+Diagram.equation_factory = Diagram.Equation = Equation
 
 
 __getattr__ = deprecated_alias(__name__, {"Ob": "Wire"})

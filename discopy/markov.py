@@ -14,9 +14,14 @@ Summary
 
     Diagram
     Box
-    Swap
     Permutation
+    Swap
+    Trace
     Copy
+    Merge
+    Discard
+    Sum
+    Bubble
     Functor
 
 
@@ -78,12 +83,9 @@ from typing import ClassVar
 from discopy import symmetric, monoidal, cmap, hypergraph
 from discopy.abc import MarkovCategory
 from discopy.axioms import Serialisable
-from discopy.cat import factory
+from discopy.cat import factory, Generator
 from discopy.monoidal import Ty  # noqa: F401
 from discopy.utils import assert_isatomic, factory_name
-
-
-Layer = symmetric.Layer
 
 
 @factory
@@ -117,20 +119,21 @@ class Diagram(symmetric.Diagram, MarkovCategory):
 
     .. image:: /_static/markov/copy_and_apply.svg
     """
-    copy_factory: ClassVar[type[Copy]]
-    merge_factory: ClassVar[type[Merge]]
-    discard_factory: ClassVar[type[Discard]]
+    Copy: ClassVar[Generator[..., "Copy"]]
+    Merge: ClassVar[Generator[..., "Merge"]]
+    Discard: ClassVar[Generator[..., "Discard"]]
+    Functor: ClassVar[Generator[..., "Functor"]]
     pickling = Serialisable.pickling.failing(
         "A copy does not unpickle, its __new__ wanting its type (#742).")
     copying = Serialisable.copying.failing(
         "A copy does not deep-copy, its __new__ wanting its type (#742).")
 
-    @classmethod
-    def spider_factory(cls, n_legs_in, n_legs_out, typ, phase=None):
+    @Generator.classmethod
+    def Spider(cls, n_legs_in, n_legs_out, typ, phase=None):
         if phase is not None or 1 not in (n_legs_in, n_legs_out):
             raise ValueError
-        return cls.copy_factory(typ, n_legs_out) if n_legs_in == 1\
-            else cls.merge_factory(typ, n_legs_in)
+        return cls.Copy(typ, n_legs_out) if n_legs_in == 1\
+            else cls.Merge(typ, n_legs_in)
 
     @classmethod
     def copy(cls, x: monoidal.Ty, n=2) -> Diagram:
@@ -167,51 +170,12 @@ class Diagram(symmetric.Diagram, MarkovCategory):
         return cls.copy(x, 0)
 
 
-class Box(symmetric.Box, Diagram):
-    """
-    A Markov box is a symmetric box in a Markov diagram.
-
-    Parameters:
-        name (str) : The name of the box.
-        dom (monoidal.Ty) : The domain of the box, i.e. its input.
-        cod (monoidal.Ty) : The codomain of the box, i.e. its output.
-    """
+Box, Permutation, Swap, Trace = (
+    Diagram.Box, Diagram.Permutation,
+    Diagram.Swap, Diagram.Trace)
 
 
-class Permutation(symmetric.Permutation, Box):
-    """
-    A permutation in a Markov category.
-
-    Parameters:
-        dom (monoidal.Ty) : The domain, i.e. the wires to permute.
-        perm : The permutation as a :class:`finset.Permutation` or a list.
-    """
-
-
-class Swap(Permutation, symmetric.Swap, Box):
-    """
-    Symmetric swap in a Markov diagram.
-
-    Parameters:
-        left (monoidal.Ty) : The type on the top left and bottom right.
-        right (monoidal.Ty) : The type on the top right and bottom left.
-    """
-
-
-class Trace(symmetric.Trace, Box):
-    """
-    A trace in a Markov category.
-
-    Parameters:
-        arg : The diagram to trace.
-        left : Whether to trace the wires on the left or right.
-
-    See also
-    --------
-    :meth:`Diagram.trace`
-    """
-
-
+@Diagram.generator
 class Copy(Box):
     """
     The copy of an atomic type :code:`x` some :code:`n` number of times.
@@ -223,21 +187,27 @@ class Copy(Box):
     def __init__(self, x: monoidal.Ty, n: int = 2):
         assert_isatomic(x, monoidal.Ty)
         name = f"Copy({x}" + ("" if n == 2 else f", {n}") + ")"
-        Box.__init__(self, name, dom=x, cod=x ** n,
-                     draw_as_spider=True, color="black", drawing_name="")
+        self.Box.__init__(
+            self, name, dom=x, cod=x ** n,
+            draw_as_spider=True, color="black", drawing_name="")
 
     def __new__(cls, x: monoidal.Ty, n: int = 2):
         return super().__new__(cls) if n else\
-            cls.discard_factory.__new__(cls.discard_factory, x)
+            cls.Discard.__new__(cls.Discard, x)
 
     def dagger(self) -> Merge:
-        return self.merge_factory(self.dom, len(self.cod))
+        return self.Merge(self.dom, len(self.cod))
 
     def __repr__(self):
         return (
             factory_name(type(self)) + f"({repr(self.dom)}, {len(self.cod)})")
 
+    def image(self, functor):
+        return functor.cod.copy(functor(self.dom), len(self.cod))\
+            if hasattr(functor.cod, "copy") else super().image(functor)
 
+
+@Diagram.generator
 class Merge(Box):
     """
     The merge of an atomic type :code:`x` some :code:`n` number of times.
@@ -249,17 +219,23 @@ class Merge(Box):
     def __init__(self, x: monoidal.Ty, n: int = 2):
         assert_isatomic(x, monoidal.Ty)
         name = f"Merge({x}" + ("" if n == 2 else f", {n}") + ")"
-        Box.__init__(self, name, dom=x ** n, cod=x,
-                     draw_as_spider=True, color="black", drawing_name="")
+        self.Box.__init__(
+            self, name, dom=x ** n, cod=x,
+            draw_as_spider=True, color="black", drawing_name="")
 
     def dagger(self) -> Copy:
-        return self.copy_factory(self.cod, len(self.dom))
+        return self.Copy(self.cod, len(self.dom))
 
     def __repr__(self):
         return (
             factory_name(type(self)) + f"({repr(self.cod)}, {len(self.dom)})")
 
+    def image(self, functor):
+        return functor.cod.merge(functor(self.cod), len(self.dom))\
+            if hasattr(functor.cod, "merge") else super().image(functor)
 
+
+@Diagram.generator
 class Discard(Copy):
     """
     The discard of an atomic type :code:`x`.
@@ -271,17 +247,10 @@ class Discard(Copy):
         super().__init__(x, 0)
 
 
-class Sum(symmetric.Sum, Box):
-    """
-    A markov sum is a symmetric sum and a markov box.
-
-    Parameters:
-        terms (tuple[Diagram, ...]) : The terms of the formal sum.
-        dom (Ty) : The domain of the formal sum.
-        cod (Ty) : The codomain of the formal sum.
-    """
+Sum, Bubble = Diagram.Sum, Diagram.Bubble
 
 
+@Diagram.generator
 class Functor(symmetric.Functor):
     """
     A Markov functor is a symmetric functor that preserves copies.
@@ -315,24 +284,11 @@ class Functor(symmetric.Functor):
     """
     dom = cod = Diagram
 
-    def __call__(self, other):
-        if isinstance(other, Copy) and hasattr(self.cod, "copy"):
-            return self.cod.copy(self(other.dom), len(other.cod))
-        if isinstance(other, Merge) and hasattr(self.cod, "merge"):
-            return self.cod.merge(self(other.cod), len(other.dom))
-        return super().__call__(other)
-
 
 CMap = cmap.CMap[Diagram]
 
-Diagram.functor_factory = Functor
 Hypergraph = hypergraph.Hypergraph[Diagram]
-Diagram.copy_factory, Diagram.merge_factory = Copy, Merge
-Diagram.swap_factory = Swap
-Diagram.permutation_factory = Permutation
-Diagram.trace_factory = Trace
-Diagram.discard_factory = Discard
-Diagram.sum_factory = Sum
+Layer = Diagram.Layer
 Id = Diagram.id
 
 
@@ -341,4 +297,4 @@ class Equation(symmetric.Equation):
     up_to = staticmethod(Diagram.to_hypergraph)
 
 
-Diagram.equation_factory = Equation
+Diagram.equation_factory = Diagram.Equation = Equation

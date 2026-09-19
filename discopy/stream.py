@@ -413,7 +413,7 @@ class Stream[category](MonoidalCategory, NamedGeneric):
     @classmethod
     def sequence(
             cls, name: str, dom: Ty, cod: Ty, mem: Ty | None = None,
-            n_steps: int = 0, box_factory=symmetric.Box) -> Stream:
+            n_steps: int = 0) -> Stream:
         """
         Produce a stream of boxes indexed by a time step.
 
@@ -428,10 +428,10 @@ class Stream[category](MonoidalCategory, NamedGeneric):
         f2 : x2 @ m1 -> y2 @ m2
         """
         mem = Ty[cls.category.ob]() if mem is None else mem
-        now = box_factory(
+        now = cls.category.Box(
             f"{name}{n_steps}", dom.now @ mem.now, cod.now @ mem.later.now)
         return cls(now, dom, cod, mem, _later=lambda: cls.sequence(
-            name, dom.later, cod.later, mem.later, n_steps + 1, box_factory))
+            name, dom.later, cod.later, mem.later, n_steps + 1))
 
     @inductive
     def delay(self) -> Stream:
@@ -609,7 +609,7 @@ class Stream[category](MonoidalCategory, NamedGeneric):
             self.now, dom, cod,
             mem @ self.mem, _later)  # ty: ignore[unsupported-operator]
 
-    followed_by = id
+    FollowedBy = id
 
 
 #: The underlying category of an unparameterised stream.

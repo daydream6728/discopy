@@ -95,18 +95,12 @@ class Category[C0, C1: Category](Testable, ABC):
     #: themselves the objects of diagrams.
     ar = classproperty(lambda cls: getattr(cls, "factory", cls))
 
-    @classmethod
-    def equation_factory(cls, *terms) -> Equation:
-        """
-        Construct an equation, using strict equality by default.
-
-        A class that quotients its equations overrides this, e.g. by
-        hypergraph isomorphism from symmetric categories on, so an axiom
-        built with it is checked up to whatever quotient the category
-        defines — and :meth:`discopy.axioms.Axiom.modulo` weakens it
-        further.
-        """
-        return Equation(*terms)
+    #: The equation up to which the axioms of the category compare, with
+    #: strict equality by default. A category that quotients its equations
+    #: binds its own, e.g. by hypergraph isomorphism from symmetric
+    #: categories on, and :meth:`discopy.axioms.Axiom.modulo` weakens it
+    #: further.
+    Equation: ClassVar[type[Equation]] = Equation
 
     @classmethod
     @rule(boxes=0)
@@ -227,47 +221,44 @@ class Category[C0, C1: Category](Testable, ABC):
     def unitality(
             cls, f: C1) -> Equation[C1]:
         """ Left and right unitality of composition. """
-        return cls.equation_factory(
-            cls.id(f.dom).then(f), f, f.then(cls.id(f.cod)))
+        return cls.Equation(cls.id(f.dom).then(f), f, f.then(cls.id(f.cod)))
 
     @axiom
     def associativity[A: C0, B: C0, C: C0, D: C0](
             cls, f: C1[A, B], g: C1[B, C], h: C1[C, D]) -> Equation[C1]:
         """ Associativity of composition. """
-        return cls.equation_factory(
-            f.then(g).then(h), f.then(g.then(h)))
+        return cls.Equation(f.then(g).then(h), f.then(g.then(h)))
 
     @axiom
     def identity_typing(
             cls, x: C0) -> Equation[C0]:
         """ Typing of identity morphisms. """
         identity = cls.id(x)
-        return cls.ob.equation_factory(identity.dom, x, identity.cod)
+        return cls.ob.Equation(identity.dom, x, identity.cod)
 
     @axiom
     def composition_dom_typing[A: C0, B: C0, C: C0](
             cls, f: C1[A, B], g: C1[B, C]) -> Equation[C0]:
         """ Domain typing of composition. """
-        return cls.ob.equation_factory(f.then(g).dom, f.dom)
+        return cls.ob.Equation(f.then(g).dom, f.dom)
 
     @axiom
     def composition_cod_typing[A: C0, B: C0, C: C0](
             cls, f: C1[A, B], g: C1[B, C]) -> Equation[C0]:
         """ Codomain typing of composition. """
-        return cls.ob.equation_factory(f.then(g).cod, g.cod)
+        return cls.ob.Equation(f.then(g).cod, g.cod)
 
     @axiom
     def dagger_involution(
             cls, f: C1) -> Equation[C1]:
         """ The dagger is involutive. """
-        return cls.equation_factory(f.dagger().dagger(), f)
+        return cls.Equation(f.dagger().dagger(), f)
 
     @axiom
     def dagger_contravariance[A: C0, B: C0, C: C0](
             cls, f: C1[A, B], g: C1[B, C]) -> Equation[C1]:
         """ The dagger reverses composition. """
-        return cls.equation_factory(
-            f.then(g).dagger(), g.dagger().then(f.dagger()))
+        return cls.Equation(f.then(g).dagger(), g.dagger().then(f.dagger()))
 
     __rshift__ = __llshift__ = lambda self, other: self.then(other)
     __lshift__ = __lrshift__ = lambda self, other: other.then(self)
