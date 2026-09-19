@@ -133,8 +133,8 @@ class Diagram(braided.Diagram, traced.Diagram, BalancedCategory):
 
     .. _nLab: https://ncatlab.org/nlab/show/traced+monoidal+category)
     """
-    Twist: ClassVar[Generator[..., "Twist"]]
-    Functor: ClassVar[Generator[..., "Functor"]]
+    Twist: ClassVar[Generator]
+    Functor: ClassVar[Generator]
 
     @classmethod
     def twist(cls, dom: monoidal.Ty) -> Diagram:

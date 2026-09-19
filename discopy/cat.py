@@ -106,7 +106,7 @@ from discopy.utils import (  # noqa: F401
 )
 
 if TYPE_CHECKING:
-    import sympy  # ty: ignore[unresolved-import]
+    import sympy
 
 dumps, loads = utils.dumps, utils.loads
 
@@ -178,7 +178,7 @@ class FreeCategory(Category):
     ``Box`` and :class:`discopy.monoidal.Diagram` its layers.
     """
     @classmethod
-    def generator(cls, root: type) -> type:
+    def generator[U](cls, root: type[U]) -> type[U]:
         """
         Declare ``root`` as a generator of the category, bound under its
         own name, e.g. ``@Diagram.generator`` above ``class Swap``.
@@ -301,9 +301,9 @@ class Arrow(FreeCategory, Serialisable):
     see :class:`monoidal.Nat`.
     """
     ob = Ob
-    Box: ClassVar[Generator[..., "Box"]]
-    Sum: ClassVar[Generator[..., "Sum"]]
-    Bubble: ClassVar[Generator[..., "Bubble"]]
+    Box: ClassVar[Generator]
+    Sum: ClassVar[Generator]
+    Bubble: ClassVar[Generator]
     serialised_attrs = ('inside', 'dom', 'cod')
 
     def __init__(self, inside, dom, cod, _scan=True):
@@ -563,7 +563,7 @@ class Box(Arrow):
     def lambdify(self, *symbols: "sympy.Symbol", **kwargs) -> Callable:
         if not any(x in self.free_symbols for x in symbols):
             return lambda *xs: self
-        from sympy import lambdify  # ty: ignore[unresolved-import]
+        from sympy import lambdify
         return lambda *xs: type(self)(
             self.name, self.dom, self.cod, is_dagger=self.is_dagger,
             data=lambdify(symbols, self.data, **kwargs)(*xs))

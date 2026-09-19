@@ -77,9 +77,9 @@ from discopy.utils import (
     factory_name, assert_isinstance, product, assert_isatomic)
 
 if TYPE_CHECKING:
-    import sympy  # ty: ignore[unresolved-import]
-    import tensornetwork  # ty: ignore[unresolved-import]
-    import quimb  # ty: ignore[unresolved-import]
+    import sympy
+    import tensornetwork
+    import quimb
 
 
 @factory
@@ -502,7 +502,7 @@ class Functor(frobenius.Functor):
             operands = [
                 x for pair in zip(arrays, indices) for x in pair]
             if next(fresh) > config.MAX_EINSUM_INDICES:
-                import opt_einsum  # ty: ignore[unresolved-import]
+                import opt_einsum
                 array = opt_einsum.contract(
                     *operands, output,
                     optimize=self.optimize, **self.params)
@@ -528,9 +528,9 @@ class Diagram[dtype](NamedGeneric, frobenius.Diagram):
     """
     strategy = no_strategy
     ob = Dim
-    Box: ClassVar[Generator[..., "Box"]]
-    Permutation: ClassVar[Generator[..., "Permutation"]]
-    Bubble: ClassVar[Generator[..., "Bubble"]]
+    Box: ClassVar[Generator]
+    Permutation: ClassVar[Generator]
+    Bubble: ClassVar[Generator]
 
     def eval(self, dtype: type | None = None, optimize="greedy",
              **params) -> Tensor:
@@ -560,7 +560,8 @@ class Diagram[dtype](NamedGeneric, frobenius.Diagram):
             dtype=dtype or getattr(self, "dtype", None),
             optimize=optimize, **params)(self)
 
-    def to_quimb(self, dtype: type | None = None) -> "quimb.tensor.Tensor":
+    def to_quimb(
+            self, dtype: type | None = None) -> "quimb.tensor.TensorNetwork":
         """
         Convert a tensor diagram to a quimb tensor.
 
@@ -573,7 +574,7 @@ class Diagram[dtype](NamedGeneric, frobenius.Diagram):
         >>> t_net = (vector >> vector[::-1]).to_quimb()  # doctest: +EXTRA
         >>> assert t_net.contract(preserve_tensor=True).data == 1
         """
-        import quimb.tensor as qtn  # ty: ignore[unresolved-import]
+        import quimb.tensor as qtn
         inputs = [
                 qtn.COPY_tensor(
                     d=getattr(dim, 'dim', dim),
@@ -612,8 +613,7 @@ class Diagram[dtype](NamedGeneric, frobenius.Diagram):
             qtn.connect(t, output, j, 0)
             tensors.append(output)
 
-        tensor_net = qtn.TensorNetwork(tensors)
-        return tensor_net
+        return qtn.TensorNetwork(tensors)
 
     def to_tn(self, dtype: type | None = None) -> tuple[
             list["tensornetwork.Node"], list["tensornetwork.Edge"]]:
@@ -633,11 +633,13 @@ class Diagram[dtype](NamedGeneric, frobenius.Diagram):
         >>> assert node.name == "vector" and np.all(node.tensor == [0, 1])
         >>> assert output_edge_order == [node[0]]
         """
-        import tensornetwork as tn  # ty: ignore[unresolved-import]
+        import tensornetwork as tn
         if dtype is None:
             dtype = self.dtype
-        nodes = [
-            tn.CopyNode(2, getattr(dim, 'dim', dim), f'input_{i}', dtype=dtype)
+        nodes: list = [
+            tn.CopyNode(
+                2, getattr(dim, 'dim', dim), f'input_{i}',
+                dtype=dtype)  # ty: ignore[invalid-argument-type]
             for i, dim in enumerate(self.dom.inside)]
         inputs, outputs = [n[0] for n in nodes], [n[1] for n in nodes]
         for box, offset in zip(self.boxes, self.offsets):
@@ -651,12 +653,13 @@ class Diagram[dtype](NamedGeneric, frobenius.Diagram):
                 if dims == (1, 1):  # identity
                     continue
                 elif dims == (2, 0):  # cup
-                    tn.connect(*outputs[offset:offset + 2])
+                    tn.connect(outputs[offset], outputs[offset + 1])
                     del outputs[offset:offset + 2]
                     continue
                 else:
                     node = tn.CopyNode(
-                        sum(dims), outputs[offset].dimension, dtype=dtype)
+                        sum(dims), outputs[offset].dimension,
+                        dtype=dtype)  # ty: ignore[invalid-argument-type]
             else:
                 array = box.eval(dtype=dtype).array
                 node = tn.Node(array, str(box))
@@ -782,7 +785,8 @@ Cup, Cap = Diagram.Cup, Diagram.Cap
 
 
 @Diagram.generator
-class Permutation(frobenius.Permutation, Box):
+class Permutation(  # ty: ignore[inconsistent-mro]
+        frobenius.Permutation, Box):
     "A permutation in a tensor diagram."
 
     @property
@@ -799,7 +803,8 @@ Swap, Spider, Sum, Eval, Coeval, Curry, Copy, Merge, Discard = (
 
 
 @Diagram.generator
-class Bubble(frobenius.Bubble, Box):
+class Bubble(  # ty: ignore[inconsistent-mro]
+        frobenius.Bubble, Box):
     """
     Bubble in a tensor diagram, applies a function elementwise.
 
@@ -861,7 +866,7 @@ class Bubble(frobenius.Bubble, Box):
         .. image:: /_static/tensor/chain-rule.svg
             :align: center
         """
-        from sympy import Symbol  # ty: ignore[unresolved-import]
+        from sympy import Symbol
         tmp = Symbol("tmp")
         name = "$\\frac{{\\partial {}}}{{\\partial {}}}$"
         return Spider(1, 2, self.dom)\

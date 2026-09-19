@@ -330,7 +330,7 @@ class Ty(monoidal.Ty):
 
     d = Wire.d
 
-    Wire: ClassVar[Generator[..., Wire]] = Generator.subclass(Wire)
+    Wire: ClassVar[Generator] = Generator.subclass(Wire)
 
 
 class Layer(markov.Layer):
@@ -370,15 +370,15 @@ class Diagram(markov.Diagram, FeedbackCategory):
         "is not a feedback diagram.")(markov.Diagram.trace)
 
     ob = Ty
-    Layer: ClassVar[Generator[..., Layer]] = Generator.subclass(Layer)
-    Box: ClassVar[Generator[..., "Box"]]
-    Permutation: ClassVar[Generator[..., "Permutation"]]
-    Swap: ClassVar[Generator[..., "Swap"]]
-    Copy: ClassVar[Generator[..., "Copy"]]
-    Merge: ClassVar[Generator[..., "Merge"]]
-    FollowedBy: ClassVar[Generator[..., "FollowedBy"]]
-    Feedback: ClassVar[Generator[..., "Feedback"]]
-    Functor: ClassVar[Generator[..., "Functor"]]
+    Layer: ClassVar[Generator] = Generator.subclass(Layer)
+    Box: ClassVar[Generator]
+    Permutation: ClassVar[Generator]
+    Swap: ClassVar[Generator]
+    Copy: ClassVar[Generator]
+    Merge: ClassVar[Generator]
+    FollowedBy: ClassVar[Generator]
+    Feedback: ClassVar[Generator]
+    Functor: ClassVar[Generator]
 
     def delay(self, n_steps=1):
         """ The delay of a feedback diagram. """
@@ -493,7 +493,8 @@ class Box(markov.Box, Diagram):
 
 
 @Diagram.generator
-class Permutation(markov.Permutation, Box):
+class Permutation(  # ty: ignore[inconsistent-mro]
+        markov.Permutation, Box):
     "A permutation in a feedback diagram."
 
     def delay(self, n_steps=1):
@@ -501,7 +502,8 @@ class Permutation(markov.Permutation, Box):
 
 
 @Diagram.generator
-class Swap(Permutation, markov.Swap, Box):
+class Swap(  # ty: ignore[inconsistent-mro]
+        Permutation, markov.Swap, Box):
     """
     The swap of feedback types :code:`left` and :code:`right`.
 
@@ -544,7 +546,8 @@ Discard, Trace, Sum, Bubble = (
     Diagram.Sum, Diagram.Bubble)
 
 
-class Head(monoidal.Bubble, Box):
+class Head(  # ty: ignore[invalid-generic-class]
+        monoidal.Bubble, Box):
     """
     The head of a feedback diagram, interpreted as the first element followed
     by the identity stream on the empty type.
@@ -560,14 +563,15 @@ class Head(monoidal.Bubble, Box):
     __str__ = Box.__str__
 
 
-class Tail(monoidal.Bubble, Box):
+class Tail(  # ty: ignore[invalid-generic-class]
+        monoidal.Bubble, Box):
     """
     The tail of a feedback diagram, interpreted as the stream starting from the
     second time step with the identity on the empty type at the first step.
     """
     def __init__(self, arg: Diagram, time_step=0):
         Head.__init__(
-            self,  # ty: ignore[invalid-argument-type]
+            self,
             arg, time_step, _attr="tail")
 
     delay, reset, __repr__ = HeadOb.delay, HeadOb.reset, HeadOb.__repr__
@@ -575,7 +579,8 @@ class Tail(monoidal.Bubble, Box):
 
 
 @Diagram.generator
-class Feedback(monoidal.Bubble, Box):
+class Feedback(  # ty: ignore[invalid-generic-class]
+        monoidal.Bubble, Box):
     """
     Feedback is a bubble that takes a diagram from `dom @ mem.delay()` to
     `cod @ mem` and returns a box from `dom` to `cod`.

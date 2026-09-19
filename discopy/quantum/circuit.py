@@ -205,11 +205,11 @@ class Circuit(tensor.Diagram[complex]):
     """
     ob = Ty
     Discard = tensor.Discard
-    Box: ClassVar[Generator[..., "Box"]]
-    Sum: ClassVar[Generator[..., "Sum"]]
-    Permutation: ClassVar[Generator[..., "Permutation"]]
-    Swap: ClassVar[Generator[..., "Swap"]]
-    Functor: ClassVar[Generator[..., "Functor"]]
+    Box: ClassVar[Generator]
+    Sum: ClassVar[Generator]
+    Permutation: ClassVar[Generator]
+    Swap: ClassVar[Generator]
+    Functor: ClassVar[Generator]
 
     @classproperty
     def generators(cls) -> dict[str, Rule]:
@@ -492,7 +492,7 @@ class Circuit(tensor.Diagram[complex]):
         if not mixed and not self.is_mixed:
             return super().to_tn(dtype=complex)
 
-        import tensornetwork as tn  # ty: ignore[unresolved-import]
+        import tensornetwork as tn
         from discopy.quantum.gates import (
             ClassicalGate, Copy, Match, Discard, Measure, Encode, SWAP)
         for box in self.boxes + [self]:
@@ -514,12 +514,21 @@ class Circuit(tensor.Diagram[complex]):
         diag >>= self[last_i:]
         self = diag
 
-        c_nodes = [tn.CopyNode(2, 2, f'c_input_{i}', dtype=complex)
-                   for i in range(self.dom.count(bit))]
-        q_nodes1 = [tn.CopyNode(2, 2, f'q1_input_{i}', dtype=complex)
-                    for i in range(self.dom.count(qubit))]
-        q_nodes2 = [tn.CopyNode(2, 2, f'q2_input_{i}', dtype=complex)
-                    for i in range(self.dom.count(qubit))]
+        c_nodes: list = [
+            tn.CopyNode(
+                2, 2, f'c_input_{i}',
+                dtype=complex)  # ty: ignore[invalid-argument-type]
+            for i in range(self.dom.count(bit))]
+        q_nodes1 = [
+            tn.CopyNode(
+                2, 2, f'q1_input_{i}',
+                dtype=complex)  # ty: ignore[invalid-argument-type]
+            for i in range(self.dom.count(qubit))]
+        q_nodes2 = [
+            tn.CopyNode(
+                2, 2, f'q2_input_{i}',
+                dtype=complex)  # ty: ignore[invalid-argument-type]
+            for i in range(self.dom.count(qubit))]
 
         inputs = [n[0] for n in c_nodes + q_nodes1 + q_nodes2]
         c_scan = [n[1] for n in c_nodes]
@@ -565,7 +574,9 @@ class Circuit(tensor.Diagram[complex]):
             elif box.is_mixed or isinstance(box, ClassicalGate):
                 if isinstance(box, (Copy, Match, Measure, Encode)):
                     assert len(box.dom) == 1 or len(box.cod) == 1
-                    node = tn.CopyNode(3, 2, 'cq_' + str(box), dtype=complex)
+                    node = tn.CopyNode(
+                        3, 2, 'cq_' + str(box),
+                        dtype=complex)  # ty: ignore[invalid-argument-type]
                 else:
                     # only unoptimised gate is MixedState()
                     array = box.eval(mixed=True).array
@@ -957,7 +968,8 @@ class Box(tensor.Box[complex], Circuit):
 
 
 @Circuit.generator
-class Sum(tensor.Sum[complex], Box):
+class Sum(  # ty: ignore[inconsistent-mro]
+        tensor.Sum[complex], Box):
     """ Sums of circuits. """
     terms: tuple[Circuit, ...]
 
@@ -1009,7 +1021,8 @@ class Permutation(tensor.Permutation[complex], Box):
 
 
 @Circuit.generator
-class Swap(Permutation, tensor.Swap, Box):
+class Swap(  # ty: ignore[inconsistent-mro]
+        Permutation, tensor.Swap, Box):
     """
     The logical swap of two circuit wires, i.e. plumbing.
 

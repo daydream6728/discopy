@@ -112,10 +112,10 @@ class Ty(monoidal.Ty):
     Applying a biclosed type to a callable yields a :class:`Abstraction`,
     applying it to a string yields a :class:`Constant`.
     """
-    Wire: ClassVar[Generator[..., "Wire"]]
-    Exp: ClassVar[Generator[..., "Exp"]]
-    Over: ClassVar[Generator[..., "Over"]]
-    Under: ClassVar[Generator[..., "Under"]]
+    Wire: ClassVar[Generator]
+    Exp: ClassVar[Generator]
+    Over: ClassVar[Generator]
+    Under: ClassVar[Generator]
 
     @overload
     def __pow__(self, other: int) -> Self: ...
@@ -340,15 +340,15 @@ class Diagram(monoidal.Diagram, BiclosedCategory):
         "The generic tree of an evaluation does not read back (#742).")
 
     ob = Ty
-    Eval: ClassVar[Generator[..., "Eval"]]
-    Coeval: ClassVar[Generator[..., "Coeval"]]
-    Curry: ClassVar[Generator[..., "Curry"]]
-    Functor: ClassVar[Generator[..., "Functor"]]
-    TermBase: ClassVar[Generator[..., "TermBase"]]
-    Constant: ClassVar[Generator[..., "Constant"]]
-    Variable: ClassVar[Generator[..., "Variable"]]
-    Application: ClassVar[Generator[..., "Application"]]
-    Abstraction: ClassVar[Generator[..., "Abstraction"]]
+    Eval: ClassVar[Generator]
+    Coeval: ClassVar[Generator]
+    Curry: ClassVar[Generator]
+    Functor: ClassVar[Generator]
+    TermBase: ClassVar[Generator]
+    Constant: ClassVar[Generator]
+    Variable: ClassVar[Generator]
+    Application: ClassVar[Generator]
+    Abstraction: ClassVar[Generator]
 
     def curry(self, n=1, left=True) -> Diagram:
         """

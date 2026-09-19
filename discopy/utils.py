@@ -20,7 +20,6 @@ from typing import (
     TypeVar,
     Collection,
     NamedTuple,
-    overload,
     TYPE_CHECKING,
 )
 
@@ -181,7 +180,7 @@ class NamedGeneric:
         base: ClassVar[Any]
         natural: ClassVar[Any]
         algebra: ClassVar[Any]
-        generator_factory: ClassVar[Any]
+        Atom: ClassVar[Any]
         factory: ClassVar[Any]
         ar: ClassVar[Any]
 
@@ -199,8 +198,7 @@ class NamedGeneric:
         subscripting with the class syntax's own type parameters, which
         infer their variance, stays a plain ``Generic`` alias so that e.g.
         ``class Box[dtype](Diagram[dtype])`` declares an ordinary subclass.
-        An explicit :class:`TypeVar` is a value like any other, standing for
-        a parameter that :func:`axioms.substitute` replaces later.
+        An explicit :class:`TypeVar` is a value like any other.
         """
         values = values if isinstance(values, tuple) else (values,)
         if any(isinstance(value, TypeVar) and value.__infer_variance__
@@ -253,11 +251,11 @@ class NamedGeneric:
             state = dict(state)
             self.__class__ = self.__class__[
                 state.pop("__class_getitem__values__")]
-        parent = super()
-        if hasattr(parent, "__setstate__"):
-            parent.__setstate__(state)
-        else:
+        setstate = getattr(super(), "__setstate__", None)
+        if setstate is None:
             self.__dict__.update(state)
+        else:
+            setstate(state)
 
 
 def product(xs: Sequence, unit=1):
@@ -443,7 +441,7 @@ def rmap(func, data):
 
 def rsubs(data, *args):
     """ Substitute recursively along nested data. """
-    from sympy import lambdify  # ty: ignore[unresolved-import]
+    from sympy import lambdify
     if isinstance(args, Iterable) and not isinstance(args[0], Iterable):
         args = (args, )
     keys, values = zip(*args)
@@ -749,13 +747,13 @@ class Generator[**P, T]:
     >>> assert closed.Swap.__bases__ == (
     ...     markov.Swap, closed.Permutation, closed.Box, closed.Diagram)
     """
-    def __init__(self, root: Callable[P, T] = None,
-                 method: Callable[Concatenate[Any, P], T] = None,
-                 aliased: str = None):
+    def __init__(self, root: type[T] | None = None,
+                 method: Callable[Concatenate[Any, P], T] | None = None,
+                 aliased: str | None = None):
         self.root, self.method, self.aliased = root, method, aliased
 
     @classmethod
-    def subclass[**Q, U](cls, root: Callable[Q, U]) -> Generator[Q, U]:
+    def subclass[U](cls, root: type[U]) -> Generator[..., U]:
         """ The factory building a subclass of ``root`` at every level. """
         return Generator(root=root)
 
@@ -776,20 +774,20 @@ class Generator[**P, T]:
     def __set_name__(self, owner: type, name: str):
         self.owner, self.name, self.cache = owner, name, {}
 
-    @overload
-    def __get__(self, instance: None, cls: type) -> Callable[P, T]: ...
-
-    @overload
-    def __get__(self, instance: object, cls: type) -> Callable[P, T]: ...
-
-    def __get__(self, instance, cls: type) -> Callable[P, T]:
+    def __get__(self, instance, cls: type) -> Any:
+        """
+        The generator of ``cls``. It is declared to return :data:`Any`
+        rather than ``type[T]`` because a module binds it to a name,
+        e.g. ``Swap = Diagram.Swap``, that classes then subclass, and a
+        typechecker only takes a class object or ``Any`` for a base.
+        """
         try:
             return self.cache[cls]
         except KeyError:
             self.cache[cls] = generator = self.resolve(cls)
             return generator
 
-    def resolve(self, cls: type) -> Callable[P, T]:
+    def resolve(self, cls: type) -> Any:
         """
         The generator of ``cls``, computed once and cached under both the
         class it is read from and the category that keys it, so that a box
@@ -825,6 +823,8 @@ class Generator[**P, T]:
     @property
     def parents(self) -> tuple[str, ...]:
         """ The generators of the owner that the root extends. """
+        if self.root is None:
+            return ()
         names = {name for klass in self.owner.__mro__ for name, value
                  in vars(klass).items() if isinstance(value, Generator)}
         return tuple(name for base in self.root.__bases__
@@ -837,6 +837,8 @@ class Generator[**P, T]:
         itself when no base of ``cls`` has one, i.e. when ``cls`` is outside
         the hierarchy of the category that declares the generator.
         """
+        if self.root is None:
+            raise TypeError(f"{self.name} declares no class to build from.")
         roots = dict.fromkeys(
             root for base in cls.__bases__
             if isinstance(root := getattr(base, self.name, None), type))

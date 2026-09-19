@@ -98,7 +98,7 @@ class Ty(rigid.Ty):
     Parameters:
         inside (Wire) : The objects inside the type.
     """
-    Wire: ClassVar[Generator[..., Wire]] = Generator.subclass(Wire)
+    Wire: ClassVar[Generator] = Generator.subclass(Wire)
 
     dagger_involution = Category.dagger_involution
     dagger_contravariance = Category.dagger_contravariance
@@ -133,9 +133,9 @@ class Diagram(rigid.Diagram, traced.Diagram, PivotalCategory):
     dagger_contravariance = Category.dagger_contravariance
 
     ob = Ty
-    Box: ClassVar[Generator[..., "Box"]]
-    Cup: ClassVar[Generator[..., "Cup"]]
-    Cap: ClassVar[Generator[..., "Cap"]]
+    Box: ClassVar[Generator]
+    Cup: ClassVar[Generator]
+    Cap: ClassVar[Generator]
 
     def dagger(self):
         """
@@ -178,7 +178,8 @@ class Diagram(rigid.Diagram, traced.Diagram, PivotalCategory):
         return self.rotate().dagger()
 
     @Generator.classmethod
-    def Trace(cls, diagram: Diagram, left=False):
+    def Trace(  # ty: ignore[invalid-attribute-override]
+            cls, diagram: Diagram, left=False):
         """
         The trace of a pivotal diagram is its pre- and post-composition with
         cups and caps to form a feedback loop.

@@ -98,9 +98,9 @@ class Diagram(pivotal.Diagram, balanced.Diagram, RibbonCategory):
         dom (pivotal.Ty) : The domain of the diagram, i.e. its input.
         cod (pivotal.Ty) : The codomain of the diagram, i.e. its output.
     """
-    Braid: ClassVar[Generator[..., "Braid"]]
-    Twist: ClassVar[Generator[..., "Twist"]]
-    Functor: ClassVar[Generator[..., "Functor"]]
+    Braid: ClassVar[Generator]
+    Twist: ClassVar[Generator]
+    Functor: ClassVar[Generator]
     serialisation = Serialisable.serialisation.failing(
         "The generic tree of a twist does not read back (#742).")
 

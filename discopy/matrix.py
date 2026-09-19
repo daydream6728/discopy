@@ -51,7 +51,7 @@ from discopy.cat import (
 from discopy.utils import assert_isinstance, unbiased
 
 if TYPE_CHECKING:
-    import sympy  # ty: ignore[unresolved-import]
+    import sympy
 
 
 @factory
@@ -399,7 +399,7 @@ class Matrix[dtype](MonoidalCategory, NamedGeneric):
 
     def lambdify(
             self, *symbols: "sympy.Symbol", dtype=None, **kwargs) -> Callable:
-        from sympy import lambdify  # ty: ignore[unresolved-import]
+        from sympy import lambdify
         with backend() as np:
             array = lambdify(
                 symbols, self.array.tolist(), modules=np.module, **kwargs)
@@ -432,7 +432,8 @@ class Backend:
         module : The main module of the backend.
         array : The array class of the backend.
     """
-    def __init__(self, module: ModuleType, array: type | None = None):
+    def __init__(self, module: ModuleType,
+                 array: Callable | None = None):
         self.module, self.array = module, array or module.array
 
     def __getattr__(self, attr):
@@ -449,14 +450,14 @@ class NumPy(Backend):
 class JAX(Backend):
     """ JAX backend. """
     def __init__(self):
-        import jax  # ty: ignore[unresolved-import]
+        import jax
         super().__init__(jax.numpy)
 
 
 class PyTorch(Backend):
     """ PyTorch backend. """
     def __init__(self):
-        import torch  # ty: ignore[unresolved-import]
+        import torch
         super().__init__(torch, array=torch.as_tensor)
 
 

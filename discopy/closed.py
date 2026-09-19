@@ -81,7 +81,7 @@ class Ty(biclosed.Ty):
         :align: center
     """
     Over = Under = Generator.alias("Exp")
-    Exp: ClassVar[Generator[..., "Exp"]]
+    Exp: ClassVar[Generator]
 
 
 Wire = Ty.Wire
@@ -105,13 +105,13 @@ class Diagram(markov.Diagram, biclosed.Diagram, ClosedCategory):
     A diagram applied to another post-composes their tensor with an `Eval`.
     """
     ob = Ty
-    Eval: ClassVar[Generator[..., "Eval"]]
-    Functor: ClassVar[Generator[..., "Functor"]]
-    TermBase: ClassVar[Generator[..., "TermBase"]]
-    Constant: ClassVar[Generator[..., "Constant"]]
-    Variable: ClassVar[Generator[..., "Variable"]]
-    Application: ClassVar[Generator[..., "Application"]]
-    Abstraction: ClassVar[Generator[..., "Abstraction"]]
+    Eval: ClassVar[Generator]
+    Functor: ClassVar[Generator]
+    TermBase: ClassVar[Generator]
+    Constant: ClassVar[Generator]
+    Variable: ClassVar[Generator]
+    Application: ClassVar[Generator]
+    Abstraction: ClassVar[Generator]
 
     @property
     def is_linear(self):
@@ -186,7 +186,7 @@ Id = Diagram.id
 
 
 @Diagram.generator
-class TermBase(Box, biclosed.TermBase):
+class TermBase(Box, biclosed.TermBase):  # ty: ignore[inconsistent-mro]
     """
     A term in the internal language of a closed category.
     """

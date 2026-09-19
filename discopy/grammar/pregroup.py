@@ -107,9 +107,9 @@ class Diagram(frobenius.Diagram):
     >>> assert F(sentence)
     """
     ob = Ty
-    Box: ClassVar[Generator[..., "Box"]]
-    Swap: ClassVar[Generator[..., "Swap"]]
-    Spider: ClassVar[Generator[..., "Spider"]]
+    Box: ClassVar[Generator]
+    Swap: ClassVar[Generator]
+    Spider: ClassVar[Generator]
 
     @classproperty
     def generators(cls) -> dict[str, Rule]:
@@ -237,7 +237,7 @@ Sum, Bubble, Eval, Coeval, Curry, Copy, Merge, Discard = (
     Diagram.Merge, Diagram.Discard)
 
 
-class Word(thue.Word, Box):
+class Word(thue.Word, Box):  # ty: ignore[invalid-generic-class]
     """
     A word is a rigid box with a ``name``, a grammatical type as ``cod`` and
     an optional domain ``dom``.

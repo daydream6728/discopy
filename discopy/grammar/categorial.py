@@ -81,14 +81,15 @@ class Diagram(biclosed.Diagram):
     """
     strategy = no_strategy
     ob = Ty
-    Functor: ClassVar[Generator[..., "Functor"]]
-    TermBase: ClassVar[Generator[..., "TermBase"]]
-    Constant: ClassVar[Generator[..., "Constant"]]
-    Variable: ClassVar[Generator[..., "Variable"]]
-    Abstraction: ClassVar[Generator[..., "Abstraction"]]
+    Functor: ClassVar[Generator]
+    TermBase: ClassVar[Generator]
+    Constant: ClassVar[Generator]
+    Variable: ClassVar[Generator]
+    Abstraction: ClassVar[Generator]
 
     @Generator.classmethod
-    def Application(cls, func, args, left=False):
+    def Application(  # ty: ignore[invalid-attribute-override]
+            cls, func, args, left=False):
         return BA(args, func) if left else FA(func, args)
 
     def to_pregroup(self):
@@ -214,7 +215,8 @@ CMap = cmap.CMap[Diagram]
 
 
 @Diagram.generator
-class TermBase(Box, biclosed.TermBase):
+class TermBase(  # ty: ignore[inconsistent-mro]
+        Box, biclosed.TermBase):
     if TYPE_CHECKING:
         def simplify(self) -> TermBase:
             """ Recursively simplify the compositions of a term. """
@@ -253,7 +255,7 @@ class Abstraction(TermBase, biclosed.Abstraction):
 
     def __init__(self, var: Variable, body: Term, left: bool = False):
         biclosed.Abstraction.__init__(
-            self, var, body, left)  # ty: ignore[invalid-argument-type]
+            self, var, body, left)
         TermBase.__init__(self, self.name, self.dom, self.cod)
 
     def simplify(self):

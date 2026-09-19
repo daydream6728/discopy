@@ -119,10 +119,10 @@ class Diagram(symmetric.Diagram, MarkovCategory):
 
     .. image:: /_static/markov/copy_and_apply.svg
     """
-    Copy: ClassVar[Generator[..., "Copy"]]
-    Merge: ClassVar[Generator[..., "Merge"]]
-    Discard: ClassVar[Generator[..., "Discard"]]
-    Functor: ClassVar[Generator[..., "Functor"]]
+    Copy: ClassVar[Generator]
+    Merge: ClassVar[Generator]
+    Discard: ClassVar[Generator]
+    Functor: ClassVar[Generator]
     pickling = Serialisable.pickling.failing(
         "A copy does not unpickle, its __new__ wanting its type (#742).")
     copying = Serialisable.copying.failing(

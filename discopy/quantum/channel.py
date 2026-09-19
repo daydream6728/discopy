@@ -347,12 +347,12 @@ class Functor(tensor.Functor):
         if not other.is_mixed and other.is_classical:
             dom, cod = self(other.dom).classical, self(other.cod).classical
             return self.cod.single(Tensor[
-                self.dtype](  # ty: ignore[invalid-type-form]
+                self.dtype](
                     other.array, dom, cod))
         if not other.is_mixed:
             dom, cod = self(other.dom).quantum, self(other.cod).quantum
             return self.cod.double(Tensor[
-                self.dtype](  # ty: ignore[invalid-type-form]
+                self.dtype](
                     other.array, dom, cod))
         if hasattr(other, "array"):
             return self.cod(other.array, self(other.dom), self(other.cod))

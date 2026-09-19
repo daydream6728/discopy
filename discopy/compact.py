@@ -84,9 +84,9 @@ class Diagram(symmetric.Diagram, ribbon.Diagram, CompactCategory):
     serialisation = Serialisable.serialisation
 
     ob = Ty
-    Layer: ClassVar[Generator[..., Layer]] = Generator.subclass(Layer)
-    Permutation: ClassVar[Generator[..., "Permutation"]]
-    Functor: ClassVar[Generator[..., "Functor"]]
+    Layer: ClassVar[Generator] = Generator.subclass(Layer)
+    Permutation: ClassVar[Generator]
+    Functor: ClassVar[Generator]
 
     pivotality = PivotalCategory.pivotality
 

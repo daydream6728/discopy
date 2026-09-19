@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Self
+from typing import Annotated, Self
 
 from hypothesis import find
 from hypothesis.errors import NoSuchExample
@@ -10,8 +10,18 @@ from pytest import raises
 
 from discopy import biclosed, cat, feedback, monoidal, traced
 from discopy.axioms import (
+    A,
+    B,
+    C,
     C0,
     C1,
+    K,
+    M,
+    N,
+    P,
+    T,
+    X,
+    Y,
     Atom,
     Axiom,
     AxiomFailure,
@@ -62,8 +72,8 @@ def test_strategy():
 def test_annotated_sequents():
     """ A law draws its arguments from the sequents its annotations give. """
     @axiom
-    def composing[A: C0, B: C0, C: C0](
-            cls, f: C1[A, B], g: C1[B, C]) -> Equation:
+    def composing(cls, f: Annotated[C1, A, B],
+                  g: Annotated[C1, B, C]) -> Equation:
         """ The domain of a composite. """
         return Equation(f.then(g).dom, f.dom)
 
@@ -80,8 +90,9 @@ def test_annotated_sequents():
         law.falsify()
 
     @axiom
-    def atoms[X: Atom[C0], Y: Atom[C0], T: C0](
-            cls, x: X, y: Y, t: T) -> Equation:
+    def atoms(cls, x: Annotated[C0, Atom[X]],
+              y: Annotated[C0, Atom[Y]],
+              t: Annotated[C0, T]) -> Equation:
         """ Two atoms and a type. """
         return Equation(len(x @ y), 2)
 
@@ -91,8 +102,8 @@ def test_annotated_sequents():
     assert [len(value) for value in drawn[:2]] == [1, 1]
 
     @axiom
-    def shared[X: Atom[C0], A: C0, B: C0](
-            cls, f: C1[X @ A, X @ B], x: X) -> Equation:
+    def shared(cls, f: Annotated[C1, X @ A, X @ B],
+               x: Annotated[C0, Atom[X]]) -> Equation:
         """ A variable shared by an arrow and an object. """
         return Equation(f.dom[:1], x)
 
@@ -101,8 +112,8 @@ def test_annotated_sequents():
     assert f.dom[:1] == x == f.cod[:1] and law(f, x)
 
     @axiom
-    def delayed[A: C0, P: Pair[C0]](
-            cls, f: C1[A @ P.d, A @ P], mem: P) -> Equation:
+    def delayed(cls, f: Annotated[C1, A @ P.d, A @ P],
+                mem: Annotated[C0, Pair[P]]) -> Equation:
         """ The delay written as ``.d``. """
         return Equation(f.dom[-2:], mem.delay())
 
@@ -356,7 +367,7 @@ def test_leaf_applies_only_on_its_shape():
 
         @classmethod
         @generator
-        def loop[A: C0](cls, dom: A) -> C1[A, A]:
+        def loop(cls, dom: Annotated[C0, A]) -> Annotated[C1, A, A]:
             return Box('loop', dom, dom)
 
     assert set(Toy.rules) == {"id", "then", "box", "loop"}
@@ -379,8 +390,8 @@ def test_rule_from_annotations():
         """ Traced diagrams with a rule of their own. """
 
         @rule
-        def looping[A: C0, B: C0, M: Atom[C0]](
-                self: C1[M @ A, M @ B]) -> C1[A, B]:
+        def looping(self: Annotated[C1, Atom[M] @ A, M @ B]
+                    ) -> Annotated[C1, A, B]:
             return self.trace(left=True)
 
     looping = Toy.rules["looping"]
@@ -485,8 +496,7 @@ def test_pattern_counts_and_choices():
     assert list(choice.match(a @ b)) == [
         {"L": True, "X": a, "Y": b}, {"L": False, "Y": a, "X": b}]
     assert choice.instantiate({"L": False, "X": a, "Y": b}) == b @ a
-    with raises(TypeError):
-        X[X, Y]
+    assert X[X, Y].boundaries is not None
     spiders = frobenius.Diagram.rules["spiders"]
     x, unit = frobenius.Ty('x'), frobenius.Ty()
     assert spiders.applies(frobenius.Diagram, Goal.of(x @ x, x, 1, unit))
@@ -553,7 +563,8 @@ def test_typechecking_on_call():
         Arrow.unitality(Ob('x'))
 
     @axiom
-    def lying[A: C0, B: C0](cls, f: C1[A, B]) -> Equation[C1[A, A]]:
+    def lying(cls, f: Annotated[C1, A, B]
+              ) -> Annotated[Equation[C1], A, A]:
         """ States a sequent its terms do not have. """
         return Equation(f, f)
 

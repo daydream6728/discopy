@@ -92,8 +92,8 @@ class Diagram(monoidal.Diagram, BraidedCategory):
         dom (monoidal.Ty) : The domain of the diagram, i.e. its input.
         cod (monoidal.Ty) : The codomain of the diagram, i.e. its output.
     """
-    Braid: ClassVar[Generator[..., "Braid"]]
-    Functor: ClassVar[Generator[..., "Functor"]]
+    Braid: ClassVar[Generator]
+    Functor: ClassVar[Generator]
 
     @classmethod
     def braid(cls, left: monoidal.Ty, right: monoidal.Ty) -> Self:

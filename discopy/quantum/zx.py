@@ -42,7 +42,7 @@ class Diagram(tensor.Diagram[complex]):
     """ ZX Diagram. """
     ob = Nat
     Spider = tensor.Spider
-    Swap: ClassVar[Generator[..., "Swap"]]
+    Swap: ClassVar[Generator]
 
     @staticmethod
     def swap(left, right):
@@ -95,7 +95,7 @@ class Diagram(tensor.Diagram[complex]):
         ...     6: {4: 1},
         ...     7: {5: 1}}
         """
-        from pyzx import (  # ty: ignore[unresolved-import]
+        from pyzx import (
             Graph, VertexType, EdgeType)
         graph, scan = Graph(), []
         for i, _ in enumerate(self.dom):
@@ -155,7 +155,7 @@ class Diagram(tensor.Diagram[complex]):
         * a boundary node is not in :code:`graph.inputs() + graph.outputs()`,
         * or :code:`set(graph.inputs()).intersection(graph.outputs())`.
         """
-        from pyzx import VertexType, EdgeType  # ty: ignore[unresolved-import]
+        from pyzx import VertexType, EdgeType
 
         def node2box(node, n_legs_in, n_legs_out):
             if graph.type(node) not in {VertexType.Z, VertexType.X}:
@@ -250,7 +250,7 @@ class Spider(tensor.Spider[complex], Box):
     def __init__(self, n_legs_in, n_legs_out, phase=0):
         super().__init__(
             n_legs_in, n_legs_out,
-            Nat(1), phase)  # ty: ignore[invalid-argument-type]
+            Nat(1), phase)
         factory_str = type(self).__name__
         phase_str = f", {self.phase}" if self.phase else ""
         self.name = f"{factory_str}({n_legs_in}, {n_legs_out}{phase_str})"
@@ -382,12 +382,12 @@ circuit2zx = quantum.circuit.Functor(
     dom=Circuit, cod=Diagram)
 
 H = Box('H', Nat(1), Nat(1))
-H.dagger = lambda: H  # ty: ignore[invalid-assignment]
+H.dagger = lambda: H
 H.draw_as_spider = True
 H.drawing_name, H.tikzstyle_name, = '', 'H'
 H.color, H.shape = "yellow", "rectangle"
 
-SWAP = Swap(Nat(1), Nat(1))  # ty: ignore[invalid-argument-type]
+SWAP = Swap(Nat(1), Nat(1))
 TermBase, Constant, Variable, Application, Abstraction = (
     Diagram.TermBase, Diagram.Constant, Diagram.Variable,
     Diagram.Application, Diagram.Abstraction)

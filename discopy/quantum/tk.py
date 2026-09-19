@@ -26,10 +26,10 @@ Summary
 
 from unittest.mock import Mock
 
-import pytket as tk  # ty: ignore[unresolved-import]
-from pytket.circuit import (  # ty: ignore[unresolved-import]
+import pytket as tk
+from pytket.circuit import (
     Bit, Op, OpType, Qubit)
-from pytket.utils import probs_from_counts  # ty: ignore[unresolved-import]
+from pytket.utils import probs_from_counts
 
 from discopy.quantum.circuit import (
     Functor, Id, Permutation, bit, qubit, Circuit as Diagram)

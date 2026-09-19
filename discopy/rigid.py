@@ -280,7 +280,7 @@ class Ty(Pregroup, biclosed.Ty):
     >>> assert n.l.r == n == n.r.l
     >>> assert (s @ n).l == n.l @ s.l and (s @ n).r == n.r @ s.r
     """
-    Wire: ClassVar[Generator[..., Wire]] = Generator.subclass(Wire)
+    Wire: ClassVar[Generator] = Generator.subclass(Wire)
 
     dagger_involution = Category.dagger_involution.inapplicable(
         "Rigid types have no dagger, use pivotal instead.")
@@ -406,7 +406,7 @@ class Diagram(biclosed.Diagram, RigidCategory):
     serialisation = Serialisable.serialisation
 
     ob = Ty
-    Layer: ClassVar[Generator[..., Layer]] = Generator.subclass(Layer)
+    Layer: ClassVar[Generator] = Generator.subclass(Layer)
 
     dagger_involution = Category.dagger_involution.inapplicable(
         "Rigid diagrams have no dagger, use pivotal instead.")
@@ -417,11 +417,11 @@ class Diagram(biclosed.Diagram, RigidCategory):
 
     ev = classmethod(RigidCategory.ev.__func__)
     curry = RigidCategory.curry
-    Box: ClassVar[Generator[..., "Box"]]
-    Sum: ClassVar[Generator[..., "Sum"]]
-    Cup: ClassVar[Generator[..., "Cup"]]
-    Cap: ClassVar[Generator[..., "Cap"]]
-    Functor: ClassVar[Generator[..., "Functor"]]
+    Box: ClassVar[Generator]
+    Sum: ClassVar[Generator]
+    Cup: ClassVar[Generator]
+    Cap: ClassVar[Generator]
+    Functor: ClassVar[Generator]
 
     @classmethod
     def cups(cls, left: Ty, right: Ty) -> Diagram:
@@ -750,7 +750,7 @@ class Box(biclosed.Box, Diagram):
 
 
 @Diagram.generator
-class Sum(biclosed.Sum, Box):
+class Sum(biclosed.Sum, Box):  # ty: ignore[inconsistent-mro]
     """
     A rigid sum is a biclosed sum that can be transposed.
 
@@ -762,9 +762,9 @@ class Sum(biclosed.Sum, Box):
 
     def rotate(self, left=False) -> Sum:
         if left:
-            return self.Sum(  # ty: ignore[invalid-return-type]
+            return self.Sum(
                 tuple(term.l for term in self.terms), self.cod.l, self.dom.l)
-        return self.Sum(  # ty: ignore[invalid-return-type]
+        return self.Sum(
             tuple(term.r for term in self.terms), self.cod.r, self.dom.r)
 
 

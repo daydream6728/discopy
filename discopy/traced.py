@@ -152,8 +152,8 @@ class Diagram(monoidal.Diagram, TracedCategory):
         dom (monoidal.Ty) : The domain of the diagram, i.e. its input.
         cod (monoidal.Ty) : The codomain of the diagram, i.e. its output.
     """
-    Trace: ClassVar[Generator[..., "Trace"]]
-    Functor: ClassVar[Generator[..., "Functor"]]
+    Trace: ClassVar[Generator]
+    Functor: ClassVar[Generator]
     repr_transparency = Serialisable.repr_transparency.failing(
         "The generic representation of a trace does not read back (#742).")
     serialisation = Serialisable.serialisation.failing(

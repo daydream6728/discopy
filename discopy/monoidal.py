@@ -86,7 +86,7 @@ from discopy.utils import (
 )
 
 if TYPE_CHECKING:
-    import sympy  # ty: ignore[unresolved-import]
+    import sympy
 
 
 @dataclass(frozen=True)
@@ -205,7 +205,7 @@ class Wire(cat.Ob):
         return cls(tree['name'], dom, cod, is_dagger='is_dagger' in tree)
 
 
-class List[generator_factory](Monoid, NamedGeneric):
+class List[Atom](Monoid, NamedGeneric):
     """
     The free monoid on an ``Atom``, i.e. lists of its instances with
     concatenation as :meth:`tensor` and the empty list as unit.
@@ -324,7 +324,7 @@ class Ty(cat.Ob, cat.FreeCategory, ColouredMonoid):
     """
     ob = Colour
 
-    Wire: ClassVar[Generator[..., Wire]] = Generator.subclass(Wire)
+    Wire: ClassVar[Generator] = Generator.subclass(Wire)
 
     @classmethod
     def strategy(
@@ -424,7 +424,7 @@ class Ty(cat.Ob, cat.FreeCategory, ColouredMonoid):
         return len(self.inside) == 1
 
     @property
-    def atom(self) -> Wire | None:
+    def atom(self) -> cat.Ob | None:
         """ The single object inside an atomic type. """
         return self.inside[0] if self.is_atom else None
 
@@ -1015,11 +1015,11 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
             normal_form
     """
     ob = Ty
-    Layer: ClassVar[Generator[..., Layer]] = Generator.subclass(Layer)
-    Box: ClassVar[Generator[..., "Box"]]
-    Sum: ClassVar[Generator[..., "Sum"]]
-    Bubble: ClassVar[Generator[..., "Bubble"]]
-    Functor: ClassVar[Generator[..., "Functor"]]
+    Layer: ClassVar[Generator] = Generator.subclass(Layer)
+    Box: ClassVar[Generator]
+    Sum: ClassVar[Generator]
+    Bubble: ClassVar[Generator]
+    Functor: ClassVar[Generator]
     draw: ClassVar[Callable]
     to_gif: ClassVar[Callable]
 
@@ -1060,7 +1060,7 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
         super().__setstate__(state)
 
     def __init__(
-            self, inside: tuple[Layer, ...], dom: Ty, cod: Ty, _scan=True):
+            self, inside: tuple[cat.Box, ...], dom: Ty, cod: Ty, _scan=True):
         if _scan:
             for layer in inside:
                 assert_isinstance(layer, Layer)

@@ -48,7 +48,7 @@ from discopy.utils import (
     assert_isinstance, factory_name, assert_isatomic, AxiomError)
 
 if TYPE_CHECKING:
-    import nltk  # ty: ignore[unresolved-import]
+    import nltk
 
 
 @factory

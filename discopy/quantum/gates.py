@@ -580,7 +580,7 @@ class Parametrized(Box):
     @property
     def modules(self):
         if self.free_symbols:
-            import sympy  # ty: ignore[unresolved-import]
+            import sympy
             return sympy
         else:
             return get_backend()
@@ -590,7 +590,7 @@ class Parametrized(Box):
         return type(self)(data)  # ty: ignore[missing-argument]
 
     def lambdify(self, *symbols, **kwargs):
-        from sympy import lambdify  # ty: ignore[unresolved-import]
+        from sympy import lambdify
         with backend() as np:
             data = lambdify(symbols, self.data, dict(kwargs, modules=np))
         return lambda *xs: type(self)(  # ty: ignore[missing-argument]
@@ -769,7 +769,7 @@ class Sqrt(Scalar):
     def array(self):
         with backend() as np:
             return np.array(
-                self.data ** .5)  # ty: ignore[unsupported-operator]
+                self.data ** .5)
 
     def dagger(self):
         return self

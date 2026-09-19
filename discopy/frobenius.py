@@ -105,7 +105,7 @@ class Ty(pivotal.Ty):
             **params,
             "dom": monoidal.transparent, "cod": monoidal.transparent})
 
-    Wire: ClassVar[Generator[..., Wire]] = Generator.subclass(Wire)
+    Wire: ClassVar[Generator] = Generator.subclass(Wire)
 
 
 @factory
@@ -145,8 +145,8 @@ class Diagram(compact.Diagram, markov.Diagram, HypergraphCategory):
     pickling = Serialisable.pickling
 
     ob = Ty
-    Spider: ClassVar[Generator[..., "Spider"]]
-    Functor: ClassVar[Generator[..., "Functor"]]
+    Spider: ClassVar[Generator]
+    Functor: ClassVar[Generator]
 
     @classmethod
     def caps(cls, left, right):

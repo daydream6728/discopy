@@ -269,11 +269,11 @@ class Diagram(balanced.Diagram, SymmetricCategory):
     >>> assert Permutation.Braid is Transposition
     """
     Braid = Generator.alias("Swap")
-    Layer: ClassVar[Generator[..., Layer]] = Generator.subclass(Layer)
+    Layer: ClassVar[Generator] = Generator.subclass(Layer)
     Twist = Generator.classmethod(lambda cls, dom: cls.id(dom))
-    Permutation: ClassVar[Generator[..., "Permutation"]]
-    Swap: ClassVar[Generator[..., "Swap"]]
-    Functor: ClassVar[Generator[..., "Functor"]]
+    Permutation: ClassVar[Generator]
+    Swap: ClassVar[Generator]
+    Functor: ClassVar[Generator]
 
     @property
     def is_plumbing(self) -> bool:
