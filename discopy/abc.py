@@ -414,9 +414,10 @@ class TwoCategory[C0: Colour | None, C1: ColouredMonoid, C2: TwoCategory](
     @rule(boxes=0)
     @abstractmethod
     @unbiased
-    def tensor[X, Y, Z, A, B, C, D](
-            self: Annotated[C2, "A[X, Y]", "B[X, Y]"],
-            other: Annotated[C2, "C[Y, Z]", "D[Y, Z]"]
+    def tensor[X, Y, Z,
+               A: Annotated[object, C1, X, Y], B: Annotated[object, C1, X, Y],
+               C: Annotated[object, C1, Y, Z], D: Annotated[object, C1, Y, Z]](
+            self: Annotated[C2, A, B], other: Annotated[C2, C, D]
     ) -> Annotated[C2, "A @ C", "B @ D"]:
         """
         Parallel composition of ``n >= 0`` morphisms, to be instantiated:
@@ -432,44 +433,55 @@ class TwoCategory[C0: Colour | None, C1: ColouredMonoid, C2: TwoCategory](
         return self.tensor(other)
 
     @axiom
-    def bifunctoriality[X, Y, Z, A, B, C, D, U, V](
-            cls, f: Annotated[C2, "A[X, Y]", "B[X, Y]"],
-            g: Annotated[C2, "C[Y, Z]", "D[Y, Z]"],
-            h: Annotated[C2, "B[X, Y]", "U[X, Y]"],
-            k: Annotated[C2, "D[Y, Z]", "V[Y, Z]"]
+    def bifunctoriality[
+            X, Y, Z,
+            A: Annotated[object, C1, X, Y], B: Annotated[object, C1, X, Y],
+            U: Annotated[object, C1, X, Y],
+            C: Annotated[object, C1, Y, Z], D: Annotated[object, C1, Y, Z],
+            V: Annotated[object, C1, Y, Z]](
+            cls, f: Annotated[C2, A, B], g: Annotated[C2, C, D],
+            h: Annotated[C2, B, U], k: Annotated[C2, D, V]
     ) -> Annotated[Equation[C2], "A @ C", "U @ V"]:
         """ Bifunctoriality of the tensor. """
         return cls.Equation(
             f @ g >> h @ k, (f >> h) @ (g >> k))
 
     @axiom
-    def tensor_unitality[X, Y, Z, A, B](
-            cls, a: Annotated[C1, "A[X, Y]"], b: Annotated[C1, "B[Y, Z]"]
+    def tensor_unitality[
+            X, Y, Z,
+            A: Annotated[object, C1, X, Y], B: Annotated[object, C1, Y, Z]](
+            cls, a: Annotated[C1, A], b: Annotated[C1, B]
     ) -> Annotated[Equation[C2], "A @ B", "A @ B"]:
         """ Preservation of identities by tensor. """
         return cls.Equation(
             cls.id(a) @ cls.id(b), cls.id(a @ b))
 
     @axiom
-    def tensor_dom_typing[X, Y, Z, A, B, C, D](
-            cls, f: Annotated[C2, "A[X, Y]", "B[X, Y]"],
-            g: Annotated[C2, "C[Y, Z]", "D[Y, Z]"]
+    def tensor_dom_typing[
+            X, Y, Z,
+            A: Annotated[object, C1, X, Y], B: Annotated[object, C1, X, Y],
+            C: Annotated[object, C1, Y, Z], D: Annotated[object, C1, Y, Z]](
+            cls, f: Annotated[C2, A, B], g: Annotated[C2, C, D]
     ) -> Annotated[Equation[C1], X, Z]:
         """ Domain typing of tensor. """
         return cls.ob.Equation((f @ g).dom, f.dom @ g.dom)
 
     @axiom
-    def tensor_cod_typing[X, Y, Z, A, B, C, D](
-            cls, f: Annotated[C2, "A[X, Y]", "B[X, Y]"],
-            g: Annotated[C2, "C[Y, Z]", "D[Y, Z]"]
+    def tensor_cod_typing[
+            X, Y, Z,
+            A: Annotated[object, C1, X, Y], B: Annotated[object, C1, X, Y],
+            C: Annotated[object, C1, Y, Z], D: Annotated[object, C1, Y, Z]](
+            cls, f: Annotated[C2, A, B], g: Annotated[C2, C, D]
     ) -> Annotated[Equation[C1], X, Z]:
         """ Codomain typing of tensor. """
         return cls.ob.Equation((f @ g).cod, f.cod @ g.cod)
 
     @axiom
-    def dagger_monoidality[X, Y, Z, A, B, C, D](
-            cls, f: Annotated[C2, "A[X, Y]", "B[X, Y]"],
-            g: Annotated[C2, "C[Y, Z]", "D[Y, Z]"]
+    def dagger_monoidality[
+            X, Y, Z,
+            A: Annotated[object, C1, X, Y], B: Annotated[object, C1, X, Y],
+            C: Annotated[object, C1, Y, Z], D: Annotated[object, C1, Y, Z]](
+            cls, f: Annotated[C2, A, B], g: Annotated[C2, C, D]
     ) -> Annotated[Equation[C2], "B @ D", "A @ C"]:
         """ The dagger distributes over the tensor. """
         return cls.Equation(

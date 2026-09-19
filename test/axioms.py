@@ -490,7 +490,8 @@ def test_pattern_counts_and_choices():
     assert list(choice.match(a @ b)) == [
         {"L": True, "X": a, "Y": b}, {"L": False, "Y": a, "X": b}]
     assert choice.instantiate({"L": False, "X": a, "Y": b}) == b @ a
-    assert X[X, Y].boundaries is not None
+    with raises(TypeError):
+        X[X, Y]
     spiders = frobenius.Diagram.rules["spiders"]
     x, unit = frobenius.Ty('x'), frobenius.Ty()
     assert spiders.applies(frobenius.Diagram, Goal.of(x @ x, x, 1, unit))

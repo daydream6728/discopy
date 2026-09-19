@@ -15,7 +15,12 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   interprets, and the metavariables are the declaration's own PEP 695
   type parameters, nothing imported: a rule reads `def then[A, B, C](
   self: Annotated[C1, A, B], other: Annotated[C1, B, C]) ->
-  Annotated[C1, A, C]`, a kind is the bound, `def cups[X: Atom]`, and a
+  Annotated[C1, A, C]`, a kind is the bound, `def cups[X: Atom]`, the
+  boundaries of a higher cell are declared on its binder, `def tensor[X,
+  Y, A: Annotated[object, C1, X, Y], ...]` mimicking the telescope
+  `{A : C1 X Y}` of a dependently typed language with its uses staying
+  bare, `Annotated[C2, A, B]` — the one bound form ty, pyright and mypy
+  all accept, the metadata being no part of the bound type — and a
   pattern with an operator or a subscript on a type parameter is quoted
   like a forward reference, `-> Annotated[C1, "X @ X.r", ()]`, since a
   typechecker types the bare operator as one on `typing.TypeVar`.

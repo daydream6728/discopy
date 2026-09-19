@@ -183,6 +183,10 @@ Annotated[C1, A, B]``, and its other arguments off their patterns, a
 and a :class:`Bool` choosing a boundary. The metavariables are the
 method's own :pep:`695` type parameters, their :class:`Kind` the bound,
 each name evaluating to one :class:`Var` shared across the declaration;
+the boundaries of a higher cell are declared on its binder, ``tensor[X,
+Y, A: Annotated[object, C1, X, Y], ...]`` mimicking the telescope
+``{A : C1 X Y}`` of a dependently typed language with its uses staying
+bare, see :func:`bound_of`, and
 a pattern with an operator or a subscript on a type parameter is quoted
 like a forward reference, since a typechecker types it as one on
 :class:`typing.TypeVar`: matching the conclusion
@@ -761,7 +765,12 @@ def annotated(
     unwrapped = inspect.unwrap(function)
     module = unwrapped.__globals__
     scope = {
-        parameter.__name__: Var(parameter.__name__, bound_of(parameter))
+        parameter.__name__: Var(parameter.__name__)
+        for parameter in unwrapped.__type_params__}
+    scope = {
+        parameter.__name__: replace(
+            scope[parameter.__name__],
+            bound=bound_of(parameter, module, scope))
         for parameter in unwrapped.__type_params__}
 
     def evaluate(annotation):
@@ -776,18 +785,29 @@ def annotated(
     return unify_vars(patterns, evaluate(signature.return_annotation))
 
 
-def bound_of(parameter: TypeVar) -> Level | Kind:
+def bound_of(parameter: TypeVar, module: dict,
+             scope: dict) -> Level | Sequent | Kind:
     """
-    The kind the bound of a type parameter declares, ``Atom`` for
-    ``def cups[X: Atom]``, any object of the lowest level when
-    unbounded, its level read off the base of the ``Annotated`` its
-    variable sits in, see :func:`level_fix`.
+    What the bound of a type parameter declares its variable to stand
+    for: a :class:`Kind`, ``def cups[X: Atom]``, the cells a higher one
+    stands between, ``def tensor[X, Y, A: Annotated[object, C1, X, Y]]``
+    mimicking the telescope ``{A : C1 X Y}`` of a dependently typed
+    language — the base is any plain type, since a bound may not
+    contain a type variable, and the metadata name the level and its
+    boundaries — and any object of the lowest level when unbounded.
     """
     bound = parameter.__bound__
     if bound is None:
         return Level(0)
     if isinstance(bound, type) and issubclass(bound, Kind):
         return bound()
+    if get_origin(bound) is Annotated:
+        _, level, *boundaries = get_args(bound)
+        level = module.get(getattr(level, "__name__", ""), level)
+        dom, cod = (
+            scope[item.__name__] if isinstance(item, TypeVar) else item
+            for item in boundaries)
+        return level[dom, cod]
     raise TypeError(
         f"{parameter} is bounded by {bound!r}, which is no kind.")
 
@@ -834,17 +854,14 @@ def interpret(annotation, module: dict | None = None,
 def level_fix(level: Level) -> Callable[[Var], Var]:
     """
     Bind the free level of a variable to the given one: the ``inner``
-    of a :class:`Kind` stated at use-site, e.g. ``Atom[X]``, and the
-    level of the :class:`Sequent` a higher cell stands between, e.g.
-    ``A[X, Y]``.
+    of a :class:`Kind` whose bound names no level, e.g. ``X: Atom``,
+    read off the base of the ``Annotated`` its variable sits in.
     """
     def fix(var: Var) -> Var:
         bound = var.bound
         if isinstance(bound, Kind) and bound.inner is None\
                 and var.kind not in ("count", "bool"):
             return replace(var, bound=replace(bound, inner=level))
-        if isinstance(bound, Sequent) and bound.level is None:
-            return replace(var, bound=replace(bound, level=level.n))
         return var
     return fix
 
@@ -2708,20 +2725,16 @@ class Var[T](ItemBase[T]):
             return tuple(range(1, remaining + 1))
         return tuple(n for n in self.LENGTHS[self.kind] if n <= remaining)
 
-    def __getitem__(self, item) -> Var[T] | Choice[T]:
+    def __getitem__(self, item) -> Choice[T]:
         """
-        The choice a boolean variable makes between two boundaries, or
-        the boundaries a higher cell stands between: ``L[X @ Y, Y @ X]``
-        chooses, ``A[X, Y]`` is a cell from ``X`` to ``Y``, its level
-        read off the base of the ``Annotated`` it sits in, see
-        :func:`level_fix`.
+        The choice a boolean variable makes between two boundaries,
+        ``L[X @ Y, Y @ X]``; the boundaries of a higher cell are
+        declared on its binder, see :func:`bound_of`.
         """
-        if self.kind == "bool":
-            then, otherwise = item
-            return Choice(self, boundary(then), boundary(otherwise))
-        dom, cod = item
-        return replace(
-            self, bound=Sequent(boundary(dom), boundary(cod), None))
+        if self.kind != "bool":
+            raise TypeError(f"Only a Bool variable chooses, {self} is not.")
+        then, otherwise = item
+        return Choice(self, boundary(then), boundary(otherwise))
 
     def value(self, env: dict) -> T:
         return env[self.name]
