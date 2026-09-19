@@ -18,4 +18,13 @@
       boundaries off the lazily evaluated bound
 - [x] Respell the six TwoCategory declarations, drop the use-site
       `A[X, Y]` subscript from `Var.__getitem__` so there is one way
-- [ ] `ty check` green, `pflake8`, pytest, CHANGELOG
+- [x] `ty check` green, `pflake8`, pytest, CHANGELOG
+
+> can you define a shorthand for this like `type Hom[C1, A, B]` ?
+
+- [WIP] @session_01UrSNrBcfEnb46fFG9LYRPo-2026-09-19 19:53
+      `type Hom[C, A, B] = Annotated[object, C, A, B]`, the binder
+      shorthand `A: Hom[C1, X, Y]`: green on ty and pyright (mypy alone
+      cannot scope sibling type parameters as alias arguments);
+      `bound_of` resolves the subscripted alias, the six declarations
+      respelled, docs, CHANGELOG, checks
