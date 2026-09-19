@@ -63,8 +63,9 @@ from types import NoneType
 from typing import Annotated, ClassVar, Self, TYPE_CHECKING
 
 from discopy.axioms import (  # noqa: F401
-    C0, C1, C2, Atom, Axiom, Bool, Cells, Count, Equation, NonEmpty, Pair,
-    Rule, Serialisable, Testable, Var, axiom, generator, inapplicable, rule)
+    C0, C1, C2, Atom, Axiom, Bool, Cells, Count, Equation, Hom, NonEmpty,
+    Pair, Rule, Serialisable, Testable, Var, axiom, generator, inapplicable,
+    rule)
 from discopy.utils import (  # noqa: F401
     NamedGeneric, classproperty, factory_name, unbiased)
 
@@ -415,8 +416,8 @@ class TwoCategory[C0: Colour | None, C1: ColouredMonoid, C2: TwoCategory](
     @abstractmethod
     @unbiased
     def tensor[X, Y, Z,
-               A: Annotated[object, C1, X, Y], B: Annotated[object, C1, X, Y],
-               C: Annotated[object, C1, Y, Z], D: Annotated[object, C1, Y, Z]](
+               A: Hom[C1, X, Y], B: Hom[C1, X, Y],
+               C: Hom[C1, Y, Z], D: Hom[C1, Y, Z]](
             self: Annotated[C2, A, B], other: Annotated[C2, C, D]
     ) -> Annotated[C2, "A @ C", "B @ D"]:
         """
@@ -434,11 +435,8 @@ class TwoCategory[C0: Colour | None, C1: ColouredMonoid, C2: TwoCategory](
 
     @axiom
     def bifunctoriality[
-            X, Y, Z,
-            A: Annotated[object, C1, X, Y], B: Annotated[object, C1, X, Y],
-            U: Annotated[object, C1, X, Y],
-            C: Annotated[object, C1, Y, Z], D: Annotated[object, C1, Y, Z],
-            V: Annotated[object, C1, Y, Z]](
+            X, Y, Z, A: Hom[C1, X, Y], B: Hom[C1, X, Y], U: Hom[C1, X, Y],
+            C: Hom[C1, Y, Z], D: Hom[C1, Y, Z], V: Hom[C1, Y, Z]](
             cls, f: Annotated[C2, A, B], g: Annotated[C2, C, D],
             h: Annotated[C2, B, U], k: Annotated[C2, D, V]
     ) -> Annotated[Equation[C2], "A @ C", "U @ V"]:
@@ -448,8 +446,7 @@ class TwoCategory[C0: Colour | None, C1: ColouredMonoid, C2: TwoCategory](
 
     @axiom
     def tensor_unitality[
-            X, Y, Z,
-            A: Annotated[object, C1, X, Y], B: Annotated[object, C1, Y, Z]](
+            X, Y, Z, A: Hom[C1, X, Y], B: Hom[C1, Y, Z]](
             cls, a: Annotated[C1, A], b: Annotated[C1, B]
     ) -> Annotated[Equation[C2], "A @ B", "A @ B"]:
         """ Preservation of identities by tensor. """
@@ -458,9 +455,8 @@ class TwoCategory[C0: Colour | None, C1: ColouredMonoid, C2: TwoCategory](
 
     @axiom
     def tensor_dom_typing[
-            X, Y, Z,
-            A: Annotated[object, C1, X, Y], B: Annotated[object, C1, X, Y],
-            C: Annotated[object, C1, Y, Z], D: Annotated[object, C1, Y, Z]](
+            X, Y, Z, A: Hom[C1, X, Y], B: Hom[C1, X, Y],
+            C: Hom[C1, Y, Z], D: Hom[C1, Y, Z]](
             cls, f: Annotated[C2, A, B], g: Annotated[C2, C, D]
     ) -> Annotated[Equation[C1], X, Z]:
         """ Domain typing of tensor. """
@@ -468,9 +464,8 @@ class TwoCategory[C0: Colour | None, C1: ColouredMonoid, C2: TwoCategory](
 
     @axiom
     def tensor_cod_typing[
-            X, Y, Z,
-            A: Annotated[object, C1, X, Y], B: Annotated[object, C1, X, Y],
-            C: Annotated[object, C1, Y, Z], D: Annotated[object, C1, Y, Z]](
+            X, Y, Z, A: Hom[C1, X, Y], B: Hom[C1, X, Y],
+            C: Hom[C1, Y, Z], D: Hom[C1, Y, Z]](
             cls, f: Annotated[C2, A, B], g: Annotated[C2, C, D]
     ) -> Annotated[Equation[C1], X, Z]:
         """ Codomain typing of tensor. """
@@ -478,9 +473,8 @@ class TwoCategory[C0: Colour | None, C1: ColouredMonoid, C2: TwoCategory](
 
     @axiom
     def dagger_monoidality[
-            X, Y, Z,
-            A: Annotated[object, C1, X, Y], B: Annotated[object, C1, X, Y],
-            C: Annotated[object, C1, Y, Z], D: Annotated[object, C1, Y, Z]](
+            X, Y, Z, A: Hom[C1, X, Y], B: Hom[C1, X, Y],
+            C: Hom[C1, Y, Z], D: Hom[C1, Y, Z]](
             cls, f: Annotated[C2, A, B], g: Annotated[C2, C, D]
     ) -> Annotated[Equation[C2], "B @ D", "A @ C"]:
         """ The dagger distributes over the tensor. """

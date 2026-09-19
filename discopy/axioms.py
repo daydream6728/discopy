@@ -184,9 +184,9 @@ and a :class:`Bool` choosing a boundary. The metavariables are the
 method's own :pep:`695` type parameters, their :class:`Kind` the bound,
 each name evaluating to one :class:`Var` shared across the declaration;
 the boundaries of a higher cell are declared on its binder, ``tensor[X,
-Y, A: Annotated[object, C1, X, Y], ...]`` mimicking the telescope
-``{A : C1 X Y}`` of a dependently typed language with its uses staying
-bare, see :func:`bound_of`, and
+Y, A: Hom[C1, X, Y], ...]`` mimicking the telescope ``{A : C1 X Y}`` of
+a dependently typed language with its uses staying bare, see
+:data:`Hom` and :func:`bound_of`, and
 a pattern with an operator or a subscript on a type parameter is quoted
 like a forward reference, since a typechecker types it as one on
 :class:`typing.TypeVar`: matching the conclusion
@@ -238,7 +238,8 @@ from functools import cache, wraps
 from itertools import chain, count
 from types import NoneType
 from typing import (
-    TYPE_CHECKING, Annotated, ClassVar, Self, TypeVar, get_args, get_origin)
+    TYPE_CHECKING, Annotated, ClassVar, Self, TypeAliasType, TypeVar,
+    get_args, get_origin)
 
 from discopy.utils import (
     AxiomError,
@@ -790,26 +791,34 @@ def bound_of(parameter: TypeVar, module: dict,
     """
     What the bound of a type parameter declares its variable to stand
     for: a :class:`Kind`, ``def cups[X: Atom]``, the cells a higher one
-    stands between, ``def tensor[X, Y, A: Annotated[object, C1, X, Y]]``
-    mimicking the telescope ``{A : C1 X Y}`` of a dependently typed
-    language — the base is any plain type, since a bound may not
-    contain a type variable, and the metadata name the level and its
-    boundaries — and any object of the lowest level when unbounded.
+    stands between, ``def tensor[X, Y, A: Hom[C1, X, Y]]`` mimicking
+    the telescope ``{A : C1 X Y}`` of a dependently typed language —
+    :data:`Hom` unfolds to an ``Annotated`` whose base is a plain type,
+    since a bound may not contain a type variable, and whose metadata
+    name the level and its boundaries — and any object of the lowest
+    level when unbounded.
     """
     bound = parameter.__bound__
     if bound is None:
         return Level(0)
     if isinstance(bound, type) and issubclass(bound, Kind):
         return bound()
-    if get_origin(bound) is Annotated:
-        _, level, *boundaries = get_args(bound)
-        level = module.get(getattr(level, "__name__", ""), level)
-        dom, cod = (
-            scope[item.__name__] if isinstance(item, TypeVar) else item
-            for item in boundaries)
-        return level[dom, cod]
-    raise TypeError(
-        f"{parameter} is bounded by {bound!r}, which is no kind.")
+    origin = get_origin(bound)
+    if isinstance(origin, TypeAliasType):
+        substitution = dict(zip(origin.__type_params__, get_args(bound)))
+        args = tuple(substitution.get(item, item)
+                     for item in get_args(origin.__value__))
+    elif origin is Annotated:
+        args = get_args(bound)
+    else:
+        raise TypeError(
+            f"{parameter} is bounded by {bound!r}, which is no kind.")
+    _, level, *boundaries = args
+    level = module.get(getattr(level, "__name__", ""), level)
+    dom, cod = (
+        scope[item.__name__] if isinstance(item, TypeVar) else item
+        for item in boundaries)
+    return level[dom, cod]
 
 
 def interpret(annotation, module: dict | None = None,
@@ -3354,6 +3363,16 @@ types as a plain 1-cell and evaluates to the :class:`Sequent` from
 ``A`` to ``B``, see :func:`interpret`. :data:`typing.Self` stands for
 the top itself, for a law of every term of a type whatever its level,
 such as :meth:`Serialisable.repr_transparency`.
+"""
+
+type Hom[C, A, B] = Annotated[object, C, A, B]
+"""
+The bound declaring the cells a metavariable stands between: ``def
+tensor[X, Y, A: Hom[C1, X, Y], ...]`` binds ``A`` a 1-cell from ``X``
+to ``Y``, the telescope ``{A : C1 X Y}`` of a dependently typed
+language, see :func:`bound_of`. It unfolds to an ``Annotated`` whose
+base is ``object``, since a bound may not contain a type variable and
+the metadata is no part of the type.
 """
 
 GENERATORS = tuple("abcde")
