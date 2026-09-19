@@ -575,6 +575,26 @@ def test_typechecking_on_call():
     assert lying.owner is None and lying.bind(Diagram).cells[0] is Ty
 
 
+def test_rule_check():
+    """ A rule checks arguments against its pattern in one mechanism. """
+    from discopy import markov, rigid
+
+    x, y = rigid.Ty('x'), rigid.Ty('y')
+    cups = rigid.Diagram.rules["cups"]
+    assert cups.check(x, x.r) == {"X": x}
+    with raises(AxiomError):
+        cups.check(x, x.l)
+    with raises(AxiomError):
+        cups.check(x @ y, (x @ y).r)
+    copy = markov.Diagram.rules["copy"]
+    z = markov.Ty('z')
+    assert copy.check(z, 3) == {"X": z, "N": 3}
+    with raises(AxiomError):
+        copy.check(z @ z, 2)
+    with raises(TypeError):
+        rigid.Diagram.rules["box"].check(x)
+
+
 def test_pattern_instantiation():
     from discopy import rigid
     from discopy.axioms import Var, Word

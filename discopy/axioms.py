@@ -1042,6 +1042,42 @@ class Rule[T]:
         """ The cells of the bound category at the levels the rule names. """
         return Cells.of(self.category, self.owner, types)
 
+    def check(self, *args) -> dict:
+        """
+        Match the arguments of the structural method against its
+        declared patterns, returning what the metavariables stand for
+        or raising :class:`discopy.utils.AxiomError`: the one mechanism
+        behind the manual assertions a generator's shape implies, e.g.
+        a cup takes an atom and its right adjoint.
+
+        >>> from discopy import rigid
+        >>> x = rigid.Ty('x')
+        >>> assert rigid.Diagram.rules["cups"].check(x, x.r) == {"X": x}
+        >>> rigid.Diagram.rules["cups"].check(x, x.l)
+        Traceback (most recent call last):
+            ...
+        discopy.utils.AxiomError: rigid.Diagram.cups expects left: X, \
+right: X.r, got (rigid.Ty(rigid.Wire('x')), rigid.Ty(rigid.Wire('x', z=-1))).
+        """
+        if self.pattern is None:
+            raise TypeError(f"{self} declares no pattern.")
+        patterns = self.pattern.patterns
+        if len(args) != len(patterns):
+            raise AxiomError(
+                f"{self} expects {self.pattern}, got {tuple(args)}.")
+        env: dict = {}
+        for pattern, value in zip(patterns.values(), args):
+            if isinstance(pattern, Var)\
+                    and pattern.kind in ("count", "bool"):
+                bound = bind(env, pattern, value)
+            else:
+                bound = next(pattern.match(value, env, self.cells()), None)
+            if bound is None:
+                raise AxiomError(
+                    f"{self} expects {self.pattern}, got {tuple(args)}.")
+            env = bound
+        return env
+
     def middles(self, dom, cod, types) -> st.SearchStrategy:
         """
         The strategy for boundaries the rule fires on, given a sequent,

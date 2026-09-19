@@ -682,6 +682,17 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Changed
 
+- One naming convention survives the unification of the generated
+  factories with the sequent search: a category's structural classes
+  are its capitalised attributes, e.g. `Diagram.Box`, `Ty.Wire` and
+  `Arrow.Equation`, built by the `Generator` descriptor unless the
+  module declares them, and the snake_case `*_factory` attributes are
+  gone — `box_factory`, `swap_factory`, `equation_factory`,
+  `generator_factory` and friends, together with
+  `monoidal.Box.__init_subclass__`, whose wiring the last generated
+  subclass used to clobber. `monoidal.List`'s parameter is named `Atom`,
+  as its doctest says.
+
 - `monoidal.Colour` is transparent by default rather than white, i.e. its
   `name` defaults to the new `config.TRANSPARENT` and `monoidal.white` is
   renamed to `monoidal.transparent`. The drawing code painted every region
@@ -1011,6 +1022,20 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   reviewer first.
 
 ### Fixed
+
+- `axioms.levels_of` skips the value parameters of a `NamedGeneric`,
+  such as the `dtype` of a tensor diagram, when picking the class whose
+  type parameters name the levels, so `tensor.Diagram` and `Circuit`
+  find their cells again instead of a single level.
+- A rule's method is called through its category rather than looked up
+  on the proof of `self`, which may be a plain term of the class the
+  rule's category shares a factory with.
+- `NamedGeneric.__setstate__` falls back on updating `__dict__` when no
+  class below it defines `__setstate__`, fixing `pickle` of a
+  parameterised `Matrix`, and pops the legacy values key instead of
+  leaving it behind.
+- `cat.Arrow.__repr__` reads `self.atom` for box transparency, where
+  `self.generator` now names the classmethod declaring a generator.
 
 - Typechecking found four latent crashes: the abstract ``TermBase.eval``
   stub was missing its ``self`` parameter, so ``self.eval()`` typed the

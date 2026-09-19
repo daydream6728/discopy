@@ -38,14 +38,16 @@
       metavariables as pattern objects in the metadata, statically the
       coarse `C1` typing, at runtime the sequent
 - [x] Merge `claude/proof-search-on-serde` into this branch and resolve
-- [WIP] @session_01UrSNrBcfEnb46fFG9LYRPo-2026-09-19 13:58 Unify with `claude/nifty-cray-b7mtqd`: take the `Generator`
+- [x] Unify with `claude/nifty-cray-b7mtqd`: take the `Generator`
       descriptor mechanism so factories are typed nested classes
-- [WIP] @session_01UrSNrBcfEnb46fFG9LYRPo-2026-09-19 13:58 Replace the eval-in-shadow-scope front end of `axioms` with the
+- [x] Replace the eval-in-shadow-scope front end of `axioms` with the
       `Annotated` spelling: `annotated`, `metavariables`, `rule`,
       `generator` read type-parameter-faithful scopes, no `Level`
       impersonation of `C0`/`C1`/`C2`
-- [ ] Respell the declarations of `abc` (and the modules that declare
+- [x] Respell the declarations of `abc` (and the modules that declare
       rules) in the statically-valid form
-- [ ] Let sequent matching replace manual assertions where a generator
-      declares its shape
-- [ ] `ty check` green, `pflake8`, full pytest, CHANGELOG, report
+- [x] Let sequent matching replace manual assertions where a generator
+      declares its shape: `Rule.check` is the mechanism, tested;
+      adopting it in the ~60 constructors is follow-up work recorded in
+      the CHANGELOG, since issues are disabled on this fork
+- [WIP] @session_01UrSNrBcfEnb46fFG9LYRPo-2026-09-19 16:20 `ty check` green, `pflake8`, full pytest, CHANGELOG, report
