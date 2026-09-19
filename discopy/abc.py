@@ -63,8 +63,7 @@ from types import NoneType
 from typing import Annotated, ClassVar, Self, TYPE_CHECKING
 
 from discopy.axioms import (  # noqa: F401
-    A, B, C, C0, C1, C2, D, E, K, L, M, N, P, U, V, X, Y, Z,
-    Atom, Axiom, Bool, Cells, Count, Equation, NonEmpty, Pair,
+    C0, C1, C2, Atom, Axiom, Bool, Cells, Count, Equation, NonEmpty, Pair,
     Rule, Serialisable, Testable, Var, axiom, generator, inapplicable, rule)
 from discopy.utils import (  # noqa: F401
     NamedGeneric, classproperty, factory_name, unbiased)
@@ -106,7 +105,7 @@ class Category[C0, C1: Category](Testable, ABC):
     @classmethod
     @rule(boxes=0)
     @abstractmethod
-    def id(cls, dom: Annotated[C0, A]) -> Annotated[C1, A, A]:
+    def id[A](cls, dom: Annotated[C0, A]) -> Annotated[C1, A, A]:
         """
         Identity morphism on an object :code:`dom: C0`, to be instantiated:
         as a rule, ``x ⊢ x`` with no box is the identity.
@@ -118,8 +117,8 @@ class Category[C0, C1: Category](Testable, ABC):
     @rule(boxes=0)
     @abstractmethod
     @unbiased
-    def then(self: Annotated[C1, A, B],
-             other: Annotated[C1, B, C]) -> Annotated[C1, A, C]:
+    def then[A, B, C](self: Annotated[C1, A, B],
+                      other: Annotated[C1, B, C]) -> Annotated[C1, A, C]:
         """
         Sequential composition of `n >= 1` morphisms, to be instantiated:
         as a rule, ``x ⊢ z`` is the composition of ``x ⊢ y`` and ``y ⊢
@@ -225,7 +224,7 @@ class Category[C0, C1: Category](Testable, ABC):
         return cls.Equation(cls.id(f.dom).then(f), f, f.then(cls.id(f.cod)))
 
     @axiom
-    def associativity(
+    def associativity[A, B, C, D](
             cls, f: Annotated[C1, A, B], g: Annotated[C1, B, C],
             h: Annotated[C1, C, D]) -> Equation[C1]:
         """ Associativity of composition. """
@@ -239,14 +238,14 @@ class Category[C0, C1: Category](Testable, ABC):
         return cls.ob.Equation(identity.dom, x, identity.cod)
 
     @axiom
-    def composition_dom_typing(
+    def composition_dom_typing[A, B, C](
             cls, f: Annotated[C1, A, B],
             g: Annotated[C1, B, C]) -> Equation[C0]:
         """ Domain typing of composition. """
         return cls.ob.Equation(f.then(g).dom, f.dom)
 
     @axiom
-    def composition_cod_typing(
+    def composition_cod_typing[A, B, C](
             cls, f: Annotated[C1, A, B],
             g: Annotated[C1, B, C]) -> Equation[C0]:
         """ Codomain typing of composition. """
@@ -259,7 +258,7 @@ class Category[C0, C1: Category](Testable, ABC):
         return cls.Equation(f.dagger().dagger(), f)
 
     @axiom
-    def dagger_contravariance(
+    def dagger_contravariance[A, B, C](
             cls, f: Annotated[C1, A, B],
             g: Annotated[C1, B, C]) -> Equation[C1]:
         """ The dagger reverses composition. """
@@ -415,10 +414,10 @@ class TwoCategory[C0: Colour | None, C1: ColouredMonoid, C2: TwoCategory](
     @rule(boxes=0)
     @abstractmethod
     @unbiased
-    def tensor(
-            self: Annotated[C2, A[X, Y], B[X, Y]],
-            other: Annotated[C2, C[Y, Z], D[Y, Z]]
-    ) -> Annotated[C2, A @ C, B @ D]:
+    def tensor[X, Y, Z, A, B, C, D](
+            self: Annotated[C2, "A[X, Y]", "B[X, Y]"],
+            other: Annotated[C2, "C[Y, Z]", "D[Y, Z]"]
+    ) -> Annotated[C2, "A @ C", "B @ D"]:
         """
         Parallel composition of ``n >= 0`` morphisms, to be instantiated:
         as a rule, ``a @ c ⊢ b @ d`` is the tensor of ``a ⊢ b`` and ``c ⊢
@@ -433,45 +432,45 @@ class TwoCategory[C0: Colour | None, C1: ColouredMonoid, C2: TwoCategory](
         return self.tensor(other)
 
     @axiom
-    def bifunctoriality(
-            cls, f: Annotated[C2, A[X, Y], B[X, Y]],
-            g: Annotated[C2, C[Y, Z], D[Y, Z]],
-            h: Annotated[C2, B[X, Y], U[X, Y]],
-            k: Annotated[C2, D[Y, Z], V[Y, Z]]
-    ) -> Annotated[Equation[C2], A @ C, U @ V]:
+    def bifunctoriality[X, Y, Z, A, B, C, D, U, V](
+            cls, f: Annotated[C2, "A[X, Y]", "B[X, Y]"],
+            g: Annotated[C2, "C[Y, Z]", "D[Y, Z]"],
+            h: Annotated[C2, "B[X, Y]", "U[X, Y]"],
+            k: Annotated[C2, "D[Y, Z]", "V[Y, Z]"]
+    ) -> Annotated[Equation[C2], "A @ C", "U @ V"]:
         """ Bifunctoriality of the tensor. """
         return cls.Equation(
             f @ g >> h @ k, (f >> h) @ (g >> k))
 
     @axiom
-    def tensor_unitality(
-            cls, a: Annotated[C1, A[X, Y]], b: Annotated[C1, B[Y, Z]]
-    ) -> Annotated[Equation[C2], A @ B, A @ B]:
+    def tensor_unitality[X, Y, Z, A, B](
+            cls, a: Annotated[C1, "A[X, Y]"], b: Annotated[C1, "B[Y, Z]"]
+    ) -> Annotated[Equation[C2], "A @ B", "A @ B"]:
         """ Preservation of identities by tensor. """
         return cls.Equation(
             cls.id(a) @ cls.id(b), cls.id(a @ b))
 
     @axiom
-    def tensor_dom_typing(
-            cls, f: Annotated[C2, A[X, Y], B[X, Y]],
-            g: Annotated[C2, C[Y, Z], D[Y, Z]]
+    def tensor_dom_typing[X, Y, Z, A, B, C, D](
+            cls, f: Annotated[C2, "A[X, Y]", "B[X, Y]"],
+            g: Annotated[C2, "C[Y, Z]", "D[Y, Z]"]
     ) -> Annotated[Equation[C1], X, Z]:
         """ Domain typing of tensor. """
         return cls.ob.Equation((f @ g).dom, f.dom @ g.dom)
 
     @axiom
-    def tensor_cod_typing(
-            cls, f: Annotated[C2, A[X, Y], B[X, Y]],
-            g: Annotated[C2, C[Y, Z], D[Y, Z]]
+    def tensor_cod_typing[X, Y, Z, A, B, C, D](
+            cls, f: Annotated[C2, "A[X, Y]", "B[X, Y]"],
+            g: Annotated[C2, "C[Y, Z]", "D[Y, Z]"]
     ) -> Annotated[Equation[C1], X, Z]:
         """ Codomain typing of tensor. """
         return cls.ob.Equation((f @ g).cod, f.cod @ g.cod)
 
     @axiom
-    def dagger_monoidality(
-            cls, f: Annotated[C2, A[X, Y], B[X, Y]],
-            g: Annotated[C2, C[Y, Z], D[Y, Z]]
-    ) -> Annotated[Equation[C2], B @ D, A @ C]:
+    def dagger_monoidality[X, Y, Z, A, B, C, D](
+            cls, f: Annotated[C2, "A[X, Y]", "B[X, Y]"],
+            g: Annotated[C2, "C[Y, Z]", "D[Y, Z]"]
+    ) -> Annotated[Equation[C2], "B @ D", "A @ C"]:
         """ The dagger distributes over the tensor. """
         return cls.Equation(
             (f @ g).dagger(), f.dagger() @ g.dagger())
@@ -522,8 +521,8 @@ class TracedCategory[C0: ColouredMonoid, C1: TracedCategory](
     """
     @rule
     @abstractmethod
-    def trace(
-        self: Annotated[C1, L[Atom[M] @ A, A @ M], L[M @ B, B @ M]],
+    def trace[A, B, M: Atom, L: Bool](
+        self: Annotated[C1, "L[M @ A, A @ M]", "L[M @ B, B @ M]"],
         n: int = 1, left: Annotated[bool, L] = False
     ) -> Annotated[C1, A, B]:
         """
@@ -548,25 +547,25 @@ class TracedCategory[C0: ColouredMonoid, C1: TracedCategory](
             f.trace(0), f, f.trace(0, left=True))
 
     @axiom
-    def trace_superposing_left(
-            cls, f: Annotated[C1, Atom[X] @ A, X @ B],
+    def trace_superposing_left[X: Atom, A, B](
+            cls, f: Annotated[C1, "X @ A", "X @ B"],
             obj: C0) -> Equation[C1]:
         """ Left-oriented superposing. """
         return cls.Equation(
             (f @ obj).trace(left=True), f.trace(left=True) @ obj)
 
     @axiom
-    def trace_superposing_right(
-            cls, f: Annotated[C1, A @ Atom[X], B @ X],
+    def trace_superposing_right[X: Atom, A, B](
+            cls, f: Annotated[C1, "A @ X", "B @ X"],
             obj: C0) -> Equation[C1]:
         """ Right-oriented superposing. """
         return cls.Equation(
             (obj @ f).trace(), obj @ f.trace())
 
     @axiom
-    def trace_naturality_left(
-            cls, f: Annotated[C1, N @ A, N @ B],
-            x: Annotated[C0, NonEmpty[N]],
+    def trace_naturality_left[N: NonEmpty, A, B](
+            cls, f: Annotated[C1, "N @ A", "N @ B"],
+            x: Annotated[C0, N],
             g: Annotated[C1, B, A]) -> Equation[C1]:
         """ Left-oriented trace naturality. """
         return cls.Equation(
@@ -574,9 +573,9 @@ class TracedCategory[C0: ColouredMonoid, C1: TracedCategory](
             g.then(f.trace(len(x), left=True)).then(g))
 
     @axiom
-    def trace_naturality_right(
-            cls, f: Annotated[C1, A @ N, B @ N],
-            x: Annotated[C0, NonEmpty[N]],
+    def trace_naturality_right[N: NonEmpty, A, B](
+            cls, f: Annotated[C1, "A @ N", "B @ N"],
+            x: Annotated[C0, N],
             g: Annotated[C1, B, A]) -> Equation[C1]:
         """ Right-oriented trace naturality. """
         return cls.Equation(
@@ -584,8 +583,8 @@ class TracedCategory[C0: ColouredMonoid, C1: TracedCategory](
             g.then(f.trace(len(x))).then(g))
 
     @axiom
-    def trace_dinaturality_left(
-            cls, f: Annotated[C1, NonEmpty[N] @ A, NonEmpty[K] @ B],
+    def trace_dinaturality_left[N: NonEmpty, K: NonEmpty, A, B](
+            cls, f: Annotated[C1, "N @ A", "K @ B"],
             g: Annotated[C1, K, N]) -> Equation[C1]:
         """ Left-oriented trace dinaturality. """
         source, target = g.cod, g.dom
@@ -595,8 +594,8 @@ class TracedCategory[C0: ColouredMonoid, C1: TracedCategory](
             (g @ base).then(f).trace(len(target), left=True))
 
     @axiom
-    def trace_dinaturality_right(
-            cls, f: Annotated[C1, A @ NonEmpty[N], B @ NonEmpty[K]],
+    def trace_dinaturality_right[N: NonEmpty, K: NonEmpty, A, B](
+            cls, f: Annotated[C1, "A @ N", "B @ K"],
             g: Annotated[C1, K, N]) -> Equation[C1]:
         """ Right-oriented trace dinaturality. """
         source, target = g.cod, g.dom
@@ -657,10 +656,10 @@ class BiclosedCategory[  # ty: ignore[invalid-generic-class]
     @classmethod
     @generator
     @abstractmethod
-    def ev(cls, base: Annotated[C0, Atom[Y]],
-           exponent: Annotated[C0, Atom[E]],
-           left: Annotated[bool, L] = True
-           ) -> Annotated[C1, L[(Y << E) @ E, E @ (E >> Y)], Y]:
+    def ev[Y: Atom, E: Atom, L: Bool](
+            cls, base: Annotated[C0, Y], exponent: Annotated[C0, E],
+            left: Annotated[bool, L] = True
+    ) -> Annotated[C1, "L[(Y << E) @ E, E @ (E >> Y)]", Y]:
         """
         The evaluation of an exponential type, to be instantiated: as a
         rule, ``(y << e) @ e ⊢ y`` is a left evaluation and ``e @ (e >>
@@ -738,19 +737,19 @@ class BiclosedCategory[  # ty: ignore[invalid-generic-class]
             else (exponent @ curried).then(ev)
 
     @axiom
-    def currying_left(
-            cls, f: Annotated[C1, A @ E, X],
-            base: Annotated[C0, Atom[X]],
-            exponent: Annotated[C0, Atom[E]]) -> Equation[C1]:
+    def currying_left[A, X: Atom, E: Atom](
+            cls, f: Annotated[C1, "A @ E", X],
+            base: Annotated[C0, X],
+            exponent: Annotated[C0, E]) -> Equation[C1]:
         """ Left currying followed by evaluation. """
         return cls.Equation(
             cls.uncurry_composition(f, base, exponent, left=True), f)
 
     @axiom
-    def currying_right(
-            cls, f: Annotated[C1, E @ A, X],
-            base: Annotated[C0, Atom[X]],
-            exponent: Annotated[C0, Atom[E]]) -> Equation[C1]:
+    def currying_right[A, X: Atom, E: Atom](
+            cls, f: Annotated[C1, "E @ A", X],
+            base: Annotated[C0, X],
+            exponent: Annotated[C0, E]) -> Equation[C1]:
         """ Right currying followed by evaluation. """
         return cls.Equation(
             cls.uncurry_composition(f, base, exponent, left=False), f)
@@ -785,8 +784,9 @@ class RigidCategory[C0: Pregroup, C1: RigidCategory](BiclosedCategory[C0, C1]):
     @classmethod
     @generator
     @abstractmethod
-    def cups(cls, left: Annotated[C0, Atom[X]],
-             right: Annotated[C0, X.r]) -> Annotated[C1, X @ X.r, ()]:
+    def cups[X: Atom](
+            cls, left: Annotated[C0, X], right: Annotated[C0, "X.r"]
+    ) -> Annotated[C1, "X @ X.r", ()]:
         """
         The cups witnessing :code:`right` as the adjoint of :code:`left`:
         as a rule, ``x @ x.r ⊢ ()`` is a cup, ``x.l @ x`` included.
@@ -799,8 +799,9 @@ class RigidCategory[C0: Pregroup, C1: RigidCategory](BiclosedCategory[C0, C1]):
     @classmethod
     @generator
     @abstractmethod
-    def caps(cls, left: Annotated[C0, Atom[X]],
-             right: Annotated[C0, X.l]) -> Annotated[C1, (), X @ X.l]:
+    def caps[X: Atom](
+            cls, left: Annotated[C0, X], right: Annotated[C0, "X.l"]
+    ) -> Annotated[C1, (), "X @ X.l"]:
         """
         The caps witnessing :code:`right` as the adjoint of :code:`left`:
         as a rule, ``() ⊢ x @ x.l`` is a cap, ``x.r @ x`` included.
@@ -896,16 +897,16 @@ class RigidCategory[C0: Pregroup, C1: RigidCategory](BiclosedCategory[C0, C1]):
         return cls.Equation(snake_r, cls.id(x), snake_l)
 
     @axiom
-    def caps_coherence(
-            cls, x: Annotated[C0, NonEmpty[N]],
-            y: Annotated[C0, NonEmpty[K]]) -> Equation[C1]:
+    def caps_coherence[N: NonEmpty, K: NonEmpty](
+            cls, x: Annotated[C0, N],
+            y: Annotated[C0, K]) -> Equation[C1]:
         """ Monoidal coherence of caps. """
         return cls.Equation(
             cls.caps(x @ y, (x @ y).l),
             cls.caps(x, x.l).then(x @ cls.caps(y, y.l) @ x.l))
 
     @axiom
-    def rotate_contravariance(
+    def rotate_contravariance[A, B, C](
             cls, f: Annotated[C1, A, B],
             g: Annotated[C1, B, C]) -> Equation[C1]:
         """ Rotation reverses composition. """
@@ -949,9 +950,9 @@ class BraidedCategory[  # ty: ignore[invalid-generic-class]
     @classmethod
     @generator
     @abstractmethod
-    def braid(cls, left: Annotated[C0, Atom[X]],
-              right: Annotated[C0, Atom[Y]]
-              ) -> Annotated[C1, X @ Y, Y @ X]:
+    def braid[X: Atom, Y: Atom](
+            cls, left: Annotated[C0, X], right: Annotated[C0, Y]
+    ) -> Annotated[C1, "X @ Y", "Y @ X"]:
         """
         The braid of two objects, to be instantiated: as a rule, ``x @ y
         ⊢ y @ x`` is a braid over.
@@ -962,18 +963,18 @@ class BraidedCategory[  # ty: ignore[invalid-generic-class]
         """
 
     @axiom
-    def hexagon_left(
-            cls, x: Annotated[C0, Atom[X]], y: Annotated[C0, Atom[Y]],
-            z: Annotated[C0, Atom[Z]]) -> Equation[C1]:
+    def hexagon_left[X: Atom, Y: Atom, Z: Atom](
+            cls, x: Annotated[C0, X], y: Annotated[C0, Y],
+            z: Annotated[C0, Z]) -> Equation[C1]:
         """ The left hexagon equation. """
         return cls.Equation(
             cls.braid(x, y @ z),
             (cls.braid(x, y) @ z).then(y @ cls.braid(x, z)))
 
     @axiom
-    def hexagon_right(
-            cls, x: Annotated[C0, Atom[X]], y: Annotated[C0, Atom[Y]],
-            z: Annotated[C0, Atom[Z]]) -> Equation[C1]:
+    def hexagon_right[X: Atom, Y: Atom, Z: Atom](
+            cls, x: Annotated[C0, X], y: Annotated[C0, Y],
+            z: Annotated[C0, Z]) -> Equation[C1]:
         """ The right hexagon equation. """
         return cls.Equation(
             cls.braid(x @ y, z),
@@ -1111,9 +1112,9 @@ class MarkovCategory[C0: ColouredMonoid, C1: MarkovCategory](
     @classmethod
     @generator
     @abstractmethod
-    def copy(cls, x: Annotated[C0, Atom[X]],
-             n: Annotated[int, Count[N]] = 2
-             ) -> Annotated[C1, X, X ** N]:
+    def copy[X: Atom, N: Count](
+            cls, x: Annotated[C0, X], n: Annotated[int, N] = 2
+    ) -> Annotated[C1, X, "X ** N"]:
         """
         Make :code:`n` copies of a given object :code:`x`: as a rule,
         ``x ⊢ x @ .. @ x`` is a copy, none or up to three drawn.
@@ -1190,8 +1191,8 @@ class FeedbackCategory[C0: ColouredMonoid, C1: FeedbackCategory](
 
     @rule
     @abstractmethod
-    def feedback(
-            self: Annotated[C1, A @ Atom[M].d, B @ M],
+    def feedback[A, B, M: Atom](
+            self: Annotated[C1, "A @ M.d", "B @ M"],
             dom: Annotated[C0, A], cod: Annotated[C0, B],
             mem: Annotated[C0, M]) -> Annotated[C1, A, B]:
         """
@@ -1211,9 +1212,9 @@ class FeedbackCategory[C0: ColouredMonoid, C1: FeedbackCategory](
         return cls.Equation(f.feedback(mem=cls.ob()), f)
 
     @axiom
-    def feedback_joining(
-            cls, f: Annotated[C1, A @ P.d, A @ P],
-            mem: Annotated[C0, Pair[P]]) -> Equation[C1]:
+    def feedback_joining[A, P: Pair](
+            cls, f: Annotated[C1, "A @ P.d", "A @ P"],
+            mem: Annotated[C0, P]) -> Equation[C1]:
         """ Joining nested feedback loops. """
         return cls.Equation(
             f.feedback(mem=mem), f.feedback().feedback())
@@ -1235,8 +1236,8 @@ class BalancedCategory[C0: ColouredMonoid, C1: BalancedCategory](
     @classmethod
     @generator
     @abstractmethod
-    def twist(cls, dom: Annotated[C0, Atom[X]]
-              ) -> Annotated[C1, X, X]:
+    def twist[X: Atom](
+            cls, dom: Annotated[C0, X]) -> Annotated[C1, X, X]:
         """
         The twist on an object, to be instantiated. As a rule, ``x ⊢ x``
         is a twist.
@@ -1246,9 +1247,9 @@ class BalancedCategory[C0: ColouredMonoid, C1: BalancedCategory](
         """
 
     @axiom
-    def balanced_twist(
-            cls, x: Annotated[C0, Atom[X]],
-            y: Annotated[C0, Atom[Y]]) -> Equation[C1]:
+    def balanced_twist[X: Atom, Y: Atom](
+            cls, x: Annotated[C0, X],
+            y: Annotated[C0, Y]) -> Equation[C1]:
         """ Compatibility of the twist and braid. """
         return cls.Equation(
             cls.twist(x @ y),
@@ -1265,8 +1266,8 @@ class RibbonCategory[C0: Pregroup, C1: RibbonCategory](
     """
 
     @axiom
-    def twist_as_trace(
-            cls, x: Annotated[C0, Atom[X]]) -> Equation[C1]:
+    def twist_as_trace[X: Atom](
+            cls, x: Annotated[C0, X]) -> Equation[C1]:
         """ The twist as both orientations of a traced braid. """
         braid = cls.braid(x, x)
         return cls.Equation(
@@ -1313,11 +1314,11 @@ class HypergraphCategory[C0: Pregroup, C1: HypergraphCategory](
     @classmethod
     @generator
     @abstractmethod
-    def spiders(
-            cls, n_legs_in: Annotated[int, Count[M]],
-            n_legs_out: Annotated[int, Count[N]],
-            typ: Annotated[C0, Atom[X]]
-    ) -> Annotated[C1, X ** M, X ** N]:
+    def spiders[X: Atom, M: Count, N: Count](
+            cls, n_legs_in: Annotated[int, M],
+            n_legs_out: Annotated[int, N],
+            typ: Annotated[C0, X]
+    ) -> Annotated[C1, "X ** M", "X ** N"]:
         """
         The spiders on a given type with ``n_legs_in`` and ``n_legs_out``:
         as a rule, ``x @ .. @ x ⊢ x @ .. @ x`` is a spider, on up to three

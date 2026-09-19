@@ -12,22 +12,24 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - The laws and rules of `discopy.axioms` state their sequent patterns in
   the metadata of `typing.Annotated`, so one annotation carries both the
   coarse type a typechecker reads and the pattern the runtime
-  interprets: a premise reads `f: Annotated[C1, A, B]`, a conclusion
-  `-> Annotated[C1, X @ X.r, ()]`, an object `x: Annotated[C0, Atom[X]]`
-  and a patterned verdict `-> Annotated[Equation[C2], A @ C, U @ V]`.
+  interprets, and the metavariables are the declaration's own PEP 695
+  type parameters, nothing imported: a rule reads `def then[A, B, C](
+  self: Annotated[C1, A, B], other: Annotated[C1, B, C]) ->
+  Annotated[C1, A, C]`, a kind is the bound, `def cups[X: Atom]`, and a
+  pattern with an operator or a subscript on a type parameter is quoted
+  like a forward reference, `-> Annotated[C1, "X @ X.r", ()]`, since a
+  typechecker types the bare operator as one on `typing.TypeVar`.
   `C0`, `C1` and `C2` name both the type parameters of the class stating
-  the law and the `Level` objects they evaluate to in the module scope,
-  and the metavariables are module-level `Var` objects, `A` to `Z`,
-  unified by name across one declaration with the most specific kind
-  stated at any use-site — `Atom[X]` an atom, `NonEmpty[N]` a non-empty
-  type, `Count[N]` a number, `A[X, Y]` a cell between boundaries —
-  binding every occurrence. `annotated` evaluates each annotation once
-  in the globals of the function's own module: the shadow scope that
-  impersonated `C0`/`C1`/`C2`, the `Verdict` stand-in for `Equation`,
-  the `Prepared` metaclass injecting levels into class bodies and the
-  `metavariables` read off type-parameter bounds are all gone, and the
-  spelling typechecks where `def cups[X: Atom[C0]](...) -> C1[X @ X.r,
-  ()]` could not.
+  the law and the `Level` objects they evaluate to in the module scope.
+  `annotated` evaluates each annotation in the scope PEP 695 gives it —
+  the function's module for the globals and its `__type_params__` for
+  the metavariables, each name one `Var` carrying the kind its bound
+  declares, so unification across a declaration holds by construction:
+  the shadow scope that impersonated `C0`/`C1`/`C2`, the `Verdict`
+  stand-in for `Equation`, the `Prepared` metaclass injecting levels
+  into class bodies and the `metavariables` read off lazily evaluated
+  bounds are all gone, and the spelling typechecks where `def cups[X:
+  Atom[C0]](...) -> C1[X @ X.r, ()]` could not.
 - `Rule.check` matches the arguments of a structural method against the
   sequent pattern its declaration states, the one mechanism behind the
   manual shape assertions: `rigid.Diagram.rules["cups"].check(x, x.r)`

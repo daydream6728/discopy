@@ -10,18 +10,8 @@ from pytest import raises
 
 from discopy import biclosed, cat, feedback, monoidal, traced
 from discopy.axioms import (
-    A,
-    B,
-    C,
     C0,
     C1,
-    K,
-    M,
-    N,
-    P,
-    T,
-    X,
-    Y,
     Atom,
     Axiom,
     AxiomFailure,
@@ -72,8 +62,8 @@ def test_strategy():
 def test_annotated_sequents():
     """ A law draws its arguments from the sequents its annotations give. """
     @axiom
-    def composing(cls, f: Annotated[C1, A, B],
-                  g: Annotated[C1, B, C]) -> Equation:
+    def composing[A, B, C](cls, f: Annotated[C1, A, B],
+                           g: Annotated[C1, B, C]) -> Equation:
         """ The domain of a composite. """
         return Equation(f.then(g).dom, f.dom)
 
@@ -90,9 +80,9 @@ def test_annotated_sequents():
         law.falsify()
 
     @axiom
-    def atoms(cls, x: Annotated[C0, Atom[X]],
-              y: Annotated[C0, Atom[Y]],
-              t: Annotated[C0, T]) -> Equation:
+    def atoms[X: Atom, Y: Atom, T](
+            cls, x: Annotated[C0, X], y: Annotated[C0, Y],
+            t: Annotated[C0, T]) -> Equation:
         """ Two atoms and a type. """
         return Equation(len(x @ y), 2)
 
@@ -102,8 +92,9 @@ def test_annotated_sequents():
     assert [len(value) for value in drawn[:2]] == [1, 1]
 
     @axiom
-    def shared(cls, f: Annotated[C1, X @ A, X @ B],
-               x: Annotated[C0, Atom[X]]) -> Equation:
+    def shared[X: Atom, A, B](
+            cls, f: Annotated[C1, "X @ A", "X @ B"],
+            x: Annotated[C0, X]) -> Equation:
         """ A variable shared by an arrow and an object. """
         return Equation(f.dom[:1], x)
 
@@ -112,8 +103,9 @@ def test_annotated_sequents():
     assert f.dom[:1] == x == f.cod[:1] and law(f, x)
 
     @axiom
-    def delayed(cls, f: Annotated[C1, A @ P.d, A @ P],
-                mem: Annotated[C0, Pair[P]]) -> Equation:
+    def delayed[A, P: Pair](
+            cls, f: Annotated[C1, "A @ P.d", "A @ P"],
+            mem: Annotated[C0, P]) -> Equation:
         """ The delay written as ``.d``. """
         return Equation(f.dom[-2:], mem.delay())
 
@@ -367,7 +359,8 @@ def test_leaf_applies_only_on_its_shape():
 
         @classmethod
         @generator
-        def loop(cls, dom: Annotated[C0, A]) -> Annotated[C1, A, A]:
+        def loop[A](cls, dom: Annotated[C0, A]
+                    ) -> Annotated[C1, A, A]:
             return Box('loop', dom, dom)
 
     assert set(Toy.rules) == {"id", "then", "box", "loop"}
@@ -390,8 +383,9 @@ def test_rule_from_annotations():
         """ Traced diagrams with a rule of their own. """
 
         @rule
-        def looping(self: Annotated[C1, Atom[M] @ A, M @ B]
-                    ) -> Annotated[C1, A, B]:
+        def looping[A, B, M: Atom](
+                self: Annotated[C1, "M @ A", "M @ B"]
+        ) -> Annotated[C1, A, B]:
             return self.trace(left=True)
 
     looping = Toy.rules["looping"]
@@ -563,8 +557,8 @@ def test_typechecking_on_call():
         Arrow.unitality(Ob('x'))
 
     @axiom
-    def lying(cls, f: Annotated[C1, A, B]
-              ) -> Annotated[Equation[C1], A, A]:
+    def lying[A, B](cls, f: Annotated[C1, A, B]
+                    ) -> Annotated[Equation[C1], A, A]:
         """ States a sequent its terms do not have. """
         return Equation(f, f)
 

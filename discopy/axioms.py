@@ -173,24 +173,27 @@ category inherits those of 2-categories with one trivial colour, see
 against them, its arguments and its equation or the cell it builds. A
 structural method carries its own rule:
 :func:`generator` or :func:`rule` reads the sequent it concludes off its
-return annotation, ``cups(cls, left: Annotated[C0, Atom[X]], right:
-Annotated[C0, X.r]) -> Annotated[C1, X @ X.r, ()]``, its premises off
-the parameters annotated with a sequent, ``self`` included, ``trace(
-self: Annotated[C1, L[Atom[M] @ A, A @ M], L[M @ B, B @ M]], n: int =
-1, left: Annotated[bool, L] = False) -> Annotated[C1, A, B]``, and its
-other arguments off their patterns, a :class:`Count` repeating an item,
-``X ** N`` for the legs of a spider, and a :class:`Bool` choosing a
-boundary, the metavariables being module-level :class:`Var` objects in
-the metadata, their :class:`Kind` stated at use-site and unified by
-name across the declaration: matching the conclusion
+return annotation, ``cups[X: Atom](cls, left: Annotated[C0, X], right:
+Annotated[C0, "X.r"]) -> Annotated[C1, "X @ X.r", ()]``, its premises
+off the parameters annotated with a sequent, ``self`` included,
+``trace[A, B, M: Atom, L: Bool](self: Annotated[C1, "L[M @ A, A @ M]",
+"L[M @ B, B @ M]"], n: int = 1, left: Annotated[bool, L] = False) ->
+Annotated[C1, A, B]``, and its other arguments off their patterns, a
+:class:`Count` repeating an item, ``X ** N`` for the legs of a spider,
+and a :class:`Bool` choosing a boundary. The metavariables are the
+method's own :pep:`695` type parameters, their :class:`Kind` the bound,
+each name evaluating to one :class:`Var` shared across the declaration;
+a pattern with an operator or a subscript on a type parameter is quoted
+like a forward reference, since a typechecker types it as one on
+:class:`typing.TypeVar`: matching the conclusion
 binds the variables, the unbound ones are drawn by kind, and the hint a
 cut draws its middle from is derived from the conclusion, matched on
 either boundary of the sequent, in any window when its length is fixed,
 so that the rule fires on one side of the cut. A law states the sequents
-of its arguments the same way, ``dagger_contravariance(cls, f:
+of its arguments the same way, ``dagger_contravariance[A, B, C](cls, f:
 Annotated[C1, A, B], g: Annotated[C1, B, C])``, an object by its kind,
-``hexagon_left(cls, x: Annotated[C0, Atom[X]], y: Annotated[C0,
-Atom[Y]], z: Annotated[C0, Atom[Z]])``: its
+``hexagon_left[X: Atom, Y: Atom, Z: Atom](cls, x: Annotated[C0, X], y:
+Annotated[C0, Y], z: Annotated[C0, Z])``: its
 :attr:`Axiom.pattern` is the :class:`Signature` of its annotations,
 whose strategy draws the metavariables once and each arrow through the
 search of its sequent, and :meth:`Axiom.strategy` maps it to the
@@ -736,27 +739,35 @@ def annotated(
         function: Callable, parameters=None
 ) -> tuple[dict, PatternBase | None]:
     """
-    The patterns a function's annotations declare, in the scope of its
-    own module, where :data:`C0`, :data:`C1` and :data:`C2` name both
-    the type parameters of the class stating the law — the coarse type
-    a typechecker reads — and the :class:`Level` objects they resolve
-    to at runtime: one pattern per annotated parameter among those
-    given, all by default, read by :func:`interpret` off the metadata
-    of a ``typing.Annotated``, and the one the return annotation
-    states, :obj:`None` when it states no pattern. The variables of
-    one declaration are then unified by name, a kind stated at any
-    use-site, e.g. ``Atom[X]``, binding every occurrence, see
-    :func:`unify_vars`.
+    The patterns a function's annotations declare, in the scope the
+    :pep:`695` class syntax gives them: the metavariables are the
+    function's own type parameters, ``def then[A, B, C]``, each
+    evaluating to the one :class:`Var` of its name — with the kind its
+    bound declares, ``def cups[X: Atom]`` — and every other name
+    resolves in the function's module, where :data:`C0`, :data:`C1`
+    and :data:`C2` name both the type parameters of the class stating
+    the law, the coarse type a typechecker reads, and the
+    :class:`Level` objects they evaluate to. One pattern is read per
+    annotated parameter among those given, all by default, by
+    :func:`interpret` off the metadata of a ``typing.Annotated``, and
+    one off the return annotation, :obj:`None` when it states no
+    pattern; a metadatum a typechecker cannot type, an operator or a
+    subscript on a type parameter, is quoted like a forward reference,
+    ``Annotated[C1, "X @ X.r", ()]``, and evaluates in the same scope.
     """
     signature = inspect.signature(function)
     if parameters is None:
         parameters = signature.parameters.values()
-    scope = inspect.unwrap(function).__globals__
+    unwrapped = inspect.unwrap(function)
+    module = unwrapped.__globals__
+    scope = {
+        parameter.__name__: Var(parameter.__name__, bound_of(parameter))
+        for parameter in unwrapped.__type_params__}
 
     def evaluate(annotation):
         if isinstance(annotation, str):
-            annotation = eval(annotation, scope)
-        return interpret(annotation)
+            annotation = eval(annotation, module, scope)
+        return interpret(annotation, module, scope)
 
     patterns = {
         parameter.name: pattern for parameter in parameters
@@ -765,7 +776,24 @@ def annotated(
     return unify_vars(patterns, evaluate(signature.return_annotation))
 
 
-def interpret(annotation) -> PatternBase | None:
+def bound_of(parameter: TypeVar) -> Level | Kind:
+    """
+    The kind the bound of a type parameter declares, ``Atom`` for
+    ``def cups[X: Atom]``, any object of the lowest level when
+    unbounded, its level read off the base of the ``Annotated`` its
+    variable sits in, see :func:`level_fix`.
+    """
+    bound = parameter.__bound__
+    if bound is None:
+        return Level(0)
+    if isinstance(bound, type) and issubclass(bound, Kind):
+        return bound()
+    raise TypeError(
+        f"{parameter} is bounded by {bound!r}, which is no kind.")
+
+
+def interpret(annotation, module: dict | None = None,
+              scope: dict | None = None) -> PatternBase | None:
     """
     The pattern an evaluated annotation states, :obj:`None` when it
     states no pattern: a :class:`Level` itself, :data:`typing.Self` the
@@ -774,7 +802,9 @@ def interpret(annotation) -> PatternBase | None:
     two metadata are the sequent ``dom ⊢ cod`` at that level, with the
     boundary variables one level below, and one metadatum is a pattern
     for a cell of the level; with any other base, e.g. ``bool`` or
-    ``int``, one metadatum is the variable it stands for.
+    ``int``, one metadatum is the variable it stands for. A quoted
+    metadatum evaluates in the scope of the declaration, ``module``
+    and ``scope`` its globals and metavariables.
     """
     if annotation is Self:
         return Level()
@@ -786,6 +816,9 @@ def interpret(annotation) -> PatternBase | None:
     if get_origin(annotation) is not Annotated:
         return None
     base, *metadata = get_args(annotation)
+    metadata = [
+        eval(item, module or {}, scope or {}) if isinstance(item, str)
+        else item for item in metadata]
     base = interpret(base)
     if isinstance(base, Level):
         if len(metadata) == 2:
@@ -836,9 +869,11 @@ def unify_vars(
     The patterns of one declaration with their variables unified by
     name: the most specific occurrence — a :class:`Kind` over a
     :class:`Sequent` over a bare :class:`Level` — binds every other,
-    so that e.g. the ``X`` of a conclusion ``X @ X.r`` is the atom its
-    parameter ``Atom[X]`` declares. Two occurrences equally specific
-    but different are a contradiction, :exc:`TypeError`.
+    so that e.g. a use-site ``Atom[X]`` makes an atom of every ``X``.
+    A declaration whose metavariables are type parameters shares one
+    :class:`Var` per name already, its kind read off the bound. Two
+    occurrences equally specific but different are a contradiction,
+    :exc:`TypeError`.
     """
     def specificity(var: Var) -> int:
         if isinstance(var.bound, Kind):
@@ -2069,9 +2104,9 @@ def generator(method: Callable) -> Callable:
     """
     Mark a structural method as a generator: a :func:`rule` with no
     premise, building one box from the values its parameters stand for,
-    ``def cups(cls, left: Annotated[C0, Atom[X]], right: Annotated[C0,
-    X.r]) -> Annotated[C1, X @ X.r, ()]`` saying that ``x @ x.r ⊢ ()``
-    is a cup. The method is returned
+    ``def cups[X: Atom](cls, left: Annotated[C0, X], right:
+    Annotated[C0, "X.r"]) -> Annotated[C1, "X @ X.r", ()]`` saying that
+    ``x @ x.r ⊢ ()`` is a cup. The method is returned
     unchanged, carrying the rule: it stays the method of its category,
     abstract or not, and an override keeps the rule unless
     :func:`inapplicable` drops it.
@@ -2089,9 +2124,9 @@ def rule(
     Mark a structural method as an inference rule, the sequent it
     concludes read off its return annotation and its premises off the
     parameters annotated with one, ``self`` included, its metavariables
-    being module-level :class:`Var` objects: ``def trace(self:
-    Annotated[C1, L[Atom[M] @ A, A @ M], L[M @ B, B @ M]], n: int = 1,
-    left: Annotated[bool, L] = False) -> Annotated[C1, A, B]`` says
+    being its own type parameters: ``def trace[A, B, M: Atom, L: Bool](
+    self: Annotated[C1, "L[M @ A, A @ M]", "L[M @ B, B @ M]"], n: int =
+    1, left: Annotated[bool, L] = False) -> Annotated[C1, A, B]`` says
     that ``x ⊢ y`` is the trace of ``m @ x ⊢
     m @ y`` or of ``x @ m ⊢ y @ m`` over an atom, on the side ``L``
     stands for, built by calling the method on the proofs of its
@@ -2518,12 +2553,12 @@ class ItemBase[T](PatternBase[T]):
 @dataclass(frozen=True)
 class Kind:
     """
-    The kind of a metavariable, stated at use-site in the metadata of
-    an ``Annotated``, refining the cells of a level or a sequent of
-    them: a plain variable stands for any object, ``Atom[X]`` for an
-    atom, ``NonEmpty[N]`` for a non-empty type, ``Pair[P]`` for a pair
-    of atoms and ``Atom[X[R, G]]`` for an atomic 1-cell from the colour
-    ``R`` to the colour ``G``.
+    The kind of a metavariable, the bound of the type parameter that
+    declares it, ``def cups[X: Atom]``, or stated at use-site in the
+    metadata of an ``Annotated``, refining the cells of a level or a
+    sequent of them: a plain variable stands for any object, ``Atom``
+    for an atom, ``NonEmpty`` for a non-empty type, ``Pair`` for a pair
+    of atoms, ``Count`` for a number and ``Bool`` for a boolean.
     """
     inner: Level | Sequent | None = None
     kind: ClassVar[str] = "type"
@@ -3219,8 +3254,8 @@ class Signature[T](PatternBase[T]):
     parameter by name, standing for tuples of arguments: the
     metavariables are shared across the patterns and drawn once, so that
     ``f: Annotated[C1, A, B], g: Annotated[C1, B, C]`` are composable
-    and ``f: Annotated[C1, X @ A, X @ B]`` shares its first atom with
-    ``x: Annotated[C0, Atom[X]]``.
+    and ``f: Annotated[C1, "X @ A", "X @ B"]`` shares its first atom
+    with ``x: Annotated[C0, X]`` under ``[X: Atom, A, B]``.
     """
     patterns: dict[str, PatternBase] = field(default_factory=dict, hash=False)
 
@@ -3307,20 +3342,6 @@ types as a plain 1-cell and evaluates to the :class:`Sequent` from
 the top itself, for a law of every term of a type whatever its level,
 such as :meth:`Serialisable.repr_transparency`.
 """
-
-A, B, C, D, E, G, H, K, M, N, P, R, T, U, V, W, X, Y, Z = map(
-    Var.type, "ABCDEGHKMNPRTUVWXYZ")
-L = Var("L", Bool())
-"""
-The metavariables that laws and rules put in the metadata of their
-``typing.Annotated`` parameters, plain variables for a cell of the
-level of the base, refined at use-site: ``Atom[X]`` an atom,
-``NonEmpty[N]`` a non-empty type, ``Pair[P]`` two atoms, ``Count[N]``
-a number, ``A[X, Y]`` a cell between boundaries, and ``L`` — the one
-boolean, choosing with ``L[then, otherwise]`` — a side. The variables
-of one declaration are unified by name, see :func:`unify_vars`.
-"""
-
 
 GENERATORS = tuple("abcde")
 """
