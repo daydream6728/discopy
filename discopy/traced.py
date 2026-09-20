@@ -251,10 +251,6 @@ class Trace(Box, monoidal.Bubble):
     def to_drawing(self):
         return self.ar.to_drawing(self)
 
-    def image(self, functor):
-        n = len(functor(self.arg.dom)) - len(functor(self.dom))
-        return functor.cod.trace(functor(self.arg), n, left=self.left)
-
 
 Sum, Bubble = Diagram.Sum, Diagram.Bubble
 
@@ -295,6 +291,12 @@ class Functor(monoidal.Functor):
     .. image:: /_static/traced/golden.svg
     """
     dom = cod = Diagram
+
+    def __call__(self, other):
+        if isinstance(other, Trace):
+            n = len(self(other.arg.dom)) - len(self(other.dom))
+            return self.cod.trace(self(other.arg), n, left=other.left)
+        return super().__call__(other)
 
 
 CMap = cmap.CMap[Diagram]

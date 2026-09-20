@@ -200,10 +200,6 @@ class Copy(Box):
         return (
             factory_name(type(self)) + f"({repr(self.dom)}, {len(self.cod)})")
 
-    def image(self, functor):
-        return functor.cod.copy(functor(self.dom), len(self.cod))\
-            if hasattr(functor.cod, "copy") else super().image(functor)
-
 
 @Diagram.generator
 class Merge(Box):
@@ -227,10 +223,6 @@ class Merge(Box):
     def __repr__(self):
         return (
             factory_name(type(self)) + f"({repr(self.cod)}, {len(self.dom)})")
-
-    def image(self, functor):
-        return functor.cod.merge(functor(self.cod), len(self.dom))\
-            if hasattr(functor.cod, "merge") else super().image(functor)
 
 
 @Diagram.generator
@@ -281,6 +273,13 @@ class Functor(symmetric.Functor):
     .. image:: /_static/markov/bialgebra.svg
     """
     dom = cod = Diagram
+
+    def __call__(self, other):
+        if isinstance(other, Copy) and hasattr(self.cod, "copy"):
+            return self.cod.copy(self(other.dom), len(other.cod))
+        if isinstance(other, Merge) and hasattr(self.cod, "merge"):
+            return self.cod.merge(self(other.cod), len(other.dom))
+        return super().__call__(other)
 
 
 CMap = cmap.CMap[Diagram]

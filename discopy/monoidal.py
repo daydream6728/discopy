@@ -1832,7 +1832,7 @@ class Functor(cat.Functor):
         return result[:-len(suffix) if suffix else None] + (
             f", colour_map={self.colour_map!r}{suffix}")
 
-    def generic(self, other):
+    def __call__(self, other):
         if isinstance(other, Colour):
             return self.colour_map[other] if self.colour_map else other
         if isinstance(other, Dim):
@@ -1840,8 +1840,8 @@ class Functor(cat.Functor):
                 *(self.ob_map[x] for x  # ty: ignore[invalid-argument-type]
                   in other))
         if isinstance(other, Nat):
-            atom = super().generic(other.factory(1))
-            return atom[:0].tensor(*other.n * [atom])
+            image = super().__call__(other.factory(1))
+            return image[:0].tensor(*other.n * [image])
         if isinstance(other, Ty):
             if not other.inside:
                 if not hasattr(self.cod.ob, 'id'):
@@ -1854,7 +1854,7 @@ class Functor(cat.Functor):
                 # Map a daggered coloured generator functorially: its image is
                 # the dagger of the image of the underlying generator.
                 return self(other.dagger()).dagger()
-            result = super().generic(self.dom.ob(other))
+            result = super().__call__(self.dom.ob(other))
             if isinstance(other, Wire) and isinstance(result, Ty):
                 expected = self(other.dom), self(other.cod)
                 if (result.dom, result.cod) != expected:
@@ -1869,7 +1869,7 @@ class Functor(cat.Functor):
             return result
         if isinstance(other, Bubble) and self.cod is Drawing:
             return other.to_drawing()
-        return super().generic(other)
+        return super().__call__(other)
 
 
 @dataclass

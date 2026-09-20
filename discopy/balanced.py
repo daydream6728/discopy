@@ -268,16 +268,31 @@ class Twist(Box):
     def dagger(self):
         return type(self)(self.dom, not self.is_dagger)
 
-    def image(self, functor):
-        return functor.cod.twist(functor(self.dom))\
-            if hasattr(functor.cod, "twist") else super().image(functor)
-
 
 Trace, Sum, Bubble = (
     Diagram.Trace, Diagram.Sum, Diagram.Bubble)
 
 
-Functor = Diagram.Functor
+@Diagram.generator
+class Functor(braided.Functor, traced.Functor):
+    """
+    A balanced functor is a braided functor that twists.
+
+    Parameters:
+        ob_map (Mapping[monoidal.Ty, monoidal.Ty]) :
+            Map from :class:`monoidal.Ty` to :code:`cod.ob`.
+        ar_map (Mapping[Box, Diagram]) : Map from :class:`Box` to :code:`cod`.
+        cod (Category) :
+            The codomain, :code:`Diagram` by default.
+    """
+    dom = cod = Diagram
+
+    def __call__(self, other):
+        if isinstance(other, Twist) and hasattr(self.cod, "twist"):
+            return self.cod.twist(self(other.dom))
+        if isinstance(other, Trace):
+            return traced.Functor.__call__(self, other)
+        return braided.Functor.__call__(self, other)
 
 
 class DualRail(Functor):

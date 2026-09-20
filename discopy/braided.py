@@ -206,11 +206,6 @@ class Braid(BinaryBoxConstructor, Box):
     def dagger(self):
         return type(self)(self.right, self.left, not self.is_dagger)
 
-    def image(self, functor):
-        if self.is_dagger or not hasattr(functor.cod, "braid"):
-            return super().image(functor)
-        return functor.cod.braid(functor(self.dom[0]), functor(self.dom[1]))
-
 
 def hexagon(cls: type[Diagram], factory: Callable) -> Callable[[Ty, Ty], Any]:
     """
@@ -239,7 +234,25 @@ def hexagon(cls: type[Diagram], factory: Callable) -> Callable[[Ty, Ty], Any]:
 Sum, Bubble = Diagram.Sum, Diagram.Bubble
 
 
-Functor = Diagram.Functor
+@Diagram.generator
+class Functor(monoidal.Functor):
+    """
+    A braided functor is a monoidal functor that preserves braids.
+
+    Parameters:
+        ob_map (Mapping[monoidal.Ty, monoidal.Ty]) :
+            Map from :class:`monoidal.Ty` to :code:`cod.ob`.
+        ar_map (Mapping[Box, Diagram]) : Map from :class:`Box` to :code:`cod`.
+        cod (Category) :
+            The codomain, :code:`Diagram` by default.
+    """
+    dom = cod = Diagram
+
+    def __call__(self, other):
+        if isinstance(other, Braid) and not other.is_dagger\
+                and hasattr(self.cod, "braid"):
+            return self.cod.braid(self(other.dom[0]), self(other.dom[1]))
+        return super().__call__(other)
 
 
 Layer = Diagram.Layer
