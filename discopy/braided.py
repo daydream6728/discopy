@@ -260,6 +260,7 @@ def braided(cls) -> Equation:
 
 
 Diagram.Functor.braided = braided
+del braided
 
 Id = Diagram.id
 

@@ -59,7 +59,8 @@ from dataclasses import dataclass
 from typing import ClassVar, Dict
 
 from discopy import monoidal, biclosed, markov, cmap, hypergraph
-from discopy.abc import ClosedCategory
+from discopy.abc import (
+    Category, ClosedCategory, MonoidalCategory)
 from discopy.cat import factory, Generator
 
 
@@ -112,6 +113,10 @@ class Diagram(markov.Diagram, biclosed.Diagram, ClosedCategory):
     Variable: ClassVar[Generator]
     Application: ClassVar[Generator]
     Abstraction: ClassVar[Generator]
+
+    dagger_involution = Category.dagger_involution
+    dagger_contravariance = Category.dagger_contravariance
+    dagger_monoidality = MonoidalCategory.dagger_monoidality
 
     @property
     def is_linear(self):

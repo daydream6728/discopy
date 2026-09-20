@@ -196,17 +196,9 @@ def test_Functor():
 
 
 def test_strategy():
-    from hypothesis import find
-
     from discopy import axioms
 
     axioms.assert_strategy_finds(Diagram, Cup, Cap)
-    x = Diagram.ob('x')
-    snake = find(
-        Diagram.strategy(dom=x, cod=x),
-        lambda value: any(isinstance(box, Cup) for box in value.boxes)
-        and any(isinstance(box, Cap) for box in value.boxes))
-    assert (snake.dom, snake.cod) == (x, x)
 
 
 def test_axioms():

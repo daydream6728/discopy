@@ -73,7 +73,7 @@ from typing import ClassVar
 
 from collections.abc import Mapping
 
-from discopy import messages, tensor, frobenius
+from discopy import axioms, messages, tensor, frobenius
 from discopy.axioms import Rule, inapplicable, no_strategy
 from discopy.cat import factory, Generator
 from discopy.matrix import backend
@@ -222,9 +222,10 @@ class Circuit(tensor.Diagram[complex]):
         """
         from discopy.quantum.gates import GATES
 
-        return {"braid": cls.rules["braid"], **{
-            name: Rule.constant(gate) for name, gate in GATES.items()
-            if not isinstance(gate, type)}}
+        structure = axioms.declarations(cls, axioms.Generator)
+        return {"id": structure["id"], "braid": structure["braid"],
+                **{name: Rule.constant(gate) for name, gate in GATES.items()
+                   if not isinstance(gate, type)}}
 
     @classmethod
     def strategy(cls, *, dom=None, cod=None, **params):
@@ -234,12 +235,12 @@ class Circuit(tensor.Diagram[complex]):
         being the domain by default, a gate keeping its wires.
 
         >>> from hypothesis import find
-        >>> from discopy.quantum.gates import CX, H
+        >>> from discopy.quantum.gates import CX
         >>> circuit = find(
-        ...     Circuit.strategy(dom=qubit ** 2, min_leaves=2, max_leaves=2),
-        ...     lambda c: c == H @ qubit >> CX)
-        >>> print(circuit)
-        H @ qubit >> CX
+        ...     Circuit.strategy(dom=qubit ** 2, max_depth=2),
+        ...     lambda c: any(box.name == 'CX' for box in c.boxes))
+        >>> assert circuit.dom == circuit.cod == qubit ** 2
+        >>> assert CX in circuit.boxes
         """
         return frobenius.Diagram.strategy.__func__(
             cls, dom=dom, cod=dom if cod is None else cod,

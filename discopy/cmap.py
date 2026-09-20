@@ -954,7 +954,9 @@ class CMap[category: Diagram](CompactCategory, NamedGeneric):
         wiring of cups when the host category is rigid.
         """
         if issubclass(cls.category, RigidCategory):
-            return super().ev(base, exponent, left)
+            return (RigidCategory.ev_left.__func__(cls, base, exponent)
+                    if left else
+                    RigidCategory.ev_right.__func__(cls, base, exponent))
         return cls.from_box(cls.category.ev(base, exponent, left))
 
     def curry_left(self, n=1):
@@ -986,7 +988,8 @@ class CMap[category: Diagram](CompactCategory, NamedGeneric):
             :align: center
         """
         if issubclass(self.category, RigidCategory):
-            return super().curry(n, left)
+            return (RigidCategory.curry_left(self, n) if left
+                    else RigidCategory.curry_right(self, n))
         if n < 0 or n > len(self.dom):
             raise ValueError
         if not n:

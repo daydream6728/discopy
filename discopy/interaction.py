@@ -463,7 +463,8 @@ class Diagram[natural](RibbonCategory, NamedGeneric):
                 i, left, down, braid),  # ty: ignore[invalid-argument-type]
             self.dom, self.cod)
 
-    trace = traced.Diagram.trace
+    trace_left = traced.Diagram.trace_left
+    trace_right = traced.Diagram.trace_right
     Trace = Generator.classmethod(
         pivotal.Diagram.Trace.__func__)
     transpose = rigid.Diagram.transpose

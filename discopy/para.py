@@ -447,6 +447,19 @@ class Feedback(Markov, FeedbackCategory):
         return type(self)(*(x.delay(n_steps) for x in (
             self.dom, self.cod, self.inside, self.param, self.copar)))
 
+    def feedback_left(self, dom: monoidal.Ty | None = None,
+                      cod: monoidal.Ty | None = None,
+                      mem: monoidal.Ty | None = None) -> Feedback:
+        """ A parametric feedback keeps its memory on the right. """
+        raise NotImplementedError(
+            "A parametric feedback keeps its memory on the right.")
+
+    def feedback_right(self, dom: monoidal.Ty | None = None,
+                       cod: monoidal.Ty | None = None,
+                       mem: monoidal.Ty | None = None) -> Feedback:
+        """ The feedback of the memory on the right, see :meth:`feedback`. """
+        return self.feedback(dom, cod, mem)
+
     def feedback(self, dom: monoidal.Ty | None = None,
                  cod: monoidal.Ty | None = None,
                  mem: monoidal.Ty | None = None) -> Feedback:

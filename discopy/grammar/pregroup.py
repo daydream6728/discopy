@@ -36,7 +36,7 @@ Summary
 
 from typing import ClassVar
 
-from discopy import rigid, frobenius, messages
+from discopy import axioms, rigid, frobenius, messages
 from discopy.axioms import Rule, inapplicable, no_strategy
 from discopy.cat import factory, Generator
 from discopy.utils import AxiomError, classproperty, deprecated_alias
@@ -119,26 +119,41 @@ class Diagram(frobenius.Diagram):
         grammatical sentences; a grammar assigns its own words, see
         :attr:`discopy.abc.Category.generators`.
         """
-        return {"cups": cls.rules["cups"], **{
-            word.name: Rule.constant(word) for word in VOCABULARY}}
+        structure = axioms.declarations(cls, axioms.Generator)
+        return {"id": structure["id"], "cups": structure["cups"],
+                **{word.name: Rule.constant(word) for word in VOCABULARY}}
 
     @classmethod
-    def strategy(cls, *, dom=Ty(), cod=Ty('s'), **params):
+    def strategy(cls, *, dom=Ty(), cod=Ty('s'), max_words=4):
         """
-        Generate sentences by :func:`discopy.axioms.search` over
-        :attr:`generators`, from the empty type to the sentence type
-        by default and without closed components.
+        Generate sentences, from the empty type to the sentence type by
+        default: a sequence of words drawn from the constants of
+        :attr:`generators`, reduced onto the goal by :func:`eager_parse`,
+        an utterance the parser rejects rejected with it.
 
         >>> from hypothesis import find
         >>> sentence = find(
-        ...     Diagram.strategy(min_leaves=5, max_leaves=5),
+        ...     Diagram.strategy(),
         ...     lambda d: [box.name for box in d.foliation().boxes[:3]]
         ...     == ['Alice', 'loves', 'Bob'])
         >>> print(sentence.foliation())
         Alice @ loves @ Bob >> Cup(n, n.r) @ s @ Cup(n.l, n)
         """
-        return super().strategy(
-            dom=dom, cod=cod, boundary_connected=True, **params)
+        from hypothesis import assume, strategies as st
+
+        words = [rule.apply({}) for rule in cls.generators.values()
+                 if isinstance(rule, axioms.Constant)]
+
+        @st.composite
+        def sentences(draw):
+            utterance = draw(st.lists(
+                st.sampled_from(words), min_size=1, max_size=max_words))
+            try:
+                return cls.id(dom) @ eager_parse(*utterance, target=cod)
+            except NotImplementedError:
+                assume(False)
+
+        return sentences()
 
     trace_left = inapplicable("No loop in a sentence.")(
         frobenius.Diagram.trace_left)

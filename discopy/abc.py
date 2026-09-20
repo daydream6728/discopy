@@ -140,7 +140,7 @@ class Category[C0, C1: Category](Testable, ABC):
         ...     generators = {
         ...         "cups": pregroup.Diagram.generators["cups"],
         ...         **{w.name: Rule.constant(w) for w in (Alice, sleeps)}}
-        >>> print(find(Sentence.strategy(min_leaves=3), bool).foliation())
+        >>> print(find(Sentence.strategy(), bool).foliation())
         Alice @ sleeps >> Cup(n, n.r) @ s
         """
         return declarations(cls, Generator)

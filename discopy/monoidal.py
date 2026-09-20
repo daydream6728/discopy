@@ -1041,9 +1041,10 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
                 :attr:`is_boundary_connected`, the subspace
                 :meth:`normal_form` is defined on.
         """
+        free = None if cls.Box.strategy.__func__ is no_strategy.__func__\
+            else cls.Box.strategy
         diagrams = search(
-            cls, cls.Box.strategy, dom=dom, cod=cod, types=types,
-            max_depth=max_depth)
+            cls, free, dom=dom, cod=cod, types=types, max_depth=max_depth)
         if not boundary_connected:
             return diagrams
         return diagrams.filter(lambda diagram: diagram.is_boundary_connected)

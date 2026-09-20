@@ -120,19 +120,25 @@ Note
 Every traced symmetric category is a feedback category with a trivial delay:
 
 >>> from discopy import symmetric
->>> symmetric.Ty.delay = symmetric.Diagram.delay = lambda self: self
->>> symmetric.Diagram.feedback = lambda self, dom=None, cod=None, mem=None:\\
-...     self.trace(len(mem))
+>>> @factory
+... class TracedTy(symmetric.Ty):
+...     delay = lambda self, n_steps=1: self
+>>> @factory
+... class Traced(symmetric.Diagram):
+...     ob = TracedTy
+...     delay = lambda self, n_steps=1: self
+...     feedback = lambda self, dom=None, cod=None, mem=None, left=False:\\
+...         self.trace(len(mem), left)
+>>> class TracedBox(symmetric.Box, Traced):
+...     pass
 
 >>> F0 = Functor(
-...     ob_map=lambda x: symmetric.Ty(x.atom.name), ar_map={},
-...     cod=symmetric.Diagram)
+...     ob_map=lambda x: TracedTy(x.atom.name), ar_map={}, cod=Traced)
 >>> assert F0(x.delay()) == F0(x)
 
 >>> F = Functor(
 ...     ob_map=F0,
-...     ar_map=lambda f: symmetric.Box(f.name, F0(f.dom), F0(f.cod)),
-...     cod=symmetric.Diagram)
+...     ar_map=lambda f: TracedBox(f.name, F0(f.dom), F0(f.cod)), cod=Traced)
 >>> f = Box('f', x @ m.delay(), y @ m)
 >>> assert F(f.delay()) == F(f) and F(f.feedback()) == F(f).trace()
 
@@ -444,9 +450,7 @@ class Diagram(markov.Diagram, FeedbackCategory):
 
     d = Wire.d
 
-    dagger_monoidality = FeedbackCategory.dagger_monoidality.failing(
-        "The dagger of a feedback box is built by the generic constructor, "
-        "which Feedback does not take (#742).")
+    dagger_monoidality = FeedbackCategory.dagger_monoidality
 
     feedback_joining = FeedbackCategory.feedback_joining.failing(
         "feedback unrolls heterogeneous memory in the wrong order, so it "
@@ -619,6 +623,10 @@ class Feedback(
         monoidal.Bubble.__init__(self, arg, dom=dom, cod=cod)
         self.Box.__init__(self, self.name, dom, cod)
 
+    def dagger(self):
+        raise AxiomError("Feedback has no dagger, "
+                         "the delay of its memory is not reversible.")
+
     def delay(self, n_steps=1):
         return type(self)(self.arg.delay(n_steps), mem=self.mem.delay(n_steps))
 
@@ -741,6 +749,9 @@ class Functor(markov.Functor):
 
 
 Hypergraph = hypergraph.Hypergraph[Diagram]
+Hypergraph.dagger_involution = FeedbackCategory.dagger_involution
+Hypergraph.dagger_contravariance = FeedbackCategory.dagger_contravariance
+Hypergraph.dagger_monoidality = FeedbackCategory.dagger_monoidality
 Id = Diagram.id
 
 

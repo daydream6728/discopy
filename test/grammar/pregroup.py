@@ -91,7 +91,7 @@ def test_random_sentences():
 
     n, s = Ty('n'), Ty('s')
     sentence = find(
-        Diagram.strategy(min_leaves=5, max_leaves=5),
+        Diagram.strategy(),
         lambda diagram: diagram.foliation().boxes[0].name == 'Bob')
     assert Diagram.Equation(sentence, (
         Word('Bob', n) @ Word('loves', n.r @ s @ n.l) @ Word('Alice', n)
@@ -105,6 +105,6 @@ def test_random_sentences():
                 word.name: Rule.constant(word)
                 for word in (Word('Alice', n), Word('sleeps', n.r @ s))}}
 
-    assert find(Sentence.strategy(min_leaves=3), bool).foliation() == (
+    assert find(Sentence.strategy(), bool).foliation() == (
         Word('Alice', n) @ Word('sleeps', n.r @ s) >> Cup(n, n.r) @ s
     ).foliation()

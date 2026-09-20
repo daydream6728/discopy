@@ -680,6 +680,7 @@ def symmetric(
 
 
 Diagram.Functor.symmetric = symmetric
+del symmetric
 
 Id = Diagram.id
 

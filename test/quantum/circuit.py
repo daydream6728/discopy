@@ -758,7 +758,7 @@ def test_random_circuits():
     from discopy.quantum.gates import GATES
 
     circuit = find(
-        Circuit.strategy(dom=qubit @ qubit, min_leaves=3, max_leaves=4),
+        Circuit.strategy(dom=qubit @ qubit, max_depth=2),
         lambda diagram: any(box.name == 'CX' for box in diagram.boxes)
         and any(box.name == 'H' for box in diagram.boxes))
     assert all(
