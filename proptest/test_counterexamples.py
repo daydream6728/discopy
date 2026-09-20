@@ -49,13 +49,15 @@ COUNTEREXAMPLES = (
                "braid relations that free diagrams do not quotient by."),
     Counterexample(
         axiom=biclosed.Diagram.currying_left,
-        args=(biclosed.Eval(biclosed.Ty("a") << biclosed.Ty("a")), ),
+        args=(biclosed.Eval(biclosed.Ty("a") << biclosed.Ty("a")),
+              biclosed.Ty("a"), biclosed.Ty("a")),
         reason="A free currying is a bubble, equal to its evaluation only "
                "semantically."),
     Counterexample(
         axiom=biclosed.Diagram.currying_right,
         args=(biclosed.Eval(
-                  biclosed.Ty("a") >> biclosed.Ty("a"), left=False), ),
+                  biclosed.Ty("a") >> biclosed.Ty("a"), left=False),
+              biclosed.Ty("a"), biclosed.Ty("a")),
         reason="A free currying is a bubble, equal to its evaluation only "
                "semantically."),
     Counterexample(

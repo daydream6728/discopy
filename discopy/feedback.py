@@ -628,24 +628,30 @@ class Feedback(
                          "the delay of its memory is not reversible.")
 
     def delay(self, n_steps=1):
-        return type(self)(self.arg.delay(n_steps), mem=self.mem.delay(n_steps))
+        return type(self)(self.arg.delay(n_steps),
+                          mem=self.mem.delay(n_steps), left=self.left)
 
     def __str__(self):
         mem_name = "" if len(self.mem) == 1 else f"mem={self.mem}"
-        return f"({self.arg}).feedback({mem_name})"
+        left_name = f"{', ' if mem_name else ''}left=True" if self.left\
+            else ""
+        return f"({self.arg}).feedback({mem_name}{left_name})"
 
     def __repr__(self):
         arg, mem = map(repr, (self.arg, self.mem))
-        return factory_name(type(self)) + f"({arg}, mem={mem})"
+        left = ", left=True" if self.left else ""
+        return factory_name(type(self)) + f"({arg}, mem={mem}{left})"
 
     def to_drawing(self):
-        return self.arg.to_drawing().trace()
+        return self.arg.to_drawing().trace(left=self.left)
 
     def image(self, functor):
         if not hasattr(functor.cod, "feedback"):
             return super().image(functor)
-        return functor(self.arg).feedback(
-            *map(functor, (self.dom, self.cod, self.mem)))
+        arguments = map(functor, (self.dom, self.cod, self.mem))
+        if self.left:
+            return functor(self.arg).feedback(*arguments, left=True)
+        return functor(self.arg).feedback(*arguments)
 
 
 @Diagram.generator

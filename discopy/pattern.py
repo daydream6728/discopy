@@ -1014,7 +1014,8 @@ class Declaration[**P, T]:
                 read_off(premise.cod, term.cod)
                 args[name] = term
             elif isinstance(premise, Sort)\
-                    and premise.resolve(self.scope) is self.scope["C1"]:
+                    and premise.resolve(self.scope) is self.scope["C1"]\
+                    and issubclass(self.scope["C1"], abc.Category):
                 arrows = hom(self.scope["C1"], None, None)
                 args[name] = draw(arrows, label=name)
             elif isinstance(premise, Sort):

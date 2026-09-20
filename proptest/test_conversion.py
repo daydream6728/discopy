@@ -123,7 +123,7 @@ def test_encode_decode(module, data):
     the comparison is up to the level's own equation.
     """
     diagram = data.draw(module.Diagram.strategy())
-    assert module.Diagram.equation_factory(
+    assert module.Diagram.Equation(
         type(diagram).decode(*diagram.encode()), diagram.to_staircases())
 
 

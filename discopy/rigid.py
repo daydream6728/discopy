@@ -306,13 +306,15 @@ class Ty(Pregroup, biclosed.Ty):
 
     @property
     def l(self) -> Self:
-        """ The left adjoint of the type. """
-        return self.ar(*[x.l for x in self.inside[::-1]])
+        """ The left adjoint of the type, with its colours swapped. """
+        return self.ar(
+            *[x.l for x in self.inside[::-1]], dom=self.cod, cod=self.dom)
 
     @property
     def r(self) -> Self:
-        """ The right adjoint of the type. """
-        return self.ar(*[x.r for x in self.inside[::-1]])
+        """ The right adjoint of the type, with its colours swapped. """
+        return self.ar(
+            *[x.r for x in self.inside[::-1]], dom=self.cod, cod=self.dom)
 
     @property
     def z(self) -> int:

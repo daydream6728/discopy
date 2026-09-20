@@ -413,13 +413,13 @@ class Diagram(monoidal.Diagram, BiclosedCategory):
         return monoidal.Diagram.to_drawing(self, functor=Functor)
 
     dagger_involution = Category.dagger_involution.inapplicable(
-        "A curried diagram has no dagger, use closed instead.")
+        "A curried diagram has no dagger.")
 
     dagger_contravariance = Category.dagger_contravariance.inapplicable(
-        "A curried diagram has no dagger, use closed instead.")
+        "A curried diagram has no dagger.")
 
     dagger_monoidality = BiclosedCategory.dagger_monoidality.inapplicable(
-        "A curried diagram has no dagger, use closed instead.")
+        "A curried diagram has no dagger.")
 
     currying_left = BiclosedCategory.currying_left.failing(
         "Currying does not evaluate back (#562).")

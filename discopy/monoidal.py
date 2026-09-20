@@ -1304,7 +1304,7 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
         >>> print(diagram.foliation().to_staircases())
         f0 @ y >> y @ f1
         """
-        return Functor.id(self.ar)(self)
+        return self.Functor.id(self.ar)(self)
 
     def to_hypergraph(self) -> Hypergraph:
         """
@@ -1326,8 +1326,7 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
         """
         graph = hypergraph.Hypergraph[
             type(self).ar].from_diagram(self)  # ty: ignore[invalid-type-form]
-        staircase = len(self.boxes) == len(self.inside)
-        if staircase and len(graph.boxes) == len(self.boxes):
+        if len(graph.boxes) == len(self.boxes):
             offsets = tuple(
                 offset if not box.dom else None
                 for box, offset in zip(self.boxes, self.offsets))
