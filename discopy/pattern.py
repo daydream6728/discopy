@@ -28,12 +28,12 @@ subscripted with the type parameters in the metadata of a
 is the :class:`Tensor` of a variable with its right :class:`Adjoint`,
 ``Delay[M]`` a :class:`Delay`, ``Over[Z, Y]`` and ``Under[Y, Z]`` the
 :class:`Exp` s, ``Repeat[X, N]`` a :class:`Repeat` and ``Unit[C0]`` the
-:class:`Unit`. The module stating a declaration does *not* defer its
-annotations, so each one is an object the interpreter builds at
-definition time — the subscript of a pattern class *is* the pattern —
-and :func:`parse` collects the sequent from ``__annotations__``,
-``__type_params__``, ``__bound__``, ``__metadata__`` and ``__args__``
-without evaluating anything itself.
+:class:`Unit`. The module stating a declaration does *not* quote its
+annotations, so each one is an object the interpreter builds when it is
+read, lazily by :pep:`649` — the subscript of a pattern class *is* the
+pattern — and :func:`parse` collects the sequent from
+``__annotations__``, ``__type_params__``, ``__bound__``,
+``__metadata__`` and ``__args__`` without evaluating anything itself.
 
 Each pattern class declares its :meth:`Pattern.level`, the least
 structure the objects it stands in must have: a :class:`Tensor` needs a
@@ -250,6 +250,14 @@ class Pattern[C0, C1: abc.Category](ABC):
 
     Matching a value yields every substitution unifying the pattern with it,
     each with the residual equations it could not invert.
+
+    A subclass named in annotations — :class:`Unit`, :class:`Tensor`,
+    :class:`Delay`, :class:`Repeat` and the fronts :class:`L`, :class:`R`,
+    :class:`Over` and :class:`Under` — is instead generic in what its
+    subscript takes, since a typechecker reads the subscript ``Tensor[A,
+    C]`` as a specialisation: its type parameters are the operands the
+    interpreter takes, and the level is its :meth:`level` classmethod
+    where this class reads the bound of ``C1``.
     """
     def __post_init__(self):
         """
@@ -423,7 +431,7 @@ class Var[C0, C1: abc.Category](Pattern[C0, C1]):
 
 
 @dataclass(frozen=True)
-class Unit(Pattern):
+class Unit[C0](Pattern):
     """
     The unit of a monoid of objects, ``Unit[C0]`` in an annotation.
 
@@ -458,7 +466,7 @@ class Unit(Pattern):
 
 
 @dataclass(frozen=True)
-class Tensor(Pattern):
+class Tensor[*Fs](Pattern):
     """
     The tensor of two or more patterns, flattened: ``Tensor[A, C]`` in an
     annotation, or ``@`` on patterns already built.
@@ -539,20 +547,20 @@ class Adjoint[C0, C1: abc.Pregroup, S: str](Pattern[C0, C1]):
         return f"{self.base}.{self.side}"
 
 
-class L:
+class L[X]:
     """ The left :class:`Adjoint` of a pattern, ``L[X]`` for ``x.l``. """
     def __class_getitem__(cls, item) -> Adjoint:
         return Adjoint(operand(item), "l")
 
 
-class R:
+class R[X]:
     """ The right :class:`Adjoint` of a pattern, ``R[X]`` for ``x.r``. """
     def __class_getitem__(cls, item) -> Adjoint:
         return Adjoint(operand(item), "r")
 
 
 @dataclass(frozen=True)
-class Delay(Pattern):
+class Delay[M](Pattern):
     """
     The delay ``M.d`` of a pattern by one time step, ``Delay[M]`` in an
     annotation.
@@ -612,14 +620,14 @@ class Exp[C0, C1: abc.ResiduatedMonoid, S: str](Pattern[C0, C1]):
         return f"({self.left} {self.symbol} {self.right})"
 
 
-class Over:
+class Over[X, Y]:
     """ The :class:`Exp` ``x << y``, ``Over[X, Y]`` in an annotation. """
     def __class_getitem__(cls, item) -> Exp:
         base, exponent = item
         return Exp("<<", operand(base), operand(exponent))
 
 
-class Under:
+class Under[X, Y]:
     """ The :class:`Exp` ``x >> y``, ``Under[X, Y]`` in an annotation. """
     def __class_getitem__(cls, item) -> Exp:
         exponent, base = item
@@ -627,7 +635,7 @@ class Under:
 
 
 @dataclass(frozen=True)
-class Repeat(Pattern):
+class Repeat[X, N](Pattern):
     """
     An atomic pattern repeated a variable number of times — ``X ** N``,
     ``Repeat[X, N]`` in an annotation — for the legs of a spider:
@@ -729,7 +737,7 @@ class HomType[C0, C1: abc.Category](Pattern[C0, C1]):
 
 
 @dataclass(frozen=True)
-class Sequent:
+class Sequent[C0, C1: abc.Category]:
     """
     Variables and their sorts, named premises and an optional conclusion.
     A premise is a :class:`HomType` to generate, a :class:`Sort` to
@@ -742,9 +750,9 @@ class Sequent:
     | self: C1[A, B], other: C1[C, D] ⊢ C1[A @ C, B @ D]
     """
 
-    variables: dict[str, Sort | HomType] = field(default_factory=dict)
-    premises: dict[str, Pattern | Sort] = field(default_factory=dict)
-    conclusion: HomType | None = None
+    variables: dict[str, Sort | HomType[C0, C1]] = field(default_factory=dict)
+    premises: dict[str, Pattern[C0, C1] | Sort] = field(default_factory=dict)
+    conclusion: HomType[C0, C1] | None = None
 
     def __str__(self):
         context = ", ".join(f"{n}: {s}" for n, s in self.variables.items())

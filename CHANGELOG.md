@@ -52,7 +52,16 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   subscripted in the metadata of `Annotated`, built by the interpreter
   when the declaration is defined — and `parse` collects each sequent
   shallowly from the annotation objects, the class stating it bounding
-  the sorts. Each pattern class declares its level, the least
+  the sorts. Every pattern class is typed, in one of two ways: `Var`,
+  `Adjoint`, `Exp`, `HomType` and `Sequent`, which no annotation
+  subscripts, are generic in the colours `C0` and objects `C1` with the
+  level as the bound of `C1`, while the classes standing in annotations
+  — `Unit[C0]`, `Tensor[A, C]`, `Delay[M]`, `Repeat[X, N]` and the
+  fronts `L`, `R`, `Over` and `Under` — are generic in what their
+  subscript takes, since a typechecker reads that subscript as a
+  specialisation and would arity- and bound-check the metavariables
+  against a `C0, C1` parameterisation, and declare their level as a
+  classmethod. Each pattern class declares its level, the least
   structure the objects it stands in must have — `Unit[C0]` and
   `Tensor` a `ColouredMonoid`, `Adjoint` (`L[X]`, `R[X]`) a
   `Pregroup`, `Delay` the new `abc.DelayedMonoid` that `feedback.Ty`
