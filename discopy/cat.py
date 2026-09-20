@@ -426,7 +426,7 @@ class Arrow(FreeCategory, Serialisable):
     def __hash__(self):
         return hash(self.setoid())
 
-    def then(self, *others: "Arrow") -> "Arrow":
+    def then(self, *others: Arrow) -> Arrow:
         """
         Sequential composition, called with :code:`>>` and :code:`<<`.
 
@@ -456,7 +456,7 @@ class Arrow(FreeCategory, Serialisable):
         """
         return cls.Sum((), dom, cod)
 
-    def bubble(self, *args, **kwargs) -> "Bubble":
+    def bubble(self, *args, **kwargs) -> Bubble:
         """ Unary operator on homsets. """
         return self.Bubble(self, *args, **kwargs)
 
@@ -477,7 +477,7 @@ class Arrow(FreeCategory, Serialisable):
         """
         return {x for box in self.inside for x in box.free_symbols}
 
-    def subs(self, *args) -> "Arrow":
+    def subs(self, *args) -> Arrow:
         """
         Substitute a variable by an expression.
 
@@ -584,7 +584,7 @@ class Box(Arrow):
             return getattr(data, "free_symbols", set())
         return recursive_free_symbols(self.data)
 
-    def subs(self, *args) -> "Box":
+    def subs(self, *args) -> Box:
         if not any(var in self.free_symbols for var in (
                 {var for var, _ in args[0]} if len(args) == 1 else {args[0]})):
             return self
@@ -808,7 +808,7 @@ class Bubble(Box):
     def free_symbols(self):
         return super().free_symbols.union(*[f.free_symbols for f in self.args])
 
-    def dagger(self) -> "Bubble":
+    def dagger(self) -> Bubble:
         return type(self)(
             *(arg.dagger() for arg in self.args),
             dom=self.cod, cod=self.dom, name=self.name, method=self.method,
@@ -876,7 +876,7 @@ class Functor(Category, Serialisable):
     dom = cod = Arrow
 
     @classmethod
-    def id(cls, dom: type | None = None) -> "Functor":
+    def id(cls, dom: type | None = None) -> Functor:
         """
         The identity functor on a given category ``dom``.
 
@@ -885,7 +885,7 @@ class Functor(Category, Serialisable):
         """
         return cls(lambda x: x, lambda f: f, dom=dom, cod=dom)
 
-    def then(self, other: "Functor") -> "Functor":
+    def then(self, other: Functor) -> Functor:
         """
         The composition of functor with another.
 
@@ -1134,7 +1134,7 @@ class Transformation(Category):
         return component
 
     @classmethod
-    def id(cls, dom: Functor) -> "Transformation":
+    def id(cls, dom: Functor) -> Transformation:
         """
         The identity transformation on a given functor ``dom``, i.e. the
         transformation whose component at each object ``x`` is the
@@ -1154,7 +1154,7 @@ class Transformation(Category):
         """
         return cls(lambda x: dom.cod.id(dom(x)), dom, dom)
 
-    def then(self, other: "Transformation") -> "Transformation":
+    def then(self, other: Transformation) -> Transformation:
         """
         The vertical composition of a transformation with another.
 

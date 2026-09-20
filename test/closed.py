@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from pytest import raises
 
 from discopy.closed import *

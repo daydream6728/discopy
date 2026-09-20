@@ -1,4 +1,3 @@
-from __future__ import annotations
 from pytest import raises
 
 from discopy.python import Function

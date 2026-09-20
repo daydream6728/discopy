@@ -354,7 +354,7 @@ class Equation[ar](NamedGeneric):
         if up_to is not None:
             self.up_to = up_to
 
-    def modulo(self, up_to: Callable) -> "Equation":
+    def modulo(self, up_to: Callable) -> Equation:
         """
         The same equation compared up to the given function, rebinding
         :attr:`up_to`, whose name the attribute already takes.
@@ -446,7 +446,7 @@ class Testable[T](metaclass=ABCMeta):
             f"No search strategy implemented for {cls.__name__}")
 
     @classproperty
-    def axioms(cls: type) -> dict[str, "Axiom"]:
+    def axioms(cls: type) -> dict[str, Axiom]:
         """
         The axioms inherited by ``cls``, by name, subclasses overriding
         bases: assigning anything that is not an axiom over an inherited
@@ -478,7 +478,7 @@ class Testable[T](metaclass=ABCMeta):
         return dict(public(vars(discopy)), **public(vars(module)))
 
     @classmethod
-    def subclasses(cls) -> tuple[type["Testable"], ...]:
+    def subclasses(cls) -> tuple[type[Testable], ...]:
         """
         Every transitive subclass of ``cls``, ``cls`` itself included.
 
@@ -950,7 +950,7 @@ class Serialisable(Testable):
         return tree
 
     @classmethod
-    def from_tree(cls, tree: dict) -> "Serialisable":
+    def from_tree(cls, tree: dict) -> Serialisable:
         """
         Decode a serialised DisCoPy object, see :func:`loads`.
 

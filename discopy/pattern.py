@@ -94,6 +94,7 @@ Summary
 """
 
 import __future__
+import annotationlib
 import inspect
 import operator
 from abc import ABC, abstractmethod
@@ -109,7 +110,7 @@ from discopy.utils import factory_name
 
 
 type Substitution = dict[str, object]
-type Residuals = tuple[tuple["Pattern", object], ...]
+type Residuals = tuple[tuple[Pattern, object], ...]
 type Match = tuple[Substitution, Residuals]
 
 type Hom[C, A, B] = Annotated[C, A, B]
@@ -146,12 +147,12 @@ class Sort:
     atomic: bool = False
     bound: type | None = field(default=None, compare=False, repr=False)
 
-    def __getattr__(self, name: str) -> "Sort":
+    def __getattr__(self, name: str) -> Sort:
         if name.startswith("_"):
             raise AttributeError(name)
         return Sort(f"{self.head}.{name}", self.atomic)
 
-    def __getitem__(self, key) -> "HomType":
+    def __getitem__(self, key) -> HomType:
         if not isinstance(key, tuple) or len(key) != 2:
             raise TypeError(f"Expected a domain and a codomain, got {key}.")
         dom, cod = key
@@ -202,7 +203,7 @@ class Count:
     """
 
 
-def sort(value) -> "Sort":
+def sort(value) -> Sort:
     """
     A sort as written in a bound: itself, :class:`Atom` or :class:`Count`
     bare, a type parameter by name and bounded as it is, or a class of
@@ -223,14 +224,14 @@ def sort(value) -> "Sort":
     raise TypeError(f"Expected a sort, got {value!r}.")
 
 
-def pattern(value) -> "Pattern":
+def pattern(value) -> Pattern:
     """ A pattern as an operand, refusing anything else. """
     if not isinstance(value, Pattern):
         raise TypeError(f"Expected a pattern, got {value!r}.")
     return value
 
 
-def operand(value) -> "Pattern":
+def operand(value) -> Pattern:
     """
     A pattern as the subscript of a pattern class: itself, or a type
     parameter as the variable of the sort its bound declares, so that
@@ -265,13 +266,13 @@ class Pattern[C0, C1: abc.Category](ABC):
                 f"are bounded by {bound.__name__}.")
 
     @classmethod
-    def level(cls) -> "type[abc.Category]":
+    def level(cls) -> type[abc.Category]:
         """ The bound of ``C1``, the least structure the pattern needs. """
         return cls.__type_params__[  # ty: ignore[invalid-return-type]
             1].__bound__
 
     @property
-    def parts(self) -> tuple["Pattern", ...]:
+    def parts(self) -> tuple[Pattern, ...]:
         """ The immediate sub-patterns, the fields holding one. """
         values = (
             getattr(self, name)
@@ -281,7 +282,7 @@ class Pattern[C0, C1: abc.Category](ABC):
             for part in (value if isinstance(value, tuple) else (value, ))
             if isinstance(part, Pattern))
 
-    def walk(self) -> Iterator["Pattern"]:
+    def walk(self) -> Iterator[Pattern]:
         """ The pattern and every sub-pattern below it. """
         yield self
         for part in self.parts:
@@ -385,13 +386,13 @@ class Var[C0, C1: abc.Category](Pattern[C0, C1]):
     """ A variable of a given sort, or between the boundaries of a hom. """
 
     name: str
-    sort: "Sort | HomType"
+    sort: Sort | HomType
 
     def __post_init__(self):
         pass
 
     @classmethod
-    def of(cls, parameter: TypeVar) -> "Var":
+    def of(cls, parameter: TypeVar) -> Var:
         """
         The variable a type parameter declares, of the sort its bound
         states, see :func:`sort_of`; the bound of the objects is attached
@@ -436,7 +437,7 @@ class Unit(Pattern):
         return cls(sort(item))
 
     @classmethod
-    def level(cls) -> "type[abc.Category]":
+    def level(cls) -> type[abc.Category]:
         return abc.ColouredMonoid
 
     variables = ()
@@ -466,7 +467,7 @@ class Tensor(Pattern):
     factors: tuple[Pattern, ...]
 
     @classmethod
-    def level(cls) -> "type[abc.Category]":
+    def level(cls) -> type[abc.Category]:
         return abc.ColouredMonoid
 
     def __class_getitem__(cls, items):
@@ -560,7 +561,7 @@ class Delay(Pattern):
     base: Pattern
 
     @classmethod
-    def level(cls) -> "type[abc.Category]":
+    def level(cls) -> type[abc.Category]:
         return abc.DelayedMonoid
 
     def __class_getitem__(cls, item):
@@ -638,7 +639,7 @@ class Repeat(Pattern):
     count: Var
 
     @classmethod
-    def level(cls) -> "type[abc.Category]":
+    def level(cls) -> type[abc.Category]:
         return abc.ColouredMonoid
 
     def __class_getitem__(cls, item):
@@ -757,9 +758,12 @@ def premises_of(function: Callable, missing: bool = False) -> list[str]:
     """
     The names of the premises a function states: its parameters without a
     default, an unannotated first ``cls`` or ``self`` skipped — only the
-    ones without an annotation when ``missing``.
+    ones without an annotation when ``missing``. The annotations are read
+    as forward references, since this runs when a declaration is decorated,
+    before the names its module defines below it exist.
     """
-    signature = inspect.signature(function)
+    signature = inspect.signature(
+        function, annotation_format=annotationlib.Format.FORWARDREF)
     parameters = list(signature.parameters.values())
     if parameters and parameters[0].annotation is inspect.Parameter.empty:
         parameters = parameters[1:]

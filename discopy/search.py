@@ -31,8 +31,6 @@ Summary
         search
 """
 
-from __future__ import annotations
-
 import inspect
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass
@@ -163,7 +161,7 @@ class Generator(Rule):
         super().__post_init__()
         try:
             sequent = parse(self.function)
-        except TypeError:
+        except (NameError, TypeError):
             return  # Validated lazily, once the owner is known.
         self.validate(sequent)
 

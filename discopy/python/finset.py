@@ -16,7 +16,6 @@ Summary
     Permutation
 """
 
-from __future__ import annotations
 from discopy.utils import assert_isinstance
 from typing import Iterable, Self, Any, overload
 from collections.abc import Sequence

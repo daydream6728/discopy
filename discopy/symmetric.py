@@ -168,7 +168,7 @@ class Layer(monoidal.Layer):
         """
         return any(isinstance(value, Permutation) for value in self)
 
-    def merge(self, other: "Layer") -> "Layer":
+    def merge(self, other: Layer) -> Layer:
         """
         Merge two layers of pure plumbing by composing their permutations,
         otherwise fall back to :meth:`discopy.monoidal.Layer.merge`.
@@ -282,7 +282,7 @@ class Diagram(balanced.Diagram, SymmetricCategory):
         return any(layer.is_plumbing for layer in self.inside)
 
     @classmethod
-    def swap(cls, left: monoidal.Ty, right: monoidal.Ty) -> "Diagram":
+    def swap(cls, left: monoidal.Ty, right: monoidal.Ty) -> Diagram:
         """
         The diagram that swaps the ``left`` and ``right`` wires.
 
@@ -298,7 +298,7 @@ class Diagram(balanced.Diagram, SymmetricCategory):
 
     @classmethod
     def permutation(cls, xs: Sequence[int],
-                    doms: Sequence | monoidal.Ty | None = None) -> "Diagram":
+                    doms: Sequence | monoidal.Ty | None = None) -> Diagram:
         """
         The diagram that encodes a given permutation as a composition of
         swaps.
@@ -340,7 +340,7 @@ class Diagram(balanced.Diagram, SymmetricCategory):
     @generator
     def cycle[X: Atom, A](
             cls, x: Annotated[Ty, X], a: Annotated[Ty, A]
-    ) -> Annotated["Diagram", Tensor[X, A], Tensor[A, X]]:
+    ) -> Annotated[Diagram, Tensor[X, A], Tensor[A, X]]:
         """
         The permutation moving a wire past a type, a native
         :class:`Permutation` of any length.
@@ -356,7 +356,7 @@ class Diagram(balanced.Diagram, SymmetricCategory):
 
     @classmethod
     def from_permutation(cls, perm: Sequence[int],
-                         dom: monoidal.Ty | None = None) -> "Diagram":
+                         dom: monoidal.Ty | None = None) -> Diagram:
         """
         Encode a permutation natively when the category has a matching
         :class:`Permutation` factory. Descendant categories without one use
@@ -385,7 +385,7 @@ class Diagram(balanced.Diagram, SymmetricCategory):
             return cls.Permutation(dom, perm)
         return cls.permutation(perm, dom)
 
-    def permute(self, *xs: int) -> "Diagram":
+    def permute(self, *xs: int) -> Diagram:
         """
         Post-compose with a permutation written as the historical swap
         decomposition. Use :meth:`from_permutation` to construct a native
@@ -558,10 +558,10 @@ class Permutation(Box):
                     dom=self.dom.to_tree(), perm=list(self.perm))
 
     @classmethod
-    def from_tree(cls, tree: dict) -> "Permutation":
+    def from_tree(cls, tree: dict) -> Permutation:
         return cls(from_tree(tree['dom']), tree['perm'])
 
-    def dagger(self) -> "Permutation":
+    def dagger(self) -> Permutation:
         return type(self)(self.cod, self.perm.dagger())
 
     def tensor(self, other=None, *others):

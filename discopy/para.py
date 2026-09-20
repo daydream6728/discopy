@@ -141,8 +141,6 @@ Parametric maps compose like layers of a neural network, e.g. over
 3.5
 """
 
-from __future__ import annotations
-
 from dataclasses import dataclass
 from typing import Self
 

@@ -55,7 +55,7 @@ if you want to run the full test suite involving all extra dependencies.
 
 ```shell
 uv sync --dev --group all
-uv run pflake8 discopy
+uv run ruff check discopy
 uv run coverage run -m pytest
 uv run coverage report -m
 ```
@@ -193,7 +193,7 @@ uv run sphinx-build docs docs/_build/html
 
 ## Build without uv
 
-The project uses the `uv_build` PEP 517 build backend, so package builds still work from standard Python tooling.
+The project uses the `setuptools` PEP 517 build backend, so package builds work from standard Python tooling.
 If you do not use `uv`, create a virtual environment and install the relevant extras manually:
 
 ```shell
@@ -201,13 +201,13 @@ python -m venv .venv
 . .venv/bin/activate
 python -m pip install --upgrade pip
 python -m pip install -e '.[test]'
-python -m pip install coverage pyproject-flake8 pytest marimo
+python -m pip install coverage pytest marimo ruff
 ```
 
 Then run:
 
 ```shell
-pflake8 discopy
+ruff check discopy
 coverage run -m pytest
 coverage report -m
 ```
