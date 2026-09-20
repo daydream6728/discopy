@@ -770,10 +770,6 @@ class Cup(BinaryBoxConstructor, Box):
         """
         raise AxiomError("Rigid cups have no dagger, use pivotal instead.")
 
-    def image(self, functor):
-        return functor.cod.cups(
-            functor(self.dom[:1]), functor(self.dom[1:]))
-
 
 @Diagram.generator
 class Cap(BinaryBoxConstructor, Box):
@@ -812,10 +808,6 @@ class Cap(BinaryBoxConstructor, Box):
         use a :class:`pivotal.Cap` instead.
         """
         raise AxiomError("Rigid caps have no dagger, use pivotal instead.")
-
-    def image(self, functor):
-        return functor.cod.caps(
-            functor(self.cod[:1]), functor(self.cod[1:]))
 
 
 Bubble, Eval, Coeval, Curry = (
@@ -856,17 +848,21 @@ class Functor(biclosed.Functor):
     dom = cod = Diagram
 
     def __call__(self, other):
-        """
-        A rotation is the rotation of the image: ``Wire`` and ``Box`` are
-        declared at every level, so a functor cannot ask them for it.
-        """
-        if isinstance(other, Wire) and other.z:
+        if isinstance(other, Ty) or isinstance(other, Wire) and other.z == 0:
+            return super().__call__(other)
+        if isinstance(other, Wire):
             return self(other.r).l if other.z < 0 else self(other.l).r
-        if isinstance(other, Box) and getattr(other, "z", 0):
-            z, unwound = other.z, other
+        if isinstance(other, Cup):
+            return self.cod.cups(self(other.dom[:1]), self(other.dom[1:]))
+        if isinstance(other, Cap):
+            return self.cod.caps(self(other.cod[:1]), self(other.cod[1:]))
+        if isinstance(other, Box):
+            if not hasattr(other, "z") or not other.z:
+                return super().__call__(other)
+            z = other.z
             for _ in range(abs(z)):
-                unwound = unwound.l if z > 0 else unwound.r
-            result = self(unwound)
+                other = other.l if z > 0 else other.r
+            result = super().__call__(other)
             for _ in range(abs(z)):
                 result = result.l if z < 0 else result.r
             return result

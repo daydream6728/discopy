@@ -58,7 +58,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import ClassVar, Dict
 
-from discopy import monoidal, biclosed, markov, cmap, hypergraph
+from discopy import cat, monoidal, biclosed, markov, cmap, hypergraph
 from discopy.abc import ClosedCategory
 from discopy.cat import factory, Generator
 
@@ -172,7 +172,25 @@ Coeval, Curry, Permutation, Swap, Trace, Copy, Merge, Discard, Sum, Bubble = (
     Diagram.Sum, Diagram.Bubble)
 
 
-Functor = Diagram.Functor
+@Diagram.generator
+class Functor(biclosed.Functor, markov.Functor):
+    """
+    A closed functor is a markov functor
+    that preserves evaluation and currying.
+
+    Parameters:
+        ob_map (Mapping[Ty, Ty]) :
+            Map from atomic :class:`Ty` to :code:`cod.ob`.
+        ar_map (Mapping[Box, Diagram]) : Map from :class:`Box` to :code:`cod`.
+        cod (Category) : The codomain of the functor.
+    """
+    dom = cod = Diagram
+
+    def __call__(self, other):
+        if isinstance(other, (
+                cat.Ob, biclosed.Eval, biclosed.Coeval, biclosed.Curry)):
+            return biclosed.Functor.__call__(self, other)
+        return super().__call__(other)
 
 
 CMap = cmap.CMap[Diagram]

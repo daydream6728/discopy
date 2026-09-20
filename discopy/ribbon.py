@@ -275,7 +275,23 @@ Sum, Bubble, Eval, Coeval, Curry = (
     Diagram.Coeval, Diagram.Curry)
 
 
-Functor = Diagram.Functor
+@Diagram.generator
+class Functor(pivotal.Functor, balanced.Functor):
+    """
+    A ribbon functor is both a pivotal functor and a balanced functor.
+
+    Parameters:
+        ob_map (Mapping[pivotal.Ty, pivotal.Ty]) :
+            Map from atomic :class:`pivotal.Ty` to :code:`cod.ob`.
+        ar_map (Mapping[Box, Diagram]) : Map from :class:`Box` to :code:`cod`.
+        cod (Category) : The codomain of the functor.
+    """
+    dom = cod = Diagram
+
+    def __call__(self, other):
+        if isinstance(other, balanced.Braid):
+            return balanced.Functor.__call__(self, other)
+        return pivotal.Functor.__call__(self, other)
 
 
 class DualRail(balanced.DualRail, Functor):

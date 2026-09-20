@@ -245,10 +245,6 @@ class Spider(Box):
         return coherence(self.ar, type(self))(
             len(self.dom), len(self.cod), self.typ, self.phase)
 
-    def image(self, functor):
-        return functor.cod.spiders(
-            len(self.dom), len(self.cod), functor(self.typ))
-
 
 Sum, Bubble, Eval, Coeval, Curry, Copy, Merge, Discard = (
     Diagram.Sum, Diagram.Bubble, Diagram.Eval,
@@ -256,7 +252,27 @@ Sum, Bubble, Eval, Coeval, Curry, Copy, Merge, Discard = (
     Diagram.Merge, Diagram.Discard)
 
 
-Functor = Diagram.Functor
+@Diagram.generator
+class Functor(compact.Functor, markov.Functor):
+    """
+    A hypergraph functor is a compact functor that preserves spiders.
+
+    Parameters:
+        ob_map (Mapping[Ty, Ty]) :
+            Map from atomic :class:`Ty` to :code:`cod.ob`.
+        ar_map (Mapping[Box, Diagram]) : Map from :class:`Box` to :code:`cod`.
+        cod (Category) : The codomain of the functor.
+    """
+
+    dom = cod = Diagram
+
+    def __call__(self, other):
+        if isinstance(other, Spider):
+            return self.cod.spiders(
+                len(other.dom), len(other.cod), self(other.typ))
+        if isinstance(other, (markov.Copy, markov.Merge)):
+            return markov.Functor.__call__(self, other)
+        return compact.Functor.__call__(self, other)
 
 
 def interleaving(cls: type, factory: Callable

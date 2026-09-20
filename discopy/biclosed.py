@@ -265,19 +265,6 @@ class Exp(Wire):
     def right(self):
         return self.base if isinstance(self, Under) else self.exponent
 
-    def exponentiate(self, functor, attr):
-        """ The image under ``functor`` of an exponential spelt ``attr``. """
-        base, exponent = functor(self.base), functor(self.exponent)
-        if hasattr(base, attr):
-            return getattr(base, attr)(exponent)
-        if hasattr(functor.cod, attr):
-            return getattr(functor.cod, attr)(base, exponent)
-        return None
-
-    def image(self, functor):
-        result = self.exponentiate(functor, "exp")
-        return super().image(functor) if result is None else result
-
 
 @Ty.generator
 class Over(Exp):
@@ -291,10 +278,6 @@ class Over(Exp):
     def __str__(self):
         return f"({self.base} << {self.exponent})"
 
-    def image(self, functor):
-        result = self.exponentiate(functor, "over")
-        return super().image(functor) if result is None else result
-
 
 @Ty.generator
 class Under(Exp):
@@ -307,10 +290,6 @@ class Under(Exp):
     """
     def __str__(self):
         return f"({self.exponent} >> {self.base})"
-
-    def image(self, functor):
-        result = self.exponentiate(functor, "under")
-        return super().image(functor) if result is None else result
 
 
 @factory
@@ -407,12 +386,6 @@ class Eval(Box):
     def drawing_name(self):
         return "<<" if self.left else ">>"
 
-    def image(self, functor):
-        if not hasattr(functor.cod, "ev"):
-            return super().image(functor)
-        return functor.cod.ev(
-            functor(self.x.base), functor(self.x.exponent), self.left)
-
 
 @Diagram.generator
 class Coeval(Box):
@@ -444,13 +417,6 @@ class Coeval(Box):
 
     def dagger(self) -> Eval:
         return self.Eval(self.x, self.left)
-
-    def image(self, functor):
-        if not hasattr(functor.cod, "ev"):
-            return super().image(functor)
-        return functor.cod.ev(
-            functor(self.x.base), functor(self.x.exponent),
-            self.left).dagger()
 
 
 @Diagram.generator
@@ -491,12 +457,6 @@ class Curry(monoidal.Bubble, Box):
         f, e = self.arg, self.Coeval(self.cod)
         return (f >> e).to_drawing().trace(left=True)
 
-    def image(self, functor):
-        if not hasattr(functor.cod, "curry"):
-            return super().image(functor)
-        return functor.cod.curry(
-            functor(self.arg), len(functor(self.cod.exponent)), self.left)
-
 
 Sum, Bubble = Diagram.Sum, Diagram.Bubble
 Layer = Diagram.Layer
@@ -518,6 +478,22 @@ class Functor(monoidal.Functor):
     dom = cod = Diagram
 
     def __call__(self, other):
+        if isinstance(other, TermBase):
+            return other.eval(self)
+        for cls, attr in [(Over, "over"), (Under, "under"), (Exp, "exp")]:
+            if isinstance(other, cls):
+                base, exponent = self(other.base), self(other.exponent)
+                if hasattr(base, attr):
+                    return getattr(base, attr)(exponent)
+                if hasattr(self.cod, attr):
+                    return getattr(self.cod, attr)(base, exponent)
+        if isinstance(other, Curry) and hasattr(self.cod, "curry"):
+            return self.cod.curry(
+                self(other.arg), len(self(other.cod.exponent)), other.left)
+        if isinstance(other, (Eval, Coeval)) and hasattr(self.cod, "ev"):
+            base, exponent, left = other.x.base, other.x.exponent, other.left
+            result = self.cod.ev(self(base), self(exponent), left)
+            return result.dagger() if isinstance(other, Coeval) else result
         if self.cod is Drawing:
             if isinstance(other, Ty) and other.inside == (other, ):
                 # Avoid infinite recursion when drawing.
@@ -583,9 +559,6 @@ class TermBase(Box):
     def draw(self, **kwargs):
         "Drawing a term by evaluating it in the free biclosed category."
         return self.eval().draw(**kwargs)
-
-    def image(self, functor):
-        return self.eval(functor)
 
     def __call__(self, other, left=False):
         args = (other, self, left) if left else (self, other, left)

@@ -125,10 +125,6 @@ class Ob(Testable["Ob"]):
             del state["_name"]
         self.__dict__.update(state)
 
-    def image(self, functor):
-        """ How a functor maps the object, ``ob_map`` by default. """
-        return functor.generic(self)
-
     def __init__(self, name: str = ""):
         assert_isinstance(name, str)
         self.name = name
@@ -203,7 +199,6 @@ class FreeCategory(Category):
         """
         Declare ``root`` as a generator of the category, bound under its
         own name, e.g. ``@Diagram.generator`` above ``class Swap``.
-
         """
         binding = Generator.subclass(root)
         binding.__set_name__(cls, root.__name__)
@@ -648,16 +643,6 @@ class Box(Arrow):
             self.name, self.dom, self.cod, is_dagger=self.is_dagger,
             data=lambdify(symbols, self.data, **kwargs)(*xs))
 
-    def image(self, functor):
-        """
-        How a functor maps the box, ``ar_map`` by default.
-
-        A generator overrides this and falls back on ``super().image``,
-        so that e.g. a swap is a swap where the codomain has one, else a
-        permutation, else a box.
-        """
-        return functor.generic(self)
-
     def dagger(self) -> Box:
         return type(self)(
             self.name, self.cod, self.dom,
@@ -1009,42 +994,6 @@ class Functor(Category):
             + f"(ob_map={self.ob_map}, ar_map={self.ar_map}{cod_repr})"
 
     def __call__(self, other):
-        """
-        The image of ``other``, asking it first how it is mapped.
-
-        A generator says so itself with an ``image`` method, but only a
-        functor whose own category declares that generator listens: a
-        braid is an opaque box to a monoidal functor, which is how
-        :meth:`discopy.cmap.CMap.from_diagram` keeps the structure of the
-        level above as boxes.
-        """
-        image = getattr(other, "image", None)
-        return self.generic(other) if image is None\
-            or not self.interprets(type(other)) else image(self)
-
-    def interprets(self, generator: type) -> bool:
-        """
-        Whether the functor lets a generator say how it is mapped, i.e.
-        whether its domain declares one of the same name.
-
-        A braid is an opaque box to a monoidal functor, which is how
-        :meth:`discopy.cmap.CMap.from_diagram` keeps the structure of the
-        level above the map as boxes.
-        """
-        dom = type(self).dom
-        declared = getattr(dom, generator.__name__, None)
-        if not isinstance(declared, type):
-            declared = getattr(dom.ob, generator.__name__, None)
-        return isinstance(declared, type) and (
-            issubclass(generator, declared) or issubclass(declared, generator))
-
-    def generic(self, other):
-        """
-        The image of a term that says nothing about how it is mapped, i.e.
-        the structure every functor preserves: an object goes through
-        ``ob_map``, a box through ``ar_map`` and an arrow is the
-        composite of the images of its boxes.
-        """
         if isinstance(other, Ob):
             result = self.ob_map[other]
             origin = get_origin(self.cod.ob)

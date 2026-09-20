@@ -111,7 +111,23 @@ Swap, Sum, Bubble, Eval, Coeval, Curry = (
     Diagram.Eval, Diagram.Coeval, Diagram.Curry)
 
 
-Functor = Diagram.Functor
+@Diagram.generator
+class Functor(symmetric.Functor, ribbon.Functor):
+    """
+    A compact functor is both a symmetric functor and a ribbon functor.
+
+    Parameters:
+        ob_map (Mapping[pivotal.Ty, pivotal.Ty]) :
+            Map from atomic :class:`pivotal.Ty` to :code:`cod.ob`.
+        ar_map (Mapping[Box, Diagram]) : Map from :class:`Box` to :code:`cod`.
+        cod (Category) : The codomain of the functor.
+    """
+    dom = cod = Diagram
+
+    def __call__(self, other):
+        if isinstance(other, (symmetric.Swap, symmetric.Permutation)):
+            return symmetric.Functor.__call__(self, other)
+        return ribbon.Functor.__call__(self, other)
 
 
 CMap = cmap.CMap[Diagram]
