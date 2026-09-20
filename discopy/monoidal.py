@@ -59,7 +59,6 @@ from functools import cached_property
 from typing import (
     Any, ClassVar, Iterable, Iterator, Callable, Self, Sequence,
     TYPE_CHECKING)
-from warnings import warn
 
 from discopy import abc, cat, drawing, hypergraph, cmap, messages
 from discopy.abc import (
@@ -78,7 +77,6 @@ from discopy.utils import (
     assert_isinstance,
     assert_iscomposable,
     AxiomError,
-    deprecated_alias,
     MappingOrCallable,
     RichDisplay,
 )
@@ -156,12 +154,6 @@ class Wire(cat.Ob):
         self.is_dagger = is_dagger
         self.dom, self.cod = dom, cod
         super().__init__(name)
-
-    def __setstate__(self, state):
-        state.setdefault('dom', transparent)
-        state.setdefault('cod', transparent)
-        state.setdefault('is_dagger', False)
-        super().__setstate__(state)
 
     repr_transparency = Serialisable.repr_transparency.failing(
         "An uncoloured wire reprs as the cat.Ob its type coerces, which its "
@@ -353,11 +345,10 @@ class Ty(cat.Ob, cat.FreeCategory, ColouredMonoid):
 
     def cast_wire(self, x: str | cat.Ob) -> cat.Ob:
         """
-        Turn a constructor argument into a ``self.Wire``.
-
-        Old dumps and pickles used a plain ``cat.Ob``, with no colour, as
-        the generators: upgrade it to ``Wire(x.name)`` for subclasses whose
-        generators are built from a name alone.
+        Turn a constructor argument into a ``self.Wire``: a name makes an
+        uncoloured wire and a plain :class:`cat.Ob` is upgraded to
+        ``Wire(x.name)``, for subclasses whose wires are built from a name
+        alone.
         """
         wire = self.Wire
         if isinstance(x, wire):
@@ -484,16 +475,6 @@ class Ty(cat.Ob, cat.FreeCategory, ColouredMonoid):
         return (len(self.inside), self.inside)\
             < (len(other.inside), other.inside)
 
-    def __setstate__(self, state):
-        if 'inside' not in state and "_objects" in state:
-            state["inside"] = state['_objects']
-            del state['_objects']
-        if 'dom' not in state:
-            state['dom'] = transparent
-        if 'cod' not in state:
-            state['cod'] = transparent
-        cat.Ob.__setstate__(self, state)
-
     def to_tree(self):
         tree = {
             'factory': factory_name(type(self)),
@@ -505,14 +486,7 @@ class Ty(cat.Ob, cat.FreeCategory, ColouredMonoid):
 
     @classmethod
     def from_tree(cls, tree):
-        if "inside" not in tree:
-            warn("Outdated dumps", DeprecationWarning)
-            return cls(*map(from_tree, tree['objects']))
         inside = tuple(map(from_tree, tree['inside']))
-        # Old dumps used cat.Ob as the generators of monoidal.Ty.
-        inside = tuple(
-            cls.Wire(x.name) if type(x) is cat.Ob else x
-            for x in inside)
         if inside:
             return cls(*inside)
         if 'dom' in tree:
@@ -603,17 +577,6 @@ class Nat(abc.Nat, Ty):
         self.n = inside if isinstance(inside, int) else len(inside)
         self.dom = self.cod = transparent
         cat.Ob.__init__(self, type(self).__name__)
-
-    def __setstate__(self, state):
-        if "n" not in state:
-            state = {"n": len(state["_objects"])}
-        state.setdefault(  # ty: ignore[no-matching-overload]
-            "dom", transparent)
-        state.setdefault(  # ty: ignore[no-matching-overload]
-            "cod", transparent)
-        state.setdefault(  # ty: ignore[no-matching-overload]
-            "name", type(self).__name__)
-        cat.Ob.__setstate__(self, state)
 
     @property
     def inside(self):
@@ -706,15 +669,6 @@ class Layer(cat.Box, ColouredMonoid):
     """
     ob = Ty
     strategy = no_strategy
-
-    def __setstate__(self, state):
-        if 'boxes_or_types' not in state:
-            state['boxes_or_types'] = tuple(
-                state[key] for key in ['_left', '_box', '_right'])
-            del state['_left'], state['_box'], state['_right']
-        state['boxes_or_types'] = type(self).normalise(
-            state['boxes_or_types'])
-        super().__setstate__(state)
 
     def __init__(self, *inside: Ty | Box, normalise: bool = True):
         if normalise:
@@ -1046,13 +1000,6 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
         if not boundary_connected:
             return diagrams
         return diagrams.filter(lambda diagram: diagram.is_boundary_connected)
-
-    def __setstate__(self, state):
-        if 'inside' not in state:  # Backward compatibility
-            state |= {
-                'dom': state['_dom'], 'cod': state['_cod'],
-                'inside': tuple(state['_layers'])}
-        super().__setstate__(state)
 
     def __init__(
             self, inside: tuple[cat.Box, ...], dom: Ty, cod: Ty, _scan=True):
@@ -1544,14 +1491,6 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
             cache.add(str(diagram))
         return diagram
 
-    @classmethod
-    def from_tree(cls, tree):
-        if "boxes" in tree:  # Backward compatibility
-            warn("Outdated dumps", DeprecationWarning)
-            boxes, offsets = map(from_tree, tree['boxes']), tree['offsets']
-            return cls.decode(from_tree(tree['dom']), zip(boxes, offsets))
-        return super().from_tree(tree)
-
     bifunctoriality = MonoidalCategory.bifunctoriality.modulo(
         normal_form).weaken(boundary_connected=True)
 
@@ -2015,4 +1954,3 @@ Hypergraph = hypergraph.Hypergraph[Diagram]
 Drawing.ob = Ty
 Id = Diagram.id
 
-__getattr__ = deprecated_alias(__name__, {"PRO": "Nat"})

@@ -92,7 +92,6 @@ from discopy.utils import (
     AxiomError,
     assert_isatomic,
     assert_isinstance,
-    deprecated_alias,
     factory_name,
     from_tree,
 )
@@ -809,4 +808,3 @@ class Equation(monoidal.Equation):
 Diagram.Equation = Equation
 
 
-__getattr__ = deprecated_alias(__name__, {"Ob": "Wire"})

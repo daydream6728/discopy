@@ -947,7 +947,7 @@ class Backend(ABC):
                            fontsize=params.get('fontsize', None))
 
     def draw_discard(self, positions, node, **params):
-        """ Draws a :class:`discopy.quantum.circuit.Discard` box. """
+        """ Draws a :class:`discopy.quantum.gates.Discard` box. """
         box, j = node.box, node.j
         for i in range(len(box.dom)):
             x = box.dom[i]
@@ -961,7 +961,7 @@ class Backend(ABC):
                 self.draw_wire(source, target)
 
     def draw_measure(self, positions, node, **params):
-        """ Draws a :class:`discopy.quantum.circuit.Measure` box. """
+        """ Draws a :class:`discopy.quantum.gates.Measure` box. """
         self.draw_box(positions, node, **dict(params, draw_box_labels=False))
         i, j = positions[node]
         self.draw_wire(

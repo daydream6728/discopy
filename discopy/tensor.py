@@ -734,9 +734,6 @@ class Box[dtype](frobenius.Box, Diagram[dtype]):
     strategy = no_strategy
 
     def __setstate__(self, state):
-        if "data" not in state and state.get("_array", None) is not None:
-            state['data'] = state['_array']
-            del state["_array"]
         super().__setstate__(state)
         if self.dtype is None and self.data is not None:
             self.data, dtype = self._get_data_dtype(self.data)

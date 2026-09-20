@@ -831,10 +831,9 @@ class Serialisable(Testable):
       :meth:`from_tree`, the JSON serialisation behind
       :func:`discopy.utils.dumps` and :func:`discopy.utils.loads`,
     - a generic :meth:`__repr__` such that ``eval(repr(x)) == x``,
-    - :meth:`__setstate__`, the terminal of every pickle migration
-      chain; the class parameters of
-      :class:`discopy.utils.NamedGeneric` are pickled by their own
-      machinery.
+    - :meth:`__setstate__` for the pickle protocol; the class
+      parameters of :class:`discopy.utils.NamedGeneric` are pickled by
+      their own machinery.
 
     A subclass with a different constructor declares its keys once
     instead of reimplementing each method.
@@ -895,8 +894,7 @@ class Serialisable(Testable):
 
     def __setstate__(self, state):
         """
-        Restore a pickled state, the terminal that every pickle
-        migration shim chains into with ``super().__setstate__``.
+        Restore a pickled state.
 
         Parameters:
             state : The pickled state of the object.

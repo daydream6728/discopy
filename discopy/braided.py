@@ -67,7 +67,7 @@ from discopy.axioms import Equation, axiom
 from discopy.cat import factory, Generator
 from discopy.monoidal import Ty, Match
 from discopy.utils import (
-    assert_isatomic, BinaryBoxConstructor, deprecated_alias, factory_name)
+    assert_isatomic, BinaryBoxConstructor, factory_name)
 
 
 class Wire(monoidal.Wire):
@@ -271,4 +271,3 @@ class Equation(monoidal.Equation):
 Diagram.Equation = Equation
 
 
-__getattr__ = deprecated_alias(__name__, {"Ob": "Wire"})

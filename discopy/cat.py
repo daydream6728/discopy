@@ -79,7 +79,6 @@ Functors are bubble-preserving.
 from functools import total_ordering, cached_property
 from typing import (
     Callable, ClassVar, Mapping, Iterable, Self, TYPE_CHECKING)
-from warnings import warn
 
 from discopy import messages, utils
 from discopy.abc import Category, Serialisable
@@ -124,12 +123,6 @@ class Ob(Serialisable):
     >>> assert x.to_tree() == {'factory': 'cat.Ob', 'name': 'x'}
     """
     serialised_attrs = ('name', )
-
-    def __setstate__(self, state):
-        if "name" not in state and "_name" in state:
-            state["name"] = state["_name"]
-            del state["_name"]
-        super().__setstate__(state)
 
     def image(self, functor):
         """ How a functor maps the object, ``ob_map`` by default. """
@@ -357,13 +350,6 @@ class Arrow(FreeCategory, Serialisable):
         return arrows.filter(
             lambda arrow: len(set(arrow.inside)) == len(arrow.inside))
 
-    def __setstate__(self, state):
-        if '_dom' in state:  # Backward compatibility
-            self.dom, self.cod, self.inside = (
-                state['_dom'], state['_cod'], tuple(state['_boxes']))
-            del state['_dom'], state['_cod'], state['_boxes']
-        super().__setstate__(state)
-
     def __repr__(self):
         if not self.inside:  # i.e. self is identity.
             return f"{factory_name(type(self))}.id({repr(self.dom)})"
@@ -558,13 +544,6 @@ class Box(Arrow):
         cods = types if cod is None else st.just(cod)
         return st.tuples(st.uuids(), doms, cods).map(
             lambda args: cls(str(args[0]), args[1], args[2]))
-
-    def __setstate__(self, state):
-        if '_name' in state:  # Backward compatibility
-            self.name, self.data, self.is_dagger = (
-                state['_name'], state['_data'], state['_dagger'])
-            del state['_name'], state['_data'], state['_dagger']
-        super().__setstate__(state)
 
     def __init__(
             self, name: str, dom: Ob, cod: Ob, data=None, is_dagger=False):
@@ -823,9 +802,6 @@ class Bubble(Box):
         Parameters:
             tree : DisCoPy serialisation.
         """
-        if 'args' not in tree:  # Backward compatibility
-            warn("Outdated dumps", DeprecationWarning)
-            tree['args'] = [tree['arg']]
         dom, cod = map(from_tree, (tree['dom'], tree['cod']))
         return cls(*map(from_tree, tree['args']), dom=dom, cod=cod)
 

@@ -616,10 +616,6 @@ class Swap(Permutation, balanced.Braid, Box):
     :class:`Swap` is only defined for atomic types (i.e. of length 1).
     For complex types, use :meth:`Diagram.swap` instead.
     """
-    def __setstate__(self, state):
-        state.setdefault('perm', finset.Permutation([1, 0], 2))
-        super().__setstate__(state)
-
     def __init__(self, left, right):
         if len(left) == 2:
             perm = finset.Permutation(right, len(left))

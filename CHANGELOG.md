@@ -31,15 +31,16 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   interpreter builds it when the declaration is defined.
   `C0` and `C1` name both the type parameters of the class stating the
   law and the `Sort`s the annotations of a module-level declaration
-  name in their metadata. Nothing is evaluated and nothing is quoted:
-  the declaring modules state their annotations eagerly, without `from
-  __future__ import annotations` — quoting the forward references of
-  the methods that are never read — and `parse` collects each sequent
-  shallowly from `__annotations__`, `__type_params__`, `__bound__`,
-  `__metadata__` and `__args__`, objects the interpreter built in the
-  scope PEP 695 gives them, so unification across a declaration holds
-  by construction and the environment that impersonated `Annotated`
-  and `Hom` around an `eval` is gone.
+  name in their metadata. Nothing is `eval`ed and nothing is quoted:
+  the annotations are the lazy objects of PEP 649, evaluated by the
+  interpreter in their defining scope when read — a forward reference
+  such as the `Diagram` of `symmetric.Diagram.cycle` staying a plain
+  name, collected as a `ForwardRef` until the class exists — and
+  `parse` collects each sequent shallowly from `__annotations__`,
+  `__type_params__`, `__bound__`, `__metadata__` and `__args__`,
+  objects built in the scope PEP 695 gives them, so unification across
+  a declaration holds by construction and the environment that
+  impersonated `Annotated` and `Hom` around an `eval` is gone.
 - `discopy.pattern` and `discopy.search`, the proof search on pattern
   sequents of the `diagram-search-strategies` branch unified with the
   typed front-end of this one: a category states its structure as the
@@ -224,8 +225,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   names the attributes that are also keyword arguments of `__init__`,
   from which follow a generic pair of inverse methods `to_tree` and
   `from_tree`, a generic `__repr__` such that `eval(repr(x)) == x`, and
-  `__setstate__`, the terminal that every pickle migration shim chains
-  into. A class with a different constructor declares its attributes
+  `__setstate__` for the pickle protocol. A class with a different
+  constructor declares its attributes
   once instead of reimplementing each method: `cat.Ob`, `Arrow`, `Box`,
   `Sum` and `utils.BinaryBoxConstructor` drop their hand-written
   `to_tree` and `from_tree` pairs for declarations that produce
@@ -550,6 +551,16 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Changed
 
+- DisCoPy requires Python 3.14. Annotations are the lazy objects of
+  PEP 649 rather than quoted strings: the `from __future__ import
+  annotations` of every module goes, the forward references it quoted
+  are plain names, and `pattern.premises_of` reads signatures in
+  `annotationlib.Format.FORWARDREF`, so a generator declared inside
+  the class its sequent names is validated once that class exists.
+  `pflake8` and `pylint`, each of which reads a lazy forward reference
+  as an undefined name, are replaced by `ruff` targeting `py314` — one
+  linter, configured in `pyproject.toml` with the same style rules,
+  `.pylintrc` deleted — and the CI test matrix runs 3.14 alone.
 - One naming convention survives the unification of the generated
   factories with the sequent search: a category's structural classes
   are its capitalised attributes, e.g. `Diagram.Box`, `Ty.Wire` and
@@ -621,14 +632,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   the declared codomain unit `cod.ob()`, since the latter can be a supertype
   of the image — `Diagram.to_hypergraph` on a `Nat`-typed permutation maps a
   `Nat` boundary through a functor whose `cod.ob` is the category's generic
-  `Ty`, and `Ty() @ Nat` is refused. The old names still work
-  through a `DeprecationWarning`, via a new `utils.deprecated_alias` taking a
-  mapping of every name a module deprecates. `utils.deprecated_ob`, the
-  single-purpose `Ob`→`Wire` wrapper it generalises, is removed: its six call
-  sites (`biclosed`, `braided`, `compact`, `feedback`, `grammar.pregroup`,
-  `quantum.circuit`) now call `deprecated_alias(__name__, {"Ob": "Wire"})`
-  directly, the same as `rigid`/`pivotal`/`frobenius`/`monoidal` already do
-  for their `PRO`→`Nat` alias
+  `Ty`, and `Ty() @ Nat` is refused. The old names are gone with the
+  other backward-compatibility shims, see **Removed**
   ([#709](https://github.com/discopy/discopy/issues/709)).
 - Matplotlib SVGs adapt to the page behind them: they are saved on a
   transparent canvas and open with a `prefers-color-scheme: dark` media
@@ -836,15 +841,24 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - Every `monoidal.Wire` subclass named `Ob` is renamed to `Wire`: `rigid`,
   `braided`, `biclosed`, `pivotal`, `frobenius`, `feedback` and
   `quantum.circuit`, completing the rename that introduced `monoidal.Wire`;
-  `cat.Ob` keeps its name. Accessing the old name still works, returning the
-  new class with a `DeprecationWarning` through a module-level `__getattr__`
-  (`utils.deprecated_ob`), on those seven modules and on `compact` and
-  `grammar.pregroup` which re-exported it; trees serialised with an `Ob`
-  factory string load the same way
+  `cat.Ob` keeps its name. The old name is gone with the other
+  backward-compatibility shims, see **Removed**
   ([#566](https://github.com/discopy/discopy/pull/566)).
 
 ### Removed
 
+- Backward compatibility with past DisCoPy versions. The deprecation
+  machinery goes — `utils.deprecated_alias` and the module
+  `__getattr__`s serving `PRO` for `Nat` and `Ob` for `Wire` — along
+  with every shim that read a past version's serialisation: the
+  `__setstate__` methods migrating attribute names out of old pickles,
+  the `from_tree` branches reading outdated dumps (`cat.Bubble`'s
+  singular `'arg'`, `monoidal.Ty`'s `'objects'`, `monoidal.Diagram`'s
+  `'boxes'` and `'offsets'`, a plain `cat.Ob` as a wire), the aliases
+  `quantum.circuit` kept for pickles from v0.6 and the cross-version
+  pickle fixtures that exercised them. What the current version writes
+  reads back, which the `pickling`, `copying` and `serialisation`
+  axioms state; what a past version wrote does not.
 - `biclosed.Variable` and `closed.Variable` require an atomic codomain:
   the abstraction machinery indexes contexts and free variables by
   variable, counting on that index to coincide with a wire index, so a
@@ -976,8 +990,7 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   ([#742](https://github.com/discopy/discopy/issues/742)).
 - `utils.from_tree` resolves a parameterised factory name such as
   `"tensor.Box[float]"` to its origin class instead of raising
-  `AttributeError`, and `cat.Bubble.from_tree` warns on the outdated
-  singular `'arg'` key like the other outdated-dumps shims
+  `AttributeError`
   ([#742](https://github.com/discopy/discopy/issues/742)).
 - `Stream[C].sequence` builds a box of `C` rather than a
   `symmetric.Box`, which `Stream.__init__` then wrapped in a `C` diagram

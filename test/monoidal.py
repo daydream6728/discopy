@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-import pickle
 
 from pytest import raises
 
@@ -65,15 +64,11 @@ def test_coloured_Ty_power_and_steps():
         Ty(Wire("y", red, green)) ** 2
 
 
-def test_coloured_Ty_tree_and_legacy_tree():
+def test_coloured_Ty_tree():
     red, green = map(Colour, ("red", "green"))
     typ = Ty(Wire("x", red, green))
     assert from_tree(typ.to_tree()) == typ
     assert from_tree(Ty.id(red).to_tree()) == Ty.id(red)
-    legacy = {
-        'factory': 'monoidal.Ty',
-        'inside': [{'factory': 'cat.Ob', 'name': 'x'}]}
-    assert from_tree(legacy) == Ty('x')
 
 
 def test_Diagram_rejects_boxless_layer():
@@ -220,21 +215,6 @@ def test_Layer_getitem():
     f = Box('f', 'x', 'x')
     layer = Layer(Ty(), f, Ty())
     assert layer[0] == f and layer.boxes_and_types == (Ty(), f, Ty())
-
-
-def test_Layer_legacy_serialisation():
-    f = Box('f', 'x', 'y')
-    factory = Layer(f).to_tree()['factory']
-    tree = dict(
-        factory=factory,
-        inside=[Ty().to_tree(), f.to_tree(), Ty().to_tree()])
-    assert from_tree(tree).boxes_or_types == (f, )
-
-    legacy = Layer(f)
-    legacy.boxes_or_types = (Ty(), f, Ty())
-    restored = pickle.loads(pickle.dumps(legacy))
-    assert restored == Layer(f)
-    assert restored.boxes_or_types == (f, )
 
 
 def test_Layer_coloured_units():

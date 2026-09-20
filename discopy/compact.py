@@ -63,7 +63,6 @@ from discopy.abc import (
     BiclosedCategory, CompactCategory, PivotalCategory, RibbonCategory)
 from discopy.axioms import Serialisable
 from discopy.cat import factory, Generator
-from discopy.utils import deprecated_alias
 from discopy.pivotal import Wire, Ty  # noqa: F401
 
 
@@ -146,4 +145,3 @@ class Equation(symmetric.Equation):
 Diagram.Equation = Equation
 
 
-__getattr__ = deprecated_alias(__name__, {"Ob": "Wire"})

@@ -77,7 +77,7 @@ from discopy.cat import factory, Generator
 from discopy.matrix import backend
 from discopy.tensor import Dim, Tensor
 from discopy.utils import (
-    assert_isinstance, classproperty, deprecated_alias, factory_name)
+    assert_isinstance, classproperty, factory_name)
 
 
 class Wire(frobenius.Wire):
@@ -131,12 +131,6 @@ class Digit(Wire):
         name = "bit" if dim == 2 else f"Digit({dim})"
         super().__init__(name, dim)
 
-    def __setstate__(self, state):
-        if "_dim" in state:
-            state["dim"] = state["_dim"]
-            del state["_dim"]
-        super(type(self), self).__setstate__(state)
-
 
 class Qudit(Wire):
     """
@@ -152,8 +146,6 @@ class Qudit(Wire):
     def __init__(self, dim, z=0):
         name = "qubit" if dim == 2 else f"Qudit({dim})"
         super().__init__(name, dim)
-
-    __setstate__ = Digit.__setstate__
 
 
 @factory
@@ -938,12 +930,6 @@ class Box(tensor.Box[complex], Circuit):
         self._is_mixed = is_mixed
         tensor.Box[complex].__init__(self, name, dom, cod, data, **params)
 
-    def __setstate__(self, state):
-        if "_is_mixed" not in state:
-            state["_is_mixed"] = state["_mixed"]
-            del state["_mixed"]
-        super().__setstate__(state)
-
     @property
     def array(self):
         """ The array of a quantum box. """
@@ -1078,4 +1064,3 @@ Layer = Circuit.Layer
 Id = Circuit.id
 
 
-__getattr__ = deprecated_alias(__name__, {"Ob": "Wire"})

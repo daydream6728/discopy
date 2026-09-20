@@ -161,7 +161,6 @@ from discopy.utils import (
     assert_isinstance,
     AxiomError,
     BinaryBoxConstructor,
-    deprecated_alias,
     factory_name,
 )
 
@@ -186,12 +185,6 @@ class Wire(monoidal.Wire):
     >>> a = Wire('a')
     >>> assert a.l.r == a.r.l == a and a != a.l.l != a.r.r
     """
-
-    def __setstate__(self, state):
-        if '_z' in state:  # Backward compatibility
-            self.z = state['_z']
-            del state['_z']
-        super().__setstate__(state)
 
     def __init__(self, name: str, z: int = 0,
                  dom: monoidal.Colour = monoidal.transparent,
@@ -284,11 +277,6 @@ class Ty(Pregroup, biclosed.Ty):
         "Rigid types have no dagger, use pivotal instead.")
     dagger_contravariance = Category.dagger_contravariance.inapplicable(
         "Rigid types have no dagger, use pivotal instead.")
-
-    def __setstate__(self, state):
-        if '_z' in state:  # Backward compatibility
-            del state['_z']
-        super().__setstate__(state)
 
     def assert_isadjoint(self, other):
         """
@@ -715,12 +703,6 @@ class Box(biclosed.Box, Diagram):
     z = 0
     serialised_attrs = cat.Box.serialised_attrs + ('z', )
 
-    def __setstate__(self, state):
-        if '_z' in state:  # Backward compatibility
-            self.z = state['_z']
-            del state['_z']
-        super().__setstate__(state)
-
     def __init__(self, name: str, dom: Ty, cod: Ty, data=None, z=0, **params):
         self.z = z
         biclosed.Box.__init__(self, name, dom, cod, data=data, **params)
@@ -959,4 +941,3 @@ class Equation(biclosed.Equation):
 Diagram.Equation = Equation
 
 
-__getattr__ = deprecated_alias(__name__, {"Ob": "Wire", "PRO": "Nat"})

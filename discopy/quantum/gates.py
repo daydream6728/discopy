@@ -48,7 +48,6 @@ Summary
         sqrt
         scalar
 """
-import copy
 from math import e, pi
 
 from discopy import messages
@@ -236,16 +235,6 @@ class QuantumGate(Box):
         if data is not None and hasattr(data, "__len__"):
             data = [complex(v) for v in data]
         super().__init__(name, dom, cod, data, **params)
-
-    def __setstate__(self, state):
-        if "_array" in state and state["_array"] is not None:
-            state["data"] = state['_array'].flatten().tolist()
-        if "_name" in state:
-            gate = GATES.get(state["_name"])
-            if isinstance(gate, QuantumGate):
-                state["data"] = copy.deepcopy(gate.data)
-                state["_z"] = gate.z
-        super().__setstate__(state)
 
     def setoid(self):
         """ Avoid checking for equality of matrices when comparing gates. """
@@ -726,10 +715,6 @@ class Scalar(Parametrized):
         dom, cod = qubit ** 0, qubit ** 0
         super().__init__(name, dom, cod, is_mixed=is_mixed, data=data, z=None)
 
-    def __setstate__(self, state):
-        state["_z"] = None
-        super().__setstate__(state)
-
     def __repr__(self):
         return super().__repr__()[:-1] + (
             ', is_mixed=True)' if self.is_mixed else ')')
@@ -759,11 +744,6 @@ class Sqrt(Scalar):
     def __init__(self, data):
         super().__init__(data, name="sqrt")
         self.drawing_name = f"sqrt({format_number(data)})"
-
-    def __setstate__(self, state):
-        super().__setstate__(state)
-        if self.is_dagger is None:
-            self.is_dagger = False
 
     @property
     def array(self):

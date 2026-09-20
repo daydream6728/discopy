@@ -164,9 +164,7 @@ from discopy.axioms import GENERATORS, no_strategy
 from discopy.abc import DelayedMonoid, FeedbackCategory
 from discopy.axioms import inapplicable
 from discopy.utils import (
-    deprecated_alias,
-    factory, Generator, factory_name, assert_isinstance, AxiomError,
-)
+    factory, Generator, factory_name, assert_isinstance, AxiomError)
 
 
 def str_delayed(time_step: int):
@@ -767,4 +765,3 @@ class Equation(markov.Equation):
 Diagram.Equation = Equation
 
 
-__getattr__ = deprecated_alias(__name__, {"Ob": "Wire"})

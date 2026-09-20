@@ -69,7 +69,7 @@ from discopy import (
 from discopy.abc import HypergraphCategory
 from discopy.axioms import Serialisable
 from discopy.cat import factory, Generator
-from discopy.utils import assert_isatomic, deprecated_alias, factory_name
+from discopy.utils import assert_isatomic, factory_name
 
 
 class Wire(pivotal.Wire):
@@ -228,15 +228,6 @@ class Spider(Box):
             self, name, dom, cod, data=data, **params)
         self.drawing_name = "" if not data else str(data)
 
-    def __setstate__(self, state):
-        if "_name" in state and state["_name"] == type(self).__name__:
-            phase = state.get("_data", None)
-            str_data = "" if phase is None else f", {phase}"
-            cod, dom = state['_dom'], state['_cod']
-            state["_name"] = type(self).__name__\
-                + f"({dom.n}, {cod.n}, {state['_typ']}{str_data})"
-        super().__setstate__(state)
-
     @property
     def phase(self):
         """ The phase of the spider. """
@@ -367,4 +358,3 @@ class Equation(compact.Equation):
 Diagram.Equation = Equation
 
 
-__getattr__ = deprecated_alias(__name__, {"Ob": "Wire", "PRO": "Nat"})
