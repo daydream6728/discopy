@@ -11,7 +11,7 @@
 - [x] One `unfold` shared by `bound_of` and `interpret`, the
       bare-variable sequent annotations of `discopy.abc` respelled with
       `Hom`, operator patterns and equation verdicts staying `Annotated`
-- [ ] `ty check` green, `pflake8`, pytest, CHANGELOG
+- [x] `ty check` green, `pflake8`, pytest, CHANGELOG
 
 > actually claude/proof-search-on-serde was an earlier experiment with
 > type annotations for proof search, another more advanced branch at
@@ -23,14 +23,14 @@
 > and all the other free categories should inherit it as is, only being
 > extended with new rules.
 
-- [WIP] @session_01UrSNrBcfEnb46fFG9LYRPo-2026-09-19 21:05 Read
-      `claude/diagram-search-strategies-766716` in full — `pattern.py`,
-      `search.py`, `axioms.py`, the rule idiom of `monoidal` and each
-      level — and map its concepts onto this branch's
-- [ ] Design the unification: their search semantics under our typed
+- [x] Read `claude/diagram-search-strategies-766716` in full —
+      `pattern.py`, `search.py`, `axioms.py`, the rule idiom of
+      `monoidal` and each level — and map its concepts onto this
+      branch's
+- [x] Design the unification: their search semantics under our typed
       `Hom`/`Annotated` front-end, one generic rule-based strategy on
       `monoidal.Diagram`, levels only adding rules
-- [ ] Merge the branch (append-only), resolve, implement the unified
+- [x] Merge the branch (append-only), resolve, implement the unified
       design
 - [ ] `ty check` green, `pflake8`, pytest, proptest fast profile,
       CHANGELOG

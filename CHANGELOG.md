@@ -63,8 +63,14 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   memory on the left too), `braid_inverse` and `symmetric.Diagram.cycle`
   — a native permutation of any length — join the generators, a
   fixed vocabulary is a dictionary of `Rule.constant` boxes (the words
-  of a pregroup grammar, the gates of a circuit), and a term built
-  outside its declared conclusion is an `AxiomError`. `cat.Arrow`
+  of a pregroup grammar, the gates of a circuit) whose search leaves
+  out the free box, a dead-ended goal is retried a bounded number of
+  times before the example is rejected, and a term built
+  outside its declared conclusion is an `AxiomError`.
+  `pregroup.Diagram.strategy` draws a sequence of words reduced onto
+  the goal by `eager_parse`, rejecting an utterance the parser
+  rejects, where the generic walk almost never meets a grammatical
+  one. `cat.Arrow`
   keeps a recursive path strategy and `cat.Functor` enrols in the
   matrix with `Relabelling` endofunctors and its own classifications,
   functor laws quantifying their functor with `Self` and their source

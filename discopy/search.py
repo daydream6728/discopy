@@ -300,6 +300,7 @@ def search(category: type[abc.Category], free: Callable | None = None, *,
             raise DeadEnd(f"{dom} -> {cod}")
         choice = draw(st.sampled_from(candidates))
         if choice is None:
+            assert free is not None
             return draw(free(dom=dom, cod=cod, types=types))
         rule, found = choice
         subst, residuals = draw(st.sampled_from(found))
