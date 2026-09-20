@@ -254,7 +254,6 @@ the Hypothesis ``uv.lock`` pins, and the artifact replays it on every
 pull request and, through the ``shared`` profile, on your machine.
 """
 
-from __future__ import annotations
 
 import inspect
 import pickle
@@ -269,13 +268,21 @@ from typing import TYPE_CHECKING, Self
 from discopy.pattern import (  # noqa: F401
     C0,
     C1,
+    SELF,
     Atom,
     Count,
     Declaration,
+    Delay,
     Hom,
     HomType,
+    L,
+    Over,
+    R,
+    Repeat,
     Sequent,
     Sort,
+    Tensor,
+    Under,
     Unit,
     Var,
     declarations,
@@ -347,7 +354,7 @@ class Equation[ar](NamedGeneric):
         if up_to is not None:
             self.up_to = up_to
 
-    def modulo(self, up_to: Callable) -> Equation:
+    def modulo(self, up_to: Callable) -> "Equation":
         """
         The same equation compared up to the given function, rebinding
         :attr:`up_to`, whose name the attribute already takes.
@@ -408,7 +415,7 @@ class Testable[T](metaclass=ABCMeta):
     """
 
     @classmethod
-    def strategy(cls, **params) -> st.SearchStrategy[T]:
+    def strategy(cls, **params) -> "st.SearchStrategy[T]":
         """
         Build a `search strategy
         <https://hypothesis.readthedocs.io/en/latest/data.html>`_ for
@@ -439,7 +446,7 @@ class Testable[T](metaclass=ABCMeta):
             f"No search strategy implemented for {cls.__name__}")
 
     @classproperty
-    def axioms(cls: type) -> dict[str, Axiom]:
+    def axioms(cls: type) -> dict[str, "Axiom"]:
         """
         The axioms inherited by ``cls``, by name, subclasses overriding
         bases: assigning anything that is not an axiom over an inherited
@@ -471,7 +478,7 @@ class Testable[T](metaclass=ABCMeta):
         return dict(public(vars(discopy)), **public(vars(module)))
 
     @classmethod
-    def subclasses(cls) -> tuple[type[Testable], ...]:
+    def subclasses(cls) -> tuple[type["Testable"], ...]:
         """
         Every transitive subclass of ``cls``, ``cls`` itself included.
 
@@ -605,7 +612,8 @@ class Axiom[**P, T](Declaration[P, T]):
         return tuple(
             inspect.signature(self.function).parameters.values())[1:]
 
-    def equations(self, evaluate: Callable, **params) -> st.SearchStrategy:
+    def equations(self, evaluate: Callable,
+                  **params) -> "st.SearchStrategy":
         """
         The law evaluated by a function of its arguments, drawn from their
         patterns; keyword arguments are passed to the strategy of each hom
@@ -626,7 +634,7 @@ class Axiom[**P, T](Declaration[P, T]):
 
         return arguments()
 
-    def strategy(self, **params) -> st.SearchStrategy[Equation]:
+    def strategy(self, **params) -> "st.SearchStrategy[Equation]":
         """
         Generate the equations the bound axiom states: a law declared
         broken raises its :class:`AxiomFailure` from the draw, as it does
@@ -942,7 +950,7 @@ class Serialisable(Testable):
         return tree
 
     @classmethod
-    def from_tree(cls, tree: dict) -> Serialisable:
+    def from_tree(cls, tree: dict) -> "Serialisable":
         """
         Decode a serialised DisCoPy object, see :func:`loads`.
 

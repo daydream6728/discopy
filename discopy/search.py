@@ -164,7 +164,7 @@ class Generator(Rule):
         try:
             sequent = parse(self.function)
         except TypeError:
-            return  # Validated lazily, once the owner bounds the sorts.
+            return  # Validated lazily, once the owner is known.
         self.validate(sequent)
 
     @staticmethod

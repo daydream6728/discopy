@@ -57,8 +57,6 @@ The hexagon equations hold on the nose.
     :align: center
 """
 
-from __future__ import annotations
-
 from typing import Any, ClassVar, Self
 
 from collections.abc import Callable
@@ -79,7 +77,7 @@ class Wire(monoidal.Wire):
     braids or swaps in any meaningful way, so its colours are always
     transparent.
     """
-    def dagger(self) -> Wire:
+    def dagger(self) -> "Wire":
         return self
 
 
@@ -111,7 +109,7 @@ class Diagram(monoidal.Diagram, BraidedCategory):
         """
         return hexagon(cls, cls.Braid)(left, right)
 
-    def simplify(self) -> Diagram:
+    def simplify(self) -> "Diagram":
         """ Remove braids followed by their dagger. """
         layers = [layer.boxes_and_types for layer in self.inside]
         for i, ((x, f, _), (y, g, _)) in enumerate(
@@ -122,7 +120,8 @@ class Diagram(monoidal.Diagram, BraidedCategory):
                     inside, self.dom, self.cod, _scan=False).simplify()
         return self
 
-    def naturality(self, i: int, left=True, down=True, braid=None) -> Diagram:
+    def naturality(self, i: int, left=True, down=True,
+                   braid=None) -> "Diagram":
         """
         Slide a box through a braid.
 

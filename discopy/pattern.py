@@ -14,34 +14,37 @@ sorts, its parameters the premises, its return annotation the conclusion.
         @abstractmethod
         def tensor[A, B, C, D](
                 self: Hom[C1, A, B], other: Hom[C1, C, D]
-        ) -> Annotated[C1, "A @ C", "B @ D"]:
+        ) -> Annotated[C1, Tensor[A, C], Tensor[B, D]]:
             ...
 
-The signature typechecks as it reads: a metavariable is one of the
-method's own :pep:`695` type parameters, its sort the bound — an object
-of ``C0`` when unbounded, an :class:`Atom` or a :class:`Count` when
-declared — ``Hom[C1, A, B]`` types as a plain ``C1`` by substituting the
-base of ``type Hom[C, A, B] = Annotated[C, A, B]``, and a pattern with
-an operator on a type parameter is quoted in the metadata of a
-``typing.Annotated``, which is no part of the type. The module stating
-it defers its annotations with ``from __future__ import annotations``
-and :func:`parse` evaluates each in an environment where the type
-parameters are :class:`Var` s, ``C0``, ``C1`` and ``Self``
-:class:`Sort` s and ``Hom`` and ``Annotated`` build the :class:`HomType`
-between two boundaries: ``X @ X.r`` is a :class:`Tensor` of a variable
-with its :class:`Adjoint`, ``M.d`` a :class:`Delay`, ``X << Y`` an
-:class:`Exp`, ``X ** N`` a :class:`Repeat` and ``Unit[C0]`` the
-:class:`Unit`.
+The signature typechecks as it reads and evaluates to the sequent it
+states: a metavariable is one of the method's own :pep:`695` type
+parameters, its sort the bound — an object of ``C0`` when unbounded, an
+:class:`Atom` or a :class:`Count` when declared — ``Hom[C1, A, B]``
+types as a plain ``C1`` by substituting the base of ``type Hom[C, A, B]
+= Annotated[C, A, B]``, and a compound pattern is a pattern class
+subscripted with the type parameters in the metadata of a
+``typing.Annotated``, which is no part of the type: ``Tensor[X, R[X]]``
+is the :class:`Tensor` of a variable with its right :class:`Adjoint`,
+``Delay[M]`` a :class:`Delay`, ``Over[Z, Y]`` and ``Under[Y, Z]`` the
+:class:`Exp` s, ``Repeat[X, N]`` a :class:`Repeat` and ``Unit[C0]`` the
+:class:`Unit`. The module stating a declaration does *not* defer its
+annotations, so each one is an object the interpreter builds at
+definition time — the subscript of a pattern class *is* the pattern —
+and :func:`parse` collects the sequent from ``__annotations__``,
+``__type_params__``, ``__bound__``, ``__metadata__`` and ``__args__``
+without evaluating anything itself.
 
-A pattern is generic in the colours ``C0`` and the objects ``C1`` of the
-monoid it stands in, and the bound of ``C1`` is the least structure the
-pattern needs: a :class:`Tensor` needs a :class:`abc.ColouredMonoid`, an
-:class:`Adjoint` a :class:`abc.Pregroup`, a :class:`Delay` a
-:class:`abc.DelayedMonoid`. A variable's sort carries the bound of the
-objects of the class stating the rule, ``C0: Pregroup``, and a pattern
-refuses a variable whose sort is bounded below what it needs. Those
-bounds are the classes of :mod:`discopy.abc`, evaluated lazily, so that
-this module imports it while it imports this one.
+Each pattern class declares its :meth:`Pattern.level`, the least
+structure the objects it stands in must have: a :class:`Tensor` needs a
+:class:`abc.ColouredMonoid`, an :class:`Adjoint` a :class:`abc.Pregroup`,
+a :class:`Delay` a :class:`abc.DelayedMonoid`. A variable's sort carries
+the bound of the objects of the class stating the rule, ``C0: Pregroup``,
+and a pattern refuses one bounded below what its shape needs — at
+construction when the bound is known, at :func:`parse` with the class
+stating the declaration otherwise. The levels are the classes of
+:mod:`discopy.abc`, read lazily, so that this module imports it while it
+imports this one.
 
 A conclusion is matched against a goal, a pair of an optional domain and
 codomain, by unification over the free monoid of objects: a
@@ -63,8 +66,12 @@ Summary
     Unit
     Tensor
     Adjoint
+    L
+    R
     Delay
     Exp
+    Over
+    Under
     Repeat
     HomType
     Sort
@@ -81,12 +88,10 @@ Summary
         :toctree:
 
         parse
-        read
+        interpret
         cell
         declarations
 """
-
-from __future__ import annotations
 
 import __future__
 import inspect
@@ -141,16 +146,16 @@ class Sort:
     atomic: bool = False
     bound: type | None = field(default=None, compare=False, repr=False)
 
-    def __getattr__(self, name: str) -> Sort:
+    def __getattr__(self, name: str) -> "Sort":
         if name.startswith("_"):
             raise AttributeError(name)
         return Sort(f"{self.head}.{name}", self.atomic)
 
-    def __getitem__(self, key) -> HomType:
+    def __getitem__(self, key) -> "HomType":
         if not isinstance(key, tuple) or len(key) != 2:
             raise TypeError(f"Expected a domain and a codomain, got {key}.")
         dom, cod = key
-        return HomType(pattern(dom), pattern(cod), self.head)
+        return HomType(operand(dom), operand(cod), self.head)
 
     def resolve(self, scope: dict) -> type:
         """ The type the head stands for, a path from a root of the scope. """
@@ -180,8 +185,8 @@ class Sort:
 class Atom:
     """
     The sort of atomic objects: the bound ``def cups[X: Atom]`` declares
-    ``X`` an object with exactly one generator, and ``Atom[C0]`` in a
-    quoted pattern stands for the same sort.
+    ``X`` an object with exactly one generator, and ``Atom[C0]`` in the
+    metadata of an annotation stands for the same sort.
 
     >>> Atom[Sort("C0")]
     Sort(head='C0', atomic=True)
@@ -197,7 +202,7 @@ class Count:
     """
 
 
-def sort(value) -> Sort:
+def sort(value) -> "Sort":
     """
     A sort as written in a bound: itself, :class:`Atom` or :class:`Count`
     bare, a type parameter by name and bounded as it is, or a class of
@@ -218,11 +223,22 @@ def sort(value) -> Sort:
     raise TypeError(f"Expected a sort, got {value!r}.")
 
 
-def pattern(value) -> Pattern:
+def pattern(value) -> "Pattern":
     """ A pattern as an operand, refusing anything else. """
     if not isinstance(value, Pattern):
         raise TypeError(f"Expected a pattern, got {value!r}.")
     return value
+
+
+def operand(value) -> "Pattern":
+    """
+    A pattern as the subscript of a pattern class: itself, or a type
+    parameter as the variable of the sort its bound declares, so that
+    ``Tensor[X, R[X]]`` in an annotation builds the pattern it reads as.
+    """
+    if isinstance(value, TypeVar):
+        return Var.of(value)
+    return pattern(value)
 
 
 class Pattern[C0, C1: abc.Category](ABC):
@@ -237,20 +253,39 @@ class Pattern[C0, C1: abc.Category](ABC):
     def __post_init__(self):
         """
         Check the objects the pattern stands for are bounded by its
-        :meth:`level`; a variable or a hom adds no structure to its parts
-        and skips the check.
+        :meth:`level` — when a bound is known: a pattern built from bare
+        type parameters knows none until :func:`parse` reads it with the
+        class stating it, which checks then; a variable or a hom adds no
+        structure to its parts and skips the check.
         """
         bound, required = self.bound, self.level()
-        if bound is None or not issubclass(bound, required):
-            raise TypeError(f"{self} needs a {required.__name__}, its objects "
-                            + ("are unbounded." if bound is None
-                               else f"are bounded by {bound.__name__}."))
+        if bound is not None and not issubclass(bound, required):
+            raise TypeError(
+                f"{self} needs a {required.__name__}, its objects "
+                f"are bounded by {bound.__name__}.")
 
     @classmethod
-    def level(cls) -> type[abc.Category]:
+    def level(cls) -> "type[abc.Category]":
         """ The bound of ``C1``, the least structure the pattern needs. """
         return cls.__type_params__[  # ty: ignore[invalid-return-type]
             1].__bound__
+
+    @property
+    def parts(self) -> tuple["Pattern", ...]:
+        """ The immediate sub-patterns, the fields holding one. """
+        values = (
+            getattr(self, name)
+            for name in getattr(self, "__dataclass_fields__", ()))
+        return tuple(
+            part for value in values
+            for part in (value if isinstance(value, tuple) else (value, ))
+            if isinstance(part, Pattern))
+
+    def walk(self) -> Iterator["Pattern"]:
+        """ The pattern and every sub-pattern below it. """
+        yield self
+        for part in self.parts:
+            yield from part.walk()
 
     @property
     @abstractmethod
@@ -326,11 +361,11 @@ class Pattern[C0, C1: abc.Category](ABC):
         raise AttributeError(name)
 
 
-C0, C1 = Sort("C0"), Sort("C1")
+C0, C1, SELF = Sort("C0"), Sort("C1"), Sort("Self")
 """
-The objects and arrows of the category a declaration is bound to, in the
-environment its annotations are read in and in a module stating a rule on
-a class with no type parameters of its own.
+The objects, the arrows and the terms of the category a declaration is
+bound to: what the annotations of a module-level declaration name in
+their metadata, where a method names the type parameters of its class.
 """
 
 
@@ -350,10 +385,19 @@ class Var[C0, C1: abc.Category](Pattern[C0, C1]):
     """ A variable of a given sort, or between the boundaries of a hom. """
 
     name: str
-    sort: Sort | HomType
+    sort: "Sort | HomType"
 
     def __post_init__(self):
         pass
+
+    @classmethod
+    def of(cls, parameter: TypeVar) -> "Var":
+        """
+        The variable a type parameter declares, of the sort its bound
+        states, see :func:`sort_of`; the bound of the objects is attached
+        when :func:`parse` reads the class stating the declaration.
+        """
+        return cls(parameter.__name__, sort_of(parameter, None))
 
     @property
     def variables(self):
@@ -378,9 +422,9 @@ class Var[C0, C1: abc.Category](Pattern[C0, C1]):
 
 
 @dataclass(frozen=True)
-class Unit[C0, C1: abc.ColouredMonoid](Pattern[C0, C1]):
+class Unit(Pattern):
     """
-    The unit of a monoid of objects, ``Unit[C0]`` in a quoted pattern.
+    The unit of a monoid of objects, ``Unit[C0]`` in an annotation.
 
     >>> Unit[Sort(bound=abc.ColouredMonoid)]
     Unit(sort=Sort(head='C0', atomic=False))
@@ -390,6 +434,10 @@ class Unit[C0, C1: abc.ColouredMonoid](Pattern[C0, C1]):
 
     def __class_getitem__(cls, item):
         return cls(sort(item))
+
+    @classmethod
+    def level(cls) -> "type[abc.Category]":
+        return abc.ColouredMonoid
 
     variables = ()
 
@@ -409,10 +457,23 @@ class Unit[C0, C1: abc.ColouredMonoid](Pattern[C0, C1]):
 
 
 @dataclass(frozen=True)
-class Tensor[C0, C1: abc.ColouredMonoid](Pattern[C0, C1]):
-    """ The tensor of two or more patterns, flattened. """
+class Tensor(Pattern):
+    """
+    The tensor of two or more patterns, flattened: ``Tensor[A, C]`` in an
+    annotation, or ``@`` on patterns already built.
+    """
 
     factors: tuple[Pattern, ...]
+
+    @classmethod
+    def level(cls) -> "type[abc.Category]":
+        return abc.ColouredMonoid
+
+    def __class_getitem__(cls, items):
+        if not isinstance(items, tuple):
+            raise TypeError(f"A tensor takes two or more factors: {items!r}.")
+        return cls(tuple(
+            factor for item in items for factor in factors(operand(item))))
 
     @property
     def variables(self):
@@ -448,8 +509,9 @@ class Tensor[C0, C1: abc.ColouredMonoid](Pattern[C0, C1]):
 @dataclass(frozen=True)
 class Adjoint[C0, C1: abc.Pregroup, S: str](Pattern[C0, C1]):
     """
-    The left or right adjoint ``X.l`` or ``X.r`` of a pattern, inverted by
-    the adjoint on the other side when matching.
+    The left or right adjoint ``X.l`` or ``X.r`` of a pattern — ``L[X]``
+    or ``R[X]`` in an annotation — inverted by the adjoint on the other
+    side when matching.
     """
 
     base: Pattern
@@ -476,11 +538,33 @@ class Adjoint[C0, C1: abc.Pregroup, S: str](Pattern[C0, C1]):
         return f"{self.base}.{self.side}"
 
 
+class L:
+    """ The left :class:`Adjoint` of a pattern, ``L[X]`` for ``x.l``. """
+    def __class_getitem__(cls, item) -> Adjoint:
+        return Adjoint(operand(item), "l")
+
+
+class R:
+    """ The right :class:`Adjoint` of a pattern, ``R[X]`` for ``x.r``. """
+    def __class_getitem__(cls, item) -> Adjoint:
+        return Adjoint(operand(item), "r")
+
+
 @dataclass(frozen=True)
-class Delay[C0, C1: abc.DelayedMonoid](Pattern[C0, C1]):
-    """ The delay ``M.d`` of a pattern by one time step. """
+class Delay(Pattern):
+    """
+    The delay ``M.d`` of a pattern by one time step, ``Delay[M]`` in an
+    annotation.
+    """
 
     base: Pattern
+
+    @classmethod
+    def level(cls) -> "type[abc.Category]":
+        return abc.DelayedMonoid
+
+    def __class_getitem__(cls, item):
+        return cls(operand(item))
 
     @property
     def variables(self):
@@ -499,7 +583,10 @@ class Delay[C0, C1: abc.DelayedMonoid](Pattern[C0, C1]):
 
 @dataclass(frozen=True)
 class Exp[C0, C1: abc.ResiduatedMonoid, S: str](Pattern[C0, C1]):
-    """ An exponential ``X << Y`` or ``X >> Y`` of two patterns. """
+    """
+    An exponential ``X << Y`` or ``X >> Y`` of two patterns —
+    ``Over[X, Y]`` or ``Under[X, Y]`` in an annotation.
+    """
 
     symbol: S
     left: Pattern
@@ -524,16 +611,42 @@ class Exp[C0, C1: abc.ResiduatedMonoid, S: str](Pattern[C0, C1]):
         return f"({self.left} {self.symbol} {self.right})"
 
 
+class Over:
+    """ The :class:`Exp` ``x << y``, ``Over[X, Y]`` in an annotation. """
+    def __class_getitem__(cls, item) -> Exp:
+        base, exponent = item
+        return Exp("<<", operand(base), operand(exponent))
+
+
+class Under:
+    """ The :class:`Exp` ``x >> y``, ``Under[X, Y]`` in an annotation. """
+    def __class_getitem__(cls, item) -> Exp:
+        exponent, base = item
+        return Exp(">>", operand(exponent), operand(base))
+
+
 @dataclass(frozen=True)
-class Repeat[C0, C1: abc.ColouredMonoid](Pattern[C0, C1]):
+class Repeat(Pattern):
     """
-    An atomic pattern repeated a variable number of times, ``X ** N`` for
-    the legs of a spider: matching binds the count to the number of atoms
-    and the base to the one atom they all equal.
+    An atomic pattern repeated a variable number of times — ``X ** N``,
+    ``Repeat[X, N]`` in an annotation — for the legs of a spider:
+    matching binds the count to the number of atoms and the base to the
+    one atom they all equal.
     """
 
     base: Pattern
     count: Var
+
+    @classmethod
+    def level(cls) -> "type[abc.Category]":
+        return abc.ColouredMonoid
+
+    def __class_getitem__(cls, item):
+        base, count = item
+        count = operand(count)
+        if not isinstance(count, Var):
+            raise TypeError(f"Expected a Count variable, got {count!r}.")
+        return cls(operand(base), count)
 
     @property
     def variables(self):
@@ -668,7 +781,10 @@ def sort_of(parameter: TypeVar, level: type | None) -> Sort | HomType:
     stated outside a class. The ``level`` is the bound of the objects of
     the class stating the declaration, carried by every object sort.
     """
-    bound = parameter.__bound__
+    try:
+        bound = parameter.__bound__
+    except RecursionError as error:
+        raise TypeError(f"{parameter} bounds itself.") from error
     if bound is None:
         return Sort("C0", bound=level)
     if isinstance(bound, type) and issubclass(bound, Atom):
@@ -692,81 +808,75 @@ def sort_of(parameter: TypeVar, level: type | None) -> Sort | HomType:
         f"{parameter} is bounded by {bound!r}, which is no sort.")
 
 
-def read(annotation: str, sorts: dict[str, Sort | HomType],
-         namespace: dict | None = None) -> Pattern | Sort:
-    """
-    Read a pattern or a sort from a deferred annotation, evaluated in the
-    environment of the sequent over the namespace of the function: the
-    metavariables are :class:`Var` s of the given sorts, ``C0``, ``C1``
-    and ``Self`` sorts — the ``C0`` of the environment bounded as the
-    variables of that sort are — ``Hom`` builds the :class:`HomType`
-    between two patterns and ``Annotated`` reads its quoted metadata in
-    the same environment.
+def head_of(base) -> str:
+    """ The head a hom annotation names with its base, ``C1`` by default. """
+    if isinstance(base, TypeVar):
+        return base.__name__
+    if isinstance(base, Sort):
+        return base.head
+    return "C1"
 
+
+def interpret(annotation, sorts: dict[str, Sort | HomType]) -> Pattern | Sort:
+    """
+    The pattern or sort an annotation object carries, collected shallowly
+    — nothing is evaluated, the interpreter built every part when the
+    declaration was defined: a type parameter is the :class:`Var` of its
+    sort, ``Self`` the sort of the terms, a pattern or a sort stands as
+    itself, an ``Annotated`` carries one boundary or the :class:`HomType`
+    between two, and a subscripted ``Hom`` alias is that hom type.
+
+    >>> def cups[X: Atom](
+    ...         cls, left: Annotated[C0, X], right: Annotated[C0, R[X]]
+    ... ) -> Annotated[C1, Tensor[X, R[X]], Unit[C0]]:
+    ...     ...
     >>> sorts = {"X": Sort("C0", atomic=True, bound=abc.Pregroup)}
-    >>> print(read('Annotated[C1, "X @ X.r", "Unit[C0]"]', sorts))
+    >>> print(interpret(cups.__annotations__["return"], sorts))
     C1[X @ X.r, Unit[C0]]
-    >>> print(read('Hom[C1, X, X]', sorts))
-    C1[X, X]
-    >>> read('Atom[Self.dom.ob]', sorts)
-    Sort(head='Self.dom.ob', atomic=True)
-    >>> read("X * 2", sorts)
+    >>> interpret("X @ X.r", sorts)  # doctest: +ELLIPSIS
     Traceback (most recent call last):
      ...
-    TypeError: Cannot read a pattern from X * 2.
+    TypeError: A declaration is stated eagerly, ...
     """
-    level = next((
-        sort.bound for sort in sorts.values()
-        if getattr(sort, "head", None) == "C0"), None)
-    environment: dict[str, object] = {
-        "Atom": Atom, "Count": Count, "Unit": Unit, "Self": Sort("Self"),
-        "C0": Sort("C0", bound=level), "C1": C1,
-        **{name: Var(name, sort) for name, sort in sorts.items()}}
-
-    def evaluate(item):
-        if isinstance(item, str):
-            item = eval(item, namespace or {}, environment)
-        return item
-
-    class AnnotatedForm:
-        """ ``Annotated[...]`` in an annotation: quoted patterns. """
-        def __class_getitem__(cls, item):
-            base, *metadata = item if isinstance(item, tuple) else (item, )
-            metadata = [evaluate(entry) for entry in metadata]
-            if len(metadata) == 1:
-                (value, ) = metadata
-                return value if isinstance(value, Sort) else pattern(value)
-            dom, cod = metadata
-            base = evaluate(base)
-            head = base.head if isinstance(base, Sort) else "C1"
-            return HomType(pattern(dom), pattern(cod), head)
-
-    class HomForm:
-        """ ``Hom[C1, A, B]`` in an annotation: the hom type it aliases. """
-        def __class_getitem__(cls, item):
-            head, dom, cod = (evaluate(entry) for entry in item)
-            return sort(head)[dom, cod]
-
-    environment["Annotated"], environment["Hom"] = AnnotatedForm, HomForm
-    try:
-        value = evaluate(annotation)
-        if not isinstance(value, (Sort, Pattern)):
-            raise TypeError(f"Expected a pattern, got {value!r}.")
-    except Exception as error:
+    if isinstance(annotation, str):
         raise TypeError(
-            f"Cannot read a pattern from {annotation}.") from error
-    return value
+            "A declaration is stated eagerly, without `from __future__ "
+            f"import annotations`, got the string {annotation!r}.")
+    if annotation is Self:
+        return Sort("Self")
+    if isinstance(annotation, TypeVar):
+        name = annotation.__name__
+        return Var(name, sorts[name]) if name in sorts else Sort(name)
+    if isinstance(annotation, (Pattern, Sort)):
+        return annotation
+    if get_origin(annotation) is Annotated:
+        metadata = [
+            interpret(entry, sorts) for entry in annotation.__metadata__]
+        if len(metadata) == 1:
+            (value, ) = metadata
+            return value if isinstance(value, Sort) else pattern(value)
+        dom, cod = metadata
+        return HomType(
+            pattern(dom), pattern(cod), head_of(annotation.__origin__))
+    if isinstance(get_origin(annotation), TypeAliasType):
+        base, dom, cod = get_args(annotation)
+        return HomType(
+            pattern(interpret(dom, sorts)), pattern(interpret(cod, sorts)),
+            head_of(base))
+    raise TypeError(f"Cannot read a pattern from {annotation!r}.")
 
 
 def parse(function: Callable, owner: type | None = None,
           conclusion: bool = True) -> Sequent:
     """
-    The sequent a function states with its signature, deferred with
-    ``from __future__ import annotations``: each type parameter a
-    variable of the sort its bound declares — carrying the bound of the
-    objects of the ``owner`` class stating it — each parameter without a
-    default a premise, the return annotation the conclusion when asked
-    for. An unannotated first parameter, ``cls`` or ``self``, is skipped.
+    The sequent a function states with its signature, collected from the
+    annotation objects the interpreter built when it was defined: each
+    type parameter a variable of the sort its bound declares — carrying
+    the bound of the objects of the ``owner`` class stating it — each
+    parameter without a default a premise, the return annotation the
+    conclusion when asked for. An unannotated first parameter, ``cls``
+    or ``self``, is skipped, and a pattern needing more structure than
+    the owner's objects have is refused.
 
     >>> def then[A, B, C](
     ...         self: Hom[C1, A, B], other: Hom[C1, B, C]
@@ -778,10 +888,11 @@ def parse(function: Callable, owner: type | None = None,
     A: C0, B: C0, C: C0 | self: C1[A, B], other: C1[B, C]
     """
     function = inspect.unwrap(function)
-    if not function.__code__.co_flags & __future__.annotations.compiler_flag:
+    if function.__code__.co_flags & __future__.annotations.compiler_flag:
         raise TypeError(
-            f"{function.__module__} states {function.__name__} without "
-            "`from __future__ import annotations`.")
+            f"{function.__module__} defers its annotations with `from "
+            f"__future__ import annotations`, so {function.__name__} "
+            "states strings where patterns are read.")
     level = None
     if owner is not None:
         if getattr(owner, "__type_params__", ()):
@@ -803,12 +914,24 @@ def parse(function: Callable, owner: type | None = None,
     for name in premises_of(function, missing=True):
         raise TypeError(
             f"{function.__name__} states no pattern for {name}.")
-    premises = premises_of(function)
-    namespace = function.__globals__
+
+    def checked(value):
+        if isinstance(value, Pattern) and level is not None:
+            for node in value.walk():
+                if isinstance(node, (Var, HomType)):
+                    continue
+                required = type(node).level()
+                if not issubclass(level, required):
+                    raise TypeError(
+                        f"{node} needs a {required.__name__}, the objects "
+                        f"of {function.__name__} are bounded by "
+                        f"{level.__name__}.")
+        return value
+
     premises = {
-        name: read(annotations[name], sorts, namespace)
-        for name in premises}
-    returns = read(annotations["return"], sorts, namespace)\
+        name: checked(interpret(annotations[name], sorts))
+        for name in premises_of(function)}
+    returns = checked(interpret(annotations["return"], sorts))\
         if conclusion and "return" in annotations else None
     if conclusion and not isinstance(returns, HomType):
         raise TypeError(f"{function.__name__} concludes no hom type.")

@@ -1,6 +1,5 @@
 """ The rules and generators of a category, and the search by them. """
 
-from __future__ import annotations
 
 from hypothesis import find
 from hypothesis import strategies as st

@@ -1,8 +1,6 @@
-""" The sequent patterns, their reading and their matching. """
+""" The sequent patterns, their collection and their matching. """
 
-from __future__ import annotations
-
-from typing import TypeVar
+from typing import Annotated, TypeVar
 
 from pytest import raises
 
@@ -12,8 +10,8 @@ from discopy.abc import (
     ResiduatedMonoid)
 from discopy.monoidal import Ty
 from discopy.pattern import (
-    C0, C1, Adjoint, Atom, Delay, Exp, HomType, Sequent, Sort, Tensor,
-    Unit, Var, parse, read)
+    C0, C1, SELF, Adjoint, Atom, Delay, Exp, HomType, L, Over, R, Repeat,
+    Sequent, Sort, Tensor, Under, Unit, Var, interpret, parse)
 
 
 x, y, z = map(Ty, "xyz")
@@ -25,31 +23,48 @@ E = Var("E", Sort(bound=ResiduatedMonoid))
 ONE = Unit(A.sort)
 
 
-def test_read():
-    sorts = {"A": A.sort, "M": M.sort}
-    assert read("A @ M", sorts) == Tensor((A, M))
-    assert read("(A @ M) @ A", sorts) == Tensor((A, M, A))
-    assert read("Unit[C0]", sorts) == ONE
-    assert read("M.r", {"M": X.sort}) == Adjoint(Var("M", X.sort), "r")
-    residuated = {"A": E.sort, "M": X.sort}
-    assert read("(A @ M) << Unit[C0]", residuated) == Exp("<<", Tensor((
-        Var("A", E.sort), Var("M", X.sort))), Unit(E.sort))
-    assert read("C0", sorts) == Sort("C0")
-    assert read("Atom[C0]", sorts) == Sort("C0", atomic=True)
-    assert read("Self.dom.ob", sorts) == Sort("Self.dom.ob")
-    assert read("Self.dom.ar[A, M]", sorts) == HomType(A, M, "Self.dom.ar")
-    assert str(read("C1[A @ M.r, Unit[C0]]", {"A": A.sort, "M": X.sort}))\
-        == "C1[A @ M.r, Unit[C0]]"
+def test_subscripts():
+    """ A pattern class subscripted with type parameters is the pattern. """
+    def cups[V: Atom, N](
+            cls, left: Annotated[C0, V], right: Annotated[C0, R[V]]
+    ) -> Annotated[C1, Tensor[V, R[V]], Unit[C0]]:
+        ...
+    conclusion = interpret(
+        cups.__annotations__["return"],
+        {"V": Sort("C0", atomic=True, bound=Pregroup)})
+    assert str(conclusion) == "C1[V @ V.r, Unit[C0]]"
+
+    def spider[V: Atom, N, K](cls) -> Annotated[C1, Repeat[V, N], V]:
+        ...
+    assert str(interpret(
+        spider.__annotations__["return"],
+        {"V": Sort("C0", atomic=True), "N": Sort("Count")}))\
+        == "C1[V ** N, V]"
+
+    def wait[V: Atom, W](cls) -> Annotated[
+            C1, Tensor[L[V], Delay[W]], Tensor[Over[V, W], Under[W, V]]]:
+        ...
+    assert str(interpret(
+        wait.__annotations__["return"],
+        {"V": Sort("C0", atomic=True), "W": Sort("C0")}))\
+        == "C1[V.l @ W.d, (V << W) @ (W >> V)]"
+
     assert A @ M == Tensor((A, M)) and (E << M) == Exp("<<", E, M)
     assert Atom[Sort("C0")] == Sort("C0", atomic=True)
     assert Atom[TypeVar("C1")] == Sort("C1", atomic=True)
     assert Atom[TypeVar("C0", bound=Pregroup)].bound is Pregroup
     assert Atom[Pregroup].bound is Pregroup and Atom[Pregroup].atomic
-    for source in ("A ** 2", "C0 @ A", "C1[A]", "1 @ A"):
-        with raises(TypeError):
-            read(source, sorts)
+    assert Atom[SELF.dom.ob] == Sort("Self.dom.ob", atomic=True)
     with raises(TypeError):
         Atom[A]
+    with raises(TypeError):
+        Tensor[A]
+    with raises(TypeError):
+        Repeat[A, 2]
+    with raises(TypeError):
+        interpret("A @ M", {})
+    with raises(TypeError):
+        interpret(1, {})
     with raises(AttributeError):
         A.__wrapped__
 
@@ -70,8 +85,10 @@ def test_parse():
     assert str(parse(lambda cls: None, conclusion=False)) == ""
     with raises(TypeError):
         parse(law)
-    namespace, source = {}, "def eager(cls, f: int): ..."
-    exec(compile(source, "<eager>", "exec", dont_inherit=True), namespace)
+    namespace = {}
+    exec(compile(  # A module deferring its annotations states strings.
+        "from __future__ import annotations\ndef eager(cls, f: int): ...",
+        "<deferred>", "exec", dont_inherit=True), namespace)
     with raises(TypeError, match="__future__"):
         parse(namespace["eager"], conclusion=False)
 
@@ -126,7 +143,7 @@ def test_sequent_str():
 
 
 def test_level():
-    """ A pattern needs the level its objects are bounded by. """
+    """ A pattern needs the level its known objects are bounded by. """
     assert Var.level() is Category and Tensor.level() is ColouredMonoid
     assert Adjoint.level() is Pregroup and Delay.level() is DelayedMonoid
     assert Exp.level() is ResiduatedMonoid and Unit.level() is ColouredMonoid
@@ -134,12 +151,19 @@ def test_level():
     assert (X << X) == Exp("<<", X, X) and (E >> X) == Exp(">>", E, X)
     assert (X @ D).l == Adjoint(Tensor((X, D)), "l") and D.d == Delay(D)
     assert X.l.r.bound is Pregroup and Unit(X.sort).bound is Pregroup
-    unbounded = Var("U", Sort())
-    for build in (lambda: unbounded @ A, lambda: X.d, lambda: D.r,
-                  lambda: Unit(unbounded.sort), lambda: unbounded << A,
-                  lambda: D >> D, lambda: (A @ X).d, lambda: Adjoint(A, "r"),
-                  lambda: Tensor((unbounded, ))):
+    for build in (lambda: X.d, lambda: D.r, lambda: D >> D,
+                  lambda: (A @ X).d, lambda: Adjoint(A, "r")):
         with raises(TypeError, match="needs a"):
             build()
+    unknown = Var("U", Sort())
+    assert (unknown @ A).bound is None  # Checked by parse, with the owner.
+
+    def snake[U: Atom](cls, u: Annotated[C0, U]) -> Annotated[
+            C1, Tensor[U, R[U]], Unit[C0]]:
+        ...
+    from discopy.abc import MonoidalCategory, RigidCategory
+    with raises(TypeError, match="needs a"):
+        parse(snake, owner=MonoidalCategory)
+    assert parse(snake, owner=RigidCategory).conclusion is not None
     with raises(AttributeError):
         A.z

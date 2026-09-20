@@ -1,8 +1,6 @@
 """ DisCoPy's property-testing module in action. """
 
-from __future__ import annotations
-
-from typing import Self
+from typing import Annotated, Any, Self
 
 from hypothesis import find
 from hypothesis.errors import NoSuchExample
@@ -14,7 +12,7 @@ from discopy.axioms import (
     Axiom, AxiomFailure, Equation, Relabelling, assert_axioms, axiom)
 from discopy.cat import Arrow, Box, Functor, Ob
 from discopy.monoidal import Diagram
-from discopy.pattern import C1
+from discopy.pattern import C1, SELF
 from discopy.utils import AxiomError
 
 
@@ -139,7 +137,9 @@ def test_Relabelling():
 
 def test_functor_law():
     @axiom
-    def preserves_identity(cls, functor: Self, x: Self.dom.ob) -> Equation:
+    def preserves_identity(
+            cls, functor: Self,
+            x: Annotated[Any, SELF.dom.ob]) -> Equation:
         """ A functor preserves the identity on each object. """
         return Equation(
             functor(cls.dom.id(x)), functor.cod.id(functor(x)))

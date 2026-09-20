@@ -11,8 +11,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 - The laws and rules of `discopy.axioms` state their sequent patterns in
   the metadata of `typing.Annotated`, so one annotation carries both the
-  coarse type a typechecker reads and the pattern the runtime
-  interprets, and the metavariables are the declaration's own PEP 695
+  coarse type a typechecker reads and the pattern the interpreter
+  builds, and the metavariables are the declaration's own PEP 695
   type parameters, nothing imported: a rule reads `def then[A, B, C](
   self: Annotated[C1, A, B], other: Annotated[C1, B, C]) ->
   Annotated[C1, A, C]`, a kind is the bound, `def cups[X: Atom]`, the
@@ -24,18 +24,22 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   the cells they compose; ty takes the subscripted alias as a bound
   where pyright expands it and refuses the type variables it finds, and
   mypy cannot scope sibling type parameters as alias arguments, ty
-  being the reference checker — and a
-  pattern with an operator or a subscript on a type parameter is quoted
-  like a forward reference, `-> Annotated[C1, "X @ X.r", ()]`, since a
-  typechecker types the bare operator as one on `typing.TypeVar`.
+  being the reference checker — and a compound pattern is a pattern
+  class subscripted with the type parameters, `-> Annotated[C1,
+  Tensor[X, R[X]], Unit[C0]]`, a value expression in the metadata a
+  typechecker leaves alone, whose subscript *is* the pattern: the
+  interpreter builds it when the declaration is defined.
   `C0` and `C1` name both the type parameters of the class stating the
-  law and the `Sort`s they evaluate to in the environment of a sequent.
-  `parse` evaluates each annotation in the scope PEP 695 gives it — the
-  function's module for the globals and its `__type_params__` for the
-  metavariables, each name one `Var` carrying the sort its bound
-  declares, so unification across a declaration holds by construction,
-  and the spelling typechecks where `def cups[X: Atom[C0]](...) ->
-  C1[X @ X.r, ()]` could not.
+  law and the `Sort`s the annotations of a module-level declaration
+  name in their metadata. Nothing is evaluated and nothing is quoted:
+  the declaring modules state their annotations eagerly, without `from
+  __future__ import annotations` — quoting the forward references of
+  the methods that are never read — and `parse` collects each sequent
+  shallowly from `__annotations__`, `__type_params__`, `__bound__`,
+  `__metadata__` and `__args__`, objects the interpreter built in the
+  scope PEP 695 gives them, so unification across a declaration holds
+  by construction and the environment that impersonated `Annotated`
+  and `Hom` around an `eval` is gone.
 - `discopy.pattern` and `discopy.search`, the proof search on pattern
   sequents of the `diagram-search-strategies` branch unified with the
   typed front-end of this one: a category states its structure as the
@@ -43,16 +47,18 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   method's own PEP 695 type parameters, its sort the bound (`Atom`,
   `Count`, an `abc` class, or `Hom[C1, X, Y]` for a higher cell),
   `Hom[C1, A, B]` types as a plain `C1` and evaluates to the hom type
-  between two boundaries, and a pattern with an operator on a type
-  parameter is quoted in the metadata of `Annotated` — and `parse`
-  reads each sequent lazily in the environment of the class stating
-  it, whose objects bound the sorts. The pattern classes are generic
-  in the colours and objects they stand in, bounded by the least
-  structure each needs — `Unit[C0]` and `Tensor` a `ColouredMonoid`,
-  `Adjoint` a `Pregroup`, `Delay` the new `abc.DelayedMonoid` that
-  `feedback.Ty` is, `Exp` a `ResiduatedMonoid`, `Repeat` (`X ** N`)
-  the legs of a spider — and what matching cannot invert is a residual
-  equation checked once the variables are instantiated.
+  between two boundaries, and a compound pattern is a pattern class
+  subscripted in the metadata of `Annotated`, built by the interpreter
+  when the declaration is defined — and `parse` collects each sequent
+  shallowly from the annotation objects, the class stating it bounding
+  the sorts. Each pattern class declares its level, the least
+  structure the objects it stands in must have — `Unit[C0]` and
+  `Tensor` a `ColouredMonoid`, `Adjoint` (`L[X]`, `R[X]`) a
+  `Pregroup`, `Delay` the new `abc.DelayedMonoid` that `feedback.Ty`
+  is, `Exp` (`Over[X, Y]`, `Under[X, Y]`) a `ResiduatedMonoid`,
+  `Repeat[X, N]` the legs of a spider — and what matching cannot
+  invert is a residual equation checked once the variables are
+  instantiated.
   `monoidal.Diagram.strategy` is the one goal-directed search by the
   `rules` and `generators` a category declares, every level inheriting
   it as is: the sides of a trace, an evaluation, a currying and a
