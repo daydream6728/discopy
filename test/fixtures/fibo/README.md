@@ -16,5 +16,7 @@ serves from `www.omg.org` only: those imports are not copied here and
 tests rely on -- annotation properties and upper-level parents -- except for
 the three minimal stand-ins under `Commons/`: the two datatypes the fixtures
 range over, read as their closest OWL 2 datatype so that HermiT accepts
-them, and the collection membership properties that make a `Portfolio`'s
-holdings queryable.
+them, the date vocabulary those fixtures relate to one of them --
+`ExplicitDate`, `hasObservedDateTime`, `hasDate` -- so that a dated
+observation can be typed by the window it falls in, and the collection
+membership properties that make a `Portfolio`'s holdings queryable.

@@ -9,6 +9,50 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Added
 
+- `docs/notebooks/fx_risk.md`, an FX-risk notebook whose every wire is a
+  FIBO class expression: what a number measures, in which unit, on which
+  date. The quotes are real — `fetch` pulls spot rates, instrument prices
+  and a year of daily closes from Yahoo Finance through `yfinance`, and
+  the covariance is estimated from those returns rather than invented, so
+  only the share counts are made up. A `Market` is an argument
+  everywhere, so the notebook passes a live fetch while the tests pass a
+  fixed snapshot and stay deterministic. One thing the feed decides is
+  the *unit*: `ISF.L` is quoted in `GBp`, pence rather than pounds, so
+  pence is a quoting unit of its own with its own `ExchangeRate`, netted
+  apart from sterling and meeting it only once both are dollar amounts of
+  the same exposure — reading a pence amount at the pound rate is a
+  hundredfold error that does not compose. Its companion
+  `docs/notebooks/financial_ontology.py` builds the world from the
+  offline FIBO fixtures and declares the two things FIBO leaves open — a
+  class per metric kind, and the currency a reporting-currency amount is
+  exposed to — then writes the fund into it,
+  so every number in the notebook is retrieved by HermiT rather than held
+  in Python: which holdings a predicate has, which amount each relates to
+  through `hasAcquisitionPrice` or the local `hasFXDelta`, and what
+  `hasAmount` says it is worth. Netting by the currency a position is
+  *priced* in is a different predicate from netting by the currency it is
+  *exposed* to, which is what keeps a zero-value hedge from vanishing
+  from the report. The plans — exposure, correlated VaR with its Euler
+  components, scenario attribution — are string diagrams over those
+  predicates, drawn and then evaluated by a functor into
+  `discopy.python`, with NumPy doing every arithmetic: a description
+  logic has none, so nothing computed is written back. Mixing currencies
+  or dates, permuting the risk factors or reading a day's exposure as a
+  quarter's are composition errors rather than wrong numbers, and the
+  window version of the risk plan is the same diagram with its wires
+  retyped from a day to an interval, every number becoming an array,
+  licensed by HermiT's proof that the day lies inside the window — and
+  with the real rates of each day behind it, that window is a backtest of
+  the current book rather than a simulation. It replaces
+  `docs/notebooks/ontology/finance.md`, which computed the same risk on
+  invented quotes, untyped dates and standalone volatilities, and the
+  `Commons/DatesAndTimes` stand-in of the fixtures gains the date
+  vocabulary the FIBO modules already reference — `ExplicitDate`,
+  `hasObservedDateTime`, `hasDate` — so that a dated observation can be
+  typed by the window it falls in. The `docs` extra gains `yfinance` and
+  loses `owlrl`, which nothing uses now that the notebook reasons with
+  HermiT rather than materialising an OWL RL closure.
+
 - `discopy.owl`, the category of relations of an OWL ontology, split at
   its predicates and deductive throughout: a `World` pairs a
   [`owlapy`](https://dice-group.github.io/owlapy/) `SyncOntology` with
@@ -27,7 +71,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   boundaries are tuples of predicates, compound class constructs
   included, each wire labelled in math notation by `label` — `Person ⊓
   ∃owns.Dog` is one wire, its anatomy of boxes and bubbles one
-  `dom=Thing` away — and a morphism is normalised between the
+  `dom=Thing` away, and a datatype restriction reads as the interval it
+  is, `∃born.[1970-01-01T00:00, +∞)` — and a morphism is normalised between the
   coreflexives of its boundary, with `split`, `relation` and `at_thing`
   converting between the two layers. Composing two queries whose
   predicates do not meet asks HermiT for the subsumption and inserts the
@@ -50,9 +95,18 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   expandable rule book. Two `owlapy` bridge repairs ship with the
   module: `preserve_list_order` drops the mapper's reversal of every
   Java list, which stored — and had HermiT reason with — every property
-  chain backwards, and `map_decimal_literals` registers the
-  `xsd:decimal` literals its literal mapper lacks, without which every
-  FIBO monetary amount written as a double made the world inconsistent.
+  chain backwards, and `map_literals` registers the `xsd:decimal`,
+  `xsd:date` and `xsd:dateTime` literals its literal mapper lacks —
+  without the first, every FIBO monetary amount written as a double
+  made the world inconsistent. Each is written in the form XSD defines
+  (`lexical`), since owlapy writes a `dateTime` with a space where XSD
+  puts a `T` and HermiT rejects that as malformed, and both Java
+  implementations are read back, since HermiT answers a retrieval with
+  the uncompressed one that the bridge would otherwise read as a string
+  whatever its datatype says. HermiT reasons over `xsd:dateTime` but
+  not `xsd:date`, which is outside the OWL 2 datatype map, so a window
+  it can prove — `∃on.[2026-01-01T00:00, 2026-06-30T00:00] ⊑
+  ∃on.[2026-01-01T00:00, 2026-12-31T00:00]` — is typed with the former.
   The pictures are a diagram layer of the module's own: `Wire` wraps a
   predicate and displays its `label`, `Ty`, `Box` and `Diagram` subclass
   `frobenius` with the factory pattern, and every box carries the
@@ -71,19 +125,21 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   the type of its wire, and the result draws the splitting as the
   Karoubi inclusions around the single-sorted middle. It ships as the
   `semantic` extra, i.e. `owlapy` plus a Java runtime, with the FIBO
-  fixtures of `test/fixtures/fibo` and two notebooks in
-  `docs/notebooks/ontology`: `ontologies`, which pitches ontologies as
+  fixtures of `test/fixtures/fibo` and two notebooks:
+  `docs/notebooks/ontology/ontologies`, which pitches ontologies as
   guardrails for AI agents on FIBO's own ownership-and-control modules,
-  and `finance`, which computes asset and FX risk over a multi-currency
-  portfolio on FIBO's own `CurrencyAmount` and `Ownership` modules —
-  currency buckets are compound predicates, the definite-unit guarantee
-  is FIBO's own cardinality axiom, exchange rates are FIBO individuals
-  carried by the conversion boxes, HermiT proves the buckets disjoint
-  and exhaustive over the fund's declared mandate and refuses the query
-  that mixes currencies, while the plan's own wires refuse the
-  conversion box that would; the fixtures gain a minimal Commons
-  `Collections` stand-in so a portfolio's holdings are queryable, and
-  the docs render notebooks from subdirectories of `docs/notebooks`.
+  and `docs/notebooks/fx_risk`, which computes FX risk over a
+  multi-currency portfolio on FIBO's own `CurrencyAmount`, `Ownership`
+  and date modules — currency buckets are compound predicates, the
+  definite-unit guarantee is FIBO's own cardinality axiom, exchange
+  rates are FIBO individuals carried by the conversion boxes, HermiT
+  proves the buckets disjoint and exhaustive over the fund's declared
+  mandate and refuses the query that mixes currencies, while the plan's
+  own wires refuse the conversion box that would; the fixtures gain
+  minimal Commons stand-ins, `Collections` so a portfolio's holdings are
+  queryable and the `DatesAndTimes` date vocabulary so an observation
+  can be typed by its valuation window, and the docs render notebooks
+  from subdirectories of `docs/notebooks`.
 - Abstract base classes for order-enriched categories in `discopy.abc`:
   `Poset`, `Lattice` and `BooleanAlgebra` for the structure of hom-sets,
   `DaggerCategory` for the converse, `Allegory` (Freyd & Scedrov) for a

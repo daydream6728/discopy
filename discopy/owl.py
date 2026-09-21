@@ -67,7 +67,8 @@ Summary
         :toctree:
 
         preserve_list_order
-        map_decimal_literals
+        lexical
+        map_literals
         load
         reason
         consistent
@@ -85,6 +86,7 @@ Summary
         property_axioms
         axioms
         label
+        interval
         ob
         peel
         demorgan
@@ -121,12 +123,17 @@ from __future__ import annotations
 import os
 from contextlib import contextmanager
 from dataclasses import dataclass
+from datetime import date, datetime
 from decimal import Decimal
 from itertools import product
 
 import jpype
 from owlapy.class_expression import (
-    OWLClass, OWLClassExpression, OWLNothing, OWLObjectAllValuesFrom,
+    OWLClass, OWLClassExpression, OWLDataAllValuesFrom,
+    OWLDataCardinalityRestriction, OWLDataExactCardinality,
+    OWLDataHasValue, OWLDataMaxCardinality, OWLDataMinCardinality,
+    OWLDataOneOf, OWLDataSomeValuesFrom, OWLDatatypeRestriction,
+    OWLNothing, OWLObjectAllValuesFrom,
     OWLObjectCardinalityRestriction, OWLObjectComplementOf,
     OWLObjectExactCardinality, OWLObjectHasSelf, OWLObjectHasValue,
     OWLObjectIntersectionOf, OWLObjectMaxCardinality,
@@ -145,6 +152,7 @@ from owlapy.owl_axiom import (
     OWLSubClassOfAxiom, OWLSubObjectPropertyOfAxiom,
     OWLSubPropertyChainAxiom, OWLSymmetricObjectPropertyAxiom,
     OWLTransitiveObjectPropertyAxiom)
+from owlapy.owl_datatype import OWLDatatype
 from owlapy.owl_individual import OWLNamedIndividual
 from owlapy.owl_literal import OWLLiteral
 from owlapy.owl_ontology import SyncOntology
@@ -152,6 +160,7 @@ from owlapy.owlapi_mapper import OWLAPIMapper
 from owlapy.owl_property import (
     OWLDataProperty, OWLObjectInverseOf, OWLObjectProperty)
 from owlapy.owl_reasoner import SyncReasoner
+from owlapy.vocab import OWLFacet
 
 from discopy import cat, frobenius, messages
 from discopy.abc import DistributiveAllegory, SymmetricCategory
@@ -171,6 +180,12 @@ INCLUSION = "$\\sqsubseteq$"
 
 NEGATION = "$\\neg$"
 """ The drawing name of the bubble for a complement. """
+
+LOWER = {OWLFacet.MIN_INCLUSIVE: "[", OWLFacet.MIN_EXCLUSIVE: "("}
+""" The bracket of a lower bound, inclusive or not. """
+
+UPPER = {OWLFacet.MAX_INCLUSIVE: "]", OWLFacet.MAX_EXCLUSIVE: ")"}
+""" The bracket of an upper bound, inclusive or not. """
 
 
 def preserve_list_order():
@@ -203,35 +218,73 @@ def preserve_list_order():
         OWLAPIMapper.map_.register(kind, to_java)
 
 
-def map_decimal_literals():
+def lexical(literal) -> str:
     """
-    Register the ``xsd:decimal`` literals that `owlapy`_'s bridge lacks:
-    its literal mapper handles string, boolean, integer and double
-    literals only, while FIBO's monetary amounts and exchange rates
-    range over ``xsd:decimal`` -- and a double is not a decimal in
-    OWL 2, so writing one where the ontology declares the other makes
-    the world inconsistent. A Java literal of any other datatype maps
-    to its lexical form rather than raising.
+    The lexical form XSD defines for a literal: `owlapy`_ writes a
+    ``dateTime`` with a space where XSD puts a ``T``, which `HermiT`_
+    rejects as malformed, so a temporal value is read back from
+    ``to_python`` and written in ISO 8601.
+
+    Parameters:
+        literal : The `owlapy` literal.
+
+    Example
+    -------
+    >>> print(lexical(OWLLiteral(datetime(2026, 1, 1))))
+    2026-01-01T00:00:00
+    >>> print(lexical(OWLLiteral(Decimal("12.5"))))
+    12.5
     """
-    literal_impl = jpype.JClass(
-        "uk.ac.manchester.cs.owl.owlapi.OWLLiteralImpl")
+    value = literal.to_python()
+    return value.isoformat() if isinstance(value, date)\
+        else str(literal.get_literal())
+
+
+def map_literals():
+    """
+    Register the literals that `owlapy`_'s bridge lacks: its literal
+    mapper handles string, boolean, integer and double literals only,
+    while FIBO's monetary amounts and exchange rates range over
+    ``xsd:decimal`` -- and a double is not a decimal in OWL 2, so
+    writing one where the ontology declares the other makes the world
+    inconsistent -- and a dated observation ranges over ``xsd:date`` or
+    ``xsd:dateTime``. Each is written in the form XSD defines, see
+    :func:`lexical`, and read back by its datatype. A Java literal of
+    any other datatype maps to its lexical form rather than raising.
+    Both Java implementations are registered: `HermiT`_ answers a
+    retrieval with the uncompressed one, which the bridge would
+    otherwise read back as a string, whatever its datatype says.
+
+    `HermiT`_ reasons over ``xsd:dateTime`` but not ``xsd:date``, which
+    is outside the OWL 2 datatype map: a date crosses the bridge and
+    answers a SPARQL query, an interval to be proved needs a
+    ``dateTime``.
+    """
+    impls = [jpype.JClass(f"uk.ac.manchester.cs.owl.owlapi.{name}")
+             for name in ("OWLLiteralImpl", "OWLLiteralImplNoCompression")]
+    parsers = {"#decimal": Decimal, "#date": date.fromisoformat,
+               "#dateTime": datetime.fromisoformat}
 
     def to_java(self, literal):
-        return literal_impl(str(literal.get_literal()), None,
-                            self.map_(literal.get_datatype()))
+        return impls[0](lexical(literal), None,
+                        self.map_(literal.get_datatype()))
 
     def from_java(self, literal):
-        lexical = str(literal.getLiteral())
-        return OWLLiteral(Decimal(lexical))\
-            if str(literal.getDatatype().getIRI()).endswith("#decimal")\
-            else OWLLiteral(lexical)
+        form = str(literal.getLiteral())
+        iri = str(literal.getDatatype().getIRI())
+        for suffix, parse in parsers.items():
+            if iri.endswith(suffix):
+                return OWLLiteral(parse(form))
+        return OWLLiteral(form)
 
-    OWLAPIMapper.map_.register(type(OWLLiteral(Decimal(0))), to_java)
-    OWLAPIMapper.map_.register(literal_impl, from_java)
+    for value in (Decimal(0), date(1, 1, 1), datetime(1, 1, 1)):
+        OWLAPIMapper.map_.register(type(OWLLiteral(value)), to_java)
+    for impl in impls:
+        OWLAPIMapper.map_.register(impl, from_java)
 
 
 preserve_list_order()
-map_decimal_literals()
+map_literals()
 
 
 def declared(entity, kind: type) -> bool:
@@ -2020,6 +2073,26 @@ def combine(operation, *diagrams):
         else operation(*diagrams)
 
 
+def interval(facets: dict) -> str:
+    """
+    The interval notation of some bounding facets, a missing bound
+    written as an open infinity.
+
+    Parameters:
+        facets : The lexical form of the value of each bounding facet,
+            see :data:`LOWER` and :data:`UPPER`.
+
+    Example
+    -------
+    >>> print(interval({OWLFacet.MIN_INCLUSIVE: "0"}))
+    [0, +∞)
+    """
+    lower = [one for one in facets if one in LOWER]
+    upper = [one for one in facets if one in UPPER]
+    return (LOWER[lower[0]] + facets[lower[0]] if lower else "(-∞")\
+        + ", " + (facets[upper[0]] + UPPER[upper[0]] if upper else "+∞)")
+
+
 def label(entity) -> str:
     """
     An OWL entity or class expression as a mathematician would write it
@@ -2050,11 +2123,14 @@ def label(entity) -> str:
     """
     sub = lambda one: f"({label(one)})" if isinstance(
         one, (OWLObjectIntersectionOf, OWLObjectUnionOf)) else label(one)
+    element = lambda one: lexical(one) if isinstance(one, OWLLiteral)\
+        else name_of(one)
     if entity == Thing:
         return "Thing"
     if entity == Nothing:
         return "Nothing"
-    if isinstance(entity, (OWLClass, OWLObjectProperty, OWLNamedIndividual)):
+    if isinstance(entity, (OWLClass, OWLObjectProperty, OWLDataProperty,
+                           OWLNamedIndividual, OWLDatatype)):
         return name_of(entity)
     if isinstance(entity, OWLObjectInverseOf):
         return sub(entity.get_inverse()) + "˘"
@@ -2064,25 +2140,38 @@ def label(entity) -> str:
         return " ⊔ ".join(map(sub, entity.operands()))
     if isinstance(entity, OWLObjectComplementOf):
         return "¬" + sub(entity.get_operand())
-    if isinstance(entity, OWLObjectOneOf):
+    if isinstance(entity, (OWLObjectOneOf, OWLDataOneOf)):
         return "{" + ", ".join(sorted(
-            name_of(one) for one in entity.operands())) + "}"
+            map(element, entity.operands()))) + "}"
     if isinstance(entity, OWLObjectHasSelf):
         return f"∃{label(entity.get_property())}.Self"
-    if isinstance(entity, OWLObjectHasValue):
+    if isinstance(entity, (OWLObjectHasValue, OWLDataHasValue)):
         return f"∃{label(entity.get_property())}"\
-            + ".{" + name_of(entity.get_filler()) + "}"
-    if isinstance(entity, OWLObjectSomeValuesFrom):
+            + ".{" + element(entity.get_filler()) + "}"
+    if isinstance(entity, (OWLObjectSomeValuesFrom,
+                           OWLDataSomeValuesFrom)):
         return f"∃{label(entity.get_property())}"\
             f".{sub(entity.get_filler())}"
-    if isinstance(entity, OWLObjectAllValuesFrom):
+    if isinstance(entity, (OWLObjectAllValuesFrom,
+                           OWLDataAllValuesFrom)):
         return f"∀{label(entity.get_property())}"\
             f".{sub(entity.get_filler())}"
-    if isinstance(entity, OWLObjectCardinalityRestriction):
-        symbol = {OWLObjectMinCardinality: "≥", OWLObjectMaxCardinality:
-                  "≤", OWLObjectExactCardinality: "="}[type(entity)]
+    if isinstance(entity, (OWLObjectCardinalityRestriction,
+                           OWLDataCardinalityRestriction)):
+        symbol = {OWLObjectMinCardinality: "≥", OWLDataMinCardinality: "≥",
+                  OWLObjectMaxCardinality: "≤", OWLDataMaxCardinality: "≤",
+                  OWLObjectExactCardinality: "=",
+                  OWLDataExactCardinality: "="}[type(entity)]
         return f"{symbol}{entity.get_cardinality()} "\
             f"{label(entity.get_property())}.{sub(entity.get_filler())}"
+    if isinstance(entity, OWLDatatypeRestriction):
+        facets = {one.get_facet(): lexical(one.get_facet_value())
+                  for one in entity.get_facet_restrictions()}
+        if facets and set(facets) <= set(LOWER) | set(UPPER):
+            return interval(facets)
+        return f"{label(entity.get_datatype())}(" + ", ".join(
+            f"{one.symbolic_form} {value}"
+            for one, value in facets.items()) + ")"
     return str(entity)
 
 

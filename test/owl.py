@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from datetime import datetime
 from decimal import Decimal
 from shutil import which
 from types import SimpleNamespace
@@ -12,7 +13,9 @@ if which("java") is None:
     skip("owlapy's owlapi bridge needs Java.", allow_module_level=True)
 
 from owlapy.class_expression import (  # noqa: E402
-    OWLClass, OWLDataSomeValuesFrom, OWLObjectAllValuesFrom,
+    OWLClass, OWLDataAllValuesFrom, OWLDataHasValue,
+    OWLDataMinCardinality, OWLDataOneOf, OWLDataSomeValuesFrom,
+    OWLDatatypeRestriction, OWLFacetRestriction, OWLObjectAllValuesFrom,
     OWLObjectComplementOf, OWLObjectExactCardinality, OWLObjectHasSelf,
     OWLObjectHasValue, OWLObjectIntersectionOf, OWLObjectMaxCardinality,
     OWLObjectMinCardinality, OWLObjectOneOf, OWLObjectSomeValuesFrom,
@@ -20,7 +23,8 @@ from owlapy.class_expression import (  # noqa: E402
 from owlapy.iri import IRI  # noqa: E402
 from owlapy.owl_axiom import (  # noqa: E402
     OWLAsymmetricObjectPropertyAxiom, OWLClassAssertionAxiom,
-    OWLDataPropertyAssertionAxiom, OWLDeclarationAxiom,
+    OWLDataPropertyAssertionAxiom, OWLDataPropertyRangeAxiom,
+    OWLDeclarationAxiom,
     OWLDisjointClassesAxiom, OWLEquivalentClassesAxiom,
     OWLEquivalentObjectPropertiesAxiom, OWLFunctionalObjectPropertyAxiom,
     OWLInverseFunctionalObjectPropertyAxiom,
@@ -29,10 +33,11 @@ from owlapy.owl_axiom import (  # noqa: E402
     OWLSubObjectPropertyOfAxiom, OWLSubPropertyChainAxiom,
     OWLSymmetricObjectPropertyAxiom, OWLTransitiveObjectPropertyAxiom)
 from owlapy.owl_datatype import OWLDatatype  # noqa: E402
-from owlapy.owl_literal import OWLLiteral  # noqa: E402
+from owlapy.owl_literal import (  # noqa: E402
+    DateTimeOWLDatatype, IntegerOWLDatatype, OWLLiteral)
 from owlapy.owl_property import (  # noqa: E402
     OWLDataProperty, OWLObjectInverseOf)
-from owlapy.vocab import XSDVocabulary  # noqa: E402
+from owlapy.vocab import OWLFacet, XSDVocabulary  # noqa: E402
 
 from discopy.owl import (  # noqa: E402
     Axiom, Box, Bubble, Coercion, Id, Nothing, Query, Relation, Thing, Ty,
@@ -117,6 +122,44 @@ def test_decimal_literals_cross_the_bridge(kennel):
     assert assertion.get_object().to_python() == Decimal("12.5")
     entailed, = world.reasoner.data_property_values(kennel.rex, weight)
     assert float(entailed.to_python()) == 12.5
+
+
+def dated(world, name="on"):
+    """ A data property ranging over ``xsd:dateTime``. """
+    result = OWLDataProperty(IRI.create(world.iri + name))
+    world.add(OWLDeclarationAxiom(result),
+              OWLDataPropertyRangeAxiom(result, DateTimeOWLDatatype))
+    return result
+
+
+def window(prop, start, end):
+    """ The class of things dated within a closed interval. """
+    return OWLDataSomeValuesFrom(prop, OWLDatatypeRestriction(
+        DateTimeOWLDatatype, (
+            OWLFacetRestriction(OWLFacet.MIN_INCLUSIVE, OWLLiteral(start)),
+            OWLFacetRestriction(OWLFacet.MAX_INCLUSIVE, OWLLiteral(end)))))
+
+
+def test_datetime_literals_cross_the_bridge(kennel):
+    world, born = kennel.world, dated(kennel.world, "born")
+    world.add(OWLDataPropertyAssertionAxiom(
+        kennel.rex, born, OWLLiteral(datetime(2026, 1, 1))))
+    assert consistent(world)  # a string here would clash with the range
+    assertion, = (axiom for axiom in world.abox()
+                  if isinstance(axiom, OWLDataPropertyAssertionAxiom))
+    assert assertion.get_object().to_python() == datetime(2026, 1, 1)
+    entailed, = world.reasoner.data_property_values(kennel.rex, born)
+    assert entailed.to_python() == datetime(2026, 1, 1)
+
+
+def test_subsumption_of_intervals(kennel):
+    world, on = kennel.world, dated(kennel.world)
+    first = window(on, datetime(2026, 1, 1), datetime(2026, 6, 30))
+    year = window(on, datetime(2026, 1, 1), datetime(2026, 12, 31))
+    second = window(on, datetime(2026, 7, 1), datetime(2026, 12, 31))
+    assert subsumes(first, year, world)
+    assert not subsumes(year, first, world)
+    assert not subsumes(first, second, world)
 
 
 def test_instances_are_memoised(kennel):
@@ -672,6 +715,26 @@ def test_label_ob_box_point(kennel):
     assert schema(OWLObjectInverseOf(owns), world) == (dog, person)
     assert point(rex, world).cod == Ty("Dog")
     assert point(rex, world).data is rex
+
+
+def test_label_of_data_restrictions(kennel):
+    named, string = kennel.named, OWLDatatype(XSDVocabulary.STRING.iri)
+    assert label(string) == "string"
+    assert label(string_of_dogs(kennel)) == "∃named.string"
+    assert label(OWLDataAllValuesFrom(named, string)) == "∀named.string"
+    assert label(OWLDataHasValue(named, OWLLiteral("rex"))) == "∃named.{rex}"
+    assert label(OWLDataMinCardinality(2, named, string))\
+        == "≥2 named.string"
+    assert label(OWLDataOneOf((OWLLiteral("rex"), OWLLiteral("fido"))))\
+        == "{fido, rex}"
+    assert label(window(named, datetime(2026, 1, 1), datetime(2026, 6, 30)))\
+        == "∃named.[2026-01-01T00:00:00, 2026-06-30T00:00:00]"
+    assert label(OWLDatatypeRestriction(IntegerOWLDatatype, (
+        OWLFacetRestriction(OWLFacet.MIN_EXCLUSIVE, OWLLiteral(0)), )))\
+        == "(0, +∞)"
+    assert label(OWLDatatypeRestriction(string, (
+        OWLFacetRestriction(OWLFacet.MIN_LENGTH, OWLLiteral(3)), )))\
+        == "string(minLength 3)"
 
 
 def test_to_diagram_constructs(kennel):

@@ -96,6 +96,7 @@ test = [
     "pytest",
 ]
 docs  = [
+    "rdflib>=7.1,<8",
     "IPython",
     "ipykernel == 6.23.*",
     "jinja2 == 3.1.*",
@@ -104,6 +105,8 @@ docs  = [
     # executed by marimo when rendering the notebooks at docs build time
     "owlapy",
     "pytket",
+    # the fx_risk notebook quotes a live feed
+    "yfinance",
     "sympy",
     "sphinx == 7.2.*",
     "sphinx-book-theme == 1.1.*",
