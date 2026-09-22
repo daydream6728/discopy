@@ -22,14 +22,16 @@ if which("java") is None:
     skip("owlapy's owlapi bridge needs Java.", allow_module_level=True)
 
 from owlapy.class_expression import (  # noqa: E402
-    OWLObjectIntersectionOf, OWLObjectOneOf, OWLObjectSomeValuesFrom,
-    OWLObjectUnionOf)
+    OWLObjectHasValue, OWLObjectIntersectionOf, OWLObjectOneOf,
+    OWLObjectSomeValuesFrom, OWLObjectUnionOf)
 
 from discopy.owl import Nothing, label, subsumes  # noqa: E402
 from discopy.utils import AxiomError  # noqa: E402
 from docs.notebooks.financial_ontology import (  # noqa: E402
-    SHARES, Market, conversion, demo, exposure_plan, history_plan,
-    interpreter, merge, netting, path, risk_box, risk_currency, stress_plan)
+    SHARES, Market, Step, conversion, demo, exposure_plan, hedge,
+    interpreter,
+    netting, pairing, quotes, regroup, risk_box, risk_currency, select,
+    shock, stress_plan)
 
 DAYS = 40
 
@@ -63,10 +65,10 @@ def fund():
 
 
 @fixture(scope="module")
-def legs(fund):
-    one, model = fund
-    return tuple(one.deltas(unit) for currency in model.currencies
-                 for unit in one.quoting(currency))
+def book(fund):
+    """What the exposure plan takes: a portfolio and a date."""
+    one, _ = fund
+    return (one, one.market.asof)
 
 
 def quarter(one):
@@ -102,92 +104,180 @@ def test_every_number_comes_from_the_reasoner(fund):
         == 37. * SHARES["uk_mid"]
 
 
-def test_a_pence_leg_is_converted_at_the_pence_rate(fund):
+def test_the_layout_does_not_depend_on_the_assets(fund):
+    """The whole point: two portfolios, one diagram.
+
+    A fund of four quoting units and a fund of two give the *same*
+    picture, because what varies lives inside the collections rather
+    than in the number of wires.
+    """
+    one, _ = fund
+    smaller = market()
+    smaller = Market(
+        asof=smaller.asof, reporting=smaller.reporting,
+        spot={key: value for key, value in smaller.spot.items()
+              if key in ("EUR", "JPY")},
+        prices={key: value for key, value in smaller.prices.items()
+                if value[1] in ("EUR", "JPY", "USD")},
+        dates=smaller.dates, history=smaller.history, source=smaller.source)
+    other, _ = demo(smaller)
+    assert other.market.units() == ("EUR", "JPY", "USD")
+    mine, theirs = exposure_plan(one), exposure_plan(other)
+    assert (mine.dom, mine.cod) == (theirs.dom, theirs.cod)
+    assert [(box.name, box.dom, box.cod) for box in mine.boxes]\
+        == [(box.name, box.dom, box.cod) for box in theirs.boxes]
+    generators = [(left, right) for left, right
+                  in zip(mine.boxes, theirs.boxes)
+                  if isinstance(left.data, Step)]
+    assert all(left.data != right.data       # only the closures differ
+               for left, right in generators)
+    assert all(left == right for left, right  # the plumbing is shared
+               in zip(mine.boxes, theirs.boxes)
+               if not isinstance(left.data, Step))
+
+
+def test_every_box_has_a_fixed_arity(fund):
+    one, model = fund
+    plan = exposure_plan(one) >> risk_box(one, model)
+    assert [(len(box.dom), len(box.cod)) for box in plan.boxes] == [
+        (1, 2), (1, 1), (2, 1), (1, 1), (2, 1), (1, 1), (1, 1), (1, 3)]
+    assert len(plan.dom) == 2 and len(plan.cod) == 3
+
+
+def test_a_pence_holding_is_converted_at_the_pence_rate(fund, book):
     """The hundredfold trap: 150m pence is $2m, not $200m."""
     one, _ = fund
+    bag = interpreter(one)(exposure_plan(one))(*book)
     pounds = one.market.spot["GBP"]
-    assert interpreter(one)(netting(one, "GBp") >> conversion(one, "GBp"))(
-        one.deltas("GBp")) == approx(
-            1042. * SHARES["uk_large"] * pounds / 100)
+    assert bag["GBP"] == approx(
+        1042. * SHARES["uk_large"] * pounds / 100
+        + 37. * SHARES["uk_mid"] * pounds)
 
 
-def test_exposure_plan_converts_each_leg(fund, legs):
-    one, model = fund
-    plan = exposure_plan(one, *model.currencies)
-    assert interpreter(one)(plan)(*legs) == approx(tuple(
-        sum(sum(one.deltas(unit)) * one.market.spot[unit]
-            for unit in one.quoting(currency))
-        for currency in model.currencies))
-    assert label(plan.cod.inside[0].entity).endswith("∃exposureTo.{EUR}")
+def test_the_plan_takes_only_a_portfolio_and_a_date(fund):
+    one, _ = fund
+    plan = exposure_plan(one)
+    assert [label(wire.entity) for wire in plan.dom.inside] == [
+        "Portfolio", "{" + one.market.asof.date().isoformat() + "}"]
 
 
-def test_risk_components_sum_to_var(fund, legs):
+def test_the_rate_is_an_input_not_a_coefficient(fund):
+    """Quoting is its own box, so no rate is compiled into a conversion."""
+    one, _ = fund
+    boxes = {box.name: box for box in exposure_plan(one).boxes}
+    assert boxes["×"].data.entity is None      # the converter denotes nothing
+    assert boxes["quotes in USD"].data.entity is one.ExchangeRate
+    assert all(not isinstance(box.name, float) and "×0" not in box.name
+               and "×1" not in box.name for box in exposure_plan(one).boxes)
+
+
+def test_another_date_gives_another_answer(fund):
+    """The coefficient is read off the feed by the date flowing in."""
+    one, _ = fund
+    run, early = interpreter(one), one.market.dates[0]
+    first = run(exposure_plan(one, when=one.on(early)))(one, early)
+    assert first["EUR"] == approx(
+        sum(one.deltas("EUR")) * one.market.rate("EUR", early))
+    assert first["EUR"] != approx(
+        run(exposure_plan(one))(one, one.market.asof)["EUR"])
+
+
+def test_risk_components_sum_to_var(fund, book):
     one, model = fund
     run = interpreter(one)
-    plan = exposure_plan(one, *model.currencies) >> risk_box(one, model)
-    var, shortfall, *components = run(plan)(*legs)
-    assert sum(components) == approx(var)
+    var, shortfall, components = run(
+        exposure_plan(one) >> risk_box(one, model))(*book)
+    assert sum(components.values()) == approx(var)
+    assert set(components) == set(model.currencies)
     assert shortfall > var > 0
-    assert run(exposure_plan(one, *model.currencies) >> risk_box(
-        one, type(model)(model.currencies, model.covariance, model.source,
-                         model.confidence, 4)))(*legs)[0] == approx(2 * var)
+    assert run(exposure_plan(one) >> risk_box(one, type(model)(
+        model.currencies, model.covariance, model.source,
+        model.confidence, 4)))(*book)[0] == approx(2 * var)
 
 
 def test_risk_of_no_exposure_is_zero(fund):
     one, model = fund
-    assert interpreter(one)(risk_box(one, model))(0., 0., 0.) == (0., ) * 5
+    var, shortfall, components = interpreter(one)(risk_box(one, model))(
+        {one: 0. for one in model.currencies})
+    assert (var, shortfall) == (0., 0.)
+    assert set(components.values()) == {0.}
 
 
-def test_stress_attributes_to_each_currency(fund, legs):
+def test_stress_attributes_to_each_currency(fund, book):
     one, model = fund
     shocks = dict(zip(model.currencies, (-.05, -.08, -.06)))
     run = interpreter(one)
-    plan = exposure_plan(one, *model.currencies)
-    assert run(plan >> stress_plan(one, shocks))(*legs) == approx(sum(
-        value * shocks[currency] for currency, value
-        in zip(model.currencies, run(plan)(*legs))))
+    bag = run(exposure_plan(one))(*book)
+    assert run(exposure_plan(one) >> stress_plan(one, shocks))(*book)\
+        == approx(sum(bag[one] * ratio for one, ratio in shocks.items()))
 
 
-def test_the_window_plan_backtests_the_same_book(fund, legs):
+def test_a_hedge_only_touches_its_own_currency(fund, book):
     one, model = fund
     run = interpreter(one)
-    dates, series = path(one, model, days=20)
-    window = history_plan(one, model, dates[0], dates[-1], series)
-    var, shortfall, *components = run(window)()
-    point, _, *_ = run(exposure_plan(one, *model.currencies)
-                       >> risk_box(one, model))(*legs)
+    bag = run(exposure_plan(one))(*book)
+    hedged = run(exposure_plan(one) >> hedge(one, "JPY", .75))(*book)
+    assert hedged["JPY"] == approx(.25 * bag["JPY"])
+    assert hedged["EUR"] == approx(bag["EUR"])
+    assert hedged["GBP"] == approx(bag["GBP"])
+
+
+def test_the_window_is_the_same_plan_retyped(fund, book):
+    """One diagram, a day or an interval, scalars or arrays."""
+    one, model = fund
+    run = interpreter(one)
+    dates = one.market.dates[-20:]
+    when = one.during(dates[0], dates[-1])
+    var, shortfall, components = run(
+        exposure_plan(one, when) >> risk_box(one, model, when))(
+            one, np.array(dates))
+    point, _, _ = run(exposure_plan(one) >> risk_box(one, model))(*book)
     assert var.shape == (len(dates), ) and shortfall.shape == var.shape
     assert var[-1] == approx(point)  # the window ends at the valuation date
-    assert sum(components)[-1] == approx(point)
+    assert sum(components.values())[-1] == approx(point)
 
 
-def test_mixing_currencies_does_not_compose(fund):
+def test_a_mismatched_valuation_is_refuted(fund):
+    """The guarantee a per-currency wire used to give, now an axiom.
+
+    It holds for every unit the feed names, not only the ones a plan
+    happened to wire up, which is what buys the fixed layout. Asked as
+    a subsumption, so nothing is written into the world to ask it.
+    """
     one, _ = fund
-    with raises(AxiomError):
-        netting(one, "EUR") >> conversion(one, "JPY")
+    mixed = lambda amount, quote: OWLObjectIntersectionOf((
+        one.Valuation,
+        OWLObjectSomeValuesFrom(one.hasExposure, OWLObjectHasValue(
+            one.hasCurrency, one.money[amount])),
+        OWLObjectSomeValuesFrom(one.hasQuotation, OWLObjectHasValue(
+            one.hasBaseCurrency, one.money[quote]))))
+    for amount, quote in (("EUR", "JPY"), ("GBP", "GBp"), ("GBp", "GBP"),
+                          ("JPY", "USD")):
+        assert subsumes(mixed(amount, quote), Nothing, one.world)
+    for matched in ("EUR", "GBp", "JPY"):
+        assert not subsumes(mixed(matched, matched), Nothing, one.world)
 
 
-def test_mixing_pence_and_pounds_does_not_compose(fund):
-    one, _ = fund
-    with raises(AxiomError):  # the pound rate on a pence amount
-        netting(one, "GBp") >> conversion(one, "GBP")
-    with raises(AxiomError):  # pence added straight into sterling exposure
-        netting(one, "GBp") >> merge(one, "GBP", 1)
+def test_the_stages_do_not_compose_out_of_order(fund):
+    """Every collection wire says what it holds, so the order is forced."""
+    one, model = fund
+    for left, right in (
+            (select(one), conversion(one)),        # holdings are not pairings
+            (netting(one), risk_box(one, model)),  # unconverted is not risk
+            (quotes(one), conversion(one)),        # rates are not pairings
+            (netting(one), regroup(one)),          # local is not reporting
+            (shock(one, {}), risk_box(one, model)),   # P&L is not exposure
+            (conversion(one), pairing(one))):      # converted is not to pair
+        with raises(AxiomError):
+            left >> right
 
 
 def test_mixing_dates_does_not_compose(fund):
     one, model = fund
     with raises(AxiomError):
-        netting(one, "EUR") >> conversion(one, "EUR", quarter(one))
+        exposure_plan(one) >> risk_box(one, model, quarter(one))
     with raises(AxiomError):
-        exposure_plan(one, *model.currencies) >> risk_box(
-            one, model, quarter(one))
-
-
-def test_permuted_risk_factors_do_not_compose(fund):
-    one, model = fund
-    with raises(AxiomError):
-        exposure_plan(one, "JPY", "EUR", "GBP") >> risk_box(one, model)
+        exposure_plan(one, quarter(one)) >> risk_box(one, model)
 
 
 def test_a_missing_risk_factor_is_refused(fund):
@@ -253,9 +343,11 @@ def test_the_reasoner_places_a_date_in_its_window(fund):
         datetime(2026, 8, 1), datetime(2026, 9, 30)), one.world)
 
 
-def test_a_window_wire_carries_an_array(fund):
+def test_a_collection_wire_carries_a_keyed_bag(fund):
     one, model = fund
     run = interpreter(one)
-    assert run(risk_box(one, model)).cod == (float, ) * 5
-    assert run(risk_box(one, model, quarter(one))).cod == (np.ndarray, ) * 5
-    assert run(netting(one, "EUR")).dom == (list, )
+    assert run(select(one)).dom == (type(one), )
+    assert run(select(one)).cod == (dict, )
+    assert run(risk_box(one, model)).cod == (float, float, dict)
+    assert run(risk_box(one, model, quarter(one))).cod == (
+        np.ndarray, np.ndarray, dict)

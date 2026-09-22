@@ -63,3 +63,30 @@ def test_spider_decomposition():
     assert Spider(5, 1, n).unfuse() == (Spider(2, 1, n) @ Spider(2, 1, n)
                                            @ Id(n) >> Spider(2, 1, n) @ Id(n)
                                            >> Spider(2, 1, n))
+
+
+def test_Functor_spider_into_a_comonoid():
+    """A codomain with no spiders still copies and merges."""
+    from discopy import markov, python
+    x = Ty('x')
+    to_python = Functor({x: (int, )}, {}, cod=python.Function)
+    assert to_python(Diagram.spiders(1, 3, x))(42) == (42, 42, 42)
+    assert to_python(Diagram.spiders(1, 0, x))(42) == ()
+    successor = python.Function(lambda a: a + 1, (int, ), (int, ))
+    assert (to_python(Diagram.spiders(1, 1, x)) >> successor)(42) == 43
+    y = markov.Ty('y')
+    to_markov = Functor({x: y}, {}, cod=markov.Diagram)
+    assert to_markov(Diagram.spiders(1, 3, x)) == markov.Diagram.copy(y, 3)
+    assert to_markov(Diagram.spiders(3, 1, x)) == markov.Diagram.merge(y, 3)
+
+
+def test_Functor_spider_without_a_comonoid():
+    """What the codomain cannot supply is looked up like any other box."""
+    from discopy import python
+    x = Ty('x')
+    spider = Diagram.spiders(2, 1, x)
+    with raises(Exception):  # python.Function has copies but no merges
+        Functor({x: (int, )}, {}, cod=python.Function)(spider)
+    merge = python.Function(lambda a, b: a + b, (int, int), (int, ))
+    assert Functor({x: (int, )}, {spider: merge},
+                   cod=python.Function)(spider)(54, 46) == 100

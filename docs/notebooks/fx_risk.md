@@ -9,6 +9,7 @@ pyproject: |-
       "matplotlib",
       "yfinance",
       "owlapy==1.6.6",
+      "discopy[semantic] @ git+https://github.com/daydream6728/discopy.git@codex/fibo-qudt-demo",
   ]
 ---
 ```python {.marimo hide_code="true"}
@@ -62,13 +63,13 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 from owlapy.class_expression import (
-    OWLObjectIntersectionOf, OWLObjectOneOf, OWLObjectSomeValuesFrom,
-    OWLObjectUnionOf)
+    OWLObjectHasValue, OWLObjectIntersectionOf, OWLObjectOneOf,
+    OWLObjectSomeValuesFrom, OWLObjectUnionOf)
 
 sys.path.insert(0, str(mo.notebook_dir() or Path.cwd()))
 from financial_ontology import (
-    SHARES, conversion, demo, exposure_plan, fetch, history_plan,
-    interpreter, merge, netting, path, risk_box, risk_currency, stress_plan)
+    SHARES, conversion, demo, exposure_plan, fetch, hedge, interpreter,
+    netting, pairing, quotes, regroup, risk_box, select, shock, stress_plan)
 from discopy.owl import Nothing, label, subsumes
 from discopy.utils import AxiomError
 ```
@@ -77,8 +78,7 @@ from discopy.utils import AxiomError
 market = fetch()
 fund, model = demo(market)
 run = interpreter(fund)
-legs = tuple(fund.deltas(unit) for currency in model.currencies
-             for unit in fund.quoting(currency))
+book = (fund, market.asof)   # everything the exposure plan takes
 ```
 
 ```python {.marimo hide_code="true"}
@@ -211,26 +211,39 @@ table(["Guarantee", "Statement", "Proved"], [
 
 ## 4 · The exposure plan
 
-Net each quoting unit **in its own unit**, convert it at **its own observed
-rate**, and only then add. Each conversion box carries the FIBO
-`ExchangeRate` individual it denotes, and the wire below it records that
-the result is a dollar amount of exposure to that *currency* — which is
-what lets the pound and pence branches meet at a `+` box, and nowhere
-earlier.
+The plan takes **a portfolio and a date, and nothing else** — and it is
+the *same six boxes and one copy* whatever the fund holds. Nothing in the
+picture counts currencies, because what varies lives inside FIBO
+`Collection` wires rather than in the number of wires:
 
 ```python {.marimo hide_code="true"}
-exposure_plan(fund, *model.currencies).foliation()
+exposure_plan(fund).foliation()
 ```
 
+The date is copied — that dot is plumbing, not a step — because both `net`
+and `quotes` need it. `select` decomposes the portfolio into its FX
+deltas; `net` groups each unit's into one dated amount; `quotes in USD`
+reads **every** rate off the feed at the incoming date; `pair` puts each amount beside the quotation of
+its own currency; `×` values them; `regroup` folds each minor unit into the
+currency whose risk it carries — which is where pence become pounds.
+
+The rate is a *wire*, never a number compiled into a box, so the same
+diagram on a different date converts at a different rate. And because the
+collections are **keyed by currency**, a whole class of mistake stops
+being detectable and starts being unrepresentable: there is no ordering of
+risk factors to get wrong, and no leg for a yen overlay to land on by
+accident.
+
 ```python {.marimo hide_code="true"}
-exposure = run(exposure_plan(fund, *model.currencies))(*legs)
+exposure = run(exposure_plan(fund))(*book)
 nav = sum(sum(fund.values(unit)) * (
     1. if unit == market.reporting else market.spot[unit])
     for unit in market.units())
 mo.hstack([
     mo.stat(label="Portfolio NAV", value=f"${nav / 1e6:,.1f}m"),
-    *(mo.stat(label=f"Net {one} exposure", value=f"${value / 1e6:,.2f}m")
-      for one, value in zip(model.currencies, exposure))], widths="equal")
+    *(mo.stat(label=f"Net {one} exposure",
+              value=f"${exposure[one] / 1e6:,.2f}m")
+      for one in model.currencies)], widths="equal")
 ```
 
 ## 5 · The risk plan
@@ -245,13 +258,13 @@ the total. $\Sigma$ is estimated from the daily log returns of the spot
 history above — no invented volatilities, no invented correlations.
 
 ```python {.marimo hide_code="true"}
-plan = exposure_plan(fund, *model.currencies) >> risk_box(fund, model)
+plan = exposure_plan(fund) >> risk_box(fund, model)
 plan.foliation()
 ```
 
 ```python {.marimo hide_code="true"}
-var, shortfall, *components = run(plan)(*legs)
-assert abs(sum(components) - var) < 1e-6
+var, shortfall, components = run(plan)(*book)
+assert abs(sum(components.values()) - var) < 1e-6
 mo.vstack([
     mo.hstack([
         mo.stat(label="1-day FX VaR · 99%", value=f"${var:,.0f}"),
@@ -262,8 +275,8 @@ mo.vstack([
     table(["Factor", "Daily volatility", "Component VaR"],
           [[one, f"{100 * np.sqrt(model.covariance[index][index]):.2f}%",
             f"${value:,.0f}"]
-           for index, (one, value) in enumerate(
-               zip(model.currencies, components))])])
+           for index, one in enumerate(model.currencies)
+           for value in [components[one]]])])
 ```
 
 The unit of that number is not a caption: it is the codomain of the plan,
@@ -285,31 +298,62 @@ def refused(what, build):
 
 
 table(["Mistake", "Verdict", "Reason"], [
-    refused("value a pence holding at the pound rate (100× too big)",
-            lambda: netting(fund, "GBp") >> conversion(fund, "GBP")),
-    refused("add pence straight into sterling exposure",
-            lambda: netting(fund, "GBp") >> merge(fund, "GBP", 1)),
-    refused("convert a euro amount at the yen rate",
-            lambda: netting(fund, "EUR") >> conversion(fund, "JPY")),
-    refused("value today's netting with a rate dated to last year",
-            lambda: netting(fund, "EUR") >> conversion(
-                fund, "EUR", fund.during(
-                    datetime(market.asof.year - 1, 1, 1),
-                    datetime(market.asof.year - 1, 12, 31)))),
-    refused("feed the risk model its factors in the wrong order",
-            lambda: exposure_plan(fund, "JPY", "EUR", "GBP")
-            >> risk_box(fund, model)),
+    refused("value holdings before netting them",
+            lambda: select(fund) >> conversion(fund)),
+    refused("take the risk of exposures nobody converted",
+            lambda: netting(fund) >> risk_box(fund, model)),
+    refused("pair the quotations with themselves",
+            lambda: quotes(fund) >> conversion(fund)),
+    refused("regroup amounts still in their local units",
+            lambda: netting(fund) >> regroup(fund)),
+    refused("take the risk of a scenario P&L",
+            lambda: shock(fund, {}) >> risk_box(fund, model)),
     refused("read a day's exposure as if it covered the window",
-            lambda: exposure_plan(fund, *model.currencies) >> risk_box(
+            lambda: exposure_plan(fund) >> risk_box(
                 fund, model, fund.during(market.dates[0], market.asof))),
+    refused("value a window's exposure at a single day's rates",
+            lambda: exposure_plan(
+                fund, fund.during(market.dates[0], market.asof))
+            >> risk_box(fund, model)),
     refused("drop a risk factor the fund is exposed to",
-            lambda: model.evaluate(exposure[:2])),
+            lambda: model.evaluate(tuple(exposure.values())[:2])),
 ])
 ```
 
-The first two are the hundredfold error, caught by the wire rather than by
-a reviewer. The fourth and sixth are the ones a unit checker alone would
-miss: every currency agrees and only the **dates** disagree.
+Every stage says what its collection holds, so the order is forced and no
+half-finished quantity can reach a later box. But the guarantee that
+matters most — *this* amount meets *its own* rate — cannot be a wire type
+any more, because there is only one wire for all the currencies. It is an
+**axiom** instead, one per unit the feed names:
+
+> `Valuation ⊓ ∃hasExposure.∃hasCurrency.{c} ⊑ ∀hasQuotation.∃hasBaseCurrency.{c}`
+
+With `hasBaseCurrency` functional and the units pairwise different, a
+valuation that crossed two of them is unsatisfiable — and HermiT says so
+without anything being written into the world:
+
+```python {.marimo hide_code="true"}
+_mixed = lambda amount, quotation: OWLObjectIntersectionOf((
+    fund.Valuation,
+    OWLObjectSomeValuesFrom(fund.hasExposure, OWLObjectHasValue(
+        fund.hasCurrency, fund.money[amount])),
+    OWLObjectSomeValuesFrom(fund.hasQuotation, OWLObjectHasValue(
+        fund.hasBaseCurrency, fund.money[quotation]))))
+table(["Valuation", "Entailed to be empty"],
+      [[f"a {amount} exposure quoted at the {quotation} rate",
+        subsumes(_mixed(amount, quotation), Nothing, fund.world)]
+       for amount, quotation in (
+           ("EUR", "JPY"), ("GBP", "GBp"), ("GBp", "GBP"),
+           ("JPY", "USD"), ("EUR", "EUR"))])
+```
+
+That last row is the matched one, and it is satisfiable — as it should be.
+This is what buys the fixed layout: the hundredfold pence error and every
+other currency crossing are refused for **every** unit the feed names, not
+only the ones some plan happened to wire up.
+
+The sixth and seventh rows are the ones a unit checker alone would miss:
+every currency agrees and only the **dates** disagree.
 
 ## 7 · Stress the portfolio
 
@@ -331,46 +375,48 @@ mo.hstack([eur_shock, jpy_shock, gbp_shock], widths="equal")
 ```python {.marimo hide_code="true"}
 shocks = dict(zip(model.currencies, (
     eur_shock.value / 100, gbp_shock.value / 100, jpy_shock.value / 100)))
-scenario = exposure_plan(fund, *model.currencies) >> stress_plan(
-    fund, shocks)
-pnl = run(scenario)(*legs)
+scenario = exposure_plan(fund) >> stress_plan(fund, shocks)
+pnl = run(scenario)(*book)
 mo.vstack([stress_plan(fund, shocks).foliation(), mo.hstack([
     mo.stat(label="Scenario P&L", value=f"${pnl:,.0f}"),
     mo.stat(label="P&L / NAV", value=f"{100 * pnl / nav:.2f}%"),
     table(["Currency", "Contribution"],
           [[one, f"${value * shocks[one]:,.0f}"]
-           for one, value in zip(model.currencies, exposure)])],
+           for one, value in exposure.items()
+           if one in shocks])],
     widths="equal")])
 ```
 
 ## 8 · A hedge, and the same plan backtested over the window
 
-Hedging is a change to the inputs, not to the plan: scale the yen delta and
-re-run the identical diagram. And because a valuation date is a predicate
-like any other, the *window* version is the same diagram with its wires
-retyped from one day to an interval — every number becomes an array, and
-HermiT's proof that today lies inside the window is what licenses reading
-one as the other. The positions are held at today's size and the exchange
-rates are the real ones of each day, so the series is a backtest of the
-current book rather than a simulation.
+A hedge is a **box**, inserted on the wire that already says which currency
+it reduces — so a yen overlay cannot land on the euro leg. And because a
+valuation date is a predicate like any other, the *window* version is the
+**same diagram** with its wires retyped from one day to an interval: every
+number becomes an array, the rate boxes read a date each, and HermiT's
+proof that today lies inside the window is what licenses reading one as
+the other. The positions are held at today's size and the rates are the
+real ones of each day, so the series is a backtest of the current book
+rather than a simulation.
 
-```python {.marimo hide_code="true"}
-hedge = mo.ui.slider(0, 100, step=5, value=75, show_value=True,
-                     label="Hedge the remaining JPY exposure (%)")
-hedge
+```python {.marimo}
+
 ```
 
 ```python {.marimo hide_code="true"}
-hedged = tuple(
-    [value * (1 - hedge.value / 100) for value in leg]
-    if risk_currency(unit) == "JPY" else leg
-    for leg, unit in zip(legs, [
-        unit for currency in model.currencies
-        for unit in fund.quoting(currency)]))
-hedged_var, _, *hedged_components = run(plan)(*hedged)
-dates, series = path(fund, model)
-window = history_plan(fund, model, dates[0], dates[-1], series)
-var_series, _, *component_series = run(window)()
+hedge_size = mo.ui.slider(0, 100, step=5, value=75, show_value=True,
+                          label="Hedge the remaining JPY exposure (%)")
+hedge_size
+```
+
+```python {.marimo hide_code="true"}
+hedged_plan = exposure_plan(fund) >> hedge(
+    fund, "JPY", hedge_size.value / 100) >> risk_box(fund, model)
+hedged_var, _, hedged_components = run(hedged_plan)(*book)
+dates = market.dates[-65:]
+_when = fund.during(dates[0], dates[-1])
+window = exposure_plan(fund, _when) >> risk_box(fund, model, _when)
+var_series, _, component_series = run(window)(fund, np.array(dates))
 assert abs(var_series[-1] - var) < 1e-6  # the window ends at the last close
 mo.hstack([
     mo.stat(label="FX VaR after the hedge", value=f"${hedged_var:,.0f}"),
@@ -383,16 +429,19 @@ mo.hstack([
 ```python {.marimo hide_code="true"}
 _figure, _axes = plt.subplots(1, 2, figsize=(13, 4), layout="constrained")
 _axes[0].plot(dates, var_series, color="#17395c", label="1-day 99% VaR")
-_axes[0].stackplot(dates, np.abs(component_series), alpha=.25,
-                   labels=list(model.currencies))
+_axes[0].stackplot(
+    dates, np.abs([component_series[one] for one in model.currencies]),
+    alpha=.25, labels=list(model.currencies))
 _axes[0].set(title="VaR ⊓ ∃hasCurrency.{USD} ⊓ ∃hasAsOfDate.(window)")
 _axes[0].legend(frameon=False, fontsize=8, loc="upper left")
 _axes[0].tick_params(axis="x", labelrotation=30)
 _y = range(len(model.currencies))
-_axes[1].barh([one + .18 for one in _y], components, height=.32,
+_axes[1].barh([one + .18 for one in _y],
+              [components[one] for one in model.currencies], height=.32,
               color="#17395c", label="Current")
-_axes[1].barh([one - .18 for one in _y], hedged_components, height=.32,
-              color="#18a999", label="After the hedge")
+_axes[1].barh([one - .18 for one in _y],
+              [hedged_components[one] for one in model.currencies],
+              height=.32, color="#18a999", label="After the hedge")
 _axes[1].set(yticks=list(_y), yticklabels=list(model.currencies),
              title="Component VaR · USD")
 _axes[1].legend(frameon=False)

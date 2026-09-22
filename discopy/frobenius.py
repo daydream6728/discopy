@@ -297,14 +297,36 @@ class Functor(compact.Functor, markov.Functor):
             Map from atomic :class:`Ty` to :code:`cod.ob`.
         ar_map (Mapping[Box, Diagram]) : Map from :class:`Box` to :code:`cod`.
         cod (Category) : The codomain of the functor.
+
+    A codomain with no spiders can still interpret half of one: a spider
+    with a single input is the copy of its comonoid and a spider with a
+    single output is the merge of its monoid, which is what lets a
+    diagram that uses only one half land in e.g. a cartesian category.
+    A spider the codomain supplies neither for is looked up in
+    ``ar_map`` like any other box.
+
+    Example
+    -------
+    >>> from discopy import python
+    >>> x = Ty('x')
+    >>> F = Functor({x: (int, )}, {}, cod=python.Function)
+    >>> F(Diagram.spiders(1, 3, x))(42)  # python has copies
+    (42, 42, 42)
+    >>> F(Diagram.spiders(1, 0, x))(42)  # and discards
+    ()
     """
 
     dom = cod = Diagram
 
     def __call__(self, other):
         if isinstance(other, Spider):
-            return self.cod.spiders(
-                len(other.dom), len(other.cod), self(other.typ))
+            if hasattr(self.cod, "spiders"):
+                return self.cod.spiders(
+                    len(other.dom), len(other.cod), self(other.typ))
+            if len(other.dom) == 1 and hasattr(self.cod, "copy"):
+                return self.cod.copy(self(other.typ), len(other.cod))
+            if len(other.cod) == 1 and hasattr(self.cod, "merge"):
+                return self.cod.merge(self(other.typ), len(other.dom))
         if isinstance(other, (markov.Copy, markov.Merge)):
             return markov.Functor.__call__(self, other)
         return compact.Functor.__call__(self, other)

@@ -44,11 +44,12 @@ import numpy as np
 from owlapy.class_expression import (
     OWLDataSomeValuesFrom, OWLDatatypeRestriction, OWLFacetRestriction,
     OWLObjectAllValuesFrom, OWLObjectHasValue, OWLObjectIntersectionOf,
-    OWLObjectSomeValuesFrom, OWLObjectUnionOf)
+    OWLObjectOneOf, OWLObjectSomeValuesFrom, OWLObjectUnionOf)
 from owlapy.iri import IRI
 from owlapy.owl_axiom import (
     OWLClassAssertionAxiom, OWLDataPropertyAssertionAxiom,
     OWLDeclarationAxiom, OWLDifferentIndividualsAxiom,
+    OWLFunctionalObjectPropertyAxiom,
     OWLObjectPropertyDomainAxiom, OWLObjectPropertyRangeAxiom,
     OWLSubClassOfAxiom)
 from owlapy.owl_literal import DateTimeOWLDatatype, OWLLiteral
@@ -57,7 +58,7 @@ from owlapy.vocab import OWLFacet
 
 from discopy import python
 from discopy.owl import (
-    Box, Functor, Id, Relation, instances, load, name_of, ob)
+    Box, Diagram, Functor, Id, Relation, instances, load, name_of, ob)
 
 FIBO = "https://spec.edmcouncil.org/fibo/ontology/"
 FIXTURES = os.path.join(
@@ -120,6 +121,21 @@ class Market:
         """The foreign currencies carrying risk, minor units folded in."""
         return tuple(sorted({
             risk_currency(one) for one in self.units()} - {self.reporting}))
+
+    def rate(self, unit: str, when):
+        """The spot of a unit on a day, or on each of a sequence of days.
+
+        A lookup in the fetched history, so the coefficient of a
+        conversion is whatever the feed said on the date flowing into
+        it, never a constant compiled into the plan.
+
+        Parameters:
+            unit : The quoting unit.
+            when : A date, or a sequence of them.
+        """
+        if isinstance(when, datetime):
+            return dict(zip(self.dates, self.history[unit]))[when]
+        return np.array([self.rate(unit, one) for one in when])
 
     def covariance(self, *currencies: str) -> tuple:
         """The daily return covariance of some currencies, as estimated.
@@ -210,6 +226,12 @@ class Fund:
         self.kind = {name: self.world.owl_class(name) for name in KINDS}
         self.world.add(*(OWLSubClassOfAxiom(one, self.MonetaryAmount)
                          for one in self.kind.values()))
+        self.Collection = find("Collections/Collection")
+        self.Valuation = self.world.owl_class("Valuation")
+        self.hasExposure = OWLObjectProperty(
+            IRI.create(self.world.iri + "hasExposure"))
+        self.hasQuotation = OWLObjectProperty(
+            IRI.create(self.world.iri + "hasQuotation"))
         self.exposureTo = OWLObjectProperty(
             IRI.create(self.world.iri + "exposureTo"))
         self.hasFXDelta = OWLObjectProperty(
@@ -220,7 +242,15 @@ class Fund:
             OWLDeclarationAxiom(self.hasFXDelta),
             OWLObjectPropertyDomainAxiom(self.hasFXDelta, self.Holding),
             OWLObjectPropertyRangeAxiom(
-                self.hasFXDelta, self.kind["FXExposure"]))
+                self.hasFXDelta, self.kind["FXExposure"]),
+            OWLDeclarationAxiom(self.hasExposure),
+            OWLObjectPropertyDomainAxiom(self.hasExposure, self.Valuation),
+            OWLObjectPropertyRangeAxiom(
+                self.hasExposure, self.kind["FXExposure"]),
+            OWLDeclarationAxiom(self.hasQuotation),
+            OWLObjectPropertyDomainAxiom(self.hasQuotation, self.Valuation),
+            OWLObjectPropertyRangeAxiom(self.hasQuotation, self.ExchangeRate),
+            OWLFunctionalObjectPropertyAxiom(self.hasBaseCurrency))
         self.money = {unit: self.world.individual(unit, self.Currency)
                       for unit in market.units()}
         self.world.add(
@@ -229,6 +259,15 @@ class Fund:
         self.dates, self.rates, self.holdings = {}, {}, {}
         for unit, value in sorted(market.spot.items()):
             self.quote(unit, value, market.source)
+        for unit in market.units():        # one axiom per unit the feed named
+            self.world.add(OWLSubClassOfAxiom(
+                OWLObjectIntersectionOf((
+                    self.Valuation, OWLObjectSomeValuesFrom(
+                        self.hasExposure, OWLObjectHasValue(
+                            self.hasCurrency, self.money[unit])))),
+                OWLObjectAllValuesFrom(
+                    self.hasQuotation, OWLObjectHasValue(
+                        self.hasBaseCurrency, self.money[unit]))))
 
     def day(self, moment: datetime):
         """The `ExplicitDate` individual of a moment, observed as such."""
@@ -256,6 +295,32 @@ class Fund:
                             OWLFacetRestriction(
                                 OWLFacet.MAX_INCLUSIVE, OWLLiteral(end))))))))
 
+    def calendar(self, when=None):
+        """The date wire of a plan: the day it values or the window it covers.
+
+        Read off the same ``when`` predicate that dates every other
+        wire, so a plan and its dates cannot disagree by construction.
+        """
+        when = self.on(self.asof) if when is None else when
+        filler = when.get_filler()
+        return OWLObjectOneOf((filler, )) if isinstance(
+            when, OWLObjectHasValue) else filler
+
+    def quotation(self, unit: str = None, when=None):
+        """The exchange rate wire: which pair, on which date.
+
+        All of it FIBO's own -- `ExchangeRate` with `hasBaseCurrency`,
+        `hasDealtCurrency` and `hasAsOfDate` -- so a conversion box can
+        state exactly which quotation it will accept.
+        """
+        when = self.on(self.asof) if when is None else when
+        return OWLObjectIntersectionOf((
+            self.ExchangeRate,
+            self.some_currency(self.hasBaseCurrency) if unit is None
+            else OWLObjectHasValue(self.hasBaseCurrency, self.money[unit]),
+            OWLObjectHasValue(
+                self.hasDealtCurrency, self.money[self.reporting]), when))
+
     def priced(self, currency: str):
         """A monetary amount in one currency, FIBO's own construct."""
         return OWLObjectIntersectionOf((
@@ -268,7 +333,25 @@ class Fund:
             self.Holding, OWLObjectSomeValuesFrom(
                 self.hasAcquisitionPrice, self.priced(currency))))
 
-    def exposed(self, currency: str):
+    def valuation(self, when=None):
+        """An exposure paired with the quotation that values it.
+
+        The ontology says a valuation's quotation is based in its
+        exposure's own currency, one axiom per unit the feed names, so a
+        collection of valuations that mismatched any of them would
+        denote an inconsistent world -- which is the guarantee that a
+        per-currency wire used to give, now holding for every currency
+        rather than the ones a plan happened to name.
+        """
+        when = self.on(self.asof) if when is None else when
+        return OWLObjectIntersectionOf((
+            self.Valuation,
+            OWLObjectSomeValuesFrom(self.hasExposure, self.amount(
+                "FXExposure", when=when)),
+            OWLObjectSomeValuesFrom(self.hasQuotation, self.quotation(
+                when=when))))
+
+    def exposed(self, currency: str = None):
         """A holding whose FX delta is in one currency.
 
         Not the same predicate as :meth:`bucket`: a hedge is priced at
@@ -277,10 +360,27 @@ class Fund:
         """
         return OWLObjectIntersectionOf((
             self.Holding, OWLObjectSomeValuesFrom(
-                self.hasFXDelta, OWLObjectHasValue(
+                self.hasFXDelta, self.some_currency(self.hasCurrency)
+                if currency is None else OWLObjectHasValue(
                     self.hasCurrency, self.money[currency]))))
 
-    def amount(self, metric: str, currency: str, when=None, to: str = None):
+    def bag(self, predicate):
+        """A collection every member of which satisfies a predicate.
+
+        FIBO's own `Collection` and `comprises`, which is what lets a
+        plan carry one wire per *kind* of thing rather than one per
+        currency: the arity stops depending on the data.
+        """
+        return OWLObjectIntersectionOf((
+            self.Collection,
+            OWLObjectAllValuesFrom(self.comprises, predicate)))
+
+    def some_currency(self, prop):
+        """``∃prop.Currency`` -- some currency rather than a named one."""
+        return OWLObjectSomeValuesFrom(prop, self.Currency)
+
+    def amount(self, metric: str, currency: str = None, when=None,
+               to: str = None):
         """What a number measures, in which currency, when, exposed to what.
 
         Parameters:
@@ -291,10 +391,12 @@ class Fund:
             to : The currency the amount is exposed to, if any.
         """
         when = self.on(self.asof) if when is None else when
-        inside = (self.kind[metric],
-                  OWLObjectHasValue(self.hasCurrency, self.money[currency]),
-                  when)
-        if to is not None:
+        inside = (self.kind[metric], self.some_currency(self.hasCurrency)
+                  if currency is None else OWLObjectHasValue(
+                      self.hasCurrency, self.money[currency]), when)
+        if to is True:
+            inside += (self.some_currency(self.exposureTo), )
+        elif to is not None:
             inside += (OWLObjectHasValue(self.exposureTo, self.money[to]), )
         return OWLObjectIntersectionOf(inside)
 
@@ -398,109 +500,149 @@ class Step:
     entity: object = None
 
 
-def netting(fund: Fund, unit: str, when=None) -> Box:
-    """Net the FX deltas of a quoting unit into one dated amount."""
+def dated(value, day):
+    """One number on a day, the same number on every day of a window."""
+    return float(value) if isinstance(day, datetime)\
+        else np.full(len(day), float(value))
+
+
+def select(fund: Fund) -> Box:
+    """Decompose the portfolio into its FX deltas, keyed by quoting unit."""
     return Box(
-        "net", ob((fund.exposed(unit), )),
-        ob((fund.amount("FXExposure", unit, when), )),
-        data=Step(lambda deltas: float(sum(deltas))))
+        "select", ob((fund.Portfolio, )), ob((fund.bag(fund.exposed()), )),
+        data=Step(lambda book: {
+            unit: book.deltas(unit) for unit in book.market.units()}))
 
 
-def conversion(fund: Fund, unit: str, when=None) -> Box:
-    """One `ExchangeRate` of the ontology, carried as the box's data.
+def netting(fund: Fund, when=None) -> Box:
+    """Group each unit's deltas into one dated amount.
 
-    The result is a reporting-currency amount of exposure to the
-    *currency* of the unit, so a pence leg and a pound leg land on the
-    same predicate and can then be added.
+    The date comes in on a wire because the amount is dated by it: the
+    book is held at today's size, so over a window each netted delta is
+    the same number on every day -- a constant series, but a series.
     """
-    rate, value, _ = fund.rates[unit]
     return Box(
-        f"×{value:.6g}", ob((fund.amount("FXExposure", unit, when), )),
-        ob((fund.amount("FXExposure", fund.reporting, when,
-                        to=risk_currency(unit)), )),
-        data=Step(lambda amount: amount * value, rate))
+        "net", ob((fund.bag(fund.exposed()), fund.calendar(when))),
+        ob((fund.bag(fund.amount("FXExposure", when=when)), )),
+        data=Step(lambda book, day: {
+            unit: dated(sum(deltas), day)
+            for unit, deltas in book.items()}))
 
 
-def merge(fund: Fund, currency: str, arity: int, when=None) -> Box:
-    """Add the reporting-currency exposures of one currency's units."""
-    wire = fund.amount("FXExposure", fund.reporting, when, to=currency)
-    return Box("+", ob(arity * (wire, )), ob((wire, )),
-               data=Step(lambda *xs: sum(xs)))
+def quotes(fund: Fund, when=None) -> Box:
+    """Read every quotation the feed has at the incoming date."""
+    return Box(
+        f"quotes in {fund.reporting}", ob((fund.calendar(when), )),
+        ob((fund.bag(fund.quotation(when=when)), )),
+        data=Step(lambda day: {
+            unit: dated(1., day) if unit == fund.reporting
+            else fund.market.rate(unit, day)
+            for unit in fund.market.units()}, fund.ExchangeRate))
 
 
-def exposure_plan(fund: Fund, *currencies: str, when=None):
-    """Net each quoting unit, convert it, then merge the units of one risk.
+def pairing(fund: Fund, when=None) -> Box:
+    """Pair each exposure with the quotation of its own currency.
 
-    Pounds and pence are netted apart, being different predicates, and
-    meet only once both have become reporting-currency amounts of
-    sterling exposure.
+    What comes out is a collection of `Valuation`, and the ontology says
+    a valuation's quotation is based in its exposure's own currency, so
+    a pairing that crossed two currencies would denote a world HermiT
+    refutes -- whatever the currencies, named in the plan or not.
     """
-    legs = []
-    for currency in currencies:
-        units = fund.quoting(currency)
-        leg = Id().tensor(*(netting(fund, one, when)
-                            >> conversion(fund, one, when) for one in units))
-        legs.append(leg if len(units) == 1
-                    else leg >> merge(fund, currency, len(units), when))
-    return Id().tensor(*legs)
+    return Box(
+        "pair", ob((fund.bag(fund.amount("FXExposure", when=when)),
+                    fund.bag(fund.quotation(when=when)))),
+        ob((fund.bag(fund.valuation(when)), )),
+        data=Step(lambda amounts, rates: {
+            unit: (amounts[unit], rates[unit]) for unit in amounts},
+            fund.Valuation))
+
+
+def conversion(fund: Fund, when=None) -> Box:
+    """Value every pairing in the reporting currency."""
+    return Box(
+        "×", ob((fund.bag(fund.valuation(when)), )),
+        ob((fund.bag(fund.amount(
+            "FXExposure", fund.reporting, when, to=True)), )),
+        data=Step(lambda pairs: {
+            unit: amount * rate for unit, (amount, rate) in pairs.items()}))
+
+
+def regroup(fund: Fund, when=None) -> Box:
+    """Fold each minor unit into the currency whose risk it carries."""
+    def fold(bag):
+        result = {}
+        for unit, value in bag.items():
+            currency = risk_currency(unit)
+            result[currency] = result.get(currency, 0.) + value
+        return result
+    wire = fund.bag(fund.amount("FXExposure", fund.reporting, when, to=True))
+    return Box("regroup", ob((wire, )), ob((wire, )), data=Step(fold))
+
+
+def exposure_plan(fund: Fund, when=None):
+    """The fund's exposure, from a portfolio and a date and nothing else.
+
+    Six boxes and one copy, every one of a fixed arity: the plan is the
+    same
+    picture for a fund of four currencies or forty, because what varies
+    lives inside the collections rather than in the number of wires.
+    """
+    calendar = ob((fund.calendar(when), ))
+    return Id(ob((fund.Portfolio, ))) @ Diagram.copy(calendar)\
+        >> select(fund) @ Id(calendar @ calendar)\
+        >> netting(fund, when) @ quotes(fund, when)\
+        >> pairing(fund, when) >> conversion(fund, when)\
+        >> regroup(fund, when)
+
+
+def hedge(fund: Fund, currency: str, fraction: float, when=None) -> Box:
+    """A spot overlay reducing the exposure to one currency."""
+    wire = fund.bag(fund.amount("FXExposure", fund.reporting, when, to=True))
+    return Box(
+        f"hedge {currency} {fraction:.0%}", ob((wire, )), ob((wire, )),
+        data=Step(lambda bag: dict(
+            bag, **{currency: bag[currency] * (1 - fraction)})))
 
 
 def risk_box(fund: Fund, model: "RiskModel", when=None) -> Box:
-    """Covariance FX risk: the same box on a day or over a window."""
-    exposure = tuple(
-        fund.amount("FXExposure", fund.reporting, when, to=one)
-        for one in model.currencies)
-    component = tuple(
-        fund.amount("ComponentVaR", fund.reporting, when, to=one)
-        for one in model.currencies)
+    """Covariance FX risk: one collection in, two numbers and one out."""
+    def evaluate(bag):
+        var, shortfall, *components = model.evaluate(
+            tuple(bag[one] for one in model.currencies))
+        return var, shortfall, dict(zip(model.currencies, components))
     return Box(
-        f"VaR {model.confidence:.0%} · {model.days}d", ob(exposure),
+        f"VaR {model.confidence:.0%} · {model.days}d",
+        ob((fund.bag(fund.amount(
+            "FXExposure", fund.reporting, when, to=True)), )),
         ob((fund.amount("VaR", fund.reporting, when),
-            fund.amount("ExpectedShortfall", fund.reporting, when))
-           + component),
-        data=Step(lambda *xs: model.evaluate(xs)))
+            fund.amount("ExpectedShortfall", fund.reporting, when),
+            fund.bag(fund.amount(
+                "ComponentVaR", fund.reporting, when, to=True)))),
+        data=Step(evaluate))
 
 
-def shock(fund: Fund, currency: str, ratio: float) -> Box:
-    """A first-order scenario move in the reporting currency per unit."""
+def shock(fund: Fund, shocks: dict, when=None) -> Box:
+    """Move every exposure by its own scenario ratio."""
     return Box(
-        f"{ratio:+.0%}",
-        ob((fund.amount("FXExposure", fund.reporting, to=currency), )),
-        ob((fund.amount("PnL", fund.reporting, to=currency), )),
-        data=Step(lambda amount: amount * ratio))
+        "shock", ob((fund.bag(fund.amount(
+            "FXExposure", fund.reporting, when, to=True)), )),
+        ob((fund.bag(fund.amount("PnL", fund.reporting, when, to=True)), )),
+        data=Step(lambda bag: {
+            one: value * shocks.get(one, 0.) for one, value in bag.items()}))
 
 
-def total(fund: Fund, *currencies: str) -> Box:
-    """Sum the scenario contributions, which share one currency and date."""
+def total(fund: Fund, when=None) -> Box:
+    """Add the contributions, which share a currency, a metric and a date."""
     return Box(
-        "+", ob(tuple(fund.amount("PnL", fund.reporting, to=one)
-                      for one in currencies)),
-        ob((fund.amount("PnL", fund.reporting), )),
-        data=Step(lambda *xs: float(sum(xs))))
+        "+", ob((fund.bag(fund.amount(
+            "PnL", fund.reporting, when, to=True)), )),
+        ob((fund.amount("PnL", fund.reporting, when), )),
+        data=Step(lambda bag: sum(bag.values())))
 
 
-def stress_plan(fund: Fund, shocks: dict):
+def stress_plan(fund: Fund, shocks: dict, when=None):
     """Shock each exposure, then add what is now commensurable."""
-    return Id().tensor(*(
-        shock(fund, one, ratio) for one, ratio in shocks.items()
-    )) >> total(fund, *shocks)
-
-
-def history(fund: Fund, currency: str, start, end, series) -> Box:
-    """A dated series of reporting-currency exposure to one currency."""
-    return Box(
-        f"{currency} history", ob(()),
-        ob((fund.amount("FXExposure", fund.reporting,
-                        fund.during(start, end), to=currency), )),
-        data=Step(lambda: np.asarray(series, dtype=float)))
-
-
-def history_plan(fund: Fund, model: "RiskModel", start, end, series: dict):
-    """The risk plan retyped from one day to a window: same shape, arrays."""
-    return Id().tensor(*(
-        history(fund, one, start, end, series[one])
-        for one in model.currencies
-    )) >> risk_box(fund, model, fund.during(start, end))
+    return shock(fund, shocks, when) >> total(fund, when)
 
 
 def interpreter(fund: Fund) -> Functor:
@@ -510,10 +652,19 @@ def interpreter(fund: Fund) -> Functor:
     its date is a window rather than a day, and a float otherwise.
     """
     def carrier(wire):
-        inside = tuple(wire.entity.operands()) if isinstance(
-            wire.entity, OWLObjectIntersectionOf) else (wire.entity, )
+        entity = wire.entity
+        inside = tuple(entity.operands()) if isinstance(
+            entity, OWLObjectIntersectionOf) else (entity, )
+        if fund.Portfolio in inside:
+            return Fund
+        if fund.Collection in inside:
+            return dict
         if fund.Holding in inside:
             return list
+        if isinstance(entity, OWLObjectOneOf):
+            return datetime           # one dated observation
+        if fund.ExplicitDate in inside:
+            return np.ndarray         # a window of them
         return np.ndarray if any(
             isinstance(one, OWLObjectSomeValuesFrom)
             and one.get_property() == fund.hasAsOfDate
@@ -590,12 +741,15 @@ def demo(market: Market = None) -> tuple:
     market = fetch() if market is None else market
     fund = Fund(market)
     for name, shares in SHARES.items():
+        if name not in market.prices:
+            continue                  # the feed prices what it prices
         price, unit = market.prices[name]
         fund.hold(name, unit, price * shares, price * shares, market.source)
     fund.hold("usd_cash", market.reporting, 1.82e6, 1.82e6,
               "Synthetic cash balance")
     euro = sum(price * SHARES[name] for name, (price, unit)
-               in market.prices.items() if unit == "EUR")
+               in market.prices.items()
+               if unit == "EUR" and name in SHARES)
     fund.hold("existing_eur_hedge", market.reporting, 0., -.6 * euro,
               "Synthetic spot-delta overlay", exposure_to="EUR")
     fund.mandate()
@@ -604,19 +758,3 @@ def demo(market: Market = None) -> tuple:
         currencies, market.covariance(*currencies),
         f"Daily log-return covariance, {len(market.dates)} days, "
         f"{market.source}")
-
-
-def path(fund: Fund, model: RiskModel, days: int = 65) -> tuple:
-    """The fund's reporting-currency exposure on each of the last days.
-
-    The positions are held at today's size and the exchange rates are
-    the real ones of those days, so the window plan is a backtest of
-    the current book rather than a simulation.
-    """
-    market, series = fund.market, {}
-    for currency in model.currencies:
-        series[currency] = sum(
-            sum(fund.deltas(unit))
-            * np.array(market.history[unit][-days:], dtype=float)
-            for unit in fund.quoting(currency))
-    return market.dates[-days:], series

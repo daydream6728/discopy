@@ -21,7 +21,31 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   pence is a quoting unit of its own with its own `ExchangeRate`, netted
   apart from sterling and meeting it only once both are dollar amounts of
   the same exposure — reading a pence amount at the pound rate is a
-  hundredfold error that does not compose. Its companion
+  hundredfold error. An exchange rate is a *wire*, not a coefficient
+  compiled into a box, and the layout is *fixed*: the plan's domain is
+  one `Portfolio` wire and one date wire, its seven boxes have arities
+  that do not depend on the data, and the same picture serves a fund of
+  four quoting units or forty. What varies rides inside FIBO
+  `Collection` wires — `Collection ⊓ ∀comprises.X` — so `select`
+  decomposes the portfolio into its deltas, `net` groups them, `quotes`
+  reads every rate off the feed at the incoming date, `pair` puts each
+  amount beside the quotation of its own currency, `×` values them and
+  `regroup` folds each minor unit into the currency whose risk it
+  carries. The quotation wire is FIBO's own `ExchangeRate` with
+  `hasBaseCurrency`, `hasDealtCurrency` and `hasAsOfDate`, and the date
+  wire is its `ExplicitDate`, so the window version of a plan is the
+  same diagram with its wires retyped, arrays flowing where scalars did.
+  Keying the collections by currency makes a class of mistake
+  unrepresentable rather than merely detectable: there is no ordering of
+  risk factors to get wrong and no leg for an overlay to land on by
+  accident. The guarantee that an amount meets its own rate, which a
+  per-currency wire used to give, becomes an axiom on a new `Valuation`
+  class — `Valuation ⊓ ∃hasExposure.∃hasCurrency.{c} ⊑
+  ∀hasQuotation.∃hasBaseCurrency.{c}`, one per unit the feed names, with
+  `hasBaseCurrency` functional and the units pairwise different — so a
+  crossed valuation is entailed empty, for every unit rather than the
+  ones a plan happened to wire up, and HermiT says so without anything
+  being written into the world. Its companion
   `docs/notebooks/financial_ontology.py` builds the world from the
   offline FIBO fixtures and declares the two things FIBO leaves open — a
   class per metric kind, and the currency a reporting-currency amount is
@@ -42,8 +66,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   window version of the risk plan is the same diagram with its wires
   retyped from a day to an interval, every number becoming an array,
   licensed by HermiT's proof that the day lies inside the window — and
-  with the real rates of each day behind it, that window is a backtest of
-  the current book rather than a simulation. It replaces
+  with each day's real rate read by the quotation boxes, that window is a
+  backtest of the current book rather than a simulation. It replaces
   `docs/notebooks/ontology/finance.md`, which computed the same risk on
   invented quotes, untyped dates and standalone volatilities, and the
   `Commons/DatesAndTimes` stand-in of the fixtures gains the date
@@ -397,6 +421,18 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
+- `frobenius.Functor` no longer raises `AttributeError` on a spider when
+  its codomain has none. A spider with a single input is the copy of the
+  codomain's comonoid and one with a single output is the merge of its
+  monoid, so a diagram that uses only one half lands in a cartesian
+  category such as `discopy.python`, where evaluating a `Copy` had been
+  impossible although `Function.copy` was right there. A spider the
+  codomain supplies neither for now falls through to `ar_map` like any
+  other box, so it can at least be given an image by hand, where before
+  the lookup was unreachable. This follows what the `markov`,
+  `symmetric`, `braided` and `balanced` branches already do, checking
+  the codomain has the structure before using it
+  ([#491](https://github.com/discopy/discopy/issues/491)).
 - The style review no longer depends on a transition that may never
   happen. `ready_for_review` fires on the draft-to-ready edge alone, so a
   pull request whose `TODO.md` was deleted before it was ever opened went
