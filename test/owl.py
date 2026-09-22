@@ -43,9 +43,9 @@ from discopy.owl import (  # noqa: E402
     Axiom, Box, Bubble, Coercion, Id, Nothing, Query, Relation, Thing, Ty,
     Wire, World, axioms, boundary, box, carrier, class_axioms, coercion,
     combine, compilable, consistent, declared, deduced, extension,
-    individual_class, instances, label, load, name_of, ob, parallel, point,
-    property_axioms, reason, relations, satisfying, schema, subsumes,
-    to_diagram)
+    individual_class, instances, label, load, name_of, ob, parallel,
+    picture, point, property_axioms, reason, relations, satisfying,
+    schema, subsumes, to_diagram)
 from discopy.utils import AxiomError  # noqa: E402
 
 
@@ -890,3 +890,18 @@ def test_market_safety():
     world.add(  # an agent's mistake
         OWLClassAssertionAxiom(demo.shell_co, not_for_profit))
     assert not consistent(world)  # HermiT knows the two are disjoint
+
+
+def test_a_data_restriction_can_be_queried(kennel):
+    """A predicate the dictionary cannot draw is named, not fatal."""
+    world, string = kennel.world, string_of_dogs(kennel)
+    assert not compilable(string, world)
+    assert picture(string, world) is None
+    drawn, = extension(string, world).to_diagram().boxes
+    assert drawn.name == label(string)      # named, since it cannot be drawn
+    query = Query.id((string, ), world)     # used to raise on its picture
+    assert query.dom == query.cod == (string, )
+    coerced = Query.from_class(kennel.Dog, world) >> query
+    assert [one.target for one in coerced.coercions] == [string]
+    with raises(AxiomError):   # a dog is not provably named anything
+        coerced.validate()

@@ -1054,6 +1054,7 @@ quantum = [
 ]
 semantic = [
     { name = "owlapy" },
+    { name = "rdflib" },
 ]
 test = [
     { name = "coverage" },
@@ -1072,6 +1073,7 @@ test = [
     { name = "qiskit" },
     { name = "qiskit-aer" },
     { name = "quimb" },
+    { name = "rdflib" },
     { name = "sympy" },
     { name = "tensornetwork" },
     { name = "torch", version = "2.13.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'linux'" },
@@ -1115,6 +1117,7 @@ semantic = [
 requires-dist = [
     { name = "coverage", marker = "extra == 'test'" },
     { name = "discopy", extras = ["grammar", "quantum", "semantic"], marker = "extra == 'test'" },
+    { name = "discopy", extras = ["semantic"], marker = "extra == 'docs'" },
     { name = "ipykernel", marker = "extra == 'docs'", specifier = "==6.23.*" },
     { name = "ipython", marker = "extra == 'docs'" },
     { name = "jax", marker = "extra == 'quantum'" },
@@ -1127,7 +1130,6 @@ requires-dist = [
     { name = "networkx" },
     { name = "nltk", marker = "extra == 'grammar'" },
     { name = "numpy" },
-    { name = "owlapy", marker = "extra == 'docs'" },
     { name = "owlapy", marker = "extra == 'semantic'" },
     { name = "pennylane", marker = "extra == 'quantum'", specifier = ">=0.45.0" },
     { name = "pennylane-qiskit", marker = "extra == 'quantum'", specifier = ">=0.45.0" },
@@ -1141,7 +1143,7 @@ requires-dist = [
     { name = "qiskit", marker = "extra == 'quantum'" },
     { name = "qiskit-aer", marker = "extra == 'quantum'" },
     { name = "quimb", marker = "extra == 'quantum'" },
-    { name = "rdflib", marker = "extra == 'docs'", specifier = ">=7.1,<8" },
+    { name = "rdflib", marker = "extra == 'semantic'", specifier = ">=7.1,<8" },
     { name = "sphinx", marker = "extra == 'docs'", specifier = "==7.2.*" },
     { name = "sphinx-book-theme", marker = "extra == 'docs'", specifier = "==1.1.*" },
     { name = "sphinxcontrib-bibtex", marker = "extra == 'docs'", specifier = "==2.5.*" },
@@ -3526,7 +3528,7 @@ name = "pexpect"
 version = "4.9.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "ptyprocess" },
+    { name = "ptyprocess", marker = "sys_platform != 'emscripten' and sys_platform != 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/42/92/cc564bf6381ff43ce1f4d06852fc19a2f11d180f23dc32d9588bee2f149d/pexpect-4.9.0.tar.gz", hash = "sha256:ee7d41123f3c9911050ea2c2dac107568dc43b2d3b0c7557a33212c398ead30f", size = 166450, upload-time = "2023-11-25T09:07:26.339Z" }
 wheels = [

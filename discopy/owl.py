@@ -97,6 +97,8 @@ Summary
         individual_class
         to_diagram
         restriction_diagram
+        picture
+        compilable
         combine
 
 .. _owlapy: https://dice-group.github.io/owlapy/
@@ -1733,7 +1735,7 @@ class Query(DistributiveAllegory, SymmetricCategory):
         dom = entity if dom is None else dom
         result = cls(extension(entity, world), (dom, ), (dom, ))
         result.name = label(entity)
-        result.diagram = to_diagram(entity, world, dom)
+        result.diagram = picture(entity, world, dom)
         return result
 
     @classmethod
@@ -2056,7 +2058,7 @@ def coreflexive(expr, members, world: World) -> Relation:
     """
     result = Relation([2 * ((one, ), ) for one in members], 1, 1, world)
     result.name = label(expr)
-    result.diagram = to_diagram(expr, world, Thing)
+    result.diagram = picture(expr, world)
     return result
 
 
@@ -2616,6 +2618,41 @@ def axioms(entity, world: World = None) -> list[Axiom]:
             if entity in axiom.source.signature()]
 
 
+def picture(expr, world: World, dom=None):
+    """
+    The picture of a class expression, or ``None`` when it is outside
+    the dictionary of constructs :func:`to_diagram` draws.
+
+    A predicate whose anatomy cannot be drawn -- a datatype restriction,
+    say -- is still a perfectly good predicate: the relation it defines
+    falls back to a box named after it, see :meth:`Relation.to_diagram`,
+    rather than refusing to be built at all.
+
+    Parameters:
+        expr : The `owlapy` class or class expression.
+        world : The world whose ontology declares the schema.
+        dom : The predicate to read it at, ``owl:Thing`` by default.
+
+    Example
+    -------
+    >>> from owlapy.class_expression import OWLDataSomeValuesFrom
+    >>> from owlapy.owl_datatype import OWLDatatype
+    >>> from owlapy.owl_property import OWLDataProperty
+    >>> from owlapy.vocab import XSDVocabulary
+    >>> world = World("http://discopy.org/kennel.owl#")
+    >>> Dog = world.owl_class("Dog")
+    >>> named = OWLDataProperty(IRI.create(world.iri + "named"))
+    >>> world.add(OWLDeclarationAxiom(named))
+    >>> assert picture(Dog, world) is not None
+    >>> assert picture(OWLDataSomeValuesFrom(
+    ...     named, OWLDatatype(XSDVocabulary.STRING.iri)), world) is None
+    """
+    try:
+        return to_diagram(expr, world, Thing if dom is None else dom)
+    except NotImplementedError:
+        return None
+
+
 def compilable(expr, world: World) -> bool:
     """
     Whether a class expression is inside the dictionary, i.e. whether
@@ -2626,8 +2663,4 @@ def compilable(expr, world: World) -> bool:
         expr : The `owlapy` class or class expression.
         world : The world whose ontology declares the schema.
     """
-    try:
-        to_diagram(expr, world, Thing)
-        return True
-    except NotImplementedError:
-        return False
+    return picture(expr, world) is not None

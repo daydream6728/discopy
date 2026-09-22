@@ -144,7 +144,7 @@ class Function(function.Function, ClosedCategory):
             x : The tuple of types to copy.
             n : The number of copies.
         """
-        return Function(lambda *xs: n * xs, dom=x, cod=n * x)
+        return Function(lambda *xs: untuplify(n * xs), dom=x, cod=n * x)
 
     @staticmethod
     def discard(dom: Ty) -> Function:

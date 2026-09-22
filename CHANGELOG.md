@@ -421,6 +421,26 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
+- A predicate the drawing dictionary cannot compile no longer refuses to
+  be queried. `coreflexive` and `Query.from_class` built their picture
+  eagerly with `to_diagram`, which raises on anything outside the
+  dictionary, so a datatype restriction — a valuation window, say — made
+  `extension`, `boundary` and every `Query` over it fail on the picture
+  rather than on the semantics, which are perfectly well defined. A new
+  `picture` returns the diagram or `None`, the relation then falling back
+  to a box named after the predicate the way `Relation.to_diagram`
+  already does for a composite that forgot its history, and `compilable`
+  is defined as `picture(...) is not None` rather than duplicating the
+  attempt.
+- `python.Function.copy(x, 1)` returns its argument rather than a
+  one-tuple, the way `Function.id` does. The two compose identically,
+  since `then` tuplifies either, so this only shows at the boundary —
+  where a single copy now reads as the identity it is.
+- The `semantic` extra declares `rdflib`, which `discopy.owl` imports for
+  `Relation.sparql`: installing `discopy[semantic]` and asking a SPARQL
+  query used to be an `ImportError`, the dependency having been declared
+  only by `docs`, which now asks for `discopy[semantic]` instead of
+  listing its pieces.
 - `frobenius.Functor` no longer raises `AttributeError` on a spider when
   its codomain has none. A spider with a single input is the copy of the
   codomain's comonoid and one with a single output is the merge of its

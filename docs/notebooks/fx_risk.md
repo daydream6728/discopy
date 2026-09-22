@@ -8,9 +8,13 @@ pyproject: |-
       "numpy",
       "matplotlib",
       "yfinance",
-      "owlapy==1.6.6",
-      "discopy[semantic] @ git+https://github.com/daydream6728/discopy.git@codex/fibo-qudt-demo",
+      "discopy[semantic]",
   ]
+  # This notebook reads financial_ontology.py beside it and the FIBO
+  # fixtures two directories up, so it only runs from inside the repo --
+  # where the repo's own discopy is the one it should be using.
+  [tool.uv.sources]
+  discopy = { path = "../..", editable = true }
 ---
 ```python {.marimo hide_code="true"}
 import marimo as mo
