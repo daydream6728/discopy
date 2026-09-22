@@ -14,7 +14,7 @@ sorts, its parameters the premises, its return annotation the conclusion.
         @abstractmethod
         def tensor[A, B, C, D](
                 self: Hom[C1, A, B], other: Hom[C1, C, D]
-        ) -> Annotated[C1, Tensor[A, C], Tensor[B, D]]:
+        ) -> Hom[C1, Tensor[A, C], Tensor[B, D]]:
             ...
 
 The signature typechecks as it reads and evaluates to the sequent it
@@ -23,8 +23,9 @@ parameters, its sort the bound — an object of ``C0`` when unbounded, an
 :class:`Atom` or a :class:`Count` when declared — ``Hom[C1, A, B]``
 types as a plain ``C1`` by substituting the base of ``type Hom[C, A, B]
 = Annotated[C, A, B]``, and a compound pattern is a pattern class
-subscripted with the type parameters in the metadata of a
-``typing.Annotated``, which is no part of the type: ``Tensor[X, R[X]]``
+subscripted with the type parameters, standing as a boundary of a
+``Hom`` — a raw ``typing.Annotated`` only annotates what is not a hom,
+an object or count premise with its one pattern: ``Tensor[X, R[X]]``
 is the :class:`Tensor` of a variable with its right :class:`Adjoint`,
 ``Delay[M]`` a :class:`Delay`, ``Over[Z, Y]`` and ``Under[Y, Z]`` the
 :class:`Exp` s, ``Repeat[X, N]`` a :class:`Repeat` and ``Unit[C0]`` the
@@ -840,7 +841,7 @@ def interpret(annotation, sorts: dict[str, Sort | HomType]) -> Pattern | Sort:
 
     >>> def cups[X: Atom](
     ...         cls, left: Annotated[C0, X], right: Annotated[C0, R[X]]
-    ... ) -> Annotated[C1, Tensor[X, R[X]], Unit[C0]]:
+    ... ) -> Hom[C1, Tensor[X, R[X]], Unit[C0]]:
     ...     ...
     >>> sorts = {"X": Sort("C0", atomic=True, bound=abc.Pregroup)}
     >>> print(interpret(cups.__annotations__["return"], sorts))

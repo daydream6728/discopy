@@ -98,7 +98,8 @@ from typing import Annotated, Any
 
 from discopy import monoidal, balanced, hypergraph, cmap, messages
 from discopy.abc import MonoidalCategory, SymmetricCategory
-from discopy.axioms import SELF, Atom, Equation, Tensor, axiom, generator
+from discopy.axioms import (
+    SELF, Atom, Equation, Hom, Tensor, axiom, generator)
 from discopy.cat import factory, Generator
 from discopy.monoidal import Wire, Ty, Nat  # noqa: F401
 from discopy.python import finset
@@ -340,7 +341,7 @@ class Diagram(balanced.Diagram, SymmetricCategory):
     @generator
     def cycle[X: Atom, A](
             cls, x: Annotated[Ty, X], a: Annotated[Ty, A]
-    ) -> Annotated[Diagram, Tensor[X, A], Tensor[A, X]]:
+    ) -> Hom[Diagram, Tensor[X, A], Tensor[A, X]]:
         """
         The permutation moving a wire past a type, a native
         :class:`Permutation` of any length.

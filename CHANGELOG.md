@@ -25,10 +25,11 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   where pyright expands it and refuses the type variables it finds, and
   mypy cannot scope sibling type parameters as alias arguments, ty
   being the reference checker — and a compound pattern is a pattern
-  class subscripted with the type parameters, `-> Annotated[C1,
-  Tensor[X, R[X]], Unit[C0]]`, a value expression in the metadata a
-  typechecker leaves alone, whose subscript *is* the pattern: the
-  interpreter builds it when the declaration is defined.
+  class subscripted with the type parameters, standing as a boundary,
+  `-> Hom[C1, Tensor[X, R[X]], Unit[C0]]`, whose subscript *is* the
+  pattern: the interpreter builds it when the declaration is defined.
+  Every hom is spelt `Hom`; a raw `Annotated` annotates only what is
+  not a hom, an object or count premise with its one pattern.
   `C0` and `C1` name both the type parameters of the class stating the
   law and the `Sort`s the annotations of a module-level declaration
   name in their metadata. Nothing is `eval`ed and nothing is quoted:
@@ -49,7 +50,7 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `Count`, an `abc` class, or `Hom[C1, X, Y]` for a higher cell),
   `Hom[C1, A, B]` types as a plain `C1` and evaluates to the hom type
   between two boundaries, and a compound pattern is a pattern class
-  subscripted in the metadata of `Annotated`, built by the interpreter
+  subscripted as a boundary of a `Hom`, built by the interpreter
   when the declaration is defined — and `parse` collects each sequent
   shallowly from the annotation objects, the class stating it bounding
   the sorts. Every pattern class is typed, in one of two ways: `Var`,
@@ -61,7 +62,9 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   subscript takes, since a typechecker reads that subscript as a
   specialisation and would arity- and bound-check the metavariables
   against a `C0, C1` parameterisation, and declare their level as a
-  classmethod. Each pattern class declares its level, the least
+  classmethod. That is also what lets a compound pattern stand as an
+  argument of the `Hom` alias, a type expression a checker checks
+  where it leaves `Annotated` metadata alone. Each pattern class declares its level, the least
   structure the objects it stands in must have — `Unit[C0]` and
   `Tensor` a `ColouredMonoid`, `Adjoint` (`L[X]`, `R[X]`) a
   `Pregroup`, `Delay` the new `abc.DelayedMonoid` that `feedback.Ty`
