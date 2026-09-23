@@ -2035,7 +2035,11 @@ class ToHypergraph(cat.Equivalence):
 
     retract = cat.Equivalence.retract.failing(
         "The equation of a free monoidal category is syntactic and "
-        "decoding lands on any diagram of the same hypergraph.")
+        "decoding lands on any diagram of the same hypergraph, which "
+        "is the symmetric quotient: the failure survives comparing "
+        "modulo normal_form and weakening to the boundary-connected "
+        "or connected diagrams, so no subspace states it short of the "
+        "quotient of the section itself.")
 
 
 class Equation(cat.Equation, RichDisplay):
