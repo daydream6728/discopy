@@ -164,6 +164,10 @@ from discopy.utils import (
     factory_name,
 )
 
+PARTIAL_HYPERGRAPH = (
+    "to_hypergraph rejects a left-handed cup or cap: Hypergraph.cups and "
+    "caps only accept the right-adjoint orientation.")
+
 
 class Wire(monoidal.Wire):
     """
@@ -676,6 +680,21 @@ class Diagram(biclosed.Diagram, RigidCategory):
 
     dagger_monoidality = RigidCategory.dagger_monoidality.inapplicable(
         "Rigid cups and caps have no dagger, use pivotal instead.")
+
+    hypergraph_section = monoidal.Diagram.hypergraph_section.failing(
+        PARTIAL_HYPERGRAPH)
+
+    map_hypergraph_agreement = \
+        monoidal.Diagram.map_hypergraph_agreement.failing(PARTIAL_HYPERGRAPH)
+
+    normal_form_soundness = \
+        monoidal.Diagram.normal_form_soundness.failing(PARTIAL_HYPERGRAPH)
+
+    foliation_idempotence = \
+        monoidal.Diagram.foliation_idempotence.failing(PARTIAL_HYPERGRAPH)
+
+    foliation_soundness = \
+        monoidal.Diagram.foliation_soundness.failing(PARTIAL_HYPERGRAPH)
 
 
 @Diagram.generator

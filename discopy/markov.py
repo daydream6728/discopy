@@ -121,6 +121,11 @@ class Diagram(symmetric.Diagram, MarkovCategory):
     Merge: ClassVar[Generator]
     Discard: ClassVar[Generator]
     Functor: ClassVar[Generator]
+    map_hypergraph_agreement = \
+        monoidal.Diagram.map_hypergraph_agreement.inapplicable(
+            "to_hypergraph encodes copies and merges as spiders while "
+            "to_map keeps them as boxes.")
+
     pickling = Serialisable.pickling.failing(
         "A copy does not unpickle, its __new__ wanting its type (#742).")
     copying = Serialisable.copying.failing(

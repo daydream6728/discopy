@@ -94,12 +94,13 @@ from typing import ClassVar
 
 from collections.abc import Sequence
 
-from typing import Annotated, Any
+from typing import Annotated, Any, Self
 
 from discopy import monoidal, balanced, hypergraph, cmap, messages
 from discopy.abc import MonoidalCategory, SymmetricCategory
 from discopy.axioms import (
-    SELF, Atom, Equation, Hom, Tensor, axiom, generator)
+    SELF, Atom, Equation, Hom, Tensor, axiom, generator,
+    Equation as AbstractEquation)
 from discopy.cat import factory, Generator
 from discopy.monoidal import Wire, Ty, Nat  # noqa: F401
 from discopy.python import finset
@@ -385,6 +386,40 @@ class Diagram(balanced.Diagram, SymmetricCategory):
         if cls.Permutation.ar is cls:
             return cls.Permutation(dom, perm)
         return cls.permutation(perm, dom)
+
+    hypergraph_section = monoidal.Diagram.hypergraph_section
+
+    @axiom
+    def map_section(cls, f: Self):
+        """
+        :meth:`discopy.cmap.CMap.to_diagram` is a section of
+        :meth:`~discopy.monoidal.Diagram.to_map`: decoding a map and
+        encoding the decoded diagram lands back on the same map. A map is
+        compact whatever category hosts it, so decoding one asks for
+        swaps: the law is stated where the swaps are. It holds up to the
+        hypergraph, which does not order the boxes: a diagram orders its
+        boxes totally where a map orders them only by their wiring, so
+        decoding picks one topological order among the diagrams of the
+        same map and re-encoding can permute independent boxes.
+        """
+        map_ = f.to_map()
+        return AbstractEquation(map_.to_diagram().to_map(), map_).modulo(
+            type(map_).to_hypergraph)
+
+    @axiom
+    def map_retract(cls, f: Self):
+        """
+        Decoding the map of a diagram gives back an equal diagram in the
+        quotient of the level's own :attr:`Equation`, which with
+        :meth:`map_section` makes the free category, up to its equation,
+        equivalent to its image in :class:`discopy.cmap.CMap`. The
+        quotient is essential: a map is spacial — it cannot distinguish
+        nested scalars from scalars side by side — and so is the
+        hypergraph the equation compares by, while the syntactic
+        comparison up to :meth:`~discopy.monoidal.Diagram.foliation`
+        is false even on the boundary-connected subspace.
+        """
+        return cls.Equation(f.to_map().to_diagram(), f)
 
     def permute(self, *xs: int) -> Diagram:
         """

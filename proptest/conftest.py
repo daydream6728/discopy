@@ -8,7 +8,10 @@ Under ``CI`` a registered profile inherits Hypothesis's ``ci`` defaults,
 
 import os
 
+import matplotlib
 from hypothesis import HealthCheck, settings
+
+matplotlib.use("Agg")
 from hypothesis.database import (
     DirectoryBasedExampleDatabase, GitHubArtifactDatabase,
     MultiplexedDatabase, ReadOnlyDatabase)

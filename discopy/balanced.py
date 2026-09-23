@@ -39,6 +39,7 @@ from dataclasses import dataclass
 
 from discopy import config, monoidal, braided, traced, cmap, hypergraph
 from discopy.abc import BalancedCategory
+from discopy.axioms import no_strategy
 from discopy.cat import factory, Generator
 from discopy.monoidal import Colour, Ty  # noqa: F401
 from discopy.utils import factory_name, assert_isatomic
@@ -315,6 +316,10 @@ class DualRail(Functor):
     cod = braided.Diagram
     DualRailTwist = DualRailTwist
     DualRailBraid = DualRailBraid
+
+    #: One functor rather than a category of functors: the inherited
+    #: relabelling strategy generates the wrong terms.
+    strategy = no_strategy
 
     def __init__(self, width: float | None = None, colour="gray"):
         self.width = config.DRAWING_DEFAULT["ribbon_width"]\

@@ -53,18 +53,22 @@ We can check the Eckmann-Hilton argument, up to interchanger.
     :align: center
 """
 
+import io
 import itertools
+import os
+import tempfile
 from dataclasses import dataclass, field
 from functools import cached_property
 from typing import (
-    Any, ClassVar, Iterable, Iterator, Callable, Self, Sequence,
+    Annotated, Any, ClassVar, Iterable, Iterator, Callable, Self, Sequence,
     TYPE_CHECKING)
 
 from discopy import abc, cat, drawing, hypergraph, cmap, messages
 from discopy.abc import (
     ColouredMonoid, Monoid, MonoidalCategory, NamedGeneric)
 from discopy.axioms import (
-    GENERATORS, Serialisable, no_strategy, search)
+    C0, GENERATORS, Serialisable, no_strategy, search,
+    Equation as AbstractEquation, axiom)
 from discopy.drawing import Drawing
 from discopy.config import (
     BOX_DRAWING_ATTRIBUTES, WIRE_DRAWING_ATTRIBUTES,
@@ -978,7 +982,7 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
     @classmethod
     def strategy(
             cls, *, types=None, dom=None, cod=None, max_depth=3,
-            boundary_connected=False):
+            **subspaces):
         """
         Generate diagrams by the :attr:`rules` and :attr:`generators` of
         the category, see :func:`discopy.search.search`: a subclass with
@@ -989,17 +993,22 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
             cod : The codomain of the diagrams, if any.
             types : A strategy for the types, that of :attr:`ob` by default.
             max_depth : The number of nested rules a diagram may apply.
-            boundary_connected : Whether to keep only the diagrams that are
-                :attr:`is_boundary_connected`, the subspace
-                :meth:`normal_form` is defined on.
+            subspaces : Named subspaces to quantify over: each keyword
+                keeps the diagrams whose property of that name holds,
+                e.g. ``boundary_connected=True`` keeps the diagrams that
+                are :attr:`is_boundary_connected`, the subspace
+                :meth:`normal_form` is defined on. This is how
+                :meth:`discopy.axioms.Axiom.weaken` states that a law
+                holds on a subspace of the diagrams.
         """
         free = None if cls.Box.strategy.__func__ is no_strategy.__func__\
             else cls.Box.strategy
         diagrams = search(
             cls, free, dom=dom, cod=cod, types=types, max_depth=max_depth)
-        if not boundary_connected:
-            return diagrams
-        return diagrams.filter(lambda diagram: diagram.is_boundary_connected)
+        for name in (name for name, value in subspaces.items() if value):
+            diagrams = diagrams.filter(
+                lambda diagram, name=name: getattr(diagram, f"is_{name}"))
+        return diagrams
 
     def __init__(
             self, inside: tuple[cat.Box, ...], dom: Ty, cod: Ty, _scan=True):
@@ -1497,6 +1506,112 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
     dagger_monoidality = MonoidalCategory.dagger_monoidality.modulo(
         normal_form).weaken(boundary_connected=True)
 
+    @axiom
+    def hypergraph_section(cls, f: Self):
+        """
+        :meth:`discopy.hypergraph.Hypergraph.to_diagram` is a section of
+        :meth:`to_hypergraph`: decoding a hypergraph and encoding the
+        decoded diagram lands back on the same hypergraph.
+        """
+        graph = f.to_hypergraph()
+        return AbstractEquation(graph.to_diagram().to_hypergraph(), graph)
+
+    @axiom
+    def map_hypergraph_agreement(cls, f: Self):
+        """
+        Encoding through a map or directly gives the same hypergraph.
+        """
+        return AbstractEquation(f.to_map().to_hypergraph(), f.to_hypergraph())
+
+    @axiom
+    def staircase_encoding(cls, f: Self):
+        """
+        :meth:`decode` undoes :meth:`encode` up to splitting layers in
+        staircases, which decompose plumbing into swaps from symmetric
+        categories on, so the equation holds up to the level's own quotient.
+        """
+        return cls.Equation(type(f).decode(*f.encode()), f.to_staircases())
+
+    @axiom
+    def normal_form_idempotence(cls, f: Self):
+        """
+        :meth:`normal_form` returns a canonical representative, i.e. a
+        normal form is its own normal form, on the boundary-connected
+        subspace where it is defined.
+        """
+        normal = f.normal_form()
+        return AbstractEquation(normal.normal_form(), normal)
+
+    normal_form_idempotence = normal_form_idempotence.weaken(
+        boundary_connected=True)
+
+    @axiom
+    def normal_form_soundness(cls, f: Self):
+        """
+        :meth:`normal_form` returns an equal morphism, compared in the
+        symmetric quotient of :meth:`to_hypergraph` where equality is
+        decidable, on the boundary-connected subspace where it is defined.
+        """
+        return cls.Equation(f.normal_form(), f, up_to=cls.to_hypergraph)
+
+    normal_form_soundness = normal_form_soundness.weaken(
+        boundary_connected=True)
+
+    @axiom
+    def foliation_idempotence(cls, f: Self):
+        """
+        :meth:`foliation` returns a canonical representative, i.e. a
+        foliation is its own foliation.
+        """
+        foliated = f.foliation()
+        return AbstractEquation(foliated.foliation(), foliated)
+
+    @axiom
+    def foliation_soundness(cls, f: Self):
+        """
+        :meth:`foliation` returns an equal morphism, compared in the
+        symmetric quotient of :meth:`to_hypergraph` where equality is
+        decidable.
+        """
+        return cls.Equation(f.foliation(), f, up_to=cls.to_hypergraph)
+
+    @axiom
+    def drawing_identity(cls, x: Annotated[Ty, C0]):
+        """
+        :meth:`to_drawing` preserves identities on the nose. It does not
+        preserve composition or whiskering on the nose, since the layout
+        spaces the wires of a diagram from the widths of everything it
+        contains.
+        """
+        return AbstractEquation(
+            cls.id(x).to_drawing(), Drawing.id(x.to_drawing()))
+
+    @axiom
+    def matplotlib_determinism(cls, f: Self):
+        """
+        Rendering a diagram with Matplotlib is deterministic: drawing it
+        twice gives the same portable network graphics byte for byte.
+        """
+        def render():
+            buffer = io.BytesIO()
+            f.draw(path=buffer, format="png")
+            return buffer.getvalue()
+        return AbstractEquation(render(), render())
+
+    @axiom
+    def tikz_determinism(cls, f: Self):
+        """
+        Rendering a diagram with TikZ is deterministic: drawing it twice
+        gives the same code byte for byte.
+        """
+        def render():
+            with tempfile.TemporaryDirectory() as directory:
+                path = os.path.join(directory, "diagram.tikz")
+                f.draw(path=path, to_tikz=True)
+                with open(path) as file:
+                    return file.read()
+        return AbstractEquation(render(), render())
+
 
 @Diagram.generator
 class Box(cat.Box, Diagram):
@@ -1585,19 +1700,22 @@ class Box(cat.Box, Diagram):
     min_width: float
 
     @classmethod
-    def strategy(cls, **params):
+    def strategy(cls, *, types=None, dom=None, cod=None, **subspaces):
         """
         Generate fresh boxes, for the generator class of a level only: a
         structural box such as a cup is generated by the rules of its
         category, inside a diagram, so its own strategy is left to raise.
-        A box has no closed component, so it honours ``boundary_connected``
-        by consuming it.
+        A box is a diagram, so it honours the named subspaces of
+        :meth:`Diagram.strategy` by filtering on the same properties.
         """
         if cls is not cls.ar.Box:
             raise NotImplementedError(
                 f"No search strategy implemented for {cls.__name__}")
-        params.pop("boundary_connected", None)
-        return super().strategy(**params)
+        boxes = super().strategy(types=types, dom=dom, cod=cod)
+        for name in (name for name, value in subspaces.items() if value):
+            boxes = boxes.filter(
+                lambda box, name=name: getattr(box, f"is_{name}"))
+        return boxes
 
     def __init__(self, name: str, dom: Ty, cod: Ty, **params):
         dom = dom if isinstance(dom, self.ob) else self.ob(dom)

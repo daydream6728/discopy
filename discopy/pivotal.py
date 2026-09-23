@@ -203,6 +203,21 @@ class Diagram(rigid.Diagram, traced.Diagram, PivotalCategory):
 
     trace_superposing_right = TracedCategory.trace_superposing_right
 
+    hypergraph_section = monoidal.Diagram.hypergraph_section.failing(
+        "Decoding a cup or cap can cross wires, which needs swaps the "
+        "category does not have.")
+
+    map_hypergraph_agreement = monoidal.Diagram.map_hypergraph_agreement\
+        .weaken(boundary_connected=True)
+
+    normal_form_soundness = monoidal.Diagram.normal_form_soundness
+
+    foliation_idempotence = monoidal.Diagram.foliation_idempotence.weaken(
+        boundary_connected=True)
+
+    foliation_soundness = monoidal.Diagram.foliation_soundness.weaken(
+        boundary_connected=True)
+
     dagger_monoidality = monoidal.Diagram.dagger_monoidality
 
 

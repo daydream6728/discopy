@@ -92,6 +92,76 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   what the search draws. The `TwoCategory` levels, the goals-with-holes
   search, the `Choice` patterns and the argument-shape wrappers of the
   earlier experiments are retired.
+- The conversion, rewriting and drawing laws of the free diagram
+  categories, stated as axioms on the classes introducing the methods
+  and checked by the matrix, absorbing `proptest/test_conversion.py`,
+  `test_normal_form.py` and `test_drawing.py` (with `categories.py`,
+  their parameter list) the way the serialisation axioms absorbed the
+  ad-hoc property files. `monoidal.Diagram` states `hypergraph_section`
+  (`to_diagram` is a section of `to_hypergraph`),
+  `map_hypergraph_agreement` (encoding through a map or directly gives
+  the same hypergraph), `staircase_encoding` (`decode` undoes `encode`
+  up to the level's own equation), `normal_form_idempotence` and
+  `normal_form_soundness` (a normal form is a canonical representative,
+  equal to its diagram in the symmetric quotient, on the
+  boundary-connected subspace where it is defined),
+  `foliation_idempotence` and `foliation_soundness`, `drawing_identity`
+  (`to_drawing` preserves identities on the nose — not composition or
+  whiskering, the layout spacing wires from the widths of everything
+  the diagram contains) and `matplotlib_determinism` with
+  `tikz_determinism` (rendering twice gives the same bytes, which also
+  renders every generated diagram on both backends, where the old suite
+  smoke-tested them). `map_section` and `map_retract` are stated on
+  `symmetric.Diagram`: a map is compact whatever category hosts it, so
+  decoding one asks for swaps and the laws live where the swaps are —
+  the old suite's `monoidal` cell passed on the luck of its draws, a
+  map recording no offsets for its states where a hypergraph does, and
+  the failure survives weakening to the boundary-connected subspace.
+  The section holds modulo the hypergraph, which does not order the
+  boxes: a diagram orders its boxes totally where a map orders them
+  only by their wiring, so decoding picks one topological order among
+  the diagrams of the same map and re-encoding can permute independent
+  boxes — the old suite's on-the-nose assertion was falsifiable, its
+  draws never having met two independent boxes decoded in the other
+  order. The retract is new: decoding the map of a diagram gives back an equal
+  diagram in the quotient of the level's own `Equation`, which with the
+  section makes the free category, up to its equation, equivalent to
+  its image in `CMap`. The quotient is essential — a map is spacial,
+  unable to distinguish nested scalars from scalars side by side, and
+  so is the hypergraph the equation compares by, while the syntactic
+  comparison up to `foliation` is falsified even on the
+  boundary-connected subspace, where the doctest example of
+  `to_hypergraph` might suggest it holds. `Diagram.strategy`
+  generalises its one hard-coded filter to named subspaces, so a law
+  states the subset of diagrams it holds on: any keyword keeps the
+  diagrams whose property of that name holds, `boundary_connected=True`
+  keeping the `is_boundary_connected` ones, and `Axiom.weaken` passes
+  its parameters through, `monoidal.Box` filtering on the same
+  properties instead of consuming the keyword. The permutation test
+  is subsumed: the strategy draws native permutations through the
+  `cycle` generator, so the section and staircase laws exercise their
+  encoding, and `abc` states `swap_inverse`. The level lists and xfail
+  marks of the old suites become classifications on the level each
+  concerns, verified against observed failures rather than transcribed:
+  decoding a braid, trace, cup or cap crosses wires that need swaps, so
+  `hypergraph_section` is `.failing` on `braided`, `traced` and
+  `pivotal` (reaching `balanced` and `ribbon` through them) and
+  re-declared on `symmetric`; `to_hypergraph` rejects a left-handed cup
+  or cap, so `rigid` declares `hypergraph_section`,
+  `map_hypergraph_agreement`, `normal_form_soundness` and both
+  foliation laws `.failing`, each re-enabled on `pivotal` with the
+  agreement and foliation laws weakened to the boundary-connected
+  subspace its `to_hypergraph` asks for; the two encodings differ by
+  design from `markov` on, a copy being a spider in a hypergraph and a
+  box in a map, so the agreement is `.inapplicable` there. Two of the
+  old marks did not reproduce at a 300-example budget and are gone:
+  `biclosed` and `compact` hold `hypergraph_section`, and `feedback`
+  holds `map_section`. `balanced.DualRail` declares
+  `strategy = no_strategy` — one functor rather than a category of
+  functors, whose inherited relabelling strategy crashed the collection
+  of the full matrix on `cat.Functor.identity_typing` — and
+  `Hypergraph.cups` and `caps` raise their `AxiomError` with a message
+  where they raised it bare.
 - The whole unified tree typechecks: `uv run --with ty ty check` passes
   in the full development environment (`uv sync --dev --group all`, the
   reference for typechecking now that the optional imports carry no

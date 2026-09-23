@@ -465,7 +465,7 @@ class Hypergraph[category: Diagram](MonoidalCategory, NamedGeneric):
     def cups(cls, left, right):
         adjoint = left.r if hasattr(left, "r") else left[::-1]
         if adjoint != right:
-            raise AxiomError
+            raise AxiomError(messages.NOT_ADJOINT.format(left, right))
         dom_wires = tuple(range(len(left))) + tuple(reversed(range(len(left))))
         return cls(
             left @ right, cls.category.ob(), (), (dom_wires, (), ()))
@@ -474,7 +474,7 @@ class Hypergraph[category: Diagram](MonoidalCategory, NamedGeneric):
     def caps(cls, left, right):
         adjoint = left.r if hasattr(left, "r") else left[::-1]
         if adjoint != right:
-            raise AxiomError
+            raise AxiomError(messages.NOT_ADJOINT.format(left, right))
         cod_wires = tuple(range(len(left))) + tuple(reversed(range(len(left))))
         return cls(
             cls.category.ob(), left @ right, (), ((), (), cod_wires))
