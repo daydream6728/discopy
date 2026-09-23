@@ -131,13 +131,18 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   so is the hypergraph the equation compares by, while the syntactic
   comparison up to `foliation` is falsified even on the
   boundary-connected subspace, where the doctest example of
-  `to_hypergraph` might suggest it holds. `Diagram.strategy`
-  generalises its one hard-coded filter to named subspaces, so a law
-  states the subset of diagrams it holds on: any keyword keeps the
-  diagrams whose property of that name holds, `boundary_connected=True`
-  keeping the `is_boundary_connected` ones, and `Axiom.weaken` passes
-  its parameters through, `monoidal.Box` filtering on the same
-  properties instead of consuming the keyword. The permutation test
+  `to_hypergraph` might suggest it holds. `Axiom.weaken(boundary_connected=True)`
+  quantifies a law over the subspace `normal_form` is defined on,
+  through the one subspace parameter of `Diagram.strategy`; a new
+  subspace earns a new explicit parameter when a law needs it. The
+  full matrix, collectable again, showed two latent failures of the
+  weakened laws: the equations of a weakened law now stay in the
+  subspace — a state and an effect are each boundary-connected while
+  composing into a closed component, on which the `bifunctoriality`
+  of two boxes was compared by a normal form that is not defined
+  there — and `closed.Diagram` re-declares `dagger_monoidality`
+  inapplicable, `markov` having re-enabled through the diamond what
+  `biclosed` declares a curried diagram cannot have. The permutation test
   is subsumed: the strategy draws native permutations through the
   `cycle` generator, so the section and staircase laws exercise their
   encoding, and `abc` states `swap_inverse`. The level lists and xfail

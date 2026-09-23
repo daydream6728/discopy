@@ -104,6 +104,9 @@ class Diagram(markov.Diagram, biclosed.Diagram, ClosedCategory):
     A diagram applied to another post-composes their tensor with an `Eval`.
     """
     ob = Ty
+    #: :class:`markov.Diagram` re-enables the law that :mod:`biclosed`
+    #: declares inapplicable, so a closed diagram declares it again.
+    dagger_monoidality = biclosed.Diagram.dagger_monoidality
     Eval: ClassVar[Generator]
     Functor: ClassVar[Generator]
     TermBase: ClassVar[Generator]

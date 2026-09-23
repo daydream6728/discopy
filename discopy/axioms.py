@@ -613,7 +613,11 @@ class Axiom[**P, T](Declaration[P, T]):
         """
         The law evaluated by a function of its arguments, drawn from their
         patterns; keyword arguments are passed to the strategy of each hom
-        premise, after those :meth:`weaken` declared.
+        premise, after those :meth:`weaken` declared. A law weakened to
+        the boundary-connected subspace also keeps its equations there: a
+        state and an effect are each boundary-connected while composing
+        into a closed component, on which the normal form of a term of
+        the equation would not be defined.
         """
         from hypothesis import strategies as st
 
@@ -628,7 +632,10 @@ class Axiom[**P, T](Declaration[P, T]):
         def arguments(draw):
             return evaluate(**self.generate(draw, hom)[1])
 
-        return arguments()
+        if not params.get("boundary_connected"):
+            return arguments()
+        return arguments().filter(lambda equation: all(
+            term.is_boundary_connected for term in equation.terms))
 
     def strategy(self, **params) -> "st.SearchStrategy[Equation]":
         """
