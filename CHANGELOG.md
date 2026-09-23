@@ -129,7 +129,10 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   at once, class schema and role schema both (`owlapi` files
   subproperties, inverses, chains and characteristics in the RBox,
   which its TBox accessor omits), displayed as the notebook's
-  expandable rule book. Two `owlapy` bridge repairs ship with the
+  expandable rule book; asked for one class or one property it filters
+  the declarations by signature before compiling any, so reading a
+  single entity of a large ontology costs a fraction of that book
+  rather than all of it. Two `owlapy` bridge repairs ship with the
   module: `preserve_list_order` drops the mapper's reversal of every
   Java list, which stored — and had HermiT reason with — every property
   chain backwards, and `map_literals` registers the `xsd:decimal`,
@@ -165,11 +168,14 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   fixtures of `test/fixtures/fibo` and three notebooks gathered under
   `docs/notebooks/finance`: `ontologies`, which pitches ontologies as
   guardrails for AI agents on FIBO's own ownership-and-control modules;
-  `fibo`, which loads the ownership import closure and draws its whole
-  rule book — every axiom FIBO states, compiled to an equation or an
-  inclusion between relations and rendered lazily, so a page of the
-  1,427 rules costs only the pictures actually opened, browsable by
-  entity or by page; and `fx_risk`, which computes FX risk over a
+  `fibo`, which loads the financial-instrument closure — securities and
+  their kinds, derivatives, options and futures, debt, credit
+  agreements and facilities, collateral, positions and exposure — and
+  draws what FIBO says about each: a rule is an equation or an
+  inclusion between relations, compiled one entity at a time and drawn
+  only when its row is opened, since compiling the rule book of 719
+  classes whole is minutes of reasoning for a page nobody reads whole;
+  and `fx_risk`, which computes FX risk over a
   multi-currency portfolio on FIBO's own `CurrencyAmount`, `Ownership`
   and date modules — currency buckets are compound predicates, the
   definite-unit guarantee is FIBO's own cardinality axiom, exchange

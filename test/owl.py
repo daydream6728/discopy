@@ -677,8 +677,9 @@ def test_axioms(kennel):
     book = axioms(world)
     assert any("=" in axiom.symbols for axiom in book)  # the disjointness
     assert all(book)  # a consistent schema entails itself
-    for axiom in axioms(kennel.Dog, world):
-        assert kennel.Dog in axiom.source.signature()
+    assert [one.source for one in axioms(kennel.Dog, world)] == [
+        one.source for one in book  # the same rules, filtered before
+        if kennel.Dog in one.source.signature()]  # compiling rather than after
     assert len(axioms(kennel.owns, world)) >= 2  # its domain and range
     with raises(TypeError):
         axioms("not an entity", world)

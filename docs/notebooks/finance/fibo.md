@@ -18,9 +18,9 @@ import marimo as mo
 
 An ontology is usually met as a wall of RDF. But every axiom it states is
 an equation — or an inclusion — between *relations*, and a relation has a
-picture. This notebook loads the
+picture. This notebook loads the financial-instrument modules of the
 [Financial Industry Business Ontology](https://spec.edmcouncil.org/fibo/)
-and draws the lot.
+and draws what they say about securities, credit and derivatives.
 
 Nothing here is authored: every rule below is FIBO's own, compiled from
 the axioms in the files. The pictures are read off the same syntax — an
@@ -36,8 +36,9 @@ from discopy.owl import axioms, consistent, label, load, name_of
 FIBO = "https://spec.edmcouncil.org/fibo/ontology/"
 FIXTURES = os.path.join(str(mo.notebook_dir() or "."),
                         "..", "..", "..", "test", "fixtures", "fibo")
-world = load(FIBO + "FND/OwnershipAndControl/Ownership/", path=FIXTURES)
-book = axioms(world)
+world = load(FIBO + "FBC/FinancialInstruments/FinancialInstruments/",
+             path=FIXTURES)
+classes = {name_of(one): one for one in world.classes()}
 ```
 
 ```python {.marimo hide_code="true"}
@@ -47,16 +48,39 @@ mo.hstack([
             value=f"{len(world.object_properties()):,}"),
     mo.stat(label="Axioms declared",
             value=f"{len(world.tbox()) + len(world.rbox()):,}"),
-    mo.stat(label="Rules compiled", value=f"{len(book):,}"),
+    mo.stat(label="World consistent", value=str(consistent(world))),
 ], widths="equal")
 ```
 
-Loading `Ownership` pulls its whole import closure — accounting, dates,
-relations, the legal-entity modules — from the offline copy in
-`test/fixtures/fibo`, so this touches no network. The class schema comes
-from the TBox and the role schema from the RBox: `owlapi` files
-subproperties, inverses, chains and characteristics in the latter, which
-its TBox accessor omits, so both are compiled.
+Loading `FinancialInstruments` pulls its whole import closure — debt and
+equities, products and services, accounting, dates, the legal-entity and
+ownership modules — from the offline copy in `test/fixtures/fibo`, so
+this touches no network. The class schema comes from the TBox and the
+role schema from the RBox: `owlapi` files subproperties, inverses, chains
+and characteristics in the latter, which its TBox accessor omits, so both
+are compiled.
+
+Compiling *every* rule of a closure this size is minutes of reasoning for
+a page nobody reads whole, so nothing is compiled up front: `axioms` is
+asked for one entity at a time, filtering the declarations before it
+compiles any, and each picture is drawn only when its row is opened.
+
+```python {.marimo hide_code="true"}
+def drawn(rules):
+    """A lazy accordion: nothing is drawn until a row is opened."""
+    return mo.accordion({
+        f"{index}. {one}": mo.lazy(lambda one=one: one.equation)
+        for index, one in enumerate(rules, 1)})
+
+
+def rules_of(entity):
+    """Every rule mentioning an entity, counted and drawn lazily."""
+    rules = axioms(entity, world)
+    return mo.vstack([
+        mo.md(f"**{len(rules)}** rules, **{sum(map(bool, rules))}** "
+              f"of them holding."),
+        drawn(rules)])
+```
 
 ## Every rule holds
 
@@ -67,39 +91,47 @@ not a triviality: the same check run against a populated world is what
 catches a fact the schema forbids, and it is the check the risk notebooks
 lean on.
 
-```python {.marimo hide_code="true"}
-_equations = sum(1 for _one in book if "=" in _one.symbols)
-mo.vstack([
-    mo.hstack([
-        mo.stat(label="World consistent", value=str(consistent(world))),
-        mo.stat(label="Rules holding",
-                value=f"{sum(map(bool, book)):,} / {len(book):,}"),
-        mo.stat(label="Equations", value=f"{_equations:,}"),
-        mo.stat(label="Inclusions", value=f"{len(book) - _equations:,}"),
-    ], widths="equal"),
-    mo.md("An equation is a definition — the two sides are the same "
-          "relation. An inclusion is a constraint: everything on the left "
-          "is on the right. Every rule here carries a picture, because a "
-          "construct the drawing dictionary cannot compile is one the "
-          "compiler declines to emit a rule for in the first place."),
-])
-```
-
 ## One rule, up close
 
-Before the wall of them, a single equation. FIBO defines a reference
-document as a document that something refers to; the two sides of the
-equation are the same relation, one named and one spelled out:
+Before the wall of them, a single equation. FIBO defines a constituent of
+a basket as whatever is a constituent *of* one — the two sides are the
+same relation, one named and one spelled out:
 
 ```python {.marimo hide_code="true"}
-_example = next(one for one in book if "=" in one.symbols)
+_example = next(one for one in axioms(classes["Basket"], world)
+                if "=" in one.symbols)
 mo.vstack([mo.md(f"`{_example}`"), _example.equation])
+```
+
+## What an instrument is
+
+The vocabulary the rest of this repository types its numbers by: what a
+security is, what a debt instrument owes to whom, what makes a
+derivative one, and what a credit facility commits. Open a row to compile
+its rules — the reasoning happens then, not before.
+
+```python {.marimo hide_code="true"}
+INSTRUMENTS = {
+    "Instruments": ["FinancialInstrument", "Security", "DebtInstrument",
+                    "EquityInstrument", "PromissoryNote"],
+    "Derivatives": ["DerivativeInstrument", "Option", "Future", "Underlier",
+                    "Basket"],
+    "Credit": ["CreditAgreement", "CreditFacility", "RevolvingLineOfCredit",
+               "Debt", "InterestPayment", "FloatingInterestRate"],
+    "Collateral": ["Collateral", "PhysicalCollateral", "SecurityAgreement"],
+    "Exposure": ["FinancialExposure", "Position", "Holding"],
+}
+
+mo.accordion({
+    f"**{group}** · {name}": mo.lazy(
+        lambda name=name: rules_of(classes[name]))
+    for group, names in INSTRUMENTS.items() for name in names})
 ```
 
 ## Browse by entity
 
-Pick any class or property the ontology declares and read what it says
-about it. Each equation is drawn only when you open it.
+Any other class or property the closure declares, on the same terms: the
+rules mentioning it, each drawn when you open it.
 
 ```python {.marimo hide_code="true"}
 entities = sorted(
@@ -113,43 +145,14 @@ chooser
 ```
 
 ```python {.marimo hide_code="true"}
-def drawn(rules):
-    """A lazy accordion: nothing is drawn until a row is opened."""
-    return mo.accordion({
-        f"{index}. {one}": mo.lazy(lambda one=one: one.equation)
-        for index, one in enumerate(rules, 1)})
-
-
 if chooser.value is None:
     _panel = mo.md("*Choose an entity above.*")
 else:
     _chosen = entities[chooser.value]
-    _rules = [one for one in book if _chosen in one.source.signature()]
     _panel = mo.vstack([
-        mo.md(f"**{len(_rules)}** rules mention "
-              f"`{label(_chosen)}` in their subject."),
-        drawn(_rules)])
+        mo.md(f"Rules mentioning `{label(_chosen)}` in their subject."),
+        rules_of(_chosen)])
 _panel
-```
-
-## The whole rule book
-
-All of it, twenty-five at a time. The accordion is lazy, so opening a row
-is what compiles its picture — which is the only reason a page of
-FIBO's axioms renders at all.
-
-```python {.marimo hide_code="true"}
-page = mo.ui.number(start=1, stop=(len(book) + 24) // 25, value=1,
-                    label="Page of 25")
-page
-```
-
-```python {.marimo hide_code="true"}
-_first = (page.value - 1) * 25
-mo.vstack([
-    mo.md(f"Rules **{_first + 1}–{min(_first + 25, len(book))}** "
-          f"of **{len(book):,}**."),
-    drawn(book[_first:_first + 25])])
 ```
 
 ## What this is good for

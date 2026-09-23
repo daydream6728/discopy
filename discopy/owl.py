@@ -2585,8 +2585,10 @@ def axioms(entity, world: World = None) -> list[Axiom]:
     each a :class:`cat.Equation` between relations, whose
     :attr:`Axiom.equation` draws itself. A :class:`World` gives every
     rule its schema declares, imports included; a class or an object
-    property gives the rules mentioning it. Every retrieval goes
-    through :attr:`World.retrieved`, so a whole world compiles with one
+    property gives the rules mentioning it, filtering the declarations
+    before compiling any, so reading one entity of a large ontology
+    costs a fraction of its rule book. Every retrieval goes through
+    :attr:`World.retrieved`, so a whole world compiles with one
     reasoner and one retrieval per predicate. SWRL rules are not
     compiled: FIBO's ownership-and-control modules declare none, and
     they wait on data properties.
@@ -2608,14 +2610,14 @@ def axioms(entity, world: World = None) -> list[Axiom]:
     >>> assert len(axioms(Person, world)) == 1  # the domain of owns
     """
     if isinstance(entity, World):
-        return [axiom
-                for declared_axiom in entity.tbox() + entity.rbox()
-                for axiom in class_axioms(declared_axiom, entity)
-                + property_axioms(declared_axiom, entity)]
-    assert_isinstance(
-        entity, (OWLClass, OWLObjectProperty))
-    return [axiom for axiom in axioms(world)
-            if entity in axiom.source.signature()]
+        world, declared = entity, entity.tbox() + entity.rbox()
+    else:
+        assert_isinstance(entity, (OWLClass, OWLObjectProperty))
+        declared = [one for one in world.tbox() + world.rbox()
+                    if entity in one.signature()]
+    return [axiom for one in declared
+            for axiom in class_axioms(one, world)
+            + property_axioms(one, world)]
 
 
 def picture(expr, world: World, dom=None):
