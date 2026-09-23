@@ -163,10 +163,11 @@ def test_axiom():
     assert equation and len(equation.terms) == 2
     assert MonoidalCategory.tensor.sequent.conclusion is not None
     assert Axiom.concludes is False
-    with raises(TypeError):
-        @axiom
-        def eager(cls, f):
-            """ An unannotated premise has no pattern. """
+    @axiom
+    def unannotated(cls, f):
+        """ An unannotated premise has no pattern. """
+    with raises(TypeError, match="states no pattern"):
+        unannotated.bind(Diagram).sequent
 
 
 def test_weaken_params():
@@ -201,13 +202,6 @@ def test_canonical():
     assert cups == {"left": rigid.Ty('X'), "right": rigid.Ty('X').r}
     with raises(AxiomError):
         feedback.Diagram.feedback_joining.canonical()
-
-
-def test_rule_check():
-    x = rigid.Ty('x')
-    assert rigid.Diagram.generators["cups"].check(x, x.r) == {"X": x}
-    with raises(AxiomError):
-        rigid.Diagram.generators["cups"].check(x, x.l)
 
 
 def test_hom_binder():

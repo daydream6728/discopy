@@ -1,6 +1,8 @@
 """ The rules and generators of a category, and the search by them. """
 
 
+from typing import Annotated
+
 from hypothesis import find
 from hypothesis import strategies as st
 from pytest import raises
@@ -8,7 +10,7 @@ from pytest import raises
 from discopy import braided, rigid, traced
 from discopy.abc import Category, ColouredMonoid
 from discopy.monoidal import Box, Diagram, Ty
-from discopy.pattern import C0, C1, Unit, declarations
+from discopy.pattern import C0, C1, Hom, Unit, declarations
 from discopy.search import Generator, Rule, generator, rule, search
 from discopy.utils import AxiomError
 
@@ -31,7 +33,8 @@ def test_rule():
 
     class Wrapped(Diagram):
         @rule
-        def twice[A: C0](self: C1[A, A]) -> C1[A, A]:
+        def twice[A: C0](self: Annotated[C1, Hom[A, A]]
+                         ) -> Annotated[C1, Hom[A, A]]:
             """ A rule declared and implemented in one place. """
             return self >> self
 
@@ -47,10 +50,12 @@ def test_rule():
 
 
 def test_generator():
+    @generator
+    def wrong[A: C0](cls, f: Annotated[C1, Hom[A, A]]
+                     ) -> Annotated[C1, Hom[A, A]]:
+        ...
     with raises(TypeError):
-        @generator
-        def wrong[A: C0](cls, f: C1[A, A]) -> C1[A, A]:
-            ...
+        wrong.sequent
     assert type(declarations(rigid.Diagram, Generator)["cups"]) is Generator
     assert "cups" not in declarations(rigid.Diagram, Rule)
     assert rigid.Diagram.generators["cups"].category is rigid.Diagram
@@ -61,7 +66,8 @@ def test_generator():
     class Lying(Diagram):
         @classmethod
         @generator
-        def wrong[A: ColouredMonoid](cls, dom: A) -> C1[A, Unit[C0]]:
+        def wrong[A: ColouredMonoid](
+                cls, dom: A) -> Annotated[C1, Hom[A, Unit[C0]]]:
             """ A generator whose conclusion lies. """
             return cls.id(dom)
 

@@ -34,8 +34,8 @@ is the :class:`Tensor` of a variable with its right :class:`Adjoint`,
 annotations, so each one is an object the interpreter builds when it is
 read, lazily by :pep:`649` — the subscript of a pattern class *is* the
 pattern — and :func:`parse` collects the sequent from
-``__annotations__``, ``__type_params__``, ``__bound__``,
-``__metadata__`` and ``__args__`` without evaluating anything itself.
+``__annotations__``, ``__type_params__``, ``__bound__`` and
+``__metadata__`` without evaluating anything itself.
 
 Each pattern class declares its :meth:`Pattern.level`, the least
 structure the objects it stands in must have: a :class:`Tensor` needs a
@@ -96,7 +96,6 @@ Summary
 """
 
 import __future__
-import annotationlib
 import inspect
 import operator
 from abc import ABC, abstractmethod
@@ -120,16 +119,12 @@ class Sort:
     The sort of an object variable: the instances of the type its ``head``
     resolves to in the scope of a bound declaration, atomic or not, and
     the class of :mod:`discopy.abc` bounding them when known. An attribute
-    of a sort is a longer head, ``Self.dom.ob``, and subscripting a sort
-    with two patterns is the :class:`Hom` between them.
+    of a sort is a longer head, ``Self.dom.ob``.
 
     >>> print(Sort("C0", atomic=True))
     Atom[C0]
     >>> Sort("Self").dom.ob
     Sort(head='Self.dom.ob', atomic=False)
-    >>> X = Var('X', Sort(bound=abc.ColouredMonoid))
-    >>> print(Sort("C1")[X, Unit[X.sort]])
-    C1[X, Unit[C0]]
     """
 
     head: str = "C0"
@@ -140,12 +135,6 @@ class Sort:
         if name.startswith("_"):
             raise AttributeError(name)
         return Sort(f"{self.head}.{name}", self.atomic)
-
-    def __getitem__(self, key) -> Hom:
-        if not isinstance(key, tuple) or len(key) != 2:
-            raise TypeError(f"Expected a domain and a codomain, got {key}.")
-        dom, cod = key
-        return Hom(operand(dom), operand(cod), self.head)
 
     def resolve(self, scope: dict) -> type:
         """ The type the head stands for, a path from a root of the scope. """
@@ -318,7 +307,7 @@ class Pattern[C0, C1: abc.Category](ABC):
         >>> from discopy.monoidal import Ty
         >>> x, y = Ty('x'), Ty('y')
         >>> A, B = (Var(n, Sort(bound=abc.ColouredMonoid)) for n in "AB")
-        >>> for subst, _ in (A @ B).match(x @ y):
+        >>> for subst, _ in Tensor[A, B].match(x @ y):
         ...     print(subst['A'], '|', subst['B'])
         Ty() | x @ y
         x | y
@@ -337,27 +326,6 @@ class Pattern[C0, C1: abc.Category](ABC):
         kept as a residual, checked once the variables are instantiated.
         """
         yield subst, residuals + ((self, value), )
-
-    def __matmul__(self, other):
-        return Tensor(factors(self) + factors(pattern(other)))
-
-    def __lshift__(self, other):
-        return Exp("<<", self, pattern(other))
-
-    def __rshift__(self, other):
-        return Exp(">>", self, pattern(other))
-
-    def __pow__(self, other):
-        if not isinstance(other, Var):
-            raise TypeError(f"Expected a Count variable, got {other!r}.")
-        return Repeat(self, other)
-
-    def __getattr__(self, name: str):
-        if name in ("l", "r"):
-            return Adjoint(self, name)
-        if name == "d":
-            return Delay(self)
-        raise AttributeError(name)
 
 
 C0, C1, SELF = Sort("C0"), Sort("C1"), Sort("Self")
@@ -684,7 +652,7 @@ class Hom[A, B](Pattern):
 
     >>> from discopy.monoidal import Ty
     >>> A, B = (Var(n, Sort(bound=abc.ColouredMonoid)) for n in "AB")
-    >>> hom = Hom(A @ B, A)
+    >>> hom = Hom(Tensor[A, B], A)
     >>> print(hom)
     C1[A @ B, A]
     >>> x, y = Ty('x'), Ty('y')
@@ -765,13 +733,9 @@ def premises_of(function: Callable, missing: bool = False) -> list[str]:
     """
     The names of the premises a function states: its parameters without a
     default, an unannotated first ``cls`` or ``self`` skipped — only the
-    ones without an annotation when ``missing``. The annotations are read
-    as forward references, since this runs when a declaration is decorated,
-    before the names its module defines below it exist.
+    ones without an annotation when ``missing``.
     """
-    signature = inspect.signature(
-        function, annotation_format=annotationlib.Format.FORWARDREF)
-    parameters = list(signature.parameters.values())
+    parameters = list(inspect.signature(function).parameters.values())
     if parameters and parameters[0].annotation is inspect.Parameter.empty:
         parameters = parameters[1:]
     return [
@@ -992,8 +956,6 @@ class Declaration[**P, T]:
                 "classmethod, not outside.")
         self.name = self.name or self.function.__name__
         self.__doc__ = self.function.__doc__
-        for name in premises_of(inspect.unwrap(self.function), missing=True):
-            raise TypeError(f"{self.name} states no pattern for {name}.")
 
     @property
     def sequent(self) -> Sequent:

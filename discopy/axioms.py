@@ -278,12 +278,9 @@ from discopy.pattern import (  # noqa: F401
     Over,
     R,
     Repeat,
-    Sequent,
-    Sort,
     Tensor,
     Under,
     Unit,
-    Var,
     declarations,
 )
 from discopy.search import (  # noqa: F401

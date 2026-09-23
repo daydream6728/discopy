@@ -9,64 +9,59 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Added
 
-- The laws and rules of `discopy.axioms` state their sequent patterns in
-  the metadata of `typing.Annotated`: every annotation is an
-  `Annotated[T, pat]`, the coarse type a typechecker reads beside the
-  one pattern the interpreter builds, and the metavariables are the
-  declaration's own PEP 695 type parameters, nothing imported. A rule
-  reads `def then[A, B, C](self: Annotated[C1, Hom[A, B]], other:
-  Annotated[C1, Hom[B, C]]) -> Annotated[C1, Hom[A, C]]` — the base
-  `C1` is what a typechecker sees, so the laws typecheck on the cells
-  they compose — a kind is the bound, `def cups[X: Atom]`, the
+- `discopy.pattern` and `discopy.search`, the language in which a
+  category states its structure and the proof search generating its
+  terms, serving two ends: the equations of the axioms of
+  `discopy.axioms`, canonical or generated, and diagrams built from
+  rules toward a goal pattern.
+  A category states its structure as the typed signatures of its
+  methods, which `parse` collects into sequents. Every annotation is
+  an `Annotated[T, pat]`, the coarse type a typechecker reads beside
+  the one pattern the interpreter builds, and the metavariables are
+  the declaration's own PEP 695 type parameters, nothing imported: a
+  rule reads `def then[A, B, C](self: Annotated[C1, Hom[A, B]],
+  other: Annotated[C1, Hom[B, C]]) -> Annotated[C1, Hom[A, C]]` — the
+  base `C1` is what a typechecker sees, so the laws typecheck on the
+  cells they compose — a kind is the bound, `def cups[X: Atom]`, the
   boundaries of a higher cell are declared on its binder, `def
   tensor[X, Y, A: Annotated[C1, Hom[X, Y]], ...]` mimicking the
   telescope `{A : C1 X Y}` of a dependently typed language, and a
   compound pattern is a pattern class subscripted with the type
-  parameters, `Hom[Tensor[X, R[X]], Unit[C0]]` for the cups, whose
+  parameters — `Hom[Tensor[X, R[X]], Unit[C0]]` for the cups — whose
   subscript *is* the pattern: the interpreter builds it when the
   declaration is defined, a `Hom` taking its level from the base of
-  the `Annotated` carrying it.
-  `C0` and `C1` name both the type parameters of the class stating the
-  law and the `Sort`s the annotations of a module-level declaration
-  name in their metadata. Nothing is `eval`ed and nothing is quoted:
-  the annotations are the lazy objects of PEP 649, evaluated by the
-  interpreter in their defining scope when read — a forward reference
-  such as the `Diagram` of `symmetric.Diagram.cycle` staying a plain
-  name, collected as a `ForwardRef` until the class exists — and
-  `parse` collects each sequent shallowly from `__annotations__`,
-  `__type_params__`, `__bound__` and `__metadata__`, objects built in
-  the scope PEP 695 gives them, so unification across a declaration
-  holds by construction and the environment that impersonated
-  `Annotated` around an `eval` is gone.
-- `discopy.pattern` and `discopy.search`, the proof search on pattern
-  sequents of the `diagram-search-strategies` branch unified with the
-  typed front-end of this one: a category states its structure as the
-  typed signatures of its methods — a metavariable is one of the
-  method's own PEP 695 type parameters, its sort the bound (`Atom`,
-  `Count`, an `abc` class, or `Annotated[C1, Hom[X, Y]]` for a higher
-  cell), an `Annotated[C1, Hom[A, B]]` types as a plain `C1` and
-  evaluates to the hom between two boundaries, and a compound pattern
-  is a pattern class subscripted in the one metadatum, built by the
-  interpreter when the declaration is defined — and `parse` collects
-  each sequent shallowly from the annotation objects, the class
-  stating it bounding the sorts. Every pattern class is typed, in one
-  of two ways: `Var`, `Adjoint`, `Exp` and `Sequent`, which no
-  annotation subscripts, are generic in the colours `C0` and objects
-  `C1` with the level as the bound of `C1`, while the classes standing
-  in annotations — `Hom[A, B]` (formerly `HomType`), `Unit[C0]`,
-  `Tensor[A, C]`, `Delay[M]`, `Repeat[X, N]` and the fronts `L`, `R`,
-  `Over` and `Under` — are generic in what their subscript takes,
-  since a typechecker reads that subscript as a specialisation and
-  would arity- and bound-check the metavariables against a `C0, C1`
-  parameterisation, and declare their level as a
-  classmethod. Each pattern class declares its level, the least
-  structure the objects it stands in must have — `Unit[C0]` and
-  `Tensor` a `ColouredMonoid`, `Adjoint` (`L[X]`, `R[X]`) a
-  `Pregroup`, `Delay` the new `abc.DelayedMonoid` that `feedback.Ty`
-  is, `Exp` (`Over[X, Y]`, `Under[X, Y]`) a `ResiduatedMonoid`,
-  `Repeat[X, N]` the legs of a spider — and what matching cannot
-  invert is a residual equation checked once the variables are
-  instantiated.
+  the `Annotated` carrying it. The subscript is the one spelling of
+  the language. Each pattern class declares its level, the least
+  structure the objects it stands in must have — `Unit` and `Tensor`
+  a `ColouredMonoid`, `Adjoint` (`L[X]`, `R[X]`) a `Pregroup`,
+  `Delay` the new `abc.DelayedMonoid` that `feedback.Ty` is, `Exp`
+  (`Over[X, Y]`, `Under[X, Y]`) a `ResiduatedMonoid`, `Repeat[X, N]`
+  the legs of a spider — and is typed in one of two ways: `Var`,
+  `Adjoint`, `Exp` and `Sequent`, which no annotation subscripts, are
+  generic in the colours `C0` and objects `C1` with the level as the
+  bound of `C1`, while the classes standing in annotations are
+  generic in what their subscript takes, since a typechecker reads
+  that subscript as a specialisation and would arity- and bound-check
+  the metavariables against a `C0, C1` parameterisation, and declare
+  their level as a classmethod.
+  `C0` and `C1` name both the type parameters of the class stating
+  the law and the `Sort`s the annotations of a module-level
+  declaration name; a premise may also be a bare sort — `f: C1`,
+  `term: Self` — quantifying over the arrows or terms themselves.
+  Nothing is `eval`ed and nothing is quoted: the annotations are the
+  lazy objects of PEP 649, evaluated by the interpreter in their
+  defining scope when read — a forward reference such as the
+  `Diagram` of `symmetric.Diagram.cycle` staying a plain name until
+  the class exists — and `parse` collects each sequent shallowly from
+  `__annotations__`, `__type_params__`, `__bound__` and
+  `__metadata__`, objects built in the scope PEP 695 gives them, so
+  unification across a declaration holds by construction and the
+  environment that impersonated `Annotated` around an `eval` is gone.
+  A conclusion is matched against a goal by unification over the free
+  monoid of objects — a `Tensor` splits the goal at every position, a
+  `Var` binds once, an adjoint inverts to the other side — and what
+  matching cannot invert is a residual equation checked once the
+  variables are instantiated.
   `monoidal.Diagram.strategy` is the one goal-directed search by the
   `rules` and `generators` a category declares, every level inheriting
   it as is: the sides of a trace, an evaluation, a currying and a
@@ -97,14 +92,6 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   what the search draws. The `TwoCategory` levels, the goals-with-holes
   search, the `Choice` patterns and the argument-shape wrappers of the
   earlier experiments are retired.
-- `Rule.check` matches the arguments of a structural method against the
-  sequent pattern its declaration states, the one mechanism behind the
-  manual shape assertions: `rigid.Diagram.generators["cups"].check(x, x.r)`
-  binds `{"X": x}` and raises `AxiomError` on `check(x, x.l)`. Adopting
-  it in the ~60 constructors that call `assert_isatomic` and friends by
-  hand is left as follow-up work, pending a cached `rules` lookup that
-  keeps the hot constructors fast and error-message parity with
-  `discopy.messages`.
 - The whole unified tree typechecks: `uv run --with ty ty check` passes
   in the full development environment (`uv sync --dev --group all`, the
   reference for typechecking now that the optional imports carry no
@@ -197,7 +184,7 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   arguments of its pattern, each metavariable an object named after it
   and each arrow a box named after its parameter — `Equation(f >> g >>
   h, f >> g >> h)` for associativity — and `Axiom.draw`, drawing it;
-  `PatternBase.canonical` gives the default value of any pattern.
+  `Declaration.canonical` gives the canonical arguments of any sequent.
 - `Axiom` is a `Testable` whose terms are its equations: `Axiom.pattern`
   is the `Signature` of its annotations, whose strategy is the input of
   the law, and `Axiom.strategy` returns a `SearchStrategy[Equation[T]]`,
@@ -533,9 +520,10 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - DisCoPy requires Python 3.14. Annotations are the lazy objects of
   PEP 649 rather than quoted strings: the `from __future__ import
   annotations` of every module goes, the forward references it quoted
-  are plain names, and `pattern.premises_of` reads signatures in
-  `annotationlib.Format.FORWARDREF`, so a generator declared inside
-  the class its sequent names is validated once that class exists.
+  are plain names, and every signature is read lazily, when a
+  declaration's sequent is first parsed, so a generator declared
+  inside the class its sequent names validates once that class
+  exists.
   `pflake8` and `pylint`, each of which reads a lazy forward reference
   as an undefined name, are replaced by `ruff` targeting `py314` — one
   linter, configured in `pyproject.toml` with the same style rules,

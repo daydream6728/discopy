@@ -31,14 +31,12 @@ Summary
         search
 """
 
-import inspect
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass
 from types import MethodType
 from typing import TYPE_CHECKING
 
-from discopy.pattern import (
-    Declaration, Hom, Match, Sequent, Sort, Substitution, parse)
+from discopy.pattern import Declaration, Hom, Match, Sequent
 from discopy.utils import AxiomError
 
 if TYPE_CHECKING:
@@ -97,53 +95,6 @@ class Rule[**P, T](Declaration[P, T]):
         return getattr(self.category, self.name or "")(
             *arguments.values())
 
-    def check(self, /, *args: P.args, **kwargs: P.kwargs) -> Substitution:
-        """
-        Match the arguments of the rule's method against the patterns its
-        declaration states, the one mechanism behind the manual shape
-        assertions: binding the metavariables on success and raising
-        :class:`discopy.utils.AxiomError` on a mismatch.
-
-        >>> from discopy.rigid import Diagram, Ty
-        >>> x = Ty('x')
-        >>> assert Diagram.generators["cups"].check(x, x.r) == {"X": x}
-        >>> Diagram.generators["cups"].check(x, x.l)  # doctest: +ELLIPSIS
-        Traceback (most recent call last):
-         ...
-        discopy.utils.AxiomError: cups does not accept ...
-        """
-        sequent = self.sequent
-        parameters = [
-            inspect.Parameter(name, inspect.Parameter.POSITIONAL_OR_KEYWORD)
-            for name in sequent.premises]
-        values = inspect.Signature(parameters).bind(*args, **kwargs).arguments
-
-        def matches(premises, subst, residuals):
-            if not premises:
-                for pattern, value in residuals:
-                    if pattern.instantiate(subst, self.unit) != value:
-                        return
-                yield subst
-                return
-            (name, premise), *rest = premises
-            value = values[name]
-            if isinstance(premise, Hom):
-                found = premise.match((value.dom, value.cod), subst,
-                                      residuals)
-            elif isinstance(premise, Sort):
-                found = iter([(subst, residuals)])
-            else:
-                found = premise.match(value, subst, residuals)
-            for subst_, residuals_ in found:
-                yield from matches(rest, subst_, residuals_)
-
-        premises = list(sequent.premises.items())
-        for subst in matches(premises, {}, ()):
-            return subst
-        mismatch = ", ".join(
-            f"{name}={values[name]!r}" for name in sequent.premises)
-        raise AxiomError(f"{self.name} does not accept {mismatch}.")
-
 
 class Generator(Rule):
     """
@@ -154,16 +105,6 @@ class Generator(Rule):
     >>> print(RigidCategory.generators["cups"])
     cups: X: Atom[C0] | left: X, right: X.r ⊢ C1[X @ X.r, Unit[C0]]
     """
-
-    __hash__ = Declaration.__hash__
-
-    def __post_init__(self):
-        super().__post_init__()
-        try:
-            sequent = parse(self.function)
-        except (NameError, TypeError):
-            return  # Validated lazily, once the owner is known.
-        self.validate(sequent)
 
     @staticmethod
     def validate(sequent: Sequent) -> None:
