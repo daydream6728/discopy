@@ -372,6 +372,11 @@ class Diagram(markov.Diagram, FeedbackCategory):
         "is not a feedback diagram.")(markov.Diagram.trace)
 
     ob = Ty
+    #: :class:`markov.Diagram` re-enables what
+    #: :class:`discopy.abc.FeedbackCategory` declares inapplicable, so a
+    #: feedback diagram declares it again.
+    dagger_involution = FeedbackCategory.dagger_involution
+    dagger_contravariance = FeedbackCategory.dagger_contravariance
     Layer: ClassVar[Generator] = Generator.subclass(Layer)
     Box: ClassVar[Generator]
     Permutation: ClassVar[Generator]

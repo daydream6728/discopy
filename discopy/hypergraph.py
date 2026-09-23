@@ -51,8 +51,8 @@ from networkx.algorithms.isomorphism import is_isomorphic
 
 from discopy import cmap, messages
 from discopy.abc import (
-    HypergraphCategory, MarkovCategory, MonoidalCategory, NamedGeneric,
-    RigidCategory, SymmetricCategory, TracedCategory)
+    DaggerCategory, HypergraphCategory, MarkovCategory, MonoidalCategory,
+    NamedGeneric, RigidCategory, SymmetricCategory, TracedCategory)
 from discopy.drawing import Node, backend
 from discopy.python.finset import Permutation
 from discopy.utils import (
@@ -94,7 +94,8 @@ Mapping from :class:`Spider` to atomic :class:`frobenius.Ty`.
 """
 
 
-class Hypergraph[category: Diagram](MonoidalCategory, NamedGeneric):
+class Hypergraph[category: Diagram](MonoidalCategory, DaggerCategory,
+                                     NamedGeneric):
     """
     A hypergraph is given by:
 

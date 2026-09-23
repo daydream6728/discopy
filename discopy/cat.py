@@ -84,7 +84,7 @@ from typing import (
     TYPE_CHECKING)
 
 from discopy import messages, utils
-from discopy.abc import Category, Serialisable
+from discopy.abc import Category, DaggerCategory, Serialisable
 from discopy.axioms import (
     GENERATORS,
     SELF,
@@ -244,7 +244,7 @@ class FreeCategory(Category):
 
 
 @factory
-class Arrow(FreeCategory, Serialisable):
+class Arrow(FreeCategory, DaggerCategory, Serialisable):
     """
     An arrow is a tuple of composable boxes :code:`inside` with a pair of
     objects :code:`dom` and :code:`cod` as domain and codomain.
@@ -961,12 +961,6 @@ class Functor(Category, Serialisable):
         "left of a functor given by mappings acts the same but compares "
         "unequal (#648).")
 
-    dagger_involution = Category.dagger_involution.inapplicable(
-        "A functor has no dagger.")
-
-    dagger_contravariance = Category.dagger_contravariance.inapplicable(
-        "A functor has no dagger.")
-
     @axiom
     def identity_typing(cls):
         """
@@ -1002,20 +996,22 @@ class Functor(Category, Serialisable):
 ONE_FUNCTOR = "One functor rather than a category of functors."
 
 
-class Equivalence(Functor):
+class Equivalence(Functor, DaggerCategory):
     """
     A functor with an inverse: the functor is :meth:`__call__`, the
     inverse is :meth:`decode` and :meth:`dagger` wraps it as the
-    :class:`Inverse` functor from the codomain back, so that composing
-    the two either way gives an identity. Functors given by mappings
-    compare unequal to the identity functor (#648), so the laws
-    quantify the composites pointwise: :meth:`retract` over the arrows
-    of the domain and :meth:`section` over their images, beside the
-    :meth:`composition` and :meth:`identity` the functor preserves.
+    :class:`Inverse` functor from the codomain back, a
+    :class:`discopy.abc.DaggerCategory` whose involution holds on the
+    nose. Functors given by mappings compare unequal to the identity
+    functor (#648), so the remaining laws quantify the composites
+    pointwise: :meth:`retract` over the arrows of the domain and
+    :meth:`section` over their images, beside the :meth:`composition`
+    and :meth:`identity` the functor preserves.
 
     A subclass names its ``dom``, its ``cod`` and its :meth:`decode`;
     the laws of the functor category are inapplicable, one functor not
-    being a category of functors.
+    being a category of functors, contravariance of the dagger with
+    them.
 
     Example
     -------
@@ -1113,6 +1109,14 @@ class Equivalence(Functor):
         Functor.composition_cod_typing.inapplicable(ONE_FUNCTOR)
 
     unitality = Functor.unitality.inapplicable(ONE_FUNCTOR)
+
+    @axiom
+    def dagger_involution(cls, functor: Annotated[Any, SELF]):
+        """ The dagger of the inverse is the equivalence itself. """
+        return AbstractEquation(functor.dagger().dagger(), functor)
+
+    dagger_contravariance = \
+        DaggerCategory.dagger_contravariance.inapplicable(ONE_FUNCTOR)
 
 
 class Inverse(Functor):

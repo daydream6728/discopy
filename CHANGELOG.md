@@ -446,6 +446,29 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   the case for boxes. A factory class whose `ar` has no generator in its
   bases, e.g. `grammar.cfg.Tree`, keeps the root of the declaration rather
   than raising `ValueError`.
+- `abc.DaggerCategory`, a `Category` with an abstract `dagger`, so that the
+  dagger laws — contravariance and involution — are stated only where there
+  is a dagger. `cat.Arrow` inherits it, and the diagram classes inherit it
+  down the hierarchy, while `cat.Functor` and `monoidal.Ty` do not: a functor
+  has no dagger and a type's generators need not either, so the property
+  tests of [#658](https://github.com/discopy/discopy/pull/658) can generate
+  the dagger axioms for the carriers that declare one instead of every
+  carrier opting out by hand. `cat.FreeCategory` keeps the implementation —
+  reversal by slicing, shared with `monoidal.Ty` — without the
+  declaration. `matrix.Matrix`, `hypergraph.Hypergraph` and `cmap.CMap`
+  declare it too: the conjugate transpose and the boundary swaps are
+  daggers of their own
+  ([#731](https://github.com/discopy/discopy/issues/731)). Merged into
+  this branch, the entry above holds with two adjustments: the laws
+  keep their `Annotated` spelling, and the inapplicable declarations
+  they replace go where the laws are gone — `cat.Functor`'s and the
+  rigid and biclosed types' — while the levels that re-enable or
+  restate them, `pivotal` and `biclosed`, read them off
+  `DaggerCategory`. `cat.Equivalence` becomes the
+  `Equivalence(Functor, DaggerCategory)` first asked for: its
+  involution holds on the nose, restated over the one functor, and its
+  contravariance is inapplicable like the rest of the functor-category
+  laws.
 - `monoidal.List`, the free monoid on a generator type: `List[X]` is a
   tuple of instances of `X` with concatenation as `tensor` and the empty
   list as unit, an `abc.Monoid` parameterised as

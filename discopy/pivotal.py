@@ -57,7 +57,8 @@ We also have its dagger and its transpose:
 from typing import ClassVar
 
 from discopy import cat, cmap, monoidal, rigid, traced
-from discopy.abc import Category, PivotalCategory, TracedCategory
+from discopy.abc import (
+    DaggerCategory, PivotalCategory, TracedCategory)
 from discopy.cat import factory, Generator
 
 
@@ -97,8 +98,8 @@ class Ty(rigid.Ty):
     """
     Wire: ClassVar[Generator] = Generator.subclass(Wire)
 
-    dagger_involution = Category.dagger_involution
-    dagger_contravariance = Category.dagger_contravariance
+    dagger_involution = DaggerCategory.dagger_involution
+    dagger_contravariance = DaggerCategory.dagger_contravariance
 
 
 @factory
@@ -126,8 +127,8 @@ class Diagram(rigid.Diagram, traced.Diagram, PivotalCategory):
         dom (Ty) : The domain of the diagram, i.e. its input.
         cod (Ty) : The codomain of the diagram, i.e. its output.
     """
-    dagger_involution = Category.dagger_involution
-    dagger_contravariance = Category.dagger_contravariance
+    dagger_involution = DaggerCategory.dagger_involution
+    dagger_contravariance = DaggerCategory.dagger_contravariance
 
     ob = Ty
     Box: ClassVar[Generator]

@@ -85,7 +85,7 @@ from typing import Callable, ClassVar, Self, overload
 
 from discopy import monoidal, cmap
 from discopy.axioms import Serialisable, no_strategy
-from discopy.abc import BiclosedCategory, Category
+from discopy.abc import BiclosedCategory, DaggerCategory
 from discopy.drawing import Drawing
 from discopy.cat import factory, Generator
 from discopy.utils import (
@@ -388,11 +388,11 @@ class Diagram(monoidal.Diagram, BiclosedCategory):
     def to_drawing(self):
         return monoidal.Diagram.to_drawing(self, functor=Functor)
 
-    dagger_involution = Category.dagger_involution.inapplicable(
+    dagger_involution = DaggerCategory.dagger_involution.inapplicable(
         "A curried diagram has no dagger.")
 
-    dagger_contravariance = Category.dagger_contravariance.inapplicable(
-        "A curried diagram has no dagger.")
+    dagger_contravariance = DaggerCategory.dagger_contravariance\
+        .inapplicable("A curried diagram has no dagger.")
 
     dagger_monoidality = BiclosedCategory.dagger_monoidality.inapplicable(
         "A curried diagram has no dagger.")

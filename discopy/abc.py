@@ -15,8 +15,9 @@ forgetful functors between categories go the other way.
 Each class also declares its :func:`discopy.axioms.axiom` equations, which
 every free category inherits along with the structure they axiomatise:
 :class:`Category` states the unitality and associativity of composition,
-the typing of its identities and composites, and the involution and
-contravariance of its dagger; a :class:`ColouredMonoid` inherits them as
+the typing of its identities and composites, and a
+:class:`DaggerCategory` the involution and contravariance of its dagger;
+a :class:`ColouredMonoid` inherits them as
 the unitality and associativity of its product, its composition. The
 structural methods carry their own :func:`discopy.search.rule` or
 :func:`discopy.search.generator`, from which
@@ -33,6 +34,7 @@ Summary
     :toctree:
 
     Category
+    DaggerCategory
     ColouredMonoid
     Monoid
     Nat
@@ -223,6 +225,25 @@ class Category[C0, C1: Category](Testable, ABC):
         """ Codomain typing of composition. """
         return cls.ob.Equation(f.then(g).cod, g.cod)
 
+    __rshift__ = __llshift__ = lambda self, other: self.then(other)
+    __lshift__ = __lrshift__ = lambda self, other: other.then(self)
+
+
+class DaggerCategory[C0, C1: DaggerCategory](Category[C0, C1]):
+    """
+    A `dagger category <https://ncatlab.org/nlab/show/dagger+category>`_ is a
+    :class:`Category` with a method :code:`dagger` for the identity-on-objects
+    contravariant involution, i.e. such that
+    ``(f >> g).dagger() == g.dagger() >> f.dagger()``
+    and ``f.dagger().dagger() == f``.
+
+    Its two laws are stated here rather than on :class:`Category`, so that a
+    category with no dagger does not have to declare them inapplicable.
+    """
+    @abstractmethod
+    def dagger(self) -> C1:
+        """ The dagger of a morphism, to be instantiated. """
+
     @axiom
     def dagger_involution(
             cls, f: C1) -> Equation[C1]:
@@ -235,9 +256,6 @@ class Category[C0, C1: Category](Testable, ABC):
             g: Annotated[C1, Hom[B, C]]) -> Equation[C1]:
         """ The dagger reverses composition. """
         return cls.Equation(f.then(g).dagger(), g.dagger().then(f.dagger()))
-
-    __rshift__ = __llshift__ = lambda self, other: self.then(other)
-    __lshift__ = __lrshift__ = lambda self, other: other.then(self)
 
 
 class ColouredMonoid[C0, C1: ColouredMonoid](Category[C0, C1]):
@@ -1252,11 +1270,11 @@ class FeedbackCategory[C0: DelayedMonoid, C1: FeedbackCategory](
         return cls.Equation(
             f.feedback(mem=f.cod[-2:]), f.feedback().feedback())
 
-    dagger_involution = Category.dagger_involution.inapplicable(
+    dagger_involution = DaggerCategory.dagger_involution.inapplicable(
         "The delay of a feedback category is not reversible.")
 
-    dagger_contravariance = Category.dagger_contravariance.inapplicable(
-        "The delay of a feedback category is not reversible.")
+    dagger_contravariance = DaggerCategory.dagger_contravariance\
+        .inapplicable("The delay of a feedback category is not reversible.")
 
     dagger_monoidality = MonoidalCategory.dagger_monoidality.inapplicable(
         "The delay of a feedback category is not reversible.")

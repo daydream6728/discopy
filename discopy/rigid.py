@@ -153,7 +153,7 @@ from collections.abc import Callable
 from typing import Any, ClassVar, Iterator, Self
 
 from discopy import cat, monoidal, biclosed, messages
-from discopy.abc import Category, Pregroup, RigidCategory
+from discopy.abc import DaggerCategory, Pregroup, RigidCategory
 from discopy.axioms import GENERATORS, Serialisable
 from discopy.cat import factory, Generator
 from discopy.utils import (
@@ -277,11 +277,6 @@ class Ty(Pregroup, biclosed.Ty):
     """
     Wire: ClassVar[Generator] = Generator.subclass(Wire)
 
-    dagger_involution = Category.dagger_involution.inapplicable(
-        "Rigid types have no dagger, use pivotal instead.")
-    dagger_contravariance = Category.dagger_contravariance.inapplicable(
-        "Rigid types have no dagger, use pivotal instead.")
-
     def assert_isadjoint(self, other):
         """
         Raise ``AxiomError`` if two rigid types are not adjoints.
@@ -400,10 +395,10 @@ class Diagram(biclosed.Diagram, RigidCategory):
     ob = Ty
     Layer: ClassVar[Generator] = Generator.subclass(Layer)
 
-    dagger_involution = Category.dagger_involution.inapplicable(
+    dagger_involution = DaggerCategory.dagger_involution.inapplicable(
         "Rigid diagrams have no dagger, use pivotal instead.")
-    dagger_contravariance = Category.dagger_contravariance.inapplicable(
-        "Rigid diagrams have no dagger, use pivotal instead.")
+    dagger_contravariance = DaggerCategory.dagger_contravariance\
+        .inapplicable("Rigid diagrams have no dagger, use pivotal instead.")
 
     to_drawing = monoidal.Diagram.to_drawing
 

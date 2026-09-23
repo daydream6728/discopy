@@ -40,7 +40,8 @@ from types import ModuleType
 from typing import Literal, Callable, TYPE_CHECKING
 
 from discopy import monoidal, config, messages
-from discopy.abc import MonoidalCategory, NamedGeneric, Nat
+from discopy.abc import (
+    DaggerCategory, MonoidalCategory, NamedGeneric, Nat)
 from discopy.cat import (
     factory,
     assert_iscomposable,
@@ -53,7 +54,7 @@ if TYPE_CHECKING:
 
 
 @factory
-class Matrix[dtype](MonoidalCategory, NamedGeneric):
+class Matrix[dtype](MonoidalCategory, DaggerCategory, NamedGeneric):
     """
     A matrix is an ``array`` with natural numbers as ``dom`` and ``cod``.
 

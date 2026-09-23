@@ -49,6 +49,7 @@ from typing import TYPE_CHECKING, ClassVar, Literal, Self
 from discopy import hypergraph, messages
 from discopy.abc import (
     CompactCategory,
+    DaggerCategory,
     NamedGeneric,
     Pregroup,
     RigidCategory,
@@ -123,7 +124,8 @@ class Port:
     side: Literal["up", "down"]
 
 
-class CMap[category: Diagram](CompactCategory, NamedGeneric):
+class CMap[category: Diagram](CompactCategory, DaggerCategory,
+                              NamedGeneric):
     r"""
     An open combinatorial map, i.e. a diagram represented as a bijection
     between its ports.
