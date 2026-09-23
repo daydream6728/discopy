@@ -63,9 +63,9 @@ from discopy.owl import (
 FIBO = "https://spec.edmcouncil.org/fibo/ontology/"
 FIXTURES = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), os.pardir, os.pardir,
-    "test", "fixtures", "fibo")
+    os.pardir, "test", "fixtures", "fibo")
 KINDS = ("MarketValue", "FXExposure", "PnL", "VaR", "ExpectedShortfall",
-         "ComponentVaR")
+         "ComponentVaR", "NetAssetValue")
 PAIRS = {"EUR": "EURUSD=X", "JPY": "JPYUSD=X", "GBP": "GBPUSD=X"}
 """ The FX pairs quoting one foreign unit in the reporting currency. """
 
@@ -228,10 +228,14 @@ class Fund:
                          for one in self.kind.values()))
         self.Collection = find("Collections/Collection")
         self.Valuation = self.world.owl_class("Valuation")
+        self.Weight = self.world.owl_class("Weight")
+        self.Concentration = self.world.owl_class("Concentration")
         self.hasExposure = OWLObjectProperty(
             IRI.create(self.world.iri + "hasExposure"))
         self.hasQuotation = OWLObjectProperty(
             IRI.create(self.world.iri + "hasQuotation"))
+        self.attributedTo = OWLObjectProperty(
+            IRI.create(self.world.iri + "attributedTo"))
         self.exposureTo = OWLObjectProperty(
             IRI.create(self.world.iri + "exposureTo"))
         self.hasFXDelta = OWLObjectProperty(
@@ -247,6 +251,8 @@ class Fund:
             OWLObjectPropertyDomainAxiom(self.hasExposure, self.Valuation),
             OWLObjectPropertyRangeAxiom(
                 self.hasExposure, self.kind["FXExposure"]),
+            OWLDeclarationAxiom(self.attributedTo),
+            OWLObjectPropertyRangeAxiom(self.attributedTo, self.Currency),
             OWLDeclarationAxiom(self.hasQuotation),
             OWLObjectPropertyDomainAxiom(self.hasQuotation, self.Valuation),
             OWLObjectPropertyRangeAxiom(self.hasQuotation, self.ExchangeRate),
@@ -333,7 +339,7 @@ class Fund:
             self.Holding, OWLObjectSomeValuesFrom(
                 self.hasAcquisitionPrice, self.priced(currency))))
 
-    def valuation(self, when=None):
+    def valuation(self, metric: str = "FXExposure", when=None):
         """An exposure paired with the quotation that values it.
 
         The ontology says a valuation's quotation is based in its
@@ -347,9 +353,20 @@ class Fund:
         return OWLObjectIntersectionOf((
             self.Valuation,
             OWLObjectSomeValuesFrom(self.hasExposure, self.amount(
-                "FXExposure", when=when)),
+                metric, when=when)),
             OWLObjectSomeValuesFrom(self.hasQuotation, self.quotation(
                 when=when))))
+
+    def dimensionless(self, cls, when=None):
+        """A pure number of the book: a weight, a concentration index."""
+        when = self.on(self.asof) if when is None else when
+        return OWLObjectIntersectionOf((cls, when))
+
+    def weighting(self, when=None):
+        """A share of net asset value, attributed to a quoting unit."""
+        when = self.on(self.asof) if when is None else when
+        return OWLObjectIntersectionOf((
+            self.Weight, self.some_currency(self.attributedTo), when))
 
     def exposed(self, currency: str = None):
         """A holding whose FX delta is in one currency.
@@ -540,7 +557,7 @@ def quotes(fund: Fund, when=None) -> Box:
             for unit in fund.market.units()}, fund.ExchangeRate))
 
 
-def pairing(fund: Fund, when=None) -> Box:
+def pairing(fund: Fund, metric: str = "FXExposure", when=None) -> Box:
     """Pair each exposure with the quotation of its own currency.
 
     What comes out is a collection of `Valuation`, and the ontology says
@@ -549,25 +566,25 @@ def pairing(fund: Fund, when=None) -> Box:
     refutes -- whatever the currencies, named in the plan or not.
     """
     return Box(
-        "pair", ob((fund.bag(fund.amount("FXExposure", when=when)),
+        "pair", ob((fund.bag(fund.amount(metric, when=when)),
                     fund.bag(fund.quotation(when=when)))),
-        ob((fund.bag(fund.valuation(when)), )),
+        ob((fund.bag(fund.valuation(metric, when)), )),
         data=Step(lambda amounts, rates: {
             unit: (amounts[unit], rates[unit]) for unit in amounts},
             fund.Valuation))
 
 
-def conversion(fund: Fund, when=None) -> Box:
+def conversion(fund: Fund, metric: str = "FXExposure", when=None) -> Box:
     """Value every pairing in the reporting currency."""
     return Box(
-        "×", ob((fund.bag(fund.valuation(when)), )),
+        "×", ob((fund.bag(fund.valuation(metric, when)), )),
         ob((fund.bag(fund.amount(
-            "FXExposure", fund.reporting, when, to=True)), )),
+            metric, fund.reporting, when, to=True)), )),
         data=Step(lambda pairs: {
             unit: amount * rate for unit, (amount, rate) in pairs.items()}))
 
 
-def regroup(fund: Fund, when=None) -> Box:
+def regroup(fund: Fund, metric: str = "FXExposure", when=None) -> Box:
     """Fold each minor unit into the currency whose risk it carries."""
     def fold(bag):
         result = {}
@@ -575,7 +592,7 @@ def regroup(fund: Fund, when=None) -> Box:
             currency = risk_currency(unit)
             result[currency] = result.get(currency, 0.) + value
         return result
-    wire = fund.bag(fund.amount("FXExposure", fund.reporting, when, to=True))
+    wire = fund.bag(fund.amount(metric, fund.reporting, when, to=True))
     return Box("regroup", ob((wire, )), ob((wire, )), data=Step(fold))
 
 
@@ -591,8 +608,64 @@ def exposure_plan(fund: Fund, when=None):
     return Id(ob((fund.Portfolio, ))) @ Diagram.copy(calendar)\
         >> select(fund) @ Id(calendar @ calendar)\
         >> netting(fund, when) @ quotes(fund, when)\
-        >> pairing(fund, when) >> conversion(fund, when)\
-        >> regroup(fund, when)
+        >> pairing(fund, when=when) >> conversion(fund, when=when)\
+        >> regroup(fund, when=when)
+
+
+def pricing(fund: Fund, when=None) -> Box:
+    """Read what the book is worth, each bucket in its own quoting unit.
+
+    This is the wire that makes the footgun visible: what comes out is
+    ``MarketValue ⊓ ∃hasCurrency.Currency`` -- *some* currency, each its
+    own -- and not ``∃hasCurrency.{USD}``. A metric that assumes one
+    currency cannot be reached from here without converting first.
+    """
+    return Box(
+        "prices", ob((fund.Portfolio, fund.calendar(when))),
+        ob((fund.bag(fund.amount("MarketValue", when=when)), )),
+        data=Step(lambda book, day: {
+            unit: dated(sum(book.values(unit)), day)
+            for unit in book.market.units()}))
+
+
+def weights(fund: Fund, when=None) -> Box:
+    """Each bucket's share of net asset value.
+
+    The domain is the reporting currency, so a bag of amounts still in
+    their own units has a different predicate and does not compose
+    here: forgetting to convert is a diagram that cannot be drawn,
+    rather than a ratio of incommensurable numbers.
+    """
+    return Box(
+        "weights",
+        ob((fund.bag(fund.amount(
+            "MarketValue", fund.reporting, when, to=True)), )),
+        ob((fund.bag(fund.weighting(when)), )),
+        data=Step(lambda bag: {
+            one: value / sum(bag.values()) for one, value in bag.items()}))
+
+
+def concentration(fund: Fund, when=None) -> Box:
+    """The Herfindahl index of the weights: one is a single position."""
+    return Box(
+        "HHI", ob((fund.bag(fund.weighting(when)), )),
+        ob((fund.dimensionless(fund.Concentration, when), )),
+        data=Step(lambda bag: float(sum(one ** 2 for one in bag.values()))))
+
+
+def nav_plan(fund: Fund, when=None):
+    """Value the book, convert it, weigh it, and measure its concentration.
+
+    The same shape as the exposure plan, on the same conversion boxes --
+    only the metric on the wires differs.
+    """
+    calendar = ob((fund.calendar(when), ))
+    return Id(ob((fund.Portfolio, ))) @ Diagram.copy(calendar)\
+        >> pricing(fund, when) @ quotes(fund, when)\
+        >> pairing(fund, "MarketValue", when)\
+        >> conversion(fund, "MarketValue", when)\
+        >> regroup(fund, "MarketValue", when)\
+        >> weights(fund, when) >> concentration(fund, when)
 
 
 def hedge(fund: Fund, currency: str, fraction: float, when=None) -> Box:

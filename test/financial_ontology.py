@@ -25,11 +25,12 @@ from owlapy.class_expression import (  # noqa: E402
     OWLObjectHasValue, OWLObjectIntersectionOf, OWLObjectOneOf,
     OWLObjectSomeValuesFrom, OWLObjectUnionOf)
 
-from discopy.owl import Nothing, label, subsumes  # noqa: E402
+from discopy.owl import (  # noqa: E402
+    Diagram, Nothing, label, subsumes)
 from discopy.utils import AxiomError  # noqa: E402
-from docs.notebooks.financial_ontology import (  # noqa: E402
-    SHARES, Market, Step, conversion, demo, exposure_plan, hedge,
-    interpreter,
+from docs.notebooks.finance.financial_ontology import (  # noqa: E402
+    SHARES, Market, Step, concentration, conversion, demo, exposure_plan,
+    hedge, interpreter, nav_plan, pricing, weights,
     netting, pairing, quotes, regroup, risk_box, risk_currency, select,
     shock, stress_plan)
 
@@ -235,6 +236,33 @@ def test_the_window_is_the_same_plan_retyped(fund, book):
     assert var.shape == (len(dates), ) and shortfall.shape == var.shape
     assert var[-1] == approx(point)  # the window ends at the valuation date
     assert sum(components.values())[-1] == approx(point)
+
+
+def test_forgetting_to_convert_does_not_compose(fund):
+    """The footgun: a metric that assumes one currency cannot be reached
+    from prices that are each in their own."""
+    one, _ = fund
+    assert label(pricing(one).cod.inside[0].entity).find(
+        "∃hasCurrency.Currency") > 0          # some currency, each its own
+    assert label(weights(one).dom.inside[0].entity).find(
+        "∃hasCurrency.{USD}") > 0             # one currency, the fund's
+    with raises(AxiomError):
+        pricing(one) >> weights(one)
+    with raises(AxiomError):                  # nor by skipping the weighing
+        pricing(one) >> concentration(one)
+
+
+def test_the_nav_plan_measures_concentration(fund, book):
+    one, _ = fund
+    run = interpreter(one)
+    index = run(nav_plan(one))(*book)
+    units = len(one.market.currencies()) + 1
+    assert 1. / units <= index <= 1.          # Herfindahl bounds
+    plan = nav_plan(one)
+    upto = Diagram(plan.inside[:-1], plan.dom, plan.boxes[-1].dom)
+    bag = run(upto)(*book)
+    assert sum(bag.values()) == approx(1.)    # the weights are a partition
+    assert index == approx(sum(one ** 2 for one in bag.values()))
 
 
 def test_a_mismatched_valuation_is_refuted(fund):

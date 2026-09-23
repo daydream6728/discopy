@@ -25,8 +25,9 @@ DisCoPy documentation
 
     notebooks/diagrams
     notebooks/examples
-    notebooks/ontology/ontologies
-    notebooks/fx_risk
+    notebooks/finance/ontologies
+    notebooks/finance/fibo
+    notebooks/finance/fx_risk
     notebooks/qnlp
     notebooks/diag-diff
     notebooks/21-05-03-tallcat

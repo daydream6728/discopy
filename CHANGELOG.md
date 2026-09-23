@@ -9,7 +9,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Added
 
-- `docs/notebooks/fx_risk.md`, an FX-risk notebook whose every wire is a
+- `docs/notebooks/finance/fx_risk.md`, an FX-risk notebook whose every
+  wire is a
   FIBO class expression: what a number measures, in which unit, on which
   date. The quotes are real — `fetch` pulls spot rates, instrument prices
   and a year of daily closes from Yahoo Finance through `yfinance`, and
@@ -35,6 +36,18 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `hasBaseCurrency`, `hasDealtCurrency` and `hasAsOfDate`, and the date
   wire is its `ExplicitDate`, so the window version of a plan is the
   same diagram with its wires retyped, arrays flowing where scalars did.
+  The same boxes serve a second metric: `pricing` reads what the book is
+  worth with each bucket in its own quoting unit, and `weights` and
+  `concentration` measure how concentrated it is — which is where the
+  ambiguity of an ordinary signature shows. A Herfindahl index written
+  as `concentration(values: list[float]) -> float` is correct and
+  satisfiable by a list of prices that were never converted, returning a
+  ratio between incommensurable quantities with every annotation
+  honoured. The same function as a box demands
+  `MarketValue ⊓ ∃hasCurrency.{USD}` where `pricing` offers
+  `MarketValue ⊓ ∃hasCurrency.Currency` — some currency, each its own —
+  so forgetting the conversion is a composition that does not exist
+  rather than a number nobody questions.
   Keying the collections by currency makes a class of mistake
   unrepresentable rather than merely detectable: there is no ordering of
   risk factors to get wrong and no leg for an overlay to land on by
@@ -149,10 +162,14 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   the type of its wire, and the result draws the splitting as the
   Karoubi inclusions around the single-sorted middle. It ships as the
   `semantic` extra, i.e. `owlapy` plus a Java runtime, with the FIBO
-  fixtures of `test/fixtures/fibo` and two notebooks:
-  `docs/notebooks/ontology/ontologies`, which pitches ontologies as
-  guardrails for AI agents on FIBO's own ownership-and-control modules,
-  and `docs/notebooks/fx_risk`, which computes FX risk over a
+  fixtures of `test/fixtures/fibo` and three notebooks gathered under
+  `docs/notebooks/finance`: `ontologies`, which pitches ontologies as
+  guardrails for AI agents on FIBO's own ownership-and-control modules;
+  `fibo`, which loads the ownership import closure and draws its whole
+  rule book — every axiom FIBO states, compiled to an equation or an
+  inclusion between relations and rendered lazily, so a page of the
+  1,427 rules costs only the pictures actually opened, browsable by
+  entity or by page; and `fx_risk`, which computes FX risk over a
   multi-currency portfolio on FIBO's own `CurrencyAmount`, `Ownership`
   and date modules — currency buckets are compound predicates, the
   definite-unit guarantee is FIBO's own cardinality axiom, exchange

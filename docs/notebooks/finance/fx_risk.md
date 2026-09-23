@@ -8,13 +8,10 @@ pyproject: |-
       "numpy",
       "matplotlib",
       "yfinance",
-      "discopy[semantic]",
+      "owlapy==1.6.6",
+      "discopy[semantic] @ git+https://github.com/daydream6728/discopy.git@codex/fibo-qudt-demo",
+
   ]
-  # This notebook reads financial_ontology.py beside it and the FIBO
-  # fixtures two directories up, so it only runs from inside the repo --
-  # where the repo's own discopy is the one it should be using.
-  [tool.uv.sources]
-  discopy = { path = "../..", editable = true }
 ---
 ```python {.marimo hide_code="true"}
 import marimo as mo
@@ -72,8 +69,9 @@ from owlapy.class_expression import (
 
 sys.path.insert(0, str(mo.notebook_dir() or Path.cwd()))
 from financial_ontology import (
-    SHARES, conversion, demo, exposure_plan, fetch, hedge, interpreter,
-    netting, pairing, quotes, regroup, risk_box, select, shock, stress_plan)
+    SHARES, concentration, conversion, demo, exposure_plan, fetch, hedge,
+    interpreter, nav_plan, netting, pairing, pricing, quotes, regroup,
+    risk_box, select, shock, stress_plan, weights)
 from discopy.owl import Nothing, label, subsumes
 from discopy.utils import AxiomError
 ```
@@ -286,7 +284,62 @@ mo.vstack([
 The unit of that number is not a caption: it is the codomain of the plan,
 read off the diagram — a dollar value at risk, as of the last close.
 
-## 6 · Plans that cannot be written down
+## 6 · Two signatures
+
+Here is the ambiguity, in ordinary Python. This is a real metric —
+the Herfindahl index of a book's concentration — and it is correct:
+
+```python
+def concentration(values: list[float]) -> float:
+    """How concentrated a book is: 1 is a single position."""
+    total = sum(values)
+    return sum((value / total) ** 2 for value in values)
+```
+
+Nothing in `list[float]` says those values share a currency. Hand it the
+book's positions **before** converting them — euros beside yen beside
+pence — and it returns a number, confidently, that means nothing: a ratio
+between incommensurable quantities. Every annotation is satisfied. The
+type checker has no complaint to make, because shape is all it was ever
+asked about.
+
+The same function as a box has to say what it accepts, and the two wires
+differ in exactly the place the annotation was silent:
+
+```python {.marimo hide_code="true"}
+table(["Wire", "Predicate"], [
+    ["what `prices` produces",
+     f"`{label(pricing(fund).cod.inside[0].entity)}`"],
+    ["what `weights` requires",
+     f"`{label(weights(fund).dom.inside[0].entity)}`"],
+])
+```
+
+`∃hasCurrency.Currency` is *some* currency, each amount its own.
+`∃hasCurrency.{USD}` is one currency, the fund's. Forgetting the
+conversion is then not a wrong number to be noticed in a review — it is a
+diagram that cannot be drawn:
+
+```python {.marimo hide_code="true"}
+mo.vstack([
+    table(["Composition", "Verdict", "Reason"], [
+        refused("weigh prices that were never converted",
+                lambda: pricing(fund) >> weights(fund)),
+        refused("measure concentration straight from local prices",
+                lambda: pricing(fund) >> concentration(fund)),
+    ]),
+    mo.md("With the conversion in between, the same boxes compose — and "
+          f"the book's Herfindahl index is **{run(nav_plan(fund))(*book):.3f}**, "
+          "against a floor of "
+          f"**{1 / (len(model.currencies) + 1):.3f}** for a perfectly "
+          "spread book.")])
+```
+
+```python {.marimo hide_code="true"}
+nav_plan(fund).foliation()
+```
+
+## 7 · Plans that cannot be written down
 
 Each of the following is a well-intentioned mistake, and two of them are
 the ones that cost real money. None produces a wrong number, because none
@@ -359,7 +412,7 @@ only the ones some plan happened to wire up.
 The sixth and seventh rows are the ones a unit checker alone would miss:
 every currency agrees and only the **dates** disagree.
 
-## 7 · Stress the portfolio
+## 8 · Stress the portfolio
 
 Shocks are percentage changes in dollars per foreign unit, so a negative
 shock is a foreign depreciation. Each contribution stays on its own
@@ -391,7 +444,7 @@ mo.vstack([stress_plan(fund, shocks).foliation(), mo.hstack([
     widths="equal")])
 ```
 
-## 8 · A hedge, and the same plan backtested over the window
+## 9 · A hedge, and the same plan backtested over the window
 
 A hedge is a **box**, inserted on the wire that already says which currency
 it reduces — so a yen overlay cannot land on the euro leg. And because a
@@ -486,7 +539,7 @@ mo.callout(
 From the repository root:
 
 ```sh
-uv run --group all marimo edit docs/notebooks/fx_risk.md
+uv run --group all marimo edit docs/notebooks/finance/fx_risk.md
 uv run --group all python docs/export_notebooks.py fx_risk
 uv run --group all pytest test/financial_ontology.py
 ```
