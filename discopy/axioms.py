@@ -274,7 +274,6 @@ from discopy.pattern import (  # noqa: F401
     Declaration,
     Delay,
     Hom,
-    HomType,
     L,
     Over,
     R,

@@ -38,7 +38,7 @@ from types import MethodType
 from typing import TYPE_CHECKING
 
 from discopy.pattern import (
-    Declaration, HomType, Match, Sequent, Sort, Substitution, parse)
+    Declaration, Hom, Match, Sequent, Sort, Substitution, parse)
 from discopy.utils import AxiomError
 
 if TYPE_CHECKING:
@@ -127,7 +127,7 @@ class Rule[**P, T](Declaration[P, T]):
                 return
             (name, premise), *rest = premises
             value = values[name]
-            if isinstance(premise, HomType):
+            if isinstance(premise, Hom):
                 found = premise.match((value.dom, value.cod), subst,
                                       residuals)
             elif isinstance(premise, Sort):
@@ -169,7 +169,7 @@ class Generator(Rule):
     def validate(sequent: Sequent) -> None:
         """ Refuse a premise the search would have to prove. """
         for name, premise in sequent.premises.items():
-            if isinstance(premise, HomType):
+            if isinstance(premise, Hom):
                 raise TypeError(
                     f"A generator takes no hom premise, got {name}.")
 

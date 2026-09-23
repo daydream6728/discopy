@@ -10,7 +10,7 @@ from discopy.abc import (
     ResiduatedMonoid)
 from discopy.monoidal import Ty
 from discopy.pattern import (
-    C0, C1, SELF, Adjoint, Atom, Delay, Exp, HomType, L, Over, R, Repeat,
+    C0, C1, SELF, Adjoint, Atom, Delay, Exp, Hom, L, Over, R, Repeat,
     Sequent, Sort, Tensor, Under, Unit, Var, interpret, parse)
 
 
@@ -27,22 +27,22 @@ def test_subscripts():
     """ A pattern class subscripted with type parameters is the pattern. """
     def cups[V: Atom, N](
             cls, left: Annotated[C0, V], right: Annotated[C0, R[V]]
-    ) -> Annotated[C1, Tensor[V, R[V]], Unit[C0]]:
+    ) -> Annotated[C1, Hom[Tensor[V, R[V]], Unit[C0]]]:
         ...
     conclusion = interpret(
         cups.__annotations__["return"],
         {"V": Sort("C0", atomic=True, bound=Pregroup)})
     assert str(conclusion) == "C1[V @ V.r, Unit[C0]]"
 
-    def spider[V: Atom, N, K](cls) -> Annotated[C1, Repeat[V, N], V]:
+    def spider[V: Atom, N, K](cls) -> Annotated[C1, Hom[Repeat[V, N], V]]:
         ...
     assert str(interpret(
         spider.__annotations__["return"],
         {"V": Sort("C0", atomic=True), "N": Sort("Count")}))\
         == "C1[V ** N, V]"
 
-    def wait[V: Atom, W](cls) -> Annotated[
-            C1, Tensor[L[V], Delay[W]], Tensor[Over[V, W], Under[W, V]]]:
+    def wait[V: Atom, W](cls) -> Annotated[C1, Hom[
+            Tensor[L[V], Delay[W]], Tensor[Over[V, W], Under[W, V]]]]:
         ...
     assert str(interpret(
         wait.__annotations__["return"],
@@ -55,6 +55,12 @@ def test_subscripts():
     assert Atom[TypeVar("C0", bound=Pregroup)].bound is Pregroup
     assert Atom[Pregroup].bound is Pregroup and Atom[Pregroup].atomic
     assert Atom[SELF.dom.ob] == Sort("Self.dom.ob", atomic=True)
+    def two[V, W](cls) -> Annotated[C1, V, W]:
+        ...
+    with raises(TypeError, match="exactly one pattern"):
+        interpret(two.__annotations__["return"], {
+            "V": Sort("C0"), "W": Sort("C0")})
+
     with raises(TypeError):
         Atom[A]
     with raises(TypeError):
@@ -123,12 +129,12 @@ def test_instantiate():
     assert X.r.instantiate({"X": rigid.Ty("z")}, rigid.Ty) == rigid.Ty("z").r
     assert D.d.instantiate({"D": feedback.Ty("z")}, feedback.Ty)\
         == feedback.Ty("z").d
-    assert HomType(A, M).instantiate(subst, Ty) == (x @ y, z)
+    assert Hom(A, M).instantiate(subst, Ty) == (x @ y, z)
     assert (A @ M).variables == ("A", "M") and (E << E).variables == ("E", "E")
 
 
 def test_hom_match():
-    hom = HomType(A @ B, A)
+    hom = Hom(A @ B, A)
     assert [s for s, _ in hom.match((x @ y, x))] == [{"A": x, "B": y}]
     assert [s for s, _ in hom.match((None, x))] == [{"A": x}]
     assert list(hom.match((x @ y, y))) == []
@@ -136,7 +142,7 @@ def test_hom_match():
 
 def test_sequent_str():
     assert str(Sequent()) == ""
-    assert str(Sequent({"A": Sort()}, {"f": HomType(A, A)}, HomType(A, A)))\
+    assert str(Sequent({"A": Sort()}, {"f": Hom(A, A)}, Hom(A, A)))\
         == "A: C0 | f: C1[A, A] ⊢ C1[A, A]"
     assert str(Sequent(premises={"x": Sort("C0", atomic=True)}))\
         == "x: Atom[C0]"
@@ -159,7 +165,7 @@ def test_level():
     assert (unknown @ A).bound is None  # Checked by parse, with the owner.
 
     def snake[U: Atom](cls, u: Annotated[C0, U]) -> Annotated[
-            C1, Tensor[U, R[U]], Unit[C0]]:
+            C1, Hom[Tensor[U, R[U]], Unit[C0]]]:
         ...
     from discopy.abc import MonoidalCategory, RigidCategory
     with raises(TypeError, match="needs a"):

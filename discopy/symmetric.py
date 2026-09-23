@@ -341,7 +341,7 @@ class Diagram(balanced.Diagram, SymmetricCategory):
     @generator
     def cycle[X: Atom, A](
             cls, x: Annotated[Ty, X], a: Annotated[Ty, A]
-    ) -> Hom[Diagram, Tensor[X, A], Tensor[A, X]]:
+    ) -> Annotated[Diagram, Hom[Tensor[X, A], Tensor[A, X]]]:
         """
         The permutation moving a wire past a type, a native
         :class:`Permutation` of any length.

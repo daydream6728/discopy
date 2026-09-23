@@ -211,13 +211,16 @@ def test_rule_check():
 
 
 def test_hom_binder():
-    from discopy.pattern import Hom, HomType
+    from typing import Annotated
+
+    from discopy.pattern import Hom
 
     @axiom
-    def whiskering[X, Y, A: Hom[C1, X, Y]](cls, a: Self, x: X) -> Equation:
+    def whiskering[X, Y, A: Annotated[C1, Hom[X, Y]]](
+            cls, a: Self, x: X) -> Equation:
         """ A higher metavariable declares its boundaries on its binder. """
         return Equation(a, a)
 
     law = whiskering.bind(Arrow)
     binder = law.sequent.variables["A"]
-    assert isinstance(binder, HomType) and str(binder) == "C1[X, Y]"
+    assert isinstance(binder, Hom) and str(binder) == "C1[X, Y]"
