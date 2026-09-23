@@ -20,6 +20,8 @@ Summary
     Sum
     Bubble
     Functor
+    Equivalence
+    Inverse
     Transformation
     Equation
     Generator
@@ -78,12 +80,14 @@ Functors are bubble-preserving.
 
 from functools import total_ordering, cached_property
 from typing import (
-    Callable, ClassVar, Mapping, Iterable, Self, TYPE_CHECKING)
+    Annotated, Any, Callable, ClassVar, Mapping, Iterable, Self,
+    TYPE_CHECKING)
 
 from discopy import messages, utils
 from discopy.abc import Category, Serialisable
 from discopy.axioms import (
     GENERATORS,
+    SELF,
     Equation as AbstractEquation,
     axiom,
     no_strategy,
@@ -993,6 +997,151 @@ class Functor(Category, Serialisable):
     def composition_cod_typing(cls, f: Self, g: Self):
         """ Composition of functors preserves the target category. """
         return AbstractEquation(f.then(g).cod, g.cod)
+
+
+ONE_FUNCTOR = "One functor rather than a category of functors."
+
+
+class Equivalence(Functor):
+    """
+    A functor with an inverse: the functor is :meth:`__call__`, the
+    inverse is :meth:`decode` and :meth:`dagger` wraps it as the
+    :class:`Inverse` functor from the codomain back, so that composing
+    the two either way gives an identity. Functors given by mappings
+    compare unequal to the identity functor (#648), so the laws
+    quantify the composites pointwise: :meth:`retract` over the arrows
+    of the domain and :meth:`section` over their images, beside the
+    :meth:`composition` and :meth:`identity` the functor preserves.
+
+    A subclass names its ``dom``, its ``cod`` and its :meth:`decode`;
+    the laws of the functor category are inapplicable, one functor not
+    being a category of functors.
+
+    Example
+    -------
+    >>> from discopy.monoidal import Ty, Box, Diagram
+    >>> encode = Diagram.ToHypergraph()
+    >>> f = Box('f', Ty('x'), Ty('y'))
+    >>> assert encode.dagger()(encode(f)) == f
+    """
+    def decode(self, other):
+        """
+        The inverse image of an object or arrow of the codomain, to be
+        implemented by the subclass.
+
+        Parameters:
+            other : An object or arrow of the codomain.
+        """
+        raise NotImplementedError
+
+    def dagger(self) -> Functor:
+        """ The inverse, as the functor calling :meth:`decode`. """
+        return Inverse(self)
+
+    @classmethod
+    def strategy(cls, *, dom=None, cod=None, **params):
+        """
+        The one functor of the class, when it decodes and its domain
+        freely generates the arrows the laws quantify over: the matrix
+        keeps to the free categories, so an equivalence over a fixed
+        vocabulary is left unchecked like the vocabulary itself.
+        """
+        from hypothesis import strategies as st
+
+        from discopy.search import Constant
+
+        if cls.decode is Equivalence.decode:
+            raise NotImplementedError(
+                f"{cls.__name__} does not implement decode.")
+        if any(isinstance(rule, Constant) for rule
+               in dict(getattr(cls.dom, "generators", {})).values()):
+            raise NotImplementedError(
+                f"{cls.dom.__name__} draws from a fixed vocabulary.")
+        cls.dom.strategy()
+        return st.just(cls())
+
+    def __reduce__(self):
+        """ An equivalence is determined by its class, so it pickles as
+        the class alone: its codomain is a parameterised class that does
+        not pickle by reference. """
+        return (type(self), ())
+
+    @axiom
+    def retract(cls, functor: Annotated[Any, SELF],
+                f: Annotated[Any, SELF.dom]):
+        """
+        The inverse after the functor is the identity, up to the
+        equation of the domain category.
+        """
+        return functor.dom.Equation(functor.dagger()(functor(f)), f)
+
+    @axiom
+    def section(cls, functor: Annotated[Any, SELF],
+                f: Annotated[Any, SELF.dom]):
+        """
+        The functor after its inverse is the identity on its image.
+        """
+        image = functor(f)
+        return AbstractEquation(functor(functor.dagger()(image)), image)
+
+    @axiom
+    def composition(cls, functor: Annotated[Any, SELF],
+                    f: Annotated[Any, SELF.dom]):
+        """
+        The functor preserves composition: the image of an arrow is the
+        composition of the images of any two halves of it.
+        """
+        top, bottom = f[:len(f) // 2], f[len(f) // 2:]
+        return AbstractEquation(
+            functor(f), functor(top) >> functor(bottom))
+
+    @axiom
+    def identity(cls, functor: Annotated[Any, SELF],
+                 x: Annotated[Any, SELF.dom.ob]):
+        """ The functor preserves identities. """
+        return AbstractEquation(
+            functor(functor.dom.id(x)), functor.cod.id(functor(x)))
+
+    identity_typing = Functor.identity_typing.inapplicable(ONE_FUNCTOR)
+
+    associativity = Functor.associativity.inapplicable(ONE_FUNCTOR)
+
+    composition_dom_typing = \
+        Functor.composition_dom_typing.inapplicable(ONE_FUNCTOR)
+
+    composition_cod_typing = \
+        Functor.composition_cod_typing.inapplicable(ONE_FUNCTOR)
+
+    unitality = Functor.unitality.inapplicable(ONE_FUNCTOR)
+
+
+class Inverse(Functor):
+    """
+    The inverse of an :class:`Equivalence`, the functor from its
+    codomain given by :meth:`Equivalence.decode`.
+
+    Parameters:
+        inverse : The equivalence this functor inverts.
+    """
+    #: One functor rather than a category of functors: the inherited
+    #: relabelling strategy generates the wrong terms.
+    strategy = no_strategy
+
+    def __init__(self, inverse: Equivalence):
+        self.inverse = inverse
+        super().__init__(dom=inverse.cod, cod=inverse.dom)
+
+    def __call__(self, other):
+        return self.inverse.decode(other)
+
+    def dagger(self) -> Equivalence:
+        return self.inverse
+
+    def __eq__(self, other):
+        return isinstance(other, Inverse) and self.inverse == other.inverse
+
+    def __repr__(self):
+        return f"{self.inverse!r}.dagger()"
 
 
 @factory

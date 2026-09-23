@@ -162,6 +162,43 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   of the full matrix on `cat.Functor.identity_typing` — and
   `Hypergraph.cups` and `caps` raise their `AxiomError` with a message
   where they raised it bare.
+- `cat.Equivalence` and `cat.Inverse`, a functor with an inverse: the
+  functor is `__call__`, the inverse is `decode` and `dagger` wraps it
+  as the `Inverse` functor from the codomain back — the first functors
+  whose domain is a concrete category rather than a free one. Functors
+  given by mappings compare unequal to the identity functor (#648), so
+  the laws of `F >> F.dagger() == Id() == F.dagger() >> F` are
+  quantified pointwise: `retract` over the arrows of the domain, up to
+  the equation of the domain category, and `section` over their images,
+  beside the `composition` and `identity` any functor preserves, stated
+  here for the first time — the image of an arrow is the composition of
+  the images of its two halves, which is the correctness of the glued
+  encodings. The laws of the functor category — associativity, typing,
+  unitality — are inapplicable, one functor not being a category of
+  functors, and an equivalence pickles as its class alone, its codomain
+  being a parameterised class that does not pickle by reference.
+  `monoidal.Diagram.ToHypergraph` and `symmetric.Diagram.ToMap` wrap
+  the conversion methods as generators, so every level gets its own
+  equivalence by the same diamond as its diagrams and the
+  classifications inherit with it: the cells of the conversion laws
+  move from the diagram classes onto the equivalences —
+  `hypergraph_section` becomes `ToHypergraph.section`, failing on
+  `braided`, `traced`, `rigid` and `pivotal` and re-enabled on
+  `symmetric`, `map_section` and `map_retract` become the laws of
+  `ToMap`, the section still modulo the hypergraph — while the
+  agreement, staircase, rewriting and drawing laws stay where they
+  were. `ToHypergraph.retract` is declared failing on `monoidal`,
+  whose syntactic equation decoding cannot land back on, re-enabled
+  from `symmetric` on where the equation is the hypergraph quotient;
+  `rigid.ToHypergraph.composition` fails on the left-handed cups its
+  encoding rejects and comes back on `pivotal`, which encodes both
+  orientations. The new laws found one violation the old suite's draws
+  never met: decoding the map of a closed diagram re-whiskers the
+  inside of a curry bubble, which the hypergraph of a bubble compares
+  syntactically, so `closed.ToMap.retract` is declared failing. An
+  equivalence whose domain does not generate stays unenrolled, e.g.
+  over `tensor.Diagram`, and `Inverse` declares
+  `strategy = no_strategy` like `balanced.DualRail`.
 - The whole unified tree typechecks: `uv run --with ty ty check` passes
   in the full development environment (`uv sync --dev --group all`, the
   reference for typechecking now that the optional imports carry no

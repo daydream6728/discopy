@@ -550,6 +550,7 @@ class Functor(monoidal.Functor):
 
 
 CMap = cmap.CMap[Diagram]
+ToHypergraph = Diagram.ToHypergraph
 
 
 @Diagram.generator

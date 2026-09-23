@@ -746,6 +746,8 @@ class Functor(markov.Functor):
 
 
 Hypergraph = hypergraph.Hypergraph[Diagram]
+ToHypergraph = Diagram.ToHypergraph
+ToMap = Diagram.ToMap
 Hypergraph.dagger_involution = FeedbackCategory.dagger_involution
 Hypergraph.dagger_contravariance = FeedbackCategory.dagger_contravariance
 Hypergraph.dagger_monoidality = FeedbackCategory.dagger_monoidality

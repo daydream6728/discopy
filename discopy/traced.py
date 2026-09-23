@@ -158,9 +158,6 @@ class Diagram(monoidal.Diagram, TracedCategory):
         "The generic representation of a trace does not read back (#742).")
     serialisation = Serialisable.serialisation.failing(
         "The generic tree of a trace does not read back (#742).")
-    hypergraph_section = monoidal.Diagram.hypergraph_section.failing(
-        "Decoding a trace can cross wires, which needs swaps the "
-        "category does not have.")
 
     def trace_left(self, n=1):
         """
@@ -217,6 +214,18 @@ class Diagram(monoidal.Diagram, TracedCategory):
 
 
 Box = Diagram.Box
+
+
+@Diagram.generator
+class ToHypergraph(monoidal.ToHypergraph):
+    """
+    A :class:`monoidal.ToHypergraph` of traced diagrams.
+    """
+    dom = Diagram
+
+    section = monoidal.ToHypergraph.section.failing(
+        "Decoding a trace can cross wires, which needs swaps the "
+        "category does not have.")
 
 
 @Diagram.generator

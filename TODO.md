@@ -9,25 +9,24 @@
 
 > run the equivalence round
 
-- [WIP] @session_01UrSNrBcfEnb46fFG9LYRPo-2026-09-23 17:20 Probe the
-      mechanics: how a level's `Functor` binds its `dom`, how the
-      functor laws spell their premises, what the `Serialisable` laws
-      make of a functor with no mappings
-- [ ] `cat.Equivalence`, a functor with an inverse: `decode` and
+- [x] Probe the mechanics: how a level's `Functor` binds its `dom`,
+      how the functor laws spell their premises, what the
+      `Serialisable` laws make of a functor with no mappings
+- [x] `cat.Equivalence`, a functor with an inverse: `decode` and
       `dagger`, the pointwise laws `section` and `retract` (functor
       equality being #648, `F >> F.dagger() == Id()` is quantified
       over the arrows), `composition` and `identity` preservation,
       and the functor-category laws declared inapplicable on a
       single functor
-- [ ] `monoidal.Diagram.ToHypergraph` and
+- [x] `monoidal.Diagram.ToHypergraph` and
       `symmetric.Diagram.ToMap`, generators wrapping the conversion
       methods, every level getting its own by the `Generator`
       diamond so the classifications inherit like the diagrams do
-- [ ] Migrate `hypergraph_section`, `map_section` and `map_retract`
+- [x] Migrate `hypergraph_section`, `map_section` and `map_retract`
       with their per-level classifications from the diagram classes
       onto the equivalences, keeping agreement, staircases,
       rewriting and drawing where they are
-- [ ] Run every cell at every level, classify what the runs show,
+- [x] Run every cell at every level, classify what the runs show,
       tests for the new classes
-- [ ] `ty check`, `ruff check`, pytest, proptest fast + targeted
+- [x] `ty check`, `ruff check`, pytest, proptest fast + targeted
       cells, CHANGELOG, close

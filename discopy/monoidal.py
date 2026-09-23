@@ -23,6 +23,7 @@ Summary
     Sum
     Bubble
     Functor
+    ToHypergraph
     Equation
 
 Axioms
@@ -83,6 +84,7 @@ from discopy.utils import (
     AxiomError,
     MappingOrCallable,
     RichDisplay,
+    classproperty,
 )
 
 if TYPE_CHECKING:
@@ -976,6 +978,7 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
     Sum: ClassVar[Generator]
     Bubble: ClassVar[Generator]
     Functor: ClassVar[Generator]
+    ToHypergraph: ClassVar[Generator]
     draw: ClassVar[Callable]
     to_gif: ClassVar[Callable]
 
@@ -1507,16 +1510,6 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
         normal_form).weaken(boundary_connected=True)
 
     @axiom
-    def hypergraph_section(cls, f: Self):
-        """
-        :meth:`discopy.hypergraph.Hypergraph.to_diagram` is a section of
-        :meth:`to_hypergraph`: decoding a hypergraph and encoding the
-        decoded diagram lands back on the same hypergraph.
-        """
-        graph = f.to_hypergraph()
-        return AbstractEquation(graph.to_diagram().to_hypergraph(), graph)
-
-    @axiom
     def map_hypergraph_agreement(cls, f: Self):
         """
         Encoding through a map or directly gives the same hypergraph.
@@ -2017,6 +2010,32 @@ class Match:
 
 
 CMap = cmap.CMap[Diagram]
+
+
+@Diagram.generator
+class ToHypergraph(cat.Equivalence):
+    """
+    The equivalence sending a diagram to its hypergraph:
+    :meth:`Diagram.to_hypergraph` is the functor and
+    :meth:`discopy.hypergraph.Hypergraph.to_diagram` its inverse, a
+    section of it. The retract holds up to the equation of the domain,
+    which is syntactic below :mod:`discopy.symmetric`, where it is
+    re-enabled.
+    """
+    dom = Diagram
+    cod = classproperty(lambda cls: hypergraph.Hypergraph[cls.dom])
+
+    def __call__(self, other):
+        if isinstance(other, self.dom):
+            return other.to_hypergraph()
+        return other
+
+    def decode(self, other):
+        return other.to_diagram()
+
+    retract = cat.Equivalence.retract.failing(
+        "The equation of a free monoidal category is syntactic and "
+        "decoding lands on any diagram of the same hypergraph.")
 
 
 class Equation(cat.Equation, RichDisplay):

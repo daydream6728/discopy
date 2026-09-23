@@ -206,6 +206,19 @@ CMap = cmap.CMap[Diagram]
 
 
 Hypergraph = hypergraph.Hypergraph[Diagram]
+ToHypergraph = Diagram.ToHypergraph
+
+
+@Diagram.generator
+class ToMap(markov.ToMap):
+    """
+    A :class:`symmetric.ToMap` of closed diagrams.
+    """
+    dom = Diagram
+
+    retract = markov.ToMap.retract.failing(
+        "Decoding re-whiskers the inside of a curry bubble, which the "
+        "hypergraph of a bubble compares syntactically.")
 
 
 Layer = Diagram.Layer

@@ -681,9 +681,6 @@ class Diagram(biclosed.Diagram, RigidCategory):
     dagger_monoidality = RigidCategory.dagger_monoidality.inapplicable(
         "Rigid cups and caps have no dagger, use pivotal instead.")
 
-    hypergraph_section = monoidal.Diagram.hypergraph_section.failing(
-        PARTIAL_HYPERGRAPH)
-
     map_hypergraph_agreement = \
         monoidal.Diagram.map_hypergraph_agreement.failing(PARTIAL_HYPERGRAPH)
 
@@ -947,6 +944,19 @@ TermBase, Constant, Variable, Application, Abstraction = (
     Diagram.TermBase, Diagram.Constant, Diagram.Variable,
     Diagram.Application, Diagram.Abstraction)
 Id = Diagram.id
+
+
+@Diagram.generator
+class ToHypergraph(monoidal.ToHypergraph):
+    """
+    A :class:`monoidal.ToHypergraph` of rigid diagrams.
+    """
+    dom = Diagram
+
+    section = monoidal.ToHypergraph.section.failing(PARTIAL_HYPERGRAPH)
+
+    composition = monoidal.ToHypergraph.composition.failing(
+        PARTIAL_HYPERGRAPH)
 
 
 class Equation(biclosed.Equation):

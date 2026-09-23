@@ -521,6 +521,7 @@ def tree2diagram(tree: dict, dom=Ty()) -> Diagram:
 
 Layer = Diagram.Layer
 Id = Diagram.id
+ToHypergraph = Diagram.ToHypergraph
 
 Ty.Variable, Ty.Constant = (
     Diagram.Variable, Diagram.Constant)

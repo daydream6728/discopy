@@ -290,6 +290,8 @@ class Functor(symmetric.Functor):
 CMap = cmap.CMap[Diagram]
 
 Hypergraph = hypergraph.Hypergraph[Diagram]
+ToHypergraph = Diagram.ToHypergraph
+ToMap = Diagram.ToMap
 Layer = Diagram.Layer
 Id = Diagram.id
 

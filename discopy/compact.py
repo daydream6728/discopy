@@ -151,6 +151,8 @@ TermBase, Constant, Variable, Application, Abstraction = (
 Id = Diagram.id
 
 Hypergraph = hypergraph.Hypergraph[Diagram]
+ToHypergraph = Diagram.ToHypergraph
+ToMap = Diagram.ToMap
 
 
 class Equation(symmetric.Equation):

@@ -358,6 +358,8 @@ def coherence(cls: type[Diagram], factory: Callable
 CMap = cmap.CMap[Diagram]
 
 Hypergraph = hypergraph.Hypergraph[Diagram]
+ToHypergraph = Diagram.ToHypergraph
+ToMap = Diagram.ToMap
 Exp, Over, Under = Ty.Exp, Ty.Over, Ty.Under
 TermBase, Constant, Variable, Application, Abstraction = (
     Diagram.TermBase, Diagram.Constant, Diagram.Variable,

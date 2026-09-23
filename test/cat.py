@@ -412,3 +412,21 @@ def test_strategy():
     assert (arrow.dom, arrow.cod) == (a, b)
     functor = find(Functor.strategy(), lambda value: value(a) != a)
     assert functor(arrow).dom == functor(a)
+
+
+def test_Equivalence():
+    from discopy.cat import Equivalence, Inverse
+    from discopy import monoidal
+
+    encode = monoidal.ToHypergraph()
+    f = monoidal.Box('f', monoidal.Ty('x'), monoidal.Ty('y'))
+    decode = encode.dagger()
+    assert isinstance(decode, Inverse) and decode.dagger() is encode
+    assert decode(encode(f)) == f
+    assert encode(f.dom) == f.dom
+    assert (decode.dom, decode.cod) == (encode.cod, encode.dom)
+    assert eval(repr(decode), {'monoidal': monoidal}) == decode
+    with raises(NotImplementedError):
+        Equivalence().decode(f)
+    with raises(NotImplementedError):
+        Equivalence.strategy()
