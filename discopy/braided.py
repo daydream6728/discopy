@@ -261,6 +261,18 @@ class Functor(monoidal.Functor):
     """
     dom = cod = Diagram
 
+    @axiom
+    def braided(cls) -> Equation:
+        """
+        A braided functor preserves the braid, but only up to the braid
+        relations: the braid of a composite type is a chosen sequence of
+        crossings and a functor rebrackets it. Free braided diagrams
+        compare presentations, so the law is checkable from
+        :class:`discopy.symmetric.Diagram`'s functor on, whose equations
+        hold up to hypergraph isomorphism.
+        """
+        return NotImplemented
+
     def __call__(self, other):
         if isinstance(other, Braid) and not other.is_dagger\
                 and hasattr(self.cod, "braid"):
@@ -270,22 +282,6 @@ class Functor(monoidal.Functor):
 
 Layer = Diagram.Layer
 
-
-@axiom
-def braided(cls) -> Equation:
-    """
-    A braided functor preserves the braid, but only up to the braid
-    relations: the braid of a composite type is a chosen sequence of
-    crossings and a functor rebrackets it. Free braided diagrams compare
-    presentations, so the law is checkable from
-    :class:`discopy.symmetric.Diagram`'s functor on, whose equations
-    hold up to hypergraph isomorphism.
-    """
-    return NotImplemented
-
-
-Diagram.Functor.braided = braided
-del braided
 
 Id = Diagram.id
 

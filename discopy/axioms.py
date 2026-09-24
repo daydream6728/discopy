@@ -267,7 +267,10 @@ from typing import TYPE_CHECKING, Self
 from discopy.pattern import (  # noqa: F401
     C0,
     C1,
-    SELF,
+    In0,
+    In1,
+    Out0,
+    Out1,
     Atom,
     Count,
     Declaration,

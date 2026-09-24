@@ -118,28 +118,19 @@ class Sort:
     """
     The sort of an object variable: the instances of the type its ``head``
     resolves to in the scope of a bound declaration, atomic or not, and
-    the class of :mod:`discopy.abc` bounding them when known. An attribute
-    of a sort is a longer head, ``Self.dom.ob``.
+    the class of :mod:`discopy.abc` bounding them when known.
 
     >>> print(Sort("C0", atomic=True))
     Atom[C0]
-    >>> Sort("Self").dom.ob
-    Sort(head='Self.dom.ob', atomic=False)
     """
 
     head: str = "C0"
     atomic: bool = False
     bound: type | None = field(default=None, compare=False, repr=False)
 
-    def __getattr__(self, name: str) -> Sort:
-        if name.startswith("_"):
-            raise AttributeError(name)
-        return Sort(f"{self.head}.{name}", self.atomic)
-
     def resolve(self, scope: dict) -> type:
-        """ The type the head stands for, a path from a root of the scope. """
-        root, *path = self.head.split(".")
-        return reduce(getattr, path, scope[root])
+        """ The type the head stands for in the scope. """
+        return scope[self.head]
 
     def strategy(self, scope: dict, types=None):
         """
@@ -331,11 +322,22 @@ class Pattern[C0, C1: abc.Category](ABC):
         yield subst, residuals + ((self, value), )
 
 
-C0, C1, SELF = Sort("C0"), Sort("C1"), Sort("Self")
+C0, C1 = Sort("C0"), Sort("C1")
 """
-The objects, the arrows and the terms of the category a declaration is
-bound to: what the annotations of a module-level declaration name in
-their metadata, where a method names the type parameters of its class.
+The objects and the arrows of the category a declaration is bound to:
+what the annotations of a module-level declaration name in their
+metadata, where a method names the type parameters of its class. For a
+functor category the objects are categories and the arrows functors.
+"""
+
+In0, In1, Out0, Out1 = (
+    Sort("In0"), Sort("In1"), Sort("Out0"), Sort("Out1"))
+"""
+The objects and the arrows of the categories a functor maps from and
+to, read off the ``dom`` and ``cod`` of the class a declaration is
+bound to: the sorts of the two overloads of
+:meth:`discopy.cat.Functor.__call__`, ``In0 -> Out0`` on objects and
+``In1 -> Out1`` on arrows.
 """
 
 
@@ -1009,15 +1011,23 @@ class Declaration[**P, T]:
         """
         What the heads of the sorts and homs stand for: the category for
         ``Self``, its objects and arrows for ``C0`` and ``C1``. A monoid,
-        having no objects of its own, stands for both; the category a
-        functor maps from is reachable as ``Self.dom``.
+        having no objects of its own, stands for both; a functor class,
+        whose ``dom`` and ``cod`` are categories, also gives their
+        objects and arrows as ``In0``, ``In1``, ``Out0`` and ``Out1``.
         """
         if self.category is None:
             raise TypeError(f"{self.name} is not bound to a class.")
-        return {
+        scope = {
             "Self": self.category,
             "C0": getattr(self.category, "ob", self.category),
             "C1": getattr(self.category, "ar", self.category)}
+        dom, cod = (getattr(self.category, name, None)
+                    for name in ("dom", "cod"))
+        if isinstance(dom, type) and isinstance(cod, type):
+            scope.update({
+                "In0": getattr(dom, "ob", dom), "In1": dom,
+                "Out0": getattr(cod, "ob", cod), "Out1": cod})
+        return scope
 
     @property
     def unit(self) -> Callable:

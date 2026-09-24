@@ -81,13 +81,16 @@ Functors are bubble-preserving.
 from functools import total_ordering, cached_property
 from typing import (
     Annotated, Any, Callable, ClassVar, Mapping, Iterable, Self,
-    TYPE_CHECKING)
+    TYPE_CHECKING, overload)
 
 from discopy import messages, utils
 from discopy.abc import Category, DaggerCategory, Serialisable
 from discopy.axioms import (
     GENERATORS,
-    SELF,
+    In0,
+    In1,
+    Out0,
+    Out1,
     Equation as AbstractEquation,
     axiom,
     no_strategy,
@@ -900,7 +903,18 @@ class Functor(Category, Serialisable):
         return factory_name(type(self))\
             + f"(ob_map={self.ob_map}, ar_map={self.ar_map}{cod_repr})"
 
+    @overload
+    def __call__(self, other: Annotated[Any, In0]) -> Annotated[Any, Out0]:
+        ...
+
+    @overload
+    def __call__(self, other: Annotated[Any, In1]) -> Annotated[Any, Out1]:
+        ...
+
     def __call__(self, other):
+        """ The action of the functor, an object of ``dom`` to an object
+        of ``cod`` and an arrow of ``dom`` to an arrow of ``cod``, as the
+        two overloads spell. """
         if isinstance(other, Ob):
             result = self.ob_map[other]
             origin = get_origin(self.cod.ob)
@@ -1069,8 +1083,7 @@ class Equivalence(Functor, DaggerCategory):
         return (type(self), ())
 
     @axiom
-    def retract(cls, functor: Annotated[Any, SELF],
-                f: Annotated[Any, SELF.dom]):
+    def retract(cls, functor: Self, f: Annotated[Any, In1]):
         """
         The inverse after the functor is the identity, up to the
         equation of the domain category.
@@ -1078,8 +1091,7 @@ class Equivalence(Functor, DaggerCategory):
         return functor.dom.Equation(functor.dagger()(functor(f)), f)
 
     @axiom
-    def section(cls, functor: Annotated[Any, SELF],
-                f: Annotated[Any, SELF.dom]):
+    def section(cls, functor: Self, f: Annotated[Any, In1]):
         """
         The functor after its inverse is the identity on its image.
         """
@@ -1087,8 +1099,7 @@ class Equivalence(Functor, DaggerCategory):
         return AbstractEquation(functor(functor.dagger()(image)), image)
 
     @axiom
-    def composition(cls, functor: Annotated[Any, SELF],
-                    f: Annotated[Any, SELF.dom]):
+    def composition(cls, functor: Self, f: Annotated[Any, In1]):
         """
         The functor preserves composition: the image of an arrow is the
         composition of the images of any two halves of it.
@@ -1098,8 +1109,7 @@ class Equivalence(Functor, DaggerCategory):
             functor(f), functor(top) >> functor(bottom))
 
     @axiom
-    def identity(cls, functor: Annotated[Any, SELF],
-                 x: Annotated[Any, SELF.dom.ob]):
+    def identity(cls, functor: Self, x: Annotated[Any, In0]):
         """ The functor preserves identities. """
         return AbstractEquation(
             functor(functor.dom.id(x)), functor.cod.id(functor(x)))

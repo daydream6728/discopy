@@ -12,7 +12,7 @@ from discopy.axioms import (
     Axiom, AxiomFailure, Equation, Relabelling, assert_axioms, axiom)
 from discopy.cat import Arrow, Box, Functor, Ob
 from discopy.monoidal import Diagram
-from discopy.pattern import C1, SELF
+from discopy.pattern import C1, In0
 from discopy.utils import AxiomError
 
 
@@ -139,7 +139,7 @@ def test_functor_law():
     @axiom
     def preserves_identity(
             cls, functor: Self,
-            x: Annotated[Any, SELF.dom.ob]) -> Equation:
+            x: Annotated[Any, In0]) -> Equation:
         """ A functor preserves the identity on each object. """
         return Equation(
             functor(cls.dom.id(x)), functor.cod.id(functor(x)))

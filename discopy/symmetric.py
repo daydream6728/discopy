@@ -92,16 +92,14 @@ Both sides foliate to the same single permutation.
 
 """
 
-from typing import ClassVar
+from typing import Annotated, ClassVar, Self
 
 from collections.abc import Sequence
-
-from typing import Annotated, Any
 
 from discopy import cat, monoidal, balanced, hypergraph, cmap, messages
 from discopy.abc import BraidedCategory, MonoidalCategory, SymmetricCategory
 from discopy.axioms import (
-    SELF, Atom, Equation, Hom, Tensor, axiom, generator)
+    Atom, Equation, Hom, In0, Tensor, axiom, generator)
 from discopy.cat import factory, Generator
 from discopy.monoidal import Wire, Ty, Nat  # noqa: F401
 from discopy.python import finset
@@ -713,6 +711,16 @@ class Functor(balanced.Functor):
     """
     dom = cod = Diagram
 
+    @axiom
+    def symmetric(
+            cls, functor: Self,
+            x: Annotated[Ty, Atom[In0]],
+            y: Annotated[Ty, Atom[In0]]) -> Equation:
+        """ A symmetric functor preserves the swap. """
+        return functor.cod.Equation(
+            functor(functor.dom.swap(x, y)),
+            functor.cod.swap(functor(x), functor(y)))
+
     def __call__(self, other):
         if isinstance(other, Swap) and hasattr(self.cod.ar, "swap"):
             return self.cod.ar.swap(self(other.dom[0]), self(other.dom[1]))
@@ -730,20 +738,6 @@ CMap = cmap.CMap[Diagram]
 
 Hypergraph = hypergraph.Hypergraph[Diagram]
 
-
-@axiom
-def symmetric(
-        cls, functor: Annotated[Any, SELF],
-        x: Annotated[Ty, Atom[SELF.dom.ob]],
-        y: Annotated[Ty, Atom[SELF.dom.ob]]) -> Equation:
-    """ A symmetric functor preserves the swap. """
-    return functor.cod.Equation(
-        functor(functor.dom.swap(x, y)),
-        functor.cod.swap(functor(x), functor(y)))
-
-
-Diagram.Functor.symmetric = symmetric
-del symmetric
 
 Id = Diagram.id
 

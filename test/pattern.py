@@ -10,7 +10,7 @@ from discopy.abc import (
     ResiduatedMonoid)
 from discopy.monoidal import Ty
 from discopy.pattern import (
-    C0, C1, SELF, Adjoint, Atom, Delay, Exp, Hom, L, Over, R, Repeat,
+    C0, C1, In0, Adjoint, Atom, Delay, Exp, Hom, L, Over, R, Repeat,
     Sequent, Sort, Tensor, Under, Unit, Var, interpret, parse)
 
 
@@ -55,7 +55,7 @@ def test_subscripts():
     assert Atom[TypeVar("C1")] == Sort("C1", atomic=True)
     assert Atom[TypeVar("C0", bound=Pregroup)].bound is Pregroup
     assert Atom[Pregroup].bound is Pregroup and Atom[Pregroup].atomic
-    assert Atom[SELF.dom.ob] == Sort("Self.dom.ob", atomic=True)
+    assert Atom[In0] == Sort("In0", atomic=True)
     def two[V, W](cls) -> Annotated[C1, V, W]:
         ...
     with raises(TypeError, match="exactly one pattern"):
