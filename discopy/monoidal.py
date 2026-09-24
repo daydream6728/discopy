@@ -922,6 +922,9 @@ class Layer(cat.Box, ColouredMonoid):
                 (self, other), self.dom, other.cod).to_staircases())
         except NotImplementedError as exception:  # Eckmann-Hilton argument.
             diagram = exception.last_step
+        if not diagram.inside:  # The layers compose to the identity,
+            raise AxiomError(  # which is not a layer, see #599.
+                messages.NOT_MERGEABLE.format(self, other))
         boxes_or_types, offset = [self.dom[:0]], 0
         for layer in diagram.inside:
             left, box, right = layer.boxes_and_types

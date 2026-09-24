@@ -1085,6 +1085,11 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   raised `AxiomError` (#606) — the joining law then holds by
   construction, so `feedback.Diagram.feedback_joining` is checked
   again and its counterexample record is gone.
+- `Layer.merge` raises `AxiomError` on two layers that compose to the
+  identity — a snake whose normal form is empty — which is not a layer
+  (#599), where the merge crashed with `UnboundLocalError` reading the
+  last layer of an empty loop: the `foliation_soundness` cell of the
+  matrix met it on a pivotal diagram.
 - `Diagram.foliation` merges the layers of its hypergraph fast path:
   reading the foliation off the hypergraph in one pass over the
   boundary can leave two mergeable layers apart — a state and an
