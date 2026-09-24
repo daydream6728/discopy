@@ -244,9 +244,12 @@ class Pattern[C0, C1: abc.Category](ABC):
         :meth:`level` — when a bound is known: a pattern built from bare
         type parameters knows none until :func:`parse` reads it with the
         class stating it, which checks then; a variable or a hom adds no
-        structure to its parts and skips the check.
+        structure to its parts, which its level being a bare
+        :class:`discopy.abc.Category` says.
         """
         bound, required = self.bound, self.level()
+        if required is abc.Category:
+            return
         if bound is not None and not issubclass(bound, required):
             raise TypeError(
                 f"{self} needs a {required.__name__}, its objects "
@@ -354,9 +357,6 @@ class Var[C0, C1: abc.Category](Pattern[C0, C1]):
     name: str
     sort: Sort | Hom
 
-    def __post_init__(self):
-        pass
-
     @classmethod
     def of(cls, parameter: TypeVar) -> Var:
         """
@@ -427,7 +427,7 @@ class Unit[C0](Pattern):
 class Tensor[*Fs](Pattern):
     """
     The tensor of two or more patterns, flattened: ``Tensor[A, C]`` in an
-    annotation, or ``@`` on patterns already built.
+    annotation.
     """
 
     factors: tuple[Pattern, ...]
@@ -437,7 +437,7 @@ class Tensor[*Fs](Pattern):
         return abc.ColouredMonoid
 
     def __class_getitem__(cls, items):
-        if not isinstance(items, tuple):
+        if not isinstance(items, tuple) or len(items) < 2:
             raise TypeError(f"A tensor takes two or more factors: {items!r}.")
         return cls(tuple(
             factor for item in items for factor in factors(operand(item))))
@@ -502,7 +502,9 @@ class Adjoint[C0, C1: abc.Pregroup, S: str](Pattern[C0, C1]):
         yield from self.base.unify(inverse, subst, residuals)
 
     def __str__(self):
-        return f"{self.base}.{self.side}"
+        base = f"({self.base})"\
+            if isinstance(self.base, (Tensor, Repeat)) else str(self.base)
+        return f"{base}.{self.side}"
 
 
 class L[X]:
@@ -545,7 +547,9 @@ class Delay[M](Pattern):
         return self.base.instantiate(subst, unit).d
 
     def __str__(self):
-        return f"{self.base}.d"
+        base = f"({self.base})"\
+            if isinstance(self.base, (Tensor, Repeat)) else str(self.base)
+        return f"{base}.d"
 
 
 @dataclass(frozen=True)
@@ -595,8 +599,8 @@ class Under[X, Y]:
 @dataclass(frozen=True)
 class Repeat[X, N](Pattern):
     """
-    An atomic pattern repeated a variable number of times — ``X ** N``,
-    ``Repeat[X, N]`` in an annotation — for the legs of a spider:
+    An atomic pattern repeated a variable number of times,
+    ``Repeat[X, N]`` in an annotation, for the legs of a spider:
     matching binds the count to the number of atoms and the base to the
     one atom they all equal.
     """
@@ -610,10 +614,14 @@ class Repeat[X, N](Pattern):
 
     def __class_getitem__(cls, item):
         base, count = item
-        count = operand(count)
+        base, count = operand(base), operand(count)
         if not isinstance(count, Var):
             raise TypeError(f"Expected a Count variable, got {count!r}.")
-        return cls(operand(base), count)
+        if not getattr(getattr(base, "sort", None), "atomic", False):
+            raise TypeError(
+                f"Repeat takes an atomic base, e.g. `X: Atom`, got {base!r}: "
+                "matching cannot read a repeated compound back.")
+        return cls(base, count)
 
     @property
     def variables(self):
@@ -673,9 +681,6 @@ class Hom[A, B](Pattern):
     @classmethod
     def level(cls) -> type[abc.Category]:
         return abc.Category
-
-    def __post_init__(self):
-        pass
 
     @property
     def variables(self):
@@ -824,7 +829,13 @@ def interpret(annotation, sorts: dict[str, Sort | Hom]) -> Pattern | Sort:
         return Sort("Self")
     if isinstance(annotation, TypeVar):
         name = annotation.__name__
-        return Var(name, sorts[name]) if name in sorts else Sort(name)
+        if name in sorts:
+            return Var(name, sorts[name])
+        if name in ("Self", "C0", "C1"):
+            return Sort(name)
+        raise TypeError(
+            f"{name} is not a type parameter of the declaration nor a "
+            "sort in scope.")
     if isinstance(annotation, (Pattern, Sort)):
         return annotation
     if get_origin(annotation) is Annotated:
@@ -905,6 +916,9 @@ def parse(function: Callable, owner: type | None = None,
                         f"{level.__name__}.")
         return value
 
+    for sort in sorts.values():
+        if isinstance(sort, Hom):
+            checked(sort)
     premises = {
         name: checked(interpret(annotations[name], sorts))
         for name in premises_of(function)}
@@ -1086,21 +1100,21 @@ class Declaration[**P, T]:
                        or len(value) == 1)
                 subst[pattern.name] = value
 
+        def draw_variable(name):
+            sort = sorts[name]
+            if not isinstance(sort, Hom):
+                return draw(sort.strategy(self.scope, types), label=name)
+            dom, cod = side(sort.dom), side(sort.cod)
+            term = draw(
+                hom(sort.resolve(self.scope), dom, cod), label=name)
+            read_off(sort.dom, term.dom)
+            read_off(sort.cod, term.cod)
+            return term
+
         def bound(*names):
             for name in names:
-                if name in subst:
-                    continue
-                sort = sorts[name]
-                if isinstance(sort, Hom):
-                    dom, cod = side(sort.dom), side(sort.cod)
-                    term = draw(
-                        hom(sort.resolve(self.scope), dom, cod), label=name)
-                    read_off(sort.dom, term.dom)
-                    read_off(sort.cod, term.cod)
-                    subst[name] = term
-                else:
-                    strategy = sort.strategy(self.scope, types)
-                    subst[name] = draw(strategy, label=name)
+                if name not in subst:
+                    subst[name] = draw_variable(name)
 
         args = {}
         for name, premise in self.sequent.premises.items():

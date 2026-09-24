@@ -33,6 +33,7 @@ Summary
 
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass
+from inspect import signature
 from types import MethodType
 from typing import TYPE_CHECKING
 
@@ -91,9 +92,25 @@ class Rule[**P, T](Declaration[P, T]):
         return self.sequent.conclusion.match((dom, cod))
 
     def apply(self, arguments: dict) -> T:
-        """ The implementation of the rule on the category, applied. """
-        return getattr(self.category, self.name or "")(
-            *arguments.values())
+        """ The implementation of the rule on the category, applied
+        positionally in premise order except the keyword-only parameters,
+        applied by name. """
+        function = getattr(self.category, self.name or "")
+        try:
+            keywords = {
+                name for name, parameter
+                in signature(function).parameters.items()
+                if parameter.kind == parameter.KEYWORD_ONLY}
+        except ValueError:
+            keywords = set()
+        return function(
+            *(x for name, x in arguments.items() if name not in keywords),
+            **{name: x for name, x in arguments.items() if name in keywords})
+
+    @staticmethod
+    def constant(box) -> Constant:
+        """ The rule of one given box, see :class:`Constant`. """
+        return Constant(box)
 
 
 class Generator(Rule):
@@ -165,14 +182,6 @@ def rule[**P, T](function: Callable[P, T]) -> Rule[P, T]:
 def generator[**P, T](function: Callable[P, T]) -> Generator:
     """ Decorate a method as a logical constant, its signature the sequent. """
     return Generator(function)
-
-
-def constant(box) -> Constant:
-    """ The rule of one given box, see :class:`Constant`. """
-    return Constant(box)
-
-
-Rule.constant = staticmethod(constant)
 
 
 def inapplicable(reason: str) -> Callable:
