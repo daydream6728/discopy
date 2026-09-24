@@ -51,7 +51,7 @@ from owlapy.owl_axiom import (
     OWLDeclarationAxiom, OWLDifferentIndividualsAxiom,
     OWLFunctionalObjectPropertyAxiom,
     OWLObjectPropertyDomainAxiom, OWLObjectPropertyRangeAxiom,
-    OWLSubClassOfAxiom)
+    OWLSubClassOfAxiom, OWLSubObjectPropertyOfAxiom)
 from owlapy.owl_literal import DateTimeOWLDatatype, OWLLiteral
 from owlapy.owl_property import OWLObjectProperty
 from owlapy.vocab import OWLFacet
@@ -61,11 +61,15 @@ from discopy.owl import (
     Box, Diagram, Functor, Id, Relation, instances, load, name_of, ob)
 
 FIBO = "https://spec.edmcouncil.org/fibo/ontology/"
+MODULES = "https://discopy.org/fibo/FXRisk/"
+""" The import list of the FIBO modules the plans are typed by. """
 FIXTURES = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), os.pardir, os.pardir,
     os.pardir, "test", "fixtures", "fibo")
 KINDS = ("MarketValue", "FXExposure", "PnL", "VaR", "ExpectedShortfall",
          "ComponentVaR", "NetAssetValue")
+ESTIMATES = ("VaR", "ExpectedShortfall", "ComponentVaR")
+""" The kinds a model estimates rather than the feed observes. """
 PAIRS = {"EUR": "EURUSD=X", "JPY": "JPYUSD=X", "GBP": "GBPUSD=X"}
 """ The FX pairs quoting one foreign unit in the reporting currency. """
 
@@ -194,17 +198,22 @@ def fetch(reporting: str = "USD", years: int = 1) -> Market:
 class Fund:
     """A portfolio of dated FIBO amounts, and the world that judges it.
 
-    Loading `Ownership` pulls its whole import closure, `CurrencyAmount`
-    and the Commons dates included. On top of it this declares the two
-    things FIBO leaves open: a class per metric kind, and `exposureTo`,
-    the currency a reporting-currency amount is exposed to.
+    Loading `Baskets` pulls its whole import closure: ownership and
+    holdings, `CurrencyAmount`, the financial instruments, the market
+    `Indicators` that say what a quoted price and an end-of-day rate
+    are, and FIBO's own statistics module, `Analytics`. On top of it
+    this declares what FIBO leaves open -- a class per metric kind, and
+    `exposureTo`, the currency a reporting-currency amount is exposed
+    to -- and says it in FIBO's vocabulary rather than beside it: an
+    estimated metric is a `StatisticalMeasure`, a valuation is an
+    `Expression` whose exposure is one of its arguments, and the book's
+    weights are a `WeightingFunction`.
     """
 
     def __init__(self, market: Market):
         self.market = market
         self.asof, self.reporting = market.asof, market.reporting
-        self.world = load(
-            FIBO + "FND/OwnershipAndControl/Ownership/", path=FIXTURES)
+        self.world = load(MODULES, path=FIXTURES)
         find = self.world.find
         self.MonetaryAmount = find("CurrencyAmount/MonetaryAmount")
         self.MonetaryPrice = find("CurrencyAmount/MonetaryPrice")
@@ -223,9 +232,20 @@ class Fund:
         self.hasAsOfDate = find("FinancialDates/hasAsOfDate")
         self.ExplicitDate = find("DatesAndTimes/ExplicitDate")
         self.hasObservedDateTime = find("DatesAndTimes/hasObservedDateTime")
+        self.QuotedPrice = find("Indicators/QuotedPrice")
+        self.EndOfDayMarketRate = find("Indicators/EndOfDayMarketRate")
+        self.StatisticalMeasure = find("Analytics/StatisticalMeasure")
+        self.WeightingFunction = find("Analytics/WeightingFunction")
+        self.Expression = find("QuantitiesAndUnits/Expression")
+        self.ScalarQuantityValue = find(
+            "QuantitiesAndUnits/ScalarQuantityValue")
+        self.hasArgument = find("QuantitiesAndUnits/hasArgument")
         self.kind = {name: self.world.owl_class(name) for name in KINDS}
-        self.world.add(*(OWLSubClassOfAxiom(one, self.MonetaryAmount)
-                         for one in self.kind.values()))
+        self.world.add(
+            *(OWLSubClassOfAxiom(one, self.MonetaryAmount)
+              for one in self.kind.values()),
+            *(OWLSubClassOfAxiom(self.kind[one], self.StatisticalMeasure)
+              for one in ESTIMATES))
         self.Collection = find("Collections/Collection")
         self.Valuation = self.world.owl_class("Valuation")
         self.Weight = self.world.owl_class("Weight")
@@ -256,6 +276,10 @@ class Fund:
             OWLDeclarationAxiom(self.hasQuotation),
             OWLObjectPropertyDomainAxiom(self.hasQuotation, self.Valuation),
             OWLObjectPropertyRangeAxiom(self.hasQuotation, self.ExchangeRate),
+            OWLSubClassOfAxiom(self.Valuation, self.Expression),
+            OWLSubObjectPropertyOfAxiom(self.hasExposure, self.hasArgument),
+            OWLSubClassOfAxiom(self.Weight, self.ScalarQuantityValue),
+            OWLSubClassOfAxiom(self.Concentration, self.StatisticalMeasure),
             OWLFunctionalObjectPropertyAxiom(self.hasBaseCurrency))
         self.money = {unit: self.world.individual(unit, self.Currency)
                       for unit in market.units()}
@@ -316,12 +340,14 @@ class Fund:
         """The exchange rate wire: which pair, on which date.
 
         All of it FIBO's own -- `ExchangeRate` with `hasBaseCurrency`,
-        `hasDealtCurrency` and `hasAsOfDate` -- so a conversion box can
-        state exactly which quotation it will accept.
+        `hasDealtCurrency` and `hasAsOfDate`, and `EndOfDayMarketRate`
+        for where the number came from -- so a conversion box states
+        not only which pair it will accept but that the rate is a close
+        the market set, rather than one written down by hand.
         """
         when = self.on(self.asof) if when is None else when
         return OWLObjectIntersectionOf((
-            self.ExchangeRate,
+            self.ExchangeRate, self.EndOfDayMarketRate,
             self.some_currency(self.hasBaseCurrency) if unit is None
             else OWLObjectHasValue(self.hasBaseCurrency, self.money[unit]),
             OWLObjectHasValue(
@@ -333,11 +359,17 @@ class Fund:
             self.MonetaryAmount,
             OWLObjectHasValue(self.hasCurrency, self.money[currency])))
 
+    def quoted(self, currency: str):
+        """A price in one currency, quoted by a publisher on a date."""
+        return OWLObjectIntersectionOf((
+            self.QuotedPrice, OWLObjectHasValue(
+                self.hasCurrency, self.money[currency])))
+
     def bucket(self, currency: str):
-        """A holding whose acquisition price is in one currency."""
+        """A holding whose acquisition price is quoted in one currency."""
         return OWLObjectIntersectionOf((
             self.Holding, OWLObjectSomeValuesFrom(
-                self.hasAcquisitionPrice, self.priced(currency))))
+                self.hasAcquisitionPrice, self.quoted(currency))))
 
     def valuation(self, metric: str = "FXExposure", when=None):
         """An exposure paired with the quotation that values it.
@@ -367,6 +399,18 @@ class Fund:
         when = self.on(self.asof) if when is None else when
         return OWLObjectIntersectionOf((
             self.Weight, self.some_currency(self.attributedTo), when))
+
+    def weighting_function(self, when=None):
+        """The weights of the book, as FIBO's own `WeightingFunction`.
+
+        A weighting function is what says how much each element of a
+        set counts towards the whole; here it is given by one weight
+        per quoting unit, which is what `weights` computes and what
+        `HHI` reads.
+        """
+        return OWLObjectIntersectionOf((
+            self.WeightingFunction, OWLObjectAllValuesFrom(
+                self.comprises, self.weighting(when))))
 
     def exposed(self, currency: str = None):
         """A holding whose FX delta is in one currency.
@@ -430,6 +474,7 @@ class Fund:
         """
         exposure_to = unit if exposure_to is None else exposure_to
         price = self.world.individual(name + "_price", self.MonetaryPrice)
+        self.world.add(OWLClassAssertionAxiom(price, self.QuotedPrice))
         self.world.relate(price, self.hasCurrency, self.money[unit])
         self.world.add(OWLDataPropertyAssertionAxiom(
             price, self.hasAmount, OWLLiteral(Decimal(str(value)))))
@@ -450,6 +495,7 @@ class Fund:
     def quote(self, base: str, value: float, source: str):
         """Add an `ExchangeRate`: reporting currency per one base unit."""
         rate = self.world.individual(base + self.reporting, self.ExchangeRate)
+        self.world.add(OWLClassAssertionAxiom(rate, self.EndOfDayMarketRate))
         self.world.relate(rate, self.hasBaseCurrency, self.money[base])
         self.world.relate(
             rate, self.hasDealtCurrency, self.money[self.reporting])
@@ -640,7 +686,7 @@ def weights(fund: Fund, when=None) -> Box:
         "weights",
         ob((fund.bag(fund.amount(
             "MarketValue", fund.reporting, when, to=True)), )),
-        ob((fund.bag(fund.weighting(when)), )),
+        ob((fund.weighting_function(when), )),
         data=Step(lambda bag: {
             one: value / sum(bag.values()) for one, value in bag.items()}))
 
@@ -648,7 +694,7 @@ def weights(fund: Fund, when=None) -> Box:
 def concentration(fund: Fund, when=None) -> Box:
     """The Herfindahl index of the weights: one is a single position."""
     return Box(
-        "HHI", ob((fund.bag(fund.weighting(when)), )),
+        "HHI", ob((fund.weighting_function(when), )),
         ob((fund.dimensionless(fund.Concentration, when), )),
         data=Step(lambda bag: float(sum(one ** 2 for one in bag.values()))))
 
@@ -730,7 +776,7 @@ def interpreter(fund: Fund) -> Functor:
             entity, OWLObjectIntersectionOf) else (entity, )
         if fund.Portfolio in inside:
             return Fund
-        if fund.Collection in inside:
+        if fund.Collection in inside or fund.WeightingFunction in inside:
             return dict
         if fund.Holding in inside:
             return list

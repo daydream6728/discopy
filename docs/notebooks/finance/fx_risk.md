@@ -7,10 +7,9 @@ pyproject: |-
       "marimo",
       "numpy",
       "matplotlib",
-      "yfinance",
+      "yfinance==1.7.0",
       "owlapy==1.6.6",
       "discopy[semantic] @ git+https://github.com/daydream6728/discopy.git@codex/fibo-qudt-demo",
-
   ]
 ---
 ```python {.marimo hide_code="true"}
@@ -100,14 +99,26 @@ mo.callout(
 
 ## 1 · The vocabulary is FIBO's, almost all of it
 
-Loading `Ownership` pulls its whole import closure — `CurrencyAmount`, the
-financial dates, the Commons collections — from an offline copy, so the
-*schema* never touches the network even though the *quotes* do. Two things
-FIBO deliberately leaves open are declared on top: a class per **metric
-kind**, because FIBO says a number is a monetary amount but not whether it
-is a market value or a value at risk, and two properties saying which
-currency a dollar amount is **exposed to** and which FX delta a holding
-carries.
+Two FIBO modules are loaded: `FND/OwnershipAndControl/Ownership` for
+portfolios, holdings, currency amounts and dates, and `IND/Indicators` for
+what a **quoted price** and an **end-of-day market rate** are, which brings
+FIBO's own statistics module, `FND/Utilities/Analytics`, with it. Both come
+from an offline copy, so the *schema* never touches the network even though
+the *quotes* do. Two things FIBO deliberately leaves open are declared on
+top: a class per **metric kind**, because FIBO says a number is a monetary
+amount but not whether it is a market value or a value at risk, and two
+properties saying which currency a dollar amount is **exposed to** and
+which FX delta a holding carries.
+
+What is declared is said in FIBO's words rather than beside them. A metric
+a model *estimates* — VaR, expected shortfall, a component — is a
+`StatisticalMeasure`; a valuation is an `Expression` whose exposure is one
+of its arguments, which is the pattern FIBO uses for a formula (a
+difference is an expression with a minuend and a subtrahend); the book's
+weights are a `WeightingFunction`. And because the feed's numbers are typed
+as what they are — each price a `QuotedPrice`, each rate an
+`EndOfDayMarketRate` — a conversion box can ask for the close the market
+set rather than for any rate at all.
 
 ```python {.marimo hide_code="true"}
 mo.md(f"""
@@ -286,8 +297,8 @@ read off the diagram — a dollar value at risk, as of the last close.
 
 ## 6 · Two signatures
 
-Here is the ambiguity, in ordinary Python. This is a real metric —
-the Herfindahl index of a book's concentration — and it is correct:
+Here is the ambiguity, in ordinary Python. This is a real metric — the
+Herfindahl index of a book's concentration — and it is correct:
 
 ```python
 def concentration(values: list[float]) -> float:
@@ -296,40 +307,73 @@ def concentration(values: list[float]) -> float:
     return sum((value / total) ** 2 for value in values)
 ```
 
-Nothing in `list[float]` says those values share a currency. Hand it the
-book's positions **before** converting them — euros beside yen beside
-pence — and it returns a number, confidently, that means nothing: a ratio
-between incommensurable quantities. Every annotation is satisfied. The
-type checker has no complaint to make, because shape is all it was ever
-asked about.
-
-The same function as a box has to say what it accepts, and the two wires
-differ in exactly the place the annotation was silent:
+`list[float]` is the whole contract, and it is silent about everything
+that makes the answer mean something: not that the numbers share a
+currency, not that they are what the book is *worth* rather than what it
+is *exposed to*, not that they were all read on the same day. Hand it any
+of those lists and it returns a number, confidently, with every
+annotation satisfied:
 
 ```python {.marimo hide_code="true"}
-table(["Wire", "Predicate"], [
-    ["what `prices` produces",
-     f"`{label(pricing(fund).cod.inside[0].entity)}`"],
-    ["what `weights` requires",
-     f"`{label(weights(fund).dom.inside[0].entity)}`"],
+herfindahl = lambda values: sum(
+    (one / sum(values)) ** 2 for one in values)
+
+table(["The list it was handed", "What it returns"], [
+    ["the book's value per bucket, converted and weighed",
+     f"**{run(nav_plan(fund))(*book):.3f}**"],
+    ["the same book before converting — euros beside yen beside pence",
+     f"**{herfindahl(list(run(pricing(fund))(*book).values())):.3f}**"],
+    ["the FX exposures instead of the values",
+     f"**{herfindahl(list(run(exposure_plan(fund))(*book).values())):.3f}**"],
 ])
 ```
 
-`∃hasCurrency.Currency` is *some* currency, each amount its own.
-`∃hasCurrency.{USD}` is one currency, the fund's. Forgetting the
-conversion is then not a wrong number to be noticed in a review — it is a
-diagram that cannot be drawn:
+The first is the concentration of the book. The second is a statement
+about *units*: a yen is small, so the yen position's nine figures crowd
+out everything else in a sum they have no business dominating. The third
+is a perfectly good metric — how concentrated the FX exposure is — that
+is simply not the one that was asked for, and it is the dangerous one,
+because it looks right.
+
+The same metric as a box has to say what it takes and what it gives back,
+and the wires differ in exactly the places the annotation was silent:
+
+```python {.marimo hide_code="true"}
+table(["Wire", "Predicate"], [
+    ["what `HHI` accepts",
+     f"`{label(concentration(fund).dom.inside[0].entity)}`"],
+    ["what `HHI` returns",
+     f"`{label(concentration(fund).cod.inside[0].entity)}`"],
+    ["what `weights` requires",
+     f"`{label(weights(fund).dom.inside[0].entity)}`"],
+    ["what `prices` produces",
+     f"`{label(pricing(fund).cod.inside[0].entity)}`"],
+])
+```
+
+A weighting function — one weight per bucket, each attributed to a
+currency, all as of one date — and what comes back is a `Concentration`,
+which this world knows is a `StatisticalMeasure`: a statistic *of* the
+book rather than an amount *in* it, which is the difference `-> float`
+could not make. Weighing is its own box, and it is where the currency is
+pinned: `∃hasCurrency.{USD}` is one currency, the fund's, where `prices`
+offers `∃hasCurrency.Currency`, some currency, each its own.
+
+So each confusion the annotation allows is a diagram that cannot be
+drawn, rather than a number nobody questions:
 
 ```python {.marimo hide_code="true"}
 mo.vstack([
     table(["Composition", "Verdict", "Reason"], [
         refused("weigh prices that were never converted",
                 lambda: pricing(fund) >> weights(fund)),
-        refused("measure concentration straight from local prices",
-                lambda: pricing(fund) >> concentration(fund)),
+        refused("weigh the exposures as if they were values",
+                lambda: regroup(fund, "FXExposure") >> weights(fund)),
+        refused("measure concentration without weighing anything",
+                lambda: regroup(fund, "MarketValue") >> concentration(fund)),
     ]),
-    mo.md("With the conversion in between, the same boxes compose — and "
-          f"the book's Herfindahl index is **{run(nav_plan(fund))(*book):.3f}**, "
+    mo.md("With the weighing in between, the same boxes compose — and the "
+          f"book's Herfindahl index is **{run(nav_plan(fund))(*book):.3f}**, "
           "against a floor of "
           f"**{1 / (len(model.currencies) + 1):.3f}** for a perfectly "
           "spread book.")])

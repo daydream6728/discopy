@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The modules the FX risk notebook reads FIBO at, and nothing else: an
+     ontology whose whole content is an import list, the way FIBO's own
+     AboutFIBOProd.rdf assembles a set of modules. Ownership brings
+     portfolios, holdings, currency amounts and dates; Indicators brings
+     what a quoted price and an end-of-day market rate are, and with them
+     FIBO's statistics module. Loading a published module that happens to
+     import both (SEC/Securities/Baskets is the smallest) would drag
+     in the securities, instrument and economic-indicator vocabularies
+     that nothing here types a wire by, and every one of their classes is
+     another one the reasoner carries through every retrieval. -->
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+         xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+         xmlns:owl="http://www.w3.org/2002/07/owl#"
+         xml:base="https://discopy.org/fibo/FXRisk/">
+	<owl:Ontology rdf:about="https://discopy.org/fibo/FXRisk/">
+		<rdfs:label>FX risk modules</rdfs:label>
+		<owl:imports rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/OwnershipAndControl/Ownership/"/>
+		<owl:imports rdf:resource="https://spec.edmcouncil.org/fibo/ontology/IND/Indicators/Indicators/"/>
+	</owl:Ontology>
+</rdf:RDF>

@@ -26,7 +26,7 @@ from owlapy.class_expression import (  # noqa: E402
     OWLObjectSomeValuesFrom, OWLObjectUnionOf)
 
 from discopy.owl import (  # noqa: E402
-    Diagram, Nothing, label, subsumes)
+    Diagram, Nothing, instances, label, subsumes)
 from discopy.utils import AxiomError  # noqa: E402
 from docs.notebooks.finance.financial_ontology import (  # noqa: E402
     SHARES, Market, Step, concentration, conversion, demo, exposure_plan,
@@ -250,6 +250,55 @@ def test_forgetting_to_convert_does_not_compose(fund):
         pricing(one) >> weights(one)
     with raises(AxiomError):                  # nor by skipping the weighing
         pricing(one) >> concentration(one)
+
+
+def test_the_herfindahl_index_says_what_it_measures(fund):
+    """`list[float]` admits three lists the index means nothing on: one
+    in mixed currencies, one of exposures rather than values, and one of
+    amounts that were never weighed. Each is a refusal here, and what
+    comes back is a statistic rather than an amount of money."""
+    one, _ = fund
+    assert label(concentration(one).dom.inside[0].entity).startswith(
+        "WeightingFunction")
+    assert label(concentration(one).cod.inside[0].entity).startswith(
+        "Concentration")
+    assert subsumes(one.Concentration, one.StatisticalMeasure, one.world)
+    assert not subsumes(one.Concentration, one.MonetaryAmount, one.world)
+    for mistake in (
+            lambda: pricing(one) >> weights(one),          # mixed currencies
+            lambda: regroup(one, "FXExposure") >> weights(one),  # exposures
+            lambda: regroup(one, "MarketValue")            # never weighed
+            >> concentration(one)):
+        with raises(AxiomError):
+            mistake()
+
+
+def test_the_feed_s_numbers_say_where_they_come_from(fund):
+    """Every price is a quote and every rate a close, in FIBO's own
+    words, and a plan's rate wire asks for the close rather than for
+    any exchange rate somebody wrote down."""
+    one, _ = fund
+    assert len(instances(one.EndOfDayMarketRate, one.world))\
+        == len(one.market.spot)
+    assert len(instances(one.QuotedPrice, one.world)) == len(one.holdings)
+    assert subsumes(one.quotation("EUR"), one.EndOfDayMarketRate, one.world)
+    assert not subsumes(one.ExchangeRate, one.EndOfDayMarketRate, one.world)
+
+
+def test_the_metrics_are_stated_in_fibo_s_vocabulary(fund):
+    """What a model estimates is a statistical measure, what the feed
+    observes is not, and a valuation is an expression whose exposure is
+    one of its arguments -- FIBO's own pattern for a formula."""
+    one, _ = fund
+    assert subsumes(one.kind["VaR"], one.StatisticalMeasure, one.world)
+    assert not subsumes(
+        one.kind["MarketValue"], one.StatisticalMeasure, one.world)
+    assert subsumes(one.Valuation, one.Expression, one.world)
+    assert subsumes(OWLObjectIntersectionOf((
+        one.Valuation, OWLObjectSomeValuesFrom(
+            one.hasExposure, one.kind["FXExposure"]))),
+        OWLObjectSomeValuesFrom(one.hasArgument, one.ScalarQuantityValue),
+        one.world)
 
 
 def test_the_nav_plan_measures_concentration(fund, book):

@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- A minimal stand-in for the OMG Commons Quantities and Units module,
+     which OMG serves from www.omg.org only: the quantity vocabulary that
+     the FIBO fixtures already state their own classes in terms of (a
+     monetary amount is a scalar quantity value, an exchange rate is a
+     ratio, a statistic is a measure and a formula an expression over
+     arguments), so that those parents resolve rather than being dropped
+     as references into an empty stub. Only what the fixtures name, with
+     the ranges Commons gives, and none of the quantity kinds, units or
+     systems of units, which nothing here measures in. -->
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+         xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+         xmlns:owl="http://www.w3.org/2002/07/owl#"
+         xmlns:xsd="http://www.w3.org/2001/XMLSchema#"
+         xml:base="https://www.omg.org/spec/Commons/QuantitiesAndUnits/">
+	<owl:Ontology rdf:about="https://www.omg.org/spec/Commons/QuantitiesAndUnits/"/>
+	<owl:Class rdf:about="https://www.omg.org/spec/Commons/QuantitiesAndUnits/Expression">
+		<rdfs:label>expression</rdfs:label>
+	</owl:Class>
+	<owl:Class rdf:about="https://www.omg.org/spec/Commons/QuantitiesAndUnits/Measure">
+		<rdfs:label>measure</rdfs:label>
+	</owl:Class>
+	<owl:Class rdf:about="https://www.omg.org/spec/Commons/QuantitiesAndUnits/MeasurementUnit">
+		<rdfs:label>measurement unit</rdfs:label>
+	</owl:Class>
+	<owl:Class rdf:about="https://www.omg.org/spec/Commons/QuantitiesAndUnits/ScalarQuantityValue">
+		<rdfs:label>scalar quantity value</rdfs:label>
+	</owl:Class>
+	<owl:Class rdf:about="https://www.omg.org/spec/Commons/QuantitiesAndUnits/ScalarQuantityValueRange">
+		<rdfs:subClassOf rdf:resource="https://www.omg.org/spec/Commons/QuantitiesAndUnits/Expression"/>
+		<rdfs:label>scalar quantity value range</rdfs:label>
+	</owl:Class>
+	<owl:Class rdf:about="https://www.omg.org/spec/Commons/QuantitiesAndUnits/Ratio">
+		<rdfs:label>ratio</rdfs:label>
+	</owl:Class>
+	<owl:Class rdf:about="https://www.omg.org/spec/Commons/QuantitiesAndUnits/Percentage">
+		<rdfs:subClassOf rdf:resource="https://www.omg.org/spec/Commons/QuantitiesAndUnits/Ratio"/>
+		<rdfs:label>percentage</rdfs:label>
+	</owl:Class>
+	<owl:ObjectProperty rdf:about="https://www.omg.org/spec/Commons/QuantitiesAndUnits/hasArgument">
+		<rdfs:label>has argument</rdfs:label>
+		<rdfs:range>
+			<owl:Class>
+				<owl:unionOf rdf:parseType="Collection">
+					<rdf:Description rdf:about="https://www.omg.org/spec/Commons/QuantitiesAndUnits/ScalarQuantityValue"/>
+					<rdf:Description rdf:about="https://www.omg.org/spec/Commons/QuantitiesAndUnits/ScalarQuantityValueRange"/>
+				</owl:unionOf>
+			</owl:Class>
+		</rdfs:range>
+	</owl:ObjectProperty>
+	<owl:ObjectProperty rdf:about="https://www.omg.org/spec/Commons/QuantitiesAndUnits/hasExpression">
+		<rdfs:label>has expression</rdfs:label>
+		<rdfs:range rdf:resource="https://www.omg.org/spec/Commons/QuantitiesAndUnits/Expression"/>
+	</owl:ObjectProperty>
+	<owl:ObjectProperty rdf:about="https://www.omg.org/spec/Commons/QuantitiesAndUnits/hasQuantityValue">
+		<rdfs:label>has quantity value</rdfs:label>
+		<rdfs:range rdf:resource="https://www.omg.org/spec/Commons/QuantitiesAndUnits/ScalarQuantityValue"/>
+		<owl:inverseOf rdf:resource="https://www.omg.org/spec/Commons/QuantitiesAndUnits/isValueOf"/>
+	</owl:ObjectProperty>
+	<owl:ObjectProperty rdf:about="https://www.omg.org/spec/Commons/QuantitiesAndUnits/hasQuantityValueRange">
+		<rdfs:label>has quantity value range</rdfs:label>
+		<rdfs:range rdf:resource="https://www.omg.org/spec/Commons/QuantitiesAndUnits/ScalarQuantityValueRange"/>
+	</owl:ObjectProperty>
+	<owl:ObjectProperty rdf:about="https://www.omg.org/spec/Commons/QuantitiesAndUnits/hasMeasurementUnit">
+		<rdfs:label>has measurement unit</rdfs:label>
+		<rdfs:range rdf:resource="https://www.omg.org/spec/Commons/QuantitiesAndUnits/MeasurementUnit"/>
+	</owl:ObjectProperty>
+	<owl:ObjectProperty rdf:about="https://www.omg.org/spec/Commons/QuantitiesAndUnits/isValueOf">
+		<rdfs:label>is value of</rdfs:label>
+		<rdfs:domain rdf:resource="https://www.omg.org/spec/Commons/QuantitiesAndUnits/ScalarQuantityValue"/>
+	</owl:ObjectProperty>
+	<owl:DatatypeProperty rdf:about="https://www.omg.org/spec/Commons/QuantitiesAndUnits/hasNumericValue">
+		<rdfs:label>has numeric value</rdfs:label>
+		<rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#decimal"/>
+	</owl:DatatypeProperty>
+</rdf:RDF>

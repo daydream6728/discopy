@@ -6,10 +6,9 @@ pyproject: |-
   dependencies = [
       "marimo",
       "matplotlib",
-      "discopy[semantic]",
+      "discopy[semantic] @ git+https://github.com/daydream6728/discopy.git@codex/fibo-qudt-demo",
   ]
 ---
-
 ```python {.marimo hide_code="true"}
 import marimo as mo
 ```
@@ -126,6 +125,12 @@ mo.accordion({
     f"**{group}** · {name}": mo.lazy(
         lambda name=name: rules_of(classes[name]))
     for group, names in INSTRUMENTS.items() for name in names})
+```
+
+```python {.marimo}
+# rules_of(INSTRUMENTS["Future"])
+axioms(classes["DerivativeInstrument"], world)[4].draw(path="cash-and-derivatives-instruments-are-disjoint.svg")
+# axioms(classes["Future"], world)[0].draw(path="future-derivative.svg")
 ```
 
 ## Browse by entity

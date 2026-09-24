@@ -1,7 +1,7 @@
 ---
 title: Ontologies
-marimo-version: 0.23.14
-pyproject: |
+marimo-version: 0.23.16
+pyproject: |-
   requires-python = ">=3.11"
   dependencies = [
       "discopy[semantic] @ git+https://github.com/daydream6728/discopy.git@feature/allegory-owlapy",
@@ -251,9 +251,11 @@ mo.hstack([fenced.to_diagram(), collapsed.to_diagram()],
 ```
 
 ```python {.marimo}
-mo.md(f"The tests became types: `{collapsed}` — "
+mo.md(f"""
+The tests became types: `{collapsed}` — "
       f"and nothing extensional changed: "
-      f"**{collapsed.relation == fenced}**.")
+      f"**{collapsed.relation == fenced}**.
+""")
 ```
 
 HermiT also decides candidate rules exactly, not just the declared ones:

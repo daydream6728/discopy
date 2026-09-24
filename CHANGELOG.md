@@ -40,13 +40,20 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   worth with each bucket in its own quoting unit, and `weights` and
   `concentration` measure how concentrated it is — which is where the
   ambiguity of an ordinary signature shows. A Herfindahl index written
-  as `concentration(values: list[float]) -> float` is correct and
-  satisfiable by a list of prices that were never converted, returning a
-  ratio between incommensurable quantities with every annotation
-  honoured. The same function as a box demands
+  as `concentration(values: list[float]) -> float` is correct, and
+  `list[float]` is the whole contract: it is satisfied by the book's
+  values before anyone converted them, where a yen's nine figures crowd
+  out a sum they have no business dominating, and equally by the FX
+  exposures, which give a perfectly good metric that is not the one
+  asked for and looks right. The same index as a box takes a
+  `WeightingFunction` — one weight per bucket, each attributed to a
+  currency, all as of one date — and returns a `Concentration`, which
+  the world knows is a FIBO `StatisticalMeasure` and not a monetary
+  amount, the distinction `-> float` could not make. Weighing is its own
+  box and is where the currency is pinned, demanding
   `MarketValue ⊓ ∃hasCurrency.{USD}` where `pricing` offers
   `MarketValue ⊓ ∃hasCurrency.Currency` — some currency, each its own —
-  so forgetting the conversion is a composition that does not exist
+  so each of the three confusions is a composition that does not exist
   rather than a number nobody questions.
   Keying the collections by currency makes a class of mistake
   unrepresentable rather than merely detectable: there is no ordering of
@@ -73,7 +80,24 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   components, scenario attribution — are string diagrams over those
   predicates, drawn and then evaluated by a functor into
   `discopy.python`, with NumPy doing every arithmetic: a description
-  logic has none, so nothing computed is written back. Mixing currencies
+  logic has none, so nothing computed is written back. What the plans
+  are typed by is FIBO's own vocabulary wherever FIBO has one: the
+  notebook loads `IND/Indicators` beside `Ownership` — one authored
+  file, `discopy/FXRisk.rdf`, whose whole content is that import list,
+  since the smallest published module importing both drags in the
+  securities and economic-indicator vocabularies that nothing here types
+  a wire by — so a price the feed quotes is a `QuotedPrice` and a rate
+  it closes at an `EndOfDayMarketRate`, and a conversion box asks for
+  the close the market set rather than for any exchange rate at all.
+  The declarations that remain ours are stated inside FIBO's statistics
+  module rather than beside it: a metric a model estimates is a
+  `StatisticalMeasure` where an observed amount is not, a `Valuation` is
+  a Commons `Expression` whose exposure is one of its `hasArgument`s —
+  the pattern FIBO uses for a formula, as a difference is an expression
+  with a minuend and a subtrahend — and the weights of the book are
+  FIBO's own `WeightingFunction`. None of this costs reasoning time: the
+  two modules together are 398 classes and the finance tests run in the
+  same ten seconds they did before. Mixing currencies
   or dates, permuting the risk factors or reading a day's exposure as a
   quarter's are composition errors rather than wrong numbers, and the
   window version of the risk plan is the same diagram with its wires
@@ -444,6 +468,16 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
+- The Commons date stand-in of `test/fixtures/fibo` is read at last. Its
+  XML comment contained a `--`, which XML forbids inside one, so the
+  file was not well-formed; `owlapi`'s `AutoIRIMapper` skips a file it
+  cannot parse without a word and the import it declares is then stubbed
+  empty, exactly as if the file were not there. `ExplicitDate`,
+  `hasObservedDateTime` and `hasDate` were therefore never declared,
+  only referenced by the modules that restrict over them, for as long as
+  the stand-in has existed. The comment is rewritten and `test/owl.py`
+  now parses every fixture, so the next one fails a test rather than
+  disappearing.
 - A predicate the drawing dictionary cannot compile no longer refuses to
   be queried. `coreflexive` and `Query.from_class` built their picture
   eagerly with `to_diagram`, which raises on anything outside the

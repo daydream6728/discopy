@@ -2,8 +2,10 @@
 
 from datetime import datetime
 from decimal import Decimal
+from pathlib import Path
 from shutil import which
 from types import SimpleNamespace
+from xml.parsers import expat
 
 from pytest import fixture, importorskip, raises, skip
 
@@ -866,6 +868,17 @@ def test_market_validates_a_typed_chain(market):
     assert (one.source, one.target) == (company, person)
     with raises(AxiomError):
         sloppy.validate()  # a company is not a natural person
+
+
+def test_every_fixture_is_well_formed_xml():
+    """`owlapi`'s IRI mapper skips a file it cannot parse without a word,
+    and the import that file declares is then stubbed empty: the Commons
+    date stand-in went unread that way, for a `--` inside an XML comment,
+    which XML forbids."""
+    files = sorted(Path(FIXTURES).rglob("*.rdf"))
+    assert len(files) > 40
+    for path in files:
+        expat.ParserCreate().Parse(path.read_bytes(), True)
 
 
 def test_fixtures_resolve_the_currency_module():
