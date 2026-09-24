@@ -179,43 +179,46 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   of the full matrix on `cat.Functor.identity_typing` — and
   `Hypergraph.cups` and `caps` raise their `AxiomError` with a message
   where they raised it bare.
-- `cat.Equivalence` and `cat.Inverse`, a functor with an inverse: the
-  functor is `__call__`, the inverse is `decode` and `dagger` wraps it
-  as the `Inverse` functor from the codomain back — the first functors
-  whose domain is a concrete category rather than a free one. Functors
-  given by mappings compare unequal to the identity functor (#648), so
-  the laws of `F >> F.dagger() == Id() == F.dagger() >> F` are
-  quantified pointwise: `retract` over the arrows of the domain, up to
-  the equation of the domain category, and `section` over their images,
-  beside the `composition` and `identity` any functor preserves, stated
-  here for the first time — the image of an arrow is the composition of
-  the images of its two halves, which is the correctness of the glued
-  encodings. The laws of the functor category — associativity, typing,
-  unitality — are inapplicable, one functor not being a category of
-  functors, and an equivalence pickles as its class alone, its codomain
-  being a parameterised class that does not pickle by reference.
-  `monoidal.Diagram.ToHypergraph` and `symmetric.Diagram.ToMap` wrap
-  the conversion methods as generators, so every level gets its own
-  equivalence by the same diamond as its diagrams and the
-  classifications inherit with it: the cells of the conversion laws
-  move from the diagram classes onto the equivalences —
-  `hypergraph_section` becomes `ToHypergraph.section`, failing on
-  `braided`, `traced`, `rigid` and `pivotal` and re-enabled on
-  `symmetric`, `map_section` and `map_retract` become the laws of
-  `ToMap`, the section still modulo the hypergraph — while the
-  agreement, staircase, rewriting and drawing laws stay where they
-  were. `ToHypergraph.retract` is declared failing on `monoidal`,
-  whose syntactic equation decoding cannot land back on, re-enabled
-  from `symmetric` on where the equation is the hypergraph quotient;
-  `rigid.ToHypergraph.composition` fails on the left-handed cups its
-  encoding rejects and comes back on `pivotal`, which encodes both
-  orientations. The new laws found one violation the old suite's draws
-  never met: decoding the map of a closed diagram re-whiskers the
-  inside of a curry bubble, which the hypergraph of a bubble compares
-  syntactically, so `closed.ToMap.retract` is declared failing. An
-  equivalence whose domain does not generate stays unenrolled, e.g.
-  over `tensor.Diagram`, and `Inverse` declares
-  `strategy = no_strategy` like `balanced.DualRail`.
+- `cat.Equivalence`, a functor with an inverse. A specific functor is
+  an instance of a `Functor` class, never a subclass — subclasses
+  denote whole categories of functors, one per level of the hierarchy
+  — so an equivalence is a pair of callables between two categories:
+  the functor applies `encode` to the arrows of `dom`, letting
+  objects pass through, and `dagger` is the equivalence the other way
+  around, swapping `encode` and `decode`, so the involution holds by
+  construction, equality and hash read the four fields and there is
+  no `Inverse` class, no class-only pickling and no inapplicable
+  functor-category laws to declare. `Diagram.hypergraph_equivalence`
+  and, from symmetric on, `Diagram.map_equivalence` build the
+  instance of each level from the conversion methods — the first
+  functors whose domain is a concrete category rather than a free
+  one. Functors given by mappings compare unequal to the identity
+  functor (#648), so the laws of
+  `F >> F.dagger() == Id() == F.dagger() >> F` are quantified
+  pointwise over the arrows of the domain, as axioms of the diagram
+  classes that build the instances: `hypergraph_section` and
+  `map_section` (a decoded diagram encodes back onto its image, the
+  map section modulo the hypergraph, which does not order the boxes:
+  decoding picks one topological order among the diagrams of the same
+  map and re-encoding can permute independent boxes),
+  `hypergraph_retract` and `map_retract` (decoding gives the diagram
+  back up to the equation of the level), and the `composition` and
+  `identity` any functor preserves, stated here for the first time —
+  the image of a diagram is the composition of the images of its two
+  halves, which is the correctness of the glued encodings. The
+  classifications live on the levels where the laws break:
+  `hypergraph_section` fails on `braided`, `traced`, `rigid` and
+  `pivotal` and is re-enabled on `symmetric`; `hypergraph_retract`
+  fails on `monoidal`, whose syntactic equation decoding cannot land
+  back on, and is restated on `symmetric`, where the equation is the
+  hypergraph quotient; `hypergraph_composition` fails on `rigid` over
+  the left-handed cups its encoding rejects and comes back on
+  `pivotal`, which encodes both orientations; and the laws found one
+  violation the old suite's draws never met — decoding the map of a
+  closed diagram re-whiskers the inside of a curry bubble, which the
+  hypergraph of a bubble compares syntactically, so `closed.Diagram`
+  declares `map_retract` failing. The agreement, staircase, rewriting
+  and drawing laws stay where they were.
 - The whole unified tree typechecks: `uv run --with ty ty check` passes
   in the full development environment (`uv sync --dev --group all`, the
   reference for typechecking now that the optional imports carry no
@@ -478,9 +481,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   restate them, `pivotal` and `biclosed`, read them off
   `DaggerCategory`. `cat.Equivalence` becomes the
   `Equivalence(Functor, DaggerCategory)` first asked for: its
-  involution holds on the nose, restated over the one functor, and its
-  contravariance is inapplicable like the rest of the functor-category
-  laws.
+  involution holds by construction, `dagger` swapping `encode` and
+  `decode`.
 - `monoidal.List`, the free monoid on a generator type: `List[X]` is a
   tuple of instances of `X` with concatenation as `tensor` and the empty
   list as unit, an `abc.Monoid` parameterised as
@@ -702,11 +704,6 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `markov.Diagram` declares its `repr_transparency` and
   `serialisation` under the copy's own reason, its `__new__` wanting
   its type (#742), where they were recorded under the trace's.
-- `cat.Equivalence.dagger_involution` is declared inapplicable — the
-  dagger of the inverse is the equivalence itself by construction, so
-  there is nothing to check — and both `Equivalence` and `Inverse`
-  hash consistently with their equality, an equivalence by its class
-  and an inverse by the equivalence it inverts.
 - `monoidal.Diagram.to_drawing` names its optional parameter `functor`
   rather than `functor_factory`, after the slot rename that removed
   the `*_factory` convention.
