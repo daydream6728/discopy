@@ -159,12 +159,13 @@ In the category of streams, this is just the identity.
 
 from typing import ClassVar
 
-from discopy import monoidal, braided, markov, hypergraph
+from discopy import monoidal, braided, markov, hypergraph, messages
 from discopy.axioms import GENERATORS, no_strategy
 from discopy.abc import DelayedMonoid, FeedbackCategory
 from discopy.axioms import inapplicable
 from discopy.utils import (
-    factory, Generator, factory_name, assert_isinstance, AxiomError)
+    factory, Generator, factory_name, assert_isinstance, AxiomError,
+    from_tree)
 
 
 def str_delayed(time_step: int):
@@ -394,18 +395,25 @@ class Diagram(markov.Diagram, FeedbackCategory):
         return type(self)(inside, dom, cod, _scan=False)
 
     def feedback_left(self, dom=None, cod=None, mem=None):
-        """ A :class:`Feedback` of the memory on the left, wire by wire. """
+        """
+        A :class:`Feedback` of the memory on the left, wire by wire: the
+        outermost memory wire, the first, feeds back first.
+        """
         if mem is None or len(mem) == 1:
             return self.Feedback(self, dom=dom, cod=cod, mem=mem, left=True)
         return self if not mem\
-            else self.feedback_left(mem=mem[1:]).feedback_left()
+            else self.feedback_left(mem=mem[:1]).feedback_left(mem=mem[1:])
 
     def feedback_right(self, dom=None, cod=None, mem=None):
-        """ A :class:`Feedback` of the memory on the right, wire by wire. """
+        """
+        A :class:`Feedback` of the memory on the right, wire by wire: the
+        outermost memory wire, the last, feeds back first.
+        """
         if mem is None or len(mem) == 1:
             return self.Feedback(self, dom=dom, cod=cod, mem=mem)
         return self if not mem\
-            else self.feedback_right(mem=mem[:-1]).feedback_right()
+            else self.feedback_right(mem=mem[-1:]).feedback_right(
+                mem=mem[:-1])
 
     @classmethod
     def wait(cls, dom: Ty) -> Diagram:
@@ -452,10 +460,6 @@ class Diagram(markov.Diagram, FeedbackCategory):
     d = Wire.d
 
     dagger_monoidality = FeedbackCategory.dagger_monoidality
-
-    feedback_joining = FeedbackCategory.feedback_joining.failing(
-        "feedback unrolls heterogeneous memory in the wrong order, so it "
-        "refuses to build the joined loop at all (#606).")
 
 
 @Diagram.generator
@@ -616,13 +620,26 @@ class Feedback(
             dom = arg.dom[len(mem):] if left else arg.dom[:-len(mem)]
         if cod is None:
             cod = arg.cod[len(mem):] if left else arg.cod[:-len(mem)]
-        if arg.dom != (mem.delay() @ dom if left else dom @ mem.delay()):
-            raise AxiomError
-        if arg.cod != (mem @ cod if left else cod @ mem):
-            raise AxiomError
+        expected_dom = mem.delay() @ dom if left else dom @ mem.delay()
+        expected_cod = mem @ cod if left else cod @ mem
+        if arg.dom != expected_dom:
+            raise AxiomError(messages.WRONG_DOM.format(expected_dom, arg.dom))
+        if arg.cod != expected_cod:
+            raise AxiomError(messages.WRONG_COD.format(expected_cod, arg.cod))
         self.mem, self.left = mem, left
         monoidal.Bubble.__init__(self, arg, dom=dom, cod=cod)
         self.Box.__init__(self, self.name, dom, cod)
+
+    serialised_attrs = ('args', 'dom', 'cod', 'mem', 'left')
+
+    def setoid(self):
+        """ The memory and its side tell two feedbacks of one arg apart. """
+        return super().setoid() + (self.mem, self.left)
+
+    @classmethod
+    def from_tree(cls, tree):
+        arg, mem = map(from_tree, (tree['args'][0], tree['mem']))
+        return cls(arg, mem=mem, left=tree.get('left', False))
 
     def dagger(self):
         raise AxiomError("Feedback has no dagger, "
@@ -744,9 +761,10 @@ class Functor(markov.Functor):
             return self.cod.FollowedBy(self(arg))
         if isinstance(other, Feedback) and hasattr(self.cod, "feedback"):
             arguments = map(self, (other.dom, other.cod, other.mem))
+            image = self(other.arg)
             if other.left:
-                return self(other.arg).feedback(*arguments, left=True)
-            return self(other.arg).feedback(*arguments)
+                return image.feedback_left(*arguments)
+            return image.feedback(*arguments)
         return super().__call__(other)
 
 

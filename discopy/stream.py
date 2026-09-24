@@ -566,6 +566,12 @@ class Stream[category](MonoidalCategory, NamedGeneric):
         _later = None if dom.is_constant else lambda: cls.copy(dom.later, n)
         return cls(now, dom, cod, _later=_later)
 
+    def feedback_left(self, dom: Ty | None = None, cod: Ty | None = None,
+                      mem: Ty | None = None) -> Stream:
+        """ A monoidal stream keeps its memory on the right. """
+        raise NotImplementedError(
+            "A monoidal stream keeps its memory on the right.")
+
     def feedback(
         self, dom: Ty | None = None, cod: Ty | None = None,
         mem: Ty | None = None, _first_call=True

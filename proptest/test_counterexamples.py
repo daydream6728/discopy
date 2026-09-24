@@ -7,7 +7,7 @@ from typing import NamedTuple
 
 import pytest
 
-from discopy import biclosed, braided, cat, feedback, pivotal, ribbon
+from discopy import biclosed, braided, cat, pivotal, ribbon
 from discopy.axioms import GENERATORS, Axiom, AxiomFailure, Relabelling
 from discopy.utils import AxiomError, factory_name
 
@@ -32,8 +32,6 @@ It names all of them because every functor the strategy builds does, see
 rather than what the bug needs: composing the identity functor on the
 left preserves its action but compares unequal (#648).
 """
-
-MEMORY = feedback.Ty("a") @ feedback.Ty("b")
 
 COUNTEREXAMPLES = (
     Counterexample(
@@ -69,12 +67,6 @@ COUNTEREXAMPLES = (
         axiom=ribbon.Diagram.twist_as_trace,
         args=(pivotal.Ty("a"), ),
         reason="A free twist is a box, not the trace of a braid."),
-    Counterexample(
-        axiom=feedback.Diagram.feedback_joining,
-        args=(feedback.Box(
-                  "f", MEMORY[:1] @ MEMORY.delay(), MEMORY[:1] @ MEMORY), ),
-        reason="feedback.Diagram.feedback unrolls its memory in the wrong "
-               "order (#606)"),
 )
 
 
