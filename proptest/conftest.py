@@ -41,8 +41,9 @@ settings.register_profile(
     print_blob=True,
     suppress_health_check=[HealthCheck.filter_too_much])
 """
-The settings of ``dev`` for a matrix of one cell per declaration of a
-law, see ``once_per_declaration`` in ``test_axioms.py``.
+The budget of ``dev``, derandomized and hence without the example
+database, for a matrix of one cell per declaration of a law, see
+``once_per_declaration`` in ``test_axioms.py``.
 """
 if PROFILE != "shared":
     settings.load_profile(PROFILE)

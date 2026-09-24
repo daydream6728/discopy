@@ -77,8 +77,7 @@ Properties before implementation
 --------------------------------
 
 A feature starts as mathematics, and the mathematics starts as
-properties. Before implementing anything, write the laws down — on an
-agent branch, as the first checkboxes of its ``TODO.md``:
+properties. Before implementing anything, write the laws down:
 
 1. **State the laws.** Which equations define the new structure? Which
    level of :mod:`discopy.abc` do they belong to? Which existing axioms

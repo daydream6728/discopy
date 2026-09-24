@@ -46,28 +46,27 @@
 > pass, Rule.constant after the class, axioms.py telling readers to
 > write laws into TODO.md).
 
-- [WIP] @session_01UrSNrBcfEnb46fFG9LYRPo-2026-09-24 Run the full
-      matrix under the dev profile on the current head to enumerate
-      the failing cells as they stand
-- [ ] Fix the left feedback: equality and hash read `left`, the tree
+- [x] Run the full matrix under the dev profile on the current head
+      to enumerate the failing cells as they stand
+- [x] Fix the left feedback: equality and hash read `left`, the tree
       records `left` and `mem`, the functor only passes `left` where
       the codomain takes it, and `feedback_left` handles memories of
       any length
-- [ ] Stop the broken marks at the level they hold: re-enable
+- [x] Stop the broken marks at the level they hold: re-enable
       `braid_naturality` on `symmetric`, declare markov's roundtrips
       under the copy's own reason
-- [ ] Fix or classify every failing dev cell: the coloured empty
+- [x] Fix or classify every failing dev cell: the coloured empty
       `Ty` repr, the relabelling strategy on a non-endo functor,
       the `layer` UnboundLocalError and `Swap.is_mixed`,
       `grammar.cfg.Algebra` pickling, `ribbon.rotate_contravariance`
-- [ ] The pattern and search fixes: refuse out-of-scope
+- [x] The pattern and search fixes: refuse out-of-scope
       metavariables, parenthesise `__str__`, apply keyword-only
       premises by name, check the bounds of binders, reject
       `Tensor[()]` and a non-atomic `Repeat` base, drop the operator
       docstring
-- [ ] `Equivalence.dagger_involution` declared by construction,
+- [x] `Equivalence.dagger_involution` declared by construction,
       `Inverse.__hash__`
-- [ ] The minor round: the #562 reason, `para.Closed.curry` left
+- [x] The minor round: the #562 reason, `para.Closed.curry` left
       default, the cycle error message, CHANGELOG entries for the
       renames, the fast-profile claim, the style violations
 - [ ] `ty check`, `ruff check`, pytest, proptest fast + dev rerun of

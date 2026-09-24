@@ -652,6 +652,52 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Changed
 
+- `cat.Functor.strategy` relabels endofunctors only: a relabelling
+  sends the domain's own generators to each other, so the functors into
+  another category — tensors, intertwiners, channels — stay unchecked,
+  as their docstring promised, instead of failing the functor laws on
+  relabellings their codomain cannot type, and `grammar.cfg.Algebra`,
+  whose domain is an operad of trees rather than a free category,
+  declares `strategy = no_strategy`.
+- The laws a curry bubble breaks are classified where they break:
+  mapping a bubble decodes the map of its inside, which re-whiskers its
+  states, reorders its independent boxes and can ask a planar category
+  for swaps, while the hypergraph of a bubble compares its inside
+  syntactically — so `biclosed.Diagram` declares
+  `map_hypergraph_agreement` failing, and `closed.Diagram` declares
+  `staircase_encoding` failing, whose roundtrip decomposes the
+  permutations inside a bubble into swaps, both found by the matrix.
+  `biclosed.Diagram`'s currying laws carry the reason of their
+  recorded counterexample — a free currying is a bubble, equal to its
+  evaluation only semantically — where they cited the fixed #562.
+- `Rule.apply` applies the keyword-only parameters of a rule's method
+  by the names of its premises, so `feedback(*, left)` and friends
+  apply, and the rest positionally in premise order, which variadic
+  methods such as `Arrow.then` need. `Rule.constant` is declared in the
+  body of `Rule` and `pattern.interpret` refuses a type variable that
+  is neither a parameter of the declaration nor a sort in scope, where
+  it crashed with `KeyError` on the stray name. `parse` level-checks
+  the bounds of binders, `Tensor` refuses a subscript of fewer than two
+  operands, where `Tensor[()]` crashed with `IndexError`, `Repeat`
+  refuses a non-atomic base, which matching cannot read back, the
+  `__str__` of an adjoint or delay parenthesises a compound base, so
+  `R[Tensor[A, B]]` prints `(A @ B).r` rather than `A @ B.r`, and the
+  pattern docstrings stop promising an `@` operator on patterns.
+- Broken marks stop at the level where the law holds again:
+  `braid_naturality` is re-enabled on `symmetric.Diagram` — a free
+  braid is a box, but the braid of a symmetric category is its swap,
+  whose naturality holds in the hypergraph quotient — and
+  `markov.Diagram` declares its `repr_transparency` and
+  `serialisation` under the copy's own reason, its `__new__` wanting
+  its type (#742), where they were recorded under the trace's.
+- `cat.Equivalence.dagger_involution` is declared inapplicable — the
+  dagger of the inverse is the equivalence itself by construction, so
+  there is nothing to check — and both `Equivalence` and `Inverse`
+  hash consistently with their equality, an equivalence by its class
+  and an inverse by the equivalence it inverts.
+- `monoidal.Diagram.to_drawing` names its optional parameter `functor`
+  rather than `functor_factory`, after the slot rename that removed
+  the `*_factory` convention.
 - DisCoPy requires Python 3.14. Annotations are the lazy objects of
   PEP 649 rather than quoted strings: the `from __future__ import
   annotations` of every module goes, the forward references it quoted
@@ -957,8 +1003,10 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   the `from_tree` branches reading outdated dumps (`cat.Bubble`'s
   singular `'arg'`, `monoidal.Ty`'s `'objects'`, `monoidal.Diagram`'s
   `'boxes'` and `'offsets'`, a plain `cat.Ob` as a wire), the aliases
-  `quantum.circuit` kept for pickles from v0.6 and the cross-version
-  pickle fixtures that exercised them. What the current version writes
+  `quantum.circuit` kept for pickles from v0.6 — `circuit.Measure`,
+  `circuit.Encode` and `circuit.MixedState`, which live in
+  `discopy.quantum.gates` — and the cross-version pickle fixtures that
+  exercised them. What the current version writes
   reads back, which the `pickling`, `copying` and `serialisation`
   axioms state; what a past version wrote does not.
 - `biclosed.Variable` and `closed.Variable` require an atomic codomain:
@@ -1025,7 +1073,34 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - A `Feedback` whose memory is on the left draws by tracing on the
   left, keeps its side through `delay` and a functor, and spells it in
   its representation, where it was drawn, delayed, mapped and printed
-  as a right feedback.
+  as a right feedback. Its equality and hash read `mem` and `left`
+  through `setoid`, where a left feedback compared equal to the right
+  one on the same argument, its tree records both, where it decoded as
+  a right feedback on the default memory, and the functor passes the
+  side by calling `feedback_left`, which a stream and a parametric map
+  answer with `NotImplementedError` naming their convention where they
+  crashed on a keyword they never took. `feedback_left` and
+  `feedback_right` peel the outermost memory wire first, so a
+  heterogeneous memory of length two or more feeds back where it
+  raised `AxiomError` (#606) — the joining law then holds by
+  construction, so `feedback.Diagram.feedback_joining` is checked
+  again and its counterexample record is gone.
+- `ribbon.Braid.rotate` of a dagger braid swapped the rotated boundary,
+  building the dagger of the rotation of the underlying braid: the
+  rotation of `Braid(l, r, is_dagger)` is `Braid(l.r, r.r, is_dagger)`,
+  which restores `rotate_contravariance` on ribbon diagrams — found by
+  the matrix.
+- The representation of a coloured empty type reads back: `biclosed.Ty`
+  overrode `__repr__` without the branch that prints a coloured empty
+  type as `Ty.id(colour)`, so `rigid.Ty(dom=red, cod=red)` printed as
+  `rigid.Ty()` on every level from `biclosed` on — found by the
+  `repr_transparency` cells of the matrix. The redundant override goes;
+  the bug also exists on `main`.
+- `symmetric.Diagram.cycle` refuses a non-atomic wire with a message
+  naming it, where `from_permutation` complained about the length of a
+  permutation the caller never wrote.
+- `para.Closed.curry` defaults `left` to `True` like `abc`, `biclosed`,
+  `closed` and `rigid`; every caller passed it explicitly.
 - `axioms.levels_of` skips the value parameters of a `NamedGeneric`,
   such as the `dtype` of a tensor diagram, when picking the class whose
   type parameters name the levels, so `tensor.Diagram` and `Circuit`

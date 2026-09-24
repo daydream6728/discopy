@@ -408,7 +408,7 @@ class Closed(Markov, ClosedCategory):
         """ The right currying of ``n`` objects, see :meth:`curry`. """
         return self.curry(n, left=False)
 
-    def curry(self, n: int = 1, left: bool = False) -> Closed:
+    def curry(self, n: int = 1, left: bool = True) -> Closed:
         """
         Curry the last `n` objects of the domain if `left` else the first,
         i.e. everything but the parameters, which a left currying swaps out
