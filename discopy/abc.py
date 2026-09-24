@@ -70,7 +70,7 @@ from typing import Annotated, ClassVar, Self, TYPE_CHECKING
 from discopy.axioms import (  # noqa: F401
     C0, C1, Atom, Axiom, Count, Delay, Equation, Generator, Hom, L, Over,
     R, Repeat, Rule, Serialisable, Tensor, Testable, Under, Unit, axiom,
-    declarations, generator, inapplicable, rule)
+    declarations, generator, rule)
 from discopy.utils import (  # noqa: F401
     NamedGeneric, classproperty, factory_name)
 
@@ -115,7 +115,7 @@ class Category[C0, C1: Category](Testable, ABC):
         structural method carries, see :func:`discopy.search.rule`, bound
         to ``cls`` and owned by the class declaring it. A rule survives
         the plain method implementing it, which the search calls by that
-        name; one decorated with :func:`discopy.search.inapplicable` is
+        name; one declared :meth:`discopy.search.Rule.inapplicable` is
         dropped.
         """
         return declarations(cls, Rule)
@@ -1335,10 +1335,12 @@ class CompactCategory[C0: Pregroup, C1: CompactCategory](
     :class:`SymmetricCategory`, i.e. with cups, caps and swaps and where
     the twist is the identity.
     """
-    @classmethod
-    @inapplicable("The twist is the identity.")
     def twist(cls, dom: C0) -> C1:
+        """ The twist of a compact category is the identity. """
         return cls.id(dom)
+
+    twist = classmethod(  # ty: ignore[invalid-assignment]
+        rule(twist).inapplicable("The twist is the identity."))
 
     @axiom
     def reidemeister_1_cap(

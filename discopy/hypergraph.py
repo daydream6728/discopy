@@ -1320,6 +1320,9 @@ class Hypergraph[category: Diagram](MonoidalCategory, DaggerCategory,
         for input_spider, (typ, (input_wires, output_wires)) in enumerate(
                 zip(self.spider_types, self.spider_wires)):
             input_wire, = input_wires
+            #: The wire is cut at the type its ports read, which differs
+            #: from the spider's when a cup or cap rotated the loop.
+            typ = self.ports[input_wire].obj
             for output_wire in output_wires:
                 if input_wire < output_wire and\
                         not has_path(causal_graph, output_wire, input_wire):

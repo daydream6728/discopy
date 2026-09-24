@@ -37,7 +37,7 @@ Summary
 from typing import ClassVar
 
 from discopy import axioms, rigid, frobenius, messages
-from discopy.axioms import Rule, inapplicable, no_strategy
+from discopy.axioms import Rule, no_strategy, rule
 from discopy.cat import factory, Generator
 from discopy.utils import AxiomError, classproperty
 from discopy.grammar import thue
@@ -155,10 +155,10 @@ class Diagram(frobenius.Diagram):
 
         return sentences()
 
-    trace_left = inapplicable("No loop in a sentence.")(
-        frobenius.Diagram.trace_left)
-    trace_right = inapplicable("No loop in a sentence.")(
-        frobenius.Diagram.trace_right)
+    trace_left = rule(frobenius.Diagram.trace_left).inapplicable(
+        "No loop in a sentence.")
+    trace_right = rule(frobenius.Diagram.trace_right).inapplicable(
+        "No loop in a sentence.")
 
     def normal_form(self, **params):
         """

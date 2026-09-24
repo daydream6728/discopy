@@ -162,7 +162,7 @@ from typing import ClassVar
 from discopy import monoidal, braided, markov, hypergraph, messages
 from discopy.axioms import GENERATORS, no_strategy
 from discopy.abc import DelayedMonoid, FeedbackCategory
-from discopy.axioms import inapplicable
+from discopy.axioms import rule
 from discopy.utils import (
     factory, Generator, factory_name, assert_isinstance, AxiomError,
     from_tree)
@@ -367,10 +367,16 @@ class Diagram(markov.Diagram, FeedbackCategory):
     .. image:: /_static/feedback/feedback-random-walk.svg
         :align: center
     """
-    trace = inapplicable(
+    trace = rule(markov.Diagram.trace).inapplicable(
         "A feedback category feeds back rather than traces: the trace a "
         "feedback diagram inherits from markov builds a markov.Trace that "
-        "is not a feedback diagram.")(markov.Diagram.trace)
+        "is not a feedback diagram.")
+
+    staircase_encoding = monoidal.Diagram.staircase_encoding.failing(
+        "The staircase encoding decomposes the permutations inside a "
+        "trace or feedback bubble, which the hypergraph of a bubble "
+        "compares syntactically: a feedback category has no trace to "
+        "absorb the loop into wiring.")
 
     ob = Ty
     #: :class:`markov.Diagram` re-enables what

@@ -27,15 +27,14 @@ Summary
 
         rule
         generator
-        inapplicable
         search
 """
 
 from collections.abc import Callable, Iterator
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from inspect import signature
 from types import MethodType
-from typing import TYPE_CHECKING
+from typing import Self, TYPE_CHECKING
 
 from discopy.pattern import Declaration, Hom, Match, Sequent
 from discopy.utils import AxiomError
@@ -112,6 +111,18 @@ class Rule[**P, T](Declaration[P, T]):
         """ The rule of one given box, see :class:`Constant`. """
         return Constant(box)
 
+    def inapplicable(self, reason: str) -> Self:
+        """
+        The same rule dropped from the rules and generators of the
+        class it is assigned on, with the reason as its record: the
+        method still runs, the search just never applies it, e.g.
+        ``trace_left = rule(Diagram.trace_left).inapplicable("No loop
+        in a sentence.")``.
+        """
+        result = replace(self)
+        result.__inapplicable__ = reason
+        return result
+
 
 class Generator(Rule):
     """
@@ -182,21 +193,6 @@ def rule[**P, T](function: Callable[P, T]) -> Rule[P, T]:
 def generator[**P, T](function: Callable[P, T]) -> Generator:
     """ Decorate a method as a logical constant, its signature the sequent. """
     return Generator(function)
-
-
-def inapplicable(reason: str) -> Callable:
-    """
-    Decorate a method to drop the rule it would otherwise inherit: the
-    method still runs, but :func:`discopy.pattern.declarations` leaves it
-    out of the rules and generators of the class, with the reason as its
-    record.
-    """
-    def decorate(method: Callable) -> Callable:
-        inner = method.__func__ if isinstance(method, classmethod)\
-            else method
-        inner.__inapplicable__ = reason
-        return method
-    return decorate
 
 
 def search(category: type[abc.Category], free: Callable | None = None, *,

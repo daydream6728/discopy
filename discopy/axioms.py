@@ -290,7 +290,6 @@ from discopy.search import (  # noqa: F401
     Generator,
     Rule,
     generator,
-    inapplicable,
     rule,
     search,
 )
