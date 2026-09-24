@@ -681,6 +681,10 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `map_hypergraph_agreement` failing, and `closed.Diagram` declares
   `staircase_encoding` failing, whose roundtrip decomposes the
   permutations inside a bubble into swaps, both found by the matrix.
+  `feedback.Diagram` declares `staircase_encoding` failing for the
+  same reason on its trace and feedback bubbles, which a feedback
+  category has no trace to absorb into wiring — found by the matrix
+  once the restored trace rules widened its draws.
   `biclosed.Diagram`'s currying laws carry the reason of their
   recorded counterexample — a free currying is a bubble, equal to its
   evaluation only semantically — where they cited the fixed #562.
@@ -697,6 +701,15 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `__str__` of an adjoint or delay parenthesises a compound base, so
   `R[Tensor[A, B]]` prints `(A @ B).r` rather than `A @ B.r`, and the
   pattern docstrings stop promising an `@` operator on patterns.
+- `Rule.inapplicable(reason)` replaces the standalone
+  `discopy.search.inapplicable` decorator, mirroring
+  `Axiom.inapplicable`: it returns a marked copy of the rule, dropped
+  from the rules and generators of the class it is assigned on while
+  the method still runs, e.g.
+  `trace_left = rule(Diagram.trace_left).inapplicable("No loop in a
+  sentence.")`. The four call sites — `abc.CompactCategory.twist`,
+  the traces of `quantum.circuit` and `grammar.pregroup` and the
+  trace of `feedback` — are respelled.
 - Broken marks stop at the level where the law holds again:
   `braid_naturality` is re-enabled on `symmetric.Diagram` — a free
   braid is a box, but the braid of a symmetric category is its swap,
@@ -1064,6 +1077,20 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
+- The standalone `inapplicable` decorator mutated the function it
+  wrapped: pregroup's mark on the shared `trace_left` implementation
+  leaked into `ribbon.Diagram`, silently dropping the trace rules of
+  every category inheriting it — ribbon, compact, frobenius, tensor —
+  whenever `grammar.pregroup` was imported, so their searches never
+  drew a trace. `Rule.inapplicable` marks a copy, and the rules are
+  back.
+- `Hypergraph.make_causal` cuts a cycle at the type the wire's ports
+  read, which differs from the spider's when a cup or cap rotated the
+  loop, the way `make_monogamous` already reads the ports: decoding
+  the hypergraph of a compact trace on a dual type built a
+  mis-oriented cap and crashed — found by the `hypergraph_section`
+  cell of the matrix as soon as the restored trace rules let compact
+  diagrams draw traces.
 - The adjoint of a coloured type keeps its colours, swapped:
   `rigid.Ty.l` and `.r` rebuilt the type from its wires alone, whose
   own adjoints do swap them, so the adjoint of an empty type between
