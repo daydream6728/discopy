@@ -383,5 +383,3 @@ TermBase, Constant, Variable, Application, Abstraction = (
     Diagram.Application, Diagram.Abstraction)
 Layer = Diagram.Layer
 Id = Diagram.id
-ToHypergraph = Diagram.ToHypergraph
-ToMap = Diagram.ToMap

@@ -212,20 +212,12 @@ class Diagram(monoidal.Diagram, TracedCategory):
     trace_superposing_right = \
         TracedCategory.trace_superposing_right.inapplicable(FREE_TRACE)
 
-
-Box = Diagram.Box
-
-
-@Diagram.generator
-class ToHypergraph(monoidal.ToHypergraph):
-    """
-    A :class:`monoidal.ToHypergraph` of traced diagrams.
-    """
-    dom = Diagram
-
-    section = monoidal.ToHypergraph.section.failing(
+    hypergraph_section = monoidal.Diagram.hypergraph_section.failing(
         "Decoding a trace can cross wires, which needs swaps the "
         "category does not have.")
+
+
+Box = Diagram.Box
 
 
 @Diagram.generator

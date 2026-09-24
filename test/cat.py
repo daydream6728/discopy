@@ -418,18 +418,15 @@ def test_strategy():
 
 
 def test_Equivalence():
-    from discopy.cat import Equivalence, Inverse
     from discopy import monoidal
 
-    encode = monoidal.ToHypergraph()
+    encode = monoidal.Diagram.hypergraph_equivalence()
     f = monoidal.Box('f', monoidal.Ty('x'), monoidal.Ty('y'))
     decode = encode.dagger()
-    assert isinstance(decode, Inverse) and decode.dagger() is encode
+    assert decode.dagger() == encode
     assert decode(encode(f)) == f
     assert encode(f.dom) == f.dom
     assert (decode.dom, decode.cod) == (encode.cod, encode.dom)
-    assert eval(repr(decode), {'monoidal': monoidal}) == decode
+    assert hash(encode) != hash(decode) and encode != decode
     with raises(NotImplementedError):
-        Equivalence().decode(f)
-    with raises(NotImplementedError):
-        Equivalence.strategy()
+        monoidal.Diagram.hypergraph_equivalence().strategy()

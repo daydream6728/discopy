@@ -167,21 +167,13 @@ class Diagram(monoidal.Diagram, BraidedCategory):
     braid_naturality = BraidedCategory.braid_naturality.failing(
         "A free braid does not commute past a box.")
 
-
-Box = Diagram.Box
-
-
-@Diagram.generator
-class ToHypergraph(monoidal.ToHypergraph):
-    """
-    A :class:`monoidal.ToHypergraph` of braided diagrams.
-    """
-    dom = Diagram
-
-    section = monoidal.ToHypergraph.section.failing(
+    hypergraph_section = monoidal.Diagram.hypergraph_section.failing(
         "Decoding a hypergraph can cross wires, which needs swaps the "
         "category does not have: a braid does not survive the symmetric "
         "quotient.")
+
+
+Box = Diagram.Box
 
 
 @Diagram.generator

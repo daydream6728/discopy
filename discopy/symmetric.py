@@ -20,8 +20,6 @@ Summary
     Sum
     Bubble
     Functor
-    ToHypergraph
-    ToMap
 
 Axioms
 ------
@@ -99,13 +97,13 @@ from collections.abc import Sequence
 from discopy import cat, monoidal, balanced, hypergraph, cmap, messages
 from discopy.abc import BraidedCategory, MonoidalCategory, SymmetricCategory
 from discopy.axioms import (
-    Atom, Equation, Hom, In0, Tensor, axiom, generator)
+    Atom, C0, Hom, In0, Tensor, axiom, generator,
+    Equation as AbstractEquation)
 from discopy.cat import factory, Generator
 from discopy.monoidal import Wire, Ty, Nat  # noqa: F401
 from discopy.python import finset
 from discopy.utils import (
-    AxiomError, assert_iscomposable, assert_isatomic, classproperty,
-    factory_name, from_tree)
+    AxiomError, assert_iscomposable, assert_isatomic, factory_name, from_tree)
 
 
 class Layer(monoidal.Layer):
@@ -277,7 +275,6 @@ class Diagram(balanced.Diagram, SymmetricCategory):
     Permutation: ClassVar[Generator]
     Swap: ClassVar[Generator]
     Functor: ClassVar[Generator]
-    ToMap: ClassVar[Generator]
 
     @property
     def is_plumbing(self) -> bool:
@@ -446,6 +443,78 @@ class Diagram(balanced.Diagram, SymmetricCategory):
     #: A free braid is a box, but the braid of a symmetric category is
     #: its swap, whose naturality holds in the hypergraph quotient.
     braid_naturality = BraidedCategory.braid_naturality
+
+    #: The category has the swaps that decoding asks for, so the
+    #: section of the hypergraph encoding comes back.
+    hypergraph_section = monoidal.Diagram.hypergraph_section
+
+    @axiom
+    def hypergraph_retract(cls, f: Self):
+        """
+        Decoding the hypergraph of a diagram gives it back: from
+        symmetric on the equation is the hypergraph quotient, which is
+        where decoding lands.
+        """
+        functor = cls.hypergraph_equivalence()
+        return cls.Equation(functor.decode(functor(f)), f)
+
+    @classmethod
+    def map_equivalence(cls) -> cat.Equivalence:
+        """
+        The equivalence sending a diagram to its combinatorial map:
+        :meth:`~discopy.monoidal.Diagram.to_map` encodes and
+        :meth:`discopy.cmap.CMap.to_diagram` decodes. A map is compact
+        whatever category hosts it, so decoding one asks for swaps: the
+        equivalence is stated where the swaps are.
+        """
+        return cat.Equivalence(
+            cls.ar.to_map, cmap.CMap.to_diagram,
+            cls.ar, cmap.CMap[cls.ar])
+
+    @axiom
+    def map_section(cls, f: Self):
+        """
+        Decoding is a section of the map encoding, modulo the
+        hypergraph, which does not order the boxes: a diagram orders
+        its boxes totally where a map orders them only by their wiring,
+        so decoding picks one topological order among the diagrams of
+        the same map and re-encoding can permute independent boxes.
+        """
+        functor = cls.map_equivalence()
+        image = functor(f)
+        return AbstractEquation(
+            functor(functor.decode(image)), image,
+            up_to=cmap.CMap.to_hypergraph)
+
+    @axiom
+    def map_retract(cls, f: Self):
+        """
+        Decoding the map of a diagram gives it back, up to the
+        equation of the level, which is essential: a map is spacial —
+        it cannot distinguish nested scalars from scalars side by
+        side — and so is the hypergraph the equation compares by,
+        while the syntactic comparison up to
+        :meth:`~discopy.monoidal.Diagram.foliation` is false even on
+        the boundary-connected subspace.
+        """
+        functor = cls.map_equivalence()
+        return cls.Equation(functor.decode(functor(f)), f)
+
+    @axiom
+    def map_composition(cls, f: Self):
+        """
+        The encoding preserves composition: the map of a diagram is
+        the composition of the maps of any two halves of it.
+        """
+        functor = cls.map_equivalence()
+        top, bottom = f[:len(f) // 2], f[len(f) // 2:]
+        return AbstractEquation(functor(f), functor(top) >> functor(bottom))
+
+    @axiom
+    def map_identity(cls, x: Annotated[Ty, C0]):
+        """ The encoding preserves identities. """
+        functor = cls.map_equivalence()
+        return AbstractEquation(functor(cls.id(x)), functor.cod.id(x))
 
 
 Box = Diagram.Box
@@ -647,54 +716,6 @@ class Swap(Permutation, balanced.Braid, Box):
 
 Trace, Sum, Bubble = (
     Diagram.Trace, Diagram.Sum, Diagram.Bubble)
-
-
-@Diagram.generator
-class ToHypergraph(balanced.ToHypergraph):
-    """
-    A :class:`monoidal.ToHypergraph` of symmetric diagrams, with the
-    section and the retract re-enabled: the category has the swaps that
-    decoding asks for, and its :class:`Equation` compares up to the
-    hypergraph, so the retract holds in the quotient of the domain.
-    """
-    dom = Diagram
-
-    section = monoidal.ToHypergraph.section
-
-    retract = cat.Equivalence.retract
-
-
-@Diagram.generator
-class ToMap(cat.Equivalence):
-    """
-    The equivalence sending a diagram to its combinatorial map:
-    :meth:`~discopy.monoidal.Diagram.to_map` is the functor and
-    :meth:`discopy.cmap.CMap.to_diagram` its inverse. A map is compact
-    whatever category hosts it, so decoding one asks for swaps: the
-    equivalence is stated where the swaps are. The section holds modulo
-    the hypergraph, which does not order the boxes: a diagram orders its
-    boxes totally where a map orders them only by their wiring, so
-    decoding picks one topological order among the diagrams of the same
-    map and re-encoding can permute independent boxes. The retract holds
-    in the quotient of the domain's :class:`Equation`, which is essential:
-    a map is spacial — it cannot distinguish nested scalars from scalars
-    side by side — and so is the hypergraph the equation compares by,
-    while the syntactic comparison up to
-    :meth:`~discopy.monoidal.Diagram.foliation` is false even on the
-    boundary-connected subspace.
-    """
-    dom = Diagram
-    cod = classproperty(lambda cls: cmap.CMap[cls.dom])
-
-    def __call__(self, other):
-        if isinstance(other, self.dom):
-            return other.to_map()
-        return other
-
-    def decode(self, other):
-        return other.to_diagram()
-
-    section = cat.Equivalence.section.modulo(cmap.CMap.to_hypergraph)
 
 
 @Diagram.generator

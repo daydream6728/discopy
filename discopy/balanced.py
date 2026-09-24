@@ -340,7 +340,6 @@ class DualRail(Functor):
 
 CMap = cmap.CMap[Diagram]
 Hypergraph = hypergraph.Hypergraph[Diagram]
-ToHypergraph = Diagram.ToHypergraph
 Diagram.DualRail = DualRail
 Layer = Diagram.Layer
 Id = Diagram.id

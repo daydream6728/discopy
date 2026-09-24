@@ -23,7 +23,6 @@ Summary
     Sum
     Bubble
     Functor
-    ToHypergraph
     Equation
 
 Axioms
@@ -84,7 +83,6 @@ from discopy.utils import (
     AxiomError,
     MappingOrCallable,
     RichDisplay,
-    classproperty,
 )
 
 if TYPE_CHECKING:
@@ -981,7 +979,6 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
     Sum: ClassVar[Generator]
     Bubble: ClassVar[Generator]
     Functor: ClassVar[Generator]
-    ToHypergraph: ClassVar[Generator]
     draw: ClassVar[Callable]
     to_gif: ClassVar[Callable]
 
@@ -1509,6 +1506,60 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
     dagger_monoidality = MonoidalCategory.dagger_monoidality.modulo(
         normal_form).weaken(boundary_connected=True)
 
+    @classmethod
+    def hypergraph_equivalence(cls) -> cat.Equivalence:
+        """
+        The equivalence sending a diagram to its hypergraph:
+        :meth:`to_hypergraph` encodes and
+        :meth:`discopy.hypergraph.Hypergraph.to_diagram` decodes.
+        """
+        return cat.Equivalence(
+            cls.ar.to_hypergraph, hypergraph.Hypergraph.to_diagram,
+            cls.ar, hypergraph.Hypergraph[cls.ar])
+
+    @axiom
+    def hypergraph_section(cls, f: Self):
+        """
+        Decoding is a section of the hypergraph encoding: a decoded
+        diagram encodes back onto the same hypergraph.
+        """
+        functor = cls.hypergraph_equivalence()
+        image = functor(f)
+        return AbstractEquation(functor(functor.decode(image)), image)
+
+    @axiom
+    def hypergraph_retract(cls, f: Self):
+        """
+        Decoding the hypergraph of a diagram gives it back, up to the
+        equation of the level.
+        """
+        functor = cls.hypergraph_equivalence()
+        return cls.Equation(functor.decode(functor(f)), f)
+
+    hypergraph_retract = hypergraph_retract.failing(
+        "The equation of a free monoidal category is syntactic and "
+        "decoding lands on any diagram of the same hypergraph, which "
+        "is the symmetric quotient: the failure survives comparing "
+        "modulo normal_form and weakening to the boundary-connected "
+        "or connected diagrams, so no subspace states it short of the "
+        "quotient of the section itself.")
+
+    @axiom
+    def hypergraph_composition(cls, f: Self):
+        """
+        The encoding preserves composition: the hypergraph of a diagram
+        is the composition of the hypergraphs of any two halves of it.
+        """
+        functor = cls.hypergraph_equivalence()
+        top, bottom = f[:len(f) // 2], f[len(f) // 2:]
+        return AbstractEquation(functor(f), functor(top) >> functor(bottom))
+
+    @axiom
+    def hypergraph_identity(cls, x: Annotated[Ty, C0]):
+        """ The encoding preserves identities. """
+        functor = cls.hypergraph_equivalence()
+        return AbstractEquation(functor(cls.id(x)), functor.cod.id(x))
+
     @axiom
     def map_hypergraph_agreement(cls, f: Self):
         """
@@ -2007,36 +2058,6 @@ class Match:
 
 
 CMap = cmap.CMap[Diagram]
-
-
-@Diagram.generator
-class ToHypergraph(cat.Equivalence):
-    """
-    The equivalence sending a diagram to its hypergraph:
-    :meth:`Diagram.to_hypergraph` is the functor and
-    :meth:`discopy.hypergraph.Hypergraph.to_diagram` its inverse, a
-    section of it. The retract holds up to the equation of the domain,
-    which is syntactic below :mod:`discopy.symmetric`, where it is
-    re-enabled.
-    """
-    dom = Diagram
-    cod = classproperty(lambda cls: hypergraph.Hypergraph[cls.dom])
-
-    def __call__(self, other):
-        if isinstance(other, self.dom):
-            return other.to_hypergraph()
-        return other
-
-    def decode(self, other):
-        return other.to_diagram()
-
-    retract = cat.Equivalence.retract.failing(
-        "The equation of a free monoidal category is syntactic and "
-        "decoding lands on any diagram of the same hypergraph, which "
-        "is the symmetric quotient: the failure survives comparing "
-        "modulo normal_form and weakening to the boundary-connected "
-        "or connected diagrams, so no subspace states it short of the "
-        "quotient of the section itself.")
 
 
 class Equation(cat.Equation, RichDisplay):

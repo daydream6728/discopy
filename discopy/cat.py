@@ -21,7 +21,6 @@ Summary
     Bubble
     Functor
     Equivalence
-    Inverse
     Transformation
     Equation
     Generator
@@ -1013,160 +1012,58 @@ class Functor(Category, Serialisable):
         return AbstractEquation(f.then(g).cod, g.cod)
 
 
-ONE_FUNCTOR = "One functor rather than a category of functors."
-
-
 class Equivalence(Functor, DaggerCategory):
     """
-    A functor with an inverse: the functor is :meth:`__call__`, the
-    inverse is :meth:`decode` and :meth:`dagger` wraps it as the
-    :class:`Inverse` functor from the codomain back, a
-    :class:`discopy.abc.DaggerCategory` whose involution holds on the
-    nose. Functors given by mappings compare unequal to the identity
-    functor (#648), so the remaining laws quantify the composites
-    pointwise: :meth:`retract` over the arrows of the domain and
-    :meth:`section` over their images, beside the :meth:`composition`
-    and :meth:`identity` the functor preserves.
+    A functor with an inverse, an instance rather than a subclass: the
+    functor applies ``encode`` to the arrows of ``dom``, letting
+    objects pass through, and :meth:`dagger` is the equivalence the
+    other way around, swapping ``encode`` and ``decode``, so the
+    involution holds by construction. Functors given by mappings
+    compare unequal to the identity functor (#648), so the laws of an
+    equivalence quantify the composites pointwise, over the arrows of
+    its domain: see e.g. :meth:`discopy.monoidal.Diagram\
+.hypergraph_equivalence` and the laws it satisfies.
 
-    A subclass names its ``dom``, its ``cod`` and its :meth:`decode`;
-    the laws of the functor category are inapplicable, one functor not
-    being a category of functors, contravariance of the dagger with
-    them.
+    Parameters:
+        encode : The action on the arrows of ``dom``.
+        decode : The action on the arrows of ``cod``, its inverse.
+        dom : The domain category.
+        cod : The codomain category.
 
     Example
     -------
     >>> from discopy.monoidal import Ty, Box, Diagram
-    >>> encode = Diagram.ToHypergraph()
+    >>> encode = Diagram.hypergraph_equivalence()
     >>> f = Box('f', Ty('x'), Ty('y'))
     >>> assert encode.dagger()(encode(f)) == f
     """
-    def decode(self, other):
-        """
-        The inverse image of an object or arrow of the codomain, to be
-        implemented by the subclass.
-
-        Parameters:
-            other : An object or arrow of the codomain.
-        """
-        raise NotImplementedError
-
-    def dagger(self) -> Functor:
-        """ The inverse, as the functor calling :meth:`decode`. """
-        return Inverse(self)
-
-    @classmethod
-    def strategy(cls, *, dom=None, cod=None, **params):
-        """
-        The one functor of the class, when it decodes and its domain
-        freely generates the arrows the laws quantify over: the matrix
-        keeps to the free categories, so an equivalence over a fixed
-        vocabulary is left unchecked like the vocabulary itself.
-        """
-        from hypothesis import strategies as st
-
-        from discopy.search import Constant
-
-        if cls.decode is Equivalence.decode:
-            raise NotImplementedError(
-                f"{cls.__name__} does not implement decode.")
-        if any(isinstance(rule, Constant) for rule
-               in dict(getattr(cls.dom, "generators", {})).values()):
-            raise NotImplementedError(
-                f"{cls.dom.__name__} draws from a fixed vocabulary.")
-        cls.dom.strategy()
-        return st.just(cls())
-
-    def __reduce__(self):
-        """ An equivalence is determined by its class, so it pickles as
-        the class alone: its codomain is a parameterised class that does
-        not pickle by reference. """
-        return (type(self), ())
-
-    @axiom
-    def retract(cls, functor: Self, f: Annotated[Any, In1]):
-        """
-        The inverse after the functor is the identity, up to the
-        equation of the domain category.
-        """
-        return functor.dom.Equation(functor.dagger()(functor(f)), f)
-
-    @axiom
-    def section(cls, functor: Self, f: Annotated[Any, In1]):
-        """
-        The functor after its inverse is the identity on its image.
-        """
-        image = functor(f)
-        return AbstractEquation(functor(functor.dagger()(image)), image)
-
-    @axiom
-    def composition(cls, functor: Self, f: Annotated[Any, In1]):
-        """
-        The functor preserves composition: the image of an arrow is the
-        composition of the images of any two halves of it.
-        """
-        top, bottom = f[:len(f) // 2], f[len(f) // 2:]
-        return AbstractEquation(
-            functor(f), functor(top) >> functor(bottom))
-
-    @axiom
-    def identity(cls, functor: Self, x: Annotated[Any, In0]):
-        """ The functor preserves identities. """
-        return AbstractEquation(
-            functor(functor.dom.id(x)), functor.cod.id(functor(x)))
-
-    identity_typing = Functor.identity_typing.inapplicable(ONE_FUNCTOR)
-
-    associativity = Functor.associativity.inapplicable(ONE_FUNCTOR)
-
-    composition_dom_typing = \
-        Functor.composition_dom_typing.inapplicable(ONE_FUNCTOR)
-
-    composition_cod_typing = \
-        Functor.composition_cod_typing.inapplicable(ONE_FUNCTOR)
-
-    unitality = Functor.unitality.inapplicable(ONE_FUNCTOR)
-
-    dagger_involution = DaggerCategory.dagger_involution.inapplicable(
-        "The dagger of the inverse is the equivalence itself by "
-        "construction, see :meth:`Inverse.dagger`.")
-
-    dagger_contravariance = \
-        DaggerCategory.dagger_contravariance.inapplicable(ONE_FUNCTOR)
-
-    def __hash__(self):
-        return hash(type(self))
-
-
-class Inverse(Functor):
-    """
-    The inverse of an :class:`Equivalence`, the functor from its
-    codomain given by :meth:`Equivalence.decode`.
-
-    Parameters:
-        inverse : The equivalence this functor inverts.
-    """
-    #: One functor rather than a category of functors: the inherited
-    #: relabelling strategy generates the wrong terms.
+    #: The laws of an equivalence are stated on the category that
+    #: builds the instance, not on this class.
     strategy = no_strategy
 
-    def __init__(self, inverse: Equivalence):
-        self.inverse = inverse
-        super().__init__(dom=inverse.cod, cod=inverse.dom)
+    def __init__(self, encode: Callable, decode: Callable,
+                 dom: type, cod: type):
+        self.encode, self.decode = encode, decode
+        self.dom, self.cod = dom, cod  # ty: ignore[invalid-assignment]
 
     def __call__(self, other):
-        return self.inverse.decode(other)
+        return self.encode(other) if isinstance(other, self.dom)\
+            else other
 
-    def dagger(self) -> Equivalence:
-        return self.inverse
+    def dagger(self) -> Self:
+        return type(self)(self.decode, self.encode, self.cod, self.dom)
 
     def __eq__(self, other):
-        return isinstance(other, Inverse) and self.inverse == other.inverse
+        return isinstance(other, Equivalence)\
+            and (self.encode, self.decode, self.dom, self.cod)\
+            == (other.encode, other.decode, other.dom, other.cod)
 
     def __hash__(self):
-        return hash((type(self), self.inverse))
+        return hash((self.encode, self.decode, self.dom, self.cod))
 
     def __repr__(self):
-        return f"{self.inverse!r}.dagger()"
+        return factory_name(type(self)) + (
+            f"({self.encode.__qualname__}, {self.decode.__qualname__})")
 
 
 @factory

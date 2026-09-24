@@ -1062,7 +1062,5 @@ TermBase, Constant, Variable, Application, Abstraction = (
     Circuit.Application, Circuit.Abstraction)
 Layer = Circuit.Layer
 Id = Circuit.id
-ToHypergraph = Circuit.ToHypergraph
-ToMap = Circuit.ToMap
 
 

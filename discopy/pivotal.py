@@ -204,6 +204,14 @@ class Diagram(rigid.Diagram, traced.Diagram, PivotalCategory):
 
     trace_superposing_right = TracedCategory.trace_superposing_right
 
+    hypergraph_section = monoidal.Diagram.hypergraph_section.failing(
+        "Decoding a cup or cap can cross wires, which needs swaps the "
+        "category does not have.")
+
+    #: A pivotal hypergraph encodes a cup and a cap of either
+    #: orientation, so the composition law comes back.
+    hypergraph_composition = monoidal.Diagram.hypergraph_composition
+
     map_hypergraph_agreement = monoidal.Diagram.map_hypergraph_agreement\
         .weaken(boundary_connected=True)
 
@@ -294,21 +302,6 @@ TermBase, Constant, Variable, Application, Abstraction = (
     Diagram.Application, Diagram.Abstraction)
 Layer = Diagram.Layer
 Id = Diagram.id
-
-
-@Diagram.generator
-class ToHypergraph(rigid.ToHypergraph):
-    """
-    A :class:`rigid.ToHypergraph` of pivotal diagrams, which encodes a
-    cup and a cap of either orientation, so the functor laws come back.
-    """
-    dom = Diagram
-
-    section = monoidal.ToHypergraph.section.failing(
-        "Decoding a cup or cap can cross wires, which needs swaps the "
-        "category does not have.")
-
-    composition = monoidal.ToHypergraph.composition
 
 
 class Equation(rigid.Equation):
