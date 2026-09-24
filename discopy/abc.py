@@ -327,7 +327,7 @@ class ColouredMonoid[C0, C1: ColouredMonoid](Category[C0, C1]):
         """
         return (
             other if isinstance(other, cls)  # ty: ignore[invalid-return-type]
-            else cls.id(other))  # ty: ignore[invalid-argument-type]
+            else cls.id(other))
 
     def __matmul__(self, other):
         return self.tensor(other)
