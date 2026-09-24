@@ -99,15 +99,15 @@ from collections.abc import Sequence
 from typing import Annotated, Any
 
 from discopy import cat, monoidal, balanced, hypergraph, cmap, messages
-from discopy.abc import MonoidalCategory, SymmetricCategory
+from discopy.abc import BraidedCategory, MonoidalCategory, SymmetricCategory
 from discopy.axioms import (
     SELF, Atom, Equation, Hom, Tensor, axiom, generator)
 from discopy.cat import factory, Generator
 from discopy.monoidal import Wire, Ty, Nat  # noqa: F401
 from discopy.python import finset
 from discopy.utils import (
-    AxiomError, assert_iscomposable, classproperty, factory_name,
-    from_tree)
+    AxiomError, assert_iscomposable, assert_isatomic, classproperty,
+    factory_name, from_tree)
 
 
 class Layer(monoidal.Layer):
@@ -357,6 +357,7 @@ class Diagram(balanced.Diagram, SymmetricCategory):
         >>> x, y, z = Ty('x'), Ty('y'), Ty('z')
         >>> assert Diagram.cycle(x, y @ z) == Permutation(x @ y @ z, [1, 2, 0])
         """
+        assert_isatomic(x, cls.ob)
         return cls.from_permutation([*range(1, len(a) + 1), 0], x @ a)
 
     @classmethod
@@ -443,6 +444,10 @@ class Diagram(balanced.Diagram, SymmetricCategory):
     bifunctoriality = MonoidalCategory.bifunctoriality
 
     dagger_monoidality = MonoidalCategory.dagger_monoidality
+
+    #: A free braid is a box, but the braid of a symmetric category is
+    #: its swap, whose naturality holds in the hypergraph quotient.
+    braid_naturality = BraidedCategory.braid_naturality
 
 
 Box = Diagram.Box

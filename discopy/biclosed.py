@@ -158,10 +158,6 @@ class Ty(monoidal.Ty):
             return self.Abstraction(var, arg(var), left)
         raise ValueError
 
-    def __repr__(self):
-        return factory_name(type(self))\
-            + f"({', '.join(map(repr, self.inside))})"
-
     @property
     def is_exp(self):
         """
@@ -397,11 +393,20 @@ class Diagram(monoidal.Diagram, BiclosedCategory):
     dagger_monoidality = BiclosedCategory.dagger_monoidality.inapplicable(
         "A curried diagram has no dagger.")
 
+    map_hypergraph_agreement = \
+        monoidal.Diagram.map_hypergraph_agreement.failing(
+            "Mapping a curry bubble decodes the map of its inside, which "
+            "re-whiskers its states, reorders its independent boxes and "
+            "can ask a planar category for swaps, while the hypergraph "
+            "of a bubble compares its inside syntactically.")
+
     currying_left = BiclosedCategory.currying_left.failing(
-        "Currying does not evaluate back (#562).")
+        "A free currying is a bubble, equal to its evaluation only "
+        "semantically.")
 
     currying_right = BiclosedCategory.currying_right.failing(
-        "Currying does not evaluate back (#562).")
+        "A free currying is a bubble, equal to its evaluation only "
+        "semantically.")
 
 
 Box = Diagram.Box

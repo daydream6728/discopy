@@ -130,6 +130,12 @@ class Diagram(symmetric.Diagram, MarkovCategory):
         "A copy does not unpickle, its __new__ wanting its type (#742).")
     copying = Serialisable.copying.failing(
         "A copy does not deep-copy, its __new__ wanting its type (#742).")
+    repr_transparency = Serialisable.repr_transparency.failing(
+        "The generic representation of a copy does not read back, its "
+        "__new__ wanting its type (#742).")
+    serialisation = Serialisable.serialisation.failing(
+        "The generic tree of a copy does not read back, its __new__ "
+        "wanting its type (#742).")
 
     @Generator.classmethod
     def Spider(cls, n_legs_in, n_legs_out, typ, phase=None):

@@ -225,6 +225,7 @@ class Algebra(Functor):
         cod (Operad) : The codomain of the algebra.
     """
     dom = cod = Operad()
+    strategy = no_strategy
 
     def __call__(self, other):
         if isinstance(other, Id):

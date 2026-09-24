@@ -107,6 +107,11 @@ class Diagram(markov.Diagram, biclosed.Diagram, ClosedCategory):
     #: :class:`markov.Diagram` re-enables the law that :mod:`biclosed`
     #: declares inapplicable, so a closed diagram declares it again.
     dagger_monoidality = biclosed.Diagram.dagger_monoidality
+
+    staircase_encoding = monoidal.Diagram.staircase_encoding.failing(
+        "The staircase encoding decomposes the permutations inside a "
+        "curry bubble into swaps, which the hypergraph of a bubble "
+        "compares syntactically.")
     Eval: ClassVar[Generator]
     Functor: ClassVar[Generator]
     TermBase: ClassVar[Generator]
