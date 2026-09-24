@@ -1085,6 +1085,14 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   raised `AxiomError` (#606) — the joining law then holds by
   construction, so `feedback.Diagram.feedback_joining` is checked
   again and its counterexample record is gone.
+- `Diagram.foliation` merges the layers of its hypergraph fast path:
+  reading the foliation off the hypergraph in one pass over the
+  boundary can leave two mergeable layers apart — a state and an
+  effect on independent wires — which a second foliation then merged,
+  so the foliation was not idempotent. The fast path now runs
+  `merge_layers` on what it reads off, which is a fixpoint — found by
+  the `foliation_idempotence` cell of the matrix on a Markov diagram
+  whose one-legged copy the quotient erases.
 - `ribbon.Braid.rotate` of a dagger braid swapped the rotated boundary,
   building the dagger of the rotation of the underlying braid: the
   rotation of `Braid(l, r, is_dagger)` is `Braid(l.r, r.r, is_dagger)`,

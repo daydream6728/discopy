@@ -1325,7 +1325,7 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
                 and graph.is_boundary_connected and all(
                     getattr(obj, "l", obj) == getattr(obj, "r", obj)
                     for obj in graph.spider_types):
-            return graph.to_diagram()
+            return graph.to_diagram().merge_layers()
         return self.merge_layers()
 
     def merge_layers(self):
