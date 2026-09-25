@@ -35,6 +35,7 @@ from discopy.quantum.gates import (
 from discopy.quantum.gates import Scalar as GatesScalar
 from discopy.rigid import Sum, Nat
 from discopy.utils import factory_name
+from discopy.search import rule
 
 
 @factory
@@ -45,6 +46,7 @@ class Diagram(tensor.Diagram[complex]):
     Swap: ClassVar[Generator]
 
     @staticmethod
+    @rule
     def swap(left, right):
         left = left if isinstance(left, Nat) else Nat(left)
         right = right if isinstance(right, Nat) else Nat(right)

@@ -83,7 +83,7 @@ from typing import ClassVar
 
 from discopy import pivotal, balanced
 from discopy.abc import RibbonCategory
-from discopy.axioms import Serialisable
+from discopy.axioms import Serialisable, rule
 from discopy.cat import factory, Generator
 from discopy.pivotal import Ty, Nat  # noqa: F401
 
@@ -104,10 +104,12 @@ class Diagram(pivotal.Diagram, balanced.Diagram, RibbonCategory):
     serialisation = Serialisable.serialisation.failing(
         "The generic tree of a twist does not read back (#742).")
 
+    @rule
     def trace_left(self, n=1):
         """ The trace of ``n`` wires on the left, see :meth:`trace`. """
         return self.trace(n, left=True)
 
+    @rule
     def trace_right(self, n=1):
         """ The trace of ``n`` wires on the right, see :meth:`trace`. """
         return self.trace(n)

@@ -129,7 +129,7 @@ from typing import ClassVar
 
 from discopy import monoidal, cmap, hypergraph
 from discopy.abc import TracedCategory
-from discopy.axioms import Serialisable
+from discopy.axioms import Serialisable, rule
 from discopy.cat import factory, Generator
 from discopy.monoidal import Ty  # noqa: F401
 from discopy.utils import (
@@ -159,6 +159,7 @@ class Diagram(monoidal.Diagram, TracedCategory):
     serialisation = Serialisable.serialisation.failing(
         "The generic tree of a trace does not read back (#742).")
 
+    @rule
     def trace_left(self, n=1):
         """
         Feed ``n`` outputs on the left back into inputs.
@@ -181,6 +182,7 @@ class Diagram(monoidal.Diagram, TracedCategory):
         return self if n == 0\
             else self.Trace(self, left=True).trace_left(n - 1)
 
+    @rule
     def trace_right(self, n=1):
         """
         Feed ``n`` outputs on the right back into inputs.

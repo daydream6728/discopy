@@ -166,6 +166,7 @@ from dataclasses import dataclass
 from discopy import symmetric
 from discopy.abc import MonoidalCategory, NamedGeneric
 from discopy.python import finset
+from discopy.search import rule
 from discopy.utils import (
     AxiomError,
     assert_isinstance, unbiased, inductive, classproperty, factory_name)
@@ -467,6 +468,7 @@ class Stream[category](MonoidalCategory, NamedGeneric):
         return type(self)(now, dom, cod, mem, _later=lambda: later.later)
 
     @classmethod
+    @rule
     def id(cls, x: Optional[Ty] = None) -> Stream:
         """
         Construct a stream of identity arrows.
@@ -483,6 +485,7 @@ class Stream[category](MonoidalCategory, NamedGeneric):
         _later = None if x.is_constant else lambda: cls.id(x.later)
         return cls(now, dom, cod, _later=_later)
 
+    @rule
     @unbiased
     def then(self, other: Stream) -> Stream:
         """
@@ -508,6 +511,7 @@ class Stream[category](MonoidalCategory, NamedGeneric):
             lambda: self.later >> other.later)
         return type(self)(now, dom, cod, mem, _later)
 
+    @rule
     @unbiased
     def tensor(self, other: Stream) -> Stream:
         """

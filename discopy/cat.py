@@ -93,6 +93,7 @@ from discopy.axioms import (
     Equation as AbstractEquation,
     axiom,
     no_strategy,
+    rule,
 )
 from discopy.utils import (  # noqa: F401
     factory,
@@ -198,11 +199,13 @@ class FreeCategory(Category):
                     previous, cod, previous, cod))
 
     @classmethod
+    @rule
     def id(cls, dom=None):
         """The identity path on ``dom``, with no generators inside."""
         dom = cls.ob() if dom is None else dom
         return cls.ar(inside=(), dom=dom, cod=dom, _scan=False)
 
+    @rule
     def then(self, *others):
         inside, dom, cod = self.inside, self.dom, self.cod
         for other in others:
@@ -413,6 +416,7 @@ class Arrow(FreeCategory, DaggerCategory, Serialisable):
     def __hash__(self):
         return hash(self.setoid())
 
+    @rule
     def then(self, *others: Arrow) -> Arrow:
         """
         Sequential composition, called with :code:`>>` and :code:`<<`.
@@ -688,6 +692,7 @@ class Sum(Box):
     def __len__(self):
         return len(self.terms)
 
+    @rule
     @unbiased
     def then(self, other):
         other = other if isinstance(other, Sum)\
@@ -843,6 +848,7 @@ class Functor(Category, Serialisable):
     dom = cod = Arrow
 
     @classmethod
+    @rule
     def id(cls, dom: type | None = None) -> Functor:
         """
         The identity functor on a given category ``dom``.
@@ -852,6 +858,7 @@ class Functor(Category, Serialisable):
         """
         return cls(lambda x: x, lambda f: f, dom=dom, cod=dom)
 
+    @rule
     def then(self, other: Functor) -> Functor:
         """
         The composition of functor with another.
@@ -1130,6 +1137,7 @@ class Transformation(Category):
         return component
 
     @classmethod
+    @rule
     def id(cls, dom: Functor) -> Transformation:
         """
         The identity transformation on a given functor ``dom``, i.e. the
@@ -1150,6 +1158,7 @@ class Transformation(Category):
         """
         return cls(lambda x: dom.cod.id(dom(x)), dom, dom)
 
+    @rule
     def then(self, other: Transformation) -> Transformation:
         """
         The vertical composition of a transformation with another.

@@ -71,7 +71,7 @@ from typing import ClassVar
 
 from collections.abc import Mapping
 
-from discopy import axioms, messages, tensor, frobenius
+from discopy import messages, tensor, frobenius
 from discopy.axioms import Rule, no_strategy, rule
 from discopy.cat import factory, Generator
 from discopy.matrix import backend
@@ -212,8 +212,7 @@ class Circuit(tensor.Diagram[complex]):
         """
         from discopy.quantum.gates import GATES
 
-        structure = axioms.declarations(cls, axioms.Generator)
-        return {"id": structure["id"], "braid": structure["braid"],
+        return {"id": cls.rules["id"], "braid": cls.rules["braid"],
                 **{name: Rule.constant(gate) for name, gate in GATES.items()
                    if not isinstance(gate, type)}}
 
@@ -236,12 +235,13 @@ class Circuit(tensor.Diagram[complex]):
             cls, dom=dom, cod=dom if cod is None else cod,
             boundary_connected=True, **params)
 
-    trace_left = rule(tensor.Diagram.trace_left).inapplicable(
+    trace_left = tensor.Diagram.trace_left.inapplicable(
         "A trace unfolds into kets and bras.")
-    trace_right = rule(tensor.Diagram.trace_right).inapplicable(
+    trace_right = tensor.Diagram.trace_right.inapplicable(
         "A trace unfolds into kets and bras.")
 
     @classmethod
+    @rule
     def id(cls, dom: int | Ty | None = None):
         """
         The identity circuit on a given domain.

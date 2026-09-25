@@ -80,7 +80,7 @@ from typing import ClassVar
 
 from discopy import symmetric, monoidal, cmap, hypergraph
 from discopy.abc import MarkovCategory
-from discopy.axioms import Serialisable
+from discopy.axioms import Serialisable, rule
 from discopy.cat import factory, Generator
 from discopy.monoidal import Ty  # noqa: F401
 from discopy.utils import assert_isatomic, factory_name
@@ -145,6 +145,7 @@ class Diagram(symmetric.Diagram, MarkovCategory):
             else cls.Merge(typ, n_legs_in)
 
     @classmethod
+    @rule
     def copy(cls, x: monoidal.Ty, n=2) -> Diagram:
         """
         Make :code:`n` copies of a given type :code:`x`.
@@ -158,6 +159,7 @@ class Diagram(symmetric.Diagram, MarkovCategory):
             cls, 1, n, x)  # ty: ignore[invalid-argument-type]
 
     @classmethod
+    @rule
     def merge(cls, x: monoidal.Ty, n=2) -> Diagram:
         """
         Merge :code:`n` copies of a given type :code:`x`.

@@ -67,7 +67,7 @@ from collections.abc import Callable
 from discopy import (
     monoidal, rigid, markov, compact, pivotal, cmap, hypergraph)
 from discopy.abc import HypergraphCategory
-from discopy.axioms import Serialisable
+from discopy.axioms import Serialisable, rule
 from discopy.cat import factory, Generator
 from discopy.utils import assert_isatomic, factory_name
 
@@ -147,10 +147,12 @@ class Diagram(compact.Diagram, markov.Diagram, HypergraphCategory):
     Functor: ClassVar[Generator]
 
     @classmethod
+    @rule
     def caps(cls, left, right):
         return cls.cups(left, right).dagger()
 
     @classmethod
+    @rule
     def spiders(cls, n_legs_in: int, n_legs_out: int, typ: Ty, phases=None
                 ) -> Diagram:
         """

@@ -58,6 +58,7 @@ from discopy.abc import (
 )
 from discopy.cat import Ob
 from discopy.python.finset import Permutation
+from discopy.search import rule
 from discopy.utils import (
     AxiomError,
     assert_isatomic,
@@ -744,6 +745,7 @@ class CMap[category: Diagram](CompactCategory, DaggerCategory,
             self.dom, self.cod, self.boxes, self.edges, self.loops))
 
     @classmethod
+    @rule
     def id(cls, dom=None) -> CMap:
         """ The identity map, with each input wired to its output. """
         dom = cls.ob() if dom is None else dom
@@ -880,6 +882,7 @@ class CMap[category: Diagram](CompactCategory, DaggerCategory,
             for box, offset in layer.boxes_and_offsets])
 
     @classmethod
+    @rule
     def swap(cls, left: Ty, right: Ty) -> CMap:
         """ The symmetry encoded as boundary wiring. """
         dom, cod = left @ right, right @ left
@@ -899,6 +902,7 @@ class CMap[category: Diagram](CompactCategory, DaggerCategory,
         cls.category.Cap(left, right)))
 
     @classmethod
+    @rule
     def cups(cls, left: Ty, right: Ty) -> CMap:
         """ A cup encoded as boundary wiring between adjoint types. """
         assert_isinstance(left, Pregroup)
@@ -911,6 +915,7 @@ class CMap[category: Diagram](CompactCategory, DaggerCategory,
         return cls(left @ right, cls.ob(), (), edge, check=False)
 
     @classmethod
+    @rule
     def caps(cls, left: Ty, right: Ty) -> CMap:
         """ A cap encoded as boundary wiring between adjoint types. """
         assert_isinstance(left, Pregroup)
@@ -938,11 +943,13 @@ class CMap[category: Diagram](CompactCategory, DaggerCategory,
         return cls.copy(typ, 0)
 
     @classmethod
+    @rule
     def ev_left(cls, base, exponent):
         """ The left evaluation, see :meth:`ev`. """
         return cls.ev(base, exponent, left=True)
 
     @classmethod
+    @rule
     def ev_right(cls, base, exponent):
         """ The right evaluation, see :meth:`ev`. """
         return cls.ev(base, exponent, left=False)
@@ -959,10 +966,12 @@ class CMap[category: Diagram](CompactCategory, DaggerCategory,
                     RigidCategory.ev_right.__func__(cls, base, exponent))
         return cls.from_box(cls.category.ev(base, exponent, left))
 
+    @rule
     def curry_left(self, n=1):
         """ The left currying of ``n`` objects, see :meth:`curry`. """
         return self.curry(n, left=True)
 
+    @rule
     def curry_right(self, n=1):
         """ The right currying of ``n`` objects, see :meth:`curry`. """
         return self.curry(n, left=False)
@@ -1053,6 +1062,7 @@ class CMap[category: Diagram](CompactCategory, DaggerCategory,
         return cls.from_box(cls.category.spiders(
             n_legs_in, n_legs_out, typ, phases))
 
+    @rule
     @unbiased
     def then(self, other: CMap) -> CMap:
         """
@@ -1083,10 +1093,12 @@ class CMap[category: Diagram](CompactCategory, DaggerCategory,
         return type(self)(
             dom, cod, boxes, edge, loops=loops, check=False)
 
+    @rule
     def trace_left(self, n=1):
         """ The trace of ``n`` wires on the left, see :meth:`trace`. """
         return self.trace(n, left=True)
 
+    @rule
     def trace_right(self, n=1):
         """ The trace of ``n`` wires on the right, see :meth:`trace`. """
         return self.trace(n)
@@ -1125,6 +1137,7 @@ class CMap[category: Diagram](CompactCategory, DaggerCategory,
         return type(self)(
             dom, cod, self.boxes, edge, loops=loops, check=False)
 
+    @rule
     @unbiased
     def tensor(self, other: CMap) -> CMap:
         """ Tensor product given by disjoint union of the two maps. """

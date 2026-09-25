@@ -367,11 +367,6 @@ class Diagram(markov.Diagram, FeedbackCategory):
     .. image:: /_static/feedback/feedback-random-walk.svg
         :align: center
     """
-    trace = rule(markov.Diagram.trace).inapplicable(
-        "A feedback category feeds back rather than traces: the trace a "
-        "feedback diagram inherits from markov builds a markov.Trace that "
-        "is not a feedback diagram.")
-
     staircase_encoding = monoidal.Diagram.staircase_encoding.failing(
         "The staircase encoding decomposes the permutations inside a "
         "trace or feedback bubble, which the hypergraph of a bubble "
@@ -400,6 +395,7 @@ class Diagram(markov.Diagram, FeedbackCategory):
         inside = tuple(box.delay(n_steps) for box in self.inside)
         return type(self)(inside, dom, cod, _scan=False)
 
+    @rule
     def feedback_left(self, dom=None, cod=None, mem=None):
         """
         A :class:`Feedback` of the memory on the left, wire by wire: the
@@ -410,6 +406,7 @@ class Diagram(markov.Diagram, FeedbackCategory):
         return self if not mem\
             else self.feedback_left(mem=mem[:1]).feedback_left(mem=mem[1:])
 
+    @rule
     def feedback_right(self, dom=None, cod=None, mem=None):
         """
         A :class:`Feedback` of the memory on the right, wire by wire: the

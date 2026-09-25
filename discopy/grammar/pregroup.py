@@ -37,7 +37,7 @@ Summary
 from typing import ClassVar
 
 from discopy import axioms, rigid, frobenius, messages
-from discopy.axioms import Rule, no_strategy, rule
+from discopy.axioms import Rule, no_strategy
 from discopy.cat import factory, Generator
 from discopy.utils import AxiomError, classproperty
 from discopy.grammar import thue
@@ -119,8 +119,7 @@ class Diagram(frobenius.Diagram):
         grammatical sentences; a grammar assigns its own words, see
         :attr:`discopy.abc.Category.generators`.
         """
-        structure = axioms.declarations(cls, axioms.Generator)
-        return {"id": structure["id"], "cups": structure["cups"],
+        return {"id": cls.rules["id"], "cups": cls.rules["cups"],
                 **{word.name: Rule.constant(word) for word in VOCABULARY}}
 
     @classmethod
@@ -155,9 +154,9 @@ class Diagram(frobenius.Diagram):
 
         return sentences()
 
-    trace_left = rule(frobenius.Diagram.trace_left).inapplicable(
+    trace_left = frobenius.Diagram.trace_left.inapplicable(
         "No loop in a sentence.")
-    trace_right = rule(frobenius.Diagram.trace_right).inapplicable(
+    trace_right = frobenius.Diagram.trace_right.inapplicable(
         "No loop in a sentence.")
 
     def normal_form(self, **params):

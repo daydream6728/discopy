@@ -84,7 +84,7 @@ from inspect import signature
 from typing import Callable, ClassVar, Self, overload
 
 from discopy import monoidal, cmap
-from discopy.axioms import Serialisable, no_strategy
+from discopy.axioms import Serialisable, no_strategy, rule
 from discopy.abc import BiclosedCategory, DaggerCategory
 from discopy.drawing import Drawing
 from discopy.cat import factory, Generator
@@ -323,10 +323,12 @@ class Diagram(monoidal.Diagram, BiclosedCategory):
     Application: ClassVar[Generator]
     Abstraction: ClassVar[Generator]
 
+    @rule
     def curry_left(self, n=1):
         """ The left currying of ``n`` objects, see :meth:`curry`. """
         return self.curry(n, left=True)
 
+    @rule
     def curry_right(self, n=1):
         """ The right currying of ``n`` objects, see :meth:`curry`. """
         return self.curry(n, left=False)
@@ -343,11 +345,13 @@ class Diagram(monoidal.Diagram, BiclosedCategory):
         return self.Curry(self, n, left)
 
     @classmethod
+    @rule
     def ev_left(cls, base, exponent):
         """ The left evaluation, see :meth:`ev`. """
         return cls.ev(base, exponent, left=True)
 
     @classmethod
+    @rule
     def ev_right(cls, base, exponent):
         """ The right evaluation, see :meth:`ev`. """
         return cls.ev(base, exponent, left=False)

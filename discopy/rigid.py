@@ -154,7 +154,7 @@ from typing import Any, ClassVar, Iterator, Self
 
 from discopy import cat, monoidal, biclosed, messages
 from discopy.abc import DaggerCategory, Pregroup, RigidCategory
-from discopy.axioms import GENERATORS, Serialisable
+from discopy.axioms import GENERATORS, Serialisable, rule
 from discopy.cat import factory, Generator
 from discopy.utils import (
     assert_isatomic,
@@ -416,6 +416,7 @@ class Diagram(biclosed.Diagram, RigidCategory):
     Functor: ClassVar[Generator]
 
     @classmethod
+    @rule
     def cups(cls, left: Ty, right: Ty) -> Diagram:
         """
         Construct a diagram of nested cups for types ``left`` and ``right``.
@@ -436,6 +437,7 @@ class Diagram(biclosed.Diagram, RigidCategory):
         return nesting(cls, cls.Cup)(left, right)
 
     @classmethod
+    @rule
     def caps(cls, left: Ty, right: Ty) -> Diagram:
         """
         Construct a diagram of nested caps for types ``left`` and ``right``.

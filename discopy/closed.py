@@ -58,6 +58,7 @@ from dataclasses import dataclass
 from typing import ClassVar, Dict
 
 from discopy import cat, monoidal, biclosed, markov, cmap, hypergraph
+from discopy.search import rule
 from discopy.abc import ClosedCategory
 from discopy.cat import factory, Generator
 
@@ -130,11 +131,13 @@ class Diagram(markov.Diagram, biclosed.Diagram, ClosedCategory):
         return not any(isinstance(box, markov.Copy) for box in self.boxes)
 
     @classmethod
+    @rule
     def ev_left(cls, base, exponent):
         """ The left evaluation, see :meth:`ev`. """
         return cls.ev(base, exponent, left=True)
 
     @classmethod
+    @rule
     def ev_right(cls, base, exponent):
         """ The right evaluation, see :meth:`ev`. """
         return cls.ev(base, exponent, left=False)

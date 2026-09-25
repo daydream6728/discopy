@@ -24,6 +24,7 @@ from dataclasses import dataclass
 
 from discopy import messages
 from discopy.abc import MonoidalCategory, PROP, Nat
+from discopy.search import rule
 
 
 @dataclass
@@ -72,14 +73,17 @@ class Function(MonoidalCategory, Sequence):
         return len(self.cod)
 
     @staticmethod
+    @rule
     def id(x: int | Nat = 0):
         x = Nat(int(x))
         return Function(list(range(x)), x, x)
 
+    @rule
     def then(self, other: Function) -> Function:
         inside = [self[other[i]] for i in range(len(other))]
         return Function(inside, self.dom, other.cod)
 
+    @rule
     def tensor(self, other: Function) -> Function:
         inside = list(self.inside) + [
             int(self.dom) + other[i] for i in range(len(other))]
@@ -87,6 +91,7 @@ class Function(MonoidalCategory, Sequence):
             inside, self.dom.tensor(other.dom), self.cod.tensor(other.cod))
 
     @staticmethod
+    @rule
     def swap(x: int | Nat, y: int | Nat) -> Function:
         m, n = int(x), int(y)
         inside = list(Permutation.swap(m, n))
@@ -179,6 +184,7 @@ class Permutation(Function, PROP):
         return hash(tuple(self))
 
     @classmethod
+    @rule
     def id(cls, dom: int | Nat = 0) -> Self:
         """ The identity permutation on ``range(size)``. """
         n = int(dom)
@@ -246,6 +252,7 @@ class Permutation(Function, PROP):
             i = self[i]
         return tuple(cycle)
 
+    @rule
     def then(self, other: Self) -> Self:
         """ Return ``self ; other``, i.e. ``result[i] == other[self[i]]``. """
         other = type(self)(other, len(self))
@@ -269,6 +276,7 @@ class Permutation(Function, PROP):
         other = type(self)(other, len(self))
         return other.dagger().then(self).then(other)
 
+    @rule
     def tensor(self, other=None, *others) -> Self:
         """ Return the disjoint union of permutations. """
         if other is None:
@@ -325,6 +333,7 @@ class Permutation(Function, PROP):
         return component_of
 
     @classmethod
+    @rule
     def swap(cls, left: int | Nat, right: int | Nat) -> Self:
         m, n = int(left), int(right)
         inside = tuple(

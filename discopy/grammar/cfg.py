@@ -38,7 +38,7 @@ The axioms of multicategories (aka operads) hold on the nose.
 from typing import TYPE_CHECKING
 
 from discopy import monoidal
-from discopy.axioms import no_strategy
+from discopy.axioms import no_strategy, rule
 from discopy.cat import factory, Functor
 from discopy.grammar import thue
 from discopy.monoidal import Ty
@@ -103,6 +103,7 @@ class Tree:
         raise NotImplementedError()
 
     @staticmethod
+    @rule
     def id(dom):
         return Id(dom)
 

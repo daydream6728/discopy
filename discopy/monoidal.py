@@ -67,7 +67,7 @@ from discopy import abc, cat, drawing, hypergraph, cmap, messages
 from discopy.abc import (
     ColouredMonoid, Monoid, MonoidalCategory, NamedGeneric)
 from discopy.axioms import (
-    C0, GENERATORS, Serialisable, no_strategy, search,
+    C0, GENERATORS, Serialisable, no_strategy, rule, search,
     Equation as AbstractEquation, axiom)
 from discopy.drawing import Drawing
 from discopy.config import (
@@ -387,7 +387,7 @@ class Ty(cat.Ob, cat.FreeCategory, ColouredMonoid):
             return NotImplemented  # This allows whiskering on the left.
         return cat.FreeCategory.then(self, *others)
 
-    then = tensor
+    then = rule(tensor)
 
     def __pow__(self, n_times: int) -> Self:
         assert_isinstance(n_times, int)
@@ -594,7 +594,7 @@ class Nat(abc.Nat, Ty):
             assert_isinstance(other, self.factory)
         return self.factory(self.n + sum(other.n for other in others))
 
-    then = tensor
+    then = rule(tensor)
 
     def __repr__(self):
         return factory_name(type(self)) + f"({self.n})"
@@ -1102,6 +1102,7 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
 
         return decorator
 
+    @rule
     def tensor(
             self, other: Diagram | None = None, *others: Diagram) -> Diagram:
         """
@@ -1806,6 +1807,7 @@ class Sum(cat.Sum, Box):
     def size(self):
         return 1
 
+    @rule
     def tensor(self, other=None, *others):
         if other is None or others:
             return Diagram.tensor(self, other, *others)
@@ -1968,9 +1970,11 @@ class Functor(cat.Functor):
         self.colour_map = MappingOrCallable(colour_map or {})
 
     @classmethod
+    @rule
     def id(cls, dom=None):
         return cls(lambda x: x, lambda f: f, dom=dom, cod=dom)
 
+    @rule
     def then(self, other):
         assert_isinstance(other, Functor)
         assert_iscomposable(self, other)

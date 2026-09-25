@@ -77,6 +77,7 @@ from discopy import (
 from discopy.abc import RibbonCategory, TracedCategory, NamedGeneric
 from discopy.cat import assert_iscomposable
 from discopy.python import finset
+from discopy.search import rule
 from discopy.utils import (
     factory, Generator, classproperty, unbiased, assert_isinstance,
     factory_name)
@@ -201,6 +202,7 @@ class Diagram[natural](RibbonCategory, NamedGeneric):
                 cod.positive @ dom.negative, inside.cod))
         self.inside, self.dom, self.cod = inside, dom, cod
 
+    @rule
     @unbiased
     def then(self, other: Diagram):
         """
@@ -256,6 +258,7 @@ class Diagram[natural](RibbonCategory, NamedGeneric):
         return type(self)(inside, dom, cod)
 
     @classmethod
+    @rule
     def id(cls, dom: Ty | None = None) -> Diagram:
         """
         The identity on an integer type.
@@ -287,6 +290,7 @@ class Diagram[natural](RibbonCategory, NamedGeneric):
         inside = cls.natural.id(positive) @ cls.natural.twist(negative)
         return cls(inside, dom, dom)
 
+    @rule
     @unbiased
     def tensor(self, other):
         """
@@ -319,6 +323,7 @@ class Diagram[natural](RibbonCategory, NamedGeneric):
         return type(self)(inside, self.dom @ other.dom, self.cod @ other.cod)
 
     @classmethod
+    @rule
     def braid(cls, left: Ty, right: Ty) -> Diagram:
         """
         The braid of integer diagrams is given by the following diagram:
@@ -361,6 +366,7 @@ class Diagram[natural](RibbonCategory, NamedGeneric):
         return cls(inside, dom, cod)
 
     @classmethod
+    @rule
     def cups(cls, left: Ty, right: Ty) -> Diagram:
         """
         The integer cups are given by natural identities.
@@ -391,6 +397,7 @@ class Diagram[natural](RibbonCategory, NamedGeneric):
         return cls(inside, left @ right, type(left)())
 
     @classmethod
+    @rule
     def caps(cls, left: Ty, right: Ty) -> Diagram:
         """
         The integer caps are given by natural identities.

@@ -125,7 +125,7 @@ from functools import cached_property
 import numpy as np
 
 from discopy import monoidal, ribbon, tensor, frobenius
-from discopy.axioms import no_strategy
+from discopy.axioms import no_strategy, rule
 from discopy.tensor import Dim, Box, Id
 from discopy.abc import RibbonCategory, NamedGeneric
 from discopy.utils import (
@@ -905,6 +905,7 @@ class Intertwiner[algebra](tensor.Diagram, RibbonCategory):
         super().__init__(inside, dom, cod, _scan=_scan)
 
     @classmethod
+    @rule
     def braid(cls, left, right, is_dagger=False):
         """
         The braiding :math:`V \\otimes W \\to W \\otimes V` (its inverse
@@ -948,6 +949,7 @@ class Intertwiner[algebra](tensor.Diagram, RibbonCategory):
         return cls(body.inside, body.dom, body.cod)
 
     @classmethod
+    @rule
     def cups(cls, left, right):
         """
         The evaluation of a module against its dual. When ``right`` is the
@@ -971,6 +973,7 @@ class Intertwiner[algebra](tensor.Diagram, RibbonCategory):
         return cls(body.inside, body.dom, body.cod)
 
     @classmethod
+    @rule
     def caps(cls, left, right):
         """
         The coevaluation of a module against its dual. When ``right`` is

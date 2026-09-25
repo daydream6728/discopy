@@ -50,6 +50,7 @@ from discopy.quantum.circuit import (
 from discopy.quantum.gates import Discard, Measure, MixedState, Encode, Scalar
 from discopy.tensor import Dim, Tensor
 from discopy.utils import assert_isinstance
+from discopy.search import rule
 
 
 class CQ:
@@ -168,12 +169,14 @@ class Channel(Tensor):
             self.array, self.dom.to_dim(), self.cod.to_dim())
 
     @classmethod
+    @rule
     def id(cls, dom=CQ()) -> Channel:
         assert_isinstance(dom, CQ)
         return cls(Tensor[
             cls.dtype].id(dom.to_dim()).array,  # ty: ignore[invalid-type-form]
             dom, dom)
 
+    @rule
     def then(self, other: Channel | None = None, *others: Channel) -> Channel:
         if other is None or others:
             return super().then(other, *others)
@@ -184,6 +187,7 @@ class Channel(Tensor):
     def dagger(self) -> Channel:
         return type(self)(self.to_tensor().dagger().array, self.cod, self.dom)
 
+    @rule
     def tensor(
             self, other: Channel | None = None, *others: Channel) -> Channel:
         if other is None or others:

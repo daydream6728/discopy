@@ -205,6 +205,7 @@ from discopy.drawing import backend, Node, Point
 from discopy.config import BOX_DRAWING_ATTRIBUTES, TRANSPARENT
 from discopy.abc import TracedCategory
 from discopy.python import finset
+from discopy.search import rule
 from discopy.utils import (
     assert_isinstance, assert_iscomposable, unbiased, factory, RichDisplay)
 
@@ -712,6 +713,7 @@ class Drawing(TracedCategory, RichDisplay):
         return result
 
     @staticmethod
+    @rule
     def id(dom: "monoidal.Ty" | None = None, length=0) -> Drawing:
         """
         Draw the identity diagram.
@@ -750,6 +752,7 @@ class Drawing(TracedCategory, RichDisplay):
         result.add_edges(list(zip(dom_nodes, cod_nodes)))
         return result
 
+    @rule
     @unbiased
     def then(self, other: Drawing,
              draw_step_by_step=False) -> Drawing | list[Drawing]:
@@ -859,6 +862,7 @@ class Drawing(TracedCategory, RichDisplay):
         result.height += y
         return result
 
+    @rule
     @unbiased
     def tensor(self, other: Drawing) -> Drawing:
         """
@@ -895,10 +899,12 @@ class Drawing(TracedCategory, RichDisplay):
         result.width = x_shift + other.width
         return result
 
+    @rule
     def trace_left(self, n=1):
         """ The trace of ``n`` wires on the left, see :meth:`trace`. """
         return self.trace(n, left=True)
 
+    @rule
     def trace_right(self, n=1):
         """ The trace of ``n`` wires on the right, see :meth:`trace`. """
         return self.trace(n)

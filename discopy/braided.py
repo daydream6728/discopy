@@ -63,7 +63,7 @@ from collections.abc import Callable
 
 from discopy import monoidal
 from discopy.abc import BraidedCategory
-from discopy.axioms import Equation, axiom
+from discopy.axioms import Equation, axiom, rule
 from discopy.cat import factory, Generator
 from discopy.monoidal import Ty, Match
 from discopy.utils import (
@@ -95,6 +95,7 @@ class Diagram(monoidal.Diagram, BraidedCategory):
     Functor: ClassVar[Generator]
 
     @classmethod
+    @rule
     def braid(cls, left: monoidal.Ty, right: monoidal.Ty) -> Self:
         """
         The diagram braiding :code:`left` over :code:`right`.

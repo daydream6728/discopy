@@ -39,7 +39,7 @@ from dataclasses import dataclass
 
 from discopy import config, monoidal, braided, traced, cmap, hypergraph
 from discopy.abc import BalancedCategory
-from discopy.axioms import no_strategy
+from discopy.axioms import no_strategy, rule
 from discopy.cat import factory, Generator
 from discopy.monoidal import Colour, Ty  # noqa: F401
 from discopy.utils import factory_name, assert_isatomic
@@ -136,6 +136,7 @@ class Diagram(braided.Diagram, traced.Diagram, BalancedCategory):
     Functor: ClassVar[Generator]
 
     @classmethod
+    @rule
     def twist(cls, dom: monoidal.Ty) -> Diagram:
         """
         The twist on an object.

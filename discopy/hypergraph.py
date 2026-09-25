@@ -55,6 +55,7 @@ from discopy.abc import (
     NamedGeneric, RigidCategory, SymmetricCategory, TracedCategory)
 from discopy.drawing import Node, backend
 from discopy.python.finset import Permutation
+from discopy.search import rule
 from discopy.utils import (
     factory_name,
     assert_isinstance,
@@ -344,6 +345,7 @@ class Hypergraph[category: Diagram](MonoidalCategory, DaggerCategory,
             i for i, (x, y) in enumerate(self.spider_wires) if not x and not y]
 
     @classmethod
+    @rule
     def id(cls, dom=None) -> Hypergraph:
         dom = cls.category.ob() if dom is None else dom
         dom_wires = cod_wires = tuple(range(len(dom)))
@@ -351,6 +353,7 @@ class Hypergraph[category: Diagram](MonoidalCategory, DaggerCategory,
 
     twist = id
 
+    @rule
     @unbiased
     def then(self, other: Hypergraph):
         """
@@ -376,6 +379,7 @@ class Hypergraph[category: Diagram](MonoidalCategory, DaggerCategory,
             right[i]: t for i, t in enumerate(other.spider_types)})
         return type(self)(dom, cod, boxes, wires, spider_types, offsets)
 
+    @rule
     @unbiased
     def tensor(self, other: Hypergraph):
         """ Tensor of two hypergraph diagrams, i.e. their disjoint union. """

@@ -19,8 +19,8 @@ the typing of its identities and composites, and a
 :class:`DaggerCategory` the involution and contravariance of its dagger;
 a :class:`ColouredMonoid` inherits them as
 the unitality and associativity of its product, its composition. The
-structural methods carry their own :func:`discopy.search.rule` or
-:func:`discopy.search.generator`, from which
+structural methods carry their own :func:`discopy.search.rule`, from
+which
 :meth:`discopy.monoidal.Diagram.strategy` searches for the diagrams the
 laws quantify over: a level of the hierarchy declares its structure here
 and inherits the search as is.
@@ -68,9 +68,9 @@ from types import NoneType
 from typing import Annotated, ClassVar, Self, TYPE_CHECKING
 
 from discopy.axioms import (  # noqa: F401
-    C0, C1, Atom, Axiom, Count, Delay, Equation, Generator, Hom, L, Over,
+    C0, C1, Atom, Axiom, Count, Delay, Equation, Hom, L, Over,
     R, Repeat, Rule, Serialisable, Tensor, Testable, Under, Unit, axiom,
-    declarations, generator, rule)
+    declarations, rule)
 from discopy.utils import (  # noqa: F401
     NamedGeneric, classproperty, factory_name)
 
@@ -113,19 +113,20 @@ class Category[C0, C1: Category](Testable, ABC):
         """
         The inference rules inherited by ``cls``, by name: the rule each
         structural method carries, see :func:`discopy.search.rule`, bound
-        to ``cls`` and owned by the class declaring it. A rule survives
-        the plain method implementing it, which the search calls by that
-        name; one declared :meth:`discopy.search.Rule.inapplicable` is
-        dropped.
+        to ``cls`` and owned by the class declaring it. A method
+        implementing a rule is decorated :func:`discopy.search.rule`
+        itself, without restating the sequent, and the search calls it
+        by name; one declared :meth:`discopy.search.Rule.inapplicable`
+        is dropped.
         """
         return declarations(cls, Rule)
 
     @classproperty
-    def generators(cls: type) -> dict[str, Generator]:
+    def generators(cls: type) -> dict[str, Rule]:
         """
         The logical constants inherited by ``cls``, by name: the rules
-        the search builds in one step, see
-        :func:`discopy.search.generator`. A class adjusts the set by
+        with no hom premise, which the search builds in one step, see
+        :meth:`discopy.search.Rule.recursive`. A class adjusts the set by
         assigning a dictionary of rules instead,
         :meth:`discopy.search.Rule.constant` giving the rule of one given
         box, so that its strategy draws from a fixed vocabulary, e.g. the
@@ -144,10 +145,11 @@ class Category[C0, C1: Category](Testable, ABC):
         >>> print(find(Sentence.strategy(), bool).foliation())
         Alice @ sleeps >> Cup(n, n.r) @ s
         """
-        return declarations(cls, Generator)
+        return {name: rule for name, rule in cls.rules.items()
+                if not rule.recursive}
 
     @classmethod
-    @generator
+    @rule
     @abstractmethod
     def id[A](cls, dom: Annotated[C0, A]) -> Annotated[C1, Hom[A, A]]:
         """
@@ -276,6 +278,7 @@ class ColouredMonoid[C0, C1: ColouredMonoid](Category[C0, C1]):
             """ The slices of a free monoid, assumed to stay inside it. """
 
     @classmethod
+    @rule
     def id(cls, dom: C0 | None = None) -> C1:
         """The monoidal unit, i.e. the empty tensor ``cls()``."""
         return cls()  # ty: ignore[invalid-return-type]
@@ -295,6 +298,7 @@ class ColouredMonoid[C0, C1: ColouredMonoid](Category[C0, C1]):
     def tensor(self, *objects: C1) -> C1:
         """ The n-ary product of a monoid for ``n > 0``. """
 
+    @rule
     def then(self, *others: C1) -> C1:
         """Sequential composition, given by the monoid product."""
         return self.tensor(*others)
@@ -620,7 +624,7 @@ class BiclosedCategory[C0: ResiduatedMonoid, C1: BiclosedCategory](
     exponentials :code`x << y` and :code`x >> y`.
     """
     @classmethod
-    @generator
+    @rule
     @abstractmethod
     def ev_left[Y: Atom, E: Atom](
             cls, base: Annotated[C0, Y], exponent: Annotated[C0, E]
@@ -635,7 +639,7 @@ class BiclosedCategory[C0: ResiduatedMonoid, C1: BiclosedCategory](
         """
 
     @classmethod
-    @generator
+    @rule
     @abstractmethod
     def ev_right[Y: Atom, E: Atom](
             cls, base: Annotated[C0, Y], exponent: Annotated[C0, E]
@@ -807,7 +811,7 @@ class RigidCategory[C0: Pregroup, C1: RigidCategory](BiclosedCategory[C0, C1]):
     object type and methods for :code:`cups` and :code:`caps`.
     """
     @classmethod
-    @generator
+    @rule
     @abstractmethod
     def cups[X: Atom](
             cls, left: Annotated[C0, X], right: Annotated[C0, R[X]]
@@ -822,7 +826,7 @@ class RigidCategory[C0: Pregroup, C1: RigidCategory](BiclosedCategory[C0, C1]):
         """
 
     @classmethod
-    @generator
+    @rule
     @abstractmethod
     def caps[X: Atom](
             cls, left: Annotated[C0, X], right: Annotated[C0, L[X]]
@@ -837,15 +841,18 @@ class RigidCategory[C0: Pregroup, C1: RigidCategory](BiclosedCategory[C0, C1]):
         """
 
     @classmethod
+    @rule
     def ev_left(cls, base: C0, exponent: C0) -> C1:
         """ The left evaluation of a rigid morphism is obtained using cups. """
         return base @ cls.cups(exponent.l, exponent)
 
     @classmethod
+    @rule
     def ev_right(cls, base: C0, exponent: C0) -> C1:
         """ The right evaluation of a rigid morphism, using cups. """
         return cls.cups(exponent, exponent.r) @ base
 
+    @rule
     def curry_left(self, n: int = 1) -> C1:
         """ The left curry of a rigid morphism is obtained using caps. """
         if n < 0 or n > len(self.dom):
@@ -855,6 +862,7 @@ class RigidCategory[C0: Pregroup, C1: RigidCategory](BiclosedCategory[C0, C1]):
         base, exponent = self.dom[:-n], self.dom[-n:]
         return base @ self.caps(exponent, exponent.l) >> self @ exponent.l
 
+    @rule
     def curry_right(self, n: int = 1) -> C1:
         """ The right curry of a rigid morphism is obtained using caps. """
         if n < 0 or n > len(self.dom):
@@ -967,7 +975,7 @@ class BraidedCategory[C0: ColouredMonoid, C1: BraidedCategory](
     :code:`braid` for the natural isomorphism :code:`x @ y -> y @ x`.
     """
     @classmethod
-    @generator
+    @rule
     @abstractmethod
     def braid[X: Atom, Y: Atom](
             cls, left: Annotated[C0, X], right: Annotated[C0, Y]
@@ -982,7 +990,7 @@ class BraidedCategory[C0: ColouredMonoid, C1: BraidedCategory](
         """
 
     @classmethod
-    @generator
+    @rule
     def braid_inverse[X: Atom, Y: Atom](
             cls, left: Annotated[C0, X], right: Annotated[C0, Y]
     ) -> Annotated[C1, Hom[Tensor[Y, X], Tensor[X, Y]]]:
@@ -1036,7 +1044,7 @@ class SymmetricCategory[C0: ColouredMonoid, C1: SymmetricCategory](
     own inverse called :code:`swap` for the symmetry :code:`x @ y -> y @ x`.
     """
     @classmethod
-    @generator
+    @rule
     @abstractmethod
     def swap[X: Atom, Y: Atom](
             cls, left: Annotated[C0, X], right: Annotated[C0, Y]
@@ -1067,6 +1075,7 @@ class SymmetricCategory[C0: ColouredMonoid, C1: SymmetricCategory](
         return result
 
     @classmethod
+    @rule
     def braid(cls, left: C0, right: C0) -> C1:
         return cls.swap(left, right)
 
@@ -1092,10 +1101,10 @@ class MarkovCategory[C0: ColouredMonoid, C1: MarkovCategory](
     :code:`copy` and :code:`merge` for the supply of commutative comonoids.
     """
     @classmethod
-    @generator
+    @rule
     @abstractmethod
     def copy[X: Atom, N: Count](
-            cls, x: Annotated[C0, X], n: Annotated[int, N]
+            cls, x: Annotated[C0, X], n: Annotated[int, N] = 2
     ) -> Annotated[C1, Hom[X, Repeat[X, N]]]:
         """
         Make :code:`n` copies of a given object :code:`x`: as a rule,
@@ -1107,7 +1116,7 @@ class MarkovCategory[C0: ColouredMonoid, C1: MarkovCategory](
         """
 
     @classmethod
-    @generator
+    @rule
     def merge[X: Atom, N: Count](
             cls, x: Annotated[C0, X], n: Annotated[int, N]
     ) -> Annotated[C1, Hom[Repeat[X, N], X]]:
@@ -1288,7 +1297,7 @@ class BalancedCategory[C0: ColouredMonoid, C1: BalancedCategory](
     automorphism :code:`x -> x`.
     """
     @classmethod
-    @generator
+    @rule
     @abstractmethod
     def twist[X: Atom](
             cls, dom: Annotated[C0, X]) -> Annotated[C1, Hom[X, X]]:
@@ -1368,7 +1377,7 @@ class HypergraphCategory[C0: Pregroup, C1: HypergraphCategory](
     This makes it both a :class:`CompactCategory` and a :class:`MarkovCategory`
     """
     @classmethod
-    @generator
+    @rule
     @abstractmethod
     def spiders[X: Atom, M: Count, N: Count](
             cls, n_legs_in: Annotated[int, M],

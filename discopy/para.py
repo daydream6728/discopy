@@ -144,6 +144,7 @@ Parametric maps compose like layers of a neural network, e.g. over
 from dataclasses import dataclass
 from typing import Self
 
+from discopy.search import rule
 from discopy import (
     monoidal, symmetric, markov, closed, feedback, compact, frobenius)
 from discopy.abc import (
@@ -214,6 +215,7 @@ class Symmetric[category: symmetric.Diagram](SymmetricCategory, NamedGeneric):
         return cls(inside.dom, inside.cod, inside)
 
     @classmethod
+    @rule
     def id(cls, dom: monoidal.Ty | None = None) -> Symmetric:
         """
         The identity parametric map on `dom`, with empty parameter space.
@@ -223,6 +225,7 @@ class Symmetric[category: symmetric.Diagram](SymmetricCategory, NamedGeneric):
         """
         return cls.lift(cls.category.id(cls.ob() if dom is None else dom))
 
+    @rule
     @unbiased
     def then(self, other: Symmetric) -> Symmetric:
         """
@@ -244,6 +247,7 @@ class Symmetric[category: symmetric.Diagram](SymmetricCategory, NamedGeneric):
                           self.param @ other.param,
                           self.copar @ other.copar)
 
+    @rule
     @unbiased
     def tensor(self, other: Symmetric) -> Symmetric:
         """
@@ -263,6 +267,7 @@ class Symmetric[category: symmetric.Diagram](SymmetricCategory, NamedGeneric):
                           self.copar @ other.copar)
 
     @classmethod
+    @rule
     def swap(cls, left: monoidal.Ty, right: monoidal.Ty) -> Symmetric:
         """
         The swap of the underlying category, with empty parameter space.
@@ -320,10 +325,12 @@ class Traced(Symmetric, TracedCategory):
     Parametric maps over a traced symmetric underlying `category` form a
     traced category, with the parameters swapped out of the way.
     """
+    @rule
     def trace_left(self, n=1):
         """ The trace of ``n`` wires on the left, see :meth:`trace`. """
         return self.trace(n, left=True)
 
+    @rule
     def trace_right(self, n=1):
         """ The trace of ``n`` wires on the right, see :meth:`trace`. """
         return self.trace(n)
@@ -358,6 +365,7 @@ class Markov(Symmetric, MarkovCategory):
     category = markov.Diagram
 
     @classmethod
+    @rule
     def copy(cls, x: monoidal.Ty, n: int = 2) -> Markov:
         """
         The copy of the underlying category, with empty parameter space.
@@ -377,11 +385,13 @@ class Closed(Markov, ClosedCategory):
     category = closed.Diagram
 
     @classmethod
+    @rule
     def ev_left(cls, base, exponent):
         """ The left evaluation, see :meth:`ev`. """
         return cls.ev(base, exponent, left=True)
 
     @classmethod
+    @rule
     def ev_right(cls, base, exponent):
         """ The right evaluation, see :meth:`ev`. """
         return cls.ev(base, exponent, left=False)
@@ -400,10 +410,12 @@ class Closed(Markov, ClosedCategory):
         return cls.lift(cls.category.ev(
             base, exponent, left))  # ty: ignore[invalid-argument-type]
 
+    @rule
     def curry_left(self, n=1):
         """ The left currying of ``n`` objects, see :meth:`curry`. """
         return self.curry(n, left=True)
 
+    @rule
     def curry_right(self, n=1):
         """ The right currying of ``n`` objects, see :meth:`curry`. """
         return self.curry(n, left=False)
@@ -445,6 +457,7 @@ class Feedback(Markov, FeedbackCategory):
         return type(self)(*(x.delay(n_steps) for x in (
             self.dom, self.cod, self.inside, self.param, self.copar)))
 
+    @rule
     def feedback_left(self, dom: monoidal.Ty | None = None,
                       cod: monoidal.Ty | None = None,
                       mem: monoidal.Ty | None = None) -> Feedback:
@@ -452,6 +465,7 @@ class Feedback(Markov, FeedbackCategory):
         raise NotImplementedError(
             "A parametric feedback keeps its memory on the right.")
 
+    @rule
     def feedback_right(self, dom: monoidal.Ty | None = None,
                        cod: monoidal.Ty | None = None,
                        mem: monoidal.Ty | None = None) -> Feedback:
@@ -489,6 +503,7 @@ class Compact(Traced, CompactCategory):
     category = compact.Diagram
 
     @classmethod
+    @rule
     def cups(cls, left: monoidal.Ty, right: monoidal.Ty) -> Compact:
         """
         The cups of the underlying category, with empty parameter space.
@@ -501,6 +516,7 @@ class Compact(Traced, CompactCategory):
             left, right))  # ty: ignore[invalid-argument-type]
 
     @classmethod
+    @rule
     def caps(cls, left: monoidal.Ty, right: monoidal.Ty) -> Compact:
         """
         The caps of the underlying category, with empty parameter space.
@@ -524,6 +540,7 @@ class Hypergraph(Compact, Markov, HypergraphCategory):
     category = frobenius.Diagram
 
     @classmethod
+    @rule
     def spiders(cls, n_legs_in: int, n_legs_out: int, typ: monoidal.Ty
                 ) -> Hypergraph:
         """

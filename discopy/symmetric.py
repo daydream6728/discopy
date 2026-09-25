@@ -97,7 +97,7 @@ from collections.abc import Sequence
 from discopy import cat, monoidal, balanced, hypergraph, cmap, messages
 from discopy.abc import BraidedCategory, MonoidalCategory, SymmetricCategory
 from discopy.axioms import (
-    Atom, C0, Hom, In0, Tensor, axiom, generator,
+    Atom, C0, Hom, In0, Tensor, axiom, rule,
     Equation as AbstractEquation)
 from discopy.cat import factory, Generator
 from discopy.monoidal import Wire, Ty, Nat  # noqa: F401
@@ -282,6 +282,7 @@ class Diagram(balanced.Diagram, SymmetricCategory):
         return any(layer.is_plumbing for layer in self.inside)
 
     @classmethod
+    @rule
     def swap(cls, left: monoidal.Ty, right: monoidal.Ty) -> Diagram:
         """
         The diagram that swaps the ``left`` and ``right`` wires.
@@ -337,7 +338,7 @@ class Diagram(balanced.Diagram, SymmetricCategory):
                 [x - 1 if x > i else x for x in xs[1:]], rest)
 
     @classmethod
-    @generator
+    @rule
     def cycle[X: Atom, A](
             cls, x: Annotated[Ty, X], a: Annotated[Ty, A]
     ) -> Annotated[Diagram, Hom[Tensor[X, A], Tensor[A, X]]]:
@@ -641,6 +642,7 @@ class Permutation(Box):
     def dagger(self) -> Permutation:
         return type(self)(self.cod, self.perm.dagger())
 
+    @rule
     def tensor(self, other=None, *others):
         if other is None:
             return self

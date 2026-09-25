@@ -48,6 +48,7 @@ from discopy.cat import (
     assert_isparallel,
 )
 from discopy.utils import assert_isinstance, unbiased
+from discopy.search import rule
 
 if TYPE_CHECKING:
     import sympy
@@ -237,6 +238,7 @@ class Matrix[dtype](MonoidalCategory, DaggerCategory, NamedGeneric):
         return complex(self.array)
 
     @classmethod
+    @rule
     def id(cls, dom=0) -> Matrix:
         with backend('numpy') as np:
             array = np.identity(index(dom), dtype=cls.dtype or int)
@@ -244,6 +246,7 @@ class Matrix[dtype](MonoidalCategory, DaggerCategory, NamedGeneric):
 
     twist = id
 
+    @rule
     @unbiased
     def then(self, other: Matrix) -> Matrix:
         assert_isinstance(other, type(self))
@@ -252,10 +255,11 @@ class Matrix[dtype](MonoidalCategory, DaggerCategory, NamedGeneric):
             array = np.matmul(self.array, other.array)
         return type(self)(array, self.dom, other.cod)
 
+    @rule
     def tensor(self, other: Matrix | None = None, *others: Matrix):
         if others or other is None:
             return monoidal.Diagram.tensor(
-                self, other, *others)  # ty: ignore[invalid-argument-type]
+                self, other, *others)
         assert_isinstance(other, type(self))
         dom, cod = self.dom @ other.dom, self.cod @ other.cod
         array = self.zero(dom, cod).array

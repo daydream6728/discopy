@@ -63,7 +63,7 @@ from typing import (
 
 from discopy import (
     cat, monoidal, rigid, frobenius, cmap, config)
-from discopy.axioms import no_strategy
+from discopy.axioms import no_strategy, rule
 from discopy.cat import factory, Generator, assert_iscomposable
 from discopy.frobenius import Dim, Cup
 from discopy.matrix import (  # noqa: F401
@@ -150,9 +150,11 @@ class Tensor[dtype](Matrix[dtype]):
         self.dom, self.cod = dom, cod
 
     @classmethod
+    @rule
     def id(cls, dom=Dim(1)) -> Tensor:
         return cls(Matrix.id(product(dom.inside)).array, dom, dom)
 
+    @rule
     def then(self, other: Tensor | None = None, *others: Tensor) -> Self:
         if other is None or others:
             return super().then(other, *others)
@@ -164,11 +166,11 @@ class Tensor[dtype](Matrix[dtype]):
                 else self.array * other.array
         return type(self)(array, self.dom, other.cod)
 
+    @rule
     def tensor(
             self, other: Tensor | None = None, *others: Tensor) -> Self:
         if other is None or others:
-            return Diagram.tensor(  # ty: ignore[invalid-return-type]
-                self, other, *others)  # ty: ignore[invalid-argument-type]
+            return Diagram.tensor(self, other, *others)
         assert_isinstance(other, Tensor)
         dom, cod = self.dom @ other.dom, self.cod @ other.cod
         source = range(len(dom @ cod))
