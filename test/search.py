@@ -11,7 +11,7 @@ from discopy import braided, rigid, traced
 from discopy.abc import Category, ColouredMonoid
 from discopy.monoidal import Box, Diagram, Ty
 from discopy.pattern import C0, C1, Hom, Unit, declarations
-from discopy.search import Generator, Rule, generator, rule, search
+from discopy.search import Rule, rule, search
 from discopy.utils import AxiomError
 
 
@@ -40,7 +40,7 @@ def test_rule():
 
     f = Box("f", x, x)
     assert Wrapped.twice(f) == f >> f == Wrapped(f.inside, x, x).twice()
-    assert list(Wrapped.rules) == ["then", "tensor", "twice"]
+    assert list(Wrapped.rules) == ["id", "then", "tensor", "twice"]
     assert str(Wrapped.rules["twice"])\
         == "twice: A: C0 | self: C1[A, A] ⊢ C1[A, A]"
     found = find(Wrapped.strategy(dom=x, cod=x, types=st.just(x)),
@@ -50,14 +50,9 @@ def test_rule():
 
 
 def test_generator():
-    @generator
-    def wrong[A: C0](cls, f: Annotated[C1, Hom[A, A]]
-                     ) -> Annotated[C1, Hom[A, A]]:
-        ...
-    with raises(TypeError):
-        wrong.sequent
-    assert type(declarations(rigid.Diagram, Generator)["cups"]) is Generator
-    assert "cups" not in declarations(rigid.Diagram, Rule)
+    assert Category.then.recursive
+    assert not rigid.Diagram.rules["cups"].recursive
+    assert "cups" in rigid.Diagram.generators
     assert rigid.Diagram.generators["cups"].category is rigid.Diagram
     assert str(braided.Diagram.generators["braid"]) == (
         "braid: X: Atom[C0], Y: Atom[C0] | left: X, right: Y"
@@ -65,7 +60,7 @@ def test_generator():
 
     class Lying(Diagram):
         @classmethod
-        @generator
+        @rule
         def wrong[A: ColouredMonoid](
                 cls, dom: A) -> Annotated[C1, Hom[A, Unit[C0]]]:
             """ A generator whose conclusion lies. """
@@ -81,8 +76,8 @@ def test_declarations():
         then = None
 
     assert "unitality" not in Hidden.axioms
-    assert "then" in Hidden.rules
-    assert list(declarations(Category, Generator)) == ["id"]
+    assert "then" not in Hidden.rules
+    assert list(Category.generators) == ["id"]
 
 
 def test_search():
