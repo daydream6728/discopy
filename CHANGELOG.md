@@ -666,6 +666,42 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Changed
 
+- Every rule is a `Rule`, plain and simple: `discopy.search.Generator`
+  and its `@generator` decorator are gone, `Constant` is a `Rule`, and
+  a category's `generators` — the constants its search builds in one
+  step — are derived as the rules with no hom premise, read off the
+  new `Rule.recursive`, so `swap`, `cups`, `caps` and friends are
+  rules like `then` and `tensor` and the search recurses on the
+  recursive ones alone. The lowercase declarations stay although the
+  box classes could sample most of them, because the sequent is the
+  search interface: `id`, `cycle`, `braid_inverse`, the trace of a
+  pivotal diagram and the `Rule.constant` boxes of a vocabulary have
+  no box class of their own, and a box class says how one box is made
+  where the rule says what the term proves. An implementation
+  overriding a rule wraps itself in `@rule` as well — some thirty
+  modules decorate the `then`, `tensor`, `swap`, `cups`, `caps`,
+  `copy`, `merge`, `spiders`, `twist`, `braid`, `curry`, `ev`, trace
+  and feedback methods they implement, `@rule` outermost over
+  `@unbiased` — and `declarations` reads redeclaration off the
+  signature: an override whose return annotation states a `Hom`
+  conclusion redeclares the sequent, one that states none implements
+  the declaration it overrides, keeping its sequent, anything that is
+  not a declaration assigned over an inherited one drops it
+  (`Matrix.twist = Matrix.id` opts out silently), an implementation
+  below a drop stays dropped, and classmethods and staticmethods are
+  unwrapped, so a decorated classmethod declares like a plain method
+  and the `shadowed` escape hatch goes. `Rule.__get__` returns a
+  plain bound method on instance access, since `then` and `tensor`
+  sit on the hot path of every composition, and
+  `Declaration.__signature__` exposes the wrapped function's
+  signature, so `Rule.apply` still reads the keyword-only parameters
+  and the vocabulary `generators` of `pregroup.Diagram` and
+  `quantum.circuit.Circuit` read `cls.rules` for the structure they
+  keep. The doctests of a wrapped method live on an attribute
+  doctest's finder does not recurse into, so `test/plugin.py`
+  registers them in each module's `__test__`, and the abc `copy`
+  declaration defaults its `n` to two, the arity the axioms call it
+  with.
 - `cat.Functor.strategy` relabels endofunctors only: a relabelling
   sends the domain's own generators to each other, so the functors into
   another category — tensors, intertwiners, channels — stay unchecked,
@@ -706,10 +742,12 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `Axiom.inapplicable`: it returns a marked copy of the rule, dropped
   from the rules and generators of the class it is assigned on while
   the method still runs, e.g.
-  `trace_left = rule(Diagram.trace_left).inapplicable("No loop in a
-  sentence.")`. The four call sites — `abc.CompactCategory.twist`,
-  the traces of `quantum.circuit` and `grammar.pregroup` and the
-  trace of `feedback` — are respelled.
+  `trace_left = frobenius.Diagram.trace_left.inapplicable("No loop in
+  a sentence.")`. The call sites — `abc.CompactCategory.twist` and
+  the traces of `quantum.circuit` and `grammar.pregroup` — are
+  respelled, and the mark `feedback` put on `trace`, which was never
+  a collected rule, goes as vacuous: a feedback category has no trace
+  to drop.
 - Broken marks stop at the level where the law holds again:
   `braid_naturality` is re-enabled on `symmetric.Diagram` — a free
   braid is a box, but the braid of a symmetric category is its swap,
