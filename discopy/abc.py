@@ -1104,7 +1104,7 @@ class MarkovCategory[C0: ColouredMonoid, C1: MarkovCategory](
     @rule
     @abstractmethod
     def copy[X: Atom, N: Count](
-            cls, x: Annotated[C0, X], n: Annotated[int, N] = 2
+            cls, x: Annotated[C0, X], n: Annotated[int, N]
     ) -> Annotated[C1, Hom[X, Repeat[X, N]]]:
         """
         Make :code:`n` copies of a given object :code:`x`: as a rule,
@@ -1134,7 +1134,7 @@ class MarkovCategory[C0: ColouredMonoid, C1: MarkovCategory](
     def copy_counitality(
             cls, x: C0) -> Equation[C1]:
         """ Counitality of copying. """
-        copy, discard = cls.copy(x), cls.copy(x, n=0)
+        copy, discard = cls.copy(x, n=2), cls.copy(x, n=0)
         return cls.Equation(
             copy.then(discard @ x), cls.id(x),
             copy.then(x @ discard))
@@ -1143,7 +1143,7 @@ class MarkovCategory[C0: ColouredMonoid, C1: MarkovCategory](
     def copy_coassociativity(
             cls, x: C0) -> Equation[C1]:
         """ Coassociativity of copying. """
-        copy = cls.copy(x)
+        copy = cls.copy(x, n=2)
         return cls.Equation(
             copy.then(copy @ x), copy.then(x @ copy))
 
@@ -1151,7 +1151,7 @@ class MarkovCategory[C0: ColouredMonoid, C1: MarkovCategory](
     def copy_cocommutativity(
             cls, x: C0) -> Equation[C1]:
         """ Cocommutativity of copying. """
-        copy = cls.copy(x)
+        copy = cls.copy(x, n=2)
         return cls.Equation(copy.then(cls.swap(x, x)), copy)
 
     @axiom
@@ -1167,8 +1167,8 @@ class MarkovCategory[C0: ColouredMonoid, C1: MarkovCategory](
             cls, x: C0) -> Equation[C1]:
         """ Monoidal coherence of copying. """
         return cls.Equation(
-            cls.copy(x @ x),
-            (cls.copy(x) @ cls.copy(x)).then(
+            cls.copy(x @ x, n=2),
+            (cls.copy(x, n=2) @ cls.copy(x, n=2)).then(
                 x @ cls.swap(x, x) @ x))
 
 

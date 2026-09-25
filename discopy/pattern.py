@@ -928,6 +928,19 @@ def parse(function: Callable, owner: type | None = None,
         if conclusion and "return" in annotations else None
     if conclusion and not isinstance(returns, Hom):
         raise TypeError(f"{function.__name__} concludes no hom type.")
+    if isinstance(returns, Hom):
+        stated = {
+            name for premise in premises.values()
+            for name in getattr(premise, "variables", ())}
+        stated |= {
+            name for variable in stated
+            for name in getattr(sorts.get(variable), "variables", ())}
+        missing = set(returns.variables) - stated
+        if missing:
+            raise TypeError(
+                f"{function.__name__} concludes on "
+                f"{', '.join(sorted(missing))} that no premise states, "
+                "e.g. a parameter whose default drops it.")
     return Sequent(
         sorts, premises, returns if isinstance(returns, Hom) else None)
 

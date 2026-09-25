@@ -104,6 +104,13 @@ def test_parse():
         ...
     with raises(TypeError):
         parse(unsorted, conclusion=False)
+
+    def defaulted[X: Atom, N](  # The default drops the premise stating N.
+            cls, x: Annotated[C0, X], n: Annotated[int, N] = 2
+    ) -> Annotated[C1, Hom[X, Repeat[X, N]]]:
+        ...
+    with raises(TypeError, match="no premise states"):
+        parse(defaulted)
     assert str(FeedbackCategory.feedback_right.sequent) == (
         "A: C0, B: C0, M: Atom[C0] | self: C1[A @ M.d, B @ M] ⊢ C1[A, B]")
     assert FeedbackCategory.feedback_left.sequent.variables["M"].bound\

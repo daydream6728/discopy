@@ -699,9 +699,13 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `quantum.circuit.Circuit` read `cls.rules` for the structure they
   keep. The doctests of a wrapped method live on an attribute
   doctest's finder does not recurse into, so `test/plugin.py`
-  registers them in each module's `__test__`, and the abc `copy`
-  declaration defaults its `n` to two, the arity the axioms call it
-  with.
+  registers them in each module's `__test__`, and the copy axioms
+  pass their `n=2` explicitly: a defaulted parameter is not a
+  premise, while the `N` of the conclusion still is, so a default on
+  the declaration had the rule ignoring the count the goal unified —
+  `parse` now refuses a conclusion quantifying a variable no premise
+  states, turning the mistake into a `TypeError` where the matrix
+  found it as a term built outside its declared conclusion.
 - `cat.Functor.strategy` relabels endofunctors only: a relabelling
   sends the domain's own generators to each other, so the functors into
   another category — tensors, intertwiners, channels — stay unchecked,
