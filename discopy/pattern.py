@@ -989,6 +989,12 @@ class Declaration[**P, T]:
     def __isabstractmethod__(self):
         return getattr(self.function, "__isabstractmethod__", False)
 
+    @property
+    def __signature__(self):
+        """ The signature of the function, so that a declaration
+        introspects as the method it decorates. """
+        return inspect.signature(self.function)
+
     def __repr__(self):
         if self.category is None:
             return f"{type(self).__name__}({self.name})"
@@ -1170,28 +1176,46 @@ def cell(factory: type, name: str, dom=None, cod=None):
     return factory(name)
 
 
-def declarations[D: Declaration](cls: type, kind: type[D],
-                                 shadowed: bool = True) -> dict[str, D]:
+def concluding(function: Callable) -> bool:
     """
-    The declarations of exactly a kind inherited by a class, bound to it and
-    keyed by name, subclasses overriding bases. A rule survives a plain
-    method assigned over it, its implementation; an axiom does not, so
-    assigning anything that is not an axiom over an inherited law drops it
-    rather than restating it.
+    Whether a function states a conclusion: a return annotation carrying
+    a :class:`Hom` pattern. A rule without one implements the
+    declaration it overrides, keeping its sequent.
+    """
+    returns = getattr(function, "__annotations__", {}).get("return")
+    return any(
+        isinstance(pattern, Hom)
+        for pattern in getattr(returns, "__metadata__", ()))
+
+
+def declarations[D: Declaration](cls: type, kind: type[D]) -> dict[str, D]:
+    """
+    The declarations of exactly a kind inherited by a class, bound to it
+    and keyed by name, subclasses overriding bases — found under any
+    inner decorator: a classmethod, a staticmethod or an abstract
+    method. A declaration whose signature states no conclusion
+    implements the one it overrides, keeping its sequent, and anything
+    that is not a declaration assigned over an inherited one drops it,
+    an implementation below the drop staying dropped.
 
     >>> from discopy.monoidal import Diagram
     >>> from discopy.search import Rule
     >>> list(declarations(Diagram, Rule))
-    ['then', 'tensor']
+    ['id', 'then', 'tensor']
     """
     result: dict[str, D] = {}
+    dropped: set[str] = set()
     for base in reversed(cls.__mro__):
         for name, value in base.__dict__.items():
-            value = value.__func__ if isinstance(value, classmethod) else value
+            while isinstance(value, (classmethod, staticmethod)):
+                value = value.__func__
             if getattr(value, "__inapplicable__", None) is not None:
                 result.pop(name, None)
-            elif type(value) is kind:
+                dropped.add(name)
+            elif type(value) is not kind:
+                if result.pop(name, None) is not None:
+                    dropped.add(name)
+            elif not kind.concludes or concluding(value.function):
                 result[name] = value.bind(cls, owner=base)
-            elif name in result and not shadowed:
-                del result[name]
+                dropped.discard(name)
     return result

@@ -287,9 +287,7 @@ from discopy.pattern import (  # noqa: F401
 )
 from discopy.search import (  # noqa: F401
     Constant,
-    Generator,
     Rule,
-    generator,
     rule,
     search,
 )
@@ -449,7 +447,7 @@ class Testable[T](metaclass=ABCMeta):
         bases: assigning anything that is not an axiom over an inherited
         one drops it altogether, rather than restating it.
         """
-        return declarations(cls, Axiom, shadowed=False)
+        return declarations(cls, Axiom)
 
     @classmethod
     def environment(cls) -> dict:
