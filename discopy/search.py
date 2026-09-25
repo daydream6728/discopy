@@ -58,8 +58,8 @@ class Rule[**P, T](Declaration[P, T]):
     with a conclusion. The sequent is read from the declaration in
     :mod:`discopy.abc` while :func:`search` calls the attribute of the same
     name on the category, which a concrete class overrides with its own
-    method. Accessed on a class, a rule binds to it; on an instance, it
-    behaves as the method it decorates.
+    method. Accessed on a class, a rule binds to it, once per class; on
+    an instance, it behaves as the method it decorates.
 
     >>> from discopy.abc import Category
     >>> print(Category.then)
@@ -71,11 +71,16 @@ class Rule[**P, T](Declaration[P, T]):
     def __get__(self, instance, owner: type):
         if instance is not None:
             return MethodType(self.function, instance)
-        declaring = next((
-            base for base in owner.__mro__
-            if self.is_declared(base.__dict__.get(self.name or ""))),
-            None)
-        return self.bind(owner, owner=declaring)
+        bound = self.__dict__.get("bound")
+        if bound is None:
+            bound = self.__dict__["bound"] = {}
+        if owner not in bound:
+            declaring = next((
+                base for base in owner.__mro__
+                if self.is_declared(base.__dict__.get(self.name or ""))),
+                None)
+            bound[owner] = self.bind(owner, owner=declaring)
+        return bound[owner]
 
     def is_declared(self, value) -> bool:
         """ Whether a class attribute is this very declaration. """

@@ -690,10 +690,17 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   (`Matrix.twist = Matrix.id` opts out silently), an implementation
   below a drop stays dropped, and classmethods and staticmethods are
   unwrapped, so a decorated classmethod declares like a plain method
-  and the `shadowed` escape hatch goes. `Rule.__get__` returns a
-  plain bound method on instance access, since `then` and `tensor`
-  sit on the hot path of every composition, and
-  `Declaration.__signature__` exposes the wrapped function's
+  and the `shadowed` escape hatch goes. `then` and `tensor` sit on
+  the hot path of every composition, so `Rule.__get__` returns a
+  plain bound method on instance access and caches its class-level
+  binding per accessing class, where each access re-bound through
+  `dataclasses.replace` — an explicit implementation call such as the
+  `cat.FreeCategory.then` of `Ty.tensor` is on that path. Measured on
+  the composition benchmark, what remains is one Python descriptor
+  call per instance access, visible only on the k-fold series
+  microbenchmark (~80ns on a ~400ns composition, +10-15%), every
+  other workload within noise. `Declaration.__signature__` exposes
+  the wrapped function's
   signature, so `Rule.apply` still reads the keyword-only parameters
   and the vocabulary `generators` of `pregroup.Diagram` and
   `quantum.circuit.Circuit` read `cls.rules` for the structure they
