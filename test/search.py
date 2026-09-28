@@ -7,7 +7,7 @@ from hypothesis import find
 from hypothesis import strategies as st
 from pytest import raises
 
-from discopy import braided, rigid, traced
+from discopy import braided, cat, rigid, traced
 from discopy.abc import Category, ColouredMonoid
 from discopy.monoidal import Box, Diagram, Ty
 from discopy.pattern import C0, C1, Hom, Unit, declarations
@@ -25,7 +25,9 @@ def test_rule():
         is Diagram
     assert hash(Category.then) == hash(Category.then.bind(Category))
     assert Category.then.__isabstractmethod__
-    assert Diagram.rules["then"].__doc__ == Category.then.__doc__
+    assert Diagram.rules["then"].owner is cat.Arrow  # The latest wins.
+    assert Diagram.rules["then"].sequent.conclusion\
+        == Category.then.sequent.conclusion
     with raises(TypeError):
         Rule(Category.then.function).scope
     with raises(TypeError):

@@ -678,19 +678,37 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   pivotal diagram and the `Rule.constant` boxes of a vocabulary have
   no box class of their own, and a box class says how one box is made
   where the rule says what the term proves. An implementation
-  overriding a rule wraps itself in `@rule` as well — some thirty
-  modules decorate the `then`, `tensor`, `swap`, `cups`, `caps`,
-  `copy`, `merge`, `spiders`, `twist`, `braid`, `curry`, `ev`, trace
-  and feedback methods they implement, `@rule` outermost over
-  `@unbiased` — and `declarations` reads redeclaration off the
-  signature: an override whose return annotation states a `Hom`
-  conclusion redeclares the sequent, one that states none implements
-  the declaration it overrides, keeping its sequent, anything that is
-  not a declaration assigned over an inherited one drops it
-  (`Matrix.twist = Matrix.id` opts out silently), an implementation
-  below a drop stays dropped, and classmethods and staticmethods are
-  unwrapped, so a decorated classmethod declares like a plain method
-  and the `shadowed` escape hatch goes. `then` and `tensor` sit on
+  overriding a rule wraps itself in `@rule` and states its full
+  sequent — some thirty modules re-annotate the `then`, `tensor`,
+  `swap`, `cups`, `caps`, `copy`, `merge`, `spiders`, `twist`,
+  `braid`, `curry`, `ev`, trace and feedback methods they implement,
+  `@rule` outermost over `@unbiased` — and `declarations` is ordinary
+  attribute lookup: the latest rule in the method resolution order
+  wins, a mark or anything that is not a rule assigned over an
+  inherited one drops it, and classmethods and staticmethods are
+  unwrapped. So `markov.Diagram.copy` is the rule of a Markov
+  diagram, sequent and implementation alike, where the `concluding`
+  mechanism used to keep the abc declaration — and silently lost the
+  rules of a category whose implementations had none above them:
+  `finset.Function` had no `then`, `tensor` or `swap` in its rules at
+  all. A premise is a parameter whose annotation states a pattern,
+  whether or not it has a default, and an annotated `*others` states
+  the premise of one more argument, the implementation folding any
+  number, so a variadic `then` states the binary rule. A mark lives
+  on the class where it must win — `compact.Diagram` drops the twist
+  that `balanced` re-enables through the diamond — an alias like
+  `Matrix.twist = Matrix.id` honestly registers the identity rule
+  under the alias, and rigid diagrams state their evaluation and
+  currying in their own language, `x @ y ⊢ z` currying to
+  `x ⊢ z @ y.l` where a biclosed category writes `x ⊢ z << y`, since
+  a pregroup is not residuated and the level check reads each rule
+  where it is written. `biclosed.Ty` declares the `ResiduatedMonoid`
+  it implements, `interaction.Ty` the `Pregroup`, `stream.Ty` and
+  `quantum.channel.CQ` the `ColouredMonoid`, `C0` and `C1` are
+  `TypeVar`s a typechecker accepts in a return annotation, and
+  `Declaration.__set_name__` names a fresh rule assigned by hand,
+  while `Ty` inherits the `then` of `ColouredMonoid`, which calls its
+  tensor, in place of `then = rule(tensor)`. `then` and `tensor` sit on
   the hot path of every composition, so `Rule.__get__` returns a
   plain bound method on instance access and caches its class-level
   binding per accessing class, where each access re-bound through
@@ -706,17 +724,11 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `quantum.circuit.Circuit` read `cls.rules` for the structure they
   keep. The doctests of a wrapped method live on an attribute
   doctest's finder does not recurse into, so `test/plugin.py`
-  registers them in each module's `__test__`, and the copy axioms
-  pass their `n=2` explicitly: a defaulted parameter is not a
-  premise, while the `N` of the conclusion still is, so a default on
-  the declaration had the rule ignoring the count the goal unified —
-  `parse` now refuses a conclusion quantifying a variable no premise
-  states, turning the mistake into a `TypeError` where the matrix
-  found it as a term built outside its declared conclusion. A bound
-  rule whose signature states no conclusion presents the sequent of
-  the declaration it implements, so `finset.Function.then` prints the
-  sequent of `Category.then`, where parsing its plain signature
-  crashed the printing.
+  registers them in each module's `__test__`, and `parse` refuses a
+  conclusion quantifying a variable no premise states and a parameter
+  that states no pattern and has no default, so a missed
+  re-annotation is a `TypeError` naming it rather than a rule the
+  matrix rejects.
 - `cat.Functor.strategy` relabels endofunctors only: a relabelling
   sends the domain's own generators to each other, so the functors into
   another category — tensors, intertwiners, channels — stay unchecked,
