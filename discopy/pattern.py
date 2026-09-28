@@ -322,7 +322,8 @@ class Pattern[C0, C1: abc.Category](ABC):
         yield subst, residuals + ((self, value), )
 
 
-C0, C1 = Sort("C0"), Sort("C1")
+C0 = TypeVar("C0")
+C1 = TypeVar("C1")
 """
 The objects and the arrows of the category a declaration is bound to:
 what the annotations of a module-level declaration name in their
@@ -736,22 +737,38 @@ class Sequent[C0, C1: abc.Category]:
         return left + right
 
 
+def states_pattern(annotation) -> bool:
+    """ Whether an annotation states a pattern or a sort. """
+    return (annotation is Self
+            or isinstance(annotation, (Pattern, Sort, TypeVar))
+            or get_origin(annotation) is Annotated)
+
+
 def premises_of(function: Callable, missing: bool = False) -> list[str]:
     """
-    The names of the premises a function states: its parameters without a
-    default, an unannotated first ``cls`` or ``self`` skipped — only the
-    ones without an annotation when ``missing``.
+    The names of the premises a function states: its parameters whose
+    annotation states a pattern, whether or not they have a default, an
+    unannotated first ``cls`` or ``self`` skipped and an annotated
+    ``*args`` standing for one argument at a time, the implementation
+    taking any number of them. With ``missing``, the parameters that
+    state no pattern and have no default, which a call by the sequent
+    could not fill.
     """
     parameters = list(inspect.signature(function).parameters.values())
     if parameters and parameters[0].annotation is inspect.Parameter.empty:
         parameters = parameters[1:]
+    if missing:
+        return [
+            parameter.name for parameter in parameters
+            if not states_pattern(parameter.annotation)
+            and parameter.default is inspect.Parameter.empty
+            and parameter.kind not in (
+                inspect.Parameter.VAR_POSITIONAL,
+                inspect.Parameter.VAR_KEYWORD)]
     return [
         parameter.name for parameter in parameters
-        if parameter.default is inspect.Parameter.empty
-        and parameter.kind not in (
-            inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD)
-        and (not missing
-             or parameter.annotation is inspect.Parameter.empty)]
+        if states_pattern(parameter.annotation)
+        and parameter.kind is not inspect.Parameter.VAR_KEYWORD]
 
 
 def sort_of(parameter: TypeVar, level: type | None) -> Sort | Hom:
@@ -776,6 +793,8 @@ def sort_of(parameter: TypeVar, level: type | None) -> Sort | Hom:
         return Sort("Count")
     if isinstance(bound, Sort):
         return replace(bound, bound=bound.bound or level)
+    if isinstance(bound, TypeVar):
+        return Sort(bound.__name__, bound=level)
     if get_origin(bound) is Annotated:
         (value, ) = bound.__metadata__
         if not isinstance(value, Hom):
@@ -862,10 +881,10 @@ def parse(function: Callable, owner: type | None = None,
     annotation objects the interpreter built when it was defined: each
     type parameter a variable of the sort its bound declares — carrying
     the bound of the objects of the ``owner`` class stating it — each
-    parameter without a default a premise, the return annotation the
-    conclusion when asked for. An unannotated first parameter, ``cls``
-    or ``self``, is skipped, and a pattern needing more structure than
-    the owner's objects have is refused.
+    parameter stating a pattern a premise (see :func:`premises_of`), the
+    return annotation the conclusion when asked for. An unannotated
+    first parameter, ``cls`` or ``self``, is skipped, and a pattern
+    needing more structure than the owner's objects have is refused.
 
     >>> def then[A, B, C](
     ...         self: Annotated[C1, Hom[A, B]],
@@ -886,9 +905,15 @@ def parse(function: Callable, owner: type | None = None,
     level = None
     if owner is not None:
         if getattr(owner, "__type_params__", ()):
-            bound = owner.__type_params__[0].__bound__
-            level = bound if isinstance(bound, type) else None
-        else:
+            try:
+                bound = owner.__type_params__[0].__bound__
+            except NameError:  # A bound imported for typechecking only.
+                bound = None
+            level = bound if isinstance(bound, type) and issubclass(
+                bound, abc.ColouredMonoid) else None
+            # A monoid of objects is a level where the bound of a value
+            # parameter, e.g. the category a CMap hosts, is not.
+        if level is None:
             level = getattr(owner, "ob", None)
             level = level if isinstance(level, type) else None
     sorts = {
@@ -939,8 +964,7 @@ def parse(function: Callable, owner: type | None = None,
         if missing:
             raise TypeError(
                 f"{function.__name__} concludes on "
-                f"{', '.join(sorted(missing))} that no premise states, "
-                "e.g. a parameter whose default drops it.")
+                f"{', '.join(sorted(missing))} that no premise states.")
     return Sequent(
         sorts, premises, returns if isinstance(returns, Hom) else None)
 
@@ -991,22 +1015,16 @@ class Declaration[**P, T]:
         """ The parsed signature, read lazily and cached, see :func:`parse`
         — lazily so that the sorts carry the bounds of the class stating
         the declaration, which does not exist when its body is decorated.
-        A bound declaration whose signature states no conclusion is an
-        implementation, presenting the sequent of the declaration it
-        implements, the one :func:`declarations` keeps.
         """
         if "sequent" not in self.__dict__:
-            if (self.concludes and self.category is not None
-                    and not concluding(self.function)):
-                declaration = declarations(
-                    self.category, type(self)).get(self.name or "")
-                if declaration is not None:
-                    self.__dict__["sequent"] = declaration.sequent
-                    return self.__dict__["sequent"]
             self.__dict__["sequent"] = parse(
                 self.function, self.owner or self.category,
                 conclusion=self.concludes)
         return self.__dict__["sequent"]
+
+    def __set_name__(self, owner: type, name: str):
+        if self.category is None:
+            self.name = name
 
     @property
     def __isabstractmethod__(self):
@@ -1199,27 +1217,14 @@ def cell(factory: type, name: str, dom=None, cod=None):
     return factory(name)
 
 
-def concluding(function: Callable) -> bool:
-    """
-    Whether a function states a conclusion: a return annotation carrying
-    a :class:`Hom` pattern. A rule without one implements the
-    declaration it overrides, keeping its sequent.
-    """
-    returns = getattr(function, "__annotations__", {}).get("return")
-    return any(
-        isinstance(pattern, Hom)
-        for pattern in getattr(returns, "__metadata__", ()))
-
-
 def declarations[D: Declaration](cls: type, kind: type[D]) -> dict[str, D]:
     """
     The declarations of exactly a kind inherited by a class, bound to it
-    and keyed by name, subclasses overriding bases — found under any
-    inner decorator: a classmethod, a staticmethod or an abstract
-    method. A declaration whose signature states no conclusion
-    implements the one it overrides, keeping its sequent, and anything
-    that is not a declaration assigned over an inherited one drops it,
-    an implementation below the drop staying dropped.
+    and keyed by name, the latest in the method resolution order winning
+    like ordinary attribute lookup — found under any inner decorator: a
+    classmethod, a staticmethod or an abstract method. A declaration
+    marked inapplicable, or anything that is not a declaration, assigned
+    over an inherited one drops it.
 
     >>> from discopy.monoidal import Diagram
     >>> from discopy.search import Rule
@@ -1227,18 +1232,13 @@ def declarations[D: Declaration](cls: type, kind: type[D]) -> dict[str, D]:
     ['id', 'then', 'tensor']
     """
     result: dict[str, D] = {}
-    dropped: set[str] = set()
     for base in reversed(cls.__mro__):
         for name, value in base.__dict__.items():
             while isinstance(value, (classmethod, staticmethod)):
                 value = value.__func__
-            if getattr(value, "__inapplicable__", None) is not None:
-                result.pop(name, None)
-                dropped.add(name)
-            elif type(value) is not kind:
-                if result.pop(name, None) is not None:
-                    dropped.add(name)
-            elif not kind.concludes or concluding(value.function):
+            if type(value) is kind\
+                    and getattr(value, "__inapplicable__", None) is None:
                 result[name] = value.bind(cls, owner=base)
-                dropped.discard(name)
+            else:
+                result.pop(name, None)
     return result

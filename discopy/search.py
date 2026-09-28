@@ -55,11 +55,12 @@ class DeadEnd(Exception):
 class Rule[**P, T](Declaration[P, T]):
     """
     An inference rule of a category, a :class:`discopy.pattern.Declaration`
-    with a conclusion. The sequent is read from the declaration in
-    :mod:`discopy.abc` while :func:`search` calls the attribute of the same
-    name on the category, which a concrete class overrides with its own
-    method. Accessed on a class, a rule binds to it, once per class; on
-    an instance, it behaves as the method it decorates.
+    with a conclusion. Every rule states its sequent as its own
+    signature, whether it is the declaration of :mod:`discopy.abc` or the
+    method of a concrete class overriding it, and :func:`search` calls
+    the attribute of the same name on the category. Accessed on a class,
+    a rule binds to it, once per class; on an instance, it behaves as the
+    method it decorates.
 
     >>> from discopy.abc import Category
     >>> print(Category.then)
