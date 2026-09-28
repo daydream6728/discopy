@@ -991,8 +991,18 @@ class Declaration[**P, T]:
         """ The parsed signature, read lazily and cached, see :func:`parse`
         — lazily so that the sorts carry the bounds of the class stating
         the declaration, which does not exist when its body is decorated.
+        A bound declaration whose signature states no conclusion is an
+        implementation, presenting the sequent of the declaration it
+        implements, the one :func:`declarations` keeps.
         """
         if "sequent" not in self.__dict__:
+            if (self.concludes and self.category is not None
+                    and not concluding(self.function)):
+                declaration = declarations(
+                    self.category, type(self)).get(self.name or "")
+                if declaration is not None:
+                    self.__dict__["sequent"] = declaration.sequent
+                    return self.__dict__["sequent"]
             self.__dict__["sequent"] = parse(
                 self.function, self.owner or self.category,
                 conclusion=self.concludes)

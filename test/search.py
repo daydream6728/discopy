@@ -79,6 +79,11 @@ def test_declarations():
     assert "then" not in Hidden.rules
     assert list(Category.generators) == ["id"]
 
+    from discopy.python.finset import Function
+    assert str(Function.then.sequent) == str(Category.then.sequent)
+    assert Function.then.recursive  # An implementation presents the
+    # sequent of the declaration it implements, see Declaration.sequent.
+
 
 def test_search():
     strategy = search(Diagram, Box.strategy, dom=x, cod=y, max_depth=2)

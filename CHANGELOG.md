@@ -712,7 +712,11 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   the declaration had the rule ignoring the count the goal unified —
   `parse` now refuses a conclusion quantifying a variable no premise
   states, turning the mistake into a `TypeError` where the matrix
-  found it as a term built outside its declared conclusion.
+  found it as a term built outside its declared conclusion. A bound
+  rule whose signature states no conclusion presents the sequent of
+  the declaration it implements, so `finset.Function.then` prints the
+  sequent of `Category.then`, where parsing its plain signature
+  crashed the printing.
 - `cat.Functor.strategy` relabels endofunctors only: a relabelling
   sends the domain's own generators to each other, so the functors into
   another category — tensors, intertwiners, channels — stay unchecked,
