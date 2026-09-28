@@ -23,7 +23,7 @@ Summary
     Scalar
 """
 
-from typing import ClassVar
+from typing import Annotated, ClassVar
 
 from math import pi
 
@@ -35,6 +35,7 @@ from discopy.quantum.gates import (
 from discopy.quantum.gates import Scalar as GatesScalar
 from discopy.rigid import Sum, Nat
 from discopy.utils import factory_name
+from discopy.pattern import Atom, Hom, Tensor as TensorPattern
 from discopy.search import rule
 
 
@@ -47,10 +48,13 @@ class Diagram(tensor.Diagram[complex]):
 
     @staticmethod
     @rule
-    def swap(left, right):
+    def swap[X: Atom, Y: Atom](
+            left: Annotated[int | Nat, X], right: Annotated[int | Nat, Y]
+    ) -> Annotated[Diagram, Hom[TensorPattern[X, Y], TensorPattern[Y, X]]]:
         left = left if isinstance(left, Nat) else Nat(left)
         right = right if isinstance(right, Nat) else Nat(right)
-        return tensor.Diagram.swap.__func__(Diagram, left, right)
+        return tensor.Diagram.swap.__func__(
+            Diagram, left, right)  # ty: ignore[invalid-return-type]
 
     @staticmethod
     def Cup(left, right):

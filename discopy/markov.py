@@ -80,7 +80,9 @@ from typing import ClassVar
 
 from discopy import symmetric, monoidal, cmap, hypergraph
 from discopy.abc import MarkovCategory
-from discopy.axioms import Serialisable, rule
+from typing import Annotated
+
+from discopy.axioms import Atom, Count, Hom, Repeat, Serialisable, rule
 from discopy.cat import factory, Generator
 from discopy.monoidal import Ty  # noqa: F401
 from discopy.utils import assert_isatomic, factory_name
@@ -146,7 +148,9 @@ class Diagram(symmetric.Diagram, MarkovCategory):
 
     @classmethod
     @rule
-    def copy(cls, x: monoidal.Ty, n=2) -> Diagram:
+    def copy[X: Atom, N: Count](
+            cls, x: Annotated[monoidal.Ty, X], n: Annotated[int, N] = 2
+    ) -> Annotated[Diagram, Hom[X, Repeat[X, N]]]:
         """
         Make :code:`n` copies of a given type :code:`x`.
 
@@ -160,7 +164,9 @@ class Diagram(symmetric.Diagram, MarkovCategory):
 
     @classmethod
     @rule
-    def merge(cls, x: monoidal.Ty, n=2) -> Diagram:
+    def merge[X: Atom, N: Count](
+            cls, x: Annotated[monoidal.Ty, X], n: Annotated[int, N] = 2
+    ) -> Annotated[Diagram, Hom[Repeat[X, N], X]]:
         """
         Merge :code:`n` copies of a given type :code:`x`.
 

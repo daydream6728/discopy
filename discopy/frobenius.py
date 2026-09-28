@@ -67,7 +67,10 @@ from collections.abc import Callable
 from discopy import (
     monoidal, rigid, markov, compact, pivotal, cmap, hypergraph)
 from discopy.abc import HypergraphCategory
-from discopy.axioms import Serialisable, rule
+from typing import Annotated
+
+from discopy.axioms import (
+    C0, Atom, Count, Hom, L, Repeat, Serialisable, Tensor, Unit, rule)
 from discopy.cat import factory, Generator
 from discopy.utils import assert_isatomic, factory_name
 
@@ -148,13 +151,17 @@ class Diagram(compact.Diagram, markov.Diagram, HypergraphCategory):
 
     @classmethod
     @rule
-    def caps(cls, left, right):
+    def caps[X: Atom](
+            cls, left: Annotated[Ty, X], right: Annotated[Ty, L[X]]
+    ) -> Annotated[Diagram, Hom[Unit[C0], Tensor[X, L[X]]]]:
         return cls.cups(left, right).dagger()
 
     @classmethod
     @rule
-    def spiders(cls, n_legs_in: int, n_legs_out: int, typ: Ty, phases=None
-                ) -> Diagram:
+    def spiders[X: Atom, M: Count, N: Count](
+            cls, n_legs_in: Annotated[int, M], n_legs_out: Annotated[int, N],
+            typ: Annotated[Ty, X], phases=None
+    ) -> Annotated[Diagram, Hom[Repeat[X, M], Repeat[X, N]]]:
         """
         The spiders on a given type with ``n_legs_in`` and ``n_legs_out`` and
         some optional vector of ``phases``.

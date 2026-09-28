@@ -67,12 +67,12 @@ Examples
     :align: center
 """
 
-from typing import ClassVar
+from typing import Annotated, ClassVar
 
 from collections.abc import Mapping
 
 from discopy import messages, tensor, frobenius
-from discopy.axioms import Rule, no_strategy, rule
+from discopy.axioms import Hom, Rule, no_strategy, rule
 from discopy.cat import factory, Generator
 from discopy.matrix import backend
 from discopy.tensor import Dim, Tensor
@@ -242,7 +242,8 @@ class Circuit(tensor.Diagram[complex]):
 
     @classmethod
     @rule
-    def id(cls, dom: int | Ty | None = None):
+    def id[A](cls, dom: Annotated[int | Ty | None, A] = None
+              ) -> Annotated[Circuit, Hom[A, A]]:
         """
         The identity circuit on a given domain.
 

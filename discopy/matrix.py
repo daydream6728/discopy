@@ -37,7 +37,7 @@ See also
 from contextlib import contextmanager
 from operator import index
 from types import ModuleType
-from typing import Literal, Callable, TYPE_CHECKING
+from typing import Annotated, Any, Literal, Callable, TYPE_CHECKING
 
 from discopy import monoidal, config, messages
 from discopy.abc import (
@@ -48,6 +48,7 @@ from discopy.cat import (
     assert_isparallel,
 )
 from discopy.utils import assert_isinstance, unbiased
+from discopy.pattern import Hom, Tensor as TensorPattern
 from discopy.search import rule
 
 if TYPE_CHECKING:
@@ -239,7 +240,8 @@ class Matrix[dtype](MonoidalCategory, DaggerCategory, NamedGeneric):
 
     @classmethod
     @rule
-    def id(cls, dom=0) -> Matrix:
+    def id[A](cls, dom: Annotated[Any, A] = 0
+              ) -> Annotated[Matrix, Hom[A, A]]:
         with backend('numpy') as np:
             array = np.identity(index(dom), dtype=cls.dtype or int)
         return cls(array, dom, dom)
@@ -248,7 +250,10 @@ class Matrix[dtype](MonoidalCategory, DaggerCategory, NamedGeneric):
 
     @rule
     @unbiased
-    def then(self, other: Matrix) -> Matrix:
+    def then[A, B, C](
+            self: Annotated[Matrix, Hom[A, B]],
+            other: Annotated[Matrix, Hom[B, C]]
+    ) -> Annotated[Matrix, Hom[A, C]]:
         assert_isinstance(other, type(self))
         assert_iscomposable(self, other)
         with backend() as np:
@@ -256,7 +261,11 @@ class Matrix[dtype](MonoidalCategory, DaggerCategory, NamedGeneric):
         return type(self)(array, self.dom, other.cod)
 
     @rule
-    def tensor(self, other: Matrix | None = None, *others: Matrix):
+    def tensor[A, B, C, D](
+            self: Annotated[Matrix, Hom[A, B]],
+            other: Annotated[Matrix | None, Hom[C, D]] = None,
+            *others: Matrix
+    ) -> Annotated[Matrix, Hom[TensorPattern[A, C], TensorPattern[B, D]]]:
         if others or other is None:
             return monoidal.Diagram.tensor(
                 self, other, *others)

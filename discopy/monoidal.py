@@ -67,8 +67,8 @@ from discopy import abc, cat, drawing, hypergraph, cmap, messages
 from discopy.abc import (
     ColouredMonoid, Monoid, MonoidalCategory, NamedGeneric)
 from discopy.axioms import (
-    C0, GENERATORS, Serialisable, no_strategy, rule, search,
-    Equation as AbstractEquation, axiom)
+    C0, GENERATORS, Hom, Serialisable, Tensor as TensorPattern,
+    no_strategy, rule, search, Equation as AbstractEquation, axiom)
 from discopy.drawing import Drawing
 from discopy.config import (
     BOX_DRAWING_ATTRIBUTES, WIRE_DRAWING_ATTRIBUTES,
@@ -387,8 +387,6 @@ class Ty(cat.Ob, cat.FreeCategory, ColouredMonoid):
             return NotImplemented  # This allows whiskering on the left.
         return cat.FreeCategory.then(self, *others)
 
-    then = rule(tensor)
-
     def __pow__(self, n_times: int) -> Self:
         assert_isinstance(n_times, int)
         if n_times <= 0:
@@ -593,8 +591,6 @@ class Nat(abc.Nat, Ty):
             assert_isinstance(self, other.factory)
             assert_isinstance(other, self.factory)
         return self.factory(self.n + sum(other.n for other in others))
-
-    then = rule(tensor)
 
     def __repr__(self):
         return factory_name(type(self)) + f"({self.n})"
@@ -1103,8 +1099,11 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
         return decorator
 
     @rule
-    def tensor(
-            self, other: Diagram | None = None, *others: Diagram) -> Diagram:
+    def tensor[A, B, C, D](
+            self: Annotated[Diagram, Hom[A, B]],
+            other: Annotated[Diagram | None, Hom[C, D]] = None,
+            *others: Diagram
+    ) -> Annotated[Diagram, Hom[TensorPattern[A, C], TensorPattern[B, D]]]:
         """
         Parallel composition, called using :code:`@`.
 
@@ -1808,7 +1807,10 @@ class Sum(cat.Sum, Box):
         return 1
 
     @rule
-    def tensor(self, other=None, *others):
+    def tensor[A, B, C, D](
+            self: Annotated[Sum, Hom[A, B]],
+            other: Annotated[Diagram | None, Hom[C, D]] = None, *others
+    ) -> Annotated[Sum, Hom[TensorPattern[A, C], TensorPattern[B, D]]]:
         if other is None or others:
             return Diagram.tensor(self, other, *others)
         other = other if isinstance(other, Sum)\
@@ -1971,11 +1973,15 @@ class Functor(cat.Functor):
 
     @classmethod
     @rule
-    def id(cls, dom=None):
+    def id[A](cls, dom: Annotated[type | None, A] = None
+              ) -> Annotated[Any, Hom[A, A]]:
         return cls(lambda x: x, lambda f: f, dom=dom, cod=dom)
 
     @rule
-    def then(self, other):
+    def then[A, B, C](
+            self: Annotated[Functor, Hom[A, B]],
+            other: Annotated[Functor, Hom[B, C]]
+    ) -> Annotated[Functor, Hom[A, C]]:
         assert_isinstance(other, Functor)
         assert_iscomposable(self, other)
         return type(self)(

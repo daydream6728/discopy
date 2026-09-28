@@ -17,13 +17,14 @@ Summary
 """
 
 from discopy.utils import assert_isinstance
-from typing import Iterable, Self, Any, overload
+from typing import Annotated, Iterable, Self, Any, overload
 from collections.abc import Sequence
 
 from dataclasses import dataclass
 
 from discopy import messages
 from discopy.abc import MonoidalCategory, PROP, Nat
+from discopy.pattern import Atom, Hom, Tensor as TensorPattern
 from discopy.search import rule
 
 
@@ -74,17 +75,24 @@ class Function(MonoidalCategory, Sequence):
 
     @staticmethod
     @rule
-    def id(x: int | Nat = 0):
+    def id[A](x: Annotated[int | Nat, A] = 0
+              ) -> Annotated[Function, Hom[A, A]]:
         x = Nat(int(x))
         return Function(list(range(x)), x, x)
 
     @rule
-    def then(self, other: Function) -> Function:
+    def then[A, B, C](
+            self: Annotated[Function, Hom[A, B]],
+            other: Annotated[Function, Hom[B, C]]
+    ) -> Annotated[Function, Hom[A, C]]:
         inside = [self[other[i]] for i in range(len(other))]
         return Function(inside, self.dom, other.cod)
 
     @rule
-    def tensor(self, other: Function) -> Function:
+    def tensor[A, B, C, D](
+            self: Annotated[Function, Hom[A, B]],
+            other: Annotated[Function, Hom[C, D]]
+    ) -> Annotated[Function, Hom[TensorPattern[A, C], TensorPattern[B, D]]]:
         inside = list(self.inside) + [
             int(self.dom) + other[i] for i in range(len(other))]
         return Function(
@@ -92,7 +100,9 @@ class Function(MonoidalCategory, Sequence):
 
     @staticmethod
     @rule
-    def swap(x: int | Nat, y: int | Nat) -> Function:
+    def swap[X: Atom, Y: Atom](
+            x: Annotated[int | Nat, X], y: Annotated[int | Nat, Y]
+    ) -> Annotated[Function, Hom[TensorPattern[X, Y], TensorPattern[Y, X]]]:
         m, n = int(x), int(y)
         inside = list(Permutation.swap(m, n))
         return Function(inside, Nat(m + n), Nat(m + n))
@@ -185,7 +195,8 @@ class Permutation(Function, PROP):
 
     @classmethod
     @rule
-    def id(cls, dom: int | Nat = 0) -> Self:
+    def id[A](cls, dom: Annotated[int | Nat, A] = 0
+              ) -> Annotated[Self, Hom[A, A]]:
         """ The identity permutation on ``range(size)``. """
         n = int(dom)
         return cls(range(n), n)
@@ -253,7 +264,10 @@ class Permutation(Function, PROP):
         return tuple(cycle)
 
     @rule
-    def then(self, other: Self) -> Self:
+    def then[A, B, C](
+            self: Annotated[Self, Hom[A, B]],
+            other: Annotated[Self, Hom[B, C]]
+    ) -> Annotated[Self, Hom[A, C]]:
         """ Return ``self ; other``, i.e. ``result[i] == other[self[i]]``. """
         other = type(self)(other, len(self))
         elems = (other[self[i]] for i in range(len(self)))
@@ -277,7 +291,10 @@ class Permutation(Function, PROP):
         return other.dagger().then(self).then(other)
 
     @rule
-    def tensor(self, other=None, *others) -> Self:
+    def tensor[A, B, C, D](
+            self: Annotated[Self, Hom[A, B]],
+            other: Annotated[Self | None, Hom[C, D]] = None, *others
+    ) -> Annotated[Self, Hom[TensorPattern[A, C], TensorPattern[B, D]]]:
         """ Return the disjoint union of permutations. """
         if other is None:
             return self
@@ -334,7 +351,10 @@ class Permutation(Function, PROP):
 
     @classmethod
     @rule
-    def swap(cls, left: int | Nat, right: int | Nat) -> Self:
+    def swap[X: Atom, Y: Atom](
+            cls, left: Annotated[int | Nat, X],
+            right: Annotated[int | Nat, Y]
+    ) -> Annotated[Self, Hom[TensorPattern[X, Y], TensorPattern[Y, X]]]:
         m, n = int(left), int(right)
         inside = tuple(
             i + n if i < m else i - m

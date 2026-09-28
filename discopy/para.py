@@ -142,8 +142,12 @@ Parametric maps compose like layers of a neural network, e.g. over
 """
 
 from dataclasses import dataclass
-from typing import Self
+from typing import Annotated, Self
 
+from discopy.pattern import (
+    C0, Atom, Count, Delay, Hom, L, R, Repeat, Unit,
+    Over as OverPattern, Under as UnderPattern,
+    Tensor as TensorPattern)
 from discopy.search import rule
 from discopy import (
     monoidal, symmetric, markov, closed, feedback, compact, frobenius)
@@ -216,7 +220,8 @@ class Symmetric[category: symmetric.Diagram](SymmetricCategory, NamedGeneric):
 
     @classmethod
     @rule
-    def id(cls, dom: monoidal.Ty | None = None) -> Symmetric:
+    def id[A](cls, dom: Annotated[monoidal.Ty | None, A] = None
+              ) -> Annotated[Symmetric, Hom[A, A]]:
         """
         The identity parametric map on `dom`, with empty parameter space.
 
@@ -227,7 +232,10 @@ class Symmetric[category: symmetric.Diagram](SymmetricCategory, NamedGeneric):
 
     @rule
     @unbiased
-    def then(self, other: Symmetric) -> Symmetric:
+    def then[A, B, C](
+            self: Annotated[Symmetric, Hom[A, B]],
+            other: Annotated[Symmetric, Hom[B, C]]
+    ) -> Annotated[Symmetric, Hom[A, C]]:
         """
         Sequential composition tensors the hidden spaces on both sides,
         i.e. `(p, f) >> (q, g) == (p @ q, f @ q >> g)` for empty
@@ -249,7 +257,10 @@ class Symmetric[category: symmetric.Diagram](SymmetricCategory, NamedGeneric):
 
     @rule
     @unbiased
-    def tensor(self, other: Symmetric) -> Symmetric:
+    def tensor[A, B, C, D](
+            self: Annotated[Symmetric, Hom[A, B]],
+            other: Annotated[Symmetric, Hom[C, D]]
+    ) -> Annotated[Symmetric, Hom[TensorPattern[A, C], TensorPattern[B, D]]]:
         """
         Parallel composition tensors the hidden spaces on both sides, with
         swaps routing the parameters to the right of the domains and the
@@ -268,7 +279,10 @@ class Symmetric[category: symmetric.Diagram](SymmetricCategory, NamedGeneric):
 
     @classmethod
     @rule
-    def swap(cls, left: monoidal.Ty, right: monoidal.Ty) -> Symmetric:
+    def swap[X: Atom, Y: Atom](
+            cls, left: Annotated[monoidal.Ty, X],
+            right: Annotated[monoidal.Ty, Y]
+    ) -> Annotated[Symmetric, Hom[TensorPattern[X, Y], TensorPattern[Y, X]]]:
         """
         The swap of the underlying category, with empty parameter space.
 
@@ -326,12 +340,18 @@ class Traced(Symmetric, TracedCategory):
     traced category, with the parameters swapped out of the way.
     """
     @rule
-    def trace_left(self, n=1):
+    def trace_left[A, B, M: Atom](
+            self: Annotated[
+                Traced, Hom[TensorPattern[M, A], TensorPattern[M, B]]],
+            n=1) -> Annotated[Traced, Hom[A, B]]:
         """ The trace of ``n`` wires on the left, see :meth:`trace`. """
         return self.trace(n, left=True)
 
     @rule
-    def trace_right(self, n=1):
+    def trace_right[A, B, M: Atom](
+            self: Annotated[
+                Traced, Hom[TensorPattern[A, M], TensorPattern[B, M]]],
+            n=1) -> Annotated[Traced, Hom[A, B]]:
         """ The trace of ``n`` wires on the right, see :meth:`trace`. """
         return self.trace(n)
 
@@ -366,7 +386,10 @@ class Markov(Symmetric, MarkovCategory):
 
     @classmethod
     @rule
-    def copy(cls, x: monoidal.Ty, n: int = 2) -> Markov:
+    def copy[X: Atom, N: Count](
+            cls, x: Annotated[monoidal.Ty, X],
+            n: Annotated[int, N] = 2
+    ) -> Annotated[Markov, Hom[X, Repeat[X, N]]]:
         """
         The copy of the underlying category, with empty parameter space.
 
@@ -386,13 +409,19 @@ class Closed(Markov, ClosedCategory):
 
     @classmethod
     @rule
-    def ev_left(cls, base, exponent):
+    def ev_left[Y: Atom, E: Atom](
+            cls, base: Annotated[monoidal.Ty, Y],
+            exponent: Annotated[monoidal.Ty, E]
+    ) -> Annotated[Closed, Hom[TensorPattern[OverPattern[Y, E], E], Y]]:
         """ The left evaluation, see :meth:`ev`. """
         return cls.ev(base, exponent, left=True)
 
     @classmethod
     @rule
-    def ev_right(cls, base, exponent):
+    def ev_right[Y: Atom, E: Atom](
+            cls, base: Annotated[monoidal.Ty, Y],
+            exponent: Annotated[monoidal.Ty, E]
+    ) -> Annotated[Closed, Hom[TensorPattern[E, UnderPattern[E, Y]], Y]]:
         """ The right evaluation, see :meth:`ev`. """
         return cls.ev(base, exponent, left=False)
 
@@ -411,12 +440,16 @@ class Closed(Markov, ClosedCategory):
             base, exponent, left))  # ty: ignore[invalid-argument-type]
 
     @rule
-    def curry_left(self, n=1):
+    def curry_left[X, Y: Atom, Z](
+            self: Annotated[Closed, Hom[TensorPattern[X, Y], Z]], n=1
+    ) -> Annotated[Closed, Hom[X, OverPattern[Z, Y]]]:
         """ The left currying of ``n`` objects, see :meth:`curry`. """
         return self.curry(n, left=True)
 
     @rule
-    def curry_right(self, n=1):
+    def curry_right[Y: Atom, X, Z](
+            self: Annotated[Closed, Hom[TensorPattern[Y, X], Z]], n=1
+    ) -> Annotated[Closed, Hom[X, UnderPattern[Y, Z]]]:
         """ The right currying of ``n`` objects, see :meth:`curry`. """
         return self.curry(n, left=False)
 
@@ -458,17 +491,27 @@ class Feedback(Markov, FeedbackCategory):
             self.dom, self.cod, self.inside, self.param, self.copar)))
 
     @rule
-    def feedback_left(self, dom: monoidal.Ty | None = None,
-                      cod: monoidal.Ty | None = None,
-                      mem: monoidal.Ty | None = None) -> Feedback:
+    def feedback_left[A, B, M: Atom](
+            self: Annotated[
+                Feedback,
+                Hom[TensorPattern[Delay[M], A], TensorPattern[M, B]]],
+            dom: monoidal.Ty | None = None,
+            cod: monoidal.Ty | None = None,
+            mem: monoidal.Ty | None = None
+    ) -> Annotated[Feedback, Hom[A, B]]:
         """ A parametric feedback keeps its memory on the right. """
         raise NotImplementedError(
             "A parametric feedback keeps its memory on the right.")
 
     @rule
-    def feedback_right(self, dom: monoidal.Ty | None = None,
-                       cod: monoidal.Ty | None = None,
-                       mem: monoidal.Ty | None = None) -> Feedback:
+    def feedback_right[A, B, M: Atom](
+            self: Annotated[
+                Feedback,
+                Hom[TensorPattern[A, Delay[M]], TensorPattern[B, M]]],
+            dom: monoidal.Ty | None = None,
+            cod: monoidal.Ty | None = None,
+            mem: monoidal.Ty | None = None
+    ) -> Annotated[Feedback, Hom[A, B]]:
         """ The feedback of the memory on the right, see :meth:`feedback`. """
         return self.feedback(dom, cod, mem)
 
@@ -504,7 +547,10 @@ class Compact(Traced, CompactCategory):
 
     @classmethod
     @rule
-    def cups(cls, left: monoidal.Ty, right: monoidal.Ty) -> Compact:
+    def cups[X: Atom](
+            cls, left: Annotated[monoidal.Ty, X],
+            right: Annotated[monoidal.Ty, R[X]]
+    ) -> Annotated[Compact, Hom[TensorPattern[X, R[X]], Unit[C0]]]:
         """
         The cups of the underlying category, with empty parameter space.
 
@@ -517,7 +563,10 @@ class Compact(Traced, CompactCategory):
 
     @classmethod
     @rule
-    def caps(cls, left: monoidal.Ty, right: monoidal.Ty) -> Compact:
+    def caps[X: Atom](
+            cls, left: Annotated[monoidal.Ty, X],
+            right: Annotated[monoidal.Ty, L[X]]
+    ) -> Annotated[Compact, Hom[Unit[C0], TensorPattern[X, L[X]]]]:
         """
         The caps of the underlying category, with empty parameter space.
 
@@ -541,8 +590,10 @@ class Hypergraph(Compact, Markov, HypergraphCategory):
 
     @classmethod
     @rule
-    def spiders(cls, n_legs_in: int, n_legs_out: int, typ: monoidal.Ty
-                ) -> Hypergraph:
+    def spiders[X: Atom, M: Count, N: Count](
+            cls, n_legs_in: Annotated[int, M],
+            n_legs_out: Annotated[int, N], typ: Annotated[monoidal.Ty, X]
+    ) -> Annotated[Hypergraph, Hom[Repeat[X, M], Repeat[X, N]]]:
         """
         The spiders of the underlying category, with empty parameters.
 

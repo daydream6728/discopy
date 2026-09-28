@@ -82,6 +82,9 @@ class Diagram(symmetric.Diagram, ribbon.Diagram, CompactCategory):
     """
     serialisation = Serialisable.serialisation
 
+    twist = classmethod(ribbon.Diagram.twist.__func__.inapplicable(
+        "The twist is the identity."))
+
     ob = Ty
     Layer: ClassVar[Generator] = Generator.subclass(Layer)
     Permutation: ClassVar[Generator]

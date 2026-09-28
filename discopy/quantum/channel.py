@@ -42,6 +42,7 @@ Channel([0.5+0.j, 0.5+0.j, 0.5+0.j, 0.5+0.j], dom=CQ(), cod=Q(Dim(2)))
 """
 
 from discopy import frobenius, tensor
+from discopy.abc import ColouredMonoid
 from discopy.cat import factory
 from discopy.frobenius import Ty, Diagram, Box
 from discopy.matrix import backend
@@ -50,10 +51,13 @@ from discopy.quantum.circuit import (
 from discopy.quantum.gates import Discard, Measure, MixedState, Encode, Scalar
 from discopy.tensor import Dim, Tensor
 from discopy.utils import assert_isinstance
+from typing import Annotated
+
+from discopy.pattern import Hom, Tensor as TensorPattern
 from discopy.search import rule
 
 
-class CQ:
+class CQ(ColouredMonoid):
     """
     A classical-quantum dimension is a pair of dimensions
     ``classical`` and ``quantum``.
@@ -170,14 +174,18 @@ class Channel(Tensor):
 
     @classmethod
     @rule
-    def id(cls, dom=CQ()) -> Channel:
+    def id[A](cls, dom: Annotated[CQ, A] = CQ()
+              ) -> Annotated[Channel, Hom[A, A]]:
         assert_isinstance(dom, CQ)
         return cls(Tensor[
             cls.dtype].id(dom.to_dim()).array,  # ty: ignore[invalid-type-form]
             dom, dom)
 
     @rule
-    def then(self, other: Channel | None = None, *others: Channel) -> Channel:
+    def then[A, B, C](
+            self: Annotated[Channel, Hom[A, B]],
+            other: Annotated[Channel | None, Hom[B, C]] = None,
+            *others: Channel) -> Annotated[Channel, Hom[A, C]]:
         if other is None or others:
             return super().then(other, *others)
         assert_isinstance(other, type(self))
@@ -188,8 +196,11 @@ class Channel(Tensor):
         return type(self)(self.to_tensor().dagger().array, self.cod, self.dom)
 
     @rule
-    def tensor(
-            self, other: Channel | None = None, *others: Channel) -> Channel:
+    def tensor[A, B, C, D](
+            self: Annotated[Channel, Hom[A, B]],
+            other: Annotated[Channel | None, Hom[C, D]] = None,
+            *others: Channel
+    ) -> Annotated[Channel, Hom[TensorPattern[A, C], TensorPattern[B, D]]]:
         if other is None or others:
             return super().tensor(other, *others)
         assert_isinstance(other, type(self))

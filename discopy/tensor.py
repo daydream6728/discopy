@@ -59,11 +59,12 @@ indices. Swaps, cups and caps become wiring while spiders stay as boxes.
 
 from itertools import count
 from typing import (
-    TYPE_CHECKING, Any, Callable, ClassVar, Mapping, Self, Sequence)
+    TYPE_CHECKING, Annotated, Any, Callable, ClassVar, Mapping, Sequence)
 
 from discopy import (
     cat, monoidal, rigid, frobenius, cmap, config)
-from discopy.axioms import no_strategy, rule
+from discopy.axioms import (
+    Hom, no_strategy, rule, Tensor as TensorPattern)
 from discopy.cat import factory, Generator, assert_iscomposable
 from discopy.frobenius import Dim, Cup
 from discopy.matrix import (  # noqa: F401
@@ -151,11 +152,15 @@ class Tensor[dtype](Matrix[dtype]):
 
     @classmethod
     @rule
-    def id(cls, dom=Dim(1)) -> Tensor:
+    def id[A](cls, dom: Annotated[Any, A] = Dim(1)
+              ) -> Annotated[Tensor, Hom[A, A]]:
         return cls(Matrix.id(product(dom.inside)).array, dom, dom)
 
     @rule
-    def then(self, other: Tensor | None = None, *others: Tensor) -> Self:
+    def then[A, B, C](
+            self: Annotated[Tensor, Hom[A, B]],
+            other: Annotated[Tensor | None, Hom[B, C]] = None,
+            *others: Tensor) -> Annotated[Tensor, Hom[A, C]]:
         if other is None or others:
             return super().then(other, *others)
         assert_isinstance(other, type(self))
@@ -167,8 +172,11 @@ class Tensor[dtype](Matrix[dtype]):
         return type(self)(array, self.dom, other.cod)
 
     @rule
-    def tensor(
-            self, other: Tensor | None = None, *others: Tensor) -> Self:
+    def tensor[A, B, C, D](
+            self: Annotated[Tensor, Hom[A, B]],
+            other: Annotated[Tensor | None, Hom[C, D]] = None,
+            *others: Tensor
+    ) -> Annotated[Tensor, Hom[TensorPattern[A, C], TensorPattern[B, D]]]:
         if other is None or others:
             return Diagram.tensor(self, other, *others)
         assert_isinstance(other, Tensor)

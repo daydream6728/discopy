@@ -113,11 +113,12 @@ class Category[C0, C1: Category](Testable, ABC):
         """
         The inference rules inherited by ``cls``, by name: the rule each
         structural method carries, see :func:`discopy.search.rule`, bound
-        to ``cls`` and owned by the class declaring it. A method
-        implementing a rule is decorated :func:`discopy.search.rule`
-        itself, without restating the sequent, and the search calls it
-        by name; one declared :meth:`discopy.search.Rule.inapplicable`
-        is dropped.
+        to ``cls`` and owned by the class declaring it, the latest in the
+        method resolution order winning like ordinary attribute lookup. A
+        method implementing a rule is decorated
+        :func:`discopy.search.rule` itself, restating its sequent, and
+        the search calls it by name; one declared
+        :meth:`discopy.search.Rule.inapplicable` is dropped.
         """
         return declarations(cls, Rule)
 
@@ -279,7 +280,8 @@ class ColouredMonoid[C0, C1: ColouredMonoid](Category[C0, C1]):
 
     @classmethod
     @rule
-    def id(cls, dom: C0 | None = None) -> C1:
+    def id[A](cls, dom: Annotated[C0 | None, A] = None
+              ) -> Annotated[C1, Hom[A, A]]:
         """The monoidal unit, i.e. the empty tensor ``cls()``."""
         return cls()  # ty: ignore[invalid-return-type]
 
@@ -299,7 +301,9 @@ class ColouredMonoid[C0, C1: ColouredMonoid](Category[C0, C1]):
         """ The n-ary product of a monoid for ``n > 0``. """
 
     @rule
-    def then(self, *others: C1) -> C1:
+    def then[A, B, C](
+            self: Annotated[C1, Hom[A, B]],
+            *others: Annotated[C1, Hom[B, C]]) -> Annotated[C1, Hom[A, C]]:
         """Sequential composition, given by the monoid product."""
         return self.tensor(*others)
 
@@ -842,33 +846,41 @@ class RigidCategory[C0: Pregroup, C1: RigidCategory](BiclosedCategory[C0, C1]):
 
     @classmethod
     @rule
-    def ev_left(cls, base: C0, exponent: C0) -> C1:
+    def ev_left[Y: Atom, E: Atom](
+            cls, base: Annotated[C0, Y], exponent: Annotated[C0, E]
+    ) -> Annotated[C1, Hom[Tensor[Y, L[E], E], Y]]:
         """ The left evaluation of a rigid morphism is obtained using cups. """
         return base @ cls.cups(exponent.l, exponent)
 
     @classmethod
     @rule
-    def ev_right(cls, base: C0, exponent: C0) -> C1:
+    def ev_right[Y: Atom, E: Atom](
+            cls, base: Annotated[C0, Y], exponent: Annotated[C0, E]
+    ) -> Annotated[C1, Hom[Tensor[E, R[E], Y], Y]]:
         """ The right evaluation of a rigid morphism, using cups. """
         return cls.cups(exponent, exponent.r) @ base
 
     @rule
-    def curry_left(self, n: int = 1) -> C1:
+    def curry_left[X, Y: Atom, Z](
+            self: Annotated[C1, Hom[Tensor[X, Y], Z]], n: int = 1
+    ) -> Annotated[C1, Hom[X, Tensor[Z, L[Y]]]]:
         """ The left curry of a rigid morphism is obtained using caps. """
         if n < 0 or n > len(self.dom):
             raise ValueError
         if not n:
-            return self  # ty: ignore[invalid-return-type]
+            return self
         base, exponent = self.dom[:-n], self.dom[-n:]
         return base @ self.caps(exponent, exponent.l) >> self @ exponent.l
 
     @rule
-    def curry_right(self, n: int = 1) -> C1:
+    def curry_right[Y: Atom, X, Z](
+            self: Annotated[C1, Hom[Tensor[Y, X], Z]], n: int = 1
+    ) -> Annotated[C1, Hom[X, Tensor[R[Y], Z]]]:
         """ The right curry of a rigid morphism is obtained using caps. """
         if n < 0 or n > len(self.dom):
             raise ValueError
         if not n:
-            return self  # ty: ignore[invalid-return-type]
+            return self
         base, exponent = self.dom[n:], self.dom[:n]
         return self.caps(exponent.r, exponent) @ base >> exponent.r @ self
 
@@ -1076,7 +1088,10 @@ class SymmetricCategory[C0: ColouredMonoid, C1: SymmetricCategory](
 
     @classmethod
     @rule
-    def braid(cls, left: C0, right: C0) -> C1:
+    def braid[X: Atom, Y: Atom](
+            cls, left: Annotated[C0, X], right: Annotated[C0, Y]
+    ) -> Annotated[C1, Hom[Tensor[X, Y], Tensor[Y, X]]]:
+        """ The braid of a symmetric category is its swap. """
         return cls.swap(left, right)
 
     @axiom
@@ -1344,7 +1359,8 @@ class CompactCategory[C0: Pregroup, C1: CompactCategory](
     :class:`SymmetricCategory`, i.e. with cups, caps and swaps and where
     the twist is the identity.
     """
-    def twist(cls, dom: C0) -> C1:
+    def twist[X: Atom](cls, dom: Annotated[C0, X]
+                       ) -> Annotated[C1, Hom[X, X]]:
         """ The twist of a compact category is the identity. """
         return cls.id(dom)
 

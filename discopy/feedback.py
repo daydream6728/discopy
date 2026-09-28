@@ -160,9 +160,11 @@ In the category of streams, this is just the identity.
 from typing import ClassVar
 
 from discopy import monoidal, braided, markov, hypergraph, messages
+from typing import Annotated
+
 from discopy.axioms import GENERATORS, no_strategy
 from discopy.abc import DelayedMonoid, FeedbackCategory
-from discopy.axioms import rule
+from discopy.axioms import Atom, Delay, Hom, Tensor, rule
 from discopy.utils import (
     factory, Generator, factory_name, assert_isinstance, AxiomError,
     from_tree)
@@ -396,7 +398,10 @@ class Diagram(markov.Diagram, FeedbackCategory):
         return type(self)(inside, dom, cod, _scan=False)
 
     @rule
-    def feedback_left(self, dom=None, cod=None, mem=None):
+    def feedback_left[A, B, M: Atom](
+            self: Annotated[Diagram, Hom[Tensor[Delay[M], A], Tensor[M, B]]],
+            dom=None, cod=None, mem=None
+    ) -> Annotated[Diagram, Hom[A, B]]:
         """
         A :class:`Feedback` of the memory on the left, wire by wire: the
         outermost memory wire, the first, feeds back first.
@@ -407,7 +412,10 @@ class Diagram(markov.Diagram, FeedbackCategory):
             else self.feedback_left(mem=mem[:1]).feedback_left(mem=mem[1:])
 
     @rule
-    def feedback_right(self, dom=None, cod=None, mem=None):
+    def feedback_right[A, B, M: Atom](
+            self: Annotated[Diagram, Hom[Tensor[A, Delay[M]], Tensor[B, M]]],
+            dom=None, cod=None, mem=None
+    ) -> Annotated[Diagram, Hom[A, B]]:
         """
         A :class:`Feedback` of the memory on the right, wire by wire: the
         outermost memory wire, the last, feeds back first.

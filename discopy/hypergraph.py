@@ -34,7 +34,8 @@ from inspect import isclass
 from itertools import chain
 
 import random
-from typing import Any, ClassVar, Iterable, Union, TYPE_CHECKING, Sequence
+from typing import (
+    Annotated, Any, ClassVar, Iterable, Union, TYPE_CHECKING, Sequence)
 
 import matplotlib.pyplot as plt
 
@@ -55,6 +56,7 @@ from discopy.abc import (
     NamedGeneric, RigidCategory, SymmetricCategory, TracedCategory)
 from discopy.drawing import Node, backend
 from discopy.python.finset import Permutation
+from discopy.pattern import Hom, Tensor as TensorPattern
 from discopy.search import rule
 from discopy.utils import (
     factory_name,
@@ -346,7 +348,8 @@ class Hypergraph[category: Diagram](MonoidalCategory, DaggerCategory,
 
     @classmethod
     @rule
-    def id(cls, dom=None) -> Hypergraph:
+    def id[A](cls, dom: Annotated[Any | None, A] = None
+              ) -> Annotated[Hypergraph, Hom[A, A]]:
         dom = cls.category.ob() if dom is None else dom
         dom_wires = cod_wires = tuple(range(len(dom)))
         return cls(dom, dom, (), (dom_wires, (), cod_wires))
@@ -355,7 +358,10 @@ class Hypergraph[category: Diagram](MonoidalCategory, DaggerCategory,
 
     @rule
     @unbiased
-    def then(self, other: Hypergraph):
+    def then[A, B, C](
+            self: Annotated[Hypergraph, Hom[A, B]],
+            other: Annotated[Hypergraph, Hom[B, C]]
+    ) -> Annotated[Hypergraph, Hom[A, C]]:
         """
         Composition of two hypergraph diagrams, i.e. their :func:`pushout`.
         """
@@ -381,7 +387,11 @@ class Hypergraph[category: Diagram](MonoidalCategory, DaggerCategory,
 
     @rule
     @unbiased
-    def tensor(self, other: Hypergraph):
+    def tensor[A, B, C, D](
+            self: Annotated[Hypergraph, Hom[A, B]],
+            other: Annotated[Hypergraph, Hom[C, D]]
+    ) -> Annotated[Hypergraph,
+                   Hom[TensorPattern[A, C], TensorPattern[B, D]]]:
         """ Tensor of two hypergraph diagrams, i.e. their disjoint union. """
         dom, cod = self.dom @ other.dom, self.cod @ other.cod
         boxes, offsets = self.boxes + other.boxes, self.offsets + other.offsets

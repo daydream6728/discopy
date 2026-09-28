@@ -125,7 +125,11 @@ from functools import cached_property
 import numpy as np
 
 from discopy import monoidal, ribbon, tensor, frobenius
-from discopy.axioms import no_strategy, rule
+from typing import Annotated
+
+from discopy.axioms import (
+    C0, Atom, Hom, L, R, Unit, no_strategy, rule,
+    Tensor as TensorPattern)
 from discopy.tensor import Dim, Box, Id
 from discopy.abc import RibbonCategory, NamedGeneric
 from discopy.utils import (
@@ -906,7 +910,10 @@ class Intertwiner[algebra](tensor.Diagram, RibbonCategory):
 
     @classmethod
     @rule
-    def braid(cls, left, right, is_dagger=False):
+    def braid[X: Atom, Y: Atom](
+            cls, left: Annotated[Representation, X],
+            right: Annotated[Representation, Y], is_dagger=False
+    ) -> Annotated[Intertwiner, Hom[TensorPattern[X, Y], TensorPattern[Y, X]]]:
         """
         The braiding :math:`V \\otimes W \\to W \\otimes V` (its inverse
         :math:`R^{-1} = (S \\otimes 1) R` when ``is_dagger``): the R-matrix
@@ -950,7 +957,10 @@ class Intertwiner[algebra](tensor.Diagram, RibbonCategory):
 
     @classmethod
     @rule
-    def cups(cls, left, right):
+    def cups[X: Atom](
+            cls, left: Annotated[Representation, X],
+            right: Annotated[Representation, R[X]]
+    ) -> Annotated[Intertwiner, Hom[TensorPattern[X, R[X]], Unit[C0]]]:
         """
         The evaluation of a module against its dual. When ``right`` is the
         right dual of ``left`` — read off the ``action`` of the two
@@ -974,7 +984,10 @@ class Intertwiner[algebra](tensor.Diagram, RibbonCategory):
 
     @classmethod
     @rule
-    def caps(cls, left, right):
+    def caps[X: Atom](
+            cls, left: Annotated[Representation, X],
+            right: Annotated[Representation, L[X]]
+    ) -> Annotated[Intertwiner, Hom[Unit[C0], TensorPattern[X, L[X]]]]:
         """
         The coevaluation of a module against its dual. When ``right`` is
         the right dual of ``left`` this is the plain copairing; a dual

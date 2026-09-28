@@ -159,13 +159,15 @@ Note that we can only check equality of streams up to a finite number of steps.
 
 See :mod:`discopy.feedback` for the other axioms for feedback categories.
 """
-from typing import Optional
+from typing import Annotated, Optional
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 
 from discopy import symmetric
 from discopy.abc import MonoidalCategory, NamedGeneric
 from discopy.python import finset
+from discopy.pattern import Hom, Tensor as TensorPattern
+from discopy.abc import ColouredMonoid
 from discopy.search import rule
 from discopy.utils import (
     AxiomError,
@@ -173,7 +175,7 @@ from discopy.utils import (
 
 
 @dataclass
-class Ty[base](NamedGeneric):
+class Ty[base](NamedGeneric, ColouredMonoid):
     """
     A stream of types from some underlying class `base`.
 
@@ -469,7 +471,8 @@ class Stream[category](MonoidalCategory, NamedGeneric):
 
     @classmethod
     @rule
-    def id(cls, x: Optional[Ty] = None) -> Stream:
+    def id[A](cls, x: Annotated[Optional[Ty], A] = None
+              ) -> Annotated[Stream, Hom[A, A]]:
         """
         Construct a stream of identity arrows.
 
@@ -487,7 +490,10 @@ class Stream[category](MonoidalCategory, NamedGeneric):
 
     @rule
     @unbiased
-    def then(self, other: Stream) -> Stream:
+    def then[A, B, C](
+            self: Annotated[Stream, Hom[A, B]],
+            other: Annotated[Stream, Hom[B, C]]
+    ) -> Annotated[Stream, Hom[A, C]]:
         """
         Composition of streams is given by swapping the memories as follows:
 
@@ -513,7 +519,10 @@ class Stream[category](MonoidalCategory, NamedGeneric):
 
     @rule
     @unbiased
-    def tensor(self, other: Stream) -> Stream:
+    def tensor[A, B, C, D](
+            self: Annotated[Stream, Hom[A, B]],
+            other: Annotated[Stream, Hom[C, D]]
+    ) -> Annotated[Stream, Hom[TensorPattern[A, C], TensorPattern[B, D]]]:
         """
         Tensor of streams is given by swapping the memories as follows:
 
@@ -615,7 +624,7 @@ class Stream[category](MonoidalCategory, NamedGeneric):
         mem = mem.delay() if _first_call else mem
         return type(self)(
             self.now, dom, cod,
-            mem @ self.mem, _later)  # ty: ignore[unsupported-operator]
+            mem @ self.mem, _later)
 
     FollowedBy = id
 

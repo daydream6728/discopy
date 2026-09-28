@@ -283,7 +283,10 @@ class Diagram(balanced.Diagram, SymmetricCategory):
 
     @classmethod
     @rule
-    def swap(cls, left: monoidal.Ty, right: monoidal.Ty) -> Diagram:
+    def swap[X: Atom, Y: Atom](
+            cls, left: Annotated[monoidal.Ty, X],
+            right: Annotated[monoidal.Ty, Y]
+    ) -> Annotated[Diagram, Hom[Tensor[X, Y], Tensor[Y, X]]]:
         """
         The diagram that swaps the ``left`` and ``right`` wires.
 
@@ -643,7 +646,11 @@ class Permutation(Box):
         return type(self)(self.cod, self.perm.dagger())
 
     @rule
-    def tensor(self, other=None, *others):
+    def tensor[A, B, C, D](
+            self: Annotated[Permutation, Hom[A, B]],
+            other: Annotated[Diagram | monoidal.Ty | None, Hom[C, D]] = None,
+            *others
+    ) -> Annotated[Diagram, Hom[Tensor[A, C], Tensor[B, D]]]:
         if other is None:
             return self
         if isinstance(other, Permutation):

@@ -129,7 +129,9 @@ from typing import ClassVar
 
 from discopy import monoidal, cmap, hypergraph
 from discopy.abc import TracedCategory
-from discopy.axioms import Serialisable, rule
+from typing import Annotated
+
+from discopy.axioms import Atom, Hom, Serialisable, Tensor, rule
 from discopy.cat import factory, Generator
 from discopy.monoidal import Ty  # noqa: F401
 from discopy.utils import (
@@ -160,7 +162,9 @@ class Diagram(monoidal.Diagram, TracedCategory):
         "The generic tree of a trace does not read back (#742).")
 
     @rule
-    def trace_left(self, n=1):
+    def trace_left[A, B, M: Atom](
+            self: Annotated[Diagram, Hom[Tensor[M, A], Tensor[M, B]]], n=1
+    ) -> Annotated[Diagram, Hom[A, B]]:
         """
         Feed ``n`` outputs on the left back into inputs.
 
@@ -183,7 +187,9 @@ class Diagram(monoidal.Diagram, TracedCategory):
             else self.Trace(self, left=True).trace_left(n - 1)
 
     @rule
-    def trace_right(self, n=1):
+    def trace_right[A, B, M: Atom](
+            self: Annotated[Diagram, Hom[Tensor[A, M], Tensor[B, M]]], n=1
+    ) -> Annotated[Diagram, Hom[A, B]]:
         """
         Feed ``n`` outputs on the right back into inputs.
 

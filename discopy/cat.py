@@ -86,6 +86,7 @@ from discopy import messages, utils
 from discopy.abc import Category, DaggerCategory, Serialisable
 from discopy.axioms import (
     GENERATORS,
+    Hom,
     In0,
     In1,
     Out0,
@@ -200,13 +201,16 @@ class FreeCategory(Category):
 
     @classmethod
     @rule
-    def id(cls, dom=None):
+    def id[A](cls, dom: Annotated[Any | None, A] = None
+              ) -> Annotated[Any, Hom[A, A]]:
         """The identity path on ``dom``, with no generators inside."""
         dom = cls.ob() if dom is None else dom
         return cls.ar(inside=(), dom=dom, cod=dom, _scan=False)
 
     @rule
-    def then(self, *others):
+    def then[A, B, C](
+            self: Annotated[Any, Hom[A, B]],
+            *others: Annotated[Any, Hom[B, C]]) -> Annotated[Any, Hom[A, C]]:
         inside, dom, cod = self.inside, self.dom, self.cod
         for other in others:
             assert_isinstance(other, self.ar)
@@ -417,7 +421,10 @@ class Arrow(FreeCategory, DaggerCategory, Serialisable):
         return hash(self.setoid())
 
     @rule
-    def then(self, *others: Arrow) -> Arrow:
+    def then[A, B, C](
+            self: Annotated[Arrow, Hom[A, B]],
+            *others: Annotated[Arrow, Hom[B, C]]
+    ) -> Annotated[Arrow, Hom[A, C]]:
         """
         Sequential composition, called with :code:`>>` and :code:`<<`.
 
@@ -694,7 +701,9 @@ class Sum(Box):
 
     @rule
     @unbiased
-    def then(self, other):
+    def then[A, B, C](
+            self: Annotated[Sum, Hom[A, B]],
+            other: Annotated[Arrow, Hom[B, C]]) -> Annotated[Sum, Hom[A, C]]:
         other = other if isinstance(other, Sum)\
             else self.Sum((other, ))
         terms = tuple(f.then(g) for f in self.terms for g in other.terms)
@@ -849,7 +858,8 @@ class Functor(Category, Serialisable):
 
     @classmethod
     @rule
-    def id(cls, dom: type | None = None) -> Functor:
+    def id[A](cls, dom: Annotated[type | None, A] = None
+              ) -> Annotated[Functor, Hom[A, A]]:
         """
         The identity functor on a given category ``dom``.
 
@@ -859,7 +869,10 @@ class Functor(Category, Serialisable):
         return cls(lambda x: x, lambda f: f, dom=dom, cod=dom)
 
     @rule
-    def then(self, other: Functor) -> Functor:
+    def then[A, B, C](
+            self: Annotated[Functor, Hom[A, B]],
+            other: Annotated[Functor, Hom[B, C]]
+    ) -> Annotated[Functor, Hom[A, C]]:
         """
         The composition of functor with another.
 
@@ -1138,7 +1151,8 @@ class Transformation(Category):
 
     @classmethod
     @rule
-    def id(cls, dom: Functor) -> Transformation:
+    def id[A](cls, dom: Annotated[Functor, A]
+              ) -> Annotated[Transformation, Hom[A, A]]:
         """
         The identity transformation on a given functor ``dom``, i.e. the
         transformation whose component at each object ``x`` is the
@@ -1159,7 +1173,10 @@ class Transformation(Category):
         return cls(lambda x: dom.cod.id(dom(x)), dom, dom)
 
     @rule
-    def then(self, other: Transformation) -> Transformation:
+    def then[A, B, C](
+            self: Annotated[Transformation, Hom[A, B]],
+            other: Annotated[Transformation, Hom[B, C]]
+    ) -> Annotated[Transformation, Hom[A, C]]:
         """
         The vertical composition of a transformation with another.
 

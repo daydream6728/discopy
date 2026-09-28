@@ -154,7 +154,10 @@ from typing import Any, ClassVar, Iterator, Self
 
 from discopy import cat, monoidal, biclosed, messages
 from discopy.abc import DaggerCategory, Pregroup, RigidCategory
-from discopy.axioms import GENERATORS, Serialisable, rule
+from typing import Annotated
+
+from discopy.axioms import (
+    C0, GENERATORS, Atom, Hom, L, R, Serialisable, Tensor, Unit, rule)
 from discopy.cat import factory, Generator
 from discopy.utils import (
     assert_isatomic,
@@ -417,7 +420,9 @@ class Diagram(biclosed.Diagram, RigidCategory):
 
     @classmethod
     @rule
-    def cups(cls, left: Ty, right: Ty) -> Diagram:
+    def cups[X: Atom](
+            cls, left: Annotated[Ty, X], right: Annotated[Ty, R[X]]
+    ) -> Annotated[Diagram, Hom[Tensor[X, R[X]], Unit[C0]]]:
         """
         Construct a diagram of nested cups for types ``left`` and ``right``.
 
@@ -438,7 +443,9 @@ class Diagram(biclosed.Diagram, RigidCategory):
 
     @classmethod
     @rule
-    def caps(cls, left: Ty, right: Ty) -> Diagram:
+    def caps[X: Atom](
+            cls, left: Annotated[Ty, X], right: Annotated[Ty, L[X]]
+    ) -> Annotated[Diagram, Hom[Unit[C0], Tensor[X, L[X]]]]:
         """
         Construct a diagram of nested caps for types ``left`` and ``right``.
 
