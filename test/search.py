@@ -93,6 +93,25 @@ def test_search():
     assert (term.dom, term.cod) == (x, y)
     assert find(search(Diagram, Box.strategy, dom=x, cod=x, max_depth=0),
                 lambda value: not value.boxes) == Diagram.id(x)
+
+
+def test_goal_patterns():
+    """ The sides of a goal are patterns under a shared substitution. """
+    from typing import TypeVar
+
+    from discopy import markov
+    from discopy.pattern import Tensor
+
+    A = TypeVar("A")
+    loop = find(search(Diagram, Box.strategy, dom=A, cod=A),
+                lambda term: len(term.boxes) == 1)
+    assert loop.dom == loop.cod
+    copy = find(
+        search(markov.Diagram, markov.Box.strategy,
+               dom=A, cod=Tensor[A, A]),
+        lambda term: bool(term.boxes)
+        and all(isinstance(box, markov.Copy) for box in term.boxes))
+    assert copy.cod == copy.dom @ copy.dom
     assert find(search(Diagram, Box.strategy, max_depth=0),
                 lambda value: not value.boxes).dom == find(
                     search(Diagram, Box.strategy, max_depth=0),

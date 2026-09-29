@@ -9,6 +9,22 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Added
 
+- Goals as patterns with a shared substitution: the two sides of a
+  `search` goal are a type, a pattern, a type parameter standing for
+  its variable, or `None` for a fresh one, so `search(Diagram,
+  Box.strategy, dom=A, cod=A)` finds an endomorphism on anything and
+  `dom=A, cod=Tensor[A, A]` a copy of whatever the search seeds — the
+  substitution is shared across the sides and down the attempts, a
+  fully open goal being the pair of fresh variables it always was. A
+  side guides the search once its variables are all bound,
+  instantiating to the type the conclusions unify with, and
+  constrains it afterwards, unifying with the boundary of the built
+  term to extend the substitution: a failed unification rejects the
+  attempt and rolls the substitution back, unless the side was fully
+  bound already — then the term was built outside its declared
+  conclusion, the same `AxiomError` as before. The residuals a goal
+  pattern cannot invert are checked once the term is found, drawing
+  any variable still free from its sort.
 - `discopy.pattern` and `discopy.search`, the language in which a
   category states its structure and the proof search generating its
   terms, serving two ends: the equations of the axioms of
