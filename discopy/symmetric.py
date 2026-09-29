@@ -646,11 +646,10 @@ class Permutation(Box):
 
     @rule
     def tensor[A, B, C, D](
-            self: Annotated[Permutation, Hom(Ob(A), Ob(B))],
+            self: Annotated[Permutation, Hom(A, B)],
             other: Annotated[Diagram | monoidal.Ty | None, Hom(
-                Ob(C), Ob(D))] = None,
-            *others
-    ) -> Annotated[Diagram, Hom(Ob(A) @ Ob(C), Ob(B) @ Ob(D))]:
+                C, D)] = None,
+            *others) -> Annotated[Diagram, Hom(Ob(A) @ Ob(C), Ob(B) @ Ob(D))]:
         if other is None:
             return self
         if isinstance(other, Permutation):

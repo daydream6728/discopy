@@ -206,9 +206,9 @@ class Diagram[natural](RibbonCategory, NamedGeneric):
     @rule
     @unbiased
     def then[A, B, C](
-            self: Annotated[Diagram, Hom(Ob(A), Ob(B))],
-            other: Annotated[Diagram, Hom(Ob(B), Ob(C))]
-    ) -> Annotated[Diagram, Hom(Ob(A), Ob(C))]:
+            self: Annotated[Diagram, Hom(A, B)],
+            other: Annotated[Diagram, Hom(B, C)]
+    ) -> Annotated[Diagram, Hom(A, C)]:
         """
         The composition of two integer diagrams.
 
@@ -264,7 +264,7 @@ class Diagram[natural](RibbonCategory, NamedGeneric):
     @classmethod
     @rule
     def id[A](cls, dom: Annotated[Ty | None, Ob(A)] = None
-              ) -> Annotated[Diagram, Hom(Ob(A), Ob(A))]:
+              ) -> Annotated[Diagram, Hom(A, A)]:
         """
         The identity on an integer type.
 
@@ -298,8 +298,8 @@ class Diagram[natural](RibbonCategory, NamedGeneric):
     @rule
     @unbiased
     def tensor[A, B, C, D](
-            self: Annotated[Diagram, Hom(Ob(A), Ob(B))],
-            other: Annotated[Diagram, Hom(Ob(C), Ob(D))]
+            self: Annotated[Diagram, Hom(A, B)],
+            other: Annotated[Diagram, Hom(C, D)]
     ) -> Annotated[Diagram, Hom(Ob(A) @ Ob(C), Ob(B) @ Ob(D))]:
         """
         The tensor of two integer diagrams.

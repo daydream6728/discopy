@@ -35,8 +35,8 @@ def test_rule():
 
     class Wrapped(Diagram):
         @rule
-        def twice[A](self: Annotated[Diagram, Hom(Ob(A), Ob(A))]
-                     ) -> Annotated[Diagram, Hom(Ob(A), Ob(A))]:
+        def twice[A](self: Annotated[Diagram, Hom(A, A)]
+                     ) -> Annotated[Diagram, Hom(A, A)]:
             """ A rule declared and implemented in one place. """
             return self >> self
 
@@ -65,7 +65,7 @@ def test_generator():
         @rule
         def wrong[A: ColouredMonoid](
                 cls, dom: Annotated[Ty, Ob(A)]
-        ) -> Annotated[Diagram, Hom(Ob(A), UNIT)]:
+        ) -> Annotated[Diagram, Hom(A, UNIT)]:
             """ A generator whose conclusion lies. """
             return cls.id(dom)
 

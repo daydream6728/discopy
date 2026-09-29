@@ -218,7 +218,7 @@ class Symmetric[category: symmetric.Diagram](SymmetricCategory, NamedGeneric):
     @classmethod
     @rule
     def id[A](cls, dom: Annotated[monoidal.Ty | None, Ob(A)] = None
-              ) -> Annotated[Symmetric, Hom(Ob(A), Ob(A))]:
+              ) -> Annotated[Symmetric, Hom(A, A)]:
         """
         The identity parametric map on `dom`, with empty parameter space.
 
@@ -230,9 +230,9 @@ class Symmetric[category: symmetric.Diagram](SymmetricCategory, NamedGeneric):
     @rule
     @unbiased
     def then[A, B, C](
-            self: Annotated[Symmetric, Hom(Ob(A), Ob(B))],
-            other: Annotated[Symmetric, Hom(Ob(B), Ob(C))]
-    ) -> Annotated[Symmetric, Hom(Ob(A), Ob(C))]:
+            self: Annotated[Symmetric, Hom(A, B)],
+            other: Annotated[Symmetric, Hom(B, C)]
+    ) -> Annotated[Symmetric, Hom(A, C)]:
         """
         Sequential composition tensors the hidden spaces on both sides,
         i.e. `(p, f) >> (q, g) == (p @ q, f @ q >> g)` for empty
@@ -255,8 +255,8 @@ class Symmetric[category: symmetric.Diagram](SymmetricCategory, NamedGeneric):
     @rule
     @unbiased
     def tensor[A, B, C, D](
-            self: Annotated[Symmetric, Hom(Ob(A), Ob(B))],
-            other: Annotated[Symmetric, Hom(Ob(C), Ob(D))]
+            self: Annotated[Symmetric, Hom(A, B)],
+            other: Annotated[Symmetric, Hom(C, D)]
     ) -> Annotated[Symmetric, Hom(Ob(A) @ Ob(C), Ob(B) @ Ob(D))]:
         """
         Parallel composition tensors the hidden spaces on both sides, with
@@ -340,7 +340,7 @@ class Traced(Symmetric, TracedCategory):
     def trace_left[A, B, M: Atom](
             self: Annotated[
                 Traced, Hom(Ob(M) @ Ob(A), Ob(M) @ Ob(B))],
-            n=1) -> Annotated[Traced, Hom(Ob(A), Ob(B))]:
+            n=1) -> Annotated[Traced, Hom(A, B)]:
         """ The trace of ``n`` wires on the left, see :meth:`trace`. """
         return self.trace(n, left=True)
 
@@ -348,7 +348,7 @@ class Traced(Symmetric, TracedCategory):
     def trace_right[A, B, M: Atom](
             self: Annotated[
                 Traced, Hom(Ob(A) @ Ob(M), Ob(B) @ Ob(M))],
-            n=1) -> Annotated[Traced, Hom(Ob(A), Ob(B))]:
+            n=1) -> Annotated[Traced, Hom(A, B)]:
         """ The trace of ``n`` wires on the right, see :meth:`trace`. """
         return self.trace(n)
 
@@ -386,7 +386,7 @@ class Markov(Symmetric, MarkovCategory):
     def copy[X: Atom, N: Count](
             cls, x: Annotated[monoidal.Ty, Ob(X)],
             n: Annotated[int, Ob(N)] = 2
-    ) -> Annotated[Markov, Hom(Ob(X), Ob(X) ** Ob(N))]:
+    ) -> Annotated[Markov, Hom(X, Ob(X) ** Ob(N))]:
         """
         The copy of the underlying category, with empty parameter space.
 
@@ -409,7 +409,7 @@ class Closed(Markov, ClosedCategory):
     def ev_left[Y: Atom, E: Atom](
             cls, base: Annotated[monoidal.Ty, Ob(Y)],
             exponent: Annotated[monoidal.Ty, Ob(E)]
-    ) -> Annotated[Closed, Hom((Ob(Y) << Ob(E)) @ Ob(E), Ob(Y))]:
+    ) -> Annotated[Closed, Hom((Ob(Y) << Ob(E)) @ Ob(E), Y)]:
         """ The left evaluation, see :meth:`ev`. """
         return cls.ev(base, exponent, left=True)
 
@@ -418,7 +418,7 @@ class Closed(Markov, ClosedCategory):
     def ev_right[Y: Atom, E: Atom](
             cls, base: Annotated[monoidal.Ty, Ob(Y)],
             exponent: Annotated[monoidal.Ty, Ob(E)]
-    ) -> Annotated[Closed, Hom(Ob(E) @ (Ob(E) >> Ob(Y)), Ob(Y))]:
+    ) -> Annotated[Closed, Hom(Ob(E) @ (Ob(E) >> Ob(Y)), Y)]:
         """ The right evaluation, see :meth:`ev`. """
         return cls.ev(base, exponent, left=False)
 
@@ -438,15 +438,15 @@ class Closed(Markov, ClosedCategory):
 
     @rule
     def curry_left[X, Y: Atom, Z](
-            self: Annotated[Closed, Hom(Ob(X) @ Ob(Y), Ob(Z))], n=1
-    ) -> Annotated[Closed, Hom(Ob(X), (Ob(Z) << Ob(Y)))]:
+            self: Annotated[Closed, Hom(Ob(X) @ Ob(Y), Z)], n=1
+    ) -> Annotated[Closed, Hom(X, (Ob(Z) << Ob(Y)))]:
         """ The left currying of ``n`` objects, see :meth:`curry`. """
         return self.curry(n, left=True)
 
     @rule
     def curry_right[Y: Atom, X, Z](
-            self: Annotated[Closed, Hom(Ob(Y) @ Ob(X), Ob(Z))], n=1
-    ) -> Annotated[Closed, Hom(Ob(X), (Ob(Y) >> Ob(Z)))]:
+            self: Annotated[Closed, Hom(Ob(Y) @ Ob(X), Z)], n=1
+    ) -> Annotated[Closed, Hom(X, (Ob(Y) >> Ob(Z)))]:
         """ The right currying of ``n`` objects, see :meth:`curry`. """
         return self.curry(n, left=False)
 
@@ -494,8 +494,7 @@ class Feedback(Markov, FeedbackCategory):
                 Hom(Ob(M).d @ Ob(A), Ob(M) @ Ob(B))],
             dom: monoidal.Ty | None = None,
             cod: monoidal.Ty | None = None,
-            mem: monoidal.Ty | None = None
-    ) -> Annotated[Feedback, Hom(Ob(A), Ob(B))]:
+            mem: monoidal.Ty | None = None) -> Annotated[Feedback, Hom(A, B)]:
         """ A parametric feedback keeps its memory on the right. """
         raise NotImplementedError(
             "A parametric feedback keeps its memory on the right.")
@@ -507,8 +506,7 @@ class Feedback(Markov, FeedbackCategory):
                 Hom(Ob(A) @ Ob(M).d, Ob(B) @ Ob(M))],
             dom: monoidal.Ty | None = None,
             cod: monoidal.Ty | None = None,
-            mem: monoidal.Ty | None = None
-    ) -> Annotated[Feedback, Hom(Ob(A), Ob(B))]:
+            mem: monoidal.Ty | None = None) -> Annotated[Feedback, Hom(A, B)]:
         """ The feedback of the memory on the right, see :meth:`feedback`. """
         return self.feedback(dom, cod, mem)
 

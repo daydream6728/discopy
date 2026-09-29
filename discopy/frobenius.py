@@ -319,8 +319,7 @@ def interleaving(cls: type[Diagram], factory: Callable
     return method
 
 
-def coherence(cls: type[Diagram], factory: Callable
-              ) -> Callable[..., Diagram]:
+def coherence(cls: type[Diagram], factory: Callable) -> Callable[..., Diagram]:
     """
     Take a ``factory`` for spiders with one or three legs of atomic types
     and extend it recursively to arbitrary spiders of atomic types.

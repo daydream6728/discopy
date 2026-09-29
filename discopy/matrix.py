@@ -241,7 +241,7 @@ class Matrix[dtype](MonoidalCategory, DaggerCategory, NamedGeneric):
     @classmethod
     @rule
     def id[A](cls, dom: Annotated[Any, Ob(A)] = 0
-              ) -> Annotated[Matrix, Hom(Ob(A), Ob(A))]:
+              ) -> Annotated[Matrix, Hom(A, A)]:
         with backend('numpy') as np:
             array = np.identity(index(dom), dtype=cls.dtype or int)
         return cls(array, dom, dom)
@@ -251,9 +251,9 @@ class Matrix[dtype](MonoidalCategory, DaggerCategory, NamedGeneric):
     @rule
     @unbiased
     def then[A, B, C](
-            self: Annotated[Matrix, Hom(Ob(A), Ob(B))],
-            other: Annotated[Matrix, Hom(Ob(B), Ob(C))]
-    ) -> Annotated[Matrix, Hom(Ob(A), Ob(C))]:
+            self: Annotated[Matrix, Hom(A, B)],
+            other: Annotated[Matrix, Hom(B, C)]
+    ) -> Annotated[Matrix, Hom(A, C)]:
         assert_isinstance(other, type(self))
         assert_iscomposable(self, other)
         with backend() as np:
@@ -262,8 +262,8 @@ class Matrix[dtype](MonoidalCategory, DaggerCategory, NamedGeneric):
 
     @rule
     def tensor[A, B, C, D](
-            self: Annotated[Matrix, Hom(Ob(A), Ob(B))],
-            other: Annotated[Matrix | None, Hom(Ob(C), Ob(D))] = None,
+            self: Annotated[Matrix, Hom(A, B)],
+            other: Annotated[Matrix | None, Hom(C, D)] = None,
             *others: Matrix
     ) -> Annotated[Matrix, Hom(Ob(A) @ Ob(C), Ob(B) @ Ob(D))]:
         if others or other is None:

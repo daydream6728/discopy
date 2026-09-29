@@ -472,7 +472,7 @@ class Stream[category](MonoidalCategory, NamedGeneric):
     @classmethod
     @rule
     def id[A](cls, x: Annotated[Optional[Ty], Ob(A)] = None
-              ) -> Annotated[Stream, Hom(Ob(A), Ob(A))]:
+              ) -> Annotated[Stream, Hom(A, A)]:
         """
         Construct a stream of identity arrows.
 
@@ -491,9 +491,9 @@ class Stream[category](MonoidalCategory, NamedGeneric):
     @rule
     @unbiased
     def then[A, B, C](
-            self: Annotated[Stream, Hom(Ob(A), Ob(B))],
-            other: Annotated[Stream, Hom(Ob(B), Ob(C))]
-    ) -> Annotated[Stream, Hom(Ob(A), Ob(C))]:
+            self: Annotated[Stream, Hom(A, B)],
+            other: Annotated[Stream, Hom(B, C)]
+    ) -> Annotated[Stream, Hom(A, C)]:
         """
         Composition of streams is given by swapping the memories as follows:
 
@@ -520,8 +520,8 @@ class Stream[category](MonoidalCategory, NamedGeneric):
     @rule
     @unbiased
     def tensor[A, B, C, D](
-            self: Annotated[Stream, Hom(Ob(A), Ob(B))],
-            other: Annotated[Stream, Hom(Ob(C), Ob(D))]
+            self: Annotated[Stream, Hom(A, B)],
+            other: Annotated[Stream, Hom(C, D)]
     ) -> Annotated[Stream, Hom(Ob(A) @ Ob(C), Ob(B) @ Ob(D))]:
         """
         Tensor of streams is given by swapping the memories as follows:
@@ -587,8 +587,7 @@ class Stream[category](MonoidalCategory, NamedGeneric):
 
     def feedback(
         self, dom: Ty | None = None, cod: Ty | None = None,
-        mem: Ty | None = None, _first_call=True
-    ) -> Stream:
+        mem: Ty | None = None, _first_call=True) -> Stream:
         """
         The delayed feedback of a monoidal stream.
 

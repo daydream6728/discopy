@@ -716,7 +716,7 @@ class Drawing(TracedCategory, RichDisplay):
     @staticmethod
     @rule
     def id[A](dom: Annotated[Any | None, Ob(A)] = None, length=0
-              ) -> Annotated[Drawing, Hom(Ob(A), Ob(A))]:
+              ) -> Annotated[Drawing, Hom(A, A)]:
         """
         Draw the identity diagram.
 
@@ -757,10 +757,10 @@ class Drawing(TracedCategory, RichDisplay):
     @rule
     @unbiased
     def then[A, B, C](
-            self: Annotated[Drawing, Hom(Ob(A), Ob(B))],
-            other: Annotated[Drawing, Hom(Ob(B), Ob(C))],
+            self: Annotated[Drawing, Hom(A, B)],
+            other: Annotated[Drawing, Hom(B, C)],
             draw_step_by_step=False
-    ) -> Annotated[Drawing | list[Drawing], Hom(Ob(A), Ob(C))]:
+    ) -> Annotated[Drawing | list[Drawing], Hom(A, C)]:
         """
         Draw one diagram composed with another.
 
@@ -870,9 +870,8 @@ class Drawing(TracedCategory, RichDisplay):
     @rule
     @unbiased
     def tensor[A, B, C, D](
-            self: Annotated[Drawing, Hom(Ob(A), Ob(B))],
-            other: Annotated[Drawing, Hom(Ob(C), Ob(D))]
-    ) -> Annotated[Drawing,
+            self: Annotated[Drawing, Hom(A, B)],
+            other: Annotated[Drawing, Hom(C, D)]) -> Annotated[Drawing,
                    Hom(Ob(A) @ Ob(C), Ob(B) @ Ob(D))]:
         """
         Draw two diagrams side by side.
@@ -912,7 +911,7 @@ class Drawing(TracedCategory, RichDisplay):
     def trace_left[A, B, M: Atom](
             self: Annotated[
                 Drawing, Hom(Ob(M) @ Ob(A), Ob(M) @ Ob(B))],
-            n=1) -> Annotated[Drawing, Hom(Ob(A), Ob(B))]:
+            n=1) -> Annotated[Drawing, Hom(A, B)]:
         """ The trace of ``n`` wires on the left, see :meth:`trace`. """
         return self.trace(n, left=True)
 
@@ -920,7 +919,7 @@ class Drawing(TracedCategory, RichDisplay):
     def trace_right[A, B, M: Atom](
             self: Annotated[
                 Drawing, Hom(Ob(A) @ Ob(M), Ob(B) @ Ob(M))],
-            n=1) -> Annotated[Drawing, Hom(Ob(A), Ob(B))]:
+            n=1) -> Annotated[Drawing, Hom(A, B)]:
         """ The trace of ``n`` wires on the right, see :meth:`trace`. """
         return self.trace(n)
 

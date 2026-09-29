@@ -38,11 +38,12 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   parameters, its sort read off the bound — an object when unbounded,
   `def cups[X: Atom]` an atomic one, `def spiders[N: Count]` a number
   of repetitions — and `Hom(p, q)`, `p @ q`, `p.l`, `p.r`, `p.d`,
-  `p << q`, `p >> q`, `p ** n` and `UNIT` build the compounds, so a
-  rule reads `def then[A, B, C](self: Annotated[C1, Hom(Ob(A),
-  Ob(B))], other: Annotated[C1, Hom(Ob(B), Ob(C))]) -> Annotated[C1,
-  Hom(Ob(A), Ob(C))]` and the cups conclude `Hom(Ob(X) @ Ob(X).r,
-  UNIT)`. The type level carries only types — the class parameters
+  `p << q`, `p >> q`, `p ** n` and `UNIT` build the compounds, and
+  `Hom` lifts a bare type parameter itself, so a rule reads `def
+  then[A, B, C](self: Annotated[C1, Hom(A, B)], other: Annotated[C1,
+  Hom(B, C)]) -> Annotated[C1, Hom(A, C)]` and the cups conclude
+  `Hom(Ob(X) @ Ob(X).r, UNIT)`. The type level carries only types —
+  the class parameters
   `C0` and `C1`, the concrete classes of an implementation, `Self` —
   and the value level only patterns, so no name plays both parts and
   no type-hack is left. A premise over the bare objects, arrows or

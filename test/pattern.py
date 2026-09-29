@@ -47,6 +47,9 @@ def test_operators():
     def spiders[K: Count](cls): ...
     V, K = cups.__type_params__ + spiders.__type_params__
     assert Ob(V).sort.atomic and Ob(K).sort == Sort("Count")
+    assert Hom(V, "W") == Hom(Ob(V), Ob("W"))  # Hom lifts a bare side.
+    with raises(TypeError):
+        Hom(42, "W")
     assert sort_of(Pregroup).bound is Pregroup
     with raises(TypeError):
         sort_of(int)
@@ -54,9 +57,9 @@ def test_operators():
 
 def test_parse():
     def then[A, B, C](
-            self: Annotated[str, Hom(Ob(A), Ob(B))],
-            other: Annotated[str, Hom(Ob(B), Ob(C))]
-    ) -> Annotated[str, Hom(Ob(A), Ob(C))]:
+            self: Annotated[str, Hom(A, B)],
+            other: Annotated[str, Hom(B, C)]
+    ) -> Annotated[str, Hom(A, C)]:
         ...
     sequent = parse(then)
     assert list(sequent.variables) == ["A", "B", "C"]
@@ -89,7 +92,7 @@ def test_parse():
 
     def unstated[X: Atom, N: Count](  # The conclusion's N has no premise.
             cls, x: Annotated[Ty, Ob(X)]
-    ) -> Annotated[Ty, Hom(Ob(X), Ob(X) ** Ob(N))]:
+    ) -> Annotated[Ty, Hom(X, Ob(X) ** Ob(N))]:
         ...
     with raises(TypeError, match="no premise states"):
         parse(unstated)

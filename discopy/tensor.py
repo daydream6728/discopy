@@ -152,14 +152,14 @@ class Tensor[dtype](Matrix[dtype]):
     @classmethod
     @rule
     def id[A](cls, dom: Annotated[Any, Ob(A)] = Dim(1)
-              ) -> Annotated[Tensor, Hom(Ob(A), Ob(A))]:
+              ) -> Annotated[Tensor, Hom(A, A)]:
         return cls(Matrix.id(product(dom.inside)).array, dom, dom)
 
     @rule
     def then[A, B, C](
-            self: Annotated[Tensor, Hom(Ob(A), Ob(B))],
-            other: Annotated[Tensor | None, Hom(Ob(B), Ob(C))] = None,
-            *others: Tensor) -> Annotated[Tensor, Hom(Ob(A), Ob(C))]:
+            self: Annotated[Tensor, Hom(A, B)],
+            other: Annotated[Tensor | None, Hom(B, C)] = None,
+            *others: Tensor) -> Annotated[Tensor, Hom(A, C)]:
         if other is None or others:
             return super().then(other, *others)
         assert_isinstance(other, type(self))
@@ -172,8 +172,8 @@ class Tensor[dtype](Matrix[dtype]):
 
     @rule
     def tensor[A, B, C, D](
-            self: Annotated[Tensor, Hom(Ob(A), Ob(B))],
-            other: Annotated[Tensor | None, Hom(Ob(C), Ob(D))] = None,
+            self: Annotated[Tensor, Hom(A, B)],
+            other: Annotated[Tensor | None, Hom(C, D)] = None,
             *others: Tensor
     ) -> Annotated[Tensor, Hom(Ob(A) @ Ob(C), Ob(B) @ Ob(D))]:
         if other is None or others:

@@ -76,22 +76,22 @@ class Function(MonoidalCategory, Sequence):
     @staticmethod
     @rule
     def id[A](x: Annotated[int | Nat, Ob(A)] = 0
-              ) -> Annotated[Function, Hom(Ob(A), Ob(A))]:
+              ) -> Annotated[Function, Hom(A, A)]:
         x = Nat(int(x))
         return Function(list(range(x)), x, x)
 
     @rule
     def then[A, B, C](
-            self: Annotated[Function, Hom(Ob(A), Ob(B))],
-            other: Annotated[Function, Hom(Ob(B), Ob(C))]
-    ) -> Annotated[Function, Hom(Ob(A), Ob(C))]:
+            self: Annotated[Function, Hom(A, B)],
+            other: Annotated[Function, Hom(B, C)]
+    ) -> Annotated[Function, Hom(A, C)]:
         inside = [self[other[i]] for i in range(len(other))]
         return Function(inside, self.dom, other.cod)
 
     @rule
     def tensor[A, B, C, D](
-            self: Annotated[Function, Hom(Ob(A), Ob(B))],
-            other: Annotated[Function, Hom(Ob(C), Ob(D))]
+            self: Annotated[Function, Hom(A, B)],
+            other: Annotated[Function, Hom(C, D)]
     ) -> Annotated[Function, Hom(Ob(A) @ Ob(C), Ob(B) @ Ob(D))]:
         inside = list(self.inside) + [
             int(self.dom) + other[i] for i in range(len(other))]
@@ -196,7 +196,7 @@ class Permutation(Function, PROP):
     @classmethod
     @rule
     def id[A](cls, dom: Annotated[int | Nat, Ob(A)] = 0
-              ) -> Annotated[Self, Hom(Ob(A), Ob(A))]:
+              ) -> Annotated[Self, Hom(A, A)]:
         """ The identity permutation on ``range(size)``. """
         n = int(dom)
         return cls(range(n), n)
@@ -265,9 +265,8 @@ class Permutation(Function, PROP):
 
     @rule
     def then[A, B, C](
-            self: Annotated[Self, Hom(Ob(A), Ob(B))],
-            other: Annotated[Self, Hom(Ob(B), Ob(C))]
-    ) -> Annotated[Self, Hom(Ob(A), Ob(C))]:
+            self: Annotated[Self, Hom(A, B)],
+            other: Annotated[Self, Hom(B, C)]) -> Annotated[Self, Hom(A, C)]:
         """ Return ``self ; other``, i.e. ``result[i] == other[self[i]]``. """
         other = type(self)(other, len(self))
         elems = (other[self[i]] for i in range(len(self)))
@@ -292,8 +291,8 @@ class Permutation(Function, PROP):
 
     @rule
     def tensor[A, B, C, D](
-            self: Annotated[Self, Hom(Ob(A), Ob(B))],
-            other: Annotated[Self | None, Hom(Ob(C), Ob(D))] = None, *others
+            self: Annotated[Self, Hom(A, B)],
+            other: Annotated[Self | None, Hom(C, D)] = None, *others
     ) -> Annotated[Self, Hom(Ob(A) @ Ob(C), Ob(B) @ Ob(D))]:
         """ Return the disjoint union of permutations. """
         if other is None:

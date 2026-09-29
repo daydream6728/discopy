@@ -243,7 +243,7 @@ class Circuit(tensor.Diagram[complex]):
     @classmethod
     @rule
     def id[A](cls, dom: Annotated[int | Ty | None, Ob(A)] = None
-              ) -> Annotated[Circuit, Hom(Ob(A), Ob(A))]:
+              ) -> Annotated[Circuit, Hom(A, A)]:
         """
         The identity circuit on a given domain.
 

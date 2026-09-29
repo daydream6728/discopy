@@ -150,7 +150,7 @@ class Diagram(symmetric.Diagram, MarkovCategory):
     @rule
     def copy[X: Atom, N: Count](
             cls, x: Annotated[monoidal.Ty, Ob(X)], n: Annotated[int, Ob(N)] = 2
-    ) -> Annotated[Diagram, Hom(Ob(X), Ob(X) ** Ob(N))]:
+    ) -> Annotated[Diagram, Hom(X, Ob(X) ** Ob(N))]:
         """
         Make :code:`n` copies of a given type :code:`x`.
 
@@ -166,7 +166,7 @@ class Diagram(symmetric.Diagram, MarkovCategory):
     @rule
     def merge[X: Atom, N: Count](
             cls, x: Annotated[monoidal.Ty, Ob(X)], n: Annotated[int, Ob(N)] = 2
-    ) -> Annotated[Diagram, Hom(Ob(X) ** Ob(N), Ob(X))]:
+    ) -> Annotated[Diagram, Hom(Ob(X) ** Ob(N), X)]:
         """
         Merge :code:`n` copies of a given type :code:`x`.
 

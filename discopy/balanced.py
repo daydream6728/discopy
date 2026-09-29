@@ -140,7 +140,7 @@ class Diagram(braided.Diagram, traced.Diagram, BalancedCategory):
     @classmethod
     @rule
     def twist[X: Atom](cls, dom: Annotated[monoidal.Ty, Ob(X)]
-                       ) -> Annotated[Diagram, Hom(Ob(X), Ob(X))]:
+                       ) -> Annotated[Diagram, Hom(X, X)]:
         """
         The twist on an object.
 

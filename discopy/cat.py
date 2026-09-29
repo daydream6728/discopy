@@ -193,16 +193,15 @@ class FreeCategory(Category):
     @classmethod
     @rule
     def id[A](cls, dom: Annotated[Any | None, pattern.Ob(A)] = None
-              ) -> Annotated[Any, Hom(pattern.Ob(A), pattern.Ob(A))]:
+              ) -> Annotated[Any, Hom(A, A)]:
         """The identity path on ``dom``, with no generators inside."""
         dom = cls.ob() if dom is None else dom
         return cls.ar(inside=(), dom=dom, cod=dom, _scan=False)
 
     @rule
     def then[A, B, C](
-            self: Annotated[Any, Hom(pattern.Ob(A), pattern.Ob(B))],
-            *others: Annotated[Any, Hom(pattern.Ob(B), pattern.Ob(C))]
-    ) -> Annotated[Any, Hom(pattern.Ob(A), pattern.Ob(C))]:
+            self: Annotated[Any, Hom(A, B)],
+            *others: Annotated[Any, Hom(B, C)]) -> Annotated[Any, Hom(A, C)]:
         inside, dom, cod = self.inside, self.dom, self.cod
         for other in others:
             assert_isinstance(other, self.ar)
@@ -414,9 +413,9 @@ class Arrow(FreeCategory, DaggerCategory, Serialisable):
 
     @rule
     def then[A, B, C](
-            self: Annotated[Arrow, Hom(pattern.Ob(A), pattern.Ob(B))],
-            *others: Annotated[Arrow, Hom(pattern.Ob(B), pattern.Ob(C))]
-    ) -> Annotated[Arrow, Hom(pattern.Ob(A), pattern.Ob(C))]:
+            self: Annotated[Arrow, Hom(A, B)],
+            *others: Annotated[Arrow, Hom(B, C)]
+    ) -> Annotated[Arrow, Hom(A, C)]:
         """
         Sequential composition, called with :code:`>>` and :code:`<<`.
 
@@ -694,9 +693,8 @@ class Sum(Box):
     @rule
     @unbiased
     def then[A, B, C](
-            self: Annotated[Sum, Hom(pattern.Ob(A), pattern.Ob(B))],
-            other: Annotated[Arrow, Hom(pattern.Ob(B), pattern.Ob(C))]
-    ) -> Annotated[Sum, Hom(pattern.Ob(A), pattern.Ob(C))]:
+            self: Annotated[Sum, Hom(A, B)],
+            other: Annotated[Arrow, Hom(B, C)]) -> Annotated[Sum, Hom(A, C)]:
         other = other if isinstance(other, Sum)\
             else self.Sum((other, ))
         terms = tuple(f.then(g) for f in self.terms for g in other.terms)
@@ -852,7 +850,7 @@ class Functor(Category, Serialisable):
     @classmethod
     @rule
     def id[A](cls, dom: Annotated[type | None, pattern.Ob(A)] = None
-              ) -> Annotated[Functor, Hom(pattern.Ob(A), pattern.Ob(A))]:
+              ) -> Annotated[Functor, Hom(A, A)]:
         """
         The identity functor on a given category ``dom``.
 
@@ -863,9 +861,9 @@ class Functor(Category, Serialisable):
 
     @rule
     def then[A, B, C](
-            self: Annotated[Functor, Hom(pattern.Ob(A), pattern.Ob(B))],
-            other: Annotated[Functor, Hom(pattern.Ob(B), pattern.Ob(C))]
-    ) -> Annotated[Functor, Hom(pattern.Ob(A), pattern.Ob(C))]:
+            self: Annotated[Functor, Hom(A, B)],
+            other: Annotated[Functor, Hom(B, C)]
+    ) -> Annotated[Functor, Hom(A, C)]:
         """
         The composition of functor with another.
 
@@ -1147,7 +1145,7 @@ class Transformation(Category):
     @classmethod
     @rule
     def id[A](cls, dom: Annotated[Functor, pattern.Ob(A)]) -> Annotated[
-            Transformation, Hom(pattern.Ob(A), pattern.Ob(A))]:
+            Transformation, Hom(A, A)]:
         """
         The identity transformation on a given functor ``dom``, i.e. the
         transformation whose component at each object ``x`` is the
@@ -1169,9 +1167,9 @@ class Transformation(Category):
 
     @rule
     def then[A, B, C](
-            self: Annotated[Transformation, Hom(pattern.Ob(A), pattern.Ob(B))],
-            other: Annotated[Transformation, Hom(pattern.Ob(B), pattern.Ob(C))]
-    ) -> Annotated[Transformation, Hom(pattern.Ob(A), pattern.Ob(C))]:
+            self: Annotated[Transformation, Hom(A, B)],
+            other: Annotated[Transformation, Hom(B, C)]
+    ) -> Annotated[Transformation, Hom(A, C)]:
         """
         The vertical composition of a transformation with another.
 

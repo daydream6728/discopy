@@ -106,7 +106,7 @@ class Tree:
 
     @staticmethod
     @rule
-    def id[A](dom: Annotated[Ty, Ob(A)]) -> Annotated[Tree, Hom(Ob(A), Ob(A))]:
+    def id[A](dom: Annotated[Ty, Ob(A)]) -> Annotated[Tree, Hom(A, A)]:
         return Id(dom)
 
     def __eq__(self, other):

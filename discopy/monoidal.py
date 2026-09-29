@@ -1100,8 +1100,8 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
 
     @rule
     def tensor[A, B, C, D](
-            self: Annotated[Diagram, Hom(Ob(A), Ob(B))],
-            other: Annotated[Diagram | None, Hom(Ob(C), Ob(D))] = None,
+            self: Annotated[Diagram, Hom(A, B)],
+            other: Annotated[Diagram | None, Hom(C, D)] = None,
             *others: Diagram
     ) -> Annotated[Diagram, Hom(Ob(A) @ Ob(C), Ob(B) @ Ob(D))]:
         """
@@ -1808,8 +1808,8 @@ class Sum(cat.Sum, Box):
 
     @rule
     def tensor[A, B, C, D](
-            self: Annotated[Sum, Hom(Ob(A), Ob(B))],
-            other: Annotated[Diagram | None, Hom(Ob(C), Ob(D))] = None, *others
+            self: Annotated[Sum, Hom(A, B)],
+            other: Annotated[Diagram | None, Hom(C, D)] = None, *others
     ) -> Annotated[Sum, Hom(Ob(A) @ Ob(C), Ob(B) @ Ob(D))]:
         if other is None or others:
             return Diagram.tensor(self, other, *others)
@@ -1974,14 +1974,14 @@ class Functor(cat.Functor):
     @classmethod
     @rule
     def id[A](cls, dom: Annotated[type | None, Ob(A)] = None
-              ) -> Annotated[Any, Hom(Ob(A), Ob(A))]:
+              ) -> Annotated[Any, Hom(A, A)]:
         return cls(lambda x: x, lambda f: f, dom=dom, cod=dom)
 
     @rule
     def then[A, B, C](
-            self: Annotated[Functor, Hom(Ob(A), Ob(B))],
-            other: Annotated[Functor, Hom(Ob(B), Ob(C))]
-    ) -> Annotated[Functor, Hom(Ob(A), Ob(C))]:
+            self: Annotated[Functor, Hom(A, B)],
+            other: Annotated[Functor, Hom(B, C)]
+    ) -> Annotated[Functor, Hom(A, C)]:
         assert_isinstance(other, Functor)
         assert_iscomposable(self, other)
         return type(self)(

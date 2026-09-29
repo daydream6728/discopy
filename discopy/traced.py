@@ -164,7 +164,7 @@ class Diagram(monoidal.Diagram, TracedCategory):
     @rule
     def trace_left[A, B, M: Atom](
             self: Annotated[Diagram, Hom(Ob(M) @ Ob(A), Ob(M) @ Ob(B))], n=1
-    ) -> Annotated[Diagram, Hom(Ob(A), Ob(B))]:
+    ) -> Annotated[Diagram, Hom(A, B)]:
         """
         Feed ``n`` outputs on the left back into inputs.
 
@@ -189,7 +189,7 @@ class Diagram(monoidal.Diagram, TracedCategory):
     @rule
     def trace_right[A, B, M: Atom](
             self: Annotated[Diagram, Hom(Ob(A) @ Ob(M), Ob(B) @ Ob(M))], n=1
-    ) -> Annotated[Diagram, Hom(Ob(A), Ob(B))]:
+    ) -> Annotated[Diagram, Hom(A, B)]:
         """
         Feed ``n`` outputs on the right back into inputs.
 

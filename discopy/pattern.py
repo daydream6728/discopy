@@ -11,12 +11,14 @@ parameters, its sort the bound — an object when unbounded, an
 :class:`Atom` or a :class:`Count` when declared — and constructors and
 operators build the compounds: ``Hom(p, q)``, ``p @ q``, ``p.l``,
 ``p.r``, ``p.d``, ``p << q``, ``p >> q``, ``p ** n`` and :data:`UNIT`.
+:class:`Hom` lifts a bare type parameter itself, so a side that is one
+variable writes ``Hom(A, B)`` directly.
 
 .. code-block:: python
 
     def tensor[A, B, C, D](
-            self: Annotated[C1, Hom(Ob(A), Ob(B))],
-            other: Annotated[C1, Hom(Ob(C), Ob(D))]
+            self: Annotated[C1, Hom(A, B)],
+            other: Annotated[C1, Hom(C, D)]
     ) -> Annotated[C1, Hom(Ob(A) @ Ob(C), Ob(B) @ Ob(D))]:
         ...
 
@@ -314,6 +316,9 @@ class Ob(Pattern):
     sort: Sort
 
     def __init__(self, var: TypeVar | str, sort: Sort | None = None):
+        if not isinstance(var, (TypeVar, str)):
+            raise TypeError(
+                f"Expected a type parameter or a name, got {var!r}.")
         name = var if isinstance(var, str) else var.__name__
         if sort is None:
             sort = sort_of(getattr(var, "__bound__", None))
@@ -577,12 +582,14 @@ class Repeat(Pattern):
         return f"{self.base} ** {self.count}"
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, init=False)
 class Hom(Pattern):
     """
     The type ``head[dom, cod]`` of the morphisms between two patterns,
     ``Hom(p, q)`` in an annotation — matched against a goal: a pair of
-    an optional domain and codomain.
+    an optional domain and codomain. A side that is not a pattern is
+    lifted by :class:`Ob`, so a rule writes ``Hom(A, B)`` on its own
+    type parameters directly.
 
     >>> from discopy.monoidal import Ty
     >>> A, B = Ob("A"), Ob("B")
@@ -594,11 +601,21 @@ class Hom(Pattern):
     [('x', 'y')]
     >>> list(hom.match((x @ y, y)))
     []
+    >>> def then[A, B](): ...
+    >>> assert Hom(*then.__type_params__) == Hom(Ob("A"), Ob("B"))
     """
 
     dom: Pattern
     cod: Pattern
     head: str = "C1"
+
+    def __init__(self, dom: Pattern | TypeVar | str,
+                 cod: Pattern | TypeVar | str, head: str = "C1"):
+        for name, side in (("dom", dom), ("cod", cod)):
+            side = side if isinstance(side, Pattern) else Ob(side)
+            object.__setattr__(self, name, side)
+        object.__setattr__(self, "head", head)
+        super().__post_init__()
 
     @property
     def variables(self):

@@ -175,7 +175,7 @@ class Channel(Tensor):
     @classmethod
     @rule
     def id[A](cls, dom: Annotated[CQ, Ob(A)] = CQ()
-              ) -> Annotated[Channel, Hom(Ob(A), Ob(A))]:
+              ) -> Annotated[Channel, Hom(A, A)]:
         assert_isinstance(dom, CQ)
         return cls(Tensor[
             cls.dtype].id(dom.to_dim()).array,  # ty: ignore[invalid-type-form]
@@ -183,9 +183,9 @@ class Channel(Tensor):
 
     @rule
     def then[A, B, C](
-            self: Annotated[Channel, Hom(Ob(A), Ob(B))],
-            other: Annotated[Channel | None, Hom(Ob(B), Ob(C))] = None,
-            *others: Channel) -> Annotated[Channel, Hom(Ob(A), Ob(C))]:
+            self: Annotated[Channel, Hom(A, B)],
+            other: Annotated[Channel | None, Hom(B, C)] = None,
+            *others: Channel) -> Annotated[Channel, Hom(A, C)]:
         if other is None or others:
             return super().then(other, *others)
         assert_isinstance(other, type(self))
@@ -197,8 +197,8 @@ class Channel(Tensor):
 
     @rule
     def tensor[A, B, C, D](
-            self: Annotated[Channel, Hom(Ob(A), Ob(B))],
-            other: Annotated[Channel | None, Hom(Ob(C), Ob(D))] = None,
+            self: Annotated[Channel, Hom(A, B)],
+            other: Annotated[Channel | None, Hom(C, D)] = None,
             *others: Channel
     ) -> Annotated[Channel, Hom(Ob(A) @ Ob(C), Ob(B) @ Ob(D))]:
         if other is None or others:

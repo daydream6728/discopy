@@ -137,7 +137,7 @@ class Diagram(markov.Diagram, biclosed.Diagram, ClosedCategory):
     @rule
     def ev_left[Y: Atom, E: Atom](
             cls, base: Annotated[Ty, Ob(Y)], exponent: Annotated[Ty, Ob(E)]
-    ) -> Annotated[Diagram, Hom((Ob(Y) << Ob(E)) @ Ob(E), Ob(Y))]:
+    ) -> Annotated[Diagram, Hom((Ob(Y) << Ob(E)) @ Ob(E), Y)]:
         """ The left evaluation, see :meth:`ev`. """
         return cls.ev(base, exponent, left=True)
 
@@ -145,7 +145,7 @@ class Diagram(markov.Diagram, biclosed.Diagram, ClosedCategory):
     @rule
     def ev_right[Y: Atom, E: Atom](
             cls, base: Annotated[Ty, Ob(Y)], exponent: Annotated[Ty, Ob(E)]
-    ) -> Annotated[Diagram, Hom(Ob(E) @ (Ob(E) >> Ob(Y)), Ob(Y))]:
+    ) -> Annotated[Diagram, Hom(Ob(E) @ (Ob(E) >> Ob(Y)), Y)]:
         """ The right evaluation, see :meth:`ev`. """
         return cls.ev(base, exponent, left=False)
 
