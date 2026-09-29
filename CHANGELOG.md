@@ -41,13 +41,9 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   Annotated[C1, Hom(A, B)], other: Annotated[C1, Hom(B, C)]) ->
   Annotated[C1, Hom(A, C)]` and a trace takes `Hom([M, A], [M, B])`.
   The type level carries only types and the value level only
-  patterns, so no name plays both parts and no type-hack is left.
-  Every axiom quantifies its premises the same way — `unitality[A,
-  B](cls, f: Annotated[C1, Hom(A, B)]) -> Equation[Annotated[C1,
-  Hom(A, B)]]`, the `Equation` subscript carrying the hom type of its
-  terms — so there are no bare-sort premises and no `OB`, `ARROW` or
-  `TERM` constants: a premise over the terms of the category itself
-  states `Self`, one over a functor's source or target its `Sort`,
+  patterns, so no name plays both parts and no type-hack is left. A
+  premise over the bare objects, arrows or terms states a `Sort` —
+  `x: Annotated[C0, OB]`, `f: Annotated[C1, ARROW]`, `term: Self` —
   and each pattern class declares its level, the least structure the
   objects it stands in must have — `Tensor` a `ColouredMonoid`,
   `Adjoint` a `Pregroup`, `Delay` the new `abc.DelayedMonoid` that

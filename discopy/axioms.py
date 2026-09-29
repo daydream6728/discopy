@@ -254,7 +254,8 @@ from functools import wraps
 from typing import TYPE_CHECKING, Self
 
 from discopy.pattern import (  # noqa: F401
-    Atom, Count, Declaration, declarations, Hom, Ob, Sort, UNIT)
+    ARROW, Atom, Count, Declaration, declarations, Hom, OB, Ob, Sort, TERM,
+    UNIT)
 from discopy.search import (  # noqa: F401
     Constant,
     Rule,

@@ -97,7 +97,7 @@ from collections.abc import Sequence
 from discopy import cat, monoidal, balanced, hypergraph, cmap, messages
 from discopy.abc import BraidedCategory, MonoidalCategory, SymmetricCategory
 from discopy.axioms import (
-    Atom, axiom, Equation as AbstractEquation, Hom, Ob, rule, Sort)
+    Atom, axiom, Equation as AbstractEquation, Hom, Ob, OB, rule, Sort)
 from discopy.cat import factory, Generator
 from discopy.monoidal import Wire, Ty, Nat  # noqa: F401
 from discopy.python import finset
@@ -514,7 +514,7 @@ class Diagram(balanced.Diagram, SymmetricCategory):
         return AbstractEquation(functor(f), functor(top) >> functor(bottom))
 
     @axiom
-    def map_identity[X](cls, x: Annotated[Ty, Ob(X)]):
+    def map_identity(cls, x: Annotated[Ty, OB]):
         """ The encoding preserves identities. """
         functor = cls.map_equivalence()
         return AbstractEquation(functor(cls.id(x)), functor.cod.id(x))

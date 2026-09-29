@@ -25,10 +25,9 @@ so a rule writes ``Hom(A, B)`` and ``Hom([M, A], [M, B])`` directly.
 
 The signature typechecks as it reads: the type level carries only types
 and the value level only patterns, so no name plays both parts. A
-premise over the terms of the category itself states ``Self``, and one
-over the objects or arrows of a functor's source or target its
-:class:`Sort`, ``Sort("In0")`` to ``Sort("Out1")``. Nothing is
-quoted: each pattern is built when the annotation is read,
+premise over the bare objects, arrows or terms of the category states a
+:class:`Sort` instead, :data:`OB`, :data:`ARROW` or :data:`TERM`.
+Nothing is quoted: each pattern is built when the annotation is read,
 lazily by :pep:`649`, and :func:`parse` collects the sequent without
 evaluating anything itself. Each pattern class declares its
 :meth:`Pattern.level`, the least structure the objects it stands in
@@ -133,6 +132,14 @@ class Sort:
 
     def __str__(self):
         return f"Atom[{self.head}]" if self.atomic else self.head
+
+
+OB, ARROW, TERM = Sort("C0"), Sort("C1"), Sort("Self")
+"""
+The sorts of the objects, arrows and terms of the category stating a
+declaration, for a premise over them rather than a pattern, e.g.
+``x: Annotated[C0, OB]`` in an axiom.
+"""
 
 
 class Atom:
@@ -342,7 +349,7 @@ class Ob(Pattern):
 class Unit(Pattern):
     """ The unit of a monoid of objects, :data:`UNIT` in an annotation. """
 
-    sort: Sort = Sort("C0")
+    sort: Sort = OB
 
     @classmethod
     def level(cls) -> type[abc.Category]:
@@ -758,7 +765,7 @@ def parse(function: Callable, owner: type | None = None,
 
     def stated(annotation) -> Pattern | Sort:
         if annotation is Self:
-            return Sort("Self")
+            return TERM
         try:
             (value, ) = annotation.__metadata__
         except (AttributeError, ValueError):
