@@ -911,7 +911,7 @@ class Intertwiner[algebra](tensor.Diagram, RibbonCategory):
     def braid[X: Atom, Y: Atom](
             cls, left: Annotated[Representation, Ob(X)],
             right: Annotated[Representation, Ob(Y)], is_dagger=False
-    ) -> Annotated[Intertwiner, Hom(Ob(X) @ Ob(Y), Ob(Y) @ Ob(X))]:
+    ) -> Annotated[Intertwiner, Hom([X, Y], [Y, X])]:
         """
         The braiding :math:`V \\otimes W \\to W \\otimes V` (its inverse
         :math:`R^{-1} = (S \\otimes 1) R` when ``is_dagger``): the R-matrix

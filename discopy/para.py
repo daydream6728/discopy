@@ -257,7 +257,7 @@ class Symmetric[category: symmetric.Diagram](SymmetricCategory, NamedGeneric):
     def tensor[A, B, C, D](
             self: Annotated[Symmetric, Hom(A, B)],
             other: Annotated[Symmetric, Hom(C, D)]
-    ) -> Annotated[Symmetric, Hom(Ob(A) @ Ob(C), Ob(B) @ Ob(D))]:
+    ) -> Annotated[Symmetric, Hom([A, C], [B, D])]:
         """
         Parallel composition tensors the hidden spaces on both sides, with
         swaps routing the parameters to the right of the domains and the
@@ -279,7 +279,7 @@ class Symmetric[category: symmetric.Diagram](SymmetricCategory, NamedGeneric):
     def swap[X: Atom, Y: Atom](
             cls, left: Annotated[monoidal.Ty, Ob(X)],
             right: Annotated[monoidal.Ty, Ob(Y)]
-    ) -> Annotated[Symmetric, Hom(Ob(X) @ Ob(Y), Ob(Y) @ Ob(X))]:
+    ) -> Annotated[Symmetric, Hom([X, Y], [Y, X])]:
         """
         The swap of the underlying category, with empty parameter space.
 
@@ -339,7 +339,7 @@ class Traced(Symmetric, TracedCategory):
     @rule
     def trace_left[A, B, M: Atom](
             self: Annotated[
-                Traced, Hom(Ob(M) @ Ob(A), Ob(M) @ Ob(B))],
+                Traced, Hom([M, A], [M, B])],
             n=1) -> Annotated[Traced, Hom(A, B)]:
         """ The trace of ``n`` wires on the left, see :meth:`trace`. """
         return self.trace(n, left=True)
@@ -347,7 +347,7 @@ class Traced(Symmetric, TracedCategory):
     @rule
     def trace_right[A, B, M: Atom](
             self: Annotated[
-                Traced, Hom(Ob(A) @ Ob(M), Ob(B) @ Ob(M))],
+                Traced, Hom([A, M], [B, M])],
             n=1) -> Annotated[Traced, Hom(A, B)]:
         """ The trace of ``n`` wires on the right, see :meth:`trace`. """
         return self.trace(n)
@@ -438,14 +438,14 @@ class Closed(Markov, ClosedCategory):
 
     @rule
     def curry_left[X, Y: Atom, Z](
-            self: Annotated[Closed, Hom(Ob(X) @ Ob(Y), Z)], n=1
+            self: Annotated[Closed, Hom([X, Y], Z)], n=1
     ) -> Annotated[Closed, Hom(X, (Ob(Z) << Ob(Y)))]:
         """ The left currying of ``n`` objects, see :meth:`curry`. """
         return self.curry(n, left=True)
 
     @rule
     def curry_right[Y: Atom, X, Z](
-            self: Annotated[Closed, Hom(Ob(Y) @ Ob(X), Z)], n=1
+            self: Annotated[Closed, Hom([Y, X], Z)], n=1
     ) -> Annotated[Closed, Hom(X, (Ob(Y) >> Ob(Z)))]:
         """ The right currying of ``n`` objects, see :meth:`curry`. """
         return self.curry(n, left=False)
@@ -491,7 +491,7 @@ class Feedback(Markov, FeedbackCategory):
     def feedback_left[A, B, M: Atom](
             self: Annotated[
                 Feedback,
-                Hom(Ob(M).d @ Ob(A), Ob(M) @ Ob(B))],
+                Hom(Ob(M).d @ Ob(A), [M, B])],
             dom: monoidal.Ty | None = None,
             cod: monoidal.Ty | None = None,
             mem: monoidal.Ty | None = None) -> Annotated[Feedback, Hom(A, B)]:
@@ -503,7 +503,7 @@ class Feedback(Markov, FeedbackCategory):
     def feedback_right[A, B, M: Atom](
             self: Annotated[
                 Feedback,
-                Hom(Ob(A) @ Ob(M).d, Ob(B) @ Ob(M))],
+                Hom(Ob(A) @ Ob(M).d, [B, M])],
             dom: monoidal.Ty | None = None,
             cod: monoidal.Ty | None = None,
             mem: monoidal.Ty | None = None) -> Annotated[Feedback, Hom(A, B)]:

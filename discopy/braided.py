@@ -101,7 +101,7 @@ class Diagram(monoidal.Diagram, BraidedCategory):
     def braid[X: Atom, Y: Atom](
             cls, left: Annotated[monoidal.Ty, Ob(X)],
             right: Annotated[monoidal.Ty, Ob(Y)]
-    ) -> Annotated[Self, Hom(Ob(X) @ Ob(Y), Ob(Y) @ Ob(X))]:
+    ) -> Annotated[Self, Hom([X, Y], [Y, X])]:
         """
         The diagram braiding :code:`left` over :code:`right`.
 

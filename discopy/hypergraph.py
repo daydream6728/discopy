@@ -390,7 +390,7 @@ class Hypergraph[category: Diagram](MonoidalCategory, DaggerCategory,
     def tensor[A, B, C, D](
             self: Annotated[Hypergraph, Hom(A, B)],
             other: Annotated[Hypergraph, Hom(C, D)]) -> Annotated[Hypergraph,
-                   Hom(Ob(A) @ Ob(C), Ob(B) @ Ob(D))]:
+                   Hom([A, C], [B, D])]:
         """ Tensor of two hypergraph diagrams, i.e. their disjoint union. """
         dom, cod = self.dom @ other.dom, self.cod @ other.cod
         boxes, offsets = self.boxes + other.boxes, self.offsets + other.offsets

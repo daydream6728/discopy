@@ -51,7 +51,7 @@ class Diagram(tensor.Diagram[complex]):
     def swap[X: Atom, Y: Atom](
             left: Annotated[int | Nat, Ob(X)],
             right: Annotated[int | Nat, Ob(Y)]
-    ) -> Annotated[Diagram, Hom(Ob(X) @ Ob(Y), Ob(Y) @ Ob(X))]:
+    ) -> Annotated[Diagram, Hom([X, Y], [Y, X])]:
         left = left if isinstance(left, Nat) else Nat(left)
         right = right if isinstance(right, Nat) else Nat(right)
         return tensor.Diagram.swap.__func__(

@@ -199,8 +199,7 @@ class Channel(Tensor):
     def tensor[A, B, C, D](
             self: Annotated[Channel, Hom(A, B)],
             other: Annotated[Channel | None, Hom(C, D)] = None,
-            *others: Channel
-    ) -> Annotated[Channel, Hom(Ob(A) @ Ob(C), Ob(B) @ Ob(D))]:
+            *others: Channel) -> Annotated[Channel, Hom([A, C], [B, D])]:
         if other is None or others:
             return super().tensor(other, *others)
         assert_isinstance(other, type(self))

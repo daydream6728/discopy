@@ -264,8 +264,7 @@ class Matrix[dtype](MonoidalCategory, DaggerCategory, NamedGeneric):
     def tensor[A, B, C, D](
             self: Annotated[Matrix, Hom(A, B)],
             other: Annotated[Matrix | None, Hom(C, D)] = None,
-            *others: Matrix
-    ) -> Annotated[Matrix, Hom(Ob(A) @ Ob(C), Ob(B) @ Ob(D))]:
+            *others: Matrix) -> Annotated[Matrix, Hom([A, C], [B, D])]:
         if others or other is None:
             return monoidal.Diagram.tensor(
                 self, other, *others)

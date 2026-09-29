@@ -92,7 +92,7 @@ class Function(MonoidalCategory, Sequence):
     def tensor[A, B, C, D](
             self: Annotated[Function, Hom(A, B)],
             other: Annotated[Function, Hom(C, D)]
-    ) -> Annotated[Function, Hom(Ob(A) @ Ob(C), Ob(B) @ Ob(D))]:
+    ) -> Annotated[Function, Hom([A, C], [B, D])]:
         inside = list(self.inside) + [
             int(self.dom) + other[i] for i in range(len(other))]
         return Function(
@@ -102,7 +102,7 @@ class Function(MonoidalCategory, Sequence):
     @rule
     def swap[X: Atom, Y: Atom](
             x: Annotated[int | Nat, Ob(X)], y: Annotated[int | Nat, Ob(Y)]
-    ) -> Annotated[Function, Hom(Ob(X) @ Ob(Y), Ob(Y) @ Ob(X))]:
+    ) -> Annotated[Function, Hom([X, Y], [Y, X])]:
         m, n = int(x), int(y)
         inside = list(Permutation.swap(m, n))
         return Function(inside, Nat(m + n), Nat(m + n))
@@ -293,7 +293,7 @@ class Permutation(Function, PROP):
     def tensor[A, B, C, D](
             self: Annotated[Self, Hom(A, B)],
             other: Annotated[Self | None, Hom(C, D)] = None, *others
-    ) -> Annotated[Self, Hom(Ob(A) @ Ob(C), Ob(B) @ Ob(D))]:
+    ) -> Annotated[Self, Hom([A, C], [B, D])]:
         """ Return the disjoint union of permutations. """
         if other is None:
             return self
@@ -353,7 +353,7 @@ class Permutation(Function, PROP):
     def swap[X: Atom, Y: Atom](
             cls, left: Annotated[int | Nat, Ob(X)],
             right: Annotated[int | Nat, Ob(Y)]
-    ) -> Annotated[Self, Hom(Ob(X) @ Ob(Y), Ob(Y) @ Ob(X))]:
+    ) -> Annotated[Self, Hom([X, Y], [Y, X])]:
         m, n = int(left), int(right)
         inside = tuple(
             i + n if i < m else i - m

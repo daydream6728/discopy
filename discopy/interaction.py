@@ -300,7 +300,7 @@ class Diagram[natural](RibbonCategory, NamedGeneric):
     def tensor[A, B, C, D](
             self: Annotated[Diagram, Hom(A, B)],
             other: Annotated[Diagram, Hom(C, D)]
-    ) -> Annotated[Diagram, Hom(Ob(A) @ Ob(C), Ob(B) @ Ob(D))]:
+    ) -> Annotated[Diagram, Hom([A, C], [B, D])]:
         """
         The tensor of two integer diagrams.
 
@@ -334,7 +334,7 @@ class Diagram[natural](RibbonCategory, NamedGeneric):
     @rule
     def braid[X: Atom, Y: Atom](
             cls, left: Annotated[Ty, Ob(X)], right: Annotated[Ty, Ob(Y)]
-    ) -> Annotated[Diagram, Hom(Ob(X) @ Ob(Y), Ob(Y) @ Ob(X))]:
+    ) -> Annotated[Diagram, Hom([X, Y], [Y, X])]:
         """
         The braid of integer diagrams is given by the following diagram:
 

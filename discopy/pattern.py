@@ -11,8 +11,9 @@ parameters, its sort the bound — an object when unbounded, an
 :class:`Atom` or a :class:`Count` when declared — and constructors and
 operators build the compounds: ``Hom(p, q)``, ``p @ q``, ``p.l``,
 ``p.r``, ``p.d``, ``p << q``, ``p >> q``, ``p ** n`` and :data:`UNIT`.
-:class:`Hom` lifts a bare type parameter itself, so a side that is one
-variable writes ``Hom(A, B)`` directly.
+A side of :class:`Hom` goes through :func:`lift` — a bare type
+parameter is one variable, a list or tuple the tensor of its elements —
+so a rule writes ``Hom(A, B)`` and ``Hom([M, A], [M, B])`` directly.
 
 .. code-block:: python
 
@@ -69,6 +70,7 @@ Summary
         :nosignatures:
         :toctree:
 
+        lift
         parse
         cell
         declarations
@@ -582,14 +584,35 @@ class Repeat(Pattern):
         return f"{self.base} ** {self.count}"
 
 
+def lift(side: Pattern | TypeVar | str | list | tuple) -> Pattern:
+    """
+    The pattern a side of a :class:`Hom` stands for: a pattern as it
+    is, a list or tuple tensored — each element a side itself, none the
+    :data:`UNIT` — and anything else lifted by :class:`Ob`.
+
+    >>> def cups[X: Atom](): ...
+    >>> X, = cups.__type_params__
+    >>> assert lift([X, Ob(X).r]) == Ob(X) @ Ob(X).r
+    >>> assert lift(()) == UNIT and lift([X]) == Ob(X)
+    """
+    if isinstance(side, Pattern):
+        return side
+    if isinstance(side, (list, tuple)):
+        parts = tuple(lift(part) for part in side)
+        if not parts:
+            return UNIT
+        return parts[0] if len(parts) == 1 else Tensor(*parts)
+    return Ob(side)
+
+
 @dataclass(frozen=True, init=False)
 class Hom(Pattern):
     """
     The type ``head[dom, cod]`` of the morphisms between two patterns,
     ``Hom(p, q)`` in an annotation — matched against a goal: a pair of
-    an optional domain and codomain. A side that is not a pattern is
-    lifted by :class:`Ob`, so a rule writes ``Hom(A, B)`` on its own
-    type parameters directly.
+    an optional domain and codomain. A side goes through :func:`lift`:
+    a rule writes ``Hom(A, B)`` on its own type parameters directly and
+    ``Hom([M, A], [M, B])`` for the tensors of them.
 
     >>> from discopy.monoidal import Ty
     >>> A, B = Ob("A"), Ob("B")
@@ -603,17 +626,18 @@ class Hom(Pattern):
     []
     >>> def then[A, B](): ...
     >>> assert Hom(*then.__type_params__) == Hom(Ob("A"), Ob("B"))
+    >>> assert Hom([A, B], A) == hom
     """
 
     dom: Pattern
     cod: Pattern
     head: str = "C1"
 
-    def __init__(self, dom: Pattern | TypeVar | str,
-                 cod: Pattern | TypeVar | str, head: str = "C1"):
-        for name, side in (("dom", dom), ("cod", cod)):
-            side = side if isinstance(side, Pattern) else Ob(side)
-            object.__setattr__(self, name, side)
+    def __init__(self, dom: Pattern | TypeVar | str | list | tuple,
+                 cod: Pattern | TypeVar | str | list | tuple,
+                 head: str = "C1"):
+        object.__setattr__(self, "dom", lift(dom))
+        object.__setattr__(self, "cod", lift(cod))
         object.__setattr__(self, "head", head)
         super().__post_init__()
 

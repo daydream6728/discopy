@@ -174,8 +174,7 @@ class Tensor[dtype](Matrix[dtype]):
     def tensor[A, B, C, D](
             self: Annotated[Tensor, Hom(A, B)],
             other: Annotated[Tensor | None, Hom(C, D)] = None,
-            *others: Tensor
-    ) -> Annotated[Tensor, Hom(Ob(A) @ Ob(C), Ob(B) @ Ob(D))]:
+            *others: Tensor) -> Annotated[Tensor, Hom([A, C], [B, D])]:
         if other is None or others:
             return Diagram.tensor(self, other, *others)
         assert_isinstance(other, Tensor)

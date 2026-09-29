@@ -399,7 +399,7 @@ class Diagram(markov.Diagram, FeedbackCategory):
 
     @rule
     def feedback_left[A, B, M: Atom](
-            self: Annotated[Diagram, Hom(Ob(M).d @ Ob(A), Ob(M) @ Ob(B))],
+            self: Annotated[Diagram, Hom(Ob(M).d @ Ob(A), [M, B])],
             dom=None, cod=None, mem=None) -> Annotated[Diagram, Hom(A, B)]:
         """
         A :class:`Feedback` of the memory on the left, wire by wire: the
@@ -412,7 +412,7 @@ class Diagram(markov.Diagram, FeedbackCategory):
 
     @rule
     def feedback_right[A, B, M: Atom](
-            self: Annotated[Diagram, Hom(Ob(A) @ Ob(M).d, Ob(B) @ Ob(M))],
+            self: Annotated[Diagram, Hom(Ob(A) @ Ob(M).d, [B, M])],
             dom=None, cod=None, mem=None) -> Annotated[Diagram, Hom(A, B)]:
         """
         A :class:`Feedback` of the memory on the right, wire by wire: the

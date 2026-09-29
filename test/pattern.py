@@ -48,6 +48,7 @@ def test_operators():
     V, K = cups.__type_params__ + spiders.__type_params__
     assert Ob(V).sort.atomic and Ob(K).sort == Sort("Count")
     assert Hom(V, "W") == Hom(Ob(V), Ob("W"))  # Hom lifts a bare side.
+    assert Hom([V, "W"], ()) == Hom(Ob(V) @ Ob("W"), UNIT)
     with raises(TypeError):
         Hom(42, "W")
     assert sort_of(Pregroup).bound is Pregroup

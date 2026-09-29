@@ -285,7 +285,7 @@ class Diagram(balanced.Diagram, SymmetricCategory):
     def swap[X: Atom, Y: Atom](
             cls, left: Annotated[monoidal.Ty, Ob(X)],
             right: Annotated[monoidal.Ty, Ob(Y)]
-    ) -> Annotated[Diagram, Hom(Ob(X) @ Ob(Y), Ob(Y) @ Ob(X))]:
+    ) -> Annotated[Diagram, Hom([X, Y], [Y, X])]:
         """
         The diagram that swaps the ``left`` and ``right`` wires.
 
@@ -343,7 +343,7 @@ class Diagram(balanced.Diagram, SymmetricCategory):
     @rule
     def cycle[X: Atom, A](
             cls, x: Annotated[Ty, Ob(X)], a: Annotated[Ty, Ob(A)]
-    ) -> Annotated[Diagram, Hom(Ob(X) @ Ob(A), Ob(A) @ Ob(X))]:
+    ) -> Annotated[Diagram, Hom([X, A], [A, X])]:
         """
         The permutation moving a wire past a type, a native
         :class:`Permutation` of any length.
@@ -647,9 +647,8 @@ class Permutation(Box):
     @rule
     def tensor[A, B, C, D](
             self: Annotated[Permutation, Hom(A, B)],
-            other: Annotated[Diagram | monoidal.Ty | None, Hom(
-                C, D)] = None,
-            *others) -> Annotated[Diagram, Hom(Ob(A) @ Ob(C), Ob(B) @ Ob(D))]:
+            other: Annotated[Diagram | monoidal.Ty | None, Hom(C, D)] = None,
+            *others) -> Annotated[Diagram, Hom([A, C], [B, D])]:
         if other is None:
             return self
         if isinstance(other, Permutation):

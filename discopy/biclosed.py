@@ -327,14 +327,14 @@ class Diagram(monoidal.Diagram, BiclosedCategory):
 
     @rule
     def curry_left[X, Y: Atom, Z](
-            self: Annotated[Diagram, Hom(Ob(X) @ Ob(Y), Z)], n=1
+            self: Annotated[Diagram, Hom([X, Y], Z)], n=1
     ) -> Annotated[Diagram, Hom(X, (Ob(Z) << Ob(Y)))]:
         """ The left currying of ``n`` objects, see :meth:`curry`. """
         return self.curry(n, left=True)
 
     @rule
     def curry_right[Y: Atom, X, Z](
-            self: Annotated[Diagram, Hom(Ob(Y) @ Ob(X), Z)], n=1
+            self: Annotated[Diagram, Hom([Y, X], Z)], n=1
     ) -> Annotated[Diagram, Hom(X, (Ob(Y) >> Ob(Z)))]:
         """ The right currying of ``n`` objects, see :meth:`curry`. """
         return self.curry(n, left=False)

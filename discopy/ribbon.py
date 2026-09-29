@@ -85,7 +85,7 @@ from discopy import pivotal, balanced
 from discopy.abc import RibbonCategory
 from typing import Annotated
 
-from discopy.axioms import Atom, Hom, Ob, rule, Serialisable
+from discopy.axioms import Atom, Hom, rule, Serialisable
 from discopy.cat import factory, Generator
 from discopy.pivotal import Ty, Nat  # noqa: F401
 
@@ -108,14 +108,14 @@ class Diagram(pivotal.Diagram, balanced.Diagram, RibbonCategory):
 
     @rule
     def trace_left[A, B, M: Atom](
-            self: Annotated[Diagram, Hom(Ob(M) @ Ob(A), Ob(M) @ Ob(B))], n=1
+            self: Annotated[Diagram, Hom([M, A], [M, B])], n=1
     ) -> Annotated[Diagram, Hom(A, B)]:
         """ The trace of ``n`` wires on the left, see :meth:`trace`. """
         return self.trace(n, left=True)
 
     @rule
     def trace_right[A, B, M: Atom](
-            self: Annotated[Diagram, Hom(Ob(A) @ Ob(M), Ob(B) @ Ob(M))], n=1
+            self: Annotated[Diagram, Hom([A, M], [B, M])], n=1
     ) -> Annotated[Diagram, Hom(A, B)]:
         """ The trace of ``n`` wires on the right, see :meth:`trace`. """
         return self.trace(n)

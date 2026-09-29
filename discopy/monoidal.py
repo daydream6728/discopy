@@ -1102,8 +1102,7 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
     def tensor[A, B, C, D](
             self: Annotated[Diagram, Hom(A, B)],
             other: Annotated[Diagram | None, Hom(C, D)] = None,
-            *others: Diagram
-    ) -> Annotated[Diagram, Hom(Ob(A) @ Ob(C), Ob(B) @ Ob(D))]:
+            *others: Diagram) -> Annotated[Diagram, Hom([A, C], [B, D])]:
         """
         Parallel composition, called using :code:`@`.
 
@@ -1810,7 +1809,7 @@ class Sum(cat.Sum, Box):
     def tensor[A, B, C, D](
             self: Annotated[Sum, Hom(A, B)],
             other: Annotated[Diagram | None, Hom(C, D)] = None, *others
-    ) -> Annotated[Sum, Hom(Ob(A) @ Ob(C), Ob(B) @ Ob(D))]:
+    ) -> Annotated[Sum, Hom([A, C], [B, D])]:
         if other is None or others:
             return Diagram.tensor(self, other, *others)
         other = other if isinstance(other, Sum)\

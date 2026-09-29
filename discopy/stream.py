@@ -522,7 +522,7 @@ class Stream[category](MonoidalCategory, NamedGeneric):
     def tensor[A, B, C, D](
             self: Annotated[Stream, Hom(A, B)],
             other: Annotated[Stream, Hom(C, D)]
-    ) -> Annotated[Stream, Hom(Ob(A) @ Ob(C), Ob(B) @ Ob(D))]:
+    ) -> Annotated[Stream, Hom([A, C], [B, D])]:
         """
         Tensor of streams is given by swapping the memories as follows:
 
