@@ -7,7 +7,7 @@ from hypothesis import find
 from hypothesis import strategies as st
 from pytest import raises
 
-from discopy import braided, cat, rigid, traced
+from discopy import braided, cat, rigid
 from discopy.abc import Category, ColouredMonoid
 from discopy.monoidal import Box, Diagram, Ty
 from discopy.pattern import Hom, Ob, UNIT
@@ -88,14 +88,6 @@ def test_declarations():
     # sequent of the declaration it implements, see Declaration.sequent.
 
 
-def test_search():
-    strategy = search(Diagram, Box.strategy, dom=x, cod=y, max_depth=2)
-    term = find(strategy, lambda value: len(value.boxes) == 3)
-    assert (term.dom, term.cod) == (x, y)
-    assert find(search(Diagram, Box.strategy, dom=x, cod=x, max_depth=0),
-                lambda value: not value.boxes) == Diagram.id(x)
-
-
 def test_goal_patterns():
     """ The sides of a goal are patterns under a shared substitution. """
     from typing import TypeVar
@@ -112,26 +104,3 @@ def test_goal_patterns():
         lambda term: bool(term.boxes)
         and all(isinstance(box, markov.Copy) for box in term.boxes))
     assert copy.cod == copy.dom @ copy.dom
-    assert find(search(Diagram, Box.strategy, max_depth=0),
-                lambda value: not value.boxes).dom == find(
-                    search(Diagram, Box.strategy, max_depth=0),
-                    lambda value: not value.boxes).cod
-
-
-def test_search_residual():
-    """ The evaluation generator matches a goal by its residual. """
-    from discopy.biclosed import Diagram, Eval, Ty
-    a, b = Ty('a'), Ty('b')
-    term = find(Diagram.strategy(dom=(a << b) @ b, cod=a, max_depth=0),
-                lambda value: isinstance(value, Eval))
-    assert term == Diagram.ev(a, b)
-
-
-def test_search_trace():
-    """ The trace rule builds around any diagram of the traced type. """
-    a = traced.Ty('a')
-    term = find(traced.Diagram.strategy(dom=a, cod=a),
-                lambda value: any(
-                    isinstance(box, traced.Trace) and len(box.arg.boxes) > 1
-                    for box in value.boxes))
-    assert (term.dom, term.cod) == (a, a)

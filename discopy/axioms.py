@@ -663,13 +663,6 @@ class Axiom[**P, T](Declaration[P, T]):
         """
         Draw the :meth:`canonical` equation of the law, the parameters those
         of :meth:`discopy.monoidal.Equation.draw`.
-
-        >>> from discopy.symmetric import Diagram
-        >>> Diagram.bifunctoriality.draw(
-        ...     doctest="docs/_static/axioms/bifunctoriality.svg")
-
-        .. image:: /_static/axioms/bifunctoriality.svg
-            :align: center
         """
         equation = self.canonical()
         if equation is NotImplemented:

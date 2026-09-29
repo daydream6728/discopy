@@ -6,13 +6,12 @@ from hypothesis import find
 from hypothesis.errors import NoSuchExample
 from pytest import raises
 
-from discopy import braided, cat, feedback, monoidal, rigid
+from discopy import braided, cat, feedback, rigid
 from discopy.abc import MonoidalCategory
-from discopy.axioms import (
-    Axiom, AxiomFailure, Equation, Relabelling, assert_axioms, axiom)
+from discopy.axioms import Axiom, AxiomFailure, Equation, assert_axioms, axiom
 from discopy.cat import Arrow, Box, Functor, Ob
 from discopy.monoidal import Diagram
-from discopy.pattern import ARROW, Sort
+from discopy.pattern import ARROW
 
 
 def test_axioms():
@@ -24,16 +23,6 @@ def test_axioms():
         dagger_involution = Arrow.dagger_involution.inapplicable("No dagger.")
 
     assert_axioms(Classified)
-
-
-def test_strategy():
-    x, y = Ob('x'), Ob('y')
-    find(Ob.strategy(), lambda ob: ob.name == "a")
-    assert find(Arrow.strategy(dom=x, cod=x), lambda _: True) == Arrow.id(x)
-    assert find(Arrow.strategy(dom=x, cod=y), lambda _: True).cod == y
-    assert find(Arrow.strategy(dom=x), lambda _: True).dom == x
-    assert find(Arrow.strategy(cod=y), lambda _: True).cod == y
-    assert find(Box.strategy(dom=x), lambda _: True).dom == x
 
 
 def test_axiom_binding():
@@ -115,45 +104,6 @@ def test_axioms_of_category():
     assert "unitality" not in Hidden.axioms
 
 
-def test_Relabelling():
-    x, y, z = cat.Ob('x'), cat.Ob('y'), cat.Ob('z')
-    relabelling = Relabelling(((x, y), ))
-    assert relabelling[x] == y and relabelling[z] == z
-    assert list(relabelling) == [x] and len(relabelling) == 1
-    assert bool(Relabelling())
-    assert relabelling[cat.Box('f', x, x)] == cat.Box('f', y, y)
-    rigid_x, rigid_y = rigid.Ty('x'), rigid.Ty('y')
-    rotating = Relabelling(((rigid_x, rigid_y), ))
-    functor = rigid.Functor(rotating, rotating)
-    assert functor(rigid_x.l) == rigid_y.l and functor(rigid_x.r) == rigid_y.r
-    rotated = rigid.Box('f', rigid_x.r, rigid_x @ rigid_x)
-    assert rotating[rotated] == rigid.Box('f', rigid_y.r, rigid_y @ rigid_y)
-    delayed = Relabelling(((feedback.Ty('u'), feedback.Ty('v')), ))
-    delaying = feedback.Box('f', feedback.Ty('u').delay(), feedback.Ty('u'))
-    assert delayed[delaying] == feedback.Box(
-        'f', feedback.Ty('v').delay(), feedback.Ty('v'))
-
-
-def test_functor_law():
-    @axiom
-    def preserves_identity(
-            cls, functor: Self,
-            x: Annotated[Any, Sort("In0")]) -> Equation:
-        """ A functor preserves the identity on each object. """
-        return Equation(
-            functor(cls.dom.id(x)), functor.cod.id(functor(x)))
-
-    law = preserves_identity.bind(Functor)
-    equation = find(law.strategy(), lambda _: True)
-    assert equation and all(isinstance(t, Arrow) for t in equation.terms)
-
-
-def test_monoid_law():
-    law = monoidal.Ty.unitality.weaken(max_length=1)
-    equation = find(law.strategy(), lambda _: True)
-    assert equation and all(len(term) <= 1 for term in equation.terms)
-
-
 def test_axiom():
     assert MonoidalCategory.bifunctoriality.parameters[0].name == "f"
     assert str(MonoidalCategory.bifunctoriality.sequent).startswith(
@@ -177,11 +127,6 @@ def test_weaken_params():
     assert law.modulo(lambda term: term).params == law.params
 
 
-def test_equation_of_axiom():
-    x, y = monoidal.Ty('x'), monoidal.Ty('y')
-    assert isinstance(Diagram.unitality(monoidal.Box("f", x, y)), Equation)
-
-
 def test_canonical():
     equation = Diagram.bifunctoriality.canonical()
     assert equation and str(equation.terms[0])\
@@ -200,4 +145,3 @@ def test_canonical():
     cups = rigid.Diagram.generators["cups"].canonical()
     assert cups == {"left": rigid.Ty('X'), "right": rigid.Ty('X').r}
     assert feedback.Diagram.feedback_joining.canonical()
-

@@ -98,10 +98,9 @@ type Match = tuple[Substitution, Residuals]
 class Sort:
     """
     The sort of a premise or a variable: the instances of the type its
-    ``head`` resolves to in the scope of a bound declaration, atomic or
-    not, and the class of :mod:`discopy.abc` bounding them when known.
-    :data:`OB`, :data:`ARROW` and :data:`TERM` are the sorts of the
-    objects, arrows and terms of the category stating a declaration.
+    ``head`` resolves to in the scope of a bound declaration, atomic
+    or not, and the class of :mod:`discopy.abc` bounding them when
+    known.
 
     >>> print(Sort("C0", atomic=True))
     Atom[C0]
@@ -157,8 +156,8 @@ def sort_of(bound, level: type | None = None) -> Sort:
     The sort a bound declares: an object when :obj:`None`, an
     :class:`Atom` or a :class:`Count` when the bound says so, a
     :class:`Sort` as it is, or a class of :mod:`discopy.abc` bounding
-    the objects. The ``level`` is the bound of the objects of the class
-    stating the declaration, carried by every object sort.
+    the objects; the ``level`` of the declaring class is carried by
+    every object sort.
     """
     if bound is None:
         return Sort("C0", bound=level)
@@ -177,19 +176,15 @@ def sort_of(bound, level: type | None = None) -> Sort:
 class Pattern(ABC):
     """
     A pattern for the objects of a category, with variables to
-    instantiate: matching a value yields every substitution unifying the
-    pattern with it, each with the residual equations it could not
-    invert. Compound patterns are built with the operators of the
-    objects they stand for: ``@``, ``.l``, ``.r``, ``.d``, ``<<``,
-    ``>>`` and ``**``.
+    instantiate: matching a value yields every substitution unifying
+    the pattern with it, each with the residual equations it could not
+    invert. Compounds are built with the operators of the objects they
+    stand for: ``@``, ``.l``, ``.r``, ``.d``, ``<<``, ``>>``, ``**``.
     """
     def __post_init__(self):
-        """
-        Check the objects the pattern stands for are bounded by its
-        :meth:`level` — when a bound is known: a pattern built from bare
-        type parameters knows none until :func:`parse` reads it with the
-        class stating it, which checks then.
-        """
+        """ Check a known bound against the :meth:`level`; a pattern
+        of bare type parameters knows none until :func:`parse` reads it
+        with the class stating it. """
         bound = self.bound
         if bound is None:
             return
@@ -304,9 +299,9 @@ class Pattern(ABC):
 @dataclass(frozen=True, init=False)
 class Ob(Pattern):
     """
-    A variable over the objects of a category: the lift of one of the
-    declaration's own type parameters, ``Ob(A)``, its sort the bound of
-    ``A`` — or a name and a sort directly.
+    A variable over the objects of a category: the lift ``Ob(A)`` of
+    one of the declaration's own type parameters, its sort the bound —
+    or a name and a sort directly.
 
     >>> def cups[X: Atom](): ...
     >>> X, = cups.__type_params__
@@ -383,10 +378,7 @@ UNIT = Unit()
 
 @dataclass(frozen=True, init=False)
 class Tensor(Pattern):
-    """
-    The tensor of two or more patterns, flattened: ``p @ q`` in an
-    annotation.
-    """
+    """ The tensor of two or more patterns, flattened: ``p @ q``. """
 
     factors: tuple[Pattern, ...]
 
@@ -438,10 +430,8 @@ class Tensor(Pattern):
 
 @dataclass(frozen=True)
 class Adjoint(Pattern):
-    """
-    The left or right adjoint ``p.l`` or ``p.r`` of a pattern, inverted
-    by the adjoint on the other side when matching.
-    """
+    """ The left or right adjoint ``p.l`` or ``p.r`` of a pattern,
+    inverted by the adjoint on the other side when matching. """
 
     base: Pattern
     side: str
@@ -534,9 +524,9 @@ class Exp(Pattern):
 @dataclass(frozen=True)
 class Repeat(Pattern):
     """
-    An atomic pattern repeated a variable number of times, ``p ** n``
-    in an annotation, for the legs of a spider: matching binds the count
-    to the number of atoms and the base to the one atom they all equal.
+    An atomic pattern repeated a variable number of times, ``p ** n``,
+    for the legs of a spider: matching binds the count to the number
+    of atoms and the base to the one atom they all equal.
     """
 
     base: Pattern
@@ -587,8 +577,8 @@ class Repeat(Pattern):
 def lift(side: Pattern | TypeVar | str | list | tuple) -> Pattern:
     """
     The pattern a side of a :class:`Hom` stands for: a pattern as it
-    is, a list or tuple tensored — each element a side itself, none the
-    :data:`UNIT` — and anything else lifted by :class:`Ob`.
+    is, a list or tuple tensored — each element a side itself, none
+    the :data:`UNIT` — and anything else lifted by :class:`Ob`.
 
     >>> def cups[X: Atom](): ...
     >>> X, = cups.__type_params__
@@ -609,10 +599,9 @@ def lift(side: Pattern | TypeVar | str | list | tuple) -> Pattern:
 class Hom(Pattern):
     """
     The type ``head[dom, cod]`` of the morphisms between two patterns,
-    ``Hom(p, q)`` in an annotation — matched against a goal: a pair of
-    an optional domain and codomain. A side goes through :func:`lift`:
-    a rule writes ``Hom(A, B)`` on its own type parameters directly and
-    ``Hom([M, A], [M, B])`` for the tensors of them.
+    matched against a goal: a pair of an optional domain and codomain.
+    A side goes through :func:`lift`: a rule writes ``Hom(A, B)`` on
+    its own type parameters and ``Hom([M, A], [M, B])`` for tensors.
 
     >>> from discopy.monoidal import Ty
     >>> A, B = Ob("A"), Ob("B")
@@ -675,9 +664,9 @@ def common(*patterns: Pattern) -> type | None:
 @dataclass(frozen=True)
 class Sequent:
     """
-    Variables and their sorts, named premises and an optional conclusion.
-    A premise is a :class:`Hom` to generate, a :class:`Sort` to
-    generate, or a :class:`Pattern` to instantiate.
+    Variables and their sorts, named premises — a :class:`Hom` or a
+    :class:`Sort` to generate, a :class:`Pattern` to instantiate — and
+    an optional conclusion.
 
     >>> from discopy.abc import MonoidalCategory
     >>> print(MonoidalCategory.tensor.sequent)
@@ -705,12 +694,11 @@ def states_pattern(annotation) -> bool:
 def premises_of(function: Callable, missing: bool = False) -> list[str]:
     """
     The names of the premises a function states: its parameters whose
-    annotation states a pattern, whether or not they have a default, an
-    unannotated first ``cls`` or ``self`` skipped and an annotated
-    ``*args`` standing for one argument at a time, the implementation
-    taking any number of them. With ``missing``, the parameters that
-    state no pattern and have no default, which a call by the sequent
-    could not fill.
+    annotation states a pattern, an unannotated first ``cls`` or
+    ``self`` skipped and an annotated ``*args`` standing for one
+    argument at a time. With ``missing``, the parameters that state no
+    pattern and have no default, which a call by the sequent could not
+    fill.
     """
     parameters = list(inspect.signature(function).parameters.values())
     if parameters and parameters[0].annotation is inspect.Parameter.empty:
@@ -732,14 +720,13 @@ def premises_of(function: Callable, missing: bool = False) -> list[str]:
 def parse(function: Callable, owner: type | None = None,
           conclusion: bool = True) -> Sequent:
     """
-    The sequent a function states with its signature, collected from the
-    pattern objects its annotations built when they were read: each
-    parameter stating a pattern a premise (see :func:`premises_of`), the
-    return annotation the conclusion when asked for, the variables the
-    :class:`Ob` s the patterns lift — carrying the bound of the objects
-    of the ``owner`` class stating it. An unannotated first parameter,
-    ``cls`` or ``self``, is skipped, and a pattern needing more
-    structure than the owner's objects have is refused.
+    The sequent a function states with its signature, collected from
+    the pattern objects its annotations built when they were read:
+    each parameter stating a pattern a premise, the return annotation
+    the conclusion when asked for, the variables the :class:`Ob` s the
+    patterns lift, carrying the bound of the objects of the ``owner``
+    class stating it. A pattern needing more structure than the
+    owner's objects have is refused.
 
     >>> def then[A, B, C](
     ...         self: Annotated["object", Hom(Ob(A), Ob(B))],
@@ -834,19 +821,14 @@ def parse(function: Callable, owner: type | None = None,
 @dataclass(repr=False)
 class Declaration[**P, T]:
     """
-    A sequent stated by a function on an abstract base class and inherited
-    by every category below it: the base of the rules and generators of
-    :mod:`discopy.search` and of the axioms of :mod:`discopy.axioms`.
-
-    Parameters:
-        function : The function stating the sequent as its signature; a
-            classmethod is decorated inside ``classmethod``.
-        category : The class the declaration is bound to, :obj:`None`
-            until :meth:`bind` or the attribute access on a class binds it.
-        name : The attribute the declaration is stored under, the name of
-            the function by default.
-        owner : The class declaring the sequent, whose objects bound the
-            sorts of its variables; found when a class access binds it.
+    A sequent stated by a ``function`` on an abstract base class and
+    inherited by every category below it: the base of the rules and
+    generators of :mod:`discopy.search` and of the axioms of
+    :mod:`discopy.axioms`. The ``category`` is the class the
+    declaration is bound to, :obj:`None` until :meth:`bind` or the
+    attribute access on a class binds it, ``name`` the attribute it is
+    stored under and ``owner`` the class declaring the sequent, whose
+    objects bound the sorts of its variables.
 
     >>> from discopy.abc import Category
     >>> Category.then
@@ -874,10 +856,9 @@ class Declaration[**P, T]:
 
     @property
     def sequent(self) -> Sequent:
-        """ The parsed signature, read lazily and cached, see :func:`parse`
-        — lazily so that the sorts carry the bounds of the class stating
-        the declaration, which does not exist when its body is decorated.
-        """
+        """ The parsed signature, cached — and read lazily, so the
+        sorts carry the bounds of a class that does not exist when its
+        body is decorated. """
         if "sequent" not in self.__dict__:
             self.__dict__["sequent"] = parse(
                 self.function, self.owner or self.category,
@@ -1038,9 +1019,9 @@ class Declaration[**P, T]:
 
 def cell(factory: type, name: str, dom=None, cod=None):
     """
-    A cell of a class named after a parameter or a variable: a box of a
-    class with a ``Box``, between ``dom`` and ``cod`` or objects named
-    ``x`` and ``y``, else an instance of the class of that name.
+    A cell of a class named after a parameter or a variable: a box of
+    a class with a ``Box``, between ``dom`` and ``cod`` or objects
+    named ``x`` and ``y``, else an instance of the class of that name.
 
     >>> from discopy.monoidal import Box, Diagram, Ty
     >>> assert cell(Diagram, 'f') == Box('f', Ty('x'), Ty('y'))
@@ -1056,12 +1037,11 @@ def cell(factory: type, name: str, dom=None, cod=None):
 
 def declarations[D: Declaration](cls: type, kind: type[D]) -> dict[str, D]:
     """
-    The declarations of exactly a kind inherited by a class, bound to it
-    and keyed by name, the latest in the method resolution order winning
-    like ordinary attribute lookup — found under any inner decorator: a
-    classmethod, a staticmethod or an abstract method. A declaration
-    marked inapplicable, or anything that is not a declaration, assigned
-    over an inherited one drops it.
+    The declarations of exactly a kind inherited by a class, bound to
+    it and keyed by name, the latest in the method resolution order
+    winning like ordinary attribute lookup, found under any inner
+    decorator; a declaration marked inapplicable, or anything that is
+    not a declaration, assigned over an inherited one drops it.
 
     >>> from discopy.monoidal import Diagram
     >>> from discopy.search import Rule

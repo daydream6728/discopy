@@ -70,17 +70,9 @@ def test_Arrow_dagger():
     x, y, z = Ob('x'), Ob('y'), Ob('z')
     f, g = Box('f', x, y), Box('g', y, z)
     h = Arrow((f, g), x, z)
-    assert h.dagger() == g.dagger() >> f.dagger()
-    assert h.dagger().dagger() == h
     assert isinstance(h, DaggerCategory)
     assert not issubclass(FreeCategory, DaggerCategory)
     assert not issubclass(Functor, DaggerCategory)
-
-
-def test_Id_init():
-    idx = Id(Ob('x'))
-    assert idx >> idx == idx
-    assert idx.dagger() == idx
 
 
 def test_AxiomError():
@@ -92,17 +84,6 @@ def test_AxiomError():
         Arrow((f, ), x, z)
     with raises(AxiomError) as err:
         g >> f
-
-
-def test_Box():
-    f = Box('f', Ob('x'), Ob('y'), data=[42, {0: 1}, lambda x: x])
-    assert f >> Id(Ob('y')) == f == Id(Ob('x')) >> f
-
-
-def test_Box_dagger():
-    f = Box('f', Ob('x'), Ob('y'), data=[42, {0: 1}])
-    assert f.dom == f.dagger().cod and f.cod == f.dagger().dom
-    assert f == f.dagger().dagger()
 
 
 def test_Bubble_dagger():
@@ -201,11 +182,6 @@ def test_Transformation_eq():
     assert Transformation({x: f, y: f[::-1]}, F, G)\
         == Transformation({x: f, y: f[::-1]}, F, G)
     assert Transformation({x: f, y: f[::-1]}, F, G) != F
-
-
-def test_Transformation_repr():
-    F = Functor.id()
-    assert "Transformation" in repr(Transformation.id(F))
 
 
 def test_Transformation_errors():

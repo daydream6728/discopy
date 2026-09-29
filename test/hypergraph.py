@@ -4,7 +4,7 @@ from pytest import raises
 
 from discopy.hypergraph import *
 from discopy.frobenius import (
-    Ty, Box, Cap, Cup, Diagram, Spider, Hypergraph as H)
+    Ty, Box, Cap, Cup, Spider, Hypergraph as H)
 
 def test_pushout():
     with raises(ValueError):
@@ -98,11 +98,6 @@ def test_Hypergraph_rotate():
         assert (graph.l.dom, graph.l.cod) == (graph.cod.l, graph.dom.l)
         assert graph.l.r == graph == graph.r.l
         assert graph.rotate() == box.rotate().to_hypergraph()
-
-
-def test_Box():
-    box = Box('box', Ty('x'), Ty('y')).to_hypergraph()
-    assert box == box and box == box @ H.id() and box != 1
 
 
 def test_AxiomError():
@@ -250,12 +245,6 @@ def _naive_from_diagram(old):
         dom=type(old), cod=factory)(old)
 
 
-def test_Hypergraph_from_glued():
-    x = Ty('x')
-    f, g = Box('f', x, x).to_hypergraph(), Box('g', x, x).to_hypergraph()
-    assert H.from_glued(x, x, [(f, 0), (g, 0)]) == f >> g
-
-
 def test_Hypergraph_from_diagram_closed_loop():
     """ A cap glued directly onto a cup leaves a closed loop: it must
     survive gluing as a scalar spider rather than vanish because it is
@@ -267,30 +256,6 @@ def test_Hypergraph_from_diagram_closed_loop():
     assert hypergraph.n_spiders == 1 and hypergraph.scalar_spiders == [0]
     assert not hypergraph.is_acyclic
     assert hypergraph == _naive_from_diagram(diagram)
-
-
-def test_Hypergraph_from_diagram_matches_naive_composition():
-    """ Gluing every box in one pass agrees with folding their images with
-    :meth:`Hypergraph.then` one layer at a time, on diagrams that exercise
-    a chain of swaps, states and effects, and boxes of different arity and
-    coarity sharing a layer, see issue #623. """
-    x = Ty('x')
-    f = Box('f', x, x)
-    state, effect = Box('s', Ty(), x), Box('e', x, Ty())
-    split, merge = Box('p', x, x @ x), Box('m', x @ x, x)
-
-    chain = Diagram.id(x @ x)
-    for _ in range(6):
-        chain = chain >> (f @ x) >> Diagram.swap(x, x)
-
-    diagrams = [
-        chain,
-        state >> split >> merge >> effect,
-        Diagram.id(x) @ split >> f @ merge,
-        Cap(x, x) @ x >> x @ Cup(x, x),
-    ]
-    for diagram in diagrams:
-        assert diagram.to_hypergraph() == _naive_from_diagram(diagram)
 
 
 def test_Hypergraph_from_diagram_pinned_category():

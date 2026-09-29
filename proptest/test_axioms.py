@@ -13,25 +13,14 @@ def types() -> tuple[type[Testable], ...]:
     """
     The testable types the matrix quantifies over: every transitive
     subclass of :class:`discopy.axioms.Testable` that generates its own
-    terms, i.e. every one whose
-    :meth:`discopy.axioms.Testable.strategy` is implemented rather than
-    left to raise.
-
-    Implementing a strategy is how a type enrols itself, so that the
-    matrix follows the package rather than a list kept beside it: a type
-    whose terms cannot be generated yet states its laws without being
-    checked against them, and is checked as soon as it says how.
-
-    Importing :mod:`discopy.axioms` imports the package that defines
-    them, so every subclass is in place by the time this is called. A
-    class stating no law gets no cell: :class:`Testable` itself, and an
-    axiom or a pattern, which generate their terms without stating laws.
-    Nor does a category over a fixed vocabulary, whose
+    terms, i.e. implements :meth:`discopy.axioms.Testable.strategy` —
+    which is how a type enrols itself, so the matrix follows the
+    package rather than a list kept beside it. A class stating no law
+    gets no cell, nor does a category over a fixed vocabulary, whose
     :attr:`discopy.abc.Category.generators` are the
-    :class:`discopy.search.Constant` rules of its words or gates: the
-    sentences of a pregroup grammar or the circuits over a gate set fill
-    only the sequents their vocabulary derives, not the ones a law draws,
-    and their laws are those of the free category they live in.
+    :class:`discopy.search.Constant` rules of its words or gates: it
+    fills only the sequents its vocabulary derives, not the ones a law
+    draws, and its laws are those of the free category it lives in.
     """
     def generates(testable):
         try:
@@ -82,13 +71,9 @@ def axiom_parameters(broken: bool = False):
     """
     Translate every axiom of every testable type to a pytest parameter,
     one per declaration under the ``fast`` profile, the laws declared
-    broken and the others apart.
-
-    An axiom taking no argument states its verdict without one, so we ask it
-    here: :obj:`NotImplemented` means the structure does not apply and the
-    test is skipped rather than generating arguments it could not satisfy.
-    A type need not state laws at all: one enrolled for the ad-hoc
-    properties only, such as a type of wires, has no ``axioms``.
+    broken and the others apart. An axiom taking no argument states its
+    verdict without one: :obj:`NotImplemented` skips the cell rather
+    than generating arguments it could not satisfy.
     """
     cells = [
         (testable, axiom)

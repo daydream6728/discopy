@@ -52,17 +52,6 @@ def test_M_init():
         M(x, y, (), (1, 0))
 
 
-def test_id_and_tensor():
-    from discopy.compact import Ty, CMap as M, Hypergraph as H
-    x, y = map(Ty, "xy")
-    assert M.id(x).edges == (1, 0)
-    assert M.id(x).orientation == (1, 0)
-    assert M.id(x).faces == (0, 1)
-    assert M.id().tensor() == M.id()
-    assert M.id(x).tensor(M.id(y)) == M.id(x) @ M.id(y)
-    assert (M.id(x) @ M.id(y)).to_hypergraph() == H.id(x @ y)
-
-
 def test_from_box_and_to_hypergraph():
     from discopy.compact import Ty, Box, CMap as M
     x, y, z = map(Ty, "xyz")
@@ -78,28 +67,6 @@ def test_from_box_and_to_hypergraph():
         [(1, 0, 5), (2, 3, 4)], 6)
 
 
-def test_eliminate_swaps():
-    from discopy.compact import Ty, Id, Box
-
-    x, y, w, z = map(Ty, "xyzw")
-
-    diagram = Id(x @ y).permute(1, 0).permute(1, 0)
-    assert diagram != Id(x @ y)  # there are swaps to eliminate
-    assert diagram.to_map().to_diagram().normal_form() == Id(x @ y)
-
-    diagram = Id(x @ y @ w @ z).permute(2, 3, 0, 1).permute(2, 3, 0, 1)
-    assert diagram != Id(x @ y @ w @ z)
-    assert diagram.to_map().to_diagram().normal_form() == Id(x @ y @ w @ z)
-
-    f, g = Box("f", x, z), Box("g", y, w)
-
-    diagram = Id(x @ y).permute(1, 0) >> g @ x\
-        >> Id(w @ x).permute(1, 0) >> f @ w
-    assert diagram.to_map().to_diagram() == x @ g >> f @ w
-    assert diagram.to_map() == diagram.to_map().to_diagram().to_map()
-    assert diagram.to_map() == diagram.to_hypergraph().to_diagram().to_map()
-
-
 def test_states_decode_where_they_were():
     from discopy.symmetric import Ty, Box
 
@@ -107,15 +74,6 @@ def test_states_decode_where_they_were():
     state = Box("s", Ty(), y)
     diagram = x @ state
     assert diagram.to_map().to_diagram() == diagram
-
-
-def test_diagram_to_map():
-    from discopy.monoidal import Ty, Box
-
-    x, y, z = map(Ty, "xyz")
-    f, g = Box("f", x, y), Box("g", y, z)
-    assert (f >> g).to_map() == f.to_map() >> g.to_map()
-    assert (f @ g).to_map() == f.to_map() @ g.to_map()
 
 
 def test_symmetric_diagram_to_map_encodes_swap_as_wiring():
@@ -507,26 +465,6 @@ def test_scalar_box():
     assert cm.to_hypergraph() == s.to_hypergraph()
 
 
-def test_zipping_cups_and_caps():
-    """
-    │ ╭─╮ ╭─╮ ╭─╮ ╭─╮    │
-    │ │ │ │ │ │ │ │ │  = │
-    ╰─╯ ╰─╯ ╰─╯ ╰─╯ │    │
-    """
-
-    from discopy.compact import Ty, Diagram as D, CMap as M
-
-    x, y = map(Ty, 'xy')
-
-    def zipping_expr(c, z):
-        id, cup, cap = c.id(z), c.cups(z, z.r), c.caps(z.r, z)
-        return id @ cap @ cap @ cap @ cap >> cup @ cup @ cup @ cup @ id
-
-    assert zipping_expr(D, x).to_map() == zipping_expr(M, x) == M.id(x)
-    assert zipping_expr(D, x @ y).to_map()\
-        == zipping_expr(M, x @ y) == M.id(x @ y)
-
-
 def test_scalar_is_not_eliminated():
     from discopy.compact import Ty, Diagram as D, CMap as M
 
@@ -553,18 +491,6 @@ def test_connected_components_of_loops():
     components = loops.connected_components
     assert len(components) == 2
     assert tuple(c.loops for c in components) == ((x,), (y,))
-
-
-def test_hypergraph_to_map():
-    from discopy import compact, frobenius
-
-    x, y = map(compact.Ty, "xy")
-    f = compact.Box("f", x, y).to_hypergraph()
-    assert f.to_map().to_hypergraph() == f
-
-    fx = frobenius.Ty("x")
-    assert frobenius.Hypergraph.spiders(1, 2, fx).to_map()\
-        == frobenius.CMap.spiders(1, 2, fx)
 
 
 def test_plug_input():

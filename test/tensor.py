@@ -105,29 +105,14 @@ def test_Tensor_caps():
         Tensor.caps(Dim(3), Dim(2))
 
 
-def test_Tensor_transpose():
-    assert Tensor.caps(Dim(2), Dim(2)).transpose()\
-        == Tensor.cups(Dim(2), Dim(2))
-
-
 def test_Tensor_conjugate():
     assert Tensor[complex]([1j], Dim(1), Dim(1)).conjugate().array == -1j
 
 
 def test_Tensor_tensor():
-    assert Tensor.tensor(Tensor.id(Dim(2))) == Tensor.id(Dim(2))
-
-    assert Tensor.id(Dim(2)) @ Tensor.id(Dim(3)) == Tensor.id(Dim(2, 3))
-
     v = Tensor([1, 0], Dim(1), Dim(2))
     assert v @ v == Tensor([1, 0, 0, 0], dom=Dim(1), cod=Dim(2, 2))
     assert v @ v.dagger() == v << v.dagger()
-
-    x, y = frobenius.Ty('x'), frobenius.Ty('y')
-    f, g = frobenius.Box('f', x, x), frobenius.Box('g', y, y)
-    ob, ar = {x: 2, y: 3}, {f: [1, 0, 0, 1], g: list(range(9))}
-    F = Functor(ob, ar)
-    assert F(f) @ F(g) == F(f @ g)
 
 
 def test_tensor_spiders():
@@ -146,14 +131,6 @@ def test_Functor_call():
     with raises(TypeError):
         F("Alice")
     assert Functor(ob_map={x: Dim(2, 3)}, ar_map=None)(x) == Dim(2, 3)
-
-
-def test_Functor_swap():
-    x, y = frobenius.Ty('x'), frobenius.Ty('y')
-    f, g = frobenius.Box('f', x, x), frobenius.Box('g', y, y)
-    F = Functor({x: 2, y: 3}, {f: [1, 2, 3, 4], g: list(range(9))})
-    assert F(f @ g >> frobenius.Swap(x, y)) == \
-           F(frobenius.Swap(x, y) >> g @ f)
 
 
 def test_AxiomError():

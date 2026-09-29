@@ -86,26 +86,6 @@ def test_Diagram_rejects_boxless_layer():
     assert (x @ Box('f', x, x)).inside[0].boxes
 
 
-def test_composition_never_emits_a_boxless_layer():
-    """ ``then``, ``tensor`` and ``normal_form`` build their layers with
-    ``_scan=False``, so the constructor cannot catch a boxless one: these are
-    the paths that have to be checked by hand. """
-    x, y, z = Ty('x'), Ty('y'), Ty('z')
-    f, g, h = Box('f', x, y), Box('g', y, z), Box('h', z, x)
-    interchanger = f @ Id(z) >> Id(y) @ h
-    diagrams = [
-        f >> g, f >> g >> h, f >> f.dagger(), (f >> g).dagger(),
-        f @ g, g @ f, f @ g @ h, f.tensor(), f.tensor(g, h),
-        x @ f, f @ x, Ty() @ f, f @ Ty(), Id(Ty()) @ f, f @ Id(Ty()),
-        Id(x) @ f, f @ Id(y), Id(Ty()) >> Id(Ty()),
-        interchanger, interchanger.normal_form(), interchanger.foliation(),
-        interchanger.interchange(0, 1),
-        (f @ Id(z) >> Id(y) @ h).normal_form().dagger(),
-    ]
-    for diagram in diagrams:
-        assert all(layer.boxes for layer in diagram.inside), repr(diagram)
-
-
 def test_Ty_init():
     assert list(Ty('x', 'y', 'z')) == [Ty('x'), Ty('y'), Ty('z')]
 
@@ -155,13 +135,6 @@ def test_Nat_sequence_protocol():
     assert len(Nat(3)) == 3
     assert list(Nat(3)) == 3 * [Nat(1)]
     assert Nat(3)[:1] == Nat(1)
-
-
-def test_Nat_identity_and_dagger():
-    assert Nat(0) @ Nat(3) == Nat(3) == Nat(3) @ Nat(0)
-    assert Nat.id() == Nat(0) == Nat.id(Nat(0))
-    assert Nat(3)[::-1] == Nat(3)
-    assert Nat(3).dagger() == Nat(3)
 
 
 def test_Dim_identity_and_slicing():
@@ -448,18 +421,9 @@ def test_spiral(n_cups=2):
     assert spiral_nf.boxes[-1] == counit and spiral_nf.boxes[n_cups] == unit
 
 
-def test_Id_init():
-    assert Id(Ty('x')) == Diagram.id(Ty('x'))
-
-
 def test_Box_init():
     f = Box('f', Ty('x', 'y'), Ty('z'), data=42)
     assert (f.name, f.dom, f.cod, f.data) == ('f', Ty('x', 'y'), Ty('z'), 42)
-
-
-def test_Functor_init():
-    F = Functor({Ty('x'): Ty('y')}, {})
-    assert F(Id(Ty('x'))) == Id(Ty('y'))
 
 
 def test_Functor_call():

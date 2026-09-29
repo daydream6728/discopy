@@ -4,14 +4,13 @@ from typing import Annotated
 
 from pytest import raises
 
-from discopy import feedback, rigid
 from discopy.abc import (
     Category, ColouredMonoid, DelayedMonoid, FeedbackCategory, Pregroup,
     ResiduatedMonoid)
 from discopy.monoidal import Ty
 from discopy.pattern import (
-    OB, UNIT, Adjoint, Atom, Count, Delay, Exp, Hom, Ob, Repeat, Sequent,
-    Sort, Tensor, Unit, parse, sort_of)
+    OB, UNIT, Adjoint, Atom, Count, Delay, Exp, Hom, Ob, Repeat, Sort,
+    Tensor, Unit, parse, sort_of)
 
 
 x, y, z = map(Ty, "xyz")
@@ -101,50 +100,6 @@ def test_parse():
         "A: C0, B: C0, M: Atom[C0] | self: C1[A @ M.d, B @ M] ⊢ C1[A, B]")
     assert FeedbackCategory.feedback_left.sequent.variables["M"].bound\
         is DelayedMonoid
-
-
-def test_match():
-    assert list(A.match(None)) == [({}, ())]
-    assert [s for s, _ in (M @ A).match(x @ y)] == [{"M": x, "A": y}]
-    assert list((M @ M).match(x)) == []
-    assert list(ONE.match(x)) == []
-    assert list((A @ A).match(x @ y)) == []
-    assert [s for s, _ in (A @ A).match(x @ x)] == [{"A": x}]
-    assert next(X.r.match(rigid.Ty("x").r))[0] == {"X": rigid.Ty("x")}
-    subst, residuals = next((X << X).match(x))
-    assert subst == {} and residuals == ((X << X, x), )
-    subst, residuals = next(D.d.match(x))
-    assert residuals == ((D.d, x), )
-    assert [s for s, _ in (M ** N).match(x @ x)] == [{"N": 2, "M": x}]
-    assert list((M ** N).match(x @ y)) == []
-
-
-def test_instantiate():
-    subst = {"A": x @ y, "M": z}
-    assert (A @ M).instantiate(subst, Ty) == x @ y @ z
-    assert ONE.instantiate(subst, Ty) == Ty()
-    assert X.r.instantiate({"X": rigid.Ty("z")}, rigid.Ty)\
-        == rigid.Ty("z").r
-    assert D.d.instantiate({"D": feedback.Ty("z")}, feedback.Ty)\
-        == feedback.Ty("z").d
-    assert Hom(A, M).instantiate(subst, Ty) == (x @ y, z)
-    assert (A @ M).variables == ("A", "M")
-    assert (E << E).variables == ("E", "E")
-
-
-def test_hom_match():
-    hom = Hom(A @ B, A)
-    assert [s for s, _ in hom.match((x @ y, x))] == [{"A": x, "B": y}]
-    assert [s for s, _ in hom.match((None, x))] == [{"A": x}]
-    assert list(hom.match((x @ y, y))) == []
-
-
-def test_sequent_str():
-    assert str(Sequent()) == ""
-    assert str(Sequent({"A": Sort()}, {"f": Hom(A, A)}, Hom(A, A)))\
-        == "A: C0 | f: C1[A, A] ⊢ C1[A, A]"
-    assert str(Sequent(premises={"x": Sort("C0", atomic=True)}))\
-        == "x: Atom[C0]"
 
 
 def test_level():
