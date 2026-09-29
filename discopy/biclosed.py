@@ -86,9 +86,7 @@ from typing import Callable, ClassVar, Self, overload
 from discopy import monoidal, cmap
 from typing import Annotated
 
-from discopy.axioms import (
-    Atom, Hom, Serialisable, Tensor, no_strategy, rule,
-    Over as OverPattern, Under as UnderPattern)
+from discopy.axioms import Atom, Hom, no_strategy, Ob, rule, Serialisable
 from discopy.abc import BiclosedCategory, DaggerCategory, ResiduatedMonoid
 from discopy.drawing import Drawing
 from discopy.cat import factory, Generator
@@ -329,15 +327,15 @@ class Diagram(monoidal.Diagram, BiclosedCategory):
 
     @rule
     def curry_left[X, Y: Atom, Z](
-            self: Annotated[Diagram, Hom[Tensor[X, Y], Z]], n=1
-    ) -> Annotated[Diagram, Hom[X, OverPattern[Z, Y]]]:
+            self: Annotated[Diagram, Hom(Ob(X) @ Ob(Y), Ob(Z))], n=1
+    ) -> Annotated[Diagram, Hom(Ob(X), (Ob(Z) << Ob(Y)))]:
         """ The left currying of ``n`` objects, see :meth:`curry`. """
         return self.curry(n, left=True)
 
     @rule
     def curry_right[Y: Atom, X, Z](
-            self: Annotated[Diagram, Hom[Tensor[Y, X], Z]], n=1
-    ) -> Annotated[Diagram, Hom[X, UnderPattern[Y, Z]]]:
+            self: Annotated[Diagram, Hom(Ob(Y) @ Ob(X), Ob(Z))], n=1
+    ) -> Annotated[Diagram, Hom(Ob(X), (Ob(Y) >> Ob(Z)))]:
         """ The right currying of ``n`` objects, see :meth:`curry`. """
         return self.curry(n, left=False)
 
@@ -355,16 +353,16 @@ class Diagram(monoidal.Diagram, BiclosedCategory):
     @classmethod
     @rule
     def ev_left[Y: Atom, E: Atom](
-            cls, base: Annotated[Ty, Y], exponent: Annotated[Ty, E]
-    ) -> Annotated[Diagram, Hom[Tensor[OverPattern[Y, E], E], Y]]:
+            cls, base: Annotated[Ty, Ob(Y)], exponent: Annotated[Ty, Ob(E)]
+    ) -> Annotated[Diagram, Hom((Ob(Y) << Ob(E)) @ Ob(E), Ob(Y))]:
         """ The left evaluation, see :meth:`ev`. """
         return cls.ev(base, exponent, left=True)
 
     @classmethod
     @rule
     def ev_right[Y: Atom, E: Atom](
-            cls, base: Annotated[Ty, Y], exponent: Annotated[Ty, E]
-    ) -> Annotated[Diagram, Hom[Tensor[E, UnderPattern[E, Y]], Y]]:
+            cls, base: Annotated[Ty, Ob(Y)], exponent: Annotated[Ty, Ob(E)]
+    ) -> Annotated[Diagram, Hom(Ob(E) @ (Ob(E) >> Ob(Y)), Ob(Y))]:
         """ The right evaluation, see :meth:`ev`. """
         return cls.ev(base, exponent, left=False)
 

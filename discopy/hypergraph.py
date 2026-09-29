@@ -56,7 +56,7 @@ from discopy.abc import (
     NamedGeneric, RigidCategory, SymmetricCategory, TracedCategory)
 from discopy.drawing import Node, backend
 from discopy.python.finset import Permutation
-from discopy.pattern import Hom, Tensor as TensorPattern
+from discopy.pattern import Hom, Ob
 from discopy.search import rule
 from discopy.utils import (
     factory_name,
@@ -348,8 +348,8 @@ class Hypergraph[category: Diagram](MonoidalCategory, DaggerCategory,
 
     @classmethod
     @rule
-    def id[A](cls, dom: Annotated[Any | None, A] = None
-              ) -> Annotated[Hypergraph, Hom[A, A]]:
+    def id[A](cls, dom: Annotated[Any | None, Ob(A)] = None
+              ) -> Annotated[Hypergraph, Hom(Ob(A), Ob(A))]:
         dom = cls.category.ob() if dom is None else dom
         dom_wires = cod_wires = tuple(range(len(dom)))
         return cls(dom, dom, (), (dom_wires, (), cod_wires))
@@ -359,9 +359,9 @@ class Hypergraph[category: Diagram](MonoidalCategory, DaggerCategory,
     @rule
     @unbiased
     def then[A, B, C](
-            self: Annotated[Hypergraph, Hom[A, B]],
-            other: Annotated[Hypergraph, Hom[B, C]]
-    ) -> Annotated[Hypergraph, Hom[A, C]]:
+            self: Annotated[Hypergraph, Hom(Ob(A), Ob(B))],
+            other: Annotated[Hypergraph, Hom(Ob(B), Ob(C))]
+    ) -> Annotated[Hypergraph, Hom(Ob(A), Ob(C))]:
         """
         Composition of two hypergraph diagrams, i.e. their :func:`pushout`.
         """
@@ -388,10 +388,10 @@ class Hypergraph[category: Diagram](MonoidalCategory, DaggerCategory,
     @rule
     @unbiased
     def tensor[A, B, C, D](
-            self: Annotated[Hypergraph, Hom[A, B]],
-            other: Annotated[Hypergraph, Hom[C, D]]
+            self: Annotated[Hypergraph, Hom(Ob(A), Ob(B))],
+            other: Annotated[Hypergraph, Hom(Ob(C), Ob(D))]
     ) -> Annotated[Hypergraph,
-                   Hom[TensorPattern[A, C], TensorPattern[B, D]]]:
+                   Hom(Ob(A) @ Ob(C), Ob(B) @ Ob(D))]:
         """ Tensor of two hypergraph diagrams, i.e. their disjoint union. """
         dom, cod = self.dom @ other.dom, self.cod @ other.cod
         boxes, offsets = self.boxes + other.boxes, self.offsets + other.offsets

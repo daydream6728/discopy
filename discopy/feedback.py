@@ -164,7 +164,7 @@ from typing import Annotated
 
 from discopy.axioms import GENERATORS, no_strategy
 from discopy.abc import DelayedMonoid, FeedbackCategory
-from discopy.axioms import Atom, Delay, Hom, Tensor, rule
+from discopy.axioms import Atom, Hom, Ob, rule
 from discopy.utils import (
     factory, Generator, factory_name, assert_isinstance, AxiomError,
     from_tree)
@@ -399,9 +399,9 @@ class Diagram(markov.Diagram, FeedbackCategory):
 
     @rule
     def feedback_left[A, B, M: Atom](
-            self: Annotated[Diagram, Hom[Tensor[Delay[M], A], Tensor[M, B]]],
+            self: Annotated[Diagram, Hom(Ob(M).d @ Ob(A), Ob(M) @ Ob(B))],
             dom=None, cod=None, mem=None
-    ) -> Annotated[Diagram, Hom[A, B]]:
+    ) -> Annotated[Diagram, Hom(Ob(A), Ob(B))]:
         """
         A :class:`Feedback` of the memory on the left, wire by wire: the
         outermost memory wire, the first, feeds back first.
@@ -413,9 +413,9 @@ class Diagram(markov.Diagram, FeedbackCategory):
 
     @rule
     def feedback_right[A, B, M: Atom](
-            self: Annotated[Diagram, Hom[Tensor[A, Delay[M]], Tensor[B, M]]],
+            self: Annotated[Diagram, Hom(Ob(A) @ Ob(M).d, Ob(B) @ Ob(M))],
             dom=None, cod=None, mem=None
-    ) -> Annotated[Diagram, Hom[A, B]]:
+    ) -> Annotated[Diagram, Hom(Ob(A), Ob(B))]:
         """
         A :class:`Feedback` of the memory on the right, wire by wire: the
         outermost memory wire, the last, feeds back first.

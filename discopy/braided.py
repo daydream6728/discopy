@@ -65,7 +65,7 @@ from discopy import monoidal
 from discopy.abc import BraidedCategory
 from typing import Annotated
 
-from discopy.axioms import Atom, Equation, Hom, Tensor, axiom, rule
+from discopy.axioms import Atom, axiom, Equation, Hom, Ob, rule
 from discopy.cat import factory, Generator
 from discopy.monoidal import Ty, Match
 from discopy.utils import (
@@ -99,9 +99,9 @@ class Diagram(monoidal.Diagram, BraidedCategory):
     @classmethod
     @rule
     def braid[X: Atom, Y: Atom](
-            cls, left: Annotated[monoidal.Ty, X],
-            right: Annotated[monoidal.Ty, Y]
-    ) -> Annotated[Self, Hom[Tensor[X, Y], Tensor[Y, X]]]:
+            cls, left: Annotated[monoidal.Ty, Ob(X)],
+            right: Annotated[monoidal.Ty, Ob(Y)]
+    ) -> Annotated[Self, Hom(Ob(X) @ Ob(Y), Ob(Y) @ Ob(X))]:
         """
         The diagram braiding :code:`left` over :code:`right`.
 

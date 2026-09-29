@@ -72,7 +72,7 @@ from typing import Annotated, ClassVar
 from collections.abc import Mapping
 
 from discopy import messages, tensor, frobenius
-from discopy.axioms import Hom, Rule, no_strategy, rule
+from discopy.axioms import Hom, no_strategy, Ob, Rule, rule
 from discopy.cat import factory, Generator
 from discopy.matrix import backend
 from discopy.tensor import Dim, Tensor
@@ -242,8 +242,8 @@ class Circuit(tensor.Diagram[complex]):
 
     @classmethod
     @rule
-    def id[A](cls, dom: Annotated[int | Ty | None, A] = None
-              ) -> Annotated[Circuit, Hom[A, A]]:
+    def id[A](cls, dom: Annotated[int | Ty | None, Ob(A)] = None
+              ) -> Annotated[Circuit, Hom(Ob(A), Ob(A))]:
         """
         The identity circuit on a given domain.
 

@@ -35,7 +35,7 @@ from discopy.quantum.gates import (
 from discopy.quantum.gates import Scalar as GatesScalar
 from discopy.rigid import Sum, Nat
 from discopy.utils import factory_name
-from discopy.pattern import Atom, Hom, Tensor as TensorPattern
+from discopy.pattern import Atom, Hom, Ob
 from discopy.search import rule
 
 
@@ -49,8 +49,9 @@ class Diagram(tensor.Diagram[complex]):
     @staticmethod
     @rule
     def swap[X: Atom, Y: Atom](
-            left: Annotated[int | Nat, X], right: Annotated[int | Nat, Y]
-    ) -> Annotated[Diagram, Hom[TensorPattern[X, Y], TensorPattern[Y, X]]]:
+            left: Annotated[int | Nat, Ob(X)],
+            right: Annotated[int | Nat, Ob(Y)]
+    ) -> Annotated[Diagram, Hom(Ob(X) @ Ob(Y), Ob(Y) @ Ob(X))]:
         left = left if isinstance(left, Nat) else Nat(left)
         right = right if isinstance(right, Nat) else Nat(right)
         return tensor.Diagram.swap.__func__(

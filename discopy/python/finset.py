@@ -24,7 +24,7 @@ from dataclasses import dataclass
 
 from discopy import messages
 from discopy.abc import MonoidalCategory, PROP, Nat
-from discopy.pattern import Atom, Hom, Tensor as TensorPattern
+from discopy.pattern import Atom, Hom, Ob
 from discopy.search import rule
 
 
@@ -75,24 +75,24 @@ class Function(MonoidalCategory, Sequence):
 
     @staticmethod
     @rule
-    def id[A](x: Annotated[int | Nat, A] = 0
-              ) -> Annotated[Function, Hom[A, A]]:
+    def id[A](x: Annotated[int | Nat, Ob(A)] = 0
+              ) -> Annotated[Function, Hom(Ob(A), Ob(A))]:
         x = Nat(int(x))
         return Function(list(range(x)), x, x)
 
     @rule
     def then[A, B, C](
-            self: Annotated[Function, Hom[A, B]],
-            other: Annotated[Function, Hom[B, C]]
-    ) -> Annotated[Function, Hom[A, C]]:
+            self: Annotated[Function, Hom(Ob(A), Ob(B))],
+            other: Annotated[Function, Hom(Ob(B), Ob(C))]
+    ) -> Annotated[Function, Hom(Ob(A), Ob(C))]:
         inside = [self[other[i]] for i in range(len(other))]
         return Function(inside, self.dom, other.cod)
 
     @rule
     def tensor[A, B, C, D](
-            self: Annotated[Function, Hom[A, B]],
-            other: Annotated[Function, Hom[C, D]]
-    ) -> Annotated[Function, Hom[TensorPattern[A, C], TensorPattern[B, D]]]:
+            self: Annotated[Function, Hom(Ob(A), Ob(B))],
+            other: Annotated[Function, Hom(Ob(C), Ob(D))]
+    ) -> Annotated[Function, Hom(Ob(A) @ Ob(C), Ob(B) @ Ob(D))]:
         inside = list(self.inside) + [
             int(self.dom) + other[i] for i in range(len(other))]
         return Function(
@@ -101,8 +101,8 @@ class Function(MonoidalCategory, Sequence):
     @staticmethod
     @rule
     def swap[X: Atom, Y: Atom](
-            x: Annotated[int | Nat, X], y: Annotated[int | Nat, Y]
-    ) -> Annotated[Function, Hom[TensorPattern[X, Y], TensorPattern[Y, X]]]:
+            x: Annotated[int | Nat, Ob(X)], y: Annotated[int | Nat, Ob(Y)]
+    ) -> Annotated[Function, Hom(Ob(X) @ Ob(Y), Ob(Y) @ Ob(X))]:
         m, n = int(x), int(y)
         inside = list(Permutation.swap(m, n))
         return Function(inside, Nat(m + n), Nat(m + n))
@@ -195,8 +195,8 @@ class Permutation(Function, PROP):
 
     @classmethod
     @rule
-    def id[A](cls, dom: Annotated[int | Nat, A] = 0
-              ) -> Annotated[Self, Hom[A, A]]:
+    def id[A](cls, dom: Annotated[int | Nat, Ob(A)] = 0
+              ) -> Annotated[Self, Hom(Ob(A), Ob(A))]:
         """ The identity permutation on ``range(size)``. """
         n = int(dom)
         return cls(range(n), n)
@@ -265,9 +265,9 @@ class Permutation(Function, PROP):
 
     @rule
     def then[A, B, C](
-            self: Annotated[Self, Hom[A, B]],
-            other: Annotated[Self, Hom[B, C]]
-    ) -> Annotated[Self, Hom[A, C]]:
+            self: Annotated[Self, Hom(Ob(A), Ob(B))],
+            other: Annotated[Self, Hom(Ob(B), Ob(C))]
+    ) -> Annotated[Self, Hom(Ob(A), Ob(C))]:
         """ Return ``self ; other``, i.e. ``result[i] == other[self[i]]``. """
         other = type(self)(other, len(self))
         elems = (other[self[i]] for i in range(len(self)))
@@ -292,9 +292,9 @@ class Permutation(Function, PROP):
 
     @rule
     def tensor[A, B, C, D](
-            self: Annotated[Self, Hom[A, B]],
-            other: Annotated[Self | None, Hom[C, D]] = None, *others
-    ) -> Annotated[Self, Hom[TensorPattern[A, C], TensorPattern[B, D]]]:
+            self: Annotated[Self, Hom(Ob(A), Ob(B))],
+            other: Annotated[Self | None, Hom(Ob(C), Ob(D))] = None, *others
+    ) -> Annotated[Self, Hom(Ob(A) @ Ob(C), Ob(B) @ Ob(D))]:
         """ Return the disjoint union of permutations. """
         if other is None:
             return self
@@ -352,9 +352,9 @@ class Permutation(Function, PROP):
     @classmethod
     @rule
     def swap[X: Atom, Y: Atom](
-            cls, left: Annotated[int | Nat, X],
-            right: Annotated[int | Nat, Y]
-    ) -> Annotated[Self, Hom[TensorPattern[X, Y], TensorPattern[Y, X]]]:
+            cls, left: Annotated[int | Nat, Ob(X)],
+            right: Annotated[int | Nat, Ob(Y)]
+    ) -> Annotated[Self, Hom(Ob(X) @ Ob(Y), Ob(Y) @ Ob(X))]:
         m, n = int(left), int(right)
         inside = tuple(
             i + n if i < m else i - m

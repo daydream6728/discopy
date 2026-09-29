@@ -67,8 +67,8 @@ from discopy import abc, cat, drawing, hypergraph, cmap, messages
 from discopy.abc import (
     ColouredMonoid, Monoid, MonoidalCategory, NamedGeneric)
 from discopy.axioms import (
-    C0, GENERATORS, Hom, Serialisable, Tensor as TensorPattern,
-    no_strategy, rule, search, Equation as AbstractEquation, axiom)
+    axiom, Equation as AbstractEquation, GENERATORS, Hom, no_strategy, Ob, OB,
+    rule, search, Serialisable)
 from discopy.drawing import Drawing
 from discopy.config import (
     BOX_DRAWING_ATTRIBUTES, WIRE_DRAWING_ATTRIBUTES,
@@ -1100,10 +1100,10 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
 
     @rule
     def tensor[A, B, C, D](
-            self: Annotated[Diagram, Hom[A, B]],
-            other: Annotated[Diagram | None, Hom[C, D]] = None,
+            self: Annotated[Diagram, Hom(Ob(A), Ob(B))],
+            other: Annotated[Diagram | None, Hom(Ob(C), Ob(D))] = None,
             *others: Diagram
-    ) -> Annotated[Diagram, Hom[TensorPattern[A, C], TensorPattern[B, D]]]:
+    ) -> Annotated[Diagram, Hom(Ob(A) @ Ob(C), Ob(B) @ Ob(D))]:
         """
         Parallel composition, called using :code:`@`.
 
@@ -1555,7 +1555,7 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
         return AbstractEquation(functor(f), functor(top) >> functor(bottom))
 
     @axiom
-    def hypergraph_identity(cls, x: Annotated[Ty, C0]):
+    def hypergraph_identity(cls, x: Annotated[Ty, OB]):
         """ The encoding preserves identities. """
         functor = cls.hypergraph_equivalence()
         return AbstractEquation(functor(cls.id(x)), functor.cod.id(x))
@@ -1620,7 +1620,7 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
         return cls.Equation(f.foliation(), f, up_to=cls.to_hypergraph)
 
     @axiom
-    def drawing_identity(cls, x: Annotated[Ty, C0]):
+    def drawing_identity(cls, x: Annotated[Ty, OB]):
         """
         :meth:`to_drawing` preserves identities on the nose. It does not
         preserve composition or whiskering on the nose, since the layout
@@ -1808,9 +1808,9 @@ class Sum(cat.Sum, Box):
 
     @rule
     def tensor[A, B, C, D](
-            self: Annotated[Sum, Hom[A, B]],
-            other: Annotated[Diagram | None, Hom[C, D]] = None, *others
-    ) -> Annotated[Sum, Hom[TensorPattern[A, C], TensorPattern[B, D]]]:
+            self: Annotated[Sum, Hom(Ob(A), Ob(B))],
+            other: Annotated[Diagram | None, Hom(Ob(C), Ob(D))] = None, *others
+    ) -> Annotated[Sum, Hom(Ob(A) @ Ob(C), Ob(B) @ Ob(D))]:
         if other is None or others:
             return Diagram.tensor(self, other, *others)
         other = other if isinstance(other, Sum)\
@@ -1973,15 +1973,15 @@ class Functor(cat.Functor):
 
     @classmethod
     @rule
-    def id[A](cls, dom: Annotated[type | None, A] = None
-              ) -> Annotated[Any, Hom[A, A]]:
+    def id[A](cls, dom: Annotated[type | None, Ob(A)] = None
+              ) -> Annotated[Any, Hom(Ob(A), Ob(A))]:
         return cls(lambda x: x, lambda f: f, dom=dom, cod=dom)
 
     @rule
     def then[A, B, C](
-            self: Annotated[Functor, Hom[A, B]],
-            other: Annotated[Functor, Hom[B, C]]
-    ) -> Annotated[Functor, Hom[A, C]]:
+            self: Annotated[Functor, Hom(Ob(A), Ob(B))],
+            other: Annotated[Functor, Hom(Ob(B), Ob(C))]
+    ) -> Annotated[Functor, Hom(Ob(A), Ob(C))]:
         assert_isinstance(other, Functor)
         assert_iscomposable(self, other)
         return type(self)(

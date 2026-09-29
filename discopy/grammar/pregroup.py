@@ -37,7 +37,7 @@ Summary
 from typing import ClassVar
 
 from discopy import axioms, rigid, frobenius, messages
-from discopy.axioms import Rule, no_strategy
+from discopy.axioms import no_strategy, Rule
 from discopy.cat import factory, Generator
 from discopy.utils import AxiomError, classproperty
 from discopy.grammar import thue

@@ -144,10 +144,7 @@ Parametric maps compose like layers of a neural network, e.g. over
 from dataclasses import dataclass
 from typing import Annotated, Self
 
-from discopy.pattern import (
-    C0, Atom, Count, Delay, Hom, L, R, Repeat, Unit,
-    Over as OverPattern, Under as UnderPattern,
-    Tensor as TensorPattern)
+from discopy.pattern import Atom, Count, Hom, Ob, UNIT
 from discopy.search import rule
 from discopy import (
     monoidal, symmetric, markov, closed, feedback, compact, frobenius)
@@ -220,8 +217,8 @@ class Symmetric[category: symmetric.Diagram](SymmetricCategory, NamedGeneric):
 
     @classmethod
     @rule
-    def id[A](cls, dom: Annotated[monoidal.Ty | None, A] = None
-              ) -> Annotated[Symmetric, Hom[A, A]]:
+    def id[A](cls, dom: Annotated[monoidal.Ty | None, Ob(A)] = None
+              ) -> Annotated[Symmetric, Hom(Ob(A), Ob(A))]:
         """
         The identity parametric map on `dom`, with empty parameter space.
 
@@ -233,9 +230,9 @@ class Symmetric[category: symmetric.Diagram](SymmetricCategory, NamedGeneric):
     @rule
     @unbiased
     def then[A, B, C](
-            self: Annotated[Symmetric, Hom[A, B]],
-            other: Annotated[Symmetric, Hom[B, C]]
-    ) -> Annotated[Symmetric, Hom[A, C]]:
+            self: Annotated[Symmetric, Hom(Ob(A), Ob(B))],
+            other: Annotated[Symmetric, Hom(Ob(B), Ob(C))]
+    ) -> Annotated[Symmetric, Hom(Ob(A), Ob(C))]:
         """
         Sequential composition tensors the hidden spaces on both sides,
         i.e. `(p, f) >> (q, g) == (p @ q, f @ q >> g)` for empty
@@ -258,9 +255,9 @@ class Symmetric[category: symmetric.Diagram](SymmetricCategory, NamedGeneric):
     @rule
     @unbiased
     def tensor[A, B, C, D](
-            self: Annotated[Symmetric, Hom[A, B]],
-            other: Annotated[Symmetric, Hom[C, D]]
-    ) -> Annotated[Symmetric, Hom[TensorPattern[A, C], TensorPattern[B, D]]]:
+            self: Annotated[Symmetric, Hom(Ob(A), Ob(B))],
+            other: Annotated[Symmetric, Hom(Ob(C), Ob(D))]
+    ) -> Annotated[Symmetric, Hom(Ob(A) @ Ob(C), Ob(B) @ Ob(D))]:
         """
         Parallel composition tensors the hidden spaces on both sides, with
         swaps routing the parameters to the right of the domains and the
@@ -280,9 +277,9 @@ class Symmetric[category: symmetric.Diagram](SymmetricCategory, NamedGeneric):
     @classmethod
     @rule
     def swap[X: Atom, Y: Atom](
-            cls, left: Annotated[monoidal.Ty, X],
-            right: Annotated[monoidal.Ty, Y]
-    ) -> Annotated[Symmetric, Hom[TensorPattern[X, Y], TensorPattern[Y, X]]]:
+            cls, left: Annotated[monoidal.Ty, Ob(X)],
+            right: Annotated[monoidal.Ty, Ob(Y)]
+    ) -> Annotated[Symmetric, Hom(Ob(X) @ Ob(Y), Ob(Y) @ Ob(X))]:
         """
         The swap of the underlying category, with empty parameter space.
 
@@ -342,16 +339,16 @@ class Traced(Symmetric, TracedCategory):
     @rule
     def trace_left[A, B, M: Atom](
             self: Annotated[
-                Traced, Hom[TensorPattern[M, A], TensorPattern[M, B]]],
-            n=1) -> Annotated[Traced, Hom[A, B]]:
+                Traced, Hom(Ob(M) @ Ob(A), Ob(M) @ Ob(B))],
+            n=1) -> Annotated[Traced, Hom(Ob(A), Ob(B))]:
         """ The trace of ``n`` wires on the left, see :meth:`trace`. """
         return self.trace(n, left=True)
 
     @rule
     def trace_right[A, B, M: Atom](
             self: Annotated[
-                Traced, Hom[TensorPattern[A, M], TensorPattern[B, M]]],
-            n=1) -> Annotated[Traced, Hom[A, B]]:
+                Traced, Hom(Ob(A) @ Ob(M), Ob(B) @ Ob(M))],
+            n=1) -> Annotated[Traced, Hom(Ob(A), Ob(B))]:
         """ The trace of ``n`` wires on the right, see :meth:`trace`. """
         return self.trace(n)
 
@@ -387,9 +384,9 @@ class Markov(Symmetric, MarkovCategory):
     @classmethod
     @rule
     def copy[X: Atom, N: Count](
-            cls, x: Annotated[monoidal.Ty, X],
-            n: Annotated[int, N] = 2
-    ) -> Annotated[Markov, Hom[X, Repeat[X, N]]]:
+            cls, x: Annotated[monoidal.Ty, Ob(X)],
+            n: Annotated[int, Ob(N)] = 2
+    ) -> Annotated[Markov, Hom(Ob(X), Ob(X) ** Ob(N))]:
         """
         The copy of the underlying category, with empty parameter space.
 
@@ -410,18 +407,18 @@ class Closed(Markov, ClosedCategory):
     @classmethod
     @rule
     def ev_left[Y: Atom, E: Atom](
-            cls, base: Annotated[monoidal.Ty, Y],
-            exponent: Annotated[monoidal.Ty, E]
-    ) -> Annotated[Closed, Hom[TensorPattern[OverPattern[Y, E], E], Y]]:
+            cls, base: Annotated[monoidal.Ty, Ob(Y)],
+            exponent: Annotated[monoidal.Ty, Ob(E)]
+    ) -> Annotated[Closed, Hom((Ob(Y) << Ob(E)) @ Ob(E), Ob(Y))]:
         """ The left evaluation, see :meth:`ev`. """
         return cls.ev(base, exponent, left=True)
 
     @classmethod
     @rule
     def ev_right[Y: Atom, E: Atom](
-            cls, base: Annotated[monoidal.Ty, Y],
-            exponent: Annotated[monoidal.Ty, E]
-    ) -> Annotated[Closed, Hom[TensorPattern[E, UnderPattern[E, Y]], Y]]:
+            cls, base: Annotated[monoidal.Ty, Ob(Y)],
+            exponent: Annotated[monoidal.Ty, Ob(E)]
+    ) -> Annotated[Closed, Hom(Ob(E) @ (Ob(E) >> Ob(Y)), Ob(Y))]:
         """ The right evaluation, see :meth:`ev`. """
         return cls.ev(base, exponent, left=False)
 
@@ -441,15 +438,15 @@ class Closed(Markov, ClosedCategory):
 
     @rule
     def curry_left[X, Y: Atom, Z](
-            self: Annotated[Closed, Hom[TensorPattern[X, Y], Z]], n=1
-    ) -> Annotated[Closed, Hom[X, OverPattern[Z, Y]]]:
+            self: Annotated[Closed, Hom(Ob(X) @ Ob(Y), Ob(Z))], n=1
+    ) -> Annotated[Closed, Hom(Ob(X), (Ob(Z) << Ob(Y)))]:
         """ The left currying of ``n`` objects, see :meth:`curry`. """
         return self.curry(n, left=True)
 
     @rule
     def curry_right[Y: Atom, X, Z](
-            self: Annotated[Closed, Hom[TensorPattern[Y, X], Z]], n=1
-    ) -> Annotated[Closed, Hom[X, UnderPattern[Y, Z]]]:
+            self: Annotated[Closed, Hom(Ob(Y) @ Ob(X), Ob(Z))], n=1
+    ) -> Annotated[Closed, Hom(Ob(X), (Ob(Y) >> Ob(Z)))]:
         """ The right currying of ``n`` objects, see :meth:`curry`. """
         return self.curry(n, left=False)
 
@@ -494,11 +491,11 @@ class Feedback(Markov, FeedbackCategory):
     def feedback_left[A, B, M: Atom](
             self: Annotated[
                 Feedback,
-                Hom[TensorPattern[Delay[M], A], TensorPattern[M, B]]],
+                Hom(Ob(M).d @ Ob(A), Ob(M) @ Ob(B))],
             dom: monoidal.Ty | None = None,
             cod: monoidal.Ty | None = None,
             mem: monoidal.Ty | None = None
-    ) -> Annotated[Feedback, Hom[A, B]]:
+    ) -> Annotated[Feedback, Hom(Ob(A), Ob(B))]:
         """ A parametric feedback keeps its memory on the right. """
         raise NotImplementedError(
             "A parametric feedback keeps its memory on the right.")
@@ -507,11 +504,11 @@ class Feedback(Markov, FeedbackCategory):
     def feedback_right[A, B, M: Atom](
             self: Annotated[
                 Feedback,
-                Hom[TensorPattern[A, Delay[M]], TensorPattern[B, M]]],
+                Hom(Ob(A) @ Ob(M).d, Ob(B) @ Ob(M))],
             dom: monoidal.Ty | None = None,
             cod: monoidal.Ty | None = None,
             mem: monoidal.Ty | None = None
-    ) -> Annotated[Feedback, Hom[A, B]]:
+    ) -> Annotated[Feedback, Hom(Ob(A), Ob(B))]:
         """ The feedback of the memory on the right, see :meth:`feedback`. """
         return self.feedback(dom, cod, mem)
 
@@ -548,9 +545,9 @@ class Compact(Traced, CompactCategory):
     @classmethod
     @rule
     def cups[X: Atom](
-            cls, left: Annotated[monoidal.Ty, X],
-            right: Annotated[monoidal.Ty, R[X]]
-    ) -> Annotated[Compact, Hom[TensorPattern[X, R[X]], Unit[C0]]]:
+            cls, left: Annotated[monoidal.Ty, Ob(X)],
+            right: Annotated[monoidal.Ty, Ob(X).r]
+    ) -> Annotated[Compact, Hom(Ob(X) @ Ob(X).r, UNIT)]:
         """
         The cups of the underlying category, with empty parameter space.
 
@@ -564,9 +561,9 @@ class Compact(Traced, CompactCategory):
     @classmethod
     @rule
     def caps[X: Atom](
-            cls, left: Annotated[monoidal.Ty, X],
-            right: Annotated[monoidal.Ty, L[X]]
-    ) -> Annotated[Compact, Hom[Unit[C0], TensorPattern[X, L[X]]]]:
+            cls, left: Annotated[monoidal.Ty, Ob(X)],
+            right: Annotated[monoidal.Ty, Ob(X).l]
+    ) -> Annotated[Compact, Hom(UNIT, Ob(X) @ Ob(X).l)]:
         """
         The caps of the underlying category, with empty parameter space.
 
@@ -591,9 +588,10 @@ class Hypergraph(Compact, Markov, HypergraphCategory):
     @classmethod
     @rule
     def spiders[X: Atom, M: Count, N: Count](
-            cls, n_legs_in: Annotated[int, M],
-            n_legs_out: Annotated[int, N], typ: Annotated[monoidal.Ty, X]
-    ) -> Annotated[Hypergraph, Hom[Repeat[X, M], Repeat[X, N]]]:
+            cls, n_legs_in: Annotated[int, Ob(M)],
+            n_legs_out: Annotated[int, Ob(N)],
+            typ: Annotated[monoidal.Ty, Ob(X)]
+    ) -> Annotated[Hypergraph, Hom(Ob(X) ** Ob(M), Ob(X) ** Ob(N))]:
         """
         The spiders of the underlying category, with empty parameters.
 

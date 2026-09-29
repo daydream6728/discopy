@@ -131,7 +131,7 @@ from discopy import monoidal, cmap, hypergraph
 from discopy.abc import TracedCategory
 from typing import Annotated
 
-from discopy.axioms import Atom, Hom, Serialisable, Tensor, rule
+from discopy.axioms import Atom, Hom, Ob, rule, Serialisable
 from discopy.cat import factory, Generator
 from discopy.monoidal import Ty  # noqa: F401
 from discopy.utils import (
@@ -163,8 +163,8 @@ class Diagram(monoidal.Diagram, TracedCategory):
 
     @rule
     def trace_left[A, B, M: Atom](
-            self: Annotated[Diagram, Hom[Tensor[M, A], Tensor[M, B]]], n=1
-    ) -> Annotated[Diagram, Hom[A, B]]:
+            self: Annotated[Diagram, Hom(Ob(M) @ Ob(A), Ob(M) @ Ob(B))], n=1
+    ) -> Annotated[Diagram, Hom(Ob(A), Ob(B))]:
         """
         Feed ``n`` outputs on the left back into inputs.
 
@@ -188,8 +188,8 @@ class Diagram(monoidal.Diagram, TracedCategory):
 
     @rule
     def trace_right[A, B, M: Atom](
-            self: Annotated[Diagram, Hom[Tensor[A, M], Tensor[B, M]]], n=1
-    ) -> Annotated[Diagram, Hom[A, B]]:
+            self: Annotated[Diagram, Hom(Ob(A) @ Ob(M), Ob(B) @ Ob(M))], n=1
+    ) -> Annotated[Diagram, Hom(Ob(A), Ob(B))]:
         """
         Feed ``n`` outputs on the right back into inputs.
 

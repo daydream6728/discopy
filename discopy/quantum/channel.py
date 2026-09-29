@@ -53,7 +53,7 @@ from discopy.tensor import Dim, Tensor
 from discopy.utils import assert_isinstance
 from typing import Annotated
 
-from discopy.pattern import Hom, Tensor as TensorPattern
+from discopy.pattern import Hom, Ob
 from discopy.search import rule
 
 
@@ -174,8 +174,8 @@ class Channel(Tensor):
 
     @classmethod
     @rule
-    def id[A](cls, dom: Annotated[CQ, A] = CQ()
-              ) -> Annotated[Channel, Hom[A, A]]:
+    def id[A](cls, dom: Annotated[CQ, Ob(A)] = CQ()
+              ) -> Annotated[Channel, Hom(Ob(A), Ob(A))]:
         assert_isinstance(dom, CQ)
         return cls(Tensor[
             cls.dtype].id(dom.to_dim()).array,  # ty: ignore[invalid-type-form]
@@ -183,9 +183,9 @@ class Channel(Tensor):
 
     @rule
     def then[A, B, C](
-            self: Annotated[Channel, Hom[A, B]],
-            other: Annotated[Channel | None, Hom[B, C]] = None,
-            *others: Channel) -> Annotated[Channel, Hom[A, C]]:
+            self: Annotated[Channel, Hom(Ob(A), Ob(B))],
+            other: Annotated[Channel | None, Hom(Ob(B), Ob(C))] = None,
+            *others: Channel) -> Annotated[Channel, Hom(Ob(A), Ob(C))]:
         if other is None or others:
             return super().then(other, *others)
         assert_isinstance(other, type(self))
@@ -197,10 +197,10 @@ class Channel(Tensor):
 
     @rule
     def tensor[A, B, C, D](
-            self: Annotated[Channel, Hom[A, B]],
-            other: Annotated[Channel | None, Hom[C, D]] = None,
+            self: Annotated[Channel, Hom(Ob(A), Ob(B))],
+            other: Annotated[Channel | None, Hom(Ob(C), Ob(D))] = None,
             *others: Channel
-    ) -> Annotated[Channel, Hom[TensorPattern[A, C], TensorPattern[B, D]]]:
+    ) -> Annotated[Channel, Hom(Ob(A) @ Ob(C), Ob(B) @ Ob(D))]:
         if other is None or others:
             return super().tensor(other, *others)
         assert_isinstance(other, type(self))
