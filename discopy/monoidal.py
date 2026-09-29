@@ -67,7 +67,7 @@ from discopy import abc, cat, drawing, hypergraph, cmap, messages
 from discopy.abc import (
     ColouredMonoid, Monoid, MonoidalCategory, NamedGeneric)
 from discopy.axioms import (
-    axiom, Equation as AbstractEquation, GENERATORS, Hom, no_strategy, Ob, OB,
+    axiom, Equation as AbstractEquation, GENERATORS, Hom, no_strategy, Ob,
     rule, search, Serialisable)
 from discopy.drawing import Drawing
 from discopy.config import (
@@ -1554,7 +1554,7 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
         return AbstractEquation(functor(f), functor(top) >> functor(bottom))
 
     @axiom
-    def hypergraph_identity(cls, x: Annotated[Ty, OB]):
+    def hypergraph_identity[X](cls, x: Annotated[Ty, Ob(X)]):
         """ The encoding preserves identities. """
         functor = cls.hypergraph_equivalence()
         return AbstractEquation(functor(cls.id(x)), functor.cod.id(x))
@@ -1619,7 +1619,7 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
         return cls.Equation(f.foliation(), f, up_to=cls.to_hypergraph)
 
     @axiom
-    def drawing_identity(cls, x: Annotated[Ty, OB]):
+    def drawing_identity[X](cls, x: Annotated[Ty, Ob(X)]):
         """
         :meth:`to_drawing` preserves identities on the nose. It does not
         preserve composition or whiskering on the nose, since the layout

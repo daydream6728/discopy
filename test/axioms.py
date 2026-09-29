@@ -8,10 +8,10 @@ from pytest import raises
 
 from discopy import braided, cat, feedback, rigid
 from discopy.abc import MonoidalCategory
-from discopy.axioms import Axiom, AxiomFailure, Equation, assert_axioms, axiom
+from discopy.axioms import (
+    Axiom, AxiomFailure, Equation, Hom, assert_axioms, axiom)
 from discopy.cat import Arrow, Box, Functor, Ob
 from discopy.monoidal import Diagram
-from discopy.pattern import ARROW
 
 
 def test_axioms():
@@ -78,7 +78,7 @@ def test_self_annotation():
 
 def test_falsify():
     @axiom
-    def trivial(cls, f: Annotated[Any, ARROW]) -> Equation:
+    def trivial[A, B](cls, f: Annotated[Any, Hom(A, B)]) -> Equation:
         """ Every arrow is an identity, which a box refutes. """
         return Equation(f, cls.id(f.dom))
 
@@ -134,14 +134,14 @@ def test_canonical():
     assert str(Arrow.associativity.canonical())\
         == "Equation(f >> g >> h, f >> g >> h)"
     assert str(Diagram.tensor_unitality.canonical())\
-        == "Equation(Id(x @ y), Id(x @ y))"
+        == "Equation(Id(X @ Y), Id(X @ Y))"
     assert Arrow.unitality.failing("Declared.").canonical()
     assert not braided.Diagram.braid_naturality.canonical()
     inapplicable = Arrow.unitality.inapplicable("No identities.")
     assert inapplicable.canonical() is NotImplemented
     with raises(TypeError, match="nothing to draw"):
         inapplicable.draw()
-    assert str(rigid.Diagram.snake_equations.canonical().terms[1]) == "Id(x)"
+    assert str(rigid.Diagram.snake_equations.canonical().terms[1]) == "Id(X)"
     cups = rigid.Diagram.generators["cups"].canonical()
     assert cups == {"left": rigid.Ty('X'), "right": rigid.Ty('X').r}
     assert feedback.Diagram.feedback_joining.canonical()
