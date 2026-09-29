@@ -1,6 +1,6 @@
 """ The sequent patterns, their collection and their matching. """
 
-from typing import Annotated, TypeVar
+from typing import Annotated
 
 from pytest import raises
 
@@ -10,76 +10,53 @@ from discopy.abc import (
     ResiduatedMonoid)
 from discopy.monoidal import Ty
 from discopy.pattern import (
-    C0, C1, In0, Adjoint, Atom, Delay, Exp, Hom, L, Over, R, Repeat,
-    Sequent, Sort, Tensor, Under, Unit, Var, interpret, parse)
+    OB, UNIT, Adjoint, Atom, Count, Delay, Exp, Hom, Ob, Repeat, Sequent,
+    Sort, Tensor, Unit, parse, sort_of)
 
 
 x, y, z = map(Ty, "xyz")
-A, B = (Var(name, Sort(bound=ColouredMonoid)) for name in "AB")
-M = Var("M", Sort(atomic=True, bound=ColouredMonoid))
-X = Var("X", Sort(atomic=True, bound=Pregroup))
-D = Var("D", Sort(bound=DelayedMonoid))
-E = Var("E", Sort(bound=ResiduatedMonoid))
+A, B = (Ob(name, Sort(bound=ColouredMonoid)) for name in "AB")
+M = Ob("M", Sort(atomic=True, bound=ColouredMonoid))
+X = Ob("X", Sort(atomic=True, bound=Pregroup))
+D = Ob("D", Sort(bound=DelayedMonoid))
+E = Ob("E", Sort(bound=ResiduatedMonoid))
+N = Ob("N", Sort("Count"))
 ONE = Unit(A.sort)
 
 
-def test_subscripts():
-    """ A pattern class subscripted with type parameters is the pattern. """
-    def cups[V: Atom, N](
-            cls, left: Annotated[C0, V], right: Annotated[C0, R[V]]
-    ) -> Annotated[C1, Hom[Tensor[V, R[V]], Unit[C0]]]:
-        ...
-    conclusion = interpret(
-        cups.__annotations__["return"],
-        {"V": Sort("C0", atomic=True, bound=Pregroup)})
-    assert str(conclusion) == "C1[V @ V.r, Unit[C0]]"
-
-    def spider[V: Atom, N, K](cls) -> Annotated[C1, Hom[Repeat[V, N], V]]:
-        ...
-    assert str(interpret(
-        spider.__annotations__["return"],
-        {"V": Sort("C0", atomic=True), "N": Sort("Count")}))\
-        == "C1[V ** N, V]"
-
-    def wait[V: Atom, W](cls) -> Annotated[C1, Hom[
-            Tensor[L[V], Delay[W]], Tensor[Over[V, W], Under[W, V]]]]:
-        ...
-    assert str(interpret(
-        wait.__annotations__["return"],
-        {"V": Sort("C0", atomic=True), "W": Sort("C0")}))\
-        == "C1[V.l @ W.d, (V << W) @ (W >> V)]"
-
-    assert Tensor[A, M] == Tensor((A, M))
-    assert Over[E, M] == Exp("<<", E, M)
-    assert Atom[Sort("C0")] == Sort("C0", atomic=True)
-    assert Atom[TypeVar("C1")] == Sort("C1", atomic=True)
-    assert Atom[TypeVar("C0", bound=Pregroup)].bound is Pregroup
-    assert Atom[Pregroup].bound is Pregroup and Atom[Pregroup].atomic
-    assert Atom[In0] == Sort("In0", atomic=True)
-    def two[V, W](cls) -> Annotated[C1, V, W]:
-        ...
-    with raises(TypeError, match="exactly one pattern"):
-        interpret(two.__annotations__["return"], {
-            "V": Sort("C0"), "W": Sort("C0")})
+def test_operators():
+    """ The operators of the objects build the compound patterns. """
+    assert A @ B == Tensor(A, B) and A @ B @ M == Tensor(A, B, M)
+    assert X.l == Adjoint(X, "l") and X.r == Adjoint(X, "r")
+    assert D.d == Delay(D)
+    assert (E << E) == Exp("<<", E, E) and (E >> E) == Exp(">>", E, E)
+    assert M ** N == Repeat(M, N)
+    assert str(Hom(X @ X.r, ONE)) == "C1[X @ X.r, Unit[C0]]"
+    assert str(M ** N) == "M ** N"
+    assert str((X @ X).l) == "(X @ X).l"
+    assert str(D.d) == "D.d" and str((E << E) @ E) == "(E << E) @ E"
 
     with raises(TypeError):
-        Atom[A]
+        Tensor(A)
     with raises(TypeError):
-        Tensor[A]
+        Repeat(A, 2)
+    with raises(TypeError, match="atomic"):
+        Repeat(A @ B, N)
+
+    def cups[V: Atom](cls): ...
+    def spiders[K: Count](cls): ...
+    V, K = cups.__type_params__ + spiders.__type_params__
+    assert Ob(V).sort.atomic and Ob(K).sort == Sort("Count")
+    assert sort_of(Pregroup).bound is Pregroup
     with raises(TypeError):
-        Repeat[A, 2]
-    with raises(TypeError):
-        interpret("A @ M", {})
-    with raises(TypeError):
-        interpret(1, {})
-    with raises(AttributeError):
-        A.__wrapped__
+        sort_of(int)
 
 
 def test_parse():
-    def then[A: C0, B: C0, C: C0](
-            self: Annotated[C1, Hom[A, B]], other: Annotated[C1, Hom[B, C]]
-    ) -> Annotated[C1, Hom[A, C]]:
+    def then[A, B, C](
+            self: Annotated[str, Hom(Ob(A), Ob(B))],
+            other: Annotated[str, Hom(Ob(B), Ob(C))]
+    ) -> Annotated[str, Hom(Ob(A), Ob(C))]:
         ...
     sequent = parse(then)
     assert list(sequent.variables) == ["A", "B", "C"]
@@ -87,7 +64,7 @@ def test_parse():
     assert str(sequent.conclusion) == "C1[A, C]"
     assert parse(then, conclusion=False).conclusion is None
 
-    def law(cls, x: Atom[C0], n: int = 1, *args, **kwargs):
+    def law(cls, x: Annotated[Ty, OB], n: int = 1, *args, **kwargs):
         ...
     assert list(parse(law, conclusion=False).premises) == ["x"]
     assert str(parse(lambda cls: None, conclusion=False)) == ""
@@ -100,14 +77,19 @@ def test_parse():
     with raises(TypeError, match="__future__"):
         parse(namespace["eager"], conclusion=False)
 
-    def unsorted[A: Annotated[C1, Hom[A, A]]](cls, f: A):
+    def unannotated(cls, f):
         ...
-    with raises(TypeError):
-        parse(unsorted, conclusion=False)
+    with raises(TypeError, match="states no pattern"):
+        parse(unannotated, conclusion=False)
 
-    def unstated[X: Atom, N](  # No premise states the N of the conclusion.
-            cls, x: Annotated[C0, X]
-    ) -> Annotated[C1, Hom[X, Repeat[X, N]]]:
+    def two[V, W](cls) -> Annotated[str, Ob(V), Ob(W)]:
+        ...
+    with raises(TypeError, match="exactly one pattern"):
+        parse(two)
+
+    def unstated[X: Atom, N: Count](  # The conclusion's N has no premise.
+            cls, x: Annotated[Ty, Ob(X)]
+    ) -> Annotated[Ty, Hom(Ob(X), Ob(X) ** Ob(N))]:
         ...
     with raises(TypeError, match="no premise states"):
         parse(unstated)
@@ -119,33 +101,35 @@ def test_parse():
 
 def test_match():
     assert list(A.match(None)) == [({}, ())]
-    assert [s for s, _ in Tensor[M, A].match(x @ y)] == [{"M": x, "A": y}]
-    assert list(Tensor[M, M].match(x)) == []
+    assert [s for s, _ in (M @ A).match(x @ y)] == [{"M": x, "A": y}]
+    assert list((M @ M).match(x)) == []
     assert list(ONE.match(x)) == []
-    assert list(Tensor[A, A].match(x @ y)) == []
-    assert [s for s, _ in Tensor[A, A].match(x @ x)] == [{"A": x}]
-    assert next(R[X].match(rigid.Ty("x").r))[0] == {"X": rigid.Ty("x")}
-    subst, residuals = next(Over[X, X].match(x))
-    assert subst == {} and residuals == ((Over[X, X], x), )
-    subst, residuals = next(Delay[D].match(x))
-    assert residuals == ((Delay[D], x), )
+    assert list((A @ A).match(x @ y)) == []
+    assert [s for s, _ in (A @ A).match(x @ x)] == [{"A": x}]
+    assert next(X.r.match(rigid.Ty("x").r))[0] == {"X": rigid.Ty("x")}
+    subst, residuals = next((X << X).match(x))
+    assert subst == {} and residuals == ((X << X, x), )
+    subst, residuals = next(D.d.match(x))
+    assert residuals == ((D.d, x), )
+    assert [s for s, _ in (M ** N).match(x @ x)] == [{"N": 2, "M": x}]
+    assert list((M ** N).match(x @ y)) == []
 
 
 def test_instantiate():
     subst = {"A": x @ y, "M": z}
-    assert Tensor[A, M].instantiate(subst, Ty) == x @ y @ z
+    assert (A @ M).instantiate(subst, Ty) == x @ y @ z
     assert ONE.instantiate(subst, Ty) == Ty()
-    assert R[X].instantiate({"X": rigid.Ty("z")}, rigid.Ty)\
+    assert X.r.instantiate({"X": rigid.Ty("z")}, rigid.Ty)\
         == rigid.Ty("z").r
-    assert Delay[D].instantiate({"D": feedback.Ty("z")}, feedback.Ty)\
+    assert D.d.instantiate({"D": feedback.Ty("z")}, feedback.Ty)\
         == feedback.Ty("z").d
     assert Hom(A, M).instantiate(subst, Ty) == (x @ y, z)
-    assert Tensor[A, M].variables == ("A", "M")
-    assert Over[E, E].variables == ("E", "E")
+    assert (A @ M).variables == ("A", "M")
+    assert (E << E).variables == ("E", "E")
 
 
 def test_hom_match():
-    hom = Hom(Tensor[A, B], A)
+    hom = Hom(A @ B, A)
     assert [s for s, _ in hom.match((x @ y, x))] == [{"A": x, "B": y}]
     assert [s for s, _ in hom.match((None, x))] == [{"A": x}]
     assert list(hom.match((x @ y, y))) == []
@@ -161,23 +145,20 @@ def test_sequent_str():
 
 def test_level():
     """ A pattern needs the level its known objects are bounded by. """
-    assert Var.level() is Category and Tensor.level() is ColouredMonoid
+    assert Ob.level() is Category and Tensor.level() is ColouredMonoid
     assert Adjoint.level() is Pregroup and Delay.level() is DelayedMonoid
     assert Exp.level() is ResiduatedMonoid and Unit.level() is ColouredMonoid
-    assert L[X] == Adjoint(X, "l") and R[X] == Adjoint(X, "r")
-    assert Over[X, X] == Exp("<<", X, X) and Under[E, X] == Exp(">>", E, X)
-    assert L[Tensor[X, D]] == Adjoint(Tensor((X, D)), "l")
-    assert Delay[D] == Delay(D)
-    assert R[L[X]].bound is Pregroup and Unit(X.sort).bound is Pregroup
-    for build in (lambda: Delay[X], lambda: R[D], lambda: Under[D, D],
-                  lambda: Delay[Tensor[A, X]], lambda: Adjoint(A, "r")):
+    assert (X @ D).l == Adjoint(Tensor(X, D), "l")
+    assert X.l.r.bound is Pregroup and Unit(X.sort).bound is Pregroup
+    for build in (lambda: X.d, lambda: D.r, lambda: D >> D,
+                  lambda: (A @ X).d, lambda: Adjoint(A, "r")):
         with raises(TypeError, match="needs a"):
             build()
-    unknown = Var("U", Sort())
-    assert Tensor[unknown, A].bound is None  # Checked by parse with owner.
+    unknown = Ob("U", Sort())
+    assert (unknown @ A).bound is None  # Checked by parse with owner.
 
-    def snake[U: Atom](cls, u: Annotated[C0, U]) -> Annotated[
-            C1, Hom[Tensor[U, R[U]], Unit[C0]]]:
+    def snake[U: Atom](cls, u: Annotated[Ty, Ob(U)]) -> Annotated[
+            Ty, Hom(Ob(U) @ Ob(U).r, UNIT)]:
         ...
     from discopy.abc import MonoidalCategory, RigidCategory
     with raises(TypeError, match="needs a"):

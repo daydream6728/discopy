@@ -13,7 +13,7 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `search` goal are a type, a pattern, a type parameter standing for
   its variable, or `None` for a fresh one, so `search(Diagram,
   Box.strategy, dom=A, cod=A)` finds an endomorphism on anything and
-  `dom=A, cod=Tensor[A, A]` a copy of whatever the search seeds — the
+  `dom=A, cod=Ob(A) @ Ob(A)` a copy of whatever the search seeds — the
   substitution is shared across the sides and down the attempts, a
   fully open goal being the pair of fresh variables it always was. A
   side guides the search once its variables are all bound,
@@ -32,50 +32,38 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   rules toward a goal pattern.
   A category states its structure as the typed signatures of its
   methods, which `parse` collects into sequents. Every annotation is
-  an `Annotated[T, pat]`, the coarse type a typechecker reads beside
-  the one pattern the interpreter builds, and the metavariables are
-  the declaration's own PEP 695 type parameters, nothing imported: a
-  rule reads `def then[A, B, C](self: Annotated[C1, Hom[A, B]],
-  other: Annotated[C1, Hom[B, C]]) -> Annotated[C1, Hom[A, C]]` — the
-  base `C1` is what a typechecker sees, so the laws typecheck on the
-  cells they compose — a kind is the bound, `def cups[X: Atom]`, the
-  boundaries of a higher cell are declared on its binder, `def
-  tensor[X, Y, A: Annotated[C1, Hom[X, Y]], ...]` mimicking the
-  telescope `{A : C1 X Y}` of a dependently typed language, and a
-  compound pattern is a pattern class subscripted with the type
-  parameters — `Hom[Tensor[X, R[X]], Unit[C0]]` for the cups — whose
-  subscript *is* the pattern: the interpreter builds it when the
-  declaration is defined, a `Hom` taking its level from the base of
-  the `Annotated` carrying it. The subscript is the one spelling of
-  the language. Each pattern class declares its level, the least
+  an `Annotated[T, pat]` — the coarse type a typechecker reads, and
+  beside it the one pattern, a plain value built by constructors and
+  operators: `Ob(A)` lifts one of the declaration's own PEP 695 type
+  parameters, its sort read off the bound — an object when unbounded,
+  `def cups[X: Atom]` an atomic one, `def spiders[N: Count]` a number
+  of repetitions — and `Hom(p, q)`, `p @ q`, `p.l`, `p.r`, `p.d`,
+  `p << q`, `p >> q`, `p ** n` and `UNIT` build the compounds, so a
+  rule reads `def then[A, B, C](self: Annotated[C1, Hom(Ob(A),
+  Ob(B))], other: Annotated[C1, Hom(Ob(B), Ob(C))]) -> Annotated[C1,
+  Hom(Ob(A), Ob(C))]` and the cups conclude `Hom(Ob(X) @ Ob(X).r,
+  UNIT)`. The type level carries only types — the class parameters
+  `C0` and `C1`, the concrete classes of an implementation, `Self` —
+  and the value level only patterns, so no name plays both parts and
+  no type-hack is left. A premise over the bare objects, arrows or
+  terms of the category states a `Sort` — `x: Annotated[C0, OB]`,
+  `f: Annotated[C1, ARROW]`, `term: Self` — and the four sorts of a
+  functor's source and target are spelled `Sort("In0")` to
+  `Sort("Out1")`. Each pattern class declares its level, the least
   structure the objects it stands in must have — `Unit` and `Tensor`
-  a `ColouredMonoid`, `Adjoint` (`L[X]`, `R[X]`) a `Pregroup`,
-  `Delay` the new `abc.DelayedMonoid` that `feedback.Ty` is, `Exp`
-  (`Over[X, Y]`, `Under[X, Y]`) a `ResiduatedMonoid`, `Repeat[X, N]`
-  the legs of a spider — and is typed in one of two ways: `Var`,
-  `Adjoint`, `Exp` and `Sequent`, which no annotation subscripts, are
-  generic in the colours `C0` and objects `C1` with the level as the
-  bound of `C1`, while the classes standing in annotations are
-  generic in what their subscript takes, since a typechecker reads
-  that subscript as a specialisation and would arity- and bound-check
-  the metavariables against a `C0, C1` parameterisation, and declare
-  their level as a classmethod.
-  `C0` and `C1` name both the type parameters of the class stating
-  the law and the `Sort`s the annotations of a module-level
-  declaration name; a premise may also be a bare sort — `f: C1`,
-  `term: Self` — quantifying over the arrows or terms themselves.
+  a `ColouredMonoid`, `Adjoint` a `Pregroup`, `Delay` the new
+  `abc.DelayedMonoid` that `feedback.Ty` is, `Exp` a
+  `ResiduatedMonoid`, `Repeat` the legs of a spider — and a variable
+  carries the bound of the objects of the class stating the rule, so
+  a pattern refuses one bounded below what its shape needs.
   Nothing is `eval`ed and nothing is quoted: the annotations are the
-  lazy objects of PEP 649, evaluated by the interpreter in their
-  defining scope when read — a forward reference such as the
-  `Diagram` of `symmetric.Diagram.cycle` staying a plain name until
-  the class exists — and `parse` collects each sequent shallowly from
-  `__annotations__`, `__type_params__`, `__bound__` and
-  `__metadata__`, objects built in the scope PEP 695 gives them, so
-  unification across a declaration holds by construction and the
-  environment that impersonated `Annotated` around an `eval` is gone.
+  lazy objects of PEP 649, built in their defining scope when first
+  read — a forward reference such as the `Diagram` of
+  `symmetric.Diagram.cycle` staying a plain name until the class
+  exists — so unification across a declaration holds by construction.
   A conclusion is matched against a goal by unification over the free
-  monoid of objects — a `Tensor` splits the goal at every position, a
-  `Var` binds once, an adjoint inverts to the other side — and what
+  monoid of objects — a `Tensor` splits the goal at every position,
+  an `Ob` binds once, an adjoint inverts to the other side — and what
   matching cannot invert is a residual equation checked once the
   variables are instantiated.
   `monoidal.Diagram.strategy` is the one goal-directed search by the
@@ -106,20 +94,21 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   its `dom` and `cod` — the sorts of the two overloads declared on
   `Functor.__call__`, `In0 -> Out0` on objects and `In1 -> Out1` on
   arrows. Functor laws quantify their functor with `Self` and their
-  source with these, e.g. the `Equivalence` laws draw `f: In1`, and a
-  level's functor declares the axiom for its own structure in its
-  class body — `braided.Functor.braided`, and
-  `symmetric.Functor.symmetric` preserving the swap on `Atom[In0]` —
-  rather than functors inheriting a generic one: in practice each
-  level adds one more axiom sending the extra structure of its `dom`
-  to the same generator of its `cod`. The dagger laws
+  source with these, e.g. the `Equivalence` laws draw an arrow of the
+  functor's domain, and a level's functor declares the axiom for its
+  own structure in its class body — `braided.Functor.braided`, and
+  `symmetric.Functor.symmetric` preserving the swap on the atomic
+  objects of its source — rather than functors inheriting a generic
+  one: in practice each level adds one more axiom sending the extra
+  structure of its `dom` to the same generator of its `cod`. The
+  dagger laws
   of biclosed and closed diagrams are inapplicable, a curried diagram
   having no dagger, and `proptest/conftest.py` suppresses
   `filter_too_much` again, the search rejecting by design: a dead-ended
   goal rejects its example and a law weakened to a subspace filters
   what the search draws. The `TwoCategory` levels, the goals-with-holes
-  search, the `Choice` patterns and the argument-shape wrappers of the
-  earlier experiments are retired.
+  search, the `Choice` patterns, the argument-shape wrappers and the
+  subscripted spelling of the earlier experiments are retired.
 - The conversion, rewriting and drawing laws of the free diagram
   categories, stated as axioms on the classes introducing the methods
   and checked by the matrix, absorbing `proptest/test_conversion.py`,
@@ -771,15 +760,10 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   by the names of its premises, so `feedback(*, left)` and friends
   apply, and the rest positionally in premise order, which variadic
   methods such as `Arrow.then` need. `Rule.constant` is declared in the
-  body of `Rule` and `pattern.interpret` refuses a type variable that
-  is neither a parameter of the declaration nor a sort in scope, where
-  it crashed with `KeyError` on the stray name. `parse` level-checks
-  the bounds of binders, `Tensor` refuses a subscript of fewer than two
-  operands, where `Tensor[()]` crashed with `IndexError`, `Repeat`
-  refuses a non-atomic base, which matching cannot read back, the
+  body of `Rule`, `Tensor` refuses fewer than two factors, `Repeat`
+  refuses a non-atomic base, which matching cannot read back, and the
   `__str__` of an adjoint or delay parenthesises a compound base, so
-  `R[Tensor[A, B]]` prints `(A @ B).r` rather than `A @ B.r`, and the
-  pattern docstrings stop promising an `@` operator on patterns.
+  `(Ob(A) @ Ob(B)).l` prints `(A @ B).l` rather than `A @ B.l`.
 - `Rule.inapplicable(reason)` replaces the standalone
   `discopy.search.inapplicable` decorator, mirroring
   `Axiom.inapplicable`: it returns a marked copy of the rule, dropped
@@ -1097,6 +1081,17 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   ([#566](https://github.com/discopy/discopy/pull/566)).
 
 ### Removed
+
+- The unit tests the matrix states generically: the per-type
+  repr, equality, hash, pickle and tree roundtrips of enrolled types,
+  the law restatements on hand-picked examples and the
+  `test_axioms`/`test_strategy` mirrors of every level's test file,
+  together with `axioms.assert_strategy_finds`, which only they called —
+  the `Serialisable` and categorical axioms check all of it on generated
+  terms, and the unit suite keeps to what the matrix cannot state:
+  behaviours, error cases and recorded regressions. Four message
+  constants that nothing raised go too: `messages.MATRIX_TWO_DTYPES`,
+  `HAS_NO_ATTRIBUTE`, `COMPLEX_TYPE_HAS_NO_ATTR` and `NOT_FROBENIUS`.
 
 - Backward compatibility with past DisCoPy versions. The deprecation
   machinery goes — `utils.deprecated_alias` and the module

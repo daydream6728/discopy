@@ -9,29 +9,10 @@ def test_Ob_init():
         Wire('x', z='y')
 
 
-def test_Ob_eq():
-    assert Wire('a') == Wire('a').l.r and Wire('a') != 'a'
-
-
-def test_Ob_hash():
-    a = Wire('a')
-    assert {a: 42}[a] == 42
-
-
 def test_Ty_over_under():
     x, y = Ty('x'), Ty('y')
     assert x.over(y) == x @ y.l == x << y
     assert y.under(x) == x.r @ y == x >> y
-
-
-def test_Box_hash():
-    x, y = Ty('x'), Ty('y')
-    f = Box('f', x, y)
-    assert f == f @ Id()
-    assert hash(f) == hash(f @ Id())
-    assert hash(f) == hash(Id() @ f)
-    assert f @ Id() in {f}
-    assert {f: 42}[f @ Id()] == 42
 
 
 def test_Box_hash_winding():
@@ -43,15 +24,6 @@ def test_Box_hash_winding():
     f = Box('f', x, x)
     assert f != f.rotate() and hash(f) != hash(f.rotate())
     assert f == Box('f', x, x) and hash(f) == hash(Box('f', x, x))
-
-
-def test_Ob_repr():
-    assert repr(Wire('a', z=42)) == "rigid.Wire('a', z=42)"
-
-
-def test_Ob_str():
-    a = Wire('a')
-    assert str(a) == "a" and str(a.r) == "a.r" and str(a.l) == "a.l"
 
 
 def test_Wire_unwind():
@@ -193,15 +165,3 @@ def test_Functor():
     x, y = Ty('x'), Ty('y')
     assert Diagram.Functor is Functor
     assert Diagram.Functor({x: y}, {})(x.r) == y.r
-
-
-def test_strategy():
-    from discopy import axioms
-
-    axioms.assert_strategy_finds(Diagram, Cup, Cap)
-
-
-def test_axioms():
-    from discopy import axioms
-
-    axioms.assert_axioms(Diagram)

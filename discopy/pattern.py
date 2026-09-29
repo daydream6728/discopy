@@ -6,43 +6,29 @@ A sequent is the signature of a method on an abstract base class of
 :mod:`discopy.abc`: its parameters are the premises and its return
 annotation the conclusion, each an ``Annotated[T, pat]`` — the coarse
 type ``T`` a typechecker reads and the one pattern ``pat`` beside it, a
-plain value. A metavariable is one of the method's own :pep:`695` type
-parameters, lifted once by :class:`Ob`, its sort the bound — an object
-when unbounded, an :class:`Atom` or a :class:`Count` when declared —
-and the compound patterns are built by constructors and operators:
-``Hom(p, q)`` between two patterns, ``p @ q`` a :class:`Tensor`,
-``p.l`` and ``p.r`` an :class:`Adjoint`, ``p.d`` a :class:`Delay`,
-``p << q`` and ``p >> q`` an :class:`Exp`, ``p ** n`` a
-:class:`Repeat` and :data:`UNIT` the :class:`Unit`.
+plain value. :class:`Ob` lifts one of the method's own :pep:`695` type
+parameters, its sort the bound — an object when unbounded, an
+:class:`Atom` or a :class:`Count` when declared — and constructors and
+operators build the compounds: ``Hom(p, q)``, ``p @ q``, ``p.l``,
+``p.r``, ``p.d``, ``p << q``, ``p >> q``, ``p ** n`` and :data:`UNIT`.
 
 .. code-block:: python
 
-    class MonoidalCategory[C0: ColouredMonoid, C1: MonoidalCategory](
-            Category[C0, C1]):
-        @rule
-        @abstractmethod
-        def tensor[A, B, C, D](
-                self: Annotated[C1, Hom(Ob(A), Ob(B))],
-                other: Annotated[C1, Hom(Ob(C), Ob(D))]
-        ) -> Annotated[C1, Hom(Ob(A) @ Ob(C), Ob(B) @ Ob(D))]:
-            ...
+    def tensor[A, B, C, D](
+            self: Annotated[C1, Hom(Ob(A), Ob(B))],
+            other: Annotated[C1, Hom(Ob(C), Ob(D))]
+    ) -> Annotated[C1, Hom(Ob(A) @ Ob(C), Ob(B) @ Ob(D))]:
+        ...
 
-The signature typechecks as it reads: the type level carries only
-types — the class parameters ``C0`` and ``C1``, the concrete classes of
-an implementation, ``Self`` — and the value level only patterns, so no
-name plays both parts. A premise over the bare objects, arrows or terms
-of the category states a :class:`Sort` instead of a pattern, :data:`OB`,
-:data:`ARROW` or :data:`TERM`. The module stating a declaration does
-*not* quote its annotations, so each pattern is built when the
-annotation is read, lazily by :pep:`649`, and :func:`parse` collects
-the sequent without evaluating anything itself.
-
-Each pattern class declares its :meth:`Pattern.level`, the least
-structure the objects it stands in must have: a :class:`Tensor` needs a
-:class:`abc.ColouredMonoid`, an :class:`Adjoint` a :class:`abc.Pregroup`,
-a :class:`Delay` a :class:`abc.DelayedMonoid`. A variable's sort carries
-the bound of the objects of the class stating the rule and a pattern
-refuses one bounded below what its shape needs.
+The signature typechecks as it reads: the type level carries only types
+and the value level only patterns, so no name plays both parts. A
+premise over the bare objects, arrows or terms of the category states a
+:class:`Sort` instead, :data:`OB`, :data:`ARROW` or :data:`TERM`.
+Nothing is quoted: each pattern is built when the annotation is read,
+lazily by :pep:`649`, and :func:`parse` collects the sequent without
+evaluating anything itself. Each pattern class declares its
+:meth:`Pattern.level`, the least structure the objects it stands in
+must have, and refuses objects bounded below what its shape needs.
 
 A conclusion is matched against a goal, a pair of an optional domain and
 codomain, by unification over the free monoid of objects: a
@@ -154,17 +140,12 @@ declaration, for a premise over them rather than a pattern, e.g.
 
 
 class Atom:
-    """
-    The sort of atomic objects: the bound ``def cups[X: Atom]`` declares
-    ``X`` an object with exactly one generator.
-    """
+    """ The bound ``def cups[X: Atom]`` declares an atomic object. """
 
 
 class Count:
-    """
-    The sort of small numbers: the bound ``def spiders[N: Count]``
-    declares ``N`` a number of repetitions, see :class:`Repeat`.
-    """
+    """ The bound ``def spiders[N: Count]`` declares a number of
+    repetitions, see :class:`Repeat`. """
 
 
 def sort_of(bound, level: type | None = None) -> Sort:
@@ -645,11 +626,6 @@ class Hom(Pattern):
         return f"{self.head}[{self.dom}, {self.cod}]"
 
 
-def factors(value: Pattern) -> tuple:
-    """ The factors of a pattern as a tensor: itself, unless it is one. """
-    return value.factors if isinstance(value, Tensor) else (value, )
-
-
 def common(*patterns: Pattern) -> type | None:
     """ The bound of the objects of patterns standing together, if all do. """
     bounds = [pattern.bound for pattern in patterns]
@@ -901,11 +877,10 @@ class Declaration[**P, T]:
     @property
     def scope(self) -> dict:
         """
-        What the heads of the sorts and homs stand for: the category for
-        ``Self``, its objects and arrows for ``C0`` and ``C1``. A monoid,
-        having no objects of its own, stands for both; a functor class,
-        whose ``dom`` and ``cod`` are categories, also gives their
-        objects and arrows as ``In0``, ``In1``, ``Out0`` and ``Out1``.
+        What the heads stand for: the category for ``Self``, its
+        objects and arrows for ``C0`` and ``C1`` (a monoid stands for
+        both), and those of a functor class's ``dom`` and ``cod`` as
+        ``In0``, ``In1``, ``Out0`` and ``Out1``.
         """
         if self.category is None:
             raise TypeError(f"{self.name} is not bound to a class.")
@@ -959,26 +934,18 @@ class Declaration[**P, T]:
     def generate(self, draw: Callable, hom: Callable, subst=None,
                  residuals: Residuals = (), types=None) -> tuple:
         """
-        Draw the arguments of the sequent inside a composite strategy, by
-        name and one premise at a time: a pattern is instantiated, a sort
-        drawn, a hom drawn by ``hom(category, dom, cod)`` — a premise of
-        the sort of the arrows, ``f: C1``, being the hom with both sides
+        Draw the arguments of the sequent inside a composite strategy —
+        ``draw`` its draw function, ``hom(category, dom, cod)`` a strategy
+        for the morphisms of that type, ``types`` one for the objects
+        overriding that of ``C0`` — one premise at a time: a pattern is
+        instantiated, a sort drawn, a hom drawn through ``hom``, a
+        premise of the sort of the arrows being the hom with both sides
         free. A variable is drawn from its sort the first time a premise
-        needs it — one bounded by a hom through ``hom`` itself — except
-        one standing alone on a side of a hom, which is read off the term
-        the search finds so that the goal guides the search. The residuals
-        of a match are checked once every variable is bound, rejecting the
-        example otherwise.
-
-        Parameters:
-            draw : The draw function of a
-                :func:`hypothesis.strategies.composite`.
-            hom : A function from a category, a domain and a codomain to a
-                strategy for the morphisms of that type, either boundary
-                free when :obj:`None`.
-            subst : The variables already bound by a match.
-            residuals : The equations a match could not invert.
-            types : A strategy for the objects, overriding that of ``C0``.
+        needs it, except one standing alone on a side of a hom, which is
+        read off the term the search finds so that the goal guides the
+        search. The ``subst`` and ``residuals`` of a match seed the draw,
+        and the residuals are checked once every variable is bound,
+        rejecting the example otherwise.
         """
         from hypothesis import assume
 

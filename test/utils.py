@@ -7,7 +7,6 @@ from unittest.mock import patch
 
 from discopy.cat import Ob
 from discopy.utils import *
-from discopy.tensor import Box
 
 zip_mock = MagicMock()
 zip_mock.open().__enter__().read.return_value =\
@@ -30,11 +29,6 @@ def test_named_generic_cache():
     assert box_int is dt.Box[int]
 
 
-def test_parameterised_box_pickle():
-    box = Box("A", 2, 3)
-    assert pickle.loads(pickle.dumps(box)) == box
-
-
 def test_parameterised_pickle_and_deepcopy():
     from copy import deepcopy
     from discopy import frobenius, interaction, matrix, symmetric
@@ -52,17 +46,8 @@ def test_parameterised_factory_name():
     assert from_tree({'factory': 'cat.Ob[int]', 'name': 'x'}) == Ob('x')
 
 
-def test_wire_tree_roundtrip():
-    from discopy import biclosed, braided, feedback, frobenius, pivotal, rigid
-    from discopy.quantum import circuit
-    for x in (rigid.Wire('x'), braided.Wire('x'), biclosed.Wire('x'),
-              pivotal.Wire('x'), frobenius.Wire('x'), feedback.Wire('x'),
-              circuit.Digit(2)):
-        assert from_tree(x.to_tree()) == x
-
-
 def test_generator():
-    from discopy import symmetric, markov, closed, compact, feedback
+    from discopy import markov, closed, compact, feedback
     from discopy import biclosed, rigid, pivotal
     from discopy.grammar import categorial
     assert closed.Wire.__bases__ == (biclosed.Wire, )

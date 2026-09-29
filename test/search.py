@@ -10,7 +10,7 @@ from pytest import raises
 from discopy import braided, cat, rigid, traced
 from discopy.abc import Category, ColouredMonoid
 from discopy.monoidal import Box, Diagram, Ty
-from discopy.pattern import C0, C1, Hom, Unit, declarations
+from discopy.pattern import Hom, Ob, UNIT
 from discopy.search import Rule, rule, search
 from discopy.utils import AxiomError
 
@@ -35,8 +35,8 @@ def test_rule():
 
     class Wrapped(Diagram):
         @rule
-        def twice[A: C0](self: Annotated[C1, Hom[A, A]]
-                         ) -> Annotated[C1, Hom[A, A]]:
+        def twice[A](self: Annotated[Diagram, Hom(Ob(A), Ob(A))]
+                     ) -> Annotated[Diagram, Hom(Ob(A), Ob(A))]:
             """ A rule declared and implemented in one place. """
             return self >> self
 
@@ -64,7 +64,8 @@ def test_generator():
         @classmethod
         @rule
         def wrong[A: ColouredMonoid](
-                cls, dom: A) -> Annotated[C1, Hom[A, Unit[C0]]]:
+                cls, dom: Annotated[Ty, Ob(A)]
+        ) -> Annotated[Diagram, Hom(Ob(A), UNIT)]:
             """ A generator whose conclusion lies. """
             return cls.id(dom)
 
@@ -100,7 +101,6 @@ def test_goal_patterns():
     from typing import TypeVar
 
     from discopy import markov
-    from discopy.pattern import Tensor
 
     A = TypeVar("A")
     loop = find(search(Diagram, Box.strategy, dom=A, cod=A),
@@ -108,7 +108,7 @@ def test_goal_patterns():
     assert loop.dom == loop.cod
     copy = find(
         search(markov.Diagram, markov.Box.strategy,
-               dom=A, cod=Tensor[A, A]),
+               dom=A, cod=Ob(A) @ Ob(A)),
         lambda term: bool(term.boxes)
         and all(isinstance(box, markov.Copy) for box in term.boxes))
     assert copy.cod == copy.dom @ copy.dom

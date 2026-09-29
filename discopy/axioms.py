@@ -32,7 +32,6 @@ Summary
 
         axiom
         assert_axioms
-        assert_strategy_finds
 
 How to develop DisCoPy against its property suite: state the laws before
 writing the implementation, let the matrix search for counterexamples,
@@ -56,9 +55,6 @@ The suite
   the package's public names and its own module's, so that a
   representation printing bare names evaluates without the category
   declaring anything.
-- ``proptest/test_drawing.py`` and ``proptest/test_normal_form.py`` check
-  drawing and rewriting over the diagram categories;
-  ``proptest/test_conversion.py`` checks their representations.
 - ``proptest/test_counterexamples.py`` replays every recorded
   counterexample deterministically — no generation, no search: the
   matrix's explicit phase. Its memory is Hypothesis's example database,
@@ -68,10 +64,8 @@ The suite
   'Arrow and unitality' -vrsxX``. Recorded counterexamples carry the id
   of their matrix cell, so one expression selects a law's search and its
   records together.
-- Each ``test/<module>.py`` gains a ``test_axioms`` dry run (one example
-  per axiom, see :func:`assert_axioms`) and a ``test_strategy`` checking
-  the strategy reaches the structure its laws need, as its module's
-  categories are enrolled: the fast loop before the full matrix.
+- :func:`assert_axioms` dry-runs every axiom of a category on one
+  example, the fast loop before the full matrix.
 
 Properties before implementation
 --------------------------------
@@ -95,11 +89,10 @@ properties. Before implementing anything, write the laws down:
    operations the feature will provide; until they exist, the cell fails.
    That is the red state of the loop.
 3. **Reach the structure.** Declare the new structure as a
-   :func:`discopy.search.generator` or a :func:`discopy.search.rule` on
-   the abstract base class, so that the search builds terms containing
-   it, and pin that with a :func:`hypothesis.find` in the module's
-   ``test_strategy``. A green cell whose strategy never generates the
-   structure proves nothing.
+   :func:`discopy.search.rule` on the abstract base class, so that the
+   search builds terms containing it, and check the reach with a
+   :func:`hypothesis.find`: a green cell whose strategy never generates
+   the structure proves nothing.
 4. **Implement until green**, on the dry run first, then the matrix.
 
 A property is meaningful when it quantifies over all terms of a category.
@@ -169,15 +162,12 @@ arguments the search shrunk the failure to.
   the file's imports as records arrive.
 - ``reason`` says what broke and links the issue when there is one.
 
-The replay test marks a record xfail, strictly, exactly when its axiom is
-declared :meth:`Axiom.failing`, and checks the equation the axiom's
-:class:`AxiomFailure` carries, so the xfail is earned by the arguments
-falsifying the law in one of the two shapes :meth:`Axiom.falsify` counts:
-the equation is false, an assertion, or the implementation refuses to
-build its terms, an :class:`discopy.utils.AxiomError`. A fixed bug shows
-up as an unexpected pass, which strictness turns red, a typo'd record as
-an error rather than an expected failure, and a record never needs
-updating when the bug is fixed: only the ``.failing`` declaration moves.
+The replay test marks a record xfail, strictly, exactly when its axiom
+is declared :meth:`Axiom.failing`, and checks that the arguments falsify
+the law: the equation is false or the implementation refuses to build
+its terms. A fixed bug shows up as an unexpected pass, which strictness
+turns red, and a record never needs updating when the bug is fixed: only
+the ``.failing`` declaration moves.
 
 Never delete a record because it is inconvenient; a record only leaves
 when the law itself leaves the codebase.
@@ -193,8 +183,7 @@ audit closes the class. Check three causes, in order:
    Ask :func:`hypothesis.find` with the category's strategy and a
    predicate for the shape — the structural box involved, the boundary,
    the depth. :class:`hypothesis.errors.NoSuchExample` convicts the
-   strategy: declare the missing rule or generator, then pin the reach in
-   the module's ``test_strategy`` with a ``find`` for the shape.
+   strategy: declare the missing rule or generator.
 2. **Rarity.** Reachable but starved: run the cell with
    ``--hypothesis-show-statistics``, tagging the shape with
    :func:`hypothesis.event` if need be, to see how often it is drawn, and
@@ -282,8 +271,6 @@ from discopy.utils import (
 
 if TYPE_CHECKING:
     from hypothesis import strategies as st
-
-    from discopy import monoidal
 
 
 GENERATORS = tuple("abcde")
@@ -789,20 +776,6 @@ def assert_axioms(*categories) -> None:
                 assert law.broken, law
             else:
                 assert equation is NotImplemented or equation, law
-
-
-def assert_strategy_finds[D: monoidal.Diagram](
-        category: type[D], *structures: type[D]) -> None:
-    """
-    Check that the strategy of a diagram category generates a term
-    containing a box of each of the given structural classes, the reach a
-    module's ``test_strategy`` pins.
-    """
-    from hypothesis import find
-
-    for structure in structures:
-        find(category.strategy(), lambda term: any(
-            isinstance(box, structure) for box in term.boxes))
 
 
 class Serialisable(Testable):

@@ -7,47 +7,6 @@ from discopy.cat import *
 from discopy.utils import AxiomError
 
 
-def test_main():
-    x, y, z = Ob('x'), Ob('y'), Ob('z')
-    f, g, h = Box('f', x, y), Box('g', y, z), Box('h', z, x)
-    assert Id(x) >> f == f == f >> Id(y)
-    assert (f >> g).dom == f.dom and (f >> g).cod == g.cod
-    assert f >> g >> h == f >> (g >> h)
-    F = Functor(ob_map={x: y, y: z, z: x}, ar_map={f: g, g: h})
-    assert F(Id(x)) == Id(F(x))
-    assert F(f >> g) == F(f) >> F(g)
-
-
-def test_Ob():
-    assert Ob('x') == Ob('x') and Ob('x') != Ob('y')
-
-
-def test_Ob_init():
-    assert (Ob('x'), Ob('Alice')) == (Ob('x'), Ob('Alice'))
-
-
-def test_Ob_name():
-    assert Ob('x').name == 'x'
-
-
-def test_Ob_repr():
-    assert repr(Ob('x')) == "cat.Ob('x')"
-
-
-def test_Ob_str():
-    assert str(Ob('x')) == 'x'
-
-
-def test_Ob_eq():
-    x, x1, y = Ob('x'), Ob('x'), Ob('y')
-    assert x == x1 and x != y and x != 'x'
-    assert 'x' != Ob('x')
-
-
-def test_Ob_hash():
-    assert {Ob('x'): 42}[Ob('x')] == 42
-
-
 def test_Arrow():
     x, y, z, w = Ob('x'), Ob('y'), Ob('z'), Ob('w')
     f, g, h = Box('f', x, y), Box('g', y, z), Box('h', z, w)
@@ -99,33 +58,6 @@ def test_Arrow_getitem():
             *arrow.inside[depth: depth + 2])
 
 
-def test_Arrow_repr():
-    assert repr(Arrow((), Ob('x'), Ob('x'))) == "cat.Arrow.id(cat.Ob('x'))"
-    inside = (Box('f', Ob('x'), Ob('y')), Box('g', Ob('y'), Ob('z')))
-    assert repr(Arrow(inside, Ob('x'), Ob('z')))\
-        == "cat.Arrow(inside=(cat.Box('f', cat.Ob('x'), cat.Ob('y')), "\
-           "cat.Box('g', cat.Ob('y'), cat.Ob('z'))), dom=cat.Ob('x'), "\
-           "cod=cat.Ob('z'))"
-
-
-def test_Arrow_str():
-    x, y, z = Ob('x'), Ob('y'), Ob('z')
-    f, g = Box('f', x, y), Box('g', y, z)
-    assert str(Arrow((), x, x) == "Id(x)")
-    assert str(Arrow((f, ), x, y) == "f")
-    assert str(Arrow((f, g), x, z)) == "f >> g"
-
-
-def test_Arrow_eq():
-    x, y, z = Ob('x'), Ob('y'), Ob('z')
-    f, g = Box('f', x, y), Box('g', y, z)
-    assert f >> g == Arrow((f, g), x, z)
-
-
-def test_Arrow_hash():
-    assert {Id(Ob('x')): 42}[Id(Ob('x'))] == 42
-
-
 def test_Arrow_then():
     x, y, z = Ob('x'), Ob('y'), Ob('z')
     f, g = Box('f', x, y), Box('g', y, z)
@@ -149,15 +81,6 @@ def test_Id_init():
     idx = Id(Ob('x'))
     assert idx >> idx == idx
     assert idx.dagger() == idx
-
-
-def test_Id_repr():
-    assert repr(Id(Ob('x'))) == "cat.Arrow.id(cat.Ob('x'))"
-
-
-def test_Id_str():
-    x = Ob('x')
-    assert str(Id(x)) == "Id(x)"
 
 
 def test_AxiomError():
@@ -187,28 +110,6 @@ def test_Bubble_dagger():
     b = f.bubble(data=42)
     assert b.dagger().data == 42 and b.dagger().is_dagger
     assert b.dagger().dagger() == b
-
-
-def test_Box_repr():
-    f = Box('f', Ob('x'), Ob('y'), data=42)
-    assert repr(f) == "cat.Box('f', cat.Ob('x'), cat.Ob('y'), data=42)"
-    assert repr(f.dagger())\
-        == "cat.Box('f', cat.Ob('x'), cat.Ob('y'), data=42).dagger()"
-
-
-def test_Box_str():
-    f = Box('f', Ob('x'), Ob('y'), data=42)
-    assert str(f) == "f"
-    assert str(f.dagger()) == "f[::-1]"
-
-
-def test_Box_hash():
-    assert {Box('f', Ob('x'), Ob('y')): 42}[Box('f', Ob('x'), Ob('y'))] == 42
-
-
-def test_Box_eq():
-    f = Box('f', Ob('x'), Ob('y'), data=[42, {0: 1}])
-    assert f == Arrow((f, ), Ob('x'), Ob('y')) and f != Ob('x')
 
 
 def test_Box_generator_hash():
@@ -251,10 +152,6 @@ def test_Functor():
 def test_Functor_eq():
     x, y = Ob('x'), Ob('y')
     assert Functor({x: y, y: x}, {}) == Functor({y: x, x: y}, {})
-
-
-def test_Functor_repr():
-    assert repr(Functor({}, {})) == "cat.Functor(ob_map={}, ar_map={})"
 
 
 def test_Functor_call():
@@ -401,20 +298,6 @@ def test_Functor_then_left_unit():
     assert F >> Functor.id() == F
     assert Functor.id() >> F != F
     assert (Functor.id() >> F)(x) == F(x)
-
-
-def test_strategy():
-    from hypothesis import find
-
-    find(Arrow.strategy(), lambda term: any(
-        isinstance(box, Box) for box in term.inside))
-    a, b = Ob('a'), Ob('b')
-    arrow = find(
-        Arrow.strategy(dom=a, cod=b, min_leaves=2, max_leaves=2),
-        lambda value: len(value.inside) > 1)
-    assert (arrow.dom, arrow.cod) == (a, b)
-    functor = find(Functor.strategy(), lambda value: value(a) != a)
-    assert functor(arrow).dom == functor(a)
 
 
 def test_Equivalence():

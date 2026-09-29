@@ -12,8 +12,7 @@ from discopy.axioms import (
     Axiom, AxiomFailure, Equation, Relabelling, assert_axioms, axiom)
 from discopy.cat import Arrow, Box, Functor, Ob
 from discopy.monoidal import Diagram
-from discopy.pattern import C1, In0
-from discopy.utils import AxiomError
+from discopy.pattern import ARROW, Sort
 
 
 def test_axioms():
@@ -90,7 +89,7 @@ def test_self_annotation():
 
 def test_falsify():
     @axiom
-    def trivial(cls, f: C1) -> Equation:
+    def trivial(cls, f: Annotated[Any, ARROW]) -> Equation:
         """ Every arrow is an identity, which a box refutes. """
         return Equation(f, cls.id(f.dom))
 
@@ -139,7 +138,7 @@ def test_functor_law():
     @axiom
     def preserves_identity(
             cls, functor: Self,
-            x: Annotated[Any, In0]) -> Equation:
+            x: Annotated[Any, Sort("In0")]) -> Equation:
         """ A functor preserves the identity on each object. """
         return Equation(
             functor(cls.dom.id(x)), functor.cod.id(functor(x)))
@@ -202,18 +201,3 @@ def test_canonical():
     assert cups == {"left": rigid.Ty('X'), "right": rigid.Ty('X').r}
     assert feedback.Diagram.feedback_joining.canonical()
 
-
-def test_hom_binder():
-    from typing import Annotated
-
-    from discopy.pattern import Hom
-
-    @axiom
-    def whiskering[X, Y, A: Annotated[C1, Hom[X, Y]]](
-            cls, a: Self, x: X) -> Equation:
-        """ A higher metavariable declares its boundaries on its binder. """
-        return Equation(a, a)
-
-    law = whiskering.bind(Arrow)
-    binder = law.sequent.variables["A"]
-    assert isinstance(binder, Hom) and str(binder) == "C1[X, Y]"

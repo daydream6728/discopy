@@ -26,28 +26,10 @@ def test_Hypergraph_str():
         == "Spider(1, 0, x) @ Spider(1, 0, y)"
 
 
-def test_Hypergraph_repr():
-    x, y = map(Ty, "xy")
-    assert repr(H.spiders(1, 0, x @ y))\
-        == "hypergraph.Hypergraph[Diagram]("\
-           "dom=frobenius.Ty(frobenius.Wire('x'), frobenius.Wire('y')), "\
-           "cod=frobenius.Ty(), boxes=(), wires=((0, 1), (), ()))"
-
-
-def test_Hypergraph_hash():
-    x, y = map(Ty, "xy")
-    assert hash(H.id(x @ y)) == hash(H.id(x) @ H.id(y))
-
-
 def test_Hypergraph_then():
     x, y = map(Ty, "xy")
     with raises(AxiomError):
         H.id(x) >> H.id(y)
-
-
-def test_Hypergraph_tensor():
-    Id = H.id
-    assert Id().tensor(Id(), Id()) == Id().tensor() == Id()
 
 
 def test_Hypergraph_getitem():

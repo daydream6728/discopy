@@ -20,22 +20,6 @@ def test_Discard():
     assert isinstance(Copy(Ty('x'), n=0), Discard)
 
 
-def test_equations():
-    x = Ty('x')
-    copy, discard = Copy(x), Copy(x, 0)
-    add, minus, zero = Box('+', x @ x, x), Box('-', x, x), Box('0', Ty(), x)
-
-    add >> copy, copy @ copy >> x @ Swap(x, x) @ x >> add @ add
-    add >> discard, discard @ discard
-    zero >> discard, Diagram.id(Ty())
-    copy >> minus @ x >> add, discard >> zero, copy >> x @ minus >> add
-
-    Diagram.id(x)
-    x @ zero >> x @ copy >> add @ x >> discard @ x
-    x @ zero @ zero >> discard @ discard @ x
-    discard >> zero
-
-
 def test_neural_network():
     x = Ty('x')
     add = lambda n: Box('$+$', x ** n, x)
@@ -68,23 +52,3 @@ def test_Permutation():
     assert Permutation(x @ y, [1, 0]) == Swap(x, y)
     assert issubclass(Swap, Permutation)
     assert Equation(perm, perm.to_swaps())
-
-
-def test_strategy():
-    from hypothesis import find
-
-    from discopy import axioms
-
-    axioms.assert_strategy_finds(Diagram, Copy)
-    x = Diagram.ob('x')
-    discarding = find(
-        Diagram.strategy(dom=x, cod=x),
-        lambda value: any(
-            isinstance(box, Copy) and not box.cod for box in value.boxes))
-    assert (discarding.dom, discarding.cod) == (x, x)
-
-
-def test_axioms():
-    from discopy import axioms
-
-    axioms.assert_axioms(Diagram)

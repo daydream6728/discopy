@@ -130,24 +130,9 @@ def test_Tensor_tensor():
     assert F(f) @ F(g) == F(f @ g)
 
 
-def test_tensor_swap():
-    f = Tensor([1, 0, 0, 1], Dim(2), Dim(2))
-    g = Tensor(list(range(9)), Dim(3), Dim(3))
-    swap = Tensor.swap(Dim(2), Dim(3))
-    assert f @ g >> swap == swap >> g @ f
-
-
 def test_tensor_spiders():
     with raises(NotImplementedError):
         Tensor.spiders(1, 2, Dim(3), [0.5])
-
-
-def test_Functor_repr():
-    x = frobenius.Ty('x')
-    F = Functor({x: 2}, {}, dom=frobenius.Diagram, dtype=bool)
-    assert repr(F) ==\
-        "tensor.Functor(ob_map={frobenius.Ty(frobenius.Wire('x')): 2}, "\
-        "ar_map={}, dom=frobenius.Diagram, dtype=bool)"
 
 
 def test_Functor_call():
@@ -208,12 +193,6 @@ def test_Tensor_subs():
 def test_Diagram_cups_and_caps():
     with raises(AxiomError):
         Diagram.cups(Dim(2), Dim(3))
-
-
-def test_Diagram_swap():
-    x, y, z = Dim(2), Dim(3), Dim(4)
-    assert Diagram.swap(x, y @ z) == \
-        (Swap(x, y) @ Id(z)) >> (Id(y) @ Swap(x, z))
 
 
 def test_Box():

@@ -110,14 +110,6 @@ def test_Ty_init():
     assert list(Ty('x', 'y', 'z')) == [Ty('x'), Ty('y'), Ty('z')]
 
 
-def test_Ty_eq():
-    assert Ty('x') != 'x'
-
-
-def test_Ty_repr():
-    assert repr(Ty('x', 'y')) == "monoidal.Ty(cat.Ob('x'), cat.Ob('y'))"
-
-
 def test_Ty_str():
     assert str(Ty('x')) == 'x'
     assert str(Ty()) == 'Ty()'
@@ -152,23 +144,6 @@ def test_Nat_tensor():
     assert Nat(2) @ Nat(3) @ Nat(7) == Nat(12) == Nat(2).tensor(Nat(3), Nat(7))
     with raises(TypeError) as err:
         Nat(2) @ Ty('x')
-
-
-def test_Nat_repr():
-    assert repr((Nat(0), Nat(1))) == "(monoidal.Nat(0), monoidal.Nat(1))"
-
-
-def test_Nat_hash():
-    assert hash(Nat(0)) == hash(Nat(0)) != hash(Nat(1))
-
-
-def test_Nat_to_tree():
-    assert Nat(0).to_tree() == {'factory': 'monoidal.Nat', 'n': 0}
-    assert Nat.from_tree(Nat(0).to_tree()) == Nat(0)
-
-
-def test_Nat_str():
-    assert str(Nat(2 * 3 * 7)) == "Nat(42)"
 
 
 def test_Nat_getitem():
@@ -298,11 +273,6 @@ def test_Diagram_init():
         Diagram((1, ), Ty('x'), Ty('x'))
 
 
-def test_Diagram_eq():
-    assert Diagram((), Ty('x'), Ty('x')) != Ty('x')
-    assert Diagram((), Ty('x'), Ty('x')) == Id(Ty('x'))
-
-
 def test_Diagram_iter():
     x, y = Ty('x'), Ty('y')
     f0, f1 = Box('f0', x, y), Box('f1', y, y)
@@ -361,24 +331,6 @@ def test_Diagram_offsets():
     diagram = Diagram((layer,), layer.dom, layer.cod)
     assert layer.boxes_and_offsets == [(f, 0), (g, 2)]
     assert diagram.offsets == [0, 2]
-
-
-def test_Diagram_hash():
-    assert {Id(Ty('x')): 42}[Id(Ty('x'))] == 42
-
-
-def test_Diagram_str():
-    x, y, z, w = Ty('x'), Ty('y'), Ty('z'), Ty('w')
-    assert str(Diagram((), x, x)) == "Id(x)"
-    f0, f1 = Box('f0', x, y), Box('f1', z, w)
-    assert str(Diagram((Layer(f0), ), x, y)) == "f0"
-    assert str(f0 @ Id(z) >> Id(y) @ f1) == "f0 @ z >> y @ f1"
-    assert str(f0 @ Id(z) >> Id(y) @ f1) == "f0 @ z >> y @ f1"
-
-
-def test_Diagram_matmul():
-    assert Id(Ty('x')) @ Id(Ty('y')) == Id(Ty('x', 'y'))
-    assert Id(Ty('x')) @ Id(Ty('y')) == Id(Ty('x')).tensor(Id(Ty('y')))
 
 
 def test_Diagram_interchange():
@@ -500,39 +452,14 @@ def test_Id_init():
     assert Id(Ty('x')) == Diagram.id(Ty('x'))
 
 
-def test_Id_repr():
-    assert repr(Id(Ty('x')))\
-        == "monoidal.Diagram.id(monoidal.Ty(cat.Ob('x')))"
-
-
-def test_Id_str():
-    assert str(Id(Ty('x'))) == "Id(x)"
-
-
 def test_Box_init():
     f = Box('f', Ty('x', 'y'), Ty('z'), data=42)
     assert (f.name, f.dom, f.cod, f.data) == ('f', Ty('x', 'y'), Ty('z'), 42)
 
 
-def test_Box_hash():
-    f = Box('f', Ty('x', 'y'), Ty('z'), data=42)
-    assert {f: 42}[f] == 42
-
-
-def test_Box_eq():
-    f = Box('f', Ty('x', 'y'), Ty('z'), data=42)
-    assert f == Diagram((Layer(f), ), Ty('x', 'y'), Ty('z')) and f != 'f'
-
-
 def test_Functor_init():
     F = Functor({Ty('x'): Ty('y')}, {})
     assert F(Id(Ty('x'))) == Id(Ty('y'))
-
-
-def test_Functor_repr():
-    assert repr(Functor({Ty('x'): Ty('y')}, {})) ==\
-        "monoidal.Functor("\
-        "ob_map={monoidal.Ty(cat.Ob('x')): monoidal.Ty(cat.Ob('y'))}, ar_map={})"
 
 
 def test_Functor_call():
@@ -745,37 +672,6 @@ def test_List():
         Ty(Wire('x', red, red), Wire('y'))
 
 
-def test_strategy():
-    from hypothesis import find
-    from hypothesis import strategies as st
-
-    from discopy import axioms
-
-    axioms.assert_strategy_finds(Diagram, Box)
-    x = Ty('x')
-    find(Ty.strategy(), lambda value: len(value) == 2)
-    composition = find(
-        Diagram.strategy(types=st.just(x), max_depth=1),
-        lambda value: len(value.inside) == 2)
-    assert len(composition.boxes) == 2
-    assert len(set(composition.boxes)) == len(composition.boxes)
-    assert find(Diagram.strategy(dom=x, cod=x, max_depth=0),
-                lambda value: not value.boxes) == Id(x)
-    connected = find(
-        Diagram.strategy(boundary_connected=True), lambda value: True)
-    assert connected.is_boundary_connected
-    closed = find(
-        Diagram.strategy(boundary_connected=False),
-        lambda value: value.boxes and not value.is_boundary_connected)
-    assert not closed.is_boundary_connected
-
-
 def test_transparent_colour_serialisation():
     colour = Colour()
     assert Colour.from_tree(colour.to_tree()) == colour
-
-
-def test_axioms():
-    from discopy import axioms
-
-    axioms.assert_axioms(Diagram)

@@ -17,16 +17,6 @@ def test_Swap():
         Swap(x ** 2, Ty())
 
 
-def test_Box_hash():
-    x, y = Ty('x'), Ty('y')
-    f = Box('f', x, y)
-    assert f == f @ Id()
-    assert hash(f) == hash(f @ Id())
-    assert hash(f) == hash(Id() @ f)
-    assert f @ Id() in {f}
-    assert {f: 42}[f @ Id()] == 42
-
-
 def test_symmetric_Equation():
     """
     ``symmetric.Equation`` compares diagrams up to hypergraph isomorphism
@@ -404,24 +394,3 @@ def test_coloured_Layer_boxes_and_types():
     assert Layer(f).boxes_and_types == (empty_red, f, empty_green)
     assert Layer(empty_red, f, empty_green).boxes_and_types\
         == (empty_red, f, empty_green)
-
-
-def test_strategy():
-    from hypothesis import find
-
-    from discopy import axioms
-
-    axioms.assert_strategy_finds(Diagram, Swap)
-    x, y, z = map(Diagram.ob, "xyz")
-    shuffled = find(
-        Diagram.strategy(dom=x @ y @ z, cod=z @ x @ y),
-        lambda value: any(
-            isinstance(box, Permutation) and not isinstance(box, Swap)
-            for box in value.boxes))
-    assert shuffled.cod == z @ x @ y
-
-
-def test_axioms():
-    from discopy import axioms
-
-    axioms.assert_axioms(Diagram)

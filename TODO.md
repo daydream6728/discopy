@@ -27,18 +27,18 @@
 Baseline on `claude/sequent-annotations` at `58af1dc4`: 42324 lines
 of Python, 126963 lines tracked in total.
 
-- [WIP] @session_01UrSNrBcfEnb46fFG9LYRPo-2026-09-29 Reimplement
+- [x] Reimplement
       `discopy.pattern` on value-level constructors: `Ob(A)` lifts a
       type parameter once, `@`, `.l`, `.r`, `<<`, `>>`, `**` and
       `Hom(p, q)` build the compound patterns, the subscript
       machinery goes — `interpret`, `sort_of`, `head_of`, `operand`,
       the `__class_getitem__` of every pattern class and the fronts
       `L`, `R`, `Over`, `Under`
-- [ ] Respell every declaration, rule and axiom on the new spelling,
+- [x] Respell every declaration, rule and axiom on the new spelling,
       the coarse type in `Annotated` for the typechecker and the
       pattern value beside it, no type-hacks left
-- [ ] Cut what the LOC budget demands — machinery docs first,
+- [x] Cut what the LOC budget demands — machinery docs first,
       doctests and unit tests of deleted machinery next — until the
       branch is 1000 lines smaller than `claude/sequent-annotations`
-- [ ] Validate: ruff, ty, pytest, fast + dev matrix, CHANGELOG,
+- [WIP] @session_01UrSNrBcfEnb46fFG9LYRPo-2026-09-29 Validate: ruff, ty, pytest, fast + dev matrix, CHANGELOG,
       close
