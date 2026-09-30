@@ -953,7 +953,10 @@ def parse(function: Callable, owner: type | None = None,
             # parameter, e.g. the category a CMap hosts, is not.
         if level is None:
             level = getattr(owner, "ob", None)
-            level = level if isinstance(level, type) else None
+            level = level if isinstance(level, type) and issubclass(
+                level, abc.Category) else None
+            # An ob outside the hierarchy, e.g. the wrapped cells of a
+            # delooping, is not a level to check patterns against.
     signature = inspect.signature(function)
     for name in premises_of(function, missing=True):
         raise TypeError(
