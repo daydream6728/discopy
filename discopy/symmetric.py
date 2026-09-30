@@ -758,6 +758,12 @@ class Functor(balanced.Functor):
                 doms = self(other.dom)
             else:
                 doms = list(map(self, other.dom))
+            atoms = list(doms)
+            if hasattr(self.cod.ar, "Permutation")\
+                    and len(atoms) == len(other.perm)\
+                    and all(len(atom) == 1 for atom in atoms):
+                dom = self.cod.ar.ob().tensor(*atoms)
+                return self.cod.ar.Permutation(dom, other.perm)
             return self.cod.ar.permutation(other.perm, doms)
         return super().__call__(other)
 

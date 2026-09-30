@@ -1039,6 +1039,19 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
+- A symmetric functor maps a native permutation to the codomain's own
+  `Permutation` when it has one and every wire's image is atomic,
+  instead of decomposing it into transpositions with
+  `abc.SymmetricCategory.permutation`, whose swaps are all an
+  arbitrary symmetric category has: the identity functor is the
+  identity on permutations again, so `foliation`, whose staircase
+  pass runs it, no longer rewrites the inside of a curry bubble that
+  the hypergraph compares syntactically — found by the
+  `foliation_soundness` cell of the matrix on `closed.Diagram`. A
+  codomain without native permutations, e.g. `python.Function` or
+  `Drawing`, still composes swaps, and so does the image of a
+  permutation whose wires map to compound types, which no single
+  permutation of the images spells.
 - The standalone `inapplicable` decorator mutated the function it
   wrapped: pregroup's mark on the shared `trace_left` implementation
   leaked into every category inheriting it whenever
