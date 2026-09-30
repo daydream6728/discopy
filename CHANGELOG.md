@@ -659,6 +659,14 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   braid is its swap, and `markov.Diagram` declares its
   `repr_transparency` and `serialisation` under the copy's own reason
   (#742), where they were recorded under the trace's.
+- `compact.Diagram` declares `foliation_idempotence` failing, found
+  by the matrix: the hypergraph decode follows the box order stored
+  by its encoding, so the foliation of `f >> e @ a` written backwards
+  through a snake — `Cap(a.r, a) >> a.r @ e >> a.r @ f >>
+  Cup(a.r, a) @ a` for a state `f` feeding an effect `e` — keeps the
+  cut that foliating the result straightens: sound, but not a
+  canonical representative. The fix is a decode that does not read
+  the stored box order.
 - `monoidal.Diagram.to_drawing` names its optional parameter
   `functor`, after the slot rename that removed `*_factory`.
 - DisCoPy requires Python 3.14. Annotations are the lazy objects of

@@ -94,6 +94,11 @@ class Diagram(symmetric.Diagram, ribbon.Diagram, CompactCategory):
 
     twist_as_trace = RibbonCategory.twist_as_trace
 
+    foliation_idempotence = ribbon.Diagram.foliation_idempotence.failing(
+        "The hypergraph decode follows the box order of its encoding, so "
+        "the foliation of a composition written backwards through a snake "
+        "keeps a cut that foliating it again straightens.")
+
     currying_left = BiclosedCategory.currying_left.weaken(
         boundary_connected=True)
 
