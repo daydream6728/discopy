@@ -30,37 +30,37 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   or generated, and diagrams built from rules toward a goal pattern.
   A category states its structure as the typed signatures of its
   methods, which `parse` collects into sequents: the PEP 695 type
-  parameter list is the quantifier prefix, each bound a sort written
-  with the pattern classes as type formers — `A: Ob[C0]` an object,
-  `X: Atom[C0]` an atomic one, `N: Count` a number of repetitions,
-  `F: Hom[C1, A, B]` the pattern of a premise or a conclusion, its
-  compound sides built by `Tensor[A, C]`, `Unit[C0]`, `L[A]`,
-  `R[A]`, `D[A]`, `Over[A, B]`, `Under[A, B]` and `Repeat[X, N]` —
-  and every annotation an `Annotated[T, V]`, the coarse type a
-  typechecker reads and one type parameter beside it, dereferenced to
-  the pattern its bound states or standing as its own variable when
-  the bound is a sort. So a rule reads `def then[A: Ob[C0], B:
-  Ob[C0], C: Ob[C0], F: Hom[C1, A, B], G: Hom[C1, B, C], H: Hom[C1,
-  A, C]](self: Annotated[C1, F], other: Annotated[C1, G]) ->
-  Annotated[C1, H]`, a trace takes `F: Hom[C1, Tensor[M, A],
-  Tensor[M, B]]`, and `discopy.abc` is written wholly in this
-  displaced form. The bounds are evaluated lazily, in a scope where
-  the sibling parameters and the heads of the declaring class are
-  visible, so a former receives the very type parameters it
-  quantifies over; the coarse types stay fully checked — a `C0` in a
-  `C1` slot is still an error — while the one typing-spec rule the
-  spelling breaks, a bound referencing type variables, is turned off
-  and documented in `pyproject.toml` (`invalid-type-variable-bound`),
-  `parse` validating the bounds at runtime instead. The patterns
-  remain plain values that an `Annotated` may carry inline: `Ob(A)`
+  parameter list is the context, each bound a sort — `A: Ob[C0]` an
+  object, `X: Atom[C0]` an atomic one, `N: Count` a number of
+  repetitions — the parameters the premises and the return
+  annotation the conclusion, each a subscript of the type aliases
+  `Ob` and `Hom` of `discopy.abc`: `f: Hom[C1, A, B]` a morphism
+  between two sides and `x: Ob[C0, p]` a pattern beside its coarse
+  type, the compound sides built by the formers `Tensor[A, C]`,
+  `Unit[C0]`, `L[A]`, `R[A]`, `D[A]`, `Over[A, B]`, `Under[A, B]`
+  and `Repeat[X, N]`. So a rule reads `def then[A: Ob[C0], B:
+  Ob[C0], C: Ob[C0]](self: Hom[C1, A, B], other: Hom[C1, B, C]) ->
+  Hom[C1, A, C]`, a trace takes `Hom[C1, Tensor[M, A], Tensor[M,
+  B]]`, the cups take `right: Ob[C0, R[X]]`, and `discopy.abc` is
+  written wholly in these brackets. The aliases are PEP 695 `type`
+  statements expanding to the `Annotated[T, ...]` a typechecker
+  reads, so the coarse types stay fully checked — a `C0` in a `C1`
+  slot is still an error — while `pattern.expand` rebuilds the
+  pattern from the subscript, its args evaluated lazily in a scope
+  where the sibling parameters and the heads of the declaring class
+  are visible; the one typing-spec rule the context bounds break, a
+  bound referencing type variables, is turned off and documented in
+  `pyproject.toml` (`invalid-type-variable-bound`), `parse`
+  validating the bounds at runtime instead. The patterns remain
+  plain values that an `Annotated` may carry inline: `Ob(A)`
   lifts a type parameter, `Hom(p, q)`, `p @ q`, `p.l`, `p.r`, `p.d`,
   `p << q`, `p >> q`, `p ** n` and `UNIT` build the compounds, and a
   side of `Hom` lifts itself — a bare type parameter is one
   variable, a list or tuple the tensor of its elements. Every axiom
   quantifies its premises the same way — `unitality[A: Ob[C0], B:
-  Ob[C0], F: Hom[C1, A, B]](cls, f: Annotated[C1, F]) ->
-  Equation[Annotated[C1, F]]`, the `Equation` subscript carrying the
-  hom type of its terms — so there are no bare-sort premises and no
+  Ob[C0]](cls, f: Hom[C1, A, B]) -> Equation[Hom[C1, A, B]]`, the
+  `Equation` subscript carrying the hom type of its terms — so there
+  are no bare-sort premises and no
   `OB`, `ARROW` or `TERM` constants: a premise over the terms of the
   category itself states `Self`, one over a functor's source or
   target its `Sort`, and each pattern class declares its level, the
