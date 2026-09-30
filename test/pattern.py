@@ -88,6 +88,41 @@ def test_alias():
         parse(bare, conclusion=False)
 
 
+def test_overloads():
+    """ The overloads of a helper taking ``left`` restate the sequents of
+    its two rules, and those of ``uncurry`` state ``curry`` upside down. """
+    from typing import get_args, get_overloads
+    import inspect
+
+    from discopy.abc import BiclosedCategory, TracedCategory
+
+    def sides(helper, owner):
+        stubs = {}
+        for stub in get_overloads(helper):
+            function = getattr(stub, "__func__", stub)
+            annotation = inspect.signature(
+                function).parameters["left"].annotation
+            stubs[get_args(annotation)[0]] = parse(function, owner=owner)
+        return stubs[True], stubs[False]
+
+    for owner, helper, left_rule, right_rule in (
+            (TracedCategory, "trace", "trace_left", "trace_right"),
+            (BiclosedCategory, "ev", "ev_left", "ev_right"),
+            (BiclosedCategory, "curry", "curry_left", "curry_right"),
+            (FeedbackCategory, "feedback", "feedback_left",
+             "feedback_right")):
+        left, right = sides(getattr(owner, helper), owner)
+        assert str(left) == str(getattr(owner, left_rule).sequent)
+        assert str(right) == str(getattr(owner, right_rule).sequent)
+
+    for uncurried, rule in zip(
+            sides(BiclosedCategory.uncurry, BiclosedCategory),
+            ("curry_left", "curry_right")):
+        curried = getattr(BiclosedCategory, rule).sequent
+        assert uncurried.premises["self"] == curried.conclusion
+        assert uncurried.conclusion == curried.premises["self"]
+
+
 def test_parse():
     def then[A, B, C](
             self: Annotated[str, Hom(A, B)],

@@ -62,12 +62,15 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   Equation[Hom[C1, A, B]]`, an object equation `Equation[Ob[C0,
   Tensor[A, C]]]` — no `Equation[C1]` or bare `C1` subscript remains,
   and `test/axioms.py` checks every `Equation` subscript against the
-  canonical equation it types; a helper taking `left` is typed by the
-  union of its two rules' sequents, e.g. `trace` reads `Hom[C1,
-  Tensor[M, A], Tensor[M, B]] | Hom[C1, Tensor[A, M], Tensor[B, M]]
-  -> Hom[C1, A, B]`, the object operations `over`, `under`, `l`, `r`
-  and `d` read their formers at head `C1`, and what an n-ary monoid
-  operation cannot pattern-type lands in `Self`. So there are no
+  canonical equation it types; a helper taking `left` states each
+  side as an `@overload` whose `left: Literal[True]`/`Literal[False]`
+  links the branch to the argument, so `trace(n, left=True)` reads
+  `Hom[C1, Tensor[M, A], Tensor[M, B]] -> Hom[C1, A, B]` — the same
+  sequent as its rule, which `test/pattern.py` checks for `trace`,
+  `ev`, `curry` and `feedback`, and for `uncurry` that its overloads
+  are `curry`'s upside down — the object operations `over`, `under`,
+  `l`, `r` and `d` read their formers at head `C1`, and what an n-ary
+  monoid operation cannot pattern-type lands in `Self`. So there are no
   bare-sort premises and no
   `OB`, `ARROW` or `TERM` constants: a premise over the terms of the
   category itself states `Self`, one over a functor's source or

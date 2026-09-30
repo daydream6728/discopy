@@ -65,7 +65,8 @@ from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from dataclasses import dataclass
 from types import NoneType
-from typing import Annotated, ClassVar, Self, TYPE_CHECKING
+from typing import (
+    Annotated, ClassVar, Literal, Self, TYPE_CHECKING, overload)
 
 from discopy.axioms import (  # noqa: F401
     Atom, Axiom, axiom, Count, D, declarations, Equation, L, Over, R,
@@ -521,13 +522,21 @@ class TracedCategory[C0: ColouredMonoid, C1: TracedCategory](
             n : The number of objects to trace over.
         """
 
+    @overload
     def trace[A: Ob[C0], B: Ob[C0], M: Atom[C0]](
-            self: Hom[C1, Tensor[M, A], Tensor[M, B]]
-            | Hom[C1, Tensor[A, M], Tensor[B, M]],
-            n: int = 1, left: bool = False) -> Hom[C1, A, B]:
+            self: Hom[C1, Tensor[A, M], Tensor[B, M]], n: int = ...,
+            left: Literal[False] = ...) -> Hom[C1, A, B]: ...
+
+    @overload
+    def trace[A: Ob[C0], B: Ob[C0], M: Atom[C0]](
+            self: Hom[C1, Tensor[M, A], Tensor[M, B]], n: int = ...,
+            left: Literal[True] = ...) -> Hom[C1, A, B]: ...
+
+    def trace(self, n=1, left=False):
         """
         The trace of a morphism on either side, :meth:`trace_left` or
-        :meth:`trace_right`. Tracing no object at all is the identity, i.e.
+        :meth:`trace_right`, whose sequents the two overloads restate.
+        Tracing no object at all is the identity, i.e.
         the vanishing axiom ``f.trace(0) == f``, see `nLab
         <https://ncatlab.org/nlab/show/traced+monoidal+category>`_.
 
@@ -689,14 +698,26 @@ class BiclosedCategory[C0: ResiduatedMonoid, C1: BiclosedCategory](
             exponent : The exponent of the exponential type.
         """
 
+    @overload
     @classmethod
     def ev[Y: Atom[C0], E: Atom[C0]](
-            cls, base: Ob[C0, Y], exponent: Ob[C0, E], left: bool = True
-    ) -> Hom[C1, Tensor[Over[Y, E], E], Y] | Hom[
-            C1, Tensor[E, Under[E, Y]], Y]:
+            cls, base: Ob[C0, Y], exponent: Ob[C0, E],
+            left: Literal[True] = ...
+    ) -> Hom[C1, Tensor[Over[Y, E], E], Y]: ...
+
+    @overload
+    @classmethod
+    def ev[Y: Atom[C0], E: Atom[C0]](
+            cls, base: Ob[C0, Y], exponent: Ob[C0, E],
+            left: Literal[False] = ...
+    ) -> Hom[C1, Tensor[E, Under[E, Y]], Y]: ...
+
+    @classmethod
+    def ev(cls, base, exponent, left=True):
         """
         The evaluation of an exponential type on either side,
-        :meth:`ev_left` or :meth:`ev_right`.
+        :meth:`ev_left` or :meth:`ev_right`, whose sequents the two
+        overloads restate.
 
         Parameters:
             base : The base of the exponential type.
@@ -731,13 +752,20 @@ class BiclosedCategory[C0: ResiduatedMonoid, C1: BiclosedCategory](
             n : The number of objects to curry.
         """
 
+    @overload
     def curry[X: Ob[C0], Y: Atom[C0], Z: Ob[C0]](
-            self: Hom[C1, Tensor[X, Y], Z] | Hom[C1, Tensor[Y, X], Z],
-            n: int = 1, left: bool = True
-    ) -> Hom[C1, X, Over[Z, Y]] | Hom[C1, X, Under[Y, Z]]:
+            self: Hom[C1, Tensor[X, Y], Z], n: int = ...,
+            left: Literal[True] = ...) -> Hom[C1, X, Over[Z, Y]]: ...
+
+    @overload
+    def curry[Y: Atom[C0], X: Ob[C0], Z: Ob[C0]](
+            self: Hom[C1, Tensor[Y, X], Z], n: int = ...,
+            left: Literal[False] = ...) -> Hom[C1, X, Under[Y, Z]]: ...
+
+    def curry(self, n=1, left=True):
         """
         The currying of a morphism on either side, :meth:`curry_left` or
-        :meth:`curry_right`.
+        :meth:`curry_right`, whose sequents the two overloads restate.
 
         Parameters:
             n : The number of objects to curry.
@@ -745,9 +773,17 @@ class BiclosedCategory[C0: ResiduatedMonoid, C1: BiclosedCategory](
         """
         return self.curry_left(n) if left else self.curry_right(n)
 
+    @overload
     def base_and_exponent[X: Ob[C0], Y: Atom[C0], Z: Ob[C0]](
-            self: Hom[C1, X, Over[Z, Y]] | Hom[C1, X, Under[Y, Z]],
-            n: int, left: bool) -> tuple[Ob[C0, Z], Ob[C0, Y]]:
+            self: Hom[C1, X, Over[Z, Y]], n: int,
+            left: Literal[True]) -> tuple[Ob[C0, Z], Ob[C0, Y]]: ...
+
+    @overload
+    def base_and_exponent[X: Ob[C0], Y: Atom[C0], Z: Ob[C0]](
+            self: Hom[C1, X, Under[Y, Z]], n: int,
+            left: Literal[False]) -> tuple[Ob[C0, Z], Ob[C0, Y]]: ...
+
+    def base_and_exponent(self, n, left):
         """
         The base and exponent that :meth:`uncurry` evaluates, read off the
         exponential object in the codomain.
@@ -763,14 +799,22 @@ class BiclosedCategory[C0: ResiduatedMonoid, C1: BiclosedCategory](
             raise ValueError
         return base, exponent
 
+    @overload
     def uncurry[X: Ob[C0], Y: Atom[C0], Z: Ob[C0]](
-            self: Hom[C1, X, Over[Z, Y]] | Hom[C1, X, Under[Y, Z]],
-            n: int = 1, left: bool = True
-    ) -> Hom[C1, Tensor[X, Y], Z] | Hom[C1, Tensor[Y, X], Z]:
+            self: Hom[C1, X, Over[Z, Y]], n: int = ...,
+            left: Literal[True] = ...) -> Hom[C1, Tensor[X, Y], Z]: ...
+
+    @overload
+    def uncurry[Y: Atom[C0], X: Ob[C0], Z: Ob[C0]](
+            self: Hom[C1, X, Under[Y, Z]], n: int = ...,
+            left: Literal[False] = ...) -> Hom[C1, Tensor[Y, X], Z]: ...
+
+    def uncurry(self, n: int = 1, left: bool = True):
         """
         Uncurry a morphism by composing it with :meth:`ev`, assuming its
-        codomain is an exponential object. If the exponent has less than
-        ``n`` objects, we uncurry the remaining ones in turn.
+        codomain is an exponential object, i.e. undo :meth:`curry`, whose
+        sequents the two overloads state upside down. If the exponent has
+        less than ``n`` objects, we uncurry the remaining ones in turn.
 
         Parameters:
             n : The number of objects to uncurry.
@@ -780,16 +824,28 @@ class BiclosedCategory[C0: ResiduatedMonoid, C1: BiclosedCategory](
             raise ValueError
         if not n:
             return self
-        base, exponent = self.base_and_exponent(n, left)
+        base, exponent = self.base_and_exponent(
+            n, left)  # ty: ignore[no-matching-overload]
         result = self @ exponent >> self.ev(base, exponent, True) if left\
             else exponent @ self >> self.ev(base, exponent, False)
         return result.uncurry(n - len(exponent), left)
 
+    @overload
     @classmethod
     def uncurry_composition[A: Ob[C0], X: Atom[C0], E: Atom[C0]](
-            cls, f: Hom[C1, Tensor[A, E], X] | Hom[C1, Tensor[E, A], X],
-            base: Ob[C0, X], exponent: Ob[C0, E], left: bool
-    ) -> Hom[C1, Tensor[A, E], X] | Hom[C1, Tensor[E, A], X]:
+            cls, f: Hom[C1, Tensor[A, E], X], base: Ob[C0, X],
+            exponent: Ob[C0, E], left: Literal[True]
+    ) -> Hom[C1, Tensor[A, E], X]: ...
+
+    @overload
+    @classmethod
+    def uncurry_composition[A: Ob[C0], X: Atom[C0], E: Atom[C0]](
+            cls, f: Hom[C1, Tensor[E, A], X], base: Ob[C0, X],
+            exponent: Ob[C0, E], left: Literal[False]
+    ) -> Hom[C1, Tensor[E, A], X]: ...
+
+    @classmethod
+    def uncurry_composition(cls, f, base, exponent, left: bool):
         """
         Curry ``f`` then evaluate it back, i.e. whisker the currying with
         ``exponent`` and compose with :meth:`ev`, the roundtrip that
@@ -931,9 +987,17 @@ class RigidCategory[C0: Pregroup, C1: RigidCategory](BiclosedCategory[C0, C1]):
         base, exponent = self.dom[n:], self.dom[:n]
         return self.caps(exponent.r, exponent) @ base >> exponent.r @ self
 
+    @overload
     def base_and_exponent[X: Ob[C0], Y: Atom[C0], Z: Ob[C0]](
-            self: Hom[C1, X, Tensor[Z, L[Y]]] | Hom[C1, X, Tensor[R[Y], Z]],
-            n: int, left: bool) -> tuple[Ob[C0, Z], Ob[C0, Y]]:
+            self: Hom[C1, X, Tensor[Z, L[Y]]], n: int,
+            left: Literal[True]) -> tuple[Ob[C0, Z], Ob[C0, Y]]: ...
+
+    @overload
+    def base_and_exponent[X: Ob[C0], Y: Atom[C0], Z: Ob[C0]](
+            self: Hom[C1, X, Tensor[R[Y], Z]], n: int,
+            left: Literal[False]) -> tuple[Ob[C0, Z], Ob[C0, Y]]: ...
+
+    def base_and_exponent(self, n, left):
         """
         Contrary to :meth:`BiclosedCategory.base_and_exponent`, a pregroup has
         no exponential object to read the exponent off the codomain: it is the
@@ -949,9 +1013,17 @@ class RigidCategory[C0: Pregroup, C1: RigidCategory](BiclosedCategory[C0, C1]):
             return self.cod[:-n], self.cod[-n:].r
         return self.cod[n:], self.cod[:n].l
 
+    @overload
     def transpose[A: Ob[C0], B: Ob[C0]](
-            self: Hom[C1, A, B], left: bool = False
-    ) -> Hom[C1, R[B], R[A]] | Hom[C1, L[B], L[A]]:
+            self: Hom[C1, A, B], left: Literal[False] = ...
+    ) -> Hom[C1, R[B], R[A]]: ...
+
+    @overload
+    def transpose[A: Ob[C0], B: Ob[C0]](
+            self: Hom[C1, A, B], left: Literal[True] = ...
+    ) -> Hom[C1, L[B], L[A]]: ...
+
+    def transpose(self, left=False):
         """
         The transpose of a morphism, i.e. its composition with cups and caps.
 
@@ -1319,14 +1391,24 @@ class FeedbackCategory[C0: DelayedMonoid, C1: FeedbackCategory](
             mem : The memory type to feed back.
         """
 
+    @overload
     def feedback[A: Ob[C0], B: Ob[C0], M: Atom[C0]](
-            self: Hom[C1, Tensor[D[M], A], Tensor[M, B]]
-            | Hom[C1, Tensor[A, D[M]], Tensor[B, M]],
-            dom: C0 | None = None, cod: C0 | None = None,
-            mem: C0 | None = None, left: bool = False) -> Hom[C1, A, B]:
+            self: Hom[C1, Tensor[A, D[M]], Tensor[B, M]],
+            dom: C0 | None = ..., cod: C0 | None = ...,
+            mem: C0 | None = ...,
+            left: Literal[False] = ...) -> Hom[C1, A, B]: ...
+
+    @overload
+    def feedback[A: Ob[C0], B: Ob[C0], M: Atom[C0]](
+            self: Hom[C1, Tensor[D[M], A], Tensor[M, B]],
+            dom: C0 | None = ..., cod: C0 | None = ...,
+            mem: C0 | None = ...,
+            left: Literal[True] = ...) -> Hom[C1, A, B]: ...
+
+    def feedback(self, dom=None, cod=None, mem=None, left=False):
         """
         The feedback operator on either side, :meth:`feedback_left` or
-        :meth:`feedback_right`.
+        :meth:`feedback_right`, whose sequents the two overloads restate.
 
         Parameters:
             dom : The domain of the feedback.
