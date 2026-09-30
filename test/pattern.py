@@ -8,9 +8,10 @@ from discopy.abc import (
     Category, ColouredMonoid, DelayedMonoid, FeedbackCategory, Pregroup,
     ResiduatedMonoid)
 from discopy.monoidal import Ty
+from discopy import pattern
 from discopy.pattern import (
-    UNIT, Adjoint, Atom, Count, Delay, Exp, Hom, Ob, Repeat, Sort,
-    Tensor, Unit, parse, sort_of)
+    UNIT, Adjoint, Atom, Count, Delay, Exp, Hom, L, Ob, Over, R, Repeat,
+    Sort, Tensor, Under, Unit, parse, sort_of)
 
 
 x, y, z = map(Ty, "xyz")
@@ -53,6 +54,35 @@ def test_operators():
     assert sort_of(Pregroup).bound is Pregroup
     with raises(TypeError):
         sort_of(int)
+
+
+def test_formers():
+    """ Subscripting a pattern class builds the pattern a bound states. """
+    assert Ob["C0"] == Sort("C0") and Atom["C0"] == Sort("C0", atomic=True)
+    assert Unit["C0"] == UNIT and Tensor[A, B] == A @ B
+    assert L[X] == X.l and R[X] == X.r and pattern.D[D] == D.d
+    assert Over[E, E] == (E << E) and Under[E, E] == (E >> E)
+    assert Repeat[M, N] == M ** N
+    assert Hom["C1", [M, A], B] == Hom(M @ A, B)
+    with raises(TypeError):
+        Hom["C1", A]
+    with raises(TypeError):
+        Ob[42]
+
+
+def test_displaced():
+    """ A premise names a type parameter, dereferenced to its bound. """
+    def cups[V: Atom, W: R[V], F: Hom["C1", Tensor[V, R[V]], Unit["C0"]]](
+            cls, left: Annotated[Ty, V], right: Annotated[Ty, W]
+    ) -> Annotated[Ty, F]:
+        ...
+    assert str(parse(cups))\
+        == "V: Atom[C0] | left: V, right: V.r ⊢ C1[V @ V.r, Unit[C0]]"
+
+    def bad[Z: int](cls, z: Annotated[Ty, Z]):
+        ...
+    with raises(TypeError, match="Expected a sort"):
+        parse(bad, conclusion=False)
 
 
 def test_parse():

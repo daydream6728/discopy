@@ -3,32 +3,41 @@ Sequent patterns and their matching: the language in which a category
 states its rules, generators and axioms.
 
 A sequent is the signature of a method on an abstract base class of
-:mod:`discopy.abc`: its parameters are the premises and its return
-annotation the conclusion, each an ``Annotated[T, pat]`` — the coarse
-type ``T`` a typechecker reads and the one pattern ``pat`` beside it, a
-plain value. :class:`Ob` lifts one of the method's own :pep:`695` type
-parameters, its sort the bound — an object when unbounded, an
-:class:`Atom` or a :class:`Count` when declared — and constructors and
-operators build the compounds: ``Hom(p, q)``, ``p @ q``, ``p.l``,
-``p.r``, ``p.d``, ``p << q``, ``p >> q``, ``p ** n`` and :data:`UNIT`.
-A side of :class:`Hom` goes through :func:`lift` — a bare type
-parameter is one variable, a list or tuple the tensor of its elements —
-so a rule writes ``Hom(A, B)`` and ``Hom([M, A], [M, B])`` directly.
+:mod:`discopy.abc`, its :pep:`695` type parameter list the quantifier
+prefix: each parameter declares one variable, its sort the bound,
+written with the pattern classes as type formers — ``A: Ob[C0]`` an
+object, ``A: Atom[C0]`` an atomic one, ``N: Count`` a number of
+repetitions, ``F: Hom[C1, A, B]`` a pattern named for a premise or a
+conclusion, its compound sides built by the formers ``Tensor[A, B]``,
+``Unit[C0]``, ``L[A]``, ``R[A]``, ``D[A]``, ``Over[A, B]``,
+``Under[A, B]`` and ``Repeat[A, N]``. The method's parameters are the
+premises and its return annotation the conclusion, each an
+``Annotated[T, V]`` — the coarse type ``T`` a typechecker reads and one
+type parameter ``V`` beside it, dereferenced to the pattern its bound
+states, or standing as its own variable when the bound is a sort.
 
 .. code-block:: python
 
-    def tensor[A, B, C, D](
-            self: Annotated[C1, Hom(A, B)],
-            other: Annotated[C1, Hom(C, D)]
-    ) -> Annotated[C1, Hom(Ob(A) @ Ob(C), Ob(B) @ Ob(D))]:
+    def tensor[A: Ob[C0], B: Ob[C0], C: Ob[C0], D: Ob[C0],
+               F: Hom[C1, A, B], G: Hom[C1, C, D],
+               H: Hom[C1, Tensor[A, C], Tensor[B, D]]](
+            self: Annotated[C1, F], other: Annotated[C1, G]
+    ) -> Annotated[C1, H]:
         ...
 
-The signature typechecks as it reads: the type level carries only types
-and the value level only patterns, so no name plays both parts. A
-premise over the terms of the category itself states ``Self``, and one
-over the objects or arrows of a functor's source or target its
+The type level carries the whole sequent and the value level nothing:
+the bounds are evaluated lazily by :pep:`695`, in a scope where the
+sibling parameters and the heads ``C0`` and ``C1`` of the declaring
+class are visible, so a former receives the very type parameters it
+quantifies over. The patterns remain plain values — ``Hom(A, B)``,
+``p @ q``, ``p.l``, ``p.r``, ``p.d``, ``p << q``, ``p >> q``,
+``p ** n`` and :data:`UNIT` build them directly, a side of
+:class:`Hom` going through :func:`lift` — which is what the formers
+return and what an ``Annotated`` may still carry inline. A premise
+over the terms of the category itself states ``Self``, and one over
+the objects or arrows of a functor's source or target its
 :class:`Sort`, ``Sort("In0")`` to ``Sort("Out1")``. Nothing is
-quoted: each pattern is built when the annotation is read,
+quoted: each pattern is built when the annotation or bound is read,
 lazily by :pep:`649`, and :func:`parse` collects the sequent without
 evaluating anything itself. Each pattern class declares its
 :meth:`Pattern.level`, the least structure the objects it stands in
@@ -61,6 +70,11 @@ Summary
     Sort
     Atom
     Count
+    L
+    R
+    D
+    Over
+    Under
     Sequent
     Declaration
 
@@ -135,8 +149,24 @@ class Sort:
         return f"Atom[{self.head}]" if self.atomic else self.head
 
 
-class Atom:
-    """ The bound ``def cups[X: Atom]`` declares an atomic object. """
+def head_of(head: TypeVar | str) -> str:
+    """ The name of a head: a type parameter's, e.g. ``C0``, or its own. """
+    if isinstance(head, TypeVar):
+        return head.__name__
+    if isinstance(head, str):
+        return head
+    raise TypeError(f"Expected a head, got {head!r}.")
+
+
+class Atom[T]:
+    """ The bound ``def cups[X: Atom]`` declares an atomic object; the
+    former ``Atom[C0]`` names its head.
+
+    >>> assert Atom["C0"] == Sort("C0", atomic=True)
+    """
+
+    def __class_getitem__(cls, head) -> Sort:
+        return Sort(head_of(head), atomic=True)
 
 
 class Count:
@@ -290,20 +320,25 @@ class Pattern(ABC):
 
 
 @dataclass(frozen=True, init=False)
-class Ob(Pattern):
+class Ob[T](Pattern):
     """
     A variable over the objects of a category: the lift ``Ob(A)`` of
     one of the declaration's own type parameters, its sort the bound —
-    or a name and a sort directly.
+    or a name and a sort directly. The former ``Ob[C0]`` is the sort a
+    bound declares, ``A: Ob[C0]``.
 
     >>> def cups[X: Atom](): ...
     >>> X, = cups.__type_params__
     >>> print(Ob(X) @ Ob(X).r)
     X @ X.r
+    >>> assert Ob["C0"] == Sort("C0")
     """
 
     name: str
     sort: Sort
+
+    def __class_getitem__(cls, head) -> Sort:
+        return Sort(head_of(head))
 
     def __init__(self, var: TypeVar | str, sort: Sort | None = None):
         if not isinstance(var, (TypeVar, str)):
@@ -339,10 +374,14 @@ class Ob(Pattern):
 
 
 @dataclass(frozen=True)
-class Unit(Pattern):
-    """ The unit of a monoid of objects, :data:`UNIT` in an annotation. """
+class Unit[T](Pattern):
+    """ The unit of a monoid of objects, :data:`UNIT` in an annotation
+    and the former ``Unit[C0]`` in a bound. """
 
     sort: Sort = Sort("C0")
+
+    def __class_getitem__(cls, head) -> Unit:
+        return cls(Sort(head_of(head)))
 
     @classmethod
     def level(cls) -> type[abc.Category]:
@@ -370,10 +409,15 @@ UNIT = Unit()
 
 
 @dataclass(frozen=True, init=False)
-class Tensor(Pattern):
-    """ The tensor of two or more patterns, flattened: ``p @ q``. """
+class Tensor[*Ts](Pattern):
+    """ The tensor of two or more patterns, flattened: ``p @ q`` and
+    the former ``Tensor[p, q]`` in a bound. """
 
     factors: tuple[Pattern, ...]
+
+    def __class_getitem__(cls, factors) -> Tensor:
+        factors = factors if isinstance(factors, tuple) else (factors, )
+        return cls(*map(lift, factors))
 
     def __init__(self, *factors: Pattern):
         if len(factors) < 2:
@@ -515,15 +559,20 @@ class Exp(Pattern):
 
 
 @dataclass(frozen=True)
-class Repeat(Pattern):
+class Repeat[P, N](Pattern):
     """
-    An atomic pattern repeated a variable number of times, ``p ** n``,
-    for the legs of a spider: matching binds the count to the number
-    of atoms and the base to the one atom they all equal.
+    An atomic pattern repeated a variable number of times, ``p ** n``
+    and the former ``Repeat[p, n]`` in a bound, for the legs of a
+    spider: matching binds the count to the number of atoms and the
+    base to the one atom they all equal.
     """
 
     base: Pattern
     count: Ob
+
+    def __class_getitem__(cls, args) -> Repeat:
+        base, count = args
+        return cls(lift(base), count if isinstance(count, Ob) else Ob(count))
 
     def __post_init__(self):
         if not isinstance(self.count, Ob)\
@@ -589,12 +638,14 @@ def lift(side: Pattern | TypeVar | str | list | tuple) -> Pattern:
 
 
 @dataclass(frozen=True, init=False)
-class Hom(Pattern):
+class Hom[T, A, B](Pattern):
     """
     The type ``head[dom, cod]`` of the morphisms between two patterns,
     matched against a goal: a pair of an optional domain and codomain.
     A side goes through :func:`lift`: a rule writes ``Hom(A, B)`` on
     its own type parameters and ``Hom([M, A], [M, B])`` for tensors.
+    The former ``Hom[C1, A, B]`` names the head first, so a bound
+    states the whole pattern, ``F: Hom[C1, A, B]``.
 
     >>> from discopy.monoidal import Ty
     >>> A, B = Ob("A"), Ob("B")
@@ -609,11 +660,21 @@ class Hom(Pattern):
     >>> def then[A, B](): ...
     >>> assert Hom(*then.__type_params__) == Hom(Ob("A"), Ob("B"))
     >>> assert Hom([A, B], A) == hom
+    >>> assert Hom["C1", A, B] == Hom(A, B)
     """
 
     dom: Pattern
     cod: Pattern
     head: str = "C1"
+
+    def __class_getitem__(cls, args) -> Hom:
+        try:
+            head, dom, cod = args
+        except (TypeError, ValueError):
+            raise TypeError(
+                f"Hom[head, dom, cod] takes three arguments, got "
+                f"{args!r}.") from None
+        return cls(dom, cod, head=head_of(head))
 
     def __init__(self, dom: Pattern | TypeVar | str | list | tuple,
                  cod: Pattern | TypeVar | str | list | tuple,
@@ -647,6 +708,46 @@ class Hom(Pattern):
 
     def __str__(self):
         return f"{self.head}[{self.dom}, {self.cod}]"
+
+
+class L[T]:
+    """ The former ``L[p]`` of the left adjoint ``p.l``.
+
+    >>> assert L[Ob("X")] == Ob("X").l
+    """
+
+    def __class_getitem__(cls, base) -> Adjoint:
+        return lift(base).l
+
+
+class R[T]:
+    """ The former ``R[p]`` of the right adjoint ``p.r``. """
+
+    def __class_getitem__(cls, base) -> Adjoint:
+        return lift(base).r
+
+
+class D[T]:
+    """ The former ``D[p]`` of the delay ``p.d``. """
+
+    def __class_getitem__(cls, base) -> Delay:
+        return lift(base).d
+
+
+class Over[A, B]:
+    """ The former ``Over[p, q]`` of the exponential ``p << q``. """
+
+    def __class_getitem__(cls, args) -> Exp:
+        left, right = args
+        return lift(left) << lift(right)
+
+
+class Under[A, B]:
+    """ The former ``Under[p, q]`` of the exponential ``p >> q``. """
+
+    def __class_getitem__(cls, args) -> Exp:
+        left, right = args
+        return lift(left) >> lift(right)
 
 
 def common(*patterns: Pattern) -> type | None:
@@ -719,7 +820,9 @@ def parse(function: Callable, owner: type | None = None,
     the conclusion when asked for, the variables the :class:`Ob` s the
     patterns lift, carrying the bound of the objects of the ``owner``
     class stating it. A pattern needing more structure than the
-    owner's objects have is refused.
+    owner's objects have is refused. An annotation whose one metadata
+    is a type parameter is dereferenced: to the pattern its bound
+    states, or to its own :class:`Ob` when the bound is a sort.
 
     >>> def then[A, B, C](
     ...         self: Annotated["object", Hom(Ob(A), Ob(B))],
@@ -730,6 +833,13 @@ def parse(function: Callable, owner: type | None = None,
     A: C0, B: C0, C: C0 | self: C1[A, B], other: C1[B, C] ⊢ C1[A, C]
     >>> print(parse(then, conclusion=False))
     A: C0, B: C0, C: C0 | self: C1[A, B], other: C1[B, C]
+    >>> def displaced[A: Ob["C0"], B: Ob["C0"], C: Ob["C0"],
+    ...               F: Hom["C1", A, B], G: Hom["C1", B, C],
+    ...               H: Hom["C1", A, C]](
+    ...         self: Annotated["object", F], other: Annotated["object", G]
+    ... ) -> Annotated["object", H]:
+    ...     ...
+    >>> assert str(parse(displaced)) == str(parse(then))
     """
     function = inspect.unwrap(function)
     if function.__code__.co_flags & __future__.annotations.compiler_flag:
@@ -765,6 +875,9 @@ def parse(function: Callable, owner: type | None = None,
             raise TypeError(
                 "An annotation carries exactly one pattern, got "
                 f"{annotation!r}.") from None
+        if isinstance(value, TypeVar):
+            bound = value.__bound__
+            value = bound if isinstance(bound, Pattern) else Ob(value)
         if not isinstance(value, (Pattern, Sort)):
             raise TypeError(f"Expected a pattern or a sort, got {value!r}.")
         if isinstance(value, Pattern) and level is not None:

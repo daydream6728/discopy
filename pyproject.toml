@@ -154,6 +154,15 @@ python-version = "3.14"
 [tool.ty.rules]
 invalid-method-override = "ignore"
 unresolved-attribute = "ignore"
+# The bounds of a declaration's type parameters carry the sorts of its
+# sequent, written with the pattern classes as type formers, e.g.
+# `F: Hom[C1, A, B]` — deliberately referencing the sibling parameters
+# and the heads of the declaring class, which the typing spec forbids
+# (invalid-type-variable-bound). The variables bounded this way appear
+# only inside Annotated metadata, never in a type expression, so the
+# coarse types stay fully checked; discopy.pattern.parse validates the
+# bounds at runtime instead.
+invalid-type-variable-bound = "ignore"
 
 [tool.pytest.ini_options]
 pythonpath = [

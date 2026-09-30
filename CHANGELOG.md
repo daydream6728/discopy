@@ -29,27 +29,42 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   terms: the equations of the axioms of `discopy.axioms`, canonical
   or generated, and diagrams built from rules toward a goal pattern.
   A category states its structure as the typed signatures of its
-  methods, which `parse` collects into sequents. Every annotation is
-  an `Annotated[T, pat]` — the coarse type a typechecker reads, and
-  beside it the one pattern, a plain value: `Ob(A)` lifts one of the
-  declaration's own PEP 695 type parameters, its sort read off the
-  bound (`Atom` an atomic object, `Count` a number of repetitions),
-  `Hom(p, q)`, `p @ q`, `p.l`, `p.r`, `p.d`, `p << q`, `p >> q`,
-  `p ** n` and `UNIT` build the compounds, and a side of `Hom` lifts
-  itself — a bare type parameter is one variable, a list or tuple the
-  tensor of its elements — so a rule reads `def then[A, B, C](self:
-  Annotated[C1, Hom(A, B)], other: Annotated[C1, Hom(B, C)]) ->
-  Annotated[C1, Hom(A, C)]` and a trace takes `Hom([M, A], [M, B])`.
-  The type level carries only types and the value level only
-  patterns, so no name plays both parts and no type-hack is left.
-  Every axiom quantifies its premises the same way — `unitality[A,
-  B](cls, f: Annotated[C1, Hom(A, B)]) -> Equation[Annotated[C1,
-  Hom(A, B)]]`, the `Equation` subscript carrying the hom type of its
-  terms — so there are no bare-sort premises and no `OB`, `ARROW` or
-  `TERM` constants: a premise over the terms of the category itself
-  states `Self`, one over a functor's source or target its `Sort`,
-  and each pattern class declares its level, the least structure the
-  objects it stands in must have — `Tensor` a `ColouredMonoid`,
+  methods, which `parse` collects into sequents: the PEP 695 type
+  parameter list is the quantifier prefix, each bound a sort written
+  with the pattern classes as type formers — `A: Ob[C0]` an object,
+  `X: Atom[C0]` an atomic one, `N: Count` a number of repetitions,
+  `F: Hom[C1, A, B]` the pattern of a premise or a conclusion, its
+  compound sides built by `Tensor[A, C]`, `Unit[C0]`, `L[A]`,
+  `R[A]`, `D[A]`, `Over[A, B]`, `Under[A, B]` and `Repeat[X, N]` —
+  and every annotation an `Annotated[T, V]`, the coarse type a
+  typechecker reads and one type parameter beside it, dereferenced to
+  the pattern its bound states or standing as its own variable when
+  the bound is a sort. So a rule reads `def then[A: Ob[C0], B:
+  Ob[C0], C: Ob[C0], F: Hom[C1, A, B], G: Hom[C1, B, C], H: Hom[C1,
+  A, C]](self: Annotated[C1, F], other: Annotated[C1, G]) ->
+  Annotated[C1, H]`, a trace takes `F: Hom[C1, Tensor[M, A],
+  Tensor[M, B]]`, and `discopy.abc` is written wholly in this
+  displaced form. The bounds are evaluated lazily, in a scope where
+  the sibling parameters and the heads of the declaring class are
+  visible, so a former receives the very type parameters it
+  quantifies over; the coarse types stay fully checked — a `C0` in a
+  `C1` slot is still an error — while the one typing-spec rule the
+  spelling breaks, a bound referencing type variables, is turned off
+  and documented in `pyproject.toml` (`invalid-type-variable-bound`),
+  `parse` validating the bounds at runtime instead. The patterns
+  remain plain values that an `Annotated` may carry inline: `Ob(A)`
+  lifts a type parameter, `Hom(p, q)`, `p @ q`, `p.l`, `p.r`, `p.d`,
+  `p << q`, `p >> q`, `p ** n` and `UNIT` build the compounds, and a
+  side of `Hom` lifts itself — a bare type parameter is one
+  variable, a list or tuple the tensor of its elements. Every axiom
+  quantifies its premises the same way — `unitality[A: Ob[C0], B:
+  Ob[C0], F: Hom[C1, A, B]](cls, f: Annotated[C1, F]) ->
+  Equation[Annotated[C1, F]]`, the `Equation` subscript carrying the
+  hom type of its terms — so there are no bare-sort premises and no
+  `OB`, `ARROW` or `TERM` constants: a premise over the terms of the
+  category itself states `Self`, one over a functor's source or
+  target its `Sort`, and each pattern class declares its level, the
+  least structure the objects it stands in must have — `Tensor` a `ColouredMonoid`,
   `Adjoint` a `Pregroup`, `Delay` the new `abc.DelayedMonoid` that
   `feedback.Ty` is, `Exp` a `ResiduatedMonoid`, `Repeat` the legs of
   a spider — refusing objects bounded below what its shape needs.
