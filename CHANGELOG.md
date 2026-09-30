@@ -9,6 +9,36 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Added
 
+- `abc.TwoCategory`, a category enriched in categories, and
+  `discopy.deloop`, its first instances. The dimensions are relative
+  — `C0` are the 1-cells and `C1` the 2-cells — so the vertical
+  structure is inherited from `Category` untouched and the 1-cells'
+  own category lives on the `ob` class; the only new structure is
+  horizontal: the `compose` rule, `interchange` — its functoriality
+  — `compose_identity`, strict `compose_associativity` and the
+  typing laws mirroring the tensor's. Their sequents take one new
+  pattern, `Compose[F, G]`, the composite of 1-cells: it reads `>>`
+  on the objects of a plain category, the exponential keeping the
+  operator on those of a residuated monoid — no class is both — and
+  it unifies like a `Tensor` when a value decomposes, every cut of a
+  sequence over one 0-cell being composable, staying a residual when
+  it does not, e.g. a functor composite. A monoidal category is the
+  one-object case: `Deloop` wraps the objects of a category as
+  `Cell` 1-cells composing by its tensor and its arrows as 2-cells,
+  delegates its strategy and its `Equation` to the category inside,
+  and one delooping per monoidal level, `deloop.Monoidal` to
+  `deloop.Feedback`, enrols in the matrix — interchange is checked
+  on every level by the same terms and quotients as
+  `bifunctoriality`, to which it deloops term for term, each
+  delooping mirroring its level's own mark: `modulo` the normal form
+  on the boundary-connected subspace, restated plain on the
+  deloopings of the symmetric levels whose `Equation` compares by
+  hypergraph. The 0-cells stay implicit, read off the 1-cells and
+  never quantified, so a `B0` head and the horizontal unit laws
+  wait, as does **Cat** itself: `Transformation` composes
+  horizontally and interchange fails for its non-natural
+  transformations, but checking that needs an extensional equation
+  of transformations and a strategy drawing them, its own round.
 - Goals as patterns with a shared substitution: the two sides of a
   `search` goal are a type, a pattern, a type parameter standing for
   its variable, or `None` for a fresh one, so `search(Diagram,

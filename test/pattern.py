@@ -10,8 +10,8 @@ from discopy.abc import (
 from discopy.monoidal import Ty
 from discopy import pattern
 from discopy.pattern import (
-    UNIT, Adjoint, Atom, Count, Delay, Exp, Hom, L, Ob, Over, R, Repeat,
-    Sort, Tensor, Under, Unit, parse, sort_of)
+    UNIT, Adjoint, Atom, Compose, Count, Delay, Exp, Hom, L, Ob, Over, R,
+    Repeat, Sort, Tensor, Under, Unit, parse, sort_of)
 
 
 x, y, z = map(Ty, "xyz")
@@ -63,6 +63,30 @@ def test_formers():
     assert L[X] == X.l and R[X] == X.r and pattern.D[D] == D.d
     assert Over[E, E] == (E << E) and Under[E, E] == (E >> E)
     assert Repeat[M, N] == M ** N
+    assert Compose[A, B] == Compose(A, B)
+
+
+def test_compose():
+    """ The composite of 1-cells: ``>>`` on the objects of a plain
+    category, split like a tensor when the value decomposes and kept
+    as a residual when it does not. """
+    F, G = (Ob(name, Sort(bound=Category)) for name in "FG")
+    assert F >> G == Compose(F, G) and Compose[F, G] == F >> G
+    assert Compose(F >> G, F) == Compose(F, G, F)
+    assert str(F >> G) == "F >> G" and str(Compose[Tensor[A, B], F])\
+        == "(A @ B) >> F"
+    assert Compose.level() is Category
+    assert (F >> G).bound is Category
+    assert E >> E == Exp(">>", E, E)  # A residuated monoid keeps its Exp.
+    with raises(TypeError):
+        Compose(F)
+    x, y = Ty('x'), Ty('y')
+    splits = [(subst['F'], subst['G'])
+              for subst, _ in (F >> G).match(x @ y)]
+    assert (x, y) in splits and len(splits) == 3
+    opaque = object()  # A composite that does not decompose.
+    ((subst, residuals), ) = (F >> G).match(opaque)
+    assert not subst and residuals == ((F >> G, opaque), )
 
 
 def test_alias():

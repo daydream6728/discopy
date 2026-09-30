@@ -11,8 +11,8 @@ the conclusion, each a subscript of the ``Ob`` and ``Hom`` aliases of
 :mod:`discopy.abc`: ``f: Hom[C1, A, B]`` a morphism between two sides
 and ``x: Ob[C0, p]`` a pattern beside its coarse type, the compound
 sides built by the formers ``Tensor[A, B]``, ``Unit[C0]``, ``L[A]``,
-``R[A]``, ``D[A]``, ``Over[A, B]``, ``Under[A, B]`` and
-``Repeat[X, N]``.
+``R[A]``, ``D[A]``, ``Over[A, B]``, ``Under[A, B]``, ``Repeat[X, N]``
+and ``Compose[F, G]`` for the 1-cells of a two-category.
 
 .. code-block:: python
 
@@ -61,6 +61,7 @@ Summary
     Ob
     Unit
     Tensor
+    Compose
     Adjoint
     Delay
     Exp
@@ -321,7 +322,15 @@ class Pattern(ABC):
     def __lshift__(self, other: Pattern) -> Exp:
         return Exp("<<", self, other)
 
-    def __rshift__(self, other: Pattern) -> Exp:
+    def __rshift__(self, other: Pattern) -> Pattern:
+        """ The exponential on the objects of a monoid, the composite
+        on those of a plain category — no class is both — and the
+        exponential on objects whose bound :func:`parse` has not read
+        yet, checked with its owner like every level. """
+        bound = common(self, other)
+        if bound is not None and issubclass(bound, abc.Category)\
+                and not issubclass(bound, abc.ColouredMonoid):
+            return Compose(self, other)
         return Exp(">>", self, other)
 
     def __pow__(self, count: Ob) -> Repeat:
@@ -467,6 +476,62 @@ class Tensor[*Ts](Pattern):
 
     def __str__(self):
         return " @ ".join(map(str, self.factors))
+
+
+@dataclass(frozen=True, init=False)
+class Compose[*Ts](Pattern):
+    """
+    The composite of two or more 1-cells, flattened: ``p >> q`` on
+    patterns whose objects form a category without being a monoid, and
+    the former ``Compose[p, q]`` in a subscript — the sides of the
+    2-cells of a :class:`discopy.abc.TwoCategory`, objects that
+    themselves compose. A value that decomposes, e.g. the objects of a
+    delooped monoidal category, is split at every position like a
+    :class:`Tensor` — every cut of a sequence over one 0-cell is
+    composable — and one that does not, e.g. a functor composite, is
+    kept whole as a residual.
+    """
+
+    cells: tuple[Pattern, ...]
+
+    def __class_getitem__(cls, cells) -> Compose:
+        cells = cells if isinstance(cells, tuple) else (cells, )
+        return cls(*map(lift, cells))
+
+    def __init__(self, *cells: Pattern):
+        if len(cells) < 2:
+            raise TypeError(
+                f"A composite takes two or more cells: {cells!r}.")
+        object.__setattr__(self, "cells", tuple(
+            part for cell in cells
+            for part in (
+                cell.cells if isinstance(cell, Compose) else (cell, ))))
+        super().__post_init__()
+
+    @property
+    def variables(self):
+        return tuple(name for cell in self.cells for name in cell.variables)
+
+    @property
+    def bound(self):
+        return common(*self.cells)
+
+    def instantiate(self, subst, unit):
+        return reduce(operator.rshift, (
+            cell.instantiate(subst, unit) for cell in self.cells))
+
+    def unify(self, value, subst, residuals):
+        try:
+            len(value)
+        except TypeError:
+            yield from super().unify(value, subst, residuals)
+            return
+        yield from Tensor.split(self.cells, value, subst, residuals)
+
+    def __str__(self):
+        return " >> ".join(
+            f"({cell})" if isinstance(cell, (Tensor, Repeat))
+            else str(cell) for cell in self.cells)
 
 
 @dataclass(frozen=True)
@@ -739,7 +804,7 @@ class Under[A, B]:
 
     def __class_getitem__(cls, args) -> Exp:
         left, right = args
-        return lift(left) >> lift(right)
+        return Exp(">>", lift(left), lift(right))
 
 
 def common(*patterns: Pattern) -> type | None:

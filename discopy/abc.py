@@ -35,6 +35,7 @@ Summary
 
     Category
     DaggerCategory
+    TwoCategory
     ColouredMonoid
     Monoid
     Nat
@@ -69,8 +70,9 @@ from typing import (
     Annotated, ClassVar, Literal, Self, TYPE_CHECKING, overload)
 
 from discopy.axioms import (  # noqa: F401
-    Atom, Axiom, axiom, Count, D, declarations, Equation, L, Over, R,
-    Repeat, Rule, rule, Serialisable, Tensor, Testable, Under, Unit)
+    Atom, Axiom, axiom, Compose, Count, D, declarations, Equation, L,
+    Over, R, Repeat, Rule, rule, Serialisable, Tensor, Testable, Under,
+    Unit)
 from discopy.utils import (  # noqa: F401
     NamedGeneric, classproperty, factory_name)
 
@@ -271,6 +273,77 @@ class DaggerCategory[C0, C1: DaggerCategory](Category[C0, C1]):
             g: Hom[C1, B, C]) -> Equation[Hom[C1, C, A]]:
         """ The dagger reverses composition. """
         return cls.Equation(f.then(g).dagger(), g.dagger().then(f.dagger()))
+
+
+class TwoCategory[C0: Category, C1: TwoCategory](Category[C0, C1]):
+    """
+    A two-category is a category enriched in categories: ``C0`` are
+    the 1-cells and ``C1`` the 2-cells between parallel ones, composed
+    vertically by ``then`` along a shared 1-cell and horizontally by
+    :meth:`compose` along a shared 0-cell. The dimensions are
+    relative, so the vertical structure is inherited from
+    :class:`Category` untouched and the 1-cells form a category of
+    their own, on the ``ob`` class; only the horizontal structure is
+    stated here, and its functoriality is the :meth:`interchange` law.
+
+    A monoidal category is the one-object case: delooping sends its
+    objects to 1-cells, its arrows to 2-cells and its tensor to the
+    horizontal composition, see :class:`discopy.deloop.Deloop`, and
+    interchange to :meth:`MonoidalCategory.bifunctoriality`.
+    """
+    @rule
+    @abstractmethod
+    def compose[F: Ob[C0], G: Ob[C0], H: Ob[C0], K: Ob[C0]](
+            self: Hom[C1, F, G], other: Hom[C1, H, K]
+    ) -> Hom[C1, Compose[F, H], Compose[G, K]]:
+        """
+        The horizontal composition along a shared 0-cell, to be
+        instantiated.
+
+        Parameters:
+            other : The other 2-cell to compose horizontally.
+        """
+
+    @axiom
+    def interchange[F1: Ob[C0], F2: Ob[C0], F3: Ob[C0],
+                    G1: Ob[C0], G2: Ob[C0], G3: Ob[C0]](
+            cls, a: Hom[C1, F1, F2], b: Hom[C1, F2, F3],
+            c: Hom[C1, G1, G2], d: Hom[C1, G2, G3]
+    ) -> Equation[Hom[C1, Compose[F1, G1], Compose[F3, G3]]]:
+        """ Composing vertically then horizontally or the other way. """
+        return cls.Equation(
+            a.then(b).compose(c.then(d)),
+            a.compose(c).then(b.compose(d)))
+
+    @axiom
+    def compose_identity[F: Ob[C0], G: Ob[C0]](
+            cls, f: Ob[C0, F], g: Ob[C0, G]
+    ) -> Equation[Hom[C1, Compose[F, G], Compose[F, G]]]:
+        """ Horizontal composition preserves identity 2-cells. """
+        return cls.Equation(cls.id(f).compose(cls.id(g)), cls.id(f >> g))
+
+    @axiom
+    def compose_associativity[F: Ob[C0], G: Ob[C0], H: Ob[C0],
+                              K: Ob[C0], U: Ob[C0], V: Ob[C0]](
+            cls, a: Hom[C1, F, G], b: Hom[C1, H, K], c: Hom[C1, U, V]
+    ) -> Equation[Hom[C1, Compose[F, H, U], Compose[G, K, V]]]:
+        """ Strict associativity of the horizontal composition. """
+        return cls.Equation(
+            a.compose(b).compose(c), a.compose(b.compose(c)))
+
+    @axiom
+    def compose_dom_typing[F: Ob[C0], G: Ob[C0], H: Ob[C0], K: Ob[C0]](
+            cls, a: Hom[C1, F, G], b: Hom[C1, H, K]
+    ) -> Equation[Ob[C0, Compose[F, H]]]:
+        """ The domain of a horizontal composition. """
+        return cls.Equation(a.compose(b).dom, a.dom >> b.dom)
+
+    @axiom
+    def compose_cod_typing[F: Ob[C0], G: Ob[C0], H: Ob[C0], K: Ob[C0]](
+            cls, a: Hom[C1, F, G], b: Hom[C1, H, K]
+    ) -> Equation[Ob[C0, Compose[G, K]]]:
+        """ The codomain of a horizontal composition. """
+        return cls.Equation(a.compose(b).cod, a.cod >> b.cod)
 
 
 class ColouredMonoid[C0, C1: ColouredMonoid](Category[C0, C1]):

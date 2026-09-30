@@ -25,6 +25,7 @@ from discopy import (
     hypergraph,
     cmap,
     interaction,
+    deloop,
     feedback,
     stream,
     para,
