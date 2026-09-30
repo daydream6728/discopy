@@ -127,6 +127,38 @@ def test_weaken_params():
     assert law.modulo(lambda term: term).params == law.params
 
 
+def test_equation_types():
+    """ The Equation subscript of an axiom types its canonical equation. """
+    import inspect
+    from discopy import (
+        balanced, closed, compact, pivotal, ribbon, symmetric, traced)
+    from discopy.pattern import cell, expand
+    (parameter, ) = Equation.__type_params__
+    levels = (Diagram, braided.Diagram, traced.Diagram, balanced.Diagram,
+              symmetric.Diagram, closed.Diagram, rigid.Diagram,
+              pivotal.Diagram, ribbon.Diagram, compact.Diagram,
+              feedback.Diagram)
+    checked = set()
+    for category in levels:
+        for law in category.axioms.values():
+            returns = inspect.signature(law.function).return_annotation
+            pattern = expand(getattr(returns, parameter.__name__, None))
+            if pattern is None\
+                    or (equation := law.canonical()) is NotImplemented:
+                continue
+            subst = {
+                name: 2 if sort.head == "Count"
+                else cell(sort.resolve(law.scope), name)
+                for name, sort in law.sequent.variables.items()}
+            value = pattern.instantiate(subst, law.unit)
+            boundary = (lambda term: (term.dom, term.cod))\
+                if isinstance(pattern, Hom) else (lambda term: term)
+            assert all(
+                boundary(term) == value for term in equation.terms), law
+            checked.add(law.name)
+    assert len(checked) > 30
+
+
 def test_canonical():
     equation = Diagram.bifunctoriality.canonical()
     assert equation and str(equation.terms[0])\

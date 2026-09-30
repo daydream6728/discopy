@@ -57,10 +57,18 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `p << q`, `p >> q`, `p ** n` and `UNIT` build the compounds, and a
   side of `Hom` lifts itself — a bare type parameter is one
   variable, a list or tuple the tensor of its elements. Every axiom
-  quantifies its premises the same way — `unitality[A: Ob[C0], B:
-  Ob[C0]](cls, f: Hom[C1, A, B]) -> Equation[Hom[C1, A, B]]`, the
-  `Equation` subscript carrying the hom type of its terms — so there
-  are no bare-sort premises and no
+  quantifies its premises the same way and every return is fully
+  typed — `unitality[A: Ob[C0], B: Ob[C0]](cls, f: Hom[C1, A, B]) ->
+  Equation[Hom[C1, A, B]]`, an object equation `Equation[Ob[C0,
+  Tensor[A, C]]]` — no `Equation[C1]` or bare `C1` subscript remains,
+  and `test/axioms.py` checks every `Equation` subscript against the
+  canonical equation it types; a helper taking `left` is typed by the
+  union of its two rules' sequents, e.g. `trace` reads `Hom[C1,
+  Tensor[M, A], Tensor[M, B]] | Hom[C1, Tensor[A, M], Tensor[B, M]]
+  -> Hom[C1, A, B]`, the object operations `over`, `under`, `l`, `r`
+  and `d` read their formers at head `C1`, and what an n-ary monoid
+  operation cannot pattern-type lands in `Self`. So there are no
+  bare-sort premises and no
   `OB`, `ARROW` or `TERM` constants: a premise over the terms of the
   category itself states `Self`, one over a functor's source or
   target its `Sort`, and each pattern class declares its level, the
