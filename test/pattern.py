@@ -9,7 +9,7 @@ from discopy.abc import (
     ResiduatedMonoid)
 from discopy.monoidal import Ty
 from discopy.pattern import (
-    OB, UNIT, Adjoint, Atom, Count, Delay, Exp, Hom, Ob, Repeat, Sort,
+    UNIT, Adjoint, Atom, Count, Delay, Exp, Hom, Ob, Repeat, Sort,
     Tensor, Unit, parse, sort_of)
 
 
@@ -67,7 +67,7 @@ def test_parse():
     assert str(sequent.conclusion) == "C1[A, C]"
     assert parse(then, conclusion=False).conclusion is None
 
-    def law(cls, x: Annotated[Ty, OB], n: int = 1, *args, **kwargs):
+    def law[X](cls, x: Annotated[Ty, Ob(X)], n: int = 1, *args, **kwargs):
         ...
     assert list(parse(law, conclusion=False).premises) == ["x"]
     assert str(parse(lambda cls: None, conclusion=False)) == ""
