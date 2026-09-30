@@ -336,14 +336,14 @@ class TwoCategory[C0: Category, C1: TwoCategory](Category[C0, C1]):
             cls, a: Hom[C1, F, G], b: Hom[C1, H, K]
     ) -> Equation[Ob[C0, Compose[F, H]]]:
         """ The domain of a horizontal composition. """
-        return cls.Equation(a.compose(b).dom, a.dom >> b.dom)
+        return cls.ob.Equation(a.compose(b).dom, a.dom >> b.dom)
 
     @axiom
     def compose_cod_typing[F: Ob[C0], G: Ob[C0], H: Ob[C0], K: Ob[C0]](
             cls, a: Hom[C1, F, G], b: Hom[C1, H, K]
     ) -> Equation[Ob[C0, Compose[G, K]]]:
         """ The codomain of a horizontal composition. """
-        return cls.Equation(a.compose(b).cod, a.cod >> b.cod)
+        return cls.ob.Equation(a.compose(b).cod, a.cod >> b.cod)
 
 
 class ColouredMonoid[C0, C1: ColouredMonoid](Category[C0, C1]):

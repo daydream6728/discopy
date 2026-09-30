@@ -80,6 +80,15 @@ class Cell[category](NamedGeneric):
                 f"No search strategy implemented for {cls.__name__}")
         return cls.category.ob.strategy(**params).map(cls)
 
+    @classproperty
+    def Equation(cls):  # noqa: N802
+        """ The equations of the category's objects, on those inside. """
+        equation = cls.category.ob.Equation
+
+        def build(*terms, **params):
+            return equation(*(term.inside for term in terms), **params)
+        return build
+
 
 @dataclass(frozen=True)
 class Deloop[category](NamedGeneric, TwoCategory):
