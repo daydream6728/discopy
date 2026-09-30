@@ -187,9 +187,10 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   a curry bubble, which the hypergraph of a bubble compares
   syntactically, so `closed.Diagram` declares `map_retract` failing —
   a violation the old suite's draws never met.
-- The codebase typechecks: `uv run --with ty ty check` passes in the
+- The codebase typechecks: `uv run ty check` passes in the
   full development environment (`uv sync --dev --group all`, the
-  reference now that the optional imports carry no ignore comments),
+  reference now that the optional imports carry no ignore comments;
+  `ty` is a dev dependency, its version locked in `uv.lock`),
   configured by the `[tool.ty]` sections of `pyproject.toml`. An
   annotation pass declares the factory class attributes assigned
   after each class definition and the box drawing attributes that

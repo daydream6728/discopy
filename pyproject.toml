@@ -50,6 +50,7 @@ dev = [
     "polars",
     "pytest-xdist",
     "ruff",
+    "ty",
 ]
 docs = ["discopy[docs]"]
 quantum = ["discopy[quantum]"]
@@ -87,6 +88,7 @@ test = [
     "pytest",
     "pytest-xdist",
     "ruff",
+    "ty",
 ]
 docs  = [
     "IPython",
