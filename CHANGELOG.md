@@ -34,15 +34,42 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   generates the terms its laws quantify over with the generators of
   its host, and a vocabulary host keeps its vocabulary.
   Unparameterised, the strategy raises `NotImplementedError`, which
-  is how a type stays out of the matrix. The same strategy on `CMap`
-  found its first counterexamples within a minute and is withheld
-  until they are addressed: `CMap` equality distinguishes the order
-  its `boxes` are listed in, so every law that reorders disconnected
-  boxes — `braid_naturality` on two scalars is the smallest — fails
-  under strict equality and holds only up to a map isomorphism that
-  `CMap.Equation` does not yet compare by; and the compact laws of a
-  map over a host below `rigid` cannot draw the adjoint types they
-  quantify over. An issue should be filed upstream for both.
+  is how a type stays out of the matrix. `CMap` enrols the same way
+  over its rigid hosts — `pivotal`, `compact` and `frobenius` — and
+  its strategy raises `NotImplementedError` below `rigid`: a map is
+  compact whatever hosts it, so its laws draw the adjoint types of
+  a `Pregroup` that a lower host does not have — `snake_equations`
+  needs `.r` on `monoidal.Ty`, `currying_left` reaches a `Curry` the
+  host lacks — and the gate states once what inapplicability marks
+  on a dozen compact laws of eight aliases would restate, at the
+  price of the categorical cells of a map over those hosts, which
+  run on the same map code over the rigid ones; a map states no
+  serialisation law to lose, `CMap` not being `Serialisable` —
+  its `repr` reads back but it has no tree — which is a third gap
+  to file upstream. The
+  laws whose sides list the same boxes in a different order —
+  `bifunctoriality` rows against columns, `dagger_monoidality`,
+  `braid_naturality` and both trace dinaturalities sliding a box
+  past another — are declared `.failing`, with their counterexamples
+  recorded: a map is compared with its `boxes` in listed order, and
+  the sides differ on two boundary-connected one-box premises just
+  as on the two scalars that first witnessed it, so weakening these
+  laws would lie: they hold only up to a map isomorphism that
+  `CMap.Equation` does not yet compare by. The order of `loops` is
+  the same bug one floor down, and there the weakening is honest:
+  both trace naturalities and `dagger_contravariance` concatenate
+  the loops of their premises in a different order — tracing a wire
+  beside a scalar loop lists `(b, b, a)` against `(b, a, b)` — while
+  their boxes stay in step, so they are weakened to the
+  boundary-connected subspace, where a map has no loop at all, cut
+  out by the new `CMap.is_boundary_connected`, the counterpart of
+  the predicate `Axiom.weaken` reads on diagrams and hypergraphs.
+  Every other law holds strictly, the snakes and transposes
+  included, since cups and caps are wiring and gluing is canonical.
+  `rotate_contravariance` is inapplicable: a map does not implement
+  rotation. The missing quotient and the missing rotation should be
+  filed upstream at discopy/discopy, issues being disabled on this
+  fork.
 
 - The codebase typechecks: `uv run ty check` passes in the full
   development environment, `ty` a dev dependency locked in

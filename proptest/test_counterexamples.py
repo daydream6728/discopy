@@ -7,7 +7,7 @@ from typing import NamedTuple
 
 import pytest
 
-from discopy import biclosed, braided, cat, pivotal, ribbon
+from discopy import biclosed, braided, cat, compact, pivotal, ribbon
 from discopy.axioms import GENERATORS, Axiom, AxiomFailure, Relabelling
 from discopy.utils import AxiomError, factory_name
 
@@ -67,6 +67,41 @@ COUNTEREXAMPLES = (
         axiom=ribbon.Diagram.twist_as_trace,
         args=(pivotal.Ty("a"), ),
         reason="A free twist is a box, not the trace of a braid."),
+    Counterexample(
+        axiom=compact.CMap.bifunctoriality,
+        args=(compact.Box("f", compact.Ty("a"), compact.Ty("a")).to_map(),
+              compact.Box("g", compact.Ty("a"), compact.Ty("a")).to_map(),
+              compact.Box("h", compact.Ty("a"), compact.Ty("a")).to_map(),
+              compact.Box("k", compact.Ty("a"), compact.Ty("a")).to_map()),
+        reason="Tensoring rows lists the boxes (f, g, h, k) where "
+               "composing columns lists (f, h, g, k), and a map is "
+               "compared with its boxes in listed order."),
+    Counterexample(
+        axiom=compact.CMap.dagger_monoidality,
+        args=(compact.Box("f", compact.Ty("a"), compact.Ty("a")).to_map(),
+              compact.Box("g", compact.Ty("a"), compact.Ty("a")).to_map()),
+        reason="The dagger reverses the box list where the tensor of "
+               "daggers preserves it."),
+    Counterexample(
+        axiom=compact.CMap.braid_naturality,
+        args=(compact.Box("f", compact.Ty("a"), compact.Ty("a")).to_map(),
+              compact.Box("g", compact.Ty("a"), compact.Ty("a")).to_map()),
+        reason="Sliding two boxes past the braid exchanges their places "
+               "in the box list, which a map distinguishes."),
+    Counterexample(
+        axiom=compact.CMap.trace_dinaturality_left,
+        args=(compact.Box(
+                  "f", compact.Ty("a", "a"), compact.Ty("a", "a")).to_map(),
+              compact.Box("g", compact.Ty("a"), compact.Ty("a")).to_map()),
+        reason="Sliding a box around the loop moves it from one end of "
+               "the box list to the other, which a map distinguishes."),
+    Counterexample(
+        axiom=compact.CMap.trace_dinaturality_right,
+        args=(compact.Box(
+                  "f", compact.Ty("a", "a"), compact.Ty("a", "a")).to_map(),
+              compact.Box("g", compact.Ty("a"), compact.Ty("a")).to_map()),
+        reason="Sliding a box around the loop moves it from one end of "
+               "the box list to the other, which a map distinguishes."),
 )
 
 

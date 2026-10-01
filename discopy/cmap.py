@@ -48,8 +48,10 @@ from typing import TYPE_CHECKING, Annotated, Any, ClassVar, Literal, Self
 
 from discopy import hypergraph, messages, pattern
 from discopy.abc import (
+    BraidedCategory,
     CompactCategory,
     DaggerCategory,
+    MonoidalCategory,
     NamedGeneric,
     Pregroup,
     RigidCategory,
@@ -728,6 +730,49 @@ class CMap[category: Diagram](CompactCategory, DaggerCategory,
         return not self.loops and self.is_monogamous\
             and self.is_topologically_ordered
 
+    @property
+    def is_boundary_connected(self) -> bool:
+        """
+        Whether the boundary reaches every box and no closed loop is left,
+        i.e. the graph with boxes as vertices and :attr:`edges` as edges
+        is connected once a virtual boundary vertex joins the input and
+        output ports. The boundary vertex is always added, even when the
+        boundary is empty, so that a closed map with a non-trivial
+        interior — a scalar box, a fully traced endomorphism or a scalar
+        loop — is not boundary-connected.
+
+        >>> from discopy.compact import Ty, Box
+        >>> x = Ty("x")
+        >>> f, s = Box("f", x, x).to_map(), Box("s", Ty(), Ty()).to_map()
+        >>> assert f.is_boundary_connected
+        >>> assert not (f @ s).is_boundary_connected
+        >>> assert not f.trace().is_boundary_connected
+        >>> assert type(f).id(Ty()).is_boundary_connected
+        """
+        if self.loops:
+            return False
+        n_boxes = len(self.boxes)
+        parent = list(range(n_boxes + 1))
+
+        def find(i):
+            while parent[i] != i:
+                parent[i] = parent[parent[i]]
+                i = parent[i]
+            return i
+
+        vertex = {
+            i: box
+            for box, indices in enumerate(self._box_port_indices)
+            for i in indices}
+        for i in range(len(self.dom)):
+            vertex[i] = n_boxes
+        for i in range(self.n_ports - len(self.cod), self.n_ports):
+            vertex[i] = n_boxes
+        for i, j in enumerate(self.edges):
+            if i < j:
+                parent[find(vertex[i])] = find(vertex[j])
+        return all(find(box) == find(n_boxes) for box in range(n_boxes))
+
     def __repr__(self):
         factory = f"cmap.CMap[{factory_name(self.category)}]"
         return factory\
@@ -744,6 +789,43 @@ class CMap[category: Diagram](CompactCategory, DaggerCategory,
     def __hash__(self):
         return hash((
             self.dom, self.cod, self.boxes, self.edges, self.loops))
+
+    dagger_contravariance = DaggerCategory.dagger_contravariance.weaken(
+        boundary_connected=True)
+
+    trace_naturality_left = TracedCategory.trace_naturality_left.weaken(
+        boundary_connected=True)
+
+    trace_naturality_right = TracedCategory.trace_naturality_right.weaken(
+        boundary_connected=True)
+
+    bifunctoriality = MonoidalCategory.bifunctoriality.failing(
+        "The two sides list the same boxes as rows against columns, and "
+        "a map distinguishes the order its boxes are listed in, even "
+        "boundary-connected.")
+
+    dagger_monoidality = MonoidalCategory.dagger_monoidality.failing(
+        "The dagger reverses the box list where the tensor of daggers "
+        "preserves it, and a map distinguishes the order its boxes are "
+        "listed in, even boundary-connected.")
+
+    braid_naturality = BraidedCategory.braid_naturality.failing(
+        "Sliding two boxes past the braid exchanges their places in the "
+        "box list, which a map distinguishes, even boundary-connected.")
+
+    trace_dinaturality_left = TracedCategory.trace_dinaturality_left.failing(
+        "Sliding a box around the loop moves it from one end of the box "
+        "list to the other, which a map distinguishes, even "
+        "boundary-connected.")
+
+    trace_dinaturality_right = TracedCategory.trace_dinaturality_right\
+        .failing(
+            "Sliding a box around the loop moves it from one end of the "
+            "box list to the other, which a map distinguishes, even "
+            "boundary-connected.")
+
+    rotate_contravariance = RigidCategory.rotate_contravariance.inapplicable(
+        "A map does not implement rotation.")
 
     @classmethod
     @rule
@@ -851,6 +933,21 @@ class CMap[category: Diagram](CompactCategory, DaggerCategory,
                 source, target = ends[wire]
                 edges[source], edges[target] = target, source
         return cls(dom, cod, boxes, edges, loops=loops)
+
+    @classmethod
+    def strategy(cls, **params):
+        """
+        Generate maps as the image of :meth:`from_diagram` on the search
+        of the host category, reusing its generators and rules. A map is
+        compact whatever hosts it, so its laws draw the adjoint types of
+        :class:`discopy.abc.Pregroup`: a host below
+        :class:`discopy.abc.RigidCategory` cannot, and stays out of the
+        matrix.
+        """
+        if cls.category is None\
+                or not issubclass(cls.category, RigidCategory):
+            raise NotImplementedError
+        return cls.category.strategy(**params).map(cls.from_diagram)
 
     @classmethod
     def from_diagram(cls, old: Diagram) -> CMap:
