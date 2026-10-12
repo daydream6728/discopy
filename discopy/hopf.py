@@ -120,14 +120,13 @@ tensor network that gets contracted):
     :align: center
 """
 
+from __future__ import annotations
+
 from functools import cached_property
 
 import numpy as np
 
 from discopy import monoidal, ribbon, tensor, frobenius
-from typing import Annotated
-
-from discopy.axioms import Atom, Hom, no_strategy, Var, rule, UNIT
 from discopy.tensor import Dim, Box, Id
 from discopy.abc import RibbonCategory, NamedGeneric
 from discopy.utils import (
@@ -636,7 +635,7 @@ class Double(Algebra):
         return factory_name(type(self)) + f"({self.base!r})"
 
 
-class Representation[algebra](NamedGeneric, frobenius.Dim):
+class Representation(NamedGeneric["algebra"], frobenius.Dim):
     """
     A finite-dimensional (left) module over the class parameter ``algebra``:
     given a :class:`Algebra` ``H``, the class ``Representation[H]`` is
@@ -679,8 +678,6 @@ class Representation[algebra](NamedGeneric, frobenius.Dim):
     .. graphviz:: /_static/hopf/module.dot
         :align: center
     """
-    strategy = no_strategy
-
     def __init__(self, dim=None, action=None):
         if self.algebra is None:
             raise ValueError(
@@ -849,7 +846,7 @@ class Representation[algebra](NamedGeneric, frobenius.Dim):
         return cls(Dim(d), action)
 
 
-class Intertwiner[algebra](tensor.Diagram, RibbonCategory):
+class Intertwiner(NamedGeneric["algebra"], tensor.Diagram, RibbonCategory):
     """
     The ribbon category :math:`\\mathrm{Rep}(H)` of representations of the
     class parameter ``algebra``: given a :class:`Algebra` ``H``, the
@@ -907,11 +904,7 @@ class Intertwiner[algebra](tensor.Diagram, RibbonCategory):
         super().__init__(inside, dom, cod, _scan=_scan)
 
     @classmethod
-    @rule
-    def braid[X: Atom, Y: Atom](
-            cls, left: Annotated[Representation, Var(X)],
-            right: Annotated[Representation, Var(Y)], is_dagger=False
-    ) -> Annotated[Intertwiner, Hom([X, Y], [Y, X])]:
+    def braid(cls, left, right, is_dagger=False):
         """
         The braiding :math:`V \\otimes W \\to W \\otimes V` (its inverse
         :math:`R^{-1} = (S \\otimes 1) R` when ``is_dagger``): the R-matrix
@@ -954,11 +947,7 @@ class Intertwiner[algebra](tensor.Diagram, RibbonCategory):
         return cls(body.inside, body.dom, body.cod)
 
     @classmethod
-    @rule
-    def cups[X: Atom](
-            cls, left: Annotated[Representation, Var(X)],
-            right: Annotated[Representation, Var(X).r]
-    ) -> Annotated[Intertwiner, Hom(Var(X) @ Var(X).r, UNIT)]:
+    def cups(cls, left, right):
         """
         The evaluation of a module against its dual. When ``right`` is the
         right dual of ``left`` — read off the ``action`` of the two
@@ -981,11 +970,7 @@ class Intertwiner[algebra](tensor.Diagram, RibbonCategory):
         return cls(body.inside, body.dom, body.cod)
 
     @classmethod
-    @rule
-    def caps[X: Atom](
-            cls, left: Annotated[Representation, Var(X)],
-            right: Annotated[Representation, Var(X).l]
-    ) -> Annotated[Intertwiner, Hom(UNIT, Var(X) @ Var(X).l)]:
+    def caps(cls, left, right):
         """
         The coevaluation of a module against its dual. When ``right`` is
         the right dual of ``left`` this is the plain copairing; a dual

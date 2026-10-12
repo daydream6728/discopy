@@ -397,34 +397,24 @@ z
     </g>
    </g>
    <g id="dark-fill-27">
-    <!-- $\neq$ -->
-    <g transform="translate(172.62 111.31125) scale(0.12 -0.12)">
+    <!-- = -->
+    <g transform="translate(174.972187 111.31125) scale(0.12 -0.12)">
      <defs>
-      <path id="DejaVuSans-2260" d="M 678 2906 
-L 3091 2906 
-L 3891 3891 
-L 4281 3572 
-L 3738 2906 
+      <path id="DejaVuSans-3d" d="M 678 2906 
 L 4684 2906 
 L 4684 2381 
-L 3309 2381 
-L 2700 1631 
-L 4684 1631 
-L 4684 1100 
-L 2266 1100 
-L 1459 122 
-L 1069 441 
-L 1613 1100 
-L 678 1100 
-L 678 1631 
-L 2047 1631 
-L 2656 2381 
 L 678 2381 
 L 678 2906 
 z
+M 678 1631 
+L 4684 1631 
+L 4684 1100 
+L 678 1100 
+L 678 1631 
+z
 " transform="scale(0.015625)"/>
      </defs>
-     <use xlink:href="#DejaVuSans-2260" transform="translate(19.482422 0.203125)"/>
+     <use xlink:href="#DejaVuSans-3d"/>
     </g>
    </g>
   </g>

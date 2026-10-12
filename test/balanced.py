@@ -1,6 +1,14 @@
 from discopy.balanced import *
 
 
+def test_repr():
+    x = Ty('x')
+    assert repr(Twist(Ty('x')))\
+        == "balanced.Twist(monoidal.Ty(cat.Ob('x')))"
+    assert repr(Twist(Ty('x')).dagger())\
+        == "balanced.Twist(monoidal.Ty(cat.Ob('x'))).dagger()"
+
+
 def test_double_rail():
     x = Ty('x')
     # Doubling puts a shared Ribbon region between the two rails of a wire,
@@ -79,18 +87,6 @@ def test_to_braided_default_and_zero_width():
     assert twist.to_braided(width=0) == twist
 
 
-def test_repr():
-    x, y = Ty('x'), Ty('y')
-    assert repr(Twist(x))\
-        == "balanced.Twist(monoidal.Ty(cat.Ob('x')))"
-    assert repr(Twist(x).dagger())\
-        == "balanced.Twist(monoidal.Ty(cat.Ob('x'))).dagger()"
-    assert repr(DualRailBraid(x, y).dagger()) == (
-        "balanced.DualRailBraid(monoidal.Ty(cat.Ob('y')), "
-        "monoidal.Ty(cat.Ob('x')), is_dagger=True)")
-    assert repr(DualRailTwist(x).dagger()) == (
-        "balanced.DualRailTwist(monoidal.Ty(cat.Ob('x')), is_dagger=True)")
-    assert DualRailTwist(x).dagger().dagger() == DualRailTwist(x)
-    ribbon = Ribbon("red", label="r", width=.5)
-    assert repr(ribbon) == "balanced.Ribbon('red', label='r', width=0.5)"
-    assert Ribbon.from_tree(ribbon.to_tree()) == ribbon
+def test_functor_twist_dagger():
+    twist = Twist(Ty('x')).dagger()
+    assert Functor(ob_map=lambda x: x, ar_map=lambda f: f)(twist) == twist

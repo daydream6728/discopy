@@ -90,12 +90,11 @@ def test_Kauffman():
 
 
 def test_rotate():
-    x, y = Ty('x'), Ty('y')
-    assert Twist(x).r == Twist(x) == Twist(x).rotate()
-    assert Braid(x, y).rotate() == Braid(x.r, y.r)
-    assert DualRailBraid(x, y).rotate() == DualRailBraid(y, x)
-    assert DualRailTwist(x).rotate() == DualRailTwist(x)
-    assert DualRailCup(x, x.r).rotate() == DualRailCap(x.r, x)
-    assert DualRailCap(x.r, x).rotate() == DualRailCup(x, x.r)
-    assert DualRailCap(x.r, x).dagger()\
-        == DualRailCup(x.r, x, is_dagger=True)
+    x = Ty('x')
+    assert Twist(x).r == Twist(x)
+
+
+def test_to_hypergraph():
+    from discopy.hypergraph import Hypergraph
+    x = Ty('x')
+    assert Diagram.twist(x).to_hypergraph() == Hypergraph[Diagram].id(x)

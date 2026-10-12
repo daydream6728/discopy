@@ -196,9 +196,10 @@ Coloured regions are also checked as part of the gallery:
 """
 
 
-from typing import Annotated, Any, NamedTuple, TYPE_CHECKING, Sequence
+from __future__ import annotations
+
+from typing import NamedTuple, TYPE_CHECKING, Sequence
 from dataclasses import dataclass
-from functools import cached_property
 
 import networkx as nx
 
@@ -206,8 +207,6 @@ from discopy.drawing import backend, Node, Point
 from discopy.config import BOX_DRAWING_ATTRIBUTES, TRANSPARENT
 from discopy.abc import TracedCategory
 from discopy.python import finset
-from discopy.pattern import Hom, Var
-from discopy.search import rule
 from discopy.utils import (
     assert_isinstance, assert_iscomposable, unbiased, factory, RichDisplay)
 
@@ -269,23 +268,18 @@ class Drawing(TracedCategory, RichDisplay):
     edges = property(lambda self: self.graph.edges)
     positions = property(lambda self: self.inside.positions)
 
-    @cached_property
-    def nodes_by_kind(self) -> dict[str, list[Node]]:
-        """
-        The nodes of each kind, sorted by their :attr:`Node.index`: the order
-        the graph happens to store its nodes in is not part of the drawing.
-        """
-        result = dict()
-        for node in sorted(self.nodes, key=lambda node: node.index):
-            result.setdefault(node.kind, []).append(node)
-        return result
-
     def nodes_of_kind(self, kind):
-        return list(self.nodes_by_kind.get(kind, []))
+        """
+        The nodes of a kind, sorted by their :attr:`Node.index`: the order the
+        graph happens to store them in is no part of the drawing.
 
-    def invalidate(self):
-        """ Forget :attr:`nodes_by_kind` once the graph changed in place. """
-        vars(self).pop("nodes_by_kind", None)
+        >>> from discopy.monoidal import Box
+        >>> f, g = Box('f', 'x', 'y'), Box('g', 'y', 'z')
+        >>> drawing = (f >> g).to_drawing()
+        >>> assert drawing.dagger().dagger() == drawing
+        """
+        return sorted((node for node in self.nodes if node.kind == kind),
+                      key=lambda node: node.index)
 
     box_nodes = property(lambda self: self.nodes_of_kind("box"))
     dom_nodes = property(lambda self: self.nodes_of_kind("dom"))
@@ -456,21 +450,12 @@ class Drawing(TracedCategory, RichDisplay):
             return
         self.graph.add_nodes_from(positions)
         self.positions.update(positions)
-        self.invalidate()
         self.width = max(self.width, max(i for (i, _) in positions.values()))
         self.height = max(self.height, max(j for (_, j) in positions.values()))
 
     def add_edges(self, edges: list[tuple[Node, Node]]):
         """ Add edges from a list. """
         self.graph.add_edges_from(edges)
-        self.invalidate()
-
-    def remove_nodes(self, nodes: list[Node]):
-        """ Remove nodes from the graph, with their positions. """
-        self.graph.remove_nodes_from(nodes)
-        for node in nodes:
-            self.positions.pop(node)
-        self.invalidate()
 
     def relabel_nodes(
             self, mapping=dict(), positions=dict(), copy=True, _check=False):
@@ -478,7 +463,6 @@ class Drawing(TracedCategory, RichDisplay):
         graph = nx.relabel_nodes(self.graph, mapping, copy)
         if not copy:
             self.positions.update(positions)
-            self.invalidate()
             return self
         positions = {mapping.get(node, node): positions.get(node, pos)
                      for node, pos in self.positions.items()}
@@ -744,9 +728,7 @@ class Drawing(TracedCategory, RichDisplay):
         return result
 
     @staticmethod
-    @rule
-    def id[A](dom: Annotated[Any | None, Var(A)] = None
-              ) -> Annotated[Drawing, Hom(A, A)]:
+    def id(dom: "monoidal.Ty" = None) -> Drawing:
         """
         Draw the identity diagram.
 
@@ -785,11 +767,7 @@ class Drawing(TracedCategory, RichDisplay):
         return result
 
     @unbiased
-    def then[A, B, C](
-            self: Annotated[Drawing, Hom(A, B)],
-            other: Annotated[Drawing, Hom(B, C)],
-            draw_step_by_step=False
-    ) -> Annotated[Drawing | list[Drawing], Hom(A, C)]:
+    def then(self, other: Drawing, draw_step_by_step=False) -> Drawing:
         """
         Draw one diagram composed with another.
 
@@ -855,7 +833,8 @@ class Drawing(TracedCategory, RichDisplay):
             if draw_step_by_step:
                 steps.append(result.relabel_nodes(copy=True))
 
-        result.remove_nodes(tmp_dom + tmp_cod)
+        result.graph.remove_nodes_from(tmp_dom + tmp_cod)
+        [result.positions.pop(n) for n in tmp_dom + tmp_cod]
         result.relabel_nodes(copy=False, positions={
             n: p.shift(y=-1)
             for n, p in result.positions.items() if p.y > other.height})
@@ -896,10 +875,7 @@ class Drawing(TracedCategory, RichDisplay):
         return result
 
     @unbiased
-    def tensor[A, B, C, D](
-            self: Annotated[Drawing, Hom(A, B)],
-            other: Annotated[Drawing, Hom(C, D)]) -> Annotated[Drawing,
-                   Hom([A, C], [B, D])]:
+    def tensor(self, other: Drawing) -> Drawing:
         """
         Draw two diagrams side by side.
 
@@ -1216,8 +1192,7 @@ class Drawing(TracedCategory, RichDisplay):
 
     def zero(dom, cod):
         from discopy.monoidal import Box
-        result = Box(
-            "zero", dom, cod).to_drawing()  # ty: ignore[invalid-argument-type]
+        result = Box("zero", dom, cod).to_drawing()
         result.zero_drawing = True
         return result
 

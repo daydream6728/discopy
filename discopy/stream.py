@@ -159,23 +159,22 @@ Note that we can only check equality of streams up to a finite number of steps.
 
 See :mod:`discopy.feedback` for the other axioms for feedback categories.
 """
-from typing import Annotated, Optional
+from __future__ import annotations
+
+from typing import Optional
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 
 from discopy import symmetric
 from discopy.abc import MonoidalCategory, NamedGeneric
 from discopy.python import finset
-from discopy.pattern import Hom, Var
-from discopy.abc import ColouredMonoid
-from discopy.search import rule
 from discopy.utils import (
     AxiomError,
     assert_isinstance, unbiased, inductive, classproperty, factory_name)
 
 
 @dataclass
-class Ty[base](NamedGeneric, ColouredMonoid):
+class Ty(NamedGeneric['base']):
     """
     A stream of types from some underlying class `base`.
 
@@ -184,13 +183,15 @@ class Ty[base](NamedGeneric, ColouredMonoid):
         _later (Optional[Callable[[], Ty[base]]]) :
             A thunk for the tail of the stream, constant by default.
     """
-    now: base
-    _later: Callable[[], Ty[base]] | None
+    base = symmetric.Ty  # The underlying class of types.
+
+    now: base = None
+    _later: Callable[[], Ty[base]] = None
 
     ob = classproperty(lambda cls: cls)
 
-    def __init__(self, now: base | None = None,
-                 _later: Callable[[], Ty[base]] | None = None):
+    def __init__(
+            self, now: base = None, _later: Callable[[], Ty[base]] = None):
         self.now = self.base() if now is None else self.base.cast(now)
         self._later = _later
 
@@ -201,7 +202,7 @@ class Ty[base](NamedGeneric, ColouredMonoid):
     @property
     def later(self) -> Ty:
         """ The tail of a stream, or `self` if :meth:`is_constant`. """
-        return self if self._later is None else self._later()
+        return self if self.is_constant else self._later()
 
     @property
     def head(self) -> Ty:
@@ -254,9 +255,7 @@ class Ty[base](NamedGeneric, ColouredMonoid):
         x1 @ y1
         x2 @ y2
         """
-        now = cls.base().tensor(
-            *(cls.base(f"{obj}{n_steps}")
-              for obj in x))  # ty: ignore[not-iterable]
+        now = cls.base().tensor(*(cls.base(f"{obj}{n_steps}") for obj in x))
         return cls(now, _later=lambda: cls.sequence(x, n_steps + 1))
 
     @inductive
@@ -294,12 +293,8 @@ class Ty[base](NamedGeneric, ColouredMonoid):
     __pow__ = symmetric.Ty.__pow__
 
 
-#: The underlying class of types of an unparameterised stream of types.
-Ty.base = symmetric.Ty
-
-
 @dataclass
-class Stream[category](MonoidalCategory, NamedGeneric):
+class Stream(MonoidalCategory, NamedGeneric['category']):
     """
     Monoidal streams over an underlying `category`.
 
@@ -337,37 +332,24 @@ class Stream[category](MonoidalCategory, NamedGeneric):
     >>> assert cod.later.now == later.cod.now
     >>> assert mem.later.now == later.mem.now
     """
+    category = symmetric.Diagram
     ob = classproperty(lambda cls: Ty[cls.category.ob])
 
     now: category
-    dom: Ty
-    cod: Ty
-    mem: Ty
-    _later: Callable[[], Stream[category]] | None
+    dom: ob = None
+    cod: ob = None
+    mem: ob = None
+    _later: Callable[[], Stream[category]] = None
 
-    @property
-    def later(self) -> Stream:
-        """ The tail of a stream, or `self` if :meth:`is_constant`. """
-        return self if self._later is None else self._later()
-
-    @property
-    def head(self) -> Stream:
-        """ The :meth:`singleton` over the first time step. """
-        return self.singleton(self.now)
-
-    tail = later
-
-    @property
-    def is_constant(self) -> bool:
-        """ Whether a stream is constant. """
-        return self._later is None
+    later, is_constant = Ty.later, Ty.is_constant
+    head, tail = Ty.head, Ty.tail
 
     def __init__(
             self, now: category,
-            dom: Ty | None = None,
-            cod: Ty | None = None,
-            mem: Ty | None = None,
-            _later: Callable[[], Stream[category]] | None = None):
+            dom: ob = None,
+            cod: ob = None,
+            mem: ob = None,
+            _later: Callable[[], Stream[category]] = None):
         if dom is None or cod is None:
             if mem is not None or _later is not None:
                 raise ValueError(
@@ -413,8 +395,8 @@ class Stream[category](MonoidalCategory, NamedGeneric):
 
     @classmethod
     def sequence(
-            cls, name: str, dom: Ty, cod: Ty, mem: Ty | None = None,
-            n_steps: int = 0) -> Stream:
+            cls, name: str, dom: Ty, cod: Ty, mem: Ty = None, n_steps: int = 0,
+            box_factory=symmetric.Box) -> Stream:
         """
         Produce a stream of boxes indexed by a time step.
 
@@ -429,10 +411,10 @@ class Stream[category](MonoidalCategory, NamedGeneric):
         f2 : x2 @ m1 -> y2 @ m2
         """
         mem = Ty[cls.category.ob]() if mem is None else mem
-        now = cls.category.Box(
+        now = box_factory(
             f"{name}{n_steps}", dom.now @ mem.now, cod.now @ mem.later.now)
         return cls(now, dom, cod, mem, _later=lambda: cls.sequence(
-            name, dom.later, cod.later, mem.later, n_steps + 1))
+            name, dom.later, cod.later, mem.later, n_steps + 1, box_factory))
 
     @inductive
     def delay(self) -> Stream:
@@ -470,9 +452,7 @@ class Stream[category](MonoidalCategory, NamedGeneric):
         return type(self)(now, dom, cod, mem, _later=lambda: later.later)
 
     @classmethod
-    @rule
-    def id[A](cls, x: Annotated[Optional[Ty], Var(A)] = None
-              ) -> Annotated[Stream, Hom(A, A)]:
+    def id(cls, x: Optional[Ty] = None) -> Stream:
         """
         Construct a stream of identity arrows.
 
@@ -489,10 +469,7 @@ class Stream[category](MonoidalCategory, NamedGeneric):
         return cls(now, dom, cod, _later=_later)
 
     @unbiased
-    def then[A, B, C](
-            self: Annotated[Stream, Hom(A, B)],
-            other: Annotated[Stream, Hom(B, C)]
-    ) -> Annotated[Stream, Hom(A, C)]:
+    def then(self, other: Stream) -> Stream:
         """
         Composition of streams is given by swapping the memories as follows:
 
@@ -517,10 +494,7 @@ class Stream[category](MonoidalCategory, NamedGeneric):
         return type(self)(now, dom, cod, mem, _later)
 
     @unbiased
-    def tensor[A, B, C, D](
-            self: Annotated[Stream, Hom(A, B)],
-            other: Annotated[Stream, Hom(C, D)]
-    ) -> Annotated[Stream, Hom([A, C], [B, D])]:
+    def tensor(self, other: Stream) -> Stream:
         """
         Tensor of streams is given by swapping the memories as follows:
 
@@ -577,15 +551,9 @@ class Stream[category](MonoidalCategory, NamedGeneric):
         _later = None if dom.is_constant else lambda: cls.copy(dom.later, n)
         return cls(now, dom, cod, _later=_later)
 
-    def feedback_left(self, dom: Ty | None = None, cod: Ty | None = None,
-                      mem: Ty | None = None) -> Stream:
-        """ A monoidal stream keeps its memory on the right. """
-        raise NotImplementedError(
-            "A monoidal stream keeps its memory on the right.")
-
     def feedback(
-        self, dom: Ty | None = None, cod: Ty | None = None,
-        mem: Ty | None = None, _first_call=True) -> Stream:
+        self, dom: Ty = None, cod: Ty = None, mem: Ty = None, _first_call=True
+    ) -> Stream:
         """
         The delayed feedback of a monoidal stream.
 
@@ -619,12 +587,6 @@ class Stream[category](MonoidalCategory, NamedGeneric):
         def _later():
             return self.later.feedback(dom.later, cod.later, mem.later, False)
         mem = mem.delay() if _first_call else mem
-        return type(self)(
-            self.now, dom, cod,
-            mem @ self.mem, _later)
+        return type(self)(self.now, dom, cod, mem @ self.mem, _later)
 
-    FollowedBy = id
-
-
-#: The underlying category of an unparameterised stream.
-Stream.category = symmetric.Diagram
+    followed_by = id

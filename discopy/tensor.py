@@ -17,28 +17,12 @@ Summary
     Diagram
     CMap
     Box
+    Swap
     Cup
     Cap
-    Permutation
-    Swap
     Spider
     Sum
     Bubble
-
-Spiders
--------
-
-The spiders of a tensor diagram evaluate to the copy tensors of the
-frobenius algebra on each dimension.
-
->>> vector = Box('vec', Dim(1), Dim(2), [0, 1])
->>> spider = Spider(1, 2, Dim(2))
->>> assert (vector >> spider).eval() == (vector @ vector).eval()
->>> Equation(vector >> spider, vector @ vector).draw(figsize=(3, 2),
-...     doctest='docs/_static/tensor/frobenius-example.svg')
-
-.. image:: /_static/tensor/frobenius-example.svg
-    :align: center
 
 Tensor combinatorial maps
 -------------------------
@@ -57,19 +41,20 @@ indices. Swaps, cups and caps become wiring while spiders stay as boxes.
 ...     assert jax.grad(f)(1.) == 4.
 """
 
+from __future__ import annotations
+
 from itertools import count
-from typing import (
-    TYPE_CHECKING, Annotated, Any, Callable, ClassVar, Mapping, Sequence)
+from typing import TYPE_CHECKING, Sequence
 
 from discopy import (
     cat, monoidal, rigid, frobenius, cmap, config)
-from discopy.axioms import Hom, no_strategy, Var, rule
-from discopy.cat import factory, Generator, assert_iscomposable
+from discopy.cat import factory, assert_iscomposable
 from discopy.frobenius import Dim, Cup
 from discopy.matrix import (  # noqa: F401  pylint: disable=unused-import
     Matrix, backend, set_backend, get_backend,
     NumPy, JAX, PyTorch, TensorFlow)
 from discopy.abc import NamedGeneric
+from discopy.axioms import no_strategy
 from discopy.python import finset
 from discopy.utils import (
     factory_name, assert_isinstance, product, assert_isatomic)
@@ -81,7 +66,7 @@ if TYPE_CHECKING:
 
 
 @factory
-class Tensor[dtype](Matrix[dtype]):
+class Tensor(Matrix):
     """
     A tensor is a :class:`Matrix` with dimensions as domain and codomain and
     the Kronecker product as tensor.
@@ -150,15 +135,10 @@ class Tensor[dtype](Matrix[dtype]):
         self.dom, self.cod = dom, cod
 
     @classmethod
-    @rule
-    def id[A](cls, dom: Annotated[Any, Var(A)] = Dim(1)
-              ) -> Annotated[Tensor, Hom(A, A)]:
+    def id(cls, dom=Dim(1)) -> Tensor:
         return cls(Matrix.id(product(dom.inside)).array, dom, dom)
 
-    def then[A, B, C](
-            self: Annotated[Tensor, Hom(A, B)],
-            other: Annotated[Tensor | None, Hom(B, C)] = None,
-            *others: Tensor) -> Annotated[Tensor, Hom(A, C)]:
+    def then(self, other: Tensor = None, *others: Tensor) -> Tensor:
         if other is None or others:
             return super().then(other, *others)
         assert_isinstance(other, type(self))
@@ -169,10 +149,7 @@ class Tensor[dtype](Matrix[dtype]):
                 else self.array * other.array
         return type(self)(array, self.dom, other.cod)
 
-    def tensor[A, B, C, D](
-            self: Annotated[Tensor, Hom(A, B)],
-            other: Annotated[Tensor | None, Hom(C, D)] = None,
-            *others: Tensor) -> Annotated[Tensor, Hom([A, C], [B, D])]:
+    def tensor(self, other: Tensor = None, *others: Tensor) -> Tensor:
         if other is None or others:
             return Diagram.tensor(self, other, *others)
         assert_isinstance(other, Tensor)
@@ -198,7 +175,7 @@ class Tensor[dtype](Matrix[dtype]):
         return type(self)(array, self.cod, self.dom)
 
     @classmethod
-    def Cup(cls, left: Dim, right: Dim) -> Tensor:
+    def cup_factory(cls, left: Dim, right: Dim) -> Tensor:
         assert_isinstance(left, Dim)
         assert_isinstance(right, Dim)
         left.assert_isadjoint(right)
@@ -206,9 +183,7 @@ class Tensor[dtype](Matrix[dtype]):
 
     @classmethod
     def cups(cls, left: Dim, right: Dim) -> Tensor:
-        return rigid.nesting(
-            cls,  # ty: ignore[invalid-argument-type]
-            cls.Cup)(left, right)
+        return rigid.nesting(cls, cls.cup_factory)(left, right)
 
     @classmethod
     def caps(cls, left: Dim, right: Dim) -> Tensor:
@@ -243,8 +218,8 @@ class Tensor[dtype](Matrix[dtype]):
         return cls(array, dom, cod)
 
     @classmethod
-    def Spider(cls, n_legs_in: int, n_legs_out: int,
-               typ: Dim, phase=None) -> Tensor:
+    def spider_factory(cls, n_legs_in: int, n_legs_out: int,
+                       typ: Dim, phase=None) -> Tensor:
         if phase is not None:
             raise NotImplementedError
         assert_isatomic(typ, Dim)
@@ -271,8 +246,7 @@ class Tensor[dtype](Matrix[dtype]):
             typ : The type of the spiders.
         """
         return frobenius.Diagram.spiders.__func__(
-            cls, n_legs_in,  # ty: ignore[invalid-argument-type]
-            n_legs_out, typ, phase)  # ty: ignore[invalid-return-type]
+            cls, n_legs_in, n_legs_out, typ, phase)
 
     @classmethod
     def copy(cls, x: Dim, n: int) -> Tensor:
@@ -423,9 +397,8 @@ class Functor(frobenius.Functor):
     dom, cod = frobenius.Diagram, Tensor
 
     def __init__(
-            self, ob_map: Mapping[cat.Ob, Dim] | Callable[[cat.Ob], Dim],
-            ar_map: Mapping[cat.Box, Any] | Callable[[cat.Box], Any],
-            dom: type | None = None, dtype: type | None = float,
+            self, ob_map: dict[cat.Ob, Dim], ar_map: dict[cat.Box, list],
+            dom: type = None, dtype: type = float,
             optimize="greedy", **params):
         self.dtype, self.optimize, self.params = dtype, optimize, params
         cod = type(self).cod[dtype]
@@ -520,7 +493,7 @@ class Functor(frobenius.Functor):
 
 
 @factory
-class Diagram[dtype](NamedGeneric, frobenius.Diagram):
+class Diagram(NamedGeneric['dtype'], frobenius.Diagram):
     """
     A tensor diagram is a frobenius diagram with tensor boxes.
 
@@ -531,13 +504,9 @@ class Diagram[dtype](NamedGeneric, frobenius.Diagram):
     >>> print(diagram)
     vector[::-1] >> vector >> Dim(2) @ vector
     """
-    strategy = no_strategy
     ob = Dim
-    Box: ClassVar[Generator]
-    Permutation: ClassVar[Generator]
-    Bubble: ClassVar[Generator]
 
-    def eval(self, dtype: type | None = None, optimize="greedy",
+    def eval(self, dtype: type = None, optimize="greedy",
              **params) -> Tensor:
         """
         Evaluate a tensor network as a :class:`Tensor`: call the
@@ -565,8 +534,7 @@ class Diagram[dtype](NamedGeneric, frobenius.Diagram):
             dtype=dtype or getattr(self, "dtype", None),
             optimize=optimize, **params)(self)
 
-    def to_quimb(
-            self, dtype: type | None = None) -> "quimb.tensor.TensorNetwork":
+    def to_quimb(self, dtype: type = None) -> "quimb.tensor.Tensor":
         """
         Convert a tensor diagram to a quimb tensor.
 
@@ -621,9 +589,10 @@ class Diagram[dtype](NamedGeneric, frobenius.Diagram):
             qtn.connect(t, output, j, 0)
             tensors.append(output)
 
-        return qtn.TensorNetwork(tensors)
+        tensor_net = qtn.TensorNetwork(tensors)
+        return tensor_net
 
-    def to_tn(self, dtype: type | None = None) -> tuple[
+    def to_tn(self, dtype: type = None) -> tuple[
             list["tensornetwork.Node"], list["tensornetwork.Edge"]]:
         """
         Convert a tensor diagram to :code:`tensornetwork`.
@@ -644,10 +613,8 @@ class Diagram[dtype](NamedGeneric, frobenius.Diagram):
         import tensornetwork as tn
         if dtype is None:
             dtype = self.dtype
-        nodes: list = [
-            tn.CopyNode(
-                2, getattr(dim, 'dim', dim), f'input_{i}',
-                dtype=dtype)  # ty: ignore[invalid-argument-type]
+        nodes = [
+            tn.CopyNode(2, getattr(dim, 'dim', dim), f'input_{i}', dtype=dtype)
             for i, dim in enumerate(self.dom.inside)]
         inputs, outputs = [n[0] for n in nodes], [n[1] for n in nodes]
         for box, offset in zip(self.boxes, self.offsets):
@@ -661,13 +628,12 @@ class Diagram[dtype](NamedGeneric, frobenius.Diagram):
                 if dims == (1, 1):  # identity
                     continue
                 elif dims == (2, 0):  # cup
-                    tn.connect(outputs[offset], outputs[offset + 1])
+                    tn.connect(*outputs[offset:offset + 2])
                     del outputs[offset:offset + 2]
                     continue
                 else:
                     node = tn.CopyNode(
-                        sum(dims), outputs[offset].dimension,
-                        dtype=dtype)  # ty: ignore[invalid-argument-type]
+                        sum(dims), outputs[offset].dimension, dtype=dtype)
             else:
                 array = box.eval(dtype=dtype).array
                 node = tn.Node(array, str(box))
@@ -680,7 +646,7 @@ class Diagram[dtype](NamedGeneric, frobenius.Diagram):
     def grad(self, var, **params):
         """ Gradient with respect to :code:`var`. """
         if var not in self.free_symbols:
-            return self.Sum((), self.dom, self.cod)
+            return self.sum_factory((), self.dom, self.cod)
         left, box, right = self.inside[0].boxes_and_types
         tail = self[1:]
         t1 = self.id(left) @ box.grad(var, **params) @ self.id(right) >> tail
@@ -719,14 +685,16 @@ class Diagram[dtype](NamedGeneric, frobenius.Diagram):
                 @ self.grad(var, **params)
         return result
 
-    Functor = frobenius.Functor
+    # A tensor box carries an array, which the strategy of a free category
+    # does not draw: tensor diagrams, circuits and ZX diagrams stay out of
+    # the matrix.
+    strategy = no_strategy
 
 
 CMap = cmap.CMap[Diagram]
 
 
-@Diagram.generator
-class Box[dtype](frobenius.Box, Diagram[dtype]):
+class Box(frobenius.Box, Diagram):
     """
     A tensor box is a frobenius box with an array as data.
 
@@ -742,16 +710,16 @@ class Box[dtype](frobenius.Box, Diagram[dtype]):
     >>> b1.eval()
     Tensor[float64]([0.84193562, 0.91343221], dom=Dim(1), cod=Dim(2))
     """
-    strategy = no_strategy
 
     def __setstate__(self, state):
+        NamedGeneric.__setstate__(self, state)
         if "data" not in state and state.get("_array", None) is not None:
             state['data'] = state['_array']
             del state["_array"]
         super().__setstate__(state)
         if self.dtype is None and self.data is not None:
-            self.data, dtype = self._get_data_dtype(self.data)
-            self.__class__ = self.__class__[dtype]
+            self.data, self.dtype = self._get_data_dtype(self.data)
+            self.__class__ = self.__class__[self.dtype]
 
     def __new__(
             cls, name=None, dom=None, cod=None, data=None, *args, **kwargs):
@@ -779,7 +747,6 @@ class Box[dtype](frobenius.Box, Diagram[dtype]):
                     self.dom.inside + self.cod.inside)
 
     def grad(self, var, **params):
-        # pylint: disable=unused-argument  # the signature of grad
         return self.bubble(
             func=lambda x: getattr(x, "diff", lambda _: 0)(var),
             drawing_name=f"$\\partial {var}$")
@@ -791,12 +758,27 @@ class Box[dtype](frobenius.Box, Diagram[dtype]):
         return (self.name, self.dom, self.cod, self.dtype) + data
 
 
-Cup, Cap = Diagram.Cup, Diagram.Cap
+class Cup(frobenius.Cup, Box):
+    """
+    A tensor cup is a frobenius cup in a tensor diagram.
+
+    Parameters:
+        left (Dim) : The atomic type.
+        right (Dim) : Its adjoint.
+    """
 
 
-@Diagram.generator
-class Permutation(  # ty: ignore[inconsistent-mro]
-        frobenius.Permutation, Box):
+class Cap(frobenius.Cap, Box):
+    """
+    A tensor cap is a frobenius cap in a tensor diagram.
+
+    Parameters:
+        left (Dim) : The atomic type.
+        right (Dim) : Its adjoint.
+    """
+
+
+class Permutation(frobenius.Permutation, Box):
     "A permutation in a tensor diagram."
 
     @property
@@ -806,15 +788,51 @@ class Permutation(  # ty: ignore[inconsistent-mro]
         return Tensor.permutation(self.perm, doms).array
 
 
-Swap, Spider, Sum, Eval, Coeval, Curry, Copy, Merge, Discard = (
-    Diagram.Swap, Diagram.Spider, Diagram.Sum,
-    Diagram.Eval, Diagram.Coeval, Diagram.Curry,
-    Diagram.Copy, Diagram.Merge, Diagram.Discard)
+class Swap(Permutation, frobenius.Swap, Box):
+    """
+    A tensor swap is a frobenius swap in a tensor diagram.
+
+    Parameters:
+        left (Dim) : The type on the top left and bottom right.
+        right (Dim) : The type on the top right and bottom left.
+    """
 
 
-@Diagram.generator
-class Bubble(  # ty: ignore[inconsistent-mro]
-        frobenius.Bubble, Box):
+class Spider(frobenius.Spider, Box):
+    """
+    A tensor spider is a frobenius spider in a tensor diagram.
+
+    Parameters:
+        n_legs_in (int) : The number of legs in.
+        n_legs_out (int) : The number of legs out.
+        typ (Dim) : The dimension of the spider.
+        data : The phase of the spider.
+
+    Examples
+    --------
+    >>> vector = Box('vec', Dim(1), Dim(2), [0, 1])
+    >>> spider = Spider(1, 2, Dim(2))
+    >>> assert (vector >> spider).eval() == (vector @ vector).eval()
+    >>> Equation(vector >> spider, vector @ vector).draw(figsize=(3, 2),
+    ...     doctest='docs/_static/tensor/frobenius-example.svg')
+
+    .. image:: /_static/tensor/frobenius-example.svg
+        :align: center
+    """
+
+
+class Sum(monoidal.Sum, Box):
+    """
+    A formal sum of tensor diagrams with the same domain and codomain.
+
+    Parameters:
+        terms (tuple[Diagram, ...]) : The terms of the formal sum.
+        dom (Dim) : The domain of the formal sum.
+        cod (Dim) : The codomain of the formal sum.
+    """
+
+
+class Bubble(monoidal.Bubble, Box):
     """
     Bubble in a tensor diagram, applies a function elementwise.
 
@@ -862,7 +880,6 @@ class Bubble(  # ty: ignore[inconsistent-mro]
         super().__init__(inside, **params)
 
     def grad(self, var, **params):
-        # pylint: disable=unused-argument  # the signature of grad
         """
         The gradient of a bubble is given by the chain rule.
 
@@ -887,15 +904,12 @@ class Bubble(  # ty: ignore[inconsistent-mro]
             @ self.arg.grad(var) >> Spider(2, 1, self.cod)
 
 
-TermBase, Constant, Variable, Application, Abstraction = (
-    Diagram.TermBase, Diagram.Constant, Diagram.Variable,
-    Diagram.Application, Diagram.Abstraction)
-Layer = Diagram.Layer
+Diagram.sum_factory, Diagram.swap_factory = Sum, Swap
+Diagram.permutation_factory = Permutation
+Diagram.cup_factory, Diagram.cap_factory = Cup, Cap
+Diagram.spider_factory, Diagram.bubble_factory = Spider, Bubble
 Id = Diagram.id
 
 
 class Equation(frobenius.Equation):
     """ The :class:`frobenius.Equation` of tensor diagrams. """
-
-
-Diagram.Equation = Equation

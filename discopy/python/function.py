@@ -13,6 +13,8 @@ Summary
 
     Function
 """
+from __future__ import annotations
+
 from collections.abc import Callable
 from dataclasses import dataclass
 from contextlib import contextmanager
@@ -58,14 +60,12 @@ class Function(Category):
     ob = Ty
     type_checking = True
 
-    def __init__(self, inside: Callable,
-                 dom: Ty | type | tuple[type, ...],
-                 cod: Ty | type | tuple[type, ...]):
+    def __init__(self, inside: Callable, dom: Ty, cod: Ty):
         self.inside, self.dom, self.cod = (
             inside, self.ob.cast(dom), self.ob.cast(cod))
 
     @classmethod
-    def id(cls, dom: type | tuple[type, ...]) -> Function:
+    def id(cls, dom: type) -> Function:
         """
         The identity function on a given list of types :code:`dom`.
 

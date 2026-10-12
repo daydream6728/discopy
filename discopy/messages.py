@@ -15,6 +15,7 @@ NOT_ADJOINT = "{} and {} are not adjoints."
 NOT_RIGID_ADJOINT = "{} is not the left adjoint of {}, maybe you meant to use"\
                     " a pivotal type rather than a rigid one?"
 MISSING_TYPES_FOR_EMPTY_SUM = "Empty sum needs a domain and codomain."
+MATRIX_TWO_DTYPES = "Matrix class cannot be indexed twice."
 MATRIX_REPEAT_ERROR = "The reflexive transitive closure is only defined for "\
                       "square boolean matrices."
 BOX_IS_MIXED = "Pure boxes can have only digits or only qudits as dom and cod."
@@ -23,11 +24,38 @@ NOT_MERGEABLE = "Layers {} and {} cannot be merged."
 INTERCHANGER_ERROR = "Boxes {} and {} do not commute."
 WRONG_PERMUTATION = "Expected a permutation of length {}, got {}."
 ZERO_DISTANCE_CONTROLLED = "Zero-distance controlled gates are ill-defined."
+HAS_NO_ATTRIBUTE = "{!r} object has no attribute {!r}"
 WRONG_DOM = "Expected inside.dom == {}, got {} instead."
 WRONG_COD = "Expected inside.cod == {}, got {} instead."
+COMPLEX_TYPE_HAS_NO_ATTR = "{!r} object of length != 1 has no attribute {!r}"
+NOT_FROBENIUS = \
+    "{} has no spiders, cups or caps to downgrade this hypergraph."
 NOT_RIGID = "{} has no cups or caps for the wiring of this map."
 NOT_TRACED = "{} has no traces for the cycles of this map."
 NOT_SYMMETRIC = "{} has no swaps to downgrade this map."
 NOT_ACYCLIC = "{} has a directed cycle, its boxes cannot be ordered."
-PERMUTATION_HAS_NO_OFFSET = (
-    "A layer with a non-identity permutation has no single offset.")
+
+FREE_CURRY = (
+    "A free curry is a bubble, which a hypergraph keeps as a box: nothing "
+    "evaluates it.")
+FREE_FEEDBACK = (
+    "A free feedback is a bubble, which a hypergraph keeps as a box: nothing "
+    "slides into it.")
+RIGID_HAS_NO_DAGGER = (
+    "Rigid cups and caps have no dagger, use pivotal instead.")
+CURRY_HAS_NO_DAGGER = "A curry has no dagger."
+MAP_OF_A_CURRY = (
+    "The map of a curry rebuilds its inside from the map of it, which can "
+    "whisker a scalar on the other side, while a hypergraph compares the "
+    "inside of a bubble syntactically.")
+FEEDBACK_HAS_NO_DAGGER = (
+    "Feedback has no dagger, it would feed its memory back in time.")
+MAP_HAS_NO_ADJOINTS = (
+    "A map is compact whatever category hosts it, but a host that is not "
+    "rigid has no adjoints or curries for the laws to quantify over.")
+SECTION_NEEDS_SWAPS = (
+    "Decoding a hypergraph orders its boxes with swaps, which a category "
+    "with no symmetry does not have.")
+MAP_HAS_NO_SPIDERS = (
+    "A map has no spiders: it keeps a copy as a box where a hypergraph merges "
+    "its wires.")

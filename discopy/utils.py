@@ -2,20 +2,19 @@
 
 """ DisCoPy utility functions. """
 
+from __future__ import annotations
+
 import json
 from functools import lru_cache, wraps
 from math import ceil
 from pathlib import Path
-from types import MethodType
 from typing import (
-    Any,
     Callable,
-    ClassVar,
-    Concatenate,
+    Generic,
     Mapping,
     Iterable,
-    Sequence,
     TypeVar,
+    Any,
     Collection,
     NamedTuple,
     TYPE_CHECKING,
@@ -30,7 +29,6 @@ import discopy.messages as messages
 
 if TYPE_CHECKING:
     from discopy.monoidal import Ty, Diagram
-    from discopy.hypergraph import Hypergraph
     from discopy.abc import Category
 
 KT = TypeVar('KT')
@@ -55,18 +53,14 @@ class MappingOrCallable(Mapping[KT, VT]):
     assert len(g) == 1
     assert list(g) == [0]
     """
-    def __class_getitem__(_, args: tuple[type, type]) -> Any:
+    def __class_getitem__(_, args: tuple[type, type]) -> type:
         source, target = args
-        return (
-            Mapping[source, target]  # ty: ignore[invalid-type-form]
-            | Callable[
-                [source], target])  # ty: ignore[invalid-type-form]
+        return Mapping[source, target] | Callable[[source], target]
 
-    def __init__(self, mapping: Mapping[KT, VT] | Callable[[KT], VT]
-                 | MappingOrCallable[KT, VT]) -> None:
+    def __init__(self, mapping: MappingOrCallable[KT, VT]) -> None:
         while isinstance(mapping, MappingOrCallable):
             mapping = mapping.mapping
-        self.mapping: Any = mapping
+        self.mapping = mapping
 
     def __bool__(self) -> bool:
         return bool(self.mapping)
@@ -103,8 +97,8 @@ class MappingOrCallable(Mapping[KT, VT]):
     def __repr__(self):
         return repr(self.mapping)
 
-    def then(self, other: Mapping[VT, V2T] | Callable[[VT], V2T]
-             | MappingOrCallable[VT, V2T]) -> MappingOrCallable[KT, V2T]:
+    def then(self, other: MappingOrCallable[VT, V2T]
+             ) -> MappingOrCallable[KT, V2T]:
         """
         Returns the composition of the object with a dict or a Callable.
 
@@ -126,27 +120,21 @@ def get_origin(typ):
     return getattr(typ, "__origin__", typ)
 
 
-def unpickle_parameterised(func, args, values):
+def rebuild_named_generic(func, origin, values, args):
     """
-    Rebuild an instance of a parameterised class: reconstruct the
-    instance of the origin class and parameterise its class with
-    ``values``, before pickle restores the state as usual, so that the
-    ``__setstate__`` of the origin class sees the right parameters.
+    Unpickle a member of a subscripted :class:`NamedGeneric` by calling the
+    reconstructor ``func`` of its pickle on the subscripted class itself,
+    which is found by subscripting its ``origin`` again with its ``values``.
+    """
+    return func(origin[values], *args)
+
+
+class NamedGeneric(Generic[TypeVar('T')]):
+    """
+    A ``NamedGeneric`` is a ``Generic`` where the type parameter has a name.
 
     Parameters:
-        func : The reconstructor of the origin class.
-        args : The arguments to the reconstructor.
-        values : The parameters of the class, see :class:`NamedGeneric`.
-    """
-    self = func(*args)
-    self.__class__ = self.__class__[values]
-    return self
-
-
-class NamedGeneric:
-    """
-    A ``NamedGeneric`` is a ``Generic`` whose type parameters are attached by
-    name to the members of the class.
+        attributes : The names of the type parameters.
 
     Note
     ----
@@ -165,104 +153,84 @@ class NamedGeneric:
 
     >>> from dataclasses import dataclass
     >>> @dataclass
-    ... class L[dtype](NamedGeneric):
+    ... class L(NamedGeneric["dtype"]):
     ...     inside: list
     >>> assert L[int]([1, 2, 3]).dtype == int
     >>> assert L[int]([1, 2, 3]) != L[float]([1, 2, 3])
-
-    A DisCoPy class is named by its module, since every level of the
-    hierarchy has a ``Diagram`` of its own:
-
-    >>> from discopy import frobenius
-    >>> frobenius.Hypergraph.__name__
-    'Hypergraph[frobenius.Diagram]'
     """
-    if TYPE_CHECKING:
-        #: The parameter names used in discopy, declared so that attribute
-        #: access typechecks; subscripting attaches the actual values.
-        dtype: ClassVar[Any]
-        category: ClassVar[Any]
-        base: ClassVar[Any]
-        natural: ClassVar[Any]
-        algebra: ClassVar[Any]
-        Atom: ClassVar[Any]
-        factory: ClassVar[Any]
-        ar: ClassVar[Any]
-
     _cache = dict()
 
-    def __init_subclass__(cls, **kwargs):
-        super().__init_subclass__(**kwargs)
-        for param in cls.__type_params__:
-            if not hasattr(cls, param.__name__):
-                setattr(cls, param.__name__, None)
+    def __class_getitem__(_, attributes):
+        if not isinstance(attributes, tuple):
+            attributes = (attributes,)
 
-    def __class_getitem__(cls, values):
-        """
-        Subscripting with a value builds a subclass carrying it, while
-        subscripting with the class syntax's own type parameters, which
-        infer their variance, stays a plain ``Generic`` alias so that e.g.
-        ``class Box[dtype](Diagram[dtype])`` declares an ordinary subclass.
-        An explicit :class:`TypeVar` is a value like any other.
-        """
-        values = values if isinstance(values, tuple) else (values,)
-        if any(isinstance(value, TypeVar) and value.__infer_variance__
-               for value in values):
-            return super().__class_getitem__(
-                values[0] if len(values) == 1 else values)
-        origin = get_origin(cls)
-        for c in origin.__mro__:
-            if c.__type_params__:
-                attributes = [param.__name__ for param in c.__type_params__]
-                break
-        else:
-            raise TypeError(
-                f"{origin} has no type parameter to attach {values} to: "
-                "declare one with the class syntax, e.g. class C[name].")
-        cls_values = tuple(
-            getattr(origin, attr, None) for attr in attributes)
-        if origin not in NamedGeneric._cache:
-            NamedGeneric._cache[origin] = {cls_values: origin}
-        if values not in NamedGeneric._cache[origin]:
-            class C(origin):
-                def __reduce__(self):
-                    """
-                    Pickle a member of the subscripted class as a
-                    member of its origin carrying the values, since
-                    a class created inside a function cannot be
-                    found by name, see `how can I pickle a
-                    dynamically created nested class
-                    <https://stackoverflow.com/questions/1947904>`_.
-                    """
-                    func, args, data = super().__reduce__()
-                    # Check if class name is of the form ClassName[type]
-                    if '[' in args[0].__name__:
-                        return unpickle_parameterised, (
-                            func, (origin, ) + args[1:], values), data
-                    return func, args, data
+        G = Generic.__class_getitem__(tuple(map(TypeVar, attributes)))
 
-            C.__module__ = origin.__module__
-            names = [
-                factory_name(v)
-                if isinstance(v, type) and v.__module__.startswith("discopy.")
-                else getattr(v, "__name__", str(v)) for v in values]
-            C.__name__ = C.__qualname__ = origin.__name__\
-                + f"[{', '.join(names)}]"
-            C.__origin__ = origin
-            for attr, value in zip(attributes, values):
-                setattr(C, attr, value)
-            NamedGeneric._cache[origin][values] = C
-        return NamedGeneric._cache[origin][values]
+        class Result(G):
+            def __class_getitem__(cls, values):
+                if hasattr(cls, "__is_named_generic__"):
+                    cls = cls.__bases__[0]
+                values = values if isinstance(values, tuple) else (values,)
+                cls_values = tuple(
+                    getattr(cls, attr, None) for attr in attributes)
+                if cls not in NamedGeneric._cache:
+                    NamedGeneric._cache[cls] = {cls_values: cls}
+                if values not in NamedGeneric._cache[cls]:
+                    origin = get_origin(cls)
+
+                    class C(origin):
+                        __is_named_generic__ = True
+
+                        def __reduce__(self):
+                            """
+                            Pickle a member of the subscripted class by its
+                            origin and values, since a class created inside
+                            a function cannot be found by name, see `how can
+                            I pickle a dynamically created nested class
+                            <https://stackoverflow.com/questions/1947904>`_.
+                            The class is rebuilt before the state is set,
+                            so that unpickling needs no ``__setstate__``,
+                            which the subscripted class does not inherit.
+
+                            >>> import pickle
+                            >>> from discopy.tensor import Tensor, Dim
+                            >>> t = Tensor[int]([1, 0, 0, 1], Dim(2), Dim(2))
+                            >>> u = pickle.loads(pickle.dumps(t))
+                            >>> assert type(u) is Tensor[int] and u == t
+                            """
+                            func, args, *rest = super().__reduce__()
+                            if not args or args[0] is not type(self):
+                                return (func, args, *rest)
+                            return (
+                                rebuild_named_generic,
+                                (func, origin, values, args[1:]), *rest)
+
+                    C.__module__ = origin.__module__
+                    names = [
+                        factory_name(v) if is_discopy_class(v)
+                        else getattr(v, "__name__", str(v)) for v in values]
+                    C.__name__ = C.__qualname__ = origin.__name__\
+                        + f"[{', '.join(names)}]"
+                    C.__origin__ = cls
+                    for attr, value in zip(attributes, values):
+                        setattr(C, attr, value)
+                    NamedGeneric._cache[cls][values] = C
+                return NamedGeneric._cache[cls][values]
+
+            __name__ = __qualname__\
+                = f"NamedGeneric[{', '.join(map(repr, attributes))}]"
+
+        for attr in attributes:
+            setattr(Result, attr, getattr(Result, attr, None))
+        return Result
 
     def __setstate__(self, state):
-        setstate = getattr(super(), "__setstate__", None)
-        if setstate is None:
-            self.__dict__.update(state)
-        else:
-            setstate(state)
+        if "__class_getitem__values__" in state:
+            new_cls = self.__class__[state["__class_getitem__values__"]]
+            self.__class__ = new_cls
 
 
-def product(xs: Sequence, unit=1):
+def product(xs: list, unit=1):
     """
     The left-fold product of a ``unit`` with list of ``xs``.
 
@@ -309,51 +277,17 @@ def deprecated_alias(module_name: str, aliases: dict[str, str]):
     return __getattr__
 
 
-class DeprecatedAttribute:
+def is_discopy_class(value) -> bool:
     """
-    A class attribute renamed ``new``, read through the new name with a
-    :class:`DeprecationWarning`. :class:`Generator` declares one for the
-    ``*_factory`` name each generator had before it was bound under its
-    own, e.g. ``swap_factory`` for ``Swap``.
+    Whether a value is a class defined in DisCoPy, which
+    :class:`NamedGeneric` names by its :func:`factory_name`, e.g.
+    ``hypergraph.Hypergraph[frobenius.Diagram]``, since every level of the
+    hierarchy has a ``Diagram`` of its own.
 
-    Parameters:
-        new : The name the attribute is read under.
-
-    Example
-    -------
-    >>> import warnings
-    >>> from discopy import symmetric
-    >>> with warnings.catch_warnings(record=True) as w:
-    ...     warnings.simplefilter("always")
-    ...     assert symmetric.Diagram.swap_factory is symmetric.Swap
-    >>> print(w[-1].message)  # doctest: +NORMALIZE_WHITESPACE
-    symmetric.Diagram.swap_factory is deprecated,
-    use symmetric.Diagram.Swap instead.
+    >>> from discopy.frobenius import Diagram
+    >>> assert is_discopy_class(Diagram) and not is_discopy_class(int)
     """
-    def __init__(self, new: str):
-        self.new = new
-
-    def __set_name__(self, owner: type, name: str):
-        self.name = name
-
-    def __get__(self, instance, cls: type) -> Any:
-        import warnings
-        warnings.warn(
-            f"{factory_name(cls)}.{self.name} is deprecated, "
-            f"use {factory_name(cls)}.{self.new} instead.",
-            DeprecationWarning, stacklevel=2)
-        return getattr(cls if instance is None else instance, self.new)
-
-
-def snake_case(name: str) -> str:
-    """
-    The snake case of a class name.
-
-    >>> assert snake_case("DualRailTwist") == "dual_rail_twist"
-    """
-    return "".join(
-        f"_{char.lower()}" if char.isupper() and i else char.lower()
-        for i, char in enumerate(name))
+    return isinstance(value, type) and value.__module__.startswith("discopy")
 
 
 def factory_name(cls: type) -> str:
@@ -364,15 +298,9 @@ def factory_name(cls: type) -> str:
     -------
     >>> from discopy.grammar.pregroup import Word
     >>> assert factory_name(Word) == "grammar.pregroup.Word"
-
-    A class is named by its qualified name, e.g. the ``Recipe.Swap`` that
-    a :class:`Generator` builds for a category ``Recipe`` outside the
-    package, unless it is defined in a function.
     """
     module = cls.__module__.removeprefix('discopy.')
-    name = cls.__name__ if "<locals>" in cls.__qualname__\
-        else cls.__qualname__
-    return f"{module}.{name}".removeprefix('builtins.')
+    return f"{module}.{cls.__name__}".removeprefix('builtins.')
 
 
 def from_tree(tree: dict):
@@ -402,19 +330,23 @@ def from_tree(tree: dict):
     >>> from discopy.cat import Box
     >>> f = Box('f', 'x', 'y', data=42)
     >>> assert from_tree(tree) == f >> f[::-1]
-
-    Note
-    ----
-    A parameterised factory such as ``"tensor.Box[float]"`` resolves to
-    its origin class, which re-derives the parameter from the tree.
     """
-    factory = tree['factory'].removeprefix('discopy.').split('[')[0]
-    *modules, factory = factory.split('.')
-    import discopy
+    return resolve_factory(tree['factory']).from_tree(tree)
+
+
+def resolve_factory(name: str) -> type:
+    """
+    The DisCoPy class with a given :func:`factory_name`, the inverse of it.
+
+    >>> from discopy.markov import Diagram
+    >>> assert resolve_factory(factory_name(Diagram)) is Diagram
+    """
+    *modules, factory = name.removeprefix('discopy.').split('.')
+    import discopy  # pylint: disable=import-outside-toplevel
     module = discopy
     for attr in modules:
         module = getattr(module, attr)
-    return getattr(module, factory).from_tree(tree)
+    return getattr(module, factory)
 
 
 def dumps(obj, **kwargs):
@@ -603,17 +535,10 @@ class BinaryBoxConstructor:
     """
     Box constructor with attributes ``left`` and ``right`` as input.
 
-    The class declares what serialises it, which
-    :class:`discopy.axioms.Serialisable` reads off whichever box it is mixed
-    into, rather than implementing the interface itself: a binary box
-    constructor is never a term on its own.
-
     Parameters:
         left : Some attribute on the left.
         right : Some attribute on the right.
     """
-    serialised_attrs = ('left', 'right')
-
     def __init__(self, left, right):
         self.left, self.right = left, right
 
@@ -625,6 +550,20 @@ class BinaryBoxConstructor:
                               f"({state['left']}, {state['right']})"
             )
         super().__setstate__(state)
+
+    def __repr__(self):
+        return factory_name(type(self))\
+            + f"({repr(self.left)}, {repr(self.right)})"
+
+    def to_tree(self) -> dict:
+        """ Serialise a binary box constructor. """
+        left, right = self.left.to_tree(), self.right.to_tree()
+        return dict(factory=factory_name(type(self)), left=left, right=right)
+
+    @classmethod
+    def from_tree(cls, tree: dict) -> BinaryBoxConstructor:
+        """ Decode a serialised binary box constructor. """
+        return cls(*map(from_tree, (tree['left'], tree['right'])))
 
 
 @lru_cache(maxsize=1024)
@@ -646,7 +585,7 @@ def text_width(text: str, fontsize=12, points_per_inch=72., grid=16):
     return ceil(width / points_per_inch * grid) / grid
 
 
-def tuplify(stuff: Any) -> tuple:
+def tuplify(stuff: any) -> tuple:
     """
     Turns anything into a tuple, do nothing if it is already.
 
@@ -656,7 +595,7 @@ def tuplify(stuff: Any) -> tuple:
     return stuff if isinstance(stuff, tuple) else (stuff, )
 
 
-def untuplify(stuff: Sequence) -> Any:
+def untuplify(stuff: tuple) -> any:
     """
     Takes the element out of a tuple if it has length 1, otherwise do nothing.
 
@@ -698,13 +637,10 @@ def factory(cls):
     ... class Circuit(Arrow):
     ...     ob = Qubit
 
-    The boxes of a :code:`Circuit` are a subclass of both :class:`Box` and
-    :code:`Circuit`, built by :attr:`Arrow.Box`, a
-    :class:`Generator`.
+    The :code:`Circuit` subclass itself has a subclass :code:`Gate` as boxes.
 
-    >>> Gate = Circuit.Box
-    >>> assert issubclass(Gate, Box) and issubclass(Gate, Circuit)
-    >>> assert Gate.__name__ == "Box" and Gate.__module__ == Circuit.__module__
+    >>> class Gate(Box, Circuit):
+    ...     pass
 
     The identity and composition of :code:`Circuit` is again a :code:`Circuit`.
 
@@ -749,7 +685,7 @@ def assert_isparallel(left: Category, right: Category):
         raise AxiomError(messages.NOT_PARALLEL.format(left, right))
 
 
-def assert_isatomic(typ: Ty, cls: type | None = None):
+def assert_isatomic(typ: Ty, cls: type = None):
     """ Raise :class:`AxiomError` if a type does not have length one. """
     cls = cls or type(typ)
     assert_isinstance(typ, cls)
@@ -758,7 +694,7 @@ def assert_isatomic(typ: Ty, cls: type | None = None):
             factory_name(cls), len(typ)))
 
 
-def assert_istraceable(arg: Diagram | Hypergraph, n=1, left=False):
+def assert_istraceable(arg: Diagram, n=1, left=False):
     """ Raise :class:`AxiomError` if a diagram is not traceable. """
     traced_dom, traced_cod = (arg.dom[:n], arg.cod[:n]) if left\
         else (arg.dom[len(arg.dom) - n:], arg.cod[len(arg.cod) - n:])
@@ -776,202 +712,8 @@ class classproperty(object):
         return self.f(x)
 
 
-class Generator[**P, T]:
-    """
-    The generator of a category, bound under its own name, e.g. ``Swap``
-    on ``symmetric.Diagram``, and taking the parameters ``P`` of that class
-    to an instance ``T`` of it. :meth:`discopy.cat.FreeCategory.generator`
-    declares one at its class statement.
-
-    :meth:`subclass` declares the class of the generator: on that category
-    the attribute is the class itself, on any other category decorated with
-    :func:`factory` it is a subclass built on first access, extending the
-    attribute of each base and the generators of the category that the
-    class extends, so that a module writes ``Swap = Diagram.Swap``.
-    The level enters through the root: a box extends the level's
-    ``Diagram``, an ``Exp`` gets the level's ``Ty`` as ``ob`` and a
-    ``Functor`` its ``Diagram`` as ``dom`` and ``cod``. A generator is built
-    once per module and a class attribute assigned by hand wins, as does
-    one assigned under the name the generator had before, e.g.
-    ``swap_factory``, which is read with a :class:`DeprecationWarning`.
-    A class built for a category outside the package is named after the
-    category, e.g. ``Recipe.Swap``, so that it pickles by reference.
-    :meth:`classmethod` declares a generator that is behaviour rather than
-    a class, e.g. the trace of a pivotal diagram, and :meth:`alias` one that
-    is another generator of the same category, e.g. the braid of a symmetric
-    category is its swap.
-
-    Example
-    -------
-    >>> from discopy import symmetric, markov, closed
-    >>> assert symmetric.Diagram.Swap is symmetric.Swap
-    >>> assert closed.Swap.__bases__ == (
-    ...     markov.Swap, closed.Permutation, closed.Box, closed.Diagram)
-    """
-    def __init__(self, root: type[T] | None = None,
-                 method: Callable[Concatenate[Any, P], T] | None = None,
-                 aliased: str | None = None):
-        self.root, self.method, self.aliased = root, method, aliased
-
-    @classmethod
-    def subclass[U](cls, root: type[U]) -> Generator[..., U]:
-        """ The factory building a subclass of ``root`` at every level. """
-        return Generator(root=root)
-
-    @classmethod
-    def alias(cls, name: str) -> Generator[..., Any]:
-        """
-        The factory named ``name`` on the same category, e.g. the braid of
-        a symmetric category is its swap.
-        """
-        return Generator(aliased=name)
-
-    @classmethod
-    def classmethod[**Q, U](
-            cls, method: Callable[Concatenate[Any, Q], U]) -> Generator[Q, U]:
-        """ The factory calling ``method`` on the category. """
-        return Generator(method=method)
-
-    def __set_name__(self, owner: type, name: str):
-        self.owner, self.name, self.cache = owner, name, {}
-        if self.legacy not in vars(owner):
-            deprecated = DeprecatedAttribute(name)
-            deprecated.__set_name__(owner, self.legacy)
-            setattr(owner, self.legacy, deprecated)
-
-    @property
-    def legacy(self) -> str:
-        """ The name the generator had before, e.g. ``swap_factory``. """
-        return f"{snake_case(self.name)}_factory"
-
-    def assigned(self, cls: type) -> Any:
-        """
-        The generator assigned by hand under its :attr:`legacy` name on
-        ``cls`` or a base below the owner, e.g. ``swap_factory = MySwap``,
-        read with a :class:`DeprecationWarning`, :obj:`None` otherwise.
-        """
-        for klass in cls.__mro__:
-            value = vars(klass).get(self.legacy)
-            if value is not None\
-                    and not isinstance(value, DeprecatedAttribute):
-                import warnings
-                warnings.warn(
-                    f"{factory_name(klass)}.{self.legacy} is deprecated, "
-                    f"assign {factory_name(klass)}.{self.name} instead.",
-                    DeprecationWarning, stacklevel=4)
-                return value
-            if klass is self.owner:
-                return None
-        return None
-
-    def __get__(self, instance, cls: type) -> Any:
-        """
-        The generator of ``cls``. It is declared to return :data:`Any`
-        rather than ``type[T]`` because a module binds it to a name,
-        e.g. ``Swap = Diagram.Swap``, that classes then subclass, and a
-        typechecker only takes a class object or ``Any`` for a base.
-        """
-        try:
-            return self.cache[cls]
-        except KeyError:
-            self.cache[cls] = generator = self.resolve(cls)
-            return generator
-
-    def resolve(self, cls: type) -> Any:
-        """
-        The generator of ``cls``, computed once and cached under both the
-        class it is read from and the category that keys it, so that a box
-        and its diagram get the same class rather than two equal ones.
-        """
-        if (assigned := self.assigned(cls)) is not None:
-            return assigned
-        if self.aliased is not None:
-            return getattr(cls, self.aliased)
-        if self.method is not None:
-            return MethodType(self.method, cls)
-        category = cls.ar
-        if (generator := self.cache.get(category)) is None:
-            self.cache[category] = generator = self.root\
-                if category is self.owner\
-                else self.shared(category) or self.build(category)
-        return generator
-
-    def __call__(self, *args: P.args, **kwargs: P.kwargs) -> T:
-        """
-        Call the factory of the category that declares it, e.g. the ``Swap``
-        of ``symmetric.Diagram``. Attribute access goes through
-        :meth:`__get__`, so this is reached only by a factory taken out of
-        the class where it is declared.
-        """
-        return self.__get__(None, self.owner)(*args, **kwargs)
-
-    def shared(self, cls: type) -> type | None:
-        """ The generator of a base of ``cls`` defined in the same module. """
-        return next((
-            root for base in cls.__bases__ if base.__module__ == cls.__module__
-            and isinstance(root := getattr(base, self.name, None), type)),
-            None)
-
-    @property
-    def parents(self) -> tuple[str, ...]:
-        """ The generators of the owner that the root extends. """
-        if self.root is None:
-            return ()
-        names = {name for klass in self.owner.__mro__ for name, value
-                 in vars(klass).items() if isinstance(value, Generator)}
-        return tuple(name for base in self.root.__bases__
-                     for name in sorted(names)
-                     if getattr(self.owner, name) is base)
-
-    def build(self, cls: type) -> type:
-        """
-        The subclass of the generators of the bases of ``cls``, under its
-        name or one aliased to it, e.g. a compact swap is both a symmetric
-        swap and a ribbon braid, or the root
-        itself when no base of ``cls`` has one, i.e. when ``cls`` is outside
-        the hierarchy of the category that declares the generator.
-        """
-        if self.root is None:
-            raise TypeError(f"{self.name} declares no class to build from.")
-        aliases = {name for klass in cls.__mro__
-                   for name, value in vars(klass).items()
-                   if isinstance(value, Generator)
-                   and value.aliased == self.name}
-        roots = dict.fromkeys(
-            root for base in cls.__bases__
-            if isinstance(root := getattr(base, self.name, None), type))
-        if not roots:
-            return self.root
-        parents = [getattr(cls, name) for name in self.parents]
-        aliased = [
-            root for base in cls.__bases__ for name in sorted(aliases)
-            if isinstance(root := getattr(base, name, None), type)
-            and root not in roots and root not in parents]
-        root, *_ = roots
-        level = (cls, ) if issubclass(self.root, self.owner) else ()
-        attributes = {key: cls for key, value in vars(self.root).items()
-                      if value is self.owner}
-        references = " and ".join(
-            f":class:`~{r.__module__}.{r.__name__}`"
-            for r in (*roots, *aliased))
-        qualname = root.__name__ if cls.__module__.startswith("discopy.")\
-            else f"{cls.__qualname__}.{self.name}"
-        return type(root.__name__, (*roots, *parents, *aliased, *level), {
-            **attributes,
-            "__module__": cls.__module__,
-            "__qualname__": qualname,
-            "__doc__": f"A {references} in a "
-                       f":class:`~{cls.__module__}.{cls.__name__}`."})
-
-
 class Node:
     """ Node in a :class:`networkx.Graph`, can hold arbitrary data. """
-    obj: Any
-    box: Any
-    i: int
-    j: int
-    x: float
-
     def __init__(self, kind, **data):
         self.kind, self.data = kind, data
         for key, value in data.items():
