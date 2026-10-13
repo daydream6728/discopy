@@ -1055,9 +1055,11 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `unresolved-attribute`, since a downgrade asks the host category for
   structure it may not have. `fail-under` rises to 9.0.
 
-- The pylint plugin of `.github/scripts/pylint_axioms.py` reads a `@rule`
-  as the classmethod it is, as it read an `@axiom`, and `fail-under` rises
-  to 8.97.
+- The pylint plugin of `.github/scripts/pylint_axioms.py` goes: a
+  `Declaration` is a `classmethod`, which its constructor initialises with
+  the function it declares, and astroid reads a function as a classmethod
+  when its decorator returns one, so pylint reads an `@axiom` or a `@rule`
+  as the classmethod it is with no transform.
 
 - pylint reads a law stated with `@axiom` as the classmethod it is,
   through `.github/scripts/pylint_axioms.py`, a plugin `.pylintrc` loads

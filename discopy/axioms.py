@@ -343,7 +343,7 @@ def inhabits(value, kind) -> bool:
 
 
 @dataclass
-class Declaration[**P, T]:
+class Declaration[**P, T](classmethod):
     """
     A declaration of a category, stated once on an abstract base class and
     inherited by every category below it: an :class:`Axiom` or a
@@ -390,6 +390,7 @@ class Declaration[**P, T]:
             raise TypeError(
                 f"{function.__module__} states {function.__name__} "
                 "without `from __future__ import annotations`.")
+        classmethod.__init__(self, self.function)
         self.name = self.name or self.function.__name__
         self.params = dict(self.params or {})
         self.__doc__ = self.function.__doc__
