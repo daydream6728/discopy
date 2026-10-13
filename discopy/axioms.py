@@ -636,11 +636,11 @@ class Axiom[**P, T](Declaration[P, T]):
         on its canonical instance is drawn all the same, as the inequation it
         is there, see :meth:`Equation.checked`.
 
-        >>> from discopy import braided
-        >>> braided.Diagram.braid_naturality.draw(
-        ...     doctest="docs/_static/braided/braid-naturality-failing.svg")
+        >>> from discopy import biclosed
+        >>> biclosed.Diagram.currying_left.draw(
+        ...     doctest="docs/_static/biclosed/currying-left-failing.svg")
 
-        .. image:: /_static/braided/braid-naturality-failing.svg
+        .. image:: /_static/biclosed/currying-left-failing.svg
             :align: center
         """
         equation = self.canonical()

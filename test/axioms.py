@@ -158,3 +158,16 @@ def test_matrix():
     assert cat.Arrow.dagger_involution in once
     assert rigid.Diagram.unitality not in once
     assert set(once) <= set(Testable.matrix())
+
+
+def test_canonical_instances():
+    """ Every law of a free category holds on its canonical instance unless
+    declared broken, so that a law that crashes on its own statement fails
+    here before the property matrix ever searches for a counterexample. """
+    for category in Testable.enrolled():
+        if not hasattr(category, "box_factory"):
+            continue
+        for law in category.axioms.values():
+            equation = law.canonical()
+            assert equation is NotImplemented or law.broken or equation,\
+                (category, law.name)

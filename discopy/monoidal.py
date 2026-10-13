@@ -1139,8 +1139,9 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
         then we set it to ``zip(boxes, offstes)``.
         """
         if boxes_and_offsets is None:
-            boxes_and_offsets = zip(
-                boxes, offsets)  # ty: ignore[invalid-argument-type]
+            if boxes is None or offsets is None:
+                raise ValueError(messages.MISSING_BOXES_AND_OFFSETS)
+            boxes_and_offsets = zip(boxes, offsets)
         diagram = cls.id(dom)
         for box, offset in boxes_and_offsets:
             left = diagram.cod[:offset]
@@ -1220,6 +1221,13 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
         drawing = f.to_drawing()
         return cat.Equation(drawing.dagger().dagger(), drawing)
 
+    @axiom
+    def foliation_idempotence[A: Obj[Ty], B: Obj[Ty]](
+            cls, f: Hom[Self, A, B]) -> axioms.Equation[Hom[Self, A, B]]:
+        """ A foliation is its own foliation, on the nose. """
+        foliated = f.foliation()
+        return cat.Equation(foliated.foliation(), foliated)
+
     @classmethod
     def equation_factory(cls, *terms: Diagram) -> Equation:
         """
@@ -1257,8 +1265,8 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
         """
         graph = hypergraph.Hypergraph[
             type(self).ar].from_diagram(self)  # ty: ignore[invalid-type-form]
-        staircase = len(self.boxes) == len(self.inside)
-        if staircase and len(graph.boxes) == len(self.boxes):
+        has_states = any(not box.dom for box in self.boxes)
+        if has_states and len(graph.boxes) == len(self.boxes):
             offsets = tuple(
                 offset if not box.dom else None
                 for box, offset in zip(self.boxes, self.offsets))
@@ -1303,7 +1311,7 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
                 and graph.is_boundary_connected and all(
                     getattr(obj, "l", obj) == getattr(obj, "r", obj)
                     for obj in graph.spider_types):
-            return graph.to_diagram()
+            return graph.to_diagram().merge_layers()
         return self.merge_layers()
 
     def merge_layers(self):

@@ -59,3 +59,10 @@ SECTION_NEEDS_SWAPS = (
 MAP_HAS_NO_SPIDERS = (
     "A map has no spiders: it keeps a copy as a box where a hypergraph merges "
     "its wires.")
+MISSING_BOXES_AND_OFFSETS = (
+    "Decoding needs either boxes and offsets, or the two of them zipped.")
+NO_TYPE_PARAMETER = (
+    "{} has no type parameter to subscript, declare one as in class C[name].")
+FOLIATION_YANKS_SNAKES = (
+    "Foliating a compact diagram decodes its hypergraph, which yanks a snake "
+    "a first foliation can leave in place.")

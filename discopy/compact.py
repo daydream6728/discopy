@@ -54,7 +54,7 @@ Coherence
 ...     Cap(x, x.r) @ Cap(y, y.r) >> x @ Diagram.swap(x.r, y @ y.r))
 """
 
-from discopy import symmetric, ribbon, rigid, cmap, hypergraph
+from discopy import symmetric, ribbon, rigid, cmap, hypergraph, messages
 from discopy.abc import CompactCategory
 from discopy.cat import factory
 from discopy.utils import Generator, deprecated_alias
@@ -79,6 +79,9 @@ class Diagram(symmetric.Diagram, ribbon.Diagram, CompactCategory):
     ob = Ty
     layer_factory = Layer
     trace_factory = ribbon.Diagram.trace_factory
+
+    foliation_idempotence = symmetric.Diagram.foliation_idempotence.failing(
+        messages.FOLIATION_YANKS_SNAKES)
 
 
 class Box(symmetric.Box, ribbon.Box, Diagram):

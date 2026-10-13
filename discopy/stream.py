@@ -397,7 +397,7 @@ class Stream[category](MonoidalCategory, NamedGeneric):
     @classmethod
     def sequence(
             cls, name: str, dom: Ty, cod: Ty, mem: Ty | None = None,
-            n_steps: int = 0, box_factory=symmetric.Box) -> Stream:
+            n_steps: int = 0, box_factory=None) -> Stream:
         """
         Produce a stream of boxes indexed by a time step.
 
@@ -412,6 +412,7 @@ class Stream[category](MonoidalCategory, NamedGeneric):
         f2 : x2 @ m1 -> y2 @ m2
         """
         mem = cls.ob() if mem is None else mem
+        box_factory = box_factory or cls.category.box_factory
         now = box_factory(
             f"{name}{n_steps}", dom.now @ mem.now, cod.now @ mem.later.now)
         return cls(now, dom, cod, mem, _later=lambda: cls.sequence(

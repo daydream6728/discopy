@@ -855,6 +855,19 @@ class RigidCategory[C0: Pregroup, C1: RigidCategory](BiclosedCategory[C0, C1]):
         return cls.equation_factory(
             (f >> g).transpose(), g.transpose() >> f.transpose())
 
+    @axiom
+    def rotate_contravariance[A: Obj[C0], B: Obj[C0], C: Obj[C0]](
+            cls, f: Hom[C1, A, B], g: Hom[C1, B, C]
+    ) -> Equation[Hom[C1, R[C], R[A]]]:
+        """ Rotation, i.e. the right adjoint, reverses composition. """
+        return cls.equation_factory((f >> g).r, g.r >> f.r)
+
+    @axiom
+    def adjunction[A: Obj[C0], B: Obj[C0]](
+            cls, f: Hom[C1, A, B]) -> Equation[Hom[C1, A, B]]:
+        """ The left and right adjoints are mutually inverse. """
+        return cls.equation_factory(f.l.r, f, f.r.l)
+
     @rule
     def counit[X: Obj[C0]](
             cls, x: Var[C0, X]) -> Hom[C1, Tensor[X, R[X]], Unit[C0]]:
@@ -875,6 +888,12 @@ class PivotalCategory[
     A pivotal category is a :class:`RigidCategory` where the left and right
     adjoints coincide, hence it is also a :class:`TracedCategory`.
     """
+
+    @axiom
+    def self_dual[X: Obj[C0]](
+            cls, x: Var[C0, X]) -> Equation[Var[C0, R[X]]]:
+        """ The left and right adjoints of an object are equal. """
+        return Equation(x.r, x.l)
 
     @axiom
     def pivotality[A: Obj[C0], B: Obj[C0]](

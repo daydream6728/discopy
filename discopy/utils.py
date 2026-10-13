@@ -190,9 +190,11 @@ class NamedGeneric:
                 values[0] if len(values) == 1 else values)
         if hasattr(cls, "__is_named_generic__"):
             cls = cls.__bases__[0]
-        attributes = next(
+        attributes = next((
             [param.__name__ for param in c.__type_params__]
-            for c in cls.__mro__ if c.__type_params__)
+            for c in cls.__mro__ if c.__type_params__), None)
+        if attributes is None:
+            raise TypeError(messages.NO_TYPE_PARAMETER.format(cls))
         cls_values = tuple(getattr(cls, attr, None) for attr in attributes)
         if cls not in NamedGeneric._cache:
             NamedGeneric._cache[cls] = {cls_values: cls}

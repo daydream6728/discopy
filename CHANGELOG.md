@@ -9,6 +9,14 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Added
 
+- `RigidCategory.rotate_contravariance` and `adjunction`, that rotation
+  reverses composition and that the left and right adjoints of a morphism
+  are mutually inverse, the class of bug #716 was, and
+  `PivotalCategory.self_dual`. `test_canonical_instances` checks every law
+  of every free category on its canonical instance, and `Axiom.draw` draws
+  `biclosed.Diagram.currying_left`, a law the category breaks, now that
+  braids are compared by hypergraph and `braid_naturality` holds. The
+  left unitality of `cat.Functor` is a strict xfail until #648 is fixed.
 - Hypothesis strategies for every free category of the hierarchy, each
   generating diagrams through the structure it is compared up to:
   `Hypergraph.strategy` draws a wiring port by port under the spider
@@ -756,6 +764,21 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
+- `Diagram.foliation` is idempotent. A diagram records the offsets of its
+  states whenever it has one, where it did only when each layer held one
+  box, so a foliated diagram with several states in a layer refoliated
+  differently; and the foliation read off a hypergraph merges its layers,
+  so consecutive permutations compose into one. `foliation_idempotence`,
+  a law of `monoidal.Diagram`, found the second, and is declared broken
+  from compact categories on, where a refoliation yanks a snake the first
+  can leave in place.
+- `Stream.sequence` builds the boxes of the category the stream is over,
+  where it built `symmetric.Box` whatever the category; `para.Closed.curry`
+  defaults to `left=True` like every other curry since #560; decoding with
+  neither boxes and offsets nor their zip, and subscripting a
+  `NamedGeneric` that has no type parameter, raise with a message; and the
+  recipe of the `diagrams` notebook sets `ob`, where it set a `ty_factory`
+  nothing reads.
 - A binary term or type raising of a categorial grammar evaluates with a
   functor passed positionally, as the terms around it pass it, where
   `FX(FC(a, b), r).eval()` raised `TypeError`.
