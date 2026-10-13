@@ -86,14 +86,15 @@ class Category[C0, C1: Category](Testable[C1], ABC):
     ...         return self + other
     >>> assert List([1, 2]) >> List([3]) == List([1, 2, 3])
     >>> assert List([3]) << List([1, 2]) == List([1, 2, 3])
+
+    The class variable ``ar`` is a backward-compatible alias for
+    ``factory``, since types are themselves the objects of diagrams.
     """
     ob: ClassVar[type]
     factory: ClassVar[type]
     dom: C0
     cod: C0
 
-    #: Backward-compatible alias for :attr:`factory`, since types are
-    #: themselves the objects of diagrams.
     ar = classproperty(lambda cls: getattr(cls, "factory", cls))
 
     @classmethod

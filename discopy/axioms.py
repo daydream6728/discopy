@@ -76,7 +76,7 @@ from dataclasses import KW_ONLY, dataclass, replace
 from functools import cached_property, reduce, wraps
 from operator import matmul
 from typing import (
-    TYPE_CHECKING, Annotated, Self, get_args, get_origin)
+    TYPE_CHECKING, Annotated, Any, Self, get_args, get_origin)
 
 from discopy.utils import (
     AxiomError,
@@ -93,7 +93,7 @@ if TYPE_CHECKING:
 
 GENERATORS = tuple("abcde")
 """
-The names the generators of a free category are drawn from.
+The names the generators of a free category are sampled from.
 
 They are finitely many and shared, so a generated functor can name every one
 of them: composing two functors keeps only the keys of the left-hand map, so
@@ -226,7 +226,7 @@ it as ``Coarse``.
 type Hom[Coarse, Dom, Cod] = Annotated[Coarse, Dom, Cod]
 """
 The morphisms of type ``Coarse`` from ``Dom`` to ``Cod``, as a premise to
-draw, e.g. ``f: Hom[C1, A, B]``, or the conclusion of a rule. A typechecker
+sample, e.g. ``f: Hom[C1, A, B]``, or the conclusion of a rule. A typechecker
 reads it as ``Coarse``.
 """
 
@@ -234,14 +234,17 @@ reads it as ``Coarse``.
 class Count(int):
     """
     The sort of the numbers up to :data:`MAX_COUNT`, as the bound of a
-    variable ``N: Count`` of a declaration, e.g. the legs of a spider.
+    variable ``N: Count`` of a declaration, e.g. the legs of a spider, two
+    in the canonical instance of a law, the least that is neither the unit
+    nor a single wire.
     """
+    canonical = 2
 
 
 class Tensor[*Objects]:
     """
     The tensor of objects in a signature: ``Tensor[A, B]`` is a type for a
-    typechecker and the object ``A @ B`` once the variables are drawn.
+    typechecker and the object ``A @ B`` once the variables are sampled.
 
     >>> from discopy.monoidal import Ty
     >>> assert Tensor[Ty('x'), Ty('y')] == Ty('x', 'y')
@@ -352,7 +355,7 @@ class Declaration[**P, T](classmethod):
     The category is the class the declaration is bound to, e.g.
     :class:`discopy.cat.Arrow` for those of :class:`discopy.abc.Category`.
     Its function is a classmethod of it, implicitly: its first parameter is
-    the category and the others are its arguments, drawn in order. Its
+    the category and the others are its arguments, sampled in order. Its
     signature is a sequent: each type parameter is a variable of the sort
     its bound states, ``A: Obj[C0]`` an object, ``X: Atom[C0]`` an atomic
     one and ``N: Count`` a number, each parameter a premise, ``f: Hom[C1, A,
@@ -363,7 +366,7 @@ class Declaration[**P, T](classmethod):
     :class:`R`, :class:`Delay`, :class:`Over`, :class:`Under` and
     :class:`Repeat`. Every module stating a declaration needs ``from
     __future__ import annotations``, which keeps the annotations unevaluated
-    until the variables are drawn: a function compiled without it is
+    until the variables are sampled: a function compiled without it is
     refused.
 
     Parameters:
@@ -381,7 +384,7 @@ class Declaration[**P, T](classmethod):
     _: KW_ONLY
     category: type = None  # ty: ignore[invalid-assignment]
     name: str = None  # ty: ignore[invalid-assignment]
-    params: dict = None  # ty: ignore[invalid-assignment]
+    params: dict[str, Any] = None  # ty: ignore[invalid-assignment]
 
     def __post_init__(self):
         function = inspect.unwrap(self.function)
@@ -462,7 +465,7 @@ class Declaration[**P, T](classmethod):
     def output(self, scope: dict):
         """
         The type of the output of the declaration, its return annotation
-        evaluated in the scope its arguments were drawn in, which the output
+        evaluated in the scope its arguments were sampled in, which the output
         :func:`inhabits`.
         """
         return self.evaluate(
@@ -621,7 +624,7 @@ class Axiom[**P, T](Declaration[P, T]):
                 else (self.category.ob(name), ) * 2
             return self.category.box_factory(name, dom, cod)
 
-        scope = self.scope(lambda name, sort: 2 if sort is Count
+        scope = self.scope(lambda name, sort: Count.canonical if sort is Count
                            else self.category.ob(name))
         arguments = self.instantiate(scope, value)
         try:
@@ -755,7 +758,7 @@ class Rule[**P, T](Declaration[P, T]):
         """
         Generate the premises of the rule for a conclusion from ``dom`` to
         ``cod``, see :meth:`Declaration.arguments`, the variables it binds
-        :meth:`given` and the others drawn. The conclusion need not meet the
+        :meth:`given` and the others sampled. The conclusion need not meet the
         goal on a side that is not a variable.
         """
         return self.arguments(self.given(dom, cod), **params)

@@ -313,7 +313,7 @@ class Arrow(FreeCategory, Serialisable["Arrow"]):
     @classmethod
     def strategy(cls, **params):
         """
-        The strategy the property matrix draws the terms of a free category
+        The strategy the property matrix samples the terms of a free category
         from: its :meth:`search`, which a category with a combinatorial
         representation mixes with the :meth:`sample` of it, e.g.
         :meth:`discopy.symmetric.Diagram.strategy`.
@@ -326,18 +326,17 @@ class Arrow(FreeCategory, Serialisable["Arrow"]):
     def search(cls, *, dom=None, cod=None, fuel=FUEL, within=None):
         """
         Derive the terms of a free category from its rules: a box, or the
-        conclusion of
-        one of its :attr:`rules` chosen at random, its morphism premises drawn
-        by the :meth:`strategy` of the category with one less unit of
-        ``fuel``, see
+        conclusion of one of its :attr:`rules` chosen at random, its
+        morphism premises sampled by the :meth:`strategy` of the category
+        with one less unit of ``fuel``, see
         :meth:`discopy.axioms.Rule.strategy`. Once the fuel runs out, only the
         rules with no morphism premise are applied. A conclusion that misses
         ``dom`` or ``cod`` is composed with a box from or to it, so that both
         are always honoured, with no filtering. Every choice shrinks to a box.
 
         Parameters:
-            dom : The domain, drawn if ``None``.
-            cod : The codomain, drawn if ``None``.
+            dom : The domain, sampled if ``None``.
+            cod : The codomain, sampled if ``None``.
             fuel : How deep the rules nest.
             within : The class whose rules a term is derived from, e.g.
                 :class:`discopy.abc.MonoidalCategory` for the terms of the

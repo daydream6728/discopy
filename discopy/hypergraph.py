@@ -191,7 +191,7 @@ class Hypergraph[category](
     >>> assert (f @ g).wires == ((0, 1), (((0,), (2,)), ((1,), (3,))), (2, 3))
     """
     MAX_ARITY = 3
-    """ The largest number of ports :meth:`strategy` draws for a box. """
+    """ The largest number of ports :meth:`strategy` samples for a box. """
 
     functor = classproperty(lambda cls: cls.category.functor_factory)
     ob = classproperty(lambda cls: cls.category.ob)
@@ -1412,7 +1412,7 @@ class Hypergraph[category](
         Generate hypergraphs of :attr:`category` by drawing their wiring,
         then a box of the category for each box of the wiring.
 
-        The wiring is drawn port by port, in the order of :attr:`ports`,
+        The wiring is sampled port by port, in the order of :attr:`ports`,
         under the constraint the category puts on the producers (inputs and
         box outputs) and the consumers (box inputs and outputs) of a spider,
         from the most structure to the least:
@@ -1427,7 +1427,7 @@ class Hypergraph[category](
         * a category with no symmetry has no hypergraphs generated, since a
           planar diagram is not determined by its wiring.
 
-        The box types are free, so a boundary the drawn wiring does not match
+        The box types are free, so a boundary the sampled wiring does not match
         is closed by one extra balancing box: ``dom`` and ``cod`` are always
         honoured, with no filtering. Every choice is an integer whose zero is
         the simplest option, a fresh spider or the first candidate, so that
@@ -1435,8 +1435,8 @@ class Hypergraph[category](
 
         Parameters:
             types : A strategy for the types of boxes and boundaries.
-            dom : The domain, drawn from ``types`` if ``None``.
-            cod : The codomain, drawn from ``types`` if ``None``.
+            dom : The domain, sampled from ``types`` if ``None``.
+            cod : The codomain, sampled from ``types`` if ``None``.
             min_leaves : The minimum number of boxes.
             max_leaves : The maximum number of boxes, not counting the
                 balancing box.
@@ -1446,7 +1446,7 @@ class Hypergraph[category](
                 to acyclic. Only applies to the directed wirings.
             max_scalars : The maximum number of spiders with no port, by
                 default one in a traced category unless ``acyclic``. A
-                scalar is drawn for about one hypergraph in four.
+                scalar is sampled for about one hypergraph in four.
 
         Example
         -------

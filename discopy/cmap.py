@@ -834,7 +834,7 @@ class CMap[category](CompactCategory, NamedGeneric, Serialisable):
         Generate maps of :attr:`category` by drawing their edge involution,
         which pairs ports of different kinds with equal types, and ports of
         the same kind with adjoint types when the category is compact: this
-        is the wiring :meth:`Hypergraph.strategy` draws for a symmetric or a
+        is the wiring :meth:`Hypergraph.strategy` samples for a symmetric or a
         compact category, which the map reads off with
         :meth:`Hypergraph.to_map`.
 
@@ -845,8 +845,8 @@ class CMap[category](CompactCategory, NamedGeneric, Serialisable):
 
         Parameters:
             types : A strategy for the types of boxes and boundaries.
-            dom : The domain, drawn from ``types`` if ``None``.
-            cod : The codomain, drawn from ``types`` if ``None``.
+            dom : The domain, sampled from ``types`` if ``None``.
+            cod : The codomain, sampled from ``types`` if ``None``.
             min_leaves : The minimum number of boxes.
             max_leaves : The maximum number of boxes, not counting the
                 balancing box of :meth:`Hypergraph.strategy`.

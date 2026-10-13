@@ -343,9 +343,9 @@ class Diagram(markov.Diagram, FeedbackCategory):
     def sample(cls, *, dom=None, cod=None, fuel=FUEL):
         """
         Sample feedback diagrams as the :meth:`feedback` of an acyclic
-        Markov diagram drawn through its hypergraph: a feedback category is
+        Markov diagram sampled through its hypergraph: a feedback category is
         not traced, its cycles go through a delayed memory, so the wiring is
-        drawn acyclic, from ``dom @ mem.delay()`` to ``cod @ mem``, with a
+        sampled acyclic, from ``dom @ mem.delay()`` to ``cod @ mem``, with a
         memory of at most ``fuel`` wires and at most ``fuel + 1`` boxes, then
         fed back.
 
