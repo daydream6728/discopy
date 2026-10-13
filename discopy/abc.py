@@ -61,7 +61,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from dataclasses import dataclass
 from types import NoneType
-from typing import TYPE_CHECKING, ClassVar, Self
+from typing import TYPE_CHECKING, ClassVar
 
 from discopy.axioms import (
     Atom, Count, Delay, Equation, Hom, L, Obj, Over, R, Repeat, Tensor,
@@ -164,22 +164,6 @@ class Category[C0, C1: Category](Testable[C1], ABC):
         return cls.equation_factory(f.then(g).then(h), f.then(g.then(h)))
 
     @axiom
-    def identity_typing[X: Obj[C0]](
-            cls, x: Var[C0, X]) -> Equation[Var[C0, X]]:
-        """ Typing of identity morphisms. """
-        identity = cls.id(x)
-        return cls.ob.equation_factory(identity.dom, x, identity.cod)
-
-    @axiom
-    def composition_typing[A: Obj[C0], B: Obj[C0], C: Obj[C0]](
-            cls, f: Hom[C1, A, B], g: Hom[C1, B, C]
-    ) -> Equation[tuple[Var[C0, A], Var[C0, C]]]:
-        """ Typing of composition, its domain then its codomain. """
-        composite = f.then(g)
-        return cls.ob.equation_factory(
-            (composite.dom, composite.cod), (f.dom, g.cod))
-
-    @axiom
     def dagger_involution[A: Obj[C0], B: Obj[C0]](
             cls, f: Hom[C1, A, B]) -> Equation[Hom[C1, A, B]]:
         """ The dagger is involutive. """
@@ -222,16 +206,16 @@ class ColouredMonoid[C0, C1: ColouredMonoid](Category[C0, C1]):
         def __len__(self) -> int:
             """ The number of generating objects inside, assumed free. """
 
-        def __getitem__(self, key) -> Self:
+        def __getitem__(self, key) -> C1:
             """ The slices of a free monoid, assumed to stay inside it. """
 
     @classmethod
-    def id(cls, dom: C0 | None = None) -> Self:
+    def id(cls, dom: C0 | None = None) -> C1:
         """The monoidal unit, i.e. the empty tensor ``cls()``."""
-        return cls()
+        return cls()  # ty: ignore[invalid-return-type]
 
     @classmethod
-    def unit(cls, colour: C0 | None = None) -> C0 | Self:
+    def unit(cls, colour: C0 | None = None) -> C0 | C1:
         """
         The unit at a colour, i.e. the identity on it.
 
@@ -242,15 +226,15 @@ class ColouredMonoid[C0, C1: ColouredMonoid](Category[C0, C1]):
         return cls.id(colour)
 
     @abstractmethod
-    def tensor(self, *objects: Self) -> Self:
+    def tensor(self, *objects: C1) -> C1:
         """ The n-ary product of a monoid for ``n > 0``. """
 
-    def then(self, *others: Self) -> Self:
+    def then(self, *others: C1) -> C1:
         """Sequential composition, given by the monoid product."""
         return self.tensor(*others)
 
     @classmethod
-    def cast(cls, atoms) -> Self:
+    def cast(cls, atoms) -> C1:
         """
         The element of a tuple of atoms, or of a single atom; an element of
         the monoid is unchanged.
@@ -263,18 +247,21 @@ class ColouredMonoid[C0, C1: ColouredMonoid](Category[C0, C1]):
         if isinstance(atoms, cls):
             return atoms
         if isinstance(atoms, tuple):
-            return cls(*atoms)
-        return cls(atoms)  # ty: ignore[too-many-positional-arguments]
+            return cls(*atoms)  # ty: ignore[invalid-return-type]
+        return cls(  # ty: ignore[invalid-return-type]
+            atoms)  # ty: ignore[too-many-positional-arguments]
 
     @classmethod
-    def whisker(cls, other: C0 | Self) -> Self:
+    def whisker(cls, other: C0 | C1) -> C1:
         """
         Do nothing if ``other`` is already a morphism else apply :meth:`id`.
 
         Parameters:
             other : The object or morphism to be tensored on the left or right.
         """
-        return other if isinstance(other, cls) else cls.id(other)
+        return (
+            other  # ty: ignore[invalid-return-type]
+            if isinstance(other, cls) else cls.id(other))
 
     def __matmul__(self, other):
         return self.tensor(other)
@@ -576,7 +563,7 @@ class BiclosedCategory[
         """
 
     @abstractmethod
-    def curry(self, n: int = 1, left: bool = True) -> Self:
+    def curry(self, n: int = 1, left: bool = True) -> C1:
         """
         The currying of a morphism, to be instantiated.
 
@@ -602,7 +589,7 @@ class BiclosedCategory[
             raise ValueError
         return base, exponent
 
-    def uncurry(self, n: int = 1, left: bool = True) -> Self:
+    def uncurry(self, n: int = 1, left: bool = True) -> C1:
         """
         Uncurry a morphism by composing it with :meth:`ev`, assuming its
         codomain is an exponential object. If the exponent has less than
@@ -615,7 +602,7 @@ class BiclosedCategory[
         if n < 0:
             raise ValueError
         if not n:
-            return self
+            return self  # ty: ignore[invalid-return-type]
         base, exponent = self.base_and_exponent(n, left)
         result = self @ exponent >> self.ev(base, exponent, True) if left\
             else exponent @ self >> self.ev(base, exponent, False)
@@ -760,7 +747,7 @@ class RigidCategory[C0: Pregroup, C1: RigidCategory](BiclosedCategory[C0, C1]):
         return base @ cls.cups(exponent.l, exponent) if left\
             else cls.cups(exponent, exponent.r) @ base
 
-    def curry(self, n: int = 1, left: bool = True) -> Self:
+    def curry(self, n: int = 1, left: bool = True) -> C1:
         """
         The curry of a rigid morphism is obtained using caps.
 
@@ -771,7 +758,7 @@ class RigidCategory[C0: Pregroup, C1: RigidCategory](BiclosedCategory[C0, C1]):
         if n < 0 or n > len(self.dom):
             raise ValueError
         if not n:
-            return self
+            return self  # ty: ignore[invalid-return-type]
         if left:
             base, exponent = self.dom[:-n], self.dom[-n:]
             return base @ self.caps(exponent, exponent.l) >> self @ exponent.l

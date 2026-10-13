@@ -421,8 +421,9 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `substitute` and `assert_axioms` go, and `Axiom.weaken` takes the
   parameters of the strategy of the morphisms, e.g. `weaken(within=
   MonoidalCategory)` for the rigid diagrams with no cups or caps. `Axiom.strategy` and
-  `Axiom.falsify` give the arguments of a law by name. The typing of
-  composition is one law, `composition_typing`, and `abc.Category` is a
+  `Axiom.falsify` give the arguments of a law by name, the typing laws go,
+  since the boundary of every term is checked by its constructor and the
+  output of every law by `axioms.inhabits`, and `abc.Category` is a
   `Testable`, whose `strategy` raises `NotImplementedError` until a class
   implements one. The `shared` profile goes.
 - `Hypergraph.strategy` and `CMap.strategy` sample the categories whose
