@@ -57,7 +57,7 @@ Coherence
 from discopy import symmetric, ribbon, rigid, cmap, hypergraph
 from discopy.abc import CompactCategory
 from discopy.cat import factory
-from discopy.utils import deprecated_alias
+from discopy.utils import Generator, deprecated_alias
 from discopy.pivotal import (  # noqa: F401  pylint: disable=unused-import
     Wire, Ty)
 
@@ -89,26 +89,6 @@ class Box(symmetric.Box, ribbon.Box, Diagram):
         name (str) : The name of the box.
         dom (pivotal.Ty) : The domain of the box, i.e. its input.
         cod (pivotal.Ty) : The codomain of the box, i.e. its output.
-    """
-
-
-class Cup(ribbon.Cup, Box):
-    """
-    A compact cup is a ribbon cup in a compact diagram.
-
-    Parameters:
-        left (pivotal.Ty) : The atomic type.
-        right (pivotal.Ty) : Its adjoint.
-    """
-
-
-class Cap(ribbon.Cap, Box):
-    """
-    A compact cap is a ribbon cap in a compact diagram.
-
-    Parameters:
-        left (pivotal.Ty) : The atomic type.
-        right (pivotal.Ty) : Its adjoint.
     """
 
 
@@ -160,12 +140,13 @@ CMap = cmap.CMap[Diagram]
 
 Id = Diagram.id
 
-Diagram.box_factory = Box
-Diagram.swap_factory = Swap
+Diagram.box_factory = Generator(Box)
+Diagram.swap_factory = Generator(Swap)
 Diagram.functor_factory = Functor
-Diagram.permutation_factory = Permutation
+Diagram.permutation_factory = Generator(Permutation)
+Cup = Diagram.cup_factory
+Cap = Diagram.cap_factory
 Hypergraph = hypergraph.Hypergraph[Diagram]
-Diagram.cup_factory, Diagram.cap_factory = Cup, Cap
 
 
 class Equation(symmetric.Equation):

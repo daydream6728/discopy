@@ -67,6 +67,7 @@ from discopy import (
 from discopy.abc import HypergraphCategory
 from discopy.cat import factory
 from discopy.utils import (
+    Generator,
     assert_isatomic, deprecated_alias, factory_name, from_tree)
 
 
@@ -333,7 +334,7 @@ class Functor(compact.Functor, markov.Functor):
 
 
 def interleaving(cls: type, factory: Callable
-                 ) -> Callable[[int, int, Ty], Diagram]:
+                 ) -> Callable[..., Diagram]:
     """
     Take a ``factory`` for spiders of atomic types and extend it recursively.
 
@@ -362,7 +363,7 @@ def interleaving(cls: type, factory: Callable
 
 
 def coherence(cls: type, factory: Callable
-              ) -> Callable[[int, int, Ty], Diagram]:
+              ) -> Callable[..., Diagram]:
     """
     Take a ``factory`` for spiders with one or three legs of atomic types
     and extend it recursively to arbitrary spiders of atomic types.
@@ -408,12 +409,13 @@ def coherence(cls: type, factory: Callable
 
 CMap = cmap.CMap[Diagram]
 
-Diagram.box_factory = Box
+Diagram.box_factory = Generator(Box)
 Diagram.functor_factory = Functor
-Diagram.cup_factory, Diagram.cap_factory = Cup, Cap
-Diagram.swap_factory, Diagram.spider_factory = Swap, Spider
-Diagram.permutation_factory = Permutation
-Diagram.bubble_factory = Bubble
+Diagram.cup_factory, Diagram.cap_factory = Generator(Cup), Generator(Cap)
+Diagram.swap_factory = Generator(Swap)
+Diagram.spider_factory = Generator(Spider)  # ty: ignore[invalid-assignment]
+Diagram.permutation_factory = Generator(Permutation)
+Diagram.bubble_factory = Generator(Bubble)
 Hypergraph = hypergraph.Hypergraph[Diagram]
 Id = Diagram.id
 

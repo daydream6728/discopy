@@ -39,7 +39,7 @@ from __future__ import annotations
 from contextlib import contextmanager
 from operator import index
 from types import ModuleType
-from typing import Union, Literal as L, Callable, TYPE_CHECKING
+from typing import Literal, Callable, TYPE_CHECKING
 
 from discopy import monoidal, config, messages
 from discopy.abc import MonoidalCategory, NamedGeneric, Nat
@@ -55,7 +55,7 @@ if TYPE_CHECKING:
 
 
 @factory
-class Matrix(MonoidalCategory, NamedGeneric['dtype']):
+class Matrix[dtype](MonoidalCategory, NamedGeneric):
     """
     A matrix is an ``array`` with natural numbers as ``dom`` and ``cod``.
 
@@ -154,7 +154,7 @@ class Matrix(MonoidalCategory, NamedGeneric['dtype']):
                 return cls.__new__(cls[dtype], array, *args, **kwargs)
             return object.__new__(cls)
 
-    def __init__(self, array, dom: Nat, cod: Nat):
+    def __init__(self, array, dom: Nat | int, cod: Nat | int):
         dom, cod = (Nat(x) if isinstance(x, int) else x for x in (dom, cod))
         assert_isinstance(dom, Nat)
         assert_isinstance(cod, Nat)
@@ -253,9 +253,10 @@ class Matrix(MonoidalCategory, NamedGeneric['dtype']):
             array = np.matmul(self.array, other.array)
         return type(self)(array, self.dom, other.cod)
 
-    def tensor(self, other: Matrix = None, *others: Matrix):
+    def tensor(self, other: Matrix | None = None, *others: Matrix):
         if others or other is None:
-            return monoidal.Diagram.tensor(self, other, *others)
+            return monoidal.Diagram.tensor(
+                self, other, *others)  # ty: ignore[invalid-argument-type]
         assert_isinstance(other, type(self))
         dom, cod = self.dom @ other.dom, self.cod @ other.cod
         array = self.zero(dom, cod).array
@@ -272,7 +273,7 @@ class Matrix(MonoidalCategory, NamedGeneric['dtype']):
         return self if other == 0 else self.__add__(other)
 
     @classmethod
-    def zero(cls, dom: Nat, cod: Nat) -> Matrix:
+    def zero(cls, dom: Nat | int, cod: Nat | int) -> Matrix:
         """
         Returns the zero matrix of a given shape.
 
@@ -285,7 +286,7 @@ class Matrix(MonoidalCategory, NamedGeneric['dtype']):
                 (index(dom), index(cod)), dtype=cls.dtype or int), dom, cod)
 
     @classmethod
-    def swap(cls, left: Nat, right: Nat) -> Matrix:
+    def swap(cls, left: Nat | int, right: Nat | int) -> Matrix:
         """
         The matrix that swaps left and right dimensions.
 
@@ -329,26 +330,26 @@ class Matrix(MonoidalCategory, NamedGeneric['dtype']):
         return type(self)(array, self.dom, self.cod)
 
     @classmethod
-    def copy(cls, x: Nat, n: int) -> Matrix:
+    def copy(cls, x: Nat | int, n: int) -> Matrix:
         x = index(x)
         array = [[i + int(j % n * x) == j
                   for j in range(n * x)] for i in range(x)]
         return cls(array, x, n * x)
 
     @classmethod
-    def discard(cls, x: Nat) -> Matrix:
+    def discard(cls, x: Nat | int) -> Matrix:
         return cls.copy(x, 0)
 
     @classmethod
-    def merge(cls, x: Nat, n: int) -> Matrix:
+    def merge(cls, x: Nat | int, n: int) -> Matrix:
         return cls.copy(x, n).dagger()
 
     @classmethod
-    def ones(cls, x: Nat) -> Matrix:
+    def ones(cls, x: Nat | int) -> Matrix:
         return cls.merge(x, 0)
 
     @classmethod
-    def basis(cls, x: Nat, i: int) -> Matrix:
+    def basis(cls, x: Nat | int, i: int) -> Matrix:
         """
         The ``i``-th basis vector of dimension ``x``.
 
@@ -425,7 +426,7 @@ def array2string(array, **params):
     """ Numpy array pretty print. """
     import numpy
     numpy.set_printoptions(threshold=config.NUMPY_THRESHOLD)
-    return numpy.array2string(array, **dict(params, separator=', '))\
+    return numpy.array2string(array, **params, separator=', ')\
         .replace('[ ', '[').replace('  ', ' ')
 
 
@@ -437,7 +438,7 @@ class Backend:
         module : The main module of the backend.
         array : The array class of the backend.
     """
-    def __init__(self, module: ModuleType, array: type = None):
+    def __init__(self, module: ModuleType, array: Callable | None = None):
         self.module, self.array = module, array or module.array
 
     def __getattr__(self, attr):
@@ -468,8 +469,8 @@ class PyTorch(Backend):
 class TensorFlow(Backend):
     """ TensorFlow backend. """
     def __init__(self):
-        import tensorflow.experimental.numpy as tnp
-        from tensorflow.python.ops.numpy_ops import np_config
+        import tensorflow.experimental.numpy as tnp  # ty: ignore
+        from tensorflow.python.ops.numpy_ops import np_config  # ty: ignore
         np_config.enable_numpy_behavior()
         super().__init__(tnp)
 
@@ -481,12 +482,12 @@ BACKENDS = {
     'tensorflow': TensorFlow,
 }
 
-BackendName = Union[tuple(L[x] for x in BACKENDS)]
+BackendName = Literal["numpy", "jax", "pytorch", "tensorflow"]
 
 
 @contextmanager
-def backend(name: BackendName = None,
-            _stack=[config.DEFAULT_BACKEND], _cache=dict()):
+def backend(name: BackendName | None = None,
+            _stack: list = [config.DEFAULT_BACKEND], _cache=dict()):
     """
     Context manager for matrix backend.
 

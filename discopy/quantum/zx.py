@@ -113,7 +113,8 @@ class Diagram(tensor.Diagram[complex]):
                 scan[offset:offset + len(box.dom)] = [
                     segment[i] for i in box.perm]
             elif isinstance(box, Scalar):
-                graph.scalar.add_float(box.data)
+                graph.scalar.add_float(
+                    box.data)  # ty: ignore[invalid-argument-type]
             elif box == H:
                 node, hadamard = scan[offset]
                 scan[offset] = (node, not hadamard)
@@ -258,7 +259,9 @@ class Spider(tensor.Spider[complex], Box):
     """ Abstract spider box. """
 
     def __init__(self, n_legs_in, n_legs_out, phase=0):
-        super().__init__(n_legs_in, n_legs_out, Nat(1), phase)
+        super().__init__(
+            n_legs_in, n_legs_out,
+            Nat(1), phase)  # ty: ignore[invalid-argument-type]
         factory_str = type(self).__name__
         phase_str = f", {self.phase}" if self.phase else ""
         self.name = f"{factory_str}({n_legs_in}, {n_legs_out}{phase_str})"
@@ -390,12 +393,12 @@ circuit2zx = quantum.circuit.Functor(
     dom=Circuit, cod=Diagram)
 
 H = Box('H', Nat(1), Nat(1))
-H.dagger = lambda: H
+H.dagger = lambda: H  # ty: ignore[invalid-assignment]
 H.draw_as_spider = True
 H.drawing_name, H.tikzstyle_name, = '', 'H'
 H.color, H.shape = "yellow", "rectangle"
 
-SWAP = Swap(Nat(1), Nat(1))
+SWAP = Swap(Nat(1), Nat(1))  # ty: ignore[invalid-argument-type]
 Diagram.swap_factory, Diagram.sum_factory = Swap, Sum
 Diagram.permutation_factory = Permutation
 Id = Diagram.id

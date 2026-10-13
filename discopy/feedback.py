@@ -150,6 +150,7 @@ from discopy import monoidal, braided, markov, hypergraph, messages
 from discopy.abc import FeedbackCategory, MarkovCategory
 from discopy.axioms import FUEL
 from discopy.utils import (
+    Generator,
     deprecated_alias,
     factory, factory_name, assert_isinstance, AxiomError, from_tree,
 )
@@ -355,13 +356,14 @@ class Diagram(markov.Diagram, FeedbackCategory):
         >>> assert (loop.dom, loop.cod) == (x, x)
         """
         from hypothesis import strategies as st
+        category = hypergraph.Hypergraph[cls]  # ty: ignore[invalid-type-form]
 
         @st.composite
         def feedbacks(draw):
             domain = draw(cls.ob.strategy()) if dom is None else dom
             codomain = draw(cls.ob.strategy()) if cod is None else cod
             mem = draw(cls.ob.strategy(max_length=fuel))
-            graph = draw(hypergraph.Hypergraph[cls].strategy(
+            graph = draw(category.strategy(
                 dom=domain @ mem.delay(), cod=codomain @ mem,
                 max_leaves=fuel + 1, acyclic=True))
             return graph.to_diagram().feedback(
@@ -641,7 +643,9 @@ class Tail(monoidal.Bubble, Box):
     second time step with the identity on the empty type at the first step.
     """
     def __init__(self, arg: Diagram, time_step=0):
-        Head.__init__(self, arg, time_step, _attr="tail")
+        Head.__init__(
+            self,  # ty: ignore[invalid-argument-type]
+            arg, time_step, _attr="tail")
 
     delay, reset, __repr__ = HeadOb.delay, HeadOb.reset, HeadOb.__repr__
     __str__ = Box.__str__
@@ -817,21 +821,22 @@ class Functor(markov.Functor):
         if isinstance(
                 other, FollowedBy) and hasattr(self.cod, "followed_by"):
             arg = other.dom if other.is_dagger else other.cod
-            return self.cod.followed_by(self(arg))
+            return self.cod.followed_by(  # ty: ignore[call-non-callable]
+                self(arg))
         if isinstance(other, Feedback) and hasattr(self.cod, "feedback"):
             return self(other.arg).feedback(*map(self, (
                 other.dom, other.cod, other.mem)))
         return super().__call__(other)
 
 
-Diagram.box_factory = Box
+Diagram.box_factory = Generator(Box)
 Diagram.functor_factory = Functor
-Diagram.swap_factory = Swap
-Diagram.permutation_factory = Permutation
-Diagram.discard_factory = Discard
-Diagram.copy_factory, Diagram.merge_factory = Copy, Merge
+Diagram.swap_factory = Generator(Swap)
+Diagram.permutation_factory = Generator(Permutation)
+Diagram.discard_factory = Generator(Discard)
+Diagram.copy_factory, Diagram.merge_factory = Generator(Copy), Generator(Merge)
 Diagram.feedback_factory, Diagram.followed_by = Feedback, FollowedBy
-Diagram.trace_factory = Trace
+Diagram.trace_factory = Generator(Trace)
 Hypergraph = hypergraph.Hypergraph[Diagram]
 Id = Diagram.id
 

@@ -46,7 +46,7 @@ from functools import cached_property, reduce
 from inspect import isclass
 from io import BytesIO
 from math import inf, lcm
-from typing import TYPE_CHECKING, ClassVar, Literal
+from typing import TYPE_CHECKING, Literal, Self
 
 from discopy import hypergraph, messages
 from discopy.abc import (
@@ -129,9 +129,7 @@ class Port:
     side: Literal["up", "down"]
 
 
-class CMap[C0: Pregroup, C1: CMap](
-    CompactCategory[C0, C1], NamedGeneric['category'], Serialisable
-):
+class CMap[category](CompactCategory, NamedGeneric, Serialisable):
     r"""
     An open combinatorial map, i.e. a diagram represented as a bijection
     between its ports.
@@ -226,19 +224,18 @@ class CMap[C0: Pregroup, C1: CMap](
         :align: center
     """
 
-    category: ClassVar[Diagram] = None
     functor = classproperty(lambda cls: cls.category.functor_factory)
     ob = classproperty(lambda cls: cls.category.ob)
 
-    dom: C0
-    cod: C0
-    loops: tuple[C0, ...]
+    dom: Ty
+    cod: Ty
+    loops: tuple[Ty, ...]
     edges: Permutation
 
     def __init__(
-            self, dom: C0, cod: C0, boxes: tuple[Box, ...],
+            self, dom: Ty, cod: Ty, boxes: tuple[Box, ...],
             edges: Iterable[int],
-            loops: tuple[C0, ...] = (), *, check: bool = True):
+            loops: tuple[Ty, ...] = (), *, check: bool = True):
         assert_isinstance(dom, self.category.ob)
         assert_isinstance(cod, self.category.ob)
         for box in boxes:
@@ -454,7 +451,7 @@ class CMap[C0: Pregroup, C1: CMap](
                 factory_name(cls.category)))
 
     @property
-    def connected_components(self) -> list[CMap]:
+    def connected_components(self) -> list[Self]:
         """ The connected components, with the boundary component first. """
         if not self.n_ports:
             # Avoid recursively rebuilding the same portless component.
@@ -494,7 +491,7 @@ class CMap[C0: Pregroup, C1: CMap](
                 and not self.loops:
             return [self]
 
-        def make_component(component: int) -> CMap:
+        def make_component(component: int) -> Self:
             dom = self.dom if component == boundary_component else self.ob()
             cod = self.cod if component == boundary_component else self.ob()
             boxes = tuple(box for _, box in boxes_by_component.get(
@@ -1275,7 +1272,7 @@ class CMap[C0: Pregroup, C1: CMap](
 
     def plug_input(
             self, input_index: int, box: Box,
-            cod: C0, root_index: int = 0) -> CMap:
+            cod: Ty, root_index: int = 0) -> CMap:
         """
         Plug an input boundary and the output root into a new box.
 
@@ -1557,7 +1554,7 @@ cycles of this map.
             offset = None
             for i, wire_id in enumerate(dom_wires):
                 j = scan.index(wire_id)
-                if i == 0:
+                if offset is None:
                     offset = j
                 elif j != offset + i:
                     if j > offset + i:

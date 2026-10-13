@@ -60,7 +60,7 @@ class Function(Category):
     ob = Ty
     type_checking = True
 
-    def __init__(self, inside: Callable, dom: Ty, cod: Ty):
+    def __init__(self, inside: Callable, dom: Ty | type, cod: Ty | type):
         self.inside, self.dom, self.cod = (
             inside, self.ob.cast(dom), self.ob.cast(cod))
 

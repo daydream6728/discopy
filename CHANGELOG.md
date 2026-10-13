@@ -226,6 +226,18 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   imports `multiplicative` on first use, since it imports `monoidal`
   which imports `python.finset`
   ([#728](https://github.com/discopy/discopy/issues/728)).
+- `utils.Generator`, the class of a generator of a free category declared
+  once on the level that introduces it, e.g. `symmetric.Diagram.swap_factory
+  = Generator(Swap)`, and derived on first access for every level below that
+  declares no class of its own, as a subclass of the generators of its bases
+  and of its own boxes. The 20 subclasses that only restated this and that
+  nothing subclasses, e.g. `compact.Cup(ribbon.Cup, Box)`, are gone, each
+  module keeping its name as an alias, e.g. `compact.Cup =
+  Diagram.cup_factory`, so that every import, `repr` and pickle reads as
+  before; a class something subclasses stays written out, so that linters
+  and typecheckers still see its bases. `pivotal.Box` is a
+  `traced.Box`, as its diagrams are traced, and `ribbon.Diagram.sum_factory`
+  is `ribbon.Sum`, which it defined but never assigned.
 - `discopy/axioms.py`, a Hypothesis-based property-testing module, home
   of `Equation` (formerly `discopy.abc.Equation`): a law is stated once
   on `discopy.abc.Category` and every subclass inherits
@@ -744,6 +756,9 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
+- A binary term or type raising of a categorial grammar evaluates with a
+  functor passed positionally, as the terms around it pass it, where
+  `FX(FC(a, b), r).eval()` raised `TypeError`.
 - An exponential of the unit is its base, `x << Ty()`, `Ty() >> x` and
   `x ** Ty()` being `x` on biclosed and closed types, so that `curry(0)` is
   the identity and the evaluation at the unit is too: a curry of no wire
@@ -1026,6 +1041,19 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   ([#624](https://github.com/discopy/discopy/issues/624)).
 
 ### Project
+
+- The package typechecks: `uv run ty check` passes, `ty` pinned in the
+  `dev` group at 0.0.69, configured by the `[tool.ty]` sections of
+  `pyproject.toml` and run by the `lint` job, which now syncs the extras
+  the imports need. `NamedGeneric` takes the PEP 695 type parameters of
+  its subclass, `class CMap[category](CompactCategory, NamedGeneric)`, so
+  that a typechecker reads `CMap[closed.Diagram]` or `tensor.Box[complex]`
+  as the specialisation it is; the abstract base classes bound their type
+  variables down the tower, and a default of `None` is typed as optional.
+  Two rules stay off: `invalid-method-override`, since the factory-method
+  pattern narrows `then` and `tensor` down the tower, and
+  `unresolved-attribute`, since a downgrade asks the host category for
+  structure it may not have. `fail-under` rises to 9.0.
 
 - The pylint plugin of `.github/scripts/pylint_axioms.py` reads a `@rule`
   as the classmethod it is, as it read an `@axiom`, and `fail-under` rises

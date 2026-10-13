@@ -60,7 +60,8 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import ClassVar
+from types import NoneType
+from typing import TYPE_CHECKING, ClassVar, Self
 
 from discopy.axioms import (
     Atom, Count, Delay, Equation, Hom, L, Obj, Over, R, Repeat, Tensor,
@@ -86,8 +87,8 @@ class Category[C0, C1: Category](Testable[C1], ABC):
     >>> assert List([1, 2]) >> List([3]) == List([1, 2, 3])
     >>> assert List([3]) << List([1, 2]) == List([1, 2, 3])
     """
-    ob: ClassVar[type[C0]]
-    factory: ClassVar[type[C1]]
+    ob: ClassVar[type]
+    factory: ClassVar[type]
     dom: C0
     cod: C0
 
@@ -216,13 +217,20 @@ class ColouredMonoid[C0, C1: ColouredMonoid](Category[C0, C1]):
     colour, i.e. :class:`type(None)`. We do not enforce this so
     that e.g. :class:`monoidal.Ty` can take colours as objects.
     """
+    if TYPE_CHECKING:
+        def __len__(self) -> int:
+            """ The number of generating objects inside, assumed free. """
+
+        def __getitem__(self, key) -> Self:
+            """ The slices of a free monoid, assumed to stay inside it. """
+
     @classmethod
-    def id(cls, dom: C0 = None) -> C1:
+    def id(cls, dom: C0 | None = None) -> Self:
         """The monoidal unit, i.e. the empty tensor ``cls()``."""
         return cls()
 
     @classmethod
-    def unit(cls, colour: C0 = None) -> C0 | C1:
+    def unit(cls, colour: C0 | None = None) -> C0 | Self:
         """
         The unit at a colour, i.e. the identity on it.
 
@@ -233,15 +241,15 @@ class ColouredMonoid[C0, C1: ColouredMonoid](Category[C0, C1]):
         return cls.id(colour)
 
     @abstractmethod
-    def tensor(self, *objects: C1) -> C1:
+    def tensor(self, *objects: Self) -> Self:
         """ The n-ary product of a monoid for ``n > 0``. """
 
-    def then(self, *others: C1) -> C1:
+    def then(self, *others: Self) -> Self:
         """Sequential composition, given by the monoid product."""
         return self.tensor(*others)
 
     @classmethod
-    def cast(cls, atoms) -> C1:
+    def cast(cls, atoms) -> Self:
         """
         The element of a tuple of atoms, or of a single atom; an element of
         the monoid is unchanged.
@@ -253,10 +261,12 @@ class ColouredMonoid[C0, C1: ColouredMonoid](Category[C0, C1]):
         """
         if isinstance(atoms, cls):
             return atoms
-        return cls(*atoms) if isinstance(atoms, tuple) else cls(atoms)
+        if isinstance(atoms, tuple):
+            return cls(*atoms)
+        return cls(atoms)  # ty: ignore[too-many-positional-arguments]
 
     @classmethod
-    def whisker(cls, other: C0 | C1) -> C1:
+    def whisker(cls, other: C0 | Self) -> Self:
         """
         Do nothing if ``other`` is already a morphism else apply :meth:`id`.
 
@@ -272,7 +282,7 @@ class ColouredMonoid[C0, C1: ColouredMonoid](Category[C0, C1]):
         return self.whisker(other).tensor(self)
 
 
-class Monoid[C1: Monoid](ColouredMonoid[type(None), C1]):
+class Monoid[C1: Monoid](ColouredMonoid[NoneType, C1]):
     """ A monoid is a coloured monoid with a single, trivial colour. """
 
 
@@ -344,7 +354,9 @@ class MonoidalCategory[C0: ColouredMonoid, C1: MonoidalCategory](
         Parameters:
             other : The object or morphism to be tensored on the left or right.
         """
-        return other if isinstance(other, MonoidalCategory) else cls.id(other)
+        return (
+            other  # ty: ignore[invalid-return-type]
+            if isinstance(other, MonoidalCategory) else cls.id(other))
 
     def __matmul__(self, other):
         return self.tensor(self.whisker(other))
@@ -393,7 +405,8 @@ class PRO[C1: PRO](MonoidalCategory[Nat, C1]):
     """
 
 
-class TracedCategory[C0, C1](MonoidalCategory[C0, C1]):
+class TracedCategory[
+        C0: ColouredMonoid, C1: TracedCategory](MonoidalCategory[C0, C1]):
     """
     A traced category is a :class:`MonoidalCategory` with a method
     :code:`trace` for the partial trace of a morphism over some objects.
@@ -562,7 +575,7 @@ class BiclosedCategory[
         """
 
     @abstractmethod
-    def curry(self, n: int = 1, left: bool = True) -> C1:
+    def curry(self, n: int = 1, left: bool = True) -> Self:
         """
         The currying of a morphism, to be instantiated.
 
@@ -588,7 +601,7 @@ class BiclosedCategory[
             raise ValueError
         return base, exponent
 
-    def uncurry(self, n: int = 1, left: bool = True) -> C1:
+    def uncurry(self, n: int = 1, left: bool = True) -> Self:
         """
         Uncurry a morphism by composing it with :meth:`ev`, assuming its
         codomain is an exponential object. If the exponent has less than
@@ -746,7 +759,7 @@ class RigidCategory[C0: Pregroup, C1: RigidCategory](BiclosedCategory[C0, C1]):
         return base @ cls.cups(exponent.l, exponent) if left\
             else cls.cups(exponent, exponent.r) @ base
 
-    def curry(self, n: int = 1, left: bool = True) -> C1:
+    def curry(self, n: int = 1, left: bool = True) -> Self:
         """
         The curry of a rigid morphism is obtained using caps.
 
@@ -855,7 +868,9 @@ class RigidCategory[C0: Pregroup, C1: RigidCategory](BiclosedCategory[C0, C1]):
         return cls.caps(x, x.l)
 
 
-class PivotalCategory[C0, C1](RigidCategory[C0, C1], TracedCategory[C0, C1]):
+class PivotalCategory[
+        C0: Pregroup, C1: PivotalCategory](
+            RigidCategory[C0, C1], TracedCategory[C0, C1]):
     """
     A pivotal category is a :class:`RigidCategory` where the left and right
     adjoints coincide, hence it is also a :class:`TracedCategory`.
@@ -868,7 +883,8 @@ class PivotalCategory[C0, C1](RigidCategory[C0, C1], TracedCategory[C0, C1]):
         return cls.equation_factory(f.transpose(left=True), f.transpose())
 
 
-class BraidedCategory[C0, C1](MonoidalCategory[C0, C1]):
+class BraidedCategory[
+        C0: ColouredMonoid, C1: BraidedCategory](MonoidalCategory[C0, C1]):
     """
     A braided category is a :class:`MonoidalCategory` with a method
     :code:`braid` for the natural isomorphism :code:`x @ y -> y @ x`.
@@ -947,7 +963,8 @@ class PROB[C1: PROB](PRO[C1], BraidedCategory[Nat, C1]):
     """
 
 
-class SymmetricCategory[C0, C1](BraidedCategory[C0, C1]):
+class SymmetricCategory[
+        C0: ColouredMonoid, C1: SymmetricCategory](BraidedCategory[C0, C1]):
     """
     A symmetric category is a :class:`BraidedCategory` where the braid is its
     own inverse called :code:`swap` for the symmetry :code:`x @ y -> y @ x`.
@@ -999,7 +1016,8 @@ class PROP[C1: PROP](PROB[C1], SymmetricCategory[Nat, C1]):
     """
 
 
-class MarkovCategory[C0, C1](SymmetricCategory[C0, C1]):
+class MarkovCategory[
+        C0: ColouredMonoid, C1: MarkovCategory](SymmetricCategory[C0, C1]):
     """
     A Markov category is a :class:`SymmetricCategory` with methods
     :code:`copy` and :code:`merge` for the supply of commutative comonoids.
@@ -1062,7 +1080,9 @@ class MarkovCategory[C0, C1](SymmetricCategory[C0, C1]):
         return cls.copy(x, n)
 
 
-class ClosedCategory[C0, C1](BiclosedCategory[C0, C1], MarkovCategory[C0, C1]):
+class ClosedCategory[
+        C0: ResiduatedMonoid, C1: ClosedCategory](
+            BiclosedCategory[C0, C1], MarkovCategory[C0, C1]):
     """
     A closed category is a symmetric :class:`BiclosedCategory`. We also assume
     it comes with copy and discard so it is also a :class:`MarkovCategory`.
@@ -1079,7 +1099,8 @@ class ClosedCategory[C0, C1](BiclosedCategory[C0, C1], MarkovCategory[C0, C1]):
             f.curry(n), (cls.swap(exponent, base) >> f).curry(n, left=False))
 
 
-class FeedbackCategory[C0, C1](MarkovCategory[C0, C1]):
+class FeedbackCategory[
+        C0: ColouredMonoid, C1: FeedbackCategory](MarkovCategory[C0, C1]):
     """
     A feedback category is a :class:`MarkovCategory` with a :code:`delay`
     endofunctor and a :code:`feedback` operator.
@@ -1094,7 +1115,8 @@ class FeedbackCategory[C0, C1](MarkovCategory[C0, C1]):
         """
 
     @abstractmethod
-    def feedback(self, dom: C0, cod: C0, mem: C0) -> C1:
+    def feedback(self, dom: C0 | None = None, cod: C0 | None = None,
+                 mem: C0 | None = None) -> C1:
         """
         The feedback operator on a morphism.
 
@@ -1180,7 +1202,7 @@ class FeedbackCategory[C0, C1](MarkovCategory[C0, C1]):
         return f.feedback(mem=mem)
 
 
-class BalancedCategory[C0, C1](
+class BalancedCategory[C0: ColouredMonoid, C1: BalancedCategory](
         BraidedCategory[C0, C1], TracedCategory[C0, C1]):
     """
     A balanced category is a :class:`BraidedCategory` and a
@@ -1240,7 +1262,7 @@ class BalancedCategory[C0, C1](
         return cls.twist(x).dagger()
 
 
-class RibbonCategory[C0, C1](
+class RibbonCategory[C0: Pregroup, C1: RibbonCategory](
         PivotalCategory[C0, C1], BalancedCategory[C0, C1]):
     """
     A ribbon category is a :class:`PivotalCategory` which is also a
@@ -1248,7 +1270,7 @@ class RibbonCategory[C0, C1](
     """
 
 
-class CompactCategory[C0, C1](
+class CompactCategory[C0: Pregroup, C1: CompactCategory](
         RibbonCategory[C0, C1], SymmetricCategory[C0, C1]):
     """
     A compact category is a :class:`RibbonCategory` which is also a
@@ -1276,7 +1298,7 @@ class CompactCategory[C0, C1](
             cls.swap(x, x.r) >> cls.cups(x.r, x), cls.cups(x, x.r))
 
 
-class HypergraphCategory[C0, C1](
+class HypergraphCategory[C0: Pregroup, C1: HypergraphCategory](
         CompactCategory[C0, C1], MarkovCategory[C0, C1]):
     """
     A hypergraph category is a symmetric category with a supply of spiders,

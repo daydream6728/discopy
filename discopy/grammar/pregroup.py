@@ -33,7 +33,7 @@ Summary
 from discopy import rigid, frobenius, messages
 from discopy.axioms import no_strategy
 from discopy.cat import factory
-from discopy.utils import AxiomError, deprecated_alias
+from discopy.utils import Generator, AxiomError, deprecated_alias
 from discopy.grammar import thue
 from discopy.rigid import Wire  # noqa: F401  pylint: disable=unused-import
 
@@ -259,9 +259,10 @@ def brute_force(*vocab, target=Ty('s')):
             test.append(words + (word, ))
 
 
-Diagram.swap_factory, Diagram.spider_factory = Swap, Spider
-Diagram.permutation_factory = Permutation
-Diagram.cup_factory, Diagram.cap_factory = Cup, Cap
+Diagram.swap_factory = Generator(Swap)
+Diagram.spider_factory = Generator(Spider)  # ty: ignore[invalid-assignment]
+Diagram.permutation_factory = Generator(Permutation)
+Diagram.cup_factory, Diagram.cap_factory = Generator(Cup), Generator(Cap)
 
 
 Id = Diagram.id

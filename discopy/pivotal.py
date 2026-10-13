@@ -57,7 +57,7 @@ from __future__ import annotations
 from discopy import cat, cmap, rigid, traced
 from discopy.abc import PivotalCategory
 from discopy.cat import factory
-from discopy.utils import deprecated_alias
+from discopy.utils import Generator, deprecated_alias
 
 
 class Wire(rigid.Wire):
@@ -189,7 +189,7 @@ class Diagram(rigid.Diagram, traced.Diagram, PivotalCategory):
     dagger_monoidality_monoidal = None
 
 
-class Box(rigid.Box, Diagram):
+class Box(rigid.Box, traced.Box, Diagram):
     """
     A pivotal box is a rigid box in a pivotal diagram.
 
@@ -262,9 +262,9 @@ class Functor(rigid.Functor):
     dom = cod = Diagram
 
 
-Diagram.box_factory = Box
+Diagram.box_factory = Generator(Box)
 Diagram.functor_factory = Functor
-Diagram.cup_factory, Diagram.cap_factory = Cup, Cap
+Diagram.cup_factory, Diagram.cap_factory = Generator(Cup), Generator(Cap)
 
 
 CMap = cmap.CMap[Diagram]

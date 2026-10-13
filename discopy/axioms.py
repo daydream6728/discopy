@@ -379,9 +379,9 @@ class Declaration[**P, T]:
 
     function: Callable[P, T]
     _: KW_ONLY
-    category: type[T] = None
-    name: str = None
-    params: dict = None
+    category: type = None  # ty: ignore[invalid-assignment]
+    name: str = None  # ty: ignore[invalid-assignment]
+    params: dict = None  # ty: ignore[invalid-assignment]
 
     def __post_init__(self):
         function = inspect.unwrap(self.function)
@@ -516,7 +516,9 @@ class Declaration[**P, T]:
     def __call__(self, *args: P.args, **kwargs: P.kwargs) -> T:
         if self.category is None:
             raise TypeError(f"{self.name} is not bound to a class.")
-        return self.function(self.category, *args, **kwargs)
+        return self.function(
+            self.category,  # ty: ignore[invalid-argument-type]
+            *args, **kwargs)
 
 
 @dataclass(repr=False)
@@ -622,7 +624,7 @@ class Axiom[**P, T](Declaration[P, T]):
                            else self.category.ob(name))
         arguments = self.instantiate(scope, value)
         try:
-            return self(**arguments)
+            return self(**arguments)  # ty: ignore[invalid-return-type]
         except AxiomFailure as failure:
             return failure.equation
 
@@ -695,7 +697,7 @@ class Rule[**P, T](Declaration[P, T]):
     __hash__ = Declaration.__hash__
 
     @cached_property
-    def conclusion(self) -> tuple[str | None, str | None]:
+    def conclusion(self) -> tuple[str | None, ...]:
         """
         The type parameter each side of the conclusion is, or :obj:`None`
         for a side that is not a variable.

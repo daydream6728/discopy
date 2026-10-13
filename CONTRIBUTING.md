@@ -57,6 +57,7 @@ if you want to run the full test suite involving all extra dependencies.
 uv sync --dev --group all
 uv run pflake8 discopy
 uv run pylint discopy
+uv run ty check
 uv run coverage run -m pytest
 uv run coverage report -m
 ```

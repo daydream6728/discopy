@@ -83,7 +83,7 @@ from discopy.utils import (
 
 
 @dataclass
-class Ty(NamedGeneric['natural']):
+class Ty[natural](NamedGeneric):
     """
     An integer type is a pair of :attr:`natural` types.
 
@@ -108,7 +108,7 @@ class Ty(NamedGeneric['natural']):
     positive: natural
     negative: natural
 
-    def __init__(self, positive: natural = None, negative: natural = None):
+    def __init__(self, positive=None, negative=None):
         positive, negative = (
             self.natural() if x is None else x for x in (positive, negative))
         positive, negative = (
@@ -156,7 +156,7 @@ class Ty(NamedGeneric['natural']):
 
 @factory
 @dataclass
-class Diagram(RibbonCategory, NamedGeneric['natural']):
+class Diagram[natural](RibbonCategory, NamedGeneric):
     """
     An integer diagram from ``x`` to ``y`` is a :attr:`natural` diagram
     from ``x.positive @ y.negative`` to ``x.negative @ y.positive``.
@@ -190,7 +190,7 @@ class Diagram(RibbonCategory, NamedGeneric['natural']):
     dom: Ty
     cod: Ty
 
-    def __init__(self, inside: natural, dom: Ty, cod: Ty):
+    def __init__(self, inside, dom: Ty, cod: Ty):
         assert_isinstance(inside, self.natural)
         if inside.dom != dom.positive @ cod.negative:
             raise ValueError(messages.WRONG_DOM.format(
@@ -255,7 +255,7 @@ class Diagram(RibbonCategory, NamedGeneric['natural']):
         return type(self)(inside, dom, cod)
 
     @classmethod
-    def id(cls, dom: Ty = None) -> Diagram:
+    def id(cls, dom: Ty | None = None) -> Diagram:
         """
         The identity on an integer type.
 
@@ -280,7 +280,7 @@ class Diagram(RibbonCategory, NamedGeneric['natural']):
         .. image:: /_static/int/idr.svg
             :align: center
         """
-        dom = Ty[cls.natural.ob]() if dom is None else dom
+        dom = cls.ob() if dom is None else dom
         positive, negative = dom
         inside = cls.natural.id(positive) @ cls.natural.twist(negative)
         return cls(inside, dom, dom)
@@ -383,7 +383,8 @@ class Diagram(RibbonCategory, NamedGeneric['natural']):
         .. image:: /_static/int/int-snake-equations.svg
             :align: center
         """
-        rigid.Ty.assert_isadjoint(left, right)
+        rigid.Ty.assert_isadjoint(
+            left, right)  # ty: ignore[invalid-argument-type]
         inside = cls.natural.id(left.positive @ left.negative)
         return cls(inside, left @ right, type(left)())
 
@@ -396,7 +397,8 @@ class Diagram(RibbonCategory, NamedGeneric['natural']):
             left : The left-hand side of the caps.
             right : The right-hand side of the caps.
         """
-        rigid.Ty.assert_isadjoint(right, left)
+        rigid.Ty.assert_isadjoint(
+            right, left)  # ty: ignore[invalid-argument-type]
         inside = cls.natural.id(left.negative @ left.positive)
         return cls(inside, type(left)(), left @ right)
 
@@ -467,7 +469,7 @@ class Diagram(RibbonCategory, NamedGeneric['natural']):
     to_drawing = lambda self: self.inside.to_drawing()
 
 
-def Int(category: TracedCategory) -> RibbonCategory:
+def Int(category: type[TracedCategory]) -> type[RibbonCategory]:
     """
     The Int construction, i.e. the free ribbon category on a given balanced
     traced `category`, with :class:`interaction.Ty` as objects and
@@ -481,7 +483,7 @@ def Int(category: TracedCategory) -> RibbonCategory:
     >>> from discopy.ribbon import Diagram as D
     >>> assert Int(D) == Diagram[D]
     """
-    return Diagram[category]
+    return Diagram[category]  # ty: ignore[invalid-type-form]
 
 
 Id = Diagram.id

@@ -65,8 +65,8 @@ from discopy.abc import BraidedCategory
 from discopy.cat import factory
 from discopy.monoidal import Ty, Match
 from discopy.utils import (
-    assert_isatomic, BinaryBoxConstructor, deprecated_alias, factory_name,
-    from_tree)
+    Generator, assert_isatomic, BinaryBoxConstructor, deprecated_alias,
+    factory_name, from_tree)
 
 
 class Wire(monoidal.Wire):
@@ -158,7 +158,7 @@ class Diagram(monoidal.Diagram, BraidedCategory):
                       below=self[i + len(source):] if down else self[i + 1:],
                       left=left_wires[:-1] if left else left_wires,
                       right=right_wires if left else right_wires[1:])
-        return match.substitute(target)
+        return match.substitute(target)  # ty: ignore[invalid-return-type]
 
     hypergraph_section = monoidal.Diagram.hypergraph_section.failing(
         messages.SECTION_NEEDS_SWAPS)
@@ -281,9 +281,9 @@ class Functor(monoidal.Functor):
         return super().__call__(other)
 
 
-Diagram.box_factory = Box
-Diagram.braid_factory, Diagram.functor_factory = Braid, Functor
-Diagram.sum_factory = Sum
+Diagram.box_factory = Generator(Box)
+Diagram.braid_factory, Diagram.functor_factory = Generator(Braid), Functor
+Diagram.sum_factory = Generator(Sum)
 Id = Diagram.id
 
 

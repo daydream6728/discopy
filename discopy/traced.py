@@ -128,6 +128,7 @@ from discopy.abc import TracedCategory
 from discopy.cat import factory
 from discopy.monoidal import Ty  # noqa: F401  pylint: disable=unused-import
 from discopy.utils import (
+    Generator,
     factory_name,
     from_tree,
     assert_isinstance,
@@ -288,8 +289,8 @@ class Functor(monoidal.Functor):
 
 CMap = cmap.CMap[Diagram]
 
-Diagram.box_factory = Box
+Diagram.box_factory = Generator(Box)
 Diagram.functor_factory = Functor
-Diagram.trace_factory = Trace
+Diagram.trace_factory = Generator(Trace)
 Hypergraph = hypergraph.Hypergraph[Diagram]
 Id = Diagram.id

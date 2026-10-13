@@ -101,7 +101,8 @@ Mapping from :class:`Spider` to atomic :class:`frobenius.Ty`.
 """
 
 
-class Hypergraph(MonoidalCategory, NamedGeneric['category'], Serialisable):
+class Hypergraph[category](
+        MonoidalCategory, NamedGeneric, Serialisable):
     """
     A hypergraph is given by:
 
@@ -189,7 +190,6 @@ class Hypergraph(MonoidalCategory, NamedGeneric['category'], Serialisable):
     >>> assert (f @ g).n_spiders == 4
     >>> assert (f @ g).wires == ((0, 1), (((0,), (2,)), ((1,), (3,))), (2, 3))
     """
-    category = None
     MAX_ARITY = 3
     """ The largest number of ports :meth:`strategy` draws for a box. """
 
@@ -198,8 +198,8 @@ class Hypergraph(MonoidalCategory, NamedGeneric['category'], Serialisable):
 
     def __init__(
             self, dom: Ty, cod: Ty, boxes: tuple[Box, ...],
-            wires: Wiring, spider_types: SpiderTypes = None,
-            offsets: tuple[int | None, ...] = None):
+            wires: Wiring, spider_types: SpiderTypes | None = None,
+            offsets: tuple[int | None, ...] | None = None):
         assert_isinstance(dom, self.category.ob)
         assert_isinstance(cod, self.category.ob)
         for box in boxes:
@@ -232,7 +232,8 @@ class Hypergraph(MonoidalCategory, NamedGeneric['category'], Serialisable):
         first_occurrence = {}
         for index, spider in enumerate(flat_wires):
             first_occurrence.setdefault(spider, index)
-        relabeling = sorted(connected_spiders, key=first_occurrence.get)
+        relabeling = sorted(
+            connected_spiders, key=first_occurrence.__getitem__)
         relabeling += sorted(set(spider_types.keys()) - connected_spiders)
         self.spider_types = tuple(
             spider_types[s].unwind() for s in relabeling)
@@ -323,7 +324,7 @@ class Hypergraph(MonoidalCategory, NamedGeneric['category'], Serialisable):
         return inputs + doms_and_cods + outputs
 
     def rebracket(
-            self, flat_wires: list[Spider], boxes=None, dom=None):
+            self, flat_wires: Sequence[Spider], boxes=None, dom=None):
         """
         Rebracket a flat list of :class:`Spider` into a proper :class:`Wiring`.
         """
@@ -782,7 +783,7 @@ class Hypergraph(MonoidalCategory, NamedGeneric['category'], Serialisable):
         for spider in self.cod_wires:
             see(spider)
 
-        box_rank = [None] * len(self.boxes)
+        box_rank: list[Any] = [None] * len(self.boxes)
         next_rank = 0
         position = 0
         while position < len(order):
@@ -954,7 +955,8 @@ class Hypergraph(MonoidalCategory, NamedGeneric['category'], Serialisable):
             flat_wires[i] = flat_wires[j] = spider
         spider_types.extend(old.loops)
         wires = cls.rebracket(
-            None, flat_wires, dom=old.dom, boxes=old.boxes)
+            None,  # ty: ignore[invalid-argument-type]
+            flat_wires, dom=old.dom, boxes=old.boxes)
         factory = cls[old.category]
         return factory(
             old.dom, old.cod, old.boxes, wires, tuple(spider_types))
@@ -1492,7 +1494,9 @@ class Hypergraph(MonoidalCategory, NamedGeneric['category'], Serialisable):
             # A scalar is drawn one time in four, so as not to be in most.
             n_scalars = max(0, draw(st.integers(0, max_scalars + 2)) - 2)
             spider_types += [
-                cls.draw_atom(draw, types) for _ in range(n_scalars)]
+                cls.draw_atom(
+                    draw, types)  # ty: ignore[invalid-argument-type]
+                for _ in range(n_scalars)]
             boxes = tuple(
                 draw(category.box_factory.strategy(dom=x, cod=y))
                 for x, y in box_types)
@@ -1670,7 +1674,8 @@ class Hypergraph(MonoidalCategory, NamedGeneric['category'], Serialisable):
         dom = draw(types) if dom is None else dom
         ob = type(dom)
         dom_wires = [port(True, obj)[0] for obj in dom]
-        boxes = [(ports(False), ports(True)) for _ in range(n_boxes)]
+        boxes: list[tuple] = [
+            (ports(False), ports(True)) for _ in range(n_boxes)]
         if cod is None:
             outputs = [
                 open_ports.pop(draw(st.integers(0, len(open_ports) - 1)))
@@ -1908,7 +1913,7 @@ class Hypergraph(MonoidalCategory, NamedGeneric['category'], Serialisable):
             dom_wires, cod_wires = self.box_wires[depth]
             for i in range(len(box.dom)):
                 j = scan.index(dom_wires[i])
-                if i == 0 and offset is None:
+                if offset is None:
                     offset = j
                 elif j != offset + i:
                     flush()  # a swap is a layer of its own
@@ -1948,7 +1953,8 @@ class Hypergraph(MonoidalCategory, NamedGeneric['category'], Serialisable):
         return diagram
 
     @classmethod
-    def from_callable(cls, dom: Ty, cod: Ty) -> Callable[Callable, Hypergraph]:
+    def from_callable(
+            cls, dom: Ty, cod: Ty) -> Callable[[Callable], Hypergraph]:
         """
         Turns an arbitrary Python function into a causal hypergraph.
 
@@ -2036,7 +2042,9 @@ class Hypergraph(MonoidalCategory, NamedGeneric['category'], Serialisable):
                 graph.successors(box_node), key=lambda node: node.i)))
         wires += tuple(map(
             predecessor, sorted(outputs, key=lambda node: node.i)))
-        wires = Hypergraph.rebracket(None, wires, dom=dom, boxes=boxes)
+        wires = Hypergraph.rebracket(
+            None,  # ty: ignore[invalid-argument-type]
+            wires, dom=dom, boxes=boxes)
         return cls(dom, cod, boxes, wires, spider_types, offsets)
 
     def to_graph(self) -> Graph:

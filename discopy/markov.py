@@ -78,7 +78,7 @@ from discopy.abc import MarkovCategory
 from discopy.axioms import FUEL
 from discopy.cat import factory
 from discopy.monoidal import Ty  # noqa: F401  pylint: disable=unused-import
-from discopy.utils import assert_isatomic, factory_name, from_tree
+from discopy.utils import Generator, assert_isatomic, factory_name, from_tree
 
 
 Layer = symmetric.Layer
@@ -124,7 +124,8 @@ class Diagram(symmetric.Diagram, MarkovCategory):
         copies and discards here and every spider in a hypergraph category,
         downgraded with :meth:`discopy.hypergraph.Hypergraph.to_diagram`.
         """
-        return hypergraph.Hypergraph[cls].strategy(
+        category = hypergraph.Hypergraph[cls]  # ty: ignore[invalid-type-form]
+        return category.strategy(
             dom=dom, cod=cod, max_leaves=fuel + 1).map(
                 lambda graph: graph.to_diagram())
 
@@ -145,7 +146,8 @@ class Diagram(symmetric.Diagram, MarkovCategory):
             n : The number of copies.
         """
         from discopy import frobenius
-        return frobenius.Diagram.spiders.__func__(cls, 1, n, x)
+        return frobenius.Diagram.spiders.__func__(
+            cls, 1, n, x)  # ty: ignore[invalid-argument-type]
 
     @classmethod
     def merge(cls, x: monoidal.Ty, n=2) -> Diagram:
@@ -369,15 +371,15 @@ class Functor(symmetric.Functor):
 
 CMap = cmap.CMap[Diagram]
 
-Diagram.box_factory = Box
+Diagram.box_factory = Generator(Box)
 Diagram.functor_factory = Functor
 Hypergraph = hypergraph.Hypergraph[Diagram]
-Diagram.copy_factory, Diagram.merge_factory = Copy, Merge
-Diagram.swap_factory = Swap
-Diagram.permutation_factory = Permutation
-Diagram.trace_factory = Trace
-Diagram.discard_factory = Discard
-Diagram.sum_factory = Sum
+Diagram.copy_factory, Diagram.merge_factory = Generator(Copy), Generator(Merge)
+Diagram.swap_factory = Generator(Swap)
+Diagram.permutation_factory = Generator(Permutation)
+Diagram.trace_factory = Generator(Trace)
+Diagram.discard_factory = Generator(Discard)
+Diagram.sum_factory = Generator(Sum)
 Id = Diagram.id
 
 

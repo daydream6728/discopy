@@ -82,13 +82,14 @@ from __future__ import annotations
 
 from abc import abstractmethod
 from inspect import signature
-from typing import Callable, ClassVar
+from typing import Callable, ClassVar, Self
 
 from discopy import cat, monoidal, cmap, messages
 from discopy.abc import BiclosedCategory, MonoidalCategory
 from discopy.drawing import Drawing
 from discopy.cat import factory
 from discopy.utils import (
+    Generator,
     AxiomError,
     assert_isinstance,
     deprecated_alias,
@@ -112,11 +113,11 @@ class Ty(monoidal.Ty):
     applying it to a string yields a :class:`Constant`.
     """
 
-    def __pow__(self, other: Ty) -> Ty:
+    def __pow__(self, other: Ty | int) -> Self:
         return self.exp(other) if isinstance(other, Ty)\
             else monoidal.Ty.__pow__(self, other)
 
-    def exp(self, other: Ty) -> Ty:
+    def exp(self, other: Ty) -> Self:
         """
         The exponential of a type, which is the type itself when the
         exponent is the unit, as is any exponential of the unit.
@@ -539,11 +540,11 @@ class Sum(monoidal.Sum, Box):
 
 
 Id = Diagram.id
-Diagram.box_factory = Box
-Diagram.curry_factory = Curry
-Diagram.eval_factory = Eval
-Diagram.coeval_factory = Coeval
-Diagram.sum_factory = Sum
+Diagram.box_factory = Generator(Box)
+Diagram.curry_factory = Generator(Curry)
+Diagram.eval_factory = Generator(Eval)
+Diagram.coeval_factory = Generator(Coeval)
+Diagram.sum_factory = Generator(Sum)
 
 
 class Functor(monoidal.Functor):
@@ -619,7 +620,8 @@ class Functor(monoidal.Functor):
             result = self.cod.ob.variable_factory(name, cod)
         return result
 
-    def map_term(self, term: TermBase, context: dict = None) -> TermBase:
+    def map_term(
+            self, term: TermBase, context: dict | None = None) -> TermBase:
         """
         The image of a term, a term in the internal language of the codomain,
         checked to have the image of its type and exactly the images of its
@@ -700,7 +702,7 @@ class TermBase(Box):
     functor: ClassVar[Functor] = Functor.id(Diagram)
 
     @abstractmethod
-    def eval(functor: Functor = None) -> BiclosedCategory:
+    def eval(self, functor: Functor | None = None) -> BiclosedCategory:
         """
         The evaluation of a :class:`Functor` on a term gives a morphism in its
         codomain. By default, this is the identity functor on the free biclosed
@@ -708,7 +710,7 @@ class TermBase(Box):
         """
 
     @abstractmethod
-    def map(functor: Functor, context: dict) -> Term:
+    def map(self, functor: Functor, context: dict) -> Term:
         """
         The image of a term under a :class:`Functor` whose codomain objects
         are biclosed types, i.e. a term in the codomain's internal language
@@ -741,7 +743,7 @@ class Constant(TermBase):
         inside (Diagram): The diagram which defines the constant.
         left (Optional[bool]): Whether the domain comes from the left or right.
     """
-    def __init__(self, name: Ty, cod: Ty, **kwargs):
+    def __init__(self, name: str, cod: Ty, **kwargs):
         super().__init__(name, dom=self.ob(), cod=cod, **kwargs)
         self.freevars = []
 

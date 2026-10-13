@@ -52,12 +52,12 @@ Axioms
 from __future__ import annotations
 from dataclasses import dataclass
 from functools import reduce
-from typing import Dict
+from typing import Dict, Self
 
 from discopy import monoidal, biclosed, markov, cmap, hypergraph, messages
 from discopy.abc import ClosedCategory
 from discopy.cat import factory
-from discopy.utils import AxiomError
+from discopy.utils import Generator, AxiomError
 
 
 @factory
@@ -78,7 +78,7 @@ class Ty(biclosed.Ty):
         :align: center
     """
     @classmethod
-    def from_biclosed(cls, old: biclosed.Ty) -> Ty:
+    def from_biclosed(cls, old: biclosed.Ty) -> Self:
         """
         Translate a biclosed type into a closed type, collapsing left and
         right exponentials into a single exponential.
@@ -171,10 +171,6 @@ class Eval(biclosed.Eval, Box):
     drawing_name = "__call__"
 
 
-class Coeval(biclosed.Coeval, Box):
-    "The coevaluation of an exponential type, i.e. the dagger of an Eval."
-
-
 class Curry(biclosed.Curry, Box):
     "The currying of a closed diagram, linear when its argument is."
 
@@ -203,10 +199,6 @@ class Copy(markov.Copy, Box):
     "A markov copy in a closed category"
 
     is_linear = False
-
-
-class Discard(markov.Discard, Copy):
-    "A markov discard in a closed category."
 
 
 class Merge(markov.Merge, Box):
@@ -253,18 +245,18 @@ class Functor(biclosed.Functor, markov.Functor):
 CMap = cmap.CMap[Diagram]
 
 
-Diagram.box_factory = Box
+Diagram.box_factory = Generator(Box)
 Diagram.functor_factory = Functor
 Hypergraph = hypergraph.Hypergraph[Diagram]
-Diagram.copy_factory, Diagram.merge_factory = Copy, Merge
-Diagram.swap_factory = Swap
-Diagram.permutation_factory = Permutation
-Diagram.curry_factory = Curry
-Diagram.eval_factory = Eval
-Diagram.coeval_factory = Coeval
-Diagram.trace_factory = Trace
-Diagram.discard_factory = Discard
-Diagram.sum_factory = Sum
+Diagram.copy_factory, Diagram.merge_factory = Generator(Copy), Generator(Merge)
+Diagram.swap_factory = Generator(Swap)
+Diagram.permutation_factory = Generator(Permutation)
+Diagram.curry_factory = Generator(Curry)
+Diagram.eval_factory = Generator(Eval)
+Diagram.trace_factory = Generator(Trace)
+Diagram.sum_factory = Generator(Sum)
+Coeval = Diagram.coeval_factory
+Discard = Diagram.discard_factory
 Ty.exp_factory = Ty.under_factory = Ty.over_factory = staticmethod(Exp)
 
 Id = Diagram.id
@@ -299,7 +291,7 @@ class TermBase(Box, biclosed.TermBase):
         args = (other, self) if left else (self, other)
         return self.cod.application_factory(*args)
 
-    def compose(self, *others: Term) -> Term:
+    def compose(self, *others: Term) -> TermBase:
         """
         The composition of terms of function types: ``t.compose(u)`` for
         ``t : x >> y`` and ``u : y >> z`` is ``x(lambda v: u(t(v)))``, i.e.
@@ -359,7 +351,7 @@ class TermBase(Box, biclosed.TermBase):
             [context.index(x) for x in self.freevars + unused],
             [functor(x.cod) for x in context])
         if not unused:
-            return permutation
+            return permutation  # ty: ignore[invalid-return-type]
         discard = functor.cod.discard(functor(
             self.ob().tensor(*[x.cod for x in unused])))
         return permutation >> functor.cod.id(functor(self.dom)) @ discard
@@ -369,13 +361,13 @@ class TermBase(Box, biclosed.TermBase):
         # pylint: disable=unused-argument  # a constant has no variable
         return 0
 
-    def substitute(self, substitution: Substitution) -> Term:
+    def substitute(self, substitution: Substitution) -> Self:
         "The term with the free variables of a substitution replaced."
         # pylint: disable=unused-argument  # a constant has no variable
         return self
 
     @classmethod
-    def from_biclosed(cls, term: biclosed.Term) -> Term:
+    def from_biclosed(cls, term: biclosed.TermBase) -> Term:
         """
         Translate a biclosed term into a closed term, dropping planarity by
         collapsing left and right exponentials and applications.
@@ -434,6 +426,9 @@ class Application(TermBase, biclosed.Application):
         overlap : The variables free in both ``func`` and ``args``, which
             :meth:`eval` copies.
     """
+    func: Term
+    args: Term
+
     def __init__(self, func: Term, args: Term, left: bool = False):
         # pylint: disable=unused-argument  # a closed category is symmetric
         biclosed.Application.__init__(self, func, args)
@@ -482,6 +477,9 @@ class Abstraction(TermBase, biclosed.Abstraction):
     The abstraction ``var.cod(lambda var: body)`` of a variable in a term,
     which need not occur in it or may occur several times.
     """
+    var: Variable
+    body: Term
+
     def __init__(self, var: Variable, body: Term, left: bool = False):
         # pylint: disable=unused-argument  # a closed category is symmetric
         biclosed.Abstraction.__init__(self, var, body)

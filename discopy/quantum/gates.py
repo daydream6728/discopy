@@ -587,13 +587,14 @@ class Parametrized(Box):
 
     def subs(self, *args):
         data = rsubs(self.data, *args)
-        return type(self)(data)
+        return type(self)(data)  # ty: ignore[missing-argument]
 
     def lambdify(self, *symbols, **kwargs):
         from sympy import lambdify
         with backend() as np:
             data = lambdify(symbols, self.data, dict(kwargs, modules=np))
-        return lambda *xs: type(self)(data(*xs))
+        return lambda *xs: type(self)(
+            data(*xs))  # ty: ignore[missing-argument]
 
     def __str__(self):
         if isinstance(self, Controlled):
@@ -767,7 +768,8 @@ class Sqrt(Scalar):
     @property
     def array(self):
         with backend() as np:
-            return np.array(self.data ** .5)
+            return np.array(
+                self.data ** .5)  # ty: ignore[unsupported-operator]
 
     def dagger(self):
         return self

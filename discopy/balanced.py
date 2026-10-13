@@ -40,7 +40,7 @@ from discopy.abc import BalancedCategory
 from discopy.cat import factory
 from discopy.monoidal import (  # noqa: F401  pylint: disable=unused-import
     Colour, Ty)
-from discopy.utils import factory_name, assert_isatomic, from_tree
+from discopy.utils import Generator, factory_name, assert_isatomic, from_tree
 
 
 @dataclass(frozen=True)
@@ -66,7 +66,7 @@ class Ribbon(Colour):
     >>> assert Ribbon() == Ribbon("gray", width=0.25)
     """
     name: str = "gray"
-    width: float = None
+    width: float | None = None
 
     def __post_init__(self):
         super().__post_init__()
@@ -89,7 +89,8 @@ class Ribbon(Colour):
 
 
 def double_rail(
-        typ: monoidal.Ty, width: float = None, colour="gray") -> monoidal.Ty:
+        typ: monoidal.Ty, width: float | None = None, colour="gray"
+) -> monoidal.Ty:
     """
     Doubles every object of a type into the two rails of a ribbon, i.e. two
     copies of the object with a shared :class:`Ribbon` as the colour region
@@ -149,7 +150,7 @@ class Diagram(braided.Diagram, traced.Diagram, BalancedCategory):
             >> cls.twist(dom[1:]) @ cls.twist_factory(dom[0])\
             >> cls.braid(dom[1:], dom[0])
 
-    def to_braided(self, width: float = None, colour="gray"):
+    def to_braided(self, width: float | None = None, colour="gray"):
         """
         Doubles every object and sends the twist to the braid.
 
@@ -247,20 +248,6 @@ class DualRailTwist(braided.Box):
 
     def dagger(self):
         return type(self)(self.dom, not self.is_dagger)
-
-
-class Trace(traced.Trace, Box):
-    """
-    A trace in a balanced category.
-
-    Parameters:
-        arg : The diagram to trace.
-        left : Whether to trace the wires on the left or right.
-
-    See also
-    --------
-    :meth:`Diagram.trace`
-    """
 
 
 class Twist(Box):
@@ -363,7 +350,7 @@ class DualRail(Functor):
     dual_rail_twist_factory = DualRailTwist
     dual_rail_braid_factory = DualRailBraid
 
-    def __init__(self, width: float = None, colour="gray"):
+    def __init__(self, width: float | None = None, colour="gray"):
         self.width = config.DRAWING_DEFAULT["ribbon_width"]\
             if width is None else width
         self.colour = colour
@@ -380,15 +367,15 @@ class DualRail(Functor):
         return super().__call__(other)
 
 
-Diagram.box_factory = Box
+Diagram.box_factory = Generator(Box)
 Diagram.functor_factory = Functor
 CMap = cmap.CMap[Diagram]
 Hypergraph = hypergraph.Hypergraph[Diagram]
-Diagram.braid_factory = Braid
-Diagram.twist_factory = Twist
-Diagram.trace_factory = Trace
-Diagram.sum_factory = Sum
+Diagram.braid_factory = Generator(Braid)
+Diagram.twist_factory = Generator(Twist)
+Diagram.sum_factory = Generator(Sum)
 Diagram.dual_rail_factory = DualRail
+Trace = Diagram.trace_factory
 Id = Diagram.id
 
 

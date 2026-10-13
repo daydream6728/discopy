@@ -50,6 +50,7 @@ from discopy.abc import ClosedCategory
 from discopy.cat import factory
 from discopy.grammar import thue
 from discopy.utils import (
+    Generator,
     BinaryBoxConstructor,
     AxiomError,
     factory_name,
@@ -144,24 +145,6 @@ class Word(thue.Word, Box):
     """
 
 
-class Eval(biclosed.Eval, Box):
-    """
-    Evaluation box in a categorial grammar.
-    """
-
-
-class Coeval(biclosed.Coeval, Box):
-    """
-    Coevaluation box in a categorial grammar, the dagger of an evaluation.
-    """
-
-
-class Curry(biclosed.Curry, Box):
-    """
-    The currying of a categorial diagram.
-    """
-
-
 class ForwardCrossedComposition(BinaryBoxConstructor, Box):
     """ Forward crossed composition rule. """
     def __init__(self, left, right):
@@ -225,7 +208,6 @@ class TermBase(Box, biclosed.TermBase):
     A term in the internal language of a categorial grammar.
     """
     functor = Functor.id(Diagram)
-    freevars = None
 
     def __call__(self, other, left=False):
         return BA(self, other) if left else FA(self, other)
@@ -259,7 +241,8 @@ class Abstraction(TermBase, biclosed.Abstraction):
     left: bool = False
 
     def __init__(self, var: Variable, body: Term, left: bool = False):
-        biclosed.Abstraction.__init__(self, var, body, left)
+        biclosed.Abstraction.__init__(
+            self, var, body, left)  # ty: ignore[invalid-argument-type]
         TermBase.__init__(self, self.name, self.dom, self.cod)
 
     def simplify(self):
@@ -299,8 +282,8 @@ class TypeRaising(TermBase):
         self.base, self.child, self.freevars = base, child, child.freevars
         super().__init__(name, child.dom, cod)
 
-    def eval(self, **kwargs):
-        return self.simplify().eval(**kwargs)
+    def eval(self, functor=None):
+        return self.simplify().eval(functor)
 
     def map(self, functor, context):
         return functor.map_term(self.simplify(), context)
@@ -356,8 +339,8 @@ class BinaryTerm(TermBase):
     def simplify(self):
         return type(self)(self.left.simplify(), self.right.simplify())
 
-    def eval(self, **kwargs):
-        return self.simplify().eval(**kwargs)
+    def eval(self, functor=None):
+        return self.simplify().eval(functor)
 
     def map(self, functor, context):
         return functor.map_term(self.simplify(), context)
@@ -549,9 +532,10 @@ def tree2diagram(tree: dict, dom=Ty()) -> Diagram:
 
 
 Id = Diagram.id
-Diagram.box_factory, Diagram.functor_factory = Box, Functor
-Diagram.curry_factory = Curry
-Diagram.eval_factory, Diagram.coeval_factory = Eval, Coeval
+Diagram.box_factory, Diagram.functor_factory = Generator(Box), Functor
+Curry = Diagram.curry_factory
+Eval = Diagram.eval_factory
+Coeval = Diagram.coeval_factory
 
 Ty.variable_factory = Variable
 Ty.constant_factory = Constant

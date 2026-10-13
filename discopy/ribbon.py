@@ -79,6 +79,7 @@ cap becomes a ribbon folding back.
 from discopy import rigid, pivotal, balanced
 from discopy.abc import RibbonCategory
 from discopy.cat import factory
+from discopy.utils import Generator
 from discopy.pivotal import (  # noqa: F401  pylint: disable=unused-import
     Ty, Nat)
 
@@ -128,7 +129,7 @@ class Diagram(pivotal.Diagram, balanced.Diagram, RibbonCategory):
         cup = self.cup_factory(self.cod[y - 1], self.cod[y])
         return self >> self.cod[:y - 1] @ cup @ self.cod[y + 1:]
 
-    def to_ribbons(self, width: float = None, colour="gray"):
+    def to_ribbons(self, width: float | None = None, colour="gray"):
         """
         Doubles every object and sends the twist to the braid, folding cups
         and caps into a single box.
@@ -161,26 +162,6 @@ class Box(pivotal.Box, balanced.Box, Diagram):
         name (str) : The name of the box.
         dom (pivotal.Ty) : The domain of the box, i.e. its input.
         cod (pivotal.Ty) : The codomain of the box, i.e. its output.
-    """
-
-
-class Cup(pivotal.Cup, Box):
-    """
-    A ribbon cup is a pivotal cup in a ribbon diagram.
-
-    Parameters:
-        left (pivotal.Ty) : The atomic type.
-        right (pivotal.Ty) : Its adjoint.
-    """
-
-
-class Cap(pivotal.Cap, Box):
-    """
-    A ribbon cap is a pivotal cap in a ribbon diagram.
-
-    Parameters:
-        left (pivotal.Ty) : The atomic type.
-        right (pivotal.Ty) : Its adjoint.
     """
 
 
@@ -358,11 +339,13 @@ class DualRail(balanced.DualRail, Functor):
         return super().__call__(other)
 
 
-Diagram.box_factory = Box
-Diagram.braid_factory, Diagram.functor_factory = Braid, Functor
-Diagram.cup_factory, Diagram.cap_factory = Cup, Cap
-Diagram.twist_factory = Twist
+Diagram.box_factory = Generator(Box)
+Diagram.braid_factory, Diagram.functor_factory = Generator(Braid), Functor
+Diagram.twist_factory = Generator(Twist)
+Diagram.sum_factory = Generator(Sum)
 Diagram.dual_rail_factory = DualRail
+Cup = Diagram.cup_factory
+Cap = Diagram.cap_factory
 
 Id = Diagram.id
 
