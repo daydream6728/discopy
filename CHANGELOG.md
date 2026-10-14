@@ -281,6 +281,25 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   the objects to match; `Permutation` inherits `abc.PROP` on the strength
   of that, its first genuine user
   ([#709](https://github.com/discopy/discopy/issues/709)).
+- Monoidal lenses, also called optics, `discopy.lens`, with one class for
+  each doctrine of the underlying category as in `discopy.para`.
+  `lens.Symmetric` is a residual with a forward and a backward morphism
+  over a symmetric category, composing by tensoring the residuals as
+  `discopy.para` does with its co/parameters, over pairs `lens.Ty`
+  tensored componentwise; `to_int` reads one over a traced category as an
+  integer diagram of `discopy.interaction`, the residual being the wire
+  between the legs, and `lens.Traced` traces it leg by leg.
+  `lens.Markov` is the lenses of functional programming, a `get` and a
+  `put` composing by the chain rule over a Markov category: a subclass of
+  `lens.Symmetric` whose residual is the input, copied to be read by `get`
+  and kept for `put`, and `lens.Symmetric.to_markov` normalises any lens
+  to one. Lenses over
+  `python.Function` are the reverse derivatives of gradient-based
+  learning, and a parametric lens `para.Symmetric[lens.Markov[Function]]`
+  a neural network with its weights' gradients beside its input's.
+  Building a Markov lens over a category without `copy` and `discard`
+  raises `messages.NOT_MARKOV`
+  ([#701](https://github.com/discopy/discopy/pull/701)).
 - A `workflows` job in `build.yml`, so that the code running our pull
   requests is checked like the code it checks: `actionlint` over the
   workflows, `pflake8` over `.github`, and `pytest .github/tests/*.py`
@@ -768,6 +787,12 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   marimo's theme class, which outweighs the media query of
   `drawing.backend.DARK_MODE_STYLE`
   ([#453](https://github.com/discopy/discopy/issues/453)).
+- `interaction.Diagram.caps` built its inside on `negative @ positive`
+  where the constructor asks for `positive @ negative`, so a cap on a type
+  with both halves raised `ValueError`; both snake equations hold on such
+  a type now. `interaction.Ty.unit` called `natural.unit()`, which an
+  `int` or a `tuple` natural does not have: it is `cls()`, the pair of
+  empty halves ([#701](https://github.com/discopy/discopy/pull/701)).
 - `Hypergraph.rotate` exchanged the two boundaries of the hypergraph and
   replaced each box by its rotation, but left the *ports* of those boxes
   and the spiders where they were: the wires reading a box's domain went
