@@ -674,6 +674,25 @@ class TermBase(Box, biclosed.TermBase):
             dom=biclosed.Diagram, cod=cls.functor.cod)
         return functor(term)
 
+    @classmethod
+    def generate(cls, cod, choices, types, letters):
+        """
+        Build a term as :meth:`biclosed.TermBase.generate` does, except
+        that a closed term need not be linear: its :class:`biclosed.Sampler`
+        may use a bound variable any number of times, or not at all.
+
+        Example
+        -------
+        >>> X, Y = Ty("X"), Ty("Y")
+        >>> choices = [4, 2, 0, 2, 0, 0, 2, 2]
+        >>> print(TermBase.generate(Y << X, choices, [X], "x"))
+        X(lambda x0: c0(x0)(x0))
+        >>> print(TermBase.generate(Y << X, [4, 0], [X], "x"))
+        X(lambda x0: c0)
+        """
+        return biclosed.Sampler(
+            cls, iter(choices), types, letters, linear=False).term(cod)
+
 
 type Term = Constant | Variable | Application | Abstraction\
     | Tuple | Projection | Let
@@ -870,6 +889,15 @@ class Tuple(Compound):
         return type(self)(*[
             term.substitute(substitution) for term in self.terms])
 
+    def alpha_eq_under(self, scopes, others, depth=0):
+        """ Tuples of one length with alpha-equivalent terms. """
+        if any(type(other) is not type(self)
+               or len(other.terms) != len(self.terms) for other in others):
+            return False
+        return all(term.alpha_eq_under(
+            scopes, [other.terms[i] for other in others], depth)
+            for i, term in enumerate(self.terms))
+
     def map(self, functor, context):
         return type(self)(*[
             functor.map_term(term, context) for term in self.terms])
@@ -944,6 +972,14 @@ class Projection(Compound):
 
     def substitute(self, substitution):
         return type(self)(self.arg.substitute(substitution), self.index)
+
+    def alpha_eq_under(self, scopes, others, depth=0):
+        """ Projections onto one index of alpha-equivalent terms. """
+        if any(type(other) is not type(self) or other.index != self.index
+               for other in others):
+            return False
+        return self.arg.alpha_eq_under(
+            scopes, [other.arg for other in others], depth)
 
     def map(self, functor, context):
         return type(self)(functor.map_term(self.arg, context), self.index)
@@ -1066,6 +1102,22 @@ class Let(Compound):
                 body = Substitution({var: variables[i]})(body)
         return type(self)(
             expression, tuple(variables), Substitution(inside)(body))
+
+    def alpha_eq_under(self, scopes, others, depth=0):
+        """
+        Statements binding variables of the same types to alpha-equivalent
+        expressions, with bodies alike under the levels they bind.
+        """
+        if any(type(other) is not type(self)
+               or [x.cod for x in other.variables]
+               != [x.cod for x in self.variables] for other in others):
+            return False
+        terms = (self, *others)
+        return self.expression.alpha_eq_under(
+            scopes, [other.expression for other in others], depth)\
+            and self.alpha_eq_bound(
+                scopes, [term.body for term in terms],
+                [term.variables for term in terms], depth)
 
     def map(self, functor, context):
         expression = functor.map_term(self.expression, context)

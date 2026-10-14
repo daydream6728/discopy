@@ -296,6 +296,14 @@ class TypeRaising(TermBase):
     def eval(self, **kwargs):
         return self.simplify().eval(**kwargs)
 
+    def alpha_eq_under(self, scopes, others, depth=0):
+        """ Type raisings of one base with alpha-equivalent children. """
+        if any(type(other) is not type(self) or other.base != self.base
+               for other in others):
+            return False
+        return self.child.alpha_eq_under(
+            scopes, [other.child for other in others], depth)
+
     def map(self, functor, context):
         return functor.map_term(self.simplify(), context)
 
@@ -352,6 +360,15 @@ class BinaryTerm(TermBase):
 
     def eval(self, **kwargs):
         return self.simplify().eval(**kwargs)
+
+    def alpha_eq_under(self, scopes, others, depth=0):
+        """ Compositions of one kind with alpha-equivalent sides. """
+        if any(type(other) is not type(self) for other in others):
+            return False
+        return self.left.alpha_eq_under(
+            scopes, [other.left for other in others], depth)\
+            and self.right.alpha_eq_under(
+                scopes, [other.right for other in others], depth)
 
     def map(self, functor, context):
         return functor.map_term(self.simplify(), context)
