@@ -27,6 +27,7 @@ from discopy import (
     stream,
     para,
     lens,
+    neural,
     python,
     matrix,
     tensor,

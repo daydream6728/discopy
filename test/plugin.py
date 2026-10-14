@@ -13,7 +13,7 @@ from _pytest.doctest import DoctestItem
 
 UNIMPORTABLE = (
     "discopy/quantum/pennylane.py", "discopy/quantum/tk.py",
-    "discopy/grammar/neural.py")
+    "discopy/grammar/neural.py", "discopy/neural/torch.py")
 
 
 def pytest_addoption(parser):
