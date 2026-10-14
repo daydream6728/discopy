@@ -211,6 +211,8 @@ class Product(biclosed.Wire):
     @classmethod
     def from_tree(cls, tree):
         return cls(*map(from_tree, tree['factors']))
+
+
 class Unitype(Exp):
     """
     The unitype is its own exponential, i.e. ``U == U >> U``: embedding the
