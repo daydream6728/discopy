@@ -372,7 +372,7 @@ class Diagram(markov.Diagram, FeedbackCategory):
         def feedbacks(draw):
             domain = draw(cls.ob.strategy()) if dom is None else dom
             codomain = draw(cls.ob.strategy()) if cod is None else cod
-            mem = draw(cls.ob.strategy(max_length=fuel))
+            mem = draw(cls.ob.strategy(fuel=min(fuel, 1)))
             graph = draw(category.strategy(
                 dom=domain @ mem.delay(), cod=codomain @ mem,
                 max_leaves=fuel + 1, acyclic=True))

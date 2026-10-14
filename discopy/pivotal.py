@@ -93,6 +93,9 @@ class Ty(rigid.Ty):
     """
     generator_factory = Wire
 
+    dagger_involution = PivotalCategory.dagger_involution
+    dagger_contravariance = PivotalCategory.dagger_contravariance
+
 
 @factory
 class Nat(rigid.Nat, Ty):

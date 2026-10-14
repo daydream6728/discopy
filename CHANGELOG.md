@@ -68,7 +68,7 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   and neither can `Matrix`, whose `Tensor` and `Channel` narrow its
   objects, nor `CMap`, `Stream` and `interaction.Diagram`, whose objects
   are not of the sort their base bounds them by; `fail-under` rises to
-  9.01.
+  9.02.
 - `axioms.Rule` and the decorator `rule`: an inference rule of a structure,
   stated like a law with a morphism as its conclusion. `Rule` and `Axiom`
   share a `Declaration`, which binds them to the class they are read from
@@ -82,11 +82,18 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `comultiplication`, `delaying` and `feedback_right`, and `spider`, their
   contexts written with capital Greek letters from Γ as in type theory,
   e.g. the curry of `f: Hom[C1, Tensor[Γ, E], B]` concludes `Hom[C1, Γ,
-  Over[B, E]]`. `cat.Arrow.search` derives the terms of every free
-  category from its rules: a box or the conclusion of a rule chosen at
-  random, its morphism premises drawn in turn with less `fuel`, a side of
-  the conclusion that is a variable taken from the goal, see `Rule.given`,
-  and any other fitted to it by a box. A level adds rules, never a search.
+  Over[B, E]]`. `cat.FreeCategory.search` derives the terms of every free
+  category from its rules: a generator, drawn by `generators`, or the
+  conclusion of a rule chosen at random, its morphism premises drawn in
+  turn with less `fuel`, a side of the conclusion that is a variable taken
+  from the goal, see `Rule.given`, and any other fitted to it by a
+  generator. A level adds rules, never a search. The generators of a
+  diagram are its boxes and those of a type its wires, so that types are
+  derived by the identity and composition rules of the free monoid too,
+  `Ty.strategy` being the search with one unit of fuel and an atomic
+  object one of its `generators`; `Nat` generates `Nat(1)`, `Dim` a
+  dimension of two or three and a circuit type a bit or a qubit, and the
+  colours of a generated type are all transparent, `Colour.strategy`.
   The symmetric, Markov and feedback levels also `sample` a diagram from
   their combinatorial representation, and `strategy`, which the property
   matrix draws from, is the search alone or one of the search and the
@@ -102,7 +109,9 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   Markov, closed, feedback and hypergraph diagrams from a hypergraph, and
   the maps and hypergraphs themselves as categories of their own.
   `Testable.enrolled` lists the categories that are their own `ar`, a box
-  or a type being checked as part of the morphisms of its category, and
+  being checked as part of the morphisms of its category, and every type
+  as the free coloured monoid it is, rigid types breaking the dagger laws
+  as rigid diagrams do, and
   `Testable.matrix` their laws, or only `once` per declaration under the
   new `fast` profile, so that `proptest/` is one parametrised test. The laws
   of doctrine-search are stated on `discopy.abc`: the interchange law, the
@@ -837,11 +846,12 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - The categorial grammar has a `Coeval` and the abstract one a `Merge`, so
   that the daggers of their evaluations and copies stay in their category.
 - A delayed `feedback.Box` reads back from its tree, which dropped its time
-  step.
+  step, and a `Dim` from its own, where `dumps(Dim(2))` raised
+  `AttributeError` on the integers inside it.
 - `Layer.merge` refuses two layers that compose to the identity, e.g. a
   snake, which is not a layer, where it raised `UnboundLocalError`; and
-  `messages.PERMUTATION_HAS_NO_OFFSET`, which `rigid.Diagram.snake_removal`
-  raises, exists.
+  `rigid.Diagram.snake_removal` loses a guard on an attribute no layer has,
+  which raised a message that did not exist.
 
 - `feedback.Diagram.trace` built a `markov.Trace`, which does not compose
   with feedback diagrams: `feedback.Trace` is the trace of a feedback

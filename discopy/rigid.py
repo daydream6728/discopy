@@ -202,7 +202,7 @@ class Wire(monoidal.Wire):
         super().__init__(name, dom, cod)
 
     def dagger(self) -> Wire:
-        raise AxiomError("Rigid types have no dagger, use pivotal instead.")
+        raise AxiomError(messages.RIGID_TYPE_HAS_NO_DAGGER)
 
     @property
     def l(self) -> Self:
@@ -280,6 +280,11 @@ class Ty(Pregroup, biclosed.Ty):
     """
     generator_factory = Wire
 
+    dagger_involution = Pregroup.dagger_involution.failing(
+        messages.RIGID_TYPE_HAS_NO_DAGGER)
+    dagger_contravariance = Pregroup.dagger_contravariance.failing(
+        messages.RIGID_TYPE_HAS_NO_DAGGER)
+
     def __setstate__(self, state):
         if '_z' in state:  # Backward compatibility
             del state['_z']
@@ -342,6 +347,9 @@ class Nat(monoidal.Nat, Ty):
         The natural number.
     """
     l = r = property(lambda self: self)
+
+    dagger_involution = Pregroup.dagger_involution
+    dagger_contravariance = Pregroup.dagger_contravariance
 
 
 class Layer(monoidal.Layer):
@@ -532,9 +540,6 @@ class Diagram(biclosed.Diagram, RigidCategory):
         """
         from discopy import monoidal
         from discopy.rigid import Cup, Cap
-
-        if getattr(self, "has_nonidentity_permutation", False):
-            raise NotImplementedError(messages.PERMUTATION_HAS_NO_OFFSET)
 
         def follow_wire(diagram, i, j):
             """

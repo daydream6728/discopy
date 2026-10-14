@@ -56,8 +56,8 @@ SHAPES = {
 @given(data=st.data())
 def test_boundaries(module, data):
     """ A diagram has the boundary it is asked for, in its own category. """
-    dom = data.draw(module.Ty.strategy(max_length=2), label="dom")
-    cod = data.draw(module.Ty.strategy(max_length=2), label="cod")
+    dom = data.draw(module.Ty.strategy(), label="dom")
+    cod = data.draw(module.Ty.strategy(), label="cod")
     diagram = data.draw(
         module.Diagram.strategy(dom=dom, cod=cod), label="diagram")
     assert isinstance(diagram, module.Diagram)
@@ -78,8 +78,8 @@ def test_rule(module, name, data):
     diagram of the type its signature states, in the scope of the draw.
     """
     rule = module.Diagram.rules[name]
-    dom = data.draw(module.Ty.strategy(max_length=2), label="dom")
-    cod = data.draw(module.Ty.strategy(max_length=2), label="cod")
+    dom = data.draw(module.Ty.strategy(), label="dom")
+    cod = data.draw(module.Ty.strategy(), label="cod")
     scope, premises = data.draw(
         rule.sequents(rule.given(dom, cod), fuel=1), label="premises")
     assert inhabits(rule(**premises), rule.output(scope))
@@ -93,8 +93,8 @@ def test_hypergraph_shape(module, data):
     category, whatever the boundary, and is acyclic when asked to be in a
     category whose spiders have a producer.
     """
-    dom = data.draw(module.Ty.strategy(max_length=2), label="dom")
-    cod = data.draw(module.Ty.strategy(max_length=2), label="cod")
+    dom = data.draw(module.Ty.strategy(), label="dom")
+    cod = data.draw(module.Ty.strategy(), label="cod")
     acyclic = data.draw(st.booleans(), label="acyclic")
     graph = data.draw(Hypergraph[module.Diagram].strategy(
         dom=dom, cod=cod, acyclic=acyclic), label="graph")

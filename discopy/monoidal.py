@@ -98,6 +98,13 @@ class Colour(cat.Ob):
     name: str = TRANSPARENT
     label: "str | None" = field(default=None, compare=False)
 
+    @classmethod
+    def strategy(cls):
+        """ Generate the transparent colour, the one generated types have. """
+        from hypothesis import strategies as st
+
+        return st.just(cls())
+
     def __post_init__(self):
         assert_isinstance(self.name, str)
         if self.label is not None:
@@ -291,21 +298,29 @@ class Ty(cat.Ob, cat.FreeCategory, ColouredMonoid):
     generator_factory = Wire
 
     @classmethod
-    def strategy(cls, *, atoms=None, min_length=0, max_length=3):
+    def strategy(cls, **params):
         """
-        Generate types as lists of generating objects.
+        Generate types by the :meth:`search` of the free monoid, i.e. from
+        the identity and the composition of its rules with a wire as the
+        generator, with less fuel than a diagram since its types are the
+        boundaries of one.
 
-        Parameters:
-            atoms : A strategy for the generating objects, by default that of
-                :attr:`generator_factory`.
-            min_length : The minimum number of objects in a type.
-            max_length : The maximum number of objects in a type.
+        Parameters are those of :meth:`search`.
+
+        >>> from hypothesis import find
+        >>> assert len(find(Ty.strategy(), lambda x: len(x) > 1)) == 2
         """
-        from hypothesis import strategies as st
+        return cls.search(**{"fuel": 1, **params})
 
-        atoms = cls.generator_factory.strategy() if atoms is None else atoms
-        return st.lists(atoms, min_size=min_length, max_size=max_length).map(
-            lambda inside: cls(*inside))
+    @classmethod
+    def generators(cls, *, dom=None, cod=None):
+        """
+        Generate the types of one wire. Their colours are transparent, as are
+        those :meth:`Colour.strategy` draws: a coloured type is not generated
+        yet, so the boundary is not read.
+        """
+        # pylint: disable=unused-argument  # every colour is transparent
+        return cls.generator_factory.strategy().map(cls)
 
     def cast_wire(self, x: str | cat.Ob) -> cat.Ob:
         """
@@ -548,6 +563,14 @@ class Nat(abc.Nat, Ty):  # ty: ignore[invalid-generic-class]
     """
     generator_factory = int
 
+    @classmethod
+    def generators(cls, *, dom=None, cod=None):
+        """ Generate the one generator of the free monoid, ``Nat(1)``. """
+        # pylint: disable=unused-argument  # a Nat has one colour
+        from hypothesis import strategies as st
+
+        return st.just(cls(1))
+
     def __init__(self, inside: int | tuple = 0, dom: Colour | None = None,
                  cod: Colour | None = None, _scan: bool = True):
         # pylint: disable=unused-argument  # a Nat has one colour
@@ -613,6 +636,14 @@ class Dim(Ty):
     """
     generator_factory = int
 
+    @classmethod
+    def generators(cls, *, dom=None, cod=None):
+        """ Generate the dimensions of one wire, two or three. """
+        # pylint: disable=unused-argument  # a Dim has one colour
+        from hypothesis import strategies as st
+
+        return st.integers(2, 3).map(cls)
+
     def __init__(self, *inside: int, dom=None, cod=None, _scan=True, **kwargs):
         inside = kwargs.pop('inside', inside)
         if kwargs:
@@ -636,6 +667,13 @@ class Dim(Ty):
         return f"Dim({', '.join(map(repr, self.inside)) or '1'})"
 
     __str__ = __repr__
+
+    def to_tree(self):
+        return {'factory': factory_name(type(self)), 'dim': list(self.inside)}
+
+    @classmethod
+    def from_tree(cls, tree):
+        return cls(*tree['dim'])
 
 
 class Layer(cat.Box, ColouredMonoid):
@@ -1116,7 +1154,7 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
     def decode(
             cls,
             dom: Ty,
-            boxes_and_offsets: "Iterable[tuple[Box, int]] | None" = None,
+            boxes_and_offsets: Iterable[tuple["Box", int]] | None = None,
             boxes: "list[Box] | None" = None,
             offsets: list[int] | None = None,
             cod: Ty | None = None) -> "Diagram":

@@ -556,10 +556,11 @@ class Declaration[**P, T](classmethod):
         """
         Generate the scope and the arguments of the bound declaration: a
         variable of sort ``Obj`` from the strategy of ``category.ob``, of
-        sort ``Atom`` of length one and of sort :class:`Count` a number up to
-        :data:`MAX_COUNT`, then a premise ``Hom[C1, A, B]`` from the strategy
-        of the category with its boundary and ``params``, a premise
-        ``Var[T, x]`` the value ``x`` and :data:`typing.Self` a term.
+        sort ``Atom`` from the ``generators`` of ``category.ob`` and of sort
+        :class:`Count` a number up to :data:`MAX_COUNT`, then a premise
+        ``Hom[C1, A, B]`` from the strategy of the category with its boundary
+        and ``params``, a premise ``Var[T, x]`` the value ``x`` and
+        :data:`typing.Self` a term.
         """
         from hypothesis import strategies as st
 
@@ -568,10 +569,9 @@ class Declaration[**P, T](classmethod):
             def variable(name, sort):
                 if sort is Count:
                     return draw(st.integers(0, MAX_COUNT), label=name)
-                length = {"min_length": 1, "max_length": 1}\
-                    if get_origin(sort) is Atom else {}
-                return draw(
-                    self.category.ob.strategy(**length), label=name)
+                ob = self.category.ob
+                return draw(ob.generators() if get_origin(sort) is Atom
+                            else ob.strategy(), label=name)
 
             def value(name, kind):
                 if get_origin(kind) is Var:
@@ -943,17 +943,14 @@ class Testable[T](ABC):
         The categories the property matrix checks, by name: those that state
         laws, generate their terms and are their own ``ar``. A box inherits
         the strategy of the category it lives in, whose terms it is part of,
-        rather than being a category of its own, and so does a type, which
-        is checked as the boundary of the morphisms of its category.
+        rather than being a category of its own, while a type is a category
+        of its own, the free coloured monoid on its wires.
 
         >>> from discopy.cat import Arrow, Box
         >>> from discopy.monoidal import Ty
-        >>> assert Arrow in Testable.enrolled()
+        >>> assert Arrow in Testable.enrolled() and Ty in Testable.enrolled()
         >>> assert Box not in Testable.enrolled()
-        >>> assert Ty not in Testable.enrolled()
         """
-        from discopy.abc import ColouredMonoid
-
         def generates(testable):
             try:
                 testable.strategy()
@@ -964,7 +961,6 @@ class Testable[T](ABC):
         return tuple(sorted((
             testable for testable in cls.subclasses()
             if getattr(testable, "ar", None) is testable
-            and not issubclass(testable, ColouredMonoid)
             and testable.axioms and generates(testable)), key=factory_name))
 
     @classmethod

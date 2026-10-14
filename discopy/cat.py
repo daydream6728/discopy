@@ -82,7 +82,6 @@ from typing import (
     Any, Callable, ClassVar, Mapping, Iterable, Self, Sequence,
     TYPE_CHECKING)
 
-from typing import ClassVar
 
 from discopy import messages, utils
 from discopy.abc import Category
@@ -234,6 +233,67 @@ class FreeCategory(Category):
             inside, cod = inside + other.inside, other.cod
         return self.ar(inside=inside, dom=dom, cod=cod, _scan=False)
 
+    @classmethod
+    def search(cls, *, dom=None, cod=None, fuel=FUEL, within=None):
+        """
+        Derive the terms of a free category from its rules: a generator, or the
+        conclusion of one of its :attr:`rules` chosen at random, its
+        morphism premises sampled by the :meth:`strategy` of the category
+        with one less unit of ``fuel``, see
+        :meth:`discopy.axioms.Rule.strategy`. Once the fuel runs out, only the
+        rules with no morphism premise are applied. A conclusion that misses
+        ``dom`` or ``cod`` is composed with a generator from or to it, so that
+        both are always honoured, with no filtering. Every choice shrinks to
+        a generator, drawn by :meth:`generators`.
+
+        Parameters:
+            dom : The domain, sampled if ``None``.
+            cod : The codomain, sampled if ``None``.
+            fuel : How deep the rules nest.
+            within : The class whose rules a term is derived from, e.g.
+                :class:`discopy.abc.MonoidalCategory` for the terms of the
+                underlying monoidal category, the category itself if
+                ``None``.
+
+        Example
+        -------
+        >>> from hypothesis import find
+        >>> x, y = Ob('x'), Ob('y')
+        >>> term = find(Arrow.search(dom=x, cod=y), lambda f: len(f) > 2)
+        >>> assert (term.dom, term.cod) == (x, y)
+        """
+        from hypothesis import strategies as st
+
+        rules = [
+            rule for name, rule in cls.rules.items()
+            if name in (within or cls).rules
+            and (fuel > 0 or not rule.is_recursive)]
+
+        @st.composite
+        def terms(draw):
+            rule = draw(st.sampled_from([None, *rules]))
+            if rule is None:
+                return draw(cls.generators(dom=dom, cod=cod))
+            term = rule(**draw(rule.strategy(
+                dom, cod, fuel=fuel - 1, within=within)))
+            if dom is not None and term.dom != dom:
+                term = draw(cls.generators(dom=dom, cod=term.dom)) >> term
+            if cod is not None and term.cod != cod:
+                term = term >> draw(cls.generators(dom=term.cod, cod=cod))
+            return term
+
+        return terms()
+
+    @classmethod
+    def generators(cls, *, dom=None, cod=None):
+        """
+        Generate the generators of the free category as terms of it, from
+        ``dom`` to ``cod`` when given: a path of one :attr:`generator_factory`.
+        """
+        return cls.generator_factory.strategy(dom=dom, cod=cod).map(
+            lambda generator: cls.ar(
+                inside=(generator, ), dom=generator.dom, cod=generator.cod))
+
     def __iter__(self):
         return iter(self.inside)
 
@@ -330,56 +390,9 @@ class Arrow(FreeCategory, Serialisable["Arrow"]):
         return cls.search(**params)
 
     @classmethod
-    def search(cls, *, dom=None, cod=None, fuel=FUEL, within=None):
-        """
-        Derive the terms of a free category from its rules: a box, or the
-        conclusion of one of its :attr:`rules` chosen at random, its
-        morphism premises sampled by the :meth:`strategy` of the category
-        with one less unit of ``fuel``, see
-        :meth:`discopy.axioms.Rule.strategy`. Once the fuel runs out, only the
-        rules with no morphism premise are applied. A conclusion that misses
-        ``dom`` or ``cod`` is composed with a box from or to it, so that both
-        are always honoured, with no filtering. Every choice shrinks to a box.
-
-        Parameters:
-            dom : The domain, sampled if ``None``.
-            cod : The codomain, sampled if ``None``.
-            fuel : How deep the rules nest.
-            within : The class whose rules a term is derived from, e.g.
-                :class:`discopy.abc.MonoidalCategory` for the terms of the
-                underlying monoidal category, the category itself if
-                ``None``.
-
-        Example
-        -------
-        >>> from hypothesis import find
-        >>> x, y = Ob('x'), Ob('y')
-        >>> term = find(Arrow.search(dom=x, cod=y), lambda f: len(f) > 2)
-        >>> assert (term.dom, term.cod) == (x, y)
-        """
-        from hypothesis import strategies as st
-
-        rules = [
-            rule for name, rule in cls.rules.items()
-            if name in (within or cls).rules
-            and (fuel > 0 or not rule.is_recursive)]
-
-        @st.composite
-        def terms(draw):
-            rule = draw(st.sampled_from([None, *rules]))
-            if rule is None:
-                return draw(cls.box_factory.strategy(dom=dom, cod=cod))
-            term = rule(**draw(rule.strategy(
-                dom, cod, fuel=fuel - 1, within=within)))
-            if dom is not None and term.dom != dom:
-                term = draw(cls.box_factory.strategy(
-                    dom=dom, cod=term.dom)) >> term
-            if cod is not None and term.cod != cod:
-                term = term >> draw(cls.box_factory.strategy(
-                    dom=term.cod, cod=cod))
-            return term
-
-        return terms()
+    def generators(cls, *, dom=None, cod=None):
+        """ Generate the boxes of the category, see :meth:`Box.strategy`. """
+        return cls.box_factory.strategy(dom=dom, cod=cod)
 
     def __setstate__(self, state):
         if '_dom' in state:  # Backward compatibility

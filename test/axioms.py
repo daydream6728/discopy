@@ -151,7 +151,8 @@ def test_axioms_of_category():
 
 def test_matrix():
     assert monoidal.Diagram in Testable.enrolled()
-    assert monoidal.Ty not in Testable.enrolled()
+    assert monoidal.Ty in Testable.enrolled()
+    assert cat.FreeCategory not in Testable.enrolled()
     once = Testable.matrix(once=True)
     assert rigid.Diagram.dagger_involution in once
     assert cat.Arrow.dagger_involution in once
