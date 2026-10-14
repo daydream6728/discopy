@@ -769,6 +769,9 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - `python.Function.tensor` is variadic like `monoidal.Diagram.tensor`
   ([#493](https://github.com/discopy/discopy/issues/493),
   [#489](https://github.com/discopy/discopy/pull/489)).
+- `closed.Product` parenthesises a first factor of more than one wire at any
+  arity but two, as it already did at two: `Product(X @ Y, Z, W)` printed
+  `X @ Y.product(Z, W)`, which reads back as `X @ (Y.product(Z, W))`.
 - `closed.Product` no longer subclasses the deprecated `biclosed.Ob`
   alias. Its `str` prints `X.product(Y, Z)` rather than `(X * Y * Z)` at
   any arity but two, since the infix form is ambiguous with the pairwise
