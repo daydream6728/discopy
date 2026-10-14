@@ -1270,11 +1270,19 @@ class CMap[category](CompactCategory, NamedGeneric, Serialisable):
 
     def trace(self, n: int = 1, left: bool = False) -> CMap:
         """
-        Trace boundary wires by splicing the selected inputs and outputs.
+        Trace boundary wires by splicing the selected inputs and outputs, a
+        map being compact whatever hosts it, except over a planar traced
+        category, i.e. traced but not symmetric, whose trace is not wiring:
+        there it is the trace of the category, one wire at a time, see
+        :meth:`explicit_trace` and :meth:`Hypergraph.trace`.
 
         Parameters:
             n : The number of wires to trace.
             left : Whether to trace the leftmost rather than rightmost wires.
+
+        >>> from discopy import traced
+        >>> f = traced.Box('f', traced.Ty('x'), traced.Ty('x'))
+        >>> assert f.to_map().trace().boxes == (f.trace(), )
         """
         if n < 0:
             raise ValueError
@@ -1282,6 +1290,13 @@ class CMap[category](CompactCategory, NamedGeneric, Serialisable):
             return self
         if n > min(len(self.dom), len(self.cod)):
             raise ValueError
+        if self.category is not None\
+                and issubclass(self.category, TracedCategory)\
+                and not issubclass(self.category, SymmetricCategory):
+            result = self
+            for _ in range(n):
+                result = result.explicit_trace(left)
+            return result
 
         if left:
             dom, cod = self.dom[n:], self.cod[n:]

@@ -506,14 +506,14 @@ def test_trace():
 
 
 def test_make_causal_cuts_every_backward_wire_at_once():
-    from discopy import traced
-    x = traced.Ty("x")
-    f, g = traced.Box("f", x @ x, x @ x), traced.Box("g", x, x)
+    from discopy import symmetric
+    x = symmetric.Ty("x")
+    f, g = symmetric.Box("f", x @ x, x @ x), symmetric.Box("g", x, x)
     cmap = (f.to_map() >> g.to_map() @ x).trace(2)
     assert not cmap.is_acyclic
     assert cmap.make_causal().boxes == (
-        traced.Trace(traced.Trace(f >> g @ x)), )
-    assert cmap.to_diagram().to_map() == cmap.make_causal()
+        symmetric.Trace(symmetric.Trace(f >> g @ x)), )
+    assert cmap.to_diagram().to_map() == cmap
 
 
 def test_scalar_box():

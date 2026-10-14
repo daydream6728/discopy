@@ -909,7 +909,10 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   traced inputs over a symmetric one, and is the trace of the category,
   `explicit_trace`, otherwise, while the conversion of a planar traced
   diagram keeps its trace as a box, in a hypergraph as in a map, decoding
-  its argument needing swaps; a diagram with a
+  its argument needing swaps. `CMap.trace` follows over a planar traced
+  host, where it was a splice, and splices the traced wires otherwise, a
+  map being compact whatever hosts it, as `CMap.to_compact` relies on over
+  a biclosed one; a diagram with a
   coloured wire has no hypergraph and no map, `COLOURED_QUOTIENT`, as a
   swap is ill-typed across 0-cells, where it lost its colours; `feedback.Diagram.discard` builds a feedback box and
   `feedback.Diagram.feedback` takes a memory of several wires.
