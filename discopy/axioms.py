@@ -687,8 +687,9 @@ class Axiom[**P, T](Declaration[P, T]):
     def canonical(self) -> Equation:
         """
         The law as a schema: its equation with an object named after each
-        type parameter, a box named after each morphism, and two for each
-        number, the equation a law declared broken raises included.
+        type parameter, a generator named after each morphism, see
+        ``category.named``, and two for each number, the equation a law
+        declared broken raises included.
 
         >>> from discopy.cat import Arrow
         >>> print(Arrow.associativity.canonical())
@@ -699,7 +700,7 @@ class Axiom[**P, T](Declaration[P, T]):
                 return get_args(kind)[1]
             dom, cod = get_args(kind)[1:] if get_origin(kind) is Hom\
                 else (self.category.ob(name), ) * 2
-            return self.category.box_factory(name, dom, cod)
+            return self.category.named(name, dom, cod)
 
         scope = self.scope(lambda name, sort: Count.canonical if sort is Count
                            else self.category.ob(name))
@@ -724,7 +725,10 @@ class Axiom[**P, T](Declaration[P, T]):
         equation = self.canonical()
         if equation is NotImplemented:
             raise TypeError(f"{self} does not apply, so has nothing to draw.")
-        return equation.draw(**params)
+        draw = getattr(equation, "draw", None)
+        if draw is None:
+            raise TypeError(f"{self} is not an equation of diagrams.")
+        return draw(**params)
 
     def falsify(self, **params) -> dict:
         """

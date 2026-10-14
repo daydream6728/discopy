@@ -162,12 +162,15 @@ def test_matrix():
 
 def test_canonical_instances():
     """ Every law of a free category holds on its canonical instance unless
-    declared broken, so that a law that crashes on its own statement fails
-    here before the property matrix ever searches for a counterexample. """
+    declared broken, types included, so that a law that crashes on its own
+    statement fails here before the property matrix ever searches for a
+    counterexample. """
     for category in Testable.enrolled():
-        if not issubclass(getattr(category, "box_factory", object), category):
-            continue
+        if not hasattr(category, "named") or not issubclass(
+                getattr(category, "box_factory", category), category):
+            continue  # a map, a hypergraph or a test binding no box
         for law in category.axioms.values():
+            if law.broken:
+                continue
             equation = law.canonical()
-            assert equation is NotImplemented or law.broken or equation,\
-                (category, law.name)
+            assert equation is NotImplemented or equation, (category, law.name)

@@ -394,6 +394,14 @@ class Arrow(FreeCategory, Serialisable["Arrow"]):
         """ Generate the boxes of the category, see :meth:`Box.strategy`. """
         return cls.box_factory.strategy(dom=dom, cod=cod)
 
+    @classmethod
+    def named(cls, name: str, dom: Ob, cod: Ob) -> Box:
+        """
+        The box called ``name`` from ``dom`` to ``cod``, as in the canonical
+        instance of a law, see :meth:`discopy.axioms.Axiom.canonical`.
+        """
+        return cls.box_factory(name, dom, cod)
+
     def __setstate__(self, state):
         if '_dom' in state:  # Backward compatibility
             self.dom, self.cod, self.inside = (

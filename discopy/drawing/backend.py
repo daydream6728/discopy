@@ -1547,7 +1547,7 @@ class Matplotlib(Backend):
         plt.margins(*margins)
         plt.subplots_adjust(
             top=1, bottom=0, right=1, left=0, hspace=0, wspace=0)
-        self.axis.set_aspect(params["aspect"])
+        self.axis.set_aspect(params.get("aspect", "auto"))
         plt.axis('off')
         if xlim is not None:
             self.axis.set_xlim(*xlim)

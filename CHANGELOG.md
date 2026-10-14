@@ -67,8 +67,7 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   own objects and arrows contradicts the binding of the level it extends,
   and neither can `Matrix`, whose `Tensor` and `Channel` narrow its
   objects, nor `CMap`, `Stream` and `interaction.Diagram`, whose objects
-  are not of the sort their base bounds them by; `fail-under` rises to
-  9.02.
+  are not of the sort their base bounds them by.
 - `axioms.Rule` and the decorator `rule`: an inference rule of a structure,
   stated like a law with a morphism as its conclusion. `Rule` and `Axiom`
   share a `Declaration`, which binds them to the class they are read from
@@ -92,8 +91,14 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   derived by the identity and composition rules of the free monoid too,
   `Ty.strategy` being the search with one unit of fuel and an atomic
   object one of its `generators`; `Nat` generates `Nat(1)`, `Dim` a
-  dimension of two or three and a circuit type a bit or a qubit, and the
-  colours of a generated type are all transparent, `Colour.strategy`.
+  dimension of two or three and a circuit type a bit or a qubit. A
+  generated type is transparent unless a coloured boundary is asked for,
+  which `Wire.recolour` paints its wire with, `Colour.strategy` drawing
+  the transparent colour; `Nat`, `Dim`, feedback and circuit types, whose
+  wires carry no colour, refuse any other. `named` gives the generator of
+  a canonical instance, a box of a diagram or a wire of a type, so that
+  `Axiom.canonical` instantiates the laws of types too, and `Axiom.draw`
+  refuses an equation that is not one of diagrams.
   The symmetric, Markov and feedback levels also `sample` a diagram from
   their combinatorial representation, and `strategy`, which the property
   matrix draws from, is the search alone or one of the search and the
@@ -296,53 +301,33 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `ribbon.Sum`, which it defined but never assigned.
 - `discopy/axioms.py`, a Hypothesis-based property-testing module, home
   of `Equation` (formerly `discopy.abc.Equation`): a law is stated once
-  on `discopy.abc.Category` and every subclass inherits
-  it, as an `Axiom` decorated with `@axiom`: a classmethod of its
-  category — the class it is bound to — implicitly, its remaining
-  parameters generated from their annotations, `C0`, `C1` or `Self` for
-  the objects, arrows or terms of the category;
-  `.failing`/`.inapplicable` classify a
-  law as broken or not applicable to a category, and `.modulo`/`.weaken`
-  are defined (compare up to a function, quantify over a named subspace)
-  but not used yet. A
-  broken law raises `AxiomFailure` carrying its equation, whose sides say
-  how it failed; `Axiom` is a dataclass whose classifiers derive one from another
-  with `dataclasses.replace`, so none of them drops a field — `.failing`
-  used to lose the subspaces a `.weaken` declared. The argument and
-  subspace wrappers are parameterised with `NamedGeneric["factory"]` like
-  `Hypergraph` and `Equation` — which moves `NamedGeneric` itself down to
-  `discopy.utils`, re-exported from `discopy.abc`, so `discopy.axioms`
-  can use it — making a subscripted wrapper a class whose
-  `strategy(cls, **params)` matches the contract `Testable.strategy` now
-  states, so a subspace annotation like `ComposablePair[C1]`
-  builds; an unbound axiom's `.strategy()` raises the same `TypeError`
-  as `.falsify` and calling it. The
-  search itself is the canonical instantiation only — one atomic object or
-  one free/generator box per parameter, no recursive or compound
-  generation — wired up in `proptest/test_axioms.py`, enrolled so far for
-  `cat.Arrow`, and run by the new `proptest` GitHub
-  workflow on PRs labelled `proptest`, on `main`, nightly and on manual
-  dispatch. `proptest/conftest.py` registers four Hypothesis profiles
-  over one example database, keyed per cell: `pr` replays what the
-  database remembers and generates a few examples from a fixed seed,
-  `explore` searches with a large budget, `dev` works on the local
-  database alone and `shared`, registered only when selected, backs it
-  with CI's through a read-only `GitHubArtifactDatabase` and a
-  `GITHUB_TOKEN`. The workflow downloads the database from the previous
-  run's artifact, and a run of `main`, the nightly search or a dispatch
-  uploads its own afterwards — a pull request only reads it — so a
-  counterexample found by one night's search fails every pull request
-  until it is fixed or declared, and `Axiom.falsify` searches for one on
-  demand. `Testable`
-  states the laws of any type that generates its own instances, whatever
-  its level: `transparency`, `pickling` and `serialisation` are cells of
-  the matrix for every category — `eval(repr(x))`, the pickle and the tree
-  of a term read back to it, as `Equation`s like every other law — with
-  `Testable.environment` for the namespace a representation reads back
-  in — the package's public names and then those of the module the
-  category is defined in, so that a term printing bare names such as
-  `Tensor[int]([0], dom=Dim(1), cod=Dim(1))` reads back without its
-  category declaring anything; the ad-hoc property
+  on `discopy.abc.Category` and every subclass inherits it, as an `Axiom`
+  decorated with `@axiom`, a classmethod of its category whose remaining
+  parameters are generated, see the sequents above. `.failing` and
+  `.inapplicable` classify a law as broken or not applicable to a
+  category, `.modulo` compares it up to a function and `.weaken` restricts
+  the terms it quantifies over. A broken law raises `AxiomFailure`
+  carrying its equation, whose sides say how it failed; `Axiom` is a
+  dataclass whose classifiers derive one from another with
+  `dataclasses.replace`, so that none of them drops a field, and
+  `Axiom.strategy` and `Axiom.falsify` give the arguments of a law by
+  name. `NamedGeneric` moves down to `discopy.utils`, re-exported from
+  `discopy.abc`, so that `discopy.axioms` can use it, and `abc.Category`
+  is a `Testable`, whose `strategy` raises `NotImplementedError` until a
+  class implements one. The matrix is `proptest/test_axioms.py`, run by
+  the new `proptest` GitHub workflow on pull requests labelled
+  `proptest`, on `main`, nightly and on manual dispatch, under the
+  Hypothesis profiles of `proptest/conftest.py`, which share one example
+  database: the workflow downloads it from the previous run's artifact,
+  and a run of `main`, the nightly search or a dispatch uploads its own
+  afterwards — a pull request only reads it — so that a counterexample
+  found by one night's search fails every pull request until it is fixed
+  or declared, and `Axiom.falsify` searches for one on demand.
+  `axioms.Serialisable` states the roundtrips of a term as laws, its
+  `repr` evaluated in `Testable.environment`, the package's public names
+  and then those of the module the category is defined in, so that a term
+  printing bare names such as `Tensor[int]([0], dom=Dim(1), cod=Dim(1))`
+  reads back without its category declaring anything; the ad-hoc property
   files for representations, pickling and serialisation are gone, and a
   known violation is a `.failing` declaration on its category like any
   other broken law. `discopy.axioms` joins the API docs under its own
@@ -460,28 +445,12 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Changed
 
-- A law quantifies over the type parameters of its signature, which stand
-  for objects of its category, atomic when bounded by `axioms.Atom`, and
-  then over its parameters, each annotation evaluated with those objects in
-  scope: `def associativity[A, B, C, D](cls, f: Hom[A, B], g: Hom[B, C],
-  h: Hom[C, D])`. Every strategy honours the boundary it is asked for, so
-  `Grid`, `ComposablePair`, `ComposableTriple`, `Subspace`, `resolve`,
-  `substitute` and `assert_axioms` go, and `Axiom.weaken` takes the
-  parameters of the strategy of the morphisms, e.g. `weaken(within=
-  MonoidalCategory)` for the rigid diagrams with no cups or caps. `Axiom.strategy` and
-  `Axiom.falsify` give the arguments of a law by name, the typing laws go,
-  since the boundary of every term is checked by its constructor and the
-  output of every law by `axioms.inhabits`, and `abc.Category` is a
-  `Testable`, whose `strategy` raises `NotImplementedError` until a class
-  implements one. The `shared` profile goes.
 - `Hypergraph.strategy` and `CMap.strategy` sample the categories whose
   coherence theorem they state, raising `NotImplementedError` for the
   others: a planar diagram is not determined by its wiring, and a map
-  cannot draw the spiders of a Markov or hypergraph category. `CMap.strategy`
-  loses its `monogamous` parameter, read off the category.
+  cannot draw the spiders of a Markov or hypergraph category.
 - A class subscripted with a DisCoPy class is named by its `factory_name`,
-  e.g. `hypergraph.Hypergraph[frobenius.Diagram]`, so
-  `Hypergraph.qualified_name` goes.
+  e.g. `hypergraph.Hypergraph[frobenius.Diagram]`.
 - `Equation` has one symbol fewer than terms, a symbol between each pair of
   consecutive terms; `symbols` of any other length raise `ValueError`.
 
@@ -845,6 +814,9 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   its constructor with the arguments of a box.
 - The categorial grammar has a `Coeval` and the abstract one a `Merge`, so
   that the daggers of their evaluations and copies stay in their category.
+- The adjoints of a `frobenius.Wire` swap its colours, as those of a
+  pivotal wire do, where they were the wire itself, so that its dagger
+  kept a coloured wire the wrong way round.
 - A delayed `feedback.Box` reads back from its tree, which dropped its time
   step, and a `Dim` from its own, where `dumps(Dim(2))` raised
   `AttributeError` on the integers inside it.
@@ -886,8 +858,10 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `closed` gets a `Merge` for, so that the dagger is an involution there.
 - `Hypergraph.make_causal` traces a wire with the type of its producer,
   where it took the unwound type of its spider, so compact hypergraphs with
-  adjoint wires downgrade to diagrams; `Hypergraph.caps` accepts the rigid
-  `Cap(x, x.l)`; `feedback.Diagram.discard` builds a feedback box and
+  adjoint wires downgrade to diagrams; `Hypergraph.cups` and `Hypergraph.caps`
+  accept either adjoint, as a hypergraph does not record the handedness
+  of a rigid one, so that the rigid `Cap(x, x.l)` and both traces of a
+  rigid hypergraph build, raising `NOT_ADJOINT` otherwise; `feedback.Diagram.discard` builds a feedback box and
   `feedback.Diagram.feedback` takes a memory of several wires.
 
 - A regression test for `stream.Stream.__init__`'s codomain-mismatch
@@ -1190,13 +1164,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   Two rules stay off: `invalid-method-override`, since the factory-method
   pattern narrows `then` and `tensor` down the tower, and
   `unresolved-attribute`, since a downgrade asks the host category for
-  structure it may not have. `fail-under` rises to 9.0.
-
-- The pylint plugin of `.github/scripts/pylint_axioms.py` goes: a
-  `Declaration` is a `classmethod`, which its constructor initialises with
-  the function it declares, and astroid reads a function as a classmethod
-  when its decorator returns one, so pylint reads an `@axiom` or a `@rule`
-  as the classmethod it is with no transform.
+  structure it may not have. `fail-under` rises to 9.02, the score once
+  the package typechecks.
 
 - `fail-under` rises from 8.75 to 8.77, the score once `closed` gains its
   products and let statements
@@ -1207,13 +1176,11 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   the change introduced, and to claim local green only for the checks run
   locally, with CI on the pushed branch the authority on the real suite
   ([#499](https://github.com/discopy/discopy/issues/499)).
-- pylint reads a law stated with `@axiom` as the classmethod it is,
-  through `.github/scripts/pylint_axioms.py`, a plugin `.pylintrc` loads
-  and `.github/tests` checks: the decorator returns a descriptor binding
-  the law to its category, and astroid infers a classmethod from the
-  `classmethod` decorator alone, so every law read as a method wanting
-  `self`, with the members of its category read as those of an instance.
-  The configuration also declares the `factory` a `NamedGeneric` subscript
+- pylint reads a law stated with `@axiom` or `@rule` as the classmethod
+  it is with no plugin: a `Declaration` is a `classmethod`, which its
+  constructor initialises with the function it declares, and astroid reads
+  a function as a classmethod when its decorator returns one. The
+  configuration declares the `factory` a `NamedGeneric` subscript
   sets and the `*_factory` attributes a module sets after its class as
   `generated-members`, lets `hypothesis.strategies` be imported where a
   strategy is built, the convention keeping hypothesis out of the

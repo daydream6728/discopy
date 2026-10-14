@@ -173,14 +173,21 @@ class Ty(frobenius.Ty):
     bit @ bit @ qubit @ qubit @ qubit
     """
     generator_factory = Wire
+    coloured = False
 
     @classmethod
     def generators(cls, *, dom=None, cod=None):
         """ Generate a bit or a qubit, see :class:`frobenius.Ty`. """
-        # pylint: disable=unused-argument  # a circuit type has one colour
         from hypothesis import strategies as st
 
+        cls.assert_transparent(dom, cod)
         return st.sampled_from([Digit(2), Qudit(2)]).map(cls)
+
+    @classmethod
+    def named(cls, name: str, dom=None, cod=None) -> Ty:
+        """ A qubit, whatever its ``name``, see :meth:`monoidal.Ty.named`. """
+        del name, dom, cod  # a single colour, which any other reads as
+        return cls(Qudit(2))
 
 
 @factory

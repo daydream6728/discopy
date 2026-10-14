@@ -288,6 +288,7 @@ class TailOb(Wire):
 class Ty(monoidal.Ty):
     """ A feedback type is a monoidal type with `delay`, `head` and `tail`. """
     generator_factory = Wire
+    coloured = False
 
     def delay(self, n_steps=1):
         """ The delay of a feedback type by `n_steps`. """
@@ -372,7 +373,9 @@ class Diagram(markov.Diagram, FeedbackCategory):
         def feedbacks(draw):
             domain = draw(cls.ob.strategy()) if dom is None else dom
             codomain = draw(cls.ob.strategy()) if cod is None else cod
-            mem = draw(cls.ob.strategy(fuel=min(fuel, 1)))
+            mem = cls.ob().tensor(*(
+                draw(cls.ob.generators())
+                for _ in range(draw(st.integers(0, fuel)))))
             graph = draw(category.strategy(
                 dom=domain @ mem.delay(), cod=codomain @ mem,
                 max_leaves=fuel + 1, acyclic=True))
@@ -713,8 +716,7 @@ class Feedback(monoidal.Bubble, Box):
         ...
         discopy.utils.AxiomError: Feedback has no dagger...
         """
-        raise AxiomError(
-            f"Feedback has no dagger, it would feed {self.mem} back in time.")
+        raise AxiomError(messages.FEEDBACK_HAS_NO_DAGGER)
 
     def to_tree(self) -> dict:
         """

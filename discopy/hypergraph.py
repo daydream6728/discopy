@@ -471,10 +471,33 @@ class Hypergraph[category](
         cls.category.cap_factory(left, right)))
 
     @classmethod
+    def adjoints(cls, left) -> tuple:
+        """
+        The types a cup or a cap can pair with ``left``: either adjoint, or
+        its reverse for a type with none. The spiders of a hypergraph are
+        unwound, so the handedness of a rigid cup or cap is not recorded,
+        and the trace pairs a wire with the same adjoint on both sides.
+
+        >>> from discopy.rigid import Ty, Box
+        >>> x = Ty('x')
+        >>> graph = Box('f', x @ x, x @ x).to_hypergraph()
+        >>> assert graph.trace().cod == graph.trace(left=True).cod == x
+        """
+        if hasattr(left, "l"):
+            return left.l, left.r
+        return (left[::-1], )
+
+    @classmethod
     def cups(cls, left, right):
-        adjoint = left.r if hasattr(left, "r") else left[::-1]
-        if adjoint != right:
-            raise AxiomError
+        """
+        The cups of a type and an adjoint of it, see :meth:`adjoints`.
+
+        >>> from discopy.rigid import Ty, Cup
+        >>> x = Ty('x')
+        >>> assert Cup(x, x.r).to_hypergraph().dom == x @ x.r
+        """
+        if right not in cls.adjoints(left):
+            raise AxiomError(messages.NOT_ADJOINT.format(left, right))
         dom_wires = tuple(range(len(left))) + tuple(reversed(range(len(left))))
         return cls(
             left @ right, cls.category.ob(), (), (dom_wires, (), ()))
@@ -482,17 +505,16 @@ class Hypergraph[category](
     @classmethod
     def caps(cls, left, right):
         """
-        The caps of a type, i.e. ``left`` is the right adjoint of ``right``
-        as for ``Cap(x, x.l)`` and ``Cap(x.r, x)`` in a rigid category.
+        The caps of a type and an adjoint of it, see :meth:`adjoints`, e.g.
+        ``Cap(x, x.l)`` and ``Cap(x.r, x)`` in a rigid category.
 
         >>> from discopy.rigid import Ty, Cap
         >>> x = Ty('x')
         >>> assert Cap(x, x.l).to_hypergraph().cod == x @ x.l
         >>> assert Cap(x.r, x).to_hypergraph().cod == x.r @ x
         """
-        adjoint = left.l if hasattr(left, "l") else left[::-1]
-        if adjoint != right:
-            raise AxiomError
+        if right not in cls.adjoints(left):
+            raise AxiomError(messages.NOT_ADJOINT.format(left, right))
         cod_wires = tuple(range(len(left))) + tuple(reversed(range(len(left))))
         return cls(
             cls.category.ob(), left @ right, (), ((), (), cod_wires))

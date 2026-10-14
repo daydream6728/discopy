@@ -54,6 +54,7 @@ We can check the Eckmann-Hilton argument, up to interchanger.
 """
 
 import itertools
+from copy import copy
 from dataclasses import dataclass, field
 from functools import cached_property
 from typing import Iterable, Iterator, Callable, Self, TYPE_CHECKING, ClassVar
@@ -153,6 +154,19 @@ class Wire(cat.Ob):
     def dagger(self):
         return type(self)(
             self.name, self.cod, self.dom, is_dagger=not self.is_dagger)
+
+    def recolour(self, dom: Colour | None = None,
+                 cod: Colour | None = None) -> Self:
+        """
+        The same wire between other colours, those given.
+
+        >>> red = Colour('red')
+        >>> assert Wire('x').recolour(dom=red) == Wire('x', dom=red)
+        """
+        result = copy(self)
+        result.dom = self.dom if dom is None else dom
+        result.cod = self.cod if cod is None else cod
+        return result
 
     def __eq__(self, other):
         return type(self) is type(other) and (
@@ -297,6 +311,10 @@ class Ty(cat.Ob, cat.FreeCategory, ColouredMonoid):
     ob = Colour
     generator_factory = Wire
 
+    coloured = True
+    """ Whether the wires of the type carry colours other than the
+    transparent one, which a :class:`discopy.feedback.Ty` does not. """
+
     @classmethod
     def strategy(cls, **params):
         """
@@ -315,12 +333,37 @@ class Ty(cat.Ob, cat.FreeCategory, ColouredMonoid):
     @classmethod
     def generators(cls, *, dom=None, cod=None):
         """
-        Generate the types of one wire. Their colours are transparent, as are
-        those :meth:`Colour.strategy` draws: a coloured type is not generated
-        yet, so the boundary is not read.
+        Generate the types of one wire, from ``dom`` to ``cod`` when given,
+        transparent otherwise, as are the colours :meth:`Colour.strategy`
+        draws.
+
+        >>> from hypothesis import find
+        >>> red = Colour('red')
+        >>> assert find(Ty.generators(dom=red), lambda _: True).dom == red
         """
-        # pylint: disable=unused-argument  # every colour is transparent
-        return cls.generator_factory.strategy().map(cls)
+        if not cls.coloured:
+            cls.assert_transparent(dom, cod)
+        return cls.generator_factory.strategy().map(
+            lambda wire: cls(wire.recolour(dom, cod)))
+
+    @staticmethod
+    def assert_transparent(*colours: Colour | None):
+        """ Raise unless every colour given is the transparent one. """
+        for colour in colours:
+            if colour not in (None, transparent):
+                raise AxiomError(messages.ONE_COLOUR.format(colour))
+
+    @classmethod
+    def named(cls, name: str, dom=None, cod=None) -> Self:
+        """
+        The type of one wire called ``name``, from ``dom`` to ``cod``, as in
+        the canonical instance of a law, see
+        :meth:`discopy.axioms.Axiom.canonical`, uncoloured unless
+        :attr:`coloured`.
+        """
+        if not cls.coloured:
+            dom = cod = None
+        return cls(cls.generator_factory(name).recolour(dom, cod))
 
     def cast_wire(self, x: str | cat.Ob) -> cat.Ob:
         """
@@ -566,10 +609,16 @@ class Nat(abc.Nat, Ty):  # ty: ignore[invalid-generic-class]
     @classmethod
     def generators(cls, *, dom=None, cod=None):
         """ Generate the one generator of the free monoid, ``Nat(1)``. """
-        # pylint: disable=unused-argument  # a Nat has one colour
         from hypothesis import strategies as st
 
+        cls.assert_transparent(dom, cod)
         return st.just(cls(1))
+
+    @classmethod
+    def named(cls, name: str, dom=None, cod=None) -> Self:
+        """ The one generator, whatever its ``name``, see :meth:`Ty.named`. """
+        del name, dom, cod  # a single colour, which any other reads as
+        return cls(1)
 
     def __init__(self, inside: int | tuple = 0, dom: Colour | None = None,
                  cod: Colour | None = None, _scan: bool = True):
@@ -639,10 +688,16 @@ class Dim(Ty):
     @classmethod
     def generators(cls, *, dom=None, cod=None):
         """ Generate the dimensions of one wire, two or three. """
-        # pylint: disable=unused-argument  # a Dim has one colour
         from hypothesis import strategies as st
 
+        cls.assert_transparent(dom, cod)
         return st.integers(2, 3).map(cls)
+
+    @classmethod
+    def named(cls, name: str, dom=None, cod=None) -> Self:
+        """ The dimension two, whatever its ``name``, see :meth:`Ty.named`. """
+        del name, dom, cod  # a single colour, which any other reads as
+        return cls(2)
 
     def __init__(self, *inside: int, dom=None, cod=None, _scan=True, **kwargs):
         inside = kwargs.pop('inside', inside)
