@@ -340,7 +340,7 @@ class Matrix(MarkovCategory, NamedGeneric['dtype']):
         >>> assert Matrix.permutation([1, 0], [1, 2]) == Matrix.swap(1, 2)
         """
         xs = list(xs)
-        doms = len(xs) * [1] if doms is None else list(doms)
+        doms = len(xs) * [1] if doms is None else list(map(index, doms))
         if list(range(len(doms))) != sorted(xs):
             raise ValueError
         if all(x == 1 for x in doms):
