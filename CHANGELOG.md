@@ -593,6 +593,17 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   and speedups over 25%; a regression raises a warning annotation and never
   fails the job, since a shared runner can push an unrelated case over the
   threshold on noise alone.
+- `Sqrt` of a negative or complex number carries an `is_dagger` flag that
+  conjugates its array, so such a square root and its dagger are no longer
+  equal; a real square root stays self-adjoint and rejects the flag
+  ([#482](https://github.com/discopy/discopy/issues/482)).
+- The committed benchmark baseline is stored gzipped as
+  `benchmark/baseline.json.gz`, which `benchmark/report.py` reads
+  transparently.
+- The benchmark regression gate divides each case by the run-wide median
+  change rather than comparing raw medians, so that the CPU model a
+  GitHub-hosted runner happens to give out does not read as a regression. Its
+  default threshold is 25%.
 - Benchmark cases now use `pytest-benchmark`'s automatic calibration.
 - Every `monoidal.Wire` subclass named `Ob` is renamed to `Wire`: `rigid`,
   `braided`, `biclosed`, `pivotal`, `frobenius`, `feedback` and
@@ -845,6 +856,15 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - Drawing a discard on more than one wire: `draw_discard` was shadowing the
   layer index with its inner loop counter
   ([#513](https://github.com/discopy/discopy/issues/513)).
+- Bugs in `discopy.quantum` reported in
+  [#482](https://github.com/discopy/discopy/issues/482): `CQ.__str__`
+  printed classical dimensions as quantum, `Measure(override_bits=True)`
+  could not be evaluated, `Encode` ignored `constructive`/`reset_bits` in
+  its types so daggers were not type-correct, `CRz`/`CRx`/`CU1` raised at
+  any `distance` other than one, `Sqrt.dagger` returned `self` so that
+  `Sqrt(-1) >> Sqrt(-1).dagger()` evaluated to `-1` instead of `1`, and
+  `Channel.cups`/`Channel.discard` hard-coded `Channel` so `Channel[float]`
+  silently gave a `Channel[complex]`.
 - `closed.Context.dom` called `category.ob.tensor` unbound, which raised
   `TypeError` for an empty context instead of returning `Ty()`
   ([#549](https://github.com/discopy/discopy/issues/549)).
@@ -891,6 +911,14 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - `Hypergraph` equality, permutations and other micro-optimizations bring
   equality checks down to `O(n)`
   ([#353](https://github.com/discopy/discopy/pull/353)).
+- `Channel.tensor` contracts the two arrays directly and interleaves their
+  axes, instead of building four boxes, two swap diagrams and a fresh
+  `tensor.Functor` on every `@`: ~120x on one tensor and ~12x on
+  `eval(mixed=True)` for a four-qubit circuit. `Channel.measure` builds its
+  copy spider instead of a Python list comprehension, and
+  `Circuit.measure(mixed=False)` reads the Born rule off a single
+  contraction instead of running `2**n` of them: ~18x at ten qubits
+  ([#482](https://github.com/discopy/discopy/issues/482)).
 - `CMap.from_diagram` is linear rather than quadratic in the number of
   boxes: `CMap.from_glued` glues the image of each box onto a scan of
   open wires in a single pass, instead of folding the images with
