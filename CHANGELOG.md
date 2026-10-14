@@ -838,6 +838,10 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   that the daggers of their evaluations and copies stay in their category.
 - A delayed `feedback.Box` reads back from its tree, which dropped its time
   step.
+- `Layer.merge` refuses two layers that compose to the identity, e.g. a
+  snake, which is not a layer, where it raised `UnboundLocalError`; and
+  `messages.PERMUTATION_HAS_NO_OFFSET`, which `rigid.Diagram.snake_removal`
+  raises, exists.
 
 - `feedback.Diagram.trace` built a `markov.Trace`, which does not compose
   with feedback diagrams: `feedback.Trace` is the trace of a feedback

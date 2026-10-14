@@ -60,6 +60,8 @@ MAP_OF_A_CURRY = (
 MAP_HAS_NO_SPIDERS = (
     "A map has no spiders: it keeps a copy as a box where a hypergraph merges "
     "its wires.")
+PERMUTATION_HAS_NO_OFFSET = (
+    "A layer with a non-identity permutation has no single offset.")
 MISSING_BOXES_AND_OFFSETS = (
     "Decoding needs either boxes and offsets, or the two of them zipped.")
 NO_TYPE_PARAMETER = (
