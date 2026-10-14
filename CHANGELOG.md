@@ -860,10 +860,14 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - `braided.Diagram` and `ribbon.Diagram` bind their own `functor_factory`,
   where they read those of `monoidal` and `pivotal`, so that their
   conversions map a braid to a braid and a twist to a twist, as `balanced`
-  already did, into any codomain that has them: a hypergraph or a map over
-  a category that is not symmetric has neither, `abc.symmetric_only`, so
-  that a braid and a twist stay boxes of it rather than becoming a swap and
-  an identity.
+  already did. The `swap`, `braid` and `twist` of a hypergraph or a map
+  read its host category: a swap exists only over a symmetric one, and is
+  absorbed into the wiring; a braid exists over a braided one, and is that
+  swap over a symmetric one but a box otherwise, a braid being no swap; a
+  twist exists over a balanced one, the identity over a symmetric one and
+  a box otherwise. The braid laws of a category that is not symmetric fail
+  with `NO_BRAID_GROUP`, as there is no braid group to compare braid words
+  with yet.
 - `grammar.categorial.Diagram` and `grammar.abstract.Diagram` bind their own
   `box_factory`, so that their strategies draw boxes of their own category.
 - `Drawing.dagger` reflects a drawing of more than one box: a drawing read

@@ -41,9 +41,13 @@ NO_PLANAR_NORMAL_FORM = (
 COLOURED_QUOTIENT = (
     "{} is coloured: a hypergraph or a map is symmetric, and a swap is "
     "ill-typed across 0-cells, so it would lose its colours.")
-NOT_SYMMETRIC_HOST = (
-    "A quotient over {} has no braid or twist: below symmetric categories, "
-    "a braid is not a swap nor a twist an identity, so they stay boxes.")
+NO_SWAP = "{} is not symmetric, it has no swaps."
+NO_BRAID = "{} is not braided, it has no braids."
+NO_TWIST = "{} is not balanced, it has no twists."
+NO_BRAID_GROUP = (
+    "A braid is a box of the hypergraph of a category that is not "
+    "symmetric: there is no braid group implementation to compare braid "
+    "words with yet.")
 TRACE_NEEDS_PIVOTAL = (
     "Tracing {} needs its left and right adjoints to agree, as they do in a "
     "pivotal category: a rigid one has no canonical trace.")

@@ -92,11 +92,11 @@ class Diagram(monoidal.Diagram, BraidedCategory):
         cod (monoidal.Ty) : The codomain of the diagram, i.e. its output.
     """
     braid_naturality = BraidedCategory.braid_naturality.failing(
-        messages.NO_PLANAR_NORMAL_FORM)
+        messages.NO_BRAID_GROUP)
     braid_then_inverse = BraidedCategory.braid_then_inverse.failing(
-        messages.NO_PLANAR_NORMAL_FORM)
+        messages.NO_BRAID_GROUP)
     inverse_then_braid = BraidedCategory.inverse_then_braid.failing(
-        messages.NO_PLANAR_NORMAL_FORM)
+        messages.NO_BRAID_GROUP)
 
     box_factory: ClassVar[type["Box"]]
     braid_factory: ClassVar[type["Braid"]]
