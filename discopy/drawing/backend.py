@@ -289,14 +289,15 @@ def add_dark_mode_style(path):
     the elements tagged by :meth:`Matplotlib.dark_gid` white on a dark page,
     every other renderer keeping the static black on a transparent canvas.
     """
-    if hasattr(path, "getvalue"):
+    is_file = not isinstance(path, (str, os.PathLike))
+    if is_file:
         text = path.getvalue()
     else:
         with open(path, encoding="utf-8") as file:
             text = file.read()
     opening = text.index(">", text.index("<svg")) + 1
     text = text[:opening] + DARK_MODE_STYLE + text[opening:]
-    if hasattr(path, "getvalue"):
+    if is_file:
         path.seek(0)
         path.truncate()
         path.write(text)

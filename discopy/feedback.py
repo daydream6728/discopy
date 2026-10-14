@@ -288,7 +288,6 @@ class TailOb(Wire):
 class Ty(monoidal.Ty):
     """ A feedback type is a monoidal type with `delay`, `head` and `tail`. """
     generator_factory = Wire
-    coloured = False
 
     def delay(self, n_steps=1):
         """ The delay of a feedback type by `n_steps`. """

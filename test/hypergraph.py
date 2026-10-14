@@ -344,3 +344,10 @@ def test_subclass_to_hypergraph():
     f, g = Gate('f', x, x), Gate('g', x, x)
     assert (f >> g).to_hypergraph().category == Circuit
     assert isinstance((f >> g).to_hypergraph().to_diagram(), Circuit)
+
+
+def test_trace_rigid():
+    from discopy.rigid import Ty, Box
+    x = Ty('x')
+    graph = Box('f', x @ x, x @ x).to_hypergraph()
+    assert graph.trace().cod == graph.trace(left=True).cod == x

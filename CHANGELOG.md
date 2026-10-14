@@ -91,14 +91,13 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   derived by the identity and composition rules of the free monoid too,
   `Ty.strategy` being the search with one unit of fuel and an atomic
   object one of its `generators`; `Nat` generates `Nat(1)`, `Dim` a
-  dimension of two or three and a circuit type a bit or a qubit. A
-  generated type is transparent unless a coloured boundary is asked for,
-  which `Wire.recolour` paints its wire with, `Colour.strategy` drawing
-  the transparent colour; `Nat`, `Dim`, feedback and circuit types, whose
-  wires carry no colour, refuse any other. `named` gives the generator of
-  a canonical instance, a box of a diagram or a wire of a type, so that
-  `Axiom.canonical` instantiates the laws of types too, and `Axiom.draw`
-  refuses an equation that is not one of diagrams.
+  dimension of two or three and a circuit type a bit or a qubit, and the
+  colours of a generated type are all transparent, `Colour.strategy`,
+  coloured types being left for later. `named` gives the objects and
+  generators of a canonical instance, a box of a diagram, a wire of a
+  type and the transparent colour, so that `Axiom.canonical` instantiates
+  the laws of types too, and `Axiom.draw` refuses an equation that is not
+  one of diagrams.
   The symmetric, Markov and feedback levels also `sample` a diagram from
   their combinatorial representation, and `strategy`, which the property
   matrix draws from, is the search alone or one of the search and the
@@ -451,6 +450,16 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   cannot draw the spiders of a Markov or hypergraph category.
 - A class subscripted with a DisCoPy class is named by its `factory_name`,
   e.g. `hypergraph.Hypergraph[frobenius.Diagram]`.
+- A property read off a value with `hasattr` is read with `isinstance`
+  where a class states it: adjoints by `Pregroup`, swaps by
+  `SymmetricCategory`, identities by `Category`, products and packing by
+  `closed.Ty` and `closed.Diagram`, windings by a `rigid.Box.z` of zero by
+  default, arrays by `tensor.Box`, a list of numbers by `Sized` and a file
+  by not being a path. A `MappingOrCallable` is a mapping when it wraps a
+  `Mapping`, a callable otherwise, where anything indexable was a mapping.
+  A functor still asks its codomain for structure by name, as a
+  `Hypergraph`, a `Stream`, a `Matrix` or a `Tensor` has more than the
+  abstract class it subclasses states.
 - `Equation` has one symbol fewer than terms, a symbol between each pair of
   consecutive terms; `symbols` of any other length raise `ValueError`.
 
@@ -814,9 +823,6 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   its constructor with the arguments of a box.
 - The categorial grammar has a `Coeval` and the abstract one a `Merge`, so
   that the daggers of their evaluations and copies stay in their category.
-- The adjoints of a `frobenius.Wire` swap its colours, as those of a
-  pivotal wire do, where they were the wire itself, so that its dagger
-  kept a coloured wire the wrong way round.
 - A delayed `feedback.Box` reads back from its tree, which dropped its time
   step, and a `Dim` from its own, where `dumps(Dim(2))` raised
   `AttributeError` on the integers inside it.
@@ -859,9 +865,10 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - `Hypergraph.make_causal` traces a wire with the type of its producer,
   where it took the unwound type of its spider, so compact hypergraphs with
   adjoint wires downgrade to diagrams; `Hypergraph.cups` and `Hypergraph.caps`
-  accept either adjoint, as a hypergraph does not record the handedness
-  of a rigid one, so that the rigid `Cap(x, x.l)` and both traces of a
-  rigid hypergraph build, raising `NOT_ADJOINT` otherwise; `feedback.Diagram.discard` builds a feedback box and
+  accept either adjoint, `Pregroup.is_adjoint`, as a hypergraph does not
+  record the handedness of a rigid one, so that the rigid `Cap(x, x.l)`
+  and both traces of a rigid hypergraph build, raising `NOT_ADJOINT`
+  otherwise; `feedback.Diagram.discard` builds a feedback box and
   `feedback.Diagram.feedback` takes a memory of several wires.
 
 - A regression test for `stream.Stream.__init__`'s codomain-mismatch

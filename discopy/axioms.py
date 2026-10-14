@@ -687,8 +687,8 @@ class Axiom[**P, T](Declaration[P, T]):
     def canonical(self) -> Equation:
         """
         The law as a schema: its equation with an object named after each
-        type parameter, a generator named after each morphism, see
-        ``category.named``, and two for each number, the equation a law
+        type parameter and a generator named after each morphism, see
+        ``named``, and two for each number, the equation a law
         declared broken raises included.
 
         >>> from discopy.cat import Arrow
@@ -699,11 +699,11 @@ class Axiom[**P, T](Declaration[P, T]):
             if get_origin(kind) is Var:
                 return get_args(kind)[1]
             dom, cod = get_args(kind)[1:] if get_origin(kind) is Hom\
-                else (self.category.ob(name), ) * 2
+                else (self.category.ob.named(name), ) * 2
             return self.category.named(name, dom, cod)
 
         scope = self.scope(lambda name, sort: Count.canonical if sort is Count
-                           else self.category.ob(name))
+                           else self.category.ob.named(name))
         arguments = self.instantiate(scope, value)
         try:
             return self(**arguments)  # ty: ignore[invalid-return-type]

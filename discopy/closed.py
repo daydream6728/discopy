@@ -501,15 +501,15 @@ class Functor(biclosed.Functor, markov.Functor):
         if self.cod is Drawing:
             return super().__call__(other)
         if isinstance(other, Product):
-            if hasattr(self.cod.ob, "product"):
+            if issubclass(self.cod.ob, Ty):
                 return self.cod.ob(self.cod.ob.product_factory(
                     *map(self, other.factors)))
             return self(self.dom.ob().tensor(*other.factors))
         if isinstance(other, (Pack, Unpack)):
             typ = other.cod if isinstance(other, Pack) else other.dom
-            if not hasattr(self.cod.ob, "product"):
+            if not issubclass(self.cod.ob, Ty):
                 return self.cod.id(self(typ))
-            if hasattr(self.cod, "pack_factory"):
+            if issubclass(self.cod, Diagram):
                 box = self.cod.pack_factory if isinstance(other, Pack)\
                     else self.cod.unpack_factory
                 return box(self(typ))

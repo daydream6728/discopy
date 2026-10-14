@@ -708,6 +708,20 @@ class Pregroup[C0, C1: Pregroup](ResiduatedMonoid[C0, C1]):
     l: C1
     r: C1
 
+    def is_adjoint(self: C1, other: C1) -> bool:
+        """
+        Whether ``other`` is an adjoint of ``self``, on either side.
+
+        Parameters:
+            other : The alleged left or right adjoint.
+
+        >>> from discopy.rigid import Ty
+        >>> x = Ty('x')
+        >>> assert x.is_adjoint(x.l) and x.is_adjoint(x.r)
+        >>> assert not x.is_adjoint(x)
+        """
+        return self.r == other or self == other.r
+
     def over(self, other: C1) -> C1:
         return self @ other.l
 

@@ -147,6 +147,14 @@ class Ob(Serialisable["Ob"]):
         return self.name < other.name
 
     @classmethod
+    def named(cls, name: str) -> Self:
+        """
+        The object called ``name``, as in the canonical instance of a law,
+        see :meth:`discopy.axioms.Axiom.canonical`.
+        """
+        return cls(name)
+
+    @classmethod
     def strategy(cls):
         """Generate named objects."""
         from hypothesis import strategies as st

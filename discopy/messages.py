@@ -12,7 +12,6 @@ NOT_ATOMIC = "Expected {} of length 1, got length {} instead."
 NOT_CONNECTED = "{} is not boundary-connected."
 NOT_TRACEABLE = "Cannot trace {} with {}."
 NOT_ADJOINT = "{} and {} are not adjoints."
-ONE_COLOUR = "Expected the transparent colour, got {}."
 NOT_RIGID_ADJOINT = "{} is not the left adjoint of {}, maybe you meant to use"\
                     " a pivotal type rather than a rigid one?"
 MISSING_TYPES_FOR_EMPTY_SUM = "Empty sum needs a domain and codomain."

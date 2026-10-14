@@ -297,7 +297,7 @@ class Ty(Pregroup, biclosed.Ty):
         Parameters:
             other : The alleged right adjoint.
         """
-        if self.r != other and self != other.r:
+        if not Pregroup.is_adjoint(self, other):
             raise AxiomError(messages.NOT_ADJOINT.format(self, other))
         if self.r != other:
             raise AxiomError(messages.NOT_RIGID_ADJOINT.format(self, other))
@@ -702,6 +702,7 @@ class Box(biclosed.Box, Diagram):
     >>> assert f.r.l == f == f.l.r
     >>> assert f.l.l != f != f.r.r
     """
+    z = 0
 
     def __setstate__(self, state):
         if '_z' in state:  # Backward compatibility
@@ -883,7 +884,7 @@ class Functor(biclosed.Functor):
         if isinstance(other, Cap):
             return self.cod.caps(self(other.cod[:1]), self(other.cod[1:]))
         if isinstance(other, Box):
-            if not hasattr(other, "z") or not other.z:
+            if not other.z:
                 return super().__call__(other)
             z = other.z
             for _ in range(abs(z)):

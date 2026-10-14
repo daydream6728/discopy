@@ -73,18 +73,12 @@ from discopy.utils import (
 
 class Wire(pivotal.Wire):
     """
-    A frobenius object is a self-dual pivotal object: its adjoints are
-    itself, the other way round, i.e. with its colours swapped.
+    A frobenius object is a self-dual pivotal object.
 
     Parameters:
         name : The name of the object.
-
-    >>> from discopy.monoidal import Colour
-    >>> red, blue = Colour('red'), Colour('blue')
-    >>> x = Wire('x', dom=red, cod=blue)
-    >>> assert x.l == x.r == Wire('x', dom=blue, cod=red) and x.l.l == x
     """
-    l = r = property(lambda self: self.recolour(self.cod, self.dom))
+    l = r = property(lambda self: self)
     windings = (0, )
 
 
