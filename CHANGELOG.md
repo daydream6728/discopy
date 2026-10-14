@@ -597,13 +597,6 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   conjugates its array, so such a square root and its dagger are no longer
   equal; a real square root stays self-adjoint and rejects the flag
   ([#482](https://github.com/discopy/discopy/issues/482)).
-- The committed benchmark baseline is stored gzipped as
-  `benchmark/baseline.json.gz`, which `benchmark/report.py` reads
-  transparently.
-- The benchmark regression gate divides each case by the run-wide median
-  change rather than comparing raw medians, so that the CPU model a
-  GitHub-hosted runner happens to give out does not read as a regression. Its
-  default threshold is 25%.
 - Benchmark cases now use `pytest-benchmark`'s automatic calibration.
 - Every `monoidal.Wire` subclass named `Ob` is renamed to `Wire`: `rigid`,
   `braided`, `biclosed`, `pivotal`, `frobenius`, `feedback` and
