@@ -78,6 +78,7 @@ class Diagram(symmetric.Diagram, ribbon.Diagram, CompactCategory):
         dom (pivotal.Ty) : The domain of the diagram, i.e. its input.
         cod (pivotal.Ty) : The codomain of the diagram, i.e. its output.
     """
+    sum_factory: ClassVar[type["Sum"]]
     cup_factory: ClassVar[type["Cup"]]
     cap_factory: ClassVar[type["Cap"]]
     box_factory: ClassVar[type["Box"]]
@@ -149,6 +150,17 @@ class Swap(Permutation, symmetric.Swap, ribbon.Braid, Box):
     """
 
 
+class Sum(symmetric.Sum, ribbon.Sum, Box):
+    """
+    A compact sum is a sum of compact diagrams.
+
+    Parameters:
+        terms (tuple[Diagram, ...]) : The terms of the formal sum.
+        dom (Ty) : The domain of the formal sum.
+        cod (Ty) : The codomain of the formal sum.
+    """
+
+
 class Functor(symmetric.Functor, ribbon.Functor):
     """
     A compact functor is both a symmetric functor and a ribbon functor.
@@ -177,6 +189,7 @@ Diagram.functor_factory = Functor
 Diagram.permutation_factory = Permutation
 Hypergraph = hypergraph.Hypergraph[Diagram]
 Diagram.cup_factory, Diagram.cap_factory = Cup, Cap
+Diagram.sum_factory = Sum
 
 
 class Equation(symmetric.Equation):

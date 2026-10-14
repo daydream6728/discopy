@@ -125,10 +125,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   a free curry or feedback is a box nothing rewrites, biclosed, rigid and
   feedback diagrams have no dagger beyond the subspaces `weaken` names,
   decoding a hypergraph needs swaps a planar category does not have, a map
-  has no spiders and a map over a host that is not rigid has no adjoints.
-  A law that holds only up to the map of its terms is declared `modulo` it:
-  the map of a curry rebuilds its inside, so biclosed diagrams agree with
-  their maps up to the map of their hypergraphs. Tensor
+  has no spiders, the map of a curry rebuilds its inside, and a map over a
+  host that is not rigid has no adjoints. Tensor
   diagrams, which draw no arrays, and pregroup diagrams, which compare by a
   hypergraph that refuses a cap, declare `strategy = no_strategy`.
 - `CMap` and `Hypergraph` serialise with `to_tree`, naming their category,
@@ -150,6 +148,30 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   to a term under a binding environment, checking the image against the
   image of its type and of its free variables
   ([#398](https://github.com/discopy/discopy/issues/398)).
+- Products and let statements in the term language of `discopy.closed`:
+  a not-strictly-associative `Product` type constructor called with `*`,
+  `Pack`/`Unpack` boxes witnessing the isomorphism with the strict tensor,
+  the `Tuple`, `Projection` and `Let` terms with a `let` introspection
+  helper, and `Diagram.to_term` printing any causal diagram as a compact
+  term in fine-grain call-by-value style via `Hypergraph`. The new terms
+  are evaluated in a context through `weaken` like the others, substitute
+  capture-avoidingly by renaming their bound variables, and say whether
+  they are linear; `TermBase.share` is the structural morphism copying
+  the free variables of a term into those of its subterms, which
+  `Application`, `Tuple` and `Let` evaluate through. A closed constant
+  prints as its bare name. `Tuple`, `Projection` and `Let` are `Compound`
+  terms, equal when their parts are and printed only when their name is
+  first read, so that `to_term` is linear rather than quadratic in the
+  number of boxes ([#694](https://github.com/discopy/discopy/issues/694))
+  ([#370](https://github.com/discopy/discopy/issues/370),
+  [#458](https://github.com/discopy/discopy/issues/458),
+  [#489](https://github.com/discopy/discopy/pull/489)).
+- `traced.Sum`, `pivotal.Sum`, `compact.Sum` and `frobenius.Sum`, the formal
+  sum of morphisms at the four levels of the hierarchy that had none, each
+  mirroring its `Diagram`'s own bases and wired into `Diagram.sum_factory`.
+  A functor with a formal sum in its codomain (e.g. `ar_map=lambda x: x + x`)
+  crashed on any diagram in one of these four categories, unlike every other
+  level ([#207](https://github.com/discopy/discopy/issues/207)).
 - `CMap.is_scalar` is `not dom and not cod`, i.e. a scalar is an
   endomorphism of the unit, where it used to be "a single box with no ports,
   or a single scalar loop". Scalars are closed under tensor and that
@@ -725,6 +747,10 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   and speedups over 25%; a regression raises a warning annotation and never
   fails the job, since a shared runner can push an unrelated case over the
   threshold on noise alone.
+- `Sqrt` of a negative or complex number carries an `is_dagger` flag that
+  conjugates its array, so such a square root and its dagger are no longer
+  equal; a real square root stays self-adjoint and rejects the flag
+  ([#482](https://github.com/discopy/discopy/issues/482)).
 - Benchmark cases now use `pytest-benchmark`'s automatic calibration.
 - Every `monoidal.Wire` subclass named `Ob` is renamed to `Wire`: `rigid`,
   `braided`, `biclosed`, `pivotal`, `frobenius`, `feedback` and
@@ -850,6 +876,12 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `Cap(x, x.l)`; `feedback.Diagram.discard` builds a feedback box and
   `feedback.Diagram.feedback` takes a memory of several wires.
 
+- A regression test for `stream.Stream.__init__`'s codomain-mismatch
+  `AxiomError`, which reports `cod`/`now.cod` rather than the `dom`/`now.dom`
+  it once printed on both sides of `!=`. The message was corrected in passing
+  by the `+`→`@` object rewrite; the test pins it so a future refactor cannot
+  silently reintroduce the bug
+  ([#605](https://github.com/discopy/discopy/issues/605)).
 - `biclosed.Curry`'s own constructor defaulted to `left=False`, disagreeing
   with `Diagram.curry`'s `left=True` default since #560 unified the two: a
   bare `Curry(box)` curried the opposite side of `box.curry()`, and
@@ -964,8 +996,34 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   run when the branch has already moved past the event it is handling,
   rather than drafting a head that no longer exists behind its back
   ([#640](https://github.com/discopy/discopy/issues/640)).
+- `Matrix` is a `MarkovCategory` rather than a `MonoidalCategory` and gets a
+  native `Matrix.permutation`, so a matrix-valued functor applied to a
+  diagram with an explicit `Permutation` layer no longer raises
+  `AttributeError`. `Matrix.copy` and `Tensor.copy` default to `n=2` like
+  every other `copy` in the hierarchy, so single-argument calls such as
+  `closed.Application.eval` no longer raise `TypeError`
+  ([#535](https://github.com/discopy/discopy/issues/535)).
 - `build.yml` timeouts and a bounded, retried Graphviz install
   ([#591](https://github.com/discopy/discopy/issues/591)).
+- `python.Function.tensor` is variadic like `monoidal.Diagram.tensor`
+  ([#493](https://github.com/discopy/discopy/issues/493),
+  [#489](https://github.com/discopy/discopy/pull/489)).
+- `closed.Product` parenthesises a first factor of more than one wire at any
+  arity but two, as it already did at two: `Product(X @ Y, Z, W)` printed
+  `X @ Y.product(Z, W)`, which reads back as `X @ (Y.product(Z, W))`.
+- `closed.Product` no longer subclasses the deprecated `biclosed.Ob`
+  alias. Its `str` prints `X.product(Y, Z)` rather than `(X * Y * Z)` at
+  any arity but two, since the infix form is ambiguous with the pairwise
+  nesting `(X * Y) * Z` it is deliberately distinct from and does not
+  round-trip through `eval` there. `closed.Functor` routes `Pack`/`Unpack`
+  through `pack_factory`/`unpack_factory` instead of always rebuilding a
+  `closed.Pack`/`Unpack`, so converting a diagram with either box to a
+  `Hypergraph` (or any other non-`Diagram` codomain with product types) no
+  longer raises. `Pack`, `Unpack`, `Tuple`, `Projection` and `Let` have their
+  own `to_tree`/`from_tree` pair, like `Product` already did, instead of
+  inheriting `Box`'s, which builds them with a `name` keyword none of
+  their constructors accept
+  ([#489](https://github.com/discopy/discopy/pull/489)).
 - `frobenius.Diagram.unfuse`'s doctest no longer sets `Spider.color = "red"`
   to draw its example, which was leaking into every later doctest in the
   same pytest process
@@ -973,6 +1031,11 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - Tensor networks are contracted with `opt_einsum` when the number of
   indices exceeds `numpy.einsum`'s 52-index limit
   ([#448](https://github.com/discopy/discopy/pull/448)).
+- Contracting a tensor network with more than `config.MAX_EINSUM_INDICES`
+  indices imports `opt_einsum`, which is not a declared dependency; a plain
+  install now raises a clear `ImportError` naming the package to install
+  instead of `ModuleNotFoundError` with no context
+  ([#596](https://github.com/discopy/discopy/issues/596)).
 - `grammar.categorial.cat2ty` reads a fully parenthesized category such as
   `(S\NP)` as a category rather than an atom, strips CCGbank features
   wherever they occur rather than on atoms only, and associates slashes to
@@ -1011,6 +1074,15 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - Drawing a discard on more than one wire: `draw_discard` was shadowing the
   layer index with its inner loop counter
   ([#513](https://github.com/discopy/discopy/issues/513)).
+- Bugs in `discopy.quantum` reported in
+  [#482](https://github.com/discopy/discopy/issues/482): `CQ.__str__`
+  printed classical dimensions as quantum, `Measure(override_bits=True)`
+  could not be evaluated, `Encode` ignored `constructive`/`reset_bits` in
+  its types so daggers were not type-correct, `CRz`/`CRx`/`CU1` raised at
+  any `distance` other than one, `Sqrt.dagger` returned `self` so that
+  `Sqrt(-1) >> Sqrt(-1).dagger()` evaluated to `-1` instead of `1`, and
+  `Channel.cups`/`Channel.discard` hard-coded `Channel` so `Channel[float]`
+  silently gave a `Channel[complex]`.
 - `closed.Context.dom` called `category.ob.tensor` unbound, which raised
   `TypeError` for an empty context instead of returning `Ty()`
   ([#549](https://github.com/discopy/discopy/issues/549)).
@@ -1057,6 +1129,14 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - `Hypergraph` equality, permutations and other micro-optimizations bring
   equality checks down to `O(n)`
   ([#353](https://github.com/discopy/discopy/pull/353)).
+- `Channel.tensor` contracts the two arrays directly and interleaves their
+  axes, instead of building four boxes, two swap diagrams and a fresh
+  `tensor.Functor` on every `@`: ~120x on one tensor and ~12x on
+  `eval(mixed=True)` for a four-qubit circuit. `Channel.measure` builds its
+  copy spider instead of a Python list comprehension, and
+  `Circuit.measure(mixed=False)` reads the Born rule off a single
+  contraction instead of running `2**n` of them: ~18x at ten qubits
+  ([#482](https://github.com/discopy/discopy/issues/482)).
 - `CMap.from_diagram` is linear rather than quadratic in the number of
   boxes: `CMap.from_glued` glues the image of each box onto a scan of
   open wires in a single pass, instead of folding the images with
@@ -1104,6 +1184,15 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   when its decorator returns one, so pylint reads an `@axiom` or a `@rule`
   as the classmethod it is with no transform.
 
+- `fail-under` rises from 8.75 to 8.77, the score once `closed` gains its
+  products and let statements
+  ([#489](https://github.com/discopy/discopy/pull/489)).
+- `CONTRIBUTING.md` tells a sandboxed contributor to diff its test-suite
+  failure set against the same run on the merge base, so that a failure
+  already present there reads as pre-existing rather than as a regression
+  the change introduced, and to claim local green only for the checks run
+  locally, with CI on the pushed branch the authority on the real suite
+  ([#499](https://github.com/discopy/discopy/issues/499)).
 - pylint reads a law stated with `@axiom` as the classmethod it is,
   through `.github/scripts/pylint_axioms.py`, a plugin `.pylintrc` loads
   and `.github/tests` checks: the decorator returns a descriptor binding

@@ -270,7 +270,7 @@ class Abstraction(TermBase, biclosed.Abstraction):
 
     def __init__(self, var: Variable, body: Term, left: bool = False):
         biclosed.Abstraction.__init__(
-            self, var, body, left)  # ty: ignore[invalid-argument-type]
+            self, var, body, left)
         TermBase.__init__(self, self.name, self.dom, self.cod)
 
     def simplify(self):
@@ -312,6 +312,9 @@ class TypeRaising(TermBase):
 
     def eval(self, functor=None):
         return self.simplify().eval(functor)
+
+    def map(self, functor, context):
+        return functor.map_term(self.simplify(), context)
 
     def map(self, functor, context):
         return functor.map_term(self.simplify(), context)
@@ -369,6 +372,9 @@ class BinaryTerm(TermBase):
 
     def eval(self, functor=None):
         return self.simplify().eval(functor)
+
+    def map(self, functor, context):
+        return functor.map_term(self.simplify(), context)
 
     def map(self, functor, context):
         return functor.map_term(self.simplify(), context)

@@ -125,6 +125,7 @@ class Diagram(compact.Diagram, markov.Diagram, HypergraphCategory):
         dom (Ty) : The domain of the diagram, i.e. its input.
         cod (Ty) : The codomain of the diagram, i.e. its output.
     """
+    sum_factory: ClassVar[type["Sum"]]
     box_factory: ClassVar[type["Box"]]
     functor_factory: ClassVar[type["Functor"]]
     cup_factory: ClassVar[type["Cup"]]
@@ -318,6 +319,17 @@ class Bubble(monoidal.Bubble, Box):
     """
 
 
+class Sum(compact.Sum, markov.Sum, Box):
+    """
+    A Frobenius sum is a sum of Frobenius diagrams.
+
+    Parameters:
+        terms (tuple[Diagram, ...]) : The terms of the formal sum.
+        dom (Ty) : The domain of the formal sum.
+        cod (Ty) : The codomain of the formal sum.
+    """
+
+
 class Functor(compact.Functor, markov.Functor):
     """
     A hypergraph functor is a compact functor that preserves spiders.
@@ -423,6 +435,7 @@ Diagram.swap_factory = Swap
 Diagram.spider_factory = Spider  # ty: ignore[invalid-assignment]
 Diagram.permutation_factory = Permutation
 Diagram.bubble_factory = Bubble
+Diagram.sum_factory = Sum
 Hypergraph = hypergraph.Hypergraph[Diagram]
 Id = Diagram.id
 

@@ -24,6 +24,7 @@ NOT_MERGEABLE = "Layers {} and {} cannot be merged."
 INTERCHANGER_ERROR = "Boxes {} and {} do not commute."
 WRONG_PERMUTATION = "Expected a permutation of length {}, got {}."
 ZERO_DISTANCE_CONTROLLED = "Zero-distance controlled gates are ill-defined."
+REAL_SQRT_IS_SELF_ADJOINT = "The dagger of a real square root is itself."
 HAS_NO_ATTRIBUTE = "{!r} object has no attribute {!r}"
 WRONG_DOM = "Expected inside.dom == {}, got {} instead."
 WRONG_COD = "Expected inside.cod == {}, got {} instead."
@@ -52,6 +53,10 @@ MAP_HAS_NO_ADJOINTS = (
 SECTION_NEEDS_SWAPS = (
     "Decoding a hypergraph orders its boxes with swaps, which a category "
     "with no symmetry does not have.")
+MAP_OF_A_CURRY = (
+    "The map of a curry rebuilds its inside from the map of it, which can "
+    "whisker a scalar on the other side, while a hypergraph compares the "
+    "inside of a bubble syntactically.")
 MAP_HAS_NO_SPIDERS = (
     "A map has no spiders: it keeps a copy as a box where a hypergraph merges "
     "its wires.")

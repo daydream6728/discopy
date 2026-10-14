@@ -164,7 +164,7 @@ def test_canonical_instances():
     declared broken, so that a law that crashes on its own statement fails
     here before the property matrix ever searches for a counterexample. """
     for category in Testable.enrolled():
-        if not hasattr(category, "box_factory"):
+        if not issubclass(getattr(category, "box_factory", object), category):
             continue
         for law in category.axioms.values():
             equation = law.canonical()

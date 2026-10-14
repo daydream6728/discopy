@@ -84,7 +84,7 @@ from abc import abstractmethod
 from inspect import signature
 from typing import Callable, ClassVar, Self
 
-from discopy import cat, monoidal, cmap, hypergraph, messages
+from discopy import cat, monoidal, cmap, messages
 from discopy.abc import BiclosedCategory, MonoidalCategory
 from discopy.drawing import Drawing
 from discopy.cat import factory
@@ -372,8 +372,8 @@ class Diagram(monoidal.Diagram, BiclosedCategory):
     def to_drawing(self):
         return monoidal.Diagram.to_drawing(self, functor_factory=Functor)
 
-    map_agreement = monoidal.Diagram.map_agreement.modulo(
-        hypergraph.Hypergraph.to_map)
+    map_agreement = monoidal.Diagram.map_agreement.failing(
+        messages.MAP_OF_A_CURRY)
     dagger_involution = BiclosedCategory.dagger_involution.failing(
         messages.CURRY_HAS_NO_DAGGER)
     dagger_involution_monoidal = BiclosedCategory.dagger_involution.weaken(
@@ -890,10 +890,10 @@ class Application(TermBase):
 
 class Abstraction(TermBase):
     var: Variable
-    body: Term
+    body: TermBase
     left: bool = False
 
-    def __init__(self, var: Variable, body: Term, left: bool = False):
+    def __init__(self, var: Variable, body: TermBase, left: bool = False):
         self.var, self.body, self.left = var, body, left
         left_str = ", left=True" if left else ""
         name = f"{var.cod}(lambda {var.name}{left_str}: {body})"
@@ -918,8 +918,8 @@ class Abstraction(TermBase):
     def eval(self, functor=None):
         functor = functor or self.functor
         return functor.cod.curry(
-            self.body.eval(functor), len(functor(self.var.cod)),
-            not self.left)
+            self.body.eval(functor),  # ty: ignore[invalid-argument-type]
+            len(functor(self.var.cod)), not self.left)
 
     def map(self, functor, context):
         context = {key: value for key, value in context.items()
