@@ -123,12 +123,13 @@ Dinaturality
 >>> assert sliding_left and sliding_right
 """
 
+from typing import ClassVar
+
 from discopy import monoidal, cmap, hypergraph, messages
 from discopy.abc import TracedCategory
 from discopy.cat import factory
 from discopy.monoidal import Ty  # noqa: F401  pylint: disable=unused-import
 from discopy.utils import (
-    Generator,
     factory_name,
     from_tree,
     assert_isinstance,
@@ -146,6 +147,10 @@ class Diagram(monoidal.Diagram, TracedCategory):
         dom (monoidal.Ty) : The domain of the diagram, i.e. its input.
         cod (monoidal.Ty) : The codomain of the diagram, i.e. its output.
     """
+    box_factory: ClassVar[type["Box"]]
+    functor_factory: ClassVar[type["Functor"]]
+    trace_factory: ClassVar[type["Trace"]]
+
     def trace(self, n=1, left=False):
         """
         Feed ``n`` outputs back into inputs.
@@ -289,8 +294,8 @@ class Functor(monoidal.Functor):
 
 CMap = cmap.CMap[Diagram]
 
-Diagram.box_factory = Generator(Box)
+Diagram.box_factory = Box
 Diagram.functor_factory = Functor
-Diagram.trace_factory = Generator(Trace)
+Diagram.trace_factory = Trace
 Hypergraph = hypergraph.Hypergraph[Diagram]
 Id = Diagram.id

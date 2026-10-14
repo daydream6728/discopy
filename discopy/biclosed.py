@@ -84,12 +84,11 @@ from abc import abstractmethod
 from inspect import signature
 from typing import Callable, ClassVar, Self
 
-from discopy import cat, monoidal, cmap, messages
+from discopy import cat, monoidal, cmap, hypergraph, messages
 from discopy.abc import BiclosedCategory, MonoidalCategory
 from discopy.drawing import Drawing
 from discopy.cat import factory
 from discopy.utils import (
-    Generator,
     AxiomError,
     assert_isinstance,
     deprecated_alias,
@@ -112,6 +111,13 @@ class Ty(monoidal.Ty):
     Applying a biclosed type to a callable yields a :class:`Abstraction`,
     applying it to a string yields a :class:`Constant`.
     """
+    variable_factory: ClassVar[type["Variable"]]
+    constant_factory: ClassVar[type["Constant"]]
+    application_factory: ClassVar[type["Application"]]
+    abstraction_factory: ClassVar[type["Abstraction"]]
+    over_factory: ClassVar[Callable[..., "Exp"]]
+    under_factory: ClassVar[Callable[..., "Exp"]]
+    exp_factory: ClassVar[Callable[..., "Exp"]]
 
     def __pow__(self, other: Ty | int) -> Self:
         return self.exp(other) if isinstance(other, Ty)\
@@ -304,6 +310,12 @@ class Diagram(monoidal.Diagram, BiclosedCategory):
         dom (Ty) : The domain of the diagram, i.e. its input.
         cod (Ty) : The codomain of the diagram, i.e. its output.
     """
+    box_factory: ClassVar[type["Box"]]
+    curry_factory: ClassVar[type["Curry"]]
+    eval_factory: ClassVar[type["Eval"]]
+    coeval_factory: ClassVar[type["Coeval"]]
+    sum_factory: ClassVar[type["Sum"]]
+    functor_factory: ClassVar[type["Functor"]]
 
     ob = Ty
 
@@ -360,8 +372,8 @@ class Diagram(monoidal.Diagram, BiclosedCategory):
     def to_drawing(self):
         return monoidal.Diagram.to_drawing(self, functor_factory=Functor)
 
-    map_agreement = monoidal.Diagram.map_agreement.failing(
-        messages.MAP_OF_A_CURRY)
+    map_agreement = monoidal.Diagram.map_agreement.modulo(
+        hypergraph.Hypergraph.to_map)
     dagger_involution = BiclosedCategory.dagger_involution.failing(
         messages.CURRY_HAS_NO_DAGGER)
     dagger_involution_monoidal = BiclosedCategory.dagger_involution.weaken(
@@ -540,11 +552,11 @@ class Sum(monoidal.Sum, Box):
 
 
 Id = Diagram.id
-Diagram.box_factory = Generator(Box)
-Diagram.curry_factory = Generator(Curry)
-Diagram.eval_factory = Generator(Eval)
-Diagram.coeval_factory = Generator(Coeval)
-Diagram.sum_factory = Generator(Sum)
+Diagram.box_factory = Box
+Diagram.curry_factory = Curry
+Diagram.eval_factory = Eval
+Diagram.coeval_factory = Coeval
+Diagram.sum_factory = Sum
 
 
 class Functor(monoidal.Functor):
@@ -829,7 +841,7 @@ class Application(TermBase):
         args (Term): The arguments to which the function is applied.
         left (bool): Whether the argument comes in from the left or right.
     """
-    def __init__(self, func: Term, args: Term, left: bool = False):
+    def __init__(self, func: TermBase, args: TermBase, left: bool = False):
         assert_isinstance(func, TermBase)
         assert_isinstance(args, TermBase)
         if not func.cod.is_exp:

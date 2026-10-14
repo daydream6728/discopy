@@ -52,12 +52,12 @@ Axioms
 from __future__ import annotations
 from dataclasses import dataclass
 from functools import reduce
-from typing import Dict, Self
+from typing import Dict, Self, ClassVar
 
 from discopy import monoidal, biclosed, markov, cmap, hypergraph, messages
 from discopy.abc import ClosedCategory
 from discopy.cat import factory
-from discopy.utils import Generator, AxiomError
+from discopy.utils import AxiomError
 
 
 @factory
@@ -77,6 +77,11 @@ class Ty(biclosed.Ty):
     .. image:: /_static/closed/diagram.svg
         :align: center
     """
+    variable_factory: ClassVar[type["Variable"]]
+    constant_factory: ClassVar[type["Constant"]]
+    application_factory: ClassVar[type["Application"]]
+    abstraction_factory: ClassVar[type["Abstraction"]]
+
     @classmethod
     def from_biclosed(cls, old: biclosed.Ty) -> Self:
         """
@@ -112,6 +117,18 @@ class Diagram(markov.Diagram, biclosed.Diagram, ClosedCategory):
 
     A diagram applied to another post-composes their tensor with an `Eval`.
     """
+    box_factory: ClassVar[type["Box"]]
+    functor_factory: ClassVar[type["Functor"]]
+    copy_factory: ClassVar[type["Copy"]]
+    merge_factory: ClassVar[type["Merge"]]
+    swap_factory: ClassVar[type["Swap"]]
+    permutation_factory: ClassVar[type["Permutation"]]
+    curry_factory: ClassVar[type["Curry"]]
+    eval_factory: ClassVar[type["Eval"]]
+    coeval_factory: ClassVar[type["Coeval"]]
+    trace_factory: ClassVar[type["Trace"]]
+    discard_factory: ClassVar[type["Discard"]]
+    sum_factory: ClassVar[type["Sum"]]
     ob = Ty
 
     @property
@@ -171,6 +188,10 @@ class Eval(biclosed.Eval, Box):
     drawing_name = "__call__"
 
 
+class Coeval(biclosed.Coeval, Box):
+    "The coevaluation of an exponential type, i.e. the dagger of an Eval."
+
+
 class Curry(biclosed.Curry, Box):
     "The currying of a closed diagram, linear when its argument is."
 
@@ -199,6 +220,10 @@ class Copy(markov.Copy, Box):
     "A markov copy in a closed category"
 
     is_linear = False
+
+
+class Discard(markov.Discard, Copy):
+    "A markov discard in a closed category."
 
 
 class Merge(markov.Merge, Box):
@@ -245,18 +270,18 @@ class Functor(biclosed.Functor, markov.Functor):
 CMap = cmap.CMap[Diagram]
 
 
-Diagram.box_factory = Generator(Box)
+Diagram.box_factory = Box
 Diagram.functor_factory = Functor
 Hypergraph = hypergraph.Hypergraph[Diagram]
-Diagram.copy_factory, Diagram.merge_factory = Generator(Copy), Generator(Merge)
-Diagram.swap_factory = Generator(Swap)
-Diagram.permutation_factory = Generator(Permutation)
-Diagram.curry_factory = Generator(Curry)
-Diagram.eval_factory = Generator(Eval)
-Diagram.trace_factory = Generator(Trace)
-Diagram.sum_factory = Generator(Sum)
-Coeval = Diagram.coeval_factory
-Discard = Diagram.discard_factory
+Diagram.copy_factory, Diagram.merge_factory = Copy, Merge
+Diagram.swap_factory = Swap
+Diagram.permutation_factory = Permutation
+Diagram.curry_factory = Curry
+Diagram.eval_factory = Eval
+Diagram.coeval_factory = Coeval
+Diagram.trace_factory = Trace
+Diagram.discard_factory = Discard
+Diagram.sum_factory = Sum
 Ty.exp_factory = Ty.under_factory = Ty.over_factory = staticmethod(Exp)
 
 Id = Diagram.id
@@ -291,7 +316,7 @@ class TermBase(Box, biclosed.TermBase):
         args = (other, self) if left else (self, other)
         return self.cod.application_factory(*args)
 
-    def compose(self, *others: Term) -> TermBase:
+    def compose(self, *others: Term) -> biclosed.TermBase:
         """
         The composition of terms of function types: ``t.compose(u)`` for
         ``t : x >> y`` and ``u : y >> z`` is ``x(lambda v: u(t(v)))``, i.e.

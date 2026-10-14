@@ -151,14 +151,13 @@ import copy
 
 from collections.abc import Callable
 
-from typing import Iterator, Self
+from typing import Iterator, Self, ClassVar
 
 from discopy import cat, monoidal, biclosed, messages
 from discopy.abc import Pregroup, RigidCategory
 from discopy.axioms import GENERATORS
 from discopy.cat import factory
 from discopy.utils import (
-    Generator,
     assert_isatomic,
     assert_isinstance,
     AxiomError,
@@ -396,6 +395,11 @@ class Diagram(biclosed.Diagram, RigidCategory):
     .. image:: /_static/rigid/curry.svg
         :align: center
     """
+    box_factory: ClassVar[type["Box"]]
+    cup_factory: ClassVar[type["Cup"]]
+    cap_factory: ClassVar[type["Cap"]]
+    sum_factory: ClassVar[type["Sum"]]
+    functor_factory: ClassVar[type["Functor"]]
 
     ob = Ty
     layer_factory = Layer
@@ -916,10 +920,8 @@ def to_rigid(self):
 
 biclosed.Diagram.to_rigid = to_rigid
 
-Diagram.box_factory = Generator(Box)
-Diagram.cup_factory = Generator(Cup)
-Diagram.cap_factory = Generator(Cap)
-Diagram.sum_factory = Generator(Sum)
+Diagram.box_factory = Box
+Diagram.cup_factory, Diagram.cap_factory, Diagram.sum_factory = Cup, Cap, Sum
 Diagram.functor_factory = Functor
 
 

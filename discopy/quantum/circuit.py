@@ -69,6 +69,7 @@ Examples
 from __future__ import annotations
 
 from collections.abc import Mapping
+from typing import ClassVar
 
 from discopy import messages, tensor, frobenius
 from discopy.cat import factory
@@ -184,6 +185,9 @@ class Circuit(tensor.Diagram[complex]):
         dom (quantum.circuit.Ty) : The domain of the circuit diagram.
         cod (quantum.circuit.Ty) : The codomain of the circuit diagram.
     """
+    swap_factory: ClassVar[type["Swap"]]
+    sum_factory: ClassVar[type["Sum"]]
+    permutation_factory: ClassVar[type["Permutation"]]
     ob = Ty
 
     @classmethod

@@ -56,7 +56,7 @@ We can check the Eckmann-Hilton argument, up to interchanger.
 import itertools
 from dataclasses import dataclass, field
 from functools import cached_property
-from typing import Iterable, Iterator, Callable, Self, TYPE_CHECKING
+from typing import Iterable, Iterator, Callable, Self, TYPE_CHECKING, ClassVar
 from warnings import warn
 
 from discopy import abc, axioms, cat, drawing, hypergraph, cmap, messages
@@ -68,7 +68,6 @@ from discopy.config import (
     BOX_DRAWING_ATTRIBUTES, WIRE_DRAWING_ATTRIBUTES,
     COLOUR_DRAWING_ATTRIBUTES, TRANSPARENT)
 from discopy.utils import (
-    Generator,
     factory,
     factory_name,
     from_tree,
@@ -957,6 +956,10 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
             normalize
             normal_form
     """
+    box_factory: ClassVar[type["Box"]]
+    sum_factory: ClassVar[type["Sum"]]
+    bubble_factory: ClassVar[type["Bubble"]]
+    functor_factory: ClassVar[type["Functor"]]
     ob = Ty
     layer_factory = Layer
 
@@ -1174,7 +1177,7 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
         >>> print(diagram.foliation().to_staircases())
         f0 @ y >> y @ f1
         """
-        return Functor.id(self.ar)(self)
+        return self.functor_factory.id(self.ar)(self)
 
     @axiom
     def hypergraph_identity[X: Obj[Ty]](
@@ -1887,9 +1890,9 @@ class Equation(cat.Equation, RichDisplay):
 Diagram.draw = drawing.draw
 Diagram.to_gif = drawing.to_gif
 
-Diagram.box_factory = Generator(Box)
-Diagram.sum_factory = Generator(Sum)
-Diagram.bubble_factory = Generator(Bubble)
+Diagram.box_factory = Box
+Diagram.sum_factory = Sum
+Diagram.bubble_factory = Bubble
 Diagram.functor_factory = Functor
 Hypergraph = hypergraph.Hypergraph[Diagram]
 Drawing.ob = Ty

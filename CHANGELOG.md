@@ -14,8 +14,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   are mutually inverse, the class of bug #716 was, and
   `PivotalCategory.self_dual`. `test_canonical_instances` checks every law
   of every free category on its canonical instance, and `Axiom.draw` draws
-  `biclosed.Diagram.currying_left`, a law the category breaks, now that
-  braids are compared by hypergraph and `braid_naturality` holds. The
+  `rigid.Diagram.snake_equations`, now that braids are compared by
+  hypergraph and `braid_naturality` holds. The
   left unitality of `cat.Functor` is a strict xfail until #648 is fixed.
 - Hypothesis strategies for every free category of the hierarchy, each
   generating diagrams through the structure it is compared up to:
@@ -116,8 +116,7 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   that decoding is its section and that maps and hypergraphs agree, and
   `axioms.Serialisable` the four roundtrips of a term: `repr_transparency`,
   `pickling`, `copying` and `serialisation`. `Axiom.canonical` instantiates
-  a law on boxes named after its variables and `Axiom.draw` draws it, as the
-  inequation it is when the category breaks it, see `Equation.checked`.
+  a law on boxes named after its variables and `Axiom.draw` draws it.
   Every diagram compares its laws up to the isomorphism of its hypergraph,
   `Diagram.equation_factory`, so that a planar law is checked in the
   symmetric category its diagrams embed in, and `CMap` compares its laws by
@@ -126,8 +125,10 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   a free curry or feedback is a box nothing rewrites, biclosed, rigid and
   feedback diagrams have no dagger beyond the subspaces `weaken` names,
   decoding a hypergraph needs swaps a planar category does not have, a map
-  has no spiders, the map of a curry rebuilds its inside, and a map over a
-  host that is not rigid has no adjoints. Tensor
+  has no spiders and a map over a host that is not rigid has no adjoints.
+  A law that holds only up to the map of its terms is declared `modulo` it:
+  the map of a curry rebuilds its inside, so biclosed diagrams agree with
+  their maps up to the map of their hypergraphs. Tensor
   diagrams, which draw no arrays, and pregroup diagrams, which compare by a
   hypergraph that refuses a cap, declare `strategy = no_strategy`.
 - `CMap` and `Hypergraph` serialise with `to_tree`, naming their category,
@@ -256,18 +257,12 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   imports `multiplicative` on first use, since it imports `monoidal`
   which imports `python.finset`
   ([#728](https://github.com/discopy/discopy/issues/728)).
-- `utils.Generator`, the class of a generator of a free category declared
-  once on the level that introduces it, e.g. `symmetric.Diagram.swap_factory
-  = Generator(Swap)`, and derived on first access for every level below that
-  declares no class of its own, as a subclass of the generators of its bases
-  and of its own boxes. The 20 subclasses that only restated this and that
-  nothing subclasses, e.g. `compact.Cup(ribbon.Cup, Box)`, are gone, each
-  module keeping its name as an alias, e.g. `compact.Cup =
-  Diagram.cup_factory`, so that every import, `repr` and pickle reads as
-  before; a class something subclasses stays written out, so that linters
-  and typecheckers still see its bases. `pivotal.Box` is a
-  `traced.Box`, as its diagrams are traced, and `ribbon.Diagram.sum_factory`
-  is `ribbon.Sum`, which it defined but never assigned.
+- Every level declares the generators it binds after its `Diagram` as
+  class variables of it, e.g. `swap_factory: ClassVar[type["Swap"]]` in
+  `symmetric.Diagram`, so that a typechecker reads `cls.swap_factory` as
+  the class it is rather than as unknown. `pivotal.Box` is a `traced.Box`,
+  as its diagrams are traced, and `ribbon.Diagram.sum_factory` is
+  `ribbon.Sum`, which it defined but never assigned.
 - `discopy/axioms.py`, a Hypothesis-based property-testing module, home
   of `Equation` (formerly `discopy.abc.Equation`): a law is stated once
   on `discopy.abc.Category` and every subclass inherits
@@ -792,9 +787,11 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   box, so a foliated diagram with several states in a layer refoliated
   differently; and the foliation read off a hypergraph merges its layers,
   so consecutive permutations compose into one. `foliation_idempotence`,
-  a law of `monoidal.Diagram`, found the second, and is declared broken
+  a law of `monoidal.Diagram`, found the second, and holds up to `to_map`
   from compact categories on, where a refoliation yanks a snake the first
-  can leave in place.
+  can leave in place. `Diagram.to_staircases` maps a diagram with the
+  functor of its own level, where `monoidal.Functor` sent a trace to a
+  monoidal bubble.
 - `Stream.sequence` builds the boxes of the category the stream is over,
   where it built `symmetric.Box` whatever the category; `para.Closed.curry`
   defaults to `left=True` like every other curry since #560; decoding with

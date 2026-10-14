@@ -54,10 +54,12 @@ We also have its dagger and its transpose:
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 from discopy import cat, cmap, rigid, traced
 from discopy.abc import PivotalCategory
 from discopy.cat import factory
-from discopy.utils import Generator, deprecated_alias
+from discopy.utils import deprecated_alias
 
 
 class Wire(rigid.Wire):
@@ -117,6 +119,10 @@ class Diagram(rigid.Diagram, traced.Diagram, PivotalCategory):
         dom (Ty) : The domain of the diagram, i.e. its input.
         cod (Ty) : The codomain of the diagram, i.e. its output.
     """
+    box_factory: ClassVar[type["Box"]]
+    functor_factory: ClassVar[type["Functor"]]
+    cup_factory: ClassVar[type["Cup"]]
+    cap_factory: ClassVar[type["Cap"]]
     ob = Ty
 
     def dagger(self):
@@ -262,9 +268,9 @@ class Functor(rigid.Functor):
     dom = cod = Diagram
 
 
-Diagram.box_factory = Generator(Box)
+Diagram.box_factory = Box
 Diagram.functor_factory = Functor
-Diagram.cup_factory, Diagram.cap_factory = Generator(Cup), Generator(Cap)
+Diagram.cup_factory, Diagram.cap_factory = Cup, Cap
 
 
 CMap = cmap.CMap[Diagram]

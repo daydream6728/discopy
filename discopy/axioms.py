@@ -158,23 +158,6 @@ class Equation[T]:
         """
         return type(self)(*self.terms, symbols=self.symbols, up_to=up_to)
 
-    def checked(self) -> "Equation":
-        """
-        The same equation with ``≠`` between two consecutive terms that
-        differ up to :attr:`up_to`, i.e. the inequation it is when it fails.
-
-        >>> from discopy.cat import Ob, Box, Equation
-        >>> x = Ob('x')
-        >>> f, g = Box('f', x, x), Box('g', x, x)
-        >>> Equation(f, f, g).checked().symbols
-        ('=', '$\\\\neq$')
-        """
-        symbols = (
-            symbol if type(self)(left, right, up_to=self.up_to)
-            else "$\\neq$" for symbol, left, right
-            in zip(self.symbols, self.terms, self.terms[1:]))
-        return type(self)(*self.terms, symbols=symbols, up_to=self.up_to)
-
     def __repr__(self):
         """
         >>> from discopy.cat import Ob, Box, Equation
@@ -729,21 +712,19 @@ class Axiom[**P, T](Declaration[P, T]):
     def draw(self, **params):
         """
         Draw the :meth:`canonical` equation of the law, the parameters those
-        of :meth:`discopy.monoidal.Equation.draw`. A law the category breaks
-        on its canonical instance is drawn all the same, as the inequation it
-        is there, see :meth:`Equation.checked`.
+        of :meth:`discopy.monoidal.Equation.draw`.
 
-        >>> from discopy import biclosed
-        >>> biclosed.Diagram.currying_left.draw(
-        ...     doctest="docs/_static/biclosed/currying-left-failing.svg")
+        >>> from discopy import rigid
+        >>> rigid.Diagram.snake_equations.draw(
+        ...     doctest="docs/_static/rigid/snake-equations-law.svg")
 
-        .. image:: /_static/biclosed/currying-left-failing.svg
+        .. image:: /_static/rigid/snake-equations-law.svg
             :align: center
         """
         equation = self.canonical()
         if equation is NotImplemented:
             raise TypeError(f"{self} does not apply, so has nothing to draw.")
-        return equation.checked().draw(**params)
+        return equation.draw(**params)
 
     def falsify(self, **params) -> dict:
         """

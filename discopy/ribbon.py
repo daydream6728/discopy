@@ -76,10 +76,11 @@ cap becomes a ribbon folding back.
     :align: center
 """
 
+from typing import ClassVar
+
 from discopy import rigid, pivotal, balanced
 from discopy.abc import RibbonCategory
 from discopy.cat import factory
-from discopy.utils import Generator
 from discopy.pivotal import (  # noqa: F401  pylint: disable=unused-import
     Ty, Nat)
 
@@ -94,6 +95,15 @@ class Diagram(pivotal.Diagram, balanced.Diagram, RibbonCategory):
         dom (pivotal.Ty) : The domain of the diagram, i.e. its input.
         cod (pivotal.Ty) : The codomain of the diagram, i.e. its output.
     """
+    box_factory: ClassVar[type["Box"]]
+    braid_factory: ClassVar[type["Braid"]]
+    functor_factory: ClassVar[type["Functor"]]
+    cup_factory: ClassVar[type["Cup"]]
+    cap_factory: ClassVar[type["Cap"]]
+    twist_factory: ClassVar[type["Twist"]]
+    sum_factory: ClassVar[type["Sum"]]
+    dual_rail_factory: ClassVar[type["DualRail"]]
+
     def trace(self, n=1, left=False):
         """
         The trace of a ribbon diagram.
@@ -162,6 +172,26 @@ class Box(pivotal.Box, balanced.Box, Diagram):
         name (str) : The name of the box.
         dom (pivotal.Ty) : The domain of the box, i.e. its input.
         cod (pivotal.Ty) : The codomain of the box, i.e. its output.
+    """
+
+
+class Cup(pivotal.Cup, Box):
+    """
+    A ribbon cup is a pivotal cup in a ribbon diagram.
+
+    Parameters:
+        left (pivotal.Ty) : The atomic type.
+        right (pivotal.Ty) : Its adjoint.
+    """
+
+
+class Cap(pivotal.Cap, Box):
+    """
+    A ribbon cap is a pivotal cap in a ribbon diagram.
+
+    Parameters:
+        left (pivotal.Ty) : The atomic type.
+        right (pivotal.Ty) : Its adjoint.
     """
 
 
@@ -339,13 +369,12 @@ class DualRail(balanced.DualRail, Functor):
         return super().__call__(other)
 
 
-Diagram.box_factory = Generator(Box)
-Diagram.braid_factory, Diagram.functor_factory = Generator(Braid), Functor
-Diagram.twist_factory = Generator(Twist)
-Diagram.sum_factory = Generator(Sum)
+Diagram.box_factory = Box
+Diagram.braid_factory, Diagram.functor_factory = Braid, Functor
+Diagram.cup_factory, Diagram.cap_factory = Cup, Cap
+Diagram.twist_factory = Twist
+Diagram.sum_factory = Sum
 Diagram.dual_rail_factory = DualRail
-Cup = Diagram.cup_factory
-Cap = Diagram.cap_factory
 
 Id = Diagram.id
 

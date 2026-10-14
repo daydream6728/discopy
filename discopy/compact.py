@@ -54,10 +54,12 @@ Coherence
 ...     Cap(x, x.r) @ Cap(y, y.r) >> x @ Diagram.swap(x.r, y @ y.r))
 """
 
-from discopy import symmetric, ribbon, rigid, cmap, hypergraph, messages
+from typing import ClassVar
+
+from discopy import symmetric, ribbon, rigid, cmap, hypergraph, monoidal
 from discopy.abc import CompactCategory
 from discopy.cat import factory
-from discopy.utils import Generator, deprecated_alias
+from discopy.utils import deprecated_alias
 from discopy.pivotal import (  # noqa: F401  pylint: disable=unused-import
     Wire, Ty)
 
@@ -76,12 +78,18 @@ class Diagram(symmetric.Diagram, ribbon.Diagram, CompactCategory):
         dom (pivotal.Ty) : The domain of the diagram, i.e. its input.
         cod (pivotal.Ty) : The codomain of the diagram, i.e. its output.
     """
+    cup_factory: ClassVar[type["Cup"]]
+    cap_factory: ClassVar[type["Cap"]]
+    box_factory: ClassVar[type["Box"]]
+    swap_factory: ClassVar[type["Swap"]]
+    functor_factory: ClassVar[type["Functor"]]
+    permutation_factory: ClassVar[type["Permutation"]]
     ob = Ty
     layer_factory = Layer
     trace_factory = ribbon.Diagram.trace_factory
 
-    foliation_idempotence = symmetric.Diagram.foliation_idempotence.failing(
-        messages.FOLIATION_YANKS_SNAKES)
+    foliation_idempotence = symmetric.Diagram.foliation_idempotence.modulo(
+        monoidal.Diagram.to_map)
 
 
 class Box(symmetric.Box, ribbon.Box, Diagram):
@@ -92,6 +100,26 @@ class Box(symmetric.Box, ribbon.Box, Diagram):
         name (str) : The name of the box.
         dom (pivotal.Ty) : The domain of the box, i.e. its input.
         cod (pivotal.Ty) : The codomain of the box, i.e. its output.
+    """
+
+
+class Cup(ribbon.Cup, Box):
+    """
+    A compact cup is a ribbon cup in a compact diagram.
+
+    Parameters:
+        left (pivotal.Ty) : The atomic type.
+        right (pivotal.Ty) : Its adjoint.
+    """
+
+
+class Cap(ribbon.Cap, Box):
+    """
+    A compact cap is a ribbon cap in a compact diagram.
+
+    Parameters:
+        left (pivotal.Ty) : The atomic type.
+        right (pivotal.Ty) : Its adjoint.
     """
 
 
@@ -143,13 +171,12 @@ CMap = cmap.CMap[Diagram]
 
 Id = Diagram.id
 
-Diagram.box_factory = Generator(Box)
-Diagram.swap_factory = Generator(Swap)
+Diagram.box_factory = Box
+Diagram.swap_factory = Swap
 Diagram.functor_factory = Functor
-Diagram.permutation_factory = Generator(Permutation)
-Cup = Diagram.cup_factory
-Cap = Diagram.cap_factory
+Diagram.permutation_factory = Permutation
 Hypergraph = hypergraph.Hypergraph[Diagram]
+Diagram.cup_factory, Diagram.cap_factory = Cup, Cap
 
 
 class Equation(symmetric.Equation):

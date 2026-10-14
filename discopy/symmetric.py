@@ -91,6 +91,7 @@ Both sides foliate to the same single permutation.
 from __future__ import annotations
 
 from collections.abc import Sequence
+from typing import ClassVar
 
 from discopy import monoidal, balanced, hypergraph, cmap, messages
 from discopy.abc import (
@@ -102,7 +103,6 @@ from discopy.monoidal import (  # noqa: F401  pylint: disable=unused-import
     Wire, Ty, Nat)
 from discopy.python import finset
 from discopy.utils import (
-    Generator,
     AxiomError, assert_iscomposable, classproperty, factory_name, from_tree)
 
 
@@ -269,6 +269,12 @@ class Diagram(balanced.Diagram, SymmetricCategory):
     >>> Permutation.swap_factory = Transposition
     >>> assert Permutation.braid_factory is Transposition
     """
+    box_factory: ClassVar[type["Box"]]
+    functor_factory: ClassVar[type["Functor"]]
+    swap_factory: ClassVar[type["Swap"]]
+    permutation_factory: ClassVar[type["Permutation"]]
+    trace_factory: ClassVar[type["Trace"]]
+    sum_factory: ClassVar[type["Sum"]]
     braid_factory = classproperty(lambda cls: cls.swap_factory)
     layer_factory = Layer
     twist_factory = classmethod(lambda cls, dom: cls.id(dom))
@@ -659,6 +665,31 @@ class Swap(Permutation, balanced.Braid, Box):
         return self.name
 
 
+class Trace(balanced.Trace, Box):
+    """
+    A trace in a symmetric category.
+
+    Parameters:
+        arg : The diagram to trace.
+        left : Whether to trace the wires on the left or right.
+
+    See also
+    --------
+    :meth:`Diagram.trace`
+    """
+
+
+class Sum(balanced.Sum, Box):
+    """
+    A symmetric sum is a balanced sum and a symmetric box.
+
+    Parameters:
+        terms (tuple[Diagram, ...]) : The terms of the formal sum.
+        dom (Ty) : The domain of the formal sum.
+        cod (Ty) : The codomain of the formal sum.
+    """
+
+
 class Functor(balanced.Functor):
     """
     A symmetric functor is a monoidal functor that preserves swaps.
@@ -693,13 +724,13 @@ for level in (
         if isinstance(law, Axiom):
             setattr(CMap, name, law.inapplicable(messages.MAP_HAS_NO_ADJOINTS))
 
-Diagram.box_factory = Generator(Box)
+Diagram.box_factory = Box
 Diagram.functor_factory = Functor
 Hypergraph = hypergraph.Hypergraph[Diagram]
-Diagram.swap_factory = Generator(Swap)
-Diagram.permutation_factory = Generator(Permutation)
-Trace = Diagram.trace_factory
-Sum = Diagram.sum_factory
+Diagram.swap_factory = Swap
+Diagram.permutation_factory = Permutation
+Diagram.trace_factory = Trace
+Diagram.sum_factory = Sum
 Id = Diagram.id
 
 

@@ -44,13 +44,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import re
+from typing import ClassVar
 
 from discopy import biclosed, cmap, messages
 from discopy.abc import ClosedCategory
 from discopy.cat import factory
 from discopy.grammar import thue
 from discopy.utils import (
-    Generator,
     BinaryBoxConstructor,
     AxiomError,
     factory_name,
@@ -61,6 +61,11 @@ from discopy.utils import (
 @factory
 class Ty(biclosed.Ty):
     "Base class for categorial grammar types."
+    variable_factory: ClassVar[type["Variable"]]
+    constant_factory: ClassVar[type["Constant"]]
+    abstraction_factory: ClassVar[type["Abstraction"]]
+    over_factory: ClassVar[type["Over"]]
+    under_factory: ClassVar[type["Under"]]
 
 
 class Over(biclosed.Over):
@@ -80,6 +85,11 @@ class Diagram(biclosed.Diagram):
     """
     A categorial diagram is a biclosed diagram with rules and words as boxes.
     """
+    box_factory: ClassVar[type["Box"]]
+    functor_factory: ClassVar[type["Functor"]]
+    curry_factory: ClassVar[type["Curry"]]
+    eval_factory: ClassVar[type["Eval"]]
+    coeval_factory: ClassVar[type["Coeval"]]
     ob = Ty
 
     def to_pregroup(self):
@@ -142,6 +152,24 @@ class Word(thue.Word, Box):
         name (str) : The name of the word.
         cod (biclosed.Ty) : The grammatical type of the word.
         dom (biclosed.Ty) : An optional domain for the word, empty by default.
+    """
+
+
+class Eval(biclosed.Eval, Box):
+    """
+    Evaluation box in a categorial grammar.
+    """
+
+
+class Coeval(biclosed.Coeval, Box):
+    """
+    Coevaluation box in a categorial grammar, the dagger of an evaluation.
+    """
+
+
+class Curry(biclosed.Curry, Box):
+    """
+    The currying of a categorial diagram.
     """
 
 
@@ -532,15 +560,14 @@ def tree2diagram(tree: dict, dom=Ty()) -> Diagram:
 
 
 Id = Diagram.id
-Diagram.box_factory, Diagram.functor_factory = Generator(Box), Functor
-Curry = Diagram.curry_factory
-Eval = Diagram.eval_factory
-Coeval = Diagram.coeval_factory
+Diagram.box_factory, Diagram.functor_factory = Box, Functor
+Diagram.curry_factory = Curry
+Diagram.eval_factory, Diagram.coeval_factory = Eval, Coeval
 
 Ty.variable_factory = Variable
 Ty.constant_factory = Constant
-Ty.application_factory =\
-    lambda func, args, left=False: BA(args, func) if left else FA(func, args)
+Ty.application_factory = (  # ty: ignore[invalid-assignment]
+    lambda func, args, left=False: BA(args, func) if left else FA(func, args))
 Ty.abstraction_factory = Abstraction
 
 Ty.over_factory, Ty.under_factory = Over, Under

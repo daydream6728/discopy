@@ -79,14 +79,16 @@ from __future__ import annotations
 
 from functools import total_ordering, cached_property
 from typing import (
-    Any, Callable, Mapping, Iterable, Self, Sequence, TYPE_CHECKING)
+    Any, Callable, ClassVar, Mapping, Iterable, Self, Sequence,
+    TYPE_CHECKING)
+
+from typing import ClassVar
 
 from discopy import messages, utils
 from discopy.abc import Category
 from discopy.axioms import (
     FUEL, GENERATORS, Equation as AbstractEquation, Serialisable)
 from discopy.utils import (  # noqa: F401
-    Generator,
     factory,
     factory_name,
     from_tree,
@@ -118,6 +120,8 @@ class Ob(Serialisable["Ob"]):
     >>> x, x_, y = Ob('x'), Ob('x'), Ob('y')
     >>> assert x == x_ and x != y
     """
+    equation_factory: ClassVar[type["Equation"]]
+
     def __setstate__(self, state):
         if "name" not in state and "_name" in state:
             state["name"] = state["_name"]
@@ -308,6 +312,9 @@ class Arrow(FreeCategory, Serialisable["Arrow"]):
     automatically cast. This means one can use e.g. ``int`` instead of ``Ob``,
     see :class:`monoidal.Nat`.
     """
+    box_factory: ClassVar[type["Box"]]
+    sum_factory: ClassVar[type["Sum"]]
+    bubble_factory: ClassVar[type["Bubble"]]
     ob = Ob
 
     @classmethod
@@ -775,7 +782,8 @@ class Sum(Box):
         assert_isparallel(self, other)
         other = other if isinstance(other, Sum)\
             else self.sum_factory((other, ))
-        return self.sum_factory(self.terms + other.terms, self.dom, self.cod)
+        return self.sum_factory(
+            (*self.terms, *other.terms), self.dom, self.cod)
 
     def __iter__(self):
         for arrow in self.terms:
@@ -1035,7 +1043,7 @@ class Functor(Category[type, "Functor"]):
         return result
 
 
-Arrow.generator_factory, Arrow.box_factory = Box, Generator(Box)
+Arrow.generator_factory = Arrow.box_factory = Box
 
 
 @factory
@@ -1164,6 +1172,6 @@ class Equation(AbstractEquation):
 
 Ob.equation_factory = Equation
 Arrow.equation_factory = Equation  # ty: ignore[invalid-assignment]
-Arrow.sum_factory = Generator(Sum)
-Arrow.bubble_factory = Generator(Bubble)
+Arrow.sum_factory = Sum
+Arrow.bubble_factory = Bubble
 Id = Arrow.id

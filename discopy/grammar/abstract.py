@@ -146,15 +146,20 @@ Alice loves Bob
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 from discopy import closed, cmap, hypergraph
 from discopy.cat import factory
-from discopy.utils import Generator
 from discopy.grammar import categorial
 
 
 @factory
 class Ty(closed.Ty):
     "An implicative type, the type of an abstract categorial grammar."
+    variable_factory: ClassVar[type["Variable"]]
+    constant_factory: ClassVar[type["Constant"]]
+    application_factory: ClassVar[type["Application"]]
+    abstraction_factory: ClassVar[type["Abstraction"]]
 
     @classmethod
     def from_categorial(cls, old: categorial.Ty) -> Ty:
@@ -190,6 +195,18 @@ class Diagram(closed.Diagram):
         dom (Ty) : The domain of the diagram, i.e. its input.
         cod (Ty) : The codomain of the diagram, i.e. its output.
     """
+    box_factory: ClassVar[type["Box"]]
+    functor_factory: ClassVar[type["Functor"]]
+    copy_factory: ClassVar[type["Copy"]]
+    merge_factory: ClassVar[type["Merge"]]
+    permutation_factory: ClassVar[type["Permutation"]]
+    swap_factory: ClassVar[type["Swap"]]
+    curry_factory: ClassVar[type["Curry"]]
+    eval_factory: ClassVar[type["Eval"]]
+    coeval_factory: ClassVar[type["Coeval"]]
+    trace_factory: ClassVar[type["Trace"]]
+    discard_factory: ClassVar[type["Discard"]]
+    sum_factory: ClassVar[type["Sum"]]
     ob = Ty
 
     @classmethod
@@ -264,12 +281,44 @@ class Box(closed.Box, Diagram):
     "An abstract box is a closed box in an abstract diagram."
 
 
+class Eval(closed.Eval, Box):
+    "The evaluation of an exponential type."
+
+
+class Coeval(closed.Coeval, Box):
+    "The coevaluation of an exponential type, i.e. the dagger of an Eval."
+
+
+class Curry(closed.Curry, Box):
+    "The currying of an abstract diagram."
+
+
+class Copy(closed.Copy, Box):
+    "The copy of an abstract type, or its discard when ``n=0``."
+
+
+class Discard(closed.Discard, Copy):
+    "The discard of an abstract type, i.e. a copy with zero legs."
+
+
+class Merge(closed.Merge, Box):
+    "The merge of an abstract type, i.e. the dagger of a copy."
+
+
 class Permutation(closed.Permutation, Box):
     "A permutation of abstract types."
 
 
 class Swap(Permutation, closed.Swap, Box):
     "The symmetric swap of two abstract types."
+
+
+class Trace(closed.Trace, Box):
+    "A trace in an abstract categorial grammar."
+
+
+class Sum(closed.Sum, Box):
+    "A formal sum of abstract diagrams."
 
 
 class Functor(closed.Functor):
@@ -344,17 +393,16 @@ class Abstraction(TermBase, closed.Abstraction):
 type Term = Constant | Variable | Application | Abstraction
 
 Id = Diagram.id
-Diagram.box_factory, Diagram.functor_factory = Generator(Box), Functor
-Diagram.permutation_factory = Generator(Permutation)
-Diagram.swap_factory = Generator(Swap)
-Copy = Diagram.copy_factory
-Merge = Diagram.merge_factory
-Curry = Diagram.curry_factory
-Eval = Diagram.eval_factory
-Coeval = Diagram.coeval_factory
-Trace = Diagram.trace_factory
-Discard = Diagram.discard_factory
-Sum = Diagram.sum_factory
+Diagram.box_factory, Diagram.functor_factory = Box, Functor
+Diagram.copy_factory, Diagram.merge_factory = Copy, Merge
+Diagram.permutation_factory = Permutation
+Diagram.swap_factory = Swap
+Diagram.curry_factory = Curry
+Diagram.eval_factory = Eval
+Diagram.coeval_factory = Coeval
+Diagram.trace_factory = Trace
+Diagram.discard_factory = Discard
+Diagram.sum_factory = Sum
 Ty.exp_factory = Ty.under_factory = Ty.over_factory = staticmethod(Exp)
 Ty.variable_factory = Variable
 Ty.constant_factory = Constant

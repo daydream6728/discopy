@@ -44,10 +44,6 @@ FREE_FEEDBACK = (
 RIGID_HAS_NO_DAGGER = (
     "Rigid cups and caps have no dagger, use pivotal instead.")
 CURRY_HAS_NO_DAGGER = "A curry has no dagger."
-MAP_OF_A_CURRY = (
-    "The map of a curry rebuilds its inside from the map of it, which can "
-    "whisker a scalar on the other side, while a hypergraph compares the "
-    "inside of a bubble syntactically.")
 FEEDBACK_HAS_NO_DAGGER = (
     "Feedback has no dagger, it would feed its memory back in time.")
 MAP_HAS_NO_ADJOINTS = (
@@ -63,6 +59,3 @@ MISSING_BOXES_AND_OFFSETS = (
     "Decoding needs either boxes and offsets, or the two of them zipped.")
 NO_TYPE_PARAMETER = (
     "{} has no type parameter to subscript, declare one as in class C[name].")
-FOLIATION_YANKS_SNAKES = (
-    "Foliating a compact diagram decodes its hypergraph, which yanks a snake "
-    "a first foliation can leave in place.")

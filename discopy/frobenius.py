@@ -61,13 +61,13 @@ Speciality
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import ClassVar
 
 from discopy import (
     monoidal, rigid, markov, compact, pivotal, cmap, hypergraph)
 from discopy.abc import HypergraphCategory
 from discopy.cat import factory
 from discopy.utils import (
-    Generator,
     assert_isatomic, deprecated_alias, factory_name, from_tree)
 
 
@@ -125,6 +125,13 @@ class Diagram(compact.Diagram, markov.Diagram, HypergraphCategory):
         dom (Ty) : The domain of the diagram, i.e. its input.
         cod (Ty) : The codomain of the diagram, i.e. its output.
     """
+    box_factory: ClassVar[type["Box"]]
+    functor_factory: ClassVar[type["Functor"]]
+    cup_factory: ClassVar[type["Cup"]]
+    cap_factory: ClassVar[type["Cap"]]
+    swap_factory: ClassVar[type["Swap"]]
+    permutation_factory: ClassVar[type["Permutation"]]
+    bubble_factory: ClassVar[type["Bubble"]]
 
     ob = Ty
 
@@ -409,13 +416,13 @@ def coherence(cls: type, factory: Callable
 
 CMap = cmap.CMap[Diagram]
 
-Diagram.box_factory = Generator(Box)
+Diagram.box_factory = Box
 Diagram.functor_factory = Functor
-Diagram.cup_factory, Diagram.cap_factory = Generator(Cup), Generator(Cap)
-Diagram.swap_factory = Generator(Swap)
-Diagram.spider_factory = Generator(Spider)  # ty: ignore[invalid-assignment]
-Diagram.permutation_factory = Generator(Permutation)
-Diagram.bubble_factory = Generator(Bubble)
+Diagram.cup_factory, Diagram.cap_factory = Cup, Cap
+Diagram.swap_factory = Swap
+Diagram.spider_factory = Spider  # ty: ignore[invalid-assignment]
+Diagram.permutation_factory = Permutation
+Diagram.bubble_factory = Bubble
 Hypergraph = hypergraph.Hypergraph[Diagram]
 Id = Diagram.id
 

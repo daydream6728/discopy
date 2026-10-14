@@ -59,14 +59,15 @@ The hexagon equations hold on the nose.
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import ClassVar
 
 from discopy import monoidal, messages
 from discopy.abc import BraidedCategory
 from discopy.cat import factory
 from discopy.monoidal import Ty, Match
 from discopy.utils import (
-    Generator, assert_isatomic, BinaryBoxConstructor, deprecated_alias,
-    factory_name, from_tree)
+    assert_isatomic, BinaryBoxConstructor, deprecated_alias, factory_name,
+    from_tree)
 
 
 class Wire(monoidal.Wire):
@@ -90,6 +91,10 @@ class Diagram(monoidal.Diagram, BraidedCategory):
         dom (monoidal.Ty) : The domain of the diagram, i.e. its input.
         cod (monoidal.Ty) : The codomain of the diagram, i.e. its output.
     """
+    box_factory: ClassVar[type["Box"]]
+    braid_factory: ClassVar[type["Braid"]]
+    functor_factory: ClassVar[type["Functor"]]
+    sum_factory: ClassVar[type["Sum"]]
 
     @classmethod
     def braid(cls, left: monoidal.Ty, right: monoidal.Ty) -> Diagram:
@@ -281,9 +286,9 @@ class Functor(monoidal.Functor):
         return super().__call__(other)
 
 
-Diagram.box_factory = Generator(Box)
-Diagram.braid_factory, Diagram.functor_factory = Generator(Braid), Functor
-Diagram.sum_factory = Generator(Sum)
+Diagram.box_factory = Box
+Diagram.braid_factory, Diagram.functor_factory = Braid, Functor
+Diagram.sum_factory = Sum
 Id = Diagram.id
 
 

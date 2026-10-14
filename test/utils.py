@@ -1,6 +1,5 @@
 from os import listdir
 
-import inspect
 import pickle
 import re
 
@@ -104,21 +103,3 @@ def test_wire_tree_roundtrip():
     with warns(DeprecationWarning):
         assert from_tree({'factory': 'discopy.frobenius.Ob', 'name': 'x'})\
             == frobenius.Wire('x')
-
-
-def test_Generator():
-    from discopy import closed, frobenius, markov, symmetric
-    from discopy.axioms import Testable
-    for category in Testable.enrolled():
-        if not category.__module__.startswith("discopy"):
-            continue
-        for name in dir(category):
-            value = inspect.getattr_static(category, name)
-            if not isinstance(value, Generator):
-                continue
-            derived = getattr(category, name)
-            assert derived.__bases__ == value.build(category).__bases__
-            assert pickle.loads(pickle.dumps(derived)) is derived
-    assert closed.Discard.__bases__ == (markov.Discard, closed.Copy)
-    assert symmetric.Diagram.swap_factory is symmetric.Swap
-    assert issubclass(frobenius.Box, markov.Box)

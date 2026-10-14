@@ -22,6 +22,7 @@ Summary
 """
 
 from math import pi
+from typing import ClassVar
 
 from discopy import cat, rigid, tensor, quantum
 from discopy.cat import factory
@@ -36,6 +37,9 @@ from discopy.utils import factory_name
 @factory
 class Diagram(tensor.Diagram[complex]):
     """ ZX Diagram. """
+    swap_factory: ClassVar[type["Swap"]]
+    sum_factory: ClassVar[type["Sum"]]
+    permutation_factory: ClassVar[type["Permutation"]]
     ob = Nat
 
     @staticmethod

@@ -73,12 +73,14 @@ in the same diagram they automatically satisfy the :mod:`frobenius` axioms.
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 from discopy import symmetric, monoidal, cmap, hypergraph, messages
 from discopy.abc import MarkovCategory
 from discopy.axioms import FUEL
 from discopy.cat import factory
 from discopy.monoidal import Ty  # noqa: F401  pylint: disable=unused-import
-from discopy.utils import Generator, assert_isatomic, factory_name, from_tree
+from discopy.utils import assert_isatomic, factory_name, from_tree
 
 
 Layer = symmetric.Layer
@@ -115,6 +117,16 @@ class Diagram(symmetric.Diagram, MarkovCategory):
 
     .. image:: /_static/markov/copy_and_apply.svg
     """
+    box_factory: ClassVar[type["Box"]]
+    functor_factory: ClassVar[type["Functor"]]
+    copy_factory: ClassVar[type["Copy"]]
+    merge_factory: ClassVar[type["Merge"]]
+    swap_factory: ClassVar[type["Swap"]]
+    permutation_factory: ClassVar[type["Permutation"]]
+    trace_factory: ClassVar[type["Trace"]]
+    discard_factory: ClassVar[type["Discard"]]
+    sum_factory: ClassVar[type["Sum"]]
+
     @classmethod
     def sample(cls, *, dom=None, cod=None, fuel=FUEL):
         """
@@ -371,15 +383,15 @@ class Functor(symmetric.Functor):
 
 CMap = cmap.CMap[Diagram]
 
-Diagram.box_factory = Generator(Box)
+Diagram.box_factory = Box
 Diagram.functor_factory = Functor
 Hypergraph = hypergraph.Hypergraph[Diagram]
-Diagram.copy_factory, Diagram.merge_factory = Generator(Copy), Generator(Merge)
-Diagram.swap_factory = Generator(Swap)
-Diagram.permutation_factory = Generator(Permutation)
-Diagram.trace_factory = Generator(Trace)
-Diagram.discard_factory = Generator(Discard)
-Diagram.sum_factory = Generator(Sum)
+Diagram.copy_factory, Diagram.merge_factory = Copy, Merge
+Diagram.swap_factory = Swap
+Diagram.permutation_factory = Permutation
+Diagram.trace_factory = Trace
+Diagram.discard_factory = Discard
+Diagram.sum_factory = Sum
 Id = Diagram.id
 
 

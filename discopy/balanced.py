@@ -34,13 +34,14 @@ from __future__ import annotations
 
 from copy import copy
 from dataclasses import dataclass
+from typing import ClassVar
 
 from discopy import config, monoidal, braided, traced, cmap, hypergraph
 from discopy.abc import BalancedCategory
 from discopy.cat import factory
 from discopy.monoidal import (  # noqa: F401  pylint: disable=unused-import
     Colour, Ty)
-from discopy.utils import Generator, factory_name, assert_isatomic, from_tree
+from discopy.utils import factory_name, assert_isatomic, from_tree
 
 
 @dataclass(frozen=True)
@@ -131,6 +132,13 @@ class Diagram(braided.Diagram, traced.Diagram, BalancedCategory):
 
     .. _nLab: https://ncatlab.org/nlab/show/traced+monoidal+category)
     """
+    box_factory: ClassVar[type["Box"]]
+    functor_factory: ClassVar[type["Functor"]]
+    braid_factory: ClassVar[type["Braid"]]
+    twist_factory: ClassVar[type["Twist"]]
+    trace_factory: ClassVar[type["Trace"]]
+    sum_factory: ClassVar[type["Sum"]]
+    dual_rail_factory: ClassVar[type["DualRail"]]
 
     @classmethod
     def twist(cls, dom: monoidal.Ty) -> Diagram:
@@ -250,6 +258,20 @@ class DualRailTwist(braided.Box):
         return type(self)(self.dom, not self.is_dagger)
 
 
+class Trace(traced.Trace, Box):
+    """
+    A trace in a balanced category.
+
+    Parameters:
+        arg : The diagram to trace.
+        left : Whether to trace the wires on the left or right.
+
+    See also
+    --------
+    :meth:`Diagram.trace`
+    """
+
+
 class Twist(Box):
     """
     The twist on atomic type :code:`dom`.
@@ -367,15 +389,15 @@ class DualRail(Functor):
         return super().__call__(other)
 
 
-Diagram.box_factory = Generator(Box)
+Diagram.box_factory = Box
 Diagram.functor_factory = Functor
 CMap = cmap.CMap[Diagram]
 Hypergraph = hypergraph.Hypergraph[Diagram]
-Diagram.braid_factory = Generator(Braid)
-Diagram.twist_factory = Generator(Twist)
-Diagram.sum_factory = Generator(Sum)
+Diagram.braid_factory = Braid
+Diagram.twist_factory = Twist
+Diagram.trace_factory = Trace
+Diagram.sum_factory = Sum
 Diagram.dual_rail_factory = DualRail
-Trace = Diagram.trace_factory
 Id = Diagram.id
 
 

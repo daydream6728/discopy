@@ -146,11 +146,12 @@ In the category of streams, this is just the identity.
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 from discopy import monoidal, braided, markov, hypergraph, messages
 from discopy.abc import FeedbackCategory, MarkovCategory
 from discopy.axioms import FUEL
 from discopy.utils import (
-    Generator,
     deprecated_alias,
     factory, factory_name, assert_isinstance, AxiomError, from_tree,
 )
@@ -336,6 +337,15 @@ class Diagram(markov.Diagram, FeedbackCategory):
     .. image:: /_static/feedback/feedback-random-walk.svg
         :align: center
     """
+    box_factory: ClassVar[type["Box"]]
+    functor_factory: ClassVar[type["Functor"]]
+    swap_factory: ClassVar[type["Swap"]]
+    permutation_factory: ClassVar[type["Permutation"]]
+    discard_factory: ClassVar[type["Discard"]]
+    copy_factory: ClassVar[type["Copy"]]
+    merge_factory: ClassVar[type["Merge"]]
+    feedback_factory: ClassVar[type["Feedback"]]
+    trace_factory: ClassVar[type["Trace"]]
     ob = Ty
     layer_factory = Layer
 
@@ -829,14 +839,14 @@ class Functor(markov.Functor):
         return super().__call__(other)
 
 
-Diagram.box_factory = Generator(Box)
+Diagram.box_factory = Box
 Diagram.functor_factory = Functor
-Diagram.swap_factory = Generator(Swap)
-Diagram.permutation_factory = Generator(Permutation)
-Diagram.discard_factory = Generator(Discard)
-Diagram.copy_factory, Diagram.merge_factory = Generator(Copy), Generator(Merge)
+Diagram.swap_factory = Swap
+Diagram.permutation_factory = Permutation
+Diagram.discard_factory = Discard
+Diagram.copy_factory, Diagram.merge_factory = Copy, Merge
 Diagram.feedback_factory, Diagram.followed_by = Feedback, FollowedBy
-Diagram.trace_factory = Generator(Trace)
+Diagram.trace_factory = Trace
 Hypergraph = hypergraph.Hypergraph[Diagram]
 Id = Diagram.id
 
