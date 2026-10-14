@@ -9,6 +9,20 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Added
 
+- `discopy.neural`, neural networks as diagrams: `discopy.neural.network`
+  is the traced category of feedforward networks. `Dims` is the free
+  monoid over the multiplicative `Dim`, i.e. a list of shapes with
+  concatenation as tensor and the product of shapes distributing over it,
+  the free rig on the natural numbers; `Network` is the free traced
+  Markov category on `Box` layers of any input and output legs, each
+  carrying an optional `module`, so that a residual block is a `copy` and
+  a recurrent cell a `trace`. Running a network on a tensor framework
+  comes in the next pull request, and `import discopy.neural` imports
+  none. `monoidal.Functor` reads a `Dim` that generates the types of its
+  domain as one generator rather than factor by factor, so that functors,
+  drawings and hypergraphs of networks map each leg as a whole
+  ([#702](https://github.com/discopy/discopy/issues/702),
+  [#736](https://github.com/discopy/discopy/pull/736)).
 - `biclosed.TermBase.alpha_eq`, the alpha-equivalence of lambda terms,
   i.e. equality up to the names of their bound variables, of any number
   of terms in one pass: the helper `alpha_eq_under` carries a scope for
@@ -756,6 +770,16 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
+- `traced.Trace` loads from its serialisation, which records which side is
+  traced: `loads(dumps(f.trace()))` raised `TypeError` from the inherited
+  `Bubble.from_tree`, on every level of the hierarchy
+  ([#736](https://github.com/discopy/discopy/pull/736)).
+- `markov.Copy` and `markov.Merge` load from their serialisation, where
+  `loads(dumps(Copy(x)))` raised `TypeError` from the inherited
+  `Box.from_tree`, and their daggers go through `merge_factory` and
+  `copy_factory`, so that a subclass of `markov.Diagram` daggers its
+  copies into its own merges rather than into `markov.Merge`
+  ([#736](https://github.com/discopy/discopy/pull/736)).
 - A regression test for `stream.Stream.__init__`'s codomain-mismatch
   `AxiomError`, which reports `cod`/`now.cod` rather than the `dom`/`now.dom`
   it once printed on both sides of `!=`. The message was corrected in passing
