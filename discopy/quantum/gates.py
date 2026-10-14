@@ -803,6 +803,15 @@ class Sqrt(Scalar):
         return self if self.is_self_adjoint\
             else Sqrt(self.data, is_dagger=not self.is_dagger)
 
+    def subs(self, *args):
+        result = super().subs(*args)
+        return result.dagger() if self.is_dagger else result
+
+    def lambdify(self, *symbols, **kwargs):
+        function = super().lambdify(*symbols, **kwargs)
+        return lambda *xs: function(*xs).dagger() if self.is_dagger\
+            else function(*xs)
+
     def setoid(self):
         """ A square root and its dagger differ only by ``is_dagger``. """
         return super().setoid() + (self.is_dagger, )

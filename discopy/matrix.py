@@ -343,19 +343,10 @@ class Matrix(MarkovCategory, NamedGeneric['dtype']):
         doms = len(xs) * [1] if doms is None else list(map(index, doms))
         if list(range(len(doms))) != sorted(xs):
             raise ValueError
-        if all(x == 1 for x in doms):
-            array = [[int(i == x) for x in xs] for i in range(len(xs))]
-            return cls(array, len(xs), len(xs))
-        offsets, dom = [], 0
-        for x in doms:
-            offsets.append(dom)
-            dom += x
-        array, cod = Matrix.zero(dom, dom).array, 0
-        for i in xs:
-            array[offsets[i]:offsets[i] + doms[i], cod:cod + doms[i]] = \
-                Matrix.id(doms[i]).array
-            cod += doms[i]
-        return cls(array, dom, dom)
+        offsets = [sum(doms[:i]) for i in range(len(doms))]
+        sources = [offsets[i] + j for i in xs for j in range(doms[i])]
+        array = [[int(i == j) for j in sources] for i in range(len(sources))]
+        return cls(array, len(sources), len(sources))
 
     def transpose(self) -> Matrix:
         return type(self)(self.array.transpose(), self.cod, self.dom)

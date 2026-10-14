@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import numpy
-from pytest import raises
+from pytest import importorskip, raises
 
 from discopy.quantum import bit, qubit
 from discopy.quantum.gates import (
@@ -41,3 +41,10 @@ def test_Sqrt():
     assert root_two.dagger() is root_two
     with raises(ValueError):
         Sqrt(2, is_dagger=True)
+
+
+def test_Sqrt_dagger_survives_substitution():
+    phi = importorskip("sympy").Symbol("phi")
+    assert Sqrt(phi).dagger().subs(phi, -1) == Sqrt(-1).dagger()
+    assert Sqrt(phi).dagger().lambdify(phi)(-1) == Sqrt(-1).dagger()
+    assert Sqrt(phi).dagger().subs(phi, 4) == Sqrt(4)
