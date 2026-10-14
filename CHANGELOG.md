@@ -9,6 +9,57 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Added
 
+- `biclosed.TermBase.alpha_eq`, the alpha-equivalence of lambda terms,
+  i.e. equality up to the names of their bound variables, of any number
+  of terms in one pass: the helper `alpha_eq_under` carries a scope for
+  each term, mapping its bound variables to the depth of their binder,
+  i.e. their de Bruijn level, extended in place on entering a binder and
+  restored on leaving it, so the terms are alpha-equivalent when they are
+  equal with their bound variables read as levels and the check is linear
+  in the size of the terms, neither a renamed copy nor a fresh variable
+  at any binder. Free variables are compared by name, bound ones by their
+  level, applications by their `left` flag and abstractions by the type
+  they bind; `closed` terms inherit it and `grammar.categorial`'s type
+  raisings and binary compositions recurse into their subterms, as do
+  `closed`'s tuples and projections, and a `let` statement binds its
+  variables at the levels of its binder as an abstraction binds one,
+  both through `TermBase.alpha_eq_bound`, which extends the scopes and
+  restores them. Terms are `Testable` in the
+  sense of `discopy.axioms`: `TermBase.generate` builds a planar linear
+  term of a given type from a sequence of choices and the letters naming
+  its bound variables, through a `Sampler` with one method per kind of
+  node and the options of a choice deferred as closures, so that a term
+  nests as deep as the recursion limit allows, linear and planar for
+  `biclosed`, free to copy and discard for
+  `closed`, `TermBase.strategy` draws them and `Renamed[C]`
+  draws one shape under several namings, so that the laws of
+  alpha-equivalence are axioms of `TermBase` checked by the property
+  matrix, where `biclosed.TermBase` and `closed.TermBase` are now
+  enrolled. `TermBase` is an `axioms.Equivalence`, the abstract class of
+  a type with an equivalence relation besides equality, which states
+  reflexivity, symmetry and transitivity once for any such relation: the
+  relation is the `Equation` subclass `equivalence_factory`, which holds
+  when its terms are related, `biclosed.AlphaEquation` here, and the two
+  laws that need related terms quantify over `Related[C]`, two instances
+  related by construction and a third that may not be, drawn by the
+  type's `related`, so that each verdict runs both ways. Then the laws of
+  alpha-equivalence itself: renaming, congruence with respect to
+  application and to abstraction, soundness for evaluation, and
+  completeness: two terms are
+  alpha-equivalent exactly when regenerating each under one naming of
+  its bound variables gives equal terms, drawn by `Canonical[C]` as two
+  shapes under their own namings and under the canonical one, the one
+  law an `alpha_eq` that says yes too often fails where the others hold
+  of it. `Testable.axioms`, the laws a type inherits by name, moves there
+  from `abc.Category`, so that any testable type has them.
+  `Testable.serialisation`
+  is declared
+  failing on terms, which do not read back from their tree
+  ([#692](https://github.com/discopy/discopy/issues/692)), and
+  `Axiom.failing` reports a broken law whose terms fail to build as an
+  `AxiomFailure` carrying the error rather than letting it escape.
+  `biclosed.Ty.strategy` generates exponentials as well as atoms
+  ([#767](https://github.com/discopy/discopy/pull/767)).
 - `grammar.abstract`, abstract categorial grammars after de Groote's
   *Towards abstract categorial grammars* (2001)
   ([#398](https://github.com/discopy/discopy/issues/398)).
@@ -230,6 +281,25 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   the objects to match; `Permutation` inherits `abc.PROP` on the strength
   of that, its first genuine user
   ([#709](https://github.com/discopy/discopy/issues/709)).
+- Monoidal lenses, also called optics, `discopy.lens`, with one class for
+  each doctrine of the underlying category as in `discopy.para`.
+  `lens.Symmetric` is a residual with a forward and a backward morphism
+  over a symmetric category, composing by tensoring the residuals as
+  `discopy.para` does with its co/parameters, over pairs `lens.Ty`
+  tensored componentwise; `to_int` reads one over a traced category as an
+  integer diagram of `discopy.interaction`, the residual being the wire
+  between the legs, and `lens.Traced` traces it leg by leg.
+  `lens.Markov` is the lenses of functional programming, a `get` and a
+  `put` composing by the chain rule over a Markov category: a subclass of
+  `lens.Symmetric` whose residual is the input, copied to be read by `get`
+  and kept for `put`, and `lens.Symmetric.to_markov` normalises any lens
+  to one. Lenses over
+  `python.Function` are the reverse derivatives of gradient-based
+  learning, and a parametric lens `para.Symmetric[lens.Markov[Function]]`
+  a neural network with its weights' gradients beside its input's.
+  Building a Markov lens over a category without `copy` and `discard`
+  raises `messages.NOT_MARKOV`
+  ([#701](https://github.com/discopy/discopy/pull/701)).
 - A `workflows` job in `build.yml`, so that the code running our pull
   requests is checked like the code it checks: `actionlint` over the
   workflows, `pflake8` over `.github`, and `pytest .github/tests/*.py`
@@ -319,6 +389,11 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `taft(n)`, the smallest algebras with a pivot of order `n` (Sweedler's
   algebra is `n = 2`), realise the Kauffman–Radford ribbon criterion
   ([#484](https://github.com/discopy/discopy/pull/484)).
+- Syntactic beta reduction on `closed.Term` with capture-avoiding
+  substitution, and `closed.BohmTree` as the normal form: its arguments are
+  reduced lazily against a shared budget, with pluggable reduction
+  strategies defaulting to leftmost-outermost
+  ([#442](https://github.com/discopy/discopy/pull/442)).
 
 ### Changed
 
@@ -712,6 +787,12 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   marimo's theme class, which outweighs the media query of
   `drawing.backend.DARK_MODE_STYLE`
   ([#453](https://github.com/discopy/discopy/issues/453)).
+- `interaction.Diagram.caps` built its inside on `negative @ positive`
+  where the constructor asks for `positive @ negative`, so a cap on a type
+  with both halves raised `ValueError`; both snake equations hold on such
+  a type now. `interaction.Ty.unit` called `natural.unit()`, which an
+  `int` or a `tuple` natural does not have: it is `cls()`, the pair of
+  empty halves ([#701](https://github.com/discopy/discopy/pull/701)).
 - `Hypergraph.rotate` exchanged the two boundaries of the hypergraph and
   replaced each box by its rotation, but left the *ports* of those boxes
   and the spiders where they were: the wires reading a box's domain went
@@ -943,6 +1024,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Project
 
+- `fail-under` rises from 8.77 to 8.79, the score once the terms carry
+  their laws ([#767](https://github.com/discopy/discopy/pull/767)).
 - `fail-under` rises from 8.75 to 8.77, the score once `closed` gains its
   products and let statements
   ([#489](https://github.com/discopy/discopy/pull/489)).

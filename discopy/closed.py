@@ -14,6 +14,7 @@ Summary
     Ty
     Exp
     Product
+    Unitype
     TermBase
     Constant
     Variable
@@ -24,6 +25,10 @@ Summary
     Projection
     Let
     Substitution
+    BohmTree
+    Strategy
+    LeftmostOutermost
+    RightmostFirst
     Diagram
     Box
     Eval
@@ -67,7 +72,7 @@ Axioms
 """
 
 from __future__ import annotations
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from functools import cached_property, reduce
 from inspect import signature
 from typing import Callable, Dict
@@ -206,6 +211,42 @@ class Product(biclosed.Wire):
     @classmethod
     def from_tree(cls, tree):
         return cls(*map(from_tree, tree['factors']))
+
+
+class Unitype(Exp):
+    """
+    The unitype is its own exponential, i.e. ``U == U >> U``: embedding the
+    untyped lambda calculus, where every term can be applied to every other.
+
+    Example
+    -------
+    >>> U = Ty(Unitype())
+    >>> assert U == U >> U and U.base == U == U.exponent
+    """
+    def __init__(self):
+        monoidal.Wire.__init__(self, "U")
+        self.base = self.exponent = Ty(self)
+
+    def __eq__(self, other):
+        return isinstance(other, Unitype) or isinstance(other, Exp)\
+            and (other.base, other.exponent) == (self.base, self.exponent)
+
+    def __hash__(self):
+        return hash(repr(Exp(self.base, self.exponent)))
+
+    def __str__(self):
+        return "U"
+
+    def __repr__(self):
+        return "Unitype()"
+
+    def to_tree(self):
+        return {'factory': factory_name(type(self))}
+
+    @classmethod
+    def from_tree(cls, tree):
+        # pylint: disable=unused-argument  # the unitype has no parameter
+        return cls()
 
 
 @factory
@@ -674,6 +715,84 @@ class TermBase(Box, biclosed.TermBase):
             dom=biclosed.Diagram, cod=cls.functor.cod)
         return functor(term)
 
+    @classmethod
+    def generate(cls, cod, choices, types, letters):
+        """
+        Build a term as :meth:`biclosed.TermBase.generate` does, except
+        that a closed term need not be linear: its :class:`biclosed.Sampler`
+        may use a bound variable any number of times, or not at all.
+
+        Example
+        -------
+        >>> X, Y = Ty("X"), Ty("Y")
+        >>> choices = [4, 2, 0, 2, 0, 0, 2, 2]
+        >>> print(TermBase.generate(Y << X, choices, [X], "x"))
+        X(lambda x0: c0(x0)(x0))
+        >>> print(TermBase.generate(Y << X, [4, 0], [X], "x"))
+        X(lambda x0: c0)
+        """
+        return biclosed.Sampler(
+            cls, iter(choices), types, letters, linear=False).term(cod)
+
+    def reduce(self, budget: int | None = None,
+               strategy: type[Strategy] | None = None) -> BohmTree | None:
+        """
+        The head normal form of the term as a :class:`BohmTree`, contracting
+        at most ``budget`` beta redexes to reach it, or ``None`` when the
+        budget runs out before a head normal form is reached. The tree's
+        arguments are computed lazily, i.e. indexing into it may itself run
+        out of budget, see :meth:`BohmTree.__getitem__`.
+
+        Parameters:
+            budget : The number of beta redexes to contract, no bound if
+                ``None``.
+            strategy : The subclass of :class:`Strategy` to follow,
+                :class:`LeftmostOutermost` by default.
+
+        Example
+        -------
+        >>> X = Ty('X')
+        >>> f, x = Variable('f', X >> X), Variable('x', X)
+        >>> two = (X >> X)(lambda f: X(lambda x: f(f(x))))
+        >>> tree = two.reduce()
+        >>> assert tree.spine == (f(x), )
+        >>> assert tree[0][0] == BohmTree(X, (f, x), 1, tree.strategy, ())
+        >>> assert two(X(lambda x: x))(x).reduce(budget=1) is None
+        """
+        return (strategy or self.strategy_factory)(budget)(
+            self, tuple(self.freevars))
+
+    def normal_form(self, budget: int | None = None,
+                    strategy: type[Strategy] | None = None) -> Term:
+        """
+        The beta normal form of the term, i.e. the term of its Böhm tree,
+        so that normalisation is idempotent.
+
+        Parameters:
+            budget : The number of beta redexes to contract, no bound if
+                ``None``.
+            strategy : The subclass of :class:`Strategy` to follow,
+                :class:`LeftmostOutermost` by default.
+
+        Example
+        -------
+        >>> X = Ty('X')
+        >>> x = Variable('x', X)
+        >>> term = X(lambda x: x)(x)
+        >>> assert term.normal_form() == x == x.normal_form()
+        >>> term.normal_form(budget=0)
+        Traceback (most recent call last):
+            ...
+        ValueError: The budget of 0 beta redexes ran out reducing \
+X(lambda x: x)(x).
+        """
+        tree = self.reduce(budget, strategy)
+        if tree is None:
+            raise ValueError(
+                f"The budget of {budget} beta redexes ran out "
+                f"reducing {self}.")
+        return tree.to_term(len(self.freevars))
+
 
 type Term = Constant | Variable | Application | Abstraction\
     | Tuple | Projection | Let
@@ -870,6 +989,15 @@ class Tuple(Compound):
         return type(self)(*[
             term.substitute(substitution) for term in self.terms])
 
+    def alpha_eq_under(self, scopes, others, depth=0):
+        """ Tuples of one length with alpha-equivalent terms. """
+        if any(type(other) is not type(self)
+               or len(other.terms) != len(self.terms) for other in others):
+            return False
+        return all(term.alpha_eq_under(
+            scopes, [other.terms[i] for other in others], depth)
+            for i, term in enumerate(self.terms))
+
     def map(self, functor, context):
         return type(self)(*[
             functor.map_term(term, context) for term in self.terms])
@@ -944,6 +1072,14 @@ class Projection(Compound):
 
     def substitute(self, substitution):
         return type(self)(self.arg.substitute(substitution), self.index)
+
+    def alpha_eq_under(self, scopes, others, depth=0):
+        """ Projections onto one index of alpha-equivalent terms. """
+        if any(type(other) is not type(self) or other.index != self.index
+               for other in others):
+            return False
+        return self.arg.alpha_eq_under(
+            scopes, [other.arg for other in others], depth)
 
     def map(self, functor, context):
         return type(self)(functor.map_term(self.arg, context), self.index)
@@ -1067,6 +1203,22 @@ class Let(Compound):
         return type(self)(
             expression, tuple(variables), Substitution(inside)(body))
 
+    def alpha_eq_under(self, scopes, others, depth=0):
+        """
+        Statements binding variables of the same types to alpha-equivalent
+        expressions, with bodies alike under the levels they bind.
+        """
+        if any(type(other) is not type(self)
+               or [x.cod for x in other.variables]
+               != [x.cod for x in self.variables] for other in others):
+            return False
+        terms = (self, *others)
+        return self.expression.alpha_eq_under(
+            scopes, [other.expression for other in others], depth)\
+            and self.alpha_eq_bound(
+                scopes, [term.body for term in terms],
+                [term.variables for term in terms], depth)
+
     def map(self, functor, context):
         expression = functor.map_term(self.expression, context)
         context = {key: value for key, value in context.items()
@@ -1179,11 +1331,245 @@ class Substitution:
         return term.substitute(self)
 
 
+@dataclass
+class BohmTree:
+    """
+    A `Böhm tree <https://en.wikipedia.org/wiki/B%C3%B6hm_tree>`_ is the
+    normal form of a :class:`Term`: each node abstracts the variables in
+    scope beyond those of its parent, then applies a head variable to the
+    trees of its arguments. Arguments are computed lazily and cached, i.e.
+    ``tree[i]`` reduces ``spine[i]`` with ``strategy`` on first access and
+    raises :class:`ValueError` if its budget has run out.
+
+    Parameters:
+        head_cod : The type of the head variable applied to the arguments,
+            i.e. of the tree without abstracting its own bound variables.
+            Use :meth:`cod` for the type of the term it represents.
+        variables : The variables in scope, those of the parent followed by
+            the ones bound at this node.
+        head : The index in ``variables`` of the head variable.
+        strategy : The strategy used to reduce the arguments, shared with
+            every node of the tree so that its budget is spent only once.
+        spine : The unreduced terms of the arguments of the head variable,
+            in their original left-to-right order.
+
+    Example
+    -------
+    >>> from discopy import cat, closed
+    >>> X = Ty('X')
+    >>> f, x = Variable('f', X >> X), Variable('x', X)
+    >>> tree = (X >> X)(lambda f: X(lambda x: f(x))).reduce()
+    >>> assert tree.spine == (x, )
+    >>> assert tree[0] == BohmTree(X, (f, x), 1, tree.strategy, ())
+    >>> assert tree == eval(repr(tree))
+    >>> print(tree.to_term())
+    (X >> X)(lambda f: X(lambda x: f(x)))
+    """
+    head_cod: Ty
+    variables: tuple[Variable, ...]
+    head: int
+    strategy: Strategy = field(compare=False)
+    spine: tuple[Term, ...]
+    cache: dict[int, BohmTree] = field(
+        default_factory=dict, compare=False, repr=False, init=False)
+
+    def __post_init__(self):
+        assert_isinstance(self.head_cod, Ty)
+        assert_isinstance(self.head, int)
+        assert_isinstance(self.strategy, Strategy)
+        if not 0 <= self.head < len(self.variables):
+            raise AxiomError(
+                f"Expected 0 <= head < {len(self.variables)}, "
+                f"got {self.head} instead.")
+        head_cod = self.variables[self.head].cod
+        for term in self.spine:
+            assert_isinstance(term, TermBase)
+            if not head_cod.is_exp:
+                raise AxiomError(
+                    f"Expected an exponential type, got {head_cod}.")
+            if term.cod != head_cod.exponent:
+                raise AxiomError(
+                    f"Expected argument.cod == {head_cod.exponent}, "
+                    f"got {term.cod} instead.")
+            head_cod = head_cod.base
+        if head_cod != self.head_cod:
+            raise AxiomError(
+                f"Expected result type {head_cod}, "
+                f"got {self.head_cod} instead.")
+
+    def cod(self, n: int = 0) -> Ty:
+        """
+        The type of the term of the tree, abstracting over ``variables[n:]``
+        for ``n`` the number of variables of the parent.
+
+        Parameters:
+            n : The number of variables bound by the parent.
+        """
+        result = self.head_cod
+        for var in reversed(self.variables[n:]):
+            result = var.cod >> result
+        return result
+
+    def __getitem__(self, key: int) -> BohmTree:
+        """
+        The tree of the ``key``-th argument, reduced from ``spine[key]`` on
+        first access and cached thereafter.
+
+        Parameters:
+            key : The index of the argument in :attr:`spine`.
+        """
+        if key not in self.cache:
+            tree = self.strategy(self.spine[key], self.variables)
+            if tree is None:
+                raise ValueError(f"Missing arguments in {self}.")
+            self.cache[key] = tree
+        return self.cache[key]
+
+    def to_term(self, n: int = 0) -> Term:
+        """
+        The term of the tree in the standard syntax, abstracting over
+        ``variables[n:]`` for ``n`` the number of variables of the parent.
+        Forces every argument, in the order chosen by ``strategy``, raising
+        :class:`ValueError` if any of them is missing.
+
+        Parameters:
+            n : The number of variables bound by the parent.
+        """
+        for i in self.strategy.order(self.spine):
+            self[i]
+        result = self.variables[self.head]
+        for i in range(len(self.spine)):
+            result = result(self[i].to_term(len(self.variables)))
+        for var in reversed(self.variables[n:]):
+            result = var.cod.abstraction_factory(var, result)
+        return result
+
+    def __repr__(self):
+        return factory_name(type(self)) + (
+            f"({self.head_cod!r}, {self.variables!r}, {self.head}, "
+            f"{self.strategy!r}, {self.spine!r})")
+
+
+@dataclass
+class Strategy:
+    """
+    A reduction strategy computes the :class:`BohmTree` of a term within a
+    ``budget`` of beta redexes to contract, with no bound when ``None``.
+
+    Contracting the head redex comes first in every strategy that reaches a
+    head normal form; the arguments of the head variable are left lazy in
+    the resulting tree, see :meth:`BohmTree.__getitem__`. Concrete
+    strategies such as :class:`LeftmostOutermost` choose the order in which
+    the arguments are forced, e.g. by :meth:`BohmTree.to_term`, by
+    implementing :meth:`Strategy.order`.
+
+    Parameters:
+        budget : The number of beta redexes left to contract.
+    """
+    budget: int | None = None
+
+    def __call__(self, term: Term,
+                 variables=()) -> BohmTree | None:
+        """
+        The head normal form of a term in a scope of variables as a
+        :class:`BohmTree` with its arguments left lazy, or ``None`` when the
+        budget runs out before a head normal form is reached.
+
+        Parameters:
+            term : The term to reduce.
+            variables : The variables in scope, i.e. the free variables of
+                the term followed by the ones bound by its parents.
+        """
+        variables, spine = list(variables), []
+        while isinstance(term, (Application, Abstraction)):
+            if isinstance(term, Application):
+                spine.append(term.args)
+                term = term.func
+            elif spine:
+                if not self.spend():
+                    return None
+                term = Substitution({term.var: spine.pop()})(term.body)
+            else:
+                variables.append(term.var)
+                term = term.body
+        assert_isinstance(term, Variable)
+        head = len(variables) - 1 - variables[::-1].index(term)
+        cod = term.cod
+        for _ in spine:
+            cod = cod.base
+        return BohmTree(
+            cod, tuple(variables), head, self, tuple(reversed(spine)))
+
+    def spend(self) -> bool:
+        "Take one beta redex from the budget, or return ``False``."
+        if self.budget is not None and self.budget <= 0:
+            return False
+        self.budget = None if self.budget is None else self.budget - 1
+        return True
+
+    def order(self, terms: tuple[Term, ...]) -> tuple[int, ...]:
+        """
+        The order, as indices into ``terms``, in which to force the
+        arguments of a head variable when forcing the whole tree, e.g. in
+        :meth:`BohmTree.to_term`.
+
+        Parameters:
+            terms : The unreduced arguments of the head variable, i.e. a
+                :class:`BohmTree`'s :attr:`BohmTree.spine`.
+        """
+        raise NotImplementedError
+
+
+class LeftmostOutermost(Strategy):
+    """
+    The default :class:`Strategy`: contract the head redex, then force the
+    arguments of the head variable from left to right.
+
+    Example
+    -------
+    >>> X = Ty('X')
+    >>> f, x = Variable('f', X >> X), Variable('x', X)
+    >>> term = (X >> X)(lambda f: X(lambda x: f(X(lambda x: x)(x))))
+    >>> tree = LeftmostOutermost(0)(term)
+    >>> try:
+    ...     tree[0]
+    ... except ValueError:
+    ...     print("starved")
+    starved
+    >>> tree = LeftmostOutermost(1)(term)
+    >>> assert tree == term.reduce(budget=1)
+    >>> assert tree[0] == BohmTree(X, (f, x), 1, tree.strategy, ())
+    """
+    def order(self, terms):
+        return tuple(range(len(terms)))
+
+
+class RightmostFirst(LeftmostOutermost):
+    """
+    A :class:`Strategy` that contracts the head redex, then forces the
+    arguments of the head variable from right to left, e.g. to reduce the
+    last argument first within a fixed budget.
+
+    Example
+    -------
+    >>> X = Ty('X')
+    >>> c, d = Variable('c', X), Variable('d', X)
+    >>> h = Variable('h', X >> (X >> X))
+    >>> term = h(X(lambda x: x)(c))(X(lambda x: x)(d))
+    >>> tree = term.reduce(budget=1, strategy=RightmostFirst)
+    >>> assert tree.strategy.order(tree.spine) == (1, 0)
+    >>> assert tree[1].to_term(len(tree.variables)) == d
+    """
+    def order(self, terms):
+        return tuple(reversed(range(len(terms))))
+
+
 Ty.variable_factory = Variable
 Ty.constant_factory = Constant
 Ty.application_factory = Application
 Ty.abstraction_factory = Abstraction
 Ty.product_factory = Product
+TermBase.strategy_factory = LeftmostOutermost
 
 
 class Equation(markov.Equation):
