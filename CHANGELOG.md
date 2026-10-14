@@ -915,6 +915,12 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - `fail-under` rises from 8.75 to 8.77, the score once `closed` gains its
   products and let statements
   ([#489](https://github.com/discopy/discopy/pull/489)).
+- `CONTRIBUTING.md` tells a sandboxed contributor to diff its test-suite
+  failure set against the same run on the merge base, so that a failure
+  already present there reads as pre-existing rather than as a regression
+  the change introduced, and to claim local green only for the checks run
+  locally, with CI on the pushed branch the authority on the real suite
+  ([#499](https://github.com/discopy/discopy/issues/499)).
 - pylint reads a law stated with `@axiom` as the classmethod it is,
   through `.github/scripts/pylint_axioms.py`, a plugin `.pylintrc` loads
   and `.github/tests` checks: the decorator returns a descriptor binding
