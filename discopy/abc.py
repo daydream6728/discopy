@@ -64,8 +64,9 @@ from typing import TYPE_CHECKING, ClassVar
 from discopy.axioms import (
     Atom, Count, Delay, Equation, Hom, L, Obj, Over, R, Repeat, Tensor,
     Testable, Under, Unit, Var, axiom, rule)
+from discopy import messages
 from discopy.utils import (  # noqa: F401  pylint: disable=unused-import
-    NamedGeneric, classproperty)
+    AxiomError, NamedGeneric, classproperty)
 
 
 class Category[C0, C1: Category](Testable[C1], ABC):
@@ -721,6 +722,19 @@ class Pregroup[C0, C1: Pregroup](ResiduatedMonoid[C0, C1]):
         >>> assert not x.is_adjoint(x)
         """
         return self.r == other or self == other.r
+
+    def assert_isadjoint(self: C1, other: C1):
+        """
+        Raise ``AxiomError`` unless ``other`` is the right adjoint of
+        ``self``, with a hint when it is the left one.
+
+        Parameters:
+            other : The alleged right adjoint.
+        """
+        if not self.is_adjoint(other):
+            raise AxiomError(messages.NOT_ADJOINT.format(self, other))
+        if self.r != other:
+            raise AxiomError(messages.NOT_RIGID_ADJOINT.format(self, other))
 
     def over(self, other: C1) -> C1:
         return self @ other.l

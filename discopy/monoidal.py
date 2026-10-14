@@ -74,6 +74,7 @@ from discopy.utils import (
     assert_isinstance,
     assert_iscomposable,
     AxiomError,
+    classproperty,
     deprecated_alias,
     MappingOrCallable,
     RichDisplay,
@@ -97,15 +98,6 @@ class Colour(cat.Ob):
 
     name: str = TRANSPARENT
     label: "str | None" = field(default=None, compare=False)
-
-    @classmethod
-    def named(cls, name: str) -> Self:
-        """
-        The transparent colour, whatever its ``name``: the objects of the
-        canonical instance of a law on types, which have no other colour.
-        """
-        del name
-        return cls()
 
     @classmethod
     def strategy(cls):
@@ -305,6 +297,11 @@ class Ty(cat.Ob, cat.FreeCategory, ColouredMonoid):
     """
     ob = Colour
     generator_factory = Wire
+    box_factory = classproperty(lambda cls: cls.generator_factory)
+    """
+    The generators of a type as a free category, i.e. its wires, a
+    :class:`cat.Ob` that :meth:`cast` embeds as a type of length one.
+    """
 
     @classmethod
     def strategy(cls, **params):
@@ -330,16 +327,6 @@ class Ty(cat.Ob, cat.FreeCategory, ColouredMonoid):
         """
         # pylint: disable=unused-argument  # every colour is transparent
         return cls.generator_factory.strategy().map(cls)
-
-    @classmethod
-    def named(cls, name: str, dom=None, cod=None) -> Self:
-        """
-        The type of one wire called ``name``, as an object or a generator of
-        the canonical instance of a law, see
-        :meth:`discopy.axioms.Axiom.canonical`.
-        """
-        # pylint: disable=unused-argument  # every colour is transparent
-        return cls(cls.generator_factory(name))
 
     def cast_wire(self, x: str | cat.Ob) -> cat.Ob:
         """
@@ -581,6 +568,9 @@ class Nat(abc.Nat, Ty):  # ty: ignore[invalid-generic-class]
     >>> assert CX @ 2 >> 2 @ CX == CX @ CX
     """
     generator_factory = int
+    box_factory = None
+    """ No generator of one colour is named, so there is no canonical
+    instance of a law, see :meth:`discopy.axioms.Axiom.canonical`. """
 
     @classmethod
     def generators(cls, *, dom=None, cod=None):
@@ -589,12 +579,6 @@ class Nat(abc.Nat, Ty):  # ty: ignore[invalid-generic-class]
         from hypothesis import strategies as st
 
         return st.just(cls(1))
-
-    @classmethod
-    def named(cls, name: str, dom=None, cod=None) -> Self:
-        """ The one generator, whatever its ``name``, see :meth:`Ty.named`. """
-        del name, dom, cod  # one generator, with one colour
-        return cls(1)
 
     def __init__(self, inside: int | tuple = 0, dom: Colour | None = None,
                  cod: Colour | None = None, _scan: bool = True):
@@ -660,6 +644,9 @@ class Dim(Ty):
     Dim(2, 3)
     """
     generator_factory = int
+    box_factory = None
+    """ No generator of one colour is named, so there is no canonical
+    instance of a law, see :meth:`discopy.axioms.Axiom.canonical`. """
 
     @classmethod
     def generators(cls, *, dom=None, cod=None):
@@ -668,12 +655,6 @@ class Dim(Ty):
         from hypothesis import strategies as st
 
         return st.integers(2, 3).map(cls)
-
-    @classmethod
-    def named(cls, name: str, dom=None, cod=None) -> Self:
-        """ The dimension two, whatever its ``name``, see :meth:`Ty.named`. """
-        del name, dom, cod  # one generator, with one colour
-        return cls(2)
 
     def __init__(self, *inside: int, dom=None, cod=None, _scan=True, **kwargs):
         inside = kwargs.pop('inside', inside)

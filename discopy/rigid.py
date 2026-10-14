@@ -290,18 +290,6 @@ class Ty(Pregroup, biclosed.Ty):
             del state['_z']
         super().__setstate__(state)
 
-    def assert_isadjoint(self, other):
-        """
-        Raise ``AxiomError`` if two rigid types are not adjoints.
-
-        Parameters:
-            other : The alleged right adjoint.
-        """
-        if not Pregroup.is_adjoint(self, other):
-            raise AxiomError(messages.NOT_ADJOINT.format(self, other))
-        if self.r != other:
-            raise AxiomError(messages.NOT_RIGID_ADJOINT.format(self, other))
-
     @property
     def l(self) -> Self:
         """ The left adjoint of the type. """

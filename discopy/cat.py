@@ -147,14 +147,6 @@ class Ob(Serialisable["Ob"]):
         return self.name < other.name
 
     @classmethod
-    def named(cls, name: str) -> Self:
-        """
-        The object called ``name``, as in the canonical instance of a law,
-        see :meth:`discopy.axioms.Axiom.canonical`.
-        """
-        return cls(name)
-
-    @classmethod
     def strategy(cls):
         """Generate named objects."""
         from hypothesis import strategies as st
@@ -251,8 +243,9 @@ class FreeCategory(Category):
         :meth:`discopy.axioms.Rule.strategy`. Once the fuel runs out, only the
         rules with no morphism premise are applied. A conclusion that misses
         ``dom`` or ``cod`` is composed with a generator from or to it, so that
-        both are always honoured, with no filtering. Every choice shrinks to
-        a generator, drawn by :meth:`generators`.
+        both are honoured, with no filtering, whenever the :meth:`generators`
+        read them: those of a type do not, since every generated colour is
+        transparent. Every choice shrinks to a generator.
 
         Parameters:
             dom : The domain, sampled if ``None``.
@@ -401,14 +394,6 @@ class Arrow(FreeCategory, Serialisable["Arrow"]):
     def generators(cls, *, dom=None, cod=None):
         """ Generate the boxes of the category, see :meth:`Box.strategy`. """
         return cls.box_factory.strategy(dom=dom, cod=cod)
-
-    @classmethod
-    def named(cls, name: str, dom: Ob, cod: Ob) -> Box:
-        """
-        The box called ``name`` from ``dom`` to ``cod``, as in the canonical
-        instance of a law, see :meth:`discopy.axioms.Axiom.canonical`.
-        """
-        return cls.box_factory(name, dom, cod)
 
     def __setstate__(self, state):
         if '_dom' in state:  # Backward compatibility

@@ -7,7 +7,7 @@ from hypothesis.errors import NoSuchExample
 from pytest import raises
 
 from discopy import braided, cat, monoidal, rigid
-from discopy.abc import Category, MonoidalCategory
+from discopy.abc import Category, ColouredMonoid, MonoidalCategory
 from discopy.axioms import (
     L, R, Atom, Axiom, AxiomFailure, Count, Equation, Hom, Obj, Over, Repeat,
     Tensor, Testable, Under, Unit, Var, axiom, inhabits)
@@ -166,9 +166,10 @@ def test_canonical_instances():
     statement fails here before the property matrix ever searches for a
     counterexample. """
     for category in Testable.enrolled():
-        if not hasattr(category, "named") or not issubclass(
-                getattr(category, "box_factory", category), category):
-            continue  # a map, a hypergraph or a test binding no box
+        box = getattr(category, "box_factory", None)
+        if box is None or not (issubclass(box, category)
+                               or issubclass(category, ColouredMonoid)):
+            continue  # a map, a hypergraph, a type of one colour or a test
         for law in category.axioms.values():
             if law.broken:
                 continue

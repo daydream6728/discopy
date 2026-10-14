@@ -205,8 +205,6 @@ class Braid(balanced.Braid, Box):
         is_dagger (bool) : Braiding over or under.
     """
 
-    z = 0
-
     def rotate(self, left=False):
         del left
         braid = type(self)(*self.cod.r)
@@ -222,8 +220,6 @@ class DualRailBraid(balanced.DualRailBraid, Box):
     :class:`discopy.balanced.DualRailBraid`
     """
 
-    z = 0
-
     def rotate(self, left=False):
         del left
         return type(self)(self.right, self.left, self.is_dagger)
@@ -237,8 +233,6 @@ class DualRailTwist(balanced.DualRailTwist, Box):
     --------
     :class:`discopy.balanced.DualRailTwist`
     """
-
-    z = 0
 
     def rotate(self, left=False):
         del left
@@ -254,8 +248,6 @@ class DualRailCup(Box):
         left : The ribbon (doubled type) on the outside left.
         right : The ribbon on the outside right.
     """
-    z = 0
-
     def __init__(self, left, right, is_dagger=False):
         self.left, self.right = left, right
         name = type(self).__name__ + f"({left}, {right})"
@@ -276,8 +268,6 @@ class DualRailCap(Box):
     A cap joining two ribbons in the dual rail encoding, see
     :class:`DualRailCup`.
     """
-    z = 0
-
     def __init__(self, left, right, is_dagger=False):
         self.left, self.right = left, right
         name = type(self).__name__ + f"({left}, {right})"
@@ -302,8 +292,6 @@ class Twist(balanced.Twist, Box):
         right (pivotal.Ty) : The type on the top right and bottom left.
         is_dagger (bool) : Braiding over or under.
     """
-
-    z = 0
 
     def rotate(self, left=False):
         del left

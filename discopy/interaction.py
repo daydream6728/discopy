@@ -75,7 +75,8 @@ from discopy import (
     ribbon,
     messages
 )
-from discopy.abc import RibbonCategory, TracedCategory, NamedGeneric
+from discopy.abc import (
+    NamedGeneric, Pregroup, RibbonCategory, TracedCategory)
 from discopy.cat import assert_iscomposable
 from discopy.python import finset
 from discopy.utils import (
@@ -83,7 +84,7 @@ from discopy.utils import (
 
 
 @dataclass
-class Ty[natural](NamedGeneric):
+class Ty[natural](Pregroup, NamedGeneric):
     """
     An integer type is a pair of :attr:`natural` types.
 
@@ -383,8 +384,7 @@ class Diagram[natural](RibbonCategory, NamedGeneric):
         .. image:: /_static/int/int-snake-equations.svg
             :align: center
         """
-        rigid.Ty.assert_isadjoint(
-            left, right)  # ty: ignore[invalid-argument-type]
+        left.assert_isadjoint(right)
         inside = cls.natural.id(left.positive @ left.negative)
         return cls(inside, left @ right, type(left)())
 
@@ -397,8 +397,7 @@ class Diagram[natural](RibbonCategory, NamedGeneric):
             left : The left-hand side of the caps.
             right : The right-hand side of the caps.
         """
-        rigid.Ty.assert_isadjoint(
-            right, left)  # ty: ignore[invalid-argument-type]
+        right.assert_isadjoint(left)
         inside = cls.natural.id(left.negative @ left.positive)
         return cls(inside, type(left)(), left @ right)
 

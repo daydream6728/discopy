@@ -63,6 +63,8 @@ class MappingOrCallable(Mapping[KT, VT]):
     def __init__(self, mapping) -> None:
         while isinstance(mapping, MappingOrCallable):
             mapping = mapping.mapping
+        if not isinstance(mapping, Mapping) and not callable(mapping):
+            raise TypeError(messages.NOT_MAPPING_OR_CALLABLE.format(mapping))
         self.mapping = mapping
 
     def __bool__(self) -> bool:
