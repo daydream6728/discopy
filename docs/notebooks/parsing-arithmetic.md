@@ -167,9 +167,14 @@ class Encoder(nn.Module):
         for i, sentence in enumerate(tokens):
             ids[i, :len(sentence)] = torch.tensor(
                 [VOCABULARY.index(token) for token in sentence])
-        mask = torch.arange(ids.shape[1])[None] < torch.tensor(
-            [len(sentence) for sentence in tokens])[:, None]
-        return self.gru(self.embedding(ids))[0], mask
+        lengths = torch.tensor([len(sentence) for sentence in tokens])
+        mask = torch.arange(ids.shape[1])[None] < lengths[:, None]
+        packed = nn.utils.rnn.pack_padded_sequence(
+            self.embedding(ids), lengths, batch_first=True,
+            enforce_sorted=False)
+        states, _ = nn.utils.rnn.pad_packed_sequence(
+            self.gru(packed)[0], batch_first=True)
+        return states, mask
 
 
 torch.manual_seed(0)

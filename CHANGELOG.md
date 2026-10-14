@@ -1062,9 +1062,6 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   the change introduced, and to claim local green only for the checks run
   locally, with CI on the pushed branch the authority on the real suite
   ([#499](https://github.com/discopy/discopy/issues/499)).
-- `fail-under` rises from 8.75 to 8.79, the score of `main` with
-  `grammar.proofnet` and `grammar.neural` as the `lint` job measures it, on
-  Python 3.14 without the extras, where `torch` cannot be imported.
 - pylint reads a law stated with `@axiom` as the classmethod it is,
   through `.github/scripts/pylint_axioms.py`, a plugin `.pylintrc` loads
   and `.github/tests` checks: the decorator returns a descriptor binding

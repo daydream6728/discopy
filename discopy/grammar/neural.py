@@ -251,8 +251,10 @@ class Tagger(nn.Module):
                 break
             logits, hidden = self(symbols, hidden, keys, key_mask)
             allowed = slots[:, None] + arities[None, :-1] <= max_length - step
-            log_p = logits[:, -1].masked_fill(~allowed, -torch.inf)\
-                .log_softmax(-1).masked_fill(slots[:, None] == 0, -torch.inf)
+            log_p = logits[:, -1].masked_fill(~allowed, -torch.inf)
+            log_p = log_p.where(allowed.any(-1, keepdim=True), 0.)\
+                .log_softmax(-1).masked_fill(
+                    ~allowed | (slots[:, None] == 0), -torch.inf)
             log_p = torch.cat([log_p, torch.where(
                 slots[:, None] == 0, 0., -torch.inf)], 1)
             scores, best = (scores.flatten()[:, None] + log_p)\
