@@ -85,6 +85,10 @@ class Reservoir:
             raise ValueError(
                 f"Expected a unitary on {memory + inputs} qubits, "
                 f"got {unitary.dom} to {unitary.cod}.")
+        np, dim = get_backend(), 2 ** (memory + inputs)
+        array = np.reshape(unitary.eval().array, (dim, dim))
+        if not np.allclose(array.conj().T @ array, np.eye(dim)):
+            raise ValueError(f"Expected a unitary, got {unitary}.")
         self.memory, self.inputs, self.unitary = memory, inputs, unitary
 
     def __eq__(self, other):
@@ -111,8 +115,11 @@ class Reservoir:
             seed : The seed for the phases of the ansatz.
         """
         n, rng = memory + inputs, Random(seed)
-        params = [rng.random() for _ in range(3)] if n == 1 else\
-            [[rng.random() for _ in range(2 * n)] for _ in range(depth)]
+        if n == 1:
+            return cls(memory, inputs, Id(1).then(*[
+                Sim15ansatz(1, [rng.random() for _ in range(3)])
+                for _ in range(depth)]))
+        params = [[rng.random() for _ in range(2 * n)] for _ in range(depth)]
         return cls(memory, inputs, Sim15ansatz(n, params))
 
     def encode(self, *values: float) -> Circuit:

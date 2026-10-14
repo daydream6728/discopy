@@ -187,7 +187,7 @@ def Rydberg(positions, duration, omega, delta, phase=0, steps=1,
     """
     from discopy.quantum.gates import Rx, Rz, U1, CU1
 
-    if not isinstance(steps, int) or steps <= 0:
+    if isinstance(steps, bool) or not isinstance(steps, int) or steps <= 0:
         raise ValueError(f"Expected a positive number of steps, got {steps}")
     n_atoms, dt = len(positions), duration / steps
 

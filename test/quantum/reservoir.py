@@ -20,11 +20,18 @@ def test_Reservoir_errors():
     with raises(ValueError):
         Reservoir(1, 0, Discard(1) @ Ket(0))
     with raises(ValueError):
+        Reservoir(1, 0, quantum.Bra(0) >> Ket(0))
+    with raises(ValueError):
         Reservoir.random(1).encode(0.1, 0.2)
     with raises(ValueError):
         Reservoir.random(1).fit([0.1, 0.2], [0.1, 0.2, 0.3])
     with raises(ValueError):
         Reservoir.random(1).fit([0.1], [0.1], regularisation=-1)
+
+
+def test_Reservoir_random_depth():
+    assert Reservoir.random(memory=1, inputs=0, depth=0).unitary == Id(1)
+    assert len(Reservoir.random(memory=1, inputs=0, depth=3).unitary) == 9
 
 
 def test_Reservoir_repr():

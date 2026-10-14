@@ -100,3 +100,10 @@ def test_Rydberg_errors():
         Rydberg([(0, 0)], 1, 0, 0, steps=0)
     with raises(ValueError):
         Rydberg([(0, 0), (0, 1, 2)], 1, 0, 0)
+
+
+def test_Rydberg_steps():
+    from discopy.quantum import Rydberg as exported
+    assert exported is Rydberg
+    with raises(ValueError):
+        Rydberg([(0, 0)], 1, 1, 0, steps=True)
