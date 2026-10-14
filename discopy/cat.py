@@ -904,7 +904,7 @@ class Bubble(Box):
 
 
 @factory
-class Functor(Category):
+class Functor(Category[type, "Functor"]):
     """
     A functor is a pair of maps :code:`ob_map` and :code:`ar_map` and an
     optional codomain category :code:`cod`.
@@ -1039,7 +1039,7 @@ Arrow.generator_factory, Arrow.box_factory = Box, Generator(Box)
 
 
 @factory
-class Transformation(Category):
+class Transformation(Category[Functor, "Transformation"]):
     """
     A (not necessarily natural) transformation between two parallel functors.
 

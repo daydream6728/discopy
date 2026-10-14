@@ -1,7 +1,5 @@
 """ DisCoPy's property-testing module in action. """
 
-from __future__ import annotations
-
 from typing import Self
 
 from hypothesis import find
@@ -46,12 +44,13 @@ def test_axiom_binding():
     assert Arrow.unitality(f=Box('f', Ob('x'), Ob('y')))
 
 
-def test_deferred_annotations():
-    """ A law compiled without deferred annotations is refused. """
-    namespace, source = {}, "def eager(cls, f: int): return NotImplemented"
-    exec(compile(source, "<eager>", "exec", dont_inherit=True), namespace)
+def test_string_annotations():
+    """ A law whose annotations are strings is refused. """
+    namespace = {}
+    exec("from __future__ import annotations\n"
+         "def deferred(cls, f: int): return NotImplemented", namespace)
     with raises(TypeError, match="__future__"):
-        axiom(namespace["eager"])
+        axiom(namespace["deferred"])
 
 
 def test_sequents():

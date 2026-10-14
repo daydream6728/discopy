@@ -40,13 +40,35 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   g: Hom[C1, B, C]) -> Hom[C1, A, C]`. `Obj`, `Atom`, `Var` and `Hom` are
   `Annotated` aliases of their first argument, the object expressions are
   built by `Tensor`, `Unit`, `L`, `R`, `Delay`, `Over`, `Under` and
-  `Repeat`, generic classes whose subscript computes the object once the
-  variables are drawn, and `Equation` is a generic class, so that `ty
-  check` reports nothing on any of the 86 signatures. Both sides of a
-  sequent are evaluated in the scope of a draw, `Declaration.sequents` and
-  `Declaration.output`, and `axioms.inhabits` checks a value against its
+  `Repeat`, the `Former`s whose subscript stays an expression while a
+  variable is left in it and computes the object once there is none, and
+  `Equation` is a generic class, so that `ty check` reports nothing on any
+  of the signatures. The annotations are read as objects, never evaluated
+  from strings: `C0` and `C1` are the type parameters of the abstract
+  classes, each standing for what `Category.parameters` says, its objects
+  and its arrows, by its `axioms.position` among the parameters of a
+  `Category`, and both sides of a sequent are the annotations with the
+  variables of a draw substituted, `axioms.substitute`, in
+  `Declaration.sequents` and `Declaration.output`; a module stating a
+  declaration does without `from __future__ import annotations`, which
+  would make its annotations strings, and a declaration whose annotations
+  are strings is refused. `axioms.inhabits` checks a value against its
   type: every cell of the matrix checks the equation of its law against it,
-  and `test_rule` the conclusion of every rule.
+  and `test_rule` the conclusion of every rule. The abstract base classes
+  state that a term of a category is one of its arrows, `self: C1` and
+  `cls: type[C1]`, so that their methods typecheck with no `ty: ignore`,
+  and the categories that are not free bind the parameters of their base,
+  e.g. `finset.Function(MonoidalCategory[Nat, "Function"])`, so that `ty`
+  refuses a FinSet map composed with a Python function and reads
+  `finset.Function.cut` with its category substituted: `cat.Functor`,
+  `cat.Transformation`, `monoidal.List`, `hypergraph.Hypergraph`,
+  `para.Symmetric`, `python.Function`, `finset.Function` and
+  `drawing.Drawing`. The free diagrams cannot, since a level binding its
+  own objects and arrows contradicts the binding of the level it extends,
+  and neither can `Matrix`, whose `Tensor` and `Channel` narrow its
+  objects, nor `CMap`, `Stream` and `interaction.Diagram`, whose objects
+  are not of the sort their base bounds them by; `fail-under` rises to
+  9.01.
 - `axioms.Rule` and the decorator `rule`: an inference rule of a structure,
   stated like a law with a morphism as its conclusion. `Rule` and `Axiom`
   share a `Declaration`, which binds them to the class they are read from

@@ -229,7 +229,7 @@ class PlaneGraph(NamedTuple):
 
 @factory
 @dataclass
-class Drawing(TracedCategory, RichDisplay):
+class Drawing(TracedCategory["monoidal.Ty", "Drawing"], RichDisplay):
     """
     A drawing is a plane graph with designated input and output types.
 

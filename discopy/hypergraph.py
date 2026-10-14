@@ -102,7 +102,7 @@ Mapping from :class:`Spider` to atomic :class:`frobenius.Ty`.
 
 
 class Hypergraph[category](
-        MonoidalCategory, NamedGeneric, Serialisable):
+        MonoidalCategory["Ty", "Hypergraph"], NamedGeneric, Serialisable):
     """
     A hypergraph is given by:
 

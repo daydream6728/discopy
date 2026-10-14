@@ -55,8 +55,6 @@ Summary
     NamedGeneric
 """
 
-from __future__ import annotations
-
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -96,6 +94,19 @@ class Category[C0, C1: Category](Testable[C1], ABC):
     cod: C0
 
     ar = classproperty(lambda cls: getattr(cls, "factory", cls))
+
+    @classmethod
+    def parameters(cls) -> tuple[type, type]:
+        """
+        What the type parameters of the category stand for, in order: its
+        objects ``C0`` and its arrows ``C1``, so that a sequent stated with
+        them reads as one of the category it is bound to, see
+        :func:`discopy.axioms.position`.
+
+        >>> from discopy.monoidal import Ty, Diagram
+        >>> assert Diagram.parameters() == (Ty, Diagram)
+        """
+        return getattr(cls, "ob", cls), cls
 
     @classmethod
     def equation_factory(cls, *terms) -> Equation:
@@ -139,7 +150,7 @@ class Category[C0, C1: Category](Testable[C1], ABC):
         """
         return self.cod == other.dom
 
-    def is_parallel(self, other: Category) -> bool:
+    def is_parallel(self, other: "Category") -> bool:
         """
         Whether two morphisms are parallel, i.e. they have the same
         domain and codomain.
@@ -210,12 +221,12 @@ class ColouredMonoid[C0, C1: ColouredMonoid](Category[C0, C1]):
             """ The slices of a free monoid, assumed to stay inside it. """
 
     @classmethod
-    def id(cls, dom: C0 | None = None) -> C1:
+    def id(cls: type[C1], dom: C0 | None = None) -> C1:
         """The monoidal unit, i.e. the empty tensor ``cls()``."""
-        return cls()  # ty: ignore[invalid-return-type]
+        return cls()
 
     @classmethod
-    def unit(cls, colour: C0 | None = None) -> C0 | C1:
+    def unit(cls: type[C1], colour: C0 | None = None) -> C0 | C1:
         """
         The unit at a colour, i.e. the identity on it.
 
@@ -234,7 +245,7 @@ class ColouredMonoid[C0, C1: ColouredMonoid](Category[C0, C1]):
         return self.tensor(*others)
 
     @classmethod
-    def cast(cls, atoms) -> C1:
+    def cast(cls: type[C1], atoms) -> C1:
         """
         The element of a tuple of atoms, or of a single atom; an element of
         the monoid is unchanged.
@@ -247,26 +258,23 @@ class ColouredMonoid[C0, C1: ColouredMonoid](Category[C0, C1]):
         if isinstance(atoms, cls):
             return atoms
         if isinstance(atoms, tuple):
-            return cls(*atoms)  # ty: ignore[invalid-return-type]
-        return cls(  # ty: ignore[invalid-return-type]
-            atoms)  # ty: ignore[too-many-positional-arguments]
+            return cls(*atoms)
+        return cls(atoms)  # ty: ignore[too-many-positional-arguments]
 
     @classmethod
-    def whisker(cls, other: C0 | C1) -> C1:
+    def whisker(cls: type[C1], other: C0 | C1) -> C1:
         """
         Do nothing if ``other`` is already a morphism else apply :meth:`id`.
 
         Parameters:
             other : The object or morphism to be tensored on the left or right.
         """
-        return (
-            other  # ty: ignore[invalid-return-type]
-            if isinstance(other, cls) else cls.id(other))
+        return other if isinstance(other, cls) else cls.id(other)
 
     def __matmul__(self, other):
         return self.tensor(other)
 
-    def __rmatmul__(self, other):
+    def __rmatmul__(self: C1, other):
         return self.whisker(other).tensor(self)
 
 
@@ -287,7 +295,7 @@ class Nat(Monoid["Nat"]):
     """
     n: int = 0
 
-    def tensor(self, *others: Nat) -> Nat:
+    def tensor(self, *others: "Nat") -> "Nat":
         if any(not isinstance(other, Nat) for other in others):
             return NotImplemented  # This allows whiskering on the left.
         return type(self)(self.n + sum(other.n for other in others))
@@ -301,7 +309,7 @@ class Nat(Monoid["Nat"]):
     def __str__(self) -> str:
         return str(self.n)
 
-    def __getitem__(self, key: int | slice) -> Nat:
+    def __getitem__(self, key: int | slice) -> "Nat":
         """
         Slicing a natural number reads it off as a sequence of ``1``'s.
 
@@ -349,7 +357,7 @@ class MonoidalCategory[C0: ColouredMonoid, C1: MonoidalCategory](
     def __matmul__(self, other):
         return self.tensor(self.whisker(other))
 
-    def __rmatmul__(self, other):
+    def __rmatmul__(self: C1, other):
         return self.whisker(other).tensor(self)
 
     @axiom
@@ -563,7 +571,7 @@ class BiclosedCategory[
         """
 
     @abstractmethod
-    def curry(self, n: int = 1, left: bool = True) -> C1:
+    def curry(self: C1, n: int = 1, left: bool = True) -> C1:
         """
         The currying of a morphism, to be instantiated.
 
@@ -589,7 +597,7 @@ class BiclosedCategory[
             raise ValueError
         return base, exponent
 
-    def uncurry(self, n: int = 1, left: bool = True) -> C1:
+    def uncurry(self: C1, n: int = 1, left: bool = True) -> C1:
         """
         Uncurry a morphism by composing it with :meth:`ev`, assuming its
         codomain is an exponential object. If the exponent has less than
@@ -602,7 +610,7 @@ class BiclosedCategory[
         if n < 0:
             raise ValueError
         if not n:
-            return self  # ty: ignore[invalid-return-type]
+            return self
         base, exponent = self.base_and_exponent(n, left)
         result = self @ exponent >> self.ev(base, exponent, True) if left\
             else exponent @ self >> self.ev(base, exponent, False)
@@ -747,7 +755,7 @@ class RigidCategory[C0: Pregroup, C1: RigidCategory](BiclosedCategory[C0, C1]):
         return base @ cls.cups(exponent.l, exponent) if left\
             else cls.cups(exponent, exponent.r) @ base
 
-    def curry(self, n: int = 1, left: bool = True) -> C1:
+    def curry(self: C1, n: int = 1, left: bool = True) -> C1:
         """
         The curry of a rigid morphism is obtained using caps.
 
@@ -758,7 +766,7 @@ class RigidCategory[C0: Pregroup, C1: RigidCategory](BiclosedCategory[C0, C1]):
         if n < 0 or n > len(self.dom):
             raise ValueError
         if not n:
-            return self  # ty: ignore[invalid-return-type]
+            return self
         if left:
             base, exponent = self.dom[:-n], self.dom[-n:]
             return base @ self.caps(exponent, exponent.l) >> self @ exponent.l

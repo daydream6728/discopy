@@ -62,10 +62,6 @@ Summary
         inhabits
 """
 
-from __future__ import annotations
-
-import __future__
-import ast
 import inspect
 import pickle
 import sys
@@ -75,8 +71,11 @@ from copy import deepcopy
 from dataclasses import KW_ONLY, dataclass, replace
 from functools import cached_property, reduce, wraps
 from operator import matmul
+from types import GenericAlias
 from typing import (
-    TYPE_CHECKING, Annotated, Any, Self, get_args, get_origin)
+    TYPE_CHECKING, Annotated, Any, Concatenate, ParamSpec, Self, TypeVar,
+    TypeVarTuple,
+    get_args, get_origin)
 
 from discopy.utils import (
     AxiomError,
@@ -147,7 +146,7 @@ class Equation[T]:
         if up_to is not None:
             self.up_to = up_to
 
-    def modulo(self, up_to: Callable) -> Equation:
+    def modulo(self, up_to: Callable) -> "Equation":
         """
         The same equation compared up to the given function, rebinding
         :attr:`up_to`, whose name the attribute already takes.
@@ -159,7 +158,7 @@ class Equation[T]:
         """
         return type(self)(*self.terms, symbols=self.symbols, up_to=up_to)
 
-    def checked(self) -> Equation:
+    def checked(self) -> "Equation":
         """
         The same equation with ``≠`` between two consecutive terms that
         differ up to :attr:`up_to`, i.e. the inequation it is when it fails.
@@ -241,7 +240,62 @@ class Count(int):
     canonical = 2
 
 
-class Tensor[*Objects]:
+def is_open(annotation) -> bool:
+    """
+    Whether an annotation has a variable left in it, i.e. a type parameter
+    of a declaration or of the class stating it.
+
+    >>> X = TypeVar("X")
+    >>> assert is_open(Hom[None, X, X]) and not is_open(Hom[None, 1, 1])
+    """
+    if isinstance(annotation, TypeVar | TypeVarTuple | ParamSpec):
+        return True
+    return any(map(is_open, get_args(annotation)))
+
+
+def substitute(annotation, scope: dict):
+    """
+    The annotation with each variable of the scope replaced by its value,
+    from the leaves up, so that an object expression is computed once its
+    variables are, see :class:`Former`.
+
+    >>> from discopy.monoidal import Ty
+    >>> A, B = TypeVar("A"), TypeVar("B")
+    >>> x, y = Ty('x'), Ty('y')
+    >>> assert substitute(Tensor[A, B], {A: x, B: y}) == x @ y
+    """
+    try:
+        if annotation in scope:
+            return scope[annotation]
+    except TypeError:
+        return annotation
+    origin, args = get_origin(annotation), get_args(annotation)
+    if origin is None or not args:
+        return annotation
+    args = tuple(substitute(arg, scope) for arg in args)
+    return origin[args if len(args) > 1 else args[0]]
+
+
+class Former:
+    """
+    A former of object expressions in a signature, e.g. ``Tensor[A, B]``: a
+    type for a typechecker, an expression while a variable is left in it,
+    see :func:`is_open`, and the object :meth:`form` builds once there is
+    none.
+    """
+    def __class_getitem__(cls, args):
+        args = args if isinstance(args, tuple) else (args, )
+        if any(map(is_open, args)):
+            return GenericAlias(cls, args)
+        return cls.form(*args)
+
+    @staticmethod
+    def form(*args):
+        """ The object the former builds from objects, to be instantiated. """
+        raise NotImplementedError
+
+
+class Tensor[*Objects](Former):
     """
     The tensor of objects in a signature: ``Tensor[A, B]`` is a type for a
     typechecker and the object ``A @ B`` once the variables are sampled.
@@ -249,12 +303,12 @@ class Tensor[*Objects]:
     >>> from discopy.monoidal import Ty
     >>> assert Tensor[Ty('x'), Ty('y')] == Ty('x', 'y')
     """
-    def __class_getitem__(cls, objects):
-        objects = objects if isinstance(objects, tuple) else (objects, )
+    @staticmethod
+    def form(*objects):
         return reduce(matmul, objects)
 
 
-class Unit[Coarse]:
+class Unit[Coarse](Former):
     """
     The unit of a monoid of objects in a signature: ``Unit[C0]`` is the
     object ``C0()``.
@@ -262,57 +316,96 @@ class Unit[Coarse]:
     >>> from discopy.monoidal import Ty
     >>> assert Unit[Ty] == Ty()
     """
-    def __class_getitem__(cls, ob):
+    @staticmethod
+    def form(*args):
+        ob, = args
         return ob()
 
 
-class L[Object]:
+class L[Object](Former):
     """ The left adjoint of an object in a signature, ``x.l``. """
-    def __class_getitem__(cls, obj):
+    @staticmethod
+    def form(*args):
+        obj, = args
         return obj.l
 
 
-class R[Object]:
+class R[Object](Former):
     """ The right adjoint of an object in a signature, ``x.r``. """
-    def __class_getitem__(cls, obj):
+    @staticmethod
+    def form(*args):
+        obj, = args
         return obj.r
 
 
-class Delay[Object]:
+class Delay[Object](Former):
     """
     The delay of an object by one time step in a signature, ``M.delay()``.
 
     >>> from discopy.feedback import Ty
     >>> assert Delay[Ty('x')] == Ty('x').delay()
     """
-    def __class_getitem__(cls, obj):
+    @staticmethod
+    def form(*args):
+        obj, = args
         return obj.delay()
 
 
-class Over[Base, Exponent]:
+class Over[Base, Exponent](Former):
     """ The exponential on the left in a signature, ``base << exponent``. """
-    def __class_getitem__(cls, sides):
-        base, exponent = sides
+    @staticmethod
+    def form(*args):
+        base, exponent = args
         return base << exponent
 
 
-class Under[Exponent, Base]:
+class Under[Exponent, Base](Former):
     """ The exponential on the right in a signature, ``exponent >> base``. """
-    def __class_getitem__(cls, sides):
-        exponent, base = sides
+    @staticmethod
+    def form(*args):
+        exponent, base = args
         return exponent >> base
 
 
-class Repeat[Object, N]:
+class Repeat[Object, N](Former):
     """
     An object repeated a number of times in a signature, ``x ** n``.
 
     >>> from discopy.monoidal import Ty
     >>> assert Repeat[Ty('x'), 2] == Ty('x', 'x')
     """
-    def __class_getitem__(cls, args):
+    @staticmethod
+    def form(*args):
         obj, n = args
         return obj ** n
+
+
+def position(variable: TypeVar, category: type) -> int | None:
+    """
+    The position of a type parameter of a class above a category among
+    those of the class that says what they stand for, i.e. that defines
+    ``parameters``, following each generic base that passes the parameter
+    on, e.g. the ``C1`` of a ``Monoid`` is the second parameter of a
+    ``Category``, since a monoid is a ``ColouredMonoid[NoneType, C1]``.
+    :obj:`None` for a parameter that is not passed on to such a class.
+
+    >>> from discopy.abc import Category, Monoid
+    >>> assert position(Monoid.__type_params__[0], Monoid) == 1
+    >>> assert position(Category.__type_params__[0], Category) == 0
+    """
+    owner = next((
+        klass for klass in category.__mro__
+        if variable in getattr(klass, "__type_params__", ())), None)
+    while owner is not None and "parameters" not in vars(owner):
+        base = next((
+            base for base in vars(owner).get("__orig_bases__", ())
+            if variable in get_args(base)
+            and getattr(get_origin(base), "__type_params__", ())), None)
+        if base is None:
+            return None
+        owner, variable = get_origin(base), get_origin(base).__type_params__[
+            get_args(base).index(variable)]
+    return None if owner is None else owner.__type_params__.index(variable)
 
 
 def inhabits(value, kind) -> bool:
@@ -364,10 +457,12 @@ class Declaration[**P, T](classmethod):
     annotation the type of its output, see :meth:`output`. Object
     expressions are built by :class:`Tensor`, :class:`Unit`, :class:`L`,
     :class:`R`, :class:`Delay`, :class:`Over`, :class:`Under` and
-    :class:`Repeat`. Every module stating a declaration needs ``from
-    __future__ import annotations``, which keeps the annotations unevaluated
-    until the variables are sampled: a function compiled without it is
-    refused.
+    :class:`Repeat`, which stay expressions until the variables are
+    substituted, see :func:`substitute`. The annotations are read as
+    objects, the type parameters of the classes above the category standing
+    for what :meth:`discopy.abc.Category.parameters` says, see
+    :func:`position`: a function compiled with ``from __future__ import
+    annotations`` has strings for annotations, and is refused.
 
     Parameters:
         function : The function the declaration states, from the category and
@@ -380,7 +475,7 @@ class Declaration[**P, T](classmethod):
             declaration quantifies over, see :meth:`Axiom.weaken`.
     """
 
-    function: Callable[P, T]
+    function: Callable[Concatenate[Any, P], T]
     _: KW_ONLY
     category: type = None  # ty: ignore[invalid-assignment]
     name: str = None  # ty: ignore[invalid-assignment]
@@ -388,11 +483,12 @@ class Declaration[**P, T](classmethod):
 
     def __post_init__(self):
         function = inspect.unwrap(self.function)
-        deferred = __future__.annotations.compiler_flag
-        if not function.__code__.co_flags & deferred:
+        if any(isinstance(annotation, str)
+               for annotation in function.__annotations__.values()):
             raise TypeError(
-                f"{function.__module__} states {function.__name__} "
-                "without `from __future__ import annotations`.")
+                f"{function.__module__} states {function.__name__} with "
+                "string annotations, e.g. under `from __future__ import "
+                "annotations`.")
         classmethod.__init__(self, self.function)
         self.name = self.name or self.function.__name__
         self.params = dict(self.params or {})
@@ -431,49 +527,49 @@ class Declaration[**P, T](classmethod):
 
     def scope(self, variable: Callable, given: dict | None = None) -> dict:
         """
-        The names a signature is evaluated with: the category as ``Self``
-        and ``C1``, its objects as ``C0``, and then a value
-        ``variable(name, sort)`` for each type parameter not ``given`` by
-        name, the sort being its bound.
+        The values of the variables of a signature: the category for
+        :data:`typing.Self`, what each type parameter of a class above it
+        stands for, see :func:`position`, and then ``variable(name, sort)``
+        for each type parameter of the declaration not ``given`` by name,
+        the sort being its bound.
         """
         if self.category is None:
             raise TypeError(f"{self.name} is not bound to a class.")
         given, category = given or {}, self.category
-        scope = {"Self": category, "C1": category,
-                 "C0": getattr(category, "ob", category)}
+        scope: dict[Any, Any] = {Self: category}
+        for klass in category.__mro__:
+            for parameter in getattr(klass, "__type_params__", ()):
+                index = position(parameter, category)
+                if index is not None:
+                    scope[parameter] = category.parameters()[index]
         for parameter in inspect.unwrap(self.function).__type_params__:
             name = parameter.__name__
-            scope[name] = given[name] if name in given\
-                else variable(name, parameter.__bound__)
+            scope[parameter] = given[name] if name in given\
+                else variable(name, substitute(parameter.__bound__, scope))
         return scope
-
-    def evaluate(self, annotation: str, scope: dict):
-        """ An annotation of the signature, evaluated in a scope. """
-        function = inspect.unwrap(self.function)
-        return eval(annotation, function.__globals__, scope)
 
     def instantiate(self, scope: dict, value: Callable) -> dict:
         """
         The arguments of the bound declaration: ``value(name, kind)`` for each
-        of its :attr:`parameters`, their annotation evaluated in the scope.
+        of its :attr:`parameters`, their annotation substituted in the scope.
         """
         return {
             parameter.name: value(
-                parameter.name, self.evaluate(parameter.annotation, scope))
+                parameter.name, substitute(parameter.annotation, scope))
             for parameter in self.parameters}
 
     def output(self, scope: dict):
         """
         The type of the output of the declaration, its return annotation
-        evaluated in the scope its arguments were sampled in, which the output
-        :func:`inhabits`.
+        substituted in the scope its arguments were sampled in, which the
+        output :func:`inhabits`.
         """
-        return self.evaluate(
-            inspect.unwrap(self.function).__annotations__["return"], scope)
+        return substitute(
+            inspect.signature(self.function).return_annotation, scope)
 
     def sequents(
             self, given: dict | None = None, **params
-    ) -> st.SearchStrategy[tuple]:
+    ) -> "st.SearchStrategy[tuple]":
         """
         Generate the scope and the arguments of the bound declaration: a
         variable of sort ``Obj`` from the strategy of ``category.ob``, of
@@ -512,7 +608,7 @@ class Declaration[**P, T](classmethod):
 
     def arguments(
             self, given: dict | None = None, **params
-    ) -> st.SearchStrategy[dict]:
+    ) -> "st.SearchStrategy[dict]":
         """ Generate the arguments of the bound declaration, see
         :meth:`sequents`. """
         return self.sequents(given, **params).map(lambda sequent: sequent[1])
@@ -520,9 +616,7 @@ class Declaration[**P, T](classmethod):
     def __call__(self, *args: P.args, **kwargs: P.kwargs) -> T:
         if self.category is None:
             raise TypeError(f"{self.name} is not bound to a class.")
-        return self.function(
-            self.category,  # ty: ignore[invalid-argument-type]
-            *args, **kwargs)
+        return self.function(self.category, *args, **kwargs)
 
 
 @dataclass(repr=False)
@@ -551,7 +645,7 @@ class Axiom[**P, T](Declaration[P, T]):
 
     __hash__ = Declaration.__hash__
 
-    def modulo(self, up_to) -> Axiom[P, T]:
+    def modulo(self, up_to) -> "Axiom[P, T]":
         """
         The same law with its equation compared up to a function, so that a
         category weakens an inherited axiom in one statement, e.g.
@@ -563,7 +657,7 @@ class Axiom[**P, T](Declaration[P, T]):
             return self.function(*args, **kwargs).modulo(up_to)
         return replace(self, function=equation)
 
-    def failing(self, reason: str) -> Axiom[P, T]:
+    def failing(self, reason: str) -> "Axiom[P, T]":
         """
         The same law declared broken: calling it raises an
         :class:`AxiomFailure` with the reason as message and the equation
@@ -576,7 +670,7 @@ class Axiom[**P, T](Declaration[P, T]):
         equation.__doc__ = reason
         return replace(self, function=equation, broken=True)
 
-    def inapplicable(self, reason: str) -> Axiom[P, T]:
+    def inapplicable(self, reason: str) -> "Axiom[P, T]":
         """
         The same law declared not to apply to the category: it takes no
         argument and returns :obj:`NotImplemented`, with the reason as its
@@ -588,7 +682,7 @@ class Axiom[**P, T](Declaration[P, T]):
         law.__doc__ = reason
         return replace(self, function=law, params={}, broken=False)
 
-    def weaken(self, **params) -> Axiom[P, T]:
+    def weaken(self, **params) -> "Axiom[P, T]":
         """
         The same law quantified over the morphisms the strategy of the
         category generates with the given parameters, e.g. the rigid
@@ -600,7 +694,7 @@ class Axiom[**P, T](Declaration[P, T]):
         """
         return replace(self, params=dict(self.params, **params))
 
-    def strategy(self) -> st.SearchStrategy[dict]:
+    def strategy(self) -> "st.SearchStrategy[dict]":
         """
         Generate the arguments of the bound axiom, with the parameters
         :meth:`weaken` declared, see :meth:`Declaration.arguments`.
@@ -713,13 +807,10 @@ class Rule[**P, T](Declaration[P, T]):
         (None, None)
         """
         function = inspect.unwrap(self.function)
-        variables = {
-            variable.__name__ for variable in function.__type_params__}
-        annotation = function.__annotations__["return"]
-        sides = ast.parse(annotation, mode="eval").body.slice.elts[1:]
+        sides = get_args(inspect.signature(function).return_annotation)[1:]
         return tuple(
-            side.id if isinstance(side, ast.Name) and side.id in variables
-            else None for side in sides)
+            side.__name__ if side in function.__type_params__ else None
+            for side in sides)
 
     @cached_property
     def is_recursive(self) -> bool:
@@ -728,10 +819,8 @@ class Rule[**P, T](Declaration[P, T]):
         annotated with ``Hom``.
         """
         return any(
-            isinstance(premise, ast.Subscript) and premise.value.id == "Hom"
-            for premise in (
-                ast.parse(parameter.annotation, mode="eval").body
-                for parameter in self.parameters))
+            get_origin(parameter.annotation) is Hom
+            for parameter in self.parameters)
 
     def given(self, dom=None, cod=None) -> dict:
         """
@@ -754,7 +843,7 @@ class Rule[**P, T](Declaration[P, T]):
                  or len(side) == 1)}
 
     def strategy(
-            self, dom=None, cod=None, **params) -> st.SearchStrategy[dict]:
+            self, dom=None, cod=None, **params) -> "st.SearchStrategy[dict]":
         """
         Generate the premises of the rule for a conclusion from ``dom`` to
         ``cod``, see :meth:`Declaration.arguments`, the variables it binds
@@ -765,7 +854,8 @@ class Rule[**P, T](Declaration[P, T]):
 
 
 def axiom[**P, T](
-        equation: Callable[P, Equation[T]]) -> Axiom[P, Equation[T]]:
+        equation: Callable[Concatenate[Any, P], Equation[T]]
+) -> Axiom[P, Equation[T]]:
     """
     Decorate an equation as a categorical axiom: a classmethod of its
     category, implicitly, whose remaining parameters are generated.
@@ -773,7 +863,8 @@ def axiom[**P, T](
     return Axiom(equation)
 
 
-def rule[**P, T](function: Callable[P, T]) -> Rule[P, T]:
+def rule[**P, T](
+        function: Callable[Concatenate[Any, P], T]) -> Rule[P, T]:
     """
     Decorate an operation as an inference rule: a classmethod of its
     category, implicitly, from its premises to its conclusion.
@@ -793,7 +884,7 @@ class Testable[T](ABC):
     """
 
     @classmethod
-    def strategy(cls, **params) -> st.SearchStrategy[T]:
+    def strategy(cls, **params) -> "st.SearchStrategy[T]":
         """
         Build a `search strategy
         <https://hypothesis.readthedocs.io/en/latest/data.html>`_ for the
@@ -848,7 +939,7 @@ class Testable[T](ABC):
     """ The rules inherited by ``cls``, see :meth:`declared`. """
 
     @classmethod
-    def subclasses(cls) -> tuple[type[Testable], ...]:
+    def subclasses(cls) -> "tuple[type[Testable], ...]":
         """
         Every transitive subclass of ``cls``, ``cls`` itself included, once,
         in the order a breadth-first walk of the subclass graph meets it.
@@ -866,7 +957,7 @@ class Testable[T](ABC):
         return tuple(found)
 
     @classmethod
-    def enrolled(cls) -> tuple[type[Testable], ...]:
+    def enrolled(cls) -> "tuple[type[Testable], ...]":
         """
         The categories the property matrix checks, by name: those that state
         laws, generate their terms and are their own ``ar``. A box inherits

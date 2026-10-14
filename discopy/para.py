@@ -156,7 +156,8 @@ from discopy.utils import (
 
 
 @dataclass
-class Symmetric[category](SymmetricCategory, NamedGeneric):
+class Symmetric[category](
+        SymmetricCategory[symmetric.Ty, "Symmetric"], NamedGeneric):
     """
     A parametric map from `dom` to `cod` with parameter space `param` is a
     morphism `inside : dom @ param -> cod` in an underlying `category`,

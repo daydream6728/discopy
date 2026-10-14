@@ -53,8 +53,6 @@ We can check the Eckmann-Hilton argument, up to interchanger.
     :align: center
 """
 
-from __future__ import annotations
-
 import itertools
 from dataclasses import dataclass, field
 from functools import cached_property
@@ -182,7 +180,7 @@ class Wire(cat.Ob):
         return cls(tree['name'], dom, cod, is_dagger='is_dagger' in tree)
 
 
-class List[generator_factory](Monoid, NamedGeneric):
+class List[generator_factory](Monoid["List"], NamedGeneric):
     """
     The free monoid on a ``generator_factory``, i.e. lists of its instances
     with concatenation as :meth:`tensor` and the empty list as unit.
@@ -210,7 +208,7 @@ class List[generator_factory](Monoid, NamedGeneric):
     def __init__(self, *inside):
         self.inside = inside
 
-    def tensor(self, *others: List) -> List:
+    def tensor(self, *others: "List") -> "List":
         for other in others:
             assert_isinstance(other, type(self))
         return type(self)(
@@ -224,7 +222,7 @@ class List[generator_factory](Monoid, NamedGeneric):
     def __len__(self) -> int:
         return len(self.inside)
 
-    def __getitem__(self, key: int | slice) -> List:
+    def __getitem__(self, key: int | slice) -> "List":
         if isinstance(key, slice):
             return type(self)(*self.inside[key])
         return type(self)(self.inside[key])
@@ -233,7 +231,7 @@ class List[generator_factory](Monoid, NamedGeneric):
         for i in range(len(self)):
             yield self[i:i + 1]
 
-    def __pow__(self, n_times: int) -> List:
+    def __pow__(self, n_times: int) -> "List":
         assert_isinstance(n_times, int)
         return self.tensor(*(n_times - 1) * [self]) if n_times > 0\
             else type(self)()
@@ -344,7 +342,7 @@ class Ty(cat.Ob, cat.FreeCategory, ColouredMonoid):
         cat.FreeCategory.__init__(self, inside, dom, cod, _scan)
         cat.Ob.__init__(self, type(self).__name__)
 
-    def tensor(self, *others: Ty) -> Self:
+    def tensor(self, *others: "Ty") -> Self:
         if any(not isinstance(other, self.factory) for other in others):
             return NotImplemented  # This allows whiskering on the left.
         return cat.FreeCategory.then(self, *others)
@@ -400,7 +398,7 @@ class Ty(cat.Ob, cat.FreeCategory, ColouredMonoid):
         obj, = obj.inside if isinstance(obj, Ty) else (obj, )
         return self.inside.count(obj)
 
-    def unwind(self) -> Ty:
+    def unwind(self) -> "Ty":
         """
         Rotate an atomic type to winding number zero.
 
@@ -476,7 +474,7 @@ class Ty(cat.Ob, cat.FreeCategory, ColouredMonoid):
             return cls(dom=from_tree(tree['dom']), cod=from_tree(tree['cod']))
         return cls()
 
-    def to_drawing(self) -> Ty:
+    def to_drawing(self) -> "Ty":
         if not self.inside:
             return Ty.id(self.dom)
         result = Ty(*(
@@ -570,7 +568,7 @@ class Nat(abc.Nat, Ty):  # ty: ignore[invalid-generic-class]
     def inside(self):
         return self.n * (1, )
 
-    def tensor(self, *others: Nat) -> Nat:
+    def tensor(self, *others: "Nat") -> "Nat":
         for other in others:
             if not isinstance(other, Ty):
                 return NotImplemented  # This allows whiskering on the left.
@@ -664,7 +662,7 @@ class Layer(cat.Box, ColouredMonoid):
             state['boxes_or_types'])
         super().__setstate__(state)
 
-    def __init__(self, *inside: Ty | Box, normalise: bool = True):
+    def __init__(self, *inside: "Ty | Box", normalise: bool = True):
         if normalise:
             type(self).check(inside)
             inside = type(self).normalise(inside)
@@ -675,7 +673,7 @@ class Layer(cat.Box, ColouredMonoid):
     data, is_dagger = None, False
 
     @classmethod
-    def id(cls, dom: Ty | None = None) -> Layer:
+    def id(cls, dom: Ty | None = None) -> "Layer":
         """
         There is no identity layer: a layer has at least one box, and a
         layer of empty plumbing would denote the identity diagram, which is
@@ -687,7 +685,7 @@ class Layer(cat.Box, ColouredMonoid):
         raise ValueError(messages.LAYERS_MUST_HAVE_A_BOX)
 
     @classmethod
-    def whisker(cls, other: Ty | Box | Layer) -> Ty | Layer:
+    def whisker(cls, other: "Ty | Box | Layer") -> "Ty | Layer":
         """
         A type stays a type, which :meth:`tensor` merges into the boundary;
         anything else is embedded as a layer.
@@ -816,7 +814,7 @@ class Layer(cat.Box, ColouredMonoid):
         return factory_name(type(self))\
             + f"({', '.join(map(repr, self))})"
 
-    def tensor(self, other: Ty | Box | Layer) -> Layer:
+    def tensor(self, other: "Ty | Box | Layer") -> "Layer":
         """
         Tensor another layer on the right, normalising the common boundary.
 
@@ -847,7 +845,7 @@ class Layer(cat.Box, ColouredMonoid):
     def free_symbols(self) -> "set[sympy.Symbol]":
         return {x for box in self.boxes for x in box.free_symbols}
 
-    def subs(self, *args) -> Layer:
+    def subs(self, *args) -> "Layer":
         return type(self)(*(
             x if isinstance(x, self.plumbing) else x.subs(*args)
             for x in self),
@@ -862,13 +860,13 @@ class Layer(cat.Box, ColouredMonoid):
     def generator(self):
         return self.boxes_or_types[0] if self.is_generator else None
 
-    def dagger(self) -> Layer:
+    def dagger(self) -> "Layer":
         return type(self)(*(
             x if isinstance(x, Ty) else x.dagger() for x in self),
             normalise=False)
 
     @property
-    def boxes_and_offsets(self) -> list[tuple[Box, int]]:
+    def boxes_and_offsets(self) -> "list[tuple[Box, int]]":
         """
         The offsets of each box inside the layer.
 
@@ -887,7 +885,7 @@ class Layer(cat.Box, ColouredMonoid):
                 offset += len(box_or_typ.cod)
         return result
 
-    def merge(self, other: Layer) -> Layer:
+    def merge(self, other: "Layer") -> "Layer":
         """
         Merge two layers into one or raise :class:`AxiomError`,
         used by :meth:`Diagram.foliation`.
@@ -932,7 +930,7 @@ class Layer(cat.Box, ColouredMonoid):
                     inside=[x.to_tree() for x in self])
 
     @classmethod
-    def from_tree(cls, tree: dict) -> Layer:
+    def from_tree(cls, tree: dict) -> "Layer":
         return cls(*(map(from_tree, tree['inside'])))
 
 
@@ -994,7 +992,7 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
 
     @classmethod
     def from_callable(
-            cls, dom: Ty, cod: Ty) -> Callable[[Callable], Diagram]:
+            cls, dom: Ty, cod: Ty) -> "Callable[[Callable], Diagram]":
         """
         Define a diagram using the standard syntax for Python functions.
 
@@ -1021,8 +1019,8 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
 
         return decorator
 
-    def tensor(
-            self, other: Diagram | None = None, *others: Diagram) -> Diagram:
+    def tensor(self, other: "Diagram | None" = None,
+               *others: "Diagram") -> "Diagram":
         """
         Parallel composition, called using :code:`@`.
 
@@ -1062,7 +1060,7 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
         return self.ar(inside, dom, cod, _scan=False)
 
     @property
-    def boxes(self) -> list[Box]:
+    def boxes(self) -> "list[Box]":
         """ The boxes in each layer of the diagram. """
         return sum([layer.boxes for layer in self.inside], [])
 
@@ -1088,7 +1086,7 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
         """
         return max(len(self.dom), max(len(layer.cod) for layer in self))
 
-    def encode(self) -> tuple[Ty, list[tuple[Box, int]]]:
+    def encode(self) -> "tuple[Ty, list[tuple[Box, int]]]":
         """
         Compact encoding of a diagram as a tuple of boxes and offsets.
 
@@ -1112,10 +1110,10 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
     def decode(
             cls,
             dom: Ty,
-            boxes_and_offsets: Iterable[tuple[Box, int]] | None = None,
-            boxes: list[Box] | None = None,
+            boxes_and_offsets: "Iterable[tuple[Box, int]] | None" = None,
+            boxes: "list[Box] | None" = None,
             offsets: list[int] | None = None,
-            cod: Ty | None = None) -> Diagram:
+            cod: Ty | None = None) -> "Diagram":
         """
         Turn a tuple of boxes and offsets into a diagram.
 
@@ -1158,7 +1156,7 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
         cod = Drawing
         return (functor_factory or Functor)(ob, ar, dom, cod)(self)
 
-    def to_map(self) -> CMap:
+    def to_map(self) -> "CMap":
         """ Translate a diagram into a combinatorial map. """
         return cmap.CMap[self.ar].from_diagram(self)
 
@@ -1229,7 +1227,7 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
         return cat.Equation(foliated.foliation(), foliated)
 
     @classmethod
-    def equation_factory(cls, *terms: Diagram) -> Equation:
+    def equation_factory(cls, *terms: "Diagram") -> "Equation":
         """
         The equation of a law, compared up to the isomorphism of the
         hypergraphs of its terms, the quotient that every level from
@@ -1245,7 +1243,7 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
         """
         return Equation(*terms, up_to=cls.to_hypergraph)
 
-    def to_hypergraph(self) -> Hypergraph:
+    def to_hypergraph(self) -> "Hypergraph":
         """
         Translate a planar diagram into a hypergraph.
 
@@ -1352,7 +1350,7 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
         """
         return len(self.foliation())
 
-    def interchange(self, i: int, j: int, left=False) -> Diagram:
+    def interchange(self, i: int, j: int, left=False) -> "Diagram":
         """
         Interchange a box from layer ``i`` to layer ``j``.
 
@@ -1418,7 +1416,7 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
             raise AxiomError(messages.INTERCHANGER_ERROR.format(box0, box1))
         return self[:i] >> layer1 >> layer0 >> self[i + 2:]
 
-    def substitute(self, i: int, other: Diagram) -> Diagram:
+    def substitute(self, i: int, other: "Diagram") -> "Diagram":
         """
         Implements operadic composition of nested diagrams,
         replacing box :code:`i` with diagram :code:`other`.
@@ -1432,7 +1430,7 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
         outside = Match(self[:i], self[i + 1:], left, right)
         return outside.substitute(other)
 
-    def normalize(self, left=False) -> Iterator[Diagram]:
+    def normalize(self, left=False) -> "Iterator[Diagram]":
         """
         Implements normalisation of boundary-connected diagrams,
         see Delpeuch and Vicary :cite:t:`DelpeuchVicary22`.
@@ -1464,7 +1462,7 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
             if no_more_moves:
                 break
 
-    def normal_form(self, **params) -> Diagram:
+    def normal_form(self, **params) -> "Diagram":
         """
         Returns the normal form of a diagram.
 

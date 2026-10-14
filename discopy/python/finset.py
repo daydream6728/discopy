@@ -28,7 +28,7 @@ from discopy.abc import MonoidalCategory, PROP, Nat
 
 
 @dataclass
-class Function(MonoidalCategory, Sequence):
+class Function(MonoidalCategory[Nat, "Function"], Sequence):
     """
     A function between finite sets encoded as a Python list.
 

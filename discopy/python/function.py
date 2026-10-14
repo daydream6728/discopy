@@ -32,7 +32,7 @@ Ty = List[type]
 
 @factory
 @dataclass
-class Function(Category):
+class Function(Category[Ty, "Function"]):
     """
     Python function with sequential composition.
 
