@@ -76,7 +76,7 @@ Example
 >>> states = encoder(sentences)[1]
 >>> net = parser.eval()(["Bob", "loves", "Alice"], states, s)
 >>> print(net.to_term())
-(n >> (n >> s))('loves')(n('Alice'))(n('Bob'))
+loves(Alice)(Bob)
 """
 
 from __future__ import annotations
