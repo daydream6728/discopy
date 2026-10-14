@@ -47,7 +47,7 @@ def test_list_generic_in_function():
 def test_hash():
     f = Function(lambda x: x, int, int)
     assert hash(f) == hash(Function(f.inside, int, int)) and {f: 0}[f] == 0
-    assert hash(f) != hash(Function(f.inside, int, str))
+    assert f != Function(f.inside, int, str)
 
 
 def test_Functor_into_Function_folds_with_matmul():

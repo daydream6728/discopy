@@ -55,9 +55,9 @@ class Module(torch.nn.Module):
     def __init__(self, network: Network):
         super().__init__()
         self.network = network
-        self.boxes = torch.nn.ModuleList(dict.fromkeys(
-            box.module for box in network.boxes
-            if isinstance(box.module, torch.nn.Module)))
+        self.boxes = torch.nn.ModuleList({
+            id(box.module): box.module for box in network.boxes
+            if isinstance(box.module, torch.nn.Module)}.values())
         self.function = network.to_function(torch.Tensor)
 
     def forward(self, *tensors: torch.Tensor):

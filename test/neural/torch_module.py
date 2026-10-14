@@ -33,6 +33,22 @@ def test_module():
         module([1.] * 4)
 
 
+
+def test_module_unhashable():
+    torch = importorskip("torch")
+    from discopy.neural.torch import Module
+
+    class Scaled(torch.nn.Linear):
+        def __eq__(self, other):
+            return isinstance(other, Scaled)
+
+    x = Dims(2)
+    first, second = Scaled(2, 2), Scaled(2, 2)
+    module = Module(Box('first', x, x, module=first)
+                    >> Box('second', x, x, module=second))
+    assert list(module.boxes) == [first, second]
+
+
 def test_compile():
     torch = importorskip("torch")
     from discopy.neural.torch import Module

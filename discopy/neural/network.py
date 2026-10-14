@@ -186,6 +186,9 @@ class Network(markov.Diagram):
         if any(isinstance(box, Trace) for box in self.boxes):
             raise NotImplementedError(
                 f"{self} has a trace, only feedforward networks compile.")
+        for box in self.boxes:
+            if box.is_dagger:
+                raise NotImplementedError(f"{box} has no adjoint module.")
 
         def forward(box):
             if box.module is None:

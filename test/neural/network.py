@@ -173,6 +173,8 @@ def test_to_function():
         (add >> Network.copy(x)).trace().to_function()
     with raises(ValueError, match="has no module"):
         Network.merge(x).to_function()
+    with raises(NotImplementedError, match="no adjoint"):
+        double.dagger().to_function()
 
 
 def test_to_function_jax():
