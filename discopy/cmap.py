@@ -57,6 +57,7 @@ from discopy.abc import (
     RigidCategory,
     SymmetricCategory,
     TracedCategory,
+    symmetric_only,
 )
 from discopy.axioms import Equation, Serialisable
 from discopy.cat import Ob
@@ -999,6 +1000,19 @@ class CMap[category](CompactCategory, NamedGeneric, Serialisable):
             (functor(box), offset)
             for layer in old.inside
             for box, offset in layer.boxes_and_offsets])
+
+    braid = symmetric_only("swap")
+    """
+    The swap over a symmetric category, and no attribute otherwise, see
+    :func:`abc.symmetric_only`: a map is always compact, but identifies a
+    braid with its inverse faithfully only when its host category does.
+
+    >>> from discopy import braided
+    >>> braid = braided.Braid(braided.Ty('x'), braided.Ty('y'))
+    >>> assert braid.to_map().boxes == (braid, )
+    """
+    twist = symmetric_only("id")
+    """ The identity over a symmetric category, see :attr:`braid`. """
 
     @classmethod
     def swap(cls, left: Ty, right: Ty) -> CMap:

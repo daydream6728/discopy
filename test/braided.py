@@ -17,5 +17,5 @@ def test_simplify():
 
 
 def test_to_hypergraph():
-    from discopy.hypergraph import Hypergraph
-    assert Braid(x, y).to_hypergraph() == Hypergraph[Diagram].swap(x, y)
+    # A braid is not a swap: it stays a box of the hypergraph.
+    assert Braid(x, y).to_hypergraph().boxes == (Braid(x, y), )

@@ -55,7 +55,8 @@ from discopy import cmap, messages
 from discopy.axioms import Serialisable
 from discopy.abc import (
     HypergraphCategory, MarkovCategory, MonoidalCategory, NamedGeneric,
-    Pregroup, RigidCategory, SymmetricCategory, TracedCategory)
+    Pregroup, RigidCategory, SymmetricCategory, TracedCategory,
+    symmetric_only)
 from discopy.drawing import Node, backend
 from discopy.python.finset import Permutation
 from discopy.utils import (
@@ -357,7 +358,15 @@ class Hypergraph[category](
         dom_wires = cod_wires = tuple(range(len(dom)))
         return cls(dom, dom, (), (dom_wires, (), cod_wires))
 
-    twist = id
+    twist = symmetric_only("id")
+    """
+    The identity over a symmetric category, and no attribute otherwise, so
+    that a balanced twist stays a box, see :func:`abc.symmetric_only`.
+
+    >>> from discopy import balanced
+    >>> twist = balanced.Twist(balanced.Ty('x'))
+    >>> assert twist.to_hypergraph().boxes == (twist, )
+    """
 
     @unbiased
     def then(self, other: Hypergraph):
@@ -425,7 +434,15 @@ class Hypergraph[category](
         cod_wires = tuple(range(len(left), len(dom))) + tuple(range(len(left)))
         return cls(dom, cod, boxes, (dom_wires, (), cod_wires))
 
-    braid = swap
+    braid = symmetric_only("swap")
+    """
+    The swap over a symmetric category, and no attribute otherwise, so that
+    a braid stays a box rather than equal its inverse, see :attr:`twist`.
+
+    >>> from discopy import braided
+    >>> braid = braided.Braid(braided.Ty('x'), braided.Ty('y'))
+    >>> assert braid.to_hypergraph().boxes == (braid, )
+    """
 
     @classmethod
     def permutation(cls, xs: Sequence[int], doms: Sequence) -> Hypergraph:
@@ -473,17 +490,17 @@ class Hypergraph[category](
     @classmethod
     def cups(cls, left, right):
         """
-        The cups of a type and an adjoint of it, on either side: the spiders
-        of a hypergraph are unwound, so it does not record the handedness of
-        a rigid cup or cap, and its trace pairs a wire with the same adjoint
-        on both sides. A type with no adjoints is paired with its reverse.
+        The cups of a type and its right adjoint, e.g. ``Cup(x, x.r)`` and
+        ``Cup(x.l, x)`` in a rigid category, or of a type with no adjoints
+        and its reverse.
 
         >>> from discopy.rigid import Ty, Cup
         >>> x = Ty('x')
         >>> assert Cup(x, x.r).to_hypergraph().dom == x @ x.r
         """
-        if not (left.is_adjoint(right) if isinstance(left, Pregroup)
-                else left[::-1] == right):
+        if isinstance(left, Pregroup):
+            left.assert_isadjoint(right)
+        elif left[::-1] != right:
             raise AxiomError(messages.NOT_ADJOINT.format(left, right))
         dom_wires = tuple(range(len(left))) + tuple(reversed(range(len(left))))
         return cls(
@@ -492,16 +509,18 @@ class Hypergraph[category](
     @classmethod
     def caps(cls, left, right):
         """
-        The caps of a type and an adjoint of it, e.g. ``Cap(x, x.l)`` and
-        ``Cap(x.r, x)`` in a rigid category, see :meth:`cups`.
+        The caps of a type and its left adjoint, e.g. ``Cap(x, x.l)`` and
+        ``Cap(x.r, x)`` in a rigid category, or of a type with no adjoints
+        and its reverse.
 
         >>> from discopy.rigid import Ty, Cap
         >>> x = Ty('x')
         >>> assert Cap(x, x.l).to_hypergraph().cod == x @ x.l
         >>> assert Cap(x.r, x).to_hypergraph().cod == x.r @ x
         """
-        if not (left.is_adjoint(right) if isinstance(left, Pregroup)
-                else left[::-1] == right):
+        if isinstance(left, Pregroup):
+            right.assert_isadjoint(left)
+        elif left[::-1] != right:
             raise AxiomError(messages.NOT_ADJOINT.format(left, right))
         cod_wires = tuple(range(len(left))) + tuple(reversed(range(len(left))))
         return cls(
@@ -563,18 +582,31 @@ class Hypergraph[category](
     def trace(self, n=1, left=False):
         """
         The trace of a hypergraph is its pre- and post-composition with
-        cups and caps to form a feedback loop.
+        cups and caps to form a feedback loop, which needs its category to be
+        traced and, with adjoints, the left and right ones to agree, i.e. a
+        pivotal category: a rigid one has no canonical trace.
 
         Parameters:
             n : The number of wires to trace.
             left : Whether to trace on the left or right.
+
+        >>> from discopy import rigid, pivotal
+        >>> x = pivotal.Ty('x')
+        >>> f = pivotal.Box('f', x @ x, x @ x).to_hypergraph()
+        >>> assert f.trace().cod == f.trace(left=True).cod == x
         """
         if n == 0:
             return self
+        if not issubclass(self.category, TracedCategory):
+            raise AxiomError(messages.NOT_TRACED.format(
+                factory_name(self.category)))
         assert_istraceable(self, n, left)
         dom, cod = (self.dom[n:], self.cod[n:]) if left\
             else (self.dom[:-n], self.cod[:-n])
         traced_wires = self.dom[:n] if left else self.dom[len(self.dom) - n:]
+        if isinstance(traced_wires, Pregroup)\
+                and traced_wires.l != traced_wires.r:
+            raise AxiomError(messages.TRACE_NEEDS_PIVOTAL.format(traced_wires))
         traced_wires_r = traced_wires.r\
             if isinstance(traced_wires, Pregroup) else traced_wires[::-1]
         return self.caps(traced_wires_r, traced_wires) @ dom\

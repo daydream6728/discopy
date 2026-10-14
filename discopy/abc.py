@@ -66,7 +66,7 @@ from discopy.axioms import (
     Testable, Under, Unit, Var, axiom, rule)
 from discopy import messages
 from discopy.utils import (  # noqa: F401  pylint: disable=unused-import
-    AxiomError, NamedGeneric, classproperty)
+    AxiomError, NamedGeneric, classproperty, factory_name)
 
 
 class Category[C0, C1: Category](Testable[C1], ABC):
@@ -1390,3 +1390,23 @@ class HypergraphCategory[C0: Pregroup, C1: HypergraphCategory](
     ) -> Hom[C1, Repeat[X, M], Repeat[X, N]]:
         """ The spider of an atom, ``X ** m -> X ** n``. """
         return cls.spiders(m, n, x)
+
+
+def symmetric_only(name: str) -> classproperty:
+    """
+    The class attribute ``name`` of a quotient over a host ``category``, a
+    hypergraph or a map, when the host is symmetric, and no attribute
+    otherwise: a functor into the quotient asks for its braid and its twist
+    by name, so that below symmetric categories, where a braid is not a
+    swap nor a twist an identity, they stay boxes rather than collapse.
+
+    Parameters:
+        name : The attribute the quotient has over a symmetric host.
+    """
+    def attribute(cls):
+        if cls.category is None\
+                or not issubclass(cls.category, SymmetricCategory):
+            raise AttributeError(messages.NOT_SYMMETRIC_HOST.format(
+                factory_name(cls.category)))
+        return getattr(cls, name)
+    return classproperty(attribute)

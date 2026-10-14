@@ -56,7 +56,7 @@ from __future__ import annotations
 
 from typing import ClassVar
 
-from discopy import cat, cmap, rigid, traced
+from discopy import cat, cmap, messages, rigid, traced
 from discopy.abc import PivotalCategory
 from discopy.cat import factory
 from discopy.utils import deprecated_alias
@@ -122,6 +122,11 @@ class Diagram(rigid.Diagram, traced.Diagram, PivotalCategory):
         dom (Ty) : The domain of the diagram, i.e. its input.
         cod (Ty) : The codomain of the diagram, i.e. its output.
     """
+    pivotality = PivotalCategory.pivotality.failing(
+        messages.NO_PLANAR_NORMAL_FORM)
+    trace_superposing_left = PivotalCategory.trace_superposing_left
+    trace_superposing_right = PivotalCategory.trace_superposing_right
+
     sum_factory: ClassVar[type["Sum"]]
     box_factory: ClassVar[type["Box"]]
     functor_factory: ClassVar[type["Functor"]]
@@ -193,7 +198,8 @@ class Diagram(rigid.Diagram, traced.Diagram, PivotalCategory):
     # weakening to the diagrams without them.
     dagger_involution = PivotalCategory.dagger_involution
     dagger_contravariance = PivotalCategory.dagger_contravariance
-    dagger_monoidality = PivotalCategory.dagger_monoidality
+    dagger_monoidality = PivotalCategory.dagger_monoidality.failing(
+        messages.NO_PLANAR_NORMAL_FORM)
     dagger_involution_monoidal = None
     dagger_contravariance_monoidal = None
     dagger_monoidality_monoidal = None

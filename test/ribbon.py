@@ -95,6 +95,6 @@ def test_rotate():
 
 
 def test_to_hypergraph():
-    from discopy.hypergraph import Hypergraph
+    # A twist is not the identity: it stays a box of the hypergraph.
     x = Ty('x')
-    assert Diagram.twist(x).to_hypergraph() == Hypergraph[Diagram].id(x)
+    assert Diagram.twist(x).to_hypergraph().boxes == (Diagram.twist(x), )

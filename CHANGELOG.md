@@ -14,8 +14,7 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   are mutually inverse, the class of bug #716 was, and
   `PivotalCategory.self_dual`. `test_canonical_instances` checks every law
   of every free category on its canonical instance, and `Axiom.draw` draws
-  `rigid.Diagram.snake_equations`, now that braids are compared by
-  hypergraph and `braid_naturality` holds. The
+  `rigid.Diagram.snake_equations`. The
   left unitality of `cat.Functor` is a strict xfail until #648 is fixed.
 - Hypothesis strategies for every free category of the hierarchy, each
   generating diagrams through the structure it is compared up to:
@@ -131,16 +130,26 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `axioms.Serialisable` the four roundtrips of a term: `repr_transparency`,
   `pickling`, `copying` and `serialisation`. `Axiom.canonical` instantiates
   a law on boxes named after its variables and `Axiom.draw` draws it.
-  Every diagram compares its laws up to the isomorphism of its hypergraph,
-  `Diagram.equation_factory`, so that a planar law is checked in the
-  symmetric category its diagrams embed in, and `CMap` compares its laws by
-  hypergraph too, its equality depending on the order of its boxes. A law
+  A diagram compares its laws by `Diagram.equation_factory`: up to the
+  isomorphism of its hypergraph from `symmetric.Diagram` on, where the
+  hypergraph is faithful, and on the nose below, where it is a lossy
+  quotient rather than an embedding, until each planar doctrine has a
+  normal form of its own: a hypergraph identifies a braid with its inverse
+  and a twist with the identity, unwinds the adjoints of a type and forgets
+  the regions of a planar diagram and the side of its scalars. `CMap`
+  compares its laws by hypergraph too, over a symmetric host, its equality
+  depending on the order of its boxes. A law
   a level breaks is declared there with its reason in `discopy.messages`:
   a free curry or feedback is a box nothing rewrites, biclosed, rigid and
   feedback diagrams have no dagger beyond the subspaces `weaken` names,
   decoding a hypergraph needs swaps a planar category does not have, a map
-  has no spiders, the map of a curry rebuilds its inside, and a map over a
-  host that is not rigid has no adjoints. Tensor
+  has no spiders, the map of a curry rebuilds its inside, a map over a
+  host that is not rigid has no adjoints, and a planar law compared on the
+  nose has no normal form yet, `NO_PLANAR_NORMAL_FORM`: the interchange
+  law, the dagger of a tensor, the naturality and dinaturality of a trace,
+  the braid and twist laws, the snakes, the transposes, pivotality and the
+  currying of a rigid category, restated as holding from symmetric and
+  compact categories on. Tensor
   diagrams, which draw no arrays, and pregroup diagrams, which compare by a
   hypergraph that refuses a cap, declare `strategy = no_strategy`.
 - `CMap` and `Hypergraph` serialise with `to_tree`, naming their category,
@@ -451,6 +460,12 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   cannot draw the spiders of a Markov or hypergraph category.
 - A class subscripted with a DisCoPy class is named by its `factory_name`,
   e.g. `hypergraph.Hypergraph[frobenius.Diagram]`.
+- The laws of a planar level, from `monoidal` to `ribbon`, `rigid` and
+  `pivotal`, are compared on the nose rather than up to hypergraph, which
+  `symmetric.Diagram.equation_factory` keeps from symmetric categories on:
+  below, a passing cell said little, as a braid equal to its inverse or a
+  twist equal to the identity passed, and a failing one is now declared
+  with `NO_PLANAR_NORMAL_FORM` until each doctrine has a normal form.
 - A property read off a value with `hasattr` is read with `isinstance`
   where a class states it: adjoints by `Pregroup`, swaps by
   `SymmetricCategory`, identities by `Category`, products and packing by
@@ -844,9 +859,11 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   found it as soon as feedback diagrams were sampled.
 - `braided.Diagram` and `ribbon.Diagram` bind their own `functor_factory`,
   where they read those of `monoidal` and `pivotal`, so that their
-  conversions map a braid to a braid and a twist to a twist rather than to
-  a box, as `balanced` already did. The braid laws found it, compared by
-  hypergraph.
+  conversions map a braid to a braid and a twist to a twist, as `balanced`
+  already did, into any codomain that has them: a hypergraph or a map over
+  a category that is not symmetric has neither, `abc.symmetric_only`, so
+  that a braid and a twist stay boxes of it rather than becoming a swap and
+  an identity.
 - `grammar.categorial.Diagram` and `grammar.abstract.Diagram` bind their own
   `box_factory`, so that their strategies draw boxes of their own category.
 - `Drawing.dagger` reflects a drawing of more than one box: a drawing read
@@ -875,11 +892,15 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   whose wires are coloured after its variables, found.
 - `Hypergraph.make_causal` traces a wire with the type of its producer,
   where it took the unwound type of its spider, so compact hypergraphs with
-  adjoint wires downgrade to diagrams; `Hypergraph.cups` and `Hypergraph.caps`
-  accept either adjoint, `Pregroup.is_adjoint`, as a hypergraph does not
-  record the handedness of a rigid one, so that the rigid `Cap(x, x.l)`
-  and both traces of a rigid hypergraph build, raising `NOT_ADJOINT`
-  otherwise; `feedback.Diagram.discard` builds a feedback box and
+  adjoint wires downgrade to diagrams; `Hypergraph.cups` takes a type and
+  its right adjoint and `Hypergraph.caps` a type and its left adjoint, as
+  rigid cups and caps do, so that the rigid `Cap(x, x.l)` builds where caps
+  took the right adjoint, and `Hypergraph.trace` refuses a category that is
+  not traced and wires whose left and right adjoints differ, as a rigid
+  category has no canonical trace, `TRACE_NEEDS_PIVOTAL`, where it built a
+  trace from cups and caps of mismatched handedness; a diagram with a
+  coloured wire has no hypergraph and no map, `COLOURED_QUOTIENT`, as a
+  swap is ill-typed across 0-cells, where it lost its colours; `feedback.Diagram.discard` builds a feedback box and
   `feedback.Diagram.feedback` takes a memory of several wires.
 
 - A regression test for `stream.Stream.__init__`'s codomain-mismatch
@@ -1182,8 +1203,7 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   Two rules stay off: `invalid-method-override`, since the factory-method
   pattern narrows `then` and `tensor` down the tower, and
   `unresolved-attribute`, since a downgrade asks the host category for
-  structure it may not have. `fail-under` rises to 9.02, the score once
-  the package typechecks.
+  structure it may not have. `fail-under` rises to 9.03.
 
 - `fail-under` rises from 8.75 to 8.77, the score once `closed` gains its
   products and let statements

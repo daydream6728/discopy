@@ -661,14 +661,25 @@ class Diagram(biclosed.Diagram, RigidCategory):
     dagger_monoidality = RigidCategory.dagger_monoidality.failing(
         messages.RIGID_HAS_NO_DAGGER)
 
-    # The caps of a rigid category curry, which a hypergraph absorbs.
+    # The curry of a rigid diagram is made of caps, which a map and a
+    # hypergraph both read as wiring, so the two agree.
     map_agreement = monoidal.Diagram.map_agreement
-    currying_left = RigidCategory.currying_left
-    currying_right = RigidCategory.currying_right
-    currying_eta_left = RigidCategory.currying_eta_left
-    currying_eta_right = RigidCategory.currying_eta_right
-    currying_naturality_left = RigidCategory.currying_naturality_left
-    currying_naturality_right = RigidCategory.currying_naturality_right
+    currying_left = RigidCategory.currying_left.failing(
+        messages.NO_PLANAR_NORMAL_FORM)
+    currying_right = RigidCategory.currying_right.failing(
+        messages.NO_PLANAR_NORMAL_FORM)
+    currying_eta_left = RigidCategory.currying_eta_left.failing(
+        messages.NO_PLANAR_NORMAL_FORM)
+    currying_eta_right = RigidCategory.currying_eta_right.failing(
+        messages.NO_PLANAR_NORMAL_FORM)
+    currying_naturality_left = RigidCategory.currying_naturality_left\
+        .failing(messages.NO_PLANAR_NORMAL_FORM)
+    currying_naturality_right = RigidCategory.currying_naturality_right\
+        .failing(messages.NO_PLANAR_NORMAL_FORM)
+    snake_equations = RigidCategory.snake_equations.failing(
+        messages.NO_PLANAR_NORMAL_FORM)
+    transpose_contravariance = RigidCategory.transpose_contravariance.failing(
+        messages.NO_PLANAR_NORMAL_FORM)
 
 
 class Box(biclosed.Box, Diagram):

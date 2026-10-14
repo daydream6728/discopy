@@ -1009,6 +1009,11 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
             normalize
             normal_form
     """
+    bifunctoriality = MonoidalCategory.bifunctoriality.failing(
+        messages.NO_PLANAR_NORMAL_FORM)
+    dagger_monoidality = MonoidalCategory.dagger_monoidality.failing(
+        messages.NO_PLANAR_NORMAL_FORM)
+
     box_factory: ClassVar[type["Box"]]
     sum_factory: ClassVar[type["Sum"]]
     bubble_factory: ClassVar[type["Bubble"]]
@@ -1213,8 +1218,32 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
         return (functor_factory or Functor)(ob, ar, dom, cod)(self)
 
     def to_map(self) -> "CMap":
-        """ Translate a diagram into a combinatorial map. """
+        """ Translate a diagram into a combinatorial map, see
+        :meth:`assert_transparent`. """
+        self.assert_transparent()
         return cmap.CMap[self.ar].from_diagram(self)
+
+    def assert_transparent(self):
+        """
+        Raise ``AxiomError`` unless every wire of the diagram is transparent:
+        a hypergraph and a map are symmetric, and a swap is ill-typed across
+        0-cells, so a coloured diagram has neither rather than losing its
+        colours.
+
+        >>> red = Colour('red')
+        >>> x = Ty(Wire('x', dom=red, cod=red))
+        >>> Box('f', x, x).to_hypergraph()
+        Traceback (most recent call last):
+        ...
+        discopy.utils.AxiomError: ...
+        """
+        for typ in (self.dom, self.cod, *(
+                obj for box in self.boxes for obj in (box.dom, box.cod))):
+            if typ.dom != transparent or typ.cod != transparent or any(
+                    isinstance(wire, Wire) and (
+                        wire.dom != transparent or wire.cod != transparent)
+                    for wire in typ.inside):
+                raise AxiomError(messages.COLOURED_QUOTIENT.format(typ))
 
     def to_staircases(self):
         """
@@ -1285,19 +1314,20 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
     @classmethod
     def equation_factory(cls, *terms: "Diagram") -> "Equation":
         """
-        The equation of a law, compared up to the isomorphism of the
-        hypergraphs of its terms, the quotient that every level from
-        :class:`discopy.symmetric.Diagram` on is generated from. A planar
-        law is checked in the symmetric category its diagrams embed in:
-        sliding boxes past each other or pulling a snake straight is
-        absorbed, while a free braid, twist, trace, curry or feedback is a
-        box of the hypergraph like any other.
+        The equation of a law, compared on the nose. A hypergraph is faithful
+        only from :class:`discopy.symmetric.Diagram` on, whose
+        ``equation_factory`` compares up to it: below, it is a quotient that
+        forgets the regions of a planar diagram and the side of its scalars,
+        identifies a braid with its inverse, a twist with the identity and
+        the adjoints of a type, so a planar law is compared syntactically
+        until each doctrine has a normal form of its own.
 
         >>> x = Ty('x')
         >>> f, g = Box('f', Ty(), x), Box('g', x, Ty())
-        >>> assert Diagram.equation_factory(f @ g, g >> f)
+        >>> assert not Diagram.equation_factory(f @ g, g >> f)
+        >>> assert Diagram.equation_factory(f @ g, f @ g)
         """
-        return Equation(*terms, up_to=cls.to_hypergraph)
+        return Equation(*terms)
 
     def to_hypergraph(self) -> "Hypergraph":
         """
@@ -1316,7 +1346,10 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
         >>> f0, f1 = Box('f0', x, y), Box('f1', y, x)
         >>> diagram = f0 @ f1.dagger() >> f0.dagger() @ f1
         >>> assert diagram.to_hypergraph().to_diagram() == diagram.foliation()
+
+        A coloured diagram has no hypergraph, see :meth:`assert_transparent`.
         """
+        self.assert_transparent()
         graph = hypergraph.Hypergraph[
             type(self).ar].from_diagram(self)  # ty: ignore[invalid-type-form]
         has_states = any(not box.dom for box in self.boxes)

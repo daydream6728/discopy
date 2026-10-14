@@ -91,6 +91,13 @@ class Diagram(monoidal.Diagram, BraidedCategory):
         dom (monoidal.Ty) : The domain of the diagram, i.e. its input.
         cod (monoidal.Ty) : The codomain of the diagram, i.e. its output.
     """
+    braid_naturality = BraidedCategory.braid_naturality.failing(
+        messages.NO_PLANAR_NORMAL_FORM)
+    braid_then_inverse = BraidedCategory.braid_then_inverse.failing(
+        messages.NO_PLANAR_NORMAL_FORM)
+    inverse_then_braid = BraidedCategory.inverse_then_braid.failing(
+        messages.NO_PLANAR_NORMAL_FORM)
+
     box_factory: ClassVar[type["Box"]]
     braid_factory: ClassVar[type["Braid"]]
     functor_factory: ClassVar[type["Functor"]]

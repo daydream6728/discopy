@@ -95,8 +95,8 @@ from typing import ClassVar
 
 from discopy import monoidal, balanced, hypergraph, cmap, messages
 from discopy.abc import (
-    BiclosedCategory, CompactCategory, PivotalCategory, RigidCategory,
-    SymmetricCategory)
+    BalancedCategory, BiclosedCategory, CompactCategory, PivotalCategory,
+    RigidCategory, SymmetricCategory, TracedCategory)
 from discopy.axioms import FUEL, Axiom
 from discopy.cat import factory
 from discopy.monoidal import (  # noqa: F401  pylint: disable=unused-import
@@ -269,6 +269,21 @@ class Diagram(balanced.Diagram, SymmetricCategory):
     >>> Permutation.swap_factory = Transposition
     >>> assert Permutation.braid_factory is Transposition
     """
+    # A hypergraph is faithful from symmetric categories on.
+    bifunctoriality = SymmetricCategory.bifunctoriality
+    dagger_monoidality = SymmetricCategory.dagger_monoidality
+    braid_naturality = SymmetricCategory.braid_naturality
+    braid_then_inverse = SymmetricCategory.braid_then_inverse
+    inverse_then_braid = SymmetricCategory.inverse_then_braid
+    twist_naturality = BalancedCategory.twist_naturality
+    yanking = BalancedCategory.yanking
+    trace_naturality_left = TracedCategory.trace_naturality_left
+    trace_naturality_right = TracedCategory.trace_naturality_right
+    trace_dinaturality_left = TracedCategory.trace_dinaturality_left
+    trace_dinaturality_right = TracedCategory.trace_dinaturality_right
+    trace_superposing_left = TracedCategory.trace_superposing_left
+    trace_superposing_right = TracedCategory.trace_superposing_right
+
     box_factory: ClassVar[type["Box"]]
     functor_factory: ClassVar[type["Functor"]]
     swap_factory: ClassVar[type["Swap"]]
@@ -278,6 +293,21 @@ class Diagram(balanced.Diagram, SymmetricCategory):
     braid_factory = classproperty(lambda cls: cls.swap_factory)
     layer_factory = Layer
     twist_factory = classmethod(lambda cls, dom: cls.id(dom))
+
+    @classmethod
+    def equation_factory(cls, *terms: Diagram) -> Equation:
+        """
+        The equation of a law, compared up to the isomorphism of the
+        hypergraphs of its terms, the coherence theorem of symmetric
+        categories: sliding boxes past each other and composing swaps is
+        absorbed, while a free trace, curry or feedback is a box of the
+        hypergraph like any other.
+
+        >>> x = Ty('x')
+        >>> f, g = Box('f', Ty(), x), Box('g', x, Ty())
+        >>> assert Diagram.equation_factory(f @ g, g >> f)
+        """
+        return Equation(*terms)
 
     @classmethod
     def strategy(cls, *, dom=None, cod=None, fuel=FUEL, within=None):

@@ -34,6 +34,19 @@ NOT_FROBENIUS = \
     "{} has no spiders, cups or caps to downgrade this hypergraph."
 NOT_RIGID = "{} has no cups or caps for the wiring of this map."
 NOT_TRACED = "{} has no traces for the cycles of this map."
+NO_PLANAR_NORMAL_FORM = (
+    "A planar law is compared on the nose: a hypergraph is faithful only "
+    "from symmetric categories on, and there is no normal form for this "
+    "doctrine yet.")
+COLOURED_QUOTIENT = (
+    "{} is coloured: a hypergraph or a map is symmetric, and a swap is "
+    "ill-typed across 0-cells, so it would lose its colours.")
+NOT_SYMMETRIC_HOST = (
+    "A quotient over {} has no braid or twist: below symmetric categories, "
+    "a braid is not a swap nor a twist an identity, so they stay boxes.")
+TRACE_NEEDS_PIVOTAL = (
+    "Tracing {} needs its left and right adjoints to agree, as they do in a "
+    "pivotal category: a rigid one has no canonical trace.")
 NOT_SYMMETRIC = "{} has no swaps to downgrade this map."
 NOT_ACYCLIC = "{} has a directed cycle, its boxes cannot be ordered."
 

@@ -36,7 +36,8 @@ from copy import copy
 from dataclasses import dataclass
 from typing import ClassVar
 
-from discopy import config, monoidal, braided, traced, cmap, hypergraph
+from discopy import (
+    config, monoidal, braided, traced, cmap, hypergraph, messages)
 from discopy.abc import BalancedCategory
 from discopy.cat import factory
 from discopy.monoidal import (  # noqa: F401  pylint: disable=unused-import
@@ -132,6 +133,11 @@ class Diagram(braided.Diagram, traced.Diagram, BalancedCategory):
 
     .. _nLab: https://ncatlab.org/nlab/show/traced+monoidal+category)
     """
+    twist_naturality = BalancedCategory.twist_naturality.failing(
+        messages.NO_PLANAR_NORMAL_FORM)
+    yanking = BalancedCategory.yanking.failing(
+        messages.NO_PLANAR_NORMAL_FORM)
+
     box_factory: ClassVar[type["Box"]]
     functor_factory: ClassVar[type["Functor"]]
     braid_factory: ClassVar[type["Braid"]]

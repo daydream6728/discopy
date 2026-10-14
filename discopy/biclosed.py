@@ -385,7 +385,7 @@ class Diagram(monoidal.Diagram, BiclosedCategory):
     dagger_monoidality = BiclosedCategory.dagger_monoidality.failing(
         messages.CURRY_HAS_NO_DAGGER)
     dagger_monoidality_monoidal = BiclosedCategory.dagger_monoidality.weaken(
-        within=MonoidalCategory)
+        within=MonoidalCategory).failing(messages.NO_PLANAR_NORMAL_FORM)
     currying_left = BiclosedCategory.currying_left.failing(messages.FREE_CURRY)
     currying_right = BiclosedCategory.currying_right.failing(
         messages.FREE_CURRY)
