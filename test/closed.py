@@ -249,6 +249,13 @@ def test_unitype_hash():
     assert ob_map[exp] == "unitype"
 
 
+def test_unitype_tree():
+    from discopy.utils import from_tree
+    assert from_tree(U.to_tree()) == U
+    X = Ty("X")
+    assert from_tree((X >> U @ X).to_tree()) == X >> U @ X
+
+
 def test_str():
     X, Y = Ty("X"), Ty("Y")
     f = X(lambda x: (X >> Y)(lambda y: y(x)))

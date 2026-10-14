@@ -240,6 +240,14 @@ class Unitype(Exp):
     def __repr__(self):
         return "Unitype()"
 
+    def to_tree(self):
+        return {'factory': factory_name(type(self))}
+
+    @classmethod
+    def from_tree(cls, tree):
+        # pylint: disable=unused-argument  # the unitype has no parameter
+        return cls()
+
 
 @factory
 class Diagram(markov.Diagram, biclosed.Diagram, ClosedCategory):
