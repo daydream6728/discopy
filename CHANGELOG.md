@@ -770,6 +770,13 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   run when the branch has already moved past the event it is handling,
   rather than drafting a head that no longer exists behind its back
   ([#640](https://github.com/discopy/discopy/issues/640)).
+- `Matrix` is a `MarkovCategory` rather than a `MonoidalCategory` and gets a
+  native `Matrix.permutation`, so a matrix-valued functor applied to a
+  diagram with an explicit `Permutation` layer no longer raises
+  `AttributeError`. `Matrix.copy` and `Tensor.copy` default to `n=2` like
+  every other `copy` in the hierarchy, so single-argument calls such as
+  `closed.Application.eval` no longer raise `TypeError`
+  ([#535](https://github.com/discopy/discopy/issues/535)).
 - `build.yml` timeouts and a bounded, retried Graphviz install
   ([#591](https://github.com/discopy/discopy/issues/591)).
 - `python.Function.tensor` is variadic like `monoidal.Diagram.tensor`
