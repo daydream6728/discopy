@@ -48,9 +48,7 @@ NO_BRAID_GROUP = (
     "A braid is a box of the hypergraph of a category that is not "
     "symmetric: there is no braid group implementation to compare braid "
     "words with yet.")
-TRACE_NEEDS_PIVOTAL = (
-    "Tracing {} needs its left and right adjoints to agree, as they do in a "
-    "pivotal category: a rigid one has no canonical trace.")
+NO_CUPS = "{} is not rigid, it has no cups or caps."
 NOT_SYMMETRIC = "{} has no swaps to downgrade this map."
 NOT_ACYCLIC = "{} has a directed cycle, its boxes cannot be ordered."
 

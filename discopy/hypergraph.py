@@ -55,8 +55,8 @@ from discopy import cmap, messages
 from discopy.axioms import Serialisable
 from discopy.abc import (
     HypergraphCategory, MarkovCategory, MonoidalCategory, NamedGeneric,
-    BalancedCategory, BraidedCategory, Pregroup, RigidCategory,
-    SymmetricCategory, TracedCategory)
+    BalancedCategory, BraidedCategory, CompactCategory, Pregroup,
+    RigidCategory, SymmetricCategory, TracedCategory)
 from discopy.drawing import Node, backend
 from discopy.python.finset import Permutation
 from discopy.utils import (
@@ -527,14 +527,22 @@ class Hypergraph[category](
     @classmethod
     def cups(cls, left, right):
         """
-        The cups of a type and its right adjoint, e.g. ``Cup(x, x.r)`` and
-        ``Cup(x.l, x)`` in a rigid category, or of a type with no adjoints
-        and its reverse.
+        The cups of a type and its right adjoint: boxes over a rigid category
+        that is not compact, whose cups are planar and oriented, and wiring
+        from compact categories on, where a cup is faithfully a spider with
+        two ports of the same kind.
 
         >>> from discopy.rigid import Ty, Cup
         >>> x = Ty('x')
         >>> assert Cup(x, x.r).to_hypergraph().dom == x @ x.r
         """
+        if not issubclass(cls.category, RigidCategory):
+            raise AxiomError(messages.NO_CUPS.format(
+                factory_name(cls.category)))
+        if not issubclass(cls.category, CompactCategory):
+            if len(left) == 1:
+                return cls.from_box(cls.category.cup_factory(left, right))
+            return cls.from_diagram(cls.category.cups(left, right))
         if isinstance(left, Pregroup):
             left.assert_isadjoint(right)
         elif left[::-1] != right:
@@ -547,15 +555,22 @@ class Hypergraph[category](
     def caps(cls, left, right):
         """
         The caps of a type and its left adjoint, e.g. ``Cap(x, x.l)`` and
-        ``Cap(x.r, x)`` in a rigid category, or of a type with no adjoints
-        and its reverse.
+        ``Cap(x.r, x)``: boxes over a rigid category that is not compact and
+        wiring from compact categories on, see :meth:`cups`.
 
         >>> from discopy.rigid import Ty, Cap
         >>> x = Ty('x')
         >>> assert Cap(x, x.l).to_hypergraph().cod == x @ x.l
         >>> assert Cap(x.r, x).to_hypergraph().cod == x.r @ x
         """
-        if isinstance(left, Pregroup):
+        if not issubclass(cls.category, RigidCategory):
+            raise AxiomError(messages.NO_CUPS.format(
+                factory_name(cls.category)))
+        if not issubclass(cls.category, CompactCategory):
+            if len(left) == 1:
+                return cls.from_box(cls.category.cap_factory(left, right))
+            return cls.from_diagram(cls.category.caps(left, right))
+        if isinstance(right, Pregroup):
             right.assert_isadjoint(left)
         elif left[::-1] != right:
             raise AxiomError(messages.NOT_ADJOINT.format(left, right))
@@ -618,19 +633,22 @@ class Hypergraph[category](
 
     def trace(self, n=1, left=False):
         """
-        The trace of a hypergraph is its pre- and post-composition with
-        cups and caps to form a feedback loop, which needs its category to be
-        traced and, with adjoints, the left and right ones to agree, i.e. a
-        pivotal category: a rigid one has no canonical trace.
+        The trace of a hypergraph over a traced category: the traced outputs
+        wired back to the traced inputs over a symmetric one, where this is
+        faithful, and the trace of the category one wire at a time otherwise,
+        see :meth:`explicit_trace`, e.g. a box over a planar traced category
+        or its cups and caps, themselves boxes, over a pivotal one.
 
         Parameters:
             n : The number of wires to trace.
             left : Whether to trace on the left or right.
 
-        >>> from discopy import rigid, pivotal
-        >>> x = pivotal.Ty('x')
-        >>> f = pivotal.Box('f', x @ x, x @ x).to_hypergraph()
+        >>> from discopy import symmetric, traced
+        >>> x = symmetric.Ty('x')
+        >>> f = symmetric.Box('f', x @ x, x @ x).to_hypergraph()
         >>> assert f.trace().cod == f.trace(left=True).cod == x
+        >>> g = traced.Box('g', x @ x, x @ x)
+        >>> assert g.to_hypergraph().trace().boxes == (g.trace(), )
         """
         if n == 0:
             return self
@@ -638,20 +656,35 @@ class Hypergraph[category](
             raise AxiomError(messages.NOT_TRACED.format(
                 factory_name(self.category)))
         assert_istraceable(self, n, left)
+        if not issubclass(self.category, SymmetricCategory):
+            result = self
+            for _ in range(n):
+                result = result.explicit_trace(left)
+            return result
+        dom_wires, box_wires, cod_wires = self.wires
+        kept_dom, kept_cod = len(dom_wires) - n, len(cod_wires) - n
+        inputs, outputs = (dom_wires[:n], cod_wires[:n]) if left\
+            else (dom_wires[kept_dom:], cod_wires[kept_cod:])
+        parent = {}
+
+        def find(spider):
+            while parent.get(spider, spider) != spider:
+                spider = parent[spider]
+            return spider
+
+        for output, input_ in zip(outputs, inputs):
+            if find(output) != find(input_):
+                parent[find(output)] = find(input_)
         dom, cod = (self.dom[n:], self.cod[n:]) if left\
             else (self.dom[:-n], self.cod[:-n])
-        traced_wires = self.dom[:n] if left else self.dom[len(self.dom) - n:]
-        if isinstance(traced_wires, Pregroup)\
-                and traced_wires.l != traced_wires.r:
-            raise AxiomError(messages.TRACE_NEEDS_PIVOTAL.format(traced_wires))
-        traced_wires_r = traced_wires.r\
-            if isinstance(traced_wires, Pregroup) else traced_wires[::-1]
-        return self.caps(traced_wires_r, traced_wires) @ dom\
-            >> traced_wires_r @ self\
-            >> self.cups(traced_wires_r, traced_wires) @ cod if left\
-            else dom @ self.caps(traced_wires, traced_wires_r)\
-            >> self @ traced_wires_r\
-            >> cod @ self.cups(traced_wires, traced_wires_r)
+        dom_wires, cod_wires = (dom_wires[n:], cod_wires[n:]) if left\
+            else (dom_wires[:kept_dom], cod_wires[:kept_cod])
+        wires = (tuple(map(find, dom_wires)), tuple(
+            (tuple(map(find, x)), tuple(map(find, y))) for x, y in box_wires),
+            tuple(map(find, cod_wires)))
+        spider_types = {
+            find(spider): typ for spider, typ in enumerate(self.spider_types)}
+        return type(self)(dom, cod, self.boxes, wires, spider_types)
 
     def interchange(self, i: int, j: int) -> Hypergraph:
         """
@@ -1896,7 +1929,9 @@ class Hypergraph[category](
         The image of each box is computed by the functor into ``cls``, then
         the images are glued in a single pass with :meth:`from_glued`,
         rather than folding them one at a time with :meth:`then`, which
-        relabels the whole hypergraph built so far at every box.
+        relabels the whole hypergraph built so far at every box. The trace
+        of a planar traced category, which a hypergraph cannot wire, is a box
+        of its own, as decoding its argument would need swaps.
 
         Example
         -------
@@ -1913,8 +1948,12 @@ class Hypergraph[category](
         functor = factory.functor(
             ob_map=lambda typ: typ, ar_map=factory.from_box,
             dom=category, cod=factory)
+        trace = getattr(category, "trace_factory", ())
+        if not isclass(trace) or issubclass(category, SymmetricCategory):
+            trace = ()  # a trace the functor wires rather than boxes
         return factory.from_glued(old.dom, old.cod, [
-            (functor(box), offset)
+            (factory.from_box(box) if isinstance(box, trace)
+             else functor(box), offset)
             for layer in old.inside
             for box, offset in layer.boxes_and_offsets])
 

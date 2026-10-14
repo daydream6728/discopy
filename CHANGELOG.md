@@ -896,13 +896,20 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   whose wires are coloured after its variables, found.
 - `Hypergraph.make_causal` traces a wire with the type of its producer,
   where it took the unwound type of its spider, so compact hypergraphs with
-  adjoint wires downgrade to diagrams; `Hypergraph.cups` takes a type and
-  its right adjoint and `Hypergraph.caps` a type and its left adjoint, as
-  rigid cups and caps do, so that the rigid `Cap(x, x.l)` builds where caps
-  took the right adjoint, and `Hypergraph.trace` refuses a category that is
-  not traced and wires whose left and right adjoints differ, as a rigid
-  category has no canonical trace, `TRACE_NEEDS_PIVOTAL`, where it built a
-  trace from cups and caps of mismatched handedness; a diagram with a
+  adjoint wires downgrade to diagrams; the cups and caps of a hypergraph read
+  its host category as its swaps and braids do: they raise below rigid
+  categories, are the boxes of the cups and caps of a rigid, pivotal or
+  ribbon one, whose cups are planar and oriented, and are wiring from
+  compact categories on, where a cup is faithfully a spider of two ports,
+  a cup taking a type and its right adjoint and a cap a type and its left
+  one. The cups and caps of a map are boxes over a rigid host that is not
+  compact, `CMap.is_planar_rigid`, so that a right curry of a rigid map
+  builds, which wiring of one handedness refused. `Hypergraph.trace`
+  raises below traced categories, wires the traced outputs back to the
+  traced inputs over a symmetric one, and is the trace of the category,
+  `explicit_trace`, otherwise, while the conversion of a planar traced
+  diagram keeps its trace as a box, in a hypergraph as in a map, decoding
+  its argument needing swaps; a diagram with a
   coloured wire has no hypergraph and no map, `COLOURED_QUOTIENT`, as a
   swap is ill-typed across 0-cells, where it lost its colours; `feedback.Diagram.discard` builds a feedback box and
   `feedback.Diagram.feedback` takes a memory of several wires.

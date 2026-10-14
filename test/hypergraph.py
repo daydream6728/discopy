@@ -375,7 +375,7 @@ def test_planar_comparison():
     x = rigid.Ty('x')
     left = rigid.Cap(x, x.l) @ x >> x @ rigid.Cup(x.l, x)
     right = x @ rigid.Cap(x.r, x) >> rigid.Cup(x, x.r) @ x
-    assert left.to_hypergraph() == right.to_hypergraph()
+    assert left.to_hypergraph() != right.to_hypergraph()  # cups are boxes
     assert not rigid.Diagram.equation_factory(left, right)
     x, scalar = monoidal.Ty('x'), monoidal.Box('s', monoidal.Ty(), monoidal.Ty())
     assert (scalar @ x).to_hypergraph() == (x @ scalar).to_hypergraph()

@@ -980,7 +980,9 @@ class CMap[category](CompactCategory, NamedGeneric, Serialisable):
         structure from the next level remains represented by boxes.
 
         The image of each box is computed by the functor into ``cls``, then
-        the images are glued in a single pass with :meth:`from_glued`.
+        the images are glued in a single pass with :meth:`from_glued`. The
+        trace of a planar traced category is a box, as for
+        :meth:`Hypergraph.from_diagram`.
 
         >>> from discopy.braided import Ty, Braid
         >>> from discopy.monoidal import CMap
@@ -997,8 +999,12 @@ class CMap[category](CompactCategory, NamedGeneric, Serialisable):
         functor = (factory.functor if cls.category is None else cls.functor)(
             ob_map=lambda typ: typ, ar_map=factory.from_box,
             dom=category, cod=factory)
+        trace = getattr(category, "trace_factory", ())
+        if not isclass(trace) or issubclass(category, SymmetricCategory):
+            trace = ()  # a trace the functor wires rather than boxes
         return factory.from_glued(old.dom, old.cod, [
-            (functor(box), offset)
+            (factory.from_box(box) if isinstance(box, trace)
+             else functor(box), offset)
             for layer in old.inside
             for box, offset in layer.boxes_and_offsets])
 
@@ -1079,7 +1085,16 @@ class CMap[category](CompactCategory, NamedGeneric, Serialisable):
 
     @classmethod
     def cups(cls, left: Ty, right: Ty) -> CMap:
-        """ A cup encoded as boundary wiring between adjoint types. """
+        """
+        A cup between a type and its right adjoint: a box over a rigid host
+        that is not compact, whose cups are planar and oriented, see
+        :meth:`Hypergraph.cups`, and boundary wiring otherwise, a map being
+        compact whatever hosts it.
+        """
+        if cls.is_planar_rigid():
+            if len(left) == 1:
+                return cls.from_box(cls.category.cup_factory(left, right))
+            return cls.from_diagram(cls.category.cups(left, right))
         assert_isinstance(left, Pregroup)
         assert_isinstance(right, Pregroup)
         left.assert_isadjoint(right)
@@ -1091,7 +1106,11 @@ class CMap[category](CompactCategory, NamedGeneric, Serialisable):
 
     @classmethod
     def caps(cls, left: Ty, right: Ty) -> CMap:
-        """ A cap encoded as boundary wiring between adjoint types. """
+        """ A cap between a type and its left adjoint, see :meth:`cups`. """
+        if cls.is_planar_rigid():
+            if len(left) == 1:
+                return cls.from_box(cls.category.cap_factory(left, right))
+            return cls.from_diagram(cls.category.caps(left, right))
         assert_isinstance(left, Pregroup)
         assert_isinstance(right, Pregroup)
         right.assert_isadjoint(left)
@@ -1100,6 +1119,14 @@ class CMap[category](CompactCategory, NamedGeneric, Serialisable):
             ((i, size + size - 1 - i) for i in range(size)),
             2 * size)
         return cls(cls.ob(), left @ right, (), edge, check=False)
+
+    @classmethod
+    def is_planar_rigid(cls) -> bool:
+        """ Whether the host category is rigid but not compact, so that its
+        cups and caps are boxes of the map rather than its wiring. """
+        return cls.category is not None\
+            and issubclass(cls.category, RigidCategory)\
+            and not issubclass(cls.category, CompactCategory)
 
     @classmethod
     def copy(cls, typ: Ty, n: int = 2) -> CMap:
