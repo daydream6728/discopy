@@ -341,7 +341,7 @@ class Matrix(MarkovCategory, NamedGeneric['dtype']):
         """
         xs = list(xs)
         doms = len(xs) * [1] if doms is None else list(map(index, doms))
-        if list(range(len(doms))) != sorted(xs):
+        if list(range(len(doms))) != sorted(xs) or min(doms, default=0) < 0:
             raise ValueError
         offsets = [sum(doms[:i]) for i in range(len(doms))]
         sources = [offsets[i] + j for i in xs for j in range(doms[i])]

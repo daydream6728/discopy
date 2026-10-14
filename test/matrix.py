@@ -96,6 +96,8 @@ def test_permutation_doms_optional():
     assert Matrix.permutation([0, 1]) == Matrix.id(2)
     with raises(ValueError):
         Matrix.permutation([0, 2])
+    with raises(ValueError):
+        Matrix.permutation([0], [-1])
 
 
 def test_permutation_on_immutable_backend():
