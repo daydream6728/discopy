@@ -307,8 +307,13 @@ class Diagram(markov.Diagram, biclosed.Diagram, ClosedCategory):
         each wire, going through :class:`Hypergraph` so that the copy,
         discard and swap structure simplifies away into the spiders.
 
-        The free variables of the term are the inputs that the diagram
-        actually uses; a diagram with no box is a tuple of variables.
+        The inputs of the diagram are the variables ``x0, ..., x{n - 1}``
+        in the order of ``dom``. The free variables of the term are the
+        inputs that the diagram actually uses, in the order of their first
+        occurrence in the term rather than that of ``dom``, so that
+        :meth:`TermBase.eval` gives a diagram with the used inputs in that
+        order as domain; pass the inputs as its ``context`` to get ``dom``
+        back. A diagram with no box is a tuple of variables.
 
         Example
         -------
@@ -319,6 +324,14 @@ class Diagram(markov.Diagram, biclosed.Diagram, ClosedCategory):
         let(f(x0), lambda x1, x2: g(Tuple(x1, x2)))
         >>> assert Diagram.swap(X, Y).to_term()\\
         ...     == Tuple(Variable("x1", Y), Variable("x0", X))
+
+        A swap before a box puts its inputs in the order the box reads them:
+
+        >>> h = Box("h", Y @ X, X)
+        >>> term = (Diagram.swap(X, Y) >> h).to_term()
+        >>> x0, x1 = Variable("x0", X), Variable("x1", Y)
+        >>> assert term.freevars == [x1, x0] and term.eval().dom == Y @ X
+        >>> assert term.eval(context=[x0, x1]).dom == X @ Y
         """
         graph = Hypergraph.from_diagram(self)
         if not graph.is_causal:

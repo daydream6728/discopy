@@ -178,6 +178,9 @@ def test_substitution_capture():
     assert Substitution({x: y})(t) == let(g(z), lambda y_: Tuple(y_, y))
     assert Substitution({x: y})(Abstraction(y, Tuple(y, x)))\
         == Abstraction(y_, Tuple(y_, y))
+    captured = Substitution({x: y})(Abstraction(y, g(x)))
+    assert captured.alpha_eq(Abstraction(z, g(y)))
+    assert not captured.alpha_eq(Abstraction(y, g(y)))
 
 
 def test_substitution_bind_ignores_unused_replacements():
@@ -213,6 +216,17 @@ def test_to_term():
     effect = Box("effect", X, Ty())
     assert effect.to_term() == (X >> Ty())("effect")(x0)
     assert effect.to_term().cod == Ty()
+
+
+def test_to_term_freevars_order():
+    X, Y = Ty("X"), Ty("Y")
+    diagram = Diagram.swap(X, Y) >> Box("f", Y @ X, X)
+    term = diagram.to_term()
+    x0, x1 = Variable("x0", X), Variable("x1", Y)
+    assert str(term) == "f(Tuple(x1, x0))"
+    assert term.freevars == [x1, x0]
+    assert term.eval().dom == Y @ X != diagram.dom
+    assert term.eval(context=[x0, x1]).dom == diagram.dom
 
 
 def test_to_term_round_trip():
@@ -407,7 +421,7 @@ def test_bohm_tree_validation_and_equality():
         BohmTree(Y, (x, ), 0, Strategy(), ())
 
 
-def test_substitution():
+def test_substitution_under_binder():
     X = Ty('X')
     c, g, x = Constant('c', X), Variable('g', X >> X), Variable('x', X)
     assert Substitution({x: c})(g(x)) == g(c)

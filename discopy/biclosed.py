@@ -934,15 +934,18 @@ class TermBase(Box, Equivalence):
 
 class Constant(TermBase):
     """
-    A constant term of defined by a :class:`Diagram` with ``dom=X, cod=Y``.
-    The constant has type ``Y`` if ``X`` is empty else it has type either
-    ``Y << X`` if ``left=True`` else ``X >> Y``.
+    A constant term with a string as name and a :class:`Ty`, i.e. a term with
+    no free variable: ``X("x")`` is a constant of type ``X`` and
+    ``(X >> Y)("f")`` a function constant, applied to an argument by
+    :class:`Application`. Under the identity functor it is a box with the
+    empty domain, i.e. a state of its type; any other :class:`Functor`
+    interprets it through its :code:`ar_map`.
 
     Attributes:
-        inside (Diagram): The diagram which defines the constant.
-        left (Optional[bool]): Whether the domain comes from the left or right.
+        name (str): The name of the constant.
+        cod (Ty): The type of the constant.
     """
-    def __init__(self, name: Ty, cod: Ty, **kwargs):
+    def __init__(self, name: str, cod: Ty, **kwargs):
         super().__init__(name, dom=self.ob(), cod=cod, **kwargs)
         self.freevars = []
 
