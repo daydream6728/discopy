@@ -112,8 +112,8 @@ from __future__ import annotations
 from collections.abc import Callable
 
 from discopy import messages
-from discopy.abc import NamedGeneric, TracedCategory
-from discopy.axioms import Equation
+from discopy.abc import TracedCategory
+from discopy.axioms import Equation, TestableGeneric
 from discopy.kleisli import channel
 from discopy.kleisli.monad import Monad, Powerset, Subdistribution
 from discopy.python import function
@@ -224,7 +224,7 @@ def injection(offset: int, source: Ty, target: Ty) -> function.Function:
     return function.Function(inside, pack(source), pack(target))
 
 
-class Channel[monad](TracedCategory, NamedGeneric):
+class Channel[monad](TracedCategory, TestableGeneric):
     """
     A channel is a morphism in the Kleisli category of a monad ``M`` with
     disjoint union as tensor, i.e. a Python function from a tagged value of
@@ -263,6 +263,18 @@ class Channel[monad](TracedCategory, NamedGeneric):
     ...     Tagged(x, 0), Tagged(-x, 1)}), (int, ), (int, int))
     >>> assert both(1) == frozenset({Tagged(1, 0), Tagged(-1, 1)})
     """
+    @classmethod
+    def checked_instances(cls) -> tuple:
+        """
+        The channels of the Elgot monads whose iteration terminates on
+        every channel their strategy draws: the iteration of
+        :attr:`~discopy.kleisli.monad.Maybe` is a ``while`` loop, which a
+        drawn channel can make cycle forever.
+        """
+        return (
+            Channel[Powerset],  # ty: ignore[invalid-type-form]
+            Channel[Subdistribution])  # ty: ignore[invalid-type-form]
+
     ob = Ty
     monad: Monad
 
@@ -298,11 +310,10 @@ class Channel[monad](TracedCategory, NamedGeneric):
         """
         Generate channels: a table from each argument of the domain to a
         monadic value over the arguments of the codomain, drawn by the
-        :attr:`~discopy.kleisli.monad.Monad.generate` of the monad, for the
-        monads whose channels are :data:`CHECKED`.
+        :attr:`~discopy.kleisli.monad.Monad.generate` of the monad.
         """
         from hypothesis import strategies as st
-        generate = cls.monad.generate if cls in CHECKED else None
+        generate = None if cls.monad is None else cls.monad.generate
         if generate is None:
             raise NotImplementedError
 
@@ -475,14 +486,3 @@ class Channel[monad](TracedCategory, NamedGeneric):
     def __repr__(self):
         return factory_name(type(self))\
             + f"({self.inside!r}, dom={self.dom!r}, cod={self.cod!r})"
-
-
-CHECKED = (
-    Channel[Powerset],  # ty: ignore[invalid-type-form]
-    Channel[Subdistribution])  # ty: ignore[invalid-type-form]
-"""
-The channels the property matrix checks, those of the Elgot monads whose
-iteration terminates on every channel their strategy draws. The iteration
-of :attr:`~discopy.kleisli.monad.Maybe` is a ``while`` loop, which a drawn
-channel can make cycle forever.
-"""

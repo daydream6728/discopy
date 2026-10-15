@@ -69,8 +69,6 @@ from functools import wraps
 
 from discopy import (
     balanced,
-    compact,
-    symmetric,
     traced,
     rigid,
     pivotal,
@@ -78,8 +76,8 @@ from discopy import (
     messages
 )
 from discopy.abc import (
-    NamedGeneric, Pregroup, RibbonCategory, SymmetricCategory, TracedCategory)
-from discopy.axioms import Equation
+    Pregroup, RibbonCategory, SymmetricCategory, TracedCategory)
+from discopy.axioms import Equation, TestableGeneric
 from discopy.cat import assert_iscomposable
 from discopy.python import finset
 from discopy.utils import (
@@ -88,7 +86,7 @@ from discopy.utils import (
 
 
 @dataclass
-class Ty[natural](Pregroup, NamedGeneric):
+class Ty[natural](Pregroup, TestableGeneric):
     """
     An integer type is a pair of :attr:`natural` types.
 
@@ -117,6 +115,11 @@ class Ty[natural](Pregroup, NamedGeneric):
     >>> x, y = Ty(T("x"), T("x'")), Ty(T("y"), T("y'"))
     >>> assert x @ y == Ty(T("x") @ T("y"), T("y'") @ T("x'"))
     """
+    @classmethod
+    def checked_instances(cls) -> tuple:
+        """ The pairs of the default :attr:`natural` types. """
+        return (get_origin(cls), )
+
     natural = pivotal.Ty
     negatives = staticmethod(reversed)
 
@@ -203,7 +206,7 @@ class Ty[natural](Pregroup, NamedGeneric):
 
 @factory
 @dataclass
-class Diagram[natural](RibbonCategory, NamedGeneric):
+class Diagram[natural](RibbonCategory, TestableGeneric):
     """
     An integer diagram from ``x`` to ``y`` is a :attr:`natural` diagram
     from ``x.positive @ y.negative`` to ``x.negative @ y.positive``.
@@ -228,6 +231,17 @@ class Diagram[natural](RibbonCategory, NamedGeneric):
     ...     == D.id(two)\\
     ...     == D.id(two).transpose(left=True)
     """
+    @classmethod
+    def checked_instances(cls) -> tuple:
+        """
+        The free compact category on the free traced symmetric one, and on
+        the free compact one: the planar ones have no normal form to
+        compare the insides of their integer diagrams by yet.
+        """
+        # pylint: disable-next=import-outside-toplevel  # they import this
+        from discopy import compact, symmetric
+        return (Diagram[symmetric.Diagram], Diagram[compact.Diagram])
+
     ar = classproperty(lambda cls: cls)
     natural = ribbon.Diagram
 
@@ -597,9 +611,3 @@ for name in (
 for name in ("adjunction", "rotate_contravariance"):
     setattr(Diagram, name, getattr(RibbonCategory, name).inapplicable(
         messages.NO_ROTATION))
-
-CHECKED = (Diagram[symmetric.Diagram], Diagram[compact.Diagram])
-"""
-The integer diagrams the property matrix checks: the free compact category
-on the free traced symmetric one, and on the free compact one.
-"""

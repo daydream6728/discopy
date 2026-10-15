@@ -54,7 +54,7 @@ from discopy.matrix import (  # noqa: F401  pylint: disable=unused-import
     Matrix, backend, set_backend, get_backend,
     NumPy, JAX, PyTorch, TensorFlow)
 from discopy.abc import NamedGeneric
-from discopy.axioms import no_strategy
+from discopy.axioms import TestableGeneric, no_strategy
 from discopy.python import finset
 from discopy.utils import (
     factory_name, assert_isinstance, product, assert_isatomic)
@@ -503,7 +503,7 @@ class Functor(frobenius.Functor):
 
 
 @factory
-class Diagram[dtype](NamedGeneric, frobenius.Diagram):
+class Diagram[dtype](TestableGeneric, frobenius.Diagram):
     """
     A tensor diagram is a frobenius diagram with tensor boxes.
 
@@ -514,6 +514,11 @@ class Diagram[dtype](NamedGeneric, frobenius.Diagram):
     >>> print(diagram)
     vector[::-1] >> vector >> Dim(2) @ vector
     """
+    @classmethod
+    def checked_instances(cls) -> tuple:
+        """ None, a tensor diagram drawing no arrays. """
+        return ()
+
     sum_factory: ClassVar[type["Sum"]]
     swap_factory: ClassVar[type["Swap"]]
     permutation_factory: ClassVar[type["Permutation"]]

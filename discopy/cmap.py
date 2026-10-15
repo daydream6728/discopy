@@ -55,13 +55,12 @@ from discopy.abc import (
     BraidedCategory,
     CompactCategory,
     MarkovCategory,
-    NamedGeneric,
     Pregroup,
     RigidCategory,
     SymmetricCategory,
     TracedCategory,
 )
-from discopy.axioms import Equation, Serialisable
+from discopy.axioms import Equation, Serialisable, TestableGeneric
 from discopy.cat import Ob
 from discopy.python.finset import Permutation
 from discopy.utils import (
@@ -132,7 +131,7 @@ class Port:
     side: Literal["up", "down"]
 
 
-class CMap[category](CompactCategory, NamedGeneric, Serialisable):
+class CMap[category](CompactCategory, TestableGeneric, Serialisable):
     r"""
     An open combinatorial map, i.e. a diagram represented as a bijection
     between its ports.
@@ -226,6 +225,16 @@ class CMap[category](CompactCategory, NamedGeneric, Serialisable):
     .. graphviz:: /_static/cmap/swapped-cmap.dot
         :align: center
     """
+
+    @classmethod
+    def checked_instances(cls) -> tuple:
+        """
+        The maps over the free symmetric and compact categories, the ones a
+        map is the coherence theorem of.
+        """
+        # pylint: disable-next=import-outside-toplevel  # they import this
+        from discopy import compact, symmetric
+        return (CMap[symmetric.Diagram], CMap[compact.Diagram])
 
     functor = classproperty(lambda cls: cls.category.functor_factory)
     ob = classproperty(lambda cls: cls.category.ob)

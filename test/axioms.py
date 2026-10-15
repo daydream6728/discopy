@@ -12,8 +12,8 @@ from hypothesis import strategies as st
 
 from discopy.axioms import (
     L, R, Atom, Axiom, AxiomFailure, Count, Equation, Equivalence, Hom, Obj,
-    Over, Related, Repeat, Tensor, Testable, Under, Unit, Var,
-    axiom, inhabits)
+    Over, Related, Repeat, Tensor, Testable, TestableGeneric, Under, Unit,
+    Var, axiom, inhabits)
 from discopy.monoidal import Ty
 from discopy.cat import Arrow, Box, Ob
 
@@ -255,3 +255,13 @@ def test_extensional():
         values(list)
     assert Function.dagger_involution() is NotImplemented
     assert Additive.dagger_monoidality() is NotImplemented
+
+
+def test_testable_generic():
+    from discopy.kleisli import additive, Maybe, Powerset
+    from discopy.utils import NamedGeneric
+    for testable in Testable.subclasses():
+        assert not issubclass(testable, NamedGeneric)\
+            or issubclass(testable, TestableGeneric)
+    assert additive.Channel[Maybe] not in Testable.enrolled()
+    assert additive.Channel[Powerset] in Testable.enrolled()

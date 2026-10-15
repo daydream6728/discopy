@@ -1065,6 +1065,8 @@ class Testable[T](ABC):
         the generator of its category but defines a strategy of its own,
         e.g. a lambda term, is checked on the terms that strategy generates,
         and so is a testable that is no category at all, e.g. a proof net.
+        A :class:`TestableGeneric` is checked on the subscripts its
+        ``checked_instances`` names, and on no other.
 
         >>> from discopy.cat import Arrow, Box
         >>> from discopy.monoidal import Ty
@@ -1088,9 +1090,14 @@ class Testable[T](ABC):
                 and "strategy" in vars(testable)\
                 and getattr(testable, "box_factory", None) is not testable
 
+        checked = {
+            instance for generic in TestableGeneric.subclasses()[1:]
+            for instance in generic.checked_instances()}
         return tuple(sorted((
             testable for testable in cls.subclasses()
-            if own_terms(testable)
+            if (testable in checked
+                or not issubclass(testable, TestableGeneric))
+            and own_terms(testable)
             and testable.axioms and generates(testable)), key=factory_name))
 
     @classmethod
@@ -1216,7 +1223,21 @@ class Serialisable[T](Testable[T]):
         return Equation(from_tree(term.to_tree()), loads(dumps(term)), term)
 
 
-class Related[factory](Testable, NamedGeneric, tuple):
+class TestableGeneric(NamedGeneric, Testable):
+    """
+    A testable class with type parameters, e.g. ``Hypergraph[C]``, which
+    names the subscripts the property matrix checks, see
+    :meth:`Testable.enrolled`: a subscript is a class of its own, built on
+    demand, so the matrix cannot find it by walking the subclasses, and not
+    every subscript generates terms whose laws hold up to its equation.
+    """
+    @classmethod
+    @abstractmethod
+    def checked_instances(cls) -> "tuple[type[Testable], ...]":
+        """ The subscripts of the class the property matrix checks. """
+
+
+class Related[factory](TestableGeneric, tuple):
     """
     Three instances of the ``factory``, an :class:`Equivalence`: two related
     by construction and a third that may be or not, see
@@ -1227,6 +1248,11 @@ class Related[factory](Testable, NamedGeneric, tuple):
         if len(terms) != 3:
             raise ValueError("Expected three terms.")
         return super().__new__(cls, terms)
+
+    @classmethod
+    def checked_instances(cls) -> tuple:
+        """ None, a sort of premises being drawn over a category. """
+        return ()
 
     @classmethod
     def strategy(cls, **params) -> "st.SearchStrategy[Related]":

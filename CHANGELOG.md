@@ -152,11 +152,27 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   compact categories on. Tensor
   diagrams, which draw no arrays, and pregroup diagrams, which compare by a
   hypergraph that refuses a cap, declare `strategy = no_strategy`.
+- `axioms.TestableGeneric`, a `NamedGeneric` that is `Testable` and names
+  the subscripts the property matrix checks with the abstract classmethod
+  `checked_instances`: a subscript such as `Hypergraph[markov.Diagram]` is
+  a class built on demand, so the matrix found the ones some module
+  happened to build and checked any other a test had built before it.
+  `Testable.enrolled` builds the subscripts every `TestableGeneric` names
+  and checks a generic class exactly when it is one of them: the
+  hypergraphs and maps over the free categories they are the coherence
+  theorem of, the Kleisli channels of the named monads, the integer
+  diagrams over the free traced symmetric and compact categories, the
+  lists of Python types, and lenses and parametric maps over their default
+  category. Every testable `NamedGeneric` is one, those that check nothing,
+  e.g. a matrix, a stream or a sort of premises such as `Related[C]`,
+  naming none. `fail-under` is 9.07, the score of the branch, where the
+  laws of the Kleisli channels had raised it to the 9.08 it printed
+  rounded from 9.0798, which fails the threshold.
 - The property matrix checks the `Int`-construction: `interaction.Ty`
   draws pairs of types, which `lens.Ty` inherits, and
   `interaction.Diagram` draws its inside from the strategy of its natural
   category and compares it by that category's equation, on the free
-  traced symmetric and compact categories, `interaction.CHECKED`, the
+  traced symmetric and compact categories, its `checked_instances`, the
   planar ones having no normal form yet. A pair of types has no number of
   atoms for a trace or a curry to count, `messages.PAIR_LENGTH`, which
   replaces `LENS_TRACE_LENGTH`, and an integer diagram, like a parametric
@@ -183,7 +199,7 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   whose unit and associativity are the laws of their monad: the
   multiplicative channels of `Maybe`, `Powerset`, `Subdistribution` and
   `Seed`, and the additive channels, with their tensor and trace, of the
-  Elgot monads `Powerset` and `Subdistribution`, `additive.CHECKED`; the
+  Elgot monads `Powerset` and `Subdistribution`, its `checked_instances`; the
   iteration of `Maybe` is a `while` loop a drawn channel can make cycle
   forever. A `Monad` says how to `generate` its values over some outcomes
   and what two of them are compared by, `observe`: a subdistribution up to
@@ -197,7 +213,7 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   Python types, `monoidal.List.strategy` drawing them from the types
   `axioms.values` samples, which enrols `List[type]` with the laws of a
   monoid, whose one object a sequent draws as `None`. `discopy` imports
-  `kleisli`. `fail-under` rises to 9.08.
+  `kleisli`.
 - The property matrix checks lenses and parametric maps: `lens.Symmetric`,
   `lens.Traced`, `lens.Markov`, their pairs of types `lens.Ty` and the
   seven levels of `discopy.para` are enrolled, each drawing its residual,

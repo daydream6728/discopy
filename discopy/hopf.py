@@ -128,7 +128,8 @@ import numpy as np
 
 from discopy import monoidal, ribbon, tensor, frobenius
 from discopy.tensor import Dim, Box, Id
-from discopy.abc import RibbonCategory, NamedGeneric
+from discopy.abc import RibbonCategory
+from discopy.axioms import TestableGeneric
 from discopy.utils import (
     assert_isinstance, classproperty, factory_name, get_origin, product)
 
@@ -635,7 +636,7 @@ class Double(Algebra):
         return factory_name(type(self)) + f"({self.base!r})"
 
 
-class Representation[algebra](NamedGeneric, frobenius.Dim):
+class Representation[algebra](TestableGeneric, frobenius.Dim):
     """
     A finite-dimensional (left) module over the class parameter ``algebra``:
     given a :class:`Algebra` ``H``, the class ``Representation[H]`` is
@@ -678,6 +679,11 @@ class Representation[algebra](NamedGeneric, frobenius.Dim):
     .. graphviz:: /_static/hopf/module.dot
         :align: center
     """
+    @classmethod
+    def checked_instances(cls) -> tuple:
+        """ None, a representation drawing no algebra. """
+        return ()
+
     def __init__(self, dim=None, action=None):
         if self.algebra is None:
             raise ValueError(

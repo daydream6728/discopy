@@ -52,9 +52,9 @@ from networkx import (
 from networkx.algorithms.isomorphism import is_isomorphic
 
 from discopy import cmap, messages
-from discopy.axioms import Serialisable
+from discopy.axioms import Serialisable, TestableGeneric
 from discopy.abc import (
-    HypergraphCategory, MarkovCategory, MonoidalCategory, NamedGeneric,
+    HypergraphCategory, MarkovCategory, MonoidalCategory,
     BalancedCategory, BraidedCategory, CompactCategory, Pregroup,
     RigidCategory, SymmetricCategory, TracedCategory)
 from discopy.drawing import Node, backend
@@ -103,7 +103,7 @@ Mapping from :class:`Spider` to atomic :class:`frobenius.Ty`.
 
 
 class Hypergraph[category](
-        MonoidalCategory["Ty", "Hypergraph"], NamedGeneric, Serialisable):
+        MonoidalCategory["Ty", "Hypergraph"], TestableGeneric, Serialisable):
     """
     A hypergraph is given by:
 
@@ -191,6 +191,20 @@ class Hypergraph[category](
     >>> assert (f @ g).n_spiders == 4
     >>> assert (f @ g).wires == ((0, 1), (((0,), (2,)), ((1,), (3,))), (2, 3))
     """
+    @classmethod
+    def checked_instances(cls) -> tuple:
+        """
+        The hypergraphs over the free categories whose wiring they sample,
+        from symmetric categories on.
+        """
+        # pylint: disable=import-outside-toplevel  # they import this
+        from discopy import (
+            closed, compact, feedback, frobenius, markov, symmetric)
+        from discopy.grammar import abstract
+        return tuple(Hypergraph[category.Diagram] for category in (
+            symmetric, markov, compact, frobenius, closed, feedback,
+            abstract))
+
     MAX_ARITY = 3
     """ The largest number of ports :meth:`strategy` samples for a box. """
 

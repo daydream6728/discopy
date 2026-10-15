@@ -72,8 +72,8 @@ from __future__ import annotations
 from collections.abc import Callable
 
 from discopy import messages
-from discopy.abc import Category, NamedGeneric
-from discopy.axioms import Equation
+from discopy.abc import Category
+from discopy.axioms import Equation, TestableGeneric
 from discopy.kleisli import channel
 from discopy.kleisli.monad import Maybe, Monad, Powerset, Seed, Subdistribution
 from discopy.python import function
@@ -145,7 +145,7 @@ def unpack_value(value) -> tuple:
     return value.values if isinstance(value, Row) else (value, )
 
 
-class Channel[monad](Category, NamedGeneric):
+class Channel[monad](Category, TestableGeneric):
     """
     A channel is a morphism in the Kleisli category of a monad ``M`` with
     tuple as tensor, i.e. a Python function from a tuple of wires ``dom``
@@ -180,6 +180,15 @@ class Channel[monad](Category, NamedGeneric):
     >>> discard = Nondet.discard((int, ))
     >>> assert discard(3) == frozenset({()})
     """
+    @classmethod
+    def checked_instances(cls) -> tuple:
+        """
+        The channels of the named monads.
+        """
+        return tuple(
+            Channel[monad]  # ty: ignore[invalid-type-form]
+            for monad in (Maybe, Powerset, Subdistribution, Seed))
+
     ob = Ty
     monad: Monad
 
@@ -354,9 +363,3 @@ class Channel[monad](Category, NamedGeneric):
     def __repr__(self):
         return factory_name(type(self))\
             + f"({self.inside!r}, dom={self.dom!r}, cod={self.cod!r})"
-
-
-CHECKED = tuple(
-    Channel[monad]  # ty: ignore[invalid-type-form]
-    for monad in (Maybe, Powerset, Subdistribution, Seed))
-""" The channels the property matrix checks, one for each named monad. """

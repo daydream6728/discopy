@@ -61,8 +61,8 @@ from warnings import warn
 
 from discopy import abc, axioms, cat, drawing, hypergraph, cmap, messages
 from discopy.abc import (
-    ColouredMonoid, Monoid, MonoidalCategory, NamedGeneric)
-from discopy.axioms import Hom, Obj, Var, axiom
+    ColouredMonoid, Monoid, MonoidalCategory)
+from discopy.axioms import Hom, Obj, TestableGeneric, Var, axiom
 from discopy.drawing import Drawing
 from discopy.config import (
     BOX_DRAWING_ATTRIBUTES, WIRE_DRAWING_ATTRIBUTES,
@@ -187,7 +187,7 @@ class Wire(cat.Ob):
         return cls(tree['name'], dom, cod, is_dagger='is_dagger' in tree)
 
 
-class List[generator_factory](Monoid["List"], NamedGeneric):
+class List[generator_factory](Monoid["List"], TestableGeneric):
     """
     The free monoid on a ``generator_factory``, i.e. lists of its instances
     with concatenation as :meth:`tensor` and the empty list as unit.
@@ -209,6 +209,14 @@ class List[generator_factory](Monoid["List"], NamedGeneric):
     ``List[int](2, 3)[0] == List[int](2)``; the atoms themselves are its
     :attr:`inside`, e.g. ``List[int](2, 3).inside[0] == 2``.
     """
+    @classmethod
+    def checked_instances(cls) -> tuple:
+        """
+        The lists of Python types, the only generators :meth:`generators`
+        draws.
+        """
+        return (List[type], )
+
     ob = type(None)
     dom = cod = None
 

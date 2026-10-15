@@ -94,12 +94,11 @@ from discopy import cat, monoidal, cmap, messages
 from discopy.abc import BiclosedCategory, MonoidalCategory
 from discopy.axioms import (
     GENERATORS, Equation as AbstractEquation, Equivalence, Serialisable,
-    Testable, axiom)
+    Testable, TestableGeneric, axiom)
 from discopy.drawing import Drawing
 from discopy.cat import factory
 from discopy.utils import (
     AxiomError,
-    NamedGeneric,
     assert_isinstance,
     deprecated_alias,
     factory_name,
@@ -702,7 +701,7 @@ CMap = cmap.CMap[Diagram]
 Diagram.functor_factory = Functor
 
 
-class Renamed[factory](Testable, NamedGeneric, tuple):
+class Renamed[factory](TestableGeneric, tuple):
     """
     Alpha-equivalent terms of the ``factory``: one shape generated under two
     or more namings of its bound variables, see :meth:`TermBase.generate`.
@@ -714,6 +713,11 @@ class Renamed[factory](Testable, NamedGeneric, tuple):
     ...     Renamed[TermBase].strategy(), lambda terms: len(terms) == 3)
     >>> assert terms[0].alpha_eq(*terms[1:])
     """
+    @classmethod
+    def checked_instances(cls) -> tuple:
+        """ None, a sort of premises being drawn over a category. """
+        return ()
+
     @classmethod
     def strategy(cls, **params) -> "st.SearchStrategy[Renamed]":
         """
@@ -732,7 +736,7 @@ class Renamed[factory](Testable, NamedGeneric, tuple):
             st.lists(category.namings(), min_size=2, max_size=3))
 
 
-class Canonical[factory](Testable, NamedGeneric, tuple):
+class Canonical[factory](TestableGeneric, tuple):
     """
     Two terms of the ``factory`` followed by their canonical forms: two
     shapes of one type, the second the first's or another, each generated
@@ -751,6 +755,11 @@ class Canonical[factory](Testable, NamedGeneric, tuple):
     ...     lambda terms: terms[0] != terms[1] and terms[2] == terms[3])
     >>> assert first.alpha_eq(second)
     """
+    @classmethod
+    def checked_instances(cls) -> tuple:
+        """ None, a sort of premises being drawn over a category. """
+        return ()
+
     @classmethod
     def build(cls, shape: tuple, others: list[int] | None,
               namings: tuple[Sequence[str], Sequence[str]]) -> "Canonical":
@@ -781,12 +790,17 @@ class Canonical[factory](Testable, NamedGeneric, tuple):
             st.tuples(category.namings(), category.namings()))
 
 
-class Reducible[factory](Testable, NamedGeneric, tuple):
+class Reducible[factory](TestableGeneric, tuple):
     """
     A term of the ``factory`` with free variables in place of constants, so
     that beta reduction reads a variable at every head, see
     :class:`Normalising`.
     """
+    @classmethod
+    def checked_instances(cls) -> tuple:
+        """ None, a sort of premises being drawn over a category. """
+        return ()
+
     @classmethod
     def strategy(cls, **params) -> "st.SearchStrategy[Reducible]":
         """

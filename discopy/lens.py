@@ -70,8 +70,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from discopy import interaction, markov, messages, monoidal, symmetric
 from discopy.abc import (
-    MarkovCategory, NamedGeneric, SymmetricCategory, TracedCategory)
-from discopy.axioms import Equation
+    MarkovCategory, SymmetricCategory, TracedCategory)
+from discopy.axioms import Equation, TestableGeneric
 from discopy.utils import (
     AxiomError, assert_iscomposable, assert_isinstance, classproperty,
     factory_name, get_origin, unbiased)
@@ -109,7 +109,7 @@ def pairs(category) -> type:
 
 
 @dataclass
-class Symmetric[category](SymmetricCategory, NamedGeneric):
+class Symmetric[category](SymmetricCategory, TestableGeneric):
     """
     A lens from `dom` to `cod` over a symmetric `category` is a `residual`
     with a `forward` morphism `dom.positive -> cod.positive @ residual` and
@@ -151,6 +151,11 @@ class Symmetric[category](SymmetricCategory, NamedGeneric):
             to_int
             to_markov
     """
+    @classmethod
+    def checked_instances(cls) -> tuple:
+        """ The class over its default underlying category. """
+        return (get_origin(cls), )
+
     category = symmetric.Diagram
     ob = classproperty(lambda cls: pairs(cls.category))
 

@@ -161,18 +161,19 @@ from dataclasses import dataclass
 from typing import Self
 
 from discopy import symmetric, markov, closed, compact, frobenius, messages
-from discopy.axioms import Equation
+from discopy.axioms import TestableGeneric, Equation
 from discopy.abc import (
     ClosedCategory, CompactCategory, FeedbackCategory, HypergraphCategory,
-    MarkovCategory, NamedGeneric, SymmetricCategory, TracedCategory)
+    MarkovCategory, SymmetricCategory, TracedCategory)
 from discopy.feedback import Diagram as FeedbackDiagram
 from discopy.utils import (
-    assert_iscomposable, assert_isinstance, classproperty, unbiased)
+    assert_iscomposable, assert_isinstance, classproperty, get_origin,
+    unbiased)
 
 
 @dataclass
 class Symmetric[category](
-        SymmetricCategory[symmetric.Ty, "Symmetric"], NamedGeneric):
+        SymmetricCategory[symmetric.Ty, "Symmetric"], TestableGeneric):
     """
     A parametric map from `dom` to `cod` with parameter space `param` is a
     morphism `inside : dom @ param -> cod` in an underlying `category`,
@@ -198,6 +199,11 @@ class Symmetric[category](
             reparam
             recopar
     """
+    @classmethod
+    def checked_instances(cls) -> tuple:
+        """ The class over its default underlying category. """
+        return (get_origin(cls), )
+
     category = symmetric.Diagram
     ob = classproperty(lambda cls: cls.category.ob)
 

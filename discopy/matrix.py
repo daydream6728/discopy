@@ -43,7 +43,8 @@ from collections.abc import Sequence
 from typing import Literal, Callable, TYPE_CHECKING
 
 from discopy import monoidal, config, messages
-from discopy.abc import MarkovCategory, NamedGeneric, Nat
+from discopy.abc import MarkovCategory, Nat
+from discopy.axioms import TestableGeneric
 from discopy.cat import (
     factory,
     assert_iscomposable,
@@ -56,7 +57,7 @@ if TYPE_CHECKING:
 
 
 @factory
-class Matrix[dtype](MarkovCategory, NamedGeneric):
+class Matrix[dtype](MarkovCategory, TestableGeneric):
     """
     A matrix is an ``array`` with natural numbers as ``dom`` and ``cod``.
 
@@ -129,6 +130,11 @@ class Matrix[dtype](MarkovCategory, NamedGeneric):
            [0, 2],
            [0, 4]])
     """
+    @classmethod
+    def checked_instances(cls) -> tuple:
+        """ None, a matrix drawing no entries. """
+        return ()
+
     ob = Nat
 
     def cast(self, dtype: type) -> Matrix:
