@@ -1115,6 +1115,9 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Project
 
+- `fail-under` rises from 8.79 to 8.82, by what `discopy.kleisli` lifts the
+  score: 8.85 to 8.88 on the lint job of `main`, 8.969 to 8.998 locally
+  ([#443](https://github.com/discopy/discopy/pull/443)).
 - `fail-under` rises from 8.77 to 8.79, the score once the terms carry
   their laws ([#767](https://github.com/discopy/discopy/pull/767)).
 - `fail-under` rises from 8.75 to 8.77, the score once `closed` gains its
