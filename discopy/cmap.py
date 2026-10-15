@@ -1546,15 +1546,20 @@ class CMap[C0: Pregroup, C1: CMap](
 cycles of this map.
 
         What remains is decoded like in :meth:`Hypergraph.to_diagram`: we scan
-        the currently open wires from left to right, for each box we swap its
-        domain wires to the front, apply the box, and replace the consumed
-        domain labels by the box codomain labels.
+        the currently open wires from left to right, for each box we gather
+        its domain wires at the position of the first one with a single
+        permutation, see :meth:`discopy.python.finset.Permutation.gather`,
+        apply the box, and replace the consumed domain labels by the box
+        codomain labels. A box with no domain is applied on the right of the
+        open wires.
 
         >>> from discopy.compact import Ty, Box, CMap
-        >>> x, y = map(Ty, "xy")
+        >>> x, y, z = map(Ty, "xyz")
         >>> cmap = Box("f", x, y).to_map()
         >>> cmap.to_diagram().to_map() == cmap
         True
+        >>> print(CMap.permutation([2, 0, 1], x @ y @ z).to_diagram())
+        Permutation(x @ y @ z, [2, 0, 1])
         """
         if not self.is_causal:
             return self.make_causal().to_diagram()
@@ -1564,42 +1569,28 @@ cycles of this map.
             if i <= j:
                 edge_wire[i] = edge_wire[j] = len(edge_wire) // 2
 
-        def swap(left, right):
+        diagram = self.category.id(self.dom)
+        scan = [edge_wire[i] for i in range(len(self.dom))]
+
+        def permute(perm):
             if not issubclass(self.category, SymmetricCategory):
                 raise AxiomError(messages.NOT_SYMMETRIC.format(
                     factory_name(self.category)))
-            return self.category.swap(left, right)
+            return self.category.from_permutation(perm, diagram.cod)
 
-        diagram = self.category.id(self.dom)
-        scan = [edge_wire[i] for i in range(len(self.dom))]
         for depth, box in enumerate(self.boxes):
             box_ports = self._box_port_indices[depth]
             dom_ports = box_ports[:len(box.dom)]
             cod_ports = tuple(reversed(box_ports[len(box.dom):]))
             dom_wires = [edge_wire[i] for i in dom_ports]
             cod_wires = [edge_wire[i] for i in cod_ports]
-
-            offset = None
-            for i, wire_id in enumerate(dom_wires):
-                j = scan.index(wire_id)
-                if i == 0:
-                    offset = j
-                elif j != offset + i:
-                    if j > offset + i:
-                        diagram >>= diagram.cod[:offset + i] @ swap(
-                            diagram.cod[offset + i:j], diagram.cod[j]
-                        ) @ diagram.cod[j + 1:]
-                        scan = (scan[:offset + i] + scan[j:j + 1]) + (
-                            scan[offset + i:j] + scan[j + 1:])
-                    else:
-                        diagram >>= diagram.cod[:j] @ swap(
-                            diagram.cod[j], diagram.cod[j + 1:offset + i]
-                        ) @ diagram.cod[offset + i:]
-                        scan = (scan[:j] + scan[j + 1:offset + i]) + (
-                            scan[j:j + 1] + scan[offset + i:])
-                        offset -= 1
-
-            offset = len(scan) if offset is None else offset
+            positions = [scan.index(wire_id) for wire_id in dom_wires]
+            offset = positions[0] if positions else len(scan)
+            offset -= sum(j < offset for j in positions)
+            perm = Permutation.gather(positions, len(scan), offset)
+            if not perm.is_identity:
+                diagram >>= permute(perm)
+                scan = [scan[j] for j in perm]
             scan = scan[:offset] + cod_wires + scan[offset + len(box.dom):]
             diagram >>= diagram.cod[:offset] @ box @ diagram.cod[
                 offset + len(box.dom):]
@@ -1607,13 +1598,10 @@ cycles of this map.
         cod_wires = [
             edge_wire[self.n_ports - len(self.cod) + i]
             for i in range(len(self.cod))]
-        for i, wire_id in enumerate(cod_wires):
-            j = scan.index(wire_id)
-            if i < j:
-                diagram >>= diagram.cod[:i] @ swap(
-                    diagram.cod[i:j], diagram.cod[j:j + 1]
-                ) @ diagram.cod[j + 1:]
-                scan = scan[:i] + scan[j:j + 1] + scan[i:j] + scan[j + 1:]
+        perm = Permutation(
+            [scan.index(wire_id) for wire_id in cod_wires], len(scan))
+        if not perm.is_identity:
+            diagram >>= permute(perm)
         return diagram
 
     def to_hypergraph(self):
