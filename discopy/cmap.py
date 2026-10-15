@@ -39,12 +39,13 @@ from __future__ import annotations
 import operator
 import shutil
 import subprocess
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from enum import StrEnum
 from functools import cached_property, reduce
 from inspect import isclass
 from io import BytesIO
+from itertools import accumulate
 from math import inf, lcm
 from typing import TYPE_CHECKING, ClassVar, Literal
 
@@ -921,6 +922,41 @@ class CMap[C0: Pregroup, C1: CMap](
             + [(left_len + i, output_start + i)
                for i in range(right_len)],
             2 * len(dom))
+        return cls(dom, cod, (), edge, check=False)
+
+    @classmethod
+    def permutation(cls, xs: Sequence[int], doms: Sequence[Ty]) -> CMap:
+        """
+        A permutation encoded as boundary wiring, i.e. with no boxes.
+
+        The default of :class:`~discopy.abc.SymmetricCategory` composes
+        one :meth:`swap` per inversion, which is quadratic in the number
+        of wires and composes as many maps, where a permutation of the
+        boundary of a map is one involution.
+
+        Parameters:
+            xs : The permutation, sending input ``xs[j]`` to output ``j``.
+            doms : The objects to permute, tensored as the domain.
+
+        Example
+        -------
+        >>> from discopy.symmetric import Ty, CMap
+        >>> x, y, z = Ty('x'), Ty('y'), Ty('z')
+        >>> permutation = CMap.permutation([2, 0, 1], [x, y, z])
+        >>> assert permutation.boxes == () and permutation.cod == z @ x @ y
+        >>> assert permutation == CMap.swap(x @ y, z)
+        """
+        xs, doms = list(xs), list(doms)
+        if sorted(xs) != list(range(len(doms))):
+            raise ValueError(
+                f"{xs} is not a permutation of {len(doms)} objects")
+        dom = cls.ob().tensor(*doms)
+        cod = cls.ob().tensor(*(doms[x] for x in xs))
+        starts = [0, *accumulate(len(objects) for objects in doms)]
+        inputs = [
+            starts[x] + offset for x in xs for offset in range(len(doms[x]))]
+        edge = Permutation.from_transpositions(
+            ((i, len(dom) + j) for j, i in enumerate(inputs)), 2 * len(dom))
         return cls(dom, cod, (), edge, check=False)
 
     cup_factory = classmethod(lambda cls, left, right: cls.from_box(
