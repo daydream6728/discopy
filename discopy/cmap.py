@@ -1020,8 +1020,7 @@ class CMap[category](CompactCategory, NamedGeneric, Serialisable):
         ...
         discopy.utils.AxiomError: braided.Diagram is not symmetric, ...
         """
-        if cls.category is None\
-                or not issubclass(cls.category, SymmetricCategory):
+        if not issubclass(cls.category, SymmetricCategory):
             raise AxiomError(messages.NO_SWAP.format(
                 factory_name(cls.category)))
         dom, cod = left @ right, right @ left
@@ -1046,8 +1045,7 @@ class CMap[category](CompactCategory, NamedGeneric, Serialisable):
         >>> braid = CMap[braided.Diagram].braid(x, y)
         >>> assert braid.boxes == (braided.Braid(x, y), )
         """
-        if cls.category is None\
-                or not issubclass(cls.category, BraidedCategory):
+        if not issubclass(cls.category, BraidedCategory):
             raise AxiomError(messages.NO_BRAID.format(
                 factory_name(cls.category)))
         if issubclass(cls.category, SymmetricCategory):
@@ -1067,11 +1065,9 @@ class CMap[category](CompactCategory, NamedGeneric, Serialisable):
         >>> twist = CMap[balanced.Diagram].twist(x)
         >>> assert twist.boxes == (balanced.Twist(x), )
         """
-        if cls.category is not None\
-                and issubclass(cls.category, SymmetricCategory):
+        if issubclass(cls.category, SymmetricCategory):
             return cls.id(dom)
-        if cls.category is None\
-                or not issubclass(cls.category, BalancedCategory):
+        if not issubclass(cls.category, BalancedCategory):
             raise AxiomError(messages.NO_TWIST.format(
                 factory_name(cls.category)))
         if len(dom) == 1:
@@ -1124,8 +1120,7 @@ class CMap[category](CompactCategory, NamedGeneric, Serialisable):
     def is_planar_rigid(cls) -> bool:
         """ Whether the host category is rigid but not compact, so that its
         cups and caps are boxes of the map rather than its wiring. """
-        return cls.category is not None\
-            and issubclass(cls.category, RigidCategory)\
+        return issubclass(cls.category, RigidCategory)\
             and not issubclass(cls.category, CompactCategory)
 
     @classmethod
@@ -1290,8 +1285,7 @@ class CMap[category](CompactCategory, NamedGeneric, Serialisable):
             return self
         if n > min(len(self.dom), len(self.cod)):
             raise ValueError
-        if self.category is not None\
-                and issubclass(self.category, TracedCategory)\
+        if issubclass(self.category, TracedCategory)\
                 and not issubclass(self.category, SymmetricCategory):
             result = self
             for _ in range(n):

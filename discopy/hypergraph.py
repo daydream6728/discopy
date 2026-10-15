@@ -429,8 +429,7 @@ class Hypergraph[category](
         ...
         discopy.utils.AxiomError: braided.Diagram is not symmetric, ...
         """
-        if cls.category is None\
-                or not issubclass(cls.category, SymmetricCategory):
+        if not issubclass(cls.category, SymmetricCategory):
             raise AxiomError(messages.NO_SWAP.format(
                 factory_name(cls.category)))
         dom, cod, boxes = left @ right, right @ left, ()
@@ -449,8 +448,7 @@ class Hypergraph[category](
         >>> braid = Hypergraph[braided.Diagram].braid(x, y)
         >>> assert braid.boxes == (braided.Braid(x, y), )
         """
-        if cls.category is None\
-                or not issubclass(cls.category, BraidedCategory):
+        if not issubclass(cls.category, BraidedCategory):
             raise AxiomError(messages.NO_BRAID.format(
                 factory_name(cls.category)))
         if issubclass(cls.category, SymmetricCategory):
@@ -470,11 +468,9 @@ class Hypergraph[category](
         >>> twist = Hypergraph[balanced.Diagram].twist(x)
         >>> assert twist.boxes == (balanced.Twist(x), )
         """
-        if cls.category is not None\
-                and issubclass(cls.category, SymmetricCategory):
+        if issubclass(cls.category, SymmetricCategory):
             return cls.id(dom)
-        if cls.category is None\
-                or not issubclass(cls.category, BalancedCategory):
+        if not issubclass(cls.category, BalancedCategory):
             raise AxiomError(messages.NO_TWIST.format(
                 factory_name(cls.category)))
         if len(dom) == 1:
