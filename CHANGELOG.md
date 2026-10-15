@@ -152,6 +152,19 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   compact categories on. Tensor
   diagrams, which draw no arrays, and pregroup diagrams, which compare by a
   hypergraph that refuses a cap, declare `strategy = no_strategy`.
+- The property matrix checks the `Int`-construction: `interaction.Ty`
+  draws pairs of types, which `lens.Ty` inherits, and
+  `interaction.Diagram` draws its inside from the strategy of its natural
+  category and compares it by that category's equation, on the free
+  traced symmetric and compact categories, `interaction.CHECKED`, the
+  planar ones having no normal form yet. A pair of types has no number of
+  atoms for a trace or a curry to count, `messages.PAIR_LENGTH`, which
+  replaces `LENS_TRACE_LENGTH`, and an integer diagram, like a parametric
+  map, has no rotation, `messages.NO_ROTATION`, which replaces
+  `PARA_NO_ROTATION`. `proptest/test_quantum.py` checks that the features
+  of a quantum reservoir are distributions, that running a sequence
+  measures the composite of its steps and that a random reservoir depends
+  on its seed only.
 - The laws of beta reduction, `biclosed.Normalising`, which
   `closed.TermBase` inherits: a normal form is its own, has the type of
   the term, and is the same, up to the names of its bound variables, for
@@ -1063,6 +1076,10 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
+- `interaction.Diagram.twist` twists the positive half of an integer type
+  and untwists its negative half, where it borrowed the twist of
+  `balanced.Diagram`, which counts the wires of its type and raised
+  `TypeError` on any integer type.
 - `para.Compact` curries with its caps, where it borrowed `para.Closed.curry`,
   which left the coparameters inside the exponential of the codomain; a
   `para.Closed` map with coparameters refuses to curry,

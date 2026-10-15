@@ -535,9 +535,9 @@ class Compact(Traced, CompactCategory):
     category, with the cups and caps of the underlying category.
     """
     adjunction = CompactCategory.adjunction.inapplicable(
-        messages.PARA_NO_ROTATION)
+        messages.NO_ROTATION)
     rotate_contravariance = CompactCategory.rotate_contravariance\
-        .inapplicable(messages.PARA_NO_ROTATION)
+        .inapplicable(messages.NO_ROTATION)
     transpose_contravariance = CompactCategory.transpose_contravariance\
         .failing(messages.PARA_REPARAM)
     category = compact.Diagram

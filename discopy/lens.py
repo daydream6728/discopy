@@ -102,31 +102,6 @@ class Ty(interaction.Ty):
     natural = monoidal.Ty
     negatives = staticmethod(tuple)
 
-    unitality = interaction.Ty.unitality.inapplicable(messages.LENS_TYPES)
-    associativity = interaction.Ty.associativity.inapplicable(
-        messages.LENS_TYPES)
-    dagger_involution = interaction.Ty.dagger_involution.inapplicable(
-        messages.NO_DAGGER)
-    dagger_contravariance = interaction.Ty.dagger_contravariance\
-        .inapplicable(messages.NO_DAGGER)
-
-    @classmethod
-    def strategy(cls, **params):
-        """ Generate pairs of types of the underlying category. """
-        from hypothesis import strategies as st
-
-        types = cls.natural.strategy(**params)
-        return st.tuples(types, types).map(lambda pair: cls(*pair))
-
-    @classmethod
-    def generators(cls, *, dom=None, cod=None):
-        """ Generate pairs of atomic types of the underlying category. """
-        # pylint: disable=unused-argument  # a pair has one colour
-        from hypothesis import strategies as st
-
-        atoms = cls.natural.generators()
-        return st.tuples(atoms, atoms).map(lambda pair: cls(*pair))
-
 
 def pairs(category) -> type:
     """ The pairs of objects of a category, e.g. of lists of types. """
@@ -469,11 +444,11 @@ class Traced(Symmetric, TracedCategory):
         .inapplicable(messages.LENS_TRACES_RIGHT)
 
     trace_iteration_right = TracedCategory.trace_iteration_right.inapplicable(
-        messages.LENS_TRACE_LENGTH)
+        messages.PAIR_LENGTH)
     trace_naturality_right = TracedCategory.trace_naturality_right\
-        .inapplicable(messages.LENS_TRACE_LENGTH)
+        .inapplicable(messages.PAIR_LENGTH)
     trace_dinaturality_right = TracedCategory.trace_dinaturality_right\
-        .inapplicable(messages.LENS_TRACE_LENGTH)
+        .inapplicable(messages.PAIR_LENGTH)
 
     def trace(self, n: int = 1, left: bool = False) -> Traced:
         """

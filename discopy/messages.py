@@ -44,14 +44,15 @@ COLOURED_QUOTIENT = (
 NO_VALUES = "{} has no sample of values, see axioms.values."
 NO_DAGGER = "There is no dagger here, so the dagger laws do not apply."
 LENS_TRACES_RIGHT = "A lens is traced on the right only."
-LENS_TRACE_LENGTH = (
-    "A lens traces as many atoms on each half, which a pair of types has "
-    "no single number of.")
-LENS_TYPES = "A pair of types is checked as the boundary of lenses."
+PAIR_LENGTH = (
+    "A pair of types has no single number of atoms for a trace or a curry "
+    "to count.")
+PAIR_TYPES = "A pair of types is checked as the boundary of its diagrams."
 PARA_REPARAM = (
     "A parametric map is equal only up to the reparametrisations that "
     "permute its parameters, which its hypergraph compares in order.")
-PARA_NO_ROTATION = "A parametric map has no rotation."
+NO_ROTATION = (
+    "There is no rotation of a morphism here, so its laws do not apply.")
 CHANNEL_TRACES_RIGHT = "A channel is traced on the right only."
 PARA_CURRY_COPAR = (
     "A closed category cannot curry a map with coparameters {}, as its "

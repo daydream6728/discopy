@@ -69,6 +69,8 @@ from functools import wraps
 
 from discopy import (
     balanced,
+    compact,
+    symmetric,
     traced,
     rigid,
     pivotal,
@@ -76,7 +78,8 @@ from discopy import (
     messages
 )
 from discopy.abc import (
-    NamedGeneric, Pregroup, RibbonCategory, TracedCategory)
+    NamedGeneric, Pregroup, RibbonCategory, SymmetricCategory, TracedCategory)
+from discopy.axioms import Equation
 from discopy.cat import assert_iscomposable
 from discopy.python import finset
 from discopy.utils import (
@@ -116,6 +119,30 @@ class Ty[natural](Pregroup, NamedGeneric):
     """
     natural = pivotal.Ty
     negatives = staticmethod(reversed)
+
+    unitality = Pregroup.unitality.inapplicable(messages.PAIR_TYPES)
+    associativity = Pregroup.associativity.inapplicable(messages.PAIR_TYPES)
+    dagger_involution = Pregroup.dagger_involution.inapplicable(
+        messages.NO_DAGGER)
+    dagger_contravariance = Pregroup.dagger_contravariance.inapplicable(
+        messages.NO_DAGGER)
+
+    @classmethod
+    def strategy(cls, **params):
+        """ Generate pairs of :attr:`natural` types. """
+        from hypothesis import strategies as st
+
+        types = cls.natural.strategy(**params)
+        return st.tuples(types, types).map(lambda pair: cls(*pair))
+
+    @classmethod
+    def generators(cls, *, dom=None, cod=None):
+        """ Generate pairs of atomic :attr:`natural` types. """
+        # pylint: disable=unused-argument  # a pair has one colour
+        from hypothesis import strategies as st
+
+        atoms = cls.natural.generators()
+        return st.tuples(atoms, atoms).map(lambda pair: cls(*pair))
 
     positive: natural
     negative: natural
@@ -209,6 +236,40 @@ class Diagram[natural](RibbonCategory, NamedGeneric):
     inside: natural
     dom: Ty
     cod: Ty
+
+    @classmethod
+    def equation_factory(cls, *terms: Diagram) -> Equation:
+        """
+        The equation of a law, compared by the boundaries of its terms and
+        by the equation of the :attr:`natural` category on their insides.
+        """
+        def up_to(diagram):
+            inside = cls.natural.equation_factory(diagram.inside)
+            return diagram.dom, diagram.cod, diagram.inside\
+                if inside.up_to is None else inside.up_to(diagram.inside)
+        return Equation(*terms, up_to=up_to)
+
+    @classmethod
+    def strategy(cls, *, dom=None, cod=None, **params):
+        """
+        Generate integer diagrams, their insides drawn by the strategy of
+        the :attr:`natural` category with the boundary they need, when it
+        is symmetric, the planar categories having no normal form to
+        compare their insides by yet.
+        """
+        from hypothesis import strategies as st
+        if not issubclass(cls.natural, SymmetricCategory):
+            raise NotImplementedError
+
+        @st.composite
+        def diagrams(draw):
+            source = draw(cls.ob.strategy()) if dom is None else dom
+            target = draw(cls.ob.strategy()) if cod is None else cod
+            inside = draw(cls.natural.strategy(
+                dom=source.positive @ target.negative,
+                cod=target.positive @ source.negative, **params))
+            return cls(inside, source, target)
+        return diagrams()
 
     def __init__(self, inside, dom: Ty, cod: Ty):
         assert_isinstance(inside, self.natural)
@@ -420,6 +481,24 @@ class Diagram[natural](RibbonCategory, NamedGeneric):
         inside = cls.natural.id(left.positive @ left.negative)
         return cls(inside, type(left)(), left @ right)
 
+    @classmethod
+    def twist(cls, dom: Ty) -> Diagram:
+        """
+        The twist of an integer type, which twists its positive half and
+        untwists its negative half, the dagger of a twist being its inverse.
+
+        Parameters:
+            dom : The type to twist.
+
+        >>> from discopy.ribbon import Ty as T, Diagram as D
+        >>> x = Ty[T](T('x'), T('y'))
+        >>> assert Diagram[D].twist(x).inside\\
+        ...     == D.twist(T('x')) @ D.twist(T('y')).dagger()
+        """
+        inside = cls.natural.twist(dom.positive)\
+            @ cls.natural.twist(dom.negative).dagger()
+        return cls(inside, dom, dom)
+
     def dagger(self):
         """
         The dagger of an integer diagram is given by the dagger of its inside.
@@ -479,7 +558,6 @@ class Diagram[natural](RibbonCategory, NamedGeneric):
     transpose = rigid.Diagram.transpose
     # The remaining ribbon structure is derived from the concrete categories,
     # following the same idiom as `trace` and `transpose` above.
-    twist = classmethod(balanced.Diagram.twist.__func__)
     ev = classmethod(rigid.Diagram.ev.__func__)
     curry = rigid.Diagram.curry
     conjugate = pivotal.Diagram.conjugate
@@ -505,3 +583,23 @@ def Int(category: type[TracedCategory]) -> type[RibbonCategory]:
 
 
 Id = Diagram.id
+
+for name in (
+        "trace_dinaturality_left", "trace_dinaturality_right",
+        "trace_iteration_left", "trace_iteration_right",
+        "trace_naturality_left", "trace_naturality_right",
+        "trace_superposing_left", "trace_superposing_right", "yanking",
+        "currying_left", "currying_right", "currying_eta_left",
+        "currying_eta_right", "currying_naturality_left",
+        "currying_naturality_right"):
+    setattr(Diagram, name, getattr(RibbonCategory, name).inapplicable(
+        messages.PAIR_LENGTH))
+for name in ("adjunction", "rotate_contravariance"):
+    setattr(Diagram, name, getattr(RibbonCategory, name).inapplicable(
+        messages.NO_ROTATION))
+
+CHECKED = (Diagram[symmetric.Diagram], Diagram[compact.Diagram])
+"""
+The integer diagrams the property matrix checks: the free compact category
+on the free traced symmetric one, and on the free compact one.
+"""
