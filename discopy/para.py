@@ -125,6 +125,20 @@ free category with feedback of :cite:t:`KatisEtAl02`.
 >>> w = Symmetric(y, z, Box('w', y @ s, z @ s), s, s)
 >>> assert (v >> w).param == (v >> w).copar == s @ s
 
+This is not the state monad: para(copara(C)) is *not* the same as
+State(C, S): in the first case the composition of two maps tensors their
+co/parameters while in the second it chains them through. Each map above
+brings its own hidden space and `v >> w` carries `s @ s`, where the state
+category of maps `x @ s -> y @ s` in the underlying category chains one
+fixed `s` through, `w` reading the state `v` wrote:
+
+>>> state = v.inside >> w.inside
+>>> assert state.dom == x @ s and state.cod == z @ s
+
+Iterating a map on its own memory is the feedback operator of
+:mod:`discopy.feedback`, which :mod:`discopy.stream` unrolls by chaining
+the memory from one time step to the next.
+
 Example
 -------
 
