@@ -788,6 +788,20 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
+- `biclosed.Application` and `biclosed.Abstraction` are equal when their
+  parts are -- function, argument and side; variable, body and side -- as
+  the `closed.Compound` terms already were, rather than when they print
+  the same between the same types, which is what `cat.Box.setoid`
+  compares. A closed constant prints as its bare name, so `c0(c1)` with
+  `c0 : a << b, c1 : b` and with `c0 : a << a, c1 : a` compared equal
+  while `alpha_eq`, which reads the types of the constants, told them
+  apart, and `closed.TermBase.alpha_completeness` failed on the pair once
+  the nightly search drew it; a biclosed constant prints with its type, so
+  there the two equalities only disagreed on constants differing by their
+  `data` alone. Equality and hashing of a term are now structural, i.e.
+  recursive, as they were for a `Compound`
+  ([#767](https://github.com/discopy/discopy/pull/767),
+  [#489](https://github.com/discopy/discopy/pull/489)).
 - `python.Function` is hashable: its dataclass compared `inside`, `dom` and
   `cod` without hashing them, so `jax.jit` refused a function, as did any
   cache keyed on one
