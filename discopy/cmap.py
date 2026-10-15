@@ -291,6 +291,25 @@ class CMap[C0: Pregroup, C1: CMap](
             start = stop
         return tuple(result)
 
+    @staticmethod
+    def logical_order(arity: int, coarity: int) -> tuple[int, ...]:
+        """
+        The offsets of the ports of a box in logical order, i.e. its domain
+        ports followed by its codomain ports, within the clockwise order
+        which stores the codomain ports reversed.
+
+        Parameters:
+            arity : The number of domain ports.
+            coarity : The number of codomain ports.
+
+        Example
+        -------
+        >>> CMap.logical_order(2, 3)
+        (0, 1, 4, 3, 2)
+        """
+        return tuple(range(arity)) + tuple(
+            reversed(range(arity, arity + coarity)))
+
     @property
     def faces(self) -> Permutation:
         """ The face permutation, computed as ``edges ; orientation``. """
@@ -877,6 +896,67 @@ class CMap[C0: Pregroup, C1: CMap](
                 source, target = ends[wire]
                 edges[source], edges[target] = target, source
         return cls(dom, cod, boxes, edges, loops=loops)
+
+    @classmethod
+    def from_wiring(cls, boxes: tuple, wires, loops: tuple = ()) -> CMap:
+        """
+        A closed map given by boxes and wires between pairs ``(box_index,
+        port_position)``, where the position counts the domain ports of the
+        box followed by its codomain ports, in :meth:`logical_order`.
+
+        Parameters:
+            boxes : The boxes of the map.
+            wires : Pairs of ``(box_index, port_position)`` pairs.
+            loops : The types of the closed components with no ports.
+
+        Raises:
+            ValueError : If a wire names a box or a port that does not exist,
+                or if a port is left unwired or wired twice.
+
+        Example
+        -------
+        >>> from discopy.symmetric import Ty, Box, CMap
+        >>> x = Ty('x')
+        >>> f, g = Box('f', x, x @ x), Box('g', x @ x, x)
+        >>> cm = CMap.from_wiring((f, g), [
+        ...     ((0, 0), (1, 2)), ((0, 1), (1, 0)), ((0, 2), (1, 1))])
+        >>> assert cm.edges.is_fixpoint_free_involution()
+        >>> assert CMap.from_wiring((), [], loops=(x, )).loops == (x, )
+        >>> CMap.from_wiring((f, ), [((0, 0), (0, 0))])
+        Traceback (most recent call last):
+            ...
+        ValueError: Port (0, 0) is wired to itself.
+        """
+        boxes = tuple(boxes)
+        starts, n_ports = [], 0
+        for box in boxes:
+            starts.append(n_ports)
+            n_ports += len(box.dom) + len(box.cod)
+
+        def global_index(box_index: int, position: int) -> int:
+            if not 0 <= box_index < len(boxes):
+                raise ValueError(f"There is no box {box_index}.")
+            box = boxes[box_index]
+            offsets = cls.logical_order(len(box.dom), len(box.cod))
+            if not 0 <= position < len(offsets):
+                raise ValueError(f"Box {box_index} has no port {position}.")
+            return starts[box_index] + offsets[position]
+
+        pairs, seen = [], set()
+        for (one, other) in wires:
+            i, j = global_index(*one), global_index(*other)
+            if i == j:
+                raise ValueError(f"Port {one} is wired to itself.")
+            for port, position in ((i, one), (j, other)):
+                if port in seen:
+                    raise ValueError(f"Port {position} is wired twice.")
+            seen.update((i, j))
+            pairs.append((i, j))
+        if len(seen) != n_ports:
+            missing = sorted(set(range(n_ports)) - seen)
+            raise ValueError(f"Ports {missing} are left unwired.")
+        edges = Permutation.from_transpositions(pairs, n_ports)
+        return cls(cls.ob(), cls.ob(), boxes, edges, loops=loops)
 
     @classmethod
     def from_diagram(cls, old: Diagram) -> CMap:

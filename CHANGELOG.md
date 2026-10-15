@@ -9,6 +9,32 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Added
 
+- `discopy.neural.signature`, what a generator promises: `Sym` is the
+  symmetry an orbit of legs carries, none, the symmetric group or the
+  cyclic one; `Orbit(role, arity, sym, traced)` a family of legs playing
+  one atomic role, each leg twice when traced, the outgoing copy before
+  the incoming one; `Signature(orbits)` the legs of one generator in port
+  order, with `cod` the type of its abstract box in `discopy.frobenius`,
+  `box`, `positions`, `loops`, `loop_wires`, `resize`, how one shared
+  module serves sites of different degree, and `generators`, the
+  permutations of ports generating the symmetry group an equivariance
+  check runs a module against, `leg_generators` being that group before it
+  acts. `from_incidence` and `from_relation` draw a closed map out of a
+  family's combinatorics alone -- the bipartite incidence graph of nodes
+  and relations, the graph of a symmetric irreflexive binary relation --
+  with non-uniform degrees, per-relation names and signatures and the
+  traced loops closed, in `frobenius` since every box they wire has an
+  empty domain, so every wire joins two codomain ports, which a map
+  accepts only between self-dual roles. They go through
+  `cmap.CMap.from_wiring`, a closed map from boxes and wires between
+  `(box, port)` pairs counted in `CMap.logical_order`, domain ports then
+  codomain ones, refusing a port wired twice, to itself or not at all --
+  back from the history of #736, where the redesign left it with nothing
+  to consume it. Re-cut from discopy#739 onto the feedforward base: the
+  flat layout of its geometry-of-interaction backend, `slices` and
+  `width`, and the composite legs that only it needed, do not come, since
+  a `Box` here reads one tensor per leg and `positions` says which
+  ([#739](https://github.com/discopy/discopy/pull/739)).
 - `discopy.neural`, neural networks as diagrams: `discopy.neural.network`
   is the traced category of feedforward networks. `Dims` is the free
   monoid over the multiplicative `Dim`, i.e. a list of shapes with
