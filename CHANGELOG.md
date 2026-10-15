@@ -788,6 +788,20 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
+- Three docstrings say what the code does. `discopy.para`'s module
+  docstring states that the diagonal `param == copar` is not the state
+  monad: the composition of two maps tensors their co/parameters where the
+  state category chains one fixed state through, and it points to
+  `feedback` and `stream` for iterating a map on its own memory
+  ([#683](https://github.com/discopy/discopy/issues/683)).
+  `biclosed.Constant` documents its `name: str` and its type rather than
+  an `inside` diagram and a `left` flag it never had
+  ([#494](https://github.com/discopy/discopy/issues/494)).
+  `closed.Diagram.to_term` says that the free variables of its term come
+  in the order of their first occurrence in the term rather than that of
+  `dom`, so that `eval` gives a diagram with the used inputs in that order
+  as domain unless the inputs are passed as its `context`
+  ([#693](https://github.com/discopy/discopy/issues/693)).
 - `python.Function` is hashable: its dataclass compared `inside`, `dom` and
   `cod` without hashing them, so `jax.jit` refused a function, as did any
   cache keyed on one
