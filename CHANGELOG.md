@@ -34,7 +34,7 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   discopy#739 re-cut onto the feedforward base. The flat layout of its
   geometry-of-interaction backend, `slices` and `width`, and the composite
   legs that only it needed do not come: a `Box` here reads one tensor per
-  leg, and `positions` says which
+  leg, and `positions` says which ports a role's legs are
   ([#739](https://github.com/discopy/discopy/pull/739)).
 - `CMap.permutation`, a permutation encoded as boundary wiring: one
   fixpoint-free involution pairing each input port with the output port

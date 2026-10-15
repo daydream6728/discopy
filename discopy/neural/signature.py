@@ -345,7 +345,12 @@ def leg_generators(sym: Sym, arity: int) -> list[tuple[int, ...]]:
     [(1, 2, 0)]
     >>> leg_generators(Sym.NONE, 3), leg_generators(Sym.PERM, 1)
     ([], [])
+    >>> leg_generators("perms", 3)
+    Traceback (most recent call last):
+        ...
+    ValueError: 'perms' is not a valid Sym
     """
+    sym = Sym(sym)
     if arity < 2 or sym == Sym.NONE:
         return []
     rotation = tuple(range(1, arity)) + (0, )
