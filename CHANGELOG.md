@@ -792,15 +792,18 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   built their result as `type(self)(...)`, casting it to the dtype of the
   left operand: the unparametrised structural matrices -- `id`, `swap`,
   the spiders, `cups` and `caps` -- are `int64`, so `Tensor.id(Dim(2)) >> g`
-  was zeros for a float `g`, as were `Tensor.swap(x, y) >> g @ g` and any
-  spider on the left of a float tensor, and a complex tensor on the right
-  of an integer one lost its imaginary part, silently. The result is now
-  built in the class `Matrix.promote` gives: the one with the dtype the
-  backend promotes the two arrays to, read from the operand that already
-  has it, so that `Matrix.id(2) >> m == m` for a float `m`,
-  `Tensor[float]`, `Tensor[complex]` and `Tensor[Expr]` survive composition
-  with an integer structural tensor and `Matrix[bool]` composed with
-  `Matrix[bool]` stays Boolean. The guards of these methods check
+  truncated a float `g` to integers, zeros for one with entries below one,
+  as did `Tensor.swap(x, y) >> g @ g` and any spider on the left of a float
+  tensor, and a complex tensor on the right of an integer one lost its
+  imaginary part, silently. The result is now built in the class
+  `Matrix.promote` gives: the one with the dtype the backend promotes the
+  two arrays to, read from the operand that already has it, so that
+  `Matrix.id(2) >> m == m` for a float `m`, `Tensor[float]`,
+  `Tensor[complex]` and `Tensor[Expr]` survive composition with an integer
+  structural tensor and `Matrix[bool]` composed with `Matrix[bool]` stays
+  Boolean, on the backends whose operations take mixed dtypes at all:
+  PyTorch's `matmul` refuses them, as before. The guards of these methods
+  check
   `self.ar`, the matrices of the same category whatever their dtype, which
   is what `assert_isinstance(other, type(self))` checked through
   `get_origin` while reading as a check on the dtype. `Tensor.copy`
