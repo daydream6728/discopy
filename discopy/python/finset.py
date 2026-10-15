@@ -217,6 +217,25 @@ class Permutation(Function, PROP):
             result[left], result[right] = right, left
         return cls(result, size)
 
+    @classmethod
+    def gather(cls, xs: Sequence[int], size: int, offset: int = 0) -> Self:
+        """
+        Gather the inputs ``xs`` at the consecutive outputs from ``offset``,
+        in the order given, the other inputs keeping their order, i.e.
+        ``result[offset + i] == xs[i]``.
+
+        This is the wire routing of
+        :meth:`discopy.hypergraph.Hypergraph.to_diagram` and
+        :meth:`discopy.cmap.CMap.to_diagram`, which gather the domain wires
+        of each box at its offset.
+
+        >>> Permutation.gather([3, 1], 5, offset=1)
+        (0, 3, 1, 2, 4)
+        >>> assert Permutation.gather([], 3) == Permutation.id(3)
+        """
+        rest = [i for i in range(size) if i not in xs]
+        return cls(rest[:offset] + list(xs) + rest[offset:], size)
+
     def cycles(self) -> Cycles:
         """ Return the cycles of the permutation. """
         result, seen = [], set()

@@ -1487,6 +1487,13 @@ class Hypergraph(MonoidalCategory, NamedGeneric['category']):
         in one pass; this is what :meth:`discopy.symmetric.Diagram.foliation`
         relies on.
 
+        The open wires are scanned from left to right: the domain wires of
+        each box are gathered at its offset with one permutation, see
+        :meth:`discopy.python.finset.Permutation.gather`, emitted with
+        :meth:`discopy.abc.SymmetricCategory.from_permutation`, i.e. a
+        :class:`discopy.symmetric.Permutation` box when the category has a
+        native one and a composition of swaps otherwise.
+
         Note
         ----
         Hypergraphs can be translated to planar diagrams in two different ways:
@@ -1514,6 +1521,9 @@ class Hypergraph(MonoidalCategory, NamedGeneric['category']):
         v >> Swap(x, x) >> v[::-1]
         >>> print(x @ H.swap(x, x) >> v[::-1] @ x)
         Permutation(x @ x @ x, [0, 2, 1]) >> v[::-1] @ x
+        >>> from discopy.frobenius import Diagram
+        >>> print(Diagram.permutation([2, 0, 1], x @ x @ x).simplify())
+        Permutation(x @ x @ x, [2, 0, 1])
         """
         if self.scalar_spiders or not self.is_causal or not self.is_monogamous:
             if issubclass(self.category, HypergraphCategory):
@@ -1529,13 +1539,11 @@ class Hypergraph(MonoidalCategory, NamedGeneric['category']):
         diagram, scan = self.category.id(self.dom), self.dom_wires
         pending, layer_dom, layer_right, shift = [], self.dom, 0, 0
 
-        def swap(left, right):
-            if not left or not right:
-                return self.category.id(left @ right)
+        def permute(perm):
             if not issubclass(self.category, SymmetricCategory):
                 raise AxiomError(messages.NOT_SYMMETRIC.format(
                     factory_name(self.category)))
-            return self.category.swap(left, right)
+            return self.category.from_permutation(perm, diagram.cod)
 
         def flush():
             nonlocal diagram, pending, layer_right, shift
@@ -1551,27 +1559,15 @@ class Hypergraph(MonoidalCategory, NamedGeneric['category']):
 
         for depth, (box, offset) in enumerate(zip(self.boxes, self.offsets)):
             dom_wires, cod_wires = self.box_wires[depth]
-            for i in range(len(box.dom)):
-                j = scan.index(dom_wires[i])
-                if i == 0 and offset is None:
-                    offset = j
-                elif j != offset + i:
-                    flush()  # a swap is a layer of its own
-                    if j > offset + i:
-                        diagram >>= diagram.cod[:offset + i] @ swap(
-                            diagram.cod[offset + i:j], diagram.cod[j]
-                        ) @ diagram.cod[j + 1:]
-                        scan = (scan[:offset + i] + scan[j:j + 1]) + (
-                            scan[offset + i:j] + scan[j + 1:])
-                    else:
-                        diagram >>= diagram.cod[:j] @ swap(
-                            diagram.cod[j], diagram.cod[j + 1:offset + i]
-                        ) @ diagram.cod[offset + i:]
-                        scan = (scan[:j] + scan[j + 1:offset + i]) + (
-                            scan[j:j + 1] + scan[offset + i:])
-                        offset -= 1
-                    assert len(scan) == len(diagram.cod)
-            offset = 0 if offset is None else offset
+            positions = [scan.index(spider) for spider in dom_wires]
+            if offset is None:
+                offset = positions[0] if positions else 0
+            offset -= sum(j < offset for j in positions)
+            perm = Permutation.gather(positions, len(scan), offset)
+            if not perm.is_identity:
+                flush()
+                diagram >>= permute(perm)
+                scan = tuple(scan[j] for j in perm)
             if pending and offset < layer_right:
                 flush()
             if not pending:
@@ -1583,13 +1579,10 @@ class Hypergraph(MonoidalCategory, NamedGeneric['category']):
             if not foliate:
                 flush()
         flush()
-        for i, spider in enumerate(self.cod_wires):
-            j = scan.index(spider)
-            if i < j:
-                diagram >>= diagram.cod[:i] @ swap(
-                    diagram.cod[i:j], diagram.cod[j:j + 1]
-                ) @ diagram.cod[j + 1:]
-                scan = scan[:i] + scan[j:j + 1] + scan[i:j] + scan[j + 1:]
+        perm = Permutation(
+            [scan.index(spider) for spider in self.cod_wires], len(scan))
+        if not perm.is_identity:
+            diagram >>= permute(perm)
         return diagram
 
     @classmethod

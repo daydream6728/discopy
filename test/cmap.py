@@ -893,3 +893,38 @@ def test_from_glued_loops():
         (M.caps(x.r, x), 0), (M.caps(y.r, y), 2),
         (M.cups(y.r, y), 2), (M.cups(x.r, x), 0)])
     assert two.loops == (x, y)
+
+
+def test_to_diagram_routes_with_one_permutation():
+    """ Each routing step of the decoder is one :class:`Permutation` layer
+    rather than a staircase of swaps, so a permutation round-trips to itself
+    and the plumbing of a decoded diagram never spans two consecutive layers,
+    see discopy/discopy#539. """
+    from fixtures.diagrams import random_diagram
+
+    x, y, z, w = map(symmetric.Ty, "xyzw")
+    perm = symmetric.Permutation(x @ y @ z, [2, 0, 1])
+    g = symmetric.Box('g', z @ x @ y, w)
+    assert perm.to_swaps().to_map().to_diagram() == perm
+    assert (perm.to_swaps() >> g).to_map().to_diagram() == perm >> g
+
+    for module in (symmetric, compact):
+        for seed in range(10):
+            diagram, functor = random_diagram(module, seed)
+            decoded = diagram.to_map().to_diagram()
+            assert functor(decoded) == functor(diagram)
+            plumbing = [layer.is_plumbing for layer in decoded.inside]
+            assert not any(a and b for a, b in zip(plumbing, plumbing[1:]))
+
+
+def test_to_diagram_of_a_concrete_category_composes_swaps():
+    """ A category without a native permutation box routes its wires with
+    the composition of swaps of
+    :meth:`discopy.abc.SymmetricCategory.from_permutation`. """
+    from discopy import cmap
+    from discopy.tensor import Dim, Tensor
+
+    dim = Dim(2, 3, 4)
+    for perm in ([1, 0, 2], [2, 0, 1]):
+        assert cmap.CMap[Tensor].permutation(perm, dim).to_diagram()\
+            == Tensor.permutation(perm, dim)
