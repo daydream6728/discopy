@@ -788,6 +788,29 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
+- `Diagram.foliation` is an equality up to interchangers, at every level
+  of the hierarchy. `Layer.merge` normalised the composite of two layers
+  with `normal_form`, i.e. with the rewriting of the diagram's own level,
+  snake removal from `rigid` up, so `(g @ snake).foliation()` yanked the
+  snake and the README's own `x @ Cap(x.r, x) >> Cup(x, x.r) @ x` crashed
+  on the empty diagram it left; `normal_form` takes the rewriting as a
+  keyword, `normalize`, and `merge` passes `monoidal.Diagram.normalize`, so
+  that it moves boxes by interchangers alone. `to_staircases` split the
+  layers with `monoidal.Functor.id`, whose bubble branch rebuilt a `Trace`
+  as a `monoidal.Bubble`, so `foliation` and `depth` raised `TypeError` on
+  a trace beside another box in any traced or symmetric diagram; it decodes
+  the boxes with their offsets instead, which keeps every box as it is where
+  the functor of the level would not: `symmetric.Functor` splits a
+  permutation into swaps and `frobenius.Functor` drops the phase of a
+  spider. `Hypergraph.caps` demanded `left.r == right`, the convention of a
+  cup, so every rigid cap of either handedness was refused with an empty
+  `AxiomError` and the README's pregroup `Cap(n.r, n) @ Cap(n, n.l) >> n.r
+  @ loves @ n.l` could not be foliated, since `foliation` goes through
+  `to_hypergraph` first; `cups` and `caps` ask the objects themselves,
+  `left.assert_isadjoint(right)` and `right.assert_isadjoint(left)` as
+  `rigid.Cup`, `rigid.Cap` and `CMap` do, with a message, the adjoint of a
+  type that has none being its reversal
+  ([#699](https://github.com/discopy/discopy/issues/699)).
 - `python.Function` is hashable: its dataclass compared `inside`, `dom` and
   `cod` without hashing them, so `jax.jit` refused a function, as did any
   cache keyed on one

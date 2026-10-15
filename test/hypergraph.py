@@ -341,3 +341,24 @@ def test_subclass_to_hypergraph():
     f, g = Gate('f', x, x), Gate('g', x, x)
     assert (f >> g).to_hypergraph().category == Circuit
     assert isinstance((f >> g).to_hypergraph().to_diagram(), Circuit)
+
+
+def test_Hypergraph_cups_and_caps_adjoints():
+    from discopy import rigid, symmetric
+    x, y = rigid.Ty('x'), rigid.Ty('y')
+    R = Hypergraph[rigid.Diagram]
+    for left, right in [(x.r, x), (x, x.l)]:
+        assert rigid.Cap(left, right).to_hypergraph() == R.caps(left, right)
+    for left, right in [(x, x.r), (x.l, x)]:
+        assert rigid.Cup(left, right).to_hypergraph() == R.cups(left, right)
+    for cups_or_caps, left, right in [
+            (R.cups, x.r, x), (R.caps, x, x.r), (R.cups, x, x)]:
+        with raises(AxiomError):
+            cups_or_caps(left, right)
+    with raises(AxiomError, match="x and y are not adjoints"):
+        H.cups(Ty('x'), Ty('y'))
+    a, b = symmetric.Ty('a'), symmetric.Ty('b')
+    S = Hypergraph[symmetric.Diagram]
+    assert S.cups(a @ b, b @ a).dom == S.caps(a @ b, b @ a).cod
+    with raises(AxiomError, match="not adjoints"):
+        S.caps(a @ b, a @ b)

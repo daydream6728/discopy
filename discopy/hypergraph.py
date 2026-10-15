@@ -462,20 +462,35 @@ class Hypergraph(MonoidalCategory, NamedGeneric['category']):
     cap_factory = classmethod(lambda cls, left, right: cls.from_box(
         cls.category.cap_factory(left, right)))
 
+    @staticmethod
+    def assert_isadjoint(left, right):
+        """
+        Raise ``AxiomError`` unless ``right`` is the right adjoint of
+        ``left``, asked of the objects when they know, as
+        :class:`discopy.rigid.Ty` does, otherwise the adjoint of a type is
+        its reversal.
+        """
+        if hasattr(left, "assert_isadjoint"):
+            left.assert_isadjoint(right)
+        elif (left.r if hasattr(left, "r") else left[::-1]) != right:
+            raise AxiomError(messages.NOT_ADJOINT.format(left, right))
+
     @classmethod
     def cups(cls, left, right):
-        adjoint = left.r if hasattr(left, "r") else left[::-1]
-        if adjoint != right:
-            raise AxiomError
+        """ The cup wiring ``left`` to its right adjoint ``right``. """
+        cls.assert_isadjoint(left, right)
         dom_wires = tuple(range(len(left))) + tuple(reversed(range(len(left))))
         return cls(
             left @ right, cls.category.ob(), (), (dom_wires, (), ()))
 
     @classmethod
     def caps(cls, left, right):
-        adjoint = left.r if hasattr(left, "r") else left[::-1]
-        if adjoint != right:
-            raise AxiomError
+        """
+        The cap wiring ``left`` to its left adjoint ``right``, read the
+        other way round from :meth:`cups` as :class:`discopy.rigid.Cap` is
+        from :class:`discopy.rigid.Cup`.
+        """
+        cls.assert_isadjoint(right, left)
         cod_wires = tuple(range(len(left))) + tuple(reversed(range(len(left))))
         return cls(
             cls.category.ob(), left @ right, (), ((), (), cod_wires))
