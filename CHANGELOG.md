@@ -788,6 +788,29 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
+- `interaction.Diagram.trace` traces an integer diagram, where it raised
+  `TypeError` on every input: it was borrowed from `traced.Diagram` through
+  a `trace_factory` slicing the type, and an integer type is a pair of
+  types rather than a sequence of atoms, since positive and negative atoms
+  commute. The trace over a pair `(u, u_)` is the natural trace of the
+  inside over both halves at once, after the braids that bring them side
+  by side, and it agrees with the feedback loop made of cups and caps up
+  to the axioms of traced categories: on the nose over `Matrix[bool]`, by
+  hypergraph over symmetric diagrams, and with the trace of `lens.Traced`
+  through `to_int`. Its `n` counts atoms on each half, or one number per
+  half, read off the type by the new `interaction.Ty.split`, which also
+  gives `curry` and `uncurry`, borrowed stubs that sliced the type the
+  same way, and `twist` is the trace of the braid, as in `ribbon`.
+  `Int` of a symmetric category needs neither a dagger nor a twist:
+  `then`, `tensor` and `braid` took the inverse braid as the dagger of the
+  braid and `id` the natural twist, so `Int(python.Function)` could be
+  built but neither composed nor compared with an identity; the new
+  `natural_braid` and `natural_twist` read the braid the other way around
+  and the identity when `is_symmetric`, and keep the dagger path for
+  balanced categories. `rotate`, `l` and `r` are the transpose, since an
+  integer diagram has no box to rotate, which is what the borrowed
+  `conjugate` was missing
+  ([#732](https://github.com/discopy/discopy/issues/732)).
 - `python.Function` is hashable: its dataclass compared `inside`, `dom` and
   `cod` without hashing them, so `jax.jit` refused a function, as did any
   cache keyed on one
