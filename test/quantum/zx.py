@@ -232,6 +232,7 @@ def test_eval():
 
 
 def test_eval_symbolic():
+    pytest.importorskip("sympy")
     from sympy import Expr, exp, I, pi
     from sympy.abc import phi
     assert Z(1, 1, phi).eval(dtype=Expr).array[1, 1] == exp(2 * I * pi * phi)
