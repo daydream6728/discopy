@@ -9,6 +9,25 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Added
 
+- Hypergraphs of Python functions: `Hypergraph[python.Function]` is the
+  hypergraph category over `python.Function`, its spiders labelled by atomic
+  `List[type]` and its boundaries by lists of them: `monoidal.List` gains
+  `is_atomic` and `unwind` like `Ty`, the two methods `Hypergraph.__init__`
+  asks of a spider type, so that the spiders of a hypergraph over any free
+  monoid are checked alike. `Hypergraph.__call__` evaluates a
+  left-monogamous causal hypergraph by calling the boxes in order, copying
+  and discarding the values as the wiring dictates and reading the number
+  of outputs of a box off its codomain, so that a single output of type
+  `tuple` is one value, and raises `AxiomError` saying which of the two it
+  is not otherwise; a wiring with the wrong number of wires for a boundary
+  raises a `ValueError` saying so, where it was bare. The new
+  `hypergraph.Functor` maps the spider types and the boxes of a hypergraph
+  while keeping its wiring, a composite object atom by atom so that a raw
+  callable in its `ar_map` is wrapped into a function of the right type,
+  e.g. a hypergraph of a free symmetric category to one of Python functions,
+  with the swaps absorbed into the wiring; its tests evaluate the carry-save
+  adder of the composition benchmark exhaustively this way
+  ([#363](https://github.com/discopy/discopy/pull/363)).
 - `CMap.permutation`, a permutation encoded as boundary wiring: one
   fixpoint-free involution pairing each input port with the output port
   its wire lands on, so the map has no boxes and `2n` ports for `n`
