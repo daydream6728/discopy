@@ -893,3 +893,68 @@ def test_from_glued_loops():
         (M.caps(x.r, x), 0), (M.caps(y.r, y), 2),
         (M.cups(y.r, y), 2), (M.cups(x.r, x), 0)])
     assert two.loops == (x, y)
+
+
+def test_to_diagram_routes_with_one_permutation():
+    """ Each routing step of the decoder is one :class:`Permutation` layer
+    rather than a staircase of swaps, so a permutation round-trips to itself
+    and the plumbing of a decoded diagram never spans two consecutive layers,
+    see discopy/discopy#539. """
+    from fixtures.diagrams import random_diagram
+
+    x, y, z, w = map(symmetric.Ty, "xyzw")
+    perm = symmetric.Permutation(x @ y @ z, [2, 0, 1])
+    g = symmetric.Box('g', z @ x @ y, w)
+    assert perm.to_swaps().to_map().to_diagram() == perm
+    assert (perm.to_swaps() >> g).to_map().to_diagram() == perm >> g
+
+    for module in (symmetric, compact):
+        for seed in range(10):
+            diagram, functor = random_diagram(module, seed)
+            decoded = diagram.to_map().to_diagram()
+            assert functor(decoded) == functor(diagram)
+            plumbing = [layer.is_plumbing for layer in decoded.inside]
+            assert not any(a and b for a, b in zip(plumbing, plumbing[1:]))
+
+
+def test_to_diagram_of_a_concrete_category_uses_its_permutation():
+    """ A category without a native permutation box routes its wires with
+    its own ``permutation``, through the default
+    :meth:`discopy.abc.SymmetricCategory.from_permutation`. """
+    from discopy import cmap
+    from discopy.abc import Nat
+    from discopy.matrix import Matrix
+    from discopy.tensor import Dim, Tensor
+
+    for category, dom in ((Tensor, Dim(2, 3, 4)), (Matrix[int], Nat(3))):
+        for perm in ([1, 0, 2], [2, 0, 1]):
+            assert cmap.CMap[category].permutation(perm, dom).to_diagram()\
+                == category.permutation(perm, dom)
+
+
+def test_permutation_is_one_involution():
+    from discopy.abc import SymmetricCategory
+    from discopy.symmetric import Ty, Diagram, Equation, CMap as M
+    from discopy.tensor import Dim, Diagram as T, CMap as TM
+    x, y, z = map(Ty, "xyz")
+    cases = [
+        ([], []),
+        ([0], [x]),
+        ([1, 0], [x, y @ z]),
+        ([2, 0, 1], [x, y, z]),
+        ([3, 1, 0, 2], [x @ y, z, x, y @ y @ z])]
+    for xs, doms in cases:
+        direct, swaps = M.permutation(xs, doms), Diagram.permutation(xs, doms)
+        assert direct.boxes == () and direct.n_ports == 2 * len(direct.dom)
+        assert direct == swaps.to_map()
+        assert direct == SymmetricCategory.permutation.__func__(M, xs, doms)
+        assert Equation(direct.to_diagram(), swaps)
+        inverse = M.permutation(
+            [xs.index(j) for j in range(len(xs))], [doms[x] for x in xs])
+        assert direct >> inverse == M.id(direct.dom)
+    assert M.permutation(range(3), x @ y @ z) == M.id(x @ y @ z)
+    dims = [Dim(2), Dim(3), Dim(4)]
+    assert TM.permutation([2, 0, 1], dims).eval()\
+        == T.permutation([2, 0, 1], dims).eval()
+    with raises(ValueError):
+        M.permutation([0, 0], [x, y])

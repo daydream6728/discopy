@@ -69,3 +69,15 @@ def test_FinSet():
     assert F(copy >> discard @ x) == F(Diagram.id(x)) == F(copy >> x @ discard)
     assert F(copy >> copy @ x) == F(Diagram.copy(x, 3)) == F(copy >> x @ copy)
     assert F(copy >> swap) == F(copy)
+
+
+def test_gather():
+    from discopy.python import finset
+
+    assert finset.Permutation.gather([2, 0], 4, offset=1) == (1, 2, 0, 3)
+    assert finset.Permutation.gather([1], 3, offset=2) == (0, 2, 1)
+    assert finset.Permutation.gather([], 2) == (0, 1)
+    with raises(ValueError):
+        finset.Permutation.gather([0, 0], 2)
+    with raises(ValueError):
+        finset.Permutation.gather([1], 3, offset=3)
