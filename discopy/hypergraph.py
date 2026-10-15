@@ -17,6 +17,7 @@ Summary
     Wiring
     SpiderTypes
     Hypergraph
+    Functor
 
 .. admonition:: Functions
 
@@ -51,7 +52,7 @@ from networkx import (
 )
 from networkx.algorithms.isomorphism import is_isomorphic
 
-from discopy import cmap, messages
+from discopy import cat, cmap, messages
 from discopy.abc import (
     HypergraphCategory, MarkovCategory, MonoidalCategory, NamedGeneric,
     RigidCategory, SymmetricCategory, TracedCategory)
@@ -201,16 +202,21 @@ class Hypergraph(MonoidalCategory, NamedGeneric['category']):
         dom_wires, box_wires, cod_wires = wires
 
         if len(dom_wires) != len(dom):
-            raise ValueError
+            raise ValueError(messages.WRONG_NUMBER_OF_WIRES.format(
+                len(dom), dom, len(dom_wires)))
         if len(cod_wires) != len(cod):
-            raise ValueError
+            raise ValueError(messages.WRONG_NUMBER_OF_WIRES.format(
+                len(cod), cod, len(cod_wires)))
         if len(box_wires) != len(boxes):
-            raise ValueError
+            raise ValueError(messages.WRONG_NUMBER_OF_BOUNDARIES.format(
+                len(boxes), len(box_wires)))
         for box, (box_dom_wires, box_cod_wires) in zip(boxes, box_wires):
             if len(box_dom_wires) != len(box.dom):
-                raise ValueError
+                raise ValueError(messages.WRONG_NUMBER_OF_WIRES.format(
+                    len(box.dom), box.dom, len(box_dom_wires)))
             if len(box_cod_wires) != len(box.cod):
-                raise ValueError
+                raise ValueError(messages.WRONG_NUMBER_OF_WIRES.format(
+                    len(box.cod), box.cod, len(box_cod_wires)))
 
         flat_wires = dom_wires + tuple(
             chain.from_iterable(x + y for x, y in box_wires)) + cod_wires
@@ -327,8 +333,9 @@ class Hypergraph(MonoidalCategory, NamedGeneric['category']):
         for box in boxes:
             box_wires.append(tuple(map(tuple, (
                 flat_wires[i:i + len(box.dom)],
-                flat_wires[i + len(box.dom):i + len(box.dom @ box.cod)]))))
-            i += len(box.dom @ box.cod)
+                flat_wires[
+                    i + len(box.dom):i + len(box.dom) + len(box.cod)]))))
+            i += len(box.dom) + len(box.cod)
         cod_wires = tuple(flat_wires[i:])
         return (dom_wires, tuple(box_wires), cod_wires)
 
@@ -1127,6 +1134,57 @@ class Hypergraph(MonoidalCategory, NamedGeneric['category']):
                                         self.cod_wires),
             self.spider_types, offsets)
 
+    def __call__(self, *xs):
+        """
+        Evaluate a left-monogamous causal hypergraph by calling each box in
+        order: seed the domain wires with ``xs``, feed each box the values
+        on its domain wires -- copied or discarded as the wiring dictates --
+        and return the values on the codomain wires, or that value itself
+        when there is only one.
+
+        Parameters:
+            xs : One value for each wire in :attr:`dom_wires`.
+
+        Raises
+        ------
+            AxiomError :
+                If the hypergraph is not left-monogamous or not causal.
+            ValueError :
+                If there is not one value for each domain wire, or a box
+                returns a different number of values than it has codomain
+                wires.
+
+        Example
+        -------
+        The hypergraph below copies its first input into both inputs of
+        ``add`` and forwards it to its second output, so that
+        ``f(x, y) = (y + x, x)`` -- copying and discarding for free:
+
+        >>> from discopy.python import Function, Ty
+        >>> add = Function(lambda x, y: x + y, (int, int), int)
+        >>> f = Hypergraph[Function](
+        ...     dom=Ty(int, int), cod=Ty(int, int), boxes=(add, ),
+        ...     wires=((0, 1), (((1, 0), (2, )), ), (2, 0)))
+        >>> assert f(2, 3) == (5, 2)
+        """
+        if not self.is_left_monogamous:
+            raise AxiomError(messages.NOT_LEFT_MONOGAMOUS.format(
+                factory_name(type(self))))
+        if not self.is_causal:
+            raise AxiomError(messages.NOT_CAUSAL.format(
+                factory_name(type(self))))
+        if len(xs) != len(self.dom_wires):
+            raise ValueError(messages.WRONG_NUMBER_OF_WIRES.format(
+                len(self.dom_wires), self.dom, len(xs)))
+        values = dict(zip(self.dom_wires, xs))
+        for box, (box_dom, box_cod) in zip(self.boxes, self.box_wires):
+            ys = tuplify(box(*(values[spider] for spider in box_dom)))
+            if len(ys) != len(box_cod):
+                raise ValueError(messages.WRONG_NUMBER_OF_WIRES.format(
+                    len(box_cod), box.cod, len(ys)))
+            values.update(zip(box_cod, ys))
+        return untuplify(tuple(values[spider] for spider in self.cod_wires))
+
     def make_bijective(self) -> Hypergraph:
         """
         Introduces spider boxes to make self bijective.
@@ -1807,3 +1865,50 @@ class Hypergraph(MonoidalCategory, NamedGeneric['category']):
             finally:
                 plt.close()
         plt.show()
+
+
+class Functor(cat.Functor):
+    """
+    A hypergraph functor applies ``ob_map`` to each spider type and
+    ``ar_map`` to each box of a hypergraph while keeping its wiring
+    untouched, i.e. it preserves spiders.
+
+    Parameters:
+        ob_map : Mapping from atomic types to atomic ``cod.ob``.
+        ar_map : Mapping from boxes to arrows of ``cod``.
+        cod : The codomain category.
+
+    Note
+    ----
+    The boundary of the image is the tensor of the images of the spiders on
+    the boundary wires, so that the functor applies to hypergraphs over any
+    category: with ``cod=Function``, ``ob_map`` sends each atomic type to a
+    Python type, embedded as an atomic :class:`monoidal.List`, and the
+    boundary is the list of them.
+
+    Example
+    -------
+    A hypergraph in a free symmetric category is mapped to a hypergraph of
+    Python functions, which can then be evaluated directly by
+    :meth:`Hypergraph.__call__` -- the swaps are absorbed into the wiring:
+
+    >>> from discopy.symmetric import Ty, Box, Diagram
+    >>> from discopy.python import Function
+    >>> x = Ty('x')
+    >>> f = Box('f', x @ x, x)
+    >>> add = Function(lambda a, b: a + b, (int, int), int)
+    >>> F = Functor({x: int}, {f: add}, cod=Function)
+    >>> assert F(f.to_hypergraph())(1, 2) == 3
+    >>> both = Diagram.swap(x, x) >> f
+    >>> assert F(both.to_hypergraph())(1, 2) == 3
+    """
+    def __call__(self, other):
+        if not isinstance(other, Hypergraph):
+            return super().__call__(other)
+        spider_types = tuple(map(self, other.spider_types))
+        dom, cod = (
+            self.cod.ob().tensor(*(spider_types[spider] for spider in wires))
+            for wires in (other.dom_wires, other.cod_wires))
+        boxes = tuple(map(self, other.boxes))
+        return Hypergraph[self.cod](
+            dom, cod, boxes, other.wires, spider_types, other.offsets)

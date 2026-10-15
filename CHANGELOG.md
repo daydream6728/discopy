@@ -9,6 +9,21 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Added
 
+- Hypergraphs of Python functions: `Hypergraph[python.Function]` is the
+  hypergraph category over `python.Function`, its spiders labelled by atomic
+  `List[type]` and its boundaries by lists of them, which `monoidal.List`
+  supports with `is_atomic` and `unwind` like `Ty`, where
+  `Hypergraph.__init__` used to require a `Ty`. `Hypergraph.__call__`
+  evaluates a left-monogamous causal hypergraph by calling the boxes in
+  order, copying and discarding the values as the wiring dictates, and
+  raises `AxiomError` saying which of the two it is not otherwise; a wiring
+  with the wrong number of wires for a boundary raises a `ValueError` saying
+  so, where it was bare. The new `hypergraph.Functor` maps the spider types
+  and the boxes of a hypergraph while keeping its wiring, e.g. a hypergraph
+  of a free symmetric category to one of Python functions, with the swaps
+  absorbed into the wiring; its tests evaluate the carry-save adder of the
+  composition benchmark exhaustively this way
+  ([#363](https://github.com/discopy/discopy/pull/363)).
 - `discopy.neural`, neural networks as diagrams: `discopy.neural.network`
   is the traced category of feedforward networks. `Dims` is the free
   monoid over the multiplicative `Dim`, i.e. a list of shapes with
