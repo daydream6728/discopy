@@ -217,6 +217,14 @@ def test_alpha_eq():
         X(lambda x: X(lambda y: ((Y << X) << X)("h_")(x)(y))))
 
 
+def test_equality_reads_the_data_of_constants():
+    X, Y = Ty("X"), Ty("Y")
+    x = Variable("x", X)
+    f, g = Constant("f", Y << X, data=1), Constant("f", Y << X, data=2)
+    assert str(f(x)) == str(g(x)) and f(x) != g(x)
+    assert X(lambda x: f(x)) != X(lambda x: g(x))
+
+
 def test_alpha_eq_under_restores_the_scopes():
     X, Y = Ty("X"), Ty("Y")
     f, x = (Y << X)("f"), Variable("x", X)

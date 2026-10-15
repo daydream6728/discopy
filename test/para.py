@@ -37,6 +37,16 @@ def test_symmetric_axioms():
     assert Symmetric.braid(x, y) == swap
 
 
+def test_permutation():
+    perm = Symmetric.permutation([1, 2, 0], (x, y, z))
+    assert perm.inside == Diagram.permutation([1, 2, 0], x @ y @ z)
+    assert perm.param == perm.copar == Ty()
+    i, s, fl = python.Ty(int), python.Ty(str), python.Ty(float)
+    perm = Symmetric[Function].permutation([1, 2, 0], (i, s, fl))
+    assert perm.dom == i @ s @ fl and perm.cod == s @ fl @ i
+    assert perm.inside(1, "a", 2.5) == ("a", 2.5, 1)
+
+
 def test_trace():
     t = Traced(x @ y, z @ y, Box('t', x @ y @ p, z @ y), p)
     assert t.trace(0) == t

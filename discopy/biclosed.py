@@ -1089,13 +1089,16 @@ class TermBase(Box, Equivalence):
 
 class Constant(TermBase):
     """
-    A constant term of defined by a :class:`Diagram` with ``dom=X, cod=Y``.
-    The constant has type ``Y`` if ``X`` is empty else it has type either
-    ``Y << X`` if ``left=True`` else ``X >> Y``.
+    A constant term with a string as name and a :class:`Ty`, i.e. a term with
+    no free variable: ``X("x")`` is a constant of type ``X`` and
+    ``(X >> Y)("f")`` a function constant, applied to an argument by
+    :class:`Application`. Under the identity functor it is a box with the
+    empty domain, i.e. a state of its type; any other :class:`Functor`
+    interprets it through its :code:`ar_map`.
 
     Attributes:
-        inside (Diagram): The diagram which defines the constant.
-        left (Optional[bool]): Whether the domain comes from the left or right.
+        name (str): The name of the constant.
+        cod (Ty): The type of the constant.
     """
     def __init__(self, name: str, cod: Ty, **kwargs):
         super().__init__(name, dom=self.ob(), cod=cod, **kwargs)
@@ -1233,6 +1236,14 @@ class Application(TermBase):
         left = ", left=True" if self.left else ""
         return factory_name(type(self)) + f"({func}, {args}{left})"
 
+    def setoid(self):
+        """
+        Applications are equal when their functions, arguments and sides
+        are, rather than when they print the same between the same types:
+        a closed constant prints as its bare name, whatever its type.
+        """
+        return type(self), self.func, self.args, self.left
+
     @property
     def constants(self):
         return self.args.constants + self.func.constants if self.left\
@@ -1294,6 +1305,13 @@ class Abstraction(TermBase):
         var, body = repr(self.var), repr(self.body)
         left = ", left=True" if self.left else ""
         return factory_name(type(self)) + f"({var}, {body}{left})"
+
+    def setoid(self):
+        """
+        Abstractions are equal when their variables, bodies and sides are,
+        see :meth:`Application.setoid`.
+        """
+        return type(self), self.var, self.body, self.left
 
     @property
     def constants(self):
