@@ -60,3 +60,12 @@ def test_trace_serialisation():
     x = symmetric.Ty('x')
     swap = symmetric.Swap(x, x)
     assert loads(dumps(swap.trace(left=True))) == swap.trace(left=True)
+
+
+def test_trace_foliation():
+    x = Ty('x')
+    f, g = Box('f', x @ x, x @ x), Box('g', x, x)
+    beside, below = f.trace() @ g, f.trace() >> g
+    assert beside.foliation().boxes == [f.trace(), g]
+    assert len(beside.foliation()) == 1 and beside.depth() == 1
+    assert below.foliation() == below and below.depth() == 2
