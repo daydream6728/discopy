@@ -6,7 +6,7 @@ from pytest import raises
 
 from discopy import cat, lens, markov, monoidal, para, python, symmetric
 from discopy.abc import Nat
-from discopy.interaction import Ty as IntTy
+from discopy.interaction import Diagram as IntDiagram, Ty as IntTy
 from discopy.lens import Markov, Symmetric, Traced, Ty
 from discopy.python import Function
 from discopy.symmetric import Box, Diagram
@@ -149,15 +149,25 @@ def random_traced(seed):
     return pair, lens_
 
 
-def natural_trace(lens_, U):
-    """ The trace of `U` on the integer diagram in the underlying category. """
-    (u, u_), swap = U, Diagram.swap
-    x, y = (t.positive[:len(t.positive) - len(u)]
-            for t in (lens_.dom, lens_.cod))
-    x_, y_ = (t.negative[:len(t.negative) - len(u_)]
-              for t in (lens_.dom, lens_.cod))
-    inside = lens_.to_int().inside.trace(len(u_))
-    return (x @ swap(y_, u) >> inside >> y @ swap(u, x_)).trace(len(u))
+def swap_negatives(X, U):
+    """
+    The swap of negative halves from `to_int(X @ U)` to `to_int(X) @ to_int(U)`
+    that `to_int` is monoidal up to, since an integer type reverses them.
+    """
+    (x, x_), (u, u_), Int = X, U, IntTy[T]
+    return IntDiagram[Diagram](
+        x @ u @ Diagram.swap(u_, x_), Int(*(X @ U)), Int(*X) @ Int(*U))
+
+
+def int_trace(lens_, U):
+    """ The trace of the integer diagram of a lens over `U`. """
+    dom, cod = (
+        type(U)(positive[:len(positive) - len(U.positive)],
+                negative[:len(negative) - len(U.negative)])
+        for positive, negative in (lens_.dom, lens_.cod))
+    integer = swap_negatives(dom, U).dagger() >> lens_.to_int()\
+        >> swap_negatives(cod, U)
+    return integer.trace(len(U.positive)).inside
 
 
 def test_traced():
@@ -188,7 +198,7 @@ def test_trace_axioms():
         assert equal((fv >> Traced.id(Y) @ guv).trace(k),
                      (Traced.id(X) @ guv >> fv).trace(n))
         assert fu.trace(n).to_int().inside.to_hypergraph()\
-            == natural_trace(fu, U).to_hypergraph()
+            == int_trace(fu, U).to_hypergraph()
 
 
 def markov_lens():
