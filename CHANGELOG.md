@@ -864,7 +864,9 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `data`. A `frobenius.Functor` maps a spider to the spiders of its codomain
   only when it has no phase: a phased spider is a generator, mapped by
   `ar_map` like any box, where every functor out of `zx` -- `to_map`,
-  `to_hypergraph` and `eval` among them -- dropped its colour and its phase.
+  `to_hypergraph` and `eval` among them -- dropped its colour and its phase;
+  a phased `tensor.Spider`, which `Tensor` has no array for, raises
+  `NotImplementedError` from `eval` where it evaluated as the phaseless one.
   `gate2zx` decomposes a `Controlled` gate at a distance other than one
   before reading the rotation it controls, where `CRz`, `CRx` and `CU1` at
   `distance=2` gave the two-qubit diagram of `distance=1`, translates

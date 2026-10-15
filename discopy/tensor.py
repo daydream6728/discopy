@@ -838,6 +838,18 @@ class Spider(frobenius.Spider, Box):
     .. image:: /_static/tensor/frobenius-example.svg
         :align: center
     """
+    @property
+    def array(self):
+        """
+        The array of a spider without a phase, see
+        :meth:`Tensor.spider_factory`; a phase has no array in
+        :class:`Tensor` yet, so a phased spider raises rather than reading
+        its phase as its array.
+        """
+        if self.phase is not None:
+            raise NotImplementedError(
+                f"{self} has a phase, which Tensor does not interpret.")
+        return Tensor.spiders(len(self.dom), len(self.cod), self.typ).array
 
 
 class Sum(monoidal.Sum, Box):
