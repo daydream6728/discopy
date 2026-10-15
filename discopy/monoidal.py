@@ -900,7 +900,9 @@ class Layer(cat.Box, ColouredMonoid):
     def merge(self, other: Layer) -> Layer:
         """
         Merge two layers into one or raise :class:`AxiomError`,
-        used by :meth:`Diagram.foliation`.
+        used by :meth:`Diagram.foliation`: two layers merge when their
+        composite is one layer up to interchangers alone, whatever rewrites
+        the level of the diagram adds, e.g. a snake is never yanked.
 
         Parameters:
             other : The other layer with which to merge.
@@ -914,9 +916,11 @@ class Layer(cat.Box, ColouredMonoid):
         >>> assert layer0.merge(layer1) == Layer(e, f, e, g, e)
         """
         assert_iscomposable(self, other)
+        staircases = self.boxes_and_types[1].ar(
+            (self, other), self.dom, other.cod).to_staircases()
         try:
-            diagram = Diagram.normal_form(self.boxes_and_types[1].ar(
-                (self, other), self.dom, other.cod).to_staircases())
+            diagram = Diagram.normal_form(
+                staircases, normalize=Diagram.normalize)
         except NotImplementedError as exception:  # Eckmann-Hilton argument.
             diagram = exception.last_step
         boxes_or_types, offset = [self.dom[:0]], 0
@@ -1170,7 +1174,8 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
 
     def to_staircases(self):
         """
-        Splits layers with more than one box into staircases.
+        Splits layers with more than one box into staircases, i.e. decodes
+        the boxes of the diagram with their offsets, one layer each.
 
         Example
         -------
@@ -1182,7 +1187,7 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
         >>> print(diagram.foliation().to_staircases())
         f0 @ y >> y @ f1
         """
-        return Functor.id(self.ar)(self)
+        return self.ar.decode(*self.encode())
 
     def to_hypergraph(self) -> Hypergraph:
         """
@@ -1402,11 +1407,17 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
             if no_more_moves:
                 break
 
-    def normal_form(self, **params) -> Diagram:
+    def normal_form(self, normalize: Callable = None, **params) -> Diagram:
         """
         Returns the normal form of a diagram.
 
-        params : Passed to :meth:`Diagram.normalize`.
+        Parameters:
+            normalize : The rewriting to normalise with, the diagram's own
+                :meth:`normalize` by default, which from :mod:`rigid` up
+                yanks snakes before it interchanges boxes:
+                :meth:`Layer.merge` passes :meth:`Diagram.normalize`
+                to interchange alone.
+            params : Passed to ``normalize``.
 
         Raises
         ------
@@ -1414,8 +1425,9 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
             Whenever ``normalize`` yields the same rewrite steps twice, e.g.
             the diagram is not boundary-connected.
         """
+        normalize = type(self).normalize if normalize is None else normalize
         cache = set()
-        for diagram in itertools.chain([self], self.normalize(**params)):
+        for diagram in itertools.chain([self], normalize(self, **params)):
             if str(diagram) in cache:
                 exception = NotImplementedError(
                     messages.NOT_CONNECTED.format(self))

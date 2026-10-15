@@ -761,3 +761,21 @@ def test_List():
     assert eval(repr(Ty.id(red))) == Ty.id(red)
     with raises(AxiomError):
         Ty(Wire('x', red, red), Wire('y'))
+
+
+def test_foliation_up_to_interchangers():
+    from discopy import rigid, tensor
+    interchangers = lambda d: d.to_staircases().normal_form(
+        normalize=Diagram.normalize)
+    x, y = Ty('x'), Ty('y')
+    f, g, h = Box('f', x, y), Box('g', y, x), Box('h', x, x)
+    a = rigid.Ty('a')
+    k = rigid.Box('k', a, a)
+    snake = a @ rigid.Cap(a.r, a) >> rigid.Cup(a, a.r) @ a
+    for diagram in [f @ g >> g @ f, f.bubble(name="N") @ h, snake, k @ snake]:
+        foliated = diagram.foliation()
+        assert foliated.boxes == diagram.boxes
+        assert interchangers(foliated) == interchangers(diagram)
+    assert snake.foliation() == snake and len((k @ snake).foliation()) == 2
+    F = tensor.Functor({a: 2}, {k: [1, 2, 3, 4]}, dom=rigid.Diagram)
+    assert F((k @ snake).foliation()) == F(k @ snake)
