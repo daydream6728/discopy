@@ -117,7 +117,7 @@ from discopy.kleisli.monad import Monad
 from discopy.python import function
 from discopy.python.additive import Ty
 from discopy.utils import (
-    assert_isinstance, assert_iscomposable, factory, factory_name, tuplify)
+    assert_isinstance, assert_iscomposable, factory, factory_name)
 
 
 class Tagged:
@@ -163,8 +163,8 @@ def pack(ty: Ty) -> type:
     >>> assert pack((int, )) is int
     >>> assert pack((int, str)) is Tagged
     """
-    ty = tuplify(ty)
-    return ty[0] if len(ty) == 1 else Tagged
+    ty = Ty.cast(ty)
+    return ty.inside[0] if len(ty) == 1 else Tagged
 
 
 def pack_value(value, tag: int, ty: Ty):
@@ -182,7 +182,7 @@ def pack_value(value, tag: int, ty: Ty):
     >>> assert pack_value("x", 0, (str, )) == "x"
     >>> assert pack_value("x", 1, (int, str)) == Tagged("x", 1)
     """
-    return value if len(tuplify(ty)) == 1 else Tagged(value, tag)
+    return value if len(Ty.cast(ty)) == 1 else Tagged(value, tag)
 
 
 def unpack_value(value) -> tuple:
@@ -264,10 +264,10 @@ class Channel(TracedCategory, NamedGeneric['monad']):
     >>> assert both(1) == frozenset({Tagged(1, 0), Tagged(-1, 1)})
     """
     ob = Ty
-    monad: Monad = None
+    monad: Monad
 
     def __init__(self, inside: Callable, dom: Ty, cod: Ty):
-        dom, cod = tuplify(dom), tuplify(cod)
+        dom, cod = self.ob.cast(dom), self.ob.cast(cod)
         packed_cls = channel.Channel[type(self).monad]
 
         def call(value):
@@ -286,7 +286,7 @@ class Channel(TracedCategory, NamedGeneric['monad']):
         Parameters:
             dom : The disjoint union of wire types.
         """
-        dom = tuplify(dom)
+        dom = cls.ob.cast(dom)
         return cls(channel.Channel[cls.monad].id(pack(dom)), dom, dom)
 
     def __call__(self, obj, tag: int = 0):
@@ -315,7 +315,7 @@ class Channel(TracedCategory, NamedGeneric['monad']):
         """
         assert_isinstance(other, type(self))
         monad = type(self).monad
-        dom, cod = self.dom + other.dom, self.cod + other.cod
+        dom, cod = self.dom @ other.dom, self.cod @ other.cod
         left = monad(injection(0, self.cod, cod))
         right = monad(injection(len(self.cod), other.cod, cod))
 
@@ -334,13 +334,13 @@ class Channel(TracedCategory, NamedGeneric['monad']):
             x : The disjoint union on the left.
             y : The disjoint union on the right.
         """
-        x, y = tuplify(x), tuplify(y)
-        unit = cls.monad.unit(pack(y + x))
+        x, y = cls.ob.cast(x), cls.ob.cast(y)
+        unit = cls.monad.unit(pack(y @ x))
 
         def inside(obj, tag=0):
             tag = tag + len(y) if tag < len(x) else tag - len(x)
-            return unit(pack_value(obj, tag, y + x))
-        return cls(inside, x + y, y + x)
+            return unit(pack_value(obj, tag, y @ x))
+        return cls(inside, x @ y, y @ x)
 
     @classmethod
     def merge(cls, x: Ty, n: int = 2) -> Channel:
@@ -352,11 +352,11 @@ class Channel(TracedCategory, NamedGeneric['monad']):
             x : The disjoint union of wire types to merge.
             n : The number of copies to merge.
         """
-        x = tuplify(x)
+        x = cls.ob.cast(x)
         unit = cls.monad.unit(pack(x))
         return cls(
             lambda obj, tag=0: unit(pack_value(obj, tag % len(x), x)),
-            n * x, x)
+            x ** n, x)
 
     def trace(self, n: int = 1, left: bool = False) -> Channel:
         """

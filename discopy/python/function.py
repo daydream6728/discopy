@@ -113,35 +113,35 @@ class EndoFunctor(Functor):
     mapping from types to types and from functions to functions.
 
     Parameters:
-        ob_map : Mapping from tuples of types to tuples of types, e.g.
+        ob_map : Mapping from lists of types to lists of types, e.g.
             sending ``X`` to some container type over ``X``.
         ar_map : Mapping from functions to functions, e.g. ``fmap``.
 
     Note
     ----
-    Since :attr:`Function.ob` is :code:`tuple[type, ...]`, calling an
-    :class:`EndoFunctor` on a bare type tuplifies it for convenience, but the
-    result is always a tuple, matching :attr:`Function.dom` and
-    :attr:`Function.cod`.
+    Since :attr:`Function.ob` is :class:`~discopy.monoidal.List` ``[type]``,
+    calling an :class:`EndoFunctor` on a type or a tuple of types casts it
+    into a list for convenience, but the result is always a list of types,
+    matching :attr:`Function.dom` and :attr:`Function.cod`.
 
     Example
     -------
     >>> Maybe = EndoFunctor(
-    ...     lambda X: (untuplify(X) | None, ),
+    ...     lambda X: Ty(X.inside[0] | None),
     ...     lambda f: Function(
     ...         lambda x: None if x is None else f(x),
-    ...         (untuplify(f.dom) | None, ), (untuplify(f.cod) | None, )))
+    ...         f.dom.inside[0] | None, f.cod.inside[0] | None))
     >>> Maybe(int)
-    (int | None,)
+    monoidal.List[type](int | None)
     >>> f = Function(lambda x: x + 1, int, int)
     >>> Maybe(f)(1), Maybe(f)(None)
     (2, None)
-    >>> assert EndoFunctor.id()(int) == (int, )
+    >>> assert EndoFunctor.id()(int) == Ty(int)
     """
-    ob = tuple[type, ...]
+    ob = Ty
     dom = cod = Function
 
     def __call__(self, other):
         if isinstance(other, Function):
             return self.ar_map[other]
-        return self.ob_map[tuplify(other)]
+        return self.ob_map[Ty.cast(other)]

@@ -4,7 +4,7 @@ from pytest import approx, raises
 
 from discopy.cat import Transformation
 from discopy.utils import AxiomError
-from discopy.python.function import Function, EndoFunctor
+from discopy.python.function import Function, EndoFunctor, Ty
 from discopy.python.additive import Function as AdditiveFunction
 from discopy.kleisli.monad import (
     Monad, Maybe, Powerset, Subdistribution, Seed,
@@ -17,15 +17,16 @@ from discopy.tensor import Dim, Tensor
 
 
 def test_EndoFunctor():
-    assert EndoFunctor.id()(int) == (int, )
+    assert EndoFunctor.id()(int) == Ty(int)
 
     listing = EndoFunctor(
-        lambda X: (list[X[0]], ),
+        lambda X: Ty(list[X.inside[0]]),
         lambda f: Function(
-            lambda xs: [f(x) for x in xs], list[f.dom[0]], list[f.cod[0]]))
+            lambda xs: [f(x) for x in xs],
+            list[f.dom.inside[0]], list[f.cod.inside[0]]))
     increment = Function(lambda x: x + 1, int, int)
 
-    assert listing(int) == (list[int], )
+    assert listing(int) == Ty(list[int])
     assert listing(increment)([1, 2, 3]) == [2, 3, 4]
     assert listing.then(listing)(int) == listing(listing(int))
 
@@ -52,7 +53,7 @@ def test_Monad_identity():
     identity = Monad(
         "Identity", lambda X: X, lambda f: f,
         lambda X: Function.id(X), lambda X: Function.id(X))
-    assert identity(int) == (int, )
+    assert identity(int) == Ty(int)
     assert identity.unit(int)(42) == identity.mult(int)(42) == 42
 
 
@@ -168,7 +169,7 @@ def test_multiplicative_Channel_tensor():
     increment = Safe(lambda x: x + 1, int, int)
 
     parallel = half @ increment
-    assert parallel.dom == (int, int) == parallel.cod
+    assert parallel.dom == Ty(int, int) == parallel.cod
     assert parallel(4, 10) == (2, 11)
     assert parallel(3, 10) is None
 
@@ -177,7 +178,7 @@ def test_multiplicative_Channel_tensor():
     assert triple(3, 10, 6) is None
 
     left_whiskered = (int, ) @ half
-    assert left_whiskered.dom == (int, int) == left_whiskered.cod
+    assert left_whiskered.dom == Ty(int, int) == left_whiskered.cod
     assert left_whiskered(99, 4) == (99, 2)
 
     with raises(TypeError):
@@ -449,7 +450,7 @@ def test_additive_Channel_tensor():
     increment = Safe(lambda x: x + 1, int, int)
 
     either = half @ increment
-    assert either.dom == (int, int) == either.cod
+    assert either.dom == Ty(int, int) == either.cod
     assert either(4) == Tagged(2, 0) and either(4, 1) == Tagged(5, 1)
     assert either(3) is None and either(3, 1) == Tagged(4, 1)
 
@@ -457,8 +458,8 @@ def test_additive_Channel_tensor():
         half.tensor("not-a-channel")
 
     # Whiskering on either side comes from `MonoidalCategory`.
-    assert ((str, ) @ increment).dom == (str, int)
-    assert (increment @ (str, )).dom == (int, str)
+    assert ((str, ) @ increment).dom == Ty(str, int)
+    assert (increment @ (str, )).dom == Ty(int, str)
 
 
 def test_additive_tensor_is_a_bifunctor():
@@ -480,13 +481,14 @@ def test_additive_Channel_swap_and_merge():
     Nondet = additive.Channel[Powerset]
 
     swap = Nondet.swap((int, ), (str, str))
-    assert swap.dom == (int, str, str) and swap.cod == (str, str, int)
+    assert swap.dom == Ty(int, str, str) and swap.cod == Ty(str, str, int)
     assert swap(1, 0) == frozenset({Tagged(1, 2)})
     assert swap("x", 1) == frozenset({Tagged("x", 0)})
     assert swap("y", 2) == frozenset({Tagged("y", 1)})
 
     codiagonal = Nondet.merge((int, str))
-    assert codiagonal.dom == 2 * (int, str) and codiagonal.cod == (int, str)
+    assert codiagonal.dom == Ty(int, str) ** 2
+    assert codiagonal.cod == Ty(int, str)
     assert codiagonal(1, 0) == frozenset({Tagged(1, 0)}) == codiagonal(1, 2)
     assert codiagonal("x", 1) == frozenset(
         {Tagged("x", 1)}) == codiagonal("x", 3)

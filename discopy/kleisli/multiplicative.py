@@ -77,7 +77,7 @@ from discopy.kleisli.monad import Monad
 from discopy.python import function
 from discopy.python.multiplicative import Ty
 from discopy.utils import (
-    assert_isinstance, assert_iscomposable, factory, factory_name, tuplify)
+    assert_isinstance, assert_iscomposable, factory, factory_name)
 
 
 class Row:
@@ -118,8 +118,8 @@ def pack(ty: Ty) -> type:
     >>> assert pack((int, )) is int
     >>> assert pack((int, str)) is Row
     """
-    ty = tuplify(ty)
-    return ty[0] if len(ty) == 1 else Row
+    ty = Ty.cast(ty)
+    return ty.inside[0] if len(ty) == 1 else Row
 
 
 def pack_value(xs: tuple):
@@ -181,10 +181,10 @@ class Channel(Category, NamedGeneric['monad']):
     >>> assert discard(3) == frozenset({()})
     """
     ob = Ty
-    monad: Monad = None
+    monad: Monad
 
     def __init__(self, inside: Callable, dom: Ty, cod: Ty):
-        dom, cod = tuplify(dom), tuplify(cod)
+        dom, cod = self.ob.cast(dom), self.ob.cast(cod)
         packed_cls = channel.Channel[type(self).monad]
         self.inside = inside if isinstance(inside, packed_cls) else\
             packed_cls(
@@ -200,7 +200,7 @@ class Channel(Category, NamedGeneric['monad']):
         Parameters:
             dom : The tuple of wire types on which to take the identity.
         """
-        dom = tuplify(dom)
+        dom = cls.ob.cast(dom)
         return cls(channel.Channel[cls.monad].id(pack(dom)), dom, dom)
 
     def raw(self, *xs):
@@ -233,15 +233,15 @@ class Channel(Category, NamedGeneric['monad']):
         Parameters:
             Y : The tuple of wire types to whisker on the right.
         """
-        Y, monad, n = tuplify(Y), type(self).monad, len(self.dom)
+        Y, monad, n = self.ob.cast(Y), type(self).monad, len(self.dom)
 
         def inside(*xs):
             values, y = xs[:n], xs[n:]
             pairing = function.Function(
                 lambda b: pack_value(unpack_value(b) + y),
-                pack(self.cod), pack(self.cod + Y))
+                pack(self.cod), pack(self.cod @ Y))
             return monad(pairing)(self.raw(*values))
-        return type(self)(inside, self.dom + Y, self.cod + Y)
+        return type(self)(inside, self.dom @ Y, self.cod @ Y)
 
     def left_whisker(self, X: Ty) -> Channel:
         """
@@ -250,15 +250,15 @@ class Channel(Category, NamedGeneric['monad']):
         Parameters:
             X : The tuple of wire types to whisker on the left.
         """
-        X, monad, n = tuplify(X), type(self).monad, len(X)
+        X, monad, n = self.ob.cast(X), type(self).monad, len(X)
 
         def inside(*xs):
             x, values = xs[:n], xs[n:]
             pairing = function.Function(
                 lambda d: pack_value(x + unpack_value(d)),
-                pack(self.cod), pack(X + self.cod))
+                pack(self.cod), pack(X @ self.cod))
             return monad(pairing)(self.raw(*values))
-        return type(self)(inside, X + self.dom, X + self.cod)
+        return type(self)(inside, X @ self.dom, X @ self.cod)
 
     def tensor(self, other: Channel) -> Channel:
         """
@@ -290,9 +290,9 @@ class Channel(Category, NamedGeneric['monad']):
             x : The tuple of wire types to copy.
             n : The number of copies.
         """
-        x = tuplify(x)
-        unit = cls.monad.unit(pack(n * x))
-        return cls(lambda *xs: unit(pack_value(n * xs)), x, n * x)
+        x = cls.ob.cast(x)
+        unit = cls.monad.unit(pack(x ** n))
+        return cls(lambda *xs: unit(pack_value(n * xs)), x, x ** n)
 
     @classmethod
     def discard(cls, dom: Ty) -> Channel:

@@ -48,9 +48,8 @@ import random
 from collections.abc import Callable, Iterable
 
 from discopy.cat import Transformation
-from discopy.python.function import EndoFunctor, Function
-from discopy.utils import (
-    assert_isinstance, assert_iscomposable, factory_name, tuplify, untuplify)
+from discopy.python.function import EndoFunctor, Function, Ty
+from discopy.utils import assert_isinstance, assert_iscomposable, factory_name
 
 
 class Monad(EndoFunctor):
@@ -113,12 +112,14 @@ class Monad(EndoFunctor):
     :func:`iterate_powerset` and :func:`iterate_subdistribution`.
     """
 
-    def __init__(
+    # pylint: disable-next=too-many-arguments,too-many-positional-arguments
+    def __init__(  # a monad is a name and five maps
             self, name: str, ob_map: Callable, lift: Callable,
             unit_map: Callable, mult_map: Callable,
             iterate: Callable = None):
-        super().__init__(lambda X: (ob_map(untuplify(X)), ), lift)
-        unwrap = lambda X: untuplify(tuplify(X))
+        def unwrap(X):
+            return Ty.cast(X).inside[0]
+        super().__init__(lambda X: Ty(ob_map(unwrap(X))), lift)
         self.__name__ = self.name = name
         self.unit = Transformation(
             lambda X: unit_map(unwrap(X)), EndoFunctor.id(), self)
@@ -226,7 +227,7 @@ Maybe = Monad(
     ob_map=lambda X: X | None,
     lift=lambda f: Function(
         lambda x: None if x is None else f(x),
-        untuplify(f.dom) | None, untuplify(f.cod) | None),
+        f.dom.inside[0] | None, f.cod.inside[0] | None),
     unit_map=lambda X: Function(lambda x: x, X, X | None),
     mult_map=lambda X: Function(lambda x: x, (X | None) | None, X | None),
     iterate=iterate_maybe)
@@ -241,7 +242,7 @@ Powerset = Monad(
     ob_map=lambda X: frozenset[X],
     lift=lambda f: Function(
         lambda xs: frozenset(map(f, xs)),
-        frozenset[untuplify(f.dom)], frozenset[untuplify(f.cod)]),
+        frozenset[f.dom.inside[0]], frozenset[f.cod.inside[0]]),
     unit_map=lambda X: Function(
         lambda x: frozenset({x}), X, frozenset[X]),
     mult_map=lambda X: Function(
@@ -346,7 +347,7 @@ Subdistribution = Monad(
     ob_map=dist,
     lift=lambda f: Function(
         lambda d: merge((f(x), p) for x, p in d),
-        dist(untuplify(f.dom)), dist(untuplify(f.cod))),
+        dist(f.dom.inside[0]), dist(f.cod.inside[0])),
     unit_map=lambda X: Function(
         lambda x: frozenset({(x, 1.)}), X, dist(X)),
     mult_map=lambda X: Function(
@@ -412,7 +413,7 @@ def make_state(S: type) -> Monad:
     Example
     -------
     >>> State = make_state(int)
-    >>> assert State(str) == (Callable[[int], tuple[str, int]], )
+    >>> assert State(str) == Ty(Callable[[int], tuple[str, int]])
 
     The unit leaves the state untouched and the multiplication runs the
     outer computation before the inner one:
@@ -421,13 +422,14 @@ def make_state(S: type) -> Monad:
     >>> assert State.unit(str)("egg")(0) == ("egg", 0)
     >>> assert State.mult(str)(lambda s: (tick("egg"), s + 1))(0) == ("egg", 2)
     """
-    ob_map = lambda X: Callable[[S], tuple[X, S]]
+    def ob_map(X):
+        return Callable[[S], tuple[X, S]]
     return Monad(
         f"State[{factory_name(S)}]",
         ob_map=ob_map,
         lift=lambda f: Function(
             lambda m: state_map(f, m),
-            ob_map(untuplify(f.dom)), ob_map(untuplify(f.cod))),
+            ob_map(f.dom.inside[0]), ob_map(f.cod.inside[0])),
         unit_map=lambda X: Function(
             lambda x: lambda state: (x, state), X, ob_map(X)),
         mult_map=lambda X: Function(

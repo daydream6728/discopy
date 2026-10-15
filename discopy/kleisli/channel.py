@@ -67,7 +67,7 @@ class Channel(Category, NamedGeneric['monad']):
     >>> assert (identity >> half)(4) == half(4) == (half >> identity)(4)
     """
     ob = type
-    monad: Monad = None
+    monad: Monad
 
     def __init__(self, inside: Callable, dom: type, cod: type):
         monad = type(self).monad

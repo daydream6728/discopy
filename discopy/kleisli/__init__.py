@@ -7,10 +7,10 @@ DisCoPy's Kleisli modules: monad, channel, additive and multiplicative.
     :template: module.rst
     :toctree: ../_api
 
-    discopy.kleisli.monad
-    discopy.kleisli.channel
-    discopy.kleisli.additive
-    discopy.kleisli.multiplicative
+    monad
+    channel
+    additive
+    multiplicative
 """
 
 from discopy.kleisli import monad, channel, additive, multiplicative

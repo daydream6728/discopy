@@ -435,7 +435,11 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   supply one, with Dal Lago-Hoshino's token machines as a worked example
   where conditioning is a trace. `kleisli.additive.Channel` declares itself
   a `TracedCategory`, so whiskering on either side comes from
-  `MonoidalCategory`
+  `MonoidalCategory`. `python.function.EndoFunctor`, which `Monad`
+  extends, sends lists of types to lists of types since `Function.ob` is
+  `List[type]` ([#728](https://github.com/discopy/discopy/issues/728)):
+  `Maybe(int) == Ty(int | None)`, and the `dom` and `cod` of an additive
+  or multiplicative channel are lists of types, cast from a tuple
   ([#443](https://github.com/discopy/discopy/pull/443)).
 - `para.Symmetric` carries an optional coparameter space: a map is
   `inside : dom @ param -> cod @ copar` with `copar` empty by default, so
