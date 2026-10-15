@@ -54,8 +54,8 @@ from networkx.algorithms.isomorphism import is_isomorphic
 
 from discopy import cat, cmap, messages
 from discopy.abc import (
-    HypergraphCategory, MarkovCategory, MonoidalCategory, NamedGeneric,
-    RigidCategory, SymmetricCategory, TracedCategory)
+    ColouredMonoid, HypergraphCategory, MarkovCategory, MonoidalCategory,
+    NamedGeneric, RigidCategory, SymmetricCategory, TracedCategory)
 from discopy.drawing import Node, backend
 from discopy.python.finset import Permutation
 from discopy.utils import (
@@ -1140,7 +1140,9 @@ class Hypergraph(MonoidalCategory, NamedGeneric['category']):
         order: seed the domain wires with ``xs``, feed each box the values
         on its domain wires -- copied or discarded as the wiring dictates --
         and return the values on the codomain wires, or that value itself
-        when there is only one.
+        when there is only one. The outputs of a box are read off its
+        codomain the same way: one value when it has one wire, a tuple of
+        them otherwise.
 
         Parameters:
             xs : One value for each wire in :attr:`dom_wires`.
@@ -1178,7 +1180,8 @@ class Hypergraph(MonoidalCategory, NamedGeneric['category']):
                 len(self.dom_wires), self.dom, len(xs)))
         values = dict(zip(self.dom_wires, xs))
         for box, (box_dom, box_cod) in zip(self.boxes, self.box_wires):
-            ys = tuplify(box(*(values[spider] for spider in box_dom)))
+            result = box(*(values[spider] for spider in box_dom))
+            ys = (result, ) if len(box_cod) == 1 else tuplify(result)
             if len(ys) != len(box_cod):
                 raise ValueError(messages.WRONG_NUMBER_OF_WIRES.format(
                     len(box_cod), box.cod, len(ys)))
@@ -1884,7 +1887,9 @@ class Functor(cat.Functor):
     the boundary wires, so that the functor applies to hypergraphs over any
     category: with ``cod=Function``, ``ob_map`` sends each atomic type to a
     Python type, embedded as an atomic :class:`monoidal.List`, and the
-    boundary is the list of them.
+    boundary is the list of them. A composite object is mapped atom by atom
+    the same way, so that a raw callable in ``ar_map`` is wrapped into an
+    arrow of ``cod`` between the images of the boundary of its box.
 
     Example
     -------
@@ -1903,6 +1908,8 @@ class Functor(cat.Functor):
     >>> assert F(both.to_hypergraph())(1, 2) == 3
     """
     def __call__(self, other):
+        if isinstance(other, ColouredMonoid) and not other.is_atomic:
+            return self.cod.ob().tensor(*map(self, other))
         if not isinstance(other, Hypergraph):
             return super().__call__(other)
         spider_types = tuple(map(self, other.spider_types))

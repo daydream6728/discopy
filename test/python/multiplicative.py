@@ -88,6 +88,15 @@ def test_Hypergraph_call():
     # Tensoring hypergraphs of Python functions concatenates their types.
     assert (f @ g)(1, 2, 3, 4) == (3, 1, 3)
 
+    # A single output of type tuple is one value on one wire, not several;
+    # Function's own type check splits it the same way (B80 of #31).
+    pair = Function(lambda x: (x, x), int, tuple)
+    h = Hypergraph[Function](
+        dom=Ty(int), cod=Ty(tuple), boxes=(pair, ),
+        wires=((0, ), (((0, ), (1, )), ), (1, )))
+    with Function.no_type_checking:
+        assert h(1) == (1, 1)
+
     with raises(ValueError, match="Expected 2 wires for"):
         g(2)
 
@@ -127,6 +136,18 @@ def test_Hypergraph_representation():
     assert f != Hypergraph[Function](
         dom=Ty(int, int), cod=Ty(int), boxes=(), wires=((0, 1), (), (0, )))
     assert repr(f).startswith("hypergraph.Hypergraph[Function](dom=")
+
+
+def test_Functor_wraps_callables():
+    from discopy.symmetric import Ty as T, Box
+
+    # A raw callable in ar_map is wrapped into a Function whose boundaries are
+    # the images of the box's, mapped atom by atom like the spider types.
+    x = T('x')
+    f = Box('f', x @ x, x)
+    F = Functor({x: int}, {f: lambda a, b: a + b}, cod=Function)
+    assert F(x @ x) == Ty(int, int) and F(T()) == Ty()
+    assert F(f.to_hypergraph())(1, 2) == 3
 
 
 def adder_step(full_adder, adder, k):
