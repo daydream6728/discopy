@@ -880,7 +880,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   boundary alone, after `cat.Bubble.__init__` had set them, so
   `f.bubble(data=42).data` was `None` and the dagger of a bubble was not
   marked as one. The tree of a `cat.Bubble` carries both as the tree of a
-  box does, so they survive `loads(dumps(...))` too
+  box does, and its `name` and `method` when they are not the defaults, so
+  all four survive `loads(dumps(...))` too
   ([#637](https://github.com/discopy/discopy/issues/637)).
 - `tensor.Dim` reads back from its tree. It used to inherit `Ty.to_tree`,
   which asks each atom for its tree where a dimension has plain integers

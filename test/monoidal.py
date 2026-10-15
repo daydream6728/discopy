@@ -459,6 +459,10 @@ def test_Bubble_data():
     for b in (bubble, from_tree(bubble.to_tree()), loads(dumps(bubble))):
         assert b == bubble and (b.data, b.is_dagger) == (42, True)
     assert (bubble.dagger().data, bubble.dagger().is_dagger) == (42, False)
+    named = f.bubble(name="b", method="frame")
+    for b in (from_tree(named.to_tree()), loads(dumps(named))):
+        assert b == named and (b.name, b.method) == ("b", "frame")
+    assert "method" not in bubble.to_tree() and "name" not in bubble.to_tree()
 
 
 def test_Box_globularity():
