@@ -1616,7 +1616,8 @@ class Bubble(cat.Bubble, Box):
             draw_as_square: bool = None,
             draw_vertically=False, **kwargs):
         cat.Bubble.__init__(self, *args, **kwargs)
-        Box.__init__(self, self.name, self.dom, self.cod)
+        Box.__init__(self, self.name, self.dom, self.cod,
+                     data=self.data, is_dagger=self.is_dagger)
         self.drawing_name = "" if drawing_name is None else drawing_name
         self.draw_vertically = draw_vertically
         self.frame_colour = BOX_DRAWING_ATTRIBUTES['frame_colour'](self)

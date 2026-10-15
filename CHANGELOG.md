@@ -878,6 +878,45 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
+- Every `NamedGeneric`-parameterised class pickles with its parameter.
+  `NamedGeneric`
+  encodes a member of `L[v]` as a member of `L` carrying `v` in its state,
+  to be read back by a `__setstate__` it defined on `NamedGeneric` itself,
+  which no class built from `NamedGeneric[...]` inherits: so
+  `interaction.Ty[int]`, `Hypergraph[D]`, `List[int]`, `Matrix[int]`,
+  `Tensor[complex]` and `CMap[D]` all came back from `pickle.loads` and
+  `copy.deepcopy` with the parameter `None` and the values left in their
+  `__dict__`, and `pickle.dumps` wrote them into the live object's
+  `__dict__` on the way, since it merged them into the state in place.
+  The decoding half is defined on the class every `NamedGeneric[...]`
+  subclass inherits, restoring the rest of the state through the next
+  `__setstate__` of the hierarchy, and the encoding half copies the state;
+  `tensor.Box` no longer calls the former by hand
+  ([#749](https://github.com/discopy/discopy/issues/749)).
+- `biclosed.Variable`, `Application` and `Abstraction` read back from
+  their tree, and with them the `closed`, `grammar.abstract` and
+  `grammar.categorial` terms built on them, the type raisings and the
+  binary compositions: every one inherited `Box.from_tree`, which rebuilds
+  with the `name`, `dom` and `cod` keywords their constructors do not take,
+  so `loads(dumps(term))` raised `TypeError` on any term but a constant.
+  `serialisation` is a law of `biclosed.TermBase` and `closed.TermBase` in
+  the property matrix again, where it was declared failing
+  ([#692](https://github.com/discopy/discopy/issues/692)).
+- `monoidal.Bubble` keeps the `data` and `is_dagger` it is built with: its
+  constructor called `Box.__init__` a second time with the name and the
+  boundary alone, after `cat.Bubble.__init__` had set them, so
+  `f.bubble(data=42).data` was `None` and the dagger of a bubble was not
+  marked as one. The tree of a `cat.Bubble` carries both as the tree of a
+  box does, and its `name` and `method` when they are not the defaults, so
+  all four survive `loads(dumps(...))` too
+  ([#637](https://github.com/discopy/discopy/issues/637)).
+- `tensor.Dim` reads back from its tree. It used to inherit `Ty.to_tree`,
+  which asks each atom for its tree where a dimension has plain integers
+  inside, so `dumps(Dim(2, 3))` raised `AttributeError`; `monoidal.Dim`,
+  the base of `frobenius.Dim` and so of `tensor.Dim`, keeps the integers
+  in its tree since [#736](https://github.com/discopy/discopy/pull/736),
+  and a regression test pins it
+  ([#681](https://github.com/discopy/discopy/issues/681)).
 - `zx.Diagram.eval` is the standard qubit interpretation, where it silently
   returned wrong tensors: `Z(1, 1, 0.5).eval()` was a scalar on `Dim(1)` and
   `H.eval().array` was `nan`, since the atoms of `Nat` are the integer `1`

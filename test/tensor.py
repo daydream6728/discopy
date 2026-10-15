@@ -6,7 +6,7 @@ import numpy as np
 import tensornetwork as tn
 from pytest import raises
 
-from discopy.utils import AxiomError
+from discopy.utils import AxiomError, dumps, loads
 from discopy.tensor import *
 from discopy import frobenius
 
@@ -37,6 +37,7 @@ def test_Dim():
     assert repr(Dim(1, 2, 3)) == str(dim) == "Dim(2, 3)"
     assert {dim: 42}[dim] == 42
     assert Dim(2, 3, 4).r == Dim(4, 3, 2)
+    assert loads(dumps(dim)) == dim and loads(dumps(Dim())) == Dim() == Dim(1)
 
 
 def test_Tensor():

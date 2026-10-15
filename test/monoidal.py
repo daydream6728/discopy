@@ -7,7 +7,7 @@ from pytest import raises
 from discopy.cat import *
 from discopy.monoidal import *
 from discopy.drawing import spiral
-from discopy.utils import AxiomError, from_tree
+from discopy.utils import AxiomError, dumps, from_tree, loads
 
 
 def test_Ty():
@@ -202,6 +202,9 @@ def test_Dim_identity_and_slicing():
     assert Dim(2, 3, 4)[1:] == Dim(3, 4)
     # Reversing reverses the factors.
     assert Dim(2, 3, 4)[::-1] == Dim(4, 3, 2)
+    # The tree of a dimension reads back, the unit included.
+    assert loads(dumps(Dim(2, 3))) == Dim(2, 3)
+    assert loads(dumps(Dim())) == Dim() == Dim(1)
 
 
 def test_Layer_init():
@@ -451,6 +454,18 @@ def test_Bubble_dagger():
     f = Box('f', x, y)
     assert f.bubble().dagger() == f.dagger().bubble()
     assert f.bubble().dagger().dagger() == f.bubble()
+
+
+def test_Bubble_data():
+    f = Box('f', Ty('x'), Ty('y'))
+    bubble = f.bubble(data=42, is_dagger=True)
+    for b in (bubble, from_tree(bubble.to_tree()), loads(dumps(bubble))):
+        assert b == bubble and (b.data, b.is_dagger) == (42, True)
+    assert (bubble.dagger().data, bubble.dagger().is_dagger) == (42, False)
+    named = f.bubble(name="b", method="frame")
+    for b in (from_tree(named.to_tree()), loads(dumps(named))):
+        assert b == named and (b.name, b.method) == ("b", "frame")
+    assert "method" not in bubble.to_tree() and "name" not in bubble.to_tree()
 
 
 def test_Box_globularity():

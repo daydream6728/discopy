@@ -65,6 +65,10 @@ def test_pack_to_tree():
 
 
 def test_term_to_tree():
+    X, Y = Ty("X"), Ty("Y")
+    v, f = Variable("v", X), (X >> Y)("f")
+    for term in (v, f, f(v), X(lambda u: f(u)), X(lambda u: f(v))):
+        assert loads(dumps(term)) == term
     empty = Tuple()
     assert loads(dumps(empty)) == empty
     nested = Tuple(Tuple(), Tuple())

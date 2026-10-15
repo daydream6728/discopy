@@ -1,7 +1,7 @@
 from pytest import raises
 
 from discopy import cat, grammar, biclosed
-from discopy.utils import from_tree
+from discopy.utils import dumps, from_tree, loads
 from discopy.grammar.categorial import *
 
 tree = {
@@ -143,6 +143,18 @@ def test_terms_simplify_and_eval():
 
     assert FX(g_left, f_right).simplify() == FX(g_left, f_right)
     assert BX(f_left, g_right).simplify() == BX(f_left, g_right)
+
+
+def test_term_to_tree():
+    X, Y, Z = Ty('X'), Ty('Y'), Ty('Z')
+    x, var = Constant("x", X), Variable("v", X)
+    f_left, g_left = Constant("f", Y << X), Constant("g", Z << Y)
+    f_right, g_right = Constant("f", X >> Y), Constant("g", Y >> Z)
+    for term in (x, var, Abstraction(var, f_left(var)), FA(f_left, x),
+                 BA(x, f_right), FTR(Y, x), BTR(Y, x), FC(g_left, f_left),
+                 BC(f_right, g_right), FX(g_left, f_right),
+                 BX(f_left, g_right)):
+        assert loads(dumps(term)) == term == from_tree(term.to_tree())
 
 
 def test_complex_sentence():
