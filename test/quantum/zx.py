@@ -5,9 +5,10 @@ import pytest
 import numpy as np
 from pytest import raises, fixture
 
-from discopy.quantum.gates import CRz, CRx, CU1
+from discopy.quantum.gates import CRz, CRx, CU1, Controlled, Rz, Rx
 from discopy.quantum.zx import *
 from discopy import frobenius
+from discopy.tensor import Dim, Tensor
 
 
 @fixture
@@ -157,13 +158,13 @@ def _std_basis_v(*c):
 def test_circuit2zx():
     pytest.importorskip("pyzx")
     circuit = Ket(0, 0) >> quantum.H @ Rx(0) >> CRz(0) >> CRx(0) >> CU1(0)
+    gadget = [Z(1, 2), Z(1, 2), X(2, 1), Z(1, 0), scalar(2 ** 0.5)]
     assert circuit2zx(circuit) == Diagram.decode(
-        dom=Nat(0), boxes_and_offsets=zip([
-            X(0, 1), X(0, 1), scalar(0.5), H, X(1, 1),
-            Z(1, 2), Z(1, 2), X(2, 1), Z(1, 0), scalar(2 ** 0.5),
-            X(1, 2), X(1, 2), Z(2, 1), X(1, 0), scalar(2 ** 0.5),
-            Z(1, 2), Z(1, 2), X(2, 1), Z(1, 0)],
-            [0, 1, 2, 0, 1, 0, 2, 1, 1, 2, 0, 2, 1, 1, 2, 0, 2, 1, 1]))
+        dom=Nat(0), boxes_and_offsets=zip(
+            [X(0, 1), X(0, 1), scalar(0.5), H, X(1, 1)]
+            + gadget + [H] + gadget + [H] + gadget,
+            [0, 1, 2, 0, 1]
+            + [0, 2, 1, 1, 2] + [1] + [0, 2, 1, 1, 2] + [1] + [0, 2, 1, 1, 2]))
 
     # Verify XYZ=iI
     t = circuit2zx(quantum.Z >> quantum.Y >> quantum.X)
@@ -189,3 +190,115 @@ def test_circuit2zx():
                 boxes_and_offsets=zip(
                     [SWAP, Z(1, 2), X(2, 1), scalar(2 ** 0.5), SWAP],
                     [1, 0, 1, 2, 1])))
+
+
+def matrix(diagram):
+    """ The matrix of a diagram with outputs as rows, as pyzx has it. """
+    n, m = len(diagram.dom), len(diagram.cod)
+    return diagram.eval().array.reshape(2 ** n, 2 ** m).T
+
+
+def proportional(left, right):
+    left, right = np.asarray(left).flatten(), np.asarray(right).flatten()
+    i = np.argmax(abs(right))
+    return abs(left[i]) > 1e-9\
+        and np.allclose(left * right[i], right * left[i])
+
+
+def test_dim():
+    assert Diagram.dim(Nat(3)) == Dim(2, 2, 2) and Diagram.dim(Nat(0)) == Dim()
+
+
+def test_eval():
+    for spider, pauli in [(Z, quantum.Z), (X, quantum.X), (Y, quantum.Y)]:
+        assert spider(1, 1, .5).eval().is_close(pauli.eval())
+    hadamard = H.eval()
+    assert hadamard.dom == hadamard.cod == Dim(2)
+    assert not np.isnan(hadamard.array).any()
+    assert (hadamard >> hadamard.dagger()).is_close(Tensor[complex].id(Dim(2)))
+    assert (H >> H).eval().is_close(Tensor[complex].id(Dim(2)))
+    for phase in (0, .25, 1 / 3):
+        assert X(1, 2, phase).eval().is_close(
+            (H >> Z(1, 2, phase) >> H @ H).eval())
+    assert Z(1, 2).eval() == Tensor[complex].spiders(1, 2, Dim(2))
+    assert Z(0, 0, .5).eval().is_close(Tensor[complex]([0], Dim(1), Dim(1)))
+    assert scalar(1j).eval() == Tensor[complex]([1j], Dim(1), Dim(1))
+    assert np.allclose(SWAP.eval().array, Tensor.swap(Dim(2), Dim(2)).array)
+    assert np.allclose(
+        Diagram.permutation([2, 0, 1]).eval().array,
+        Tensor.permutation([2, 0, 1], 3 * [Dim(2)]).array)
+    assert (Z(1, 2, .25) >> X(2, 1, .5)).eval().is_close(
+        Z(1, 2, .25).eval() >> X(2, 1, .5).eval())
+
+
+def test_eval_symbolic():
+    from sympy import Expr, exp, I, pi
+    from sympy.abc import phi
+    assert Z(1, 1, phi).eval(dtype=Expr).array[1, 1] == exp(2 * I * pi * phi)
+
+
+def random_diagram(n_wires, depth, phases=(0, .25, .5, .75, 1 / 3, -.125)):
+    """
+    A random diagram of spiders of both colours, Hadamards, swaps and
+    scalars, where spiders have at most one leg out so that no two wires
+    are parallel: pyzx graphs are simple and ``to_pyzx`` merges them.
+    """
+    diagram = Id(n_wires)
+    for _ in range(depth):
+        offset, choice = random.randrange(len(diagram.cod)), random.random()
+        if choice < .2:
+            box = H
+        elif choice < .3 and len(diagram.cod) - offset >= 2:
+            box = SWAP
+        elif choice < .4:
+            box = scalar(random.choice([2 ** .5, 1j, .5]))
+        else:
+            n_legs_in = random.randint(0, min(2, len(diagram.cod) - offset))
+            n_legs_out = 1 if not n_legs_in else random.randint(0, 1)
+            box = random.choice([Z, X])(
+                n_legs_in, n_legs_out, random.choice(phases))
+        diagram = diagram >> Id(offset) @ box\
+            @ Id(len(diagram.cod) - offset - len(box.dom))
+        if not diagram.cod:
+            diagram = diagram @ Z(0, 1, random.choice(phases))
+    return diagram
+
+
+def test_eval_pyzx():
+    pytest.importorskip("pyzx")
+    random.seed(0)
+    for _ in range(50):
+        diagram = random_diagram(random.randint(1, 3), random.randint(1, 8))
+        assert np.allclose(matrix(diagram), diagram.to_pyzx().to_matrix())
+
+
+def test_eval_circuit2zx(random_had_cnot_diagram):
+    controlled = [
+        gate(.3, distance=distance) for gate in (CU1, CRz, CRx)
+        for distance in (-2, -1, 1, 2, 3)]
+    gates = [
+        quantum.H, quantum.X, quantum.Y, quantum.Z, quantum.S, quantum.T,
+        quantum.CX, quantum.CZ, quantum.SWAP, Ket(0, 1), Bra(1, 0),
+        quantum.scalar(1j), CU1(.3).dagger(), CRz(.3).dagger(),
+        CRx(.3).dagger(), Controlled(quantum.X, distance=-2),
+        Controlled(quantum.Z, distance=2), random_had_cnot_diagram(3, 20)]
+    for gate in controlled + gates:
+        diagram = circuit2zx(gate)
+        assert (diagram.dom, diagram.cod)\
+            == (Nat(len(gate.dom)), Nat(len(gate.cod)))
+        assert diagram.eval().is_close(gate.eval())
+    for rotation in (Rz(.3), Rx(.3)):
+        assert proportional(circuit2zx(rotation).eval().array,
+                            rotation.eval().array)
+
+
+def test_to_quimb_and_to_tn():
+    pytest.importorskip("quimb")
+    tn = pytest.importorskip("tensornetwork")
+    diagram = Z(1, 2, .25) @ X(0, 1, .5) >> Id(1) @ SWAP >> X(2, 1, .3) @ H
+    quimb = diagram.to_quimb().contract()
+    assert np.allclose(
+        quimb.data.transpose(*np.argsort(quimb.inds)), diagram.eval().array)
+    nodes, edges = diagram.to_tn()
+    assert np.allclose(
+        tn.contractors.auto(nodes, edges).tensor, diagram.eval().array)
