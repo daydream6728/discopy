@@ -80,6 +80,24 @@ def test_parameterised_box_pickle():
     assert pickle.loads(pickle.dumps(box)) == box
 
 
+def test_named_generic_pickle():
+    from copy import deepcopy
+    from discopy import interaction, matrix, tensor
+    from discopy.cmap import CMap
+    from discopy.hypergraph import Hypergraph
+    from discopy.monoidal import List
+    from discopy.symmetric import Diagram, Ty
+    x = Ty('x')
+    for term in (interaction.Ty[int](1, 2), Hypergraph[Diagram].id(x),
+                 List[int](2, 3), matrix.Matrix[int]([1, 0, 0, 1], 2, 2),
+                 tensor.Tensor[complex]([1j], tensor.Dim(1), tensor.Dim(1)),
+                 CMap[Diagram].id(x)):
+        loaded = pickle.loads(pickle.dumps(term))
+        assert "__class_getitem__values__" not in vars(term)
+        assert type(loaded) is type(term) and loaded == term
+        assert type(deepcopy(term)) is type(term)
+
+
 def test_deprecated_ob():
     from discopy import (
         biclosed, braided, compact, feedback, frobenius, pivotal, rigid)

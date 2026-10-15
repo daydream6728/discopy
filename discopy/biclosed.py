@@ -884,9 +884,6 @@ class TermBase(Box, Equivalence):
             lambda terms: (terms[0], terms[2], terms[1]),
             Canonical[cls].strategy(**params))
 
-    serialisation = Testable.serialisation.failing(
-        "A term does not read back from its tree, see #692.")
-
     @axiom
     def alpha_renaming(cls, terms: Renamed[Self]) -> Equation:
         """ A term is alpha-equivalent to its renamings, however many. """
@@ -982,6 +979,10 @@ class Variable(TermBase):
     def __init__(self, name: str, cod: Ty):
         super().__init__(name, dom=cod, cod=cod)
         self.freevars = [self]
+
+    @classmethod
+    def from_tree(cls, tree):
+        return cls(tree['name'], from_tree(tree['cod']))
 
     def eval(self, functor=None):
         functor = functor or self.functor
@@ -1081,6 +1082,15 @@ class Application(TermBase):
         left = ", left=True" if self.left else ""
         return factory_name(type(self)) + f"({func}, {args}{left})"
 
+    def to_tree(self):
+        return dict(factory=factory_name(type(self)), func=self.func.to_tree(),
+                    args=self.args.to_tree(), left=self.left)
+
+    @classmethod
+    def from_tree(cls, tree):
+        return cls(*map(from_tree, (tree['func'], tree['args'])),
+                   left=tree['left'])
+
     @property
     def constants(self):
         return self.args.constants + self.func.constants if self.left\
@@ -1142,6 +1152,15 @@ class Abstraction(TermBase):
         var, body = repr(self.var), repr(self.body)
         left = ", left=True" if self.left else ""
         return factory_name(type(self)) + f"({var}, {body}{left})"
+
+    def to_tree(self):
+        return dict(factory=factory_name(type(self)), var=self.var.to_tree(),
+                    body=self.body.to_tree(), left=self.left)
+
+    @classmethod
+    def from_tree(cls, tree):
+        return cls(*map(from_tree, (tree['var'], tree['body'])),
+                   left=tree['left'])
 
     @property
     def constants(self):

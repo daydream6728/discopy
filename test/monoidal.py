@@ -7,7 +7,7 @@ from pytest import raises
 from discopy.cat import *
 from discopy.monoidal import *
 from discopy.drawing import spiral
-from discopy.utils import AxiomError, from_tree
+from discopy.utils import AxiomError, dumps, from_tree, loads
 
 
 def test_Ty():
@@ -451,6 +451,14 @@ def test_Bubble_dagger():
     f = Box('f', x, y)
     assert f.bubble().dagger() == f.dagger().bubble()
     assert f.bubble().dagger().dagger() == f.bubble()
+
+
+def test_Bubble_data():
+    f = Box('f', Ty('x'), Ty('y'))
+    bubble = f.bubble(data=42, is_dagger=True)
+    for b in (bubble, from_tree(bubble.to_tree()), loads(dumps(bubble))):
+        assert b == bubble and (b.data, b.is_dagger) == (42, True)
+    assert (bubble.dagger().data, bubble.dagger().is_dagger) == (42, False)
 
 
 def test_Box_globularity():
