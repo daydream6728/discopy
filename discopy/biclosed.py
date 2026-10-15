@@ -1084,6 +1084,14 @@ class Application(TermBase):
         left = ", left=True" if self.left else ""
         return factory_name(type(self)) + f"({func}, {args}{left})"
 
+    def setoid(self):
+        """
+        Applications are equal when their functions, arguments and sides
+        are, rather than when they print the same between the same types:
+        a closed constant prints as its bare name, whatever its type.
+        """
+        return type(self), self.func, self.args, self.left
+
     @property
     def constants(self):
         return self.args.constants + self.func.constants if self.left\
@@ -1145,6 +1153,13 @@ class Abstraction(TermBase):
         var, body = repr(self.var), repr(self.body)
         left = ", left=True" if self.left else ""
         return factory_name(type(self)) + f"({var}, {body}{left})"
+
+    def setoid(self):
+        """
+        Abstractions are equal when their variables, bodies and sides are,
+        see :meth:`Application.setoid`.
+        """
+        return type(self), self.var, self.body, self.left
 
     @property
     def constants(self):
