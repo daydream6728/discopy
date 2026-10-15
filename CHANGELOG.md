@@ -788,6 +788,15 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
+- `pip install discopy[grammar]` can import `discopy.grammar.neural`: the
+  parser imports `torch` at module level, but `torch` was listed in the
+  `quantum` extra only, so an install with the grammar extra alone raised
+  `ModuleNotFoundError` on `from discopy.grammar.neural import Parser`.
+  `torch` is in the `grammar` extra too, served from the CPU index on Linux
+  by the same `tool.uv.sources` entry, and `uv.lock` records it under that
+  extra. `import discopy.grammar` still imports no framework, which a test
+  pins the way `test/neural/network.py` does for `discopy.neural`
+  ([rel-int/discopy-next#52](https://github.com/rel-int/discopy-next/issues/52)).
 - `python.Function` is hashable: its dataclass compared `inside`, `dom` and
   `cod` without hashing them, so `jax.jit` refused a function, as did any
   cache keyed on one

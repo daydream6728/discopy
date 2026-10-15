@@ -43,7 +43,7 @@ Different dependency groups are available (switch with `uv sync --group <group-n
 - no group: minimal set of dependencies required to work with DisCoPy.
 - `dev`: testing and linting tools.
 - `quantum`: includes quantum computating dependencies
-- `grammar`: natural language processing libraries
+- `grammar`: natural language processing libraries, PyTorch included for the neural parser
 - `docs`: for generating the documentation
 Since dependency groups are not standard, we also provide equivalents via optional dependencies.
 
