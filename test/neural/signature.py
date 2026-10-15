@@ -82,12 +82,19 @@ def test_both_builders_draw_frobenius_maps():
     assert isinstance(unit.box("unit"), frobenius.Box)
 
 
-def test_the_relation_must_be_symmetric_and_irreflexive():
+def test_the_relation_must_be_symmetric_irreflexive_and_in_range():
     node = Signature((Orbit(PEER, 1), Orbit(STATE, traced=True)))
+    unit = Signature((Orbit(PEER, 1), ))
     with raises(ValueError, match="not symmetric"):
         from_relation(((1, ), (0, ), (0, )), node)
     with raises(ValueError, match="related to itself"):
         from_relation(((0, 1), (0, )), node)
+    for relation in (((1, ), (0, 3)), ((-1, ), (0, )), ((1.0, ), (0, ))):
+        with raises(ValueError, match="does not exist"):
+            from_relation(relation, node)
+    for incidence in (((0, -1), ), ((0.0, ), )):
+        with raises(ValueError, match="does not exist"):
+            from_incidence(incidence, node, unit)
 
 
 def test_incidence_names_and_signatures():
@@ -112,18 +119,20 @@ def test_incidence_names_and_signatures():
 
 def test_resize_and_what_an_orbit_refuses():
     """
-    An orbit is resized by its role, every orbit carrying it alike, and a
-    role no orbit carries is an error, not a no-op, so a builder resizing
-    the wrong orbit hears about it; a leg carries one atomic role.
+    An orbit is resized by its position, since a role may play in several
+    orbits, and a position with no orbit is an error, not a no-op, so a
+    builder resizing the wrong orbit hears about it; a leg carries one
+    atomic role.
     """
     clique = peer_cell(2)
-    assert clique.resize(PEER, 5).orbits[0].arity == 5
-    assert clique.resize(HIDDEN, 1) == clique
-    assert clique.resize(HIDDEN, 2).positions(HIDDEN) == (2, 3, 4, 5)
+    assert clique.resize(0, 5).orbits[0].arity == 5
+    assert clique.resize(1, 1) == clique
+    assert clique.resize(1, 2).positions(HIDDEN) == (2, 3, 4, 5)
     twice = Signature((Orbit(STATE, traced=True), Orbit(STATE, traced=True)))
-    assert twice.resize(STATE, 2).loops() == ((0, 2), (1, 3), (4, 6), (5, 7))
-    with raises(ValueError, match="no orbit carries"):
-        clique.resize(MESSAGE, 2)
+    assert twice.resize(1, 2).loops() == ((0, 1), (2, 4), (3, 5))
+    for index in (4, -1):
+        with raises(IndexError):
+            clique.resize(index, 2)
     with raises(ValueError):
         Orbit(PEER, -1)
     for role in (HIDDEN @ MEMORY, Ty()):
@@ -131,6 +140,20 @@ def test_resize_and_what_an_orbit_refuses():
             Orbit(role, traced=True)
     with raises(TypeError):
         Orbit("peer")
+
+
+def test_the_builders_resize_the_first_orbit_only():
+    """
+    A node of degree ``d`` gets its first orbit resized to ``d`` and no
+    other, even one playing the same role, as does a relation of ``m``
+    members.
+    """
+    node = Signature((Orbit(MESSAGE, 2, Sym.PERM), Orbit(MESSAGE, traced=True)))
+    path = from_relation(((1, ), (0, 2), (1, )), node)
+    assert [len(box.cod) for box in path.boxes] == [3, 4, 3]
+    unit = Signature((Orbit(MESSAGE, 3, Sym.PERM), Orbit(MESSAGE, traced=True)))
+    star = from_incidence(((0, ), ) * 4, node, unit)
+    assert [len(box.cod) for box in star.boxes] == [3] * 4 + [6]
 
 
 def test_generators_act_on_legs_and_on_every_copy():

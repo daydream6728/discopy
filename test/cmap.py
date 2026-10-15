@@ -916,6 +916,10 @@ def test_from_wiring():
         M.from_wiring((f, f), [((0, 0), (0, 1)), ((0, 0), (1, 1))])
     with raises(ValueError, match="left unwired"):
         M.from_wiring((f, f), [((0, 0), (0, 1))])
+    with raises(ValueError, match="has no port"):
+        M.from_wiring((f, ), [((0, 0.5), (0, 1))])
+    with raises(ValueError, match="no box"):
+        M.from_wiring((f, ), [((0.0, 0), (0, 1))])
     closed = M.from_wiring((f, f), [((0, 0), (1, 1)), ((0, 1), (1, 0))])
     assert closed.n_ports == 4 and closed.is_monogamous
     assert closed.dom == closed.cod == Ty() and closed.boxes == (f, f)

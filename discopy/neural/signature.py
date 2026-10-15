@@ -73,6 +73,7 @@ message @ message @ message @ state @ state @ given @ given
 
 from __future__ import annotations
 
+from collections import Counter
 from collections.abc import Mapping
 from dataclasses import dataclass, replace
 from enum import StrEnum
@@ -277,24 +278,24 @@ class Signature:
         return [((index, source), (index, target))
                 for source, target in self.loops()]
 
-    def resize(self, role: frobenius.Ty, arity: int) -> Signature:
+    def resize(self, index: int, arity: int) -> Signature:
         """
-        The same signature with the arity of the orbits carrying a role
-        changed, which is how one shared module serves sites of different
-        degree.
+        The same signature with the arity of one orbit changed, which is
+        how one shared module serves sites of different degree.
 
         Parameters:
-            role : The role of the orbits to resize.
-            arity : Their new arity.
+            index : The position of the orbit in ``orbits``, from zero.
+            arity : Its new arity.
 
         Raises:
-            ValueError : If no orbit carries the role.
+            IndexError : If there is no orbit at that position.
         """
-        if not any(orbit.role == role for orbit in self.orbits):
-            raise ValueError(f"no orbit carries the role {role}")
-        return Signature(tuple(
-            replace(orbit, arity=arity) if orbit.role == role else orbit
-            for orbit in self.orbits))
+        if not 0 <= index < len(self.orbits):
+            raise IndexError(
+                f"no orbit {index} in a signature of {len(self.orbits)}")
+        return Signature(self.orbits[:index] + (
+            replace(self.orbits[index], arity=arity), )
+            + self.orbits[index + 1:])
 
     def generators(self) -> list[Permutation]:
         """
@@ -392,6 +393,10 @@ def from_incidence(incidence: tuple, node: Signature,
                         e.g. a graph-level readout wired to every node,
                         is a relation with a name of its own.
 
+    Raises:
+        ValueError : If a node belongs to a relation that does not exist, or
+                     if the names are not one per relation.
+
     Example
     -------
     >>> from discopy.frobenius import Ty
@@ -413,13 +418,13 @@ def from_incidence(incidence: tuple, node: Signature,
     ['cell', 'cell', 'cell', 'unit', 'readout']
     """
     n_nodes = len(incidence)
-    n_relations = 1 + max(
-        (index for relations in incidence for index in relations),
-        default=-1)
-    size = [0] * n_relations
-    for relations in incidence:
-        for index in relations:
-            size[index] += 1
+    for index, relations in enumerate(incidence):
+        for other in relations:
+            if not isinstance(other, int) or other < 0:
+                raise ValueError(f"node {index} belongs to relation {other}, "
+                                 "which does not exist")
+    size = Counter(other for relations in incidence for other in relations)
+    n_relations = 1 + max(size, default=-1)
     names = (relation_name, ) * n_relations \
         if isinstance(relation_name, str) else tuple(relation_name)
     if len(names) != n_relations:
@@ -427,11 +432,9 @@ def from_incidence(incidence: tuple, node: Signature,
     relations_of = dict.fromkeys(names, relation) \
         if isinstance(relation, Signature) else dict(relation)
 
-    role = node.orbits[0].role
-    nodes = [node.resize(role, len(relations)) for relations in incidence]
-    units = [relations_of[names[index]].resize(
-        relations_of[names[index]].orbits[0].role, size[index])
-        for index in range(n_relations)]
+    nodes = [node.resize(0, len(relations)) for relations in incidence]
+    units = [relations_of[names[index]].resize(0, size[index])
+             for index in range(n_relations)]
 
     free = [0] * n_relations
     wires: list = []
@@ -470,6 +473,10 @@ def from_relation(relation: tuple, node: Signature, node_name: str = NODE
                per node.
         node_name : The name every node box carries.
 
+    Raises:
+        ValueError : If the relation is not symmetric or not irreflexive, or
+                     relates a node to one that does not exist.
+
     Example
     -------
     >>> from discopy.frobenius import Ty
@@ -482,12 +489,14 @@ def from_relation(relation: tuple, node: Signature, node_name: str = NODE
     ...     ((1, ), (0, 2), (1, )), node).boxes]
     [3, 4, 3]
     """
-    role = node.orbits[0].role
-    nodes = [node.resize(role, len(others)) for others in relation]
+    nodes = [node.resize(0, len(others)) for others in relation]
 
     wires: list = []
     for index, others in enumerate(relation):
         for other in others:
+            if not isinstance(other, int) or not 0 <= other < len(relation):
+                raise ValueError(f"node {index} is related to node {other}, "
+                                 "which does not exist")
             if other == index:
                 raise ValueError(f"node {index} is related to itself")
             if index not in relation[other]:
