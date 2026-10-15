@@ -479,6 +479,27 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Changed
 
+- `Hypergraph.to_diagram` and `CMap.to_diagram` route the wires of each
+  box with one permutation rather than a staircase of swaps: the domain
+  wires of the box are gathered at its offset, the other wires keeping
+  their order, by the new `finset.Permutation.gather`, and the permutation
+  is emitted once through the new `abc.SymmetricCategory.from_permutation`,
+  which `symmetric.Diagram.from_permutation` overrides with a native
+  `Permutation` box and which defers to `permutation` in a concrete
+  category, a composition of swaps by default and a single array in
+  `Tensor`; the final alignment with the codomain is one permutation too.
+  Since `symmetric.Layer` coalesces
+  plumbing, each swap of the staircase was already a full-width
+  `Permutation` layer, so a routing step of `n` swaps was `n` layers and
+  is now one: `simplify`, `foliation` and `from_callable` give shorter
+  diagrams, a permutation round-trips to itself,
+  `Diagram.permutation([2, 0, 1], x @ y @ z).simplify()` being
+  `Permutation(x @ y @ z, [2, 0, 1])`, and a decoded diagram never has two
+  consecutive layers of plumbing. The one baseline this redraws is
+  `symmetric/decorator.svg`, whose two staircases of swaps become one
+  band of crossing wires each
+  ([#539](https://github.com/discopy/discopy/issues/539),
+  [#546](https://github.com/discopy/discopy/pull/546)).
 - `monoidal.Colour` is transparent by default rather than white, i.e. its
   `name` defaults to the new `config.TRANSPARENT` and `monoidal.white` is
   renamed to `monoidal.transparent`. The drawing code painted every region
@@ -849,6 +870,35 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   in its tree since [#736](https://github.com/discopy/discopy/pull/736),
   and a regression test pins it
   ([#681](https://github.com/discopy/discopy/issues/681)).
+- `Matrix.then`, `tensor` and `__add__`, and `Tensor.then` and `tensor`,
+  built their result as `type(self)(...)`, casting it to the dtype of the
+  left operand: the unparametrised structural matrices -- `id`, `swap`,
+  the spiders, `cups` and `caps` -- are `int64`, so `Tensor.id(Dim(2)) >> g`
+  truncated a float `g` to integers, zeros for one with entries below one,
+  as did `Tensor.swap(x, y) >> g @ g` and any spider on the left of a float
+  tensor, and a complex tensor on the right of an integer one lost its
+  imaginary part, silently. The result is now built in the class
+  `Matrix.promote` gives: the one with the dtype the backend promotes the
+  two arrays to, read from the operand that already has it, so that
+  `Matrix.id(2) >> m == m` for a float `m`, `Tensor[float]`,
+  `Tensor[complex]` and `Tensor[Expr]` survive composition with an integer
+  structural tensor and `Matrix[bool]` composed with `Matrix[bool]` stays
+  Boolean, on the backends whose operations take mixed dtypes at all:
+  PyTorch's `matmul` refuses them, as before. The guards of these methods
+  check
+  `self.ar`, the matrices of the same category whatever their dtype, which
+  is what `assert_isinstance(other, type(self))` checked through
+  `get_origin` while reading as a check on the dtype. `Tensor.copy`
+  defaults `n` to 2 and `Tensor` is an `abc.MarkovCategory` since `Matrix`
+  became one ([#538](https://github.com/discopy/discopy/pull/538)); both
+  are now tested, the latter by `lens.Markov[Tensor]` building without an
+  explicit discard
+  ([#733](https://github.com/discopy/discopy/issues/733)).
+- `Matrix.swap` wrote the two identity blocks into a zero array in place,
+  which JAX refuses: `Matrix.swap(1, 2)` raised `TypeError` under
+  `backend("jax")`. It is now `permutation([1, 0], [left, right])`, which
+  builds its array from nested lists and so on every backend
+  ([rel-int/discopy-next#49](https://github.com/rel-int/discopy-next/issues/49)).
 - `biclosed.Application` and `biclosed.Abstraction` are equal when their
   parts are -- function, argument and side; variable, body and side -- as
   the `closed.Compound` terms already were, rather than when they print

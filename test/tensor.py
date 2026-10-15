@@ -431,3 +431,32 @@ def test_Functor_bubble():
     assert np.allclose(
         np.asarray(F(men_are_mortal.arg).array, dtype=float),
         np.asarray(men_are_mortal.arg.eval().array, dtype=float))
+
+
+def test_then_promotes_dtype():
+    """ The integer structural tensors compose with floats as units. """
+    g = Tensor([[.5, .5], [.25, .75]], Dim(2), Dim(2))
+    assert Tensor.id(Dim(2)) >> g == g == g >> Tensor.id(Dim(2))
+    assert Tensor.id(Dim(1)) @ g == g
+    assert Tensor.spiders(1, 1, Dim(2)) >> g == g
+    assert Tensor.swap(Dim(2), Dim(2)) >> g @ g\
+        == g @ g >> Tensor.swap(Dim(2), Dim(2))
+    copies = Tensor.copy(Dim(2)) >> g @ g
+    assert copies.dtype == g.dtype and np.allclose(
+        copies.array[0], np.outer(g.array[0], g.array[0]))
+    c = Tensor([[1j, 0], [0, 1]], Dim(2), Dim(2))
+    assert Tensor.id(Dim(2)) >> c == c
+    assert Tensor[float].id(Dim(2)) >> Tensor.id(Dim(2))\
+        == Tensor[float].id(Dim(2))
+
+
+def test_Tensor_is_markov():
+    """ Tensor has copy and discard, so a lens over it needs no discard. """
+    from discopy import lens
+    from discopy.abc import MarkovCategory
+    assert issubclass(Tensor, MarkovCategory)
+    g = Tensor([[.5, .5], [.25, .75]], Dim(2), Dim(2))
+    lifted = lens.Markov[Tensor].lift(g)
+    assert lifted.forward == Tensor.copy(Dim(2)) >> g @ Tensor.id(Dim(2))
+    assert lifted.put == Tensor.discard(Dim(2)) @ Tensor.id(Dim(1))
+    assert lifted.forward.dtype == g.dtype

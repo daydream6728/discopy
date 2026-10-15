@@ -140,18 +140,18 @@ class Tensor(Matrix):
     def then(self, other: Tensor = None, *others: Tensor) -> Tensor:
         if other is None or others:
             return super().then(other, *others)
-        assert_isinstance(other, type(self))
+        assert_isinstance(other, self.ar)
         assert_iscomposable(self, other)
         with backend() as np:
             array = np.tensordot(self.array, other.array, len(self.cod))\
                 if self.array.shape and other.array.shape\
                 else self.array * other.array
-        return type(self)(array, self.dom, other.cod)
+        return self.promote(other)(array, self.dom, other.cod)
 
     def tensor(self, other: Tensor = None, *others: Tensor) -> Tensor:
         if other is None or others:
             return Diagram.tensor(self, other, *others)
-        assert_isinstance(other, Tensor)
+        assert_isinstance(other, self.ar)
         dom, cod = self.dom @ other.dom, self.cod @ other.cod
         source = range(len(dom @ cod))
         target = [
@@ -163,7 +163,7 @@ class Tensor(Matrix):
                 if self.array.shape and other.array.shape\
                 else self.array * other.array
             array = np.moveaxis(array, source, target)
-        return type(self)(array, dom, cod)
+        return self.promote(other)(array, dom, cod)
 
     def dagger(self) -> Tensor:
         source = list(range(len(self.dom @ self.cod)))
