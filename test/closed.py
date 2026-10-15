@@ -689,6 +689,17 @@ def test_alpha_eq_compound():
     assert scopes == [{y: 0}, {}]
 
 
+def test_equality_reads_the_types_of_constants():
+    a, b = Ty("a"), Ty("b")
+    first, second = (a << b)("c0")(b("c1")), (a << a)("c0")(a("c1"))
+    assert str(first) == str(second) and first != second
+    assert not first.alpha_eq(second)
+    assert a(lambda x: first) != a(lambda x: second)
+    shape, other = (a, [2, 1], [a, b]), [2]
+    assert TermBase.alpha_completeness(
+        biclosed.Canonical[TermBase].build(shape, other, ("x", "x")))
+
+
 def test_Sampler_nonlinear():
     X, Y = Ty("X"), Ty("Y")
     x0, x1 = Variable("x0", X), Variable("x1", X)
