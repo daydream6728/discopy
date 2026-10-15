@@ -8,11 +8,67 @@ from pytest import raises
 
 from discopy import braided, cat, monoidal, rigid
 from discopy.abc import Category, ColouredMonoid, MonoidalCategory
+from hypothesis import strategies as st
+
 from discopy.axioms import (
-    L, R, Atom, Axiom, AxiomFailure, Count, Equation, Hom, Obj, Over, Repeat,
-    Tensor, Testable, Under, Unit, Var, axiom, inhabits)
+    L, R, Atom, Axiom, AxiomFailure, Count, Equation, Equivalence, Hom, Obj,
+    Over, Related, Repeat, Tensor, Testable, Under, Unit, Var,
+    axiom, inhabits)
 from discopy.monoidal import Ty
 from discopy.cat import Arrow, Box, Ob
+
+
+class ParityEquation(Equation):
+    """ An equation between integers which holds up to their parity. """
+
+    up_to = staticmethod(lambda n: n % 2)
+
+
+class Parity(int, Equivalence):
+    """ An integer up to parity, an equivalence relation besides equality. """
+
+    equivalence_factory = ParityEquation
+
+    @classmethod
+    def strategy(cls, **params):
+        """ Generate an integer, no strategy being enrolled from a test. """
+        return st.integers().map(cls)
+
+    @classmethod
+    def related(cls, **params):
+        """ Generate an integer, another of the same parity and any third. """
+        return st.tuples(st.integers(), st.integers(), st.integers()).map(
+            lambda triple: (
+                cls(triple[0]), cls(triple[0] + 2 * triple[1]),
+                cls(triple[2])))
+
+
+def test_Equivalence():
+    assert Parity.equivalent(Parity(1), Parity(3), Parity(-5))
+    assert not Parity.equivalent(Parity(1), Parity(2))
+    assert Parity.reflexivity(Parity(2))
+    assert Parity.symmetry(Related[Parity]((1, 3, 4)))
+    assert Parity.transitivity(Related[Parity]((1, 3, 5)))
+    assert Parity.transitivity(Related[Parity]((1, 3, 4)))
+    assert not Parity.transitivity(Related[Parity]((1, 2, 3)))
+    assert find(Related[Parity].strategy(), lambda t: t[2] % 2 == 1)[2] % 2
+    with raises(ValueError):
+        Related[Parity]((1, 3))
+    arguments = find(
+        Parity.transitivity.arguments(), lambda arguments: True)
+    assert isinstance(arguments["terms"], Related[Parity])
+
+
+def test_failing_when_the_terms_do_not_build():
+    class Refusing(Arrow):
+        @axiom
+        def refusing(cls, f: Self) -> Equation:
+            raise ValueError("No terms.")
+        refusing = refusing.failing("Declared broken.")
+
+    with raises(AxiomFailure) as error:
+        Refusing.refusing(Arrow.id(Ob('x')))
+    assert isinstance(error.value.equation, ValueError)
 
 
 def test_strategy():

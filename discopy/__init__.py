@@ -26,6 +26,8 @@ from discopy import (
     feedback,
     stream,
     para,
+    lens,
+    neural,
     python,
     matrix,
     tensor,

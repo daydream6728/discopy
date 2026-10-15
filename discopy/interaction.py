@@ -80,7 +80,8 @@ from discopy.abc import (
 from discopy.cat import assert_iscomposable
 from discopy.python import finset
 from discopy.utils import (
-    factory, classproperty, unbiased, assert_isinstance, factory_name)
+    factory, classproperty, unbiased, assert_isinstance, factory_name,
+    get_origin)
 
 
 @dataclass
@@ -103,8 +104,18 @@ class Ty[natural](Pregroup, NamedGeneric):
 
     >>> x, y, z = (Ty[Nat](Nat(n)) for n in (1, 2, 3))
     >>> assert x @ -y @ z == Ty[Nat](Nat(1) @ Nat(3), Nat(2))
+
+    The negative halves of a tensor come in reverse order, as the duals of
+    a rigid category do; :attr:`negatives` is the hook that orders them,
+    which :class:`lens.Ty <discopy.lens.Ty>` overrides to keep them
+    side by side.
+
+    >>> from discopy.pivotal import Ty as T
+    >>> x, y = Ty(T("x"), T("x'")), Ty(T("y"), T("y'"))
+    >>> assert x @ y == Ty(T("x") @ T("y"), T("y'") @ T("x'"))
     """
     natural = pivotal.Ty
+    negatives = staticmethod(reversed)
 
     positive: natural
     negative: natural
@@ -113,7 +124,8 @@ class Ty[natural](Pregroup, NamedGeneric):
         positive, negative = (
             self.natural() if x is None else x for x in (positive, negative))
         positive, negative = (
-            x if isinstance(x, type(self).natural) else type(self).natural(x)
+            x if isinstance(x, type(self).natural)
+            else type(self).natural.cast(x)
             for x in (positive, negative))
         self.positive, self.negative = positive, negative
 
@@ -122,31 +134,37 @@ class Ty[natural](Pregroup, NamedGeneric):
         yield self.negative
 
     def __repr__(self):
-        pos, neg = repr(self.positive), repr(self.negative)
-        return f"interaction.Ty[{factory_name(self.natural)}]"\
-               f"(positive={pos}, negative={neg})"
+        factory, natural = map(
+            factory_name, (get_origin(type(self)), self.natural))
+        return f"{factory}[{natural}]"\
+            f"(positive={self.positive!r}, negative={self.negative!r})"
 
     def __str__(self):
         try:
             return " @ ".join(list(map(str, self.positive)) + [
-                f"-{x}" for x in reversed(self.negative)])
+                f"-{x}" for x in self.negatives(self.negative)])  # ty: ignore[not-iterable]
         except TypeError:  # e.g. when Ty.natural == int
             return repr(self)
 
     @classmethod
     def unit(cls) -> Ty:
-        return cls(cls.natural.unit(), cls.natural.unit())
+        return cls()
 
     def tensor(self, *others: Ty):
-        if any(not isinstance(other, Ty) for other in others):
+        if any(not isinstance(other, type(self)) for other in others):
             return NotImplemented
         unit = type(self).natural()
         positive = unit.tensor(*(x.positive for x in (self, ) + others))
         negative = unit.tensor(
-            *(x.negative for x in reversed((self, ) + others)))
+            *(x.negative for x in self.negatives((self, ) + others)))
         return type(self)(positive, negative)
 
     __matmul__ = tensor
+
+    def __rmatmul__(self, other):
+        """ A type does not whisker: the tensor with anything but a type of
+        the same natural numbers is undefined. """
+        return NotImplemented
 
     def __neg__(self):
         positive, negative = self
@@ -398,7 +416,7 @@ class Diagram[natural](RibbonCategory, NamedGeneric):
             right : The right-hand side of the caps.
         """
         right.assert_isadjoint(left)
-        inside = cls.natural.id(left.negative @ left.positive)
+        inside = cls.natural.id(left.positive @ left.negative)
         return cls(inside, type(left)(), left @ right)
 
     def dagger(self):

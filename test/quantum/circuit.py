@@ -287,6 +287,10 @@ def test_Controlled():
         Controlled(None)
     with raises(ValueError):
         Controlled(X, distance=0)
+    assert np.allclose(CU1(0.5, distance=2).eval().array,
+                       Controlled(U1(0.5), distance=2).eval().array)
+    assert np.allclose(CRz(0.7, distance=-2).eval().array,
+                       Controlled(Rz(0.7), distance=-2).eval().array)
 
 
 def test_adjoint():

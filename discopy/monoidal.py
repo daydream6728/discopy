@@ -642,6 +642,8 @@ class Dim(Ty):
     -------
     >>> Dim(1) @ Dim(2) @ Dim(3)
     Dim(2, 3)
+    >>> from discopy.utils import dumps, loads
+    >>> assert loads(dumps(Dim(2, 3))) == Dim(2, 3)
     """
     generator_factory = int
     box_factory = None
@@ -680,12 +682,13 @@ class Dim(Ty):
 
     __str__ = __repr__
 
-    def to_tree(self):
-        return {'factory': factory_name(type(self)), 'dim': list(self.inside)}
+    def to_tree(self) -> dict:
+        return {'factory': factory_name(type(self)),
+                'inside': list(self.inside)}
 
     @classmethod
-    def from_tree(cls, tree):
-        return cls(*tree['dim'])
+    def from_tree(cls, tree: dict) -> Dim:
+        return cls(*tree['inside'])
 
 
 class Layer(cat.Box, ColouredMonoid):
@@ -1866,6 +1869,9 @@ class Functor(cat.Functor):
     def __call__(self, other):
         if isinstance(other, Colour):
             return self.colour_map[other] if self.colour_map else other
+        if isinstance(other, Dim) and isinstance(
+                other, self.dom.ob.generator_factory):
+            return self.cod.ob.cast(self.ob_map[self.dom.ob(other)])
         if isinstance(other, Dim):
             return self.cod.ob().tensor(*(  # ty: ignore[invalid-argument-type]
                 self.ob_map[x] for x in other))

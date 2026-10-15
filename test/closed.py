@@ -4,7 +4,22 @@ from pytest import raises
 
 from discopy import biclosed
 from discopy.closed import *
+from discopy.biclosed import Constraints, Sampler
 from discopy.utils import dumps, loads
+
+
+U = Ty(Unitype())
+
+
+def church(n, X):
+    def body(f):
+        def inner(x):
+            result = x
+            for _ in range(n):
+                result = f(result)
+            return result
+        return X(inner)
+    return (X >> X)(body)
 
 
 def test_exp():
@@ -226,6 +241,18 @@ def test_python_let():
         g: Function(lambda: lambda a, b: a * b, (),
                     Function.exp((int,), (int, int)))}, cod=Function)
     assert F(t)(3) == 16
+def test_unitype_hash():
+    exp = Exp(U, U)
+    assert Unitype() == exp and hash(Unitype()) == hash(exp)
+    ob_map = {Unitype(): "unitype"}
+    assert ob_map[exp] == "unitype"
+
+
+def test_unitype_tree():
+    from discopy.utils import from_tree
+    assert from_tree(U.to_tree()) == U
+    X = Ty("X")
+    assert from_tree((X >> U @ X).to_tree()) == X >> U @ X
 
 
 def test_str():
@@ -247,6 +274,145 @@ def test_python_Functor():
 
     assert F(f.uncurry().curry())(True)(1j) == F(f)(True)(1j)
     assert F(g.curry().uncurry())(1j, True) == F(g)(1j, True)
+
+
+def test_church_addition():
+    X = Ty('X')
+    zero, one, two, three = [church(n, X) for n in range(4)]
+    N, I = two.cod, X >> X
+    add = N(lambda m: N(lambda n: I(lambda f: X(lambda x: m(f)(n(f)(x))))))
+    assert add(one)(two).normal_form() == three
+    assert add(zero)(two).normal_form() == two == add(two)(zero).normal_form()
+
+
+def test_church_multiplication():
+    X = Ty('X')
+    zero, two, three = church(0, X), church(2, X), church(3, X)
+    N, I = two.cod, X >> X
+    mul = N(lambda m: N(lambda n: I(lambda f: m(n(f)))))
+    assert mul(two)(three).normal_form() == church(6, X)
+    assert mul(two)(zero).normal_form() == zero
+
+
+def test_church_exponentiation():
+    assert U == U >> U and U.base == U == U.exponent
+    two, three = church(2, U), church(3, U)
+    N = two.cod
+    assert N == U
+    exp = N(lambda m: N(lambda n: (U >> U)(lambda f: n(m)(f))))
+    assert exp(two)(three).normal_form() == church(8, U)
+    assert exp(three)(two).normal_form() == church(9, U)
+
+
+def test_normal_form_idempotent():
+    two, three = church(2, U), church(3, U)
+    exp = two.cod(lambda m: two.cod(lambda n: n(m)))
+    result = exp(two)(three).normal_form()
+    assert result == result.normal_form()
+    x, y = Variable('x', U), Variable("x_", U)
+    body = y
+    for _ in range(8):
+        body = x(body)
+    assert result == Abstraction(x, Abstraction(y, body))
+
+
+def test_reduce_budget():
+    X = Ty('X')
+    h = Variable('h', X >> (X >> X))
+    c, d = Variable('c', X), Variable('d', X)
+    identity = X(lambda x: x)
+    term = h(identity(c))(identity(d))
+    scope = (h, c, d)
+
+    tree0 = term.reduce(budget=0)
+    assert (tree0.head_cod, tree0.variables, tree0.head) == (X, scope, 0)
+    assert tree0.spine == (identity(c), identity(d))
+    with raises(ValueError):
+        tree0[0]
+    with raises(ValueError):
+        tree0[1]
+    with raises(ValueError):
+        tree0.to_term()
+
+    tree_negative = term.reduce(budget=-1)
+    assert (tree_negative.head_cod, tree_negative.variables,
+            tree_negative.head) == (X, scope, 0)
+    with raises(ValueError):
+        tree_negative[0]
+
+    tree1 = term.reduce(budget=1)
+    assert tree1[0].to_term(len(scope)) == c
+    with raises(ValueError):
+        tree1[1]
+    with raises(ValueError):
+        tree1.to_term()
+
+    tree = term.reduce()
+    assert tree[0].to_term(len(scope)) == c
+    assert tree[1].to_term(len(scope)) == d
+    assert tree.to_term(len(scope)) == h(c)(d)
+
+    with raises(ValueError):
+        term.normal_form(budget=1)
+    assert term.normal_form(budget=2) == h(c)(d) == term.normal_form()
+
+
+def test_reduce_strategy():
+    X = Ty('X')
+    h = Variable('h', X >> (X >> X))
+    c, d = Variable('c', X), Variable('d', X)
+    term = h(X(lambda x: x)(c))(X(lambda x: x)(d))
+    scope = (h, c, d)
+
+    tree = term.reduce(budget=1, strategy=RightmostFirst)
+    assert tree.strategy.order(tree.spine) == (1, 0)
+    with raises(ValueError):
+        tree.to_term()
+    assert tree[1].to_term(len(scope)) == d
+    with raises(ValueError):
+        tree[0]
+
+    with raises(NotImplementedError):
+        Strategy().order((c, ))
+    with raises(TypeError):
+        Constant('e', X).reduce()
+
+
+def test_bohm_tree_cod():
+    X = Ty('X')
+    two = church(2, X)
+    tree = two.reduce()
+    assert tree.cod() == two.cod
+    assert tree.to_term() == two
+
+
+def test_bohm_tree_validation_and_equality():
+    X, Y = Ty('X'), Ty('Y')
+    x, y = Variable('x', X), Variable('y', Y)
+    term = (X >> X)(lambda f: X(lambda x: f(x)))
+    assert term.reduce() == term.reduce(budget=10)
+
+    with raises(AxiomError):
+        BohmTree(X, (x, ), 1, Strategy(), ())
+    with raises(AxiomError):
+        BohmTree(X, (x, ), 0, Strategy(), (x, ))
+    with raises(AxiomError):
+        BohmTree(X, (Variable('f', X >> X), ), 0, Strategy(), (y, ))
+    with raises(AxiomError):
+        BohmTree(Y, (x, ), 0, Strategy(), ())
+
+
+def test_substitution():
+    X = Ty('X')
+    c, g, x = Constant('c', X), Variable('g', X >> X), Variable('x', X)
+    assert Substitution({x: c})(g(x)) == g(c)
+    assert Substitution({x: c})(g(c)) == g(c)
+    h = Variable('h', X >> (X >> (X >> X)))
+    f, y = Variable('f', X >> X), Variable('y', X)
+    z, y_ = Variable("z", X), Variable("y_", X)
+    term = X(lambda y: f(y))
+    assert Substitution({f: h(y)(z)})(term)\
+        == Abstraction(y_, h(y)(z)(y_))
 
 
 def test_to_compact():
@@ -454,6 +620,68 @@ def test_draw_copy_and_swap():
     # A non-linear term evaluates to such a diagram, so it draws too.
     X = Ty('X')
     assert X(lambda x: (X >> X)(lambda f: f(x))).eval().to_drawing()
+
+
+def test_alpha_eq_nonlinear():
+    X, Y = Ty("X"), Ty("Y")
+    f = (X >> (X >> Y))("f")
+    assert X(lambda x: X(lambda x: x)).alpha_eq(X(lambda x: X(lambda y: y)))
+    assert not X(lambda x: X(lambda x: x)).alpha_eq(X(lambda x: X(lambda y: x)))
+    assert X(lambda x: f(x)(x)).alpha_eq(X(lambda y: f(y)(y)))
+    assert not X(lambda x: X(lambda y: f(x)(y))).alpha_eq(
+        X(lambda x: X(lambda y: f(y)(x))))
+    assert X(lambda x: X(lambda y: y)).alpha_eq(X(lambda z: X(lambda y: y)))
+    assert not X(lambda x: X(lambda y: f(x)(y))).alpha_eq(
+        X(lambda x: X(lambda y: f(x)(x))))
+
+
+def test_alpha_eq_tells_free_from_bound():
+    X, Y = Ty("X"), Ty("Y")
+    f, x0 = (X >> Y)("f"), Variable("x0", X)
+    assert not X(lambda x0: f(x0)).alpha_eq(X(lambda y: f(x0)))
+    assert X(lambda x0: f(x0)).alpha_eq(X(lambda y: f(y)))
+
+
+def test_alpha_eq_compound():
+    X, Y = Ty("X"), Ty("Y")
+    f, g = (X >> Y)("f"), (X >> (Y * Y))("g")
+    x, y, z = Variable("x", X), Variable("y", Y), Variable("z", Y)
+    assert Tuple(x, f(x)).alpha_eq(Tuple(x, f(x)))
+    assert not Tuple(x, f(x)).alpha_eq(Tuple(f(x), x), Tuple(x))
+    assert Projection(Tuple(x, f(x)), 1).alpha_eq(
+        Projection(Tuple(x, f(x)), 1))
+    assert not Projection(Tuple(x, f(x)), 1).alpha_eq(
+        Projection(Tuple(x, f(x)), 0))
+    assert Let(f(x), (y, ), Tuple(y, y)).alpha_eq(
+        Let(f(x), (z, ), Tuple(z, z)))
+    assert not Let(f(x), (y, ), Tuple(y, y)).alpha_eq(
+        Let(f(x), (z, ), Tuple(z, y)))
+    assert not Let(f(x), (y, ), y).alpha_eq(
+        Let(f(Variable("w", X)), (y, ), y))
+    assert X(lambda x: let(f(x), lambda y: y)).alpha_eq(
+        X(lambda z: let(f(z), lambda w: w)))
+    assert Let(g(x), (y, z), Tuple(y, z)).alpha_eq(
+        Let(g(x), (z, y), Tuple(z, y)))
+    assert not Let(g(x), (y, z), Tuple(y, z)).alpha_eq(
+        Let(g(x), (y, z), Tuple(z, y)))
+    scopes = [{y: 0}, {}]
+    assert Let(f(x), (y, ), y).alpha_eq_under(
+        scopes, [Let(f(x), (z, ), z)], 1)
+    assert scopes == [{y: 0}, {}]
+
+
+def test_Sampler_nonlinear():
+    X, Y = Ty("X"), Ty("Y")
+    x0, x1 = Variable("x0", X), Variable("x1", X)
+    sampler = Sampler(TermBase, iter([]), [X], "x", linear=False)
+    assert [leaf() for leaf in sampler.leaves(X, (x0, x1), True)][2:] == [x0, x1]
+    assert len(sampler.leaves(Y, (x0, x1), False)) == 1
+    constraints = Constraints((x0, ), (x1, ))
+    assert sampler.splits(constraints) == [(constraints, constraints)]
+    choices = [4, 2, 0, 2, 0, 0, 2, 2]
+    term = TermBase.generate(Y << X, choices, [X], "x")
+    assert term.alpha_eq(TermBase.generate(Y << X, choices, [X], "y"))
+    assert str(term) == "X(lambda x0: c0(x0)(x0))"
 
 
 def test_from_biclosed():

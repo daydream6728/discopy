@@ -50,6 +50,7 @@ NO_BRAID_GROUP = (
     "words with yet.")
 NO_CUPS = "{} is not rigid, it has no cups or caps."
 NOT_SYMMETRIC = "{} has no swaps to downgrade this map."
+NOT_MARKOV = "{} has no copy or discard."
 NOT_ACYCLIC = "{} has a directed cycle, its boxes cannot be ordered."
 
 FREE_CURRY = (

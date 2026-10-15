@@ -134,6 +134,7 @@ from discopy.utils import (
     from_tree,
     assert_isinstance,
     assert_istraceable,
+    from_tree,
 )
 
 
@@ -258,6 +259,17 @@ class Trace(Box, monoidal.Bubble):
 
     def dagger(self):
         return self.arg.dagger().trace(left=self.left)
+
+    def to_tree(self) -> dict:
+        tree = super().to_tree()
+        if self.left:
+            tree['left'] = True
+        return tree
+
+    @classmethod
+    def from_tree(cls, tree: dict) -> "Trace":
+        arg, = map(from_tree, tree['args'])
+        return cls(arg, left='left' in tree)
 
     def to_drawing(self):
         return self.ar.to_drawing(self)

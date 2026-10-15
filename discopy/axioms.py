@@ -23,7 +23,8 @@ A :class:`Testable` category generates its own terms and
 :meth:`Testable.matrix` lists every law of every such category, which the
 suite in ``proptest/`` checks; CONTRIBUTING.md says how to run it. A
 :class:`Serialisable` type states the laws of writing a term down and
-reading it back.
+reading it back, and an :class:`Equivalence` those of an equivalence
+relation besides equality: reflexivity, symmetry and transitivity.
 
 Summary
 -------
@@ -49,6 +50,8 @@ Summary
     Repeat
     Testable
     Serialisable
+    Equivalence
+    Related
 
 .. admonition:: Functions
 
@@ -65,7 +68,7 @@ Summary
 import inspect
 import pickle
 import sys
-from abc import ABC
+from abc import ABC, abstractmethod
 from collections.abc import Callable
 from copy import deepcopy
 from dataclasses import KW_ONLY, dataclass, replace
@@ -73,12 +76,14 @@ from functools import cached_property, reduce, wraps
 from operator import matmul
 from types import GenericAlias
 from typing import (
-    TYPE_CHECKING, Annotated, Any, Concatenate, ParamSpec, Self, TypeVar,
+    TYPE_CHECKING, Annotated, Any, ClassVar, Concatenate, ParamSpec, Self,
+    TypeVar,
     TypeVarTuple,
     get_args, get_origin)
 
 from discopy.utils import (
     AxiomError,
+    NamedGeneric,
     classproperty,
     dumps,
     factory_name,
@@ -180,7 +185,8 @@ class AxiomFailure(AxiomError):
     """
     A law declared broken, raised when the bound axiom is called: the
     reason is the message and :attr:`equation` is the law evaluated on the
-    arguments, whose sides say how it failed.
+    arguments, whose sides say how it failed, or the error raised when its
+    terms could not be built.
     """
 
     def __init__(self, reason: str, equation):
@@ -580,6 +586,9 @@ class Declaration[**P, T](classmethod):
                     _, dom, cod = get_args(kind)
                     strategy = self.category.strategy(
                         dom=dom, cod=cod, **params)
+                elif isinstance(kind, type) and issubclass(kind, Testable)\
+                        and getattr(kind, "factory", None) is Self:
+                    strategy = kind.__origin__[self.category].strategy()
                 else:
                     strategy = self.category.strategy()
                 return draw(strategy, label=name)
@@ -644,12 +653,17 @@ class Axiom[**P, T](Declaration[P, T]):
         """
         The same law declared broken: calling it raises an
         :class:`AxiomFailure` with the reason as message and the equation
-        evaluated on the arguments, e.g. ``braid_naturality =
+        evaluated on the arguments, or the error raised when the
+        implementation refuses to build its terms, e.g. ``braid_naturality =
         BraidedCategory.braid_naturality.failing("A free braid is a box.")``.
         """
         @wraps(self.function)
         def equation(*args, **kwargs):
-            raise AxiomFailure(reason, self.function(*args, **kwargs))
+            try:
+                evaluated = self.function(*args, **kwargs)
+            except Exception as error:
+                raise AxiomFailure(reason, error) from error
+            raise AxiomFailure(reason, evaluated)
         equation.__doc__ = reason
         return replace(self, function=equation, broken=True)
 
@@ -951,12 +965,16 @@ class Testable[T](ABC):
         laws, generate their terms and are their own ``ar``. A box inherits
         the strategy of the category it lives in, whose terms it is part of,
         rather than being a category of its own, while a type is a category
-        of its own, the free coloured monoid on its wires.
+        of its own, the free coloured monoid on its wires. A box that is not
+        the generator of its category but defines a strategy of its own,
+        e.g. a lambda term, is checked on the terms that strategy generates.
 
         >>> from discopy.cat import Arrow, Box
         >>> from discopy.monoidal import Ty
+        >>> from discopy.biclosed import TermBase
         >>> assert Arrow in Testable.enrolled() and Ty in Testable.enrolled()
         >>> assert Box not in Testable.enrolled()
+        >>> assert TermBase in Testable.enrolled()
         """
         def generates(testable):
             try:
@@ -965,9 +983,15 @@ class Testable[T](ABC):
                 return False
             return True
 
+        def own_terms(testable):
+            ar = getattr(testable, "ar", None)
+            return ar is testable or isinstance(ar, type)\
+                and "strategy" in vars(testable)\
+                and getattr(testable, "box_factory", None) is not testable
+
         return tuple(sorted((
             testable for testable in cls.subclasses()
-            if getattr(testable, "ar", None) is testable
+            if own_terms(testable)
             and testable.axioms and generates(testable)), key=factory_name))
 
     @classmethod
@@ -1039,6 +1063,22 @@ class Serialisable[T](Testable[T]):
         module = sys.modules[cls.__module__]
         return dict(public(vars(discopy)), **public(vars(module)))
 
+    @classproperty
+    def axioms(cls) -> dict[str, Axiom]:
+        """
+        The axioms inherited by ``cls``, by name, subclasses overriding bases.
+
+        Names are collected before they are filtered, so that assigning
+        anything that is not an axiom over an inherited one drops it
+        altogether, rather than restating it.
+        """
+        visible = {
+            name: value
+            for base in reversed(cls.__mro__)
+            for name, value in base.__dict__.items()}
+        return {name: value.bind(cls) for name, value in visible.items()
+                if isinstance(value, Axiom)}
+
     @axiom
     def repr_transparency(cls, term: Self) -> Equation[Self]:
         """
@@ -1075,3 +1115,87 @@ class Serialisable[T](Testable[T]):
         A type without a tree declares the law inapplicable.
         """
         return Equation(from_tree(term.to_tree()), loads(dumps(term)), term)
+
+
+class Related[factory](Testable, NamedGeneric, tuple):
+    """
+    Three instances of the ``factory``, an :class:`Equivalence`: two related
+    by construction and a third that may be or not, see
+    :meth:`Equivalence.related`.
+    """
+    def __new__(cls, terms):
+        terms = tuple(terms)
+        if len(terms) != 3:
+            raise ValueError("Expected three terms.")
+        return super().__new__(cls, terms)
+
+    @classmethod
+    def strategy(cls, **params) -> st.SearchStrategy[Related]:
+        """ Generate the triples the factory relates. """
+        from hypothesis import strategies as st
+
+        return st.builds(cls, cls.factory.related(**params))
+
+
+
+class Equivalence(Testable):
+    """
+    A type with an equivalence relation on its instances besides equality,
+    e.g. lambda terms up to the names of their bound variables, and the
+    laws of an equivalence relation stated once: reflexivity, symmetry and
+    transitivity.
+
+    The relation is the :class:`Equation` subclass ``equivalence_factory``,
+    which holds when its terms are related. A search over arbitrary
+    instances would rarely meet related ones, so the two laws that need
+    them quantify over :class:`Related` instances, which the type generates
+    with :meth:`related`: two related by construction and a third that may
+    be or not, so that a law runs in both directions.
+
+    Example
+    -------
+    >>> from discopy.biclosed import Ty, TermBase
+    >>> X = Ty("X")
+    >>> f, g = (X << X)("f"), (X << X)("g")
+    >>> terms = X(lambda x: f(x)), X(lambda y: f(y)), g
+    >>> assert TermBase.equivalent(*terms[:2])
+    >>> assert not TermBase.equivalent(terms[0], g)
+    >>> assert TermBase.transitivity(Related[TermBase](terms))
+    """
+    equivalence_factory: ClassVar[type[Equation]]
+
+    @classmethod
+    @abstractmethod
+    def related(cls, **params) -> st.SearchStrategy[tuple]:
+        """
+        Generate three instances: two related by construction and a third
+        comparable to them, related or not.
+        """
+
+    @classmethod
+    def equivalent(cls, *terms) -> bool:
+        """ Whether the terms are related, by the ``equivalence_factory``. """
+        return bool(cls.equivalence_factory(*terms))
+
+    @axiom
+    def reflexivity(cls, term: Self) -> Equation:
+        """ A term is related to itself. """
+        return cls.equivalence_factory(term, term)
+
+    @axiom
+    def symmetry(cls, terms: Related[Self]) -> Equation:
+        """ A term is related to another exactly when the other is to it. """
+        first, _, third = terms
+        return Equation(
+            cls.equivalent(first, third), cls.equivalent(third, first))
+
+    @axiom
+    def transitivity(cls, terms: Related[Self]) -> Equation:
+        """
+        Terms related to each other are related to the same terms: a third
+        term is related to the first exactly when it is to the second,
+        which is transitivity in both directions given symmetry.
+        """
+        first, second, third = terms
+        return Equation(
+            cls.equivalent(first, third), cls.equivalent(second, third))

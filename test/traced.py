@@ -53,3 +53,14 @@ def test_Sum():
     assert isinstance(f + f, Sum) and (f + f).terms == (f, f)
     image = Functor(lambda x: x, {f: f + f})(f)
     assert isinstance(image, Sum) and image.terms == (f, f)
+
+
+def test_trace_serialisation():
+    from discopy.utils import dumps, loads
+    from discopy import symmetric
+    f = Box('f', 'x', 'x')
+    for trace in (f.trace(), f.trace(left=True)):
+        assert loads(dumps(trace)) == trace
+    x = symmetric.Ty('x')
+    swap = symmetric.Swap(x, x)
+    assert loads(dumps(swap.trace(left=True))) == swap.trace(left=True)

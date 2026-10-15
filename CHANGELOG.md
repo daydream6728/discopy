@@ -158,6 +158,109 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - `grammar.abstract`, abstract categorial grammars after de Groote's
   *Towards abstract categorial grammars* (2001)
   ([#398](https://github.com/discopy/discopy/issues/398)).
+- `discopy.neural`, neural networks as diagrams: `discopy.neural.network`
+  is the traced category of feedforward networks. `Dims` is the free
+  monoid over the multiplicative `Dim`, i.e. a list of shapes with
+  concatenation as tensor and the product of shapes distributing over it,
+  the free rig on the natural numbers; `Network` is the free traced
+  Markov category on `Box` layers of any input and output legs, each
+  carrying an optional `module`, so that a residual block is a `copy` and
+  a recurrent cell a `trace`. A feedforward network compiles:
+  `Box.forward` applies the module of a layer to one tensor per leg, with
+  `Dims.check` checking the shape of each tensor against its leg;
+  `Network.to_function` is the functor into `python.Function` sending
+  every leg to a tensor type and every box to its `forward`, with the
+  copy, discard and swap of tuples, which `jax.jit` and `jax.grad` take as
+  it is; and `discopy.neural.torch.Module` runs it as a PyTorch module
+  with the modules of the boxes as its submodules, `torch.compile`
+  included. A trace does not compile yet, and `import discopy.neural`
+  imports no framework. `monoidal.Functor` reads a `Dim` that generates
+  the types of its domain as one generator rather than factor by factor,
+  so that functors, drawings and hypergraphs of networks map each leg as
+  a whole ([#702](https://github.com/discopy/discopy/issues/702),
+  [#736](https://github.com/discopy/discopy/pull/736),
+  [#743](https://github.com/discopy/discopy/pull/743)).
+- `biclosed.TermBase.alpha_eq`, the alpha-equivalence of lambda terms,
+  i.e. equality up to the names of their bound variables, of any number
+  of terms in one pass: the helper `alpha_eq_under` carries a scope for
+  each term, mapping its bound variables to the depth of their binder,
+  i.e. their de Bruijn level, extended in place on entering a binder and
+  restored on leaving it, so the terms are alpha-equivalent when they are
+  equal with their bound variables read as levels and the check is linear
+  in the size of the terms, neither a renamed copy nor a fresh variable
+  at any binder. Free variables are compared by name, bound ones by their
+  level, applications by their `left` flag and abstractions by the type
+  they bind; `closed` terms inherit it and `grammar.categorial`'s type
+  raisings and binary compositions recurse into their subterms, as do
+  `closed`'s tuples and projections, and a `let` statement binds its
+  variables at the levels of its binder as an abstraction binds one,
+  both through `TermBase.alpha_eq_bound`, which extends the scopes and
+  restores them. Terms are `Testable` in the
+  sense of `discopy.axioms`: `TermBase.generate` builds a planar linear
+  term of a given type from a sequence of choices and the letters naming
+  its bound variables, through a `Sampler` with one method per kind of
+  node and the options of a choice deferred as closures, so that a term
+  nests as deep as the recursion limit allows, linear and planar for
+  `biclosed`, free to copy and discard for
+  `closed`, `TermBase.strategy` draws them and `Renamed[C]`
+  draws one shape under several namings, so that the laws of
+  alpha-equivalence are axioms of `TermBase` checked by the property
+  matrix, where `biclosed.TermBase` and `closed.TermBase` are now
+  enrolled. `TermBase` is an `axioms.Equivalence`, the abstract class of
+  a type with an equivalence relation besides equality, which states
+  reflexivity, symmetry and transitivity once for any such relation: the
+  relation is the `Equation` subclass `equivalence_factory`, which holds
+  when its terms are related, `biclosed.AlphaEquation` here, and the two
+  laws that need related terms quantify over `Related[C]`, two instances
+  related by construction and a third that may not be, drawn by the
+  type's `related`, so that each verdict runs both ways. Then the laws of
+  alpha-equivalence itself: renaming, congruence with respect to
+  application and to abstraction, soundness for evaluation, and
+  completeness: two terms are
+  alpha-equivalent exactly when regenerating each under one naming of
+  its bound variables gives equal terms, drawn by `Canonical[C]` as two
+  shapes under their own namings and under the canonical one, the one
+  law an `alpha_eq` that says yes too often fails where the others hold
+  of it. `Testable.axioms`, the laws a type inherits by name, moves there
+  from `abc.Category`, so that any testable type has them.
+  `Testable.serialisation`
+  is declared
+  failing on terms, which do not read back from their tree
+  ([#692](https://github.com/discopy/discopy/issues/692)), and
+  `Axiom.failing` reports a broken law whose terms fail to build as an
+  `AxiomFailure` carrying the error rather than letting it escape.
+  `biclosed.Ty.strategy` generates exponentials as well as atoms
+  ([#767](https://github.com/discopy/discopy/pull/767)).
+- `grammar.abstract`, abstract categorial grammars after de Groote's
+  *Towards abstract categorial grammars* (2001)
+  ([#398](https://github.com/discopy/discopy/issues/398)).
+- `grammar.proofnet`, parses as proof nets: a `Sequent` is words with their
+  abstract types and a goal, its ports are the atoms of the types with their
+  polarity, and a `ProofNet` links each negative port to a positive port of
+  the same atom. `ProofNet.from_term` is the axiom linking of a closed linear
+  term and `ProofNet.to_term` reads its beta-normal eta-long term back from
+  the goal, failing exactly when the net is not correct, so that two linear
+  terms have the same net if and only if they are equal up to beta and eta.
+  Equal words are told apart by order only: `from_term` gives each
+  occurrence of a constant the first equal word no earlier one took, so
+  words whose links matter, e.g. the two `the` of a sentence, should be
+  distinct constants, with their position as `data`. `Sequent.decode`
+  takes the linking of maximum score, block by block with `hungarian`, an
+  assignment solver in numpy.
+- `grammar.neural`, a parser into proof nets with PyTorch, over the states
+  of any encoder: a constructive `Tagger` writing the type of each word in
+  the Polish notation of a `Signature`, only ever writing what can be
+  completed into a type, and a bilinear `Linker` trained on the likelihood
+  of the gold linking after `sinkhorn` normalisation, jointly in `Parser`.
+  Moved from the trilingual parser of
+  [rel-int/lambek#8](https://github.com/rel-int/lambek/pull/8), without its
+  datasets or experiments.
+- A notebook, *Parsing arithmetic*, showcasing `grammar.proofnet` and
+  `grammar.neural`: the two readings of `a + b * c` are two linkings of
+  one sequent, 24 of its 120 linkings are correct, and a parser trained on
+  formulae of up to four operators recovers `a + (b * c)`, and every one
+  of 200 held-out formulae of five and six operators, in under a minute on
+  a CPU.
 - Closed terms are evaluated in a context, a list of distinct variables
   containing the free ones, through `closed.TermBase.weaken`, the structural
   morphism discarding the others and permuting the rest; `is_linear` says
@@ -362,6 +465,25 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   the objects to match; `Permutation` inherits `abc.PROP` on the strength
   of that, its first genuine user
   ([#709](https://github.com/discopy/discopy/issues/709)).
+- Monoidal lenses, also called optics, `discopy.lens`, with one class for
+  each doctrine of the underlying category as in `discopy.para`.
+  `lens.Symmetric` is a residual with a forward and a backward morphism
+  over a symmetric category, composing by tensoring the residuals as
+  `discopy.para` does with its co/parameters, over pairs `lens.Ty`
+  tensored componentwise; `to_int` reads one over a traced category as an
+  integer diagram of `discopy.interaction`, the residual being the wire
+  between the legs, and `lens.Traced` traces it leg by leg.
+  `lens.Markov` is the lenses of functional programming, a `get` and a
+  `put` composing by the chain rule over a Markov category: a subclass of
+  `lens.Symmetric` whose residual is the input, copied to be read by `get`
+  and kept for `put`, and `lens.Symmetric.to_markov` normalises any lens
+  to one. Lenses over
+  `python.Function` are the reverse derivatives of gradient-based
+  learning, and a parametric lens `para.Symmetric[lens.Markov[Function]]`
+  a neural network with its weights' gradients beside its input's.
+  Building a Markov lens over a category without `copy` and `discard`
+  raises `messages.NOT_MARKOV`
+  ([#701](https://github.com/discopy/discopy/pull/701)).
 - A `workflows` job in `build.yml`, so that the code running our pull
   requests is checked like the code it checks: `actionlint` over the
   workflows, `pflake8` over `.github`, and `pytest .github/tests/*.py`
@@ -409,6 +531,13 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - Rich display hooks (`_repr_svg_`/`_repr_html_`) for `Diagram` and `Drawing`
   in Jupyter/IPython
   ([#445](https://github.com/discopy/discopy/pull/445)).
+- Quantum reservoir computing, `discopy.quantum.reservoir`: a `Reservoir`
+  is a fixed unitary on memory and input qubits, each input value induces
+  a channel from memory to memory, the features of a time series are the
+  Born probabilities of the memory qubits and only a ridge-regression
+  linear readout is trained, with a `Rydberg` reservoir as example
+  ([#519](https://github.com/discopy/discopy/pull/519),
+  [#586](https://github.com/discopy/discopy/pull/586)).
 - Composition benchmark suite for diagram operations, reproducing the
   scaling experiments of arXiv:2105.09257
   ([#346](https://github.com/discopy/discopy/pull/346)).
@@ -444,6 +573,9 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `trace` and `feedback` route the coparameters out of the way and
   `recopar` post-composes them, covariantly where `reparam` is
   contravariant ([#572](https://github.com/discopy/discopy/issues/572)).
+- `Rydberg` in `discopy.quantum.ansatze`, the Trotterized time evolution
+  under the Rydberg Hamiltonian of Pasqal's neutral-atom QPU
+  ([#586](https://github.com/discopy/discopy/pull/586)).
 - The pivotal structure of `Rep(H)`: `HopfAlgebra.drinfeld_element`,
   `pivotal_element` and `ribbon_element`, cached single tensors named after
   the literature (Reshetikhin–Turaev; Kassel; Radford), with pivotal cups
@@ -451,8 +583,29 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `taft(n)`, the smallest algebras with a pivot of order `n` (Sweedler's
   algebra is `n = 2`), realise the Kauffman–Radford ribbon criterion
   ([#484](https://github.com/discopy/discopy/pull/484)).
+- Syntactic beta reduction on `closed.Term` with capture-avoiding
+  substitution, and `closed.BohmTree` as the normal form: its arguments are
+  reduced lazily against a shared budget, with pluggable reduction
+  strategies defaulting to leftmost-outermost
+  ([#442](https://github.com/discopy/discopy/pull/442)).
 
 ### Changed
+
+- The lambda terms of `main` carry their laws in the sequent framework:
+  `axioms.Equivalence` and `Related` are declared on it, `Related` with
+  the PEP 695 parameter of every `NamedGeneric`, as are `biclosed.Renamed`,
+  `biclosed.Canonical` and `lens.Symmetric`, and a premise annotated with a
+  testable type of `Self`, e.g. `terms: Related[Self]`, is generated by that
+  type's strategy over the category. `Testable.enrolled` checks a box that
+  is not the generator of its category but defines a strategy of its own,
+  i.e. `biclosed.TermBase` and `closed.TermBase`, which
+  `proptest/categories.py` used to list, every inherited law of a diagram
+  declared inapplicable to a term. `biclosed.Ty.strategy` builds its
+  exponentials on atomic wires, the terms being generated over those, and
+  forwards the parameters of the free monoid's search; `interaction.Ty`
+  does not whisker, so a tensor with another kind of type raises
+  `TypeError` again; and `neural.Dims` names no generator, so its laws have
+  no canonical instance, as `monoidal.Dim`'s do not.
 
 - `Hypergraph.strategy` and `CMap.strategy` sample the categories whose
   coherence theorem they state, raising `NotImplementedError` for the
@@ -917,6 +1070,20 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   swap is ill-typed across 0-cells, where it lost its colours; `feedback.Diagram.discard` builds a feedback box and
   `feedback.Diagram.feedback` takes a memory of several wires.
 
+- `python.Function` is hashable: its dataclass compared `inside`, `dom` and
+  `cod` without hashing them, so `jax.jit` refused a function, as did any
+  cache keyed on one
+  ([#743](https://github.com/discopy/discopy/pull/743)).
+- `traced.Trace` loads from its serialisation, which records which side is
+  traced: `loads(dumps(f.trace()))` raised `TypeError` from the inherited
+  `Bubble.from_tree`, on every level of the hierarchy
+  ([#736](https://github.com/discopy/discopy/pull/736)).
+- `markov.Copy` and `markov.Merge` load from their serialisation, where
+  `loads(dumps(Copy(x)))` raised `TypeError` from the inherited
+  `Box.from_tree`, and their daggers go through `merge_factory` and
+  `copy_factory`, so that a subclass of `markov.Diagram` daggers its
+  copies into its own merges rather than into `markov.Merge`
+  ([#736](https://github.com/discopy/discopy/pull/736)).
 - A regression test for `stream.Stream.__init__`'s codomain-mismatch
   `AxiomError`, which reports `cod`/`now.cod` rather than the `dom`/`now.dom`
   it once printed on both sides of `!=`. The message was corrected in passing
@@ -975,6 +1142,12 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   marimo's theme class, which outweighs the media query of
   `drawing.backend.DARK_MODE_STYLE`
   ([#453](https://github.com/discopy/discopy/issues/453)).
+- `interaction.Diagram.caps` built its inside on `negative @ positive`
+  where the constructor asks for `positive @ negative`, so a cap on a type
+  with both halves raised `ValueError`; both snake equations hold on such
+  a type now. `interaction.Ty.unit` called `natural.unit()`, which an
+  `int` or a `tuple` natural does not have: it is `cls()`, the pair of
+  empty halves ([#701](https://github.com/discopy/discopy/pull/701)).
 - `Hypergraph.rotate` exchanged the two boundaries of the hypergraph and
   replaced each box by its rotation, but left the *ports* of those boxes
   and the spiders where they were: the wires reading a box's domain went
