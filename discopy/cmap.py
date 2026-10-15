@@ -931,6 +931,7 @@ class CMap[C0: Pregroup, C1: CMap](
         boxes = tuple(boxes)
         starts, n_ports = [], 0
         for box in boxes:
+            assert_isinstance(box, cls.category)
             starts.append(n_ports)
             n_ports += len(box.dom) + len(box.cod)
 

@@ -479,8 +479,9 @@ def from_relation(relation: tuple, node: Signature, node_name: str = NODE
         node_name : The name every node box carries.
 
     Raises:
-        ValueError : If the relation is not symmetric or not irreflexive, or
-                     relates a node to one that does not exist.
+        ValueError : If the relation is not symmetric or not irreflexive,
+                     relates a node to one that does not exist or to the
+                     same node more than once.
 
     Example
     -------
@@ -504,6 +505,9 @@ def from_relation(relation: tuple, node: Signature, node_name: str = NODE
                                  "which does not exist")
             if other == index:
                 raise ValueError(f"node {index} is related to itself")
+            if others.count(other) > 1:
+                raise ValueError(f"node {index} is related to node {other} "
+                                 "more than once")
             if index not in relation[other]:
                 raise ValueError("the relation is not symmetric")
             if index < other:

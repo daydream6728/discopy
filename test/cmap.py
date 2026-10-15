@@ -905,6 +905,8 @@ def test_from_wiring():
     from discopy.symmetric import Ty, Box, CMap as M
     x = Ty("x")
     f = Box("f", x, x)
+    with raises(TypeError):
+        M.from_wiring(("f", ), [])
     with raises(ValueError, match="has no port"):
         M.from_wiring((f, ), [((0, 0), (0, 2))])
     for box_index in (-1, 1):

@@ -89,6 +89,8 @@ def test_the_relation_must_be_symmetric_irreflexive_and_in_range():
         from_relation(((1, ), (0, ), (0, )), node)
     with raises(ValueError, match="related to itself"):
         from_relation(((0, 1), (0, )), node)
+    with raises(ValueError, match="more than once"):
+        from_relation(((1, 1), (0, 0)), node)
     for relation in (((1, ), (0, 3)), ((-1, ), (0, )), ((1.0, ), (0, ))):
         with raises(ValueError, match="does not exist"):
             from_relation(relation, node)
