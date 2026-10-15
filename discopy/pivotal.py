@@ -18,8 +18,6 @@ Summary
     Box
     Cup
     Cap
-    Sum
-    Bubble
     Functor
 
 Axioms
@@ -54,12 +52,13 @@ We also have its dagger and its transpose:
     :align: center
 """
 
+from __future__ import annotations
+
 from typing import ClassVar
 
-from discopy import cat, cmap, monoidal, rigid, traced
-from discopy.abc import (
-    DaggerCategory, PivotalCategory, TracedCategory)
-from discopy.cat import factory, Generator
+from discopy import cat, cmap, messages, rigid, traced
+from discopy.abc import PivotalCategory
+from discopy.cat import factory
 from discopy.utils import deprecated_alias
 
 
@@ -73,12 +72,7 @@ class Wire(rigid.Wire):
     """
     l = r = property(lambda self: type(self)(
         self.name, (self.z + 1) % 2, dom=self.cod, cod=self.dom))
-
-    @classmethod
-    def strategy(cls, **params):
-        """Generate pivotal wires, whose winding number is a parity."""
-        return super().strategy(
-            **{"min_winding": 0, "max_winding": 1, **params})
+    windings = (0, 1)
 
     def dagger(self) -> Wire:
         """
@@ -97,10 +91,10 @@ class Ty(rigid.Ty):
     Parameters:
         inside (Wire) : The objects inside the type.
     """
-    Wire: ClassVar[Generator] = Generator.subclass(Wire)
+    generator_factory = Wire
 
-    dagger_involution = DaggerCategory.dagger_involution
-    dagger_contravariance = DaggerCategory.dagger_contravariance
+    dagger_involution = PivotalCategory.dagger_involution
+    dagger_contravariance = PivotalCategory.dagger_contravariance
 
 
 @factory
@@ -128,13 +122,17 @@ class Diagram(rigid.Diagram, traced.Diagram, PivotalCategory):
         dom (Ty) : The domain of the diagram, i.e. its input.
         cod (Ty) : The codomain of the diagram, i.e. its output.
     """
-    dagger_involution = DaggerCategory.dagger_involution
-    dagger_contravariance = DaggerCategory.dagger_contravariance
+    pivotality = PivotalCategory.pivotality.failing(
+        messages.NO_PLANAR_NORMAL_FORM)
+    trace_superposing_left = PivotalCategory.trace_superposing_left
+    trace_superposing_right = PivotalCategory.trace_superposing_right
 
+    sum_factory: ClassVar[type["Sum"]]
+    box_factory: ClassVar[type["Box"]]
+    functor_factory: ClassVar[type["Functor"]]
+    cup_factory: ClassVar[type["Cup"]]
+    cap_factory: ClassVar[type["Cap"]]
     ob = Ty
-    Box: ClassVar[Generator]
-    Cup: ClassVar[Generator]
-    Cap: ClassVar[Generator]
 
     def dagger(self):
         """
@@ -176,9 +174,8 @@ class Diagram(rigid.Diagram, traced.Diagram, PivotalCategory):
         """
         return self.rotate().dagger()
 
-    @Generator.classmethod
-    def Trace(  # ty: ignore[invalid-attribute-override]
-            cls, diagram: Diagram, left=False):
+    @classmethod
+    def trace_factory(cls, diagram: Diagram, left=False):
         """
         The trace of a pivotal diagram is its pre- and post-composition with
         cups and caps to form a feedback loop.
@@ -190,47 +187,27 @@ class Diagram(rigid.Diagram, traced.Diagram, PivotalCategory):
         traced_wire = diagram.dom[:1] if left else diagram.dom[-1:]
         dom, cod = (diagram.dom[1:], diagram.cod[1:]) if left\
             else (diagram.dom[:-1], diagram.cod[:-1])
-        return cls.Cap(traced_wire.r, traced_wire) @ dom\
+        return cls.cap_factory(traced_wire.r, traced_wire) @ dom\
             >> traced_wire.r @ diagram\
-            >> cls.Cup(traced_wire.r, traced_wire) @ cod if left\
-            else dom @ cls.Cap(traced_wire, traced_wire.r)\
+            >> cls.cup_factory(traced_wire.r, traced_wire) @ cod if left\
+            else dom @ cls.cap_factory(traced_wire, traced_wire.r)\
             >> diagram @ traced_wire.r\
-            >> cod @ cls.Cup(traced_wire, traced_wire.r)
+            >> cod @ cls.cup_factory(traced_wire, traced_wire.r)
 
-    pivotality = PivotalCategory.pivotality.failing(
-        "The two transposes differ by a snake the normal form does not "
-        "close.")
-
-    trace_superposing_left = TracedCategory.trace_superposing_left
-
-    trace_superposing_right = TracedCategory.trace_superposing_right
-
-    hypergraph_section = monoidal.Diagram.hypergraph_section.failing(
-        "Decoding a cup or cap can cross wires, which needs swaps the "
-        "category does not have.")
-
-    #: A pivotal hypergraph encodes a cup and a cap of either
-    #: orientation, so the composition law comes back.
-    hypergraph_composition = monoidal.Diagram.hypergraph_composition
-
-    map_hypergraph_agreement = monoidal.Diagram.map_hypergraph_agreement\
-        .weaken(boundary_connected=True)
-
-    normal_form_soundness = monoidal.Diagram.normal_form_soundness
-
-    foliation_idempotence = monoidal.Diagram.foliation_idempotence.weaken(
-        boundary_connected=True)
-
-    foliation_soundness = monoidal.Diagram.foliation_soundness.weaken(
-        boundary_connected=True)
-
-    dagger_monoidality = monoidal.Diagram.dagger_monoidality
+    # The cups and caps of a pivotal category have a dagger, which needs no
+    # weakening to the diagrams without them.
+    dagger_involution = PivotalCategory.dagger_involution
+    dagger_contravariance = PivotalCategory.dagger_contravariance
+    dagger_monoidality = PivotalCategory.dagger_monoidality.failing(
+        messages.NO_PLANAR_NORMAL_FORM)
+    dagger_involution_monoidal = None
+    dagger_contravariance_monoidal = None
+    dagger_monoidality_monoidal = None
 
 
-@Diagram.generator
 class Box(rigid.Box, traced.Box, Diagram):
     """
-    A pivotal box is a rigid and traced box in a pivotal diagram.
+    A pivotal box is a rigid box in a pivotal diagram.
 
     Parameters:
         name (str) : The name of the box.
@@ -260,7 +237,6 @@ class Box(rigid.Box, traced.Box, Diagram):
         return result
 
 
-@Diagram.generator
 class Cup(rigid.Cup, Box):
     """
     A pivotal cup is a rigid cup of pivotal types.
@@ -272,10 +248,9 @@ class Cup(rigid.Cup, Box):
 
     def dagger(self) -> Cap:
         """ The dagger of a pivotal cup. """
-        return self.Cap(self.left, self.right)
+        return self.cap_factory(self.left, self.right)
 
 
-@Diagram.generator
 class Cap(rigid.Cap, Box):
     """
     A pivotal cap is a rigid cap of pivotal types.
@@ -287,28 +262,43 @@ class Cap(rigid.Cap, Box):
 
     def dagger(self) -> Cup:
         """ The dagger of a pivotal cap. """
-        return self.Cup(self.left, self.right)
+        return self.cup_factory(self.left, self.right)
 
 
-Sum, Bubble, Eval, Coeval, Curry = (
-    Diagram.Sum, Diagram.Bubble, Diagram.Eval,
-    Diagram.Coeval, Diagram.Curry)
+class Sum(rigid.Sum, traced.Sum, Box):
+    """
+    A pivotal sum is a sum of pivotal diagrams.
+
+    Parameters:
+        terms (tuple[Diagram, ...]) : The terms of the formal sum.
+        dom (Ty) : The domain of the formal sum.
+        cod (Ty) : The codomain of the formal sum.
+    """
 
 
-Functor = Diagram.Functor
+class Functor(rigid.Functor):
+    """
+    A pivotal functor is a rigid functor on a pivotal category.
+
+    Parameters:
+        ob_map (Mapping[Ty, Ty]) :
+            Map from atomic :class:`Ty` to :code:`cod.ob`.
+        ar_map (Mapping[Box, Diagram]) : Map from :class:`Box` to :code:`cod`.
+        cod (Category) : The codomain of the functor.
+    """
+    dom = cod = Diagram
+
+
+Diagram.box_factory = Box
+Diagram.functor_factory = Functor
+Diagram.cup_factory, Diagram.cap_factory = Cup, Cap
+Diagram.sum_factory = Sum
 CMap = cmap.CMap[Diagram]
-Exp, Over, Under = Ty.Exp, Ty.Over, Ty.Under
-TermBase, Constant, Variable, Application, Abstraction = (
-    Diagram.TermBase, Diagram.Constant, Diagram.Variable,
-    Diagram.Application, Diagram.Abstraction)
-Layer = Diagram.Layer
 Id = Diagram.id
 
 
 class Equation(rigid.Equation):
     """ The :class:`rigid.Equation` of pivotal diagrams. """
 
-
-Diagram.Equation = Equation
 
 __getattr__ = deprecated_alias(__name__, {"Ob": "Wire", "PRO": "Nat"})

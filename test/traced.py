@@ -5,9 +5,11 @@ from discopy.utils import AxiomError
 
 
 def test_trace_repr():
+    from discopy import cat, monoidal, traced
     trace = Box('f', 'x', 'x').trace()
-    assert repr(trace) == "traced.Trace(traced.Box('f', monoidal.Ty(cat.Ob("\
-        "'x')), monoidal.Ty(cat.Ob('x'))), left=False)"
+    assert repr(trace) == "traced.Trace(traced.Box('f', "\
+        "monoidal.Ty(cat.Ob('x')), monoidal.Ty(cat.Ob('x'))), left=False)"
+    assert eval(repr(trace)) == trace
 
 
 def test_trace_error():
@@ -43,3 +45,11 @@ def test_trace_vanishing():
 
     k = multiplicative.Function(lambda i, j: (i, j), (int, int), (int, int))
     assert k.trace(0) == k
+
+
+def test_Sum():
+    f = Box('f', 'x', 'x')
+    assert Sum([f]) == f
+    assert isinstance(f + f, Sum) and (f + f).terms == (f, f)
+    image = Functor(lambda x: x, {f: f + f})(f)
+    assert isinstance(image, Sum) and image.terms == (f, f)

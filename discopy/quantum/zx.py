@@ -13,8 +13,6 @@ Summary
 
     Diagram
     Box
-    Sum
-    Permutation
     Swap
     Spider
     Z
@@ -23,42 +21,35 @@ Summary
     Scalar
 """
 
-from typing import Annotated, ClassVar
-
 from math import pi
+from typing import ClassVar
 
 from discopy import cat, rigid, tensor, quantum
-from discopy.cat import factory, Generator
+from discopy.cat import factory
 from discopy.quantum.circuit import qubit, Circuit
 from discopy.quantum.gates import (
     Bra, Ket, Rz, Rx, CX, CZ, Controlled, format_number)
 from discopy.quantum.gates import Scalar as GatesScalar
 from discopy.rigid import Sum, Nat
 from discopy.utils import factory_name
-from discopy.pattern import Atom, Hom, Var
-from discopy.search import rule
 
 
 @factory
 class Diagram(tensor.Diagram[complex]):
     """ ZX Diagram. """
+    swap_factory: ClassVar[type["Swap"]]
+    sum_factory: ClassVar[type["Sum"]]
+    permutation_factory: ClassVar[type["Permutation"]]
     ob = Nat
-    Spider = tensor.Spider
-    Swap: ClassVar[Generator]
 
     @staticmethod
-    @rule
-    def swap[X: Atom, Y: Atom](
-            left: Annotated[int | Nat, Var(X)],
-            right: Annotated[int | Nat, Var(Y)]
-    ) -> Annotated[Diagram, Hom([X, Y], [Y, X])]:
+    def swap(left, right):
         left = left if isinstance(left, Nat) else Nat(left)
         right = right if isinstance(right, Nat) else Nat(right)
-        return tensor.Diagram.swap.__func__(
-            Diagram, left, right)  # ty: ignore[invalid-return-type]
+        return tensor.Diagram.swap.__func__(Diagram, left, right)
 
     @staticmethod
-    def Cup(left, right):
+    def cup_factory(left, right):
         del left, right
         return Z(2, 0)
 
@@ -102,8 +93,7 @@ class Diagram(tensor.Diagram[complex]):
         ...     6: {4: 1},
         ...     7: {5: 1}}
         """
-        from pyzx import (
-            Graph, VertexType, EdgeType)
+        from pyzx import Graph, VertexType, EdgeType
         graph, scan = Graph(), []
         for i, _ in enumerate(self.dom):
             node, hadamard = graph.add_vertex(VertexType.BOUNDARY), False
@@ -127,7 +117,8 @@ class Diagram(tensor.Diagram[complex]):
                 scan[offset:offset + len(box.dom)] = [
                     segment[i] for i in box.perm]
             elif isinstance(box, Scalar):
-                graph.scalar.add_float(box.data)
+                graph.scalar.add_float(
+                    box.data)  # ty: ignore[invalid-argument-type]
             elif box == H:
                 node, hadamard = scan[offset]
                 scan[offset] = (node, not hadamard)
@@ -234,15 +225,32 @@ class Diagram(tensor.Diagram[complex]):
         return diagram
 
 
-Box, Sum, Permutation, Cap, Bubble, Eval, Coeval, Curry, Copy, Merge, Discard\
-    = (Diagram.Box, Diagram.Sum,
-       Diagram.Permutation, Diagram.Cap,
-       Diagram.Bubble, Diagram.Eval, Diagram.Coeval,
-       Diagram.Curry, Diagram.Copy, Diagram.Merge,
-       Diagram.Discard)
+class Box(tensor.Box[complex], Diagram):
+    """
+    A ZX box is a tensor box in a ZX diagram.
+
+    Parameters:
+        name (str) : The name of the box.
+        dom (rigid.Nat) : The domain of the box, i.e. its input.
+        cod (rigid.Nat) : The codomain of the box, i.e. its output.
+    """
 
 
-@Diagram.generator
+class Sum(tensor.Sum[complex], Box):
+    """
+    A formal sum of ZX diagrams with the same domain and codomain.
+
+    Parameters:
+        terms (tuple[Diagram, ...]) : The terms of the formal sum.
+        dom (Dim) : The domain of the formal sum.
+        cod (Dim) : The codomain of the formal sum.
+    """
+
+
+class Permutation(tensor.Permutation[complex], Box):
+    "A permutation in a ZX diagram."
+
+
 class Swap(Permutation, tensor.Swap[complex], Box):
     """ Swap in a ZX diagram. """
     def __repr__(self):
@@ -257,7 +265,7 @@ class Spider(tensor.Spider[complex], Box):
     def __init__(self, n_legs_in, n_legs_out, phase=0):
         super().__init__(
             n_legs_in, n_legs_out,
-            Nat(1), phase)
+            Nat(1), phase)  # ty: ignore[invalid-argument-type]
         factory_str = type(self).__name__
         phase_str = f", {self.phase}" if self.phase else ""
         self.name = f"{factory_str}({n_legs_in}, {n_legs_out}{phase_str})"
@@ -280,7 +288,6 @@ class Spider(tensor.Spider[complex], Box):
         return type(self)(len(self.dom), len(self.cod), phase=phase)
 
     def grad(self, var, **params):
-        # pylint: disable=unused-argument  # the signature of grad
         if var not in self.free_symbols:
             return Sum((), self.dom, self.cod)
         gradient = self.phase.diff(var)
@@ -335,7 +342,6 @@ class Scalar(Box):
         return Scalar(self.data.conjugate())
 
     def grad(self, var, **params):
-        # pylint: disable=unused-argument  # the signature of grad
         if var not in self.free_symbols:
             return Sum((), self.dom, self.cod)
         return Scalar(self.data.diff(var))
@@ -391,14 +397,12 @@ circuit2zx = quantum.circuit.Functor(
     dom=Circuit, cod=Diagram)
 
 H = Box('H', Nat(1), Nat(1))
-H.dagger = lambda: H
+H.dagger = lambda: H  # ty: ignore[invalid-assignment]
 H.draw_as_spider = True
 H.drawing_name, H.tikzstyle_name, = '', 'H'
 H.color, H.shape = "yellow", "rectangle"
 
-SWAP = Swap(Nat(1), Nat(1))
-TermBase, Constant, Variable, Application, Abstraction = (
-    Diagram.TermBase, Diagram.Constant, Diagram.Variable,
-    Diagram.Application, Diagram.Abstraction)
-Layer = Diagram.Layer
+SWAP = Swap(Nat(1), Nat(1))  # ty: ignore[invalid-argument-type]
+Diagram.swap_factory, Diagram.sum_factory = Swap, Sum
+Diagram.permutation_factory = Permutation
 Id = Diagram.id

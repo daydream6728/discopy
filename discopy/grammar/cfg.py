@@ -35,12 +35,11 @@ The axioms of multicategories (aka operads) hold on the nose.
 >>> assert f(g, h) == left == right
 """
 
+from __future__ import annotations
+
 from typing import TYPE_CHECKING
 
 from discopy import monoidal
-from typing import Annotated
-
-from discopy.axioms import Hom, no_strategy, Var, rule
 from discopy.cat import factory, Functor
 from discopy.grammar import thue
 from discopy.monoidal import Ty
@@ -105,8 +104,7 @@ class Tree:
         raise NotImplementedError()
 
     @staticmethod
-    @rule
-    def id[A](dom: Annotated[Ty, Var(A)]) -> Annotated[Tree, Hom(A, A)]:
+    def id(dom):
         return Id(dom)
 
     def __eq__(self, other):
@@ -157,10 +155,8 @@ class Rule(Tree, thue.Rule):
     A rule is a generator of free operads, given by an atomic type ``dom``,
     a type ``cod`` of arbitrary length and an optional ``name``.
     """
-    strategy = no_strategy
-
-    def __init__(self, dom: monoidal.Ty, cod: monoidal.Ty,
-                 name: str | None = None):
+    def __init__(
+            self, dom: monoidal.Ty, cod: monoidal.Ty, name: str | None = None):
         assert_isinstance(dom, Ty)
         assert_isatomic(cod, Ty)
         thue.Rule.__init__(self, dom=dom, cod=cod, name=name)
@@ -228,7 +224,6 @@ class Algebra(Functor):
         cod (Operad) : The codomain of the algebra.
     """
     dom = cod = Operad()
-    strategy = no_strategy
 
     def __call__(self, other):
         if isinstance(other, Id):

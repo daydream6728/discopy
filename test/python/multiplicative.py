@@ -19,6 +19,15 @@ def test_Function():
     assert g.curry(left=False).uncurry(left=False)(1j, True) == g(1j, True)
 
 
+def test_tensor_unit_is_none():
+    """ `None` is the unit of `tensor`, so it never swallows the operands
+    that follow it. """
+    f, g = Function.id((int, )), Function.id((bool, ))
+    assert f.tensor() == f.tensor(None) == f
+    assert f.tensor(None, g).dom == f.tensor(g).dom == Ty(int, bool)
+    assert f.tensor(g, None).dom == Ty(int, bool)
+
+
 def test_fixed_point():
     from math import sqrt
     phi = Function(lambda x=1: 1 + 1 / x, dom=(float,), cod=(float,)).fix()
@@ -48,18 +57,6 @@ def test_Functor_into_Function_folds_with_matmul():
     assert F(x @ x) == F(x) @ F(x) == monoidal.List[type](bool, bool)
     assert F(Ty()) == monoidal.List[type]()
     assert F(g)(True, True) is True and F(g)(True, False) is False
-
-
-def test_one_wire_forwarders():
-    x, y = Ty(int), Ty(bool)
-    g = Function(lambda n, b: n if b else -n, x @ y, x)
-    assert g.curry_left()(1)(False) == g.curry(left=True)(1)(False) == -1
-    assert g.curry_right()(True)(1) == 1
-    assert Function.ev_left(x, y)(lambda b: int(b), True) == 1
-    assert Function.ev_right(x, y)(True, lambda b: int(b)) == 1
-    assert Function.id(x @ y).trace_right().dom == x
-    with raises(NotImplementedError):
-        Function.id(x).trace_left()
 
 
 def test_type_checking():

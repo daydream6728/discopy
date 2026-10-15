@@ -49,6 +49,7 @@ Summary
         scalar
 """
 import copy
+from collections.abc import Sized
 from math import e, pi
 
 from discopy import messages
@@ -208,6 +209,10 @@ class Encode(SelfConjugate):
 
     def __init__(self, n_bits=1, constructive=True, reset_bits=False):
         dom, cod = bit ** n_bits, qubit ** n_bits
+        if not constructive:
+            dom = qubit ** n_bits @ dom
+        if reset_bits:
+            cod = cod @ bit ** n_bits
         name = Measure(n_bits, constructive, reset_bits).name\
             .replace("Measure", "Encode")\
             .replace("destructive", "constructive")\
@@ -233,16 +238,16 @@ class QuantumGate(Box):
     is_classical = False
 
     def __init__(self, name: str, dom: Ty, cod: Ty, data=None, **params):
-        if data is not None and hasattr(data, "__len__"):
+        if isinstance(data, Sized):
             data = [complex(v) for v in data]
         super().__init__(name, dom, cod, data, **params)
 
     def __setstate__(self, state):
-        if "_array" in state and state["_array"] is not None:
+        if "_array" in state and not state["_array"] is None:
             state["data"] = state['_array'].flatten().tolist()
         if "_name" in state:
-            if state["_name"] in GATES and not isinstance(
-                    GATES[state["_name"]], type):
+            if state["_name"] in GATES and hasattr(
+                    GATES[state["_name"]], "data"):
                 state["data"] = copy.deepcopy(GATES[state["_name"]].data)
                 state["_z"] = GATES[state["_name"]].z
         super().__setstate__(state)
@@ -451,6 +456,16 @@ class Controlled(QuantumGate):
         dom = cod = qubit ** n_qubits
         QuantumGate.__init__(self, name, dom, cod, data=controlled.data)
 
+    def with_distance(self, distance) -> "Controlled":
+        """
+        The same controlled gate with the control at a given ``distance``.
+
+        Example
+        -------
+        >>> assert CRz(0.25, distance=-1).with_distance(1) == CRz(0.25)
+        """
+        return type(self)(self.controlled, distance=distance)
+
     def dagger(self):
         return Controlled(self.controlled.dagger(), distance=self.distance)
 
@@ -459,7 +474,6 @@ class Controlled(QuantumGate):
         return Controlled(controlled_conj, distance=-self.distance)
 
     def lambdify(self, *symbols, **kwargs):
-        # pylint: disable=unused-argument  # the signature of lambdify
         c_fn = self.controlled.lambdify(*symbols)
         return lambda *xs: type(self)(c_fn(*xs), distance=self.distance)
 
@@ -519,7 +533,7 @@ class Controlled(QuantumGate):
 
         perm = Circuit.permutation(pattern)
         diagram = (perm
-                   >> type(self)(controlled) @ Id(skipped_qbs)
+                   >> self.with_distance(1) @ Id(skipped_qbs)
                    >> perm[::-1])
 
         return diagram
@@ -594,8 +608,8 @@ class Parametrized(Box):
         from sympy import lambdify
         with backend() as np:
             data = lambdify(symbols, self.data, dict(kwargs, modules=np))
-        return lambda *xs: type(self)(  # ty: ignore[missing-argument]
-            data(*xs))
+        return lambda *xs: type(self)(
+            data(*xs))  # ty: ignore[missing-argument]
 
     def __str__(self):
         if isinstance(self, Controlled):
@@ -700,6 +714,9 @@ class ControlledRotation(Controlled, Rotation):
     def __init__(self, phase, distance=1):
         Controlled.__init__(self, self.controlled(phase), distance)
 
+    def with_distance(self, distance) -> "ControlledRotation":
+        return type(self)(self.phase, distance=distance)
+
     lambdify = Rotation.lambdify
     subs = Rotation.subs
 
@@ -756,9 +773,16 @@ class MixedScalar(Scalar):
 
 
 class Sqrt(Scalar):
-    """ Square root. """
-    def __init__(self, data):
+    """
+    Principal square root, i.e. the one with non-negative real part. It is
+    self-adjoint when that root is real, and conjugated by its dagger
+    otherwise, e.g. for the square root of a negative number.
+    """
+    def __init__(self, data, is_dagger=False):
         super().__init__(data, name="sqrt")
+        if is_dagger and self.is_self_adjoint:
+            raise ValueError(messages.REAL_SQRT_IS_SELF_ADJOINT)
+        self.is_dagger = is_dagger
         self.drawing_name = f"sqrt({format_number(data)})"
 
     def __setstate__(self, state):
@@ -767,13 +791,37 @@ class Sqrt(Scalar):
             self.is_dagger = False
 
     @property
+    def is_self_adjoint(self):
+        """ Whether the root is real, i.e. the dagger is the identity. """
+        return not self.free_symbols and not complex(
+            self.data ** .5).imag  # ty: ignore[unsupported-operator]
+
+    @property
     def array(self):
         with backend() as np:
-            return np.array(
-                self.data ** .5)
+            root = np.array(
+                self.data ** .5)  # ty: ignore[unsupported-operator]
+            return root.conjugate() if self.is_dagger else root
 
     def dagger(self):
-        return self
+        return self if self.is_self_adjoint\
+            else Sqrt(self.data, is_dagger=not self.is_dagger)
+
+    def subs(self, *args):
+        result = super().subs(*args)
+        return result.dagger() if self.is_dagger else result
+
+    def lambdify(self, *symbols, **kwargs):
+        function = super().lambdify(*symbols, **kwargs)
+        return lambda *xs: function(*xs).dagger() if self.is_dagger\
+            else function(*xs)
+
+    def setoid(self):
+        """ A square root and its dagger differ only by ``is_dagger``. """
+        return super().setoid() + (self.is_dagger, )
+
+    def __repr__(self):
+        return super().__repr__() + ("[::-1]" if self.is_dagger else "")
 
 
 def sqrt(expr):

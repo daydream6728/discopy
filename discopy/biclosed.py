@@ -22,7 +22,6 @@ Summary
     Coeval
     Curry
     Sum
-    Bubble
     Functor
     CMap
     TermBase
@@ -79,29 +78,28 @@ which lands in :class:`CMap` as a biclosed category has no trace.
 
 """
 
+from __future__ import annotations
+
 from abc import abstractmethod
 from inspect import signature
-from typing import Callable, ClassVar, Self, overload
+from typing import Callable, ClassVar, Self
 
-from discopy import monoidal, cmap
-from typing import Annotated
-
-from discopy.axioms import Atom, Hom, no_strategy, Var, rule, Serialisable
-from discopy.abc import BiclosedCategory, DaggerCategory, ResiduatedMonoid
+from discopy import cat, monoidal, cmap, messages
+from discopy.abc import BiclosedCategory, MonoidalCategory
 from discopy.drawing import Drawing
-from discopy.cat import factory, Generator
+from discopy.cat import factory
 from discopy.utils import (
-    deprecated_alias,
     AxiomError,
-    assert_isatomic,
     assert_isinstance,
+    deprecated_alias,
     factory_name,
     from_tree,
+    get_origin,
 )
 
 
 @factory
-class Ty(monoidal.Ty, ResiduatedMonoid):
+class Ty(monoidal.Ty):
     """
     A biclosed type is a monoidal type that can be exponentiated.
 
@@ -113,29 +111,33 @@ class Ty(monoidal.Ty, ResiduatedMonoid):
     Applying a biclosed type to a callable yields a :class:`Abstraction`,
     applying it to a string yields a :class:`Constant`.
     """
-    Wire: ClassVar[Generator]
-    Exp: ClassVar[Generator]
-    Over: ClassVar[Generator]
-    Under: ClassVar[Generator]
+    variable_factory: ClassVar[type["Variable"]]
+    constant_factory: ClassVar[type["Constant"]]
+    application_factory: ClassVar[type["Application"]]
+    abstraction_factory: ClassVar[type["Abstraction"]]
+    over_factory: ClassVar[Callable[..., "Exp"]]
+    under_factory: ClassVar[Callable[..., "Exp"]]
+    exp_factory: ClassVar[Callable[..., "Exp"]]
 
-    @overload
-    def __pow__(self, other: int) -> Self: ...
-
-    @overload
-    def __pow__(self, other: Ty) -> Ty: ...
-
-    def __pow__(self, other):
+    def __pow__(self, other: Ty | int) -> Self:
         return self.exp(other) if isinstance(other, Ty)\
             else monoidal.Ty.__pow__(self, other)
 
-    def exp(self, other: Ty) -> Ty:
-        return self.ar(self.Exp(self, other))
+    def exp(self, other: Ty) -> Self:
+        """
+        The exponential of a type, which is the type itself when the
+        exponent is the unit, as is any exponential of the unit.
+
+        >>> x = Ty('x')
+        >>> assert x ** Ty() == x << Ty() == Ty() >> x == x
+        """
+        return self.ar(self.exp_factory(self, other)) if other else self
 
     def over(self, other: Ty) -> Ty:
-        return self.ar(self.Over(self, other))
+        return self.ar(self.over_factory(self, other)) if other else self
 
     def under(self, other: Ty) -> Ty:
-        return self.ar(self.Under(self, other))
+        return self.ar(self.under_factory(self, other)) if other else self
 
     def __lshift__(self, other):
         return self.over(other)
@@ -145,7 +147,7 @@ class Ty(monoidal.Ty, ResiduatedMonoid):
 
     def __call__(self, arg):
         if isinstance(arg, str):
-            return self.Constant(arg, self)
+            return self.constant_factory(arg, self)
         elif isinstance(arg, Callable):
             parameters = dict(signature(arg).parameters)
             left = False
@@ -157,9 +159,13 @@ class Ty(monoidal.Ty, ResiduatedMonoid):
             varnames = list(parameters.keys())
             if len(varnames) != 1:
                 raise NotImplementedError
-            var = self.Variable(varnames[0], self)
-            return self.Abstraction(var, arg(var), left)
+            var = self.variable_factory(varnames[0], self)
+            return self.abstraction_factory(var, arg(var), left)
         raise ValueError
+
+    def __repr__(self):
+        return factory_name(type(self))\
+            + f"({', '.join(map(repr, self.inside))})"
 
     @property
     def is_exp(self):
@@ -210,7 +216,6 @@ class Ty(monoidal.Ty, ResiduatedMonoid):
         return self.inside[0].exponent
 
 
-@Ty.generator
 class Wire(monoidal.Wire):
     """
     A biclosed object is a self-dagger :class:`monoidal.Wire`, i.e. its left
@@ -221,7 +226,6 @@ class Wire(monoidal.Wire):
         return self
 
 
-@Ty.generator
 class Exp(Wire):
     """
     A :code:`base` type to an :code:`exponent` type, called with :code:`**`.
@@ -230,7 +234,6 @@ class Exp(Wire):
         base : The base type.
         exponent : The exponent type.
     """
-    strategy = no_strategy
 
     ob = Ty
 
@@ -272,7 +275,6 @@ class Exp(Wire):
         return self.base if isinstance(self, Under) else self.exponent
 
 
-@Ty.generator
 class Over(Exp):
     """
     An :code:`exponent` type over a :code:`base` type, called with :code:`<<`.
@@ -285,7 +287,6 @@ class Over(Exp):
         return f"({self.base} << {self.exponent})"
 
 
-@Ty.generator
 class Under(Exp):
     """
     A :code:`base` type under an :code:`exponent` type, called with :code:`>>`.
@@ -309,22 +310,14 @@ class Diagram(monoidal.Diagram, BiclosedCategory):
         dom (Ty) : The domain of the diagram, i.e. its input.
         cod (Ty) : The codomain of the diagram, i.e. its output.
     """
-    repr_transparency = Serialisable.repr_transparency.failing(
-        "The generic representation of an evaluation does not read back "
-        "(#742).")
-    serialisation = Serialisable.serialisation.failing(
-        "The generic tree of an evaluation does not read back (#742).")
+    box_factory: ClassVar[type["Box"]]
+    curry_factory: ClassVar[type["Curry"]]
+    eval_factory: ClassVar[type["Eval"]]
+    coeval_factory: ClassVar[type["Coeval"]]
+    sum_factory: ClassVar[type["Sum"]]
+    functor_factory: ClassVar[type["Functor"]]
 
     ob = Ty
-    Eval: ClassVar[Generator]
-    Coeval: ClassVar[Generator]
-    Curry: ClassVar[Generator]
-    Functor: ClassVar[Generator]
-    TermBase: ClassVar[Generator]
-    Constant: ClassVar[Generator]
-    Variable: ClassVar[Generator]
-    Application: ClassVar[Generator]
-    Abstraction: ClassVar[Generator]
 
     def curry(self, n=1, left=True) -> Diagram:
         """
@@ -334,24 +327,14 @@ class Diagram(monoidal.Diagram, BiclosedCategory):
             n : The number of atomic types to curry.
             left : Whether to curry on the left, i.e. into :class:`Over`,
                 or on the right, i.e. into :class:`Under`.
+
+        Currying no type is the identity, as an exponential of the unit is
+        its base.
+
+        >>> f = Box('f', Ty('x'), Ty('y'))
+        >>> assert f.curry(0) == f
         """
-        return self.Curry(self, n, left)
-
-    @classmethod
-    @rule
-    def ev_left[Y: Atom, E: Atom](
-            cls, base: Annotated[Ty, Var(Y)], exponent: Annotated[Ty, Var(E)]
-    ) -> Annotated[Diagram, Hom((Var(Y) << Var(E)) @ Var(E), Y)]:
-        """ The left evaluation, see :meth:`ev`. """
-        return cls.ev(base, exponent, left=True)
-
-    @classmethod
-    @rule
-    def ev_right[Y: Atom, E: Atom](
-            cls, base: Annotated[Ty, Var(Y)], exponent: Annotated[Ty, Var(E)]
-    ) -> Annotated[Diagram, Hom(Var(E) @ (Var(E) >> Var(Y)), Y)]:
-        """ The right evaluation, see :meth:`ev`. """
-        return cls.ev(base, exponent, left=False)
+        return self.curry_factory(self, n, left) if n else self
 
     @classmethod
     def ev(cls, base: Ty, exponent: Ty, left=True) -> Eval:
@@ -363,8 +346,12 @@ class Diagram(monoidal.Diagram, BiclosedCategory):
             exponent : The exponent of the exponential type to evaluate.
             left : Whether to evaluate on the left, i.e. from :class:`Over`,
                 or on the right, i.e. from :class:`Under`.
+
+        The evaluation at the unit is the identity.
         """
-        return cls.Eval(
+        if not exponent:
+            return cls.id(base)
+        return cls.eval_factory(
             base << exponent if left else exponent >> base)
 
     def to_compact(self) -> CMap:
@@ -383,37 +370,46 @@ class Diagram(monoidal.Diagram, BiclosedCategory):
         return self.to_map().to_compact()
 
     def to_drawing(self):
-        return monoidal.Diagram.to_drawing(self, functor=Functor)
+        return monoidal.Diagram.to_drawing(self, functor_factory=Functor)
 
-    dagger_involution = DaggerCategory.dagger_involution.inapplicable(
-        "A curried diagram has no dagger.")
-
-    dagger_contravariance = DaggerCategory.dagger_contravariance\
-        .inapplicable("A curried diagram has no dagger.")
-
-    dagger_monoidality = BiclosedCategory.dagger_monoidality.inapplicable(
-        "A curried diagram has no dagger.")
-
-    map_hypergraph_agreement = \
-        monoidal.Diagram.map_hypergraph_agreement.failing(
-            "Mapping a curry bubble decodes the map of its inside, which "
-            "re-whiskers its states, reorders its independent boxes and "
-            "can ask a planar category for swaps, while the hypergraph "
-            "of a bubble compares its inside syntactically.")
-
-    currying_left = BiclosedCategory.currying_left.failing(
-        "A free currying is a bubble, equal to its evaluation only "
-        "semantically.")
-
+    map_agreement = monoidal.Diagram.map_agreement.failing(
+        messages.MAP_OF_A_CURRY)
+    dagger_involution = BiclosedCategory.dagger_involution.failing(
+        messages.CURRY_HAS_NO_DAGGER)
+    dagger_involution_monoidal = BiclosedCategory.dagger_involution.weaken(
+        within=MonoidalCategory)
+    dagger_contravariance = BiclosedCategory.dagger_contravariance.failing(
+        messages.CURRY_HAS_NO_DAGGER)
+    dagger_contravariance_monoidal = BiclosedCategory.dagger_contravariance\
+        .weaken(within=MonoidalCategory)
+    dagger_monoidality = BiclosedCategory.dagger_monoidality.failing(
+        messages.CURRY_HAS_NO_DAGGER)
+    dagger_monoidality_monoidal = BiclosedCategory.dagger_monoidality.weaken(
+        within=MonoidalCategory).failing(messages.NO_PLANAR_NORMAL_FORM)
+    currying_left = BiclosedCategory.currying_left.failing(messages.FREE_CURRY)
     currying_right = BiclosedCategory.currying_right.failing(
-        "A free currying is a bubble, equal to its evaluation only "
-        "semantically.")
+        messages.FREE_CURRY)
+    currying_eta_left = BiclosedCategory.currying_eta_left.failing(
+        messages.FREE_CURRY)
+    currying_eta_right = BiclosedCategory.currying_eta_right.failing(
+        messages.FREE_CURRY)
+    currying_naturality_left = BiclosedCategory.currying_naturality_left\
+        .failing(messages.FREE_CURRY)
+    currying_naturality_right = BiclosedCategory.currying_naturality_right\
+        .failing(messages.FREE_CURRY)
 
 
-Box = Diagram.Box
+class Box(monoidal.Box, Diagram):
+    """
+    A biclosed box is a monoidal box in a biclosed diagram.
+
+    Parameters:
+        name (str) : The name of the box.
+        dom (Ty) : The domain of the box, i.e. its input.
+        cod (Ty) : The codomain of the box, i.e. its output.
+    """
 
 
-@Diagram.generator
 class Eval(Box):
     """
     The evaluation of an exponential type.
@@ -421,7 +417,7 @@ class Eval(Box):
     Parameters:
         x : The exponential type to evaluate.
     """
-    def __init__(self, x: Ty, left=None):
+    def __init__(self, x: Exp, left=None):
         assert x.is_exp
         self.x = x
         exp = x.inside[0]
@@ -430,15 +426,25 @@ class Eval(Box):
             else (x.exponent @ x, x.base)
         super().__init__("Eval" + str(x), dom, cod)
 
+    def __repr__(self):
+        return f"{factory_name(type(self))}({self.x!r}, left={self.left!r})"
+
+    def to_tree(self):
+        return dict(factory=factory_name(type(self)),
+                    x=self.x.to_tree(), left=self.left)
+
+    @classmethod
+    def from_tree(cls, tree):
+        return cls(from_tree(tree['x']), left=tree['left'])
+
     def dagger(self) -> Coeval:
-        return self.Coeval(self.x, self.left)
+        return self.coeval_factory(self.x, self.left)
 
     @property
     def drawing_name(self):
         return "<<" if self.left else ">>"
 
 
-@Diagram.generator
 class Coeval(Box):
     """
     The coevaluation of an exponential type, i.e. the dagger of :class:`Eval`.
@@ -457,7 +463,11 @@ class Coeval(Box):
     """
     drawing_name = "lambda"
 
-    def __init__(self, x: Ty, left=None):
+    __repr__ = Eval.__repr__
+    to_tree = Eval.to_tree
+    from_tree = classmethod(Eval.from_tree.__func__)
+
+    def __init__(self, x: Exp, left=None):
         assert x.is_exp
         self.x = x
         exp = x.inside[0]
@@ -467,10 +477,9 @@ class Coeval(Box):
         super().__init__("Coeval" + str(x), dom, cod)
 
     def dagger(self) -> Eval:
-        return self.Eval(self.x, self.left)
+        return self.eval_factory(self.x, self.left)
 
 
-@Diagram.generator
 class Curry(monoidal.Bubble, Box):
     """
     The currying of a biclosed diagram.
@@ -478,15 +487,15 @@ class Curry(monoidal.Bubble, Box):
     Parameters:
         arg : The diagram to curry.
         n : The number of atomic types to curry.
-        left : Whether to curry on the left or right.
+        left : Whether to curry on the left or right, default is ``True``.
 
     Example
     -------
     >>> x, y, z = map(Ty, "xyz")
     >>> print(Curry(Box('f', x @ y, z)))
-    Curry(f, 1, False)
+    Curry(f, 1, True)
     """
-    def __init__(self, arg: Diagram, n=1, left=False):
+    def __init__(self, arg: Diagram, n=1, left=True):
         self.n, self.left = n, left
         name = f"Curry({arg}, {n}, {left})"
         if left:
@@ -496,28 +505,60 @@ class Curry(monoidal.Bubble, Box):
             dom, cod = arg.dom[n:], arg.dom[:n] >> arg.cod
         monoidal.Bubble.__init__(
             self, arg, dom=dom, cod=cod, drawing_name="$\\Lambda$")
-        self.Box.__init__(self, name, dom, cod)
+        Box.__init__(self, name, dom, cod)
 
-    def dagger(self) -> Curry:
-        raise AxiomError("A curried diagram has no dagger.")
+    def __repr__(self):
+        return f"{factory_name(type(self))}({self.arg!r}, " \
+            f"n={self.n}, left={self.left!r})"
+
+    def to_tree(self):
+        return dict(factory=factory_name(type(self)), arg=self.arg.to_tree(),
+                    n=self.n, left=self.left)
+
+    @classmethod
+    def from_tree(cls, tree):
+        return cls(from_tree(tree['arg']), n=tree['n'], left=tree['left'])
 
     def __str__(self):
         return self.name
 
     def to_drawing(self):
-        if self.left:
-            f, e = self.arg, self.Coeval(self.cod, left=True)
-            return (f >> e).to_drawing().trace()
-        f, e = self.arg, self.Coeval(self.cod)
-        return (f >> e).to_drawing().trace(left=True)
+        f, e = self.arg, self.coeval_factory(self.cod, left=self.left)
+        return (f >> e).to_drawing().trace(self.n, left=not self.left)
+
+    def dagger(self):
+        """
+        A curry has no dagger, which would uncurry an exponential in the
+        domain of a diagram.
+
+        >>> x = Ty('x')
+        >>> Box('f', x @ x, x).curry().dagger()
+        Traceback (most recent call last):
+        ...
+        discopy.utils.AxiomError: A curry has no dagger.
+        """
+        raise AxiomError(messages.CURRY_HAS_NO_DAGGER)
 
 
-Sum, Bubble = Diagram.Sum, Diagram.Bubble
-Layer = Diagram.Layer
+class Sum(monoidal.Sum, Box):
+    """
+    A biclosed sum is a monoidal sum and a biclosed box.
+
+    Parameters:
+        terms (tuple[Diagram, ...]) : The terms of the formal sum.
+        dom (Ty) : The domain of the formal sum.
+        cod (Ty) : The codomain of the formal sum.
+    """
+
+
 Id = Diagram.id
+Diagram.box_factory = Box
+Diagram.curry_factory = Curry
+Diagram.eval_factory = Eval
+Diagram.coeval_factory = Coeval
+Diagram.sum_factory = Sum
 
 
-@Diagram.generator
 class Functor(monoidal.Functor):
     """
     A biclosed functor is a monoidal functor
@@ -528,11 +569,32 @@ class Functor(monoidal.Functor):
             Map from atomic :class:`Ty` to :code:`cod.ob`.
         ar_map (Mapping[Box, Diagram]) : Map from :class:`Box` to :code:`cod`.
         cod (Category) : The codomain of the functor.
+
+    Note
+    ----
+    When the codomain objects are biclosed types, the functor sends terms to
+    terms rather than evaluating them to morphisms:
+
+    >>> X, Y = Ty("X"), Ty("Y")
+    >>> f, x = (Y << X)("f"), X("x")
+    >>> F = Functor(ob_map={X: Ty("A"), Y: Ty("B")},
+    ...             ar_map={f: (Ty("B") << Ty("A"))("g"), x: Ty("A")("a")})
+    >>> assert F(f(x)) == F(f)(F(x))
+
+    The image of a term is checked to have the image of its type:
+
+    >>> Functor(ob_map={X: Ty("A"), Y: Ty("B")}, ar_map={f: Ty("A")("a")})(f)
+    Traceback (most recent call last):
+        ...
+    discopy.utils.AxiomError: Expected a term of type (B << A) for ...
     """
     dom = cod = Diagram
 
     def __call__(self, other):
         if isinstance(other, TermBase):
+            if issubclass(get_origin(self.cod.ob), Ty) \
+                    and not issubclass(get_origin(self.cod), cmap.CMap):
+                return self.map_term(other)
             return other.eval(self)
         for cls, attr in [(Over, "over"), (Under, "under"), (Exp, "exp")]:
             if isinstance(other, cls):
@@ -554,11 +616,60 @@ class Functor(monoidal.Functor):
                 return self.ob_map[other]
         return super().__call__(other)
 
+    def map_variable(self, variable: Variable, context: dict) -> Variable:
+        """
+        The image of a variable, of the image of its type, renamed with
+        underscores until it differs from the images already in the context.
+
+        Parameters:
+            variable : The variable to map.
+            context : The images of the variables bound so far.
+        """
+        name, cod = variable.name, self(variable.cod)
+        result = self.cod.ob.variable_factory(name, cod)
+        while result in context.values():
+            name += "_"
+            result = self.cod.ob.variable_factory(name, cod)
+        return result
+
+    def map_term(
+            self, term: TermBase, context: dict | None = None) -> TermBase:
+        """
+        The image of a term, a term in the internal language of the codomain,
+        checked to have the image of its type and exactly the images of its
+        free variables, in order when the codomain is planar.
+
+        Parameters:
+            term : The term to map.
+            context : The images of the free variables, fresh ones by default.
+        """
+        if context is None:
+            context = {}
+            for variable in term.freevars:
+                context[variable] = self.map_variable(variable, context)
+        result = term.map(self, context)
+        if not isinstance(result, TermBase):
+            raise AxiomError(f"Expected a term for {term}, got {result}.")
+        if result.cod != self(term.cod):
+            raise AxiomError(
+                f"Expected a term of type {self(term.cod)} for "
+                f"{term}, got {result} of type {result.cod}.")
+        expected = [context[v] for v in term.freevars]
+        ordered = self.cod.ob.over_factory is not self.cod.ob.under_factory
+        valid = result.freevars == expected if ordered else (
+            set(result.freevars) == set(expected))
+        if not valid:
+            raise AxiomError(f"Expected context {expected} for {term}, "
+                             f"got {result.freevars}.")
+        return result
+
 
 CMap = cmap.CMap[Diagram]
 
 
-@Diagram.generator
+Diagram.functor_factory = Functor
+
+
 class TermBase(Box):
     """
     A term in the internal language of biclosed categories.
@@ -610,16 +721,30 @@ class TermBase(Box):
         category, i.e. terms are compiled to diagrams with constants as boxes.
         """
 
+    @abstractmethod
+    def map(self, functor: Functor, context: dict) -> Term:
+        """
+        The image of a term under a :class:`Functor` whose codomain objects
+        are biclosed types, i.e. a term in the codomain's internal language
+        rather than a morphism.
+        """
+
     def draw(self, **kwargs):
         "Drawing a term by evaluating it in the free biclosed category."
         return self.eval().draw(**kwargs)
 
+    def to_closed(self):
+        """
+        Translate the term into the internal language of a closed category.
+        """
+        from discopy.closed import TermBase
+        return TermBase.from_biclosed(self)
+
     def __call__(self, other, left=False):
         args = (other, self, left) if left else (self, other, left)
-        return self.cod.Application(*args)
+        return self.cod.application_factory(*args)
 
 
-@Diagram.generator
 class Constant(TermBase):
     """
     A constant term of defined by a :class:`Diagram` with ``dom=X, cod=Y``.
@@ -634,12 +759,19 @@ class Constant(TermBase):
         super().__init__(name, dom=self.ob(), cod=cod, **kwargs)
         self.freevars = []
 
+    @classmethod
+    def from_tree(cls, tree):
+        kwargs = {k: tree[k] for k in ('data', 'is_dagger') if k in tree}
+        return cls(tree['name'], from_tree(tree['cod']), **kwargs)
+
     @property
     def constants(self):
         return [self]
 
     def eval(self, functor=None):
-        functor = functor or self.functor
+        return cat.Functor.__call__(functor or self.functor, self)
+
+    def map(self, functor, context):
         return functor.ar_map[self]
 
     def __repr__(self):
@@ -649,22 +781,15 @@ class Constant(TermBase):
         return f"{self.cod!s}({self.name!r})"
 
 
-@Diagram.generator
 class Variable(TermBase):
     """
-    A variable with a string as name and an atomic :class:`Ty`.
-
-    A variable stands for exactly one wire in the internal language of a
-    (bi)closed category, the way a lambda term binds one variable at a
-    time: the abstraction machinery indexes contexts and free variables by
-    variable, counting on that index to coincide with a wire index.
+    A variable with a string as name and a :class:`Ty`.
 
     Attributes:
         name (str): The name of the variable
-        cod (Ty): The atomic type of the variable.
+        cod (Ty): The type of the variable.
     """
     def __init__(self, name: str, cod: Ty):
-        assert_isatomic(cod)
         super().__init__(name, dom=cod, cod=cod)
         self.freevars = [self]
 
@@ -672,14 +797,39 @@ class Variable(TermBase):
         functor = functor or self.functor
         return functor.cod.id(functor(self.cod))
 
+    def map(self, functor, context):
+        return context[self]
+
     @property
     def constants(self):
         return []
 
+    @classmethod
+    def fresh(cls, name, cod, *terms):
+        """
+        A variable of a given type whose name is not free in any of the terms,
+        underscores being appended to the name until it is not.
+
+        Parameters:
+            name : The name to start from.
+            cod : The type of the variable.
+            terms : The terms in which the variable must not be free.
+
+        Example
+        -------
+        >>> x = Ty("x")
+        >>> assert Variable.fresh("v", x, Variable("v", x))\\
+        ...     == Variable("v_", x)
+        """
+        names = {
+            variable.name for term in terms for variable in term.freevars}
+        while name in names:
+            name += "_"
+        return cls(name, cod)
+
     __repr__ = Constant.__repr__
 
 
-@Diagram.generator
 class Application(TermBase):
     """
     The application either ``func(args)`` of a term ``func`` of type ``Y << X``
@@ -691,7 +841,7 @@ class Application(TermBase):
         args (Term): The arguments to which the function is applied.
         left (bool): Whether the argument comes in from the left or right.
     """
-    def __init__(self, func: Term, args: Term, left: bool = False):
+    def __init__(self, func: TermBase, args: TermBase, left: bool = False):
         assert_isinstance(func, TermBase)
         assert_isinstance(args, TermBase)
         if not func.cod.is_exp:
@@ -722,6 +872,11 @@ class Application(TermBase):
             functor(base), functor(exponent), left=not self.left)
         return args @ func >> ev if self.left else func @ args >> ev
 
+    def map(self, functor, context):
+        return functor.cod.ob.application_factory(
+            functor.map_term(self.func, context),
+            functor.map_term(self.args, context), self.left)
+
     def __repr__(self):
         func, args = repr(self.func), repr(self.args)
         left = ", left=True" if self.left else ""
@@ -733,13 +888,12 @@ class Application(TermBase):
             else self.func.constants + self.args.constants
 
 
-@Diagram.generator
 class Abstraction(TermBase):
     var: Variable
-    body: Term
+    body: TermBase
     left: bool = False
 
-    def __init__(self, var: Variable, body: Term, left: bool = False):
+    def __init__(self, var: Variable, body: TermBase, left: bool = False):
         self.var, self.body, self.left = var, body, left
         left_str = ", left=True" if left else ""
         name = f"{var.cod}(lambda {var.name}{left_str}: {body})"
@@ -757,10 +911,23 @@ class Abstraction(TermBase):
         if not self.left and index != len(body_freevars) - 1:
             raise ValueError("Expected abstraction of right-most variable.")
         self.freevars = body_freevars[1:] if self.left else body_freevars[:-1]
-        return self.body.dom[1:] if self.left else self.body.dom[:-1]
+        n = len(self.var.cod)
+        return self.body.dom[n:] if self.left\
+            else self.body.dom[:len(self.body.dom) - n]
 
     def eval(self, functor=None):
-        return (functor or self.functor)(self.body.curry(left=not self.left))
+        functor = functor or self.functor
+        return functor.cod.curry(
+            self.body.eval(functor),  # ty: ignore[invalid-argument-type]
+            len(functor(self.var.cod)), not self.left)
+
+    def map(self, functor, context):
+        context = {key: value for key, value in context.items()
+                   if key != self.var}
+        variable = functor.map_variable(self.var, context)
+        context[self.var] = variable
+        return functor.cod.ob.abstraction_factory(
+            variable, functor.map_term(self.body, context), self.left)
 
     def __repr__(self):
         var, body = repr(self.var), repr(self.body)
@@ -774,16 +941,15 @@ class Abstraction(TermBase):
 
 type Term = Constant | Variable | Application | Abstraction
 
-Ty.Variable, Ty.Constant = (
-    Diagram.Variable, Diagram.Constant)
-Ty.Application, Ty.Abstraction = (
-    Diagram.Application, Diagram.Abstraction)
+Ty.variable_factory = Variable
+Ty.constant_factory = Constant
+Ty.application_factory = Application
+Ty.abstraction_factory = Abstraction
+Ty.over_factory, Ty.under_factory, Ty.exp_factory = Over, Under, Exp
 
 
 class Equation(monoidal.Equation):
     """ The :class:`monoidal.Equation` of biclosed diagrams. """
 
-
-Diagram.Equation = Equation
 
 __getattr__ = deprecated_alias(__name__, {"Ob": "Wire"})

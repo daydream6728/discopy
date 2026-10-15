@@ -15,6 +15,8 @@ changes larger than ``--threshold`` (a fraction, e.g. ``0.25`` = 25%) to
 ``comparison.md`` as regressions and speedups. A regression is reported, never
 fatal: the exit code is non-zero only when the comparison itself fails.
 """
+from __future__ import annotations
+
 import argparse
 import json
 import os

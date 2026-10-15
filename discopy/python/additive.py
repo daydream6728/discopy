@@ -14,6 +14,8 @@ Summary
     Function
 """
 
+from __future__ import annotations
+
 from functools import cache
 from itertools import accumulate
 from typing import Self
@@ -118,14 +120,6 @@ class Function(function.Function, SymmetricCategory):
         if self.is_swap_of is None:
             raise ValueError
         return Function.swap(*self.is_swap_of[::-1])
-
-    def trace_left(self, n=1):
-        """ The trace of ``n`` wires on the left, see :meth:`trace`. """
-        return self.trace(n, left=True)
-
-    def trace_right(self, n=1):
-        """ The trace of ``n`` wires on the right, see :meth:`trace`. """
-        return self.trace(n)
 
     def trace(self, n=1, left=False):
         """

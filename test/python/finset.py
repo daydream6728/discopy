@@ -70,10 +70,6 @@ def test_FinSet():
         == finset.Function.id(2)
     assert permutation != [1, 0] and hash(permutation) == hash((1, 0))
     assert permutation.embed([2, 0], 3) == (2, 1, 0)
-    with raises(NotImplementedError):
-        permutation.trace_left()
-    with raises(NotImplementedError):
-        permutation.trace_right()
 
     x = Ty('x')
     copy, discard, swap = Diagram.copy(x), Diagram.copy(x, 0), Diagram.swap(x, x)

@@ -16,6 +16,9 @@ def test_errors():
     with raises(AxiomError):
         non_constant = T(dom, _later=lambda: dom)
         S(now, non_constant, cod, mem)
+    mismatched_cod = python.Function(lambda x: x, (int, ), (int, ))
+    with raises(AxiomError, match=r"str.*!= .*int"):
+        S(mismatched_cod, T(int), T(str))
 
 
 def test_python_stream():
@@ -39,16 +42,12 @@ def test_sequence_box_of_its_category():
     for category in (symmetric.Diagram, markov.Diagram):
         x = Ty.sequence(category.ob('x'))
         box = Stream[category].sequence("f", x, x).now
-        assert type(box) is category.Box
+        assert type(box) is category.box_factory
 
 
 def test_feedback_errors():
     x = Ty.sequence(symmetric.Ty('x'))
     with raises(ValueError):  # A constant stream needs constant types.
         Stream(symmetric.Box('g', x.now, x.now), dom=x, cod=x)
-    f = Stream.sequence('f', x, x)
-    with raises(NotImplementedError):
-        f.feedback()
-    with raises(NotImplementedError):
-        f.feedback_left()
-    assert Stream.permutation([0, 1], [x, x]).now == symmetric.Id(x.now @ x.now)
+    assert Stream.permutation([0, 1], [x, x]).now\
+        == symmetric.Id(x.now @ x.now)

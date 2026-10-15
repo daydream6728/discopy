@@ -15,10 +15,8 @@ Summary
     Box
     Cup
     Cap
-    Permutation
     Swap
-    Sum
-    Bubble
+    Permutation
     Functor
 
 Axioms
@@ -58,13 +56,12 @@ Coherence
 
 from typing import ClassVar
 
-from discopy import symmetric, ribbon, rigid, cmap, hypergraph
-from discopy.abc import (
-    BiclosedCategory, CompactCategory, PivotalCategory, RibbonCategory)
-from discopy.axioms import Serialisable
-from discopy.cat import factory, Generator
-from discopy.pivotal import Wire, Ty  # noqa: F401  pylint: disable=unused-import
+from discopy import symmetric, ribbon, rigid, cmap, hypergraph, monoidal
+from discopy.abc import CompactCategory
+from discopy.cat import factory
 from discopy.utils import deprecated_alias
+from discopy.pivotal import (  # noqa: F401  pylint: disable=unused-import
+    Wire, Ty)
 
 
 class Layer(symmetric.Layer, rigid.Layer):
@@ -81,37 +78,63 @@ class Diagram(symmetric.Diagram, ribbon.Diagram, CompactCategory):
         dom (pivotal.Ty) : The domain of the diagram, i.e. its input.
         cod (pivotal.Ty) : The codomain of the diagram, i.e. its output.
     """
-    serialisation = Serialisable.serialisation
+    # A hypergraph is faithful from symmetric categories on.
+    snake_equations = CompactCategory.snake_equations
+    transpose_contravariance = CompactCategory.transpose_contravariance
+    pivotality = CompactCategory.pivotality
+    currying_left = CompactCategory.currying_left
+    currying_right = CompactCategory.currying_right
+    currying_eta_left = CompactCategory.currying_eta_left
+    currying_eta_right = CompactCategory.currying_eta_right
+    currying_naturality_left = CompactCategory.currying_naturality_left
+    currying_naturality_right = CompactCategory.currying_naturality_right
 
-    twist = classmethod(ribbon.Diagram.twist.__func__.admissible(
-        "The twist is the identity."))
-
+    sum_factory: ClassVar[type["Sum"]]
+    cup_factory: ClassVar[type["Cup"]]
+    cap_factory: ClassVar[type["Cap"]]
+    box_factory: ClassVar[type["Box"]]
+    swap_factory: ClassVar[type["Swap"]]
+    functor_factory: ClassVar[type["Functor"]]
+    permutation_factory: ClassVar[type["Permutation"]]
     ob = Ty
-    Layer: ClassVar[Generator] = Generator.subclass(Layer)
-    Permutation: ClassVar[Generator]
-    Functor: ClassVar[Generator]
+    layer_factory = Layer
+    trace_factory = ribbon.Diagram.trace_factory
 
-    pivotality = PivotalCategory.pivotality
-
-    twist_as_trace = RibbonCategory.twist_as_trace
-
-    foliation_idempotence = ribbon.Diagram.foliation_idempotence.failing(
-        "The hypergraph decode follows the box order of its encoding, so "
-        "the foliation of a composition written backwards through a snake "
-        "keeps a cut that foliating it again straightens.")
-
-    currying_left = BiclosedCategory.currying_left.weaken(
-        boundary_connected=True)
-
-    currying_right = BiclosedCategory.currying_right.weaken(
-        boundary_connected=True)
+    foliation_idempotence = symmetric.Diagram.foliation_idempotence.modulo(
+        monoidal.Diagram.to_map)
 
 
-Box, Cup, Cap = (
-    Diagram.Box, Diagram.Cup, Diagram.Cap)
+class Box(symmetric.Box, ribbon.Box, Diagram):
+    """
+    A compact box is a symmetric and ribbon box in a compact diagram.
+
+    Parameters:
+        name (str) : The name of the box.
+        dom (pivotal.Ty) : The domain of the box, i.e. its input.
+        cod (pivotal.Ty) : The codomain of the box, i.e. its output.
+    """
 
 
-@Diagram.generator
+class Cup(ribbon.Cup, Box):
+    """
+    A compact cup is a ribbon cup in a compact diagram.
+
+    Parameters:
+        left (pivotal.Ty) : The atomic type.
+        right (pivotal.Ty) : Its adjoint.
+    """
+
+
+class Cap(ribbon.Cap, Box):
+    """
+    A compact cap is a ribbon cap in a compact diagram.
+
+    Parameters:
+        left (pivotal.Ty) : The atomic type.
+        right (pivotal.Ty) : Its adjoint.
+    """
+
+
 class Permutation(symmetric.Permutation, Box):
     """
     A compact permutation is a symmetric permutation in a compact category.
@@ -128,12 +151,27 @@ class Permutation(symmetric.Permutation, Box):
     r = property(lambda self: self.rotate(left=False))
 
 
-Swap, Sum, Bubble, Eval, Coeval, Curry = (
-    Diagram.Swap, Diagram.Sum, Diagram.Bubble,
-    Diagram.Eval, Diagram.Coeval, Diagram.Curry)
+class Swap(Permutation, symmetric.Swap, ribbon.Braid, Box):
+    """
+    A compact swap is a symmetric swap and a ribbon braid.
+
+    Parameters:
+        left (pivotal.Ty) : The type on the top left and bottom right.
+        right (pivotal.Ty) : The type on the top right and bottom left.
+    """
 
 
-@Diagram.generator
+class Sum(symmetric.Sum, ribbon.Sum, Box):
+    """
+    A compact sum is a sum of compact diagrams.
+
+    Parameters:
+        terms (tuple[Diagram, ...]) : The terms of the formal sum.
+        dom (Ty) : The domain of the formal sum.
+        cod (Ty) : The codomain of the formal sum.
+    """
+
+
 class Functor(symmetric.Functor, ribbon.Functor):
     """
     A compact functor is both a symmetric functor and a ribbon functor.
@@ -154,19 +192,20 @@ class Functor(symmetric.Functor, ribbon.Functor):
 
 CMap = cmap.CMap[Diagram]
 
-TermBase, Constant, Variable, Application, Abstraction = (
-    Diagram.TermBase, Diagram.Constant, Diagram.Variable,
-    Diagram.Application, Diagram.Abstraction)
 Id = Diagram.id
 
+Diagram.box_factory = Box
+Diagram.swap_factory = Swap
+Diagram.functor_factory = Functor
+Diagram.permutation_factory = Permutation
 Hypergraph = hypergraph.Hypergraph[Diagram]
+Diagram.cup_factory, Diagram.cap_factory = Cup, Cap
+Diagram.sum_factory = Sum
 
 
 class Equation(symmetric.Equation):
     """ The :class:`symmetric.Equation` of compact diagrams. """
     up_to = staticmethod(Diagram.to_hypergraph)
 
-
-Diagram.Equation = Equation
 
 __getattr__ = deprecated_alias(__name__, {"Ob": "Wire"})

@@ -34,6 +34,8 @@ Summary
     CMap
 """
 
+from __future__ import annotations
+
 import operator
 import shutil
 import subprocess
@@ -44,28 +46,31 @@ from functools import cached_property, reduce
 from inspect import isclass
 from io import BytesIO
 from math import inf, lcm
-from typing import TYPE_CHECKING, Annotated, Any, ClassVar, Literal, Self
+from typing import TYPE_CHECKING, Literal, Self
 
-from discopy import hypergraph, messages, pattern
+from discopy import hypergraph, messages
 from discopy.abc import (
+    BalancedCategory,
+    BraidedCategory,
     CompactCategory,
-    DaggerCategory,
+    MarkovCategory,
     NamedGeneric,
     Pregroup,
     RigidCategory,
     SymmetricCategory,
     TracedCategory,
 )
+from discopy.axioms import Equation, Serialisable
 from discopy.cat import Ob
 from discopy.python.finset import Permutation
-from discopy.pattern import Atom, Hom, UNIT
-from discopy.search import rule
 from discopy.utils import (
     AxiomError,
     assert_isatomic,
     assert_isinstance,
     classproperty,
     factory_name,
+    from_tree,
+    resolve_factory,
     unbiased,
 )
 
@@ -126,8 +131,7 @@ class Port:
     side: Literal["up", "down"]
 
 
-class CMap[category: Diagram](CompactCategory, DaggerCategory,
-                              NamedGeneric):
+class CMap[category](CompactCategory, NamedGeneric, Serialisable):
     r"""
     An open combinatorial map, i.e. a diagram represented as a bijection
     between its ports.
@@ -156,7 +160,7 @@ class CMap[category: Diagram](CompactCategory, DaggerCategory,
 
     Following :class:`Hypergraph`, the map is parametrised by a category.
     The functor used by :meth:`from_diagram` is read from
-    ``category.Functor``; :meth:`Diagram.to_map` parameterises
+    ``category.functor_factory``; :meth:`Diagram.to_map` parameterises
     ``CMap`` with the concrete diagram category automatically.
     A map is always compact, whatever the category that hosts it, so that
     every compact operation is available when manipulating maps. It is
@@ -222,8 +226,7 @@ class CMap[category: Diagram](CompactCategory, DaggerCategory,
         :align: center
     """
 
-    category: ClassVar[type[Diagram]] = None  # ty: ignore[invalid-assignment]
-    functor = classproperty(lambda cls: cls.category.Functor)
+    functor = classproperty(lambda cls: cls.category.functor_factory)
     ob = classproperty(lambda cls: cls.category.ob)
 
     dom: Ty
@@ -773,16 +776,104 @@ class CMap[category: Diagram](CompactCategory, DaggerCategory,
         return hash((
             self.dom, self.cod, self.boxes, self.edges, self.loops))
 
+    def to_tree(self) -> dict:
+        """
+        Serialise a map, with the name of its category.
+
+        >>> from discopy.utils import dumps, loads
+        >>> from discopy.compact import Ty, Box, CMap
+        >>> x = Ty('x')
+        >>> cmap = CMap.caps(x, x.r) >> Box('f', x, x).to_map() @ x.r
+        >>> assert loads(dumps(cmap)) == cmap
+        """
+        return {
+            'factory': 'cmap.CMap',
+            'category': factory_name(self.category),
+            'dom': self.dom.to_tree(),
+            'cod': self.cod.to_tree(),
+            'boxes': [box.to_tree() for box in self.boxes],
+            'edges': [int(i) for i in self.edges],
+            'loops': [loop.to_tree() for loop in self.loops]}
+
     @classmethod
-    @rule
-    def id[A](cls, dom: Annotated[Any | None, pattern.Var(A)] = None
-              ) -> Annotated[CMap, Hom(A, A)]:
+    def from_tree(cls, tree: dict) -> CMap:
+        """ Decode a serialised map, see :meth:`to_tree`. """
+        factory = cls[resolve_factory(tree['category'])]
+        return factory(
+            from_tree(tree['dom']), from_tree(tree['cod']),
+            tuple(map(from_tree, tree['boxes'])), tree['edges'],
+            loops=tuple(map(from_tree, tree['loops'])))
+
+    @classmethod
+    def equation_factory(cls, *terms: CMap) -> Equation:
+        """
+        The equation of a law, compared up to isomorphism by the hypergraphs
+        of its terms: equality of maps compares their boxes and loops in the
+        order they are listed, which composition and tensor permute.
+
+        >>> from discopy.symmetric import Ty, Box, CMap
+        >>> x = Ty('x')
+        >>> f, g = (Box(name, Ty(), x).to_map() for name in "fg")
+        >>> assert f @ g != g @ f >> CMap.swap(x, x)
+        >>> assert CMap.equation_factory(f @ g, g @ f >> CMap.swap(x, x))
+        """
+        return Equation(*terms, up_to=cls.to_hypergraph)
+
+    @classmethod
+    def id(cls, dom=None) -> CMap:
         """ The identity map, with each input wired to its output. """
         dom = cls.ob() if dom is None else dom
         n_ports = 2 * len(dom)
         edge = Permutation.from_transpositions(
             ((i, i + len(dom)) for i in range(len(dom))), n_ports)
         return cls(dom, dom, (), edge, check=False)
+
+    @classmethod
+    def strategy(  # pylint: disable=too-many-arguments  # keyword-only bounds
+            cls, *, types=None, dom=None, cod=None, min_leaves=None,
+            max_leaves=4, max_loops=None):
+        """
+        Generate maps of :attr:`category` by drawing their edge involution,
+        which pairs ports of different kinds with equal types, and ports of
+        the same kind with adjoint types when the category is compact: this
+        is the wiring :meth:`Hypergraph.strategy` samples for a symmetric or a
+        compact category, which the map reads off with
+        :meth:`Hypergraph.to_map`.
+
+        A map is how the coherence theorem of a symmetric or compact category
+        is sampled: a planar diagram has an orientation that a map does not
+        record, and a Markov or hypergraph category has spiders that a map
+        cannot draw, so their maps are not generated.
+
+        Parameters:
+            types : A strategy for the types of boxes and boundaries.
+            dom : The domain, sampled from ``types`` if ``None``.
+            cod : The codomain, sampled from ``types`` if ``None``.
+            min_leaves : The minimum number of boxes.
+            max_leaves : The maximum number of boxes, not counting the
+                balancing box of :meth:`Hypergraph.strategy`.
+            max_loops : The maximum number of scalar loops, see
+                ``max_scalars`` in :meth:`Hypergraph.strategy`.
+
+        Example
+        -------
+        >>> from hypothesis import find
+        >>> from discopy.compact import Ty, Diagram
+        >>> x = Ty('x')
+        >>> cmap = find(
+        ...     CMap[Diagram].strategy(dom=x, cod=x),
+        ...     lambda m: not m.is_monogamous)
+        >>> assert (cmap.dom, cmap.cod) == (x, x)
+        """
+        if cls.category is None\
+                or not issubclass(cls.category, SymmetricCategory)\
+                or issubclass(cls.category, MarkovCategory):
+            raise NotImplementedError(
+                f"No strategy implemented for {factory_name(cls)}.")
+        graphs = hypergraph.Hypergraph[cls.category].strategy(
+            types=types, dom=dom, cod=cod, min_leaves=min_leaves,
+            max_leaves=max_leaves, max_scalars=max_loops)
+        return graphs.map(lambda graph: graph.to_map())
 
     @classmethod
     def from_box(cls, box: Box) -> CMap:
@@ -889,7 +980,9 @@ class CMap[category: Diagram](CompactCategory, DaggerCategory,
         structure from the next level remains represented by boxes.
 
         The image of each box is computed by the functor into ``cls``, then
-        the images are glued in a single pass with :meth:`from_glued`.
+        the images are glued in a single pass with :meth:`from_glued`. The
+        trace of a planar traced category is a box, as for
+        :meth:`Hypergraph.from_diagram`.
 
         >>> from discopy.braided import Ty, Braid
         >>> from discopy.monoidal import CMap
@@ -906,18 +999,30 @@ class CMap[category: Diagram](CompactCategory, DaggerCategory,
         functor = (factory.functor if cls.category is None else cls.functor)(
             ob_map=lambda typ: typ, ar_map=factory.from_box,
             dom=category, cod=factory)
+        trace = getattr(category, "trace_factory", ())
+        if not isclass(trace) or issubclass(category, SymmetricCategory):
+            trace = ()  # a trace the functor wires rather than boxes
         return factory.from_glued(old.dom, old.cod, [
-            (functor(box), offset)
+            (factory.from_box(box) if isinstance(box, trace)
+             else functor(box), offset)
             for layer in old.inside
             for box, offset in layer.boxes_and_offsets])
 
     @classmethod
-    @rule
-    def swap[X: Atom, Y: Atom](
-            cls, left: Annotated[Any, pattern.Var(X)],
-            right: Annotated[Any, pattern.Var(Y)]) -> Annotated[CMap,
-    Hom([X, Y], [Y, X])]:
-        """ The symmetry encoded as boundary wiring. """
+    def swap(cls, left, right):
+        """
+        The swap of a symmetric category, absorbed into the edges.
+
+        >>> from discopy import braided
+        >>> x, y = braided.Ty('x'), braided.Ty('y')
+        >>> CMap[braided.Diagram].swap(x, y)
+        Traceback (most recent call last):
+        ...
+        discopy.utils.AxiomError: braided.Diagram is not symmetric, ...
+        """
+        if not issubclass(cls.category, SymmetricCategory):
+            raise AxiomError(messages.NO_SWAP.format(
+                factory_name(cls.category)))
         dom, cod = left @ right, right @ left
         left_len, right_len = len(left), len(right)
         output_start = len(dom)
@@ -929,18 +1034,63 @@ class CMap[category: Diagram](CompactCategory, DaggerCategory,
             2 * len(dom))
         return cls(dom, cod, (), edge, check=False)
 
-    Cup = classmethod(lambda cls, left, right: cls.from_box(
-        cls.category.Cup(left, right)))
-    Cap = classmethod(lambda cls, left, right: cls.from_box(
-        cls.category.Cap(left, right)))
+    @classmethod
+    def braid(cls, left, right):
+        """
+        The braid of a braided category: the :meth:`swap` of a symmetric one,
+        and boxes otherwise, a braid being no swap.
+
+        >>> from discopy import braided
+        >>> x, y = braided.Ty('x'), braided.Ty('y')
+        >>> braid = CMap[braided.Diagram].braid(x, y)
+        >>> assert braid.boxes == (braided.Braid(x, y), )
+        """
+        if not issubclass(cls.category, BraidedCategory):
+            raise AxiomError(messages.NO_BRAID.format(
+                factory_name(cls.category)))
+        if issubclass(cls.category, SymmetricCategory):
+            return cls.swap(left, right)
+        if len(left) == len(right) == 1:
+            return cls.from_box(cls.category.braid_factory(left, right))
+        return cls.from_diagram(cls.category.braid(left, right))
 
     @classmethod
-    @rule
-    def cups[X: Atom](
-            cls, left: Annotated[Any, pattern.Var(X)],
-            right: Annotated[Any, pattern.Var(X).r]
-    ) -> Annotated[CMap, Hom(pattern.Var(X) @ pattern.Var(X).r, UNIT)]:
-        """ A cup encoded as boundary wiring between adjoint types. """
+    def twist(cls, dom):
+        """
+        The twist of a balanced category: the identity of a symmetric one,
+        and boxes otherwise, a twist being no identity.
+
+        >>> from discopy import balanced
+        >>> x = balanced.Ty('x')
+        >>> twist = CMap[balanced.Diagram].twist(x)
+        >>> assert twist.boxes == (balanced.Twist(x), )
+        """
+        if issubclass(cls.category, SymmetricCategory):
+            return cls.id(dom)
+        if not issubclass(cls.category, BalancedCategory):
+            raise AxiomError(messages.NO_TWIST.format(
+                factory_name(cls.category)))
+        if len(dom) == 1:
+            return cls.from_box(cls.category.twist_factory(dom))
+        return cls.from_diagram(cls.category.twist(dom))
+
+    cup_factory = classmethod(lambda cls, left, right: cls.from_box(
+        cls.category.cup_factory(left, right)))
+    cap_factory = classmethod(lambda cls, left, right: cls.from_box(
+        cls.category.cap_factory(left, right)))
+
+    @classmethod
+    def cups(cls, left: Ty, right: Ty) -> CMap:
+        """
+        A cup between a type and its right adjoint: a box over a rigid host
+        that is not compact, whose cups are planar and oriented, see
+        :meth:`Hypergraph.cups`, and boundary wiring otherwise, a map being
+        compact whatever hosts it.
+        """
+        if cls.is_planar_rigid():
+            if len(left) == 1:
+                return cls.from_box(cls.category.cup_factory(left, right))
+            return cls.from_diagram(cls.category.cups(left, right))
         assert_isinstance(left, Pregroup)
         assert_isinstance(right, Pregroup)
         left.assert_isadjoint(right)
@@ -951,12 +1101,12 @@ class CMap[category: Diagram](CompactCategory, DaggerCategory,
         return cls(left @ right, cls.ob(), (), edge, check=False)
 
     @classmethod
-    @rule
-    def caps[X: Atom](
-            cls, left: Annotated[Any, pattern.Var(X)],
-            right: Annotated[Any, pattern.Var(X).l]
-    ) -> Annotated[CMap, Hom(UNIT, pattern.Var(X) @ pattern.Var(X).l)]:
-        """ A cap encoded as boundary wiring between adjoint types. """
+    def caps(cls, left: Ty, right: Ty) -> CMap:
+        """ A cap between a type and its left adjoint, see :meth:`cups`. """
+        if cls.is_planar_rigid():
+            if len(left) == 1:
+                return cls.from_box(cls.category.cap_factory(left, right))
+            return cls.from_diagram(cls.category.caps(left, right))
         assert_isinstance(left, Pregroup)
         assert_isinstance(right, Pregroup)
         right.assert_isadjoint(left)
@@ -965,6 +1115,13 @@ class CMap[category: Diagram](CompactCategory, DaggerCategory,
             ((i, size + size - 1 - i) for i in range(size)),
             2 * size)
         return cls(cls.ob(), left @ right, (), edge, check=False)
+
+    @classmethod
+    def is_planar_rigid(cls) -> bool:
+        """ Whether the host category is rigid but not compact, so that its
+        cups and caps are boxes of the map rather than its wiring. """
+        return issubclass(cls.category, RigidCategory)\
+            and not issubclass(cls.category, CompactCategory)
 
     @classmethod
     def copy(cls, typ: Ty, n: int = 2) -> CMap:
@@ -982,33 +1139,13 @@ class CMap[category: Diagram](CompactCategory, DaggerCategory,
         return cls.copy(typ, 0)
 
     @classmethod
-    @rule
-    def ev_left[Y: Atom, E: Atom](
-            cls, base: Annotated[Any, pattern.Var(Y)],
-            exponent: Annotated[Any, pattern.Var(E)]) -> Annotated[CMap,
-    Hom((pattern.Var(Y) << pattern.Var(E)) @ pattern.Var(E), Y)]:
-        """ The left evaluation, see :meth:`ev`. """
-        return cls.ev(base, exponent, left=True)
-
-    @classmethod
-    @rule
-    def ev_right[Y: Atom, E: Atom](
-            cls, base: Annotated[Any, pattern.Var(Y)],
-            exponent: Annotated[Any, pattern.Var(E)]) -> Annotated[CMap,
-    Hom(pattern.Var(E) @ (pattern.Var(E) >> pattern.Var(Y)), Y)]:
-        """ The right evaluation, see :meth:`ev`. """
-        return cls.ev(base, exponent, left=False)
-
-    @classmethod
     def ev(cls, base: Ty, exponent: Ty, left: bool = True) -> CMap:
         """
         Evaluation is kept as an explicit box by default, or comes from the
         wiring of cups when the host category is rigid.
         """
         if issubclass(cls.category, RigidCategory):
-            return (RigidCategory.ev_left.__func__(cls, base, exponent)
-                    if left else
-                    RigidCategory.ev_right.__func__(cls, base, exponent))
+            return super().ev(base, exponent, left)
         return cls.from_box(cls.category.ev(base, exponent, left))
 
     def curry(self, n: int = 1, left: bool = True) -> CMap:
@@ -1032,12 +1169,12 @@ class CMap[category: Diagram](CompactCategory, DaggerCategory,
             :align: center
         """
         if issubclass(self.category, RigidCategory):
-            return RigidCategory.curry(self, n, left)
+            return super().curry(n, left)
         if n < 0 or n > len(self.dom):
             raise ValueError
         if not n:
             return self
-        return self.from_box(self.category.Curry(
+        return self.from_box(self.category.curry_factory(
             self.to_diagram(), n, left))
 
     def base_and_exponent(self, n: int, left: bool) -> tuple[Ty, Ty]:
@@ -1096,11 +1233,8 @@ class CMap[category: Diagram](CompactCategory, DaggerCategory,
         return cls.from_box(cls.category.spiders(
             n_legs_in, n_legs_out, typ, phases))
 
-    @rule
     @unbiased
-    def then[A, B, C](
-            self: Annotated[CMap, Hom(A, B)],
-            other: Annotated[CMap, Hom(B, C)]) -> Annotated[CMap, Hom(A, C)]:
+    def then(self, other: CMap) -> CMap:
         """
         Compose maps by gluing output ports to input ports.
 
@@ -1131,11 +1265,19 @@ class CMap[category: Diagram](CompactCategory, DaggerCategory,
 
     def trace(self, n: int = 1, left: bool = False) -> CMap:
         """
-        Trace boundary wires by splicing the selected inputs and outputs.
+        Trace boundary wires by splicing the selected inputs and outputs, a
+        map being compact whatever hosts it, except over a planar traced
+        category, i.e. traced but not symmetric, whose trace is not wiring:
+        there it is the trace of the category, one wire at a time, see
+        :meth:`explicit_trace` and :meth:`Hypergraph.trace`.
 
         Parameters:
             n : The number of wires to trace.
             left : Whether to trace the leftmost rather than rightmost wires.
+
+        >>> from discopy import traced
+        >>> f = traced.Box('f', traced.Ty('x'), traced.Ty('x'))
+        >>> assert f.to_map().trace().boxes == (f.trace(), )
         """
         if n < 0:
             raise ValueError
@@ -1143,6 +1285,12 @@ class CMap[category: Diagram](CompactCategory, DaggerCategory,
             return self
         if n > min(len(self.dom), len(self.cod)):
             raise ValueError
+        if issubclass(self.category, TracedCategory)\
+                and not issubclass(self.category, SymmetricCategory):
+            result = self
+            for _ in range(n):
+                result = result.explicit_trace(left)
+            return result
 
         if left:
             dom, cod = self.dom[n:], self.cod[n:]
@@ -1163,12 +1311,8 @@ class CMap[category: Diagram](CompactCategory, DaggerCategory,
         return type(self)(
             dom, cod, self.boxes, edge, loops=loops, check=False)
 
-    @rule
     @unbiased
-    def tensor[A, B, C, D](
-            self: Annotated[CMap, Hom(A, B)],
-            other: Annotated[CMap, Hom(C, D)]) -> Annotated[CMap,
-    Hom([A, C], [B, D])]:
+    def tensor(self, other: CMap) -> CMap:
         """ Tensor product given by disjoint union of the two maps. """
         dom, cod = self.dom @ other.dom, self.cod @ other.cod
         boxes = self.boxes + other.boxes
@@ -1299,13 +1443,13 @@ class CMap[category: Diagram](CompactCategory, DaggerCategory,
 
         Note
         ----
-        When ``category.Trace`` is a class, e.g. for symmetric
+        When ``category.trace_factory`` is a class, e.g. for symmetric
         diagrams, then the result is just one big trace box wrapped up as a
         map. Otherwise it is a class method, e.g. for compact diagrams, in
         which case we use it to introduce cup and cap boxes.
         """
         type(self).assert_istraced()
-        factory = self.category.Trace
+        factory = self.category.trace_factory
         if isclass(factory):
             return self.from_box(factory(self.to_diagram(), left))
         return factory.__func__(type(self), self, left)
@@ -1315,8 +1459,8 @@ class CMap[category: Diagram](CompactCategory, DaggerCategory,
         Introduce cup and cap boxes to make self :attr:`is_monogamous`,
         i.e. so that every wire connects a positive and a negative port.
 
-        The boxes come from ``category.Cup`` and
-        ``category.Cap``, so this needs a rigid category.
+        The boxes come from ``category.cup_factory`` and
+        ``category.cap_factory``, so this needs a rigid category.
 
         Example
         -------
@@ -1335,12 +1479,12 @@ class CMap[category: Diagram](CompactCategory, DaggerCategory,
                 continue
             source, target = ports[i].obj, ports[j].obj
             if ports[i].kind.is_positive:
-                box = self.category.Cup(source, target)
+                box = self.category.cup_factory(source, target)
                 boxes = self.boxes + (box, )
                 insert = self.n_ports - len(self.cod)
                 box_wires = [(insert, i), (insert + 1, j)]
             else:
-                box = self.category.Cap(source, target)
+                box = self.category.cap_factory(source, target)
                 boxes = (box, ) + self.boxes
                 insert = len(self.dom)
                 box_wires = [(insert + 1, i), (insert, j)]
@@ -1419,15 +1563,15 @@ class CMap[category: Diagram](CompactCategory, DaggerCategory,
         >>> assert f.to_map().curry().to_compact()\\
         ...     == (f.to_map() >> CMap.ev(z, y).dagger()).trace()
         """
-        Curry = self.category.Curry
-        if not any(isinstance(box, Curry) for box in self.boxes):
+        curry_factory = self.category.curry_factory
+        if not any(isinstance(box, curry_factory) for box in self.boxes):
             return self
         functor = self.functor(
             ob_map=lambda typ: typ, ar_map=type(self).from_box,
             dom=self.category, cod=type(self))
 
         def image(box):
-            if not isinstance(box, Curry):
+            if not isinstance(box, curry_factory):
                 return functor(box)
             exponent = box.cod.exponent
             return (type(self).from_diagram(box.arg).to_compact()
@@ -1501,24 +1645,27 @@ cycles of this map.
             dom_wires = [edge_wire[i] for i in dom_ports]
             cod_wires = [edge_wire[i] for i in cod_ports]
 
-            offset = scan.index(dom_wires[0]) if dom_wires else len(scan)
+            offset = None
             for i, wire_id in enumerate(dom_wires):
                 j = scan.index(wire_id)
-                if i == 0 or j == offset + i:
-                    continue
-                if j > offset + i:
-                    diagram >>= diagram.cod[:offset + i] @ swap(
-                        diagram.cod[offset + i:j], diagram.cod[j]
-                    ) @ diagram.cod[j + 1:]
-                    scan = (scan[:offset + i] + scan[j:j + 1]) + (
-                        scan[offset + i:j] + scan[j + 1:])
-                else:
-                    diagram >>= diagram.cod[:j] @ swap(
-                        diagram.cod[j], diagram.cod[j + 1:offset + i]
-                    ) @ diagram.cod[offset + i:]
-                    scan = (scan[:j] + scan[j + 1:offset + i]) + (
-                        scan[j:j + 1] + scan[offset + i:])
-                    offset -= 1
+                if offset is None:
+                    offset = j
+                elif j != offset + i:
+                    if j > offset + i:
+                        diagram >>= diagram.cod[:offset + i] @ swap(
+                            diagram.cod[offset + i:j], diagram.cod[j]
+                        ) @ diagram.cod[j + 1:]
+                        scan = (scan[:offset + i] + scan[j:j + 1]) + (
+                            scan[offset + i:j] + scan[j + 1:])
+                    else:
+                        diagram >>= diagram.cod[:j] @ swap(
+                            diagram.cod[j], diagram.cod[j + 1:offset + i]
+                        ) @ diagram.cod[offset + i:]
+                        scan = (scan[:j] + scan[j + 1:offset + i]) + (
+                            scan[j:j + 1] + scan[offset + i:])
+                        offset -= 1
+
+            offset = len(scan) if offset is None else offset
             scan = scan[:offset] + cod_wires + scan[offset + len(box.dom):]
             diagram >>= diagram.cod[:offset] @ box @ diagram.cod[
                 offset + len(box.dom):]
@@ -1541,8 +1688,7 @@ cycles of this map.
         given by the edge permutation. See documentation of
         :func:``Hypergraph.from_map`` for an example.
         """
-        return hypergraph.Hypergraph[
-            self.category].from_map(self)  # ty: ignore[invalid-type-form]
+        return hypergraph.Hypergraph[self.category].from_map(self)
 
     def to_dot(
             self, engine="dot", seed=None, graph_attr=None,

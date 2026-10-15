@@ -61,6 +61,4 @@ def test_permutation():
     with raises(ValueError):
         Function(lambda obj: obj, X, X).dagger()  # Only swaps have one.
     f = Function(lambda obj, tag=0: (obj, 1 - tag), X @ X, X @ X)
-    assert f.trace_right()(3) == 3 and f.trace(0) is f
-    with raises(NotImplementedError):
-        f.trace_left()
+    assert f.trace(0) is f

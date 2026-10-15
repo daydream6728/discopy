@@ -64,6 +64,7 @@ def test_closed():
     k = Closed(a @ b, c, closed.Box('k', a @ b @ P, c), P)
     assert Closed.ev(c, b).param == closed.Ty()
     left, right = k.curry(left=True), k.curry(left=False)
+    assert k.curry() == left
     assert (left.dom, left.cod, left.param) == (a, c << b, P)
     assert (right.dom, right.cod, right.param) == (b, a >> c, P)
     assert left.inside\
@@ -145,13 +146,3 @@ def test_copar_python():
     network = cell >> cell
     assert network.param == network.copar == f ** 2
     assert network.inside(2., 1., 10.) == (13., 2., 3.)
-
-
-def test_one_wire_forwarders():
-    base, exponent = closed.Ty('y'), closed.Ty('x')
-    assert Closed.ev_left(base, exponent)\
-        == Closed.ev(base, exponent, left=True)
-    assert Closed.ev_right(base, exponent)\
-        == Closed.ev(base, exponent, left=False)
-    with raises(NotImplementedError):
-        Feedback.id(feedback.Ty('x')).feedback_left()

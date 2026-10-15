@@ -1,102 +1,137 @@
 """ DisCoPy's property-testing module in action. """
 
-import io
-from typing import Annotated, Any, Self
+from typing import Self
 
-from hypothesis import find, settings
+from hypothesis import find
 from hypothesis.errors import NoSuchExample
 from pytest import raises
 
-from discopy import braided, cat, feedback, rigid
-from discopy.abc import MonoidalCategory
+from discopy import braided, cat, monoidal, rigid
+from discopy.abc import Category, ColouredMonoid, MonoidalCategory
 from discopy.axioms import (
-    Axiom, AxiomFailure, Equation, Hom, assert_axioms, axiom)
-from discopy.cat import Arrow, Box, Functor, Ob
-from discopy.monoidal import Diagram
+    L, R, Atom, Axiom, AxiomFailure, Count, Equation, Hom, Obj, Over, Repeat,
+    Tensor, Testable, Under, Unit, Var, axiom, inhabits)
+from discopy.monoidal import Ty
+from discopy.cat import Arrow, Box, Ob
 
 
-def test_axioms():
-    assert_axioms(Arrow)
+def test_strategy():
+    x, y = Ob('x'), Ob('y')
+    find(Ob.strategy(), lambda ob: ob.name == "a")
+    arrow = find(Arrow.search(dom=x, cod=y), lambda f: len(f) > 1)
+    assert (arrow.dom, arrow.cod) == (x, y)
+    identity = find(
+        Arrow.search(fuel=0, within=Category), lambda f: not f.inside)
+    assert identity == Arrow.id(identity.dom)
+    assert find(Box.strategy(dom=x), lambda _: True).dom == x
 
-    class Classified(Arrow):
-        """ A category with a broken law and an inapplicable one. """
-        unitality = Arrow.unitality.failing("Never holds.")
-        dagger_involution = Arrow.dagger_involution.inapplicable("No dagger.")
 
-    assert_axioms(Classified)
+def test_equation():
+    f = Box('f', Ob('x'), Ob('x'))
+    assert Equation(f, f, f).symbols == ("=", "=")
+    with raises(ValueError):
+        Equation(f, f, symbols=("=", "="))
 
 
 def test_axiom_binding():
     assert repr(Axiom(lambda cls: NotImplemented)) == "Axiom(<lambda>)"
     assert eval(repr(Arrow.unitality)) == cat.Arrow.unitality
     assert hash(Arrow.unitality) == hash(eval(repr(Arrow.unitality)))
-    assert Arrow.unitality != Functor.unitality
-    with raises(TypeError):
-        Axiom(lambda cls: NotImplemented)()
-    with raises(TypeError):
-        Axiom(lambda cls: NotImplemented).falsify()
-    with raises(TypeError):
-        Axiom(lambda cls: NotImplemented).strategy()
+    for method in ("__call__", "falsify"):
+        with raises(TypeError):
+            getattr(Axiom(lambda cls: NotImplemented), method)()
     assert axiom(lambda cls: NotImplemented).bind(Arrow)() is NotImplemented
-    box = Box('f', Ob('x'), Ob('y'))
-    assert Arrow.unitality(box)
-    broken = Arrow.unitality.weaken(max_leaves=1).failing("Never holds.")
-    assert broken.params == {"max_leaves": 1}
+    assert Arrow.unitality(f=Box('f', Ob('x'), Ob('y')))
+
+
+def test_string_annotations():
+    """ A law whose annotations are strings is refused. """
+    namespace = {}
+    exec("from __future__ import annotations\n"
+         "def deferred(cls, f: int): return NotImplemented", namespace)
+    with raises(TypeError, match="__future__"):
+        axiom(namespace["deferred"])
+
+
+def test_sequents():
+    @axiom
+    def law[X: Atom[Ty], Y: Obj[Ty], N: Count](
+            cls, x: Var[Ty, X], f: Hom[Self, X, Y], term: Self,
+            n: Var[int, N]
+    ) -> Equation[tuple[int, Var[Ty, X], bool, bool]]:
+        """ Quantify over an atom, a morphism out of it, a term and a
+        number. """
+        return Equation(
+            (len(x), f.dom, isinstance(term, cls), n <= 3),
+            (1, x, True, True))
+
+    bound = law.bind(monoidal.Diagram)
+    scope, arguments = find(bound.sequents(), lambda _: True)
+    assert set(arguments) == {"x", "f", "term", "n"} and bound(**arguments)
+    assert inhabits(bound(**arguments), bound.output(scope))
+    assert bound.canonical()
+
+
+def test_formers():
+    x, y = rigid.Ty('x'), rigid.Ty('y')
+    assert Tensor[x, y] == x @ y and Unit[rigid.Ty] == rigid.Ty()
+    assert (L[x], R[x]) == (x.l, x.r) and Repeat[x, 3] == x @ x @ x
+    assert (Over[x, y], Under[y, x]) == (x << y, y >> x)
+    f = rigid.Box('f', x, y)
+    assert inhabits(f, Hom[rigid.Diagram, x, y])
+    assert not inhabits(f, Hom[rigid.Diagram, y, x])
+    assert not inhabits(Equation(f), Equation[Hom[rigid.Diagram, x, x]])
+
+
+def test_classifiers():
+    f = Box('f', Ob('x'), Ob('y'))
+    broken = Arrow.unitality.failing("Never holds.")
     with raises(AxiomFailure) as failure:
-        broken(box)
-    assert failure.value.equation
-
-
-def test_inapplicable():
+        broken(f=f)
+    assert broken.broken and failure.value.equation
     law = Arrow.unitality.inapplicable("No identities to cancel.")
-    assert law.name == "unitality"
-    assert law.__doc__ == "No identities to cancel."
     assert law() is NotImplemented
+    assert law.__doc__ == "No identities to cancel."
+    assert Arrow.unitality.modulo(lambda term: term.dom)(f=f)
 
 
-def test_modulo():
-    law = Arrow.unitality.modulo(lambda term: term.dom).bind(Arrow)
-    assert law(Box('f', Ob('x'), Ob('y')))
-
-
-def test_equation_symbols():
-    x = Ob('x')
-    f, g = Box('f', x, x), Box('g', x, x)
-    assert Equation(f).symbols == ()
-    assert Equation(f, g, symbol="<").symbols == ("<", )
-    with raises(ValueError):
-        Equation(f, g, symbols=("=", "="))
+def test_rules():
+    x, y = Ob('x'), Ob('y')
+    f = Box('f', x, y)
+    assert sorted(Arrow.rules) == ["ax", "cut"]
+    assert Arrow.cut(f, f[::-1]) == f >> f[::-1] and Arrow.ax(x) == Arrow.id(x)
+    assert Arrow.cut.is_recursive and not Arrow.ax.is_recursive
+    assert monoidal.Diagram.mix.conclusion == (None, None)
+    assert Arrow.ax.given(x, y) == {"X": y}
+    assert braided.Diagram.braiding.given(braided.Ty('x', 'y')) == {}
 
 
 def test_weaken():
-    law = Arrow.unitality.weaken(max_leaves=1).bind(Arrow)
-    assert law.modulo(lambda term: term).params == law.params
-    equation = find(law.strategy(), lambda _: True)
-    assert equation and all(len(term.inside) <= 1 for term in equation.terms)
-
-
-def test_self_annotation():
-    @axiom
-    def absorbing(cls, f: Self) -> Equation:
-        """ The identity on the domain absorbs into any arrow. """
-        return Equation(cls.id(f.dom) >> f, f)
-
-    law = absorbing.bind(Arrow)
-    equation = find(law.strategy(), lambda _: True)
-    assert isinstance(equation.terms[1], Arrow) and equation
+    law = rigid.Diagram.dagger_involution_monoidal
+    assert law.params == {"within": MonoidalCategory}
+    args = find(law.strategy(), lambda _: True)
+    assert not any(
+        isinstance(box, (rigid.Cup, rigid.Cap)) for box in args["f"].boxes)
 
 
 def test_falsify():
     @axiom
-    def trivial[A, B](cls, f: Annotated[Any, Hom(A, B)]) -> Equation:
+    def trivial[A: Obj[Ob], B: Obj[Ob]](
+            cls, f: Hom[Self, A, B]) -> Equation[Self]:
         """ Every arrow is an identity, which a box refutes. """
         return Equation(f, cls.id(f.dom))
 
-    equation = trivial.bind(Arrow).falsify()
-    assert not equation and equation.terms[0].inside
-    for law in (Arrow.associativity, Arrow.unitality.failing("Declared.")):
-        with raises(NoSuchExample):
-            law.falsify(settings=settings(max_examples=10))
+    assert trivial.bind(Arrow).falsify()["f"].inside
+    assert Arrow.unitality.failing("Never holds.").falsify()
+    with raises(NoSuchExample):
+        Arrow.associativity.falsify()
+
+
+def test_canonical():
+    assert str(Arrow.associativity.canonical()) \
+        == "Equation(f >> g >> h, f >> g >> h)"
+    equation = rigid.Diagram.dagger_involution.canonical()
+    assert equation.terms[1] == rigid.Box('f', rigid.Ty('A'), rigid.Ty('B'))
 
 
 def test_axioms_of_category():
@@ -114,96 +149,29 @@ def test_axioms_of_category():
     assert "unitality" not in Hidden.axioms
 
 
-def test_axiom():
-    assert MonoidalCategory.bifunctoriality.parameters[0].name == "f"
-    assert str(MonoidalCategory.bifunctoriality.sequent).startswith(
-        "A: C0, B: C0, C: C0, D: C0, U: C0, V: C0 | f: C1[A, B]")
-    equation = find(Diagram.bifunctoriality.strategy(), lambda _: True)
-    assert equation and len(equation.terms) == 2
-    assert MonoidalCategory.tensor.sequent.conclusion is not None
-    assert Axiom.concludes is False
-    @axiom
-    def unannotated(cls, f):
-        """ An unannotated premise has no pattern. """
-    with raises(TypeError, match="states no pattern"):
-        unannotated.bind(Diagram).sequent
-
-
-def test_weaken_params():
-    law = MonoidalCategory.bifunctoriality.weaken(max_depth=0).bind(Diagram)
-    equation = find(law.strategy(), lambda _: True)
-    assert equation and all(len(term.boxes) <= 4 for term in equation.terms)
-    assert law.weaken(max_depth=1).params == {"max_depth": 1}
-    assert law.modulo(lambda term: term).params == law.params
-
-
-def test_equation_types():
-    """ The Equation subscript of an axiom types its canonical equation. """
-    import inspect
-    from discopy import (
-        balanced, closed, compact, pivotal, ribbon, symmetric, traced)
-    from discopy.pattern import expand
-    (parameter, ) = Equation.__type_params__
-    levels = (Diagram, braided.Diagram, traced.Diagram, balanced.Diagram,
-              symmetric.Diagram, closed.Diagram, rigid.Diagram,
-              pivotal.Diagram, ribbon.Diagram, compact.Diagram,
-              feedback.Diagram)
-    checked = set()
-    for category in levels:
-        for law in category.axioms.values():
-            returns = inspect.signature(law.function).return_annotation
-            pattern = expand(getattr(returns, parameter.__name__, None))
-            if pattern is None\
-                    or (equation := law.canonical()) is NotImplemented:
-                continue
-            subst = {
-                name: sort.canonical(law.scope, name)
-                for name, sort in law.sequent.variables.items()}
-            value = pattern.instantiate(subst, law.unit)
-            boundary = (lambda term: (term.dom, term.cod))\
-                if isinstance(pattern, Hom) else (lambda term: term)
-            assert all(
-                boundary(term) == value for term in equation.terms), law
-            checked.add(law.name)
-    assert len(checked) > 30
-
-
-def test_canonical():
-    equation = Diagram.bifunctoriality.canonical()
-    assert equation and str(equation.terms[0])\
-        == "f @ C >> B @ g >> h @ D >> U @ k"
-    assert str(Arrow.associativity.canonical())\
-        == "Equation(f >> g >> h, f >> g >> h)"
-    assert str(Diagram.tensor_unitality.canonical())\
-        == "Equation(Id(X @ Y), Id(X @ Y))"
-    assert Arrow.unitality.failing("Declared.").canonical()
-    assert not braided.Diagram.braid_naturality.canonical()
-    inapplicable = Arrow.unitality.inapplicable("No identities.")
-    assert inapplicable.canonical() is NotImplemented
-    with raises(TypeError, match="nothing to draw"):
-        inapplicable.draw()
-    Diagram.bifunctoriality.draw(path=io.BytesIO(), format="png")
-    assert str(rigid.Diagram.snake_equations.canonical().terms[1]) == "Id(X)"
-    cups = rigid.Diagram.generators["cups"].canonical()
-    assert cups == {"left": rigid.Ty('X'), "right": rigid.Ty('X').r}
-    assert feedback.Diagram.feedback_joining.canonical()
+def test_matrix():
+    assert monoidal.Diagram in Testable.enrolled()
+    assert monoidal.Ty in Testable.enrolled()
+    assert cat.FreeCategory not in Testable.enrolled()
+    once = Testable.matrix(once=True)
+    assert rigid.Diagram.dagger_involution in once
+    assert cat.Arrow.dagger_involution in once
+    assert rigid.Diagram.unitality not in once
+    assert set(once) <= set(Testable.matrix())
 
 
 def test_canonical_instances():
-    """ Every law of the free diagram categories holds on its canonical
-    instance, the schema :meth:`Axiom.draw` draws, unless declared broken,
-    so that a law that crashes on its own statement fails here before
-    the property matrix ever searches for a counterexample. """
-    from discopy import (
-        balanced, biclosed, closed, compact, frobenius, markov, pivotal,
-        ribbon, symmetric, traced)
-    levels = (Arrow, Diagram, braided.Diagram, traced.Diagram,
-              balanced.Diagram, symmetric.Diagram, markov.Diagram,
-              closed.Diagram, biclosed.Diagram, rigid.Diagram,
-              pivotal.Diagram, ribbon.Diagram, compact.Diagram,
-              frobenius.Diagram, feedback.Diagram)
-    for category in levels:
+    """ Every law of a free category holds on its canonical instance unless
+    declared broken, types included, so that a law that crashes on its own
+    statement fails here before the property matrix ever searches for a
+    counterexample. """
+    for category in Testable.enrolled():
+        box = getattr(category, "box_factory", None)
+        if box is None or not (issubclass(box, category)
+                               or issubclass(category, ColouredMonoid)):
+            continue  # a map, a hypergraph, a type of one colour or a test
         for law in category.axioms.values():
+            if law.broken:
+                continue
             equation = law.canonical()
-            assert equation is NotImplemented or law.broken or equation,\
-                (category, law)
+            assert equation is NotImplemented or equation, (category, law.name)

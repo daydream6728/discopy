@@ -9,282 +9,192 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Added
 
-- `abc.MonoidalCategory.cut`, composition in context: the cut rule of
-  the Lambek calculus, from `Γ2 ⊢ A` and `Γ1, A, Γ3 ⊢ B` conclude
-  `Γ1, Γ2, Γ3 ⊢ B`, derived from `then` and `tensor` as
-  `left @ self @ right >> other`. It replaces `then` as the
-  sequential rule of the search from monoidal categories on, which
-  it subsumes as the empty-context case — `then` is marked
-  admissible on `monoidal.Diagram` — `Rule.admissible` records a rule
-  the search drops because the others reach everything it builds,
-  where `.inapplicable` keeps meaning structure outside a category's
-  terms — staying the n-ary method it always was while `cat.Arrow`
-  keeps it as the rule of a mere category, and `tensor` stays the
-  rule that puts diagrams side by side — so that rules answer to the sequent calculus and methods to
-  the programmer, decoupled where a convenient signature cannot
-  state an honest sequent. Every diagram is a sequence of layers and
-  every layer is one cut, so the search generates a diagram the way
-  `monoidal.Layer` stores it: the conclusion anchors both premises
-  on the goal by splitting its boundary, where the fresh middle of
-  `then` anchors neither, and one rule application places a
-  whiskered box where `tensor`-of-identities and `then` spent three.
+- `RigidCategory.rotate_contravariance` and `adjunction`, that rotation
+  reverses composition and that the left and right adjoints of a morphism
+  are mutually inverse, the class of bug #716 was, and
+  `PivotalCategory.self_dual`. `test_canonical_instances` checks every law
+  of every free category on its canonical instance, and `Axiom.draw` draws
+  `rigid.Diagram.snake_equations`. The
+  left unitality of `cat.Functor` is a strict xfail until #648 is fixed.
+- Hypothesis strategies for every free category of the hierarchy, each
+  generating diagrams through the structure it is compared up to:
+  `Hypergraph.strategy` draws a wiring port by port under the spider
+  constraint its category reads off the hierarchy in one `if`/`elif` chain
+  (any for a hypergraph category, one producer for a Markov one, two ports
+  for a compact one, one producer and one consumer for a symmetric one), then
+  a box for each box of the wiring, and `CMap.strategy` reads a map off,
+  symmetric and compact diagrams are downgraded from a map, Markov, closed
+  and hypergraph diagrams from a hypergraph and feedback diagrams are the
+  feedback of an acyclic wiring, each the `sample` of its level.
+  A requested boundary is always honoured with no filtering, by one
+  balancing box. `Ty.strategy` draws words and rigid wires a winding number.
+- Every rule and axiom states its sequent in its signature, in types a
+  typechecker reads as coarse ones and a sampler evaluates as fine ones: its
+  type parameters are variables of a sort, `A: Obj[C0]` an object, `X:
+  Atom[C0]` an atomic one and `N: Count` a number, its parameters are
+  premises, `f: Hom[C1, A, B]` a morphism, `x: Var[C0, X]` the value of an
+  object expression and `Self` a term, and its return annotation is the type
+  of its output, `Hom[C1, A, B]` for a rule and `Equation[T]` for an axiom,
+  e.g. `def cut[A: Obj[C0], B: Obj[C0], C: Obj[C0]](cls, f: Hom[C1, A, B],
+  g: Hom[C1, B, C]) -> Hom[C1, A, C]`. `Obj`, `Atom`, `Var` and `Hom` are
+  `Annotated` aliases of their first argument, the object expressions are
+  built by `Tensor`, `Unit`, `L`, `R`, `Delay`, `Over`, `Under` and
+  `Repeat`, the `Former`s whose subscript stays an expression while a
+  variable is left in it and computes the object once there is none, and
+  `Equation` is a generic class, so that `ty check` reports nothing on any
+  of the signatures. The annotations are read as objects, never evaluated
+  from strings: `C0` and `C1` are the type parameters of the abstract
+  classes, each standing for what `Category.parameters` says, its objects
+  and its arrows, by its `axioms.position` among the parameters of a
+  `Category`, and both sides of a sequent are the annotations with the
+  variables of a draw substituted, `axioms.substitute`, in
+  `Declaration.sequents` and `Declaration.output`; a module stating a
+  declaration does without `from __future__ import annotations`, which
+  would make its annotations strings, and a declaration whose annotations
+  are strings is refused. `axioms.inhabits` checks a value against its
+  type: every cell of the matrix checks the equation of its law against it,
+  and `test_rule` the conclusion of every rule. The abstract base classes
+  state that a term of a category is one of its arrows, `self: C1` and
+  `cls: type[C1]`, so that their methods typecheck with no `ty: ignore`,
+  and the categories that are not free bind the parameters of their base,
+  e.g. `finset.Function(MonoidalCategory[Nat, "Function"])`, so that `ty`
+  refuses a FinSet map composed with a Python function and reads
+  `finset.Function.cut` with its category substituted: `cat.Functor`,
+  `cat.Transformation`, `monoidal.List`, `hypergraph.Hypergraph`,
+  `para.Symmetric`, `python.Function`, `finset.Function` and
+  `drawing.Drawing`. The free diagrams cannot, since a level binding its
+  own objects and arrows contradicts the binding of the level it extends,
+  and neither can `Matrix`, whose `Tensor` and `Channel` narrow its
+  objects, nor `CMap`, `Stream` and `interaction.Diagram`, whose objects
+  are not of the sort their base bounds them by.
+- `axioms.Rule` and the decorator `rule`: an inference rule of a structure,
+  stated like a law with a morphism as its conclusion. `Rule` and `Axiom`
+  share a `Declaration`, which binds them to the class they are read from
+  and draws their arguments, and `Testable.rules` lists the rules of a
+  category as `Testable.axioms` its laws. `discopy.abc` declares the rules
+  of each structure, forwarding to the methods that implement it: `ax` and
+  `cut` for a category, `mix` for a monoidal one, `trace_left` and
+  `trace_right`, `curry_left`, `curry_right`, `ev_left` and `ev_right`, the
+  `counit` and `unit` of a rigid duality, i.e. cups and caps, `braiding`
+  and `inverse_braiding`, `twisting` and `inverse_twisting`,
+  `comultiplication`, `delaying` and `feedback_right`, and `spider`, their
+  contexts written with capital Greek letters from Γ as in type theory,
+  e.g. the curry of `f: Hom[C1, Tensor[Γ, E], B]` concludes `Hom[C1, Γ,
+  Over[B, E]]`. `cat.FreeCategory.search` derives the terms of every free
+  category from its rules: a generator, drawn by `generators`, or the
+  conclusion of a rule chosen at random, its morphism premises drawn in
+  turn with less `fuel`, a side of the conclusion that is a variable taken
+  from the goal, see `Rule.given`, and any other fitted to it by a
+  generator. A level adds rules, never a search. The generators of a
+  diagram are its boxes and those of a type its wires, so that types are
+  derived by the identity and composition rules of the free monoid too,
+  `Ty.strategy` being the search with one unit of fuel and an atomic
+  object one of its `generators`; `Nat` generates `Nat(1)`, `Dim` a
+  dimension of two or three and a circuit type a bit or a qubit, and the
+  colours of a generated type are all transparent, `Colour.strategy`,
+  coloured types being left for later. The `box_factory` of a type is its
+  `generator_factory`, a wire that `Axiom.canonical` casts into a type of
+  length one, so that the laws of types have canonical instances too,
+  their objects colours named after the variables; `Nat`, `Dim`, feedback
+  and circuit types, whose generators take no name, have none, and
+  `Axiom.draw` refuses an equation that is not one of diagrams.
+  The symmetric, Markov and feedback levels also `sample` a diagram from
+  their combinatorial representation, and `strategy`, which the property
+  matrix draws from, is the search alone or one of the search and the
+  sample, the premises of the search being drawn by the strategy of the
+  level so that a derived term can contain a sampled one.
+  `Axiom.weaken(within=...)` restricts a law to the terms derived from the
+  rules of a weaker structure, e.g. the rigid diagrams of the underlying
+  monoidal category. A level declares the laws it breaks, weakens or
+  restates in the body of its `Diagram`.
+- The property matrix checks the laws of the hierarchy on every category
+  that generates its terms, each sampled from the representation its
+  coherence theorem gives: symmetric and compact diagrams from a map,
+  Markov, closed, feedback and hypergraph diagrams from a hypergraph, and
+  the maps and hypergraphs themselves as categories of their own.
+  `Testable.enrolled` lists the categories that are their own `ar`, a box
+  being checked as part of the morphisms of its category, and every type
+  as the free coloured monoid it is, rigid types breaking the dagger laws
+  as rigid diagrams do, and
+  `Testable.matrix` their laws, or only `once` per declaration under the
+  new `fast` profile, so that `proptest/` is one parametrised test. The laws
+  of doctrine-search are stated on `discopy.abc`: the interchange law, the
+  vanishing, iteration, superposing, naturality and dinaturality of the
+  trace, the currying laws, the snakes and the coherence of cups and caps,
+  pivotality, the hexagons, the inverse and naturality of the braid, the
+  involution of the swap, the comonoid laws of copying, the twist and
+  yanking, the delay and feedback laws, the Reidemeister moves and the
+  spider laws. `monoidal.Diagram` states the laws of the conversions the
+  quotient relies on, that `to_hypergraph` is a strict monoidal functor,
+  that decoding is its section and that maps and hypergraphs agree, and
+  `axioms.Serialisable` the four roundtrips of a term: `repr_transparency`,
+  `pickling`, `copying` and `serialisation`. `Axiom.canonical` instantiates
+  a law on boxes named after its variables and `Axiom.draw` draws it.
+  A diagram compares its laws by `Diagram.equation_factory`: up to the
+  isomorphism of its hypergraph from `symmetric.Diagram` on, where the
+  hypergraph is faithful, and on the nose below, where it is a lossy
+  quotient rather than an embedding, until each planar doctrine has a
+  normal form of its own: a hypergraph identifies a braid with its inverse
+  and a twist with the identity, unwinds the adjoints of a type and forgets
+  the regions of a planar diagram and the side of its scalars. `CMap`
+  compares its laws by hypergraph too, over a symmetric host, its equality
+  depending on the order of its boxes. A law
+  a level breaks is declared there with its reason in `discopy.messages`:
+  a free curry or feedback is a box nothing rewrites, biclosed, rigid and
+  feedback diagrams have no dagger beyond the subspaces `weaken` names,
+  decoding a hypergraph needs swaps a planar category does not have, a map
+  has no spiders, the map of a curry rebuilds its inside, a map over a
+  host that is not rigid has no adjoints, and a planar law compared on the
+  nose has no normal form yet, `NO_PLANAR_NORMAL_FORM`: the interchange
+  law, the dagger of a tensor, the naturality and dinaturality of a trace,
+  the braid and twist laws, the snakes, the transposes, pivotality and the
+  currying of a rigid category, restated as holding from symmetric and
+  compact categories on. Tensor
+  diagrams, which draw no arrays, and pregroup diagrams, which compare by a
+  hypergraph that refuses a cap, declare `strategy = no_strategy`.
+- `CMap` and `Hypergraph` serialise with `to_tree`, naming their category,
+  and the repr of a hypergraph names it too so that it evaluates back.
 
-- `Hypergraph` enrols in the property-testing matrix by reusing the
-  search of its host category: `strategy` is the image of
-  `from_diagram` on `category.strategy`, so every parameterised
-  alias — `frobenius.Hypergraph` and the others down to `monoidal` —
-  generates the terms its laws quantify over with the generators of
-  its host, and a vocabulary host keeps its vocabulary.
-  Unparameterised, the strategy raises `NotImplementedError`, which
-  is how a type stays out of the matrix. The same strategy on `CMap`
-  found its first counterexamples within a minute and is withheld
-  until they are addressed: `CMap` equality distinguishes the order
-  its `boxes` are listed in, so every law that reorders disconnected
-  boxes — `braid_naturality` on two scalars is the smallest — fails
-  under strict equality and holds only up to a map isomorphism that
-  `CMap.Equation` does not yet compare by; and the compact laws of a
-  map over a host below `rigid` cannot sample the adjoint types they
-  quantify over. An issue should be filed upstream for both.
-
-- Epsilon-greedy focusing in `discopy.search`: a goal commits to a
-  rule it applies deterministically — the conclusion unifies in
-  exactly one way, binding every premise without residuals, and the
-  premises keep to the subformulae of the goal — except with
-  probability `epsilon`, where the full search resumes. The
-  invertible rules are computed by `search.focused` from the
-  sequents at each goal rather than declared: `Exp` patterns gain
-  the unify that decomposes a single exponential object its base and
-  exponent rebuild, so the curry of a biclosed category opens the
-  goal's own exponential and focuses, while at a rigid level the
-  collapsed exponential focuses only when the transpose is forced by
-  the goal's own atoms, the subformula condition blocking a curry
-  that would invent an adjoint. `epsilon=0` is a focused decision
-  procedure, any `epsilon > 0` preserves the support of the search —
-  every term keeps a positive chance — and `epsilon=1` disables
-  focusing; the default is `0.05`. `Diagram.strategy` defaults
-  `max_depth` to six for a category over a fixed vocabulary, whose
-  every box costs a rule, and three with a free box as before.
-  A focused rule must make progress,
-  a premise equal to the goal staying a choice, and the curries of
-  `rigid.Diagram` are marked admissible, since a rigid curry is a
-  caps composition — caps and cut reach every transpose — and the
-  self-dual types of a quantum circuit would otherwise let it focus
-  on every goal; the traces of a circuit, unfolding into kets and
-  bras, and the twist of a compact category, the identity, carry the
-  same mark.
-
-- The codebase typechecks: `uv run ty check` passes in the full
-  development environment, `ty` a dev dependency locked in
-  `uv.lock`, configured by the `[tool.ty]` sections of
-  `pyproject.toml`. `NamedGeneric` is reimplemented on PEP 695 type
-  parameters, so typecheckers understand a specialisation like
-  `tensor.Box[complex]` both as a value and as a base class; the
-  abstract base classes bound their type variables all the way down
-  the tower and `Self` return types express the covariance the
-  tower used to assert. Three rules stay off, documented in
-  `pyproject.toml`: `invalid-method-override`, since aligning the
-  n-ary signatures the tower narrows means changing runtime APIs;
-  `unresolved-attribute`, since the downgrade paths of `Hypergraph`
-  and `CMap` ask the host category for structure behind runtime
-  guards; and `invalid-type-variable-bound`, the one typing-spec
-  rule the sequent bounds break, `pattern.parse` validating them at
-  runtime instead.
-
-- Search strategies for the semantic side of the matrix.
-  `cat.Functor.strategy` enrols the functors with `Relabelling`
-  endofunctors — for the functors whose domain has objects freely
-  generated by names, the others staying unchecked as their
-  docstring promises — checking the composition and identity any
-  functor preserves and each level's own functor axiom, e.g. the
-  symmetric functor preserving the swap. A fixed vocabulary is a
-  dictionary of `Rule.constant` boxes whose search leaves out the
-  free box: `pregroup.Diagram` is generated by the words of
-  `pregroup.VOCABULARY` and the cups reducing them, so its strategy
-  samples grammatical sentences by `eager_parse`, and
-  `quantum.circuit.Circuit` by the parameterless gates of
-  `quantum.gates.GATES` and the swap; a grammar or a gate set
-  assigns its own generators on a subclass, and neither is a cell of
-  the matrix, a vocabulary filling only the sequents it derives.
-
-- `discopy.search`, the proof search generating the terms of the free
-  diagram categories: `monoidal.Diagram.strategy` is the one
-  goal-directed search by the `rules` and `generators` a category
-  declares, every level inheriting it as is. The two sides of a goal
-  are a type, a pattern, a type parameter standing for its variable,
-  or `None` for a fresh one, the substitution shared across the
-  sides and down the attempts: a side guides the search once its
-  variables are all bound and constrains it afterwards, a failed
-  unification rejecting the attempt and rolling the substitution
-  back, the residuals checked once the term is found and a term
-  built outside its declared conclusion an `AxiomError`. A
-  category's `generators` are the rules with no hom premise, so the
-  search recurses on the recursive rules alone; a dead-ended goal is
-  retried a bounded number of times before the example is rejected.
-  The strategy's one subspace parameter is `boundary_connected`,
-  through which `Axiom.weaken` quantifies a law over the subspace
-  `normal_form` is defined on. The matrix lights up: every free
-  diagram level generates the terms its axioms quantify over,
-  checking the categorical, serialisation, conversion and drawing
-  laws on sampled diagrams.
-
-- Every law is an `Axiom` and every operation a `Rule`, both stated
-  once on the abstract base classes of `discopy.abc` as the typed
-  signatures the pattern language reads, and inherited by every
-  category below: `then` reads `def then[A: Obj[C0], B: Obj[C0], C:
-  Obj[C0]](self: Hom[C1, A, B], other: Hom[C1, B, C]) -> Hom[C1, A,
-  C]`, a trace takes `Hom[C1, Tensor[M, A], Tensor[M, B]]`, the cups
-  take `right: Obj[C0, R[X]]`, and `discopy.abc` is written wholly in
-  these brackets, every return fully typed — an axiom concludes
-  `Equation[Hom[C1, A, B]]`, an object equation `Equation[Obj[C0,
-  Tensor[A, C]]]`, and `test/axioms.py` checks every `Equation`
-  subscript against the canonical equation it types. A helper taking
-  `left` states each side as an `@overload` whose `left:
-  Literal[True]`/`Literal[False]` links the branch to the argument,
-  checked against the sides' sequents, and what an n-ary monoid
-  operation cannot pattern-type lands in `Self`. An implementation
-  overriding a rule wraps itself in `@rule` and states its full
-  sequent; `declarations` is ordinary attribute lookup, the latest
-  rule in the method resolution order winning, and a mark lives on
-  the class where it must win. `.failing` and `.inapplicable`
-  classify a law as broken or not applicable, `.modulo` compares up
-  to a function and `.weaken` quantifies over a named subspace;
-  `Axiom.canonical` is the law as a schema and `Axiom.draw` draws
-  it, a law the category breaks included: `Equation.checked` puts
-  `≠` between the terms that differ, so a broken law is drawn as
-  the inequation it is.
-- `axioms.Serialisable`, the serialisation interface of DisCoPy, one
-  hook driving all three mechanisms: `serialised_attrs` names the
-  attributes that are also keyword arguments of `__init__`, from
-  which follow generic inverse `to_tree` and `from_tree`, a generic
-  `__repr__` such that `eval(repr(x)) == x`, and `__setstate__` for
-  the pickle protocol. Each mechanism comes with the law that it is
-  a roundtrip — `repr_transparency`, `pickling`, `copying` and
-  `serialisation` — stated as axioms like any other: both `Category`
-  and `Serialisable` subclass `axioms.Testable`, which carries the
-  `axioms` classproperty they share, so a type stating the
-  roundtrips without being a category is enrolled like the rest. A
-  class enrols itself by implementing `strategy`, and one that would
-  inherit a strategy for the wrong terms declares `strategy =
-  no_strategy` until it implements its own.
-- The conversion, rewriting and drawing laws of the free diagram
-  categories, stated as axioms on the classes introducing the
-  methods: the hypergraph and map sections and retracts, the
-  staircase encoding, the idempotence and soundness of `normal_form`
-  and `foliation`, `drawing_identity` and the rendering determinism
-  of both backends, together with `cat.Equivalence`, a functor with
-  an inverse, and the equivalences each level builds from its
-  conversion methods. The classifications live on the levels where
-  the laws break, verified against observed failures, and re-enabled
-  where the hierarchy's diamonds would otherwise skip a level that
-  passes.
-
-- `discopy.pattern`, the language in which a category will state its
-  structure: patterns for the objects of a category with variables to
-  instantiate, and their collection into sequents. A sequent is the
-  signature of a method: its PEP 695 type parameter list is the
-  context, each bound a sort — `A: Obj[C0]` an object, `X: Atom[C0]`
-  an atomic one, `N: Count` a number of repetitions — the parameters
-  the premises and the return annotation the conclusion, each a
-  subscript of the new type aliases `Obj` and `Hom` of `discopy.abc`:
-  `f: Hom[C1, A, B]` a morphism between two sides and `x: Obj[C0, p]`
-  a pattern beside its coarse type, the compound sides built by the
-  formers `Tensor[A, C]`, `Unit[C0]`, `L[A]`, `R[A]`, `D[A]`,
-  `Over[A, B]`, `Under[A, B]` and `Repeat[X, N]`. The aliases are
-  PEP 695 `type` statements expanding to the `Annotated[T, ...]` a
-  typechecker reads, so the coarse types stay fully checked while
-  `pattern.expand` rebuilds the pattern from the subscript. The
-  patterns remain plain values that an `Annotated` may carry inline:
-  `Var(A)` lifts a type parameter, `Hom(p, q)`, `p @ q`, `p.l`,
-  `p.r`, `p.d`, `p << q`, `p >> q`, `p ** n` and `UNIT` build the
-  compounds, and a side of `Hom` lifts itself — a bare type
-  parameter is one variable, a list or tuple the tensor of its
-  elements. Each pattern class declares its level, the least
-  structure the objects it stands in must have, refusing objects
-  bounded below what its shape needs. A conclusion is matched
-  against a goal by unification over the free monoid of objects — a
-  `Tensor` splits the goal at every position, a `Var` binds once, an
-  adjoint inverts to the other side — and what matching cannot
-  invert is a residual equation checked once the variables are
-  instantiated. Nothing is `eval`ed and nothing is quoted: the
-  annotations are the lazy objects of PEP 649, built in their
-  defining scope when first read. The alias is `Obj` and the variable
-  `Var` rather than `Ob`, which keeps naming the objects of a category
-  in every module, the deprecated `rigid.Ob` included.
-
-- `utils.Generator` declares a generator once, on the category that
-  introduces it and under its own name: `@Diagram.generator` above
-  `class Swap` in `symmetric` binds `Diagram.Swap`, with a `ClassVar`
-  annotation for it in the body of `Diagram`. Naming the attribute after
-  the class couples the two, so a category reads `cls.Swap` where it used
-  to read `cls.swap_factory` and `cat.FreeCategory.generator` needs no
-  name of its own. That name was taken: the `generator` of an `Arrow`,
-  `Ty`, `Layer`, `Diagram`, `Sum` or `Hypergraph` -- the single box or
-  object of a term that has exactly one -- is now its `atom`, with
-  `is_generator` following as `is_atom`, which is what a term of length
-  one is. `Sum.atom` is a property like the other five, where it was a
-  method returning itself. Every level below
-  gets its own subclass built on first access, extending the swaps of its
-  bases, the generators its root extends (a swap is a permutation, a
-  discard a copy) and the level itself, so a module writes
-  `Swap = Diagram.Swap` in place of `class Swap(markov.Swap, Box)`
-  and `Diagram.swap_factory = Swap`; a level adding behaviour declares it
-  again, a generator that is behaviour rather than a class is a
-  `Generator.classmethod`, e.g. the trace of a pivotal diagram, one that is
-  another generator of the same category a `Generator.alias`, e.g. the braid
-  of a symmetric category is its swap, and a class attribute assigned by
-  hand still wins. The old names read the new ones with a
-  `DeprecationWarning`: every generator declares the `*_factory` it
-  replaces, e.g. `Diagram.swap_factory` reads `Diagram.Swap`, one
-  assigned by hand, e.g. `Recipe.swap_factory = CookingSwap`, is still
-  the generator of that category, and `is_generator` reads `is_atom`. A
-  generator built for a category outside the package is named after it,
-  e.g. `Recipe.Swap`, so that it pickles, and a level's generator extends
-  those its bases declare under an alias, so a compact swap is still a
-  ribbon braid. Two slots name a role rather than a class, since they
-  are read on whichever free monoid or category is at hand: a stream
-  answers to `FollowedBy`, and a `List` names the class of its atoms
-  `Atom` where a `Ty` names its generators `Wire`, since `Atom` types
-  what a list is made of and `ob` what it goes between. `abc.Category.equation_factory` becomes `Category.Equation`
-  and each level binds the `Equation` it declares, where every one of them
-  read `cat.Equation`: an axiom of a category that quotients its equations
-  is now checked up to that quotient, e.g. by hypergraph isomorphism from
-  `symmetric` on, as the slot always said it would be.
-  `Generator[**P, T]` is generic in
-  the parameters of its generator and the instance it builds, `subclass`
-  and `classmethod` scoping their own, so that a binding carries the
-  signature of its root and a `ClassVar` spelling that signature out is
-  checked against it; `__get__` returns `Callable[P, T]` and `__call__`
-  takes `P` to `T`, for a generator read off the class that declares it. Fifty-six
-  trivial subclasses go, and every generator a level builds (bubbles,
-  sums, traces, copies, merges, evaluations) is a diagram of that level
-  rather than of the level that introduced it. Roots initialise through
-  `self.Box.__init__`, i.e. the box of the level they are
-  built in, so the six `z = 0` of the ribbon generators go where a braid
-  used to have no winding number of its own, `feedback.Swap`, `Copy` and
-  `Merge` keep only their `delay`, and `ribbon.Functor` recognises any
-  `balanced.Braid`. `cat.Arrow`
-  type-checks its boxes itself, `pivotal.Box` is a `traced.Box` and
-  `closed.Diagram.is_linear` reads its boxes. The same declaration serves
-  types, terms and functors: a `Ty` declares its wire, `biclosed.Ty` its
-  exponentials, `biclosed.Diagram` its terms with
-  `Ty.Constant = Diagram.Constant` linking the two at each
-  level, and every `Diagram` its `Functor`. A built class is tied to its
-  level by its root: it extends the level when the root is a subclass of
-  the owner, and the class attributes of the root equal to the owner are
-  lifted, so a built `Exp` has the level's `Ty` as `ob` and a built
-  `Functor` the level's `Diagram` as `dom` and `cod`. A generator is built
-  once per module, `Nat` and `Dim` sharing those of their `Ty`.
-  `categorial.Over` and `Under`, `pivotal.Functor` and `pregroup.Functor`
-  go, `biclosed.Ty` is made of the `biclosed.Wire` it never used, and the
-  braided, ribbon, pregroup and circuit diagrams have their own
-  `Functor` where they inherited a higher level's. `Layer`
-  is a `Generator` like the rest, so every level has its own `Layer` rather
-  than the one of the level that last added behaviour to it: a diagram
-  names its own layers when it serialises, and a layer built by hand from
-  a parent's class is not equal to one of the level below, as was already
-  the case for boxes. A factory class whose `ar` has no generator in its
-  bases, e.g. `grammar.cfg.Tree`, keeps the root of the declaration rather
-  than raising `ValueError`.
+- `grammar.abstract`, abstract categorial grammars after de Groote's
+  *Towards abstract categorial grammars* (2001)
+  ([#398](https://github.com/discopy/discopy/issues/398)).
+- Closed terms are evaluated in a context, a list of distinct variables
+  containing the free ones, through `closed.TermBase.weaken`, the structural
+  morphism discarding the others and permuting the rest; `is_linear` says
+  whether a term is, `compose` composes terms of function types,
+  `occurrences` counts the free occurrences of a variable and
+  `Substitution` is simultaneous and capture-avoiding, through the
+  `substitute` method of each term, where it recursed forever on an
+  abstraction.
+  `closed.Ty.from_biclosed` and `closed.TermBase.from_biclosed` are
+  functors dropping planarity, and `biclosed.Functor.map_term` sends a term
+  to a term under a binding environment, checking the image against the
+  image of its type and of its free variables
+  ([#398](https://github.com/discopy/discopy/issues/398)).
+- Products and let statements in the term language of `discopy.closed`:
+  a not-strictly-associative `Product` type constructor called with `*`,
+  `Pack`/`Unpack` boxes witnessing the isomorphism with the strict tensor,
+  the `Tuple`, `Projection` and `Let` terms with a `let` introspection
+  helper, and `Diagram.to_term` printing any causal diagram as a compact
+  term in fine-grain call-by-value style via `Hypergraph`. The new terms
+  are evaluated in a context through `weaken` like the others, substitute
+  capture-avoidingly by renaming their bound variables, and say whether
+  they are linear; `TermBase.share` is the structural morphism copying
+  the free variables of a term into those of its subterms, which
+  `Application`, `Tuple` and `Let` evaluate through. A closed constant
+  prints as its bare name. `Tuple`, `Projection` and `Let` are `Compound`
+  terms, equal when their parts are and printed only when their name is
+  first read, so that `to_term` is linear rather than quadratic in the
+  number of boxes ([#694](https://github.com/discopy/discopy/issues/694))
+  ([#370](https://github.com/discopy/discopy/issues/370),
+  [#458](https://github.com/discopy/discopy/issues/458),
+  [#489](https://github.com/discopy/discopy/pull/489)).
+- `traced.Sum`, `pivotal.Sum`, `compact.Sum` and `frobenius.Sum`, the formal
+  sum of morphisms at the four levels of the hierarchy that had none, each
+  mirroring its `Diagram`'s own bases and wired into `Diagram.sum_factory`.
+  A functor with a formal sum in its codomain (e.g. `ar_map=lambda x: x + x`)
+  crashed on any diagram in one of these four categories, unlike every other
+  level ([#207](https://github.com/discopy/discopy/issues/207)).
 - `CMap.is_scalar` is `not dom and not cod`, i.e. a scalar is an
   endomorphism of the unit, where it used to be "a single box with no ports,
   or a single scalar loop". Scalars are closed under tensor and that
@@ -392,55 +302,41 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   imports `multiplicative` on first use, since it imports `monoidal`
   which imports `python.finset`
   ([#728](https://github.com/discopy/discopy/issues/728)).
+- Every level declares the generators it binds after its `Diagram` as
+  class variables of it, e.g. `swap_factory: ClassVar[type["Swap"]]` in
+  `symmetric.Diagram`, so that a typechecker reads `cls.swap_factory` as
+  the class it is rather than as unknown. `pivotal.Box` is a `traced.Box`,
+  as its diagrams are traced, and `ribbon.Diagram.sum_factory` is
+  `ribbon.Sum`, which it defined but never assigned.
 - `discopy/axioms.py`, a Hypothesis-based property-testing module, home
   of `Equation` (formerly `discopy.abc.Equation`): a law is stated once
-  on `discopy.abc.Category` and every subclass inherits
-  it, as an `Axiom` decorated with `@axiom`: a classmethod of its
-  category — the class it is bound to — implicitly, its remaining
-  parameters generated from their annotations, `C0`, `C1` or `Self` for
-  the objects, arrows or terms of the category;
-  `.failing`/`.inapplicable` classify a
-  law as broken or not applicable to a category, and `.modulo`/`.weaken`
-  are defined (compare up to a function, quantify over a named subspace)
-  but not used yet. A
-  broken law raises `AxiomFailure` carrying its equation, whose sides say
-  how it failed; `Axiom` is a dataclass whose classifiers derive one from another
-  with `dataclasses.replace`, so none of them drops a field — `.failing`
-  used to lose the subspaces a `.weaken` declared. The argument and
-  subspace wrappers are parameterised with `NamedGeneric["factory"]` like
-  `Hypergraph` and `Equation` — which moves `NamedGeneric` itself down to
-  `discopy.utils`, re-exported from `discopy.abc`, so `discopy.axioms`
-  can use it — making a subscripted wrapper a class whose
-  `strategy(cls, **params)` matches the contract `Testable.strategy` now
-  states, so a subspace annotation like `ComposablePair[C1]`
-  builds; an unbound axiom's `.strategy()` raises the same `TypeError`
-  as `.falsify` and calling it. The
-  search itself is the canonical instantiation only — one atomic object or
-  one free/generator box per parameter, no recursive or compound
-  generation — wired up in `proptest/test_axioms.py`, enrolled so far for
-  `cat.Arrow`, and run by the new `proptest` GitHub
-  workflow on PRs labelled `proptest`, on `main`, nightly and on manual
-  dispatch. `proptest/conftest.py` registers four Hypothesis profiles
-  over one example database, keyed per cell: `pr` replays what the
-  database remembers and generates a few examples from a fixed seed,
-  `explore` searches with a large budget, `dev` works on the local
-  database alone and `shared`, registered only when selected, backs it
-  with CI's through a read-only `GitHubArtifactDatabase` and a
-  `GITHUB_TOKEN`. The workflow downloads the database from the previous
-  run's artifact, and a run of `main`, the nightly search or a dispatch
-  uploads its own afterwards — a pull request only reads it — so a
-  counterexample found by one night's search fails every pull request
-  until it is fixed or declared, and `Axiom.falsify` searches for one on
-  demand. `Testable`
-  states the laws of any type that generates its own instances, whatever
-  its level: `transparency`, `pickling` and `serialisation` are cells of
-  the matrix for every category — `eval(repr(x))`, the pickle and the tree
-  of a term read back to it, as `Equation`s like every other law — with
-  `Testable.environment` for the namespace a representation reads back
-  in — the package's public names and then those of the module the
-  category is defined in, so that a term printing bare names such as
-  `Tensor[int]([0], dom=Dim(1), cod=Dim(1))` reads back without its
-  category declaring anything; the ad-hoc property
+  on `discopy.abc.Category` and every subclass inherits it, as an `Axiom`
+  decorated with `@axiom`, a classmethod of its category whose remaining
+  parameters are generated, see the sequents above. `.failing` and
+  `.inapplicable` classify a law as broken or not applicable to a
+  category, `.modulo` compares it up to a function and `.weaken` restricts
+  the terms it quantifies over. A broken law raises `AxiomFailure`
+  carrying its equation, whose sides say how it failed; `Axiom` is a
+  dataclass whose classifiers derive one from another with
+  `dataclasses.replace`, so that none of them drops a field, and
+  `Axiom.strategy` and `Axiom.falsify` give the arguments of a law by
+  name. `NamedGeneric` moves down to `discopy.utils`, re-exported from
+  `discopy.abc`, so that `discopy.axioms` can use it, and `abc.Category`
+  is a `Testable`, whose `strategy` raises `NotImplementedError` until a
+  class implements one. The matrix is `proptest/test_axioms.py`, run by
+  the new `proptest` GitHub workflow on pull requests labelled
+  `proptest`, on `main`, nightly and on manual dispatch, under the
+  Hypothesis profiles of `proptest/conftest.py`, which share one example
+  database: the workflow downloads it from the previous run's artifact,
+  and a run of `main`, the nightly search or a dispatch uploads its own
+  afterwards — a pull request only reads it — so that a counterexample
+  found by one night's search fails every pull request until it is fixed
+  or declared, and `Axiom.falsify` searches for one on demand.
+  `axioms.Serialisable` states the roundtrips of a term as laws, its
+  `repr` evaluated in `Testable.environment`, the package's public names
+  and then those of the module the category is defined in, so that a term
+  printing bare names such as `Tensor[int]([0], dom=Dim(1), cod=Dim(1))`
+  reads back without its category declaring anything; the ad-hoc property
   files for representations, pickling and serialisation are gone, and a
   known violation is a `.failing` declaration on its category like any
   other broken law. `discopy.axioms` joins the API docs under its own
@@ -558,79 +454,36 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Changed
 
-- `Diagram.to_hypergraph` records the offset of every state of a diagram,
-  where it only did so for a diagram with one box per layer, so that a
-  foliated diagram whose states share a layer is placed back without
-  swaps too. A diagram with no state has no offset to record and its
-  hypergraph is built once, as before.
-
-- The trace laws hold from `symmetric` down: a free trace is a box,
-  so `traced` and `balanced` keep the (di)naturality and superposing
-  laws out of the matrix, but the trace of a symmetric category is a
-  feedback wire, which the hypergraph quotient its equations compare
-  by identifies on both sides. `symmetric.Diagram` restates the six
-  laws its levels below inherited unchecked. The currying laws state
-  their roundtrip through the one-wire rules `curry_left`,
-  `curry_right`, `ev_left` and `ev_right`, which the search leaves
-  out as admissible at a rigid level, and `MarkovCategory.merge_dagger`
-  states that merging is the dagger of copying, the default its
-  `merge` implements.
-
-- A class subscripted with a DisCoPy class is named by its
-  `factory_name`, e.g. `hypergraph.Hypergraph[frobenius.Diagram]`
-  where every level read `Hypergraph[Diagram]`, since every level of
-  the hierarchy has a `Diagram` of its own: the representation of a
-  hypergraph or a map says which category it is over, and so does the
-  identifier of its cells in the property matrix.
-
-- The rules of the search are decoupled from the n-ary methods they
-  derive from, each stated once in `discopy.abc` as its one-wire
-  instance: `trace_left`/`trace_right`, `curry_left`/`curry_right`
-  and `feedback_left`/`feedback_right` lose their `n` and
-  compound-memory handling and forward to the per-level methods
-  `trace(n, left)`, `curry(n, left)` and
-  `feedback(dom, cod, mem, left)`, now abstract on their abstract
-  base classes — `traced.Diagram` iterates its `Trace` one wire at a
-  time, `feedback.Diagram` its `Feedback`, and
-  `abc.RigidCategory.curry` holds the caps construction its two
-  rules used to duplicate — so the rule forwarders that `ribbon`,
-  `cmap`, `drawing`, `para` and `biclosed` restated are deleted and
-  inherited instead, while the semantic categories outside the
-  traced tower (`Matrix`, `Hypergraph` and `python`) keep their
-  method forwarders. Composing objects is a method and not a rule:
-  `abc.ColouredMonoid.then` and `cat.FreeCategory.then` shed the
-  `@rule` whose starred spelling stated a binary sequent by
-  convention, and so do the `then`/`tensor` restatements of the
-  concrete categories nothing searches — `Matrix`, `Tensor`,
-  `Channel`, `Hypergraph`, `Stream`, `para.Symmetric`, `Drawing`,
-  `interaction`, `python.finset` and `symmetric.Permutation` —
-  whose sequents live on the abstract base classes. Code calling
-  `trace_left(n)`, `curry_left(n)` or a compound-memory
-  `feedback_left` on a diagram goes through `trace`, `curry` and
-  `feedback` instead.
-
-- DisCoPy requires Python 3.14. Annotations are the lazy objects of
-  PEP 649 rather than quoted strings: the `from __future__ import
-  annotations` of every module goes — kept only where the previous
-  axioms machinery still reads strings, until it moves onto the
-  sequents — the forward references it quoted are plain names, and
-  every signature is read lazily, when a declaration's sequent is
-  first parsed. `pflake8`, which reads a lazy forward reference as an
-  undefined name, is replaced by `ruff` targeting `py314`, configured
-  in `pyproject.toml` with the codes and ignores of flake8. `pylint`
-  stays, `.pylintrc` reading Python 3.14 and disabling the messages
-  it reads wrongly there — a PEP 695 bound naming its own class, a
-  lazy annotation, a method `@axiom` or `@rule` makes a classmethod, a
-  generator built on first access — with `fail-under` raised to 9.19.
-  The pylint locked in `uv.lock`, now a dev dependency run by the
-  `lint` job over the same groups as the tests, scores between 9.24
-  and 9.27, the number of `cyclic-import` it reports varying from one
-  run to the next, so the threshold stays below that range rather than
-  at a score a rerun can miss. The type parameters of the `Obj`
-  and `Hom` aliases are named `Coarse`, `Fine`, `Dom` and `Cod`, since
-  pylint reads those of a PEP 695 alias as module-level names that
-  every `A`, `B` and `X` of a sequent would redefine. The CI test
-  matrix runs 3.14 alone.
+- `Hypergraph.strategy` and `CMap.strategy` sample the categories whose
+  coherence theorem they state, raising `NotImplementedError` for the
+  others: a planar diagram is not determined by its wiring, and a map
+  cannot draw the spiders of a Markov or hypergraph category.
+- A class subscripted with a DisCoPy class is named by its `factory_name`,
+  e.g. `hypergraph.Hypergraph[frobenius.Diagram]`.
+- The laws of a planar level, from `monoidal` to `ribbon`, `rigid` and
+  `pivotal`, are compared on the nose rather than up to hypergraph, which
+  `symmetric.Diagram.equation_factory` keeps from symmetric categories on:
+  below, a passing cell said little, as a braid equal to its inverse or a
+  twist equal to the identity passed, and a failing one is now declared
+  with `NO_PLANAR_NORMAL_FORM` until each doctrine has a normal form.
+- A property read off a value with `hasattr` is read with `isinstance`
+  where a class states it: adjoints by `Pregroup`, swaps by
+  `SymmetricCategory`, identities by `Category`, products and packing by
+  `closed.Ty` and `closed.Diagram`, windings by a `rigid.Box.z` of zero by
+  default, arrays by `tensor.Box`, a list of numbers by `Sized` and a file
+  by not being a path. A `MappingOrCallable` is a mapping when it wraps a
+  `Mapping` and a callable when it wraps a callable, where anything
+  indexable was a mapping, and it raises `TypeError` on anything else as
+  soon as it is built rather than on its first lookup. `interaction.Ty`
+  is a `Pregroup`, as its negation is both its adjoints, and
+  `assert_isadjoint` moves from `rigid.Ty` to `Pregroup`, beside
+  `is_adjoint`, so that integer types check their cups and caps as rigid
+  ones do; `x << y` and `x >> y` are their exponentials.
+  A functor still asks its codomain for structure by name, as a
+  `Hypergraph`, a `Stream`, a `Matrix` or a `Tensor` has more than the
+  abstract class it subclasses states.
+- `Equation` has one symbol fewer than terms, a symbol between each pair of
+  consecutive terms; `symbols` of any other length raise `ValueError`.
 
 - `monoidal.Colour` is transparent by default rather than white, i.e. its
   `name` defaults to the new `config.TRANSPARENT` and `monoidal.white` is
@@ -903,6 +756,10 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   and speedups over 25%; a regression raises a warning annotation and never
   fails the job, since a shared runner can push an unrelated case over the
   threshold on noise alone.
+- `Sqrt` of a negative or complex number carries an `is_dagger` flag that
+  conjugates its array, so such a square root and its dagger are no longer
+  equal; a real square root stays self-adjoint and rejects the flag
+  ([#482](https://github.com/discopy/discopy/issues/482)).
 - Benchmark cases now use `pytest-benchmark`'s automatic calibration.
 - Every `monoidal.Wire` subclass named `Ob` is renamed to `Wire`: `rigid`,
   `braided`, `biclosed`, `pivotal`, `frobenius`, `feedback` and
@@ -916,32 +773,12 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Removed
 
-- The typing axioms `identity_typing`, `composition_dom_typing`,
-  `composition_cod_typing`, `tensor_dom_typing` and
-  `tensor_cod_typing`: each says that an operation lands on the
-  boundary its sequent declares, which a dynamic check of the
-  conclusion of every rule states once for every operation, rather
-  than one axiom per operation and per side.
-- The unit tests the axioms state generically: the per-type repr,
-  equality, hash, pickle and tree roundtrips of enrolled types and
-  the law restatements on hand-picked examples — the unit suite
-  keeps to what the laws cannot state: behaviours, error cases,
-  exact encodings and recorded regressions.
-
 - Parameters nothing read: `grammar.cfg.Tree.to_diagram`'s
   `contravariant`, a placeholder since the module's first commit;
   `Tree.from_nltk`'s `lexicalised` and `word_types`, which the grammar
   refactor stopped reading; `Drawing.id`'s `length`;
   `markov.Diagram.discard`'s `n`; and `drawing.backend.Backend`'s
   `linewidth` ([#768](https://github.com/discopy/discopy/pull/768)).
-- `biclosed.Variable` and `closed.Variable` require an atomic codomain:
-  the abstraction machinery indexes contexts and free variables by
-  variable, counting on that index to coincide with a wire index, so a
-  variable of type `x @ y` used to bind only the last wire, leaving the
-  other one silently free in `biclosed`, and crash from inside `finset`
-  in `closed`, where `Abstraction.eval` permutes as many wires as there
-  are free variables
-  ([#609](https://github.com/discopy/discopy/issues/609)).
 - `cat.Bubble.dagger`: a bubble's dagger was inherited from `Box.dagger`,
   which reconstructs with `type(self)(name, cod, dom, ...)` — positional
   arguments `Bubble.__init__` reads as `*args`, so it crashed with
@@ -980,52 +817,141 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
-- `Equation` has one symbol fewer than terms, a symbol between each pair
-  of consecutive terms, where it defaulted to one per term and the last
-  went unused; `symbols` of any other length raise `ValueError`, and
-  `Equation.checked` no longer pads its symbols with the unused one.
+- `Diagram.foliation` is idempotent. A diagram records the offsets of its
+  states whenever it has one, where it did only when each layer held one
+  box, so a foliated diagram with several states in a layer refoliated
+  differently; and the foliation read off a hypergraph merges its layers,
+  so consecutive permutations compose into one. `foliation_idempotence`,
+  a law of `monoidal.Diagram`, found the second, and holds up to `to_map`
+  from compact categories on, where a refoliation yanks a snake the first
+  can leave in place. `Diagram.to_staircases` maps a diagram with the
+  functor of its own level, where `monoidal.Functor` sent a trace to a
+  monoidal bubble.
+- `Stream.sequence` builds the boxes of the category the stream is over,
+  where it built `symmetric.Box` whatever the category; `para.Closed.curry`
+  defaults to `left=True` like every other curry since #560; decoding with
+  neither boxes and offsets nor their zip, and subscripting a
+  `NamedGeneric` that has no type parameter, raise with a message; and the
+  recipe of the `diagrams` notebook sets `ob`, where it set a `ty_factory`
+  nothing reads.
+- A binary term or type raising of a categorial grammar evaluates with a
+  functor passed positionally, as the terms around it pass it, where
+  `FX(FC(a, b), r).eval()` raised `TypeError`.
+- An exponential of the unit is its base, `x << Ty()`, `Ty() >> x` and
+  `x ** Ty()` being `x` on biclosed and closed types, so that `curry(0)` is
+  the identity and the evaluation at the unit is too: a curry of no wire
+  was a box into `Ty() << Ty()`, which `to_map` crashed on.
+- A curry refuses its dagger with an `AxiomError`, where it crashed calling
+  its constructor with the arguments of a box.
+- The categorial grammar has a `Coeval` and the abstract one a `Merge`, so
+  that the daggers of their evaluations and copies stay in their category.
+- A delayed `feedback.Box` reads back from its tree, which dropped its time
+  step, and a `Dim` from its own, where `dumps(Dim(2))` raised
+  `AttributeError` on the integers inside it.
+- `Layer.merge` refuses two layers that compose to the identity, e.g. a
+  snake, which is not a layer, where it raised `UnboundLocalError`; and
+  `rigid.Diagram.snake_removal` loses a guard on an attribute no layer has,
+  which raised a message that did not exist.
 
-- `Drawing.dagger` reflects a drawing of more than one box. A drawing
-  read its nodes in the order its graph happened to store them, and its
-  validation required that order to be the index of each node, which
-  the relabelling of a reflection reversed: the nodes of each kind are
-  now `Drawing.nodes_by_kind`, a `cached_property` sorted by the new
-  `Node.index` — a box, then a wire — and forgotten by `invalidate`
-  whenever the graph changes in place, so the order the graph stores is
-  no part of the drawing. Validating the empty drawing no longer takes
-  the maximum of no position, and `monoidal.Diagram.
-  drawing_dagger_involution` states that reflecting a drawing twice
-  gives it back.
-- A trace reads back from its tree and its representation: it is
-  serialised by its argument and its side, `serialised_attrs` being
-  `("arg", "left")` with a `from_tree` of its own, where it inherited
-  those of a bubble, which wrote a `dom` and `cod` its constructor
-  does not take and dropped `left`; and it represents its argument
-  with `repr` rather than `str`. `traced` and `symmetric` check
-  `repr_transparency` and `serialisation` again, `balanced` declaring
-  its own failing `serialisation` for the twist, the case of
-  [#742](https://github.com/discopy/discopy/issues/742) that remains
-  with the copies of `markov` and the spiders of `frobenius`.
-- `feedback.Trace` delays: the delay of a trace is the trace of the
-  delayed diagram, where it inherited the delay of a box, which
-  rebuilt it from a name, a domain and a codomain its constructor does
-  not take. `feedback.Diagram.delay_unit` and `delay_composition`
-  state that delaying is an action of the natural numbers, which a
-  diagram with a trace broke.
+- `feedback.Diagram.trace` built a `markov.Trace`, which does not compose
+  with feedback diagrams: `feedback.Trace` is the trace of a feedback
+  diagram, whose delay is the trace of the delayed diagram. The trace laws
+  found it as soon as feedback diagrams were sampled.
+- `braided.Diagram` and `ribbon.Diagram` bind their own `functor_factory`,
+  where they read those of `monoidal` and `pivotal`, so that their
+  conversions map a braid to a braid and a twist to a twist, as `balanced`
+  already did. The `swap`, `braid` and `twist` of a hypergraph or a map
+  read its host category: a swap exists only over a symmetric one, and is
+  absorbed into the wiring; a braid exists over a braided one, and is that
+  swap over a symmetric one but a box otherwise, a braid being no swap; a
+  twist exists over a balanced one, the identity over a symmetric one and
+  a box otherwise. The braid laws of a category that is not symmetric fail
+  with `NO_BRAID_GROUP`, as there is no braid group to compare braid words
+  with yet.
+- `grammar.categorial.Diagram` and `grammar.abstract.Diagram` bind their own
+  `box_factory`, so that their strategies draw boxes of their own category.
+- `Drawing.dagger` reflects a drawing of more than one box: a drawing read
+  its nodes in the order its graph stored them, which the relabelling of a
+  reflection reversed, so its validation failed. The nodes of a kind are
+  sorted by the new `Node.index`, and validating an empty drawing no longer
+  takes the maximum of no position.
+- A balanced functor sends the dagger of a twist to the dagger of its image,
+  where it dropped the dagger, as a braided functor already did for braids.
+- `biclosed.Curry.to_drawing` traces the `n` wires it curries, where it
+  traced one whatever `n` was.
 
-- `Stream[C].sequence` builds a box of `C` rather than a
-  `symmetric.Box`, which `Stream.__init__` then wrapped in a `C` diagram
-  of one foreign box, since its `box_factory` keyword defaulted to
-  `symmetric.Box` whatever the stream was parameterised over. It reads
-  `cls.category.Box` and the keyword goes, nothing having passed it.
-- Two docs notebooks call attributes that do not exist: the Kauffman
-  bracket of `examples.md` reads `Kauffman.Cup`, `Cap` and `Box` where
-  the slot rename left it on `cup_factory`, `cap_factory` and
-  `generator_factory`, and the cooking example of `diagrams.md` declares
-  the objects of its category with `ob` rather than a `ty_factory` that
-  never was an attribute, so the annotated `dom` and `cod` of a recipe
-  are `Ingredient` rather than a plain `cat.Ob`. No test runs the
-  notebooks, only the docs build does.
+- A member of a subscripted `NamedGeneric`, e.g. `Tensor[int]` or
+  `Hypergraph[markov.Diagram]`, unpickled as a member of its origin, since
+  the subscripted class never inherited `NamedGeneric.__setstate__`: it is
+  now rebuilt by `NamedGeneric.__reduce__`. `Copy` and `Discard` unpickle,
+  passing their type to `__new__`.
+- `from_tree` reads back `Trace`, `Twist`, `Spider`, `Copy`, `Merge`,
+  `Discard`, `Feedback` and an inverse `Braid`, and the repr of a `Trace`
+  evaluates back to it.
+- The dagger of a copy or merge stays in the category of its module, which
+  `closed` gets a `Merge` for, so that the dagger is an involution there.
+- The adjoints of a `frobenius.Wire` are the wire the other way round,
+  from its codomain to its domain, where they were the wire itself, as
+  the canonical instance of `dagger_contravariance` on frobenius types,
+  whose wires are coloured after its variables, found.
+- `Hypergraph.make_causal` traces a wire with the type of its producer,
+  where it took the unwound type of its spider, so compact hypergraphs with
+  adjoint wires downgrade to diagrams; the cups and caps of a hypergraph read
+  its host category as its swaps and braids do: they raise below rigid
+  categories, are the boxes of the cups and caps of a rigid, pivotal or
+  ribbon one, whose cups are planar and oriented, and are wiring from
+  compact categories on, where a cup is faithfully a spider of two ports,
+  a cup taking a type and its right adjoint and a cap a type and its left
+  one. The cups and caps of a map are boxes over a rigid host that is not
+  compact, `CMap.is_planar_rigid`, so that a right curry of a rigid map
+  builds, which wiring of one handedness refused. `Hypergraph.trace`
+  raises below traced categories, wires the traced outputs back to the
+  traced inputs over a symmetric one, and is the trace of the category,
+  `explicit_trace`, otherwise, while the conversion of a planar traced
+  diagram keeps its trace as a box, in a hypergraph as in a map, decoding
+  its argument needing swaps. `CMap.trace` follows over a planar traced
+  host, where it was a splice, and splices the traced wires otherwise, a
+  map being compact whatever hosts it, as `CMap.to_compact` relies on over
+  a biclosed one; a diagram with a
+  coloured wire has no hypergraph and no map, `COLOURED_QUOTIENT`, as a
+  swap is ill-typed across 0-cells, where it lost its colours; `feedback.Diagram.discard` builds a feedback box and
+  `feedback.Diagram.feedback` takes a memory of several wires.
+
+- A regression test for `stream.Stream.__init__`'s codomain-mismatch
+  `AxiomError`, which reports `cod`/`now.cod` rather than the `dom`/`now.dom`
+  it once printed on both sides of `!=`. The message was corrected in passing
+  by the `+`→`@` object rewrite; the test pins it so a future refactor cannot
+  silently reintroduce the bug
+  ([#605](https://github.com/discopy/discopy/issues/605)).
+- `biclosed.Curry`'s own constructor defaulted to `left=False`, disagreeing
+  with `Diagram.curry`'s `left=True` default since #560 unified the two: a
+  bare `Curry(box)` curried the opposite side of `box.curry()`, and
+  `grammar.categorial.Diagram.bc` passed `n` without `left`, so backward
+  composition curried on the wrong side by the same drift.
+- A variable of a composite type, e.g. `Variable("v", x @ y)`, is bound
+  whole. The abstraction machinery indexed contexts and free variables by
+  variable, counting on that index to coincide with a wire index, so such
+  a variable used to bind only its last wire in `biclosed`, leaving the
+  other one silently free, and crash `Diagram.permutation` in `closed`:
+  the context of a term is now mapped wire by wire. This replaces the
+  atomicity check on `Variable` that
+  [#642](https://github.com/discopy/discopy/pull/642) had added for the
+  same bug ([#609](https://github.com/discopy/discopy/issues/609)).
+- `closed.Box.is_linear` is a class attribute, so a `Curry`, a `Trace` or a
+  `Sum` read as linear whatever they held: `Copy(x) >> f` is not linear but
+  its curry, its trace and its formal sum were. Each now reads its inside.
+  `monoidal.Sum` pinned `ob = monoidal.Ty`, which came before the diagram
+  class in the resolution order of every level's `Sum`, so `closed.Sum.ob`
+  and `biclosed.Sum.ob` were `monoidal.Ty` rather than their own types and
+  a subclass had to pin its own; the pin is gone, `Sum.ob` is the `ob` of
+  the diagram it is a box of, as for every other box.
+- `biclosed.Eval`, `Coeval` and `Curry` read back from their `repr` and
+  from their tree, and `biclosed.Constant` from its tree: they printed and
+  serialised as a `Box`, with a name, a domain and a codomain their
+  constructors do not read, so `eval(repr(x))` and `loads(dumps(x))` raised
+  `TypeError` on every evaluation, coevaluation and currying, and
+  `loads(dumps(c))` on every constant
+  ([#398](https://github.com/discopy/discopy/issues/398)).
 - `Matrix.trace` reads its `left` flag: a left trace is the right trace
   of the matrix conjugated by swaps, where it traced the last `n`
   dimensions whatever was asked. `Tensor.to_quimb` passes its `dtype` to
@@ -1111,8 +1037,34 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   run when the branch has already moved past the event it is handling,
   rather than drafting a head that no longer exists behind its back
   ([#640](https://github.com/discopy/discopy/issues/640)).
+- `Matrix` is a `MarkovCategory` rather than a `MonoidalCategory` and gets a
+  native `Matrix.permutation`, so a matrix-valued functor applied to a
+  diagram with an explicit `Permutation` layer no longer raises
+  `AttributeError`. `Matrix.copy` and `Tensor.copy` default to `n=2` like
+  every other `copy` in the hierarchy, so single-argument calls such as
+  `closed.Application.eval` no longer raise `TypeError`
+  ([#535](https://github.com/discopy/discopy/issues/535)).
 - `build.yml` timeouts and a bounded, retried Graphviz install
   ([#591](https://github.com/discopy/discopy/issues/591)).
+- `python.Function.tensor` is variadic like `monoidal.Diagram.tensor`
+  ([#493](https://github.com/discopy/discopy/issues/493),
+  [#489](https://github.com/discopy/discopy/pull/489)).
+- `closed.Product` parenthesises a first factor of more than one wire at any
+  arity but two, as it already did at two: `Product(X @ Y, Z, W)` printed
+  `X @ Y.product(Z, W)`, which reads back as `X @ (Y.product(Z, W))`.
+- `closed.Product` no longer subclasses the deprecated `biclosed.Ob`
+  alias. Its `str` prints `X.product(Y, Z)` rather than `(X * Y * Z)` at
+  any arity but two, since the infix form is ambiguous with the pairwise
+  nesting `(X * Y) * Z` it is deliberately distinct from and does not
+  round-trip through `eval` there. `closed.Functor` routes `Pack`/`Unpack`
+  through `pack_factory`/`unpack_factory` instead of always rebuilding a
+  `closed.Pack`/`Unpack`, so converting a diagram with either box to a
+  `Hypergraph` (or any other non-`Diagram` codomain with product types) no
+  longer raises. `Pack`, `Unpack`, `Tuple`, `Projection` and `Let` have their
+  own `to_tree`/`from_tree` pair, like `Product` already did, instead of
+  inheriting `Box`'s, which builds them with a `name` keyword none of
+  their constructors accept
+  ([#489](https://github.com/discopy/discopy/pull/489)).
 - `frobenius.Diagram.unfuse`'s doctest no longer sets `Spider.color = "red"`
   to draw its example, which was leaking into every later doctest in the
   same pytest process
@@ -1120,6 +1072,11 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - Tensor networks are contracted with `opt_einsum` when the number of
   indices exceeds `numpy.einsum`'s 52-index limit
   ([#448](https://github.com/discopy/discopy/pull/448)).
+- Contracting a tensor network with more than `config.MAX_EINSUM_INDICES`
+  indices imports `opt_einsum`, which is not a declared dependency; a plain
+  install now raises a clear `ImportError` naming the package to install
+  instead of `ModuleNotFoundError` with no context
+  ([#596](https://github.com/discopy/discopy/issues/596)).
 - `grammar.categorial.cat2ty` reads a fully parenthesized category such as
   `(S\NP)` as a category rather than an atom, strips CCGbank features
   wherever they occur rather than on atoms only, and associates slashes to
@@ -1158,6 +1115,15 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - Drawing a discard on more than one wire: `draw_discard` was shadowing the
   layer index with its inner loop counter
   ([#513](https://github.com/discopy/discopy/issues/513)).
+- Bugs in `discopy.quantum` reported in
+  [#482](https://github.com/discopy/discopy/issues/482): `CQ.__str__`
+  printed classical dimensions as quantum, `Measure(override_bits=True)`
+  could not be evaluated, `Encode` ignored `constructive`/`reset_bits` in
+  its types so daggers were not type-correct, `CRz`/`CRx`/`CU1` raised at
+  any `distance` other than one, `Sqrt.dagger` returned `self` so that
+  `Sqrt(-1) >> Sqrt(-1).dagger()` evaluated to `-1` instead of `1`, and
+  `Channel.cups`/`Channel.discard` hard-coded `Channel` so `Channel[float]`
+  silently gave a `Channel[complex]`.
 - `closed.Context.dom` called `category.ob.tensor` unbound, which raised
   `TypeError` for an empty context instead of returning `Ty()`
   ([#549](https://github.com/discopy/discopy/issues/549)).
@@ -1204,6 +1170,14 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - `Hypergraph` equality, permutations and other micro-optimizations bring
   equality checks down to `O(n)`
   ([#353](https://github.com/discopy/discopy/pull/353)).
+- `Channel.tensor` contracts the two arrays directly and interleaves their
+  axes, instead of building four boxes, two swap diagrams and a fresh
+  `tensor.Functor` on every `@`: ~120x on one tensor and ~12x on
+  `eval(mixed=True)` for a four-qubit circuit. `Channel.measure` builds its
+  copy spider instead of a Python list comprehension, and
+  `Circuit.measure(mixed=False)` reads the Born rule off a single
+  contraction instead of running `2**n` of them: ~18x at ten qubits
+  ([#482](https://github.com/discopy/discopy/issues/482)).
 - `CMap.from_diagram` is linear rather than quadratic in the number of
   boxes: `CMap.from_glued` glues the image of each box onto a scan of
   open wires in a single pass, instead of folding the images with
@@ -1232,6 +1206,45 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Project
 
+- The package typechecks: `uv run ty check` passes, `ty` pinned in the
+  `dev` group at 0.0.69, configured by the `[tool.ty]` sections of
+  `pyproject.toml` and run by the `lint` job, which now syncs the extras
+  the imports need. `NamedGeneric` takes the PEP 695 type parameters of
+  its subclass, `class CMap[category](CompactCategory, NamedGeneric)`, so
+  that a typechecker reads `CMap[closed.Diagram]` or `tensor.Box[complex]`
+  as the specialisation it is; the abstract base classes bound their type
+  variables down the tower, and a default of `None` is typed as optional.
+  Two rules stay off: `invalid-method-override`, since the factory-method
+  pattern narrows `then` and `tensor` down the tower, and
+  `unresolved-attribute`, since a downgrade asks the host category for
+  structure it may not have. `fail-under` rises to 9.03.
+
+- `fail-under` rises from 8.75 to 8.77, the score once `closed` gains its
+  products and let statements
+  ([#489](https://github.com/discopy/discopy/pull/489)).
+- `CONTRIBUTING.md` tells a sandboxed contributor to diff its test-suite
+  failure set against the same run on the merge base, so that a failure
+  already present there reads as pre-existing rather than as a regression
+  the change introduced, and to claim local green only for the checks run
+  locally, with CI on the pushed branch the authority on the real suite
+  ([#499](https://github.com/discopy/discopy/issues/499)).
+- pylint reads a law stated with `@axiom` or `@rule` as the classmethod
+  it is with no plugin: a `Declaration` is a `classmethod`, which its
+  constructor initialises with the function it declares, and astroid reads
+  a function as a classmethod when its decorator returns one. The
+  configuration declares the `factory` a `NamedGeneric` subscript
+  sets and the `*_factory` attributes a module sets after its class as
+  `generated-members`, lets `hypothesis.strategies` be imported where a
+  strategy is built, the convention keeping hypothesis out of the
+  package's imports, and reads the code as the 3.12 that `pyproject.toml`
+  requires rather than 3.10. `cyclic-import` is disabled: the package
+  imports every module, so the graph is cyclic by design, and pylint
+  reported 63 cycles on one run of `main` and 67 on the next, moving the
+  score by a hundredth between two runs of the same tree, which a
+  threshold cannot tolerate. `fail-under` rises from 8.58 to 8.75, the
+  score of `main` once these categories are gone, the first four of the
+  ones [#770](https://github.com/discopy/discopy/issues/770) lists
+  ([#776](https://github.com/discopy/discopy/pull/776)).
 - The `lint` job fails on any unused import, variable, argument, wildcard
   import or private member, and on a pylint score below `fail-under`, set
   to the score of `main` at the time so that it never goes down:

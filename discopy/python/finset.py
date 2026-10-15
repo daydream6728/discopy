@@ -16,20 +16,19 @@ Summary
     Permutation
 """
 
+from __future__ import annotations
 from discopy.utils import assert_isinstance
-from typing import Annotated, Iterable, Self, Any, overload
+from typing import Iterable, Self, Any
 from collections.abc import Sequence
 
 from dataclasses import dataclass
 
 from discopy import messages
 from discopy.abc import MonoidalCategory, PROP, Nat
-from discopy.pattern import Atom, Hom, Var
-from discopy.search import rule
 
 
 @dataclass
-class Function(MonoidalCategory, Sequence):
+class Function(MonoidalCategory[Nat, "Function"], Sequence):
     """
     A function between finite sets encoded as a Python list.
 
@@ -74,33 +73,22 @@ class Function(MonoidalCategory, Sequence):
         return len(self.cod)
 
     @staticmethod
-    @rule
-    def id[A](x: Annotated[int | Nat, Var(A)] = 0
-              ) -> Annotated[Function, Hom(A, A)]:
-        x = Nat(int(x))
-        return Function(list(range(x)), x, x)
+    def id(x: int | Nat = 0):
+        n = Nat(int(x))
+        return Function(list(range(n)), n, n)
 
-    def then[A, B, C](
-            self: Annotated[Function, Hom(A, B)],
-            other: Annotated[Function, Hom(B, C)]
-    ) -> Annotated[Function, Hom(A, C)]:
+    def then(self, other: Function) -> Function:
         inside = [self[other[i]] for i in range(len(other))]
         return Function(inside, self.dom, other.cod)
 
-    def tensor[A, B, C, D](
-            self: Annotated[Function, Hom(A, B)],
-            other: Annotated[Function, Hom(C, D)]
-    ) -> Annotated[Function, Hom([A, C], [B, D])]:
+    def tensor(self, other: Function) -> Function:
         inside = list(self.inside) + [
             int(self.dom) + other[i] for i in range(len(other))]
         return Function(
             inside, self.dom.tensor(other.dom), self.cod.tensor(other.cod))
 
     @staticmethod
-    @rule
-    def swap[X: Atom, Y: Atom](
-            x: Annotated[int | Nat, Var(X)], y: Annotated[int | Nat, Var(Y)]
-    ) -> Annotated[Function, Hom([X, Y], [Y, X])]:
+    def swap(x: int | Nat, y: int | Nat) -> Function:
         m, n = int(x), int(y)
         inside = list(Permutation.swap(m, n))
         return Function(inside, Nat(m + n), Nat(m + n))
@@ -167,12 +155,6 @@ class Permutation(Function, PROP):
     def __iter__(self):
         return (self[i] for i in range(len(self)))
 
-    @overload
-    def __getitem__(self, key: int) -> int: ...
-
-    @overload
-    def __getitem__(self, key: slice) -> tuple[int, ...]: ...
-
     def __getitem__(self, key):
         if isinstance(key, slice):
             return tuple(self)[key]
@@ -192,9 +174,7 @@ class Permutation(Function, PROP):
         return hash(tuple(self))
 
     @classmethod
-    @rule
-    def id[A](cls, dom: Annotated[int | Nat, Var(A)] = 0
-              ) -> Annotated[Self, Hom(A, A)]:
+    def id(cls, dom: int | Nat = 0) -> Self:
         """ The identity permutation on ``range(size)``. """
         n = int(dom)
         return cls(range(n), n)
@@ -261,9 +241,7 @@ class Permutation(Function, PROP):
             i = self[i]
         return tuple(cycle)
 
-    def then[A, B, C](
-            self: Annotated[Self, Hom(A, B)],
-            other: Annotated[Self, Hom(B, C)]) -> Annotated[Self, Hom(A, C)]:
+    def then(self, other: Self) -> Self:
         """ Return ``self ; other``, i.e. ``result[i] == other[self[i]]``. """
         other = type(self)(other, len(self))
         elems = (other[self[i]] for i in range(len(self)))
@@ -286,10 +264,7 @@ class Permutation(Function, PROP):
         other = type(self)(other, len(self))
         return other.dagger().then(self).then(other)
 
-    def tensor[A, B, C, D](
-            self: Annotated[Self, Hom(A, B)],
-            other: Annotated[Self | None, Hom(C, D)] = None, *others
-    ) -> Annotated[Self, Hom([A, C], [B, D])]:
+    def tensor(self, other=None, *others) -> Self:
         """ Return the disjoint union of permutations. """
         if other is None:
             return self
@@ -345,24 +320,12 @@ class Permutation(Function, PROP):
         return component_of
 
     @classmethod
-    @rule
-    def swap[X: Atom, Y: Atom](
-            cls, left: Annotated[int | Nat, Var(X)],
-            right: Annotated[int | Nat, Var(Y)]
-    ) -> Annotated[Self, Hom([X, Y], [Y, X])]:
+    def swap(cls, left: int | Nat, right: int | Nat) -> Self:
         m, n = int(left), int(right)
         inside = tuple(
             i + n if i < m else i - m
             for i in range(m + n))
         return cls(inside, m + n)
-
-    def trace_left(self, n=1):
-        """ The trace of ``n`` wires on the left, see :meth:`trace`. """
-        return self.trace(n, left=True)
-
-    def trace_right(self, n=1):
-        """ The trace of ``n`` wires on the right, see :meth:`trace`. """
-        return self.trace(n)
 
     def trace(self, n: int = 1, left: bool = False) -> Self:
         raise NotImplementedError
