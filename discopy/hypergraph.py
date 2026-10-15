@@ -1908,7 +1908,8 @@ class Functor(cat.Functor):
     >>> assert F(both.to_hypergraph())(1, 2) == 3
     """
     def __call__(self, other):
-        if isinstance(other, ColouredMonoid) and not other.is_atomic:
+        if isinstance(other, ColouredMonoid) and not isinstance(
+                other, cat.Arrow) and not other.is_atomic:
             return self.cod.ob().tensor(*map(self, other))
         if not isinstance(other, Hypergraph):
             return super().__call__(other)

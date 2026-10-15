@@ -139,7 +139,7 @@ def test_Hypergraph_representation():
 
 
 def test_Functor_wraps_callables():
-    from discopy.symmetric import Ty as T, Box
+    from discopy.symmetric import Ty as T, Box, Layer
 
     # A raw callable in ar_map is wrapped into a Function whose boundaries are
     # the images of the box's, mapped atom by atom like the spider types.
@@ -148,6 +148,11 @@ def test_Functor_wraps_callables():
     F = Functor({x: int}, {f: lambda a, b: a + b}, cod=Function)
     assert F(x @ x) == Ty(int, int) and F(T()) == Ty()
     assert F(f.to_hypergraph())(1, 2) == 3
+
+    # An arrow that is also a coloured monoid, e.g. a layer, is left to
+    # cat.Functor rather than mapped atom by atom.
+    add = Function(lambda a, b: a + b, (int, int), int)
+    assert Functor({x: int}, lambda _: add, cod=Function)(Layer(f)) == add
 
 
 def adder_step(full_adder, adder, k):
