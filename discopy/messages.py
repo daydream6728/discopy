@@ -36,3 +36,8 @@ NOT_TRACED = "{} has no traces for the cycles of this map."
 NOT_SYMMETRIC = "{} has no swaps to downgrade this map."
 NOT_MARKOV = "{} has no copy or discard."
 NOT_ACYCLIC = "{} has a directed cycle, its boxes cannot be ordered."
+NOT_LEFT_MONOGAMOUS = "{} is not left-monogamous."
+NOT_CAUSAL = "{} is not causal."
+WRONG_NUMBER_OF_WIRES = "Expected {} wires for {}, got {} instead."
+WRONG_NUMBER_OF_BOUNDARIES = \
+    "Expected one boundary of wires for each of {} boxes, got {} instead."
