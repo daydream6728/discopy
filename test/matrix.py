@@ -115,3 +115,27 @@ def test_matrix_valued_functor_on_permutation():
     perm = Permutation(x @ y @ x, [1, 2, 0])
     F = Functor(ob_map={x: 2, y: 3}, ar_map={}, cod=Matrix)
     assert F(perm) == Matrix.permutation([1, 2, 0], [2, 3, 2])
+
+
+def test_swap_on_immutable_backend():
+    """ A swap is a block permutation, built without writing into an array. """
+    pytest.importorskip("jax")
+    with backend("jax"):
+        swap = Matrix.swap(1, 2)
+        assert swap == Matrix.permutation([1, 0], [1, 2])
+    assert np.array_equal(
+        np.asarray(swap.array), [[0, 0, 1], [1, 0, 0], [0, 1, 0]])
+
+
+def test_composition_promotes_dtype():
+    """ The integer structural matrices compose with floats as units. """
+    m = Matrix([[.5, .5], [.25, .75]], 2, 2)
+    assert Matrix.id(2) >> m == m == m >> Matrix.id(2)
+    assert Matrix.zero(2, 2) + m == m
+    assert (Matrix.id(1) @ m).array.tolist()\
+        == [[1, 0, 0], [0, .5, .5], [0, .25, .75]]
+    c = Matrix([1j], 1, 1)
+    assert Matrix.id(1) >> c == c == c >> Matrix.id(1)
+    assert Matrix[float].id(2) >> Matrix.id(2) == Matrix[float].id(2)
+    one_plus_one = Matrix[bool].copy(1) >> Matrix[bool].merge(1, 2)
+    assert one_plus_one == Matrix[bool].id(1)

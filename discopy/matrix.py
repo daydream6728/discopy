@@ -67,6 +67,7 @@ class Matrix(MarkovCategory, NamedGeneric['dtype']):
             id
             then
             tensor
+            promote
             zero
             swap
             transpose
@@ -100,6 +101,13 @@ class Matrix(MarkovCategory, NamedGeneric['dtype']):
     >>> assert Matrix([1, 0], dom=1, cod=2).dtype == np.int64
     >>> assert Matrix([0.5, 0.5], dom=1, cod=2).dtype == np.float64
     >>> assert Matrix([0.5j], dom=1, cod=1).dtype == np.complex128
+
+    Composition promotes the data type as the backend does, see
+    :meth:`promote`, so that the integer identity is a unit for a float
+    matrix rather than casting it to integers.
+
+    >>> m = Matrix([[.5, .5], [.25, .75]], 2, 2)
+    >>> assert Matrix.id(2) >> m == m == m >> Matrix.id(2)
 
     The data type needs to have the structure of a rig (riNg with no negatives)
     i.e. with methods ``__add__`` and ``__mul__`` as well as an ``__init__``
@@ -143,6 +151,34 @@ class Matrix(MarkovCategory, NamedGeneric['dtype']):
         >>> assert Matrix.id().cast(bool) == Matrix[bool].id()
         """
         return type(self)[dtype](self.array, self.dom, self.cod)
+
+    def promote(self, other: Matrix) -> type:
+        """
+        The class of a composite of two matrices, i.e. of their product,
+        direct sum or sum: the one with the ``dtype`` the backend promotes
+        their arrays to, read from the operand that already has it so that
+        a declared ``dtype`` survives composition with the integer
+        structural matrices, e.g. ``float`` rather than ``numpy.float64``.
+
+        Parameters:
+            other : The matrix to compose with.
+
+        Example
+        -------
+        >>> m = Matrix([[.5, .5], [.25, .75]], 2, 2)
+        >>> assert Matrix.id(2).promote(m) == m.promote(Matrix.id(2))\\
+        ...     == Matrix[m.dtype]
+        >>> assert Matrix[float].id(2).promote(Matrix.id(2)) == Matrix[float]
+        >>> assert Matrix[bool].id(2).promote(Matrix[bool].id(2))\\
+        ...     == Matrix[bool]
+        """
+        with backend() as np:
+            dtype = np.result_type(self.array, other.array)
+        if dtype == self.array.dtype:
+            return type(self)
+        if dtype == other.array.dtype:
+            return type(self)[other.dtype]
+        return type(self)[getattr(dtype, "type", dtype)]
 
     def __new__(cls, array, *args, **kwargs):
         with backend() as np:
@@ -248,26 +284,28 @@ class Matrix(MarkovCategory, NamedGeneric['dtype']):
 
     @unbiased
     def then(self, other: Matrix) -> Matrix:
-        assert_isinstance(other, type(self))
+        assert_isinstance(other, self.ar)
         assert_iscomposable(self, other)
         with backend() as np:
             array = np.matmul(self.array, other.array)
-        return type(self)(array, self.dom, other.cod)
+        return self.promote(other)(array, self.dom, other.cod)
 
     def tensor(self, other: Matrix = None, *others: Matrix):
         if others or other is None:
             return monoidal.Diagram.tensor(self, other, *others)
-        assert_isinstance(other, type(self))
+        assert_isinstance(other, self.ar)
+        cls = self.promote(other)
         dom, cod = self.dom @ other.dom, self.cod @ other.cod
-        array = self.zero(dom, cod).array
+        array = cls.zero(dom, cod).array
         array[:self.dom, :self.cod] = self.array
         array[self.dom:, self.cod:] = other.array
-        return type(self)(array, dom, cod)
+        return cls(array, dom, cod)
 
     def __add__(self, other):
-        assert_isinstance(other, Matrix)
+        assert_isinstance(other, self.ar)
         assert_isparallel(self, other)
-        return type(self)(self.array + other.array, self.dom, self.cod)
+        return self.promote(other)(
+            self.array + other.array, self.dom, self.cod)
 
     def __radd__(self, other):
         return self if other == 0 else self.__add__(other)
@@ -301,12 +339,7 @@ class Matrix(MarkovCategory, NamedGeneric['dtype']):
         >>> Matrix.swap(2,1)
         Matrix[int64]([0, 1, 0, 0, 0, 1, 1, 0, 0], dom=3, cod=3)
         """
-        left, right = index(left), index(right)
-        dom = cod = left + right
-        array = Matrix.zero(dom, cod).array
-        array[:left, right:] = Matrix.id(left).array
-        array[left:, :right] = Matrix.id(right).array
-        return cls(array, dom, cod)
+        return cls.permutation([1, 0], [left, right])
 
     braid = swap
 
