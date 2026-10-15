@@ -465,6 +465,19 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   hierarchy below symmetric: traced, Markov, closed, feedback, compact and
   hypergraph ([#558](https://github.com/discopy/discopy/issues/558),
   refactoring [#325](https://github.com/discopy/discopy/pull/325)).
+- `discopy.kleisli`, the Kleisli category of a `Monad`, with the channel,
+  multiplicative and additive instances. `Monad` carries an optional
+  `iterate` operator, i.e. the structure of an Elgot monad, so that
+  `kleisli.additive.Channel.trace` is defined exactly for the monads that
+  supply one, with Dal Lago-Hoshino's token machines as a worked example
+  where conditioning is a trace. `kleisli.additive.Channel` declares itself
+  a `TracedCategory`, so whiskering on either side comes from
+  `MonoidalCategory`. `python.function.EndoFunctor`, which `Monad`
+  extends, sends lists of types to lists of types since `Function.ob` is
+  `List[type]` ([#728](https://github.com/discopy/discopy/issues/728)):
+  `Maybe(int) == Ty(int | None)`, and the `dom` and `cod` of an additive
+  or multiplicative channel are lists of types, cast from a tuple
+  ([#443](https://github.com/discopy/discopy/pull/443)).
 - `para.Symmetric` carries an optional coparameter space: a map is
   `inside : dom @ param -> cod @ copar` with `copar` empty by default, so
   parametric maps read as before, coparametric maps are the empty-`param`
@@ -825,6 +838,20 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
+- `biclosed.Application` and `biclosed.Abstraction` are equal when their
+  parts are -- function, argument and side; variable, body and side -- as
+  the `closed.Compound` terms already were, rather than when they print
+  the same between the same types, which is what `cat.Box.setoid`
+  compares. A closed constant prints as its bare name, so `c0(c1)` with
+  `c0 : a << b, c1 : b` and with `c0 : a << a, c1 : a` compared equal
+  while `alpha_eq`, which reads the types of the constants, told them
+  apart, and `closed.TermBase.alpha_completeness` failed on the pair once
+  the nightly search drew it; a biclosed constant prints with its type, so
+  there the two equalities only disagreed on constants differing by their
+  `data` alone. Equality and hashing of a term are now structural, i.e.
+  recursive, as they were for a `Compound`
+  ([#767](https://github.com/discopy/discopy/pull/767),
+  [#489](https://github.com/discopy/discopy/pull/489)).
 - Three docstrings say what the code does. `discopy.para`'s module
   docstring states that the diagonal `param == copar` is not the state
   monad: the composition of two maps tensors their co/parameters where the
@@ -967,6 +994,11 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   and `draw` raise. The check is gated on `_scan`, so the internal fast paths
   that build layers by construction are unaffected
   ([#599](https://github.com/discopy/discopy/issues/599)).
+- `kleisli.additive.Channel.trace(0)` no longer empties `dom` and `cod`:
+  the tenth `self.dom[:-n]` site of
+  [#578](https://github.com/discopy/discopy/issues/578), left to this
+  branch since `discopy.kleisli` was not yet on `main` when the other nine
+  were fixed by [#588](https://github.com/discopy/discopy/pull/588).
 - `no-todo-on-main.yml`'s guard reads the pull request's live `draft`
   field rather than `github.event.pull_request.draft`, a snapshot taken
   when the event fires and stale by however long the event then waited
@@ -1148,6 +1180,9 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Project
 
+- `fail-under` rises from 8.79 to 8.82, by what `discopy.kleisli` lifts the
+  score: 8.85 to 8.88 on the lint job of `main`, 8.969 to 8.998 locally
+  ([#443](https://github.com/discopy/discopy/pull/443)).
 - `fail-under` rises from 8.77 to 8.79, the score once the terms carry
   their laws ([#767](https://github.com/discopy/discopy/pull/767)).
 - `fail-under` rises from 8.75 to 8.77, the score once `closed` gains its
