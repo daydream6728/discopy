@@ -95,7 +95,8 @@ def test_named_generic_pickle():
         loaded = pickle.loads(pickle.dumps(term))
         assert "__class_getitem__values__" not in vars(term)
         assert type(loaded) is type(term) and loaded == term
-        assert type(deepcopy(term)) is type(term)
+        copied = deepcopy(term)
+        assert type(copied) is type(term) and copied == term
 
 
 def test_deprecated_ob():

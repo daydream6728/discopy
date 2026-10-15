@@ -798,7 +798,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
-- Every parameterised class pickles with its parameter. `NamedGeneric`
+- Every `NamedGeneric`-parameterised class pickles with its parameter.
+  `NamedGeneric`
   encodes a member of `L[v]` as a member of `L` carrying `v` in its state,
   to be read back by a `__setstate__` it defined on `NamedGeneric` itself,
   which no class built from `NamedGeneric[...]` inherits: so
@@ -828,12 +829,13 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   marked as one. The tree of a `cat.Bubble` carries both as the tree of a
   box does, so they survive `loads(dumps(...))` too
   ([#637](https://github.com/discopy/discopy/issues/637)).
-- `tensor.Dim` reads back from its tree: it inherited `Ty.to_tree`, which
-  asks each atom for its tree where a dimension has plain integers inside,
-  so `dumps(Dim(2, 3))` raised `AttributeError`. `monoidal.Dim` keeps the
-  integers in its tree since
-  [#736](https://github.com/discopy/discopy/pull/736); a regression test
-  pins it ([#681](https://github.com/discopy/discopy/issues/681)).
+- `tensor.Dim` reads back from its tree. It used to inherit `Ty.to_tree`,
+  which asks each atom for its tree where a dimension has plain integers
+  inside, so `dumps(Dim(2, 3))` raised `AttributeError`; `monoidal.Dim`,
+  the base of `frobenius.Dim` and so of `tensor.Dim`, keeps the integers
+  in its tree since [#736](https://github.com/discopy/discopy/pull/736),
+  and a regression test pins it
+  ([#681](https://github.com/discopy/discopy/issues/681)).
 - Three docstrings say what the code does. `discopy.para`'s module
   docstring states that the diagonal `param == copar` is not the state
   monad: the composition of two maps tensors their co/parameters where the
