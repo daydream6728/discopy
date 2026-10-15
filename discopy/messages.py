@@ -42,7 +42,22 @@ COLOURED_QUOTIENT = (
     "{} is coloured: a hypergraph or a map is symmetric, and a swap is "
     "ill-typed across 0-cells, so it would lose its colours.")
 NO_VALUES = "{} has no sample of values, see axioms.values."
-NO_DAGGER = "A function has no dagger, so the dagger laws do not apply."
+NO_DAGGER = "There is no dagger here, so the dagger laws do not apply."
+LENS_TRACES_RIGHT = "A lens is traced on the right only."
+LENS_TRACE_LENGTH = (
+    "A lens traces as many atoms on each half, which a pair of types has "
+    "no single number of.")
+LENS_TYPES = "A pair of types is checked as the boundary of lenses."
+PARA_REPARAM = (
+    "A parametric map is equal only up to the reparametrisations that "
+    "permute its parameters, which its hypergraph compares in order.")
+PARA_NO_ROTATION = "A parametric map has no rotation."
+PARA_CURRY_COPAR = (
+    "A closed category cannot curry a map with coparameters {}, as its "
+    "exponential would swallow them.")
+LENS_NATURALITY = (
+    "A Markov lens is a unit and associative only up to the naturality of "
+    "copy and discard, which a hypergraph does not decide.")
 NO_SWAP = "{} is not symmetric, it has no swaps."
 NO_BRAID = "{} is not braided, it has no braids."
 NO_TWIST = "{} is not balanced, it has no twists."

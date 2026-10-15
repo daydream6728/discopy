@@ -71,6 +71,7 @@ from dataclasses import dataclass
 from discopy import interaction, markov, messages, monoidal, symmetric
 from discopy.abc import (
     MarkovCategory, NamedGeneric, SymmetricCategory, TracedCategory)
+from discopy.axioms import Equation
 from discopy.utils import (
     AxiomError, assert_iscomposable, assert_isinstance, classproperty,
     factory_name, get_origin, unbiased)
@@ -100,6 +101,31 @@ class Ty(interaction.Ty):
     """
     natural = monoidal.Ty
     negatives = staticmethod(tuple)
+
+    unitality = interaction.Ty.unitality.inapplicable(messages.LENS_TYPES)
+    associativity = interaction.Ty.associativity.inapplicable(
+        messages.LENS_TYPES)
+    dagger_involution = interaction.Ty.dagger_involution.inapplicable(
+        messages.NO_DAGGER)
+    dagger_contravariance = interaction.Ty.dagger_contravariance\
+        .inapplicable(messages.NO_DAGGER)
+
+    @classmethod
+    def strategy(cls, **params):
+        """ Generate pairs of types of the underlying category. """
+        from hypothesis import strategies as st
+
+        types = cls.natural.strategy(**params)
+        return st.tuples(types, types).map(lambda pair: cls(*pair))
+
+    @classmethod
+    def generators(cls, *, dom=None, cod=None):
+        """ Generate pairs of atomic types of the underlying category. """
+        # pylint: disable=unused-argument  # a pair has one colour
+        from hypothesis import strategies as st
+
+        atoms = cls.natural.generators()
+        return st.tuples(atoms, atoms).map(lambda pair: cls(*pair))
 
 
 def pairs(category) -> type:
@@ -158,6 +184,51 @@ class Symmetric[category](SymmetricCategory, NamedGeneric):
     forward: category
     backward: category
     residual: category.ob = None  # ty: ignore[invalid-assignment]
+
+    dagger_involution = SymmetricCategory.dagger_involution.inapplicable(
+        messages.NO_DAGGER)
+    dagger_contravariance = SymmetricCategory.dagger_contravariance\
+        .inapplicable(messages.NO_DAGGER)
+    dagger_monoidality = SymmetricCategory.dagger_monoidality.inapplicable(
+        messages.NO_DAGGER)
+    braid_then_inverse = SymmetricCategory.braid_then_inverse.inapplicable(
+        messages.NO_DAGGER)
+    inverse_then_braid = SymmetricCategory.inverse_then_braid.inapplicable(
+        messages.NO_DAGGER)
+
+    @classmethod
+    def equation_factory(cls, *terms: Symmetric) -> Equation:
+        """
+        The equation of a law, compared by the boundary of its terms and the
+        hypergraph of the inside of their :meth:`to_int`, so that two lenses
+        are equal when they wire the same legs, whatever their residual.
+        """
+        return Equation(*terms, up_to=lambda lens: (
+            lens.dom, lens.cod, lens.to_int().inside.to_hypergraph()))
+
+    @classmethod
+    def strategy(cls, *, dom=None, cod=None, **params):
+        """
+        Generate lenses: a residual, then a forward and a backward leg from
+        the strategy of the underlying category, with the boundary they
+        need, the parameters passed to both.
+        """
+        from hypothesis import strategies as st
+
+        @st.composite
+        def lenses(draw):
+            source = draw(cls.ob.strategy()) if dom is None else dom
+            target = draw(cls.ob.strategy()) if cod is None else cod
+            residual = draw(cls.category.ob.strategy())
+            forward = draw(cls.category.strategy(
+                dom=source.positive, cod=target.positive @ residual,
+                **params))
+            backward = draw(cls.category.strategy(
+                dom=residual @ target.negative, cod=source.negative,
+                **params))
+            return cls(source, target, forward, backward, residual)
+
+        return lenses()
 
     def __post_init__(self):
         if self.residual is None:
@@ -388,6 +459,22 @@ class Traced(Symmetric, TracedCategory):
     ...     == (f.forward >> x @ Diagram.swap(u, m)).trace()
     >>> assert f.trace().backward == f.backward.trace()
     """
+    trace_iteration_left = TracedCategory.trace_iteration_left.inapplicable(
+        messages.LENS_TRACES_RIGHT)
+    trace_superposing_left = TracedCategory.trace_superposing_left\
+        .inapplicable(messages.LENS_TRACES_RIGHT)
+    trace_naturality_left = TracedCategory.trace_naturality_left.inapplicable(
+        messages.LENS_TRACES_RIGHT)
+    trace_dinaturality_left = TracedCategory.trace_dinaturality_left\
+        .inapplicable(messages.LENS_TRACES_RIGHT)
+
+    trace_iteration_right = TracedCategory.trace_iteration_right.inapplicable(
+        messages.LENS_TRACE_LENGTH)
+    trace_naturality_right = TracedCategory.trace_naturality_right\
+        .inapplicable(messages.LENS_TRACE_LENGTH)
+    trace_dinaturality_right = TracedCategory.trace_dinaturality_right\
+        .inapplicable(messages.LENS_TRACE_LENGTH)
+
     def trace(self, n: int = 1, left: bool = False) -> Traced:
         """
         The trace of a lens over the last `n` atoms of each half of its
@@ -472,6 +559,32 @@ class Markov(Symmetric):
         super().__init__(dom, cod, forward, put, dom.positive)
 
     put = property(lambda self: self.backward)
+
+    unitality = Symmetric.unitality.failing(messages.LENS_NATURALITY)
+    associativity = Symmetric.associativity.failing(messages.LENS_NATURALITY)
+    braid_naturality = Symmetric.braid_naturality.failing(
+        messages.LENS_NATURALITY)
+
+    @classmethod
+    def strategy(cls, *, dom=None, cod=None, **params):
+        """
+        Generate Markov lenses: a `get` and a `put` from the strategy of the
+        underlying category, with the boundary they need.
+        """
+        from hypothesis import strategies as st
+
+        @st.composite
+        def lenses(draw):
+            source = draw(cls.ob.strategy()) if dom is None else dom
+            target = draw(cls.ob.strategy()) if cod is None else cod
+            get = draw(cls.category.strategy(
+                dom=source.positive, cod=target.positive, **params))
+            put = draw(cls.category.strategy(
+                dom=source.positive @ target.negative, cod=source.negative,
+                **params))
+            return cls(source, target, get, put)
+
+        return lenses()
 
     def __repr__(self):
         factory, category = map(

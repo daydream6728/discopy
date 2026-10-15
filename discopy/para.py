@@ -160,7 +160,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Self
 
-from discopy import symmetric, markov, closed, compact, frobenius
+from discopy import symmetric, markov, closed, compact, frobenius, messages
+from discopy.axioms import Equation
 from discopy.abc import (
     ClosedCategory, CompactCategory, FeedbackCategory, HypergraphCategory,
     MarkovCategory, NamedGeneric, SymmetricCategory, TracedCategory)
@@ -205,6 +206,52 @@ class Symmetric[category](
     inside: category
     param: ob = None  # ty: ignore[invalid-type-form]
     copar: ob = None  # ty: ignore[invalid-type-form]
+
+    dagger_involution = SymmetricCategory.dagger_involution.inapplicable(
+        messages.NO_DAGGER)
+    dagger_contravariance = SymmetricCategory.dagger_contravariance\
+        .inapplicable(messages.NO_DAGGER)
+    dagger_monoidality = SymmetricCategory.dagger_monoidality.inapplicable(
+        messages.NO_DAGGER)
+    braid_then_inverse = SymmetricCategory.braid_then_inverse.inapplicable(
+        messages.NO_DAGGER)
+    inverse_then_braid = SymmetricCategory.inverse_then_braid.inapplicable(
+        messages.NO_DAGGER)
+    bifunctoriality = SymmetricCategory.bifunctoriality.failing(
+        messages.PARA_REPARAM)
+    braid_naturality = SymmetricCategory.braid_naturality.failing(
+        messages.PARA_REPARAM)
+
+    @classmethod
+    def equation_factory(cls, *terms: Symmetric) -> Equation:
+        """
+        The equation of a law, compared by the boundary and the hidden spaces
+        of its terms and the hypergraph of their inside, the parameters and
+        coparameters being plain wires of it.
+        """
+        return Equation(*terms, up_to=lambda para: (
+            para.dom, para.cod, para.param, para.copar,
+            para.inside.to_hypergraph()))
+
+    @classmethod
+    def strategy(cls, *, dom=None, cod=None, **params):
+        """
+        Generate parametric maps: a parameter and a coparameter space, then
+        an inside from the strategy of the underlying category, with the
+        boundary it needs, the parameters passed to it.
+        """
+        from hypothesis import strategies as st
+
+        @st.composite
+        def maps(draw):
+            source = draw(cls.ob.strategy()) if dom is None else dom
+            target = draw(cls.ob.strategy()) if cod is None else cod
+            param, copar = (draw(cls.ob.strategy()) for _ in range(2))
+            inside = draw(cls.category.strategy(
+                dom=source @ param, cod=target @ copar, **params))
+            return cls(source, target, inside, param, copar)
+
+        return maps()
 
     def __post_init__(self):
         if self.param is None:
@@ -335,6 +382,11 @@ class Traced(Symmetric, TracedCategory):
     Parametric maps over a traced symmetric underlying `category` form a
     traced category, with the parameters swapped out of the way.
     """
+    trace_dinaturality_left = TracedCategory.trace_dinaturality_left.failing(
+        messages.PARA_REPARAM)
+    trace_dinaturality_right = TracedCategory.trace_dinaturality_right.failing(
+        messages.PARA_REPARAM)
+
     def trace(self, n: int = 1, left: bool = False) -> Traced:
         """
         The trace of a parametric map is the trace of the underlying
@@ -381,6 +433,18 @@ class Closed(Markov, ClosedCategory):
     Parametric maps over a closed underlying `category` form a closed
     category, currying with the parameters swapped out of the way.
     """
+    currying_left = ClosedCategory.currying_left.failing(messages.FREE_CURRY)
+    currying_right = ClosedCategory.currying_right.failing(messages.FREE_CURRY)
+    currying_eta_left = ClosedCategory.currying_eta_left.failing(
+        messages.FREE_CURRY)
+    currying_eta_right = ClosedCategory.currying_eta_right.failing(
+        messages.FREE_CURRY)
+    currying_naturality_left = ClosedCategory.currying_naturality_left.failing(
+        messages.FREE_CURRY)
+    currying_naturality_right = ClosedCategory.currying_naturality_right\
+        .failing(messages.FREE_CURRY)
+    currying_symmetry = ClosedCategory.currying_symmetry.failing(
+        messages.FREE_CURRY)
     category = closed.Diagram
 
     @classmethod
@@ -406,6 +470,8 @@ class Closed(Markov, ClosedCategory):
             n : The number of objects to curry.
             left : Whether to curry into a left or right exponential.
         """
+        if self.copar:
+            raise ValueError(messages.PARA_CURRY_COPAR.format(self.copar))
         if not left:
             inside = self.inside.curry(n, left=False)
             return type(self)(self.dom[n:], inside.cod, inside, self.param)
@@ -420,6 +486,14 @@ class Feedback(Markov, FeedbackCategory):
     Parametric maps over a feedback underlying `category` form a feedback
     category, with :meth:`delay` applied to all five components.
     """
+    feedback_joining = FeedbackCategory.feedback_joining.failing(
+        messages.FREE_FEEDBACK)
+    feedback_sliding = FeedbackCategory.feedback_sliding.failing(
+        messages.FREE_FEEDBACK)
+    feedback_superposing = FeedbackCategory.feedback_superposing.failing(
+        messages.FREE_FEEDBACK)
+    feedback_tightening = FeedbackCategory.feedback_tightening.failing(
+        messages.FREE_FEEDBACK)
     category = FeedbackDiagram
 
     def delay(self, n_steps: int = 1) -> Feedback:
@@ -460,6 +534,12 @@ class Compact(Traced, CompactCategory):
     Parametric maps over a compact underlying `category` form a compact
     category, with the cups and caps of the underlying category.
     """
+    adjunction = CompactCategory.adjunction.inapplicable(
+        messages.PARA_NO_ROTATION)
+    rotate_contravariance = CompactCategory.rotate_contravariance\
+        .inapplicable(messages.PARA_NO_ROTATION)
+    transpose_contravariance = CompactCategory.transpose_contravariance\
+        .failing(messages.PARA_REPARAM)
     category = compact.Diagram
 
     @classmethod
@@ -485,7 +565,6 @@ class Compact(Traced, CompactCategory):
         return cls.lift(cls.category.caps(left, right))
 
     ev = classmethod(Closed.ev.__func__)
-    curry = Closed.curry
 
 
 class Hypergraph(Compact, Markov, HypergraphCategory):

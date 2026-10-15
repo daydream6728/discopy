@@ -152,6 +152,22 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   compact categories on. Tensor
   diagrams, which draw no arrays, and pregroup diagrams, which compare by a
   hypergraph that refuses a cap, declare `strategy = no_strategy`.
+- The property matrix checks lenses and parametric maps: `lens.Symmetric`,
+  `lens.Traced`, `lens.Markov`, their pairs of types `lens.Ty` and the
+  seven levels of `discopy.para` are enrolled, each drawing its residual,
+  or its parameters and coparameters, then its insides from the strategy
+  of its underlying category. A lens compares its laws by the hypergraph
+  of its integer diagram, `lens.Symmetric.to_int`, and a parametric map by
+  the hypergraph of its inside with its four objects. What does not hold
+  is declared with its reason: neither has a dagger, `messages.NO_DAGGER`;
+  a lens traces on the right only and by as many atoms on each half; a
+  Markov lens is unital and associative only up to the naturality of
+  copy, `LENS_NATURALITY`; a parametric map is equal only up to the
+  reparametrisations that permute its parameters, `PARA_REPARAM`, which
+  breaks bifunctoriality, the naturality of the braid, the dinaturality of
+  the trace and the contravariance of the transpose; it has no rotation,
+  and inherits the free currying and feedback of its underlying category.
+  `fail-under` rises to 9.07.
 - The laws of `abc.SymmetricCategory.permutation`, inherited by every
   override, `CMap.permutation` and those of the free levels included:
   `permutation_identity`, `permutation_composition`, permuting by `xs`
@@ -1014,6 +1030,11 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
+- `para.Compact` curries with its caps, where it borrowed `para.Closed.curry`,
+  which left the coparameters inside the exponential of the codomain; a
+  `para.Closed` map with coparameters refuses to curry,
+  `messages.PARA_CURRY_COPAR`, as a closed category cannot take them out
+  of the exponential.
 - `Diagram.foliation` is idempotent. A diagram records the offsets of its
   states whenever it has one, where it did only when each layer held one
   box, so a foliated diagram with several states in a layer refoliated
