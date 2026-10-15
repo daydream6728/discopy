@@ -271,6 +271,21 @@ reads it as ``Coarse``.
 """
 
 
+type Perm[N] = Annotated[tuple[int, ...], N]
+"""
+The premise standing for a permutation of ``range(N)`` for ``N: Count``,
+as the list of where each position comes from, e.g. ``xs: Perm[N]`` in
+``permutation(xs, doms)``. A typechecker reads it as a tuple of integers.
+"""
+
+type Objs[Coarse, N] = Annotated[tuple[Coarse, ...], N]
+"""
+The premise standing for ``N`` atomic objects of type ``Coarse``, e.g.
+``doms: Objs[C0, N]``, drawn as ``N`` generators of ``category.ob``. A
+typechecker reads it as a tuple of them.
+"""
+
+
 class Count(int):
     """
     The sort of the numbers up to :data:`MAX_COUNT`, as the bound of a
@@ -621,8 +636,9 @@ class Declaration[**P, T](classmethod):
         sort ``Atom`` from the ``generators`` of ``category.ob`` and of sort
         :class:`Count` a number up to :data:`MAX_COUNT`, then a premise
         ``Hom[C1, A, B]`` from the strategy of the category with its boundary
-        and ``params``, a premise ``Var[T, x]`` the value ``x`` and
-        :data:`typing.Self` a term.
+        and ``params``, a premise ``Var[T, x]`` the value ``x``, a premise
+        ``Perm[N]`` a permutation, ``Objs[C0, N]`` that many atomic objects
+        and :data:`typing.Self` a term.
         """
         from hypothesis import strategies as st
 
@@ -638,7 +654,15 @@ class Declaration[**P, T](classmethod):
             def value(name, kind):
                 if get_origin(kind) is Var:
                     return get_args(kind)[1]
-                if get_origin(kind) is Hom:
+                if get_origin(kind) is Perm:
+                    n, = get_args(kind)
+                    strategy = st.permutations(range(n)).map(tuple)
+                elif get_origin(kind) is Objs:
+                    n = get_args(kind)[1]
+                    strategy = st.lists(
+                        self.category.ob.generators(),
+                        min_size=n, max_size=n).map(tuple)
+                elif get_origin(kind) is Hom:
                     _, dom, cod = get_args(kind)
                     strategy = self.category.strategy(
                         dom=dom, cod=cod, **params)
@@ -777,6 +801,11 @@ class Axiom[**P, T](Declaration[P, T]):
         def value(name, kind):
             if get_origin(kind) is Var:
                 return get_args(kind)[1]
+            if get_origin(kind) is Perm:
+                return tuple(reversed(range(get_args(kind)[0])))
+            if get_origin(kind) is Objs:
+                return tuple(self.category.ob(f"{name}{i}")
+                             for i in range(get_args(kind)[1]))
             dom, cod = get_args(kind)[1:] if get_origin(kind) is Hom\
                 else (self.category.ob(name), ) * 2
             box = self.category.box_factory(name, dom=dom, cod=cod)

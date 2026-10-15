@@ -152,6 +152,16 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   compact categories on. Tensor
   diagrams, which draw no arrays, and pregroup diagrams, which compare by a
   hypergraph that refuses a cap, declare `strategy = no_strategy`.
+- The laws of `abc.SymmetricCategory.permutation`, inherited by every
+  override, `CMap.permutation` and those of the free levels included:
+  `permutation_identity`, `permutation_composition`, permuting by `xs`
+  then by `ys` being permuting by `[xs[y] for y in ys]`,
+  `permutation_inverse` and `permutation_swaps`, that an override is the
+  composite of swaps the default folds. They quantify over two new sorts
+  of premises, `axioms.Perm[N]`, a permutation of `range(N)`, and
+  `axioms.Objs[C0, N]`, `N` atomic objects drawn from the generators of
+  the objects of the category. `Hypergraph` is no `SymmetricCategory`, so
+  its permutation is not checked by them.
 - `axioms.Extensional`, the equation of a category of functions, whose
   insides are callables compared by identity: its terms are compared by
   their graphs on the `arguments` their category gives for their domain,

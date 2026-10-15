@@ -62,8 +62,8 @@ from types import NoneType
 from typing import TYPE_CHECKING, ClassVar
 
 from discopy.axioms import (
-    Atom, Count, Delay, Equation, Hom, L, Obj, Over, R, Repeat, Tensor,
-    Testable, Under, Unit, Var, axiom, rule)
+    Atom, Count, Delay, Equation, Hom, L, Obj, Objs, Over, Perm, R, Repeat,
+    Tensor, Testable, Under, Unit, Var, axiom, rule)
 from discopy import messages
 from discopy.utils import (  # noqa: F401  pylint: disable=unused-import
     AxiomError, NamedGeneric, classproperty)
@@ -1042,6 +1042,43 @@ class SymmetricCategory[
     @classmethod
     def braid(cls, left: C0, right: C0) -> C1:
         return cls.swap(left, right)
+
+    @axiom
+    def permutation_identity[N: Count](
+            cls, doms: Objs[C0, N]) -> Equation[C1]:
+        """ The permutation that leaves every object in place. """
+        return cls.equation_factory(
+            cls.permutation(range(len(doms)), doms),
+            cls.id(cls.ob().tensor(*doms)))
+
+    @axiom
+    def permutation_composition[N: Count](
+            cls, xs: Perm[N], ys: Perm[N], doms: Objs[C0, N]
+    ) -> Equation[C1]:
+        """ Permuting by ``xs`` then ``ys`` permutes by their composite. """
+        moved = [doms[x] for x in xs]
+        return cls.equation_factory(
+            cls.permutation(xs, doms) >> cls.permutation(ys, moved),
+            cls.permutation([xs[y] for y in ys], doms))
+
+    @axiom
+    def permutation_inverse[N: Count](
+            cls, xs: Perm[N], doms: Objs[C0, N]) -> Equation[C1]:
+        """ A permutation followed by its inverse is the identity. """
+        moved = [doms[x] for x in xs]
+        inverse = [xs.index(i) for i in range(len(xs))]
+        return cls.equation_factory(
+            cls.permutation(xs, doms) >> cls.permutation(inverse, moved),
+            cls.id(cls.ob().tensor(*doms)))
+
+    @axiom
+    def permutation_swaps[N: Count](
+            cls: type[C1], xs: Perm[N], doms: Objs[C0, N]
+    ) -> Equation[C1]:
+        """ A permutation is the composite of swaps, whatever overrides it. """
+        return cls.equation_factory(
+            cls.permutation(xs, doms),
+            SymmetricCategory.permutation.__func__(cls, xs, doms))
 
     @axiom
     def swap_inverse[X: Obj[C0], Y: Obj[C0]](
