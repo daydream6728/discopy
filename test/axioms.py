@@ -205,6 +205,12 @@ def test_axioms_of_category():
     assert "unitality" not in Hidden.axioms
 
 
+def test_canonical_unnamed_objects():
+    from discopy.neural.network import Network
+    with raises(TypeError, match="no canonical instance"):
+        Network.associativity.draw()
+
+
 def test_matrix():
     assert monoidal.Diagram in Testable.enrolled()
     assert monoidal.Ty in Testable.enrolled()
@@ -226,6 +232,10 @@ def test_canonical_instances():
         if box is None or not (issubclass(box, category)
                                or issubclass(category, ColouredMonoid)):
             continue  # a map, a hypergraph, a type of one colour or a test
+        try:
+            category.ob("A")
+        except TypeError:
+            continue  # objects that take no name, e.g. the shapes of networks
         for law in category.axioms.values():
             if law.broken:
                 continue

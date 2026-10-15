@@ -709,7 +709,8 @@ class Axiom[**P, T](Declaration[P, T]):
         into the category when it is a generator rather than a term, e.g.
         the wire of a type, and two for each number, the equation a law
         declared broken raises included. A category whose objects take no
-        name, e.g. the shapes of a network, has none: ``NotImplemented``.
+        name, e.g. the shapes of a network, has none and raises
+        ``TypeError``.
 
         >>> from discopy.cat import Arrow
         >>> print(Arrow.associativity.canonical())
@@ -717,8 +718,9 @@ class Axiom[**P, T](Declaration[P, T]):
         """
         try:
             self.category.ob("A")
-        except TypeError:
-            return NotImplemented
+        except TypeError as error:
+            raise TypeError(f"{self} has no canonical instance: the objects "
+                            f"of {self.category} take no name.") from error
 
         def value(name, kind):
             if get_origin(kind) is Var:
