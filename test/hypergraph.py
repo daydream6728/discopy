@@ -359,6 +359,7 @@ def test_Hypergraph_cups_and_caps_adjoints():
         H.cups(Ty('x'), Ty('y'))
     a, b = symmetric.Ty('a'), symmetric.Ty('b')
     S = Hypergraph[symmetric.Diagram]
-    assert S.cups(a @ b, b @ a).dom == S.caps(a @ b, b @ a).cod
+    assert S.cups(a @ b, b @ a).dom_wires == (0, 1, 1, 0)
+    assert S.caps(a @ b, b @ a).cod_wires == (0, 1, 1, 0)
     with raises(AxiomError, match="not adjoints"):
         S.caps(a @ b, a @ b)
