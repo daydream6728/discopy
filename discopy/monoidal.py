@@ -222,6 +222,25 @@ class List(Monoid, NamedGeneric['generator_factory']):
     def __len__(self) -> int:
         return len(self.inside)
 
+    @property
+    def is_atomic(self) -> bool:
+        """
+        Whether a list is atomic, i.e. it has length 1.
+
+        >>> assert List[int](2).is_atomic and not List[int](2, 3).is_atomic
+        """
+        return len(self) == 1
+
+    def unwind(self) -> List:
+        """
+        The identity: a list has no winding, see :meth:`Ty.unwind`, so that
+        a :class:`hypergraph.Hypergraph` over any free monoid labels its
+        spiders the same way.
+
+        >>> assert List[int](2).unwind() == List[int](2)
+        """
+        return self
+
     def __getitem__(self, key: int | slice) -> List:
         if isinstance(key, slice):
             return type(self)(*self.inside[key])
