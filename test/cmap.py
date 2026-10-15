@@ -895,6 +895,39 @@ def test_from_glued_loops():
     assert two.loops == (x, y)
 
 
+def test_logical_order():
+    from discopy.compact import CMap as M
+    assert M.logical_order(2, 3) == (0, 1, 4, 3, 2)
+    assert M.logical_order(0, 0) == () and M.logical_order(1, 0) == (0, )
+
+
+def test_from_wiring():
+    from discopy.symmetric import Ty, Box, CMap as M
+    x = Ty("x")
+    f = Box("f", x, x)
+    with raises(TypeError):
+        M.from_wiring(("f", ), [])
+    with raises(ValueError, match="has no port"):
+        M.from_wiring((f, ), [((0, 0), (0, 2))])
+    for box_index in (-1, 1):
+        with raises(ValueError, match="no box"):
+            M.from_wiring((f, ), [((0, 0), (box_index, 1))])
+    with raises(ValueError, match="wired to itself"):
+        M.from_wiring((f, ), [((0, 0), (0, 0))])
+    with raises(ValueError, match="wired twice"):
+        M.from_wiring((f, f), [((0, 0), (0, 1)), ((0, 0), (1, 1))])
+    with raises(ValueError, match="left unwired"):
+        M.from_wiring((f, f), [((0, 0), (0, 1))])
+    with raises(ValueError, match="has no port"):
+        M.from_wiring((f, ), [((0, 0.5), (0, 1))])
+    with raises(ValueError, match="no box"):
+        M.from_wiring((f, ), [((0.0, 0), (0, 1))])
+    closed = M.from_wiring((f, f), [((0, 0), (1, 1)), ((0, 1), (1, 0))])
+    assert closed.n_ports == 4 and closed.is_monogamous
+    assert closed.dom == closed.cod == Ty() and closed.boxes == (f, f)
+    assert closed == (M.from_box(f) >> M.from_box(f)).trace()
+
+
 def test_to_diagram_routes_with_one_permutation():
     """ Each routing step of the decoder is one :class:`Permutation` layer
     rather than a staircase of swaps, so a permutation round-trips to itself

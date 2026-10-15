@@ -9,6 +9,33 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Added
 
+- `discopy.neural.signature`, what a generator promises. `Sym` is the
+  symmetry an orbit of legs carries: none, the symmetric group or the
+  cyclic one. `Orbit(role, arity, sym, traced)` is a family of legs playing
+  one atomic role, each leg twice when traced, the outgoing copy before the
+  incoming one. `Signature(orbits)` is the legs of one generator in port
+  order, with `cod` the type of its abstract box in `discopy.frobenius`,
+  `box`, `positions`, `loops`, `loop_wires` and `resize`, which changes the
+  arity of one orbit so that one shared module serves sites of different
+  degree. `generators` are the permutations of ports generating the
+  symmetry group an equivariance check runs a module against, and
+  `leg_generators` the same generators as permutations of legs, before
+  they act on ports. `from_incidence` draws the bipartite incidence graph
+  of nodes and relations, with non-uniform degrees and a name and a
+  signature per relation; `from_relation` draws the graph of a symmetric
+  irreflexive binary relation. Both close the traced loops and draw in
+  `frobenius`: every box they wire has an empty domain, so every wire
+  joins two codomain ports, which a map accepts only between self-dual
+  roles. They go through `cmap.CMap.from_wiring`, a closed map from boxes
+  and wires between `(box, port)` pairs counted in `CMap.logical_order`,
+  domain ports then codomain ones, refusing a port wired twice, to itself
+  or not at all; both methods come back from the history of #736, where
+  the redesign left them with nothing to consume them. The module is
+  discopy#739 re-cut onto the feedforward base. The flat layout of its
+  geometry-of-interaction backend, `slices` and `width`, and the composite
+  legs that only it needed do not come: a `Box` here reads one tensor per
+  leg, and `positions` says which ports a role's legs are
+  ([#739](https://github.com/discopy/discopy/pull/739)).
 - Hypergraphs of Python functions: `Hypergraph[python.Function]` is the
   hypergraph category over `python.Function`, its spiders labelled by atomic
   `List[type]` and its boundaries by lists of them: `monoidal.List` gains
