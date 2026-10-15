@@ -174,6 +174,9 @@ def test_substitution_capture():
     assert Substitution({x: y})(t) == let(g(z), lambda y_: Tuple(y_, y))
     assert Substitution({x: y})(Abstraction(y, Tuple(y, x)))\
         == Abstraction(y_, Tuple(y_, y))
+    captured = Substitution({x: y})(Abstraction(y, g(x)))
+    assert captured.alpha_eq(Abstraction(z, g(y)))
+    assert not captured.alpha_eq(Abstraction(y, g(y)))
 
 
 def test_substitution_bind_ignores_unused_replacements():
@@ -209,6 +212,17 @@ def test_to_term():
     effect = Box("effect", X, Ty())
     assert effect.to_term() == (X >> Ty())("effect")(x0)
     assert effect.to_term().cod == Ty()
+
+
+def test_to_term_freevars_order():
+    X, Y = Ty("X"), Ty("Y")
+    diagram = Diagram.swap(X, Y) >> Box("f", Y @ X, X)
+    term = diagram.to_term()
+    x0, x1 = Variable("x0", X), Variable("x1", Y)
+    assert str(term) == "f(Tuple(x1, x0))"
+    assert term.freevars == [x1, x0]
+    assert term.eval().dom == Y @ X != diagram.dom
+    assert term.eval(context=[x0, x1]).dom == diagram.dom
 
 
 def test_to_term_round_trip():
@@ -403,7 +417,7 @@ def test_bohm_tree_validation_and_equality():
         BohmTree(Y, (x, ), 0, Strategy(), ())
 
 
-def test_substitution():
+def test_substitution_under_binder():
     X = Ty('X')
     c, g, x = Constant('c', X), Variable('g', X >> X), Variable('x', X)
     assert Substitution({x: c})(g(x)) == g(c)
@@ -669,6 +683,17 @@ def test_alpha_eq_compound():
     assert Let(f(x), (y, ), y).alpha_eq_under(
         scopes, [Let(f(x), (z, ), z)], 1)
     assert scopes == [{y: 0}, {}]
+
+
+def test_equality_reads_the_types_of_constants():
+    a, b = Ty("a"), Ty("b")
+    first, second = (a << b)("c0")(b("c1")), (a << a)("c0")(a("c1"))
+    assert str(first) == str(second) and first != second
+    assert not first.alpha_eq(second)
+    assert a(lambda x: first) != a(lambda x: second)
+    shape, other = (a, [2, 1], [a, b]), [2]
+    assert TermBase.alpha_completeness(
+        biclosed.Canonical[TermBase].build(shape, other, ("x", "x")))
 
 
 def test_Sampler_nonlinear():
