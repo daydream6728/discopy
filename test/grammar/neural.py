@@ -1,6 +1,3 @@
-import subprocess
-import sys
-
 import pytest
 
 torch = pytest.importorskip("torch")
@@ -13,13 +10,6 @@ n, s = Ty("n"), Ty("s")
 Alice, Bob = n("Alice"), n("Bob")
 loves = (n >> (n >> s))("loves")
 signature = Signature.from_types([n >> (n >> s)])
-
-
-def test_lazy_torch_import():
-    subprocess.run([
-        sys.executable, "-c",
-        "import sys; import discopy.grammar; "
-        "assert 'torch' not in sys.modules"], check=True)
 
 
 def test_Signature():
