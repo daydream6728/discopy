@@ -152,6 +152,16 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   compact categories on. Tensor
   diagrams, which draw no arrays, and pregroup diagrams, which compare by a
   hypergraph that refuses a cap, declare `strategy = no_strategy`.
+- `axioms.Extensional`, the equation of a category of functions, whose
+  insides are callables compared by identity: its terms are compared by
+  their graphs on the `arguments` their category gives for their domain,
+  drawn from `axioms.values`, a sample of each Python type that is the
+  same every time, so that both sides are called on the same inputs.
+  `python.Function` compares its laws extensionally, a multiplicative one
+  on a value of each type of its domain and an additive one on a value of
+  one of them with its tag, and declares the dagger laws inapplicable,
+  `messages.NO_DAGGER`, as a function has no dagger. `fail-under` rises
+  to 9.06.
 - `CMap` and `Hypergraph` serialise with `to_tree`, naming their category,
   and the repr of a hypergraph names it too so that it evaluates back.
 

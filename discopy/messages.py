@@ -41,6 +41,8 @@ NO_PLANAR_NORMAL_FORM = (
 COLOURED_QUOTIENT = (
     "{} is coloured: a hypergraph or a map is symmetric, and a swap is "
     "ill-typed across 0-cells, so it would lose its colours.")
+NO_VALUES = "{} has no sample of values, see axioms.values."
+NO_DAGGER = "A function has no dagger, so the dagger laws do not apply."
 NO_SWAP = "{} is not symmetric, it has no swaps."
 NO_BRAID = "{} is not braided, it has no braids."
 NO_TWIST = "{} is not balanced, it has no twists."

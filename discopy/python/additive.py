@@ -20,7 +20,9 @@ from functools import cache
 from itertools import accumulate
 from typing import Self
 
+from discopy import messages
 from discopy.abc import SymmetricCategory
+from discopy.axioms import values
 from discopy.utils import assert_isinstance
 from discopy.python import finset, function
 from discopy.python.function import Ty
@@ -47,6 +49,22 @@ class Function(function.Function, SymmetricCategory):
     def __init__(self, inside, dom, cod, is_swap_of=None):
         self.is_swap_of = is_swap_of
         super().__init__(inside, dom, cod)
+
+    dagger_monoidality = SymmetricCategory.dagger_monoidality.inapplicable(
+        messages.NO_DAGGER)
+
+    @classmethod
+    def arguments(cls, dom: Ty) -> tuple[tuple, ...]:
+        """
+        The arguments a function on ``dom`` is called with by an
+        extensional equation: a value of one of its types, with its tag.
+
+        >>> assert Function.arguments(Ty(bool, type(None))) == (
+        ...     (False, 0), (True, 0), (None, 1))
+        """
+        return tuple(
+            (value, tag) for tag, typ in enumerate(dom.inside)
+            for value in values(typ))
 
     def __call__(self, obj, tag=0):
         if self.type_checking:

@@ -241,3 +241,17 @@ def test_canonical_instances():
                 continue
             equation = law.canonical()
             assert equation is NotImplemented or equation, (category, law.name)
+
+
+def test_extensional():
+    from discopy.axioms import Extensional, values
+    from discopy.python import Function
+    from discopy.python.additive import Function as Additive
+    f, g = (Function(lambda x, k=k: x + k, int, int) for k in (1, 1))
+    assert f != g and Extensional(f, g)
+    assert Function.equation_factory(f >> Function.id(int), f)
+    assert not Extensional(f, Function.id(int))
+    with raises(TypeError):
+        values(list)
+    assert Function.dagger_involution() is NotImplemented
+    assert Additive.dagger_monoidality() is NotImplemented

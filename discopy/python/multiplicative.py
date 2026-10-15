@@ -26,10 +26,12 @@ Summary
 from __future__ import annotations
 
 from collections.abc import Callable
-from itertools import accumulate
+from itertools import accumulate, product
 from typing import Self
 
+from discopy import messages
 from discopy.abc import ClosedCategory
+from discopy.axioms import values
 from discopy.utils import assert_isinstance, tuplify, untuplify, factory
 from discopy.python import finset, function
 from discopy.python.function import Ty
@@ -73,6 +75,18 @@ class Function(function.Function, ClosedCategory):
             fix
             trace
     """
+    dagger_monoidality = ClosedCategory.dagger_monoidality.inapplicable(
+        messages.NO_DAGGER)
+
+    @classmethod
+    def arguments(cls, dom: Ty) -> tuple[tuple, ...]:
+        """
+        The arguments a function on ``dom`` is called with by an
+        extensional equation: a value of each of its types.
+
+        >>> assert len(Function.arguments(Ty(bool, bool))) == 4
+        """
+        return tuple(product(*map(values, dom.inside)))
 
     def __call__(self, *xs):
         if self.type_checking:
