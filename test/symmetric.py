@@ -406,3 +406,23 @@ def test_coloured_Layer_boxes_and_types():
     assert Layer(f).boxes_and_types == (empty_red, f, empty_green)
     assert Layer(empty_red, f, empty_green).boxes_and_types\
         == (empty_red, f, empty_green)
+
+
+def test_foliation_with_traces_and_permutations():
+    from discopy import tensor
+    x, y = Ty('x'), Ty('y')
+    f, g, h = Box('f', x @ x, x @ x), Box('g', y @ x @ x, x), Box('h', x, x)
+    F = tensor.Functor(
+        {x: 2, y: 3},
+        {f: list(range(16)), g: list(range(24)), h: [1, 2, 3, 4]},
+        dom=Diagram)
+    for diagram in [
+            f.trace() @ h,
+            h @ f.trace(left=True) >> Swap(x, x),
+            Permutation(x @ y @ x, [1, 2, 0]) >> g,
+            Swap(x, y) @ x >> y @ f.trace() @ x >> y @ h @ h]:
+        foliated = diagram.foliation()
+        assert foliated.boxes == diagram.boxes
+        assert Equation(foliated, diagram)
+        assert F(foliated) == F(diagram)
+    assert len((f.trace() @ h).foliation()) == 1
