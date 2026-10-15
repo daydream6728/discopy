@@ -930,3 +930,31 @@ def test_to_diagram_of_a_concrete_category_uses_its_permutation():
         for perm in ([1, 0, 2], [2, 0, 1]):
             assert cmap.CMap[category].permutation(perm, dom).to_diagram()\
                 == category.permutation(perm, dom)
+
+
+def test_permutation_is_one_involution():
+    from discopy.abc import SymmetricCategory
+    from discopy.symmetric import Ty, Diagram, Equation, CMap as M
+    from discopy.tensor import Dim, Diagram as T, CMap as TM
+    x, y, z = map(Ty, "xyz")
+    cases = [
+        ([], []),
+        ([0], [x]),
+        ([1, 0], [x, y @ z]),
+        ([2, 0, 1], [x, y, z]),
+        ([3, 1, 0, 2], [x @ y, z, x, y @ y @ z])]
+    for xs, doms in cases:
+        direct, swaps = M.permutation(xs, doms), Diagram.permutation(xs, doms)
+        assert direct.boxes == () and direct.n_ports == 2 * len(direct.dom)
+        assert direct == swaps.to_map()
+        assert direct == SymmetricCategory.permutation.__func__(M, xs, doms)
+        assert Equation(direct.to_diagram(), swaps)
+        inverse = M.permutation(
+            [xs.index(j) for j in range(len(xs))], [doms[x] for x in xs])
+        assert direct >> inverse == M.id(direct.dom)
+    assert M.permutation(range(3), x @ y @ z) == M.id(x @ y @ z)
+    dims = [Dim(2), Dim(3), Dim(4)]
+    assert TM.permutation([2, 0, 1], dims).eval()\
+        == T.permutation([2, 0, 1], dims).eval()
+    with raises(ValueError):
+        M.permutation([0, 0], [x, y])
