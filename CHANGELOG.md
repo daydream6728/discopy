@@ -479,6 +479,27 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Changed
 
+- `Hypergraph.to_diagram` and `CMap.to_diagram` route the wires of each
+  box with one permutation rather than a staircase of swaps: the domain
+  wires of the box are gathered at its offset, the other wires keeping
+  their order, by the new `finset.Permutation.gather`, and the permutation
+  is emitted once through the new `abc.SymmetricCategory.from_permutation`,
+  which `symmetric.Diagram.from_permutation` overrides with a native
+  `Permutation` box and which defers to `permutation` in a concrete
+  category, a composition of swaps by default and a single array in
+  `Tensor`; the final alignment with the codomain is one permutation too.
+  Since `symmetric.Layer` coalesces
+  plumbing, each swap of the staircase was already a full-width
+  `Permutation` layer, so a routing step of `n` swaps was `n` layers and
+  is now one: `simplify`, `foliation` and `from_callable` give shorter
+  diagrams, a permutation round-trips to itself,
+  `Diagram.permutation([2, 0, 1], x @ y @ z).simplify()` being
+  `Permutation(x @ y @ z, [2, 0, 1])`, and a decoded diagram never has two
+  consecutive layers of plumbing. The one baseline this redraws is
+  `symmetric/decorator.svg`, whose two staircases of swaps become one
+  band of crossing wires each
+  ([#539](https://github.com/discopy/discopy/issues/539),
+  [#546](https://github.com/discopy/discopy/pull/546)).
 - `monoidal.Colour` is transparent by default rather than white, i.e. its
   `name` defaults to the new `config.TRANSPARENT` and `monoidal.white` is
   renamed to `monoidal.transparent`. The drawing code painted every region

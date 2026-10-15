@@ -341,3 +341,26 @@ def test_subclass_to_hypergraph():
     f, g = Gate('f', x, x), Gate('g', x, x)
     assert (f >> g).to_hypergraph().category == Circuit
     assert isinstance((f >> g).to_hypergraph().to_diagram(), Circuit)
+
+
+def test_to_diagram_routes_with_one_permutation():
+    """ Each routing step of the decoder is one :class:`Permutation` layer
+    rather than a staircase of swaps, so a permutation round-trips to itself
+    and the plumbing of a decoded diagram never spans two consecutive layers,
+    see discopy/discopy#539. """
+    from discopy import symmetric, compact
+    from fixtures.diagrams import random_diagram
+
+    x, y, z, w = map(symmetric.Ty, "xyzw")
+    perm = symmetric.Permutation(x @ y @ z, [2, 0, 1])
+    g = symmetric.Box('g', z @ x @ y, w)
+    assert perm.to_swaps().simplify() == perm
+    assert (perm.to_swaps() >> g).simplify() == perm >> g
+
+    for module in (symmetric, compact):
+        for seed in range(10):
+            diagram, functor = random_diagram(module, seed)
+            decoded = diagram.to_hypergraph().to_diagram()
+            assert functor(decoded) == functor(diagram)
+            plumbing = [layer.is_plumbing for layer in decoded.inside]
+            assert not any(a and b for a, b in zip(plumbing, plumbing[1:]))
