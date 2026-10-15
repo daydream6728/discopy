@@ -851,6 +851,31 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
+- `zx.Diagram.eval` is the standard qubit interpretation, where it silently
+  returned wrong tensors: `Z(1, 1, 0.5).eval()` was a scalar on `Dim(1)` and
+  `H.eval().array` was `nan`, since the atoms of `Nat` are the integer `1`
+  with no `dim`, and a composite diagram crashed in `to_map`.
+  `tensor.Diagram.dim` is the object map of `eval`, `to_quimb`, `to_tn` and
+  of the arrays of `Box` and `Permutation` -- the `dim` of each atom --
+  which `zx.Diagram` overrides with `Dim(2)` per wire; `zx.Spider.array` is
+  the phased spider in the eigenbasis of its colour, `Spider.basis`, so that
+  `Z(1, 1, .5)`, `X(1, 1, .5)` and `Y(1, 1, .5)` are the three Paulis and
+  `X(n, m, a)` is `Z(n, m, a)` conjugated by `H`, whose matrix is now its
+  `data`. A `frobenius.Functor` maps a spider to the spiders of its codomain
+  only when it has no phase: a phased spider is a generator, mapped by
+  `ar_map` like any box, where every functor out of `zx` -- `to_map`,
+  `to_hypergraph` and `eval` among them -- dropped its colour and its phase;
+  a phased `tensor.Spider`, which `Tensor` has no array for, raises
+  `NotImplementedError` from `eval` where it evaluated as the phaseless one.
+  `gate2zx` decomposes a `Controlled` gate at a distance other than one
+  before reading the rotation it controls, where `CRz`, `CRx` and `CU1` at
+  `distance=2` gave the two-qubit diagram of `distance=1`, translates
+  `Controlled(U1(phase))`, e.g. `CU1(phase).dagger()`, where it raised
+  `KeyError`, and its `CRx` and `CU1` evaluate to the gates, where `CRx`
+  conjugated both qubits by `H` rather than the target and `CU1` doubled
+  its phase and lost a `sqrt(2)`
+  ([#625](https://github.com/discopy/discopy/issues/625),
+  [#587](https://github.com/discopy/discopy/issues/587)).
 - `Diagram.foliation` is an equality up to interchangers, at every level
   of the hierarchy. `Layer.merge` normalised the composite of two layers
   with `normal_form`, i.e. with the rewriting of the diagram's own level,

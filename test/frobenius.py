@@ -18,6 +18,15 @@ def test_Functor_call():
         F(F)
 
 
+def test_Functor_phased_spider():
+    x = Ty('x')
+    phased, box = Spider(1, 1, x, .5), Box('box', x, x)
+    F = Functor({x: x}, {phased: box})
+    assert F(phased) == box and F(Spider(1, 1, x)) == Spider(1, 1, x)
+    assert Functor.id(Diagram)(phased) == phased
+    assert not Equation(phased, Spider(1, 1, x, .25))
+
+
 def test_Box_hash():
     x, y = Ty('x'), Ty('y')
     f = Box('f', x, y)
