@@ -597,7 +597,7 @@ Ty.exp_factory = Ty.under_factory = Ty.over_factory = staticmethod(Exp)
 Id = Diagram.id
 
 
-class TermBase(Box, biclosed.TermBase):
+class TermBase(Box, biclosed.TermBase, biclosed.Normalising):
     """
     A term in the internal language of a closed category, i.e. a lambda term
     which need not be linear: this module implements closed markov categories
@@ -786,7 +786,9 @@ class TermBase(Box, biclosed.TermBase):
         return super().strategy(**params)
 
     @classmethod
-    def generate(cls, cod, choices, types, letters):
+    # pylint: disable-next=too-many-arguments,too-many-positional-arguments
+    def generate(  # a shape, a naming and whether it takes constants
+            cls, cod, choices, types, letters, constants=True):
         """
         Build a term as :meth:`biclosed.TermBase.generate` does, except
         that a closed term need not be linear: its :class:`biclosed.Sampler`
@@ -802,7 +804,8 @@ class TermBase(Box, biclosed.TermBase):
         X(lambda x0: c0)
         """
         return biclosed.Sampler(
-            cls, iter(choices), types, letters, linear=False).term(cod)
+            cls, iter(choices), types, letters, linear=False,
+            constants=constants).term(cod)
 
     def reduce(self, budget: int | None = None,
                strategy: type[Strategy] | None = None) -> BohmTree | None:
@@ -1649,6 +1652,7 @@ Ty.application_factory = Application
 Ty.abstraction_factory = Abstraction
 Ty.product_factory = Product
 TermBase.strategy_factory = LeftmostOutermost
+TermBase.reduction_strategies = (LeftmostOutermost, RightmostFirst)
 
 for law in sorted(set(Box.axioms) - set(Serialisable.axioms)):
     setattr(TermBase, law, getattr(Box, law).inapplicable(

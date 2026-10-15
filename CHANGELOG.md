@@ -152,6 +152,20 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   compact categories on. Tensor
   diagrams, which draw no arrays, and pregroup diagrams, which compare by a
   hypergraph that refuses a cap, declare `strategy = no_strategy`.
+- The laws of beta reduction, `biclosed.Normalising`, which
+  `closed.TermBase` inherits: a normal form is its own, has the type of
+  the term, and is the same, up to the names of its bound variables, for
+  each of the `reduction_strategies`, `LeftmostOutermost` and
+  `RightmostFirst`. They quantify over `biclosed.Reducible[C]`, terms
+  generated with free variables in place of constants,
+  `TermBase.generate(..., constants=False)`, since a reduction reads a
+  variable at every head. `grammar.abstract.TermBase` is enrolled with the
+  laws of closed terms, and `grammar.proofnet.ProofNet` is a `Testable`
+  with laws of its own, generated from closed linear abstract terms:
+  `sequentialisation`, that the net of the term read off a net is the net,
+  and `decoding`, that decoding the scores of its links gives it back.
+  `Testable.enrolled` checks a testable that is no category on the terms
+  its own strategy generates.
 - The property matrix checks the Kleisli categories of `discopy.kleisli`,
   whose unit and associativity are the laws of their monad: the
   multiplicative channels of `Maybe`, `Powerset`, `Subdistribution` and

@@ -1063,14 +1063,17 @@ class Testable[T](ABC):
         rather than being a category of its own, while a type is a category
         of its own, the free coloured monoid on its wires. A box that is not
         the generator of its category but defines a strategy of its own,
-        e.g. a lambda term, is checked on the terms that strategy generates.
+        e.g. a lambda term, is checked on the terms that strategy generates,
+        and so is a testable that is no category at all, e.g. a proof net.
 
         >>> from discopy.cat import Arrow, Box
         >>> from discopy.monoidal import Ty
         >>> from discopy.biclosed import TermBase
         >>> assert Arrow in Testable.enrolled() and Ty in Testable.enrolled()
         >>> assert Box not in Testable.enrolled()
+        >>> from discopy.grammar.proofnet import ProofNet
         >>> assert TermBase in Testable.enrolled()
+        >>> assert ProofNet in Testable.enrolled()
         """
         def generates(testable):
             try:
@@ -1081,7 +1084,7 @@ class Testable[T](ABC):
 
         def own_terms(testable):
             ar = getattr(testable, "ar", None)
-            return ar is testable or isinstance(ar, type)\
+            return ar is testable or (ar is None or isinstance(ar, type))\
                 and "strategy" in vars(testable)\
                 and getattr(testable, "box_factory", None) is not testable
 

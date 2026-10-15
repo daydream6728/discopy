@@ -781,6 +781,62 @@ class Canonical[factory](Testable, NamedGeneric, tuple):
             st.tuples(category.namings(), category.namings()))
 
 
+class Reducible[factory](Testable, NamedGeneric, tuple):
+    """
+    A term of the ``factory`` with free variables in place of constants, so
+    that beta reduction reads a variable at every head, see
+    :class:`Normalising`.
+    """
+    @classmethod
+    def strategy(cls, **params) -> "st.SearchStrategy[Reducible]":
+        """
+        Generate a shape and a naming, with no constants.
+
+        Parameters:
+            params : Passed to :meth:`TermBase.shapes`.
+        """
+        from hypothesis import strategies as st
+
+        category = cls.factory
+        return st.builds(
+            lambda shape, letters: cls((
+                category.generate(*shape, letters, constants=False), )),
+            category.shapes(**params), category.namings())
+
+
+class Normalising(Testable):
+    """
+    The laws of beta reduction, for terms with a ``normal_form`` reached by
+    each of their :attr:`reduction_strategies`, e.g.
+    :class:`discopy.closed.TermBase`, whose module cannot state them as its
+    annotations are strings.
+    """
+    reduction_strategies: ClassVar[tuple] = ()
+
+    @axiom
+    def normal_form_idempotence(
+            cls, terms: Reducible[Self]) -> AbstractEquation:
+        """ A normal form is its own normal form. """
+        normal_form = terms[0].normal_form()
+        return Equation(normal_form.normal_form(), normal_form)
+
+    @axiom
+    def normal_form_typing(cls, terms: Reducible[Self]) -> AbstractEquation:
+        """ Beta reduction preserves the type of a term. """
+        return Equation(terms[0].normal_form().cod, terms[0].cod)
+
+    @axiom
+    def normal_form_confluence(
+            cls, terms: Reducible[Self]) -> AbstractEquation:
+        """
+        Every reduction strategy reaches the same normal form, up to the
+        names of its bound variables.
+        """
+        return AlphaEquation(*(
+            terms[0].normal_form(strategy=strategy)
+            for strategy in cls.reduction_strategies))
+
+
 class TermBase(Box, Equivalence):
     """
     A term in the internal language of biclosed categories, an
@@ -951,15 +1007,18 @@ class TermBase(Box, Equivalence):
         return result
 
     @classmethod
-    def generate(cls, cod: Ty, choices: Sequence[int], types: Sequence[Ty],
-                 letters: Sequence[str]) -> "Term":
+    # pylint: disable-next=too-many-arguments,too-many-positional-arguments
+    def generate(  # a shape, a naming and whether it takes constants
+            cls, cod: Ty, choices: Sequence[int], types: Sequence[Ty],
+            letters: Sequence[str], constants: bool = True) -> "Term":
         """
         Build a term of type ``cod`` from a sequence of ``choices``, one per
         node of the term, taking leaves once it runs out; the exponents of
         its applications are drawn from ``types`` and the variable bound at
         each level of binders is named by the letter at that level, so that
         the same choices under other letters give an alpha-equivalent term.
-        Free variables are named ``v0, v1, ...`` and constants ``c0, c1, ...``.
+        Free variables are named ``v0, v1, ...`` and constants ``c0, c1, ...``,
+        free variables taking the place of constants unless ``constants``.
         The term is planar and linear, as any term of a closed category is
         too, see :class:`Sampler` for the procedure.
 
@@ -972,7 +1031,8 @@ class TermBase(Box, Equivalence):
         >>> assert term.alpha_eq(
         ...     TermBase.generate(Y << X, [8, 0, 0], [X], "z"))
         """
-        return Sampler(cls, iter(choices), types, letters).term(cod)
+        return Sampler(
+            cls, iter(choices), types, letters, constants=constants).term(cod)
 
     @classmethod
     def choices(cls) -> "st.SearchStrategy[list[int]]":
@@ -1364,6 +1424,9 @@ class Sampler:
         linear : Whether each bound variable occurs exactly once, in the
             order of the binders, as :mod:`biclosed` requires; a term of
             :mod:`discopy.closed` may use one any number of times.
+        constants : Whether a leaf or the head of a spine may be a
+            constant, else a free variable, so that beta reduction reads a
+            variable at every head, see :class:`Reducible`.
 
     Example
     -------
@@ -1380,13 +1443,16 @@ class Sampler:
     letters: Sequence[str]
     counter: Iterator[int] = field(default_factory=count)
     linear: bool = True
+    constants: bool = True
 
     def choose(self, options: Sequence):
         """ Pick an option by the next choice, the first when they ran out. """
         return options[next(self.choices, 0) % len(options)]
 
-    def constant(self, cod: Ty) -> Constant:
-        """ A fresh constant of a given type. """
+    def constant(self, cod: Ty) -> Constant | Variable:
+        """ A fresh constant of a given type, if the sampler takes any. """
+        if not self.constants:
+            return self.variable(cod)
         return self.category.ob.constant_factory(
             f"c{next(self.counter)}", cod)
 

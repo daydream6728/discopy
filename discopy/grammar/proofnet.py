@@ -96,17 +96,18 @@ for the assignment problem (1955) <https://doi.org/10.1002/nav.3800020109>`_).
 loves(Bob)(Alice)
 """
 
-from __future__ import annotations
-
 from collections import defaultdict
 from dataclasses import dataclass
 from functools import cached_property, reduce
 from itertools import accumulate, count
+from typing import Self
 
 import numpy as np
 
+from discopy import biclosed
+from discopy.axioms import Equation, Testable, axiom
 from discopy.grammar.abstract import (
-    Ty, Constant, Variable, Application, Abstraction, Term)
+    Ty, Constant, Variable, Application, Abstraction, Term, TermBase)
 from discopy.utils import AxiomError
 
 Port = tuple[Ty, bool]
@@ -209,7 +210,7 @@ class Sequent:
             result[atom][polarity].append(i)
         return dict(result)
 
-    def decode(self, scores) -> ProofNet:
+    def decode(self, scores) -> "ProofNet":
         """
         The linking of maximum total score, the :func:`hungarian` assignment
         of each block.
@@ -234,7 +235,7 @@ class Sequent:
 
 
 @dataclass(frozen=True)
-class ProofNet:
+class ProofNet(Testable):
     """
     A proof net is a sequent with an axiom linking, a matching of each
     negative port with a positive port of the same atom.
@@ -263,7 +264,7 @@ class ProofNet:
                     f"Cannot link port {negative} to port {positive}.")
 
     @classmethod
-    def from_term(cls, term: Term, words=None) -> ProofNet:
+    def from_term(cls, term: Term, words=None) -> "ProofNet":
         """
         The axiom linking of a closed linear term, read through the wires of
         its variables.
@@ -407,3 +408,36 @@ class ProofNet:
             if spine(word.cod, offset)[1] not in read:
                 raise AxiomError(f"{word} is not connected to the goal.")
         return term
+
+    @classmethod
+    def strategy(cls, **params):
+        """
+        Generate the nets of closed linear terms, sampled with no free
+        variables, see :class:`discopy.biclosed.Sampler`.
+
+        Parameters:
+            params : Passed to :meth:`discopy.biclosed.TermBase.shapes`.
+        """
+        from hypothesis import strategies as st
+
+        def net(shape, letters):
+            cod, choices, types = shape
+            sampler = biclosed.Sampler(TermBase, iter(choices), types, letters)
+            term = sampler.term(cod, biclosed.Constraints(extra=False))
+            return cls.from_term(term)  # ty: ignore[invalid-argument-type]
+        return st.builds(net, TermBase.shapes(**params), TermBase.namings())
+
+    @axiom
+    def sequentialisation(cls, net: Self) -> Equation:
+        """ The net of the term read off a net is the net itself. """
+        return Equation(
+            cls.from_term(net.to_term(), net.sequent.words), net)
+
+    @axiom
+    def decoding(cls, net: Self) -> Equation:
+        """ Decoding the scores of the links of a net gives it back. """
+        size = len(net.sequent.ports)
+        scores = np.zeros((size, size))
+        for negative, positive in net.links:
+            scores[negative, positive] = 1
+        return Equation(net.sequent.decode(scores), net)
