@@ -233,6 +233,8 @@ class Permutation(Function, PROP):
         (0, 3, 1, 2, 4)
         >>> assert Permutation.gather([], 3) == Permutation.id(3)
         """
+        if not 0 <= offset <= size - len(xs):
+            raise ValueError
         rest = [i for i in range(size) if i not in xs]
         return cls(rest[:offset] + list(xs) + rest[offset:], size)
 

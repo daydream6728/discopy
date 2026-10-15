@@ -79,3 +79,5 @@ def test_gather():
     assert finset.Permutation.gather([], 2) == (0, 1)
     with raises(ValueError):
         finset.Permutation.gather([0, 0], 2)
+    with raises(ValueError):
+        finset.Permutation.gather([1], 3, offset=3)

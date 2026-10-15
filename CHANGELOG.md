@@ -462,9 +462,10 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   their order, by the new `finset.Permutation.gather`, and the permutation
   is emitted once through the new `abc.SymmetricCategory.from_permutation`,
   which `symmetric.Diagram.from_permutation` overrides with a native
-  `Permutation` box and which composes the swaps of `permutation` in a
-  concrete category such as `Tensor`; the final alignment with the
-  codomain is one permutation too. Since `symmetric.Layer` coalesces
+  `Permutation` box and which defers to `permutation` in a concrete
+  category, a composition of swaps by default and a single array in
+  `Tensor`; the final alignment with the codomain is one permutation too.
+  Since `symmetric.Layer` coalesces
   plumbing, each swap of the staircase was already a full-width
   `Permutation` layer, so a routing step of `n` swaps was `n` layers and
   is now one: `simplify`, `foliation` and `from_callable` give shorter

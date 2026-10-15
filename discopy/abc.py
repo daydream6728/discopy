@@ -642,9 +642,10 @@ class SymmetricCategory[C0, C1](BraidedCategory[C0, C1]):
     @classmethod
     def from_permutation(cls, perm: Sequence[int], dom: C0) -> C1:
         """
-        The permutation of the atomic objects of ``dom``, composed of swaps
-        by :meth:`permutation`; a free category overrides it with a native
-        box, see :meth:`discopy.symmetric.Diagram.from_permutation`.
+        The permutation of the atomic objects of ``dom`` by
+        :meth:`permutation`, i.e. a composition of swaps unless the category
+        writes it directly; a free category overrides it with a native box,
+        see :meth:`discopy.symmetric.Diagram.from_permutation`.
         """
         return cls.permutation(perm, dom)
 

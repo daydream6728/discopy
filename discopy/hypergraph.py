@@ -1492,7 +1492,7 @@ class Hypergraph(MonoidalCategory, NamedGeneric['category']):
         :meth:`discopy.python.finset.Permutation.gather`, emitted with
         :meth:`discopy.abc.SymmetricCategory.from_permutation`, i.e. a
         :class:`discopy.symmetric.Permutation` box when the category has a
-        native one and a composition of swaps otherwise.
+        native one and its ``permutation`` otherwise.
 
         Note
         ----

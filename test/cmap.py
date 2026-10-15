@@ -917,14 +917,16 @@ def test_to_diagram_routes_with_one_permutation():
             assert not any(a and b for a, b in zip(plumbing, plumbing[1:]))
 
 
-def test_to_diagram_of_a_concrete_category_composes_swaps():
+def test_to_diagram_of_a_concrete_category_uses_its_permutation():
     """ A category without a native permutation box routes its wires with
-    the composition of swaps of
+    its own ``permutation``, through the default
     :meth:`discopy.abc.SymmetricCategory.from_permutation`. """
     from discopy import cmap
+    from discopy.abc import Nat
+    from discopy.matrix import Matrix
     from discopy.tensor import Dim, Tensor
 
-    dim = Dim(2, 3, 4)
-    for perm in ([1, 0, 2], [2, 0, 1]):
-        assert cmap.CMap[Tensor].permutation(perm, dim).to_diagram()\
-            == Tensor.permutation(perm, dim)
+    for category, dom in ((Tensor, Dim(2, 3, 4)), (Matrix[int], Nat(3))):
+        for perm in ([1, 0, 2], [2, 0, 1]):
+            assert cmap.CMap[category].permutation(perm, dom).to_diagram()\
+                == category.permutation(perm, dom)
