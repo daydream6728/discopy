@@ -605,7 +605,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   forwards the parameters of the free monoid's search; `interaction.Ty`
   does not whisker, so a tensor with another kind of type raises
   `TypeError` again; and `neural.Dims` names no generator, so its laws have
-  no canonical instance, as `monoidal.Dim`'s do not.
+  no canonical instance, as `monoidal.Dim`'s do not, nor do the laws of a
+  `neural.Network`, whose search draws boxes of its own `box_factory`.
 
 - `Hypergraph.strategy` and `CMap.strategy` sample the categories whose
   coherence theorem they state, raising `NotImplementedError` for the

@@ -79,6 +79,7 @@ from typing import Callable, ClassVar, Dict, Self
 
 from discopy import monoidal, biclosed, markov, cmap, hypergraph, messages
 from discopy.abc import ClosedCategory, MonoidalCategory
+from discopy.axioms import Serialisable
 from discopy.cat import factory
 from discopy.drawing import Drawing
 from discopy.utils import (
@@ -1635,6 +1636,10 @@ Ty.application_factory = Application
 Ty.abstraction_factory = Abstraction
 Ty.product_factory = Product
 TermBase.strategy_factory = LeftmostOutermost
+
+for law in sorted(set(Box.axioms) - set(Serialisable.axioms)):
+    setattr(TermBase, law, getattr(Box, law).inapplicable(
+        "A term is a box: the laws of its category are the diagram's."))
 
 
 class Equation(markov.Equation):

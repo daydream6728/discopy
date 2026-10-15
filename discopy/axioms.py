@@ -708,12 +708,18 @@ class Axiom[**P, T](Declaration[P, T]):
         type parameter, a ``box_factory`` named after each morphism, cast
         into the category when it is a generator rather than a term, e.g.
         the wire of a type, and two for each number, the equation a law
-        declared broken raises included.
+        declared broken raises included. A category whose objects take no
+        name, e.g. the shapes of a network, has none: ``NotImplemented``.
 
         >>> from discopy.cat import Arrow
         >>> print(Arrow.associativity.canonical())
         Equation(f >> g >> h, f >> g >> h)
         """
+        try:
+            self.category.ob("A")
+        except TypeError:
+            return NotImplemented
+
         def value(name, kind):
             if get_origin(kind) is Var:
                 return get_args(kind)[1]
