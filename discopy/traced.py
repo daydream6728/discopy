@@ -239,7 +239,7 @@ class Trace(Box, monoidal.Bubble):
         >>> trace = Box('f', x @ x, x @ x).trace()
         >>> assert eval(repr(trace)) == trace
         """
-        return factory_name(type(self)) + f"({self.arg!r}, left={self.left})"
+        return factory_name(type(self)) + f"({self.arg!r}, left={self.left!r})"
 
     def to_tree(self) -> dict:
         """

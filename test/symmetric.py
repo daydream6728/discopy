@@ -417,4 +417,5 @@ def test_foliation_idempotence():
     traced = Trace(Diagram((Layer(x, f), ), x, x @ x @ x @ x), left=False)
     for diagram in (s @ t @ u, s @ g @ u, s @ t >> Swap(x, y), traced):
         foliated = diagram.foliation()
+        assert Equation(diagram, foliated)
         assert foliated.foliation() == foliated

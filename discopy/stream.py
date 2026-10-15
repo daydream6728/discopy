@@ -412,7 +412,8 @@ class Stream[category](MonoidalCategory, NamedGeneric):
         f2 : x2 @ m1 -> y2 @ m2
         """
         mem = cls.ob() if mem is None else mem
-        box_factory = box_factory or cls.category.box_factory
+        if box_factory is None:
+            box_factory = cls.category.box_factory
         now = box_factory(
             f"{name}{n_steps}", dom.now @ mem.now, cod.now @ mem.later.now)
         return cls(now, dom, cod, mem, _later=lambda: cls.sequence(

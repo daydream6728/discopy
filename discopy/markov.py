@@ -132,7 +132,8 @@ class Diagram(symmetric.Diagram, MarkovCategory):
         """
         Sample Markov diagrams through their quotient: a hypergraph drawn
         by :meth:`discopy.hypergraph.Hypergraph.strategy` with at most
-        ``fuel + 1`` boxes and the spiders that the category supports, i.e.
+        ``fuel + 1`` boxes, besides the one balancing box that may close its
+        boundary, and the spiders that the category supports, i.e.
         copies and discards here and every spider in a hypergraph category,
         downgraded with :meth:`discopy.hypergraph.Hypergraph.to_diagram`.
         """

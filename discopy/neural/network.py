@@ -271,7 +271,8 @@ class Box(markov.Box, Network):
             raise ValueError(f"{self} has no module.")
         try:
             self.dom.check(*tensors)
-            outputs = tuplify(self.module(*tensors))  # ty: ignore[call-non-callable]
+            outputs = tuplify(
+                self.module(*tensors))  # ty: ignore[call-non-callable]
             self.cod.check(*outputs)
         except AxiomError as error:
             raise AxiomError(f"{self}: {error}") from error

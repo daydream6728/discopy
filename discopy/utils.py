@@ -310,7 +310,9 @@ def is_discopy_class(value) -> bool:
     >>> from discopy.frobenius import Diagram
     >>> assert is_discopy_class(Diagram) and not is_discopy_class(int)
     """
-    return isinstance(value, type) and value.__module__.startswith("discopy")
+    return isinstance(value, type) and (
+        value.__module__ == "discopy"
+        or value.__module__.startswith("discopy."))
 
 
 def factory_name(cls: type) -> str:

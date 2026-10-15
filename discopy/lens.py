@@ -182,7 +182,10 @@ class Symmetric[category](SymmetricCategory, NamedGeneric):
             f"{self.forward!r}, {self.backward!r}, {self.residual!r})"
 
     @classmethod
-    def lift(cls, forward: category, backward: category = None) -> Symmetric:  # ty: ignore[invalid-parameter-default]
+    def lift(
+            cls, forward: category,
+            backward: category = None,  # ty: ignore[invalid-parameter-default]
+    ) -> Symmetric:
         """
         A morphism `x -> y` of the underlying category as a lens from
         `(x, x_)` to `(y, y_)` with empty residual, the backward morphism
@@ -299,7 +302,9 @@ class Symmetric[category](SymmetricCategory, NamedGeneric):
                           forward, backward, self.residual @ other.residual)
 
     @classmethod
-    def swap(cls, left: ob, right: ob) -> Symmetric:  # ty: ignore[invalid-type-form]
+    def swap(
+            cls, left: ob,  # ty: ignore[invalid-type-form]
+            right: ob) -> Symmetric:  # ty: ignore[invalid-type-form]
         """
         The swap of two pairs is the swap of their positive halves forward
         and of their negative halves backward, with empty residual.
@@ -341,8 +346,9 @@ class Symmetric[category](SymmetricCategory, NamedGeneric):
         inside = self.forward @ self.cod.negative\
             >> self.cod.positive @ self.backward
         ob = interaction.Ty[self.ob.natural]
-        return interaction.Diagram[self.category](  # ty: ignore[invalid-type-form]
-            inside, ob(*self.dom), ob(*self.cod))
+        diagram = interaction.Diagram[
+            self.category]  # ty: ignore[invalid-type-form]
+        return diagram(inside, ob(*self.dom), ob(*self.cod))
 
     def to_markov(self) -> Markov:
         """
@@ -481,7 +487,10 @@ class Markov(Symmetric):
                 factory_name(cls.category)))
 
     @classmethod
-    def lift(cls, get: category, backward: category = None) -> Markov:  # ty: ignore[invalid-parameter-default]
+    def lift(
+            cls, get: category,
+            backward: category = None,  # ty: ignore[invalid-parameter-default]
+    ) -> Markov:
         """
         A morphism `x -> y` of the underlying category as a lens from
         `(x, x_)` to `(y, y_)`, with `put` discarding the input and applying

@@ -1530,8 +1530,8 @@ class Strategy:
     """
     budget: int | None = None
 
-    def __call__(self, term: Term,
-                 variables=()) -> BohmTree | None:
+    def __call__(self, term: Term, variables: tuple[Variable, ...] = ()
+                 ) -> BohmTree | None:
         """
         The head normal form of a term in a scope of variables as a
         :class:`BohmTree` with its arguments left lazy, or ``None`` when the
@@ -1542,7 +1542,8 @@ class Strategy:
             variables : The variables in scope, i.e. the free variables of
                 the term followed by the ones bound by its parents.
         """
-        variables, spine = list(variables), []
+        scope: list[Variable] = list(variables)
+        spine = []
         while isinstance(term, (Application, Abstraction)):
             if isinstance(term, Application):
                 spine.append(term.args)
@@ -1552,15 +1553,17 @@ class Strategy:
                     return None
                 term = Substitution({term.var: spine.pop()})(term.body)
             else:
-                variables.append(term.var)  # ty: ignore[invalid-argument-type]
+                scope.append(term.var)
                 term = term.body
         assert_isinstance(term, Variable)
-        head = len(variables) - 1 - variables[::-1].index(term)  # ty: ignore[invalid-argument-type]
+        index = scope[::-1].index(term)  # ty: ignore[invalid-argument-type]
+        head = len(scope) - 1 - index
         cod = term.cod
         for _ in spine:
             cod = cod.base
         return BohmTree(
-            cod, tuple(variables), head, self, tuple(reversed(spine)))  # ty: ignore[invalid-argument-type]
+            cod,  # ty: ignore[invalid-argument-type]
+            tuple(scope), head, self, tuple(reversed(spine)))
 
     def spend(self) -> bool:
         "Take one beta redex from the budget, or return ``False``."

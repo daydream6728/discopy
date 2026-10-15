@@ -421,6 +421,10 @@ def inhabits(value, kind) -> bool:
     if origin is Equation:
         return all(inhabits(term, args[0]) for term in value.terms)
     if origin is tuple:
+        if not isinstance(value, tuple):
+            return False
+        if len(args) == 2 and args[1] is Ellipsis:
+            return all(inhabits(item, args[0]) for item in value)
         return len(value) == len(args) and all(map(inhabits, value, args))
     if origin is type:
         return isinstance(value, type) and issubclass(value, args[0])
@@ -1130,12 +1134,11 @@ class Related[factory](Testable, NamedGeneric, tuple):
         return super().__new__(cls, terms)
 
     @classmethod
-    def strategy(cls, **params) -> st.SearchStrategy[Related]:
+    def strategy(cls, **params) -> "st.SearchStrategy[Related]":
         """ Generate the triples the factory relates. """
         from hypothesis import strategies as st
 
         return st.builds(cls, cls.factory.related(**params))
-
 
 
 class Equivalence(Testable):
@@ -1166,7 +1169,7 @@ class Equivalence(Testable):
 
     @classmethod
     @abstractmethod
-    def related(cls, **params) -> st.SearchStrategy[tuple]:
+    def related(cls, **params) -> "st.SearchStrategy[tuple]":
         """
         Generate three instances: two related by construction and a third
         comparable to them, related or not.

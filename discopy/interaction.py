@@ -141,8 +141,9 @@ class Ty[natural](Pregroup, NamedGeneric):
 
     def __str__(self):
         try:
+            negatives = self.negatives(self.negative)
             return " @ ".join(list(map(str, self.positive)) + [
-                f"-{x}" for x in self.negatives(self.negative)])  # ty: ignore[not-iterable]
+                f"-{x}" for x in negatives])  # ty: ignore[not-iterable]
         except TypeError:  # e.g. when Ty.natural == int
             return repr(self)
 

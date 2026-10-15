@@ -76,10 +76,12 @@ authority on the real suite: claim local green only for the checks you actually 
 `pylint` fails on any unused import, variable or argument, and on a score below the
 `fail-under` of `.pylintrc`, which is the score of `main` when it was last raised: fix the
 finding, or disable the message on that line with the reason, and raise `fail-under` to the
-new score when your change lifts it, so that the score never goes down. `.pylintrc` declares the
-`factory` members a `NamedGeneric` subscript sets and lets `hypothesis.strategies` be imported
-inside a method, where a strategy is built, so that the package never imports it; a category of messages the code is not going to follow is disabled
-there with its reason, as `cyclic-import` is: the package imports every module.
+new score when your change lifts it, so that the score never goes down. `.pylintrc` declares
+the `factory` attribute that subscripting a `NamedGeneric` sets, so that pylint knows it exists,
+and allows `hypothesis.strategies` to be imported inside the methods that build strategies, so
+that importing the package does not import Hypothesis. It also disables, each with its reason,
+the messages the code deliberately does not follow, e.g. `cyclic-import`, since the package
+imports every module.
 
 ## Run the property tests
 
@@ -119,7 +121,7 @@ and checking each law once, on the category nearest the class declaring it,
 `--hypothesis-seed` so that it draws the same examples every time, and
 `explore` for the large one `main` and the nightly run search with. All but
 `fast` share the `.hypothesis/examples` database that CI downloads before a
-run and uploads after it.
+run and uploads after every run but a pull request's, which only reads it.
 
 ```shell
 HYPOTHESIS_PROFILE=explore uv run pytest proptest/ -n auto -p no:benchmark

@@ -359,8 +359,9 @@ class Diagram(markov.Diagram, FeedbackCategory):
         Markov diagram sampled through its hypergraph: a feedback category is
         not traced, its cycles go through a delayed memory, so the wiring is
         sampled acyclic, from ``dom @ mem.delay()`` to ``cod @ mem``, with a
-        memory of at most ``fuel`` wires and at most ``fuel + 1`` boxes, then
-        fed back.
+        memory of at most ``fuel`` wires and at most ``fuel + 1`` boxes,
+        besides the one balancing box that may close its boundary, then fed
+        back.
 
         >>> from hypothesis import find
         >>> x = Ty('x')

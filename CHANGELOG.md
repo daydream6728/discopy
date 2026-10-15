@@ -9,9 +9,9 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Added
 
-- `RigidCategory.rotate_contravariance` and `adjunction`, that rotation
-  reverses composition and that the left and right adjoints of a morphism
-  are mutually inverse, the class of bug #716 was, and
+- `RigidCategory.rotate_contravariance`, that rotation reverses
+  composition, and `adjunction`, that the left and right adjoints of a
+  morphism are mutually inverse, which is the class of bug #716; and
   `PivotalCategory.self_dual`. `test_canonical_instances` checks every law
   of every free category on its canonical instance, and `Axiom.draw` draws
   `rigid.Diagram.snake_equations`. The

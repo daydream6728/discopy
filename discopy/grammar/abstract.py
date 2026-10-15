@@ -23,6 +23,7 @@ Summary
     Curry
     Copy
     Discard
+    Merge
     Permutation
     Swap
     Trace

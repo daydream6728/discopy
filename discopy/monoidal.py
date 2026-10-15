@@ -687,7 +687,7 @@ class Dim(Ty):
                 'inside': list(self.inside)}
 
     @classmethod
-    def from_tree(cls, tree: dict) -> Dim:
+    def from_tree(cls, tree: dict) -> "Dim":
         return cls(*tree['inside'])
 
 

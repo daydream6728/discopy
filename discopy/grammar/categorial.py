@@ -316,9 +316,6 @@ class TypeRaising(TermBase):
     def map(self, functor, context):
         return functor.map_term(self.simplify(), context)
 
-    def map(self, functor, context):
-        return functor.map_term(self.simplify(), context)
-
     def alpha_eq_under(self, scopes, others, depth=0):
         """ Type raisings of one base with alpha-equivalent children. """
         if any(type(other) is not type(self) or other.base != self.base
@@ -326,9 +323,6 @@ class TypeRaising(TermBase):
             return False
         return self.child.alpha_eq_under(
             scopes, [other.child for other in others], depth)
-
-    def map(self, functor, context):
-        return functor.map_term(self.simplify(), context)
 
     def __repr__(self):
         return factory_name(type(self)) + f"({self.base!r}, {self.child!r})"
@@ -387,9 +381,6 @@ class BinaryTerm(TermBase):
     def map(self, functor, context):
         return functor.map_term(self.simplify(), context)
 
-    def map(self, functor, context):
-        return functor.map_term(self.simplify(), context)
-
     def alpha_eq_under(self, scopes, others, depth=0):
         """ Compositions of one kind with alpha-equivalent sides. """
         if any(type(other) is not type(self) for other in others):
@@ -398,9 +389,6 @@ class BinaryTerm(TermBase):
             scopes, [other.left for other in others], depth)\
             and self.right.alpha_eq_under(
                 scopes, [other.right for other in others], depth)
-
-    def map(self, functor, context):
-        return functor.map_term(self.simplify(), context)
 
     def __repr__(self):
         return factory_name(type(self)) + f"({self.left!r}, {self.right!r})"

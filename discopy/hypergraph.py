@@ -962,7 +962,9 @@ class Hypergraph[category](
             'wires': [list(dom_wires), [
                 [list(inputs), list(outputs)]
                 for inputs, outputs in box_wires], list(cod_wires)],
-            'spider_types': [typ.to_tree() for typ in self.spider_types]}
+            'spider_types': [typ.to_tree() for typ in self.spider_types]
+        } | ({'offsets': list(self.offsets)}
+             if any(offset is not None for offset in self.offsets) else {})
 
     @classmethod
     def from_tree(cls, tree: dict) -> Hypergraph:
@@ -975,7 +977,8 @@ class Hypergraph[category](
         return factory(
             from_tree(tree['dom']), from_tree(tree['cod']),
             tuple(map(from_tree, tree['boxes'])), wires,
-            tuple(map(from_tree, tree['spider_types'])))
+            tuple(map(from_tree, tree['spider_types'])),
+            tuple(tree['offsets']) if 'offsets' in tree else None)
 
     def __str__(self):
         return str(self.to_diagram())

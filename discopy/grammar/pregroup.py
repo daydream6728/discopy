@@ -104,6 +104,7 @@ class Diagram(frobenius.Diagram):
     permutation_factory: ClassVar[type["Permutation"]]
     cup_factory: ClassVar[type["Cup"]]
     cap_factory: ClassVar[type["Cap"]]
+    spider_factory: ClassVar[type["Spider"]]
     ob = Ty
 
     def normal_form(self, **params):
@@ -266,7 +267,7 @@ def brute_force(*vocab, target=Ty('s')):
 
 
 Diagram.swap_factory = Swap
-Diagram.spider_factory = Spider  # ty: ignore[invalid-assignment]
+Diagram.spider_factory = Spider
 Diagram.permutation_factory = Permutation
 Diagram.cup_factory, Diagram.cap_factory = Cup, Cap
 

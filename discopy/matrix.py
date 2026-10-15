@@ -465,6 +465,7 @@ def array2string(array, **params):
     """ Numpy array pretty print. """
     import numpy
     numpy.set_printoptions(threshold=config.NUMPY_THRESHOLD)
+    params.pop('separator', None)
     return numpy.array2string(array, **params, separator=', ')\
         .replace('[ ', '[').replace('  ', ' ')
 
