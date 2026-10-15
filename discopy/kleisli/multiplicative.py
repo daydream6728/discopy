@@ -71,13 +71,14 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
+from discopy import messages
 from discopy.abc import Category, NamedGeneric
+from discopy.axioms import Equation
 from discopy.kleisli import channel
-from discopy.kleisli.monad import Monad
+from discopy.kleisli.monad import Maybe, Monad, Powerset, Seed, Subdistribution
 from discopy.python import function
-from discopy.python.multiplicative import Ty
-from discopy.utils import (
-    assert_isinstance, assert_iscomposable, factory, factory_name)
+from discopy.python.multiplicative import Function, Ty
+from discopy.utils import assert_isinstance, assert_iscomposable, factory_name
 
 
 class Row:
@@ -144,7 +145,6 @@ def unpack_value(value) -> tuple:
     return value.values if isinstance(value, Row) else (value, )
 
 
-@factory
 class Channel[monad](Category, NamedGeneric):
     """
     A channel is a morphism in the Kleisli category of a monad ``M`` with
@@ -182,6 +182,47 @@ class Channel[monad](Category, NamedGeneric):
     """
     ob = Ty
     monad: Monad
+
+    dagger_involution = Category.dagger_involution.inapplicable(
+        messages.NO_DAGGER)
+    dagger_contravariance = Category.dagger_contravariance.inapplicable(
+        messages.NO_DAGGER)
+
+    @classmethod
+    def equation_factory(cls, *terms: Channel) -> Equation:
+        """
+        The equation of a law, compared by the boundary of its terms and
+        what the monad observes of their outputs on the arguments of
+        :meth:`discopy.python.multiplicative.Function.arguments`, so that
+        the unit and associativity of composition are those of the monad.
+        """
+        return Equation(*terms, up_to=lambda term: (
+            term.dom, term.cod, tuple(
+                cls.monad.observe(term.raw(*args))
+                for args in Function.arguments(term.dom))))
+
+    @classmethod
+    def strategy(cls, *, dom=None, cod=None, **_):
+        """
+        Generate channels: a table from each argument of the domain to a
+        monadic value over the arguments of the codomain, drawn by the
+        :attr:`~discopy.kleisli.monad.Monad.generate` of the monad.
+        """
+        from hypothesis import strategies as st
+        generate = None if cls.monad is None else cls.monad.generate
+        if generate is None:
+            raise NotImplementedError
+
+        @st.composite
+        def channels(draw, generate: Callable):
+            source = draw(cls.ob.strategy()) if dom is None else dom
+            target = draw(cls.ob.strategy()) if cod is None else cod
+            outcomes = tuple(map(pack_value, Function.arguments(target)))
+            table = draw(st.fixed_dictionaries({
+                args: generate(outcomes)
+                for args in Function.arguments(source)}))
+            return cls(lambda *xs: table[xs], source, target)
+        return channels(generate)
 
     def __init__(self, inside: Callable, dom: Ty, cod: Ty):
         dom, cod = self.ob.cast(dom), self.ob.cast(cod)
@@ -313,3 +354,9 @@ class Channel[monad](Category, NamedGeneric):
     def __repr__(self):
         return factory_name(type(self))\
             + f"({self.inside!r}, dom={self.dom!r}, cod={self.cod!r})"
+
+
+CHECKED = tuple(
+    Channel[monad]  # ty: ignore[invalid-type-form]
+    for monad in (Maybe, Powerset, Subdistribution, Seed))
+""" The channels the property matrix checks, one for each named monad. """

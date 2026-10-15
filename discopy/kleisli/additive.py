@@ -111,13 +111,14 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
+from discopy import messages
 from discopy.abc import NamedGeneric, TracedCategory
+from discopy.axioms import Equation
 from discopy.kleisli import channel
-from discopy.kleisli.monad import Monad
+from discopy.kleisli.monad import Monad, Powerset, Subdistribution
 from discopy.python import function
-from discopy.python.additive import Ty
-from discopy.utils import (
-    assert_isinstance, assert_iscomposable, factory, factory_name)
+from discopy.python.additive import Function, Ty
+from discopy.utils import assert_isinstance, assert_iscomposable, factory_name
 
 
 class Tagged:
@@ -223,7 +224,6 @@ def injection(offset: int, source: Ty, target: Ty) -> function.Function:
     return function.Function(inside, pack(source), pack(target))
 
 
-@factory
 class Channel[monad](TracedCategory, NamedGeneric):
     """
     A channel is a morphism in the Kleisli category of a monad ``M`` with
@@ -265,6 +265,60 @@ class Channel[monad](TracedCategory, NamedGeneric):
     """
     ob = Ty
     monad: Monad
+
+    dagger_involution = TracedCategory.dagger_involution.inapplicable(
+        messages.NO_DAGGER)
+    dagger_contravariance = TracedCategory.dagger_contravariance\
+        .inapplicable(messages.NO_DAGGER)
+    dagger_monoidality = TracedCategory.dagger_monoidality.inapplicable(
+        messages.NO_DAGGER)
+    trace_dinaturality_left = TracedCategory.trace_dinaturality_left\
+        .inapplicable(messages.CHANNEL_TRACES_RIGHT)
+    trace_iteration_left = TracedCategory.trace_iteration_left.inapplicable(
+        messages.CHANNEL_TRACES_RIGHT)
+    trace_naturality_left = TracedCategory.trace_naturality_left\
+        .inapplicable(messages.CHANNEL_TRACES_RIGHT)
+    trace_superposing_left = TracedCategory.trace_superposing_left\
+        .inapplicable(messages.CHANNEL_TRACES_RIGHT)
+
+    @classmethod
+    def equation_factory(cls, *terms: Channel) -> Equation:
+        """
+        The equation of a law, compared by the boundary of its terms and
+        what the monad observes of their outputs on the arguments of
+        :meth:`discopy.python.additive.Function.arguments`.
+        """
+        return Equation(*terms, up_to=lambda term: (
+            term.dom, term.cod, tuple(
+                cls.monad.observe(term(*args))
+                for args in Function.arguments(term.dom))))
+
+    @classmethod
+    def strategy(cls, *, dom=None, cod=None, **_):
+        """
+        Generate channels: a table from each argument of the domain to a
+        monadic value over the arguments of the codomain, drawn by the
+        :attr:`~discopy.kleisli.monad.Monad.generate` of the monad, for the
+        monads whose channels are :data:`CHECKED`.
+        """
+        from hypothesis import strategies as st
+        generate = cls.monad.generate if cls in CHECKED else None
+        if generate is None:
+            raise NotImplementedError
+
+        @st.composite
+        def channels(draw, generate: Callable):
+            source = draw(cls.ob.strategy()) if dom is None else dom
+            target = draw(cls.ob.strategy()) if cod is None else cod
+            outcomes = tuple(
+                pack_value(value, tag, target)
+                for value, tag in Function.arguments(target))
+            table = draw(st.fixed_dictionaries({
+                args: generate(outcomes)
+                for args in Function.arguments(source)}))
+            return cls(
+                lambda obj, tag=0: table[obj, tag], source, target)
+        return channels(generate)
 
     def __init__(self, inside: Callable, dom: Ty, cod: Ty):
         dom, cod = self.ob.cast(dom), self.ob.cast(cod)
@@ -421,3 +475,14 @@ class Channel[monad](TracedCategory, NamedGeneric):
     def __repr__(self):
         return factory_name(type(self))\
             + f"({self.inside!r}, dom={self.dom!r}, cod={self.cod!r})"
+
+
+CHECKED = (
+    Channel[Powerset],  # ty: ignore[invalid-type-form]
+    Channel[Subdistribution])  # ty: ignore[invalid-type-form]
+"""
+The channels the property matrix checks, those of the Elgot monads whose
+iteration terminates on every channel their strategy draws. The iteration
+of :attr:`~discopy.kleisli.monad.Maybe` is a ``while`` loop, which a drawn
+channel can make cycle forever.
+"""

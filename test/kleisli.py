@@ -616,3 +616,11 @@ def test_additive_Channel_repr():
     half = additive.Channel[Maybe](
         lambda x: x // 2 if x % 2 == 0 else None, int, int)
     assert repr(half).startswith("kleisli.additive.Channel[Maybe](")
+
+
+def test_observe():
+    assert Subdistribution.observe(frozenset({(0, .1 + .2)}))\
+        == Subdistribution.observe(frozenset({(0, .3)}))
+    tick = lambda s: (s, s + 1)
+    assert Seed.observe(tick) == ((0, 1), (1, 2), (-1, 0), (2, 3))
+    assert Maybe.observe(None) is None

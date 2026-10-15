@@ -212,6 +212,11 @@ class List[generator_factory](Monoid["List"], NamedGeneric):
     ob = type(None)
     dom = cod = None
 
+    dagger_involution = Monoid.dagger_involution.inapplicable(
+        messages.NO_DAGGER)
+    dagger_contravariance = Monoid.dagger_contravariance.inapplicable(
+        messages.NO_DAGGER)
+
     def __init__(self, *inside):
         self.inside = inside
 
@@ -252,6 +257,28 @@ class List[generator_factory](Monoid["List"], NamedGeneric):
     def __repr__(self):
         return factory_name(type(self))\
             + f"({', '.join(map(repr, self.inside))})"
+
+    @classmethod
+    def generators(cls, **_):
+        """
+        Generate the lists of one Python type, one of those
+        :func:`axioms.values` samples, the free monoid on any other
+        generator having no strategy yet.
+
+        >>> from discopy.python import Ty
+        >>> assert Ty.generators().example() in map(Ty, axioms.VALUES)
+        """
+        from hypothesis import strategies as st
+        if cls.generator_factory is not type:
+            raise NotImplementedError
+        return st.sampled_from(tuple(axioms.VALUES)).map(cls)
+
+    @classmethod
+    def strategy(cls, **_):
+        """ Generate lists of at most three generators. """
+        from hypothesis import strategies as st
+        return st.lists(cls.generators(), max_size=3).map(
+            lambda xs: cls().tensor(*xs))
 
 
 @factory

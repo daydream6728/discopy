@@ -152,6 +152,25 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   compact categories on. Tensor
   diagrams, which draw no arrays, and pregroup diagrams, which compare by a
   hypergraph that refuses a cap, declare `strategy = no_strategy`.
+- The property matrix checks the Kleisli categories of `discopy.kleisli`,
+  whose unit and associativity are the laws of their monad: the
+  multiplicative channels of `Maybe`, `Powerset`, `Subdistribution` and
+  `Seed`, and the additive channels, with their tensor and trace, of the
+  Elgot monads `Powerset` and `Subdistribution`, `additive.CHECKED`; the
+  iteration of `Maybe` is a `while` loop a drawn channel can make cycle
+  forever. A `Monad` says how to `generate` its values over some outcomes
+  and what two of them are compared by, `observe`: a subdistribution up to
+  the rounding of its weights, whose mass a generated one keeps below `.9`
+  so that its loops terminate, and a computation of a state monad by what
+  it does on the states `axioms.values` samples. A channel is drawn as a
+  table from the arguments of its domain to the values of its monad, and
+  compared by what its monad observes of its outputs on them. A channel
+  has no dagger and an additive one is traced on the right only,
+  `messages.CHANNEL_TRACES_RIGHT`. The objects of a channel are lists of
+  Python types, `monoidal.List.strategy` drawing them from the types
+  `axioms.values` samples, which enrols `List[type]` with the laws of a
+  monoid, whose one object a sequent draws as `None`. `discopy` imports
+  `kleisli`. `fail-under` rises to 9.08.
 - The property matrix checks lenses and parametric maps: `lens.Symmetric`,
   `lens.Traced`, `lens.Markov`, their pairs of types `lens.Ty` and the
   seven levels of `discopy.para` are enrolled, each drawing its residual,

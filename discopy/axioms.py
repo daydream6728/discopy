@@ -632,7 +632,8 @@ class Declaration[**P, T](classmethod):
     ) -> "st.SearchStrategy[tuple]":
         """
         Generate the scope and the arguments of the bound declaration: a
-        variable of sort ``Obj`` from the strategy of ``category.ob``, of
+        variable of sort ``Obj`` from the strategy of ``category.ob``, or
+        ``None`` for the single object of a monoid, of
         sort ``Atom`` from the ``generators`` of ``category.ob`` and of sort
         :class:`Count` a number up to :data:`MAX_COUNT`, then a premise
         ``Hom[C1, A, B]`` from the strategy of the category with its boundary
@@ -648,6 +649,8 @@ class Declaration[**P, T](classmethod):
                 if sort is Count:
                     return draw(st.integers(0, MAX_COUNT), label=name)
                 ob = self.category.ob
+                if ob is type(None):
+                    return None
                 return draw(ob.generators() if get_origin(sort) is Atom
                             else ob.strategy(), label=name)
 

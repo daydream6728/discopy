@@ -52,6 +52,7 @@ PARA_REPARAM = (
     "A parametric map is equal only up to the reparametrisations that "
     "permute its parameters, which its hypergraph compares in order.")
 PARA_NO_ROTATION = "A parametric map has no rotation."
+CHANNEL_TRACES_RIGHT = "A channel is traced on the right only."
 PARA_CURRY_COPAR = (
     "A closed category cannot curry a map with coparameters {}, as its "
     "exponential would swallow them.")
