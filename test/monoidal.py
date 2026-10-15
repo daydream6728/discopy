@@ -202,6 +202,9 @@ def test_Dim_identity_and_slicing():
     assert Dim(2, 3, 4)[1:] == Dim(3, 4)
     # Reversing reverses the factors.
     assert Dim(2, 3, 4)[::-1] == Dim(4, 3, 2)
+    # The tree of a dimension reads back, the unit included.
+    assert loads(dumps(Dim(2, 3))) == Dim(2, 3)
+    assert loads(dumps(Dim())) == Dim() == Dim(1)
 
 
 def test_Layer_init():
