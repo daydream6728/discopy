@@ -13,8 +13,9 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   fixpoint-free involution pairing each input port with the output port
   its wire lands on, so the map has no boxes and `2n` ports for `n`
   wires, where the default of `abc.SymmetricCategory` composes one `swap`
-  per inversion, quadratic in the number of wires and composing as many
-  maps. It is the composite of swaps, i.e. equals
+  per object, moving it across the ones before it, so it builds and
+  composes as many maps of the whole boundary, quadratic in the number of
+  wires. It is the composite of swaps, i.e. equals
   `Diagram.permutation(xs, doms).to_map()`, and takes its objects as a
   sequence or as one type like the default
   ([#735](https://github.com/discopy/discopy/issues/735)).
