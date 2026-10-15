@@ -21,22 +21,42 @@ Summary
     Scalar
 """
 
+import cmath
+from functools import reduce
 from math import pi
 
 from discopy import cat, rigid, tensor, quantum
 from discopy.cat import factory
 from discopy.quantum.circuit import qubit, Circuit
 from discopy.quantum.gates import (
-    Bra, Ket, Rz, Rx, CX, CZ, Controlled, format_number)
+    Bra, Ket, Rz, Rx, U1, CX, CZ, Controlled, format_number)
 from discopy.quantum.gates import Scalar as GatesScalar
 from discopy.rigid import Sum, Nat
+from discopy.tensor import Dim, backend
 from discopy.utils import factory_name
 
 
 @factory
 class Diagram(tensor.Diagram[complex]):
-    """ ZX Diagram. """
+    """
+    A ZX diagram is a tensor diagram with qubits as wires: :meth:`eval` is
+    the standard interpretation, where each wire is ``Dim(2)``, each spider
+    the tensor of its phase in the eigenbasis of its colour, :code:`H` the
+    Hadamard matrix and a scalar its number.
+
+    Example
+    -------
+    >>> assert Z(1, 1, .5).eval().is_close(
+    ...     tensor.Tensor[complex]([1, 0, 0, -1], Dim(2), Dim(2)))
+    >>> assert (H >> H).eval().is_close(tensor.Tensor[complex].id(Dim(2)))
+    >>> assert X(1, 1, .25).eval().is_close((H >> Z(1, 1, .25) >> H).eval())
+    """
     ob = Nat
+
+    @classmethod
+    def dim(cls, typ: Nat) -> Dim:
+        """ The wires of a ZX diagram are qubits, i.e. ``Dim(2)`` each. """
+        return Dim(2) ** len(typ)
 
     @staticmethod
     def swap(left, right):
@@ -255,7 +275,28 @@ class Swap(Permutation, tensor.Swap[complex], Box):
 
 
 class Spider(tensor.Spider[complex], Box):
-    """ Abstract spider box. """
+    """
+    Abstract spider box, i.e. a phased spider in the eigenbasis of a Pauli.
+
+    Its array has ``1`` on the all-zero entry and ``exp(2j * pi * phase)``
+    on the all-one entry, conjugated by ``basis``, the unitary whose columns
+    are the eigenvectors of the Pauli: the identity for :class:`Z`, the
+    Hadamard for :class:`X` and ``[[1, 1], [1j, -1j]] / sqrt(2)`` for
+    :class:`Y`, so that the spider of phase ``.5`` on one leg in and out is
+    the Pauli itself.
+
+    Parameters:
+        n_legs_in (int) : The number of legs in.
+        n_legs_out (int) : The number of legs out.
+        phase : The phase, in units of ``2 * pi``.
+
+    Example
+    -------
+    >>> assert Z(0, 0).eval().array == 2
+    >>> for spider, pauli in [(Z, quantum.Z), (X, quantum.X), (Y, quantum.Y)]:
+    ...     assert spider(1, 1, .5).eval().is_close(pauli.eval())
+    """
+    basis = ((1, 0), (0, 1))
 
     def __init__(self, n_legs_in, n_legs_out, phase=0):
         super().__init__(n_legs_in, n_legs_out, Nat(1), phase)
@@ -297,25 +338,39 @@ class Spider(tensor.Spider[complex], Box):
 
     @property
     def array(self):
-        return None
+        if self.free_symbols:
+            import sympy
+            phase = sympy.exp(2 * sympy.pi * sympy.I * self.phase)
+        else:
+            phase = cmath.exp(2j * pi * self.phase)
+        with backend() as np:
+            basis = np.array(self.basis)
+            legs = [len(self.dom) * [np.conj(basis[:, b])]
+                    + len(self.cod) * [basis[:, b]] for b in (0, 1)]
+            zero, one = (
+                reduce(np.kron, vectors, np.array(1)) for vectors in legs)
+            return (zero + phase * one).reshape(
+                len(self.dom @ self.cod) * (2, ))
 
 
 class Z(Spider):
-    """ Z spider. """
+    """ Z spider, in the computational basis. """
     tikzstyle_name = 'Z'
     color = 'green'
 
 
 class Y(Spider):
-    """ Y spider. """
+    """ Y spider, in the eigenbasis of the Pauli Y. """
     tikzstyle_name = 'Y'
     color = "blue"
+    basis = ((2 ** -.5, 2 ** -.5), (2 ** -.5 * 1j, -2 ** -.5 * 1j))
 
 
 class X(Spider):
-    """ X spider. """
+    """ X spider, in the Hadamard basis. """
     tikzstyle_name = 'X'
     color = "red"
+    basis = ((2 ** -.5, 2 ** -.5), (2 ** -.5, -2 ** -.5))
 
 
 class Scalar(Box):
@@ -356,21 +411,20 @@ def gate2zx(box):
         return Id().tensor(*spiders) @ scalar(pow(2, -len(box.bitstring) / 2))
     if isinstance(box, (Rz, Rx)):
         return (Z if isinstance(box, Rz) else X)(1, 1, box.phase)
-    if isinstance(box, Controlled) and box.name.startswith('CRz'):
-        return Z(1, 2) @ Z(1, 2, box.phase / 2)\
+    if isinstance(box, Controlled) and box.distance != 1:
+        return circuit2zx(box._decompose())
+    if isinstance(box, Controlled) and isinstance(box.controlled, (Rz, Rx)):
+        gadget = Z(1, 2) @ Z(1, 2, box.phase / 2)\
             >> Id(1) @ (X(2, 1) >> Z(1, 0, -box.phase / 2)) @ Id(1) @ root2
-    if isinstance(box, Controlled) and box.name.startswith('CRx'):
-        return X(1, 2) @ X(1, 2, box.phase / 2)\
-            >> Id(1) @ (Z(2, 1) >> X(1, 0, -box.phase / 2)) @ Id(1) @ root2
-    if isinstance(box, quantum.CU1):
-        return Z(1, 2, box.phase) @ Z(1, 2, box.phase)\
-            >> Id(1) @ (X(2, 1) >> Z(1, 0, -box.phase)) @ Id(1)
+        return gadget if isinstance(box.controlled, Rz)\
+            else Id(1) @ H >> gadget >> Id(1) @ H
+    if isinstance(box, Controlled) and isinstance(box.controlled, U1):
+        return Z(1, 2, box.phase / 2) @ Z(1, 2, box.phase / 2)\
+            >> Id(1) @ (X(2, 1) >> Z(1, 0, -box.phase / 2)) @ Id(1) @ root2
     if isinstance(box, GatesScalar):
         if box.is_mixed:
             raise NotImplementedError
         return scalar(box.data)
-    if isinstance(box, Controlled) and box.distance != 1:
-        return circuit2zx(box._decompose())
     standard_gates = {
         # A physical swap is wire crossing in the ZX calculus.
         quantum.SWAP: SWAP,
@@ -389,7 +443,7 @@ circuit2zx = quantum.circuit.Functor(
     ob_map={qubit: Nat(1)}, ar_map=gate2zx,
     dom=Circuit, cod=Diagram)
 
-H = Box('H', Nat(1), Nat(1))
+H = Box('H', Nat(1), Nat(1), data=[x / 2 ** .5 for x in (1, 1, 1, -1)])
 H.dagger = lambda: H
 H.draw_as_spider = True
 H.drawing_name, H.tikzstyle_name, = '', 'H'

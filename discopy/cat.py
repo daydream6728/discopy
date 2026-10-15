@@ -853,17 +853,28 @@ class Bubble(Box):
             data=self.data, is_dagger=not self.is_dagger)
 
     def to_tree(self):
-        return {
+        tree = {
             'factory': factory_name(type(self)),
             'args': [f.to_tree() for f in self.args],
             'dom': self.dom.to_tree(),
             'cod': self.cod.to_tree()}
+        if self.is_dagger:
+            tree['is_dagger'] = True
+        if self.data is not None:
+            tree['data'] = self.data
+        if self.name:
+            tree['name'] = self.name
+        if self.method != "bubble":
+            tree['method'] = self.method
+        return tree
 
     @classmethod
     def from_tree(cls, tree):
         args = [tree['arg']] if 'args' not in tree else tree['args']
         dom, cod = map(from_tree, (tree['dom'], tree['cod']))
-        return cls(*map(from_tree, args), dom=dom, cod=cod)
+        kwargs = {k: tree[k] for k in ('data', 'is_dagger', 'name', 'method')
+                  if k in tree}
+        return cls(*map(from_tree, args), dom=dom, cod=cod, **kwargs)
 
 
 @factory

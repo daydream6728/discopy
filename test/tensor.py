@@ -6,7 +6,7 @@ import numpy as np
 import tensornetwork as tn
 from pytest import raises
 
-from discopy.utils import AxiomError
+from discopy.utils import AxiomError, dumps, loads
 from discopy.tensor import *
 from discopy import frobenius
 
@@ -37,6 +37,7 @@ def test_Dim():
     assert repr(Dim(1, 2, 3)) == str(dim) == "Dim(2, 3)"
     assert {dim: 42}[dim] == 42
     assert Dim(2, 3, 4).r == Dim(4, 3, 2)
+    assert loads(dumps(dim)) == dim and loads(dumps(Dim())) == Dim() == Dim(1)
 
 
 def test_Tensor():
@@ -58,6 +59,15 @@ def test_Tensor():
     assert m == m and np.all(m.array == arr)
     m = Tensor([0, 1, 1, 0], Dim(2), Dim(2))
     assert Tensor.id(Dim(2)).then(*(m, m)) == m >> m.dagger()
+
+
+def test_Spider_array():
+    d = Dim(2)
+    assert (Spider(1, 2, d).array == Tensor.spiders(1, 2, d).array).all()
+    with raises(NotImplementedError):
+        Spider(1, 1, d, .5).eval()
+    with raises(NotImplementedError):
+        (Spider(1, 2, d) >> Spider(2, 1, d, .5)).to_tn()
 
 
 def test_Spider_to_tn():
@@ -430,3 +440,32 @@ def test_Functor_bubble():
     assert np.allclose(
         np.asarray(F(men_are_mortal.arg).array, dtype=float),
         np.asarray(men_are_mortal.arg.eval().array, dtype=float))
+
+
+def test_then_promotes_dtype():
+    """ The integer structural tensors compose with floats as units. """
+    g = Tensor([[.5, .5], [.25, .75]], Dim(2), Dim(2))
+    assert Tensor.id(Dim(2)) >> g == g == g >> Tensor.id(Dim(2))
+    assert Tensor.id(Dim(1)) @ g == g
+    assert Tensor.spiders(1, 1, Dim(2)) >> g == g
+    assert Tensor.swap(Dim(2), Dim(2)) >> g @ g\
+        == g @ g >> Tensor.swap(Dim(2), Dim(2))
+    copies = Tensor.copy(Dim(2)) >> g @ g
+    assert copies.dtype == g.dtype and np.allclose(
+        copies.array[0], np.outer(g.array[0], g.array[0]))
+    c = Tensor([[1j, 0], [0, 1]], Dim(2), Dim(2))
+    assert Tensor.id(Dim(2)) >> c == c
+    assert Tensor[float].id(Dim(2)) >> Tensor.id(Dim(2))\
+        == Tensor[float].id(Dim(2))
+
+
+def test_Tensor_is_markov():
+    """ Tensor has copy and discard, so a lens over it needs no discard. """
+    from discopy import lens
+    from discopy.abc import MarkovCategory
+    assert issubclass(Tensor, MarkovCategory)
+    g = Tensor([[.5, .5], [.25, .75]], Dim(2), Dim(2))
+    lifted = lens.Markov[Tensor].lift(g)
+    assert lifted.forward == Tensor.copy(Dim(2)) >> g @ Tensor.id(Dim(2))
+    assert lifted.put == Tensor.discard(Dim(2)) @ Tensor.id(Dim(1))
+    assert lifted.forward.dtype == g.dtype

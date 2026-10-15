@@ -53,6 +53,7 @@ from discopy.utils import (
     BinaryBoxConstructor,
     AxiomError,
     factory_name,
+    from_tree,
     get_origin,
 )
 
@@ -266,6 +267,10 @@ class FA(TermBase, biclosed.Application):
         biclosed.Application.__init__(self, func, args, left=False)
         TermBase.__init__(self, self.name, self.dom, self.cod)
 
+    @classmethod
+    def from_tree(cls, tree):
+        return cls(*map(from_tree, (tree['func'], tree['args'])))
+
     def simplify(self):
         return self.func.simplify()(self.args.simplify())
 
@@ -275,6 +280,10 @@ class BA(TermBase, biclosed.Application):
     def __init__(self, args, func):
         biclosed.Application.__init__(self, func, args, left=True)
         TermBase.__init__(self, self.name, self.dom, self.cod)
+
+    @classmethod
+    def from_tree(cls, tree):
+        return cls(*map(from_tree, (tree['args'], tree['func'])))
 
     def simplify(self):
         return self.args.simplify()(self.func.simplify(), left=True)
@@ -309,6 +318,14 @@ class TypeRaising(TermBase):
 
     def __repr__(self):
         return factory_name(type(self)) + f"({self.base!r}, {self.child!r})"
+
+    def to_tree(self):
+        return dict(factory=factory_name(type(self)), base=self.base.to_tree(),
+                    child=self.child.to_tree())
+
+    @classmethod
+    def from_tree(cls, tree):
+        return cls(*map(from_tree, (tree['base'], tree['child'])))
 
     @property
     def constants(self):
@@ -375,6 +392,14 @@ class BinaryTerm(TermBase):
 
     def __repr__(self):
         return factory_name(type(self)) + f"({self.left!r}, {self.right!r})"
+
+    def to_tree(self):
+        return dict(factory=factory_name(type(self)), left=self.left.to_tree(),
+                    right=self.right.to_tree())
+
+    @classmethod
+    def from_tree(cls, tree):
+        return cls(*map(from_tree, (tree['left'], tree['right'])))
 
     @property
     def constants(self):

@@ -217,6 +217,14 @@ def test_alpha_eq():
         X(lambda x: X(lambda y: ((Y << X) << X)("h_")(x)(y))))
 
 
+def test_equality_reads_the_data_of_constants():
+    X, Y = Ty("X"), Ty("Y")
+    x = Variable("x", X)
+    f, g = Constant("f", Y << X, data=1), Constant("f", Y << X, data=2)
+    assert str(f(x)) == str(g(x)) and f(x) != g(x)
+    assert X(lambda x: f(x)) != X(lambda x: g(x))
+
+
 def test_alpha_eq_under_restores_the_scopes():
     X, Y = Ty("X"), Ty("Y")
     f, x = (Y << X)("f"), Variable("x", X)
@@ -319,7 +327,10 @@ def test_mapping_preserves_binding_and_lexical_boundaries():
 def test_transparency():
     x, y = Ty('x'), Ty('y')
     curry = Box('f', x @ y, x).curry
+    v, f, g = Variable('v', x), (y << x)('f'), (x >> y)('g')
     for box in [Eval(x << y), Eval(y >> x, left=False), Coeval(x << y),
-                curry(), curry(left=False), Constant('c', x)]:
+                curry(), curry(left=False), Constant('c', x), v, f(v),
+                v(g, left=True), x(lambda u: f(u)),
+                x(lambda u, left=True: u(g, left=True))]:
         assert eval(repr(box), {"biclosed": biclosed, "cat": cat}) == box
         assert loads(dumps(box)) == box

@@ -140,18 +140,18 @@ class Tensor(Matrix):
     def then(self, other: Tensor = None, *others: Tensor) -> Tensor:
         if other is None or others:
             return super().then(other, *others)
-        assert_isinstance(other, type(self))
+        assert_isinstance(other, self.ar)
         assert_iscomposable(self, other)
         with backend() as np:
             array = np.tensordot(self.array, other.array, len(self.cod))\
                 if self.array.shape and other.array.shape\
                 else self.array * other.array
-        return type(self)(array, self.dom, other.cod)
+        return self.promote(other)(array, self.dom, other.cod)
 
     def tensor(self, other: Tensor = None, *others: Tensor) -> Tensor:
         if other is None or others:
             return Diagram.tensor(self, other, *others)
-        assert_isinstance(other, Tensor)
+        assert_isinstance(other, self.ar)
         dom, cod = self.dom @ other.dom, self.cod @ other.cod
         source = range(len(dom @ cod))
         target = [
@@ -163,7 +163,7 @@ class Tensor(Matrix):
                 if self.array.shape and other.array.shape\
                 else self.array * other.array
             array = np.moveaxis(array, source, target)
-        return type(self)(array, dom, cod)
+        return self.promote(other)(array, dom, cod)
 
     def dagger(self) -> Tensor:
         source = list(range(len(self.dom @ self.cod)))
@@ -514,11 +514,29 @@ class Diagram(NamedGeneric['dtype'], frobenius.Diagram):
     """
     ob = Dim
 
+    @classmethod
+    def dim(cls, typ: monoidal.Ty) -> Dim:
+        """
+        The dimension of a type, i.e. its image under :meth:`eval`: the
+        ``dim`` of each atom, or the atom itself when it is a number.
+
+        Parameters:
+            typ : A type of the category of the diagram.
+
+        Example
+        -------
+        >>> from discopy.quantum import bit, qubit
+        >>> assert Diagram.dim(bit @ qubit) == Dim(2, 2)
+        >>> assert Diagram.dim(Dim(2, 3)) == Dim(2, 3)
+        """
+        return Dim(*(getattr(obj, "dim", obj) for obj in typ.inside))
+
     def eval(self, dtype: type = None, optimize="greedy",
              **params) -> Tensor:
         """
         Evaluate a tensor network as a :class:`Tensor`: call the
-        :class:`Functor` that sends each box to its array.
+        :class:`Functor` that sends each type to its :meth:`dim` and each
+        box to its array.
 
         Parameters:
             dtype : The datatype for spiders and the result,
@@ -535,10 +553,9 @@ class Diagram(NamedGeneric['dtype'], frobenius.Diagram):
         >>> assert (vector >> vector[::-1]).eval(
         ...     optimize="optimal").array == 1
         """
+        category = self.category if isinstance(self, cmap.CMap) else self.ar
         return Functor(
-            ob_map=lambda x: Dim(*(
-                getattr(obj, "dim", obj) for obj in x.inside)),
-            ar_map=lambda box: box.array,
+            ob_map=category.dim, ar_map=lambda box: box.array,
             dtype=dtype or getattr(self, "dtype", None),
             optimize=optimize, **params)(self)
 
@@ -561,9 +578,8 @@ class Diagram(NamedGeneric['dtype'], frobenius.Diagram):
         spider_params = {} if dtype is None else {"dtype": dtype}
         inputs = [
                 qtn.COPY_tensor(
-                    d=getattr(dim, 'dim', dim),
-                    inds=(f'inp{i}', f'inp{i}_end'), **spider_params
-                ) for i, dim in enumerate(self.dom.inside)]
+                    d=dim, inds=(f'inp{i}', f'inp{i}_end'), **spider_params
+                ) for i, dim in enumerate(self.dim(self.dom).inside)]
         tensors = inputs[:]
         scan = [(t, 1) for t in inputs]
 
@@ -622,8 +638,8 @@ class Diagram(NamedGeneric['dtype'], frobenius.Diagram):
         if dtype is None:
             dtype = self.dtype
         nodes = [
-            tn.CopyNode(2, getattr(dim, 'dim', dim), f'input_{i}', dtype=dtype)
-            for i, dim in enumerate(self.dom.inside)]
+            tn.CopyNode(2, dim, f'input_{i}', dtype=dtype)
+            for i, dim in enumerate(self.dim(self.dom).inside)]
         inputs, outputs = [n[0] for n in nodes], [n[1] for n in nodes]
         for box, offset in zip(self.boxes, self.offsets):
             if isinstance(box, Permutation):
@@ -631,7 +647,8 @@ class Diagram(NamedGeneric['dtype'], frobenius.Diagram):
                 outputs[offset:offset + len(box.dom)] = [
                     segment[i] for i in box.perm]
                 continue
-            if isinstance(box, (Cup, Spider)):
+            if isinstance(box, Cup)\
+                    or isinstance(box, Spider) and box.phase is None:
                 dims = (len(box.dom), len(box.cod))
                 if dims == (1, 1):  # identity
                     continue
@@ -715,7 +732,6 @@ class Box(frobenius.Box, Diagram):
     """
 
     def __setstate__(self, state):
-        NamedGeneric.__setstate__(self, state)
         if "data" not in state and state.get("_array", None) is not None:
             state['data'] = state['_array']
             del state["_array"]
@@ -747,7 +763,7 @@ class Box(frobenius.Box, Diagram):
         if self.data is not None:
             with backend() as np:
                 return np.array(self.data).reshape(
-                    self.dom.inside + self.cod.inside)
+                    self.dim(self.dom @ self.cod).inside)
 
     def grad(self, var, **params):
         return self.bubble(
@@ -786,9 +802,8 @@ class Permutation(frobenius.Permutation, Box):
 
     @property
     def array(self):
-        doms = [Dim(getattr(dim.inside[0], 'dim', dim.inside[0]))
-                for dim in self.dom]
-        return Tensor.permutation(self.perm, doms).array
+        return Tensor.permutation(
+            self.perm, [self.dim(x) for x in self.dom]).array
 
 
 class Swap(Permutation, frobenius.Swap, Box):
@@ -822,6 +837,18 @@ class Spider(frobenius.Spider, Box):
     .. image:: /_static/tensor/frobenius-example.svg
         :align: center
     """
+    @property
+    def array(self):
+        """
+        The array of a spider without a phase, see
+        :meth:`Tensor.spider_factory`; a phase has no array in
+        :class:`Tensor` yet, so a phased spider raises rather than reading
+        its phase as its array.
+        """
+        if self.phase is not None:
+            raise NotImplementedError(
+                f"{self} has a phase, which Tensor does not interpret.")
+        return Tensor.spiders(len(self.dom), len(self.cod), self.typ).array
 
 
 class Sum(monoidal.Sum, Box):

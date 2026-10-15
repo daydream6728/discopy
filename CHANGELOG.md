@@ -9,6 +9,62 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Added
 
+- `discopy.neural.signature`, what a generator promises. `Sym` is the
+  symmetry an orbit of legs carries: none, the symmetric group or the
+  cyclic one. `Orbit(role, arity, sym, traced)` is a family of legs playing
+  one atomic role, each leg twice when traced, the outgoing copy before the
+  incoming one. `Signature(orbits)` is the legs of one generator in port
+  order, with `cod` the type of its abstract box in `discopy.frobenius`,
+  `box`, `positions`, `loops`, `loop_wires` and `resize`, which changes the
+  arity of one orbit so that one shared module serves sites of different
+  degree. `generators` are the permutations of ports generating the
+  symmetry group an equivariance check runs a module against, and
+  `leg_generators` the same generators as permutations of legs, before
+  they act on ports. `from_incidence` draws the bipartite incidence graph
+  of nodes and relations, with non-uniform degrees and a name and a
+  signature per relation; `from_relation` draws the graph of a symmetric
+  irreflexive binary relation. Both close the traced loops and draw in
+  `frobenius`: every box they wire has an empty domain, so every wire
+  joins two codomain ports, which a map accepts only between self-dual
+  roles. They go through `cmap.CMap.from_wiring`, a closed map from boxes
+  and wires between `(box, port)` pairs counted in `CMap.logical_order`,
+  domain ports then codomain ones, refusing a port wired twice, to itself
+  or not at all; both methods come back from the history of #736, where
+  the redesign left them with nothing to consume them. The module is
+  discopy#739 re-cut onto the feedforward base. The flat layout of its
+  geometry-of-interaction backend, `slices` and `width`, and the composite
+  legs that only it needed do not come: a `Box` here reads one tensor per
+  leg, and `positions` says which ports a role's legs are
+  ([#739](https://github.com/discopy/discopy/pull/739)).
+- Hypergraphs of Python functions: `Hypergraph[python.Function]` is the
+  hypergraph category over `python.Function`, its spiders labelled by atomic
+  `List[type]` and its boundaries by lists of them: `monoidal.List` gains
+  `is_atomic` and `unwind` like `Ty`, the two methods `Hypergraph.__init__`
+  asks of a spider type, so that the spiders of a hypergraph over any free
+  monoid are checked alike. `Hypergraph.__call__` evaluates a
+  left-monogamous causal hypergraph by calling the boxes in order, copying
+  and discarding the values as the wiring dictates and reading the number
+  of outputs of a box off its codomain, so that a single output of type
+  `tuple` is one value, and raises `AxiomError` saying which of the two it
+  is not otherwise; a wiring with the wrong number of wires for a boundary
+  raises a `ValueError` saying so, where it was bare. The new
+  `hypergraph.Functor` maps the spider types and the boxes of a hypergraph
+  while keeping its wiring, a composite object atom by atom so that a raw
+  callable in its `ar_map` is wrapped into a function of the right type,
+  e.g. a hypergraph of a free symmetric category to one of Python functions,
+  with the swaps absorbed into the wiring; its tests evaluate the carry-save
+  adder of the composition benchmark exhaustively this way
+  ([#363](https://github.com/discopy/discopy/pull/363)).
+- `CMap.permutation`, a permutation encoded as boundary wiring: one
+  fixpoint-free involution pairing each input port with the output port
+  its wire lands on, so the map has no boxes and `2n` ports for `n`
+  wires, where the default of `abc.SymmetricCategory` composes one `swap`
+  per object, moving it across the ones before it, so it builds and
+  composes as many maps of the whole boundary, quadratic in the number of
+  wires. It is the composite of swaps, i.e. equals
+  `Diagram.permutation(xs, doms).to_map()`, and takes its objects as a
+  sequence or as one type like the default
+  ([#735](https://github.com/discopy/discopy/issues/735)).
 - `discopy.neural`, neural networks as diagrams: `discopy.neural.network`
   is the traced category of feedforward networks. `Dims` is the free
   monoid over the multiplicative `Dim`, i.e. a list of shapes with
@@ -428,6 +484,19 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   hierarchy below symmetric: traced, Markov, closed, feedback, compact and
   hypergraph ([#558](https://github.com/discopy/discopy/issues/558),
   refactoring [#325](https://github.com/discopy/discopy/pull/325)).
+- `discopy.kleisli`, the Kleisli category of a `Monad`, with the channel,
+  multiplicative and additive instances. `Monad` carries an optional
+  `iterate` operator, i.e. the structure of an Elgot monad, so that
+  `kleisli.additive.Channel.trace` is defined exactly for the monads that
+  supply one, with Dal Lago-Hoshino's token machines as a worked example
+  where conditioning is a trace. `kleisli.additive.Channel` declares itself
+  a `TracedCategory`, so whiskering on either side comes from
+  `MonoidalCategory`. `python.function.EndoFunctor`, which `Monad`
+  extends, sends lists of types to lists of types since `Function.ob` is
+  `List[type]` ([#728](https://github.com/discopy/discopy/issues/728)):
+  `Maybe(int) == Ty(int | None)`, and the `dom` and `cod` of an additive
+  or multiplicative channel are lists of types, cast from a tuple
+  ([#443](https://github.com/discopy/discopy/pull/443)).
 - `para.Symmetric` carries an optional coparameter space: a map is
   `inside : dom @ param -> cod @ copar` with `copar` empty by default, so
   parametric maps read as before, coparametric maps are the empty-`param`
@@ -456,6 +525,27 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Changed
 
+- `Hypergraph.to_diagram` and `CMap.to_diagram` route the wires of each
+  box with one permutation rather than a staircase of swaps: the domain
+  wires of the box are gathered at its offset, the other wires keeping
+  their order, by the new `finset.Permutation.gather`, and the permutation
+  is emitted once through the new `abc.SymmetricCategory.from_permutation`,
+  which `symmetric.Diagram.from_permutation` overrides with a native
+  `Permutation` box and which defers to `permutation` in a concrete
+  category, a composition of swaps by default and a single array in
+  `Tensor`; the final alignment with the codomain is one permutation too.
+  Since `symmetric.Layer` coalesces
+  plumbing, each swap of the staircase was already a full-width
+  `Permutation` layer, so a routing step of `n` swaps was `n` layers and
+  is now one: `simplify`, `foliation` and `from_callable` give shorter
+  diagrams, a permutation round-trips to itself,
+  `Diagram.permutation([2, 0, 1], x @ y @ z).simplify()` being
+  `Permutation(x @ y @ z, [2, 0, 1])`, and a decoded diagram never has two
+  consecutive layers of plumbing. The one baseline this redraws is
+  `symmetric/decorator.svg`, whose two staircases of swaps become one
+  band of crossing wires each
+  ([#539](https://github.com/discopy/discopy/issues/539),
+  [#546](https://github.com/discopy/discopy/pull/546)).
 - `monoidal.Colour` is transparent by default rather than white, i.e. its
   `name` defaults to the new `config.TRANSPARENT` and `monoidal.white` is
   renamed to `monoidal.transparent`. The drawing code painted every region
@@ -811,6 +901,174 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   integer diagram has no box to rotate, which is what the borrowed
   `conjugate` was missing
   ([#732](https://github.com/discopy/discopy/issues/732)).
+- Every `NamedGeneric`-parameterised class pickles with its parameter.
+  `NamedGeneric`
+  encodes a member of `L[v]` as a member of `L` carrying `v` in its state,
+  to be read back by a `__setstate__` it defined on `NamedGeneric` itself,
+  which no class built from `NamedGeneric[...]` inherits: so
+  `interaction.Ty[int]`, `Hypergraph[D]`, `List[int]`, `Matrix[int]`,
+  `Tensor[complex]` and `CMap[D]` all came back from `pickle.loads` and
+  `copy.deepcopy` with the parameter `None` and the values left in their
+  `__dict__`, and `pickle.dumps` wrote them into the live object's
+  `__dict__` on the way, since it merged them into the state in place.
+  The decoding half is defined on the class every `NamedGeneric[...]`
+  subclass inherits, restoring the rest of the state through the next
+  `__setstate__` of the hierarchy, and the encoding half copies the state;
+  `tensor.Box` no longer calls the former by hand
+  ([#749](https://github.com/discopy/discopy/issues/749)).
+- `biclosed.Variable`, `Application` and `Abstraction` read back from
+  their tree, and with them the `closed`, `grammar.abstract` and
+  `grammar.categorial` terms built on them, the type raisings and the
+  binary compositions: every one inherited `Box.from_tree`, which rebuilds
+  with the `name`, `dom` and `cod` keywords their constructors do not take,
+  so `loads(dumps(term))` raised `TypeError` on any term but a constant.
+  `serialisation` is a law of `biclosed.TermBase` and `closed.TermBase` in
+  the property matrix again, where it was declared failing
+  ([#692](https://github.com/discopy/discopy/issues/692)).
+- `monoidal.Bubble` keeps the `data` and `is_dagger` it is built with: its
+  constructor called `Box.__init__` a second time with the name and the
+  boundary alone, after `cat.Bubble.__init__` had set them, so
+  `f.bubble(data=42).data` was `None` and the dagger of a bubble was not
+  marked as one. The tree of a `cat.Bubble` carries both as the tree of a
+  box does, and its `name` and `method` when they are not the defaults, so
+  all four survive `loads(dumps(...))` too
+  ([#637](https://github.com/discopy/discopy/issues/637)).
+- `tensor.Dim` reads back from its tree. It used to inherit `Ty.to_tree`,
+  which asks each atom for its tree where a dimension has plain integers
+  inside, so `dumps(Dim(2, 3))` raised `AttributeError`; `monoidal.Dim`,
+  the base of `frobenius.Dim` and so of `tensor.Dim`, keeps the integers
+  in its tree since [#736](https://github.com/discopy/discopy/pull/736),
+  and a regression test pins it
+  ([#681](https://github.com/discopy/discopy/issues/681)).
+- `zx.Diagram.eval` is the standard qubit interpretation, where it silently
+  returned wrong tensors: `Z(1, 1, 0.5).eval()` was a scalar on `Dim(1)` and
+  `H.eval().array` was `nan`, since the atoms of `Nat` are the integer `1`
+  with no `dim`, and a composite diagram crashed in `to_map`.
+  `tensor.Diagram.dim` is the object map of `eval`, `to_quimb`, `to_tn` and
+  of the arrays of `Box` and `Permutation` -- the `dim` of each atom --
+  which `zx.Diagram` overrides with `Dim(2)` per wire; `zx.Spider.array` is
+  the phased spider in the eigenbasis of its colour, `Spider.basis`, so that
+  `Z(1, 1, .5)`, `X(1, 1, .5)` and `Y(1, 1, .5)` are the three Paulis and
+  `X(n, m, a)` is `Z(n, m, a)` conjugated by `H`, whose matrix is now its
+  `data`. A `frobenius.Functor` maps a spider to the spiders of its codomain
+  only when it has no phase: a phased spider is a generator, mapped by
+  `ar_map` like any box, where every functor out of `zx` -- `to_map`,
+  `to_hypergraph` and `eval` among them -- dropped its colour and its phase;
+  a phased `tensor.Spider`, which `Tensor` has no array for, raises
+  `NotImplementedError` from `eval` where it evaluated as the phaseless one.
+  `gate2zx` decomposes a `Controlled` gate at a distance other than one
+  before reading the rotation it controls, where `CRz`, `CRx` and `CU1` at
+  `distance=2` gave the two-qubit diagram of `distance=1`, translates
+  `Controlled(U1(phase))`, e.g. `CU1(phase).dagger()`, where it raised
+  `KeyError`, and its `CRx` and `CU1` evaluate to the gates, where `CRx`
+  conjugated both qubits by `H` rather than the target and `CU1` doubled
+  its phase and lost a `sqrt(2)`
+  ([#625](https://github.com/discopy/discopy/issues/625),
+  [#587](https://github.com/discopy/discopy/issues/587)).
+- `Diagram.foliation` is an equality up to interchangers, at every level
+  of the hierarchy. `Layer.merge` normalised the composite of two layers
+  with `normal_form`, i.e. with the rewriting of the diagram's own level,
+  snake removal from `rigid` up, so `(g @ snake).foliation()` yanked the
+  snake and the README's own `x @ Cap(x.r, x) >> Cup(x, x.r) @ x` crashed
+  on the empty diagram it left; `normal_form` takes the rewriting as a
+  keyword, `normalize`, and `merge` passes `monoidal.Diagram.normalize`, so
+  that it moves boxes by interchangers alone. `to_staircases` split the
+  layers with `monoidal.Functor.id`, whose bubble branch rebuilt a `Trace`
+  as a `monoidal.Bubble`, so `foliation` and `depth` raised `TypeError` on
+  a trace beside another box in any traced or symmetric diagram; it decodes
+  the boxes with their offsets instead, which keeps every box as it is where
+  the functor of the level would not: `symmetric.Functor` splits a
+  permutation into swaps and `frobenius.Functor` drops the phase of a
+  spider. `Hypergraph.caps` demanded `left.r == right`, the convention of a
+  cup, so every rigid cap of either handedness was refused with an empty
+  `AxiomError` and the README's pregroup `Cap(n.r, n) @ Cap(n, n.l) >> n.r
+  @ loves @ n.l` could not be foliated, since `foliation` goes through
+  `to_hypergraph` first; `cups` and `caps` ask the objects themselves,
+  `left.assert_isadjoint(right)` and `right.assert_isadjoint(left)` as
+  `rigid.Cup`, `rigid.Cap` and `CMap` do, with a message, the adjoint of a
+  type that has none being its reversal
+  ([#699](https://github.com/discopy/discopy/issues/699)).
+- Coloured regions follow the strands of a crossing.
+  `Backend.region_separators` built one separator per edge of a swap, braid
+  or permutation, bending at the box node like the wires of any box, where
+  `draw_braid` and `draw_permutation` draw each strand as the cubic Bezier
+  of `braid_strand`, straight from its input to the output it is permuted
+  to: the painted cells pinched into an hourglass at the box centre while
+  the wires crossed diagonally, visible as soon as the wires inside a
+  permutation carried different colours, since only its outer boundary and
+  the adjacent colours within each side are checked. The separators of a
+  crossing are now its strands, `region_cells` subdivides the canvas where
+  two strands meet — found with `monotone_root`, as the two share their
+  height at every parameter — so that no two separators cross inside a
+  band, and `region_band` and `draw_region_cell` take a cubic separator
+  beside the quadratic ones
+  ([#614](https://github.com/discopy/discopy/issues/614)).
+- `pip install discopy[grammar]` can import `discopy.grammar.neural`: the
+  parser imports `torch` at module level, but `torch` was listed in the
+  `quantum` extra only, so an install with the grammar extra alone raised
+  `ModuleNotFoundError` on `from discopy.grammar.neural import Parser`.
+  `torch` is in the `grammar` extra too, served from the CPU index on Linux
+  by the same `tool.uv.sources` entry, and `uv.lock` records it under that
+  extra. `import discopy.grammar` still imports no framework, which a test
+  pins the way `test/neural/network.py` does for `discopy.neural`
+  ([rel-int/discopy-next#52](https://github.com/rel-int/discopy-next/issues/52)).
+- `Matrix.then`, `tensor` and `__add__`, and `Tensor.then` and `tensor`,
+  built their result as `type(self)(...)`, casting it to the dtype of the
+  left operand: the unparametrised structural matrices -- `id`, `swap`,
+  the spiders, `cups` and `caps` -- are `int64`, so `Tensor.id(Dim(2)) >> g`
+  truncated a float `g` to integers, zeros for one with entries below one,
+  as did `Tensor.swap(x, y) >> g @ g` and any spider on the left of a float
+  tensor, and a complex tensor on the right of an integer one lost its
+  imaginary part, silently. The result is now built in the class
+  `Matrix.promote` gives: the one with the dtype the backend promotes the
+  two arrays to, read from the operand that already has it, so that
+  `Matrix.id(2) >> m == m` for a float `m`, `Tensor[float]`,
+  `Tensor[complex]` and `Tensor[Expr]` survive composition with an integer
+  structural tensor and `Matrix[bool]` composed with `Matrix[bool]` stays
+  Boolean, on the backends whose operations take mixed dtypes at all:
+  PyTorch's `matmul` refuses them, as before. The guards of these methods
+  check
+  `self.ar`, the matrices of the same category whatever their dtype, which
+  is what `assert_isinstance(other, type(self))` checked through
+  `get_origin` while reading as a check on the dtype. `Tensor.copy`
+  defaults `n` to 2 and `Tensor` is an `abc.MarkovCategory` since `Matrix`
+  became one ([#538](https://github.com/discopy/discopy/pull/538)); both
+  are now tested, the latter by `lens.Markov[Tensor]` building without an
+  explicit discard
+  ([#733](https://github.com/discopy/discopy/issues/733)).
+- `Matrix.swap` wrote the two identity blocks into a zero array in place,
+  which JAX refuses: `Matrix.swap(1, 2)` raised `TypeError` under
+  `backend("jax")`. It is now `permutation([1, 0], [left, right])`, which
+  builds its array from nested lists and so on every backend
+  ([rel-int/discopy-next#49](https://github.com/rel-int/discopy-next/issues/49)).
+- `biclosed.Application` and `biclosed.Abstraction` are equal when their
+  parts are -- function, argument and side; variable, body and side -- as
+  the `closed.Compound` terms already were, rather than when they print
+  the same between the same types, which is what `cat.Box.setoid`
+  compares. A closed constant prints as its bare name, so `c0(c1)` with
+  `c0 : a << b, c1 : b` and with `c0 : a << a, c1 : a` compared equal
+  while `alpha_eq`, which reads the types of the constants, told them
+  apart, and `closed.TermBase.alpha_completeness` failed on the pair once
+  the nightly search drew it; a biclosed constant prints with its type, so
+  there the two equalities only disagreed on constants differing by their
+  `data` alone. Equality and hashing of a term are now structural, i.e.
+  recursive, as they were for a `Compound`
+  ([#767](https://github.com/discopy/discopy/pull/767),
+  [#489](https://github.com/discopy/discopy/pull/489)).
+- Three docstrings say what the code does. `discopy.para`'s module
+  docstring states that the diagonal `param == copar` is not the state
+  monad: the composition of two maps tensors their co/parameters where the
+  state category chains one fixed state through, and it points to
+  `feedback` and `stream` for iterating a map on its own memory
+  ([#683](https://github.com/discopy/discopy/issues/683)).
+  `biclosed.Constant` documents its `name: str` and its type rather than
+  an `inside` diagram and a `left` flag it never had
+  ([#494](https://github.com/discopy/discopy/issues/494)).
+  `closed.Diagram.to_term` says that the free variables of its term come
+  in the order of their first occurrence in the term rather than that of
+  `dom`, so that `eval` gives a diagram with the used inputs in that order
+  as domain unless the inputs are passed as its `context`
+  ([#693](https://github.com/discopy/discopy/issues/693)).
 - `python.Function` is hashable: its dataclass compared `inside`, `dom` and
   `cod` without hashing them, so `jax.jit` refused a function, as did any
   cache keyed on one
@@ -939,6 +1197,11 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   and `draw` raise. The check is gated on `_scan`, so the internal fast paths
   that build layers by construction are unaffected
   ([#599](https://github.com/discopy/discopy/issues/599)).
+- `kleisli.additive.Channel.trace(0)` no longer empties `dom` and `cod`:
+  the tenth `self.dom[:-n]` site of
+  [#578](https://github.com/discopy/discopy/issues/578), left to this
+  branch since `discopy.kleisli` was not yet on `main` when the other nine
+  were fixed by [#588](https://github.com/discopy/discopy/pull/588).
 - `no-todo-on-main.yml`'s guard reads the pull request's live `draft`
   field rather than `github.event.pull_request.draft`, a snapshot taken
   when the event fires and stale by however long the event then waited
@@ -1120,6 +1383,9 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Project
 
+- `fail-under` rises from 8.79 to 8.82, by what `discopy.kleisli` lifts the
+  score: 8.85 to 8.88 on the lint job of `main`, 8.969 to 8.998 locally
+  ([#443](https://github.com/discopy/discopy/pull/443)).
 - `fail-under` rises from 8.77 to 8.79, the score once the terms carry
   their laws ([#767](https://github.com/discopy/discopy/pull/767)).
 - `fail-under` rises from 8.75 to 8.77, the score once `closed` gains its

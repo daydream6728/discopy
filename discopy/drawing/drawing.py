@@ -193,6 +193,19 @@ Coloured regions are also checked as part of the gallery:
 
 .. image:: /_static/drawing/coloured-bubble.svg
     :align: center
+
+The regions of a crossing follow its strands, see
+:meth:`discopy.drawing.backend.Backend.region_separators`:
+
+>>> from discopy import symmetric
+>>> red, blue = Colour("red"), Colour("blue")
+>>> symmetric.Permutation(symmetric.Ty(
+...     Wire("x", red, blue), Wire("y", blue, red), Wire("z", red, blue)),
+...     [2, 1, 0]).draw(
+...     doctest="docs/_static/drawing/coloured-permutation.svg")
+
+.. image:: /_static/drawing/coloured-permutation.svg
+    :align: center
 """
 
 

@@ -303,6 +303,11 @@ class Functor(compact.Functor, markov.Functor):
     """
     A hypergraph functor is a compact functor that preserves spiders.
 
+    A spider with no phase is the Frobenius structure, mapped to the spiders
+    of the codomain; a spider with a phase is a generator, mapped by
+    ``ar_map`` like any box, e.g. the Z and X spiders of
+    :mod:`discopy.quantum.zx`.
+
     Parameters:
         ob_map (Mapping[Ty, Ty]) :
             Map from atomic :class:`Ty` to :code:`cod.ob`.
@@ -313,7 +318,7 @@ class Functor(compact.Functor, markov.Functor):
     dom = cod = Diagram
 
     def __call__(self, other):
-        if isinstance(other, Spider):
+        if isinstance(other, Spider) and other.phase is None:
             return self.cod.spiders(
                 len(other.dom), len(other.cod), self(other.typ))
         if isinstance(other, (markov.Copy, markov.Merge)):

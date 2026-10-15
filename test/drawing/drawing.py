@@ -1,7 +1,7 @@
 
 import os
 
-from pytest import raises
+from pytest import approx, raises
 
 from discopy.utils import AxiomError
 from discopy.config import DRAWING_DEFAULT
@@ -412,6 +412,68 @@ def test_region_transparent_cells_erase_to_the_background():
     assert '#d3d3d3' in colours and '#ffffff' not in colours
 
 
+def test_region_cells_follow_the_strands_of_a_crossing():
+    # The separators of a crossing are its strands, the cubic Beziers of
+    # Backend.braid_strand from each input to the output it is permuted to,
+    # where they used to bend at the box node like the edges of any box: the
+    # painted cells pinched at the centre while the wires crossed diagonally,
+    # visible as soon as the wires inside a permutation carried different
+    # colours, see issue #17 (discopy/discopy#614).
+    from discopy.drawing.backend import bezier
+    from discopy.symmetric import Permutation, Ty as STy
+    red, blue = map(monoidal.Colour, ("red", "blue"))
+    x, y, z = (monoidal.Wire("x", red, blue), monoidal.Wire("y", blue, red),
+               monoidal.Wire("z", red, blue))
+    permutation = Permutation(STy(x, y, z), [2, 1, 0])
+    drawing = permutation.to_drawing()
+    drawing.add_box_corners()
+    separators = Backend.region_separators(drawing)
+    assert [tuple(curve) for curve, _ in separators] == [
+        tuple(Backend.braid_strand((0.5 + source, 1), (0.5 + i, 0), 0.5))
+        for i, source in enumerate((2, 1, 0))]
+    assert [colour for _, colour in separators] == ["blue", "red", "blue"]
+    strand = separators[0][0]
+    assert Backend.separator_param(strand, bezier(strand, 0.3).y)\
+        == approx(0.3)
+    # The three strands meet at the middle height, which splits the canvas
+    # in two bands of four cells each, alternating like the boundary does.
+    cells = Backend.region_cells(drawing)
+    assert [left[0].y for left, _, _ in cells] == 4 * [0.5] + 4 * [1]
+    assert [colour for _, _, colour in cells] == 2 * ["red", "blue"] * 2
+    assert len(region_hexes(permutation)) == 2
+
+
+def test_region_cells_split_where_strands_meet():
+    # The strands of a cyclic permutation meet at two heights other than the
+    # middle, where the canvas is subdivided so that no two separators cross
+    # inside a band: the cells of a band chain from one side of the canvas to
+    # the other, each left boundary staying left of the right one. No
+    # colouring of the inner regions of a 3-cycle is consistent, so a cell
+    # takes the colour of its left boundary as everywhere.
+    from discopy.drawing.backend import bezier
+    from discopy.symmetric import Permutation, Ty as STy
+    red, blue = map(monoidal.Colour, ("red", "blue"))
+    x, y, z = (monoidal.Wire("x", red, red), monoidal.Wire("y", red, blue),
+               monoidal.Wire("z", blue, red))
+    drawing = Permutation(STy(x, y, z), [1, 2, 0]).to_drawing()
+    drawing.add_box_corners()
+    cells = Backend.region_cells(drawing)
+    tops = sorted({left[0].y for left, _, _ in cells})
+    assert len(tops) == 3 and 0 < tops[0] < 0.5
+    assert tops[0] + tops[1] == approx(1)
+    assert [colour for _, _, colour in cells]\
+        == 2 * ["red", "blue", "red", "red"] + ["red", "red", "blue", "red"]
+    for (left, right, _), (next_left, _, _) in zip(cells, cells[1:]):
+        assert right == next_left or left[0].y != next_left[0].y
+    for left, right, _ in cells:
+        assert left[0].y == right[0].y and left[-1].y == right[-1].y
+        assert all(bezier(left, t).x <= bezier(right, t).x + 1e-9
+                   for t in (0, 0.25, 0.5, 0.75, 1))
+    # The lowest band ends where the strands of x and z meet.
+    (_, z_strand, _), (_, x_strand, _) = cells[1:3]
+    assert tuple(z_strand[0]) == approx(tuple(x_strand[0]))
+
+
 def test_draw_permutation():
     from matplotlib import pyplot as plt
     from discopy.monoidal import Box
@@ -446,6 +508,20 @@ def test_draw_permutation():
         draw_as_permutation=True, permutation_indices=(1, 0)).to_drawing()
     assert custom.dagger().dagger() == custom
     assert custom.dagger().dagger().box.name == 'custom'
+
+
+def test_draw_permutation_in_diagram(tmp_path):
+    from discopy.symmetric import Box, Ty, Permutation
+
+    x, y, z = map(Ty, "xyz")
+    f = Box("f", z @ x @ y, x)
+    diagram = Permutation(x @ y @ z, [2, 0, 1]) >> f
+    drawing = diagram.to_drawing()
+    assert drawing.dom == x @ y @ z and drawing.cod == x
+    assert drawing.boxes[0].permutation_indices == (2, 0, 1)
+    assert drawing.boxes[1].name == "f"
+    diagram.draw(path=str(tmp_path / "permutation.svg"), show=False)
+    assert (tmp_path / "permutation.svg").exists()
 
 
 def test_readable_foreground():

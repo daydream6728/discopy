@@ -17,6 +17,7 @@ from typing import (
     Any,
     Collection,
     NamedTuple,
+    Union,
     TYPE_CHECKING,
 )
 
@@ -116,8 +117,17 @@ class MappingOrCallable(Mapping[KT, VT]):
 
 
 def get_origin(typ):
-    """ Get origin of a parameterized generic type. """
-    return getattr(typ, "__origin__", typ)
+    """
+    Get origin of a parameterized generic type, leaving a union type
+    untouched so that ``isinstance`` can be called on it directly.
+
+    Example
+    -------
+    >>> assert get_origin(tuple[int, str]) is tuple
+    >>> assert get_origin(int | None) == (int | None)
+    """
+    origin = getattr(typ, "__origin__", typ)
+    return typ if origin is Union else origin
 
 
 class NamedGeneric(Generic[TypeVar('T')]):
@@ -184,7 +194,8 @@ class NamedGeneric(Generic[TypeVar('T')]):
                             func, args, data = super().__reduce__()
                             if '[' in args[0].__name__:
                                 args = (origin, ) + args[1:]
-                                data |= {"__class_getitem__values__": values}
+                                data = dict(
+                                    data, __class_getitem__values__=values)
                             return func, args, data
 
                     C.__module__ = origin.__module__
@@ -197,17 +208,27 @@ class NamedGeneric(Generic[TypeVar('T')]):
                     NamedGeneric._cache[cls][values] = C
                 return NamedGeneric._cache[cls][values]
 
+            def __setstate__(self, state):
+                """
+                Unpickle a member of the origin as a member of the class
+                subscripted by the values its state carries, see
+                ``__reduce__`` above, then restore the rest of the state.
+                """
+                if "__class_getitem__values__" in state:
+                    state = dict(state)
+                    self.__class__ = type(self)[
+                        state.pop("__class_getitem__values__")]
+                if hasattr(super(), "__setstate__"):
+                    super().__setstate__(state)
+                else:
+                    self.__dict__.update(state)
+
             __name__ = __qualname__\
                 = f"NamedGeneric[{', '.join(map(repr, attributes))}]"
 
         for attr in attributes:
             setattr(Result, attr, getattr(Result, attr, None))
         return Result
-
-    def __setstate__(self, state):
-        if "__class_getitem__values__" in state:
-            new_cls = self.__class__[state["__class_getitem__values__"]]
-            self.__class__ = new_cls
 
 
 def product(xs: list, unit=1):
@@ -265,7 +286,10 @@ def factory_name(cls: type) -> str:
     -------
     >>> from discopy.grammar.pregroup import Word
     >>> assert factory_name(Word) == "grammar.pregroup.Word"
+    >>> assert factory_name(int | None) == "int | None"
     """
+    if not isinstance(cls, type):
+        return str(cls).removeprefix('discopy.')
     module = cls.__module__.removeprefix('discopy.')
     return f"{module}.{cls.__name__}".removeprefix('builtins.')
 
