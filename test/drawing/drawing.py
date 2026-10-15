@@ -510,6 +510,20 @@ def test_draw_permutation():
     assert custom.dagger().dagger().box.name == 'custom'
 
 
+def test_draw_permutation_in_diagram(tmp_path):
+    from discopy.symmetric import Box, Ty, Permutation
+
+    x, y, z = map(Ty, "xyz")
+    f = Box("f", z @ x @ y, x)
+    diagram = Permutation(x @ y @ z, [2, 0, 1]) >> f
+    drawing = diagram.to_drawing()
+    assert drawing.dom == x @ y @ z and drawing.cod == x
+    assert drawing.boxes[0].permutation_indices == (2, 0, 1)
+    assert drawing.boxes[1].name == "f"
+    diagram.draw(path=str(tmp_path / "permutation.svg"), show=False)
+    assert (tmp_path / "permutation.svg").exists()
+
+
 def test_readable_foreground():
     # White and light colours get black text, dark colours get white text.
     assert Backend.readable_foreground("white") == "black"
