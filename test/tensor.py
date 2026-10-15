@@ -61,6 +61,15 @@ def test_Tensor():
     assert Tensor.id(Dim(2)).then(*(m, m)) == m >> m.dagger()
 
 
+def test_Spider_array():
+    d = Dim(2)
+    assert (Spider(1, 2, d).array == Tensor.spiders(1, 2, d).array).all()
+    with raises(NotImplementedError):
+        Spider(1, 1, d, .5).eval()
+    with raises(NotImplementedError):
+        (Spider(1, 2, d) >> Spider(2, 1, d, .5)).to_tn()
+
+
 def test_Spider_to_tn():
     d = Dim(2)
     tensor = Spider(1, 1, d) >> Spider(1, 2, d) >> Spider(2, 0, d)
