@@ -889,6 +889,21 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   in its tree since [#736](https://github.com/discopy/discopy/pull/736),
   and a regression test pins it
   ([#681](https://github.com/discopy/discopy/issues/681)).
+- Coloured regions follow the strands of a crossing.
+  `Backend.region_separators` built one separator per edge of a swap, braid
+  or permutation, bending at the box node like the wires of any box, where
+  `draw_braid` and `draw_permutation` draw each strand as the cubic Bezier
+  of `braid_strand`, straight from its input to the output it is permuted
+  to: the painted cells pinched into an hourglass at the box centre while
+  the wires crossed diagonally, visible as soon as the wires inside a
+  permutation carried different colours, since only its outer boundary and
+  the adjacent colours within each side are checked. The separators of a
+  crossing are now its strands, `region_cells` subdivides the canvas where
+  two strands meet — found with `monotone_root`, as the two share their
+  height at every parameter — so that no two separators cross inside a
+  band, and `region_band` and `draw_region_cell` take a cubic separator
+  beside the quadratic ones
+  ([#614](https://github.com/discopy/discopy/issues/614)).
 - `pip install discopy[grammar]` can import `discopy.grammar.neural`: the
   parser imports `torch` at module level, but `torch` was listed in the
   `quantum` extra only, so an install with the grammar extra alone raised
