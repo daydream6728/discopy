@@ -12,9 +12,18 @@ which this branch is stacked on. Earlier in the same session it was agreed that 
       `sections`, `extract` by brute force, `then`, `tensor`, `dagger`, equality up to isomorphism
 - [x] `EHypergraph.strategy`, so that the symmetric, compact, Markov and Frobenius aliases enrol in the
       matrix: 101 laws pass, 2 skipped, 10 declared broken with their reasons
-- [ ] Settle with the human what `s ~ t` means over a linear category, i.e. symmetric but not Markov,
-      where no section of a nontrivial relation is a hypergraph of the category (`LINEAR_SECTIONS`)
+- [x] Settle with the human what `s ~ t` means over a linear category. @toumix, verbatim:
+      > Yeah it doesn't make sense to equate two wires in an existing symmetric diagram but what does make
+      > sense is a ehypergraph which holds a monogamous acyclic hypergraph and then applies a rewrite rule to
+      > equate one subdiagram to a given RHS, adding that RHS to the ehypergraph and declaring equality of its
+      > domain and codomain
+- [WIP] @session_01VFjLpUVTvAs7PfxAhx2igm-2026-10-16 17:10 `rewrite(region, dom, cod, rhs)` records the
+      region and the right-hand side as alternatives; a section chooses a side of each, so that extraction holds
+      over linear categories and `LINEAR_SECTIONS` goes
 - [ ] Settle with the human whether congruence on a feedback loop should be coinductive
-      (`INDUCTIVE_CONGRUENCE`)
-- [ ] Rewrite rules: matching a hypergraph in an e-hypergraph, adding the right-hand side and merging
+      (`INDUCTIVE_CONGRUENCE`). @toumix, verbatim:
+      > Using coinduction would be awesome! I expect that the rebuild should work fine as an iterator so you
+      > could unroll a feedback loop as many times as needed. Not sure if it makes sense to use coinduction to
+      > "prove" anything about Python though?
+- [ ] Matching: find the regions a left-hand side occurs at, for `rewrite` to apply a rule
 - [ ] A fast extraction, checked against the brute-force one by `extraction_optimality`
