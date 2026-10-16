@@ -10,23 +10,32 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 ### Added
 
 - `discopy.ehypergraph`, e-hypergraphs: a `Hypergraph` with an equivalence
-  relation on its spiders, relating alternatives, which `merge` extends and
-  `rebuild` closes under congruence everywhere but in a Markov category,
-  whose boxes need not be deterministic. The structure of the category is
-  the wiring of the hypergraph already, so the relation is all it adds.
-  E-hypergraphs over a category form a monoidal category of their own, the
-  relation carried along the pushout, and denote the set of their
-  `sections`, one spider chosen in each class; `extract` is one of least
-  cost that decodes to a diagram, by brute force for now so that it states
-  what a faster one must return. Their laws are checked by the property
-  matrix over symmetric, compact, Markov and hypergraph categories: that
-  the hypergraph is a strict monoidal functor, that merging states an
-  equivalence relation, that `rebuild` is a closure operator and a
-  congruence, and that extraction is sound, valid, optimal, monotone and
-  the identity on the identity relation. Extraction over a linear category
-  and congruence on a feedback loop are declared broken, each with its
-  reason. `hypergraph.relabeling` is how a hypergraph numbers its spiders,
-  factored out of its constructor so that the relation follows them.
+  relation on its spiders and alternatives between its boxes. The structure
+  of the category is the wiring of the hypergraph already, so these are all
+  it adds. An equation enters through `rewrite`, which states that a region
+  of boxes equals a right-hand side with the same boundary: it adds the
+  right-hand side, relates its domain and codomain to the boundary of the
+  region and records the two as alternatives, so that over a symmetric
+  category, where a wire has one consumer, an equation replaces a subdiagram
+  rather than relating two wires. `rebuild` closes the relation under
+  congruence, the later of two congruent boxes an alternative to the first,
+  everywhere but in a Markov category, whose boxes need not be
+  deterministic. E-hypergraphs over a category form a monoidal category of
+  their own, the relation carried along the pushout, and denote the set of
+  their `sections`, one for each choice of a side of every alternative, with
+  the boxes in causal order; `extract` is one of least cost that decodes to
+  a diagram, by brute force for now so that it states what a faster one
+  must return. Their laws are checked by the property matrix over
+  symmetric, compact, Markov and hypergraph categories: that the hypergraph
+  is a strict monoidal functor, that merging states an equivalence
+  relation, that `rebuild` is a closure operator and a congruence, and that
+  extraction is sound, valid, optimal, the identity with no alternative,
+  and the cheaper of the two sides of a rewrite. Congruence on a feedback
+  loop is declared broken, being a least fixpoint. `hypergraph.relabeling`
+  is how a hypergraph numbers its spiders, factored out of its constructor
+  so that the relation follows them, and decoding a hypergraph that needs
+  spiders over a category with none raises `AxiomError`, where it raised
+  `AttributeError` for want of a `spider_factory`.
 
 - `RigidCategory.rotate_contravariance`, that rotation reverses
   composition, and `adjunction`, that the left and right adjoints of a

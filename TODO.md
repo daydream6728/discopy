@@ -17,7 +17,7 @@ which this branch is stacked on. Earlier in the same session it was agreed that 
       > sense is a ehypergraph which holds a monogamous acyclic hypergraph and then applies a rewrite rule to
       > equate one subdiagram to a given RHS, adding that RHS to the ehypergraph and declaring equality of its
       > domain and codomain
-- [WIP] @session_01VFjLpUVTvAs7PfxAhx2igm-2026-10-16 17:10 `rewrite(region, dom, cod, rhs)` records the
+- [x] `rewrite(region, dom, cod, rhs)` records the
       region and the right-hand side as alternatives; a section chooses a side of each, so that extraction holds
       over linear categories and `LINEAR_SECTIONS` goes
 - [ ] Settle with the human whether congruence on a feedback loop should be coinductive

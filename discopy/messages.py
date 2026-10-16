@@ -83,10 +83,6 @@ MISSING_BOXES_AND_OFFSETS = (
 NO_TYPE_PARAMETER = (
     "{} has no type parameter to subscript, declare one as in class C[name].")
 NO_SECTION = "{} has no section that is a hypergraph of its category."
-LINEAR_SECTIONS = (
-    "A spider of a linear hypergraph has one consumer, so a section moving "
-    "the consumers of a class onto one spider of it is not a hypergraph of "
-    "the category: what an equation means there is still open.")
 NOT_DETERMINISTIC = (
     "The boxes of a Markov category need not be deterministic, so two of "
     "them on related inputs need not have related outputs.")
