@@ -34,7 +34,6 @@ Summary
     CMap
 """
 
-from __future__ import annotations
 
 import operator
 import shutil
@@ -60,7 +59,7 @@ from discopy.abc import (
     SymmetricCategory,
     TracedCategory,
 )
-from discopy.axioms import Equation, Serialisable, TestableGeneric
+from discopy.axioms import Equation, Serialisable, TestableGeneric, axiom
 from discopy.cat import Ob
 from discopy.python.finset import Permutation
 from discopy.utils import (
@@ -239,15 +238,23 @@ class CMap[category](CompactCategory, TestableGeneric, Serialisable):
     functor = classproperty(lambda cls: cls.category.functor_factory)
     ob = classproperty(lambda cls: cls.category.ob)
 
-    dom: Ty
-    cod: Ty
-    loops: tuple[Ty, ...]
+    dom: "Ty"
+    cod: "Ty"
+    loops: "tuple[Ty, ...]"
     edges: Permutation
 
+    @axiom
+    def cmap_roundtrip(cls, term: Self) -> Equation[Self]:
+        """
+        A map reads back from the diagram it decodes to, up to the order of
+        its boxes, i.e. as a hypergraph, see :meth:`equation_factory`.
+        """
+        return cls.equation_factory(term.to_diagram().to_map(), term)
+
     def __init__(
-            self, dom: Ty, cod: Ty, boxes: tuple[Box, ...],
+            self, dom: "Ty", cod: "Ty", boxes: "tuple[Box, ...]",
             edges: Iterable[int],
-            loops: tuple[Ty, ...] = (), *, check: bool = True):
+            loops: "tuple[Ty, ...]" = (), *, check: bool = True):
         assert_isinstance(dom, self.category.ob)
         assert_isinstance(cod, self.category.ob)
         for box in boxes:
@@ -702,7 +709,7 @@ class CMap[category](CompactCategory, TestableGeneric, Serialisable):
             int(ports[i].depth + 0.5) < int(ports[j].depth - 0.5)
             for i, j in self.box_edges)
 
-    def reorder(self, order: Iterable[int]) -> CMap:
+    def reorder(self, order: Iterable[int]) -> "CMap":
         """ Relabel ports to put boxes in the given order. """
         order = tuple(order)
         boxes = tuple(self.boxes[i] for i in order)
@@ -719,7 +726,7 @@ class CMap[category](CompactCategory, TestableGeneric, Serialisable):
             self.dom, self.cod, boxes, edges,
             loops=self.loops, check=False)
 
-    def topological_order(self) -> CMap:
+    def topological_order(self) -> "CMap":
         """
         Reorder the boxes so that every directed wire points forward.
 
@@ -806,7 +813,7 @@ class CMap[category](CompactCategory, TestableGeneric, Serialisable):
             'loops': [loop.to_tree() for loop in self.loops]}
 
     @classmethod
-    def from_tree(cls, tree: dict) -> CMap:
+    def from_tree(cls, tree: dict) -> "CMap":
         """ Decode a serialised map, see :meth:`to_tree`. """
         factory = cls[resolve_factory(tree['category'])]
         return factory(
@@ -815,7 +822,7 @@ class CMap[category](CompactCategory, TestableGeneric, Serialisable):
             loops=tuple(map(from_tree, tree['loops'])))
 
     @classmethod
-    def equation_factory(cls, *terms: CMap) -> Equation:
+    def equation_factory(cls, *terms: "CMap") -> Equation:
         """
         The equation of a law, compared up to isomorphism by the hypergraphs
         of its terms: equality of maps compares their boxes and loops in the
@@ -830,7 +837,7 @@ class CMap[category](CompactCategory, TestableGeneric, Serialisable):
         return Equation(*terms, up_to=cls.to_hypergraph)
 
     @classmethod
-    def id(cls, dom=None) -> CMap:
+    def id(cls, dom=None) -> "CMap":
         """ The identity map, with each input wired to its output. """
         dom = cls.ob() if dom is None else dom
         n_ports = 2 * len(dom)
@@ -886,7 +893,7 @@ class CMap[category](CompactCategory, TestableGeneric, Serialisable):
         return graphs.map(lambda graph: graph.to_map())
 
     @classmethod
-    def from_box(cls, box: Box) -> CMap:
+    def from_box(cls, box: "Box") -> "CMap":
         """ Embed a box, wiring its boundary to fresh box ports. """
         left = len(box.dom)
         right = len(box.cod)
@@ -899,8 +906,8 @@ class CMap[category](CompactCategory, TestableGeneric, Serialisable):
         return cls(box.dom, box.cod, (box, ), edge, check=False)
 
     @classmethod
-    def from_glued(cls, dom: Ty, cod: Ty,
-                   images: Iterable[tuple[CMap, int]]) -> CMap:
+    def from_glued(cls, dom: "Ty", cod: "Ty",
+                   images: "Iterable[tuple[CMap, int]]") -> "CMap":
         """
         Glue a sequence of maps onto a scan of open wires, in one pass.
 
@@ -982,7 +989,7 @@ class CMap[category](CompactCategory, TestableGeneric, Serialisable):
         return cls(dom, cod, boxes, edges, loops=loops)
 
     @classmethod
-    def from_diagram(cls, old: Diagram) -> CMap:
+    def from_diagram(cls, old: "Diagram") -> "CMap":
         """
         Turn a :class:`Diagram` into a :class:`CMap`.
 
@@ -1085,7 +1092,7 @@ class CMap[category](CompactCategory, TestableGeneric, Serialisable):
         return cls.from_diagram(cls.category.twist(dom))
 
     @classmethod
-    def permutation(cls, xs: Sequence[int], doms: Sequence[Ty]) -> CMap:
+    def permutation(cls, xs: Sequence[int], doms: "Sequence[Ty]") -> "CMap":
         """
         A permutation encoded as boundary wiring, i.e. with no boxes.
 
@@ -1127,7 +1134,7 @@ class CMap[category](CompactCategory, TestableGeneric, Serialisable):
         cls.category.cap_factory(left, right)))
 
     @classmethod
-    def cups(cls, left: Ty, right: Ty) -> CMap:
+    def cups(cls, left: "Ty", right: "Ty") -> "CMap":
         """
         A cup between a type and its right adjoint: a box over a rigid host
         that is not compact, whose cups are planar and oriented, see
@@ -1148,7 +1155,7 @@ class CMap[category](CompactCategory, TestableGeneric, Serialisable):
         return cls(left @ right, cls.ob(), (), edge, check=False)
 
     @classmethod
-    def caps(cls, left: Ty, right: Ty) -> CMap:
+    def caps(cls, left: "Ty", right: "Ty") -> "CMap":
         """ A cap between a type and its left adjoint, see :meth:`cups`. """
         if cls.is_planar_rigid():
             if len(left) == 1:
@@ -1171,22 +1178,22 @@ class CMap[category](CompactCategory, TestableGeneric, Serialisable):
             and not issubclass(cls.category, CompactCategory)
 
     @classmethod
-    def copy(cls, typ: Ty, n: int = 2) -> CMap:
+    def copy(cls, typ: "Ty", n: int = 2) -> "CMap":
         """ Copy is kept as a box: one input cannot wire to many outputs. """
         return cls.from_box(cls.category.copy(typ, n))
 
     @classmethod
-    def merge(cls, typ: Ty, n: int = 2) -> CMap:
+    def merge(cls, typ: "Ty", n: int = 2) -> "CMap":
         """ Merge is kept as a box: many inputs cannot wire to one output. """
         return cls.from_box(cls.category.merge(typ, n))
 
     @classmethod
-    def discard(cls, typ: Ty) -> CMap:
+    def discard(cls, typ: "Ty") -> "CMap":
         """ Discard is kept as a box. """
         return cls.copy(typ, 0)
 
     @classmethod
-    def ev(cls, base: Ty, exponent: Ty, left: bool = True) -> CMap:
+    def ev(cls, base: "Ty", exponent: "Ty", left: bool = True) -> "CMap":
         """
         Evaluation is kept as an explicit box by default, or comes from the
         wiring of cups when the host category is rigid.
@@ -1195,7 +1202,7 @@ class CMap[category](CompactCategory, TestableGeneric, Serialisable):
             return super().ev(base, exponent, left)
         return cls.from_box(cls.category.ev(base, exponent, left))
 
-    def curry(self, n: int = 1, left: bool = True) -> CMap:
+    def curry(self, n: int = 1, left: bool = True) -> "CMap":
         """
         Currying is kept as an explicit curry box by default, the more
         rigorous representation, or comes from the wiring of caps when the
@@ -1224,7 +1231,7 @@ class CMap[category](CompactCategory, TestableGeneric, Serialisable):
         return self.from_box(self.category.curry_factory(
             self.to_diagram(), n, left))
 
-    def base_and_exponent(self, n: int, left: bool) -> tuple[Ty, Ty]:
+    def base_and_exponent(self, n: int, left: bool) -> "tuple[Ty, Ty]":
         """
         The base and exponent that :meth:`uncurry` evaluates, read off the
         codomain as in the host category.
@@ -1238,7 +1245,7 @@ class CMap[category](CompactCategory, TestableGeneric, Serialisable):
     l = property(lambda self: self.transpose(left=True))
     r = property(lambda self: self.transpose(left=False))
 
-    def dagger(self) -> CMap:
+    def dagger(self) -> "CMap":
         """
         Reverse a combinatorial map: swap the boundary, dagger each box in
         reverse order and conjugate the edges by the port relabeling.
@@ -1267,7 +1274,7 @@ class CMap[category](CompactCategory, TestableGeneric, Serialisable):
     @classmethod
     def spiders(
             cls, n_legs_in: int, n_legs_out: int,
-            typ: Ty, phases=None) -> CMap:
+            typ: "Ty", phases=None) -> "CMap":
         """
         Spiders are kept as boxes, including their phase data.
 
@@ -1281,7 +1288,7 @@ class CMap[category](CompactCategory, TestableGeneric, Serialisable):
             n_legs_in, n_legs_out, typ, phases))
 
     @unbiased
-    def then(self, other: CMap) -> CMap:
+    def then(self, other: "CMap") -> "CMap":
         """
         Compose maps by gluing output ports to input ports.
 
@@ -1310,7 +1317,7 @@ class CMap[category](CompactCategory, TestableGeneric, Serialisable):
         return type(self)(
             dom, cod, boxes, edge, loops=loops, check=False)
 
-    def trace(self, n: int = 1, left: bool = False) -> CMap:
+    def trace(self, n: int = 1, left: bool = False) -> "CMap":
         """
         Trace boundary wires by splicing the selected inputs and outputs, a
         map being compact whatever hosts it, except over a planar traced
@@ -1359,7 +1366,7 @@ class CMap[category](CompactCategory, TestableGeneric, Serialisable):
             dom, cod, self.boxes, edge, loops=loops, check=False)
 
     @unbiased
-    def tensor(self, other: CMap) -> CMap:
+    def tensor(self, other: "CMap") -> "CMap":
         """ Tensor product given by disjoint union of the two maps. """
         dom, cod = self.dom @ other.dom, self.cod @ other.cod
         boxes = self.boxes + other.boxes
@@ -1388,7 +1395,7 @@ class CMap[category](CompactCategory, TestableGeneric, Serialisable):
             dom, cod, boxes, edge,
             loops=self.loops + other.loops, check=False)
 
-    def interchange(self, i: int, j: int) -> CMap:
+    def interchange(self, i: int, j: int) -> "CMap":
         """
         Interchange boxes at indices ``i`` and ``j``.
 
@@ -1412,8 +1419,8 @@ class CMap[category](CompactCategory, TestableGeneric, Serialisable):
         return self.reorder(order)
 
     def plug_input(
-            self, input_index: int, box: Box,
-            cod: Ty, root_index: int = 0) -> CMap:
+            self, input_index: int, box: "Box",
+            cod: "Ty", root_index: int = 0) -> "CMap":
         """
         Plug an input boundary and the output root into a new box.
 
@@ -1481,7 +1488,7 @@ class CMap[category](CompactCategory, TestableGeneric, Serialisable):
             new_dom, cod, boxes, edge,
             loops=self.loops)
 
-    def explicit_trace(self, left: bool = False) -> CMap:
+    def explicit_trace(self, left: bool = False) -> "CMap":
         """
         The trace of a map with explicit boxes (trace, cup or cap).
 
@@ -1501,7 +1508,7 @@ class CMap[category](CompactCategory, TestableGeneric, Serialisable):
             return self.from_box(factory(self.to_diagram(), left))
         return factory.__func__(type(self), self, left)
 
-    def make_monogamous(self) -> CMap:
+    def make_monogamous(self) -> "CMap":
         """
         Introduce cup and cap boxes to make self :attr:`is_monogamous`,
         i.e. so that every wire connects a positive and a negative port.
@@ -1546,7 +1553,7 @@ class CMap[category](CompactCategory, TestableGeneric, Serialisable):
                 loops=self.loops, check=False).make_monogamous()
         return self
 
-    def make_causal(self) -> CMap:
+    def make_causal(self) -> "CMap":
         """
         Make self :attr:`is_causal`, i.e. so that every wire points forward
         and there are no loops. Boxes that are merely out of order are put
@@ -1596,7 +1603,7 @@ class CMap[category](CompactCategory, TestableGeneric, Serialisable):
             result = result.explicit_trace()
         return result
 
-    def to_compact(self) -> CMap:
+    def to_compact(self) -> "CMap":
         """
         Open every curry bubble into its argument followed by the dagger of
         :meth:`ev`, traced over the curried wires: the map is decoded and
@@ -1639,7 +1646,7 @@ class CMap[category](CompactCategory, TestableGeneric, Serialisable):
         """
         return self.category.eval(self, *args, **params)
 
-    def to_diagram(self) -> Diagram:
+    def to_diagram(self) -> "Diagram":
         """
         Downgrade to a diagram directly, preserving box orientation.
 

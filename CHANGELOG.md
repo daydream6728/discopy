@@ -156,10 +156,10 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   hypergraph or a map reads back from the diagram it decodes to, a map up
   to the order of its boxes, i.e. as a hypergraph, so that what
   `proptest/test_strategies.py` checked on five categories by hand is a
-  cell of the matrix on every checked hypergraph and map. They are stated
-  in `monoidal`, beside the laws of the conversions of diagrams, and set
-  on their categories, as `hypergraph` and `cmap` annotate under `from
-  __future__ import annotations`. The rules of
+  cell of the matrix on every checked hypergraph and map. `hypergraph` and
+  `cmap` do without `from __future__ import annotations`, as a module
+  stating a law must, their forward references and the names they import
+  only for a typechecker quoted. The rules of
   every enrolled category have their own cells, `proptest/test_rules.py`,
   drawn by `Testable.matrix(kind=Rule)` as the laws are by
   `Testable.matrix()`, where `test_strategies.py` checked those of the
