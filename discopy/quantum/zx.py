@@ -25,7 +25,7 @@ import cmath
 from functools import reduce
 from math import pi
 
-from discopy import cat, rigid, tensor, quantum
+from discopy import cat, frobenius, rigid, tensor, quantum
 from discopy.cat import factory
 from discopy.quantum.circuit import qubit, Circuit
 from discopy.quantum.gates import (
@@ -71,7 +71,8 @@ class Diagram(tensor.Diagram[complex]):
 
     def grad(self, var, **params) -> rigid.Sum:
         """
-        Gradient with respect to `var`.
+        Gradient with respect to `var`, a formal sum by the product rule
+        with the gradient of each spider given by :meth:`Spider.grad`.
 
         Parameters
         ----------
@@ -81,7 +82,8 @@ class Diagram(tensor.Diagram[complex]):
         Examples
         --------
         >>> from sympy.abc import phi  # doctest: +EXTRA
-        >>> assert Z(1, 1, phi).grad(phi) == scalar(pi) @ Z(1, 1, phi + .5)
+        >>> assert Z(1, 1, phi).grad(phi) == scalar(1j * pi) @ Z(1, 1, phi)\\
+        ...     + scalar(-1j * pi) @ Z(1, 1, phi + .5)
         """
         return super().grad(var, **params)
 
@@ -108,24 +110,40 @@ class Diagram(tensor.Diagram[complex]):
         ...     5: {2: 1, 3: 1, 7: 1},
         ...     6: {4: 1},
         ...     7: {5: 1}}
+
+        A pyzx graph is simple, so the parallel wires between two spiders
+        are merged with :meth:`pyzx.Graph.add_edge_table`, i.e. by the
+        fusion and Hopf rules with their scalars in ``graph.scalar``, and
+        pyzx has no Y vertex, so a :class:`Y` spider is encoded with
+        :meth:`Y.to_x`.
+
+        >>> hopf = X(1, 2, .75) >> Z(2, 1, 1 / 3)
+        >>> graph = hopf.to_pyzx()  # doctest: +EXTRA
+        >>> assert graph.num_edges() == 2 and graph.scalar.power2 == -2
         """
         from pyzx import Graph, VertexType, EdgeType
+        diagram = frobenius.Functor(
+            ob_map=lambda typ: typ, dom=Diagram, cod=Diagram,
+            ar_map=lambda box: box.to_x() if isinstance(box, Y) else box)(self)
         graph, scan = Graph(), []
-        for i, _ in enumerate(self.dom):
+        for i, _ in enumerate(diagram.dom):
             node, hadamard = graph.add_vertex(VertexType.BOUNDARY), False
             scan.append((node, hadamard))
             graph.set_inputs(graph.inputs() + (node,))
             graph.set_position(node, i, 0)
-        for row, (box, offset) in enumerate(zip(self.boxes, self.offsets)):
+        boxes_and_offsets = zip(diagram.boxes, diagram.offsets)
+        for row, (box, offset) in enumerate(boxes_and_offsets):
             if isinstance(box, Spider):
                 node = graph.add_vertex(
                     VertexType.Z if isinstance(box, Z) else VertexType.X,
                     phase=box.phase * 2 if box.phase else None)
                 graph.set_position(node, offset, row + 1)
+                edge_table = {}
                 for i, _ in enumerate(box.dom):
                     source, hadamard = scan[offset + i]
-                    etype = EdgeType.HADAMARD if hadamard else EdgeType.SIMPLE
-                    graph.add_edge((source, node), etype)
+                    edges = edge_table.setdefault((source, node), [0, 0])
+                    edges[hadamard] += 1
+                graph.add_edge_table(edge_table)
                 scan = scan[:offset] + len(box.cod) * [(node, False)]\
                     + scan[offset + len(box.dom):]
             elif isinstance(box, Permutation):
@@ -139,12 +157,12 @@ class Diagram(tensor.Diagram[complex]):
                 scan[offset] = (node, not hadamard)
             else:
                 raise NotImplementedError
-        for i, _ in enumerate(self.cod):
+        for i, _ in enumerate(diagram.cod):
             target = graph.add_vertex(VertexType.BOUNDARY)
             source, hadamard = scan[i]
             etype = EdgeType.HADAMARD if hadamard else EdgeType.SIMPLE
             graph.add_edge((source, target), etype)
-            graph.set_position(target, i, len(self) + 1)
+            graph.set_position(target, i, len(diagram) + 1)
             graph.set_outputs(graph.outputs() + (target,))
         return graph
 
@@ -322,12 +340,22 @@ class Spider(tensor.Spider[complex], Box):
         return type(self)(len(self.dom), len(self.cod), phase=phase)
 
     def grad(self, var, **params):
+        """
+        The gradient of a spider is a formal sum, see arXiv:2103.07960: the
+        all-zero entry of its array is constant and the derivative of the
+        all-one entry is ``2j * pi * phase'`` times itself, i.e. ``1j * pi *
+        phase'`` times the difference between the spider and the spider
+        shifted by half a turn, which negates that entry and fixes the other.
+        """
         if var not in self.free_symbols:
             return Sum((), self.dom, self.cod)
         gradient = self.phase.diff(var)
         gradient = complex(gradient) if not gradient.free_symbols else gradient
-        return Scalar(pi * gradient)\
-            @ type(self)(len(self.dom), len(self.cod), self.phase + .5)
+        n_legs_in, n_legs_out = len(self.dom), len(self.cod)
+        return Scalar(1j * pi * gradient)\
+            @ type(self)(n_legs_in, n_legs_out, self.phase)\
+            + Scalar(-1j * pi * gradient)\
+            @ type(self)(n_legs_in, n_legs_out, self.phase + .5)
 
     def dagger(self):
         return type(self)(len(self.cod), len(self.dom), -self.phase)
@@ -360,10 +388,27 @@ class Z(Spider):
 
 
 class Y(Spider):
-    """ Y spider, in the eigenbasis of the Pauli Y. """
+    """
+    Y spider, in the eigenbasis of the Pauli Y, i.e. the Hadamard basis
+    rotated by the phase gate ``S = Z(1, 1, .25)``, so that a Y spider is an
+    X spider with ``S`` on each leg out and its dagger on each leg in.
+
+    >>> S = Z(1, 1, .25)
+    >>> assert Y(2, 1, .3).to_x()\\
+    ...     == S.dagger() @ S.dagger() >> X(2, 1, .3) >> S
+    >>> assert Y(2, 1, .3).to_x().eval().is_close(Y(2, 1, .3).eval())
+    """
     tikzstyle_name = 'Y'
     color = "blue"
     basis = ((2 ** -.5, 2 ** -.5), (2 ** -.5 * 1j, -2 ** -.5 * 1j))
+
+    def to_x(self) -> Diagram:
+        """ The Y spider as an X spider between phase gates. """
+        n_legs_in, n_legs_out = len(self.dom), len(self.cod)
+        phase_gate = Z(1, 1, .25)
+        return Id().tensor(*n_legs_in * [phase_gate.dagger()])\
+            >> X(n_legs_in, n_legs_out, self.phase)\
+            >> Id().tensor(*n_legs_out * [phase_gate])
 
 
 class X(Spider):

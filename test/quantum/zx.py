@@ -82,26 +82,69 @@ def test_subs():
 
 
 def test_grad():
-    pytest.importorskip("pyzx")
+    pytest.importorskip("sympy")
     from sympy.abc import phi, psi
     from math import pi
     assert not scalar(phi).grad(psi) and scalar(phi).grad(phi) == scalar(1)
     assert not Z(1, 1, phi).grad(psi)
-    assert Z(1, 1, phi).grad(phi) == scalar(pi) @ Z(1, 1, phi + .5)
-    assert (Z(1, 1, phi / 2) >> Z(1, 1, phi + 1)).grad(phi)\
-        == (scalar(pi / 2) @ Z(1, 1, phi / 2 + .5) >> Z(1, 1, phi + 1))\
-           + (Z(1, 1, phi / 2) >> scalar(pi) @ Nat(1) >> Z(1, 1, phi + 1.5))
+    assert Z(1, 1, phi).grad(phi) == scalar(1j * pi) @ Z(1, 1, phi)\
+        + scalar(-1j * pi) @ Z(1, 1, phi + .5)
+    assert Y(2, 1, phi / 2).grad(phi) == scalar(.5j * pi) @ Y(2, 1, phi / 2)\
+        + scalar(-.5j * pi) @ Y(2, 1, phi / 2 + .5)
+
+
+def test_grad_numeric():
+    """ The gradient is the derivative of :meth:`Diagram.eval`. """
+    pytest.importorskip("sympy")
+    from sympy.abc import phi
+    diagrams = [
+        Z(1, 1, phi), X(1, 1, phi), Y(1, 1, phi), Z(2, 1, phi), X(1, 2, phi),
+        Y(2, 2, phi), Z(0, 0, phi), Z(1, 1, phi / 2) >> X(1, 1, phi + 1)]
+    for diagram in diagrams:
+        gradient = diagram.grad(phi).subs(phi, .3).eval().array
+        finite_difference = (
+            diagram.subs(phi, .3 + 1e-6).eval().array
+            - diagram.subs(phi, .3 - 1e-6).eval().array) / 2e-6
+        assert np.allclose(gradient, finite_difference)
 
 
 def test_to_pyzx_errors():
     pytest.importorskip("pyzx")
     with raises(NotImplementedError):
-        Diagram.to_pyzx(quantum.H)
+        Box('f', Nat(1), Nat(1)).to_pyzx()
 
 
 def test_to_pyzx():
     pytest.importorskip("pyzx")
     assert Diagram.from_pyzx(Z(0, 2).to_pyzx()) == Z(0, 2) >> SWAP
+
+
+def test_to_pyzx_parallel_wires():
+    pytest.importorskip("pyzx")
+    diagram = X(1, 2, .75) >> Z(2, 1, 1 / 3)
+    graph = diagram.to_pyzx()
+    assert graph.num_edges() == 2 and np.isclose(graph.scalar.to_number(), .5)
+    assert np.allclose(matrix(diagram), graph.to_matrix())
+    assert proportional(matrix(Diagram.from_pyzx(graph)), matrix(diagram))
+    diagrams = [
+        Z(1, 2) >> Z(2, 1, .3),
+        Z(1, 2, .25) >> H @ H >> Z(2, 1),
+        Z(1, 2) >> Nat(1) @ H >> Z(2, 1),
+        Z(1, 2, .25) >> Nat(1) @ H >> X(2, 1),
+        Z(1, 3, .25) >> X(3, 1, .5),
+        Z(1, 3, .25) >> H @ Nat(2) >> X(3, 1, .5)]
+    for diagram in diagrams:
+        assert np.allclose(matrix(diagram), diagram.to_pyzx().to_matrix())
+
+
+def test_to_pyzx_Y():
+    pytest.importorskip("pyzx")
+    for diagram in [
+            Y(1, 1, .5), Y(2, 1, 1 / 3), Y(0, 2, -.125), Y(1, 0) @ Nat(1),
+            H >> Y(1, 2, .3) >> H @ Nat(1), Y(1, 2, .75) >> Y(2, 1, .3)]:
+        graph = diagram.to_pyzx()
+        assert np.allclose(matrix(diagram), graph.to_matrix())
+        assert Diagram.from_pyzx(graph).eval().is_close(diagram.eval())
 
 
 def test_to_pyzx_scalar():
@@ -240,9 +283,8 @@ def test_eval_symbolic():
 
 def random_diagram(n_wires, depth, phases=(0, .25, .5, .75, 1 / 3, -.125)):
     """
-    A random diagram of spiders of both colours, Hadamards, swaps and
-    scalars, where spiders have at most one leg out so that no two wires
-    are parallel: pyzx graphs are simple and ``to_pyzx`` merges them.
+    A random diagram of spiders of the three colours, Hadamards, swaps and
+    scalars, with parallel wires between spiders.
     """
     diagram = Id(n_wires)
     for _ in range(depth):
@@ -255,8 +297,8 @@ def random_diagram(n_wires, depth, phases=(0, .25, .5, .75, 1 / 3, -.125)):
             box = scalar(random.choice([2 ** .5, 1j, .5]))
         else:
             n_legs_in = random.randint(0, min(2, len(diagram.cod) - offset))
-            n_legs_out = 1 if not n_legs_in else random.randint(0, 1)
-            box = random.choice([Z, X])(
+            n_legs_out = 1 if not n_legs_in else random.randint(0, 2)
+            box = random.choice([Z, X, Y])(
                 n_legs_in, n_legs_out, random.choice(phases))
         diagram = diagram >> Id(offset) @ box\
             @ Id(len(diagram.cod) - offset - len(box.dom))
@@ -291,6 +333,16 @@ def test_eval_circuit2zx(random_had_cnot_diagram):
     for rotation in (Rz(.3), Rx(.3)):
         assert proportional(circuit2zx(rotation).eval().array,
                             rotation.eval().array)
+
+
+def test_to_hypergraph():
+    diagram = Z(1, 2, .25) >> X(2, 1)
+    assert diagram.to_hypergraph().to_diagram() == diagram
+    assert diagram.simplify() == diagram
+    left = Z(1, 1, .25) @ X(1, 1, .5)
+    right = Nat(1) @ X(1, 1, .5) >> Z(1, 1, .25) @ Nat(1)
+    assert left != right and frobenius.Equation(left, right)
+    assert not frobenius.Equation(left, left >> H @ Nat(1))
 
 
 def test_to_quimb_and_to_tn():
