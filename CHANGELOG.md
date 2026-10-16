@@ -937,6 +937,31 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   subscript of a class that is not a factory, `Hypergraph[C]` or `CMap[C]`,
   keeps its `ar` as itself
   ([rel-int/discopy-next#77](https://github.com/rel-int/discopy-next/issues/77)).
+- `rigid.Nat.unwind` is the identity, like its `l` and `r`: `rigid.Ty.unwind`
+  asks the atom of a type for its winding and the atoms of a `Nat` are
+  integers, so `Hypergraph.__init__` raised `AttributeError` on any
+  `Nat`-typed diagram and nothing going through `to_hypergraph` worked on a
+  ZX diagram, neither `simplify` nor `frobenius.Equation`
+  ([rel-int/discopy-next#76](https://github.com/rel-int/discopy-next/issues/76)).
+- `zx.Diagram.to_pyzx` keeps parallel wires: a pyzx graph is simple and a
+  second wire between the same two spiders overwrote the first, so
+  `to_pyzx().to_matrix()` disagreed with `eval()` on
+  `X(1, 2, .75) >> Z(2, 1, 1 / 3)`; the wires into each spider now go
+  through pyzx's `add_edge_table`, which merges them by the fusion and Hopf
+  rules with their scalars in `graph.scalar`. A `Y` spider was sent to an X
+  vertex, so `Y(1, 1, .5)` read as the Pauli X: pyzx has no Y vertex, so
+  `Y.to_x` encodes it, exactly for every arity and phase, as an X spider
+  with the phase gate `S = Z(1, 1, .25)` on each leg out and its dagger on
+  each leg in, since the eigenbasis of Y is `S` applied to the Hadamard
+  basis
+  ([rel-int/discopy-next#74](https://github.com/rel-int/discopy-next/issues/74)).
+- `zx.Spider.grad` is the derivative of the standard interpretation: it used
+  the formula of `gates.Rotation.grad`, `pi * Z(n, m, a + .5)`, right for
+  `Rz(a) = diag(exp(-i pi a), exp(i pi a))` but not for a spider, which is
+  `diag(1, exp(2 pi i a))` on its legs and whose derivative is the formal
+  sum `i pi (Z(n, m, a) - Z(n, m, a + .5))` of arXiv:2103.07960, built
+  through `sum_factory` and checked against finite differences
+  ([rel-int/discopy-next#75](https://github.com/rel-int/discopy-next/issues/75)).
 - The Dal Lago & Hoshino citation in `kleisli.additive` pointed at
   arXiv:1904.11324, which is not their paper; the geometry of Bayesian
   programming is arXiv:1904.07425
