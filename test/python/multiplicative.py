@@ -227,3 +227,8 @@ def test_Hypergraph_adder():
         for bits in itertools.product((0, 1), repeat=len(compiled.dom)):
             assert carry_save_value(compiled(*bits)) == sum(bits)
         adder = adder_step(full_adder_hg, adder, k)
+
+
+def test_fix_vanishing():
+    f = Function(lambda x, y: (x + y, 1), (int, int), (int, int))
+    assert f.fix(0) == f and f.trace(0) == f

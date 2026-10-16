@@ -234,6 +234,8 @@ class Function(function.Function, ClosedCategory):
         A feedback with no fixed point reachable from the seed does not
         terminate, as the function it would compute has no value.
         """
+        if n == 0:
+            return self
         traced = self.dom[len(self.dom) - n:]
         if self.cod != traced:
             raise AxiomError(messages.NOT_TRACEABLE.format(traced, self.cod))
