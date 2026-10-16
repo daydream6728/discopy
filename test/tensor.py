@@ -469,3 +469,35 @@ def test_Tensor_is_markov():
     assert lifted.forward == Tensor.copy(Dim(2)) >> g @ Tensor.id(Dim(2))
     assert lifted.put == Tensor.discard(Dim(2)) @ Tensor.id(Dim(1))
     assert lifted.forward.dtype == g.dtype
+
+
+def test_Tensor_then_unbiased():
+    """ Composing several tensors folds Tensor.then, not Matrix.then. """
+    t = Tensor(list(range(16)), Dim(2, 2), Dim(2, 2))
+    assert t.then() == t
+    assert t.then(t, t) == t >> t >> t
+    u = Tensor(list(range(36)), Dim(2, 3), Dim(2, 3))
+    assert u.then(u, u) == u >> u >> u
+
+
+def test_Tensor_comonoid():
+    """ The spiders are a commutative comonoid under the Kronecker product. """
+    assert Tensor.copy(Dim(2)) == Tensor(
+        [1, 0, 0, 0, 0, 0, 0, 1], Dim(2), Dim(2, 2))
+    for x in (Dim(1), Dim(2), Dim(3), Dim(2, 2)):
+        assert Tensor.copy_coassociativity(x)
+        assert Tensor.copy_cocommutativity(x)
+        assert Tensor.copy_counitality(x)
+        assert Tensor.copy_coherence(x, Dim(3))
+
+
+def test_Tensor_ar():
+    """ A subscript of Tensor is its own factory, so its swaps keep dtype. """
+    assert Tensor[complex].ar is Tensor[complex]
+    assert Tensor.ar is Tensor and Box[complex].ar is Diagram
+    assert Swap[complex](Dim(2), Dim(3)).eval().dtype == complex
+    x, y = frobenius.Ty('x'), frobenius.Ty('y')
+    F = Functor({x: 2, y: 3}, {}, dtype=complex)
+    swap = frobenius.Swap(x, y)
+    assert F(swap).dtype == F(swap >> swap.dagger()).dtype == complex
+    assert F(frobenius.Permutation(x @ y @ x, [1, 2, 0])).dtype == complex

@@ -122,3 +122,28 @@ def test_wire_tree_roundtrip():
     with warns(DeprecationWarning):
         assert from_tree({'factory': 'discopy.frobenius.Ob', 'name': 'x'})\
             == frobenius.Wire('x')
+
+
+def test_NamedGeneric_factory():
+    """ A subscript of a factory is its own; the others keep ar as itself. """
+    from discopy import symmetric
+    from discopy.abc import Category
+    from discopy.cmap import CMap
+    from discopy.hypergraph import Hypergraph
+    from discopy.utils import NamedGeneric, factory
+
+    @factory
+    class F(Category, NamedGeneric["dtype"]):
+        """ The arrows of a category parameterised by a dtype. """
+
+    class G(F):
+        """ A box of F, which is not a factory. """
+
+    class H(Category, NamedGeneric["dtype"]):
+        """ A category that is not a factory, like Hypergraph. """
+
+    assert F[int].factory is F[int] is F[int].ar
+    assert G[int].ar is F
+    assert H[int].ar is H[int] and not hasattr(H[int], "factory")
+    for wiring in (Hypergraph, CMap):
+        assert wiring[symmetric.Diagram].ar is wiring[symmetric.Diagram]

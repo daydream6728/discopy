@@ -138,7 +138,9 @@ class Tensor(Matrix):
         return cls(Matrix.id(product(dom.inside)).array, dom, dom)
 
     def then(self, other: Tensor = None, *others: Tensor) -> Tensor:
-        if other is None or others:
+        if other is None:
+            return self
+        if others:
             return super().then(other, *others)
         assert_isinstance(other, self.ar)
         assert_iscomposable(self, other)

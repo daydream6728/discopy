@@ -61,7 +61,7 @@ from dataclasses import dataclass
 from typing import ClassVar
 
 from discopy.axioms import (
-    ComposablePair, ComposableTriple, Equation, axiom)
+    ComposablePair, ComposableTriple, Equation, Testable, axiom)
 from discopy.utils import (  # noqa: F401  pylint: disable=unused-import
     NamedGeneric, classproperty)
 
@@ -269,7 +269,7 @@ class Monoid[C1: Monoid](ColouredMonoid[type(None), C1]):
 
 
 @dataclass
-class Nat(Monoid["Nat"]):
+class Nat(Testable["Nat"], Monoid["Nat"]):
     """
     ``Nat`` is the free monoid on one generator, i.e. the natural numbers
     with addition as tensor. It is also a sequence over its unary encoding:
@@ -307,6 +307,17 @@ class Nat(Monoid["Nat"]):
         if key >= self.n or key < -self.n:
             raise IndexError
         return type(self)(1)
+
+    @classmethod
+    def strategy(cls, *, max_size=3):
+        """
+        Generate natural numbers up to ``max_size``, so that a category
+        whose objects they are, e.g. :class:`discopy.matrix.Matrix`,
+        quantifies over them like any other :class:`discopy.axioms.Testable`.
+        """
+        from hypothesis import strategies as st
+
+        return st.integers(min_value=0, max_value=max_size).map(cls)
 
 
 class MonoidalCategory[C0: ColouredMonoid, C1: MonoidalCategory](
@@ -663,8 +674,11 @@ class PROP[C1: PROP](PROB[C1], SymmetricCategory[Nat, C1]):
 
 class MarkovCategory[C0, C1](SymmetricCategory[C0, C1]):
     """
-    A Markov category is a :class:`SymmetricCategory` with methods
-    :code:`copy` and :code:`merge` for the supply of commutative comonoids.
+    A Markov category is a :class:`SymmetricCategory` with a method
+    :code:`copy` for the supply of commutative comonoids: ``copy(x, n)`` is
+    the comultiplication into ``n`` copies and :meth:`discard` its counit,
+    the case ``n = 0``. The laws of a commutative comonoid and the coherence
+    of the supply with the tensor are stated here.
     """
     @classmethod
     @abstractmethod
@@ -676,6 +690,47 @@ class MarkovCategory[C0, C1](SymmetricCategory[C0, C1]):
             x : The object to copy.
             n : The number of copies.
         """
+
+    @classmethod
+    def discard(cls, x: C0) -> C1:
+        """
+        The counit of the comonoid on :code:`x`, i.e. no copy of it at all.
+
+        Parameters:
+            x : The object to discard.
+        """
+        return cls.copy(x, 0)
+
+    @axiom
+    def copy_coassociativity(cls, x: C0) -> Equation[C1]:
+        """ Copying either of two copies gives the three copies. """
+        copy, identity = cls.copy(x), cls.id(x)
+        return cls.equation_factory(
+            copy >> copy @ identity, cls.copy(x, 3), copy >> identity @ copy)
+
+    @axiom
+    def copy_cocommutativity(cls, x: C0) -> Equation[C1]:
+        """ The two copies of an object are interchangeable. """
+        copy = cls.copy(x)
+        return cls.equation_factory(copy >> cls.swap(x, x), copy)
+
+    @axiom
+    def copy_counitality(cls, x: C0) -> Equation[C1]:
+        """ Discarding either of two copies leaves the object itself. """
+        copy, discard, identity = cls.copy(x), cls.discard(x), cls.id(x)
+        return cls.equation_factory(
+            copy >> discard @ identity, identity, copy >> identity @ discard)
+
+    @axiom
+    def copy_coherence(cls, x: C0, y: C0) -> Equation[C1]:
+        """
+        Copying a tensor is copying its factors, with the inner copies
+        swapped so that each copy of the tensor comes together.
+        """
+        return cls.equation_factory(
+            cls.copy(x @ y),
+            cls.copy(x) @ cls.copy(y)
+            >> cls.id(x) @ cls.swap(x, y) @ cls.id(y))
 
 
 class ClosedCategory[C0, C1](BiclosedCategory[C0, C1], MarkovCategory[C0, C1]):

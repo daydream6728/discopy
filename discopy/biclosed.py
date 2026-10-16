@@ -92,7 +92,7 @@ from itertools import count
 from typing import (
     TYPE_CHECKING, Callable, ClassVar, Iterator, Self, Sequence)
 
-from discopy import cat, monoidal, cmap
+from discopy import cat, monoidal, cmap, messages
 from discopy.abc import BiclosedCategory
 from discopy.axioms import GENERATORS, Equivalence, Testable, axiom
 from discopy.drawing import Drawing
@@ -1204,7 +1204,7 @@ for law in (
         "composition_dom_typing", "composition_cod_typing",
         "dagger_involution", "dagger_contravariance"):
     setattr(TermBase, law, getattr(Box, law).inapplicable(
-        "A term is a box: the laws of its category are the diagram's."))
+        messages.TERM_IS_A_BOX))
 
 
 @dataclass
