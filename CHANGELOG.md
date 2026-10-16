@@ -9,6 +9,21 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Added
 
+- `discopy.kleisli.token`, probabilistic token passing on lambda terms: a
+  `Machine[M]` interprets the constants of a `closed` term, one transition
+  of the token is a `kleisli.additive.Channel` from an entry plus the two
+  directions the token travels in to an exit plus the same two, and the
+  machine is its trace, i.e. the execution formula walks the token until it
+  leaves. Following Dal Lago & Hoshino's [Geometry of Bayesian
+  Programming](https://arxiv.org/abs/1904.07425), the worked example is
+  the discrete analogue of their calculus' two constants: `sample` draws a
+  coin's bias from a prior and `score` multiplies the weight of the branch
+  it runs in, so the mass the token has left is the evidence and dividing
+  by it is Bayes' rule. The machine is generic in the monad, hence also
+  nondeterministic over `Powerset` and partial over `Maybe`. Half of
+  [#618](https://github.com/discopy/discopy/issues/618), whose `Hypergraph`
+  evaluation methods are still to come
+  ([#639](https://github.com/discopy/discopy/pull/639)).
 - `discopy.neural.signature`, what a generator promises. `Sym` is the
   symmetry an orbit of legs carries: none, the symmetric group or the
   cyclic one. `Orbit(role, arity, sym, traced)` is a family of legs playing
@@ -903,6 +918,10 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   sum `i pi (Z(n, m, a) - Z(n, m, a + .5))` of arXiv:2103.07960, built
   through `sum_factory` and checked against finite differences
   ([rel-int/discopy-next#75](https://github.com/rel-int/discopy-next/issues/75)).
+- The Dal Lago & Hoshino citation in `kleisli.additive` pointed at
+  arXiv:1904.11324, which is not their paper; the geometry of Bayesian
+  programming is arXiv:1904.07425
+  ([#639](https://github.com/discopy/discopy/pull/639)).
 - `interaction.Diagram.trace` traces an integer diagram, where it raised
   `TypeError` on every input: it was borrowed from `traced.Diagram` through
   a `trace_factory` slicing the type, and an integer type is a pair of
@@ -1408,6 +1427,10 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Project
 
+- `fail-under` rises from 8.82 to 8.83, by what `discopy.kleisli.token`
+  lifts the score: 9.0105 on `main` and 9.0266 with it, both read with
+  `--output-format=json2`
+  ([#639](https://github.com/discopy/discopy/pull/639)).
 - `fail-under` rises from 8.79 to 8.82, by what `discopy.kleisli` lifts the
   score: 8.85 to 8.88 on the lint job of `main`, 8.969 to 8.998 locally
   ([#443](https://github.com/discopy/discopy/pull/443)).
