@@ -18,8 +18,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   Programming](https://arxiv.org/abs/1904.07425), the worked example is
   the discrete analogue of their calculus' two constants: `sample` draws a
   coin's bias from a prior and `score` multiplies the weight of the branch
-  it runs in, so the mass the token loses is the evidence and dividing by
-  it is Bayes' rule. The machine is generic in the monad, hence also
+  it runs in, so the mass the token has left is the evidence and dividing
+  by it is Bayes' rule. The machine is generic in the monad, hence also
   nondeterministic over `Powerset` and partial over `Maybe`. Half of
   [#618](https://github.com/discopy/discopy/issues/618), whose `Hypergraph`
   evaluation methods are still to come
