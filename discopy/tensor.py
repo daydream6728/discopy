@@ -515,7 +515,7 @@ class Diagram[dtype](TestableGeneric, frobenius.Diagram):
     vector[::-1] >> vector >> Dim(2) @ vector
     """
     @classmethod
-    def checked_instances(cls) -> tuple:
+    def checked_params(cls) -> tuple:
         """ None, a tensor diagram drawing no arrays. """
         return ()
 

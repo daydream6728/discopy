@@ -335,7 +335,7 @@ class Stream[category](MonoidalCategory, TestableGeneric):
     >>> assert mem.later.now == later.mem.now
     """
     @classmethod
-    def checked_instances(cls) -> tuple:
+    def checked_params(cls) -> tuple:
         """ None, a stream drawing no terms yet. """
         return ()
 

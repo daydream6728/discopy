@@ -680,7 +680,7 @@ class Representation[algebra](TestableGeneric, frobenius.Dim):
         :align: center
     """
     @classmethod
-    def checked_instances(cls) -> tuple:
+    def checked_params(cls) -> tuple:
         """ None, a representation drawing no algebra. """
         return ()
 

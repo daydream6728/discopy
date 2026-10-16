@@ -264,16 +264,14 @@ class Channel[monad](TracedCategory, TestableGeneric):
     >>> assert both(1) == frozenset({Tagged(1, 0), Tagged(-1, 1)})
     """
     @classmethod
-    def checked_instances(cls) -> tuple:
+    def checked_params(cls) -> tuple:
         """
-        The channels of the Elgot monads whose iteration terminates on
-        every channel their strategy draws: the iteration of
+        The Elgot monads whose iteration terminates on every channel their
+        strategy draws: the iteration of
         :attr:`~discopy.kleisli.monad.Maybe` is a ``while`` loop, which a
         drawn channel can make cycle forever.
         """
-        return (
-            Channel[Powerset],  # ty: ignore[invalid-type-form]
-            Channel[Subdistribution])  # ty: ignore[invalid-type-form]
+        return (Powerset, Subdistribution)
 
     ob = Ty
     monad: Monad

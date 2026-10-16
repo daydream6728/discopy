@@ -210,12 +210,11 @@ class List[generator_factory](Monoid["List"], TestableGeneric):
     :attr:`inside`, e.g. ``List[int](2, 3).inside[0] == 2``.
     """
     @classmethod
-    def checked_instances(cls) -> tuple:
+    def checked_params(cls) -> tuple:
         """
-        The lists of Python types, the only generators :meth:`generators`
-        draws.
+        Python types, the only generators :meth:`generators` draws.
         """
-        return (List[type], )
+        return (type, )
 
     ob = type(None)
     dom = cod = None

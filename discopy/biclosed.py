@@ -714,7 +714,7 @@ class Renamed[factory](TestableGeneric, tuple):
     >>> assert terms[0].alpha_eq(*terms[1:])
     """
     @classmethod
-    def checked_instances(cls) -> tuple:
+    def checked_params(cls) -> tuple:
         """ None, a sort of premises being drawn over a category. """
         return ()
 
@@ -756,7 +756,7 @@ class Canonical[factory](TestableGeneric, tuple):
     >>> assert first.alpha_eq(second)
     """
     @classmethod
-    def checked_instances(cls) -> tuple:
+    def checked_params(cls) -> tuple:
         """ None, a sort of premises being drawn over a category. """
         return ()
 
@@ -797,7 +797,7 @@ class Reducible[factory](TestableGeneric, tuple):
     :class:`Normalising`.
     """
     @classmethod
-    def checked_instances(cls) -> tuple:
+    def checked_params(cls) -> tuple:
         """ None, a sort of premises being drawn over a category. """
         return ()
 

@@ -153,12 +153,14 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   diagrams, which draw no arrays, and pregroup diagrams, which compare by a
   hypergraph that refuses a cap, declare `strategy = no_strategy`.
 - `axioms.TestableGeneric`, a `NamedGeneric` that is `Testable` and names
-  the subscripts the property matrix checks with the abstract classmethod
-  `checked_instances`: a subscript such as `Hypergraph[markov.Diagram]` is
-  a class built on demand, so the matrix found the ones some module
-  happened to build and checked any other a test had built before it.
-  `Testable.enrolled` builds the subscripts every `TestableGeneric` names
-  and checks a generic class exactly when it is one of them: the
+  the parameters of the subscripts the property matrix checks with the
+  abstract classmethod `checked_params`: a subscript such as
+  `Hypergraph[markov.Diagram]` is a class built on demand, so the matrix
+  found the ones some module happened to build and checked any other a
+  test had built before it. `Testable.enrolled` subscripts every
+  `TestableGeneric` by each parameter it names, `cls[param]`, and checks a
+  generic class exactly when it is one of these, a class naming its own
+  default parameter to be checked itself: the
   hypergraphs and maps over the free categories they are the coherence
   theorem of, the Kleisli channels of the named monads, the integer
   diagrams over the free traced symmetric and compact categories, the
@@ -172,7 +174,7 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   draws pairs of types, which `lens.Ty` inherits, and
   `interaction.Diagram` draws its inside from the strategy of its natural
   category and compares it by that category's equation, on the free
-  traced symmetric and compact categories, its `checked_instances`, the
+  traced symmetric and compact categories, its `checked_params`, the
   planar ones having no normal form yet. A pair of types has no number of
   atoms for a trace or a curry to count, `messages.PAIR_LENGTH`, which
   replaces `LENS_TRACE_LENGTH`, and an integer diagram, like a parametric
@@ -199,7 +201,7 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   whose unit and associativity are the laws of their monad: the
   multiplicative channels of `Maybe`, `Powerset`, `Subdistribution` and
   `Seed`, and the additive channels, with their tensor and trace, of the
-  Elgot monads `Powerset` and `Subdistribution`, its `checked_instances`; the
+  Elgot monads `Powerset` and `Subdistribution`, its `checked_params`; the
   iteration of `Maybe` is a `while` loop a drawn channel can make cycle
   forever. A `Monad` says how to `generate` its values over some outcomes
   and what two of them are compared by, `observe`: a subdistribution up to

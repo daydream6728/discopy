@@ -192,16 +192,16 @@ class Hypergraph[category](
     >>> assert (f @ g).wires == ((0, 1), (((0,), (2,)), ((1,), (3,))), (2, 3))
     """
     @classmethod
-    def checked_instances(cls) -> tuple:
+    def checked_params(cls) -> tuple:
         """
-        The hypergraphs over the free categories whose wiring they sample,
-        from symmetric categories on.
+        The free categories whose wiring a hypergraph samples, from
+        symmetric categories on.
         """
         # pylint: disable=import-outside-toplevel  # they import this
         from discopy import (
             closed, compact, feedback, frobenius, markov, symmetric)
         from discopy.grammar import abstract
-        return tuple(Hypergraph[category.Diagram] for category in (
+        return tuple(category.Diagram for category in (
             symmetric, markov, compact, frobenius, closed, feedback,
             abstract))
 

@@ -167,8 +167,7 @@ from discopy.abc import (
     MarkovCategory, SymmetricCategory, TracedCategory)
 from discopy.feedback import Diagram as FeedbackDiagram
 from discopy.utils import (
-    assert_iscomposable, assert_isinstance, classproperty, get_origin,
-    unbiased)
+    assert_iscomposable, assert_isinstance, classproperty, unbiased)
 
 
 @dataclass
@@ -200,9 +199,9 @@ class Symmetric[category](
             recopar
     """
     @classmethod
-    def checked_instances(cls) -> tuple:
-        """ The class over its default underlying category. """
-        return (get_origin(cls), )
+    def checked_params(cls) -> tuple:
+        """ The default underlying category, for the class itself. """
+        return (cls.category, )
 
     category = symmetric.Diagram
     ob = classproperty(lambda cls: cls.category.ob)

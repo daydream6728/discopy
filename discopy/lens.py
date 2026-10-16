@@ -152,9 +152,9 @@ class Symmetric[category](SymmetricCategory, TestableGeneric):
             to_markov
     """
     @classmethod
-    def checked_instances(cls) -> tuple:
-        """ The class over its default underlying category. """
-        return (get_origin(cls), )
+    def checked_params(cls) -> tuple:
+        """ The default underlying category, for the class itself. """
+        return (cls.category, )
 
     category = symmetric.Diagram
     ob = classproperty(lambda cls: pairs(cls.category))

@@ -227,14 +227,14 @@ class CMap[category](CompactCategory, TestableGeneric, Serialisable):
     """
 
     @classmethod
-    def checked_instances(cls) -> tuple:
+    def checked_params(cls) -> tuple:
         """
-        The maps over the free symmetric and compact categories, the ones a
-        map is the coherence theorem of.
+        The free symmetric and compact categories, the ones a map is the
+        coherence theorem of.
         """
         # pylint: disable-next=import-outside-toplevel  # they import this
         from discopy import compact, symmetric
-        return (CMap[symmetric.Diagram], CMap[compact.Diagram])
+        return (symmetric.Diagram, compact.Diagram)
 
     functor = classproperty(lambda cls: cls.category.functor_factory)
     ob = classproperty(lambda cls: cls.category.ob)

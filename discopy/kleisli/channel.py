@@ -68,7 +68,7 @@ class Channel[monad](Category, TestableGeneric):
     >>> assert (identity >> half)(4) == half(4) == (half >> identity)(4)
     """
     @classmethod
-    def checked_instances(cls) -> tuple:
+    def checked_params(cls) -> tuple:
         """ None, the channels being checked by tuples and tags. """
         return ()
 

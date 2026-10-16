@@ -181,13 +181,11 @@ class Channel[monad](Category, TestableGeneric):
     >>> assert discard(3) == frozenset({()})
     """
     @classmethod
-    def checked_instances(cls) -> tuple:
+    def checked_params(cls) -> tuple:
         """
-        The channels of the named monads.
+        The named monads.
         """
-        return tuple(
-            Channel[monad]  # ty: ignore[invalid-type-form]
-            for monad in (Maybe, Powerset, Subdistribution, Seed))
+        return (Maybe, Powerset, Subdistribution, Seed)
 
     ob = Ty
     monad: Monad

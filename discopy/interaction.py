@@ -116,9 +116,9 @@ class Ty[natural](Pregroup, TestableGeneric):
     >>> assert x @ y == Ty(T("x") @ T("y"), T("y'") @ T("x'"))
     """
     @classmethod
-    def checked_instances(cls) -> tuple:
-        """ The pairs of the default :attr:`natural` types. """
-        return (get_origin(cls), )
+    def checked_params(cls) -> tuple:
+        """ The default :attr:`natural` types, for the class itself. """
+        return (cls.natural, )
 
     natural = pivotal.Ty
     negatives = staticmethod(reversed)
@@ -232,15 +232,15 @@ class Diagram[natural](RibbonCategory, TestableGeneric):
     ...     == D.id(two).transpose(left=True)
     """
     @classmethod
-    def checked_instances(cls) -> tuple:
+    def checked_params(cls) -> tuple:
         """
-        The free compact category on the free traced symmetric one, and on
-        the free compact one: the planar ones have no normal form to
-        compare the insides of their integer diagrams by yet.
+        The free traced symmetric and compact categories: the planar ones
+        have no normal form to compare the insides of their integer
+        diagrams by yet.
         """
         # pylint: disable-next=import-outside-toplevel  # they import this
         from discopy import compact, symmetric
-        return (Diagram[symmetric.Diagram], Diagram[compact.Diagram])
+        return (symmetric.Diagram, compact.Diagram)
 
     ar = classproperty(lambda cls: cls)
     natural = ribbon.Diagram

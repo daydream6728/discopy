@@ -131,7 +131,7 @@ class Matrix[dtype](MarkovCategory, TestableGeneric):
            [0, 4]])
     """
     @classmethod
-    def checked_instances(cls) -> tuple:
+    def checked_params(cls) -> tuple:
         """ None, a matrix drawing no entries. """
         return ()
 

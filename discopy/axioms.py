@@ -1037,7 +1037,7 @@ class Testable[T](ABC):
     """ The rules inherited by ``cls``, see :meth:`declared`. """
 
     @classmethod
-    def subclasses(cls) -> "tuple[type[Testable], ...]":
+    def subclasses(cls) -> tuple[type[Self], ...]:
         """
         Every transitive subclass of ``cls``, ``cls`` itself included, once,
         in the order a breadth-first walk of the subclass graph meets it.
@@ -1065,8 +1065,8 @@ class Testable[T](ABC):
         the generator of its category but defines a strategy of its own,
         e.g. a lambda term, is checked on the terms that strategy generates,
         and so is a testable that is no category at all, e.g. a proof net.
-        A :class:`TestableGeneric` is checked on the subscripts its
-        ``checked_instances`` names, and on no other.
+        A :class:`TestableGeneric` is checked on the subscripts by the
+        parameters its ``checked_params`` names, and on no other.
 
         >>> from discopy.cat import Arrow, Box
         >>> from discopy.monoidal import Ty
@@ -1091,8 +1091,9 @@ class Testable[T](ABC):
                 and getattr(testable, "box_factory", None) is not testable
 
         checked = {
-            instance for generic in TestableGeneric.subclasses()[1:]
-            for instance in generic.checked_instances()}
+            generic[param] for generic in TestableGeneric.subclasses()[1:]
+            if "__is_named_generic__" not in vars(generic)
+            for param in generic.checked_params()}
         return tuple(sorted((
             testable for testable in cls.subclasses()
             if (testable in checked
@@ -1226,15 +1227,18 @@ class Serialisable[T](Testable[T]):
 class TestableGeneric(NamedGeneric, Testable):
     """
     A testable class with type parameters, e.g. ``Hypergraph[C]``, which
-    names the subscripts the property matrix checks, see
+    names the parameters of the subscripts the property matrix checks, see
     :meth:`Testable.enrolled`: a subscript is a class of its own, built on
     demand, so the matrix cannot find it by walking the subclasses, and not
     every subscript generates terms whose laws hold up to its equation.
     """
     @classmethod
     @abstractmethod
-    def checked_instances(cls) -> "tuple[type[Testable], ...]":
-        """ The subscripts of the class the property matrix checks. """
+    def checked_params(cls) -> tuple:
+        """
+        The parameters of the subscripts of the class the property matrix
+        checks, its default parameter for the class itself.
+        """
 
 
 class Related[factory](TestableGeneric, tuple):
@@ -1250,7 +1254,7 @@ class Related[factory](TestableGeneric, tuple):
         return super().__new__(cls, terms)
 
     @classmethod
-    def checked_instances(cls) -> tuple:
+    def checked_params(cls) -> tuple:
         """ None, a sort of premises being drawn over a category. """
         return ()
 
