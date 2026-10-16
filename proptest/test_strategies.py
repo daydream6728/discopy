@@ -7,19 +7,20 @@ categories, a :class:`discopy.hypergraph.Hypergraph` for Markov and
 hypergraph categories, and the :meth:`discopy.monoidal.Diagram.normal_form`
 of a planar diagram otherwise. These tests check that each strategy meets
 its contract, that the boundaries it is asked for are honoured and the
-structure it claims is there, and that a generated quotient reads back to
-itself through the diagram it downgrades to.
+structure it claims is there. That a generated quotient reads back to
+itself through the diagram it downgrades to is a law of its category,
+:meth:`discopy.axioms.Decodable.decoding`, and that a rule concludes what
+its signature states is checked by ``test_rules.py``.
 """
 
 import pytest
-from hypothesis import given, note
+from hypothesis import given
 from hypothesis import strategies as st
 
 from discopy import (
     balanced, biclosed, braided, closed, compact, feedback, frobenius, markov,
     monoidal, pivotal, ribbon, rigid, symmetric, traced)
 from discopy.cmap import CMap
-from discopy.axioms import inhabits
 from discopy.hypergraph import Hypergraph
 from discopy.utils import factory_name
 
@@ -64,27 +65,6 @@ def test_boundaries(module, data):
     assert (diagram.dom, diagram.cod) == (dom, cod)
 
 
-RULES = [
-    pytest.param(module, name, id=f"{factory_name(module.Diagram)}.{name}")
-    for module in MODULES for name in module.Diagram.rules]
-""" Every rule of every level, with its level. """
-
-
-@pytest.mark.parametrize("module, name", RULES)
-@given(data=st.data())
-def test_rule(module, name, data):
-    """
-    A rule applies to the premises it draws for a goal and concludes a
-    diagram of the type its signature states, in the scope of the draw.
-    """
-    rule = module.Diagram.rules[name]
-    dom = data.draw(module.Ty.strategy(), label="dom")
-    cod = data.draw(module.Ty.strategy(), label="cod")
-    scope, premises = data.draw(
-        rule.sequents(rule.given(dom, cod), fuel=1), label="premises")
-    assert inhabits(rule(**premises), rule.output(scope))
-
-
 @pytest.mark.parametrize("module", parameters(SYMMETRIC + MARKOV))
 @given(data=st.data())
 def test_hypergraph_shape(module, data):
@@ -104,26 +84,9 @@ def test_hypergraph_shape(module, data):
         assert graph.is_acyclic
 
 
-@pytest.mark.parametrize("module", parameters(SYMMETRIC + MARKOV))
-@given(data=st.data())
-def test_hypergraph_readback(module, data):
-    """ A hypergraph reads back from the diagram it downgrades to. """
-    graph = data.draw(Hypergraph[module.Diagram].strategy(), label="graph")
-    diagram = graph.to_diagram()
-    note(diagram)
-    assert diagram.to_hypergraph() == graph
-
-
 @pytest.mark.parametrize("module", parameters(SYMMETRIC))
 @given(data=st.data())
-def test_cmap_readback(module, data):
-    """
-    A map is monogamous unless its category has cups and caps, and it reads
-    back from the diagram it downgrades to, up to the order of its boxes,
-    i.e. as a hypergraph.
-    """
+def test_cmap_shape(module, data):
+    """ A map is monogamous unless its category has cups and caps. """
     cmap = data.draw(CMap[module.Diagram].strategy(), label="cmap")
     assert cmap.is_monogamous or module is compact
-    diagram = cmap.to_diagram()
-    note(diagram)
-    assert diagram.to_hypergraph() == cmap.to_hypergraph()

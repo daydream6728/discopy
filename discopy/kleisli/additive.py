@@ -290,6 +290,8 @@ class Channel[monad](TracedCategory, TestableGeneric):
         .inapplicable(messages.CHANNEL_TRACES_RIGHT)
     trace_superposing_left = TracedCategory.trace_superposing_left\
         .inapplicable(messages.CHANNEL_TRACES_RIGHT)
+    trace_left = TracedCategory.trace_left.inapplicable(
+        messages.CHANNEL_TRACES_RIGHT)
 
     @classmethod
     def equation_factory(cls, *terms: Channel) -> Equation:

@@ -97,7 +97,7 @@ from discopy import monoidal, balanced, hypergraph, cmap, messages
 from discopy.abc import (
     BalancedCategory, BiclosedCategory, CompactCategory, PivotalCategory,
     RigidCategory, SymmetricCategory, TracedCategory)
-from discopy.axioms import FUEL, Axiom
+from discopy.axioms import FUEL, Axiom, Rule
 from discopy.cat import factory
 from discopy.monoidal import (  # noqa: F401  pylint: disable=unused-import
     Wire, Ty, Nat)
@@ -751,7 +751,7 @@ CMap = cmap.CMap[Diagram]
 for level in (
         BiclosedCategory, RigidCategory, PivotalCategory, CompactCategory):
     for name, law in vars(level).items():
-        if isinstance(law, Axiom):
+        if isinstance(law, (Axiom, Rule)):
             setattr(CMap, name, law.inapplicable(messages.MAP_HAS_NO_ADJOINTS))
 
 Diagram.box_factory = Box

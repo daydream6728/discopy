@@ -533,6 +533,8 @@ class Declaration[**P, T](classmethod):
             function by default.
         params : The parameters passed to the strategy of every morphism the
             declaration quantifies over, see :meth:`Axiom.weaken`.
+        broken : Whether the declaration is declared broken by
+            :meth:`failing`.
     """
 
     function: Callable[Concatenate[Any, P], T]
@@ -540,6 +542,7 @@ class Declaration[**P, T](classmethod):
     category: type = None  # ty: ignore[invalid-assignment]
     name: str = None  # ty: ignore[invalid-assignment]
     params: dict[str, Any] = None  # ty: ignore[invalid-assignment]
+    broken: bool = False
 
     def __post_init__(self):
         function = inspect.unwrap(self.function)
@@ -553,6 +556,36 @@ class Declaration[**P, T](classmethod):
         self.name = self.name or self.function.__name__
         self.params = dict(self.params or {})
         self.__doc__ = self.function.__doc__
+
+    def failing(self, reason: str) -> Self:
+        """
+        The same declaration declared broken: calling it raises an
+        :class:`AxiomFailure` with the reason as message and what it
+        evaluates to on the arguments, or the error raised when the
+        implementation refuses to build it, e.g. ``braid_naturality =
+        BraidedCategory.braid_naturality.failing("A free braid is a box.")``.
+        """
+        @wraps(self.function)
+        def equation(*args, **kwargs):
+            try:
+                evaluated = self.function(*args, **kwargs)
+            except Exception as error:
+                raise AxiomFailure(reason, error) from error
+            raise AxiomFailure(reason, evaluated)
+        equation.__doc__ = reason
+        return replace(self, function=equation, broken=True)
+
+    def inapplicable(self, reason: str) -> Self:
+        """
+        The same declaration declared not to apply to the category: it
+        takes no argument and returns :obj:`NotImplemented`, with the reason
+        as its documentation, e.g. ``trace_vanishing =
+        TracedCategory.trace_vanishing.inapplicable("No trace.")``.
+        """
+        def law(_category):
+            return NotImplemented
+        law.__doc__ = reason
+        return replace(self, function=law, params={}, broken=False)
 
     def __repr__(self):
         """
@@ -710,13 +743,7 @@ class Axiom[**P, T](Declaration[P, T]):
     so :attr:`broken` is declared by :meth:`failing` before any argument is
     generated — the property matrix marks such an axiom as an expected
     failure and lets the search find the counterexample.
-
-    Parameters:
-        broken : Whether the law is declared broken by :meth:`failing`.
     """
-
-    _: KW_ONLY
-    broken: bool = False
 
     __hash__ = Declaration.__hash__
 
@@ -731,36 +758,6 @@ class Axiom[**P, T](Declaration[P, T]):
         def equation(*args, **kwargs):
             return self.function(*args, **kwargs).modulo(up_to)
         return replace(self, function=equation)
-
-    def failing(self, reason: str) -> "Axiom[P, T]":
-        """
-        The same law declared broken: calling it raises an
-        :class:`AxiomFailure` with the reason as message and the equation
-        evaluated on the arguments, or the error raised when the
-        implementation refuses to build its terms, e.g. ``braid_naturality =
-        BraidedCategory.braid_naturality.failing("A free braid is a box.")``.
-        """
-        @wraps(self.function)
-        def equation(*args, **kwargs):
-            try:
-                evaluated = self.function(*args, **kwargs)
-            except Exception as error:
-                raise AxiomFailure(reason, error) from error
-            raise AxiomFailure(reason, evaluated)
-        equation.__doc__ = reason
-        return replace(self, function=equation, broken=True)
-
-    def inapplicable(self, reason: str) -> "Axiom[P, T]":
-        """
-        The same law declared not to apply to the category: it takes no
-        argument and returns :obj:`NotImplemented`, with the reason as its
-        documentation, e.g. ``trace_vanishing =
-        TracedCategory.trace_vanishing.inapplicable("No trace.")``.
-        """
-        def law(_category):
-            return NotImplemented
-        law.__doc__ = reason
-        return replace(self, function=law, params={}, broken=False)
 
     def weaken(self, **params) -> "Axiom[P, T]":
         """
@@ -1102,20 +1099,23 @@ class Testable[T](ABC):
             and testable.axioms and generates(testable)), key=factory_name))
 
     @classmethod
-    def matrix(cls, once: bool = False) -> list[Axiom]:
+    def matrix(cls, once: bool = False,
+               kind: type[Declaration] = Axiom) -> list[Declaration]:
         """
-        Every law of every :meth:`enrolled` category, bound to it, or only
-        ``once`` per declaration of a law: bound to the enrolled category
-        nearest the class declaring it, rather than to every category
-        inheriting it. A category restating a law, broken, weakened or
-        modulo a quotient, declares it anew and is the nearest to that.
+        Every law of every :meth:`enrolled` category, or every declaration
+        of another ``kind``, e.g. its rules, bound to it, or only ``once``
+        per declaration: bound to the enrolled category nearest the class
+        declaring it, rather than to every category inheriting it. A
+        category restating a law, broken, weakened or modulo a quotient,
+        declares it anew and is the nearest to that.
 
         >>> from discopy.cat import Arrow
         >>> assert Arrow.unitality in Testable.matrix(once=True)
+        >>> assert Arrow.cut in Testable.matrix(once=True, kind=Rule)
         """
         cells = [
             law for testable in cls.enrolled()
-            for law in testable.axioms.values()]
+            for law in testable.declared(kind).values()]
         if not once:
             return cells
         nearest = {}
@@ -1138,6 +1138,20 @@ category that would inherit a strategy for terms it cannot read back, e.g.
 a pregroup diagram, declares ``strategy = no_strategy`` to stay out of the
 matrix until it implements its own.
 """
+
+
+class Decodable[T](Testable[T]):
+    """
+    A representation of diagrams, e.g. a hypergraph or a combinatorial map,
+    which decodes to a diagram, ``to_diagram``, compared by the hypergraph
+    of each, ``to_hypergraph``, with the law that decoding is a section.
+    """
+
+    @axiom
+    def decoding(cls, term: Self) -> Equation:
+        """ A term reads back from the diagram it decodes to. """
+        return Equation(
+            term.to_diagram().to_hypergraph(), term.to_hypergraph())
 
 
 class Serialisable[T](Testable[T]):

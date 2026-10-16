@@ -226,6 +226,8 @@ class Symmetric[category](
         messages.PARA_REPARAM)
     braid_naturality = SymmetricCategory.braid_naturality.failing(
         messages.PARA_REPARAM)
+    inverse_braiding = SymmetricCategory.inverse_braiding.inapplicable(
+        messages.NO_DAGGER)
 
     @classmethod
     def equation_factory(cls, *terms: Symmetric) -> Equation:
@@ -438,6 +440,8 @@ class Closed(Markov, ClosedCategory):
     Parametric maps over a closed underlying `category` form a closed
     category, currying with the parameters swapped out of the way.
     """
+    curry_left = ClosedCategory.curry_left.failing(messages.PARA_CURRY)
+    curry_right = ClosedCategory.curry_right.failing(messages.PARA_CURRY)
     currying_left = ClosedCategory.currying_left.failing(messages.FREE_CURRY)
     currying_right = ClosedCategory.currying_right.failing(messages.FREE_CURRY)
     currying_eta_left = ClosedCategory.currying_eta_left.failing(
@@ -545,6 +549,8 @@ class Compact(Traced, CompactCategory):
         .inapplicable(messages.NO_ROTATION)
     transpose_contravariance = CompactCategory.transpose_contravariance\
         .failing(messages.PARA_REPARAM)
+    inverse_twisting = CompactCategory.inverse_twisting.inapplicable(
+        messages.NO_DAGGER)
     category = compact.Diagram
 
     @classmethod

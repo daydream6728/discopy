@@ -54,6 +54,7 @@ PARA_REPARAM = (
 NO_ROTATION = (
     "There is no rotation of a morphism here, so its laws do not apply.")
 CHANNEL_TRACES_RIGHT = "A channel is traced on the right only."
+PARA_CURRY = "A closed category curries no map with coparameters."
 PARA_CURRY_COPAR = (
     "A closed category cannot curry a map with coparameters {}, as its "
     "exponential would swallow them.")

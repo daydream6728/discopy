@@ -125,6 +125,8 @@ class Ty[natural](Pregroup, TestableGeneric):
 
     unitality = Pregroup.unitality.inapplicable(messages.PAIR_TYPES)
     associativity = Pregroup.associativity.inapplicable(messages.PAIR_TYPES)
+    ax = Pregroup.ax.inapplicable(messages.PAIR_TYPES)
+    cut = Pregroup.cut.inapplicable(messages.PAIR_TYPES)
     dagger_involution = Pregroup.dagger_involution.inapplicable(
         messages.NO_DAGGER)
     dagger_contravariance = Pregroup.dagger_contravariance.inapplicable(
@@ -605,7 +607,8 @@ for name in (
         "trace_superposing_left", "trace_superposing_right", "yanking",
         "currying_left", "currying_right", "currying_eta_left",
         "currying_eta_right", "currying_naturality_left",
-        "currying_naturality_right"):
+        "currying_naturality_right", "trace_left", "trace_right",
+        "curry_left", "curry_right", "twisting", "inverse_twisting"):
     setattr(Diagram, name, getattr(RibbonCategory, name).inapplicable(
         messages.PAIR_LENGTH))
 for name in ("adjunction", "rotate_contravariance"):

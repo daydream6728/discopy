@@ -1406,9 +1406,11 @@ class Abstraction(TermBase):
 type Term = Constant | Variable | Application | Abstraction
 
 
-for law in sorted(set(Box.axioms) - set(Serialisable.axioms)):
+for law in sorted(
+        set(Box.axioms) - set(Serialisable.axioms) | set(Box.rules)):
     setattr(TermBase, law, getattr(Box, law).inapplicable(
-        "A term is a box: the laws of its category are the diagram's."))
+        "A term is a box: the laws and rules of its category are the "
+        "diagram's."))
 
 
 @dataclass

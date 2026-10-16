@@ -152,6 +152,22 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   compact categories on. Tensor
   diagrams, which draw no arrays, and pregroup diagrams, which compare by a
   hypergraph that refuses a cap, declare `strategy = no_strategy`.
+- `axioms.Decodable`, a representation of diagrams that decodes to one,
+  with the law `decoding`, that a term reads back from the diagram it
+  decodes to, up to its hypergraph: `Hypergraph` and `CMap` are decodable,
+  a hypergraph being its own `to_hypergraph`, so that what
+  `proptest/test_strategies.py` checked on five categories by hand is a
+  cell of the matrix on every checked hypergraph and map. The rules of
+  every enrolled category have their own cells, `proptest/test_rules.py`,
+  drawn by `Testable.matrix(kind=Rule)` as the laws are by
+  `Testable.matrix()`, where `test_strategies.py` checked those of the
+  free diagrams alone. `failing`, `inapplicable` and `broken` move from
+  `Axiom` to `Declaration`, so that a category declares its rules as it
+  does its laws: a term has neither, a map over a host that is not rigid
+  has no cups, caps or curry, lenses and parametric maps have no inverse
+  braid, an integer diagram counts no atoms of a pair to trace, curry or
+  twist, a lens and an additive channel are traced on the right only, and
+  a parametric map with coparameters does not curry, `PARA_CURRY`.
 - `axioms.TestableGeneric`, a `NamedGeneric` that is `Testable` and names
   the parameters of the subscripts the property matrix checks with the
   abstract classmethod `checked_params`: a subscript such as
@@ -179,10 +195,7 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   atoms for a trace or a curry to count, `messages.PAIR_LENGTH`, which
   replaces `LENS_TRACE_LENGTH`, and an integer diagram, like a parametric
   map, has no rotation, `messages.NO_ROTATION`, which replaces
-  `PARA_NO_ROTATION`. `proptest/test_quantum.py` checks that the features
-  of a quantum reservoir are distributions, that running a sequence
-  measures the composite of its steps and that a random reservoir depends
-  on its seed only.
+  `PARA_NO_ROTATION`.
 - The laws of beta reduction, `biclosed.Normalising`, which
   `closed.TermBase` inherits: a normal form is its own, has the type of
   the term, and is the same, up to the names of its bound variables, for

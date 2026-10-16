@@ -175,6 +175,8 @@ class Symmetric[category](SymmetricCategory, TestableGeneric):
         messages.NO_DAGGER)
     inverse_then_braid = SymmetricCategory.inverse_then_braid.inapplicable(
         messages.NO_DAGGER)
+    inverse_braiding = SymmetricCategory.inverse_braiding.inapplicable(
+        messages.NO_DAGGER)
 
     @classmethod
     def equation_factory(cls, *terms: Symmetric) -> Equation:
@@ -454,6 +456,10 @@ class Traced(Symmetric, TracedCategory):
         .inapplicable(messages.PAIR_LENGTH)
     trace_dinaturality_right = TracedCategory.trace_dinaturality_right\
         .inapplicable(messages.PAIR_LENGTH)
+    trace_left = TracedCategory.trace_left.inapplicable(
+        messages.LENS_TRACES_RIGHT)
+    trace_right = TracedCategory.trace_right.inapplicable(
+        messages.PAIR_LENGTH)
 
     def trace(self, n: int = 1, left: bool = False) -> Traced:
         """
