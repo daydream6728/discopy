@@ -7,7 +7,7 @@ Context: "that PR" is [discopy#730](https://github.com/discopy/discopy/pull/730)
 which this branch is stacked on. Earlier in the same session it was agreed that an e-hypergraph can be a
 `hypergraph.Hypergraph` with an equivalence relation on its spiders, checked on #730's own example.
 
-- [ ] State the axioms of `ehypergraph.EHypergraph` in the sequent DSL of `discopy.axioms`, with the
+- [WIP] @session_01VFjLpUVTvAs7PfxAhx2igm-2026-10-16 16:40 State the axioms of `ehypergraph.EHypergraph` in the sequent DSL of `discopy.axioms`, with the
       interface they quantify over documented and not yet implemented
 - [ ] Settle with the human what `s ~ t` means where boxes are linear, i.e. below Markov, and so where
       `rebuild` is sound (see the question in the module docstring)
