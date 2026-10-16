@@ -1971,6 +1971,29 @@ class Match:
 CMap = cmap.CMap[Diagram]
 
 
+@axiom
+def hypergraph_roundtrip(
+        _category, graph: hypergraph.Hypergraph
+) -> axioms.Equation[hypergraph.Hypergraph]:
+    """ A hypergraph reads back from the diagram it decodes to. """
+    return cat.Equation(graph.to_diagram().to_hypergraph(), graph)
+
+
+@axiom
+def cmap_roundtrip(
+        _category, term: cmap.CMap) -> axioms.Equation[hypergraph.Hypergraph]:
+    """
+    A map reads back from the diagram it decodes to, up to the order of its
+    boxes, i.e. as a hypergraph.
+    """
+    return cat.Equation(
+        term.to_diagram().to_hypergraph(), term.to_hypergraph())
+
+
+hypergraph.Hypergraph.hypergraph_roundtrip = hypergraph_roundtrip
+cmap.CMap.cmap_roundtrip = cmap_roundtrip
+
+
 class Equation(cat.Equation, RichDisplay):
     """
     An :class:`.cat.Equation` of diagrams, i.e. with a :meth:`draw` method.

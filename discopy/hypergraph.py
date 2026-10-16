@@ -52,7 +52,7 @@ from networkx import (
 from networkx.algorithms.isomorphism import is_isomorphic
 
 from discopy import cmap, messages
-from discopy.axioms import Decodable, Serialisable, TestableGeneric
+from discopy.axioms import Serialisable, TestableGeneric
 from discopy.abc import (
     HypergraphCategory, MarkovCategory, MonoidalCategory,
     BalancedCategory, BraidedCategory, CompactCategory, Pregroup,
@@ -103,8 +103,7 @@ Mapping from :class:`Spider` to atomic :class:`frobenius.Ty`.
 
 
 class Hypergraph[category](
-        MonoidalCategory["Ty", "Hypergraph"], TestableGeneric, Serialisable,
-        Decodable):
+        MonoidalCategory["Ty", "Hypergraph"], TestableGeneric, Serialisable):
     """
     A hypergraph is given by:
 
@@ -1970,10 +1969,6 @@ class Hypergraph[category](
              else functor(box), offset)
             for layer in old.inside
             for box, offset in layer.boxes_and_offsets])
-
-    def to_hypergraph(self) -> Hypergraph:
-        """ A hypergraph is its own hypergraph, see :class:`Decodable`. """
-        return self
 
     def to_diagram(self) -> Diagram:
         """

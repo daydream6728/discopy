@@ -1140,20 +1140,6 @@ matrix until it implements its own.
 """
 
 
-class Decodable[T](Testable[T]):
-    """
-    A representation of diagrams, e.g. a hypergraph or a combinatorial map,
-    which decodes to a diagram, ``to_diagram``, compared by the hypergraph
-    of each, ``to_hypergraph``, with the law that decoding is a section.
-    """
-
-    @axiom
-    def decoding(cls, term: Self) -> Equation:
-        """ A term reads back from the diagram it decodes to. """
-        return Equation(
-            term.to_diagram().to_hypergraph(), term.to_hypergraph())
-
-
 class Serialisable[T](Testable[T]):
     """
     A type whose terms are written down and read back: by their

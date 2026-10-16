@@ -152,12 +152,14 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   compact categories on. Tensor
   diagrams, which draw no arrays, and pregroup diagrams, which compare by a
   hypergraph that refuses a cap, declare `strategy = no_strategy`.
-- `axioms.Decodable`, a representation of diagrams that decodes to one,
-  with the law `decoding`, that a term reads back from the diagram it
-  decodes to, up to its hypergraph: `Hypergraph` and `CMap` are decodable,
-  a hypergraph being its own `to_hypergraph`, so that what
+- `Hypergraph.hypergraph_roundtrip` and `CMap.cmap_roundtrip`, that a
+  hypergraph or a map reads back from the diagram it decodes to, a map up
+  to the order of its boxes, i.e. as a hypergraph, so that what
   `proptest/test_strategies.py` checked on five categories by hand is a
-  cell of the matrix on every checked hypergraph and map. The rules of
+  cell of the matrix on every checked hypergraph and map. They are stated
+  in `monoidal`, beside the laws of the conversions of diagrams, and set
+  on their categories, as `hypergraph` and `cmap` annotate under `from
+  __future__ import annotations`. The rules of
   every enrolled category have their own cells, `proptest/test_rules.py`,
   drawn by `Testable.matrix(kind=Rule)` as the laws are by
   `Testable.matrix()`, where `test_strategies.py` checked those of the

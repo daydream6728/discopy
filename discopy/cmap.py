@@ -60,7 +60,7 @@ from discopy.abc import (
     SymmetricCategory,
     TracedCategory,
 )
-from discopy.axioms import Decodable, Equation, Serialisable, TestableGeneric
+from discopy.axioms import Equation, Serialisable, TestableGeneric
 from discopy.cat import Ob
 from discopy.python.finset import Permutation
 from discopy.utils import (
@@ -131,8 +131,7 @@ class Port:
     side: Literal["up", "down"]
 
 
-class CMap[category](
-        CompactCategory, TestableGeneric, Serialisable, Decodable):
+class CMap[category](CompactCategory, TestableGeneric, Serialisable):
     r"""
     An open combinatorial map, i.e. a diagram represented as a bijection
     between its ports.
