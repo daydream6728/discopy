@@ -33,13 +33,46 @@ def test_tensor_unit_is_none():
 
 def test_fixed_point():
     from math import sqrt
-    phi = Function(lambda x=1: 1 + 1 / x, dom=(float,), cod=(float,)).fix()
+    phi = Function(lambda x: 1 + x / (1 + x), float, float).fix()
+    assert phi.dom == Ty() and phi.cod == Ty(float)
     assert phi() == (1 + sqrt(5)) / 2
+    pair = Function(lambda a, x, y: (a, x), (int, int, int), (int, int))
+    assert pair.fix(2).dom == Ty(int) and pair.fix(2)(3) == (3, 3)
+    with raises(AxiomError):
+        Function(lambda x, y: x, (int, int), str).fix()
 
 
 def test_trace():
+    f = Function(lambda x, y: (x + y, 1), (int, int), (int, int))
+    assert f.trace().dom == Ty(int) == f.trace().cod and f.trace()(5) == 6
+    g = Function(lambda x, y, z: (x, y, z), (int, int, int), (int, int, int))
+    assert g.trace(2).dom == Ty(int) == g.trace(2).cod and g.trace(2)(7) == 7
     with raises(NotImplementedError):
         Function.id(int).trace(left=True)
+    with raises(AxiomError):
+        Function(lambda x, y: (x, "y"), (int, int), (int, str)).trace()
+
+
+def test_trace_axioms():
+    """ The laws of traced categories, on feedback with a unique fixed point
+    so that the iteration reaches it whatever the seed. """
+    X = Ty(int)
+    f = Function(lambda a, x: (a + x, min(x + 1, a)), X @ X, X @ X)
+    g = Function(lambda a, x, y: (a + x + y, min(x + 1, a), min(y + 1, x)),
+                 X @ X @ X, X @ X @ X)
+    h = Function(lambda x: x + 1, X, X)
+
+    def eq(*fs):
+        inputs = itertools.product(range(4), repeat=len(fs[0].dom))
+        return all(fs[0].is_parallel(k) for k in fs) and all(
+            len({k(*xs) for k in fs}) == 1 for xs in inputs)
+
+    assert f.trace(0) == f and eq(g.trace(2), g.trace().trace())  # Vanishing
+    assert eq(Function.swap(X, X).trace(), Function.id(X))  # Yanking
+    assert eq((f >> X @ h).trace(), (X @ h >> f).trace())  # Sliding
+    assert eq((h @ X >> f).trace(), h >> f.trace())  # Left-naturality
+    assert eq((f >> h @ X).trace(), f.trace() >> h)  # Right-naturality
+    assert eq((X @ f).trace(), X @ f.trace())  # Superposing
 
 
 def test_list_generic_in_function():
@@ -194,3 +227,13 @@ def test_Hypergraph_adder():
         for bits in itertools.product((0, 1), repeat=len(compiled.dom)):
             assert carry_save_value(compiled(*bits)) == sum(bits)
         adder = adder_step(full_adder_hg, adder, k)
+
+
+def test_fix_vanishing_and_range():
+    f = Function(lambda x, y: (x + y, 1), (int, int), (int, int))
+    assert f.fix(0) == f and f.trace(0) == f
+    for n in (-1, 3):
+        with raises(ValueError):
+            f.fix(n)
+        with raises(ValueError):
+            f.trace(n)
