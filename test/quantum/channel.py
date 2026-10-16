@@ -84,5 +84,7 @@ def test_Channel_then_unbiased():
     """ Composing several channels folds Channel.then, not Matrix.then. """
     channel = Channel(list(range(16)), Q(Dim(2)), Q(Dim(2)))
     assert channel.then() == channel
+    with raises(TypeError):
+        channel.then(None)
     assert channel.then(channel, channel) == channel >> channel >> channel
     assert Channel[float].ar is Channel[float]

@@ -63,7 +63,7 @@ from typing import ClassVar
 from discopy.axioms import (
     ComposablePair, ComposableTriple, Equation, Testable, axiom)
 from discopy.utils import (  # noqa: F401  pylint: disable=unused-import
-    NamedGeneric, classproperty)
+    NamedGeneric, classproperty, factory_name)
 
 
 class Category[C0, C1: Category](ABC):
@@ -307,6 +307,15 @@ class Nat(Testable["Nat"], Monoid["Nat"]):
         if key >= self.n or key < -self.n:
             raise IndexError
         return type(self)(1)
+
+    def to_tree(self) -> dict:
+        """ The tree of a natural number, see :func:`discopy.utils.dumps`. """
+        return {'factory': factory_name(type(self)), 'n': self.n}
+
+    @classmethod
+    def from_tree(cls, tree: dict) -> Nat:
+        """ The natural number of a tree, see :func:`discopy.utils.loads`. """
+        return cls(tree['n'])
 
     @classmethod
     def strategy(cls, *, max_size=3):

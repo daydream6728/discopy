@@ -9,7 +9,7 @@ from discopy.abc import Nat
 from discopy.matrix import Matrix, backend
 from discopy.symmetric import Ty, Permutation, Swap, Functor
 from discopy.tensor import Tensor, Dim
-from discopy.utils import AxiomError
+from discopy.utils import AxiomError, dumps, loads
 
 
 def test_Matrix_trace_left():
@@ -147,6 +147,11 @@ def test_Nat_strategy():
     """ The objects of a matrix generate, as the search asks of Matrix.ob. """
     from hypothesis import find
     assert find(Nat.strategy(), lambda n: n == Nat(2)) == Nat(2)
+
+
+def test_Nat_serialisation():
+    assert loads(dumps(Nat(2))) == Nat(2)
+
 
 
 def test_Matrix_strategy():

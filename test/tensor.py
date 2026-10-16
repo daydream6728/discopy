@@ -4,6 +4,7 @@ pytest.importorskip("tensornetwork")
 
 import numpy as np
 import tensornetwork as tn
+from hypothesis import find
 from pytest import raises
 
 from discopy.utils import AxiomError, dumps, loads
@@ -475,6 +476,10 @@ def test_Tensor_then_unbiased():
     """ Composing several tensors folds Tensor.then, not Matrix.then. """
     t = Tensor(list(range(16)), Dim(2, 2), Dim(2, 2))
     assert t.then() == t
+    with raises(TypeError):
+        t.then(None)
+    with raises(TypeError):
+        t.then(None, t)
     assert t.then(t, t) == t >> t >> t
     u = Tensor(list(range(36)), Dim(2, 3), Dim(2, 3))
     assert u.then(u, u) == u >> u >> u
@@ -501,3 +506,9 @@ def test_Tensor_ar():
     swap = frobenius.Swap(x, y)
     assert F(swap).dtype == F(swap >> swap.dagger()).dtype == complex
     assert F(frobenius.Permutation(x @ y @ x, [1, 2, 0])).dtype == complex
+
+
+def test_Tensor_strategy():
+    tensor = find(Tensor.strategy(), lambda t: len(t.dom) == 2 and t.cod)
+    assert isinstance(tensor, Tensor[int])
+    assert tensor.array.shape == tensor.dom.inside + tensor.cod.inside
