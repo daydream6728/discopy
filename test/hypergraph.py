@@ -4,7 +4,7 @@ from pytest import raises
 
 from discopy.hypergraph import *
 from discopy.frobenius import (
-    Ty, Box, Cap, Cup, Diagram, Spider, Hypergraph as H)
+    Ty, Box, Cap, Cup, Diagram, Nat, Spider, Hypergraph as H)
 
 def test_pushout():
     with raises(ValueError):
@@ -265,6 +265,13 @@ def _naive_from_diagram(old):
     return factory.functor(
         ob_map=lambda typ: typ, ar_map=factory.from_box,
         dom=type(old), cod=factory)(old)
+
+
+def test_Hypergraph_Nat():
+    diagram = Box('f', Nat(1), Nat(2)) >> Spider(2, 1, Nat(1))
+    assert diagram.to_hypergraph().to_diagram() == diagram
+    assert H.spiders(1, 2, Nat(1)).to_diagram() == Spider(1, 2, Nat(1))
+    assert H.cups(Nat(1), Nat(1)).to_diagram() == Cup(Nat(1), Nat(1))
 
 
 def test_Hypergraph_from_glued():

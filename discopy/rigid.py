@@ -320,14 +320,23 @@ class Ty(Pregroup, biclosed.Ty):
 class Nat(monoidal.Nat, Ty):
     """
     A rigid ``Nat`` is a natural number ``n`` seen as a rigid type of
-    length ``n``.
+    length ``n``. It is self-dual, so it has no winding: ``l``, ``r`` and
+    :meth:`unwind` are the identity.
 
     Parameters
     ----------
     n : int
         The natural number.
+
+    Example
+    -------
+    >>> assert Nat(1).l == Nat(1).r == Nat(1).unwind() == Nat(1)
     """
     l = r = property(lambda self: self)
+
+    def unwind(self) -> Nat:
+        """ The identity: a natural number has no winding. """
+        return self
 
 
 class Layer(monoidal.Layer):
