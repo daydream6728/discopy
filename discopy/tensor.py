@@ -137,9 +137,35 @@ class Tensor(Matrix):
     def id(cls, dom=Dim(1)) -> Tensor:
         return cls(Matrix.id(product(dom.inside)).array, dom, dom)
 
-    def then(self, other: Tensor = None, *others: Tensor) -> Tensor:
-        if other is None or others:
-            return super().then(other, *others)
+    @classmethod
+    def strategy(cls, *, dom=None, cod=None, max_size=3, max_entry=3):
+        """
+        Generate tensors between dimensions of at most two factors up to
+        ``max_size``, with entries in ``range(max_entry + 1)`` as
+        :meth:`Matrix.strategy` does between natural numbers.
+        """
+        from hypothesis import strategies as st
+
+        typed = cls[cls.dtype or int]
+        dims = st.lists(st.integers(min_value=1, max_value=max_size),
+                        max_size=2).map(lambda ns: Dim(*ns))
+
+        @st.composite
+        def tensors(draw):
+            """ Draw the shape, then one entry per coefficient. """
+            shape = tuple(draw(dims) if x is None else x for x in (dom, cod))
+            size = product(shape[0].inside) * product(shape[1].inside)
+            entries = st.lists(
+                st.integers(min_value=0, max_value=max_entry),
+                min_size=size, max_size=size)
+            return typed(draw(entries), *shape)
+
+        return tensors()
+
+    def then(self, *others: Tensor) -> Tensor:
+        if len(others) != 1:
+            return super().then(*others)
+        other, = others
         assert_isinstance(other, self.ar)
         assert_iscomposable(self, other)
         with backend() as np:

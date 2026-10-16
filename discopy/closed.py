@@ -811,6 +811,12 @@ type Term = Constant | Variable | Application | Abstraction\
     | Tuple | Projection | Let
 
 
+for law in ("copy_coassociativity", "copy_cocommutativity",
+            "copy_counitality", "copy_coherence"):
+    setattr(TermBase, law, getattr(Box, law).inapplicable(
+        messages.TERM_IS_A_BOX))
+
+
 class Constant(TermBase, biclosed.Constant):
     """
     A constant term, evaluated in a context by discarding it. It prints as

@@ -44,6 +44,7 @@ from typing import Union, Literal as L, Callable, TYPE_CHECKING
 
 from discopy import monoidal, config, messages
 from discopy.abc import MarkovCategory, NamedGeneric, Nat
+from discopy.axioms import Testable
 from discopy.cat import (
     factory,
     assert_iscomposable,
@@ -56,7 +57,7 @@ if TYPE_CHECKING:
 
 
 @factory
-class Matrix(MarkovCategory, NamedGeneric['dtype']):
+class Matrix(MarkovCategory, Testable["Matrix"], NamedGeneric['dtype']):
     """
     A matrix is an ``array`` with natural numbers as ``dom`` and ``cod``.
 
@@ -138,6 +139,35 @@ class Matrix(MarkovCategory, NamedGeneric['dtype']):
            [0, 4]])
     """
     ob = Nat
+
+    @classmethod
+    def strategy(cls, *, dom=None, cod=None, max_size=3, max_entry=3):
+        """
+        Generate matrices with entries in ``range(max_entry + 1)`` between
+        the given dimensions, or between dimensions up to ``max_size``:
+        small integers are exact in every ``dtype``, so the laws are checked
+        without rounding. The bare class generates ``Matrix[int]``, which
+        reads back from its representation where the ``int64`` it infers
+        names a type no namespace binds.
+        """
+        from hypothesis import strategies as st
+
+        typed = cls[cls.dtype or int]
+        dims = cls.ob.strategy(max_size=max_size)
+
+        @st.composite
+        def matrices(draw):
+            """ Draw the shape, then one entry per coefficient. """
+            shape = tuple(draw(dims) if x is None else x for x in (dom, cod))
+            size = index(shape[0]) * index(shape[1])
+            entries = st.lists(
+                st.integers(min_value=0, max_value=max_entry),
+                min_size=size, max_size=size)
+            return typed(draw(entries), *shape)
+
+        return matrices()
+
+    serialisation = Testable.serialisation.inapplicable(messages.NO_SYNTAX)
 
     def cast(self, dtype: type) -> Matrix:
         """
@@ -378,7 +408,10 @@ class Matrix(MarkovCategory, NamedGeneric['dtype']):
             raise ValueError
         offsets = [sum(doms[:i]) for i in range(len(doms))]
         sources = [offsets[i] + j for i in xs for j in range(doms[i])]
-        array = [[int(i == j) for j in sources] for i in range(len(sources))]
+        with backend() as np:
+            array = np.array([
+                [i == j for j in sources] for i in range(len(sources))],
+                dtype=cls.dtype or int)
         return cls(array, len(sources), len(sources))
 
     def transpose(self) -> Matrix:
@@ -402,21 +435,36 @@ class Matrix(MarkovCategory, NamedGeneric['dtype']):
 
     @classmethod
     def copy(cls, x: Nat, n: int = 2) -> Matrix:
+        """
+        The diagonal ``x -> n * x`` of the direct sum, i.e. ``n`` identities
+        side by side: ``array[i, j]`` is one iff ``j % x == i``.
+
+        Parameters:
+            x : The dimension to copy.
+            n : The number of copies.
+
+        Example
+        -------
+        >>> Matrix.copy(2)
+        Matrix[int64]([1, 0, 1, 0, 0, 1, 0, 1], dom=2, cod=4)
+        >>> assert Matrix.copy(2) >> Matrix.id(2) @ Matrix.discard(2)\\
+        ...     == Matrix.id(2)
+        """
         x = index(x)
-        array = [[i + int(j % n * x) == j
-                  for j in range(n * x)] for i in range(x)]
+        with backend() as np:
+            array = np.array([
+                [j % x == i for j in range(n * x)] for i in range(x)],
+                dtype=cls.dtype or int)
         return cls(array, x, n * x)
 
     @classmethod
-    def discard(cls, x: Nat) -> Matrix:
-        return cls.copy(x, 0)
-
-    @classmethod
-    def merge(cls, x: Nat, n: int) -> Matrix:
+    def merge(cls, x: Nat, n: int = 2) -> Matrix:
+        """ The codiagonal ``n * x -> x``, the dagger of :meth:`copy`. """
         return cls.copy(x, n).dagger()
 
     @classmethod
     def ones(cls, x: Nat) -> Matrix:
+        """ The unit ``0 -> x`` of the direct sum, the dagger of discard. """
         return cls.merge(x, 0)
 
     @classmethod

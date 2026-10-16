@@ -893,6 +893,50 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
+- `Matrix.copy(x, n)` is the diagonal of the direct sum, `n` identities
+  side by side, i.e. `array[i, j]` iff `j % x == i`, where it was the
+  Kronecker diagonal, the copy of the tensor product: under the direct sum
+  it was neither cocommutative nor counital, and at `x = 3` its middle row
+  was empty, so it was not even a function. `copy` and `permutation` build
+  their array in the `dtype` of their carrier, `int` by default like `id`
+  and `zero`, where a list of booleans inferred `bool` and an empty one
+  `float64`, so that `discard(x)`, `swap(0, 0)` and `permutation([], [])`
+  compose with the structural matrices without promoting them; `merge`
+  defaults to two copies like `copy`. `Tensor.copy` is the spider of the
+  Kronecker product, as it was. The laws of a commutative comonoid --
+  coassociativity, cocommutativity, counitality -- and the coherence of
+  `copy` with the tensor are stated once on `abc.MarkovCategory`, which
+  gains `discard` as `copy(x, 0)`, and hold on both carriers; a term being
+  a box, they are inapplicable to `closed.TermBase` like the laws of its
+  diagram category. `Matrix[int]` joins the property matrix with a
+  `strategy` of small integer matrices, its `serialisation` inapplicable
+  (`messages.NO_SYNTAX`), and `abc.Nat` is `Testable` with a `strategy` of
+  its own, since the search asks `Matrix.ob` for one. Fixed upstream the
+  same way by nightmare6728's
+  [#795](https://github.com/discopy/discopy/pull/795)
+  ([#652](https://github.com/discopy/discopy/issues/652),
+  [rel-int/discopy-next#80](https://github.com/rel-int/discopy-next/issues/80)).
+- `Tensor.then(g, h)` with several arguments folds `Tensor.then`, where it
+  folded `Matrix.then`: `utils.unbiased` applied the function it decorated
+  to every pair, so the n-ary case of a subclass overriding the binary one
+  -- `Tensor`, and `Channel` through it -- ran the parent's `numpy.matmul`
+  on arrays of several axes, batched over the leading ones: wrong entries
+  on compound dimensions, silently, and `ValueError` on unequal ones. The
+  fold now calls the method by name on the running result, one argument
+  being its base case, so that it is the binary composition of whatever
+  class the result is, and `Tensor.then()` with no argument is the
+  identity as `Matrix.then()` was, where it raised `TypeError`
+  ([rel-int/discopy-next#60](https://github.com/rel-int/discopy-next/issues/60)).
+- `Tensor[complex].ar is Tensor[complex]`, and likewise for the subscripts
+  of `Matrix`, `Channel` and every `NamedGeneric` class that is its own
+  `factory`: `@factory` sets `factory` on the class it decorates and a
+  subscript inherited it, so `symmetric.Functor` built swaps and
+  permutations with the unparameterised `Tensor`, whose `id` is `int64`,
+  and `Swap[complex](Dim(2), Dim(3)).eval()`, or a functor with
+  `dtype=complex` on a swap or a permutation, came out `Tensor[int64]`. A
+  subscript of a class that is not a factory, `Hypergraph[C]` or `CMap[C]`,
+  keeps its `ar` as itself
+  ([rel-int/discopy-next#77](https://github.com/rel-int/discopy-next/issues/77)).
 - `python.Function.trace` evaluates, and builds for `n > 1`. `fix` seeded
   its iteration by calling the function without its traced argument, so
   that the default of a lambda's last parameter was the initial value: the

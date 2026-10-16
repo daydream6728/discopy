@@ -158,6 +158,16 @@ class NamedGeneric(Generic[TypeVar('T')]):
     ...     inside: list
     >>> assert L[int]([1, 2, 3]).dtype == int
     >>> assert L[int]([1, 2, 3]) != L[float]([1, 2, 3])
+
+    A subscript of a class that is its own :func:`factory`, i.e. the arrows
+    of a category, is its own factory in turn, so that the structural arrows
+    it builds through ``cls.ar`` carry the parameter.
+
+    >>> from discopy.abc import Category
+    >>> @factory
+    ... class C(Category, NamedGeneric["dtype"]):
+    ...     pass
+    >>> assert C[int].factory is C[int] is C[int].ar
     """
     _cache = dict()
 
@@ -205,6 +215,8 @@ class NamedGeneric(Generic[TypeVar('T')]):
                     C.__origin__ = cls
                     for attr, value in zip(attributes, values):
                         setattr(C, attr, value)
+                    if getattr(origin, "factory", None) is origin:
+                        C.factory = C
                     NamedGeneric._cache[cls][values] = C
                 return NamedGeneric._cache[cls][values]
 
@@ -446,13 +458,19 @@ def unbiased(binary_method):
     Turn a biased method with signature (self, other) to an unbiased one, i.e.
     with signature (self, *others), see the `nLab`_.
 
+    One argument is the base case, more are folded by calling the method by
+    its name on the running result, so that a subclass overriding the binary
+    case has its own folded rather than the one decorated.
+
     .. _nLab: https://ncatlab.org/nlab/show/biased+definition
     """
     @wraps(binary_method)
     def method(self, *others, **params):
+        if len(others) == 1:
+            return binary_method(self, *others, **params)
         result = self
         for other in others:
-            result = binary_method(result, other, **params)
+            result = getattr(result, binary_method.__name__)(other, **params)
         return result
     return method
 
@@ -602,7 +620,9 @@ def factory(cls):
     ----
     The factory method pattern (`FMP`_) is used all over DisCoPy. For
     backward compatibility, the factory is also available as the class
-    property ``cls.ar``, see :class:`discopy.abc.Category`.
+    property ``cls.ar``, see :class:`discopy.abc.Category`. A subscript of
+    a factory, e.g. ``Tensor[complex]``, is its own factory, see
+    :class:`NamedGeneric`.
 
     .. _FMP: https://en.wikipedia.org/wiki/Factory_method_pattern
 

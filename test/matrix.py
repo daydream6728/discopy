@@ -4,10 +4,12 @@ import numpy as np
 import pytest
 from pytest import raises
 
+from discopy import axioms
+from discopy.abc import Nat
 from discopy.matrix import Matrix, backend
-from discopy.symmetric import Ty, Permutation, Functor
+from discopy.symmetric import Ty, Permutation, Swap, Functor
 from discopy.tensor import Tensor, Dim
-from discopy.utils import AxiomError
+from discopy.utils import AxiomError, dumps, loads
 
 
 def test_Matrix_trace_left():
@@ -139,3 +141,66 @@ def test_composition_promotes_dtype():
     assert Matrix[float].id(2) >> Matrix.id(2) == Matrix[float].id(2)
     one_plus_one = Matrix[bool].copy(1) >> Matrix[bool].merge(1, 2)
     assert one_plus_one == Matrix[bool].id(1)
+
+
+def test_Nat_strategy():
+    """ The objects of a matrix generate, as the search asks of Matrix.ob. """
+    from hypothesis import find
+    assert find(Nat.strategy(), lambda n: n == Nat(2)) == Nat(2)
+
+
+def test_Nat_serialisation():
+    assert loads(dumps(Nat(2))) == Nat(2)
+
+
+
+def test_Matrix_strategy():
+    """ The bare class generates Matrix[int], a subscript its own members. """
+    from hypothesis import find
+    matrix = find(Matrix.strategy(dom=2, cod=3), lambda m: m.array.any())
+    assert type(matrix) is Matrix[int]
+    assert (matrix.dom, matrix.cod) == (Nat(2), Nat(3))
+    assert type(find(Matrix[bool].strategy(), lambda _: True)) is Matrix[bool]
+
+
+def test_Matrix_axioms():
+    """ A dry run of the property matrix on the carrier it enrols. """
+    axioms.assert_axioms(Matrix[int])
+
+
+def test_Matrix_copy():
+    """ The copy of the direct sum is the identities side by side. """
+    assert Matrix.copy(3, 2) == Matrix(
+        [[1, 0, 0, 1, 0, 0],
+         [0, 1, 0, 0, 1, 0],
+         [0, 0, 1, 0, 0, 1]], 3, 6)
+    for x in range(4):
+        for n in range(4):
+            copy = Matrix.copy(x, n)
+            assert (copy.dom, copy.cod) == (Nat(x), Nat(n * x))
+            assert copy.dtype == Matrix.id(x).dtype
+            assert copy.array.tolist() == [
+                [int(j % x == i) for j in range(n * x)] for i in range(x)]
+    assert Matrix.discard(2).array.shape == (2, 0)
+    assert Matrix[bool].copy(2).dtype == bool
+    assert Matrix.permutation([], []).dtype == Matrix.id(0).dtype
+
+
+def test_Matrix_comonoid():
+    """ Copy and discard are a commutative comonoid under the direct sum. """
+    for x in map(Nat, range(4)):
+        assert Matrix.copy_coassociativity(x)
+        assert Matrix.copy_cocommutativity(x)
+        assert Matrix.copy_counitality(x)
+        assert Matrix.copy_coherence(x, Nat(2))
+        assert Matrix.ones(x) @ Matrix.id(x) >> Matrix.merge(x)\
+            == Matrix.id(x)
+
+
+def test_Matrix_ar():
+    """ A subscript of Matrix is its own factory, where functors build swaps. """
+    assert Matrix[complex].ar is Matrix[complex]
+    x, y = Ty('x'), Ty('y')
+    F = Functor(ob_map={x: 2, y: 3}, ar_map={}, cod=Matrix[complex])
+    assert F(Swap(x, y)).dtype == complex
+    assert F(Permutation(x @ y @ x, [1, 2, 0])).dtype == complex

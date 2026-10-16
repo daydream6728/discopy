@@ -78,3 +78,13 @@ def test_Measure_override_bits_evaluates():
     assert channel.dom == C(Dim(2)) @ Q(Dim(2)) and channel.cod == C(Dim(2))
     assert np.allclose(channel.array, np.tensordot(
         np.ones(2), Channel.measure(Dim(2)).array, 0))
+
+
+def test_Channel_then_unbiased():
+    """ Composing several channels folds Channel.then, not Matrix.then. """
+    channel = Channel(list(range(16)), Q(Dim(2)), Q(Dim(2)))
+    assert channel.then() == channel
+    with raises(TypeError):
+        channel.then(None)
+    assert channel.then(channel, channel) == channel >> channel >> channel
+    assert Channel[float].ar is Channel[float]

@@ -42,3 +42,6 @@ NOT_CAUSAL = "{} is not causal."
 WRONG_NUMBER_OF_WIRES = "Expected {} wires for {}, got {} instead."
 WRONG_NUMBER_OF_BOUNDARIES = \
     "Expected one boundary of wires for each of {} boxes, got {} instead."
+NO_SYNTAX = "Arrays are semantics, not syntax: there is no tree to serialise."
+TERM_IS_A_BOX = \
+    "A term is a box: the laws of its category are the diagram's."
