@@ -191,6 +191,7 @@ def test_Function():
     assert composite.dom == R == composite.cod
     assert composite.inside.dom == R.positive @ R.negative\
         == composite.inside.cod
+    assert composite.inside(2., 1.) == (16., 32.)
 
 
 def test_additive_Function():
