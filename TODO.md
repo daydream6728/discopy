@@ -7,13 +7,14 @@ Context: "that PR" is [discopy#730](https://github.com/discopy/discopy/pull/730)
 which this branch is stacked on. Earlier in the same session it was agreed that an e-hypergraph can be a
 `hypergraph.Hypergraph` with an equivalence relation on its spiders, checked on #730's own example.
 
-- [WIP] @session_01VFjLpUVTvAs7PfxAhx2igm-2026-10-16 16:40 State the axioms of `ehypergraph.EHypergraph` in the sequent DSL of `discopy.axioms`, with the
-      interface they quantify over documented and not yet implemented
-- [ ] Settle with the human what `s ~ t` means where boxes are linear, i.e. below Markov, and so where
-      `rebuild` is sound (see the question in the module docstring)
-- [ ] Implement the interface on top of `Hypergraph`: `merge`, `rebuild`, `sections`, `extract`, `then`,
-      `tensor`, equality up to isomorphism
-- [ ] `EHypergraph.strategy`: a hypergraph from `Hypergraph.strategy`, then a few merges of spiders of
-      one type, so that it enrols in the property matrix
-- [ ] Run the matrix on the e-hypergraphs of every symmetric level, declare what breaks
+- [x] State the axioms of `ehypergraph.EHypergraph` in the sequent DSL of `discopy.axioms`
+- [x] Implement them on top of `Hypergraph`, small enough to be the specification: `merge`, `rebuild`,
+      `sections`, `extract` by brute force, `then`, `tensor`, `dagger`, equality up to isomorphism
+- [x] `EHypergraph.strategy`, so that the symmetric, compact, Markov and Frobenius aliases enrol in the
+      matrix: 101 laws pass, 2 skipped, 10 declared broken with their reasons
+- [ ] Settle with the human what `s ~ t` means over a linear category, i.e. symmetric but not Markov,
+      where no section of a nontrivial relation is a hypergraph of the category (`LINEAR_SECTIONS`)
+- [ ] Settle with the human whether congruence on a feedback loop should be coinductive
+      (`INDUCTIVE_CONGRUENCE`)
 - [ ] Rewrite rules: matching a hypergraph in an e-hypergraph, adding the right-hand side and merging
+- [ ] A fast extraction, checked against the brute-force one by `extraction_optimality`
