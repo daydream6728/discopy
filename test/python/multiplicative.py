@@ -229,6 +229,11 @@ def test_Hypergraph_adder():
         adder = adder_step(full_adder_hg, adder, k)
 
 
-def test_fix_vanishing():
+def test_fix_vanishing_and_range():
     f = Function(lambda x, y: (x + y, 1), (int, int), (int, int))
     assert f.fix(0) == f and f.trace(0) == f
+    for n in (-1, 3):
+        with raises(ValueError):
+            f.fix(n)
+        with raises(ValueError):
+            f.trace(n)

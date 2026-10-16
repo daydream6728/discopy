@@ -910,10 +910,11 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   point, and an integer diagram over `Function` evaluates, e.g. the chain
   rule of two reverse-mode squares composed in `Int(Function)`. The golden
   ratio of the examples notebook and of the `traced.Functor` docstring is
-  the fixed point of `x -> sqrt(1 + x)` from zero, with the type checking
-  on, where both read the default `x=1` of a lambda with it switched off,
-  and `traced/golden.svg` is redrawn with the new label. `test_trace` never
-  called the trace it named
+  the fixed point of `x -> sqrt(1 + x)` from zero, with the type checking on,
+  where both used to read the default `x=1` of a lambda with it switched off,
+  and `traced/golden.svg` is redrawn with the new label. Both refuse an `n`
+  below zero or past the types they have, where the slices wrapped around.
+  `test_trace` never called the trace it named
   (B87 of [#31](https://github.com/rel-int/discopy-next/issues/31))
   ([rel-int/discopy-next#73](https://github.com/rel-int/discopy-next/issues/73)).
 - The Dal Lago & Hoshino citation in `kleisli.additive` pointed at
