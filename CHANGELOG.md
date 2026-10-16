@@ -937,6 +937,30 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   subscript of a class that is not a factory, `Hypergraph[C]` or `CMap[C]`,
   keeps its `ar` as itself
   ([rel-int/discopy-next#77](https://github.com/rel-int/discopy-next/issues/77)).
+- `python.Function.trace` evaluates, and builds for `n > 1`. `fix` seeded
+  its iteration by calling the function without its traced argument, so
+  that the default of a lambda's last parameter was the initial value: the
+  composite that `trace` iterates could not pass it on, since `__call__`
+  rejects the arity before the lambda is reached and a missing argument
+  cannot be routed through a swap, so every trace raised `ValueError` when
+  called; and `trace(n)` took its fixed point over one type whatever `n`,
+  so `trace(2)` raised `AxiomError`. The iteration now starts from the
+  default instance `t()` of each traced type `t`, e.g. `0` for `int`, a
+  value that type checks and flows through any composite, and stops when
+  two iterates are equal; `fix(n)` takes the fixed point over the last `n`
+  types at once and checks that they are the codomain, `trace` checks that
+  it is traceable, and both evaluate through `__call__` rather than around
+  it. The laws of traced categories hold on feedback with a unique fixed
+  point, and an integer diagram over `Function` evaluates, e.g. the chain
+  rule of two reverse-mode squares composed in `Int(Function)`. The golden
+  ratio of the examples notebook and of the `traced.Functor` docstring is
+  the fixed point of `x -> sqrt(1 + x)` from zero, with the type checking on,
+  where both used to read the default `x=1` of a lambda with it switched off,
+  and `traced/golden.svg` is redrawn with the new label. Both refuse an `n`
+  below zero or past the types they have, where the slices wrapped around.
+  `test_trace` never called the trace it named
+  (B87 of [#31](https://github.com/rel-int/discopy-next/issues/31))
+  ([rel-int/discopy-next#73](https://github.com/rel-int/discopy-next/issues/73)).
 - `rigid.Nat.unwind` is the identity, like its `l` and `r`: `rigid.Ty.unwind`
   asks the atom of a type for its winding and the atoms of a `Nat` are
   integers, so `Hypergraph.__init__` raised `AttributeError` on any
