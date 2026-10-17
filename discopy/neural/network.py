@@ -61,7 +61,7 @@ two back together; a recurrent cell feeds one of its outputs back in.
 
 from __future__ import annotations
 
-from discopy import comarkov, markov, messages, monoidal, python
+from discopy import comarkov, feedback, markov, messages, monoidal, python
 from discopy.cat import factory
 from discopy.monoidal import Dim
 from discopy.utils import (
@@ -347,16 +347,6 @@ class Noise(comarkov.Noise, Merge):
     """
 
 
-class Trace(markov.Trace, Box):
-    """
-    A trace feeds an output leg of a network back into an input leg.
-
-    Parameters:
-        arg : The network to trace.
-        left : Whether to trace the leftmost or the rightmost leg.
-    """
-
-
 class Functor(markov.Functor, comarkov.Functor):
     """
     A functor from networks to any traced category with the structure the
@@ -387,10 +377,11 @@ class Functor(markov.Functor, comarkov.Functor):
 Id = Network.id
 Equation = markov.Equation
 
+Feedback, Trace, FollowedBy, Head, Tail = feedback.generators(
+    Network, Box)
 Network.box_factory = Box
 Network.functor_factory = Functor
 Network.copy_factory, Network.merge_factory = Copy, Merge
 Network.discard_factory, Network.noise_factory = Discard, Noise
 Network.swap_factory = Swap
 Network.permutation_factory = Permutation
-Network.trace_factory = Trace

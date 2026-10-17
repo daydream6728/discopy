@@ -61,7 +61,7 @@ from __future__ import annotations
 
 from typing import ClassVar
 
-from discopy import symmetric, monoidal, cmap, hypergraph, messages
+from discopy import symmetric, monoidal, feedback, cmap, hypergraph, messages
 from discopy.abc import ComarkovCategory, MarkovCategory
 from discopy.cat import factory
 from discopy.feedback import (  # noqa: F401  pylint: disable=unused-import
@@ -134,33 +134,6 @@ class Swap(Permutation, symmetric.Swap, Box):
     Parameters:
         left (monoidal.Ty) : The type on the top left and bottom right.
         right (monoidal.Ty) : The type on the top right and bottom left.
-    """
-
-
-class Feedback(symmetric.Feedback, Box):
-    """
-    A feedback in a comarkov category.
-
-    Parameters:
-        arg : The diagram to feed back.
-        dom : The domain of the feedback.
-        cod : The codomain of the feedback.
-        mem : The memory to feed back.
-        left : Whether to feed back on the left or right.
-    """
-
-
-class Trace(symmetric.Trace, Feedback):
-    """
-    A trace in a comarkov category.
-
-    Parameters:
-        arg : The diagram to trace.
-        left : Whether to trace the wires on the left or right.
-
-    See also
-    --------
-    :meth:`Diagram.trace`
     """
 
 
@@ -281,13 +254,13 @@ class Functor(symmetric.Functor):
 
 CMap = cmap.CMap[Diagram]
 
+Feedback, Trace, FollowedBy, Head, Tail = feedback.generators(Diagram, Box)
 Diagram.box_factory = Box
 Diagram.functor_factory = Functor
 Hypergraph = hypergraph.Hypergraph[Diagram]
 Diagram.merge_factory = Merge
 Diagram.swap_factory = Swap
 Diagram.permutation_factory = Permutation
-Diagram.feedback_factory, Diagram.trace_factory = Feedback, Trace
 Diagram.noise_factory = Noise
 Diagram.sum_factory = Sum
 Id = Diagram.id

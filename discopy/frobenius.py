@@ -65,7 +65,8 @@ from copy import copy
 from typing import Self
 
 from discopy import (
-    monoidal, rigid, markov, comarkov, compact, pivotal, cmap, hypergraph)
+    monoidal, rigid, markov, comarkov, compact, pivotal, feedback, cmap,
+    hypergraph)
 from discopy.abc import HypergraphCategory
 from discopy.cat import factory
 from discopy.utils import (
@@ -94,6 +95,9 @@ class Wire(pivotal.Wire):
         return result
 
     r = l
+
+
+HeadOb, TailOb = feedback.wire_generators(Wire)
 
 
 @factory
@@ -462,6 +466,7 @@ def coherence(cls: type, factory: Callable
 
 CMap = cmap.CMap[Diagram]
 
+Feedback, Trace, FollowedBy, Head, Tail = feedback.generators(Diagram, Box)
 Diagram.box_factory = Box
 Diagram.functor_factory = Functor
 Diagram.cup_factory, Diagram.cap_factory = Cup, Cap

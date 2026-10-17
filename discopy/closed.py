@@ -77,7 +77,8 @@ from functools import cached_property, reduce
 from inspect import signature
 from typing import Callable, ClassVar, Dict
 
-from discopy import monoidal, biclosed, markov, cmap, hypergraph, messages
+from discopy import (
+    monoidal, biclosed, markov, feedback, cmap, hypergraph, messages)
 from discopy.abc import ClosedCategory
 from discopy.cat import factory
 from discopy.drawing import Drawing
@@ -484,14 +485,6 @@ class Swap(Permutation, markov.Swap, Box):
     "Symmetric swap in a closed diagram."
 
 
-class Trace(markov.Trace, Box):
-    "A trace in a closed category, linear when its argument is."
-
-    @property
-    def is_linear(self):
-        return self.arg.is_linear
-
-
 class Copy(markov.Copy, Box):
     "A markov copy in a closed category"
 
@@ -561,13 +554,15 @@ Hypergraph = hypergraph.Hypergraph[Diagram]
 Diagram.copy_factory = Copy
 Diagram.swap_factory = Swap
 Diagram.permutation_factory = Permutation
+Feedback, Trace, FollowedBy, Head, Tail = feedback.generators(Diagram, Box)
+Feedback.is_linear = Head.is_linear = Tail.is_linear = property(
+    lambda self: self.arg.is_linear)
 Diagram.box_factory = Box
 Diagram.pack_factory = Pack
 Diagram.unpack_factory = Unpack
 Diagram.curry_factory = Curry
 Diagram.eval_factory = Eval
 Diagram.coeval_factory = Coeval
-Diagram.trace_factory = Trace
 Diagram.discard_factory = Discard
 Diagram.sum_factory = Sum
 Ty.exp_factory = Ty.under_factory = Ty.over_factory = staticmethod(Exp)

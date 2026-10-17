@@ -644,33 +644,6 @@ class Swap(Permutation, balanced.Braid, Box):
         return self.name
 
 
-class Feedback(balanced.Feedback, Box):
-    """
-    A feedback in a symmetric category.
-
-    Parameters:
-        arg : The diagram to feed back.
-        dom : The domain of the feedback.
-        cod : The codomain of the feedback.
-        mem : The memory to feed back.
-        left : Whether to feed back on the left or right.
-    """
-
-
-class Trace(balanced.Trace, Feedback):
-    """
-    A trace in a symmetric category.
-
-    Parameters:
-        arg : The diagram to trace.
-        left : Whether to trace the wires on the left or right.
-
-    See also
-    --------
-    :meth:`Diagram.trace`
-    """
-
-
 class Sum(balanced.Sum, Box):
     """
     A symmetric sum is a balanced sum and a symmetric box.
@@ -710,12 +683,12 @@ class Functor(balanced.Functor):
 
 CMap = cmap.CMap[Diagram]
 
+Feedback, Trace, FollowedBy, Head, Tail = feedback.generators(Diagram, Box)
 Diagram.box_factory = Box
 Diagram.functor_factory = Functor
 Hypergraph = hypergraph.Hypergraph[Diagram]
 Diagram.swap_factory = Swap
 Diagram.permutation_factory = Permutation
-Diagram.feedback_factory, Diagram.trace_factory = Feedback, Trace
 Diagram.sum_factory = Sum
 Id = Diagram.id
 

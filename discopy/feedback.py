@@ -312,14 +312,16 @@ class Wire(monoidal.Wire):
 
     @property
     def head(self) -> HeadOb | None:
-        """ Syntactic sugar for :class:`HeadOb` or `None` if delayed. """
-        return None if self.time_step else HeadOb(self)
+        """ The :attr:`head_factory` of the object, or `None` if delayed. """
+        return None if self.time_step else self.head_factory(self)
 
     @property
     def tail(self) -> Wire | None:
-        """ Syntactic sugar for :class:`TailOb` or `self` if `is_constant`. """
+        """
+        The :attr:`tail_factory` of the object, or `self` if `is_constant`.
+        """
         return self.delay(-1) if self.time_step > 0 else (
-            self if self.is_constant else TailOb(self))
+            self if self.is_constant else self.tail_factory(self))
 
     def __eq__(self, other):
         return super().__eq__(other) and (
@@ -391,6 +393,16 @@ class HeadOb(Wire):
         return type(self)(self.arg)
 
     @property
+    def l(self) -> HeadOb:
+        """ The head of the left adjoint, for wires that have adjoints. """
+        return type(self)(self.arg.l, self.time_step)
+
+    @property
+    def r(self) -> HeadOb:
+        """ The head of the right adjoint, for wires that have adjoints. """
+        return type(self)(self.arg.r, self.time_step)
+
+    @property
     def head(self):
         return None if self.time_step else self
 
@@ -435,6 +447,10 @@ class TailOb(Wire):
 
     delay, reset, __repr__ = HeadOb.delay, HeadOb.reset, HeadOb.__repr__
     to_tree, from_tree = HeadOb.to_tree, classmethod(HeadOb.from_tree.__func__)
+    l, r = HeadOb.l, HeadOb.r
+
+
+Wire.head_factory, Wire.tail_factory = HeadOb, TailOb
 
 
 @factory
@@ -633,6 +649,19 @@ class Box(monoidal.Box, Diagram):
         return result
 
     def delay(self, n_steps=1):
+        """
+        The delay of a box: a structural box, one whose ``__getnewargs__``
+        gives the arguments it is built from, e.g. a swap or a copy, is built
+        from their delays; any other box from its delayed boundary, one more
+        time step on.
+
+        Parameters:
+            n_steps : The number of time steps to delay.
+        """
+        if hasattr(self, "__getnewargs__"):
+            return type(self)(*(
+                x.delay(n_steps) if isinstance(x, Ty) else x
+                for x in self.__getnewargs__()))
         dom, cod = self.dom.delay(n_steps), self.cod.delay(n_steps)
         time_step = self.time_step + n_steps
         return type(self)(
@@ -1011,6 +1040,92 @@ Diagram.followed_by_factory = FollowedBy
 Diagram.sum_factory = Sum
 Hypergraph = hypergraph.Hypergraph[Diagram]
 Id = Diagram.id
+
+
+GENERATORS = {
+    "Feedback": ("feedback_factory", "A feedback of {} diagrams."),
+    "Trace": ("trace_factory", "A trace of {} diagrams."),
+    "FollowedBy": ("followed_by_factory", "A followed-by in {} diagrams."),
+    "Head": ("head_factory", "The head of a {} diagram."),
+    "Tail": ("tail_factory", "The tail of a {} diagram."),
+}
+
+
+def subclass(name: str, bases: list[type], module: str, doc: str) -> type:
+    """
+    The class ``name`` of ``module`` with the given bases, less those another
+    base subclasses, so that it prints, pickles and reads back from its tree
+    as a class written in that module would.
+    """
+    bases = tuple(dict.fromkeys(
+        base for base in bases if not any(
+            other is not base and issubclass(other, base) for other in bases)))
+    return type(name, bases, {
+        "__module__": module, "__qualname__": name, "__doc__": doc})
+
+
+def generators(diagram: type, box: type) -> tuple[type, ...]:
+    """
+    The :class:`Feedback`, :class:`Trace`, :class:`FollowedBy`, :class:`Head`
+    and :class:`Tail` of a level of the hierarchy, generated rather than
+    written by hand: each subclasses the one of every level ``diagram``
+    subclasses and ``box``, lives in their module and is bound to the
+    factory of ``diagram`` that builds it. A level whose trace is not a
+    bubble, e.g. made of cups and caps in :mod:`discopy.pivotal`, keeps its
+    own :attr:`Diagram.trace_factory`.
+
+    Parameters:
+        diagram : The diagram class of the level.
+        box : The box class of the level.
+
+    Example
+    -------
+    >>> from discopy import markov, symmetric
+    >>> assert issubclass(markov.Head, symmetric.Head)
+    >>> assert issubclass(markov.Head, markov.Box)
+    >>> assert markov.Diagram.head_factory is markov.Head
+    >>> assert repr(markov.Trace).endswith("'discopy.markov.Trace'>")
+    """
+    parents = [base for base in diagram.__bases__ if issubclass(base, Diagram)]
+    module, level = diagram.__module__, diagram.__module__.split('.')[-1]
+    result = {}
+    for name, (attr, doc) in GENERATORS.items():
+        own = result["Feedback"] if name == "Trace" else box
+        bases = [getattr(parent, attr) for parent in parents]
+        bases = [base for base in bases if isinstance(base, type)] + [own]
+        result[name] = subclass(name, bases, module, doc.format(level))
+    for name, (attr, _) in GENERATORS.items():
+        if name != "Trace" or isinstance(diagram.trace_factory, type):
+            setattr(diagram, attr, result[name])
+    return tuple(result.values())
+
+
+def wire_generators(wire: type) -> tuple[type, type]:
+    """
+    The :class:`HeadOb` and :class:`TailOb` of a wire class below feedback,
+    generated as :func:`generators` does for boxes, so that the head of a
+    wire is a wire of its own level, and bound to its factories.
+
+    Parameters:
+        wire : The wire class of the level.
+
+    Example
+    -------
+    >>> from discopy import pivotal
+    >>> x = pivotal.Ty('x')
+    >>> assert x.head.inside[0] == pivotal.HeadOb(pivotal.Wire('x'))
+    >>> assert x.head.l == x.l.head and x.head.r.r == x.head
+    """
+    parents = [base for base in wire.__bases__ if issubclass(base, Wire)]
+    module, level = wire.__module__, wire.__module__.split('.')[-1]
+    head, tail = (
+        subclass(name, [getattr(parent, attr) for parent in parents] + [wire],
+                 module, f"The {part} of a {level} wire.")
+        for name, attr, part in (
+            ("HeadOb", "head_factory", "head"),
+            ("TailOb", "tail_factory", "tail")))
+    wire.head_factory, wire.tail_factory = head, tail
+    return head, tail
 
 
 __getattr__ = deprecated_alias(__name__, {

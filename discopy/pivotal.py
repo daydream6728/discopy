@@ -103,6 +103,9 @@ class Wire(feedback.Wire, rigid.Wire):
         return self.l
 
 
+HeadOb, TailOb = feedback.wire_generators(Wire)
+
+
 @factory
 class Ty(rigid.Ty, feedback.Ty):
     """
@@ -290,21 +293,6 @@ class Cap(rigid.Cap, Box):
         return type(self)(self.left.delay(n_steps), self.right.delay(n_steps))
 
 
-class Feedback(feedback.Feedback, Box):
-    """
-    A feedback in a pivotal category, over a delayed memory: the trace over
-    an undelayed memory is made of cups and caps, see
-    :meth:`Diagram.trace_factory`.
-
-    Parameters:
-        arg : The diagram to feed back.
-        dom : The domain of the feedback.
-        cod : The codomain of the feedback.
-        mem : The memory to feed back.
-        left : Whether to feed back on the left or right.
-    """
-
-
 class Sum(rigid.Sum, feedback.Sum, Box):
     """
     A pivotal sum is a sum of pivotal diagrams.
@@ -329,11 +317,11 @@ class Functor(rigid.Functor, feedback.Functor):
     dom = cod = Diagram
 
 
+Feedback, Trace, FollowedBy, Head, Tail = feedback.generators(Diagram, Box)
 Diagram.box_factory = Box
 Diagram.functor_factory = Functor
 Diagram.cup_factory, Diagram.cap_factory = Cup, Cap
 Diagram.sum_factory = Sum
-Diagram.feedback_factory = Feedback
 CMap = cmap.CMap[Diagram]
 Id = Diagram.id
 
