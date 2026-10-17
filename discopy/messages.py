@@ -12,6 +12,9 @@ NOT_ATOMIC = "Expected {} of length 1, got length {} instead."
 NOT_CONNECTED = "{} is not boundary-connected."
 NOT_TRACEABLE = "Cannot trace {} with {}."
 NOT_FEEDBACK = "Cannot feed {} back into {}, expected {} as its input."
+STREAM_SLIDING = (
+    "A morphism slides along the feedback of streams only up to extensional "
+    "equivalence, see discopy.feedback.")
 FEEDBACK_FORMS = (
     "Feed back either a number of objects n or a memory dom, cod, mem.")
 NOT_SPLITTABLE = "Cannot split {} atoms off {}."

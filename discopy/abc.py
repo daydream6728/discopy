@@ -457,7 +457,7 @@ class FeedbackCategory[C0, C1](MonoidalCategory[C0, C1]):
     @axiom
     def vanishing(cls, f: C1) -> Equation[C1]:
         """ Feeding back the unit does nothing. """
-        return cls.equation_factory(f.feedback(mem=f.dom[:0]), f)
+        return cls.equation_factory(f.feedback(0), f)
 
     @axiom
     def joining(cls, loop: Loop[Self]) -> Equation[C1]:
