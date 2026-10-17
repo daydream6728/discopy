@@ -61,6 +61,9 @@ from discopy.drawing import Node, backend
 from discopy.python.finset import Permutation
 from discopy.utils import (
     factory_name,
+    from_tree,
+    get_origin,
+    resolve_factory,
     assert_isinstance,
     pushout,
     unbiased,
@@ -954,12 +957,49 @@ class Hypergraph(MonoidalCategory, NamedGeneric['category']):
         return type(self)(self.dom, self.cod, boxes, wires, spider_types)
 
     def __repr__(self):
-        spider_types = f", spider_types={self.spider_types}"\
+        spider_types = f", spider_types={self.spider_types!r}"\
             if self.scalar_spiders else ""
         return factory_name(type(self))\
             + f"(dom={repr(self.dom)}, cod={repr(self.cod)}, " \
               f"boxes={repr(self.boxes)}, " \
               f"wires={repr(self.wires)}{spider_types})"
+
+    def to_tree(self) -> dict:
+        """
+        Serialise a hypergraph, with the name of its category.
+
+        >>> from discopy.utils import dumps, loads
+        >>> from discopy.frobenius import Ty, Hypergraph as H
+        >>> graph = H.spiders(1, 2, Ty('x')) >> H.cups(Ty('x'), Ty('x'))
+        >>> assert loads(dumps(graph)) == graph
+        """
+        dom_wires, box_wires, cod_wires = self.wires
+        return {
+            'factory': factory_name(get_origin(type(self))),
+            'category': factory_name(self.category),
+            'dom': self.dom.to_tree(),
+            'cod': self.cod.to_tree(),
+            'boxes': [box.to_tree() for box in self.boxes],
+            'wires': [list(dom_wires), [
+                [list(inputs), list(outputs)]
+                for inputs, outputs in box_wires], list(cod_wires)],
+            'spider_types': [typ.to_tree() for typ in self.spider_types]
+        } | ({'offsets': list(self.offsets)}
+             if any(offset is not None for offset in self.offsets) else {})
+
+    @classmethod
+    def from_tree(cls, tree: dict) -> Hypergraph:
+        """ Decode a serialised hypergraph, see :meth:`to_tree`. """
+        factory = cls[resolve_factory(tree['category'])]
+        dom_wires, box_wires, cod_wires = tree['wires']
+        wires = (tuple(dom_wires), tuple(
+            (tuple(inputs), tuple(outputs)) for inputs, outputs in box_wires
+        ), tuple(cod_wires))
+        return factory(
+            from_tree(tree['dom']), from_tree(tree['cod']),
+            tuple(map(from_tree, tree['boxes'])), wires,
+            tuple(map(from_tree, tree['spider_types'])),
+            tuple(tree['offsets']) if 'offsets' in tree else None)
 
     def __str__(self):
         return str(self.to_diagram())

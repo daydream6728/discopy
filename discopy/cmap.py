@@ -64,10 +64,13 @@ from discopy.cat import Ob
 from discopy.python.finset import Permutation
 from discopy.utils import (
     AxiomError,
+    from_tree,
+    resolve_factory,
     assert_isatomic,
     assert_isinstance,
     classproperty,
     factory_name,
+    get_origin,
     unbiased,
 )
 
@@ -794,6 +797,34 @@ class CMap[C0: Pregroup, C1: CMap](
     def __hash__(self):
         return hash((
             self.dom, self.cod, self.boxes, self.edges, self.loops))
+
+    def to_tree(self) -> dict:
+        """
+        Serialise a map, with the name of its category.
+
+        >>> from discopy.utils import dumps, loads
+        >>> from discopy.compact import Ty, Box, CMap
+        >>> x = Ty('x')
+        >>> cmap = CMap.caps(x, x.r) >> Box('f', x, x).to_map() @ x.r
+        >>> assert loads(dumps(cmap)) == cmap
+        """
+        return {
+            'factory': factory_name(get_origin(type(self))),
+            'category': factory_name(self.category),
+            'dom': self.dom.to_tree(),
+            'cod': self.cod.to_tree(),
+            'boxes': [box.to_tree() for box in self.boxes],
+            'edges': [int(i) for i in self.edges],
+            'loops': [loop.to_tree() for loop in self.loops]}
+
+    @classmethod
+    def from_tree(cls, tree: dict) -> CMap:
+        """ Decode a serialised map, see :meth:`to_tree`. """
+        factory = cls[resolve_factory(tree['category'])]
+        return factory(
+            from_tree(tree['dom']), from_tree(tree['cod']),
+            tuple(map(from_tree, tree['boxes'])), tree['edges'],
+            loops=tuple(map(from_tree, tree['loops'])))
 
     @classmethod
     def id(cls, dom=None) -> CMap:

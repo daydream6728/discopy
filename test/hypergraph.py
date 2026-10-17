@@ -437,3 +437,20 @@ def test_coloured_diagram_has_no_hypergraph():
         for diagram in (Box('f', x, x), scalar):
             with raises(AxiomError, match="coloured"):
                 convert(diagram)
+
+
+def test_Hypergraph_to_tree():
+    from discopy.utils import dumps, loads
+    from discopy import markov, symmetric
+    x, y = map(Ty, "xy")
+    f, g = Box('f', x, y @ x), Box('g', Ty(), y)
+    graphs = [
+        H.spiders(1, 2, x) >> H.cups(x, x), H.spiders(0, 0, x) @ H.id(x),
+        (f @ g >> y @ Diagram.swap(x, y)).to_hypergraph(),
+        markov.Box('f', markov.Ty('x'), markov.Ty('y')).to_hypergraph(),
+        symmetric.Diagram.id(symmetric.Ty('x')).to_hypergraph()]
+    for graph in graphs:
+        loaded = loads(dumps(graph))
+        assert loaded == graph and type(loaded) is type(graph)
+        assert loaded.offsets == graph.offsets
+        assert loaded.spider_types == graph.spider_types

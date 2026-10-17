@@ -334,12 +334,22 @@ def from_tree(tree: dict):
     >>> f = Box('f', 'x', 'y', data=42)
     >>> assert from_tree(tree) == f >> f[::-1]
     """
-    *modules, factory = tree['factory'].removeprefix('discopy.').split('.')
+    return resolve_factory(tree['factory']).from_tree(tree)
+
+
+def resolve_factory(name: str) -> type:
+    """
+    The DisCoPy class with a given :func:`factory_name`, the inverse of it.
+
+    >>> from discopy.markov import Diagram
+    >>> assert resolve_factory(factory_name(Diagram)) is Diagram
+    """
+    *modules, factory = name.removeprefix('discopy.').split('.')
     import discopy
     module = discopy
     for attr in modules:
         module = getattr(module, attr)
-    return getattr(module, factory).from_tree(tree)
+    return getattr(module, factory)
 
 
 def dumps(obj, **kwargs):

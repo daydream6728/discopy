@@ -989,3 +989,18 @@ def test_permutation_is_one_involution():
         == T.permutation([2, 0, 1], dims).eval()
     with raises(ValueError):
         M.permutation([0, 0], [x, y])
+
+
+def test_CMap_to_tree():
+    from discopy.utils import dumps, loads
+    x = compact.Ty('x')
+    f = compact.Box('f', x, x @ x)
+    cmaps = [
+        compact.CMap.caps(x, x.r) >> f.to_map() @ x.r,
+        compact.CMap.id(x).trace(), f.to_map().trace(),
+        symmetric.Swap(*map(symmetric.Ty, "xy")).to_map(),
+        closed.Box('f', closed.Ty('x'), closed.Ty('y')).to_map().curry()]
+    for cmap in cmaps:
+        loaded = loads(dumps(cmap))
+        assert loaded == cmap and type(loaded) is type(cmap)
+        assert loaded.loops == cmap.loops
