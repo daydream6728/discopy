@@ -527,22 +527,6 @@ class Discard(markov.Discard, Copy):
     """
 
 
-class Merge(markov.Merge, Box):
-    """
-    The merge of an atomic type :code:`x` some :code:`n` number of times.
-
-    Parameters:
-        x : The type of wires to merge.
-        n : The number of wires to merge.
-    """
-    def __init__(self, x: Ty, n: int = 2):
-        markov.Merge.__init__(self, x, n)
-        Box.__init__(self, self.name, self.dom, self.cod)
-
-    def delay(self, n_steps=1):
-        return type(self)(self.cod.delay(n_steps), len(self.dom))
-
-
 class Trace(markov.Trace, Box):
     """
     The trace of a feedback diagram, whose delay is the trace of the
@@ -756,7 +740,7 @@ Diagram.functor_factory = Functor
 Diagram.swap_factory = Swap
 Diagram.permutation_factory = Permutation
 Diagram.discard_factory = Discard
-Diagram.copy_factory, Diagram.merge_factory = Copy, Merge
+Diagram.copy_factory = Copy
 Diagram.feedback_factory, Diagram.followed_by = Feedback, FollowedBy
 Diagram.trace_factory = Trace
 Hypergraph = hypergraph.Hypergraph[Diagram]
