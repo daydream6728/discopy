@@ -260,6 +260,23 @@ class HeadOb(Wire):
     def tail(self):
         return self.delay(-1) if self.time_step else None
 
+    def to_tree(self) -> dict:
+        """
+        Serialise the head of an object by its argument and its time step.
+
+        >>> from discopy.utils import dumps, loads
+        >>> x = Ty('x')
+        >>> assert loads(dumps(x.head.delay())) == x.head.delay()
+        """
+        tree = {'factory': factory_name(type(self)), 'arg': self.arg.to_tree()}
+        if self.time_step:
+            tree['time_step'] = self.time_step
+        return tree
+
+    @classmethod
+    def from_tree(cls, tree: dict) -> HeadOb:
+        return cls(from_tree(tree['arg']), tree.get('time_step', 0))
+
 
 class TailOb(Wire):
     """
@@ -279,6 +296,7 @@ class TailOb(Wire):
         super().__init__(f"{arg}.tail", time_step, is_constant=False)
 
     delay, reset, __repr__ = HeadOb.delay, HeadOb.reset, HeadOb.__repr__
+    to_tree, from_tree = HeadOb.to_tree, classmethod(HeadOb.from_tree.__func__)
 
 
 @factory
@@ -557,6 +575,7 @@ class Head(monoidal.Bubble, Box):
         Box.__init__(self, f"({arg}).{_attr}", self.dom, self.cod, time_step)
 
     delay, reset, __repr__ = HeadOb.delay, HeadOb.reset, HeadOb.__repr__
+    to_tree, from_tree = HeadOb.to_tree, classmethod(HeadOb.from_tree.__func__)
     __str__ = Box.__str__
 
 
@@ -569,6 +588,7 @@ class Tail(monoidal.Bubble, Box):
         Head.__init__(self, arg, time_step, _attr="tail")
 
     delay, reset, __repr__ = HeadOb.delay, HeadOb.reset, HeadOb.__repr__
+    to_tree, from_tree = HeadOb.to_tree, classmethod(HeadOb.from_tree.__func__)
     __str__ = Box.__str__
 
 
@@ -683,6 +703,27 @@ class FollowedBy(Box):
 
     def reset(self):
         return type(self)(self.arg, self.is_dagger)
+
+    def to_tree(self) -> dict:
+        """
+        Serialise by the type, the direction and the time step.
+
+        >>> from discopy.utils import dumps, loads
+        >>> x = Ty(Wire('x', is_constant=False))
+        >>> fby = FollowedBy(x, is_dagger=True).delay()
+        >>> assert loads(dumps(fby)) == fby
+        """
+        tree = {'factory': factory_name(type(self)), 'arg': self.arg.to_tree()}
+        if self.is_dagger:
+            tree['is_dagger'] = True
+        if self.time_step:
+            tree['time_step'] = self.time_step
+        return tree
+
+    @classmethod
+    def from_tree(cls, tree: dict) -> FollowedBy:
+        return cls(from_tree(tree['arg']), 'is_dagger' in tree,
+                   tree.get('time_step', 0))
 
 
 class Functor(markov.Functor):
