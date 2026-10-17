@@ -203,10 +203,8 @@ class Diagram(monoidal.Diagram, TracedCategory):
         least fixed point and strict maps preserve the least element.
         Strict maps form a monoidal subcategory, so a diagram is strict
         when each of its boxes is. A free box is not strict, nothing being
-        known about it, nor is a free trace uniform along anything but an
-        isomorphism, which is dinaturality: strictness is what a model of
-        the diagram is asked to satisfy, e.g. by a functor into
-        :class:`python.Function`, whose trace is a least fixed point.
+        known about it, while a permutation, a copy, a discard and a merge
+        are, see :meth:`markov.Diagram.trace_uniformity`.
         """
         return all(box.is_strict for box in self.boxes)
 

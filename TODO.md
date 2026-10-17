@@ -32,3 +32,13 @@ which this branch is stacked on. Earlier in the same session it was agreed that 
       `is_strict` on traced diagrams and `trace_uniformity` along copy, declared failing on the free
       categories; checking it on `python.Function` waits on
       [#91](https://github.com/rel-int/discopy-next/issues/91), its multiplicative trace raising on any loop
+- [x] State the premise of uniformity as a shape. @toumix, verbatim:
+      > I disagree with “no way to state an implication”, this is what shapes do! eg if f g h are composable then associativity
+      > try to do the same with this uniformity axiom
+
+      `markov.Square[C]` draws commuting squares by construction; `trace_uniformity_written` holds on
+      every free traced Markov category but the hypergraph ones, where no square is drawn
+- [ ] `extraction_rewrite` fails over symmetric categories when `f` has a wire passing through: rewriting
+      all of `f` into `g` relates the boundaries so that an input of a section has no consumer, which a
+      linear category cannot discard (found by the `dev` profile, `@reproduce_failure('6.164.0',
+      b'AXicc2RyZECDjBgiQAgAay8FGA==')`)

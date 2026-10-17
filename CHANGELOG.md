@@ -43,10 +43,18 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   (2000), strict maps preserving the least element of a least fixed point.
   A diagram is strict when its boxes are: a free box is not, a permutation,
   a copy, a discard and a merge are, and so is the trace of a strict map.
-  `markov.Diagram.trace_uniformity` states uniformity along the copy of
-  the memory, that two copies of a loop are the one loop, which relating
-  two unrollings of a feedback loop by bisimulation relies on; it fails in
-  every free category, `NOT_UNIFORM`, and is asked of a model.
+  `markov.Diagram.trace_uniformity` states uniformity along the copy of a
+  memory, its premise holding by construction of the `markov.Square` it
+  quantifies over, as composability does by construction of the premises
+  of associativity: a template `f` and its image `g` under the functor
+  doubling the memory, each box reading one copy and copying what it
+  writes. It fails in every free category, `NOT_UNIFORM`, on a loop that
+  nothing writes, which a least fixed point makes its least element, and
+  holds once every loop is written, `trace_uniformity_written`. A
+  hypergraph category has no such square, a merge not being natural along
+  a copy, `NO_SQUARE`. A testable premise of a law, e.g. `Related[Self]`
+  or `Square[Self]`, is drawn with the parameters `Axiom.weaken` declares,
+  as a morphism already was.
 - `RigidCategory.rotate_contravariance`, that rotation reverses
   composition, and `adjunction`, that the left and right adjoints of a
   morphism are mutually inverse, which is the class of bug #716; and

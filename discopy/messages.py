@@ -89,7 +89,10 @@ NOT_DETERMINISTIC = (
 INDUCTIVE_CONGRUENCE = (
     "Congruence is closed as a least fixpoint, which relates nothing on a "
     "feedback loop: two copies of a cycle are related only coinductively.")
+NO_SQUARE = (
+    "A spider that merges is not natural along a copy, so a square along "
+    "the copy of a memory is not drawn by construction.")
 NOT_UNIFORM = (
-    "A free box is not deterministic and a free trace is uniform along no "
-    "map but an isomorphism, which is dinaturality: uniformity along a "
-    "strict map is asked of a model, e.g. a least fixed point.")
+    "A free trace keeps a loop nothing writes, which a least fixed point "
+    "makes its least element, the one value copying preserves: the trace of "
+    "the identity on a memory is one such loop, on two copies of it two.")
