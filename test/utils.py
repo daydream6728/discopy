@@ -147,3 +147,9 @@ def test_NamedGeneric_factory():
     assert H[int].ar is H[int] and not hasattr(H[int], "factory")
     for wiring in (Hypergraph, CMap):
         assert wiring[symmetric.Diagram].ar is wiring[symmetric.Diagram]
+
+
+def test_MappingOrCallable():
+    assert MappingOrCallable({0: 1})[0] == MappingOrCallable(lambda x: 1)[0]
+    with pytest.raises(TypeError):
+        MappingOrCallable([10, 20])

@@ -271,18 +271,6 @@ class Ty(Pregroup, biclosed.Ty):
             del state['_z']
         super().__setstate__(state)
 
-    def assert_isadjoint(self, other):
-        """
-        Raise ``AxiomError`` if two rigid types are not adjoints.
-
-        Parameters:
-            other : The alleged right adjoint.
-        """
-        if self.r != other and self != other.r:
-            raise AxiomError(messages.NOT_ADJOINT.format(self, other))
-        if self.r != other:
-            raise AxiomError(messages.NOT_RIGID_ADJOINT.format(self, other))
-
     @property
     def l(self) -> Ty:
         """ The left adjoint of the type. """
@@ -674,6 +662,7 @@ class Box(biclosed.Box, Diagram):
     >>> assert f.r.l == f == f.l.r
     >>> assert f.l.l != f != f.r.r
     """
+    z = 0
 
     def __setstate__(self, state):
         if '_z' in state:  # Backward compatibility
@@ -855,7 +844,7 @@ class Functor(biclosed.Functor):
         if isinstance(other, Cap):
             return self.cod.caps(self(other.cod[:1]), self(other.cod[1:]))
         if isinstance(other, Box):
-            if not hasattr(other, "z") or not other.z:
+            if not other.z:
                 return super().__call__(other)
             z = other.z
             for _ in range(abs(z)):

@@ -61,6 +61,8 @@ class MappingOrCallable(Mapping[KT, VT]):
     def __init__(self, mapping: MappingOrCallable[KT, VT]) -> None:
         while isinstance(mapping, MappingOrCallable):
             mapping = mapping.mapping
+        if not isinstance(mapping, Mapping) and not callable(mapping):
+            raise TypeError(messages.NOT_MAPPING_OR_CALLABLE.format(mapping))
         self.mapping = mapping
 
     def __bool__(self) -> bool:
@@ -74,7 +76,7 @@ class MappingOrCallable(Mapping[KT, VT]):
             yield key
 
     def __getitem__(self, item: KT) -> VT:
-        return self.mapping[item] if hasattr(self.mapping, "__getitem__")\
+        return self.mapping[item] if isinstance(self.mapping, Mapping)\
             else self.mapping(item)
 
     def __setitem__(self, key: KT, value: VT) -> None:
@@ -110,7 +112,7 @@ class MappingOrCallable(Mapping[KT, VT]):
         """
         other = other if isinstance(other, Mapping)\
             else MappingOrCallable(other)
-        if hasattr(self.mapping, "__iter__"):
+        if isinstance(self.mapping, Mapping):
             return MappingOrCallable({
                 key: other[self[key]] for key in self.mapping})
         return MappingOrCallable(lambda key: other[self[key]])

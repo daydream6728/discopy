@@ -207,3 +207,20 @@ def test_additive_Function():
     assert tokens(f >> g) == [(12, 0), (5, 1)]
     assert tokens(D.id(T(X, X)) >> f) == tokens(f)\
         == tokens(f >> D.id(T(X, X)))
+
+
+def test_Ty_pregroup():
+    """ The negation of an integer type is both its adjoints, and it checks
+    its cups and caps as a rigid type does. """
+    from discopy.abc import Pregroup
+    x, y = Ty('x'), Ty('y')
+    assert isinstance(x, Pregroup) and x.l == x.r == -x
+    assert x.is_adjoint(-x) and not x.is_adjoint(y)
+    assert (x << y, x >> y) == (x @ -y, -x @ y)
+    x.assert_isadjoint(-x)
+    with raises(AxiomError):
+        x.assert_isadjoint(y)
+    with raises(AxiomError):
+        Diagram.cups(x, y)
+    with raises(TypeError):
+        1 @ x

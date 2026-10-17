@@ -548,6 +548,23 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Changed
 
+- A property read off a value with `hasattr` is read with `isinstance`
+  where a class states it: adjoints by `Pregroup`, swaps by
+  `SymmetricCategory`, identities by `Category`, windings by a
+  `rigid.Box.z` of zero by default, arrays by `tensor.Box`, a list of
+  numbers by `Sized` and a file by not being a path. A
+  `MappingOrCallable` is a mapping when it wraps a `Mapping` and a
+  callable when it wraps a callable, where anything indexable was a
+  mapping, and it raises `TypeError` on anything else as soon as it is
+  built rather than on its first lookup. `interaction.Ty` is a
+  `Pregroup`, as its negation is both its adjoints, and
+  `assert_isadjoint` moves from `rigid.Ty` to `Pregroup`, beside
+  `is_adjoint`, so that integer types check their cups and caps as rigid
+  ones do; `x << y` and `x >> y` are their exponentials. A functor still
+  asks its codomain for structure by name, as a `Hypergraph`, a
+  `Stream`, a `Matrix` or a `Tensor` has more than the abstract class it
+  subclasses states
+  ([rel-int/discopy-next#1](https://github.com/rel-int/discopy-next/pull/1)).
 - A class subscripted with a DisCoPy class is named by its `factory_name`,
   e.g. `hypergraph.Hypergraph[frobenius.Diagram]` rather than
   `Hypergraph[Diagram]`, since every level of the hierarchy has a `Diagram`

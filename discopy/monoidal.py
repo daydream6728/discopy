@@ -1254,9 +1254,9 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
         to bottom and merges layers eagerly.
         """
         graph = self.to_hypergraph()
-        if hasattr(self, "swap") and graph.is_monogamous and graph.is_causal\
-                and graph.is_boundary_connected and all(
-                    getattr(obj, "l", obj) == getattr(obj, "r", obj)
+        if isinstance(self, abc.SymmetricCategory) and graph.is_monogamous\
+                and graph.is_causal and graph.is_boundary_connected and all(
+                    not isinstance(obj, abc.Pregroup) or obj.l == obj.r
                     for obj in graph.spider_types):
             return graph.to_diagram()
         return self.merge_layers()
@@ -1744,7 +1744,7 @@ class Functor(cat.Functor):
             return image[:0].tensor(*other.n * [image])
         if isinstance(other, Ty):
             if not other.inside:
-                if not hasattr(self.cod.ob, 'id'):
+                if not issubclass(self.cod.ob, abc.Category):
                     return self.cod.ob()
                 return self.cod.ob.id(self(other.dom))
             head, *tail = map(self, other.inside)
