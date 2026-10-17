@@ -802,3 +802,8 @@ def test_box_factory():
     assert cat.Arrow.box_factory is cat.Box
     for module in (monoidal, symmetric, markov, rigid, closed):
         assert module.Diagram.box_factory is module.Box
+
+
+def test_decode_without_boxes_and_offsets():
+    with raises(ValueError):
+        Diagram.decode(Ty('x'))

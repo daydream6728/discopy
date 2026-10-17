@@ -928,6 +928,14 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
+- `Stream.sequence` builds the boxes of the category the stream is over,
+  where it built `symmetric.Box` whatever the category; `para.Closed.curry`
+  defaults to `left=True` like every other curry since #560; decoding with
+  neither boxes and offsets nor their zip, and subscripting a
+  `NamedGeneric` that has no type parameter, raise with a message; and the
+  recipe of the `diagrams` notebook sets `ob`, where it set a `ty_factory`
+  nothing reads
+  ([rel-int/discopy-next#1](https://github.com/rel-int/discopy-next/pull/1)).
 - `Diagram.foliation` is idempotent. A diagram records the offsets of its
   states whenever it has one, where it did only when each layer held one
   box, so a foliated diagram with several states in a layer refoliated

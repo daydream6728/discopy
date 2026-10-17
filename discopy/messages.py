@@ -46,3 +46,8 @@ WRONG_NUMBER_OF_BOUNDARIES = \
 NO_SYNTAX = "Arrays are semantics, not syntax: there is no tree to serialise."
 TERM_IS_A_BOX = \
     "A term is a box: the laws of its category are the diagram's."
+MISSING_BOXES_AND_OFFSETS = (
+    "Decoding needs either boxes and offsets, or the two of them zipped.")
+NO_TYPE_PARAMETER = (
+    "{} has no type parameter to subscript, declare one as in "
+    "class C(NamedGeneric['name']).")

@@ -1155,6 +1155,8 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
         then we set it to ``zip(boxes, offstes)``.
         """
         if boxes_and_offsets is None:
+            if boxes is None or offsets is None:
+                raise ValueError(messages.MISSING_BOXES_AND_OFFSETS)
             boxes_and_offsets = zip(boxes, offsets)
         diagram = cls.id(dom)
         for box, offset in boxes_and_offsets:

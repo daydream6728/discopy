@@ -183,6 +183,8 @@ class NamedGeneric(Generic[TypeVar('T')]):
     def __class_getitem__(_, attributes):
         if not isinstance(attributes, tuple):
             attributes = (attributes,)
+        if not all(isinstance(attribute, str) for attribute in attributes):
+            raise TypeError(messages.NO_TYPE_PARAMETER.format(_))
 
         G = Generic.__class_getitem__(tuple(map(TypeVar, attributes)))
 
