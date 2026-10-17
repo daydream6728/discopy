@@ -256,3 +256,9 @@ def test_axioms_of_category():
         unitality = None
 
     assert "unitality" not in Hidden.axioms
+
+
+def test_copying():
+    x, y = Ob('x'), Ob('y')
+    assert Arrow.copying(Box('f', x, y))
+    assert "copying" in Arrow.axioms and "copying" in Ob.axioms

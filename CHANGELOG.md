@@ -9,6 +9,12 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Added
 
+- `copying`, a law of `Testable` beside `transparency`, `pickling` and
+  `serialisation`: a term is equal to its deep copy, of the same class.
+  Copying goes through the same protocol as pickling without the bytes,
+  so a class whose reduction drops what its state needs breaks one law
+  with the other, and the property matrix checks both
+  ([rel-int/discopy-next#1](https://github.com/rel-int/discopy-next/pull/1)).
 - Every level declares the generators it binds after its `Diagram` as
   class variables of it, e.g. `swap_factory: ClassVar[type["Swap"]]` in
   `symmetric.Diagram`, so that a typechecker reads `cls.swap_factory` as

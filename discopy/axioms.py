@@ -51,6 +51,7 @@ import __future__
 import inspect
 import pickle
 import sys
+from copy import deepcopy
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from dataclasses import KW_ONLY, dataclass, replace
@@ -431,7 +432,7 @@ class Testable[T](ABC):
     A type that comes with a `search strategy
     <https://hypothesis.readthedocs.io/en/latest/data.html>`_ generating
     its instances, and the laws every such type obeys: a term reads back
-    from its representation, its pickle and its tree.
+    from its representation, its pickle, its deep copy and its tree.
     """
 
     @classmethod
@@ -505,6 +506,17 @@ class Testable[T](ABC):
         """
         loaded = pickle.loads(pickle.dumps(term))
         return Equation((type(loaded), loaded), (type(term), term))
+
+    @axiom
+    def copying(cls, term: Self) -> Equation:
+        """
+        A term is equal to its deep copy, of the same class. Copying goes
+        through the same protocol as :meth:`pickling` without the bytes, so
+        a class whose reduction drops what its state needs breaks one law
+        with the other.
+        """
+        copied = deepcopy(term)
+        return Equation((type(copied), copied), (type(term), term))
 
     @axiom
     def serialisation(cls, term: Self) -> Equation:
