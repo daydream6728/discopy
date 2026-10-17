@@ -218,6 +218,17 @@ class Copy(Box):
         return super().__new__(cls) if n else\
             cls.discard_factory.__new__(cls.discard_factory, x)
 
+    def __getnewargs__(self):
+        """
+        The arguments of :meth:`__new__`, which a pickle needs.
+
+        >>> from pickle import dumps, loads
+        >>> x = Ty('x')
+        >>> assert loads(dumps(Copy(x))) == Copy(x)
+        >>> assert loads(dumps(Discard(x))) == Discard(x)
+        """
+        return self.dom, len(self.cod)
+
     def dagger(self) -> Merge:
         return self.merge_factory(self.dom, len(self.cod))
 

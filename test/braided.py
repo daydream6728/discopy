@@ -36,3 +36,10 @@ def test_functor_factory():
     F = Diagram.functor_factory({x: y, y: x}, {})
     assert F(Braid(x, y)) == Braid(y, x)
     assert F(Braid(x, y).dagger()) == Braid(y, x).dagger()
+
+
+def test_Braid_to_tree():
+    from discopy.utils import dumps, loads
+    for braid in (Braid(x, y), Braid(x, y).dagger()):
+        assert loads(dumps(braid)) == braid
+        assert loads(dumps(braid)).is_dagger == braid.is_dagger

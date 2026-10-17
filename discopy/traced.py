@@ -209,7 +209,13 @@ class Trace(Box, monoidal.Bubble):
         return self.name
 
     def __repr__(self):
-        return factory_name(type(self)) + f"({self.arg}, left={self.left})"
+        """
+        >>> from discopy import cat, monoidal, traced
+        >>> x = Ty('x')
+        >>> trace = Box('f', x @ x, x @ x).trace()
+        >>> assert eval(repr(trace)) == trace
+        """
+        return factory_name(type(self)) + f"({self.arg!r}, left={self.left!r})"
 
     def dagger(self):
         return self.arg.dagger().trace(left=self.left)

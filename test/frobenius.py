@@ -80,3 +80,11 @@ def test_Sum():
     assert isinstance(f + f, Sum) and (f + f).terms == (f, f)
     image = Functor(lambda x: x, {f: f + f})(f)
     assert isinstance(image, Sum) and image.terms == (f, f)
+
+
+def test_Spider_to_tree():
+    from discopy.utils import dumps, loads
+    x = Ty('x')
+    for spider in (Spider(1, 2, x), Spider(2, 0, x, 0.5), Spider(0, 3, x).l):
+        assert loads(dumps(spider)) == spider
+        assert loads(dumps(spider)).phase == spider.phase

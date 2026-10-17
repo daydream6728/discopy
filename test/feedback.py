@@ -134,3 +134,19 @@ def test_delayed_Box_to_tree():
         for delayed in (box, box.delay(), box.delay(2)):
             assert loads(dumps(delayed)) == delayed
             assert loads(dumps(delayed)).time_step == delayed.time_step
+
+
+def test_Feedback_to_tree():
+    from discopy.utils import dumps, loads
+    x, y, z = Ty('x'), Ty('y'), Ty('z')
+    f = Box('f', x @ (y @ z).delay(), x @ y @ z)
+    for fb in (f.feedback(mem=z), f.feedback(mem=y @ z), Feedback(f, mem=y @ z)):
+        assert loads(dumps(fb)) == fb
+        assert loads(dumps(fb)).mem == fb.mem
+
+
+def test_Copy_pickle():
+    from pickle import dumps, loads
+    x = Ty('x')
+    for box in (Copy(x), Discard(x), Copy(x).delay(), Discard(x).delay()):
+        assert loads(dumps(box)) == box

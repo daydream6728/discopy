@@ -629,6 +629,25 @@ class Feedback(monoidal.Bubble, Box):
         arg, mem = map(repr, (self.arg, self.mem))
         return factory_name(type(self)) + f"({arg}, mem={mem})"
 
+    def to_tree(self) -> dict:
+        """
+        Serialise a feedback by its argument and its memory.
+
+        >>> from discopy.utils import dumps, loads
+        >>> x, y = Ty('x'), Ty('y')
+        >>> fb = Box('f', x @ (x @ y).delay(), x @ x @ y).feedback(mem=x @ y)
+        >>> assert loads(dumps(fb)) == fb
+        """
+        return {'factory': factory_name(type(self)),
+                'arg': self.arg.to_tree(), 'dom': self.dom.to_tree(),
+                'cod': self.cod.to_tree(), 'mem': self.mem.to_tree()}
+
+    @classmethod
+    def from_tree(cls, tree: dict) -> Feedback:
+        dom, cod, mem = (
+            from_tree(tree[key]) for key in ('dom', 'cod', 'mem'))
+        return cls(from_tree(tree['arg']), dom=dom, cod=cod, mem=mem)
+
     def to_drawing(self):
         return self.arg.to_drawing().trace()
 

@@ -105,3 +105,11 @@ def test_to_hypergraph():
 def test_functor_twist_dagger():
     twist = Twist(Ty('x')).dagger()
     assert Functor(ob_map=lambda x: x, ar_map=lambda f: f)(twist) == twist
+
+
+def test_Twist_to_tree():
+    from discopy.utils import dumps, loads
+    x = Ty('x')
+    for twist in (Twist(x), Twist(x).dagger()):
+        assert loads(dumps(twist)) == twist
+        assert loads(dumps(twist)).is_dagger == twist.is_dagger
