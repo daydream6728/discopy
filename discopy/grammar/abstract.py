@@ -377,7 +377,7 @@ class Abstraction(TermBase, closed.Abstraction):
 type Term = Constant | Variable | Application | Abstraction
 
 Id = Diagram.id
-Diagram.functor_factory = Functor
+Diagram.box_factory, Diagram.functor_factory = Box, Functor
 Diagram.copy_factory = Copy
 Diagram.permutation_factory = Permutation
 Diagram.swap_factory = Swap

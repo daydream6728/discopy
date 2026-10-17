@@ -928,6 +928,13 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
+- A binary term or type raising of a categorial grammar evaluates with a
+  functor passed positionally, as the terms around it pass it, where
+  `FX(FC(a, b), r).eval()` raised `TypeError`; the categorial grammar has a
+  `Coeval`, so that the dagger of its evaluations stays in its category;
+  and `grammar.categorial.Diagram` and `grammar.abstract.Diagram` bind
+  their own `box_factory`
+  ([rel-int/discopy-next#1](https://github.com/rel-int/discopy-next/pull/1)).
 - `Stream.sequence` builds the boxes of the category the stream is over,
   where it built `symmetric.Box` whatever the category; `para.Closed.curry`
   defaults to `left=True` like every other curry since #560; decoding with

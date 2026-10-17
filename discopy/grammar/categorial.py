@@ -90,6 +90,7 @@ class Diagram(biclosed.Diagram):
     functor_factory: ClassVar[type["Functor"]]
     curry_factory: ClassVar[type["Curry"]]
     eval_factory: ClassVar[type["Eval"]]
+    coeval_factory: ClassVar[type["Coeval"]]
     ob = Ty
 
     def to_pregroup(self):
@@ -158,6 +159,12 @@ class Word(thue.Word, Box):
 class Eval(biclosed.Eval, Box):
     """
     Evaluation box in a categorial grammar.
+    """
+
+
+class Coeval(biclosed.Coeval, Box):
+    """
+    Coevaluation box in a categorial grammar, the dagger of an evaluation.
     """
 
 
@@ -312,8 +319,8 @@ class TypeRaising(TermBase):
         self.base, self.child, self.freevars = base, child, child.freevars
         super().__init__(name, child.dom, cod)
 
-    def eval(self, **kwargs):
-        return self.simplify().eval(**kwargs)
+    def eval(self, functor=None):
+        return self.simplify().eval(functor)
 
     def alpha_eq_under(self, scopes, others, depth=0):
         """ Type raisings of one base with alpha-equivalent children. """
@@ -385,8 +392,8 @@ class BinaryTerm(TermBase):
     def simplify(self):
         return type(self)(self.left.simplify(), self.right.simplify())
 
-    def eval(self, **kwargs):
-        return self.simplify().eval(**kwargs)
+    def eval(self, functor=None):
+        return self.simplify().eval(functor)
 
     def alpha_eq_under(self, scopes, others, depth=0):
         """ Compositions of one kind with alpha-equivalent sides. """
@@ -595,9 +602,9 @@ def tree2diagram(tree: dict, dom=Ty()) -> Diagram:
 
 
 Id = Diagram.id
-Diagram.functor_factory = Functor
+Diagram.box_factory, Diagram.functor_factory = Box, Functor
 Diagram.curry_factory = Curry
-Diagram.eval_factory = Eval
+Diagram.eval_factory, Diagram.coeval_factory = Eval, Coeval
 
 Ty.variable_factory = Variable
 Ty.constant_factory = Constant
