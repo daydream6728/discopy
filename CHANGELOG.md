@@ -993,6 +993,41 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
+- `feedback.HeadOb`, `TailOb`, `Head`, `Tail` and `FollowedBy` read back
+  from their tree. The two objects inherited `Wire.from_tree`, which
+  rebuilds a wire from its name, and the three boxes `Bubble.from_tree` and
+  `Box.from_tree`, which pass a `dom` and a `cod` their constructors do not
+  take, so `loads(dumps(x.head))` raised `TypeError`, as did anything typed
+  by a head or a tail, `FollowedBy(x)` included. Each now serialises as its
+  argument and its time step, a `FollowedBy` with its direction too
+  ([rel-int/discopy-next#96](https://github.com/rel-int/discopy-next/issues/96)).
+- `frobenius.Spider.__repr__` prints the phase positionally, as `dagger` and
+  `rotate` pass it, and the `is_dagger` flag its tree keeps, so that
+  `eval(repr(spider)) == spider` on a phased spider, where it printed
+  `phase=`, a keyword the constructor does not take, and dropped the flag
+  ([rel-int/discopy-next#97](https://github.com/rel-int/discopy-next/issues/97)).
+- `test/drawing/drawing.py::test_tikz_bell_state` restyles a copy of the `H`
+  gate, where it set `draw_as_spider`, `color` and `drawing_name` on the
+  module-level `discopy.quantum.gates.H` for every later drawing of it in
+  the same process: `pytest test/drawing/drawing.py discopy/drawing/drawing.py`
+  failed on the `bell-state.svg` doctest of `discopy.drawing.drawing`, while
+  each file passed on its own
+  ([rel-int/discopy-next#99](https://github.com/rel-int/discopy-next/issues/99)).
+- `monoidal.Diagram.to_hypergraph` keeps the offsets of the states when a
+  box of the diagram became a spider: it recorded them only when the
+  hypergraph had as many boxes as the diagram, so one `Copy`, `Merge` or
+  `Spider` dropped them all and `Hypergraph.to_diagram` put every state back
+  on the left, then swapped, `(f @ g >> Merge(x) >> h)` decoding as
+  `f >> g @ x >> Swap(x, x) >> Merge(x) >> h`. The offsets are recorded up
+  to the first box the functor turned into wiring, a swap, a cup or a copy,
+  since until there the boxes and the open wires of the hypergraph are
+  those of the diagram, and a state after it carries an offset counted in
+  wires the hypergraph no longer has: the `Int` example of
+  `discopy.interaction` decoded with two more permutations when they were
+  kept. `Hypergraph.to_diagram` clamps an offset to its scan, which a copy
+  or a discard it inserts before a later state may have shrunk, where it
+  raised `ValueError`
+  ([rel-int/discopy-next#101](https://github.com/rel-int/discopy-next/issues/101)).
 - `closed.Copy(x).dagger()` raises `AxiomError` saying that `closed.Diagram`
   is not a dagger category, where it returned a stray `markov.Merge` that
   nothing in a closed diagram composes with, as did the copies of
