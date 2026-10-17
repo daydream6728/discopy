@@ -334,3 +334,33 @@ def test_transparency():
                 x(lambda u, left=True: u(g, left=True))]:
         assert eval(repr(box), {"biclosed": biclosed, "cat": cat}) == box
         assert loads(dumps(box)) == box
+
+
+def test_unit_exponential():
+    """ An exponential of the unit is its base, so that currying no wire and
+    evaluating at the unit are the identity, which converts to a map. """
+    x, y = Ty('x'), Ty('y')
+    assert x ** Ty() == x << Ty() == Ty() >> x == x
+    f = Box('f', x, y)
+    assert f.curry(0) == f == f.curry(0, left=False)
+    assert Diagram.ev(x, Ty()) == Id(x) == Diagram.ev(x, Ty(), left=False)
+    assert f.curry(0).to_map().to_diagram() == f
+
+
+def test_Curry_dagger():
+    x = Ty('x')
+    with raises(AxiomError):
+        Box('f', x @ x, x).curry().dagger()
+
+
+def test_Curry_to_drawing():
+    x = Ty('x')
+    f = Box('f', x @ x @ x, x)
+    for n in range(4):
+        for left in (True, False):
+            curry = f.curry(n, left=left)
+            drawing = curry.to_drawing()
+            assert (len(drawing.dom), len(drawing.cod))\
+                == (len(curry.dom), len(curry.cod))
+    for left in (True, False):  # A curry of no wire, built explicitly.
+        assert Curry(f, 0, left=left).to_drawing() == f.to_drawing()

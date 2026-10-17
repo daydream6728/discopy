@@ -179,7 +179,7 @@ class Diagram(rigid.Diagram, traced.Diagram, PivotalCategory):
             >> cod @ cls.cup_factory(traced_wire, traced_wire.r)
 
 
-class Box(rigid.Box, Diagram):
+class Box(rigid.Box, traced.Box, Diagram):
     """
     A pivotal box is a rigid box in a pivotal diagram.
 
@@ -263,6 +263,7 @@ class Functor(rigid.Functor):
     dom = cod = Diagram
 
 
+Diagram.box_factory = Box
 Diagram.functor_factory = Functor
 Diagram.cup_factory, Diagram.cap_factory = Cup, Cap
 Diagram.sum_factory = Sum

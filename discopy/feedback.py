@@ -751,6 +751,7 @@ class Functor(markov.Functor):
         return super().__call__(other)
 
 
+Diagram.box_factory = Box
 Diagram.functor_factory = Functor
 Diagram.swap_factory = Swap
 Diagram.permutation_factory = Permutation

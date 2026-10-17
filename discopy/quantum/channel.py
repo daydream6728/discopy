@@ -357,6 +357,6 @@ class Functor(tensor.Functor):
             dom, cod = self(other.dom).quantum, self(other.cod).quantum
             return self.cod.double(
                 Tensor[self.dtype](other.array, dom, cod))
-        if hasattr(other, "array"):
+        if isinstance(other, tensor.Box):
             return self.cod(other.array, self(other.dom), self(other.cod))
         return frobenius.Functor.__call__(self, other)

@@ -157,3 +157,17 @@ def test_resolve_factory():
     assert resolve_factory("complex") is complex
     with pytest.raises(AttributeError):
         resolve_factory("nonsense")
+
+
+def test_MappingOrCallable():
+    assert MappingOrCallable({0: 1})[0] == MappingOrCallable(lambda x: 1)[0]
+    with pytest.raises(TypeError):
+        MappingOrCallable([10, 20])
+
+
+def test_NamedGeneric_without_type_parameter():
+    class X(NamedGeneric):
+        """ A class that declares no type parameter. """
+
+    with pytest.raises(TypeError):
+        X[int]

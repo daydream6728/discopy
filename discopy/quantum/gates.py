@@ -49,6 +49,7 @@ Summary
         scalar
 """
 import copy
+from collections.abc import Sized
 from math import e, pi
 
 from discopy import messages
@@ -237,7 +238,7 @@ class QuantumGate(Box):
     is_classical = False
 
     def __init__(self, name: str, dom: Ty, cod: Ty, data=None, **params):
-        if data is not None and hasattr(data, "__len__"):
+        if isinstance(data, Sized):
             data = [complex(v) for v in data]
         super().__init__(name, dom, cod, data, **params)
 

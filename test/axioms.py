@@ -202,6 +202,16 @@ def test_modulo():
     assert law(Box('f', Ob('x'), Ob('y')))
 
 
+def test_equation_symbols():
+    x = Ob('x')
+    f, g = Box('f', x, x), Box('g', x, x)
+    assert Equation(f).symbols == ()
+    assert Equation(f, g, symbol="<").symbols == ("<", )
+    assert Equation(f, f, g).symbols == ("=", "=")
+    with raises(ValueError):
+        Equation(f, g, symbols=("=", "="))
+
+
 def test_weaken():
     law = Arrow.unitality.weaken(f=Endo[C1]).bind(Arrow)
     assert law.modulo(lambda term: term).subspaces == law.subspaces
@@ -246,3 +256,9 @@ def test_axioms_of_category():
         unitality = None
 
     assert "unitality" not in Hidden.axioms
+
+
+def test_copying():
+    x, y = Ob('x'), Ob('y')
+    assert Arrow.copying(Box('f', x, y))
+    assert "copying" in Arrow.axioms and "copying" in Ob.axioms

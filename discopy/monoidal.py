@@ -58,7 +58,7 @@ from __future__ import annotations
 import itertools
 from dataclasses import dataclass, field
 from functools import cached_property
-from typing import Iterator, Callable, TYPE_CHECKING
+from typing import Iterator, Callable, ClassVar, TYPE_CHECKING
 from warnings import warn
 
 from discopy import abc, cat, drawing, hypergraph, cmap, messages
@@ -973,6 +973,10 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
             normalize
             normal_form
     """
+    box_factory: ClassVar[type["Box"]]
+    sum_factory: ClassVar[type["Sum"]]
+    bubble_factory: ClassVar[type["Bubble"]]
+    functor_factory: ClassVar[type["Functor"]]
     ob = Ty
     layer_factory = Layer
 
@@ -1151,6 +1155,8 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
         then we set it to ``zip(boxes, offstes)``.
         """
         if boxes_and_offsets is None:
+            if boxes is None or offsets is None:
+                raise ValueError(messages.MISSING_BOXES_AND_OFFSETS)
             boxes_and_offsets = zip(boxes, offsets)
         diagram = cls.id(dom)
         for box, offset in boxes_and_offsets:
@@ -1208,8 +1214,8 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
         >>> assert diagram.to_hypergraph().to_diagram() == diagram.foliation()
         """
         graph = hypergraph.Hypergraph[type(self).ar].from_diagram(self)
-        staircase = len(self.boxes) == len(self.inside)
-        if staircase and len(graph.boxes) == len(self.boxes):
+        has_states = any(not box.dom for box in self.boxes)
+        if has_states and len(graph.boxes) == len(self.boxes):
             offsets = tuple(
                 offset if not box.dom else None
                 for box, offset in zip(self.boxes, self.offsets))
@@ -1250,11 +1256,11 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
         to bottom and merges layers eagerly.
         """
         graph = self.to_hypergraph()
-        if hasattr(self, "swap") and graph.is_monogamous and graph.is_causal\
-                and graph.is_boundary_connected and all(
-                    getattr(obj, "l", obj) == getattr(obj, "r", obj)
+        if isinstance(self, abc.SymmetricCategory) and graph.is_monogamous\
+                and graph.is_causal and graph.is_boundary_connected and all(
+                    not isinstance(obj, abc.Pregroup) or obj.l == obj.r
                     for obj in graph.spider_types):
-            return graph.to_diagram()
+            return graph.to_diagram().merge_layers()
         return self.merge_layers()
 
     def merge_layers(self):
@@ -1740,7 +1746,7 @@ class Functor(cat.Functor):
             return image[:0].tensor(*other.n * [image])
         if isinstance(other, Ty):
             if not other.inside:
-                if not hasattr(self.cod.ob, 'id'):
+                if not issubclass(self.cod.ob, abc.Category):
                     return self.cod.ob()
                 return self.cod.ob.id(self(other.dom))
             head, *tail = map(self, other.inside)
@@ -1804,8 +1810,8 @@ class Equation(cat.Equation, RichDisplay):
     Parameters:
         terms : The terms of the equation.
         symbol : The symbol between each pair of terms, ``"="`` by default.
-        symbols : The symbols between each pair of terms, overriding
-            ``symbol``; ``len(terms) * (symbol, )`` by default.
+        symbols : The symbols between each pair of consecutive terms, one
+            fewer than the terms, overriding ``symbol``.
         space : The space between the terms when drawing the equation.
         up_to : The function up to which ``bool(equation)`` compares its terms,
             overriding the subclass' :attr:`up_to` if given.
@@ -1842,6 +1848,7 @@ class Equation(cat.Equation, RichDisplay):
 Diagram.draw = drawing.draw
 Diagram.to_gif = drawing.to_gif
 
+Diagram.box_factory = Box
 Diagram.sum_factory = Sum
 Diagram.bubble_factory = Bubble
 Diagram.functor_factory = Functor

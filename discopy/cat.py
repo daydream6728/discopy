@@ -79,7 +79,7 @@ from __future__ import annotations
 
 from functools import total_ordering, cached_property
 from typing import (
-    Callable, Mapping, Iterable, TYPE_CHECKING)
+    Callable, ClassVar, Mapping, Iterable, TYPE_CHECKING)
 
 from discopy import messages, utils
 from discopy.abc import Category
@@ -116,6 +116,8 @@ class Ob(Testable["Ob"]):
     >>> x, x_, y = Ob('x'), Ob('x'), Ob('y')
     >>> assert x == x_ and x != y
     """
+    equation_factory: ClassVar[type["Equation"]]
+
     def __setstate__(self, state):
         if "name" not in state and "_name" in state:
             state["name"] = state["_name"]
@@ -306,6 +308,9 @@ class Arrow(FreeCategory, Testable["Arrow"]):
     automatically cast. This means one can use e.g. ``int`` instead of ``Ob``,
     see :class:`monoidal.Nat`.
     """
+    box_factory: ClassVar[type["Box"]]
+    sum_factory: ClassVar[type["Sum"]]
+    bubble_factory: ClassVar[type["Bubble"]]
     ob = Ob
 
     @classmethod
@@ -1008,7 +1013,7 @@ class Functor(Category):
         return result
 
 
-Arrow.generator_factory = Box
+Arrow.generator_factory = Arrow.box_factory = Box
 
 
 @factory

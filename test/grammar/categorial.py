@@ -328,3 +328,23 @@ def test_alpha_eq():
     assert FTR(Y, Abstraction(x, f(x))).alpha_eq(FTR(Y, Abstraction(w, f(w))))
     assert not FTR(Y, Abstraction(x, f(x))).alpha_eq(FTR(Z, Abstraction(x, f(x))))
 
+
+
+def test_eval_passes_the_functor_positionally():
+    """ A binary term or a type raising evaluates inside a term that passes
+    the functor positionally, where it took it as a keyword. """
+    X, Y, Z, W = map(Ty, "XYZW")
+    a, b = Constant('a', Z << W), Constant('b', W << Y)
+    r = Constant('r', X >> Y)
+    assert FX(FC(a, b), r).eval() == FC(a, b).eval() @ r.eval()\
+        >> ForwardCrossedComposition(Z << Y, X >> Y)
+    c, d = Constant('c', X), Constant('d', X >> Y)
+    assert FA(FTR(Y, c), d).eval() == FTR(Y, c).eval() @ d.eval()\
+        >> Eval(Y << (X >> Y))
+
+
+def test_Coeval():
+    x, y = Ty('x'), Ty('y')
+    coeval = Eval(x << y).dagger()
+    assert isinstance(coeval, Coeval) and coeval.dagger() == Eval(x << y)
+    assert Diagram.box_factory is Box and Diagram.coeval_factory is Coeval
