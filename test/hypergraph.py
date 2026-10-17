@@ -351,7 +351,7 @@ def test_subclass_to_hypergraph():
 
 
 def test_Hypergraph_cups_and_caps_adjoints():
-    from discopy import rigid, symmetric
+    from discopy import rigid
     x, y = rigid.Ty('x'), rigid.Ty('y')
     R = Hypergraph[rigid.Diagram]
     for left, right in [(x.r, x), (x, x.l)]:
@@ -364,12 +364,6 @@ def test_Hypergraph_cups_and_caps_adjoints():
             cups_or_caps(left, right)
     with raises(AxiomError, match="x and y are not adjoints"):
         H.cups(Ty('x'), Ty('y'))
-    a, b = symmetric.Ty('a'), symmetric.Ty('b')
-    S = Hypergraph[symmetric.Diagram]
-    assert S.cups(a @ b, b @ a).dom_wires == (0, 1, 1, 0)
-    assert S.caps(a @ b, b @ a).cod_wires == (0, 1, 1, 0)
-    with raises(AxiomError, match="not adjoints"):
-        S.caps(a @ b, a @ b)
 
 
 def test_to_diagram_routes_with_one_permutation():
@@ -413,3 +407,22 @@ def test_trace_needs_traced_pivotal():
         x = module.Ty('x')
         graph = module.Box('f', x @ x, x @ x).to_hypergraph()
         assert graph.trace().cod == graph.trace(left=True).cod == x
+
+
+def test_cups_and_caps_read_the_host_category():
+    from discopy import symmetric, rigid, pivotal, ribbon, compact
+    x = symmetric.Ty('x')
+    for method in (symmetric.Hypergraph.cups, symmetric.Hypergraph.caps):
+        with raises(AxiomError, match="not rigid"):
+            method(x, x)
+    for module in (rigid, pivotal, ribbon):  # planar, so the cups are boxes
+        x, y = module.Ty('x'), module.Ty('y')
+        cup, cap = module.Cup(x, x.r), module.Cap(x.r, x)
+        assert cup.to_hypergraph().boxes == (cup, )
+        assert cap.to_hypergraph().boxes == (cap, )
+        cups = module.Diagram.cups(x @ y, (x @ y).r)
+        assert cups.to_hypergraph().boxes == tuple(cups.boxes)
+        assert cups.to_hypergraph().to_diagram() == cups
+    x = compact.Ty('x')
+    assert compact.Cup(x, x.r).to_hypergraph().boxes == ()
+    assert compact.Cap(x.r, x).to_hypergraph().boxes == ()

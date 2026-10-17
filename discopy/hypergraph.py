@@ -54,8 +54,9 @@ from networkx.algorithms.isomorphism import is_isomorphic
 
 from discopy import cat, cmap, messages
 from discopy.abc import (
-    ColouredMonoid, HypergraphCategory, MarkovCategory, MonoidalCategory,
-    NamedGeneric, RigidCategory, SymmetricCategory, TracedCategory)
+    ColouredMonoid, CompactCategory, HypergraphCategory, MarkovCategory,
+    MonoidalCategory, NamedGeneric, RigidCategory, SymmetricCategory,
+    TracedCategory)
 from discopy.drawing import Node, backend
 from discopy.python.finset import Permutation
 from discopy.utils import (
@@ -484,7 +485,25 @@ class Hypergraph(MonoidalCategory, NamedGeneric['category']):
 
     @classmethod
     def cups(cls, left, right):
-        """ The cup wiring ``left`` to its right adjoint ``right``. """
+        """
+        The cups of a type and its right adjoint: boxes over a rigid category
+        that is not compact, whose cups are planar and oriented, and wiring
+        from compact categories on, where a cup is faithfully a spider with
+        two ports of the same kind.
+
+        >>> from discopy import rigid, compact
+        >>> x = rigid.Ty('x')
+        >>> assert rigid.Cup(x, x.r).to_hypergraph().boxes == (
+        ...     rigid.Cup(x, x.r), )
+        >>> x = compact.Ty('x')
+        >>> assert compact.Cup(x, x.r).to_hypergraph().boxes == ()
+        """
+        if not issubclass(cls.category, RigidCategory):
+            raise AxiomError(messages.NO_CUPS.format(
+                factory_name(cls.category)))
+        if not issubclass(cls.category, CompactCategory):
+            return cls.cup_factory(left, right) if len(left) == 1\
+                else cls.from_diagram(cls.category.cups(left, right))
         cls.assert_isadjoint(left, right)
         dom_wires = tuple(range(len(left))) + tuple(reversed(range(len(left))))
         return cls(
@@ -493,10 +512,23 @@ class Hypergraph(MonoidalCategory, NamedGeneric['category']):
     @classmethod
     def caps(cls, left, right):
         """
-        The cap wiring ``left`` to its left adjoint ``right``, read the
-        other way round from :meth:`cups` as :class:`discopy.rigid.Cap` is
-        from :class:`discopy.rigid.Cup`.
+        The caps of a type and its left adjoint, e.g. ``Cap(x, x.l)`` and
+        ``Cap(x.r, x)``, read the other way round from :meth:`cups` as
+        :class:`discopy.rigid.Cap` is from :class:`discopy.rigid.Cup`: boxes
+        over a rigid category that is not compact and wiring from compact
+        categories on.
+
+        >>> from discopy.rigid import Ty, Cap
+        >>> x = Ty('x')
+        >>> assert Cap(x, x.l).to_hypergraph().boxes == (Cap(x, x.l), )
+        >>> assert Cap(x.r, x).to_hypergraph().boxes == (Cap(x.r, x), )
         """
+        if not issubclass(cls.category, RigidCategory):
+            raise AxiomError(messages.NO_CUPS.format(
+                factory_name(cls.category)))
+        if not issubclass(cls.category, CompactCategory):
+            return cls.cap_factory(left, right) if len(left) == 1\
+                else cls.from_diagram(cls.category.caps(left, right))
         cls.assert_isadjoint(right, left)
         cod_wires = tuple(range(len(left))) + tuple(reversed(range(len(left))))
         return cls(
