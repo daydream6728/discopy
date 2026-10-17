@@ -322,6 +322,9 @@ class Spider(tensor.Spider[complex], Box):
         phase_str = f", {self.phase}" if self.phase else ""
         self.name = f"{factory_str}({n_legs_in}, {n_legs_out}{phase_str})"
 
+    def __getnewargs__(self):
+        return len(self.dom), len(self.cod), self.phase
+
     def __setstate__(self, state):
         if "_name" in state and state["_name"] == type(self).__name__:
             phase = state.get("_data", None)

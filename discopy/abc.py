@@ -417,7 +417,7 @@ class FeedbackCategory[C0, C1](MonoidalCategory[C0, C1]):
         """
 
     def split_memory(
-            self, n: int = None, left: bool = False,
+            self, n: int = None, left: bool = False, *,
             dom: C0 = None, cod: C0 = None, mem: C0 = None
             ) -> tuple[C0, C0, C0]:
         """
@@ -526,7 +526,8 @@ class TracedCategory[C0, C1](FeedbackCategory[C0, C1]):
         memory, whose delay is itself.
         """
         if n is None:
-            n = len(self.split_memory(None, left, dom, cod, mem)[2])
+            n = len(self.split_memory(
+                left=left, dom=dom, cod=cod, mem=mem)[2])
         elif (dom, cod, mem) != (None, None, None):
             raise TypeError(messages.FEEDBACK_FORMS)
         return self.trace(n, left)

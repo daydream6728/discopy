@@ -586,7 +586,7 @@ class Stream(FeedbackCategory, NamedGeneric['category']):
         return cls(now, dom, cod, _later=_later)
 
     def split_memory(
-            self, n: int = None, left: bool = False,
+            self, n: int = None, left: bool = False, *,
             dom: Ty = None, cod: Ty = None, mem: Ty = None
             ) -> tuple[Ty, Ty, Ty]:
         """
@@ -615,7 +615,7 @@ class Stream(FeedbackCategory, NamedGeneric['category']):
             n : The number of objects to feed back.
             left : Feeding back on the left, which is not implemented.
             dom (Ty) : The domain of the result.
-            cod (Ty) : The domain of the result.
+            cod (Ty) : The codomain of the result.
             mem (Ty) : The memory over which we are taking a feedback.
 
         Example
@@ -632,7 +632,8 @@ class Stream(FeedbackCategory, NamedGeneric['category']):
         .. image:: /_static/stream/feedback-unrolling.svg
             :align: center
         """
-        return self.feed_back(*self.split_memory(n, left, dom, cod, mem))
+        return self.feed_back(*self.split_memory(
+            n, left, dom=dom, cod=cod, mem=mem))
 
     def feed_back(
             self, dom: Ty, cod: Ty, mem: Ty, is_first: bool = True) -> Stream:
@@ -642,7 +643,7 @@ class Stream(FeedbackCategory, NamedGeneric['category']):
 
         Parameters:
             dom (Ty) : The domain of the result.
-            cod (Ty) : The domain of the result.
+            cod (Ty) : The codomain of the result.
             mem (Ty) : The memory over which we are taking a feedback.
             is_first : Whether this is the first time step.
         """

@@ -16,6 +16,8 @@ Summary
     :toctree:
 
     Wire
+    HeadOb
+    TailOb
     Ty
     Dim
     Diagram
@@ -25,6 +27,11 @@ Summary
     Swap
     Spider
     Bubble
+    Feedback
+    Trace
+    FollowedBy
+    Head
+    Tail
     Functor
     CMap
 
@@ -296,6 +303,14 @@ class Spider(Box):
             state["_name"] = type(self).__name__\
                 + f"({dom.n}, {cod.n}, {state['_typ']}{str_data})"
         super().__setstate__(state)
+
+    def __getnewargs__(self):
+        """ The arguments of the constructor, which a pickle and a delay read.
+
+        >>> x = Ty('x')
+        >>> assert Spider(1, 2, x, .5).delay() == Spider(1, 2, x.delay(), .5)
+        """
+        return len(self.dom), len(self.cod), self.typ, self.phase
 
     @property
     def phase(self):

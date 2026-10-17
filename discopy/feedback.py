@@ -40,6 +40,16 @@ Summary
     Sum
     Functor
 
+.. admonition:: Functions
+
+    .. autosummary::
+        :template: function.rst
+        :nosignatures:
+        :toctree:
+
+        generators
+        wire_generators
+
 Axioms
 ------
 A feedback category is a monoidal category with a monoidal endofunctor
@@ -539,7 +549,8 @@ class Diagram(monoidal.Diagram, TracedCategory):
         >>> assert fb == f.feedback(mem=y).feedback(mem=x) == f.feedback(2)
         >>> assert (fb.dom, fb.cod) == (x, x)
         """
-        dom, cod, mem = self.split_memory(n, left, dom, cod, mem)
+        dom, cod, mem = self.split_memory(
+            n, left, dom=dom, cod=cod, mem=mem)
         size = len(mem)
         fed = self.dom[:size] if left else self.dom[len(self.dom) - size:]
         if size == 0:
@@ -580,7 +591,8 @@ class Diagram(monoidal.Diagram, TracedCategory):
 
         .. image:: /_static/traced/trace.svg
         """
-        dom, cod, mem = self.split_memory(n, left, dom, cod, mem)
+        dom, cod, mem = self.split_memory(
+            n, left, dom=dom, cod=cod, mem=mem)
         fed = self.dom[:len(mem)] if left\
             else self.dom[len(self.dom) - len(mem):]
         if fed != mem:
@@ -658,10 +670,11 @@ class Box(monoidal.Box, Diagram):
         Parameters:
             n_steps : The number of time steps to delay.
         """
-        if hasattr(self, "__getnewargs__"):
+        arguments = getattr(self, "__getnewargs__", None)
+        if arguments is not None:
             return type(self)(*(
                 x.delay(n_steps) if isinstance(x, Ty) else x
-                for x in self.__getnewargs__()))
+                for x in arguments()))
         dom, cod = self.dom.delay(n_steps), self.cod.delay(n_steps)
         time_step = self.time_step + n_steps
         return type(self)(
@@ -740,7 +753,8 @@ class Feedback(Box, monoidal.Bubble):
     """
     def __init__(self, arg: Diagram, dom=None, cod=None, mem=None, left=False):
         assert_isinstance(arg, self.ar)
-        dom, cod, mem = arg.split_memory(None, left, dom, cod, mem)
+        dom, cod, mem = arg.split_memory(
+            left=left, dom=dom, cod=cod, mem=mem)
         fed = self.fed_back(mem)
         expected = (fed @ dom, mem @ cod) if left else (dom @ fed, cod @ mem)
         if (arg.dom, arg.cod) != expected:
@@ -840,12 +854,18 @@ class Head(monoidal.Bubble, Box):
     """
     The head of a feedback diagram, interpreted as the first element followed
     by the identity stream on the empty type.
+
+    Parameters:
+        arg : The diagram to take the head of.
+        time_step : The number of times the head has been delayed.
     """
-    def __init__(self, arg: Diagram, time_step=0, _attr="head"):
+    part = "head"
+
+    def __init__(self, arg: Diagram, time_step=0):
         dom, cod = (
-            getattr(x, _attr).delay(time_step) for x in [arg.dom, arg.cod])
+            getattr(x, self.part).delay(time_step) for x in [arg.dom, arg.cod])
         monoidal.Bubble.__init__(self, arg, dom=dom, cod=cod)
-        Box.__init__(self, f"({arg}).{_attr}", self.dom, self.cod,
+        Box.__init__(self, f"({arg}).{self.part}", self.dom, self.cod,
                      time_step=time_step)
 
     delay, reset, __repr__ = HeadOb.delay, HeadOb.reset, HeadOb.__repr__
@@ -857,10 +877,14 @@ class Tail(monoidal.Bubble, Box):
     """
     The tail of a feedback diagram, interpreted as the stream starting from the
     second time step with the identity on the empty type at the first step.
-    """
-    def __init__(self, arg: Diagram, time_step=0):
-        Head.__init__(self, arg, time_step, _attr="tail")
 
+    Parameters:
+        arg : The diagram to take the tail of.
+        time_step : The number of times the tail has been delayed.
+    """
+    part = "tail"
+
+    __init__ = Head.__init__
     delay, reset, __repr__ = HeadOb.delay, HeadOb.reset, HeadOb.__repr__
     to_tree, from_tree = HeadOb.to_tree, classmethod(HeadOb.from_tree.__func__)
     __str__ = Box.__str__
@@ -1064,7 +1088,8 @@ def subclass(name: str, bases: list[type], module: str, doc: str) -> type:
         "__module__": module, "__qualname__": name, "__doc__": doc})
 
 
-def generators(diagram: type, box: type) -> tuple[type, ...]:
+def generators(
+        diagram: type, box: type) -> tuple[type, type, type, type, type]:
     """
     The :class:`Feedback`, :class:`Trace`, :class:`FollowedBy`, :class:`Head`
     and :class:`Tail` of a level of the hierarchy, generated rather than
@@ -1097,7 +1122,8 @@ def generators(diagram: type, box: type) -> tuple[type, ...]:
     for name, (attr, _) in GENERATORS.items():
         if name != "Trace" or isinstance(diagram.trace_factory, type):
             setattr(diagram, attr, result[name])
-    return tuple(result.values())
+    return (result["Feedback"], result["Trace"], result["FollowedBy"],
+            result["Head"], result["Tail"])
 
 
 def wire_generators(wire: type) -> tuple[type, type]:

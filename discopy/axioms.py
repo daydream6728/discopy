@@ -714,8 +714,9 @@ class Loop(Testable, NamedGeneric["factory"], tuple):
             """ Draw ``x, y, m, n``, then the morphisms they type. """
             x, y, m, n = (draw(objects) for _ in range(4))
             delayed = factory.id(m @ n).delay().dom
-            arrow = lambda **boundary: draw(
-                factory.strategy(**{**params, **boundary}))
+
+            def arrow(**boundary):
+                return draw(factory.strategy(**{**params, **boundary}))
             return cls(
                 x, y, m, n, arrow(dom=x @ delayed, cod=y @ m @ n),
                 arrow(cod=x), arrow(dom=y), arrow(dom=m @ n, cod=m @ n),
