@@ -286,10 +286,10 @@ class Spider(Box):
         return self.data
 
     def __repr__(self):
-        phase_repr = "" if self.phase is None \
-            else f", phase={repr(self.phase)}"
-        return factory_name(type(self)) + \
-            f"({len(self.dom)}, {len(self.cod)}, {repr(self.typ)}{phase_repr})"
+        phase = "" if self.phase is None else f", {repr(self.phase)}"
+        is_dagger = ", is_dagger=True" if self.is_dagger else ""
+        return factory_name(type(self)) + f"({len(self.dom)}, {len(self.cod)}"\
+            f", {repr(self.typ)}{phase}{is_dagger})"
 
     def dagger(self):
         phase = None if self.phase is None else -self.phase

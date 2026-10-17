@@ -92,6 +92,16 @@ def test_Spider_to_tree():
         assert loads(dumps(spider)).is_dagger == spider.is_dagger
 
 
+def test_Spider_repr():
+    from discopy import frobenius
+    x = Ty('x')
+    assert repr(Spider(1, 2, x, 0.5))\
+        == "frobenius.Spider(1, 2, frobenius.Ty(frobenius.Wire('x')), 0.5)"
+    for spider in (Spider(1, 2, x, 0.5), Spider(2, 0, x, is_dagger=True),
+                   Spider(0, 1, x, 0.25, is_dagger=True)):
+        assert eval(repr(spider)) == spider
+
+
 def test_Wire_adjoints():
     from discopy.monoidal import Colour
     a, b = Colour('a'), Colour('b')
