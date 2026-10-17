@@ -41,6 +41,14 @@ def test_Dim():
     assert loads(dumps(dim)) == dim and loads(dumps(Dim())) == Dim() == Dim(1)
 
 
+def test_Dim_unwind():
+    f = Box('f', Dim(2), Dim(2), [1, 0, 0, 1])
+    assert Dim(2).unwind() == Dim(2)
+    assert f.to_hypergraph().to_diagram() == f
+    assert (f @ f).foliation().inside == (Diagram.layer_factory(f, f), )
+    assert (f >> f).simplify() == f >> f
+
+
 def test_Tensor():
     assert Tensor([1], Dim(1), Dim(1))
     m = Tensor([0, 1, 1, 0], Dim(2), Dim(2))

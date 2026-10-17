@@ -873,8 +873,7 @@ class FollowedBy(Box):
             + f"({repr(self.arg)}{is_dagger}{time_step})"
 
     def delay(self, n_steps=1):
-        arg = self.dom if self.is_dagger else self.cod
-        return type(self)(arg, self.is_dagger, self.time_step + n_steps)
+        return type(self)(self.arg, self.is_dagger, self.time_step + n_steps)
 
     def reset(self):
         return type(self)(self.arg, self.is_dagger)

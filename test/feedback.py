@@ -211,3 +211,13 @@ def test_time_stepped_wires_below_feedback():
     assert isinstance(g.feedback(), pivotal.Feedback)
     assert g.delay().time_step == 1
     assert frobenius.Ty('z').delay().r == frobenius.Ty('z').r.delay()
+
+
+def test_FollowedBy_delay():
+    x = Ty('x')
+    for is_dagger in (False, True):
+        fby = FollowedBy(x, is_dagger)
+        assert fby.delay().delay() == fby.delay(2)\
+            == FollowedBy(x, is_dagger, time_step=2)
+        assert fby.delay(2).dom == fby.dom.delay(2)
+        assert fby.delay(2).cod == fby.cod.delay(2)

@@ -1033,6 +1033,39 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
+- `frobenius.Dim.unwind`, and so `tensor.Dim.unwind`, is the identity, like
+  its `l` and `r` and like `rigid.Nat.unwind`: it inherited
+  `rigid.Ty.unwind`, which asks the atom of a type for its winding, and the
+  atoms of a dimension are integers, so `Hypergraph.__init__` raised
+  `AttributeError` on any tensor diagram and nothing going through
+  `to_hypergraph` worked on one, neither `foliation`, `simplify` nor
+  `frobenius.Equation`, where `to_map` and `eval` did
+  ([rel-int/discopy-next#104](https://github.com/rel-int/discopy-next/issues/104)).
+- `feedback.FollowedBy.delay` delays the type at time zero, which `reset`
+  and `__repr__` read: it rebuilt the box from its codomain, or its domain
+  when daggered, a type already delayed `time_step` times, so a second delay
+  delayed it twice and `FollowedBy(x).delay().delay()` was an endomorphism
+  of `x.d.d.d` rather than `FollowedBy(x).delay(2)`
+  ([rel-int/discopy-next#105](https://github.com/rel-int/discopy-next/issues/105)).
+- `Hypergraph.make_bijective` inserts the box of a spider after every state
+  with an offset, where it inserted it right after its last producer,
+  before the states that came after that producer in the diagram: their
+  offsets were read in a scan the spider box had grown or shrunk, so
+  `f @ g >> Copy(x) @ x >> h @ x @ x` decoded with a permutation it does
+  not have, `f @ g >> Discard(x) @ x` as `f >> Copy(x, 0) >> g` and
+  `f @ g @ s >> Merge(x) @ x` with `s` after the merge, the last two only
+  because the decoder clamped the stale offset. The box goes right after
+  its last producer, or at its first consumer when it has none, as before,
+  unless a state with an offset comes later, then right after the last such
+  state, but never past its first consumer. A state with an offset comes
+  before every box of the diagram that became wiring, and the first
+  consumer of a spider reads a wire out of one, so in the hypergraph of a
+  diagram that depth lies between the producers and the consumers; in one
+  composed of several with `then`, the cap keeps a box from going past its
+  consumers, which would need traces. A diagram whose hypergraph records no
+  offset, e.g. one built with `from_callable`, decodes as before. The clamp
+  stays for a hint past the end of the scan, e.g. one given by hand
+  ([rel-int/discopy-next#106](https://github.com/rel-int/discopy-next/issues/106)).
 - `feedback.HeadOb`, `TailOb`, `Head`, `Tail` and `FollowedBy` read back
   from their tree. The two objects inherited `Wire.from_tree`, which
   rebuilds a wire from its name; `Head` and `Tail` inherited
