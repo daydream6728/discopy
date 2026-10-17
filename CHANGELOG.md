@@ -1687,6 +1687,10 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Project
 
+- `fail-under` rises from 8.83 to 8.84, by what `discopy.comarkov` lifts
+  the score: 9.0310 on `main` and 9.0481 with it, both read with
+  `--output-format=json2`
+  ([rel-int/discopy-next#94](https://github.com/rel-int/discopy-next/issues/94)).
 - `fail-under` rises from 8.82 to 8.83, by what `discopy.kleisli.token`
   lifts the score: 9.0105 on `main` and 9.0266 with it, both read with
   `--output-format=json2`
