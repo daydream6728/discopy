@@ -102,6 +102,22 @@ class Diagram(symmetric.Diagram, MarkovCategory):
     ...     doctest="docs/_static/markov/copy_and_apply.svg")
 
     .. image:: /_static/markov/copy_and_apply.svg
+
+    Note
+    ----
+    A Markov diagram is a feedback diagram whose wires carry a time step, so
+    that it is the syntax of streams, see :mod:`discopy.stream`.
+
+    >>> x = Ty('x')
+    >>> zero = Box('0', Ty(), x.head)
+    >>> rand = Box('rand', Ty(), x)
+    >>> plus = Box('+', x @ x, x)
+    >>> walk = (rand.delay() @ x.delay() >> zero @ plus.delay()
+    ...         >> FollowedBy(x) >> Copy(x)).feedback()
+    >>> walk.draw(doctest="docs/_static/feedback/feedback-random-walk.svg")
+
+    .. image:: /_static/feedback/feedback-random-walk.svg
+        :align: center
     """
     copy_factory: ClassVar[type["Copy"]]
     discard_factory: ClassVar[type["Discard"]]

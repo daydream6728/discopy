@@ -75,6 +75,7 @@ class Wire(feedback.Wire, rigid.Wire):
 
     Example
     -------
+    >>> from discopy import pivotal
     >>> x = Wire('x', time_step=2)
     >>> assert x.l == x.r == Wire('x', 1, time_step=2) and x.l.l == x
     >>> assert eval(repr(x.l)) == x.l and str(x.l) == 'x.r.d.d'

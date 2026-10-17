@@ -648,13 +648,14 @@ class Drawing(TracedCategory, RichDisplay):
         from discopy.symmetric import Permutation
         box_dom, box_cod = box.dom.to_drawing(), box.cod.to_drawing()
         old_box = box
-        box = Permutation(box_dom, old_box.perm)\
+        box = Permutation(
+            Permutation.ob(*(x.name for x in box_dom.inside)), old_box.perm)\
             if isinstance(old_box, Permutation)\
             else Box(
                 old_box.name, box_dom, box_cod,
                 is_dagger=old_box.is_dagger)
         if isinstance(old_box, Permutation):
-            box.cod = box_cod
+            box.dom, box.cod = box_dom, box_cod
             for i, obj in enumerate(box.cod.inside):
                 if old_box.perm[i] == i:
                     obj.skip_label = True

@@ -243,7 +243,7 @@ from copy import copy
 from typing import ClassVar
 
 from discopy import monoidal, cmap, hypergraph, messages
-from discopy.abc import FeedbackCategory
+from discopy.abc import FeedbackCategory, TracedCategory
 from discopy.monoidal import (  # noqa: F401  pylint: disable=unused-import
     Equation)
 from discopy.utils import (
@@ -271,6 +271,7 @@ class Wire(monoidal.Wire):
 
     Example
     -------
+    >>> from discopy import feedback
     >>> x = Wire('x')
     >>> assert x.delay().time_step == 1 and x.delay().reset() == x
     >>> assert eval(repr(x.delay(2))) == x.delay(2)
@@ -683,6 +684,7 @@ class Feedback(Box, monoidal.Bubble):
     .. image:: /_static/feedback/feedback-bubble.svg
         :align: center
 
+    >>> from discopy import feedback
     >>> assert str(fb) == "Feedback(f)" and eval(repr(fb)) == fb
     """
     def __init__(self, arg: Diagram, dom=None, cod=None, mem=None, left=False):
@@ -758,6 +760,7 @@ class Trace(Feedback):
 
     Example
     -------
+    >>> from discopy import feedback
     >>> x = Ty('x')
     >>> trace = Box('f', x @ x, x @ x).trace()
     >>> assert eval(repr(trace)) == trace
@@ -901,8 +904,7 @@ class Sum(monoidal.Sum, Box):
 class Functor(monoidal.Functor):
     """
     A feedback functor is a monoidal functor that preserves delay, feedback
-    and traces: the delay of a wire or a box is mapped to the delay of its
-    image, which is the image itself when the codomain has no delay.
+    and traces.
 
     Parameters:
         ob_map (Mapping[monoidal.Ty, monoidal.Ty]) :
@@ -952,10 +954,12 @@ class Functor(monoidal.Functor):
             n = len(self(other.arg.dom)) - len(self(other.dom))
             return self.cod.trace(self(other.arg), n, left=other.left)
         if isinstance(other, (Wire, Box)) and other.time_step:
-            result = self(other.reset())
-            for _ in range(other.time_step):
-                result = result.delay() if hasattr(result, "delay") else result
-            return result
+            cod = self.cod.ob if isinstance(other, Wire) else self.cod.ar
+            if hasattr(cod, "delay") and not issubclass(cod, TracedCategory):
+                result = self(other.reset())
+                for _ in range(other.time_step):
+                    result = result.delay()
+                return result
         if isinstance(other, (HeadOb, TailOb, Head, Tail)):
             cod = self.cod if isinstance(
                 other, (Head, Tail)) else self.cod.ob
