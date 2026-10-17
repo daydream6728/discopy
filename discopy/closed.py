@@ -283,6 +283,8 @@ class Diagram(markov.Diagram, biclosed.Diagram, ClosedCategory):
 
     @classmethod
     def ev(cls, base: Ty, exponent: Ty, left: bool = True):
+        if not exponent:
+            return cls.id(base)
         return cls.eval_factory(exponent >> base, left=left)
 
     def to_compact(self) -> Diagram:

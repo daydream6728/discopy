@@ -51,3 +51,4 @@ MISSING_BOXES_AND_OFFSETS = (
 NO_TYPE_PARAMETER = (
     "{} has no type parameter to subscript, declare one as in "
     "class C(NamedGeneric['name']).")
+CURRY_HAS_NO_DAGGER = "A curry has no dagger."

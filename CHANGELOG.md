@@ -928,6 +928,14 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
+- An exponential of the unit is its base, `x << Ty()`, `Ty() >> x` and
+  `x ** Ty()` being `x` on biclosed and closed types, so that `curry(0)` is
+  the identity and the evaluation at the unit is too: a curry of no wire
+  was a box into `Ty() << Ty()`, which `to_map` crashed on. A curry
+  refuses its dagger with an `AxiomError`, where it crashed calling its
+  constructor with the arguments of a box, and `biclosed.Curry.to_drawing`
+  traces the `n` wires it curries, where it traced one whatever `n` was
+  ([rel-int/discopy-next#1](https://github.com/rel-int/discopy-next/pull/1)).
 - A binary term or type raising of a categorial grammar evaluates with a
   functor passed positionally, as the terms around it pass it, where
   `FX(FC(a, b), r).eval()` raised `TypeError`; the categorial grammar has a

@@ -137,13 +137,20 @@ class Ty(monoidal.Ty):
             else monoidal.Ty.__pow__(self, other)
 
     def exp(self, other: Ty) -> Ty:
-        return self.ar(self.exp_factory(self, other))
+        """
+        The exponential of a type, which is the type itself when the
+        exponent is the unit, as is any exponential of the unit.
+
+        >>> x = Ty('x')
+        >>> assert x ** Ty() == x << Ty() == Ty() >> x == x
+        """
+        return self.ar(self.exp_factory(self, other)) if other else self
 
     def over(self, other: Ty) -> Ty:
-        return self.ar(self.over_factory(self, other))
+        return self.ar(self.over_factory(self, other)) if other else self
 
     def under(self, other: Ty) -> Ty:
-        return self.ar(self.under_factory(self, other))
+        return self.ar(self.under_factory(self, other)) if other else self
 
     def __lshift__(self, other):
         return self.over(other)
@@ -348,8 +355,14 @@ class Diagram(monoidal.Diagram, BiclosedCategory):
             n : The number of atomic types to curry.
             left : Whether to curry on the left, i.e. into :class:`Over`,
                 or on the right, i.e. into :class:`Under`.
+
+        Currying no type is the identity, as an exponential of the unit is
+        its base.
+
+        >>> f = Box('f', Ty('x'), Ty('y'))
+        >>> assert f.curry(0) == f
         """
-        return self.curry_factory(self, n, left)
+        return self.curry_factory(self, n, left) if n else self
 
     @classmethod
     def ev(cls, base: Ty, exponent: Ty, left=True) -> Eval:
@@ -361,7 +374,11 @@ class Diagram(monoidal.Diagram, BiclosedCategory):
             exponent : The exponent of the exponential type to evaluate.
             left : Whether to evaluate on the left, i.e. from :class:`Over`,
                 or on the right, i.e. from :class:`Under`.
+
+        The evaluation at the unit is the identity.
         """
+        if not exponent:
+            return cls.id(base)
         return cls.eval_factory(
             base << exponent if left else exponent >> base)
 
@@ -508,11 +525,21 @@ class Curry(monoidal.Bubble, Box):
         return self.name
 
     def to_drawing(self):
-        if self.left:
-            f, e = self.arg, self.coeval_factory(self.cod, left=True)
-            return (f >> e).to_drawing().trace()
-        f, e = self.arg, self.coeval_factory(self.cod)
-        return (f >> e).to_drawing().trace(left=True)
+        f, e = self.arg, self.coeval_factory(self.cod, left=self.left)
+        return (f >> e).to_drawing().trace(self.n, left=not self.left)
+
+    def dagger(self):
+        """
+        A curry has no dagger, which would uncurry an exponential in the
+        domain of a diagram.
+
+        >>> x = Ty('x')
+        >>> Box('f', x @ x, x).curry().dagger()
+        Traceback (most recent call last):
+        ...
+        discopy.utils.AxiomError: A curry has no dagger.
+        """
+        raise AxiomError(messages.CURRY_HAS_NO_DAGGER)
 
 
 class Sum(monoidal.Sum, Box):
