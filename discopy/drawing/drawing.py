@@ -282,7 +282,17 @@ class Drawing(TracedCategory, RichDisplay):
     positions = property(lambda self: self.inside.positions)
 
     def nodes_of_kind(self, kind):
-        return [node for node in self.nodes if node.kind == kind]
+        """
+        The nodes of a kind, sorted by their :attr:`Node.index`: the order the
+        graph happens to store them in is no part of the drawing.
+
+        >>> from discopy.monoidal import Box
+        >>> f, g = Box('f', 'x', 'y'), Box('g', 'y', 'z')
+        >>> drawing = (f >> g).to_drawing()
+        >>> assert drawing.dagger().dagger() == drawing
+        """
+        return sorted((node for node in self.nodes if node.kind == kind),
+                      key=lambda node: node.index)
 
     box_nodes = property(lambda self: self.nodes_of_kind("box"))
     dom_nodes = property(lambda self: self.nodes_of_kind("dom"))
@@ -327,8 +337,10 @@ class Drawing(TracedCategory, RichDisplay):
                 Node(f"box_{kind}", i=i, j=j, x=x)
                 for i, x in enumerate(xs)] for kind, xs in [
                     ("dom", box.dom), ("cod", box.cod)])
-            assert list(self.graph.predecessors(box_node)) == box_dom_nodes
-            assert list(self.graph.successors(box_node)) == box_cod_nodes
+            assert sorted(self.graph.predecessors(box_node),
+                          key=lambda node: node.index) == box_dom_nodes
+            assert sorted(self.graph.successors(box_node),
+                          key=lambda node: node.index) == box_cod_nodes
         for source, target in self.edges:
             if source.kind == "box":
                 assert target.kind == "box_cod"
@@ -341,11 +353,13 @@ class Drawing(TracedCategory, RichDisplay):
 
         assert self.height >= (1 if self.boxes else 0)
         assert self.width >= (1 if self.boxes else 0)
-        assert self.width >= max(x for (x, _) in self.positions.values())
-        assert self.height >= max(y for (_, y) in self.positions.values())
+        assert self.width >= max(
+            (x for (x, _) in self.positions.values()), default=0)
+        assert self.height >= max(
+            (y for (_, y) in self.positions.values()), default=0)
 
         assert set(self.positions.keys()) == set(self.nodes) == set(
-            self.dom_nodes + self.cod_nodes) + set(
+            self.dom_nodes + self.cod_nodes) | set(
                 self.box_dom_nodes + self.box_nodes + self.box_cod_nodes)
         assert all(isinstance(x, Point) for x in self.positions.values())
 

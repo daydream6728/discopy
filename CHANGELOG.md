@@ -928,6 +928,12 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
+- `Drawing.dagger` reflects a drawing of more than one box: a drawing read
+  its nodes in the order its graph stored them, which the relabelling of a
+  reflection reversed, so its validation failed. The nodes of a kind are
+  sorted by the new `Node.index`, and validating an empty drawing no longer
+  takes the maximum of no position
+  ([rel-int/discopy-next#1](https://github.com/rel-int/discopy-next/pull/1)).
 - An exponential of the unit is its base, `x << Ty()`, `Ty() >> x` and
   `x ** Ty()` being `x` on biclosed and closed types, so that `curry(0)` is
   the identity and the evaluation at the unit is too: a curry of no wire
