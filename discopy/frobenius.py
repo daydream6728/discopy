@@ -61,6 +61,8 @@ Speciality
 from __future__ import annotations
 
 from collections.abc import Callable
+from copy import copy
+from typing import Self
 
 from discopy import (
     monoidal, rigid, markov, compact, pivotal, cmap, hypergraph)
@@ -72,12 +74,26 @@ from discopy.utils import (
 
 class Wire(pivotal.Wire):
     """
-    A frobenius object is a self-dual pivotal object.
+    A frobenius object is a self-dual pivotal object: its adjoints are the
+    object itself the other way round, from its codomain to its domain.
 
     Parameters:
         name : The name of the object.
+
+    >>> from discopy.monoidal import Colour
+    >>> x = Wire('x', dom=Colour('a'), cod=Colour('b'))
+    >>> assert x.l == x.r and (x.l.dom, x.l.cod) == (x.cod, x.dom)
+    >>> assert x.l.l == x and Wire('y').l == Wire('y')
     """
-    l = r = property(lambda self: self)
+    @property
+    def l(self) -> Self:
+        """ The object the other way round, from its codomain to its domain.
+        """
+        result = copy(self)
+        result.dom, result.cod = self.cod, self.dom
+        return result
+
+    r = l
 
 
 @factory

@@ -88,3 +88,14 @@ def test_Spider_to_tree():
     for spider in (Spider(1, 2, x), Spider(2, 0, x, 0.5), Spider(0, 3, x).l):
         assert loads(dumps(spider)) == spider
         assert loads(dumps(spider)).phase == spider.phase
+
+
+def test_Wire_adjoints():
+    from discopy.monoidal import Colour
+    a, b = Colour('a'), Colour('b')
+    x = Wire('x', dom=a, cod=b)
+    for adjoint in (x.l, x.r):
+        assert (adjoint.name, adjoint.dom, adjoint.cod) == ('x', b, a)
+        assert adjoint.l == adjoint.r == x
+    assert Ty(x).l == Ty(x).r == Ty(x.l) and Ty(x).l.dom == b
+    assert Wire('y').l == Wire('y').r == Wire('y')
