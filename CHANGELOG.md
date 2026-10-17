@@ -928,6 +928,14 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
+- `Diagram.foliation` is idempotent. A diagram records the offsets of its
+  states whenever it has one, where it did only when each layer held one
+  box, so a foliated diagram with several states in a layer refoliated
+  differently; and the foliation read off a hypergraph merges its layers,
+  so consecutive permutations compose into one. `rigid.Diagram.snake_removal`
+  loses a guard on an attribute no layer has, which raised a message that
+  did not exist
+  ([rel-int/discopy-next#1](https://github.com/rel-int/discopy-next/pull/1)).
 - `Matrix.copy(x, n)` is the diagonal of the direct sum, `n` identities
   side by side, i.e. `array[i, j]` iff `j % x == i`, where it was the
   Kronecker diagonal, the copy of the tensor product: under the direct sum

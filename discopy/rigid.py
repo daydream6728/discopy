@@ -153,7 +153,7 @@ from collections.abc import Callable
 
 from typing import ClassVar, Iterator
 
-from discopy import cat, monoidal, biclosed, messages
+from discopy import cat, monoidal, biclosed
 from discopy.abc import Pregroup, RigidCategory
 from discopy.cat import factory
 from discopy.utils import (
@@ -515,9 +515,6 @@ class Diagram(biclosed.Diagram, RigidCategory):
         """
         from discopy import monoidal
         from discopy.rigid import Cup, Cap
-
-        if getattr(self, "has_nonidentity_permutation", False):
-            raise NotImplementedError(messages.PERMUTATION_HAS_NO_OFFSET)
 
         def follow_wire(diagram, i, j):
             """

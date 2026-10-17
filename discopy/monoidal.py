@@ -1212,8 +1212,8 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
         >>> assert diagram.to_hypergraph().to_diagram() == diagram.foliation()
         """
         graph = hypergraph.Hypergraph[type(self).ar].from_diagram(self)
-        staircase = len(self.boxes) == len(self.inside)
-        if staircase and len(graph.boxes) == len(self.boxes):
+        has_states = any(not box.dom for box in self.boxes)
+        if has_states and len(graph.boxes) == len(self.boxes):
             offsets = tuple(
                 offset if not box.dom else None
                 for box, offset in zip(self.boxes, self.offsets))
@@ -1258,7 +1258,7 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
                 and graph.is_causal and graph.is_boundary_connected and all(
                     not isinstance(obj, abc.Pregroup) or obj.l == obj.r
                     for obj in graph.spider_types):
-            return graph.to_diagram()
+            return graph.to_diagram().merge_layers()
         return self.merge_layers()
 
     def merge_layers(self):
