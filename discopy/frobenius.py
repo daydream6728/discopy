@@ -303,12 +303,15 @@ class Spider(Box):
                 'typ': self.typ.to_tree()}
         if self.phase is not None:
             tree['phase'] = self.phase
+        if self.is_dagger:
+            tree['is_dagger'] = True
         return tree
 
     @classmethod
     def from_tree(cls, tree: dict) -> Spider:
         return cls(tree['n_legs_in'], tree['n_legs_out'],
-                   from_tree(tree['typ']), tree.get('phase', None))
+                   from_tree(tree['typ']), tree.get('phase', None),
+                   is_dagger='is_dagger' in tree)
 
     def rotate(self, left=False):
         del left

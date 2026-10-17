@@ -85,9 +85,11 @@ def test_Sum():
 def test_Spider_to_tree():
     from discopy.utils import dumps, loads
     x = Ty('x')
-    for spider in (Spider(1, 2, x), Spider(2, 0, x, 0.5), Spider(0, 3, x).l):
+    for spider in (Spider(1, 2, x), Spider(2, 0, x, 0.5), Spider(0, 3, x).l,
+                   Spider(1, 2, x, is_dagger=True)):
         assert loads(dumps(spider)) == spider
         assert loads(dumps(spider)).phase == spider.phase
+        assert loads(dumps(spider)).is_dagger == spider.is_dagger
 
 
 def test_Wire_adjoints():
