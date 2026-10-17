@@ -27,6 +27,15 @@ alternatives. Relating two wires of an existing diagram makes no sense over a
 symmetric category, where a wire has one consumer: what makes sense is that
 one subdiagram may replace another.
 
+The relation holds in every section, so a rewrite only adds sections when
+``rhs`` identifies no two positions of the boundary that the region keeps
+apart, see :meth:`EHypergraph.fits`. A wire passing through ``rhs`` from an
+input to an output where the region has none would relate that input and
+output in the sections that keep the region too, and the rewrite refuses it.
+Two positions the region identifies, e.g. a spider it reads twice, are
+identified in the section of ``rhs`` as well: the boundary is the pushout
+along which ``rhs`` is glued in place of the region.
+
 An e-hypergraph denotes the set of its **sections**: one for each choice of
 a side of every alternative, keeping every box but those on the sides not
 chosen, with the spiders of each class of ``~`` identified. The sections that
@@ -61,10 +70,21 @@ Summary
     :toctree:
 
     EHypergraph
+    Rewrites
+
+.. admonition:: Functions
+
+    .. autosummary::
+        :template: function.rst
+        :nosignatures:
+        :toctree:
+
+        partition
+        kernel
 """
 
 from itertools import product
-from typing import Self
+from typing import TYPE_CHECKING, Self
 
 from networkx import Graph
 from networkx.algorithms.isomorphism import is_isomorphic
@@ -72,7 +92,7 @@ from networkx.algorithms.isomorphism import is_isomorphic
 from discopy import compact, frobenius, markov, messages, symmetric
 from discopy.abc import MarkovCategory, MonoidalCategory
 from discopy.axioms import (
-    Count, Equation, Hom, Obj, Serialisable, Var, axiom)
+    Count, Equation, Hom, Obj, Serialisable, Testable, Var, axiom)
 from discopy.drawing import Node
 from discopy.hypergraph import Hypergraph, relabeling
 from discopy.monoidal import Ty
@@ -86,6 +106,9 @@ from discopy.utils import (
     resolve_factory,
     unbiased,
 )
+
+if TYPE_CHECKING:
+    from hypothesis import strategies as st
 
 
 def partition(n: int, pairs) -> tuple[int, ...]:
@@ -109,6 +132,62 @@ def partition(n: int, pairs) -> tuple[int, ...]:
         i, j = find(i), find(j)
         label[max(i, j)] = min(i, j)
     return tuple(map(find, range(n)))
+
+
+def kernel(labels: tuple) -> tuple[int, ...]:
+    """
+    The partition of the positions of a tuple that have the same label, as
+    the first position of each label, as in :func:`partition`.
+
+    >>> kernel((5, 3, 5))
+    (0, 1, 0)
+    """
+    return tuple(map(labels.index, labels))
+
+
+class Rewrites[factory](Testable, NamedGeneric, tuple):
+    """
+    Two e-hypergraphs ``(f, g)`` of the ``factory`` over one hypergraph, each
+    with rewrites of its own. A rewrite only adds sections, so the two relate
+    the spiders of their boundary alike and the whole of ``f`` fits the
+    boundary of ``g`` by construction, see :meth:`EHypergraph.fits`, as
+    composability does by construction of the premises of associativity.
+
+    Example
+    -------
+    >>> from hypothesis import find
+    >>> E = EHypergraph[symmetric.Diagram]
+    >>> f, g = find(Rewrites[E].strategy(), lambda pair: pair[1].alternatives)
+    >>> assert f.fits(f.graph.dom_wires, f.graph.cod_wires, g.extract())
+    """
+    def __new__(cls, pair):
+        pair = tuple(pair)
+        if len(pair) != 2:
+            raise ValueError("Expected two e-hypergraphs.")
+        return super().__new__(cls, pair)
+
+    @classmethod
+    def strategy(cls, max_rewrites: int = 2, **params
+                 ) -> "st.SearchStrategy[Rewrites]":
+        """
+        Generate a hypergraph, then two e-hypergraphs over it, see
+        :meth:`EHypergraph.rewrites`.
+
+        Parameters:
+            max_rewrites : The largest number of rewrites of each.
+            params : Passed to :meth:`Hypergraph.strategy`.
+        """
+        from hypothesis import strategies as st
+
+        factory = cls.factory
+
+        @st.composite
+        def pairs(draw):
+            graph = draw(Hypergraph[factory.category].strategy(**params))
+            return cls((draw(factory.rewrites(graph, max_rewrites)),
+                        draw(factory.rewrites(graph, max_rewrites))))
+
+        return pairs()
 
 
 class EHypergraph[category](
@@ -271,6 +350,39 @@ class EHypergraph[category](
             (tuple(offset + i for i in left), tuple(offset + i for i in right))
             for left, right in self.alternatives)
 
+    def fits(self, dom: tuple[int, ...], cod: tuple[int, ...],
+             rhs: Hypergraph) -> bool:
+        """
+        Whether a hypergraph fits a boundary: it has as many inputs and
+        outputs, and it identifies no two positions whose spiders are not
+        related, i.e. the :func:`kernel` of its boundary is contained in that
+        of the classes of the boundary, so that :meth:`rewrite` only adds
+        sections.
+
+        Parameters:
+            dom : The spiders of the inputs.
+            cod : The spiders of the outputs.
+            rhs : The hypergraph.
+
+        Example
+        -------
+        >>> from discopy.symmetric import Ty, Box
+        >>> x = Ty('x')
+        >>> graph = EHypergraph[symmetric.Diagram].from_diagram(Box('f', x, x))
+        >>> assert graph.fits((0, ), (1, ), Box('g', x, x).to_hypergraph())
+
+        The identity passes its input through to its output, which ``f``
+        does not, so it does not fit the boundary of ``f``:
+
+        >>> identity = symmetric.Id(x).to_hypergraph()
+        >>> assert not graph.fits((0, ), (1, ), identity)
+        """
+        labels = tuple(self.classes[s] for s in dom + cod)
+        return (len(dom), len(cod)) == (
+            len(rhs.dom_wires), len(rhs.cod_wires)) and all(
+                labels[p] == labels[q] for p, q in enumerate(
+                    kernel(rhs.dom_wires + rhs.cod_wires)))
+
     def rewrite(self, region: tuple[int, ...], dom: tuple[int, ...],
                 cod: tuple[int, ...], rhs: Hypergraph) -> Self:
         """
@@ -282,8 +394,14 @@ class EHypergraph[category](
             region : The boxes of the left-hand side.
             dom : The spiders the region reads, in the order of ``rhs.dom``.
             cod : The spiders the region writes, in the order of ``rhs.cod``.
-            rhs : The right-hand side.
+            rhs : The right-hand side, which must fit the boundary.
+
+        Raises:
+            AxiomError : When ``rhs`` does not fit the boundary, see
+                :meth:`fits`.
         """
+        if not self.fits(dom, cod, rhs):
+            raise AxiomError(messages.NO_FIT.format(rhs, dom, cod))
         n, m = self.graph.n_spiders, len(self.graph.boxes)
         shift = lambda wires: tuple(n + s for s in wires)
         dom_wires, box_wires, cod_wires = self.graph.wires
@@ -511,11 +629,41 @@ class EHypergraph[category](
             tree.get('alternatives', ()))
 
     @classmethod
+    def rewrites(cls, graph: Hypergraph, max_rewrites: int = 2):
+        """
+        Generate e-hypergraphs over a hypergraph: up to ``max_rewrites``
+        rewrites of one of its boxes into a hypergraph with the same
+        boundary, dropping those that do not fit it, see :meth:`fits`.
+
+        Parameters:
+            graph : The hypergraph.
+            max_rewrites : The largest number of rewrites.
+        """
+        from hypothesis import strategies as st
+
+        hypergraphs = Hypergraph[cls.category].strategy
+
+        @st.composite
+        def ehypergraphs(draw):
+            result = cls(graph)
+            for _ in range(draw(st.integers(0, max_rewrites))):
+                if not result.graph.boxes:
+                    break
+                i = draw(st.integers(0, len(result.graph.boxes) - 1))
+                box = result.graph.boxes[i]
+                src, tgt = result.graph.box_wires[i]
+                rhs = draw(hypergraphs(dom=box.dom, cod=box.cod, max_leaves=2))
+                if result.fits(src, tgt, rhs):
+                    result = result.rewrite((i, ), src, tgt, rhs)
+            return result
+
+        return ehypergraphs()
+
+    @classmethod
     def strategy(cls, max_rewrites: int = 2, **params):
         """
-        Generate e-hypergraphs: a hypergraph of the category, then up to
-        ``max_rewrites`` rewrites of one of its boxes into a hypergraph with
-        the same boundary.
+        Generate e-hypergraphs: a hypergraph of the category, then its
+        :meth:`rewrites`.
 
         Parameters:
             max_rewrites : The largest number of rewrites.
@@ -530,16 +678,8 @@ class EHypergraph[category](
 
         @st.composite
         def ehypergraphs(draw):
-            graph = cls(draw(hypergraphs(**params)))
-            for _ in range(draw(st.integers(0, max_rewrites))):
-                if not graph.graph.boxes:
-                    break
-                i = draw(st.integers(0, len(graph.graph.boxes) - 1))
-                box = graph.graph.boxes[i]
-                src, tgt = graph.graph.box_wires[i]
-                rhs = draw(hypergraphs(dom=box.dom, cod=box.cod, max_leaves=2))
-                graph = graph.rewrite((i, ), src, tgt, rhs)
-            return graph
+            graph = draw(hypergraphs(**params))
+            return draw(cls.rewrites(graph, max_rewrites))
 
         return ehypergraphs()
 
@@ -673,12 +813,15 @@ class EHypergraph[category](
             cls.cost(s) for s in graph.sections() if cls.is_valid(s)))
 
     @axiom
-    def extraction_rewrite[A: Obj[Ty], B: Obj[Ty]](
-            cls, f: Hom[Self, A, B], g: Hom[Self, A, B]) -> Equation[int]:
+    def extraction_rewrite(cls, pair: Rewrites[Self]) -> Equation[int]:
         """
         Rewriting the whole of ``f`` into the hypergraph of ``g`` costs the
-        cheaper of the two: a rewrite only adds sections.
+        cheaper of the two: a rewrite only adds sections. The two are over
+        one hypergraph, so that ``g`` fits the boundary of ``f``: a rewrite
+        of an ``f`` passing a wire through into a ``g`` passing another would
+        relate both wires in every section.
         """
+        f, g = pair
         whole = tuple(range(len(f.graph.boxes)))
         rewritten = f.rewrite(
             whole, f.graph.dom_wires, f.graph.cod_wires, g.extract())

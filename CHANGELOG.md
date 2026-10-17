@@ -17,9 +17,14 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   right-hand side, relates its domain and codomain to the boundary of the
   region and records the two as alternatives, so that over a symmetric
   category, where a wire has one consumer, an equation replaces a subdiagram
-  rather than relating two wires. `rebuild` closes the relation under
-  congruence, the later of two congruent boxes an alternative to the first,
-  everywhere but in a Markov category, whose boxes need not be
+  rather than relating two wires. The relation holds in every section, so
+  `rewrite` refuses a right-hand side that does not fit the boundary, see `fits`,
+  i.e. that identifies two of its positions the region keeps apart, e.g.
+  by passing a wire through where the region has none, which would relate
+  that input and output in the sections that keep the region too: a
+  rewrite only adds sections. `rebuild` closes the relation under
+  congruence, the later of two congruent boxes an alternative to the
+  first, everywhere but in a Markov category, whose boxes need not be
   deterministic. E-hypergraphs over a category form a monoidal category of
   their own, the relation carried along the pushout, and denote the set of
   their `sections`, one for each choice of a side of every alternative, with
@@ -30,7 +35,9 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   is a strict monoidal functor, that merging states an equivalence
   relation, that `rebuild` is a closure operator and a congruence, and that
   extraction is sound, valid, optimal, the identity with no alternative,
-  and the cheaper of the two sides of a rewrite. Congruence on a feedback
+  and the cheaper of the two sides of a rewrite, over the pairs of
+  e-hypergraphs on one hypergraph that `Rewrites` draws, so that one fits
+  the boundary of the other by construction. Congruence on a feedback
   loop is declared broken, being a least fixpoint. `hypergraph.relabeling`
   is how a hypergraph numbers its spiders, factored out of its constructor
   so that the relation follows them, and decoding a hypergraph that needs

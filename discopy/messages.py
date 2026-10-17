@@ -83,6 +83,11 @@ MISSING_BOXES_AND_OFFSETS = (
 NO_TYPE_PARAMETER = (
     "{} has no type parameter to subscript, declare one as in class C[name].")
 NO_SECTION = "{} has no section that is a hypergraph of its category."
+NO_FIT = (
+    "{} does not fit the boundary {} -> {}: it has another number of inputs "
+    "or outputs, or it identifies two positions that the region keeps apart, "
+    "e.g. with a wire passing through, which would relate them in every "
+    "section.")
 NOT_DETERMINISTIC = (
     "The boxes of a Markov category need not be deterministic, so two of "
     "them on related inputs need not have related outputs.")
