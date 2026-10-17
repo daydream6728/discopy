@@ -150,3 +150,12 @@ def test_Copy_pickle():
     x = Ty('x')
     for box in (Copy(x), Discard(x), Copy(x).delay(), Discard(x).delay()):
         assert loads(dumps(box)) == box
+
+
+def test_Head_Tail_FollowedBy_to_tree():
+    from discopy.utils import dumps, loads
+    x, y = Ty(Wire('x', is_constant=False)), Ty('y')
+    f = Box('f', x, y)
+    for term in (x.head, x.tail, x.head.delay(), f.head, f.tail, f.tail.delay(2),
+                 FollowedBy(x), FollowedBy(x, is_dagger=True).delay()):
+        assert loads(dumps(term)) == term

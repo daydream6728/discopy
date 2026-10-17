@@ -621,9 +621,17 @@ def test_tikz_bialgebra_law():
 
 @tikz_and_compare('bell-state.tikz', aspect='equal', use_tikzstyles=True)
 def test_tikz_bell_state():
-    from discopy.quantum import qubit, H, sqrt, Bra, Ket, CX
-    H.draw_as_spider, H.color, H.drawing_name = True, "yellow", ""
+    from discopy.quantum import qubit, H, sqrt, Bra, Ket, CX, QuantumGate
+    H = QuantumGate(H.name, H.dom, H.cod, H.data,
+                    draw_as_spider=True, color="yellow", drawing_name="")
     return sqrt(2) >> Ket(0, 0) >> H @ qubit >> CX >> Bra(0) @ qubit
+
+
+def test_tikz_bell_state_keeps_the_gate():
+    """ The test above restyles a copy of ``H``, not the gate itself. """
+    from discopy.quantum import H
+    for attr in ("draw_as_spider", "color", "drawing_name"):
+        assert not hasattr(H, attr)
 
 
 @tikz_and_compare('crack-eggs.tikz')
