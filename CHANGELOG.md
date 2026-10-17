@@ -548,6 +548,12 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Changed
 
+- A class subscripted with a DisCoPy class is named by its `factory_name`,
+  e.g. `hypergraph.Hypergraph[frobenius.Diagram]` rather than
+  `Hypergraph[Diagram]`, since every level of the hierarchy has a `Diagram`
+  of its own; a parameter that is not a class, e.g. the algebra of a
+  `hopf.Representation`, is named as before
+  ([rel-int/discopy-next#1](https://github.com/rel-int/discopy-next/pull/1)).
 - `Hypergraph.to_diagram` and `CMap.to_diagram` route the wires of each
   box with one permutation rather than a staircase of swaps: the domain
   wires of the box are gathered at its offset, the other wires keeping

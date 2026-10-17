@@ -168,6 +168,13 @@ class NamedGeneric(Generic[TypeVar('T')]):
     ... class C(Category, NamedGeneric["dtype"]):
     ...     pass
     >>> assert C[int].factory is C[int] is C[int].ar
+
+    A DisCoPy class is named by its module, since every level of the
+    hierarchy has a ``Diagram`` of its own:
+
+    >>> from discopy import frobenius
+    >>> frobenius.Hypergraph.__name__
+    'Hypergraph[frobenius.Diagram]'
     """
     _cache = dict()
 
@@ -209,7 +216,9 @@ class NamedGeneric(Generic[TypeVar('T')]):
                             return func, args, data
 
                     C.__module__ = origin.__module__
-                    names = [getattr(v, "__name__", str(v)) for v in values]
+                    names = [
+                        factory_name(v) if is_discopy_class(v)
+                        else getattr(v, "__name__", str(v)) for v in values]
                     C.__name__ = C.__qualname__ = origin.__name__\
                         + f"[{', '.join(names)}]"
                     C.__origin__ = cls
@@ -288,6 +297,21 @@ def deprecated_alias(module_name: str, aliases: dict[str, str]):
         raise AttributeError(
             f"module {module_name!r} has no attribute {name!r}")
     return __getattr__
+
+
+def is_discopy_class(value) -> bool:
+    """
+    Whether a value is a class defined in DisCoPy, which
+    :class:`NamedGeneric` names by its :func:`factory_name`, e.g.
+    ``hypergraph.Hypergraph[frobenius.Diagram]``, since every level of the
+    hierarchy has a ``Diagram`` of its own.
+
+    >>> from discopy.frobenius import Diagram
+    >>> assert is_discopy_class(Diagram) and not is_discopy_class(int)
+    """
+    return isinstance(value, type) and (
+        value.__module__ == "discopy"
+        or value.__module__.startswith("discopy."))
 
 
 def factory_name(cls: type) -> str:

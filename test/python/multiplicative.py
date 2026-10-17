@@ -168,7 +168,8 @@ def test_Hypergraph_representation():
     assert f == g and hash(f) == hash(g)
     assert f != Hypergraph[Function](
         dom=Ty(int, int), cod=Ty(int), boxes=(), wires=((0, 1), (), (0, )))
-    assert repr(f).startswith("hypergraph.Hypergraph[Function](dom=")
+    assert repr(f).startswith(
+        "hypergraph.Hypergraph[python.multiplicative.Function](dom=")
 
 
 def test_Functor_wraps_callables():
