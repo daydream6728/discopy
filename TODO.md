@@ -25,8 +25,8 @@ which this branch is stacked on. Earlier in the same session it was agreed that 
       > Using coinduction would be awesome! I expect that the rebuild should work fine as an iterator so you
       > could unroll a feedback loop as many times as needed. Not sure if it makes sense to use coinduction to
       > "prove" anything about Python though?
-- [ ] Matching: find the regions a left-hand side occurs at, for `rewrite` to apply a rule
-- [ ] A fast extraction, checked against the brute-force one by `extraction_optimality`
+- [WIP] @session_01MY1Vs5CEhXgYwJcDnNwx6i-2026-10-17 14:35 Matching: find the regions a left-hand side occurs at, for `rewrite` to apply a rule
+- [WIP] @session_01MY1Vs5CEhXgYwJcDnNwx6i-2026-10-17 14:35 A fast extraction, checked against the brute-force one by `extraction_optimality`
 - [x] Mark the maps the trace is uniform along. @toumix, verbatim:
       > can we add an extra boolean attribute "strict" which characterises for which maps the uniform axiom holds?
       `is_strict` on traced diagrams and `trace_uniformity` along copy, declared failing on the free
@@ -38,7 +38,21 @@ which this branch is stacked on. Earlier in the same session it was agreed that 
 
       `markov.Square[C]` draws commuting squares by construction; `trace_uniformity_written` holds on
       every free traced Markov category but the hypergraph ones, where no square is drawn
-- [ ] `extraction_rewrite` fails over symmetric categories when `f` has a wire passing through: rewriting
+- [WIP] @session_01MY1Vs5CEhXgYwJcDnNwx6i-2026-10-17 14:35 `extraction_rewrite` fails over symmetric categories when `f` has a wire passing through: rewriting
       all of `f` into `g` relates the boundaries so that an input of a section has no consumer, which a
       linear category cannot discard (found by the `dev` profile, `@reproduce_failure('6.164.0',
       b'AXicc2RyZECDjBgiQAgAay8FGA==')`)
+
+## Round 2
+
+> monoidal egraphs go brrr
+
+@toumix's prompt for the session that picked this pull request up from a handoff of the session that opened
+it, whose next steps are the boxes above and below. This round works on `claude/monoidal-egraphs-mrmxze`, a
+pull request into this branch, the session's assigned branch.
+
+- [WIP] @session_01MY1Vs5CEhXgYwJcDnNwx6i-2026-10-17 14:35 Fix [#91](https://github.com/rel-int/discopy-next/issues/91), the multiplicative trace
+      raising on any loop, then check `trace_uniformity` on `python.Function`
+- [ ] Propose the API of a coinductive `bisimulation` and ask the human to confirm it before building it
+- [ ] Ask the human what strictness should mean for a merge, which is strict but not natural along a copy
+
