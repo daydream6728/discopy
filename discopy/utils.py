@@ -277,28 +277,33 @@ def deprecated_alias(module_name: str, aliases: dict[str, str]):
 
     Parameters:
         module_name : The ``__name__`` of the module deprecating names.
-        aliases : A mapping from each deprecated name to its new name.
+        aliases : A mapping from each deprecated name to its new name, in
+            the same module, or to its new dotted path when it moved.
 
     Example
     -------
     >>> import warnings
-    >>> from discopy import rigid
+    >>> from discopy import rigid, markov, comarkov
     >>> with warnings.catch_warnings(record=True) as w:
     ...     warnings.simplefilter("always")
     ...     assert rigid.PRO is rigid.Nat
-    >>> print(w[-1].message)
+    ...     assert markov.Merge is comarkov.Merge
+    >>> print(w[0].message)
     discopy.rigid.PRO is deprecated, use discopy.rigid.Nat instead.
+    >>> print(w[1].message)
+    discopy.markov.Merge is deprecated, use discopy.comarkov.Merge instead.
     """
     def __getattr__(name):
         if name in aliases:
-            import sys
             import warnings
-            new_name = aliases[name]
+            from importlib import import_module
+            new_module, _, new_name = aliases[name].rpartition('.')
+            new_module = new_module or module_name
             warnings.warn(
                 f"{module_name}.{name} is deprecated, "
-                f"use {module_name}.{new_name} instead.",
+                f"use {new_module}.{new_name} instead.",
                 DeprecationWarning, stacklevel=2)
-            return getattr(sys.modules[module_name], new_name)
+            return getattr(import_module(new_module), new_name)
         raise AttributeError(
             f"module {module_name!r} has no attribute {name!r}")
     return __getattr__
