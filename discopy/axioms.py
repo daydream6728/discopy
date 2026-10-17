@@ -113,8 +113,8 @@ class Equation(NamedGeneric["ar"]):
     Parameters:
         terms : The terms of the equation.
         symbol : The symbol between each pair of terms, ``"="`` by default.
-        symbols : The symbols between each pair of terms, overriding
-            ``symbol``; ``len(terms) * (symbol, )`` by default.
+        symbols : The symbols between each pair of consecutive terms, one
+            fewer than the terms, overriding ``symbol``.
         up_to : The function up to which ``bool(equation)`` compares its
             terms, overriding the subclass' :attr:`up_to` if given.
 
@@ -134,8 +134,13 @@ class Equation(NamedGeneric["ar"]):
 
     def __init__(self, *terms, symbol="=", symbols=None, up_to=None):
         self.terms = terms
-        self.symbols = tuple(symbols) if symbols is not None\
-            else len(terms) * (symbol, )
+        gaps = max(len(terms) - 1, 0)
+        self.symbols = gaps * (symbol, ) if symbols is None\
+            else tuple(symbols)
+        if len(self.symbols) != gaps:
+            raise ValueError(
+                f"Expected {gaps} symbols between {len(terms)} terms, "
+                f"got {len(self.symbols)}.")
         if up_to is not None:
             self.up_to = up_to
 

@@ -548,6 +548,10 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Changed
 
+- `Equation` has one symbol fewer than terms, a symbol between each pair of
+  consecutive terms, where it stored one per term; `symbols` of any other
+  length raise `ValueError`
+  ([rel-int/discopy-next#1](https://github.com/rel-int/discopy-next/pull/1)).
 - A property read off a value with `hasattr` is read with `isinstance`
   where a class states it: adjoints by `Pregroup`, swaps by
   `SymmetricCategory`, identities by `Category`, windings by a

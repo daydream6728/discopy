@@ -1808,8 +1808,8 @@ class Equation(cat.Equation, RichDisplay):
     Parameters:
         terms : The terms of the equation.
         symbol : The symbol between each pair of terms, ``"="`` by default.
-        symbols : The symbols between each pair of terms, overriding
-            ``symbol``; ``len(terms) * (symbol, )`` by default.
+        symbols : The symbols between each pair of consecutive terms, one
+            fewer than the terms, overriding ``symbol``.
         space : The space between the terms when drawing the equation.
         up_to : The function up to which ``bool(equation)`` compares its terms,
             overriding the subclass' :attr:`up_to` if given.
