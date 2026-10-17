@@ -172,6 +172,7 @@ def test_from_callable():
         f(b, a)
         return f(a, b)
 
+    swap = Permutation(x @ x @ x @ x, [0, 2, 1, 3])
     assert diagram == Diagram((
-        Layer(Copy(x), Copy(x)), Layer(Permutation(x @ x @ x @ x, [0, 2, 1, 3])),
+        Layer(Copy(x), Copy(x)), Layer(swap),
         Layer(x, f, x), Layer(x, Discard(y), x), Layer(f)), x @ x, y)
