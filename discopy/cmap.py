@@ -1204,6 +1204,11 @@ class CMap[C0: Pregroup, C1: CMap](
         return cls.copy(typ, 0)
 
     @classmethod
+    def noise(cls, typ: Ty) -> CMap:
+        """ Noise is kept as a box. """
+        return cls.merge(typ, 0)
+
+    @classmethod
     def ev(cls, base: Ty, exponent: Ty, left: bool = True) -> CMap:
         """
         Evaluation is kept as an explicit box by default, or comes from the

@@ -54,9 +54,9 @@ from networkx.algorithms.isomorphism import is_isomorphic
 
 from discopy import cat, cmap, messages
 from discopy.abc import (
-    BalancedCategory, BraidedCategory, ColouredMonoid, CompactCategory,
-    HypergraphCategory, MarkovCategory, MonoidalCategory, NamedGeneric,
-    RigidCategory, SymmetricCategory, TracedCategory)
+    BalancedCategory, BraidedCategory, ColouredMonoid, ComarkovCategory,
+    CompactCategory, HypergraphCategory, MarkovCategory, MonoidalCategory,
+    NamedGeneric, RigidCategory, SymmetricCategory, TracedCategory)
 from discopy.drawing import Node, backend
 from discopy.python.finset import Permutation
 from discopy.utils import (
@@ -1173,6 +1173,14 @@ class Hypergraph(MonoidalCategory, NamedGeneric['category']):
         return all(len(x) == 1 for x, y in self.spider_wires if x.union(y))
 
     @property
+    def is_right_monogamous(self) -> bool:
+        """
+        Checks right monogamy, i.e. if each non-scalar spider is connected
+        to exactly one output port.
+        """
+        return all(len(y) == 1 for x, y in self.spider_wires if x.union(y))
+
+    @property
     def is_causal(self) -> bool:
         """
         Checks causality, i.e. if each non-scalar spider is connected to
@@ -1209,6 +1217,31 @@ class Hypergraph(MonoidalCategory, NamedGeneric['category']):
         >>> assert not H.cups(x, x).is_causal
         """
         return all(len(input_wires) == 1 and all(
+            u < v for u in input_wires for v in output_wires)
+            for input_wires, output_wires in self.spider_wires)
+
+    @property
+    def is_cocausal(self) -> bool:
+        """
+        Checks cocausality, the mirror of :attr:`is_causal`: each non-scalar
+        spider is connected to exactly one output port, there is no directed
+        cycle and wires point forward in the current port order.
+
+        If the diagram is cocausal then it lives in a symmetric monoidal
+        category with a supply of commutative monoids.
+
+        Examples
+        --------
+        >>> from discopy.comarkov import Ty, Box, Hypergraph as H
+        >>> x, y = map(Ty, "xy")
+        >>> f = Box('f', x, y).to_hypergraph()
+        >>> assert f.is_cocausal
+        >>> assert (f @ f >> H.spiders(2, 1, y)).is_cocausal
+        >>> assert (H.spiders(0, 1, x) >> f).is_cocausal
+        >>> assert not (f @ f >> H.spiders(2, 1, y)).is_causal
+        >>> assert not H.spiders(1, 2, x).is_cocausal
+        """
+        return all(len(output_wires) == 1 and all(
             u < v for u in input_wires for v in output_wires)
             for input_wires, output_wires in self.spider_wires)
 
@@ -1522,6 +1555,44 @@ class Hypergraph(MonoidalCategory, NamedGeneric['category']):
         assert self.is_left_monogamous
         return self
 
+    def make_right_monogamous(self) -> Hypergraph:
+        """
+        Introduce spider boxes to make self right monogamous, the mirror of
+        :meth:`make_left_monogamous`.
+
+        Example
+        -------
+        >>> from discopy.frobenius import Ty, Box, Hypergraph as H, Spider
+        >>> h = H.spiders(3, 2, Ty('x')).make_right_monogamous()
+        >>> assert h.boxes == (Spider(1, 2, Ty('x')), )
+        >>> assert h.wires == ((0, 0, 0), (((0,), (1, 2)),), (1, 2))
+        """
+        for spider, (typ, (_, output_wires)) in enumerate(
+                zip(self.spider_types, self.spider_wires)):
+            if len(output_wires) == 1:
+                continue
+            depth = getattr(
+                self.ports[min(output_wires)], "depth", len(self.boxes)
+            ) if output_wires else len(self.boxes)
+            boxes = self.boxes[:depth] + (self.category.spider_factory(
+                1, len(output_wires), typ), ) + self.boxes[depth:]
+            offsets = self.offsets[:depth] + (None, ) + self.offsets[depth:]
+            fwires = list(self.flat_wires)
+            for j, port in enumerate(sorted(output_wires)):
+                fwires[port] = self.n_spiders + j
+            i = len(self.dom) + len(
+                sum([sum(wires, ()) for wires in self.box_wires[:depth]], ()))
+            fwires = fwires[:i] + [spider] + list(range(
+                self.n_spiders, self.n_spiders + len(output_wires))
+            ) + fwires[i:]
+            wires = self.rebracket(fwires, boxes=boxes)
+            spider_types = self.spider_types + len(output_wires) * (typ, )
+            return type(self)(
+                self.dom, self.cod, boxes, wires, spider_types, offsets
+            ).make_right_monogamous()
+        assert self.is_right_monogamous
+        return self
+
     def make_causal(self) -> Hypergraph:
         """
         Introduce trace boxes to make self causal.
@@ -1540,42 +1611,61 @@ class Hypergraph(MonoidalCategory, NamedGeneric['category']):
         """
         if not self.is_left_monogamous:
             return self.make_left_monogamous().make_causal()
-        for input_spider, (typ, (input_wires, output_wires)) in enumerate(
-                zip(self.spider_types, self.spider_wires)):
-            if input_wires:
-                continue
-            assert not output_wires
-            dom, cod, boxes = self.dom @ typ, self.cod @ typ, self.boxes
-            dom_wires = self.dom_wires + (input_spider, )
-            cod_wires = self.cod_wires + (input_spider, )
-            wires = (dom_wires, self.box_wires, cod_wires)
+        return self.trace_backward_wires()
+
+    def make_cocausal(self) -> Hypergraph:
+        """
+        Introduce trace boxes to make self cocausal, the mirror of
+        :meth:`make_causal`.
+
+        Example
+        -------
+        >>> from discopy.comarkov import Ty, Box, Merge
+        >>> x = Ty('x')
+        >>> f = Box('f', x @ x, x @ x)
+        >>> graph = (Merge(x) @ x >> f).trace().to_hypergraph()
+        >>> assert not graph.is_cocausal and graph.make_cocausal().is_cocausal
+        """
+        if not self.is_right_monogamous:
+            return self.make_right_monogamous().make_cocausal()
+        return self.trace_backward_wires()
+
+    def trace_backward_wires(self) -> Hypergraph:
+        """
+        Introduce trace boxes for the scalar spiders and for the wires that
+        point backward, from a port to an earlier one or around a cycle, so
+        that every wire points forward: a left-monogamous hypergraph becomes
+        causal and a right-monogamous one cocausal, since cutting a wire
+        open keeps either.
+        """
+        for spider in self.scalar_spiders:
+            typ = self.spider_types[spider]
+            dom, cod = self.dom @ typ, self.cod @ typ
+            wires = (self.dom_wires + (spider, ), self.box_wires,
+                     self.cod_wires + (spider, ))
             arg = type(self)(
-                dom, cod, boxes, wires, self.spider_types, self.offsets)
-            return arg.make_causal().explicit_trace()
-        if self.is_causal:
+                dom, cod, self.boxes, wires, self.spider_types, self.offsets)
+            return arg.trace_backward_wires().explicit_trace()
+        if self.is_topologically_ordered:
             return self
         causal_graph = self.causal_graph()
-        for input_spider, (typ, (input_wires, output_wires)) in enumerate(
-                zip(self.spider_types, self.spider_wires)):
-            input_wire, = input_wires
-            for output_wire in output_wires:
-                if input_wire < output_wire and\
-                        not has_path(causal_graph, output_wire, input_wire):
-                    continue
-                obj = self.ports[input_wire].obj
-                dom, cod = self.dom @ obj, self.cod @ obj
-                spider_types = self.spider_types + (typ, )
-                output_spider = len(spider_types) - 1
-                fwires = list(self.flat_wires)
-                fwires[output_wire] = output_spider
-                fwires = fwires[:len(self.dom)] + [output_spider]\
-                    + fwires[len(self.dom):] + [input_spider]
-                wires = self.rebracket(fwires, dom=dom)
-                arg = type(self)(
-                    dom, cod, self.boxes, wires, spider_types, self.offsets)
-                return arg.make_causal().explicit_trace()
-        assert self.is_causal
-        return self
+        input_spider, input_wire, output_wire = next(
+            (spider, u, v)
+            for spider, (us, vs) in enumerate(self.spider_wires)
+            for u in us for v in vs
+            if v < u or has_path(causal_graph, v, u))
+        typ, obj = self.spider_types[input_spider], self.ports[input_wire].obj
+        dom, cod = self.dom @ obj, self.cod @ obj
+        spider_types = self.spider_types + (typ, )
+        output_spider = len(spider_types) - 1
+        fwires = list(self.flat_wires)
+        fwires[output_wire] = output_spider
+        fwires = fwires[:len(self.dom)] + [output_spider]\
+            + fwires[len(self.dom):] + [input_spider]
+        wires = self.rebracket(fwires, dom=dom)
+        arg = type(self)(
+            dom, cod, self.boxes, wires, spider_types, self.offsets)
+        return arg.trace_backward_wires().explicit_trace()
 
     @property
     def is_generator(self):
@@ -1759,13 +1849,18 @@ class Hypergraph(MonoidalCategory, NamedGeneric['category']):
           :meth:`make_causal` (introducing traces)
         * or we first :meth:`make_left_monogamous` (introducing merges) then
           :meth:`make_causal` (introducing traces) and finally
-          :meth:`make_bijective` (introducing copies).
+          :meth:`make_bijective` (introducing copies)
+        * or we first :meth:`make_right_monogamous` (introducing copies) then
+          :meth:`make_cocausal` (introducing traces) and finally
+          :meth:`make_bijective` (introducing merges).
 
         We use the first order whenever :attr:`category` is a subclass of
         :class:`HypergraphCategory`, i.e. it has a self-dual supply of spiders,
         or when it has cups and caps. Otherwise, if it is a subclass of
         :class:`MarkovCategory`, i.e. it has a supply of comonoids, we use the
-        second order and introduce copies. When the category has neither, a
+        second order and introduce copies, and if it is a subclass of
+        :class:`ComarkovCategory`, i.e. it has a supply of monoids, we use
+        the third order and introduce merges. When the category has none, a
         non-monogamous hypergraph cannot be downgraded and we raise an error.
 
         Examples
@@ -1786,6 +1881,8 @@ class Hypergraph(MonoidalCategory, NamedGeneric['category']):
                 return self.make_monogamous().make_causal().to_diagram()
             if issubclass(self.category, MarkovCategory):
                 return self.make_causal().make_bijective().to_diagram()
+            if issubclass(self.category, ComarkovCategory):
+                return self.make_cocausal().make_bijective().to_diagram()
             if not self.is_monogamous and not issubclass(
                     self.category, RigidCategory):
                 raise AxiomError(messages.NOT_RIGID.format(

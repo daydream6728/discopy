@@ -65,7 +65,7 @@ from copy import copy
 from typing import Self
 
 from discopy import (
-    monoidal, rigid, markov, compact, pivotal, cmap, hypergraph)
+    monoidal, rigid, markov, comarkov, compact, pivotal, cmap, hypergraph)
 from discopy.abc import HypergraphCategory
 from discopy.cat import factory
 from discopy.utils import (
@@ -130,9 +130,11 @@ class Dim(monoidal.Dim, Ty):
 
 
 @factory
-class Diagram(compact.Diagram, markov.Diagram, HypergraphCategory):
+class Diagram(
+        compact.Diagram, markov.Diagram, comarkov.Diagram,
+        HypergraphCategory):
     """
-    A frobenius diagram is a compact diagram and a Markov diagram.
+    A frobenius diagram is a compact, Markov and comarkov diagram.
 
     Parameters:
         inside(Layer) : The layers of the diagram.
@@ -186,9 +188,10 @@ class Diagram(compact.Diagram, markov.Diagram, HypergraphCategory):
         return F(self)
 
 
-class Box(compact.Box, markov.Box, Diagram):
+class Box(compact.Box, markov.Box, comarkov.Box, Diagram):
     """
-    A frobenius box is a compact and Markov box in a frobenius diagram.
+    A frobenius box is a compact, Markov and comarkov box in a frobenius
+    diagram.
 
     Parameters:
         name (str) : The name of the box.
@@ -217,13 +220,15 @@ class Cap(compact.Cap, Box):
     """
 
 
-class Permutation(compact.Permutation, markov.Permutation, Box):
+class Permutation(
+        compact.Permutation, markov.Permutation, comarkov.Permutation, Box):
     "A permutation in a Frobenius diagram."
 
 
-class Swap(Permutation, compact.Swap, markov.Swap, Box):
+class Swap(Permutation, compact.Swap, markov.Swap, comarkov.Swap, Box):
     """
-    A frobenius swap is a compact and Markov swap in a frobenius diagram.
+    A frobenius swap is a compact, Markov and comarkov swap in a frobenius
+    diagram.
 
     Parameters:
         left (Ty) : The type on the top left and bottom right.
@@ -328,7 +333,7 @@ class Bubble(monoidal.Bubble, Box):
     """
 
 
-class Sum(compact.Sum, markov.Sum, Box):
+class Sum(compact.Sum, markov.Sum, comarkov.Sum, Box):
     """
     A Frobenius sum is a sum of Frobenius diagrams.
 
@@ -339,7 +344,7 @@ class Sum(compact.Sum, markov.Sum, Box):
     """
 
 
-class Functor(compact.Functor, markov.Functor):
+class Functor(compact.Functor, markov.Functor, comarkov.Functor):
     """
     A hypergraph functor is a compact functor that preserves spiders.
 
@@ -361,8 +366,10 @@ class Functor(compact.Functor, markov.Functor):
         if isinstance(other, Spider) and other.phase is None:
             return self.cod.spiders(
                 len(other.dom), len(other.cod), self(other.typ))
-        if isinstance(other, (markov.Copy, markov.Merge)):
+        if isinstance(other, markov.Copy):
             return markov.Functor.__call__(self, other)
+        if isinstance(other, comarkov.Merge):
+            return comarkov.Functor.__call__(self, other)
         return compact.Functor.__call__(self, other)
 
 

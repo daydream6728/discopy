@@ -3,7 +3,7 @@ import shutil
 import pytest
 from pytest import raises
 
-from discopy import closed, biclosed, compact, symmetric
+from discopy import closed, biclosed, comarkov, compact, symmetric
 from discopy.python.finset import Permutation
 from discopy.utils import AxiomError
 
@@ -288,9 +288,12 @@ def test_diagram_to_map_structure_and_errors():
     x = markov.Ty("x")
     assert markov.CMap.copy(x, 2).boxes == (
         markov.CMap.category.copy(x, 2), )
-    assert markov.CMap.merge(x, 2).boxes == (
-        markov.CMap.category.merge(x, 2), )
     assert markov.CMap.discard(x).boxes == (markov.CMap.category.copy(x, 0), )
+    x = comarkov.Ty("x")
+    assert comarkov.CMap.merge(x, 2).boxes == (
+        comarkov.CMap.category.merge(x, 2), )
+    assert comarkov.CMap.noise(x).boxes == (
+        comarkov.CMap.category.merge(x, 0), )
 
     x = frobenius.Ty("x")
     assert frobenius.CMap.spiders(1, 2, x).boxes == (
