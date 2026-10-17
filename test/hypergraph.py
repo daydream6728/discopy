@@ -351,7 +351,7 @@ def test_subclass_to_hypergraph():
 
 
 def test_Hypergraph_cups_and_caps_adjoints():
-    from discopy import rigid, symmetric
+    from discopy import rigid
     x, y = rigid.Ty('x'), rigid.Ty('y')
     R = Hypergraph[rigid.Diagram]
     for left, right in [(x.r, x), (x, x.l)]:
@@ -364,12 +364,6 @@ def test_Hypergraph_cups_and_caps_adjoints():
             cups_or_caps(left, right)
     with raises(AxiomError, match="x and y are not adjoints"):
         H.cups(Ty('x'), Ty('y'))
-    a, b = symmetric.Ty('a'), symmetric.Ty('b')
-    S = Hypergraph[symmetric.Diagram]
-    assert S.cups(a @ b, b @ a).dom_wires == (0, 1, 1, 0)
-    assert S.caps(a @ b, b @ a).cod_wires == (0, 1, 1, 0)
-    with raises(AxiomError, match="not adjoints"):
-        S.caps(a @ b, a @ b)
 
 
 def test_to_diagram_routes_with_one_permutation():
@@ -393,3 +387,82 @@ def test_to_diagram_routes_with_one_permutation():
             assert functor(decoded) == functor(diagram)
             plumbing = [layer.is_plumbing for layer in decoded.inside]
             assert not any(a and b for a, b in zip(plumbing, plumbing[1:]))
+
+
+def test_make_causal_traces_the_type_of_the_producer():
+    from discopy import compact
+    x = compact.Ty('x')
+    graph = compact.Box('f', x @ x.r, x @ x.r).to_hypergraph().trace()
+    assert graph.to_diagram().to_hypergraph() == graph
+
+
+def test_trace_needs_traced_pivotal():
+    from discopy import rigid, pivotal, compact
+    x = rigid.Ty('x')
+    graph = rigid.Box('f', x @ x, x @ x).to_hypergraph()
+    for left in (True, False):
+        with raises(AxiomError):
+            graph.trace(left=left)
+    for module in (pivotal, compact):
+        x = module.Ty('x')
+        graph = module.Box('f', x @ x, x @ x).to_hypergraph()
+        assert graph.trace().cod == graph.trace(left=True).cod == x
+
+
+def test_cups_and_caps_read_the_host_category():
+    from discopy import symmetric, rigid, pivotal, ribbon, compact
+    x = symmetric.Ty('x')
+    for method in (symmetric.Hypergraph.cups, symmetric.Hypergraph.caps):
+        with raises(AxiomError, match="not rigid"):
+            method(x, x)
+    for module in (rigid, pivotal, ribbon):  # planar, so the cups are boxes
+        x, y = module.Ty('x'), module.Ty('y')
+        cup, cap = module.Cup(x, x.r), module.Cap(x.r, x)
+        assert cup.to_hypergraph().boxes == (cup, )
+        assert cap.to_hypergraph().boxes == (cap, )
+        cups = module.Diagram.cups(x @ y, (x @ y).r)
+        assert cups.to_hypergraph().boxes == tuple(cups.boxes)
+        assert cups.to_hypergraph().to_diagram() == cups
+    x = compact.Ty('x')
+    assert compact.Cup(x, x.r).to_hypergraph().boxes == ()
+    assert compact.Cap(x.r, x).to_hypergraph().boxes == ()
+
+
+def test_coloured_diagram_has_no_hypergraph():
+    from discopy.monoidal import Box, Colour, Diagram, Ty, Wire
+    red = Colour("red")
+    x, a, b = Ty(Wire('x', red, red)), Wire('a', cod=red), Wire('b', dom=red)
+    scalar = Box('g', Ty(), Ty(a, b)) >> Box('h', Ty(a, b), Ty())
+    for convert in (Diagram.to_hypergraph, Diagram.to_map):
+        for diagram in (Box('f', x, x), scalar):
+            with raises(AxiomError, match="coloured"):
+                convert(diagram)
+
+
+def test_Hypergraph_to_tree():
+    from discopy.utils import dumps, loads
+    from discopy import markov, symmetric
+    x, y = map(Ty, "xy")
+    f, g = Box('f', x, y @ x), Box('g', Ty(), y)
+    graphs = [
+        H.spiders(1, 2, x) >> H.cups(x, x), H.spiders(0, 0, x) @ H.id(x),
+        (f @ g >> y @ Diagram.swap(x, y)).to_hypergraph(),
+        markov.Box('f', markov.Ty('x'), markov.Ty('y')).to_hypergraph(),
+        symmetric.Diagram.id(symmetric.Ty('x')).to_hypergraph()]
+    for graph in graphs:
+        loaded = loads(dumps(graph))
+        assert loaded == graph and type(loaded) is type(graph)
+        assert loaded.category is graph.category
+        assert loaded.offsets == graph.offsets
+        assert loaded.spider_types == graph.spider_types
+
+
+def test_trace_keeps_the_offsets():
+    from discopy import symmetric
+    x, y = symmetric.Ty('x'), symmetric.Ty('y')
+    f = symmetric.Box('f', x, x)
+    s, t = symmetric.Box('s', symmetric.Ty(), x), symmetric.Box('t', symmetric.Ty(), y)
+    diagram = f @ t @ s
+    graph = diagram.to_hypergraph()
+    assert graph.trace().offsets == graph.offsets == (None, 1, 2)
+    assert graph.trace().to_diagram() == symmetric.Trace(diagram.foliation())

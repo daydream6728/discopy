@@ -149,6 +149,16 @@ def test_NamedGeneric_factory():
         assert wiring[symmetric.Diagram].ar is wiring[symmetric.Diagram]
 
 
+def test_resolve_factory():
+    from discopy import tensor, monoidal
+    from discopy.utils import resolve_factory, factory_name
+    for cls in (tensor.Diagram[complex], monoidal.List[int], rigid.Ty):
+        assert resolve_factory(factory_name(cls)) is cls
+    assert resolve_factory("complex") is complex
+    with pytest.raises(AttributeError):
+        resolve_factory("nonsense")
+
+
 def test_MappingOrCallable():
     assert MappingOrCallable({0: 1})[0] == MappingOrCallable(lambda x: 1)[0]
     with pytest.raises(TypeError):

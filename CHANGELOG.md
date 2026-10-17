@@ -9,6 +9,9 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Added
 
+- `CMap` and `Hypergraph` serialise with `to_tree`, naming their category,
+  and read back through it with `utils.resolve_factory`, the inverse of
+  `factory_name` that `from_tree` now goes through
 - `copying`, a law of `Testable` beside `transparency`, `pickling` and
   `serialisation`: a term is equal to its deep copy, of the same class.
   Copying goes through the same protocol as pickling without the bytes,
@@ -934,6 +937,55 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
+- `feedback.Diagram.trace` built a `markov.Trace`, which does not compose
+  with feedback diagrams: `feedback.Trace` is the trace of a feedback
+  diagram, whose delay is the trace of the delayed diagram.
+  `feedback.Diagram.discard` builds a feedback box and
+  `feedback.Diagram.feedback` takes a memory of several wires. A delayed
+  `feedback.Box` reads back from its tree, which dropped its time step
+  ([rel-int/discopy-next#1](https://github.com/rel-int/discopy-next/pull/1)).
+- `braided.Diagram` and `ribbon.Diagram` bind their own `functor_factory`,
+  where they read those of `monoidal` and `pivotal`, so that their
+  conversions map a braid to a braid and a twist to a twist, as `balanced`
+  already did, and a balanced functor sends the dagger of a twist to the
+  dagger of its image, where it dropped the dagger, as a braided functor
+  already did for braids. The `swap`, `braid` and `twist` of a hypergraph or
+  a map read its host category: a swap exists only over a symmetric one,
+  and is absorbed into the wiring; a braid exists over a braided one, and
+  is that swap over a symmetric one but a box otherwise, a braid being no
+  swap; a twist exists over a balanced one, the identity over a symmetric
+  one and a box otherwise
+  ([rel-int/discopy-next#1](https://github.com/rel-int/discopy-next/pull/1)).
+- `from_tree` reads back `Twist`, `Spider`, an inverse `Braid` and a
+  `Feedback` over a memory of several wires, and the repr of a `Trace`
+  evaluates back to it; `Copy` and `Discard` unpickle, passing their type to
+  `__new__`
+  ([rel-int/discopy-next#1](https://github.com/rel-int/discopy-next/pull/1)).
+- The adjoints of a `frobenius.Wire` are the wire the other way round, from
+  its codomain to its domain, where they were the wire itself
+  ([rel-int/discopy-next#1](https://github.com/rel-int/discopy-next/pull/1)).
+- `Hypergraph.make_causal` traces a wire with the type of its producer,
+  where it took the unwound type of its spider, so compact hypergraphs with
+  adjoint wires downgrade to diagrams; the cups and caps of a hypergraph
+  read its host category as its swaps and braids do: they raise below rigid
+  categories, are the boxes of the cups and caps of a rigid, pivotal or
+  ribbon one, whose cups are planar and oriented, and are wiring from
+  compact categories on, where a cup is faithfully a spider of two ports, a
+  cup taking a type and its right adjoint and a cap a type and its left
+  one. The cups and caps of a map are boxes over a rigid host that is not
+  compact, `CMap.is_planar_rigid`, so that a right curry of a rigid map
+  builds, which wiring of one handedness refused. `Hypergraph.trace` raises
+  below traced categories, wires the traced outputs back to the traced
+  inputs over a symmetric one, and is the trace of the category,
+  `explicit_trace`, otherwise, while the conversion of a planar traced
+  diagram keeps its trace as a box, in a hypergraph as in a map, decoding
+  its argument needing swaps. `CMap.trace` follows over a planar traced
+  host, where it was a splice, and splices the traced wires otherwise, a
+  map being compact whatever hosts it, as `CMap.to_compact` relies on over
+  a biclosed one; a diagram with a coloured wire has no hypergraph and no
+  map, `COLOURED_QUOTIENT`, as a swap is ill-typed across 0-cells, where it
+  lost its colours, which `Hypergraph.from_diagram` and `CMap.from_diagram`
+  check with `hypergraph.assert_transparent`
 - `Drawing.dagger` reflects a drawing of more than one box: a drawing read
   its nodes in the order its graph stored them, which the relabelling of a
   reflection reversed, so its validation failed. The nodes of a kind are

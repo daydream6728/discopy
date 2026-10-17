@@ -359,7 +359,7 @@ class DualRail(balanced.DualRail, Functor):
 
 
 Diagram.box_factory = Box
-Diagram.braid_factory = Braid
+Diagram.braid_factory, Diagram.functor_factory = Braid, Functor
 Diagram.cup_factory, Diagram.cap_factory = Cup, Cap
 Diagram.twist_factory = Twist
 Diagram.sum_factory = Sum

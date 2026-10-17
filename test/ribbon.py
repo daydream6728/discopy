@@ -94,6 +94,19 @@ def test_rotate():
     assert Twist(x).r == Twist(x)
 
 
+def test_to_hypergraph():
+    # A twist is not the identity: it stays a box of the hypergraph.
+    x = Ty('x')
+    assert Diagram.twist(x).to_hypergraph().boxes == (Diagram.twist(x), )
+
+
+def test_functor_factory():
+    x, y = Ty('x'), Ty('y')
+    assert Diagram.functor_factory is Functor
+    assert Diagram.functor_factory({x: y}, {})(Twist(x)) == Twist(y)
+    assert Diagram.functor_factory({x: y}, {})(Braid(x, x)) == Braid(y, y)
+
+
 def test_sum_factory():
     x = Ty('x')
     f = Box('f', x, x)

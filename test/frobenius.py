@@ -80,3 +80,24 @@ def test_Sum():
     assert isinstance(f + f, Sum) and (f + f).terms == (f, f)
     image = Functor(lambda x: x, {f: f + f})(f)
     assert isinstance(image, Sum) and image.terms == (f, f)
+
+
+def test_Spider_to_tree():
+    from discopy.utils import dumps, loads
+    x = Ty('x')
+    for spider in (Spider(1, 2, x), Spider(2, 0, x, 0.5), Spider(0, 3, x).l,
+                   Spider(1, 2, x, is_dagger=True)):
+        assert loads(dumps(spider)) == spider
+        assert loads(dumps(spider)).phase == spider.phase
+        assert loads(dumps(spider)).is_dagger == spider.is_dagger
+
+
+def test_Wire_adjoints():
+    from discopy.monoidal import Colour
+    a, b = Colour('a'), Colour('b')
+    x = Wire('x', dom=a, cod=b)
+    for adjoint in (x.l, x.r):
+        assert (adjoint.name, adjoint.dom, adjoint.cod) == ('x', b, a)
+        assert adjoint.l == adjoint.r == x
+    assert Ty(x).l == Ty(x).r == Ty(x.l) and Ty(x).l.dom == b
+    assert Wire('y').l == Wire('y').r == Wire('y')

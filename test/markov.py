@@ -106,3 +106,10 @@ def test_copy_and_merge_factories():
     assert isinstance(RecipeCopy(x).dagger(), RecipeMerge)
     assert isinstance(RecipeMerge(x).dagger(), RecipeCopy)
     assert isinstance(Recipe.merge(x).boxes[0], RecipeMerge)
+
+
+def test_Copy_pickle():
+    from pickle import dumps, loads
+    x = Ty('x')
+    for box in (Copy(x), Copy(x, 3), Discard(x), Merge(x)):
+        assert loads(dumps(box)) == box

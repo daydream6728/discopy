@@ -355,3 +355,12 @@ def test_to_quimb_and_to_tn():
     nodes, edges = diagram.to_tn()
     assert np.allclose(
         tn.contractors.auto(nodes, edges).tensor, diagram.eval().array)
+
+
+def test_Spider_to_tree():
+    from discopy.utils import dumps, loads
+    for spider in (Z(1, 1, .5), X(2, 1), Y(1, 2, .25), Z(0, 3)):
+        assert loads(dumps(spider)) == spider
+    diagram = Z(1, 2, .5) >> X(1, 1) @ H
+    assert loads(dumps(diagram)) == diagram
+    assert loads(dumps(diagram.to_map())) == diagram.to_map()

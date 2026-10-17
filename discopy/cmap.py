@@ -51,6 +51,8 @@ from typing import TYPE_CHECKING, ClassVar, Literal
 
 from discopy import hypergraph, messages
 from discopy.abc import (
+    BalancedCategory,
+    BraidedCategory,
     CompactCategory,
     NamedGeneric,
     Pregroup,
@@ -62,10 +64,13 @@ from discopy.cat import Ob
 from discopy.python.finset import Permutation
 from discopy.utils import (
     AxiomError,
+    from_tree,
+    resolve_factory,
     assert_isatomic,
     assert_isinstance,
     classproperty,
     factory_name,
+    get_origin,
     unbiased,
 )
 
@@ -793,6 +798,34 @@ class CMap[C0: Pregroup, C1: CMap](
         return hash((
             self.dom, self.cod, self.boxes, self.edges, self.loops))
 
+    def to_tree(self) -> dict:
+        """
+        Serialise a map, with the name of its category.
+
+        >>> from discopy.utils import dumps, loads
+        >>> from discopy.compact import Ty, Box, CMap
+        >>> x = Ty('x')
+        >>> cmap = CMap.caps(x, x.r) >> Box('f', x, x).to_map() @ x.r
+        >>> assert loads(dumps(cmap)) == cmap
+        """
+        return {
+            'factory': factory_name(get_origin(type(self))),
+            'category': factory_name(self.category),
+            'dom': self.dom.to_tree(),
+            'cod': self.cod.to_tree(),
+            'boxes': [box.to_tree() for box in self.boxes],
+            'edges': [int(i) for i in self.edges],
+            'loops': [loop.to_tree() for loop in self.loops]}
+
+    @classmethod
+    def from_tree(cls, tree: dict) -> CMap:
+        """ Decode a serialised map, see :meth:`to_tree`. """
+        factory = cls[resolve_factory(tree['category'])]
+        return factory(
+            from_tree(tree['dom']), from_tree(tree['cod']),
+            tuple(map(from_tree, tree['boxes'])), tree['edges'],
+            loops=tuple(map(from_tree, tree['loops'])))
+
     @classmethod
     def id(cls, dom=None) -> CMap:
         """ The identity map, with each input wired to its output. """
@@ -971,7 +1004,9 @@ class CMap[C0: Pregroup, C1: CMap](
         structure from the next level remains represented by boxes.
 
         The image of each box is computed by the functor into ``cls``, then
-        the images are glued in a single pass with :meth:`from_glued`.
+        the images are glued in a single pass with :meth:`from_glued`. The
+        trace of a planar traced category is a box, as for
+        :meth:`Hypergraph.from_diagram`.
 
         >>> from discopy.braided import Ty, Braid
         >>> from discopy.monoidal import CMap
@@ -983,19 +1018,36 @@ class CMap[C0: Pregroup, C1: CMap](
         >>> Swap(x, y).to_map().boxes
         ()
         """
+        hypergraph.assert_transparent(old)
         category = type(old).ar
         factory = cls if cls.category is category else cls[category]
         functor = (factory.functor if cls.category is None else cls.functor)(
             ob_map=lambda typ: typ, ar_map=factory.from_box,
             dom=category, cod=factory)
+        trace = getattr(category, "trace_factory", ())
+        if not isclass(trace) or issubclass(category, SymmetricCategory):
+            trace = ()
         return factory.from_glued(old.dom, old.cod, [
-            (functor(box), offset)
+            (factory.from_box(box) if isinstance(box, trace)
+             else functor(box), offset)
             for layer in old.inside
             for box, offset in layer.boxes_and_offsets])
 
     @classmethod
     def swap(cls, left: Ty, right: Ty) -> CMap:
-        """ The symmetry encoded as boundary wiring. """
+        """
+        The swap of a symmetric category, absorbed into the edges.
+
+        >>> from discopy import braided
+        >>> x, y = braided.Ty('x'), braided.Ty('y')
+        >>> CMap[braided.Diagram].swap(x, y)
+        Traceback (most recent call last):
+        ...
+        discopy.utils.AxiomError: braided.Diagram is not symmetric, ...
+        """
+        if not issubclass(cls.category, SymmetricCategory):
+            raise AxiomError(messages.NO_SWAP.format(
+                factory_name(cls.category)))
         dom, cod = left @ right, right @ left
         left_len, right_len = len(left), len(right)
         output_start = len(dom)
@@ -1006,6 +1058,46 @@ class CMap[C0: Pregroup, C1: CMap](
                for i in range(right_len)],
             2 * len(dom))
         return cls(dom, cod, (), edge, check=False)
+
+    @classmethod
+    def braid(cls, left: Ty, right: Ty) -> CMap:
+        """
+        The braid of a braided category: the :meth:`swap` of a symmetric one,
+        and boxes otherwise, a braid being no swap.
+
+        >>> from discopy import braided
+        >>> x, y = braided.Ty('x'), braided.Ty('y')
+        >>> braid = CMap[braided.Diagram].braid(x, y)
+        >>> assert braid.boxes == (braided.Braid(x, y), )
+        """
+        if not issubclass(cls.category, BraidedCategory):
+            raise AxiomError(messages.NO_BRAID.format(
+                factory_name(cls.category)))
+        if issubclass(cls.category, SymmetricCategory):
+            return cls.swap(left, right)
+        if len(left) == len(right) == 1:
+            return cls.from_box(cls.category.braid_factory(left, right))
+        return cls.from_diagram(cls.category.braid(left, right))
+
+    @classmethod
+    def twist(cls, dom: Ty) -> CMap:
+        """
+        The twist of a balanced category: the identity of a symmetric one,
+        and boxes otherwise, a twist being no identity.
+
+        >>> from discopy import balanced
+        >>> x = balanced.Ty('x')
+        >>> twist = CMap[balanced.Diagram].twist(x)
+        >>> assert twist.boxes == (balanced.Twist(x), )
+        """
+        if issubclass(cls.category, SymmetricCategory):
+            return cls.id(dom)
+        if not issubclass(cls.category, BalancedCategory):
+            raise AxiomError(messages.NO_TWIST.format(
+                factory_name(cls.category)))
+        if len(dom) == 1:
+            return cls.from_box(cls.category.twist_factory(dom))
+        return cls.from_diagram(cls.category.twist(dom))
 
     @classmethod
     def permutation(cls, xs: Sequence[int], doms: Sequence[Ty]) -> CMap:
@@ -1050,7 +1142,21 @@ class CMap[C0: Pregroup, C1: CMap](
 
     @classmethod
     def cups(cls, left: Ty, right: Ty) -> CMap:
-        """ A cup encoded as boundary wiring between adjoint types. """
+        """
+        A cup between a type and its right adjoint: a box over a rigid host
+        that is not compact, whose cups are planar and oriented, see
+        :meth:`Hypergraph.cups`, and boundary wiring otherwise, a map being
+        compact whatever hosts it.
+
+        >>> from discopy import rigid, compact
+        >>> x = rigid.Ty('x')
+        >>> assert rigid.Cup(x, x.r).to_map().boxes == (rigid.Cup(x, x.r), )
+        >>> x = compact.Ty('x')
+        >>> assert compact.Cup(x, x.r).to_map().boxes == ()
+        """
+        if cls.is_planar_rigid():
+            return cls.cup_factory(left, right) if len(left) == 1\
+                else cls.from_diagram(cls.category.cups(left, right))
         assert_isinstance(left, Pregroup)
         assert_isinstance(right, Pregroup)
         left.assert_isadjoint(right)
@@ -1062,7 +1168,10 @@ class CMap[C0: Pregroup, C1: CMap](
 
     @classmethod
     def caps(cls, left: Ty, right: Ty) -> CMap:
-        """ A cap encoded as boundary wiring between adjoint types. """
+        """ A cap between a type and its left adjoint, see :meth:`cups`. """
+        if cls.is_planar_rigid():
+            return cls.cap_factory(left, right) if len(left) == 1\
+                else cls.from_diagram(cls.category.caps(left, right))
         assert_isinstance(left, Pregroup)
         assert_isinstance(right, Pregroup)
         right.assert_isadjoint(left)
@@ -1071,6 +1180,13 @@ class CMap[C0: Pregroup, C1: CMap](
             ((i, size + size - 1 - i) for i in range(size)),
             2 * size)
         return cls(cls.ob(), left @ right, (), edge, check=False)
+
+    @classmethod
+    def is_planar_rigid(cls) -> bool:
+        """ Whether the host category is rigid but not compact, so that its
+        cups and caps are boxes of the map rather than its wiring. """
+        return issubclass(cls.category, RigidCategory)\
+            and not issubclass(cls.category, CompactCategory)
 
     @classmethod
     def copy(cls, typ: Ty, n: int = 2) -> CMap:
@@ -1214,11 +1330,19 @@ class CMap[C0: Pregroup, C1: CMap](
 
     def trace(self, n: int = 1, left: bool = False) -> CMap:
         """
-        Trace boundary wires by splicing the selected inputs and outputs.
+        Trace boundary wires by splicing the selected inputs and outputs, a
+        map being compact whatever hosts it, except over a planar traced
+        category, i.e. traced but not symmetric, whose trace is not wiring:
+        there it is the trace of the category, one wire at a time, see
+        :meth:`explicit_trace` and :meth:`Hypergraph.trace`.
 
         Parameters:
             n : The number of wires to trace.
             left : Whether to trace the leftmost rather than rightmost wires.
+
+        >>> from discopy import traced
+        >>> f = traced.Box('f', traced.Ty('x'), traced.Ty('x'))
+        >>> assert f.to_map().trace().boxes == (f.trace(), )
         """
         if n < 0:
             raise ValueError
@@ -1226,6 +1350,12 @@ class CMap[C0: Pregroup, C1: CMap](
             return self
         if n > min(len(self.dom), len(self.cod)):
             raise ValueError
+        if issubclass(self.category, TracedCategory)\
+                and not issubclass(self.category, SymmetricCategory):
+            result = self
+            for _ in range(n):
+                result = result.explicit_trace(left)
+            return result
 
         if left:
             dom, cod = self.dom[n:], self.cod[n:]

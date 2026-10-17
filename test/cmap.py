@@ -194,12 +194,16 @@ def test_diagram_to_map_structure_and_errors():
 
     tx = traced.Ty("x")
     traced_box = traced.Box("f", tx, tx)
-    assert traced.Trace(traced_box).to_map() == traced_box.to_map().trace()
+    # A planar trace is a box of the map, which a decoded map's trace is too.
+    assert traced.Trace(traced_box).to_map().boxes == (
+        traced.Trace(traced_box), )
+    assert traced_box.to_map().trace().to_diagram() == traced.Trace(traced_box)
 
     px, py = map(pivotal.Ty, "xy")
     pbox = pivotal.Box("f", px, py)
-    assert pbox.transpose(left=True).transpose(left=False).to_map().boxes\
-        == (pbox, )
+    boxes = pbox.transpose(left=True).transpose(left=False).to_map().boxes
+    assert pbox in boxes  # the cups and caps of a planar category are boxes
+    assert {pivotal.Cup, pivotal.Cap} <= set(map(type, boxes))
     assert pbox.to_map() == pivotal.CMap.from_box(pbox)
 
     bx, by = map(balanced.Ty, "xy")
@@ -502,13 +506,13 @@ def test_trace():
 
 
 def test_make_causal_cuts_every_backward_wire_at_once():
-    from discopy import traced
-    x = traced.Ty("x")
-    f, g = traced.Box("f", x @ x, x @ x), traced.Box("g", x, x)
+    from discopy import symmetric
+    x = symmetric.Ty("x")
+    f, g = symmetric.Box("f", x @ x, x @ x), symmetric.Box("g", x, x)
     cmap = (f.to_map() >> g.to_map() @ x).trace(2)
     assert not cmap.is_acyclic
     assert cmap.make_causal().boxes == (
-        traced.Trace(traced.Trace(f >> g @ x)), )
+        symmetric.Trace(symmetric.Trace(f >> g @ x)), )
     assert cmap.to_diagram().to_map() == cmap
 
 
@@ -805,7 +809,7 @@ def test_boxes_with_no_domain_decode_at_the_right():
     assert snake.to_map().to_diagram() == snake
 
 
-def test_curry_is_wiring_only_when_the_category_is_rigid():
+def test_curry_is_wiring_only_when_the_category_is_compact():
     from discopy import pivotal, rigid
 
     for module in (biclosed, closed):
@@ -815,24 +819,18 @@ def test_curry_is_wiring_only_when_the_category_is_rigid():
         assert curried.boxes == (module.Diagram.curry_factory(f, 1, False), )
         assert curried.uncurry(left=False) != f.to_map()
 
-    for module in (compact, rigid, pivotal):
+    x, y, z = map(compact.Ty, "xyz")
+    f = compact.Box("f", x @ y, z)
+    curried = f.to_map().curry(left=True)
+    assert curried.boxes == (f, ) and not curried.is_monogamous
+    assert curried.uncurry(left=True) == f.to_map()
+
+    for module in (rigid, pivotal):  # planar, so the caps are boxes
         x, y, z = map(module.Ty, "xyz")
         f = module.Box("f", x @ y, z)
-        curried = f.to_map().curry(left=True)
-        assert curried.boxes == (f, ) and not curried.is_monogamous
-        assert curried.uncurry(left=True) == f.to_map()
-
-    x, y, z = map(rigid.Ty, "xyz")
-    f = rigid.Box("f", x @ y, z)
-    assert f.to_map().curry(left=True).make_monogamous().boxes == (
-        rigid.Cap(y, y.l), f)
-    with raises(AxiomError, match="adjoint"):
-        f.to_map().curry(left=False).make_monogamous()
-
-    x, y, z = map(pivotal.Ty, "xyz")
-    f = pivotal.Box("f", x @ y, z)
-    assert f.to_map().curry(left=False).make_monogamous().boxes == (
-        pivotal.Cap(x, x.r), f)
+        assert f.to_map().curry(left=True).boxes == (module.Cap(y, y.l), f)
+        assert f.to_map().curry(left=False).boxes == (module.Cap(x.r, x), f)
+        assert f.to_map().curry().uncurry() != f.to_map()
 
 
 def test_closed_to_compact():
@@ -991,3 +989,28 @@ def test_permutation_is_one_involution():
         == T.permutation([2, 0, 1], dims).eval()
     with raises(ValueError):
         M.permutation([0, 0], [x, y])
+
+
+def test_CMap_to_tree():
+    from discopy.utils import dumps, loads
+    x = compact.Ty('x')
+    f = compact.Box('f', x, x @ x)
+    cmaps = [
+        compact.CMap.caps(x, x.r) >> f.to_map() @ x.r,
+        compact.CMap.id(x).trace(), f.to_map().trace(),
+        symmetric.Swap(*map(symmetric.Ty, "xy")).to_map(),
+        closed.Box('f', closed.Ty('x'), closed.Ty('y')).to_map().curry()]
+    for cmap in cmaps:
+        loaded = loads(dumps(cmap))
+        assert loaded == cmap and type(loaded) is type(cmap)
+        assert loaded.category is cmap.category
+        assert loaded.loops == cmap.loops
+
+
+def test_CMap_to_tree_over_a_parameterised_category():
+    from discopy import tensor, cmap
+    from discopy.tensor import Dim
+    from discopy.utils import dumps, loads
+    swap = cmap.CMap[tensor.Diagram[complex]].swap(Dim(2), Dim(3))
+    loaded = loads(dumps(swap))
+    assert loaded == swap and loaded.category is tensor.Diagram[complex]
