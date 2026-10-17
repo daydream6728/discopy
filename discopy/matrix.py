@@ -43,7 +43,7 @@ from collections.abc import Sequence
 from typing import Union, Literal as L, Callable, TYPE_CHECKING
 
 from discopy import monoidal, config, messages
-from discopy.abc import MarkovCategory, NamedGeneric, Nat
+from discopy.abc import ComarkovCategory, MarkovCategory, NamedGeneric, Nat
 from discopy.axioms import Testable
 from discopy.cat import (
     factory,
@@ -57,7 +57,8 @@ if TYPE_CHECKING:
 
 
 @factory
-class Matrix(MarkovCategory, Testable["Matrix"], NamedGeneric['dtype']):
+class Matrix(MarkovCategory, ComarkovCategory, Testable["Matrix"],
+             NamedGeneric['dtype']):
     """
     A matrix is an ``array`` with natural numbers as ``dom`` and ``cod``.
 
@@ -79,6 +80,7 @@ class Matrix(MarkovCategory, Testable["Matrix"], NamedGeneric['dtype']):
             copy
             discard
             merge
+            noise
             basis
             repeat
             trace
@@ -464,8 +466,9 @@ class Matrix(MarkovCategory, Testable["Matrix"], NamedGeneric['dtype']):
 
     @classmethod
     def ones(cls, x: Nat) -> Matrix:
-        """ The unit ``0 -> x`` of the direct sum, the dagger of discard. """
-        return cls.merge(x, 0)
+        """ The unit ``0 -> x`` of the direct sum, an alias of :meth:`noise`.
+        """
+        return cls.noise(x)
 
     @classmethod
     def basis(cls, x: Nat, i: int) -> Matrix:

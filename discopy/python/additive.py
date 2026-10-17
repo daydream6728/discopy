@@ -20,15 +20,16 @@ from functools import cache
 from itertools import accumulate
 from typing import Self
 
-from discopy.abc import SymmetricCategory
+from discopy.abc import ComarkovCategory
 from discopy.utils import assert_isinstance
 from discopy.python import finset, function
 from discopy.python.function import Ty
 
 
-class Function(function.Function, SymmetricCategory):
+class Function(function.Function, ComarkovCategory):
     """
-    Python functions with disjoint union as tensor.
+    Python functions with disjoint union as tensor: a comarkov category,
+    whose merge is the codiagonal and whose noise is the empty function.
 
     Parameters:
         inside : The callable Python object inside the function.
@@ -42,6 +43,8 @@ class Function(function.Function, SymmetricCategory):
             tensor
             swap
             trace
+            merge
+            noise
     """
 
     def __init__(self, inside, dom, cod, is_swap_of=None):
@@ -166,4 +169,4 @@ class Function(function.Function, SymmetricCategory):
 
 Swap = Function.braid = Function.swap
 Id = Function.twist = Function.id
-Merge = Function.merge
+Merge, Noise = Function.merge, Function.noise

@@ -2,9 +2,10 @@
 
 from pytest import raises
 
-from discopy import closed, compact, feedback, frobenius, markov
+from discopy import closed, comarkov, compact, feedback, frobenius, markov
 from discopy.para import (
-    Closed, Compact, Feedback, Hypergraph, Markov, Symmetric, Traced)
+    Closed, Comarkov, Compact, Feedback, Hypergraph, Markov, Symmetric,
+    Traced)
 from discopy import python
 from discopy.python import Function
 from discopy.symmetric import Box, Diagram, Ty
@@ -67,6 +68,15 @@ def test_markov():
     X = markov.Ty('x')
     assert Markov.copy(X, 3) == Markov.lift(markov.Diagram.copy(X, 3))
     assert Markov.copy(X).param == markov.Ty()
+
+
+def test_comarkov():
+    X = comarkov.Ty('x')
+    assert Comarkov.merge(X, 3) == Comarkov.lift(comarkov.Diagram.merge(X, 3))
+    assert Comarkov.noise(X) == Comarkov.lift(comarkov.Noise(X))
+    assert Comarkov.merge(X).param == comarkov.Ty()
+    X = frobenius.Ty('x')
+    assert Hypergraph.merge(X) == Hypergraph.lift(frobenius.Spider(2, 1, X))
 
 
 def test_closed():
