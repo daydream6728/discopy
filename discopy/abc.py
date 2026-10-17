@@ -33,6 +33,7 @@ Summary
     Nat
     MonoidalCategory
     PRO
+    FeedbackCategory
     TracedCategory
     ResiduatedMonoid
     BiclosedCategory
@@ -46,7 +47,6 @@ Summary
     MarkovCategory
     ComarkovCategory
     ClosedCategory
-    FeedbackCategory
     BalancedCategory
     RibbonCategory
     CompactCategory
@@ -59,11 +59,11 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import ClassVar
+from typing import ClassVar, Self
 
 from discopy import messages
 from discopy.axioms import (
-    ComposablePair, ComposableTriple, Equation, Testable, axiom)
+    ComposablePair, ComposableTriple, Equation, Loop, Testable, axiom)
 from discopy.utils import (  # noqa: F401  pylint: disable=unused-import
     AxiomError, NamedGeneric, classproperty, factory_name)
 
@@ -374,10 +374,126 @@ class PRO[C1: PRO](MonoidalCategory[Nat, C1]):
     """
 
 
-class TracedCategory[C0, C1](MonoidalCategory[C0, C1]):
+class FeedbackCategory[C0, C1](MonoidalCategory[C0, C1]):
     """
-    A traced category is a :class:`MonoidalCategory` with a method
-    :code:`trace` for the partial trace of a morphism over some objects.
+    A feedback category is a :class:`MonoidalCategory` with a monoidal
+    endofunctor :meth:`delay` and an operator :meth:`feedback` from
+    morphisms ``x @ m.delay() -> y @ m`` to morphisms ``x -> y``, see
+    :cite:t:`KatisEtAl02` and :cite:t:`DiLavoreEtAl22`.
+
+    The laws of feedback are stated once here: vanishing, joining, strength,
+    tightening and sliding. A :class:`TracedCategory` is a feedback category
+    whose delay is the identity.
+    """
+    def delay(self, n_steps: int = 1) -> C1:
+        """
+        The delay endofunctor applied to a morphism, the identity by default.
+
+        Parameters:
+            n_steps : The number of time steps to delay.
+        """
+        return self
+
+    @abstractmethod
+    def feedback(
+            self, n: int = None, left: bool = False, *,
+            dom: C0 = None, cod: C0 = None, mem: C0 = None) -> C1:
+        """
+        The feedback operator on a morphism ``dom @ mem.delay() -> cod @ mem``
+        giving a morphism ``dom -> cod``, to be instantiated.
+
+        The keyword form ``dom``, ``cod``, ``mem`` is primary and the
+        positional form ``n`` its fallback, the memory being the last ``n``
+        objects of the codomain, the first when ``left``: the two forms are
+        exclusive, see :meth:`split_memory`.
+
+        Parameters:
+            n : The number of objects to feed back.
+            left : Whether to feed back on the left rather than the right.
+            dom : The domain of the feedback.
+            cod : The codomain of the feedback.
+            mem : The memory to feed back.
+        """
+
+    def split_memory(
+            self, n: int = None, left: bool = False,
+            dom: C0 = None, cod: C0 = None, mem: C0 = None
+            ) -> tuple[C0, C0, C0]:
+        """
+        The domain, codomain and memory of a feedback, read off either form
+        of :meth:`feedback`: the memory is ``mem``, or the objects of the
+        codomain beside ``cod``, or the last ``n`` objects of the codomain,
+        the first when ``left``, one by default; the domain and codomain
+        default to what the memory leaves.
+
+        Example
+        -------
+        >>> from discopy.feedback import Ty, Box
+        >>> x, y, m = map(Ty, "xym")
+        >>> f = Box('f', x @ m.delay(), y @ m)
+        >>> assert f.split_memory() == f.split_memory(mem=m) == (x, y, m)
+        >>> assert f.split_memory(cod=y) == f.split_memory(1) == (x, y, m)
+        """
+        if n is not None and (dom, cod, mem) != (None, None, None):
+            raise TypeError(messages.FEEDBACK_FORMS)
+        if mem is None:
+            size = len(self.cod) - len(cod) if cod is not None\
+                else 1 if n is None else n
+            mem = self.cod[:size] if left\
+                else self.cod[len(self.cod) - size:]
+        size = len(mem)
+        if dom is None:
+            dom = self.dom[size:] if left else self.dom[:len(self.dom) - size]
+        if cod is None:
+            cod = self.cod[size:] if left else self.cod[:len(self.cod) - size]
+        return dom, cod, mem
+
+    @axiom
+    def vanishing(cls, f: C1) -> Equation[C1]:
+        """ Feeding back the unit does nothing. """
+        return cls.equation_factory(f.feedback(mem=f.dom[:0]), f)
+
+    @axiom
+    def joining(cls, loop: Loop[Self]) -> Equation[C1]:
+        """ Feeding back a tensor is feeding back its factors in turn. """
+        x, y, m, n, f, *_ = loop
+        return cls.equation_factory(
+            f.feedback(dom=x, cod=y, mem=m @ n),
+            f.feedback(dom=x @ cls.id(m).delay().dom, cod=y @ m, mem=n
+                       ).feedback(dom=x, cod=y, mem=m))
+
+    @axiom
+    def strength(cls, loop: Loop[Self]) -> Equation[C1]:
+        """ Feedback commutes with tensoring a morphism on the left. """
+        x, y, m, n, f, *_, e = loop
+        return cls.equation_factory(
+            e @ f.feedback(dom=x, cod=y, mem=m @ n),
+            (e @ f).feedback(dom=e.dom @ x, cod=e.cod @ y, mem=m @ n))
+
+    @axiom
+    def tightening(cls, loop: Loop[Self]) -> Equation[C1]:
+        """ Feedback is natural in its domain and its codomain. """
+        x, y, m, n, f, g, h, *_ = loop
+        delayed = cls.id(m @ n).delay()
+        return cls.equation_factory(
+            (g @ delayed >> f >> h @ (m @ n)).feedback(
+                dom=g.dom, cod=h.cod, mem=m @ n),
+            g >> f.feedback(dom=x, cod=y, mem=m @ n) >> h)
+
+    @axiom
+    def sliding(cls, loop: Loop[Self]) -> Equation[C1]:
+        """ A morphism on the memory slides along the feedback, delayed. """
+        x, y, m, n, f, *_, k, _ = loop
+        return cls.equation_factory(
+            (f >> y @ k).feedback(dom=x, cod=y, mem=m @ n),
+            (x @ k.delay() >> f).feedback(dom=x, cod=y, mem=m @ n))
+
+
+class TracedCategory[C0, C1](FeedbackCategory[C0, C1]):
+    """
+    A traced category is a :class:`FeedbackCategory` whose delay is the
+    identity, with a method :code:`trace` for the partial trace of a
+    morphism over some objects, which its :meth:`feedback` is.
     """
     @abstractmethod
     def trace(self, n: int = 1, left: bool = False) -> C1:
@@ -392,6 +508,19 @@ class TracedCategory[C0, C1](MonoidalCategory[C0, C1]):
             n : The number of objects to trace over.
             left : Whether to trace the wires on the left or right.
         """
+
+    def feedback(
+            self, n: int = None, left: bool = False, *,
+            dom: C0 = None, cod: C0 = None, mem: C0 = None) -> C1:
+        """
+        The feedback of a traced category is its :meth:`trace` over the
+        memory, whose delay is itself.
+        """
+        if n is None:
+            n = len(self.split_memory(None, left, dom, cod, mem)[2])
+        elif (dom, cod, mem) != (None, None, None):
+            raise TypeError(messages.FEEDBACK_FORMS)
+        return self.trace(n, left)
 
 
 class ResiduatedMonoid[C0, C1: ResiduatedMonoid](ColouredMonoid[C0, C1]):
@@ -842,32 +971,6 @@ class ClosedCategory[C0, C1](BiclosedCategory[C0, C1], MarkovCategory[C0, C1]):
     A closed category is a symmetric :class:`BiclosedCategory`. We also assume
     it comes with copy and discard so it is also a :class:`MarkovCategory`.
     """
-
-
-class FeedbackCategory[C0, C1](MarkovCategory[C0, C1]):
-    """
-    A feedback category is a :class:`MarkovCategory` with a :code:`delay`
-    endofunctor and a :code:`feedback` operator.
-    """
-    @abstractmethod
-    def delay(self, n_steps: int = 1) -> C1:
-        """
-        The delay endofunctor applied to a morphism.
-
-        Parameters:
-            n_steps : The number of time steps to delay.
-        """
-
-    @abstractmethod
-    def feedback(self, dom: C0, cod: C0, mem: C0) -> C1:
-        """
-        The feedback operator on a morphism.
-
-        Parameters:
-            dom : The domain of the feedback.
-            cod : The codomain of the feedback.
-            mem : The memory type to trace over.
-        """
 
 
 class BalancedCategory[C0, C1](

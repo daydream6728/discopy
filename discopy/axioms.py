@@ -31,6 +31,7 @@ Summary
     Grid
     ComposablePair
     ComposableTriple
+    Loop
 
 .. admonition:: Functions
 
@@ -679,6 +680,48 @@ class ComposableTriple(Grid):
 
     n_rows, n_columns = 3, 1
     n_active_rows = 3
+
+
+class Loop(Testable, NamedGeneric["factory"], tuple):
+    """
+    A morphism ``f : x @ (m @ n).delay() -> y @ m @ n`` of the ``factory``,
+    a :class:`discopy.abc.FeedbackCategory`, with its memory in two parts
+    and the morphisms the laws of feedback compose it with: ``g`` into
+    ``x``, ``h`` out of ``y``, an endomorphism ``k`` of the memory to slide
+    along and any ``e`` to tensor with, so that a loop reads
+    ``x, y, m, n, f, g, h, k, e``.
+    """
+    def __new__(cls, *values):
+        if len(values) != 9:
+            raise ValueError("Expected x, y, m, n, f, g, h, k, e.")
+        x, y, m, n, f, g, h, k, _ = values
+        delayed = cls.factory.id(m @ n).delay().dom
+        if (f.dom, f.cod) != (x @ delayed, y @ m @ n)\
+                or (g.cod, h.dom, k.dom, k.cod) != (x, y, m @ n, m @ n):
+            raise ValueError("Expected the boundaries of a loop.")
+        return super().__new__(cls, values)
+
+    @classmethod
+    def strategy(cls, **params):
+        """ Draw the four objects, then the morphisms between them. """
+        from hypothesis import strategies as st
+
+        factory = cls.factory
+        objects = factory.ob.strategy()
+
+        @st.composite
+        def loops(draw):
+            """ Draw ``x, y, m, n``, then the morphisms they type. """
+            x, y, m, n = (draw(objects) for _ in range(4))
+            delayed = factory.id(m @ n).delay().dom
+            arrow = lambda **boundary: draw(
+                factory.strategy(**boundary, **params))
+            return cls(
+                x, y, m, n, arrow(dom=x @ delayed, cod=y @ m @ n),
+                arrow(cod=x), arrow(dom=y), arrow(dom=m @ n, cod=m @ n),
+                arrow())
+
+        return loops()
 
 
 def resolve(annotation, **params) -> st.SearchStrategy:
