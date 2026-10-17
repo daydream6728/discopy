@@ -124,9 +124,22 @@ class Nat(rigid.Nat, Ty):
 
 @factory
 class Dim(monoidal.Dim, Ty):
-    """ A dimension is a tuple of integers greater than one seen as a type. """
+    """
+    A dimension is a tuple of integers greater than one seen as a type. Its
+    adjoints are its reversal and it has no winding, so :meth:`unwind` is
+    the identity.
+
+    Example
+    -------
+    >>> assert Dim(2, 3).l == Dim(2, 3).r == Dim(3, 2)
+    >>> assert Dim(2).unwind() == Dim(2)
+    """
 
     l = r = property(lambda self: self.ar(*self.inside[::-1]))
+
+    def unwind(self) -> Dim:
+        """ The identity: a dimension has no winding. """
+        return self
 
 
 @factory

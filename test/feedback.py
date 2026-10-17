@@ -159,3 +159,13 @@ def test_Head_Tail_FollowedBy_to_tree():
     for term in (x.head, x.tail, x.head.delay(), f.head, f.tail, f.tail.delay(2),
                  FollowedBy(x), FollowedBy(x, is_dagger=True).delay()):
         assert loads(dumps(term)) == term
+
+
+def test_FollowedBy_delay():
+    x = Ty('x')
+    for is_dagger in (False, True):
+        fby = FollowedBy(x, is_dagger)
+        assert fby.delay().delay() == fby.delay(2)\
+            == FollowedBy(x, is_dagger, time_step=2)
+        assert fby.delay(2).dom == fby.dom.delay(2)
+        assert fby.delay(2).cod == fby.cod.delay(2)
