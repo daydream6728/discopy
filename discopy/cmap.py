@@ -51,6 +51,8 @@ from typing import TYPE_CHECKING, ClassVar, Literal
 
 from discopy import hypergraph, messages
 from discopy.abc import (
+    BalancedCategory,
+    BraidedCategory,
     CompactCategory,
     NamedGeneric,
     Pregroup,
@@ -1002,7 +1004,19 @@ class CMap[C0: Pregroup, C1: CMap](
 
     @classmethod
     def swap(cls, left: Ty, right: Ty) -> CMap:
-        """ The symmetry encoded as boundary wiring. """
+        """
+        The swap of a symmetric category, absorbed into the edges.
+
+        >>> from discopy import braided
+        >>> x, y = braided.Ty('x'), braided.Ty('y')
+        >>> CMap[braided.Diagram].swap(x, y)
+        Traceback (most recent call last):
+        ...
+        discopy.utils.AxiomError: braided.Diagram is not symmetric, ...
+        """
+        if not issubclass(cls.category, SymmetricCategory):
+            raise AxiomError(messages.NO_SWAP.format(
+                factory_name(cls.category)))
         dom, cod = left @ right, right @ left
         left_len, right_len = len(left), len(right)
         output_start = len(dom)
@@ -1013,6 +1027,46 @@ class CMap[C0: Pregroup, C1: CMap](
                for i in range(right_len)],
             2 * len(dom))
         return cls(dom, cod, (), edge, check=False)
+
+    @classmethod
+    def braid(cls, left: Ty, right: Ty) -> CMap:
+        """
+        The braid of a braided category: the :meth:`swap` of a symmetric one,
+        and boxes otherwise, a braid being no swap.
+
+        >>> from discopy import braided
+        >>> x, y = braided.Ty('x'), braided.Ty('y')
+        >>> braid = CMap[braided.Diagram].braid(x, y)
+        >>> assert braid.boxes == (braided.Braid(x, y), )
+        """
+        if not issubclass(cls.category, BraidedCategory):
+            raise AxiomError(messages.NO_BRAID.format(
+                factory_name(cls.category)))
+        if issubclass(cls.category, SymmetricCategory):
+            return cls.swap(left, right)
+        if len(left) == len(right) == 1:
+            return cls.from_box(cls.category.braid_factory(left, right))
+        return cls.from_diagram(cls.category.braid(left, right))
+
+    @classmethod
+    def twist(cls, dom: Ty) -> CMap:
+        """
+        The twist of a balanced category: the identity of a symmetric one,
+        and boxes otherwise, a twist being no identity.
+
+        >>> from discopy import balanced
+        >>> x = balanced.Ty('x')
+        >>> twist = CMap[balanced.Diagram].twist(x)
+        >>> assert twist.boxes == (balanced.Twist(x), )
+        """
+        if issubclass(cls.category, SymmetricCategory):
+            return cls.id(dom)
+        if not issubclass(cls.category, BalancedCategory):
+            raise AxiomError(messages.NO_TWIST.format(
+                factory_name(cls.category)))
+        if len(dom) == 1:
+            return cls.from_box(cls.category.twist_factory(dom))
+        return cls.from_diagram(cls.category.twist(dom))
 
     @classmethod
     def permutation(cls, xs: Sequence[int], doms: Sequence[Ty]) -> CMap:

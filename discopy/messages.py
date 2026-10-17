@@ -34,6 +34,9 @@ NOT_FROBENIUS = \
     "{} has no spiders, cups or caps to downgrade this hypergraph."
 NOT_RIGID = "{} has no cups or caps for the wiring of this map."
 NOT_TRACED = "{} has no traces for the cycles of this map."
+NO_SWAP = "{} is not symmetric, it has no swaps."
+NO_BRAID = "{} is not braided, it has no braids."
+NO_TWIST = "{} is not balanced, it has no twists."
 NO_CUPS = "{} is not rigid, it has no cups or caps."
 COLOURED_QUOTIENT = (
     "{} is coloured: a hypergraph or a map is symmetric, and a swap is "

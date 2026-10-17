@@ -54,9 +54,9 @@ from networkx.algorithms.isomorphism import is_isomorphic
 
 from discopy import cat, cmap, messages
 from discopy.abc import (
-    ColouredMonoid, CompactCategory, HypergraphCategory, MarkovCategory,
-    MonoidalCategory, NamedGeneric, RigidCategory, SymmetricCategory,
-    TracedCategory)
+    BalancedCategory, BraidedCategory, ColouredMonoid, CompactCategory,
+    HypergraphCategory, MarkovCategory, MonoidalCategory, NamedGeneric,
+    RigidCategory, SymmetricCategory, TracedCategory)
 from discopy.drawing import Node, backend
 from discopy.python.finset import Permutation
 from discopy.utils import (
@@ -382,8 +382,6 @@ class Hypergraph(MonoidalCategory, NamedGeneric['category']):
         dom_wires = cod_wires = tuple(range(len(dom)))
         return cls(dom, dom, (), (dom_wires, (), cod_wires))
 
-    twist = id
-
     @unbiased
     def then(self, other: Hypergraph):
         """
@@ -445,12 +443,63 @@ class Hypergraph(MonoidalCategory, NamedGeneric['category']):
 
     @classmethod
     def swap(cls, left, right):
+        """
+        The swap of a symmetric category, absorbed into the wiring.
+
+        >>> from discopy import braided
+        >>> x, y = braided.Ty('x'), braided.Ty('y')
+        >>> Hypergraph[braided.Diagram].swap(x, y)
+        Traceback (most recent call last):
+        ...
+        discopy.utils.AxiomError: braided.Diagram is not symmetric, ...
+        """
+        if not issubclass(cls.category, SymmetricCategory):
+            raise AxiomError(messages.NO_SWAP.format(
+                factory_name(cls.category)))
         dom, cod, boxes = left @ right, right @ left, ()
         dom_wires = tuple(range(len(dom)))
         cod_wires = tuple(range(len(left), len(dom))) + tuple(range(len(left)))
         return cls(dom, cod, boxes, (dom_wires, (), cod_wires))
 
-    braid = swap
+    @classmethod
+    def braid(cls, left, right):
+        """
+        The braid of a braided category: the :meth:`swap` of a symmetric one,
+        and boxes otherwise, a braid being no swap.
+
+        >>> from discopy import braided
+        >>> x, y = braided.Ty('x'), braided.Ty('y')
+        >>> braid = Hypergraph[braided.Diagram].braid(x, y)
+        >>> assert braid.boxes == (braided.Braid(x, y), )
+        """
+        if not issubclass(cls.category, BraidedCategory):
+            raise AxiomError(messages.NO_BRAID.format(
+                factory_name(cls.category)))
+        if issubclass(cls.category, SymmetricCategory):
+            return cls.swap(left, right)
+        if len(left) == len(right) == 1:
+            return cls.from_box(cls.category.braid_factory(left, right))
+        return cls.from_diagram(cls.category.braid(left, right))
+
+    @classmethod
+    def twist(cls, dom):
+        """
+        The twist of a balanced category: the identity of a symmetric one,
+        and boxes otherwise, a twist being no identity.
+
+        >>> from discopy import balanced
+        >>> x = balanced.Ty('x')
+        >>> twist = Hypergraph[balanced.Diagram].twist(x)
+        >>> assert twist.boxes == (balanced.Twist(x), )
+        """
+        if issubclass(cls.category, SymmetricCategory):
+            return cls.id(dom)
+        if not issubclass(cls.category, BalancedCategory):
+            raise AxiomError(messages.NO_TWIST.format(
+                factory_name(cls.category)))
+        if len(dom) == 1:
+            return cls.from_box(cls.category.twist_factory(dom))
+        return cls.from_diagram(cls.category.twist(dom))
 
     @classmethod
     def permutation(cls, xs: Sequence[int], doms: Sequence) -> Hypergraph:
