@@ -97,3 +97,40 @@ def test_Permutation_delay():
     assert perm.delay(2) == perm.delay().delay()
     assert (perm >> Swap(z, x) @ y).delay()\
         == perm.delay() >> Swap(z, x).delay() @ y.delay()
+
+
+def test_discard_is_a_feedback_diagram():
+    x = Ty('x')
+    discard = Diagram.copy(x, n=0)
+    assert isinstance(discard, Diagram) and isinstance(discard, Discard)
+    assert (discard >> Diagram.id(Ty())).boxes == [discard]
+    assert discard.delay() == Discard(x.delay())
+
+
+def test_trace_is_a_feedback_diagram():
+    x, y = Ty('x'), Ty('y')
+    f = Box('f', x @ y, x @ y)
+    for trace in (f.trace(), f.trace(left=True)):
+        assert isinstance(trace, Trace) and isinstance(trace, Diagram)
+        assert isinstance(trace >> trace, Diagram)
+        assert trace.delay() == f.delay().trace(left=trace.left)
+        assert trace.delay(2) == trace.delay().delay()
+        assert trace.delay() >> trace.delay() == (trace >> trace).delay()
+
+
+def test_feedback_with_a_memory_of_many_wires():
+    x, y, z = Ty('x'), Ty('y'), Ty('z')
+    f = Box('f', x @ (y @ z).delay(), x @ y @ z)
+    for fb in (f.feedback(mem=y @ z), f.feedback(dom=x, cod=x, mem=y @ z)):
+        assert fb == f.feedback(mem=z).feedback(mem=y)
+        assert (fb.dom, fb.cod) == (x, x)
+    assert f.feedback(mem=Ty()) == f
+
+
+def test_delayed_Box_to_tree():
+    from discopy.utils import dumps, loads
+    x, y = Ty('x'), Ty('y')
+    for box in (Box('f', x, y), Box('f', x, y, data=42).dagger()):
+        for delayed in (box, box.delay(), box.delay(2)):
+            assert loads(dumps(delayed)) == delayed
+            assert loads(dumps(delayed)).time_step == delayed.time_step
