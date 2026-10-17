@@ -11,7 +11,6 @@ from discopy import (
     monoidal,
     braided,
     symmetric,
-    traced,
     biclosed,
     rigid,
     pivotal,

@@ -35,11 +35,11 @@ from __future__ import annotations
 from copy import copy
 from dataclasses import dataclass
 
-from discopy import config, monoidal, braided, traced, cmap, hypergraph
+from discopy import config, monoidal, braided, feedback, cmap, hypergraph
 from discopy.abc import BalancedCategory
 from discopy.cat import factory
-from discopy.monoidal import (  # noqa: F401  pylint: disable=unused-import
-    Colour, Ty)
+from discopy.feedback import Ty
+from discopy.monoidal import Colour
 from discopy.utils import factory_name, assert_isatomic, from_tree
 
 
@@ -112,14 +112,15 @@ def double_rail(
 
 
 @factory
-class Diagram(braided.Diagram, traced.Diagram, BalancedCategory):
+class Diagram(braided.Diagram, feedback.Diagram, BalancedCategory):
     """
-    A balanced diagram is a braided diagram with :class:`Twist`.
+    A balanced diagram is a braided diagram with :class:`Twist`, and a
+    feedback diagram whose wires carry a time step.
 
     Parameters:
         inside(Layer) : The layers inside the diagram.
-        dom (monoidal.Ty) : The domain of the diagram, i.e. its input.
-        cod (monoidal.Ty) : The codomain of the diagram, i.e. its output.
+        dom (Ty) : The domain of the diagram, i.e. its input.
+        cod (Ty) : The codomain of the diagram, i.e. its output.
 
     Note
     ----
@@ -130,6 +131,7 @@ class Diagram(braided.Diagram, traced.Diagram, BalancedCategory):
 
     .. _nLab: https://ncatlab.org/nlab/show/traced+monoidal+category)
     """
+    ob = Ty
 
     @classmethod
     def twist(cls, dom: monoidal.Ty) -> Diagram:
@@ -180,7 +182,7 @@ class Diagram(braided.Diagram, traced.Diagram, BalancedCategory):
             else self.dual_rail_factory(width, colour)(self)
 
 
-class Box(braided.Box, traced.Box, Diagram):
+class Box(braided.Box, feedback.Box, Diagram):
     """
     A braided box is a monoidal box in a braided diagram.
 
@@ -249,7 +251,20 @@ class DualRailTwist(braided.Box):
         return type(self)(self.dom, not self.is_dagger)
 
 
-class Trace(traced.Trace, Box):
+class Feedback(feedback.Feedback, Box):
+    """
+    A feedback in a balanced category.
+
+    Parameters:
+        arg : The diagram to feed back.
+        dom : The domain of the feedback.
+        cod : The codomain of the feedback.
+        mem : The memory to feed back.
+        left : Whether to feed back on the left or right.
+    """
+
+
+class Trace(feedback.Trace, Feedback):
     """
     A trace in a balanced category.
 
@@ -320,7 +335,7 @@ class Sum(braided.Sum, Box):
     """
 
 
-class Functor(braided.Functor, traced.Functor):
+class Functor(braided.Functor, feedback.Functor):
     """
     A balanced functor is a braided functor that twists.
 
@@ -337,9 +352,7 @@ class Functor(braided.Functor, traced.Functor):
         if isinstance(other, Twist) and not other.is_dagger\
                 and hasattr(self.cod, "twist"):
             return self.cod.twist(self(other.dom))
-        if isinstance(other, Trace):
-            return traced.Functor.__call__(self, other)
-        return braided.Functor.__call__(self, other)
+        return super().__call__(other)
 
 
 class DualRail(Functor):
@@ -386,7 +399,7 @@ CMap = cmap.CMap[Diagram]
 Hypergraph = hypergraph.Hypergraph[Diagram]
 Diagram.braid_factory = Braid
 Diagram.twist_factory = Twist
-Diagram.trace_factory = Trace
+Diagram.feedback_factory, Diagram.trace_factory = Feedback, Trace
 Diagram.sum_factory = Sum
 Diagram.dual_rail_factory = DualRail
 Id = Diagram.id

@@ -93,17 +93,19 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import ClassVar
 
-from discopy import monoidal, balanced, hypergraph, cmap, messages
+from discopy import monoidal, feedback, balanced, hypergraph, cmap, messages
 from discopy.abc import SymmetricCategory
 from discopy.cat import factory
+from discopy.feedback import (  # noqa: F401  pylint: disable=unused-import
+    Wire, Ty)
 from discopy.monoidal import (  # noqa: F401  pylint: disable=unused-import
-    Wire, Ty, Nat)
+    Nat)
 from discopy.python import finset
 from discopy.utils import (
     AxiomError, assert_iscomposable, classproperty, factory_name, from_tree)
 
 
-class Layer(monoidal.Layer):
+class Layer(feedback.Layer):
     """
     A tensor product of generators and non-empty plumbing, where plumbing is a
     type when it is the identity and a :class:`Permutation` otherwise.
@@ -152,6 +154,22 @@ class Layer(monoidal.Layer):
             if isinstance(value, Permutation) and hasattr(value, 'perm')
             and value.is_identity else value
             for value in inside)
+
+    @classmethod
+    def wait(cls, dom: Ty) -> Diagram:
+        """
+        Wait one time step, i.e. `Swap(x, x.delay()).feedback()`.
+
+        Example
+        -------
+        >>> x = Ty('x')
+        >>> assert Diagram.wait(x) == Swap(x, x.delay()).feedback()
+        >>> Diagram.wait(x).draw(doctest="docs/_static/feedback/wait.svg")
+
+        .. image:: /_static/feedback/wait.svg
+            :align: center
+        """
+        return cls.swap(dom, dom.delay()).feedback()
 
     @property
     def is_plumbing(self) -> bool:
@@ -270,11 +288,28 @@ class Diagram(balanced.Diagram, SymmetricCategory):
     functor_factory: ClassVar[type["Functor"]]
     swap_factory: ClassVar[type["Swap"]]
     permutation_factory: ClassVar[type["Permutation"]]
+    feedback_factory: ClassVar[type["Feedback"]]
     trace_factory: ClassVar[type["Trace"]]
     sum_factory: ClassVar[type["Sum"]]
     braid_factory = classproperty(lambda cls: cls.swap_factory)
     layer_factory = Layer
     twist_factory = classmethod(lambda cls, dom: cls.id(dom))
+
+    @classmethod
+    def wait(cls, dom: Ty) -> Diagram:
+        """
+        Wait one time step, i.e. `Swap(x, x.delay()).feedback()`.
+
+        Example
+        -------
+        >>> x = Ty('x')
+        >>> assert Diagram.wait(x) == Swap(x, x.delay()).feedback()
+        >>> Diagram.wait(x).draw(doctest="docs/_static/feedback/wait.svg")
+
+        .. image:: /_static/feedback/wait.svg
+            :align: center
+        """
+        return cls.swap(dom, dom.delay()).feedback()
 
     @property
     def is_plumbing(self) -> bool:
@@ -488,6 +523,9 @@ class Permutation(Box):
             draw_as_wires=True, draw_as_permutation=True,
             permutation_indices=tuple(self.perm))
 
+    def delay(self, n_steps=1):
+        return type(self)(self.dom.delay(n_steps), self.perm)
+
     @property
     def is_identity(self) -> bool:
         """
@@ -606,6 +644,9 @@ class Swap(Permutation, balanced.Braid, Box):
     def dagger(self):
         return type(self)(self.right, self.left)
 
+    def delay(self, n_steps=1):
+        return type(self)(self.left.delay(n_steps), self.right.delay(n_steps))
+
     def to_swaps(self):
         return self
 
@@ -619,7 +660,20 @@ class Swap(Permutation, balanced.Braid, Box):
         return self.name
 
 
-class Trace(balanced.Trace, Box):
+class Feedback(balanced.Feedback, Box):
+    """
+    A feedback in a symmetric category.
+
+    Parameters:
+        arg : The diagram to feed back.
+        dom : The domain of the feedback.
+        cod : The codomain of the feedback.
+        mem : The memory to feed back.
+        left : Whether to feed back on the left or right.
+    """
+
+
+class Trace(balanced.Trace, Feedback):
     """
     A trace in a symmetric category.
 
@@ -677,7 +731,7 @@ Diagram.functor_factory = Functor
 Hypergraph = hypergraph.Hypergraph[Diagram]
 Diagram.swap_factory = Swap
 Diagram.permutation_factory = Permutation
-Diagram.trace_factory = Trace
+Diagram.feedback_factory, Diagram.trace_factory = Feedback, Trace
 Diagram.sum_factory = Sum
 Id = Diagram.id
 
