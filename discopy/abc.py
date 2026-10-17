@@ -392,6 +392,7 @@ class FeedbackCategory[C0, C1](MonoidalCategory[C0, C1]):
         Parameters:
             n_steps : The number of time steps to delay.
         """
+        del n_steps
         return self
 
     @abstractmethod
