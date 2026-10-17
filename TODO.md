@@ -54,9 +54,9 @@ The screenshot is egg's: `(a * 2) / 2` under `x * 2 = x << 1`, `(x * y) / z = x 
       deterministic and affine unless it says otherwise, as @toumix asked on discopy#730 ("`is_deterministic`
       for the copy-naturality alone", "shouldn't be a ClassVar"); a section chooses one producer per class,
       so that over cartesian diagrams the e-hypergraph is an e-graph
-- [WIP] @session_01MY1Vs5CEhXgYwJcDnNwx6i-2026-10-17 18:40 Matching and saturation, the rules of egg's example
+- [x] Matching and saturation, the rules of egg's example
       applied until nothing changes, and extraction at least tree cost, as egg's
-- [WIP] @session_01MY1Vs5CEhXgYwJcDnNwx6i-2026-10-17 18:40 egglog-python as the reference: egg's example, and a
+- [x] egglog-python as the reference: egg's example, and a
       differential stress test of the relation and the extracted cost
 - [WIP] @session_01MY1Vs5CEhXgYwJcDnNwx6i-2026-10-17 18:40 The same with `sample`, not deterministic, and
       `condition`, not affine

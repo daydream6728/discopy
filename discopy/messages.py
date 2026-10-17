@@ -95,6 +95,12 @@ NOT_A_REGION = (
     "The boxes {} do not compute the spiders {} -> {}: they cannot all fire "
     "in some order from the classes of the domain, or do not reach those of "
     "the codomain.")
+NOT_A_PATTERN = (
+    "{} is not a pattern, i.e. a cartesian diagram with sharing whose "
+    "codomain is produced by its boxes: a variable alone matches anything.")
+NOT_A_RULE = (
+    "{} = {} is not a rule: its sides are cartesian diagrams of one type, the "
+    "left a pattern and the right reading only the inputs the left reads.")
 SHARING_HAS_NO_DAGGER = (
     "A diagram with sharing has no dagger: the dagger of a copy is a merge, "
     "a spider with two producers.")

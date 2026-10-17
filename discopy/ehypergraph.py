@@ -3,31 +3,49 @@
 """
 E-hypergraphs, i.e. e-graphs of diagrams with sharing.
 
-A cartesian diagram, whose boxes are total functions, is a term with sharing:
-copying a wire shares a subterm, discarding it drops one. An e-graph gathers
-equal terms in e-classes, each the set of its e-nodes, the operations on
-e-classes that compute it :cite:`WillseyEtAl21`. An e-hypergraph over a
-copy-discard category, e.g. :class:`discopy.markov.Diagram`, is a pair of a
-:class:`discopy.hypergraph.Hypergraph` that is left-monogamous and acyclic,
-i.e. a diagram with sharing whose every spider has one producer, a domain
-position or the output of a box, its boxes the e-nodes, and of an
-equivalence relation on its spiders of one type, its classes the e-classes.
-
-Over cartesian diagrams an e-hypergraph is an e-graph: it hash-conses a
-diagram as egg does a term, :meth:`EHypergraph.rebuild` closes the relation
-under congruence and :meth:`EHypergraph.rewrite` glues the right-hand side of
-an equation onto a region and relates their outputs. It denotes its
-**sections**, each a choice of one producer for each class it needs, those of
-the codomain and those read by the boxes it keeps: those it chooses and those
-that are not affine. A section chooses per class where egg's terms choose per
-occurrence, so that relating classes removes sections, but the classes are
-egg's and :meth:`EHypergraph.extract` is a section of least tree cost.
+A cartesian diagram, whose boxes are total functions, is a term with sharing,
+and an e-graph gathers equal terms in e-classes of e-nodes
+:cite:`WillseyEtAl21`. An e-hypergraph over a copy-discard category, e.g.
+:class:`discopy.markov.Diagram`, is a left-monogamous acyclic
+:class:`discopy.hypergraph.Hypergraph`, i.e. a diagram with sharing whose
+boxes are the e-nodes, with an equivalence relation on its spiders of one
+type, whose classes are the e-classes. Over cartesian diagrams it is an
+e-graph: it hash-conses as egg does, :meth:`EHypergraph.rebuild` closes the
+relation under congruence, :meth:`EHypergraph.matches` finds a left-hand side
+modulo the classes, :meth:`EHypergraph.rewrite` glues a right-hand side onto
+it and :meth:`EHypergraph.saturate` does both round by round. Its
+**sections** choose a producer for each class they need, of the codomain and
+read by the boxes they keep, chosen or not affine: per class, where egg's
+terms choose per occurrence, so that relating classes removes sections, but
+the classes are egg's and :meth:`EHypergraph.extract` is a section of least
+tree cost.
 
 The flags of a :class:`discopy.markov.Box` go beyond terms: equal boxes on
-related inputs have related outputs only when deterministic, as two samples
-are independent, and a box that is not affine, e.g. a condition, is an effect
-every section keeps. Effects are context: equations are between cartesian
-diagrams. Equality is up to renaming the spiders.
+related inputs have related outputs only when deterministic, two samples
+being independent, and a box that is not affine, e.g. a condition, is an
+effect every section keeps. Equations are between cartesian diagrams, effects
+being context, and equality is up to renaming the spiders.
+
+Example
+-------
+Egg's own example, ``(a * 2) / 2`` with ``a`` a domain wire and constants
+boxes with no input, saturates in three rounds with egg's classes, then
+extracts ``a``:
+
+>>> from discopy.markov import Ty, Box, Diagram
+>>> x = Ty('x')
+>>> one, two = Box('1', Ty(), x), Box('2', Ty(), x)
+>>> times, divide, shift = (Box(op, x @ x, x) for op in ("*", "/", "<<"))
+>>> rules = [(x @ two >> times, x @ one >> shift),
+...          (times @ x >> divide, x @ divide >> times),
+...          (Diagram.copy(x) >> divide, Diagram.discard(x) >> one),
+...          (x @ one >> times, Diagram.id(x))]
+>>> graph = Markov.from_diagram(x @ two @ two >> times @ x >> divide)
+>>> rounds = list(graph.saturate(*rules))
+>>> [len(set(rewritten.classes)) for rewritten in [graph] + rounds]
+[4, 6, 5, 4]
+>>> print(rounds[-1].extract().to_diagram())
+Id(x)
 
 Summary
 -------
@@ -48,11 +66,12 @@ Summary
 
         partition
         relabel
+        pattern
         ast_size
 """
 
 from collections import Counter
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from math import inf
 from typing import TYPE_CHECKING, Self
 
@@ -64,18 +83,11 @@ from discopy.abc import HypergraphCategory, MarkovCategory, MonoidalCategory
 from discopy.axioms import (
     GENERATORS, Count, Equation, Hom, Obj, Serialisable, Var, axiom)
 from discopy.drawing import Node
-from discopy.hypergraph import Hypergraph, relabeling
+from discopy.hypergraph import Hypergraph
 from discopy.monoidal import Ty
 from discopy.utils import (
-    AxiomError,
-    NamedGeneric,
-    classproperty,
-    factory_name,
-    from_tree,
-    pushout,
-    resolve_factory,
-    unbiased,
-)
+    AxiomError, NamedGeneric, classproperty, factory_name, from_tree, pushout,
+    resolve_factory, unbiased)
 
 if TYPE_CHECKING:
     from hypothesis import strategies as st
@@ -84,8 +96,7 @@ if TYPE_CHECKING:
 def partition(n: int, pairs) -> tuple[int, ...]:
     """
     The finest partition of ``range(n)`` relating each pair, as the least
-    element of the class of each element, so that it only depends on the
-    partition.
+    element of the class of each element.
 
     >>> partition(4, [(3, 1), (1, 2)])
     (0, 1, 1, 1)
@@ -112,6 +123,18 @@ def relabel(wires, label: Callable):
         for src, tgt in box_wires), tuple(map(label, cod_wires))
 
 
+def pattern(graph: Hypergraph) -> Hypergraph:
+    """
+    A hypergraph without its wires from the domain straight to the codomain,
+    a pattern when it is cartesian, see :meth:`EHypergraph.matches`.
+    """
+    dom_wires, box_wires, cod_wires = graph.wires
+    kept = [k for k, s in enumerate(cod_wires) if s not in dom_wires]
+    return type(graph)(
+        graph.dom, type(graph.cod)().tensor(*(graph.cod[k] for k in kept)),
+        graph.boxes, (dom_wires, box_wires, tuple(cod_wires[k] for k in kept)))
+
+
 def ast_size(_box) -> int:
     """ The cost of a box in egg's ``AstSize``: one, whatever the box. """
     return 1
@@ -124,31 +147,28 @@ class EHypergraph[category](
     :mod:`discopy.ehypergraph`.
 
     Parameters:
-        graph : A left-monogamous acyclic hypergraph, whose boxes are the
-            e-nodes.
+        graph : A left-monogamous acyclic hypergraph, its boxes the e-nodes.
         classes : The least spider related to each spider, the e-classes,
             the identity relation by default.
 
     Example
     -------
+    Rewriting ``a * 2``, the boxes 0 and 1 from the spider 0 to the spider 2,
+    into ``a << 1``, extraction takes the least producer of least cost unless
+    multiplication costs more than a shift:
+
     >>> from discopy.markov import Ty, Box
     >>> x = Ty('x')
     >>> one, two = Box('1', Ty(), x), Box('2', Ty(), x)
     >>> times, shift = Box('*', x @ x, x), Box('<<', x @ x, x)
-    >>> graph = EHypergraph[markov.Diagram].from_diagram(x @ two >> times)
-
-    The equation ``a * 2 = a << 1`` rewrites the boxes 0 and 1 from the
-    spider 0 of ``a`` to the spider 2 of ``a * 2``. Both sides cost three, a
-    domain position and two boxes, and extraction takes the least producer of
-    least cost, unless multiplication costs more than a shift:
-
     >>> left, right = x @ two >> times, x @ one >> shift
-    >>> rewritten = graph.rewrite((0, 1), (0, ), (2, ), right.to_hypergraph())
-    >>> assert rewritten.sections() == [
+    >>> graph = Markov.from_diagram(left).rewrite(
+    ...     (0, 1), (0, ), (2, ), right.to_hypergraph())
+    >>> assert graph.sections() == [
     ...     left.to_hypergraph(), right.to_hypergraph()]
-    >>> assert rewritten.extract() == left.to_hypergraph()
+    >>> assert graph.extract() == left.to_hypergraph()
     >>> cost = lambda box: 2 if box == times else 1
-    >>> assert rewritten.extract(box_cost=cost) == right.to_hypergraph()
+    >>> assert graph.extract(box_cost=cost) == right.to_hypergraph()
     """
     ob = classproperty(lambda cls: cls.category.ob)
 
@@ -161,13 +181,12 @@ class EHypergraph[category](
         if not graph.is_left_monogamous or not graph.is_acyclic:
             raise AxiomError(messages.NOT_SHARING.format(graph))
         n = graph.n_spiders
-        classes = tuple(range(n)) if classes is None else tuple(classes)
-        if len(classes) != n:
-            raise ValueError(messages.TYPE_ERROR.format(n, len(classes)))
-        if any(graph.spider_types[s] != graph.spider_types[c]
-               for s, c in enumerate(classes)):
+        classes = tuple(range(n) if classes is None else classes)
+        if len(classes) != n or any(
+                graph.spider_types[s] != graph.spider_types[c]
+                for s, c in enumerate(classes)):
             raise AxiomError(messages.TYPE_ERROR.format(
-                "related spiders of one type", classes))
+                f"a class of one type for each of {n} spiders", classes))
         self.graph, self.classes = graph, partition(n, enumerate(classes))
 
     dom = property(lambda self: self.graph.dom)
@@ -182,9 +201,7 @@ class EHypergraph[category](
         >>> from discopy.markov import Ty, Box
         >>> x = Ty('x')
         >>> two, divide = Box('2', Ty(), x), Box('/', x @ x, x)
-        >>> graph = EHypergraph[markov.Diagram].from_diagram(
-        ...     two @ two >> divide)
-        >>> graph.classes
+        >>> Markov.from_diagram(two @ two >> divide).classes
         (0, 0, 2)
         """
         return cls(Hypergraph[cls.category].from_diagram(diagram)).rebuild()
@@ -193,25 +210,21 @@ class EHypergraph[category](
     def id(cls, dom=None) -> Self:
         return cls(Hypergraph[cls.category].id(dom))
 
-    def carry(self, graph: Hypergraph, wires, spiders, pairs) -> Self:
+    def carry(self, graph: Hypergraph, wires, pairs) -> Self:
         """
-        The e-hypergraph of a hypergraph built from some wires and spiders,
-        with pairs of them related, carried to the labels the hypergraph
-        gives them, see :func:`hypergraph.relabeling`.
+        The e-hypergraph of a hypergraph built from some wires, with pairs of
+        their spiders related, carried to the spiders it relabels them to.
         """
         dom_wires, box_wires, cod_wires = wires
-        label = relabeling(dom_wires + tuple(
-            s for src, tgt in box_wires for s in src + tgt) + cod_wires,
-            spiders)
+        label = dict(zip(dom_wires + sum((
+            src + tgt for src, tgt in box_wires), ()) + cod_wires,
+            graph.flat_wires))
         return type(self)(graph, partition(graph.n_spiders, (
             (label[s], label[t]) for s, t in pairs)))
 
     @unbiased
     def then(self, other: Self) -> Self:
-        """
-        Composition, that of the hypergraphs with both relations carried
-        along the pushout.
-        """
+        """ Composition, the relations carried along the pushout. """
         left, right = pushout(
             self.graph.n_spiders, other.graph.n_spiders,
             self.graph.cod_wires, other.graph.dom_wires)
@@ -219,10 +232,8 @@ class EHypergraph[category](
             self.graph.wires, left.get), relabel(other.graph.wires, right.get)
         pairs = [(left[s], left[c]) for s, c in enumerate(self.classes)] + [
             (right[s], right[c]) for s, c in enumerate(other.classes)]
-        return self.carry(
-            self.graph >> other.graph, (dom_wires, box_wires + others,
-                                        cod_wires),
-            set(left.values()) | set(right.values()), pairs)
+        return self.carry(self.graph >> other.graph, (
+            dom_wires, box_wires + others, cod_wires), pairs)
 
     @unbiased
     def tensor(self, other: Self) -> Self:
@@ -232,9 +243,7 @@ class EHypergraph[category](
             other.graph.wires, n.__add__)))
         pairs = list(enumerate(self.classes)) + [
             (n + s, n + c) for s, c in enumerate(other.classes)]
-        return self.carry(
-            self.graph @ other.graph, wires,
-            range(n + other.graph.n_spiders), pairs)
+        return self.carry(self.graph @ other.graph, wires, pairs)
 
     def merge(self, *spiders: int) -> Self:
         """ Relate spiders of one type, i.e. state that they are equal. """
@@ -242,17 +251,20 @@ class EHypergraph[category](
         return type(self)(self.graph, partition(self.graph.n_spiders, pairs))
 
     def pair(self, i: int, j: int) -> tuple[int, ...]:
-        """
-        Two spiders of one type, the ``i``-th modulo their number and the
-        ``j``-th of its type, for the laws to quantify over: none when there
-        is no spider.
-        """
+        """ The ``i``-th spider and the ``j``-th of its type, for the laws. """
         if not self.graph.n_spiders:
             return ()
         types = self.graph.spider_types
         first = i % len(types)
         same = [s for s, typ in enumerate(types) if typ == types[first]]
         return first, same[j % len(same)]
+
+    def twice(self) -> Self:
+        """ Two copies side by side on related inputs, rebuilt. """
+        result, n = self @ self, len(self.dom)
+        for k in range(n):
+            result = result.merge(*result.graph.dom_wires[k::n])
+        return result.rebuild()
 
     def inputs(self, box: int) -> tuple[int, ...]:
         """ The classes a box reads, given by its index. """
@@ -270,10 +282,8 @@ class EHypergraph[category](
 
     def rebuild(self) -> Self:
         """
-        The congruence closure of the relation, egg's rebuild: the least
-        relation containing it that relates the outputs of two equal boxes
-        that are deterministic and read related inputs. Two samples on
-        related inputs stay independent.
+        The congruence closure, egg's rebuild: it relates the outputs of equal
+        deterministic boxes on related inputs, but not those of two samples.
         """
         graph, classes = self.graph, self.classes
         while True:
@@ -288,27 +298,24 @@ class EHypergraph[category](
 
     def add(self, box, inputs: tuple[int, ...]) -> tuple[Self, tuple]:
         """
-        Add a box reading some spiders, egg's add, and return the spiders of
-        its outputs: an equal deterministic box reading the same classes is
-        not added again, its outputs standing for those of the box, while a
-        second sample is another sample.
+        Add a box reading some spiders, egg's add, and return its outputs, or
+        those of an equal deterministic box on the same classes: not a sample.
         """
         key = tuple(self.classes[s] for s in inputs)
-        for other, (src, tgt) in zip(self.graph.boxes, self.graph.box_wires):
-            if box.is_deterministic and other == box\
-                    and tuple(self.classes[s] for s in src) == key:
-                return self, tgt
+        for j, other in enumerate(self.graph.boxes):
+            if box.is_deterministic and other == box and self.inputs(j) == key:
+                return self, self.graph.box_wires[j][1]
         graph, n = self.graph, self.graph.n_spiders
         outputs = tuple(range(n, n + len(box.cod)))
         wires = (graph.dom_wires, graph.box_wires + (
             (tuple(inputs), outputs), ), graph.cod_wires)
-        result = self.carry(
-            type(graph)(graph.dom, graph.cod, graph.boxes + (box, ), wires),
-            wires, range(n + len(outputs)), enumerate(self.classes))
+        result = self.carry(type(graph)(
+            graph.dom, graph.cod, graph.boxes + (box, ), wires), wires,
+            enumerate(self.classes))
         return result, result.graph.box_wires[-1][1]
 
-    def assert_equation(self, region: tuple[int, ...], dom: tuple[int, ...],
-                        cod: tuple[int, ...], rhs: Hypergraph):
+    def assert_equation(self, region: tuple[int, ...], dom: tuple, cod: tuple,
+                        rhs: Hypergraph):
         """ Raise unless :meth:`rewrite` can enter an equation, see there. """
         graph, classes = self.graph, self.classes
         for box in tuple(graph.boxes[j] for j in region) + rhs.boxes:
@@ -316,11 +323,15 @@ class EHypergraph[category](
                 raise AxiomError(messages.NOT_CARTESIAN.format(box))
         if not rhs.is_left_monogamous or not rhs.is_acyclic:
             raise AxiomError(messages.NOT_SHARING.format(rhs))
-        types = [graph.spider_types[s] for s in dom + cod]
-        if (len(dom), len(cod)) != (len(rhs.dom), len(rhs.cod)) or types != [
-                rhs.spider_types[s] for s in rhs.dom_wires + rhs.cod_wires]:
+
+        def fits(s, t):
+            return not rhs.spider_wires[t][1] if s is None\
+                else graph.spider_types[s] == rhs.spider_types[t]
+
+        if (len(dom), len(cod)) != (len(rhs.dom), len(rhs.cod)) or not all(
+                map(fits, dom + cod, rhs.dom_wires + rhs.cod_wires)):
             raise AxiomError(messages.NOT_A_BOUNDARY.format(rhs, dom, cod))
-        reached, todo = {classes[s] for s in dom}, set(region)
+        reached, todo = {classes[s] for s in dom if s is not None}, set(region)
         while fired := {j for j in todo if set(self.inputs(j)) <= reached}:
             todo -= fired
             reached |= {
@@ -328,50 +339,111 @@ class EHypergraph[category](
         if todo or any(classes[s] not in reached for s in cod):
             raise AxiomError(messages.NOT_A_REGION.format(region, dom, cod))
 
-    def rewrite(self, region: tuple[int, ...], dom: tuple[int, ...],
-                cod: tuple[int, ...], rhs: Hypergraph) -> Self:
+    def rewrite(self, region: tuple[int, ...], dom: tuple, cod: tuple,
+                rhs: Hypergraph) -> Self:
         """
         State that a region, the boxes computing the spiders ``cod`` from
         ``dom``, equals a hypergraph ``rhs``: glue it onto ``dom``,
         hash-consing its boxes with :meth:`add`, and relate ``cod`` to its
         outputs. The region stays: an e-graph never deletes, a section may.
-        It raises :class:`AxiomError` when a box of either side is not
+        ``dom`` is :obj:`None` where ``rhs`` does not read it, as a match
+        leaves an input its pattern does not read, see :meth:`matches`. It
+        raises :class:`AxiomError` when a box of either side is not
         cartesian, an effect being context, when the boundaries have other
-        types, when the region does not compute ``cod`` from ``dom``, i.e.
-        when its boxes cannot fire in some order from the classes of ``dom``
-        and reach those of ``cod``, or when ``rhs`` is not a diagram with
-        sharing.
-
-        Rewriting a box into itself changes nothing:
-
-        >>> from discopy.markov import Ty, Box
-        >>> x = Ty('x')
-        >>> f = Box('f', x, x)
-        >>> graph = EHypergraph[markov.Diagram].from_diagram(f)
-        >>> assert graph.rewrite((0, ), (0, ), (1, ), f.to_hypergraph())\\
-        ...     == graph
+        types, when ``rhs`` is not a diagram with sharing, or when the boxes
+        of the region cannot fire in some order from ``dom`` to ``cod``.
         """
         dom, cod = tuple(dom), tuple(cod)
         self.assert_equation(region, dom, cod, rhs)
-        result, image = self, dict(zip(rhs.dom_wires, dom))
-        pending = list(range(len(rhs.boxes)))
-        while pending:
-            j = next(j for j in pending
-                     if set(rhs.box_wires[j][0]) <= image.keys())
-            pending.remove(j)
-            result, outputs = result.add(
-                rhs.boxes[j], tuple(image[s] for s in rhs.box_wires[j][0]))
-            image.update(zip(rhs.box_wires[j][1], outputs))
+        rhs, result, image = rhs.topological_order(), self, {}
+        image.update(zip(rhs.dom_wires, dom))
+        for box, (src, tgt) in zip(rhs.boxes, rhs.box_wires):
+            result, outputs = result.add(box, tuple(image[s] for s in src))
+            image.update(zip(tgt, outputs))
         for spider, target in zip(cod, rhs.cod_wires):
             result = result.merge(spider, image[target])
         return result
 
+    def matches(self, lhs: Hypergraph) -> list[tuple[tuple, tuple, tuple]]:
+        """
+        The matches of a pattern modulo the classes, egg's e-matching: a
+        cartesian diagram with sharing whose boxes produce its codomain, as a
+        variable alone would match anything. A match binds each box of ``lhs``
+        to an equal box, flags included, each spider to one class, and is
+        ``(region, dom, cod)``, the boxes and the least spiders of the classes
+        bound, :obj:`None` where ``lhs`` does not read, so that
+        ``rewrite(*match, rhs)`` applies a rule. The boxes are bound from the
+        codomain up, each to the equal ones in order.
+
+        >>> from discopy.markov import Ty, Box, Diagram
+        >>> x = Ty('x')
+        >>> f, g = Box('f', x, x), Box('g', x @ x, x)
+        >>> graph = Markov.from_diagram(Diagram.copy(x) >> f @ f >> g)
+        >>> graph.matches((Diagram.copy(x) >> g).to_hypergraph())
+        [((2,), (1,), (3,))]
+        """
+        if not all(box.is_cartesian for box in lhs.boxes)\
+                or not lhs.is_left_monogamous or not lhs.is_acyclic\
+                or set(lhs.dom_wires) & set(lhs.cod_wires):
+            raise AxiomError(messages.NOT_A_PATTERN.format(lhs))
+        lhs, classes, found = lhs.topological_order(), self.classes, {}
+        candidates = [[(h, src + tgt) for h, (box, (src, tgt)) in enumerate(
+            zip(self.graph.boxes, self.graph.box_wires)) if box == pb]
+            for pb in lhs.boxes]
+
+        def bind(j: int, env: dict, bound: tuple):
+            if j < 0:
+                found[tuple(sorted(set(bound))), tuple(
+                    env.get(s) for s in lhs.dom_wires), tuple(
+                    env[s] for s in lhs.cod_wires)] = None
+                return
+            for h, spiders in candidates[j]:
+                new = dict(env)
+                if all(new.setdefault(p, classes[s]) == classes[s]
+                       for p, s in zip(sum(lhs.box_wires[j], ()), spiders)):
+                    bind(j - 1, new, bound + (h, ))
+
+        bind(len(lhs.boxes) - 1, {}, ())
+        return list(found)
+
+    def saturate(self, *rules) -> Iterator[Self]:
+        """
+        Saturate under some rules with egg's schedule: each round searches
+        every match of every rule as the round begins, rewrites them all and
+        rebuilds, yielding the result if it has more boxes or fewer classes,
+        else stopping, as a rewrite only adds and relates. A rule is a pair
+        ``(lhs, rhs)`` of cartesian diagrams of one type, ``lhs`` a pattern,
+        see :meth:`matches`, and ``rhs`` reading only the inputs ``lhs``
+        reads, as egg's only uses the variables of the left, else it raises
+        :class:`AxiomError`. Rules need not saturate: cut the rounds.
+        """
+        def reads(graph):
+            return [bool(graph.spider_wires[s][1]) for s in graph.dom_wires]
+
+        pairs = []
+        for lhs, rhs in rules:
+            left, right = lhs.to_hypergraph(), rhs.to_hypergraph()
+            if (lhs.dom, lhs.cod) != (rhs.dom, rhs.cod) or not all(
+                    box.is_cartesian for box in right.boxes) or any(
+                    b and not a for a, b in zip(reads(left), reads(right))):
+                raise AxiomError(messages.NOT_A_RULE.format(lhs, rhs))
+            pairs.append((left, right))
+        current = self.rebuild()
+        while True:
+            result = current
+            for match, rhs in [(match, rhs) for lhs, rhs in pairs
+                               for match in current.matches(lhs)]:
+                result = result.rewrite(*match, rhs)
+            result = result.rebuild()
+            if (len(result.graph.boxes), len(set(result.classes))) == (
+                    len(current.graph.boxes), len(set(current.classes))):
+                return
+            yield result
+            current = result
+
     @property
     def producers(self) -> dict[int, tuple[int, ...]]:
-        """
-        The producers of each class, as ports of the hypergraph in order,
-        the domain positions before the outputs of the boxes.
-        """
+        """ The producer ports of each class, domain positions first. """
         result: dict[int, list[int]] = {}
         for spider, (ports, _) in enumerate(self.graph.spider_wires):
             result.setdefault(self.classes[spider], []).extend(ports)
@@ -379,9 +451,8 @@ class EHypergraph[category](
 
     def roots(self) -> tuple[int, ...]:
         """
-        The boxes every section keeps, those that are not affine, but for
-        the later of two equal deterministic ones on related inputs: a hard
-        constraint observed twice is observed once.
+        The boxes every section keeps, not affine, but the later of two equal
+        deterministic ones on related inputs: a constraint holds once.
         """
         found = {}
         for j, box in enumerate(self.graph.boxes):
@@ -397,11 +468,10 @@ class EHypergraph[category](
 
     def section(self, choice: dict[int, int]) -> Hypergraph:
         """
-        The section of a choice of a producer port for each class it needs,
-        see :meth:`needs`: the hypergraph of the roots and of the boxes it
-        chooses, in a causal order, with a spider for each class it needs and
-        a fresh one, discarded, for each producer it does not choose, which
-        decodes to a diagram. It raises :class:`AxiomError` on a cycle.
+        The section of a choice of a producer port for each class it needs:
+        the roots and the boxes it chooses in a causal order, a spider for each
+        class and a fresh one, discarded, for each producer not chosen. It
+        raises :class:`AxiomError` on a cycle.
         """
         graph, classes = self.graph, self.classes
         dependencies, todo = DiGraph(), list(self.needs())
@@ -427,12 +497,9 @@ class EHypergraph[category](
                 and classes[s] in position else graph.n_spiders + s
                 for s in wires)
 
-        def consume(wires):
-            return tuple(classes[s] for s in wires)
-
         wires = produce(graph.dom_wires), tuple(
-            (consume(graph.box_wires[j][0]), produce(graph.box_wires[j][1]))
-            for j in kept), consume(graph.cod_wires)
+            (self.inputs(j), produce(graph.box_wires[j][1])) for j in kept), \
+            tuple(classes[s] for s in graph.cod_wires)
         return type(graph)(
             graph.dom, graph.cod, tuple(graph.boxes[j] for j in kept), wires)
 
@@ -464,11 +531,10 @@ class EHypergraph[category](
     def relax(self, box_cost: Callable = ast_size, input_cost: float = 1
               ) -> tuple[dict[int, float], dict[int, int]]:
         """
-        The least tree cost of each class, a shared subterm counted once per
-        occurrence, by Bellman-Ford relaxation to a fixpoint, and the least of
-        its producers of least cost: exact, and the choice acyclic, when every
-        box costs at least one. A box costs ``box_cost(box)``, one as in egg's
-        ``AstSize`` by default, and a domain position ``input_cost``.
+        The least tree cost of each class by Bellman-Ford relaxation, with its
+        least producer of least cost: exact and acyclic when every box costs
+        at least one. A box costs ``box_cost(box)``, one by default as in
+        egg's ``AstSize``, and a domain position ``input_cost``.
         """
         producers = self.producers
         costs = dict.fromkeys(producers, inf)
@@ -478,41 +544,31 @@ class EHypergraph[category](
             return input_cost if box is None\
                 else self.tree_cost(box, costs, box_cost)
 
-        changed = True
-        while changed:
-            changed = False
-            for q, ports in producers.items():
-                least = min(map(weight, ports))
-                if least < costs[q]:
-                    costs[q], changed = least, True
+        while lower := {q: min(map(weight, ports)) for q, ports in producers
+                        .items() if min(map(weight, ports)) < costs[q]}:
+            costs.update(lower)
         return costs, {q: next(p for p in ports if weight(p) == costs[q])
                        for q, ports in producers.items()}
 
     def cost(self, box_cost: Callable = ast_size, input_cost: float = 1
              ) -> float:
-        """
-        The least tree cost of a section: those of the classes of the
-        codomain and of each root, see :meth:`relax`.
-        """
+        """ The least tree cost of a section, of its codomain and roots. """
         costs, _ = self.relax(box_cost, input_cost)
         return sum(costs[self.classes[s]] for s in self.graph.cod_wires) + sum(
             self.tree_cost(j, costs, box_cost) for j in self.roots())
 
     def extract(self, box_cost: Callable = ast_size, input_cost: float = 1
                 ) -> Hypergraph:
-        """
-        A section of least tree cost, egg's extraction, see :meth:`relax`.
-        """
+        """ A section of least tree cost, egg's extraction. """
         return self.section(self.relax(box_cost, input_cost)[1])
 
     def to_graph(self) -> DiGraph:
         """ The labelled graph of the hypergraph, with a node per class. """
         graph = self.graph.to_graph()
-        for spider, label in enumerate(self.classes):
-            obj = self.graph.spider_types[spider]
+        for spider, (label, obj) in enumerate(zip(
+                self.classes, self.graph.spider_types)):
             graph.add_node(("class", label), box="class")
-            graph.add_edge(
-                ("class", label), Node("spider", i=spider, obj=obj))
+            graph.add_edge(("class", label), Node("spider", i=spider, obj=obj))
         return graph
 
     def __eq__(self, other) -> bool:
@@ -531,11 +587,9 @@ class EHypergraph[category](
 
     def to_tree(self) -> dict:
         """ Serialise the e-hypergraph, with the name of its category. """
-        return {
-            'factory': factory_name(EHypergraph),
-            'category': factory_name(self.category),
-            'graph': self.graph.to_tree(),
-            'classes': list(self.classes)}
+        return {'factory': factory_name(EHypergraph),
+                'category': factory_name(self.category),
+                'graph': self.graph.to_tree(), 'classes': list(self.classes)}
 
     @classmethod
     def from_tree(cls, tree: dict) -> Self:
@@ -544,13 +598,12 @@ class EHypergraph[category](
         return factory(from_tree(tree['graph']), tuple(tree['classes']))
 
     @classmethod
-    def strategy(cls, effects: bool = False, max_merges: int = 3, **params
+    def strategy(cls, effects: bool = True, max_merges: int = 3, **params
                  ) -> "st.SearchStrategy[EHypergraph]":
         """
-        Generate e-hypergraphs: an acyclic hypergraph of the category, its
-        types and boxes named after two generators so that some are equal,
-        then up to ``max_merges`` merges. The boxes are cartesian unless
-        ``effects``, and ``params`` are passed to :meth:`Hypergraph.strategy`.
+        Generate an acyclic hypergraph, its types and boxes named after two
+        generators, some boxes not deterministic or not affine if ``effects``,
+        then up to ``max_merges`` merges; ``params`` go to the hypergraph.
         """
         from hypothesis import strategies as st
 
@@ -593,68 +646,38 @@ class EHypergraph[category](
             A: Obj[Ty], B: Obj[Ty], C: Obj[Ty], D: Obj[Ty], E: Obj[Ty]](
             cls, f: Hom[Self, A, B], g: Hom[Self, B, C], h: Hom[Self, D, E]
     ) -> Equation[Hypergraph]:
-        """
-        The hypergraph of an e-hypergraph is a strict monoidal functor, the
-        identity on an object being the identity hypergraph by definition.
-        """
+        """ The hypergraph of an e-hypergraph is a strict monoidal functor. """
         return Equation(((f >> g) @ h).graph, (f.graph >> g.graph) @ h.graph)
 
     @axiom
-    def merge_reflexivity[I: Count](
-            cls, graph: Self, i: Var[int, I]) -> Equation[Self]:
-        """ A spider is related to itself already. """
-        return Equation(graph.merge(*graph.pair(i, i)[:1] * 2), graph)
-
-    @axiom
-    def merge_symmetry[I: Count, J: Count](
-            cls, graph: Self, i: Var[int, I], j: Var[int, J]
-    ) -> Equation[Self]:
-        """ Relating ``s`` to ``t`` relates ``t`` to ``s``. """
-        pair = graph.pair(i, j)
-        return Equation(graph.merge(*pair), graph.merge(*pair[::-1]))
-
-    @axiom
-    def merge_transitivity[I: Count, J: Count, K: Count](
+    def merge_equivalence[I: Count, J: Count, K: Count](
             cls, graph: Self, i: Var[int, I], j: Var[int, J],
-            k: Var[int, K]) -> Equation[Self]:
-        """ Relating ``s`` to ``t`` and ``t`` to ``u`` relates them all. """
+            k: Var[int, K]) -> Equation[tuple[Self, ...]]:
+        """ Merging is reflexive, symmetric and transitive. """
         if not graph.graph.n_spiders:
-            return Equation(graph, graph)
+            return Equation((), ())
         (s, t), (_, u) = graph.pair(i, j), graph.pair(i, k)
         chained = graph.merge(s, t).merge(t, u)
-        return Equation(chained.merge(s, u), chained)
+        return Equation(
+            (graph.merge(s, s), graph.merge(s, t), chained.merge(s, u)),
+            (graph, graph.merge(t, s), chained))
 
     @axiom
-    def rebuild_idempotence(cls, graph: Self) -> Equation[Self]:
-        """ A congruence is its own closure. """
-        closed = graph.rebuild()
-        return Equation(closed.rebuild(), closed)
-
-    @axiom
-    def rebuild_extensivity[I: Count, J: Count](
+    def rebuild_closure[I: Count, J: Count](
             cls, graph: Self, i: Var[int, I], j: Var[int, J]
     ) -> Equation[Self]:
-        """ Closing a relation keeps the equations it had. """
-        merged = graph.merge(*graph.pair(i, j))
-        return Equation(merged.rebuild().merge(*graph.pair(i, j)),
-                        merged.rebuild())
-
-    @axiom
-    def rebuild_confluence[I: Count, J: Count](
-            cls, graph: Self, i: Var[int, I], j: Var[int, J]
-    ) -> Equation[Self]:
-        """ Closing before an equation or only after gives one congruence. """
+        """
+        Rebuilding is idempotent, keeps the equations it had and is confluent,
+        closing before an equation or only after.
+        """
         pair = graph.pair(i, j)
-        return Equation(graph.merge(*pair).rebuild(),
+        closed = graph.merge(*pair).rebuild()
+        return Equation(closed, closed.rebuild(), closed.merge(*pair),
                         graph.rebuild().merge(*pair).rebuild())
 
     @axiom
     def rebuild_minimality(cls, graph: Self) -> Equation[tuple[int, ...]]:
-        """
-        Closing a relation relates nothing but what it relates and the
-        outputs at one position of equal deterministic boxes: the closure is
-        generated by the relation and those of its own pairs.
-        """
+        """ A closure is generated by the relation and congruent outputs. """
         closed, first, pairs = graph.rebuild(), {}, list(enumerate(
             graph.classes))
         for spider, (ports, _) in enumerate(closed.graph.spider_wires):
@@ -670,19 +693,13 @@ class EHypergraph[category](
             cls, f: Hom[Self, A, B], g: Hom[Self, B, C]
     ) -> Equation[tuple[bool, ...]]:
         """
-        Relating the inputs of two copies of a composite, whose boxes read
-        one another, relates two of their outputs exactly when every box they
-        depend on is deterministic: equal boxes on related inputs have related
-        outputs when they are deterministic, while two samples are
-        independent.
+        Relating the inputs of two copies relates two outputs exactly when
+        every box they depend on is deterministic.
         """
         composite = f >> g
-        graph, n, m = composite.graph, len(f.dom), len(g.cod)
-        twice = type(f)(graph @ graph)
-        for k in range(n):
-            twice = twice.merge(
-                twice.graph.dom_wires[k], twice.graph.dom_wires[n + k])
-        cod, classes = twice.graph.cod_wires, twice.rebuild().classes
+        graph, m = composite.graph, len(g.cod)
+        twice = type(f)(graph).twice()
+        cod, classes = twice.graph.cod_wires, twice.classes
 
         def determined(spider):
             box = composite.box_of(min(graph.spider_wires[spider][0]))
@@ -694,37 +711,27 @@ class EHypergraph[category](
             tuple(map(determined, graph.cod_wires)))
 
     @axiom
-    def extraction_soundness(cls, graph: Self) -> Equation[bool]:
-        """ What is extracted is one of the sections. """
-        return Equation(graph.extract() in graph.sections(), True)
-
-    @axiom
-    def extraction_validity(cls, graph: Self) -> Equation[Hypergraph]:
-        """ What is extracted decodes to a diagram that encodes back to it. """
+    def extraction_soundness(cls, graph: Self) -> Equation[tuple]:
+        """
+        What is extracted is a section, decodes to a diagram encoding back to
+        it, and is what its own e-hypergraph extracts.
+        """
         extracted = graph.extract()
-        return Equation(extracted.to_diagram().to_hypergraph(), extracted)
+        return Equation((extracted in graph.sections(), extracted), (
+            True, extracted.to_diagram().to_hypergraph()), (
+            True, type(graph)(extracted).extract()))
 
     @axiom
     def extraction_optimality(cls, graph: Self) -> Equation[int]:
-        """
-        What is extracted costs :meth:`cost`, and no section costs less.
-        """
+        """ What is extracted costs :meth:`cost`, no section costs less. """
         return Equation(type(graph)(graph.extract()).cost(), graph.cost(), min(
             type(graph)(section).cost() for section in graph.sections()))
 
     @axiom
-    def extraction_idempotence(cls, graph: Self) -> Equation[Hypergraph]:
-        """ What is extracted is all its own e-hypergraph extracts. """
-        extracted = graph.extract()
-        return Equation(type(graph)(extracted).extract(), extracted)
-
-    @axiom
     def effects_kept(cls, graph: Self) -> Equation[bool]:
         """
-        Every section keeps every box that is not affine: all of those that
-        are not deterministic either, and one of the equal deterministic ones
-        on related inputs, checked on two copies side by side, whose equal
-        effects read unrelated inputs.
+        Every section keeps every box that is not affine, once for equal
+        deterministic ones on related inputs, checked on two copies.
         """
         def effects(boxes, inputs):
             pairs = [(box, src) for box, src in zip(boxes, inputs)
@@ -742,11 +749,7 @@ class EHypergraph[category](
 
     @axiom
     def rewrite_identity(cls, graph: Self) -> Equation[Self]:
-        """
-        Rewriting a rebuilt e-hypergraph into its own hypergraph, glued onto
-        the least spider of each class of its domain, changes nothing: each
-        of its boxes is hash-consed into itself, modulo the relation.
-        """
+        """ Rewriting a rebuilt e-hypergraph into itself changes nothing. """
         rebuilt, (dom_wires, _, cod_wires) = graph.rebuild(), graph.graph.wires
         return Equation(rebuilt.rewrite(
             tuple(range(len(graph.graph.boxes))),
@@ -757,9 +760,7 @@ class EHypergraph[category](
     def extraction_rewrite[A: Obj[Ty], B: Obj[Ty]](
             cls, f: Hom[Self, A, B], g: Hom[Self, A, B]) -> Equation[bool]:
         """
-        What is extracted from rewriting the whole of ``f`` into what ``g``
-        extracts costs no more than either: a rewrite adds producers and
-        relates classes, which lowers the least cost of each.
+        Rewriting ``f`` into what ``g`` extracts costs no more than either.
         """
         rewritten = f.rewrite(
             tuple(range(len(f.graph.boxes))), f.graph.dom_wires,
@@ -767,16 +768,57 @@ class EHypergraph[category](
         return Equation(type(f)(rewritten.extract()).cost() <= min(
             f.cost(), g.cost()), True)
 
-    rebuild_idempotence = rebuild_idempotence.weaken(effects=True)
-    rebuild_extensivity = rebuild_extensivity.weaken(effects=True)
-    rebuild_confluence = rebuild_confluence.weaken(effects=True)
-    rebuild_minimality = rebuild_minimality.weaken(effects=True)
-    congruence = congruence.weaken(effects=True)
-    extraction_soundness = extraction_soundness.weaken(effects=True)
-    extraction_validity = extraction_validity.weaken(effects=True)
-    extraction_optimality = extraction_optimality.weaken(effects=True)
-    extraction_idempotence = extraction_idempotence.weaken(effects=True)
-    effects_kept = effects_kept.weaken(effects=True)
+    @axiom
+    def matching_completeness[A: Obj[Ty], B: Obj[Ty], C: Obj[Ty]](
+            cls, f: Hom[Self, A, B], g: Hom[Self, B, C]) -> Equation[bool]:
+        """
+        Matching is complete modulo the classes: binding the boxes of ``g`` to
+        two copies of ``f >> g`` in turn is a match of its pattern.
+        """
+        composite, lhs = f >> g, pattern(g.graph)
+        n, m, twice = len(composite.graph.boxes), len(f.graph.boxes), \
+            composite.twice()
+        region = [m + j + n * (j % 2) for j in range(len(lhs.boxes))]
+        image = {s: twice.classes[t] for j, (src, tgt) in zip(
+            region, lhs.box_wires) for s, t in zip(
+            src + tgt, sum(twice.graph.box_wires[j], ()))}
+        match = tuple(sorted(region)), tuple(map(
+            image.get, lhs.dom_wires)), tuple(map(image.get, lhs.cod_wires))
+        return Equation(match in twice.matches(lhs), True)
+
+    @axiom
+    def matching_soundness[A: Obj[Ty], B: Obj[Ty], C: Obj[Ty], D: Obj[Ty]](
+            cls, f: Hom[Self, A, B], g: Hom[Self, B, C], h: Hom[Self, C, D]
+    ) -> Equation[bool]:
+        """
+        Matching is sound, flags included: rewriting a match of the pattern of
+        ``g``, made cartesian, into itself changes nothing.
+        """
+        composite, lhs = (f >> g >> h).rebuild(), pattern(g.graph)
+        lhs = type(lhs)(lhs.dom, lhs.cod, tuple(cls.category.box_factory(
+            box.name, box.dom, box.cod) for box in lhs.boxes), lhs.wires)
+        return Equation(all(composite.rewrite(*match, lhs) == composite
+                            for match in composite.matches(lhs)), True)
+
+    @axiom
+    def saturation(cls, graph: Self) -> Equation[bool]:
+        """
+        A round after saturation changes nothing: once the rules equating the
+        boxes of a type stop, so does every match of them.
+        """
+        boxes = dict.fromkeys(graph.graph.boxes)
+        rules = [(b, c) for b in boxes for c in boxes
+                 if (b.dom, b.cod) == (c.dom, c.cod)]
+        *_, last = graph.rebuild(), *graph.saturate(*rules)
+        return Equation(all(
+            last.rewrite(*match, rhs.to_hypergraph()) == last
+            for lhs, rhs in rules for match in last.matches(
+                lhs.to_hypergraph())), True)
+
+    rewrite_identity = rewrite_identity.weaken(effects=False)
+    extraction_rewrite = extraction_rewrite.weaken(effects=False)
+    matching_completeness = matching_completeness.weaken(effects=False)
+    saturation = saturation.weaken(effects=False)
 
 
 Markov = EHypergraph[markov.Diagram]

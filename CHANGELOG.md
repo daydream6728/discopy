@@ -20,6 +20,25 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   of a region, hash-consing its boxes, then relates the outputs of the
   region to its own, refusing a region whose boxes cannot fire in some
   order from the classes of its domain and reach those of its codomain.
+  `matches(lhs)` is egg's e-matching modulo the classes: a pattern is a
+  cartesian diagram with sharing whose boxes produce its codomain, bound
+  box by box from the codomain up to equal boxes, flags included, so that
+  each of its spiders is bound to one class, and a match is `(region, dom,
+  cod)`, `None` for an input the pattern does not read, so that
+  `rewrite(*match, rhs)` applies a rule. `saturate(*rules)` iterates egg's
+  schedule, every match of every rule searched as the round begins, all
+  rewritten, then rebuilt, yielding each round that adds a box or relates
+  two classes and stopping at the first that does neither; a rule is a pair
+  of cartesian diagrams of one type, the right-hand side reading only the
+  inputs the left reads, `AxiomError` otherwise. Egg's own example,
+  `(a * 2) / 2` under its four rules, saturates in three rounds and
+  extracts `a`, and a differential test against egglog-python, skipped
+  without it, compares the classes of every subterm, whether each round
+  changed anything and the cost extracted under egglog's costs, round by
+  round, on random terms and egg's rule sets, through the reference in
+  `test/fixtures/egglog_reference.py`: no disagreement on a thousand
+  random terms nor on five hundred full trees. `pattern` drops the wires
+  that go straight from the domain to the codomain of a hypergraph.
   A section chooses a producer for each class it needs, those of the
   codomain and those read by the boxes it keeps, i.e. the boxes it chooses
   and every box that is not affine, and an acyclic choice decodes to a
@@ -33,16 +52,20 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   carried along the pushout, over a category whose boxes carry the flags
   of `markov.Box`, `AxiomError` otherwise. Their laws are checked by the
   property matrix over `markov.Diagram`, drawn with some boxes that are
-  not deterministic or not affine where the laws need them: the hypergraph
-  is a strict monoidal functor, merging states an equivalence, `rebuild`
-  is a closure operator relating the outputs of two copies of a diagram on
-  related inputs exactly when they depend on deterministic boxes only, and
-  the closure of the identity relates nothing but the outputs at one
-  position of equal boxes, what is extracted is a section, valid, of
-  least cost and idempotent, every section keeps every effect, once per
-  class of equal deterministic ones on related inputs, rewriting a rebuilt
-  e-hypergraph into its own hypergraph changes nothing and rewriting never
-  raises the cost of what is extracted. A semantic test evaluates every
+  not deterministic or not affine but where a law is weakened to cartesian
+  ones: the hypergraph is a strict monoidal functor, merging states an
+  equivalence, `rebuild` is a closure operator relating the outputs of two
+  copies of a diagram on related inputs exactly when they depend on
+  deterministic boxes only, and the closure of the identity relates
+  nothing but the outputs at one position of equal boxes, what is
+  extracted is a section, valid, of least cost and idempotent, every
+  section keeps every effect, once per class of equal deterministic ones
+  on related inputs, rewriting a rebuilt e-hypergraph into its own
+  hypergraph changes nothing and rewriting never raises the cost of what is
+  extracted; matching is complete modulo the classes, binding a pattern to
+  two copies of a diagram on related inputs in turn, and sound, flags
+  included, rewriting a match into its own pattern changing nothing; and a
+  round after saturation changes nothing. A semantic test evaluates every
   section in random tensors, sampling and conditioning included, as the
   diagram it comes from, two boxes interpreted alike only when one was
   rewritten into the other. `hypergraph.relabeling` is how a

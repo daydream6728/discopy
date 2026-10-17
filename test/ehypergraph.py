@@ -1,4 +1,8 @@
+import random
+from itertools import islice
+
 import numpy as np
+import pytest
 from hypothesis import given, settings, strategies as st
 from pytest import raises
 
@@ -121,3 +125,134 @@ def test_sections_evaluate_as_the_diagram(data):
     expected = functor(diagram).array
     for section in rewritten.rebuild().sections():
         assert np.allclose(functor(section.to_diagram()).array, expected)
+
+
+def test_matches_flags_and_patterns():
+    noisy = Markov.from_diagram(Copy(x) >> sample @ Box('sample', x, x))
+    assert noisy.matches(Box('sample', x, x).to_hypergraph()) == [
+        ((1, ), (0, ), (2, ))]
+    graph = Markov.from_diagram(x @ Box('c', Ty(), x) >> Box('h', x @ x, x))
+    unread = Hypergraph[Diagram](x, x, (Box('c', Ty(), x), ), ((0, ), (
+        ((), (1, )), ), (1, )))
+    assert graph.matches(unread) == [((0, ), (None, ), (1, ))]
+    assert graph.rewrite((0, ), (None, ), (1, ), unread) == graph
+    for lhs in [Diagram.id(x).to_hypergraph(), sample.to_hypergraph()]:
+        with raises(AxiomError):
+            graph.matches(lhs)
+    with raises(AxiomError):
+        graph.rewrite((0, ), (None, ), (1, ), f.to_hypergraph())
+    for rule in [(Diagram.discard(x) >> Box('c', Ty(), x), f),
+                 (f, g @ Diagram.discard(x)), (f, sample)]:
+        with raises(AxiomError):
+            next(graph.saturate(rule))
+
+
+def test_saturate_stops():
+    graph = Markov.from_diagram(f >> f)
+    rounds = list(graph.saturate((f, g), (g, f)))
+    assert len(rounds) == 1 and len(rounds[0].graph.boxes) == 4
+    assert rounds[0].extract().boxes == (f, f)
+
+
+def to_diagram(term, variables) -> Diagram:
+    """
+    The cartesian diagram of a term of :mod:`fixtures.egglog_reference`, one
+    box for each operation or constant and one domain wire for each variable,
+    copied as many times as it occurs.
+    """
+    boxes, box_wires = [], []
+
+    def build(term):
+        if term[0] == "var":
+            return variables.index(term[1])
+        inputs = tuple(map(build, children(term)))
+        boxes.append(node(term))
+        box_wires.append((inputs, (len(variables) + len(boxes) - 1, )))
+        return box_wires[-1][1][0]
+
+    root = build(term)
+    return Hypergraph[Diagram](
+        x ** len(variables), x, tuple(boxes),
+        (tuple(range(len(variables))), tuple(box_wires), (root, ))
+    ).to_diagram()
+
+
+def node(term) -> Box:
+    """ The box of the head of a term that is not a variable. """
+    return Box(str(term[1]), Ty(), x) if term[0] == "const"\
+        else Box(term[0], x ** len(term[1:]), x)
+
+
+def children(term) -> tuple:
+    return () if term[0] in ("var", "const") else term[1:]
+
+
+def lookup(graph: EHypergraph, term, variables) -> int:
+    """ The class of a subterm of the term an e-hypergraph comes from. """
+    if term[0] == "var":
+        return graph.classes[graph.graph.dom_wires[variables.index(term[1])]]
+    inputs = tuple(lookup(graph, child, variables) for child in children(term))
+    return next(graph.classes[tgt[0]] for j, (box, (_, tgt)) in enumerate(zip(
+        graph.graph.boxes, graph.graph.box_wires))
+        if box == node(term) and graph.inputs(j) == inputs)
+
+
+def trace(term, rules, rounds: int) -> list[tuple]:
+    """
+    For each round of :meth:`EHypergraph.saturate`, as
+    :func:`fixtures.egglog_reference.egglog_trace` gives them: whether it
+    changed anything, the partition of the subterms of ``term`` and the cost
+    of what is extracted, under egglog's costs.
+    """
+    from fixtures.egglog_reference import subterms
+
+    def variables(term):
+        return list(dict.fromkeys(
+            sub[1] for sub in subterms(term) if sub[0] == "var"))
+
+    graph = Markov.from_diagram(to_diagram(term, variables(term)))
+    states = [graph, *islice(graph.saturate(*(
+        (to_diagram(lhs, variables(lhs)), to_diagram(rhs, variables(lhs)))
+        for lhs, rhs in rules)), rounds)]
+    result = []
+    for k in range(min(len(states) + 1, rounds + 1)):
+        state, members = states[min(k, len(states) - 1)], {}
+        for sub in subterms(term):
+            members.setdefault(lookup(state, sub, variables(term)), []).append(
+                sub)
+        result.append((k < len(states), tuple(sorted((tuple(sorted(
+            group, key=repr)) for group in members.values()), key=repr)),
+            Markov(state.extract(input_cost=0)).cost(input_cost=0)))
+    return result
+
+
+def differential(seed: int, rounds: int = 4) -> tuple[list, list]:
+    """
+    Our trace and egglog's on a random term of depth three or four and one
+    of the rule sets of the reference, chosen by a seed.
+    """
+    from fixtures.egglog_reference import RULESETS, egglog_trace, random_term
+
+    rng = random.Random(seed)
+    term, rules = random_term(rng, rng.choice((3, 4))), rng.choice(
+        list(RULESETS.values()))
+    return trace(term, rules, rounds), [
+        (state.updated, state.classes, state.cost)
+        for state in egglog_trace(term, rules, rounds)]
+
+
+def test_egglog_example():
+    pytest.importorskip("egglog")
+    from fixtures.egglog_reference import EGG, C2, egglog_trace
+
+    term = ("/", ("*", ("var", "a"), C2), C2)
+    expected = [(state.updated, state.classes, state.cost)
+                for state in egglog_trace(term, EGG, 10)]
+    assert trace(term, EGG, 10) == expected and len(expected) == 5
+
+
+@pytest.mark.parametrize("seed", range(30))
+def test_egglog_differential(seed):
+    pytest.importorskip("egglog")
+    ours, egglog = differential(seed)
+    assert ours == egglog
