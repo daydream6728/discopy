@@ -492,9 +492,13 @@ class Box(markov.Box, Diagram):
     _time_step = 0
     time_step = property(lambda self: self._time_step)
 
-    def __init__(self, name, dom, cod, time_step: int = 0, **params):
+    # A swap or a copy calls this once its structure is set, as a plain box:
+    # the cooperative markov.Box.__init__ would send a swap to its braid's.
+    def __init__(  # pylint: disable=super-init-not-called
+            self, name, dom, cod, time_step: int = 0, **params):
         self._time_step, self._params = time_step, params
-        markov.Box.__init__(self, name, dom, cod, **params)
+        monoidal.Box.__init__(  # pylint: disable=non-parent-init-called
+            self, name, dom, cod, **params)
         Diagram.__init__(self, self.inside, self.dom, self.cod)
 
     def to_drawing(self):

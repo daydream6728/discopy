@@ -9,40 +9,56 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Added
 
-- `discopy.ehypergraph`, e-hypergraphs: a `Hypergraph` with an equivalence
-  relation on its spiders and alternatives between its boxes. The structure
-  of the category is the wiring of the hypergraph already, so these are all
-  it adds. An equation enters through `rewrite`, which states that a region
-  of boxes equals a right-hand side with the same boundary: it adds the
-  right-hand side, relates its domain and codomain to the boundary of the
-  region and records the two as alternatives, so that over a symmetric
-  category, where a wire has one consumer, an equation replaces a subdiagram
-  rather than relating two wires. The relation holds in every section, so
-  `rewrite` refuses a right-hand side that does not fit the boundary, see `fits`,
-  i.e. that identifies two of its positions the region keeps apart, e.g.
-  by passing a wire through where the region has none, which would relate
-  that input and output in the sections that keep the region too: a
-  rewrite only adds sections. `rebuild` closes the relation under
-  congruence, the later of two congruent boxes an alternative to the
-  first, everywhere but in a Markov category, whose boxes need not be
-  deterministic. E-hypergraphs over a category form a monoidal category of
-  their own, the relation carried along the pushout, and denote the set of
-  their `sections`, one for each choice of a side of every alternative, with
-  the boxes in causal order; `extract` is one of least cost that decodes to
-  a diagram, by brute force for now so that it states what a faster one
-  must return. Their laws are checked by the property matrix over
-  symmetric, compact, Markov and hypergraph categories: that the hypergraph
-  is a strict monoidal functor, that merging states an equivalence
-  relation, that `rebuild` is a closure operator and a congruence, and that
-  extraction is sound, valid, optimal, the identity with no alternative,
-  and the cheaper of the two sides of a rewrite, over the pairs of
-  e-hypergraphs on one hypergraph that `Rewrites` draws, so that one fits
-  the boundary of the other by construction. Congruence on a feedback
-  loop is declared broken, being a least fixpoint. `hypergraph.relabeling`
-  is how a hypergraph numbers its spiders, factored out of its constructor
-  so that the relation follows them, and decoding a hypergraph that needs
-  spiders over a category with none raises `AxiomError`, where it raised
-  `AttributeError` for want of a `spider_factory`.
+- `discopy.ehypergraph`, e-graphs of diagrams with sharing: an
+  `EHypergraph` over a copy-discard category is a left-monogamous acyclic
+  `Hypergraph`, whose boxes are the e-nodes, with an equivalence relation on
+  its spiders, whose classes are the e-classes. Over cartesian diagrams,
+  which are terms with sharing, it is an e-graph: `from_diagram` hash-conses
+  a diagram as egg does a term, `rebuild` is the congruence closure of the
+  relation, `add` hash-conses a box, and `rewrite(region, dom, cod, rhs)`
+  glues the right-hand side of an equation onto the inputs of a region,
+  hash-consing its boxes, then relates the outputs of the region to its own.
+  A section chooses a producer for each class it needs, those of the
+  codomain and those read by the boxes it keeps, i.e. the boxes it chooses
+  and every box that is not affine, and an acyclic choice decodes to a
+  diagram; `sections` enumerates them, `extract` is one of least tree cost,
+  egg's extraction, by Bellman-Ford relaxation, the cost of a box and of a
+  domain position being parameters, as egg's cost functions, one by default
+  as its `AstSize`. Equal boxes on related inputs have related outputs only
+  when they are deterministic, two samples being independent, an equation
+  is between cartesian diagrams, an effect being context, and the
+  e-hypergraphs over a category form a monoidal category, the relation
+  carried along the pushout. Their laws are checked by the property matrix
+  over `markov.Diagram`, drawn with some boxes that are not deterministic
+  or not affine where the laws need them: the hypergraph is a strict
+  monoidal functor, merging states an equivalence, `rebuild` is a closure
+  operator relating the outputs of two copies of a diagram on related
+  inputs exactly when they depend on deterministic boxes only, extraction
+  is sound, valid, optimal and idempotent, every section keeps every
+  effect, rewriting a rebuilt e-hypergraph into its own hypergraph changes
+  nothing and rewriting never raises the cost of extraction. A semantic
+  test evaluates every section in random tensors, sampling and conditioning
+  included, as the diagram it comes from. `hypergraph.relabeling` is how a
+  hypergraph numbers its spiders, factored out of its constructor so that
+  the relation follows them, and decoding a hypergraph that needs spiders
+  over a category with none raises `AxiomError`, where it raised
+  `AttributeError` for want of a `spider_factory`. A premise of a law
+  annotated `Self` is drawn with the parameters `Axiom.weaken` declares, as
+  a morphism already was.
+- `markov.Box` takes the keyword arguments `is_deterministic` and
+  `is_affine`, both `True` by default: a box is deterministic when copying
+  commutes with it and affine when discarding does, e.g. a sample is not
+  deterministic and a condition not affine, and a deterministic box that is
+  not affine is a hard constraint, a soft score not being deterministic.
+  The flags are attributes of each box rather than of its class, as an
+  identity or a swap is a total function whatever its class, take part in
+  equality and hashing, and are written by `repr` and `to_tree` when they
+  are `False`, so that existing representations are unchanged, and kept by
+  `dagger`. `markov.Diagram.is_deterministic`, `is_affine` and
+  `is_cartesian`, both, hold when they hold of every box: a copy, a discard,
+  a swap and a permutation are cartesian, a merge is deterministic but not
+  affine. `feedback.Box` initialises itself as a plain box, as it did
+  through `markov.Box`, whose initialiser now cooperates.
 
 - `RigidCategory.rotate_contravariance`, that rotation reverses
   composition, and `adjunction`, that the left and right adjoints of a

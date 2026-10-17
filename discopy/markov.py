@@ -183,19 +183,125 @@ class Diagram(symmetric.Diagram, MarkovCategory):
         """
         return cls.copy(x, 0)
 
+    @property
+    def is_deterministic(self) -> bool:
+        """
+        Whether copying commutes with the diagram, i.e. its boxes are
+        deterministic, see :class:`Box`.
+
+        >>> x = Ty('x')
+        >>> sample = Box('sample', x, x, is_deterministic=False)
+        >>> assert Copy(x).is_deterministic
+        >>> assert not (Copy(x) >> sample @ x).is_deterministic
+        """
+        return all(box.is_deterministic for box in self.boxes)
+
+    @property
+    def is_affine(self) -> bool:
+        """
+        Whether discarding commutes with the diagram, i.e. its boxes are
+        affine, see :class:`Box`.
+
+        >>> x = Ty('x')
+        >>> assert Copy(x).is_affine and not Merge(x).is_affine
+        """
+        return all(box.is_affine for box in self.boxes)
+
+    @property
+    def is_cartesian(self) -> bool:
+        """
+        Whether the diagram is deterministic and affine, i.e. a total
+        function: copying and discarding both commute with it.
+        """
+        return self.is_deterministic and self.is_affine
+
     map_agreement = monoidal.Diagram.map_agreement.failing(
         messages.MAP_HAS_NO_SPIDERS)
 
 
 class Box(symmetric.Box, Diagram):
     """
-    A Markov box is a symmetric box in a Markov diagram.
+    A Markov box is a symmetric box in a Markov diagram, a total function
+    unless it says otherwise.
+
+    A box ``f`` is deterministic when ``f >> copy == copy >> f @ f`` and
+    affine when ``f >> discard == discard``, e.g. a sample is affine but not
+    deterministic, a condition deterministic but not affine. A deterministic
+    box that is not affine is a hard constraint, i.e. a partial function: a
+    weight ``w`` copied is ``w * w``, so it is zero or one, and a soft score
+    is not deterministic. Both flags are attributes of each box rather than
+    of its class, as an identity or a swap is a total function whatever its
+    class, and they are part of its equality.
 
     Parameters:
         name (str) : The name of the box.
         dom (monoidal.Ty) : The domain of the box, i.e. its input.
         cod (monoidal.Ty) : The codomain of the box, i.e. its output.
+        is_deterministic : Whether copying commutes with the box.
+        is_affine : Whether discarding commutes with the box.
+
+    Example
+    -------
+    >>> p, x = Ty('p'), Ty('x')
+    >>> sample = Box('sample', p, x, is_deterministic=False)
+    >>> assert sample != Box('sample', p, x)
+    >>> sample
+    markov.Box('sample', monoidal.Ty(cat.Ob('p')), monoidal.Ty(cat.Ob('x')), \
+is_deterministic=False)
+    >>> assert not sample.dagger().dagger().is_deterministic
     """
+    is_deterministic = is_affine = True
+
+    def __init__(self, *args, is_deterministic=True, is_affine=True,
+                 **params):
+        self.is_deterministic, self.is_affine = is_deterministic, is_affine
+        super().__init__(*args, **params)
+
+    def flags(self) -> dict[str, bool]:
+        """
+        The flags that differ from those of a total function, by name, as
+        :meth:`__repr__` and :meth:`to_tree` write them down.
+        """
+        return {name: False for name, value in [
+            ("is_deterministic", self.is_deterministic),
+            ("is_affine", self.is_affine)] if not value}
+
+    def __repr__(self):
+        flags = "".join(f", {name}=False" for name in self.flags())
+        if self.is_dagger or not flags:
+            return super().__repr__()
+        return super().__repr__()[:-1] + flags + ")"
+
+    def setoid(self):
+        """
+        Markov boxes are equal when they are equal as :class:`cat.Box` and
+        their flags are equal too.
+        """
+        return super().setoid() + (self.is_deterministic, self.is_affine)
+
+    def dagger(self) -> Box:
+        return type(self)(
+            self.name, self.cod, self.dom, data=self.data,
+            is_dagger=not self.is_dagger, **self.flags())
+
+    def to_tree(self) -> dict:
+        """
+        Serialise a box, with the flags it does not have.
+
+        >>> from discopy.utils import dumps, loads
+        >>> box = Box('condition', Ty('x'), Ty(), is_affine=False)
+        >>> assert loads(dumps(box)) == box
+        """
+        return {**super().to_tree(), **self.flags()}
+
+    @classmethod
+    def from_tree(cls, tree: dict) -> Box:
+        dom, cod = map(from_tree, (tree['dom'], tree['cod']))
+        return cls(
+            name=tree['name'], dom=dom, cod=cod, data=tree.get('data'),
+            is_dagger='is_dagger' in tree, **{
+                name: tree[name] for name in ("is_deterministic", "is_affine")
+                if name in tree})
 
 
 class Permutation(symmetric.Permutation, Box):
@@ -296,7 +402,7 @@ class Merge(Box):
     def __init__(self, x: monoidal.Ty, n: int = 2):
         assert_isatomic(x, monoidal.Ty)
         name = f"Merge({x}" + ("" if n == 2 else f", {n}") + ")"
-        Box.__init__(self, name, dom=x ** n, cod=x,
+        Box.__init__(self, name, dom=x ** n, cod=x, is_affine=False,
                      draw_as_spider=True, color="black", drawing_name="")
 
     def dagger(self) -> Copy:

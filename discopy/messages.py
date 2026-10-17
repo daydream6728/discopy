@@ -82,15 +82,18 @@ MISSING_BOXES_AND_OFFSETS = (
     "Decoding needs either boxes and offsets, or the two of them zipped.")
 NO_TYPE_PARAMETER = (
     "{} has no type parameter to subscript, declare one as in class C[name].")
-NO_SECTION = "{} has no section that is a hypergraph of its category."
-NO_FIT = (
-    "{} does not fit the boundary {} -> {}: it has another number of inputs "
-    "or outputs, or it identifies two positions that the region keeps apart, "
-    "e.g. with a wire passing through, which would relate them in every "
-    "section.")
-NOT_DETERMINISTIC = (
-    "The boxes of a Markov category need not be deterministic, so two of "
-    "them on related inputs need not have related outputs.")
-INDUCTIVE_CONGRUENCE = (
-    "Congruence is closed as a least fixpoint, which relates nothing on a "
-    "feedback loop: two copies of a cycle are related only coinductively.")
+NOT_SHARING = (
+    "{} is not a diagram with sharing, i.e. a left-monogamous acyclic "
+    "hypergraph: a spider has no producer or several, or a box depends on "
+    "itself.")
+NOT_CARTESIAN = (
+    "{} is not cartesian, i.e. deterministic and affine: an effect is "
+    "context, which a rewrite keeps, as a section that chooses a producer "
+    "for each class would decorrelate a stochastic one.")
+NOT_A_BOUNDARY = "{} does not have the types of the spiders {} -> {}."
+NOT_A_REGION = (
+    "The boxes {} do not compute the spiders {} -> {}: they read a class "
+    "that neither the domain nor they write, or do not write the codomain.")
+SHARING_HAS_NO_DAGGER = (
+    "A diagram with sharing has no dagger: the dagger of a copy is a merge, "
+    "a spider with two producers.")
