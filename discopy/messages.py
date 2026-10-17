@@ -23,6 +23,9 @@ MISSING_TYPES_FOR_EMPTY_SUM = "Empty sum needs a domain and codomain."
 MATRIX_TWO_DTYPES = "Matrix class cannot be indexed twice."
 MATRIX_REPEAT_ERROR = "The reflexive transitive closure is only defined for "\
                       "square boolean matrices."
+NO_KLEENE_STAR = (
+    "The trace of a matrix is the Kleene star of a Boolean one, while the "
+    "property matrix draws integer matrices.")
 BOX_IS_MIXED = "Pure boxes can have only digits or only qudits as dom and cod."
 LAYERS_MUST_HAVE_A_BOX = "Layers must have at least one box."
 NOT_MERGEABLE = "Layers {} and {} cannot be merged."

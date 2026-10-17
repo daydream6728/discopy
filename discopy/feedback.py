@@ -244,7 +244,7 @@ from copy import copy
 from typing import ClassVar
 
 from discopy import monoidal, cmap, hypergraph, messages
-from discopy.abc import TracedCategory
+from discopy.abc import FeedbackCategory, TracedCategory
 from discopy.monoidal import (  # noqa: F401  pylint: disable=unused-import
     Equation)
 from discopy.utils import (
@@ -969,7 +969,8 @@ class Functor(monoidal.Functor):
             return self.cod.trace(self(other.arg), n, left=other.left)
         if isinstance(other, (Wire, Box)) and other.time_step:
             cod = self.cod.ob if isinstance(other, Wire) else self.cod.ar
-            if hasattr(cod, "delay") and not issubclass(cod, TracedCategory):
+            if getattr(cod, "delay", FeedbackCategory.delay)\
+                    is not FeedbackCategory.delay:
                 result = self(other.reset())
                 for _ in range(other.time_step):
                     result = result.delay()

@@ -54,7 +54,8 @@ def test_repr_and_str():
     assert str(Merge(x)) == "Merge(x)" and str(Noise(x)) == "Merge(x, 0)"
     for box in (Merge(x), Merge(x, 3), Noise(x)):
         assert eval(repr(box), dict(
-            cat=cat, monoidal=monoidal, comarkov=comarkov)) == box
+            cat=cat, monoidal=monoidal, comarkov=comarkov,
+            feedback=feedback)) == box
 
 
 def test_serialisation_and_pickle():

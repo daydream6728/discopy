@@ -171,6 +171,10 @@ class Matrix(MarkovCategory, ComarkovCategory, TracedCategory,
         return matrices()
 
     serialisation = Testable.serialisation.inapplicable(messages.NO_SYNTAX)
+    vanishing, joining, strength, tightening, sliding = (
+        getattr(TracedCategory, law).inapplicable(messages.NO_KLEENE_STAR)
+        for law in (
+            "vanishing", "joining", "strength", "tightening", "sliding"))
 
     def cast(self, dtype: type) -> Matrix:
         """

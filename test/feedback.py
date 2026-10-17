@@ -192,9 +192,10 @@ def test_feedback_laws_on_a_traced_category():
     f = M([1, 0, 1, 1, 0, 1, 1, 0, 1], x + m + n, y + m + n)
     g, h, k, e = M([1], 1, x), M([0, 1], y, 2), M.swap(1, 1), M.id(1)
     loop = Loop[M](M.ob(x), M.ob(y), M.ob(m), M.ob(n), f, g, h, k, e)
+    from discopy.abc import FeedbackCategory
     for law in ("vanishing", "joining", "strength", "tightening", "sliding"):
         args = (f, ) if law == "vanishing" else (loop, )
-        assert getattr(M, law)(*args)
+        assert getattr(FeedbackCategory, law).bind(M)(*args)
 
 
 def test_time_stepped_wires_below_feedback():
