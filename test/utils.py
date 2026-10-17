@@ -147,3 +147,13 @@ def test_NamedGeneric_factory():
     assert H[int].ar is H[int] and not hasattr(H[int], "factory")
     for wiring in (Hypergraph, CMap):
         assert wiring[symmetric.Diagram].ar is wiring[symmetric.Diagram]
+
+
+def test_resolve_factory():
+    from discopy import tensor, monoidal
+    from discopy.utils import resolve_factory, factory_name
+    for cls in (tensor.Diagram[complex], monoidal.List[int], rigid.Ty):
+        assert resolve_factory(factory_name(cls)) is cls
+    assert resolve_factory("complex") is complex
+    with pytest.raises(AttributeError):
+        resolve_factory("nonsense")

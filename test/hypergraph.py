@@ -452,5 +452,17 @@ def test_Hypergraph_to_tree():
     for graph in graphs:
         loaded = loads(dumps(graph))
         assert loaded == graph and type(loaded) is type(graph)
+        assert loaded.category is graph.category
         assert loaded.offsets == graph.offsets
         assert loaded.spider_types == graph.spider_types
+
+
+def test_trace_keeps_the_offsets():
+    from discopy import symmetric
+    x, y = symmetric.Ty('x'), symmetric.Ty('y')
+    f = symmetric.Box('f', x, x)
+    s, t = symmetric.Box('s', symmetric.Ty(), x), symmetric.Box('t', symmetric.Ty(), y)
+    diagram = f @ t @ s
+    graph = diagram.to_hypergraph()
+    assert graph.trace().offsets == graph.offsets == (None, 1, 2)
+    assert graph.trace().to_diagram() == symmetric.Trace(diagram.foliation())

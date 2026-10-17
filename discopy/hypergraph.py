@@ -711,7 +711,8 @@ class Hypergraph(MonoidalCategory, NamedGeneric['category']):
             for x, y in self.box_wires), tuple(map(find, cod_wires)))
         spider_types = {
             find(spider): typ for spider, typ in enumerate(self.spider_types)}
-        return type(self)(dom, cod, self.boxes, wires, spider_types)
+        return type(self)(
+            dom, cod, self.boxes, wires, spider_types, self.offsets)
 
     def interchange(self, i: int, j: int) -> Hypergraph:
         """

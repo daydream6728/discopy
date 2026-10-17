@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import builtins
 import json
 from functools import lru_cache, wraps
 from math import ceil
@@ -339,16 +340,25 @@ def from_tree(tree: dict):
 
 def resolve_factory(name: str) -> type:
     """
-    The DisCoPy class with a given :func:`factory_name`, the inverse of it.
+    The DisCoPy class with a given :func:`factory_name`, the inverse of it:
+    a subscripted class is resolved by its origin and its parameter, which
+    may be a builtin type.
 
     >>> from discopy.markov import Diagram
     >>> assert resolve_factory(factory_name(Diagram)) is Diagram
+    >>> from discopy.tensor import Diagram
+    >>> assert resolve_factory("tensor.Diagram[complex]") is Diagram[complex]
     """
+    if name.endswith(']'):
+        origin, parameter = name[:-1].split('[', 1)
+        return resolve_factory(origin)[resolve_factory(parameter)]
     *modules, factory = name.removeprefix('discopy.').split('.')
     import discopy
     module = discopy
     for attr in modules:
         module = getattr(module, attr)
+    if not modules and factory not in vars(discopy):
+        return getattr(builtins, factory)
     return getattr(module, factory)
 
 

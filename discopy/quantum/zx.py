@@ -335,6 +335,18 @@ class Spider(tensor.Spider[complex], Box):
     def __repr__(self):
         return str(self).replace(type(self).__name__, factory_name(type(self)))
 
+    @classmethod
+    def from_tree(cls, tree: dict) -> "Spider":
+        """
+        Decode the tree of :meth:`discopy.frobenius.Spider.to_tree`, whose
+        type is a qubit that the constructor supplies.
+
+        >>> from discopy.utils import dumps, loads
+        >>> assert loads(dumps(Z(1, 2, .5))) == Z(1, 2, .5)
+        """
+        return cls(
+            tree['n_legs_in'], tree['n_legs_out'], tree.get('phase', 0))
+
     def subs(self, *args):
         phase = cat.rsubs(self.phase, *args)
         return type(self)(len(self.dom), len(self.cod), phase=phase)

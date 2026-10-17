@@ -1003,4 +1003,14 @@ def test_CMap_to_tree():
     for cmap in cmaps:
         loaded = loads(dumps(cmap))
         assert loaded == cmap and type(loaded) is type(cmap)
+        assert loaded.category is cmap.category
         assert loaded.loops == cmap.loops
+
+
+def test_CMap_to_tree_over_a_parameterised_category():
+    from discopy import tensor, cmap
+    from discopy.tensor import Dim
+    from discopy.utils import dumps, loads
+    swap = cmap.CMap[tensor.Diagram[complex]].swap(Dim(2), Dim(3))
+    loaded = loads(dumps(swap))
+    assert loaded == swap and loaded.category is tensor.Diagram[complex]

@@ -94,8 +94,8 @@ def test_to_hypergraph():
     x, y = Ty('x'), Ty('y')
     for convert in (Diagram.to_hypergraph, Diagram.to_map):
         assert convert(Twist(x)).boxes == (Twist(x), )
-        assert set(convert(Diagram.twist(x @ y)).boxes) == {
-            Twist(x), Twist(y), Braid(x, y), Braid(y, x)}
+        assert convert(Diagram.twist(x @ y)).boxes == (
+            Braid(x, y), Twist(y), Twist(x), Braid(y, x))
     for representation in (Hypergraph, CMap):
         assert representation.twist(x).boxes == (Twist(x), )
     assert symmetric.Hypergraph.twist(x) == symmetric.Hypergraph.id(x)
