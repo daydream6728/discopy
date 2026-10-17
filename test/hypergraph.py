@@ -274,6 +274,13 @@ def test_Hypergraph_Nat():
     assert H.cups(Nat(1), Nat(1)).to_diagram() == Cup(Nat(1), Nat(1))
 
 
+def test_Hypergraph_to_diagram_offset():
+    x = Ty('x')
+    g = Box('g', Ty(), x)
+    graph = H(Ty(), x, (g, ), ((), (((), (0, )), ), (0, )), (x, ), (3, ))
+    assert graph.to_diagram() == g
+
+
 def test_Hypergraph_from_glued():
     x = Ty('x')
     f, g = Box('f', x, x).to_hypergraph(), Box('g', x, x).to_hypergraph()

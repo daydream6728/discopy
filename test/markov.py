@@ -152,5 +152,7 @@ def test_hypergraph():
         (Layer(f, g), Layer(x, Copy(x))), Ty(), x @ x @ x)
     diagram = f @ g >> Copy(x) @ x >> h @ x @ x
     assert diagram.to_hypergraph().offsets == (0, 1, None)
-    for diagram in (diagram, f @ g >> Discard(x) @ x):
-        assert Equation(diagram.to_hypergraph().to_diagram(), diagram)
+    assert diagram.to_hypergraph().to_diagram() == Diagram(
+        (Layer(f, g), Layer(Copy(x), x), Layer(h, x, x)), Ty(), x @ x @ x)
+    diagram = f @ g >> Discard(x) @ x
+    assert diagram.to_hypergraph().to_diagram() == diagram

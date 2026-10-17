@@ -1412,6 +1412,14 @@ class Hypergraph(MonoidalCategory, NamedGeneric['category']):
         """
         Introduces spider boxes to make self bijective.
 
+        The box of a spider is inserted at the depth of its first consumer,
+        at the end when it has none, unless one of its producers comes later,
+        in which case right after its last producer: in a causal hypergraph,
+        it is the latest depth between the producer and the consumers, so
+        the boxes before it keep the open wires they had and a state keeps
+        the offset :meth:`discopy.monoidal.Diagram.to_hypergraph` recorded.
+        The boxes of the spiders inserted at one depth come in their order.
+
         Example
         -------
         >>> from discopy.frobenius import Ty, Spider, Hypergraph as H
@@ -1424,22 +1432,27 @@ class Hypergraph(MonoidalCategory, NamedGeneric['category']):
         >>> assert copy.boxes == (Spider(1, 2, Ty('x')), Spider(1, 2, Ty('y')))
 
         >>> unit = H.spiders(0, 1, Ty('x', 'y')).make_bijective()
-        >>> assert unit.boxes == (Spider(0, 1, Ty('y')), Spider(0, 1, Ty('x')))
+        >>> assert unit.boxes == (Spider(0, 1, Ty('x')), Spider(0, 1, Ty('y')))
+
+        >>> from discopy.markov import Ty, Box, Copy
+        >>> x = Ty('x')
+        >>> f, g, h = Box('f', Ty(), x), Box('g', Ty(), x), Box('h', x, x)
+        >>> graph = (f @ g >> Copy(x) @ x >> h @ x @ x).to_hypergraph()
+        >>> assert graph.make_bijective().boxes == (f, g, Copy(x), h)
         """
         boxes = list(self.boxes)
         f_wires = list(self.flat_wires)
         spider_types = list(self.spider_types)
-        for spider, (typ, (input_wires, output_wires)) in reversed(list(
-                enumerate(zip(spider_types, self.spider_wires)))):
+        for spider, (typ, (input_wires, output_wires)) in enumerate(
+                zip(spider_types, self.spider_wires)):
             n_legs = len(input_wires) + len(output_wires)
             if n_legs in [0, 2]:
                 continue
-            if input_wires:
-                node = self.ports[max(input_wires)]
-                depth = 0 if node.kind == "input" else node.depth + 1
-            else:
-                node = self.ports[min(output_wires)]
-                depth = len(boxes) if node.kind == "output" else node.depth
+            depth = max(
+                getattr(self.ports[max(input_wires)], "depth", -1) + 1
+                if input_wires else 0,
+                getattr(self.ports[min(output_wires)], "depth", len(boxes))
+                if output_wires else len(boxes))
             boxes = boxes[:depth] + [self.category.spider_factory(
                 len(input_wires), len(output_wires), typ)] + boxes[depth:]
             offsets = self.offsets[:depth] + (None, ) + self.offsets[depth:]
@@ -1840,8 +1853,10 @@ class Hypergraph(MonoidalCategory, NamedGeneric['category']):
         :class:`discopy.symmetric.Permutation` box when the category has a
         native one and its ``permutation`` otherwise. An offset recorded on
         a state by :meth:`discopy.monoidal.Diagram.to_hypergraph` is a hint
-        read in the scan of this pass, which the spider boxes inserted before
-        the state may have shrunk, so it is clamped to the end of the scan.
+        read in the scan of this pass, which :meth:`make_bijective` keeps as
+        it was recorded, its spider boxes coming after every such state; a
+        hint past the end of the scan, e.g. one given by hand, is clamped to
+        it.
 
         Note
         ----

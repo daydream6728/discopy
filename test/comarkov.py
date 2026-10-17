@@ -103,7 +103,7 @@ def test_hypergraph():
     s = Box('s', Ty(), x)
     diagram = f @ g @ s >> Merge(x) @ x
     assert diagram.to_hypergraph().to_diagram() == Diagram(
-        (Layer(f, g), Layer(Merge(x), s)), Ty(), x @ x)
+        (Layer(f, g, s), Layer(Merge(x), x)), Ty(), x @ x)
     assert (Noise(x) >> h).to_hypergraph().to_diagram() == Noise(x) >> h
     decoded = (h @ h >> Merge(x)).to_hypergraph().to_diagram()
     assert Equation(decoded, h @ h >> Merge(x))
