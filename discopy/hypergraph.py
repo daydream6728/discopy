@@ -1918,8 +1918,9 @@ class Hypergraph(MonoidalCategory, NamedGeneric['category']):
             positions = [scan.index(spider) for spider in dom_wires]
             if offset is None:
                 offset = positions[0] if positions else 0
-            offset = min(offset - sum(j < offset for j in positions),
-                         len(scan) - len(positions))
+            offset -= sum(j < offset for j in positions)
+            if not box.dom:
+                offset = min(offset, len(scan))
             perm = Permutation.gather(positions, len(scan), offset)
             if not perm.is_identity:
                 flush()

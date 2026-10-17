@@ -995,10 +995,11 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 - `feedback.HeadOb`, `TailOb`, `Head`, `Tail` and `FollowedBy` read back
   from their tree. The two objects inherited `Wire.from_tree`, which
-  rebuilds a wire from its name, and the three boxes `Bubble.from_tree` and
-  `Box.from_tree`, which pass a `dom` and a `cod` their constructors do not
-  take, so `loads(dumps(x.head))` raised `TypeError`, as did anything typed
-  by a head or a tail, `FollowedBy(x)` included. Each now serialises as its
+  rebuilds a wire from its name; `Head` and `Tail` inherited
+  `Bubble.from_tree` and `FollowedBy` inherited `Box.from_tree`, which pass
+  a `dom` and a `cod` their constructors do not take, so
+  `loads(dumps(x.head))` raised `TypeError`, as did anything typed by a head
+  or a tail, `FollowedBy(x)` included. Each now serialises as its
   argument and its time step, a `FollowedBy` with its direction too
   ([rel-int/discopy-next#96](https://github.com/rel-int/discopy-next/issues/96)).
 - `frobenius.Spider.__repr__` prints the phase positionally, as `dagger` and
