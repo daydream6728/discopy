@@ -92,3 +92,9 @@ def test_Kauffman():
 def test_rotate():
     x = Ty('x')
     assert Twist(x).r == Twist(x)
+
+
+def test_sum_factory():
+    x = Ty('x')
+    f = Box('f', x, x)
+    assert Diagram.sum_factory is Sum and type(f + f) is Sum

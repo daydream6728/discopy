@@ -124,6 +124,13 @@ class Ty(monoidal.Ty):
     Applying a biclosed type to a callable yields a :class:`Abstraction`,
     applying it to a string yields a :class:`Constant`.
     """
+    variable_factory: ClassVar[type["Variable"]]
+    constant_factory: ClassVar[type["Constant"]]
+    application_factory: ClassVar[type["Application"]]
+    abstraction_factory: ClassVar[type["Abstraction"]]
+    over_factory: ClassVar[Callable[..., "Exp"]]
+    under_factory: ClassVar[Callable[..., "Exp"]]
+    exp_factory: ClassVar[Callable[..., "Exp"]]
 
     def __pow__(self, other: Ty) -> Ty:
         return self.exp(other) if isinstance(other, Ty)\
@@ -324,6 +331,12 @@ class Diagram(monoidal.Diagram, BiclosedCategory):
         dom (Ty) : The domain of the diagram, i.e. its input.
         cod (Ty) : The codomain of the diagram, i.e. its output.
     """
+    box_factory: ClassVar[type["Box"]]
+    curry_factory: ClassVar[type["Curry"]]
+    eval_factory: ClassVar[type["Eval"]]
+    coeval_factory: ClassVar[type["Coeval"]]
+    sum_factory: ClassVar[type["Sum"]]
+    functor_factory: ClassVar[type["Functor"]]
 
     ob = Ty
 
@@ -514,6 +527,7 @@ class Sum(monoidal.Sum, Box):
 
 
 Id = Diagram.id
+Diagram.box_factory = Box
 Diagram.curry_factory = Curry
 Diagram.eval_factory = Eval
 Diagram.coeval_factory = Coeval

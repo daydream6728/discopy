@@ -146,6 +146,8 @@ loves(Bob)(Alice)
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 from discopy import closed, cmap, hypergraph
 from discopy.cat import factory
 from discopy.grammar import categorial
@@ -154,6 +156,10 @@ from discopy.grammar import categorial
 @factory
 class Ty(closed.Ty):
     "An implicative type, the type of an abstract categorial grammar."
+    variable_factory: ClassVar[type["Variable"]]
+    constant_factory: ClassVar[type["Constant"]]
+    application_factory: ClassVar[type["Application"]]
+    abstraction_factory: ClassVar[type["Abstraction"]]
 
     @classmethod
     def from_categorial(cls, old: categorial.Ty) -> Ty:

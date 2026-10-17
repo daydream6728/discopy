@@ -58,7 +58,7 @@ from __future__ import annotations
 import itertools
 from dataclasses import dataclass, field
 from functools import cached_property
-from typing import Iterator, Callable, TYPE_CHECKING
+from typing import Iterator, Callable, ClassVar, TYPE_CHECKING
 from warnings import warn
 
 from discopy import abc, cat, drawing, hypergraph, cmap, messages
@@ -973,6 +973,10 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
             normalize
             normal_form
     """
+    box_factory: ClassVar[type["Box"]]
+    sum_factory: ClassVar[type["Sum"]]
+    bubble_factory: ClassVar[type["Bubble"]]
+    functor_factory: ClassVar[type["Functor"]]
     ob = Ty
     layer_factory = Layer
 
@@ -1842,6 +1846,7 @@ class Equation(cat.Equation, RichDisplay):
 Diagram.draw = drawing.draw
 Diagram.to_gif = drawing.to_gif
 
+Diagram.box_factory = Box
 Diagram.sum_factory = Sum
 Diagram.bubble_factory = Bubble
 Diagram.functor_factory = Functor

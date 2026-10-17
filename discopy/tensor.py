@@ -44,7 +44,7 @@ indices. Swaps, cups and caps become wiring while spiders stay as boxes.
 from __future__ import annotations
 
 from itertools import count
-from typing import TYPE_CHECKING, Sequence
+from typing import TYPE_CHECKING, ClassVar, Sequence
 
 from discopy import (
     cat, monoidal, rigid, frobenius, cmap, config)
@@ -538,6 +538,12 @@ class Diagram(NamedGeneric['dtype'], frobenius.Diagram):
     >>> print(diagram)
     vector[::-1] >> vector >> Dim(2) @ vector
     """
+    sum_factory: ClassVar[type["Sum"]]
+    swap_factory: ClassVar[type["Swap"]]
+    permutation_factory: ClassVar[type["Permutation"]]
+    cup_factory: ClassVar[type["Cup"]]
+    cap_factory: ClassVar[type["Cap"]]
+    bubble_factory: ClassVar[type["Bubble"]]
     ob = Dim
 
     @classmethod

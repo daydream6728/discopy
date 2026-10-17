@@ -44,6 +44,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import re
+from typing import ClassVar
 
 from discopy import biclosed, cmap, messages
 from discopy.abc import ClosedCategory
@@ -61,6 +62,11 @@ from discopy.utils import (
 @factory
 class Ty(biclosed.Ty):
     "Base class for categorial grammar types."
+    variable_factory: ClassVar[type["Variable"]]
+    constant_factory: ClassVar[type["Constant"]]
+    abstraction_factory: ClassVar[type["Abstraction"]]
+    over_factory: ClassVar[type["Over"]]
+    under_factory: ClassVar[type["Under"]]
 
 
 class Over(biclosed.Over):
@@ -80,6 +86,10 @@ class Diagram(biclosed.Diagram):
     """
     A categorial diagram is a biclosed diagram with rules and words as boxes.
     """
+    box_factory: ClassVar[type["Box"]]
+    functor_factory: ClassVar[type["Functor"]]
+    curry_factory: ClassVar[type["Curry"]]
+    eval_factory: ClassVar[type["Eval"]]
     ob = Ty
 
     def to_pregroup(self):

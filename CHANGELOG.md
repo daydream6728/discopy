@@ -9,6 +9,14 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Added
 
+- Every level declares the generators it binds after its `Diagram` as
+  class variables of it, e.g. `swap_factory: ClassVar[type["Swap"]]` in
+  `symmetric.Diagram`, so that a typechecker reads `cls.swap_factory` as
+  the class it is rather than as unknown, and binds `box_factory` to its
+  own `Box`. `pivotal.Box` is a `traced.Box`, as its diagrams are traced,
+  and `ribbon.Diagram.sum_factory` is `ribbon.Sum`, which it defined but
+  never assigned
+  ([rel-int/discopy-next#1](https://github.com/rel-int/discopy-next/pull/1)).
 - `discopy.kleisli.token`, probabilistic token passing on lambda terms: a
   `Machine[M]` interprets the constants of a `closed` term, one transition
   of the token is a `kleisli.additive.Channel` from an entry plus the two

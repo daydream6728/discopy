@@ -151,7 +151,7 @@ import copy
 
 from collections.abc import Callable
 
-from typing import Iterator
+from typing import ClassVar, Iterator
 
 from discopy import cat, monoidal, biclosed, messages
 from discopy.abc import Pregroup, RigidCategory
@@ -390,6 +390,11 @@ class Diagram(biclosed.Diagram, RigidCategory):
     .. image:: /_static/rigid/curry.svg
         :align: center
     """
+    box_factory: ClassVar[type["Box"]]
+    cup_factory: ClassVar[type["Cup"]]
+    cap_factory: ClassVar[type["Cap"]]
+    sum_factory: ClassVar[type["Sum"]]
+    functor_factory: ClassVar[type["Functor"]]
 
     ob = Ty
     layer_factory = Layer
@@ -892,6 +897,7 @@ def to_rigid(self):
 
 biclosed.Diagram.to_rigid = to_rigid
 
+Diagram.box_factory = Box
 Diagram.cup_factory, Diagram.cap_factory, Diagram.sum_factory = Cup, Cap, Sum
 Diagram.functor_factory = Functor
 

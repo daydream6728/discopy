@@ -794,3 +794,11 @@ def test_foliation_up_to_interchangers():
     assert snake.foliation() == snake and len((k @ snake).foliation()) == 2
     F = tensor.Functor({a: 2}, {k: [1, 2, 3, 4]}, dom=rigid.Diagram)
     assert F((k @ snake).foliation()) == F(k @ snake)
+
+
+def test_box_factory():
+    """ Every level binds its own boxes, which a stream of boxes reads. """
+    from discopy import cat, monoidal, symmetric, markov, rigid, closed
+    assert cat.Arrow.box_factory is cat.Box
+    for module in (monoidal, symmetric, markov, rigid, closed):
+        assert module.Diagram.box_factory is module.Box
