@@ -1598,12 +1598,13 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `.github/scripts/pylint_axioms.py` first, a plugin `.pylintrc` loaded
   and `.github/tests` checked, which the `Axiom` of
   [rel-int/discopy-next#1](https://github.com/rel-int/discopy-next/pull/1)
-  does without. The configuration declares the `factory` a `NamedGeneric` subscript
-  sets and the `*_factory` attributes a module sets after its class as
-  `generated-members`, lets `hypothesis.strategies` be imported where a
-  strategy is built, the convention keeping hypothesis out of the
-  package's imports, and reads the code as the 3.12 that `pyproject.toml`
-  requires rather than 3.10. `cyclic-import` is disabled: the package
+  does without. The configuration declares two kinds of
+  `generated-members`: the `factory` that a `NamedGeneric` subscript sets
+  and the `*_factory` attributes that a module sets after its class. It
+  lets `hypothesis.strategies` be imported where a strategy is built, the
+  convention keeping hypothesis out of the package's imports, and reads
+  the code as the 3.12 that `pyproject.toml` requires rather than 3.10.
+  `cyclic-import` is disabled: the package
   imports every module, so the graph is cyclic by design, and pylint
   reported 63 cycles on one run of `main` and 67 on the next, moving the
   score by a hundredth between two runs of the same tree, which a

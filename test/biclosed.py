@@ -362,3 +362,5 @@ def test_Curry_to_drawing():
             drawing = curry.to_drawing()
             assert (len(drawing.dom), len(drawing.cod))\
                 == (len(curry.dom), len(curry.cod))
+    for left in (True, False):  # A curry of no wire, built explicitly.
+        assert Curry(f, 0, left=left).to_drawing() == f.to_drawing()

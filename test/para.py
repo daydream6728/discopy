@@ -75,6 +75,7 @@ def test_closed():
     assert Closed.ev(c, b).param == closed.Ty()
     left, right = k.curry(left=True), k.curry(left=False)
     assert k.curry() == left
+    assert k.curry(0) == k == k.curry(0, left=False)
     assert (left.dom, left.cod, left.param) == (a, c << b, P)
     assert (right.dom, right.cod, right.param) == (b, a >> c, P)
     assert left.inside\

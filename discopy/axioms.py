@@ -6,13 +6,13 @@ An :class:`Axiom` is an equation stated once on an abstract base class of
 :mod:`discopy.abc` and inherited by every category below it, where
 :meth:`Axiom.failing` and :meth:`Axiom.inapplicable` classify it when a
 category breaks it or has no such structure. A :class:`Testable` category
-generates its own objects and arrows, and states the laws every type that
-does so obeys: a term reads back from its representation, its pickle and
-its tree. An :class:`Equivalence` is a testable type with an equivalence
+generates its own objects and arrows, and states the laws every type that does
+so obeys: a term reads back from its representation, its pickle, its deep copy
+and its tree. An :class:`Equivalence` is a testable type with an equivalence
 relation besides equality, and states the laws of one once: reflexivity,
-symmetry and transitivity. The matrix in ``proptest/`` checks every axiom
-of every category against generated arguments, one cell per pair;
-CONTRIBUTING.md says how to run it.
+symmetry and transitivity. The matrix in ``proptest/`` checks every axiom of
+every category against generated arguments, one cell per pair; CONTRIBUTING.md
+says how to run it.
 
 Summary
 -------

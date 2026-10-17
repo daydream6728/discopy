@@ -525,6 +525,13 @@ class Curry(monoidal.Bubble, Box):
         return self.name
 
     def to_drawing(self):
+        """
+        A curry is drawn as its argument followed by a coevaluation, traced
+        over the ``n`` wires it curries; a curry of no wire is drawn as its
+        argument, as :meth:`Diagram.curry` of no wire is the diagram itself.
+        """
+        if not self.n:
+            return self.arg.to_drawing()
         f, e = self.arg, self.coeval_factory(self.cod, left=self.left)
         return (f >> e).to_drawing().trace(self.n, left=not self.left)
 

@@ -403,7 +403,16 @@ class Closed(Markov, ClosedCategory):
         Parameters:
             n : The number of objects to curry.
             left : Whether to curry into a left or right exponential.
+
+        Currying no object is the identity, as for every other curry.
+
+        >>> from discopy import closed
+        >>> a, P = closed.Ty('a'), closed.Ty('P')
+        >>> k = Closed(a, a, closed.Box('k', a @ P, a), P)
+        >>> assert k.curry(0) == k == k.curry(0, left=False)
         """
+        if not n:
+            return self
         if not left:
             inside = self.inside.curry(n, left=False)
             return type(self)(self.dom[n:], inside.cod, inside, self.param)
