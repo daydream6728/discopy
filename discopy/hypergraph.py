@@ -1412,13 +1412,13 @@ class Hypergraph(MonoidalCategory, NamedGeneric['category']):
         """
         Introduces spider boxes to make self bijective.
 
-        The box of a spider is inserted at the depth of its first consumer,
-        at the end when it has none, unless one of its producers comes later,
-        in which case right after its last producer: in a causal hypergraph,
-        it is the latest depth between the producer and the consumers, so
-        the boxes before it keep the open wires they had and a state keeps
-        the offset :meth:`discopy.monoidal.Diagram.to_hypergraph` recorded.
-        The boxes of the spiders inserted at one depth come in their order.
+        The box of a spider is inserted right after its last producer, or
+        at its first consumer when it has none, but after every state that
+        carries an offset and never past its first consumer. So a state keeps
+        the scan in which :meth:`discopy.monoidal.Diagram.to_hypergraph`
+        recorded its offset: it comes before every box of the diagram that
+        became wiring, and the first consumer of a spider reads a wire out of
+        one.
 
         Example
         -------
@@ -1432,7 +1432,7 @@ class Hypergraph(MonoidalCategory, NamedGeneric['category']):
         >>> assert copy.boxes == (Spider(1, 2, Ty('x')), Spider(1, 2, Ty('y')))
 
         >>> unit = H.spiders(0, 1, Ty('x', 'y')).make_bijective()
-        >>> assert unit.boxes == (Spider(0, 1, Ty('x')), Spider(0, 1, Ty('y')))
+        >>> assert unit.boxes == (Spider(0, 1, Ty('y')), Spider(0, 1, Ty('x')))
 
         >>> from discopy.markov import Ty, Box, Copy
         >>> x = Ty('x')
@@ -1443,16 +1443,21 @@ class Hypergraph(MonoidalCategory, NamedGeneric['category']):
         boxes = list(self.boxes)
         f_wires = list(self.flat_wires)
         spider_types = list(self.spider_types)
-        for spider, (typ, (input_wires, output_wires)) in enumerate(
-                zip(spider_types, self.spider_wires)):
+        after_states = max((
+            depth + 1 for depth, (box, offset)
+            in enumerate(zip(self.boxes, self.offsets))
+            if offset is not None and not box.dom), default=0)
+        for spider, (typ, (input_wires, output_wires)) in reversed(list(
+                enumerate(zip(spider_types, self.spider_wires)))):
             n_legs = len(input_wires) + len(output_wires)
             if n_legs in [0, 2]:
                 continue
+            first = getattr(
+                self.ports[min(output_wires)], "depth", len(boxes)
+            ) if output_wires else len(boxes)
             depth = max(
                 getattr(self.ports[max(input_wires)], "depth", -1) + 1
-                if input_wires else 0,
-                getattr(self.ports[min(output_wires)], "depth", len(boxes))
-                if output_wires else len(boxes))
+                if input_wires else first, min(after_states, first))
             boxes = boxes[:depth] + [self.category.spider_factory(
                 len(input_wires), len(output_wires), typ)] + boxes[depth:]
             offsets = self.offsets[:depth] + (None, ) + self.offsets[depth:]

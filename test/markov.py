@@ -156,3 +156,22 @@ def test_hypergraph():
         (Layer(f, g), Layer(Copy(x), x), Layer(h, x, x)), Ty(), x @ x @ x)
     diagram = f @ g >> Discard(x) @ x
     assert diagram.to_hypergraph().to_diagram() == diagram
+    graph = (f >> Copy(x) >> h @ h).to_hypergraph()\
+        >> (x @ x @ g).to_hypergraph()
+    assert graph.offsets == (0, None, None, 2)
+    assert graph.to_diagram() == Diagram(
+        (Layer(f), Layer(Copy(x)), Layer(h, h, g)), Ty(), x @ x @ x)
+
+
+def test_from_callable():
+    x, y = Ty('x'), Ty('y')
+    f = Box('f', x @ x, y)
+
+    @Diagram.from_callable(x @ x, y)
+    def diagram(a, b):
+        f(b, a)
+        return f(a, b)
+
+    assert diagram == Diagram((
+        Layer(Copy(x), Copy(x)), Layer(Permutation(x @ x @ x @ x, [0, 2, 1, 3])),
+        Layer(x, f, x), Layer(x, Discard(y), x), Layer(f)), x @ x, y)

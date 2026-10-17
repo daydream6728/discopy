@@ -1007,24 +1007,23 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   delayed it twice and `FollowedBy(x).delay().delay()` was an endomorphism
   of `x.d.d.d` rather than `FollowedBy(x).delay(2)`
   ([rel-int/discopy-next#105](https://github.com/rel-int/discopy-next/issues/105)).
-- `Hypergraph.make_bijective` inserts the box of a spider at the depth of
-  its first consumer, at the end when it has none, where it inserted it
-  right after its last producer, so that a copy, a discard or a merge comes
-  after the states that came before it in the diagram: their offsets were
-  read in a scan the spider box had grown or shrunk, so
+- `Hypergraph.make_bijective` inserts the box of a spider after every state
+  with an offset, where it inserted it right after its last producer,
+  before the states that came after that producer in the diagram: their
+  offsets were read in a scan the spider box had grown or shrunk, so
   `f @ g >> Copy(x) @ x >> h @ x @ x` decoded with a permutation it does
   not have, `f @ g >> Discard(x) @ x` as `f >> Copy(x, 0) >> g` and
   `f @ g @ s >> Merge(x) @ x` with `s` after the merge, the last two only
-  because the decoder clamped the stale offset. When the producers of a
-  spider come before its consumers, as in a causal or a cocausal
-  hypergraph, the first consumer is the latest depth between them, and it
-  comes after every state with an offset, since such a state comes before
-  every box of the diagram that became wiring and the first consumer reads
-  a wire out of one: the three decode to the diagram or its foliation. A
-  spider with a producer after its first consumer goes right after its
-  last producer as before. The spiders are taken in order, so the boxes
-  inserted at one depth come in the order of their spiders, the units of
-  the doctest of `make_bijective` included, which came reversed. The clamp
+  because the decoder clamped the stale offset. The box goes right after
+  its last producer, or at its first consumer when it has none, as before,
+  unless a state with an offset comes later, then right after the last such
+  state, but never past its first consumer. A state with an offset comes
+  before every box of the diagram that became wiring, and the first
+  consumer of a spider reads a wire out of one, so in the hypergraph of a
+  diagram that depth lies between the producers and the consumers; in one
+  composed of several with `then`, the cap keeps a box from going past its
+  consumers, which would need traces. A diagram whose hypergraph records no
+  offset, e.g. one built with `from_callable`, decodes as before. The clamp
   stays for a hint past the end of the scan, e.g. one given by hand
   ([rel-int/discopy-next#106](https://github.com/rel-int/discopy-next/issues/106)).
 - `feedback.HeadOb`, `TailOb`, `Head`, `Tail` and `FollowedBy` read back
