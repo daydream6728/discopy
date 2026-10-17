@@ -237,9 +237,6 @@ class Copy(Box):
         """
         return self.dom, len(self.cod)
 
-    def delay(self, n_steps=1):
-        return type(self)(self.dom.delay(n_steps), len(self.cod))
-
     def dagger(self) -> Diagram:
         """
         The merge of the same type, when the category is also comarkov.

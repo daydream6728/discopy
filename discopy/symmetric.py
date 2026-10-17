@@ -507,8 +507,15 @@ class Permutation(Box):
             draw_as_wires=True, draw_as_permutation=True,
             permutation_indices=tuple(self.perm))
 
-    def delay(self, n_steps=1):
-        return type(self)(self.dom.delay(n_steps), self.perm)
+    def __getnewargs__(self):
+        """
+        The arguments of :meth:`__new__`, which a pickle and a delay read.
+
+        >>> x, y, z = map(Ty, "xyz")
+        >>> perm = Permutation(x @ y @ z, [2, 0, 1])
+        >>> assert perm.delay() == Permutation((x @ y @ z).delay(), [2, 0, 1])
+        """
+        return self.dom, list(self.perm)
 
     @property
     def is_identity(self) -> bool:
@@ -628,8 +635,8 @@ class Swap(Permutation, balanced.Braid, Box):
     def dagger(self):
         return type(self)(self.right, self.left)
 
-    def delay(self, n_steps=1):
-        return type(self)(self.left.delay(n_steps), self.right.delay(n_steps))
+    def __getnewargs__(self):
+        return self.left, self.right
 
     def to_swaps(self):
         return self

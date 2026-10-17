@@ -270,10 +270,6 @@ class Cup(rigid.Cup, Box):
         """ The dagger of a pivotal cup. """
         return self.cap_factory(self.left, self.right)
 
-    def delay(self, n_steps=1) -> Cup:
-        """ The cup of the delayed types. """
-        return type(self)(self.left.delay(n_steps), self.right.delay(n_steps))
-
 
 class Cap(rigid.Cap, Box):
     """
@@ -287,10 +283,6 @@ class Cap(rigid.Cap, Box):
     def dagger(self) -> Cup:
         """ The dagger of a pivotal cap. """
         return self.cup_factory(self.left, self.right)
-
-    def delay(self, n_steps=1) -> Cap:
-        """ The cap of the delayed types. """
-        return type(self)(self.left.delay(n_steps), self.right.delay(n_steps))
 
 
 class Sum(rigid.Sum, feedback.Sum, Box):

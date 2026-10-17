@@ -281,6 +281,11 @@ class Twist(Box):
     def dagger(self):
         return type(self)(self.dom, not self.is_dagger)
 
+    def __getnewargs__(self):
+        """ The arguments of the constructor, which a pickle and a delay read.
+        """
+        return self.dom, self.is_dagger
+
     def to_tree(self) -> dict:
         """
         Serialise a twist by its type, keeping whether it is an inverse.
