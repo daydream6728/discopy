@@ -274,6 +274,7 @@ class Spider(Box):
         n_legs_out : The number of legs out.
         typ : The type of the spider.
         data : The phase of the spider.
+        is_dagger : Whether the spider is marked as a dagger.
 
     Examples
     --------
@@ -285,14 +286,15 @@ class Spider(Box):
     color = "black"
 
     def __init__(self, n_legs_in: int, n_legs_out: int, typ: Ty, data=None,
-                 **params):
+                 is_dagger=False, **params):
         assert_isatomic(typ)
         self.typ = typ
         str_data = "" if data is None else f", {data}"
         name = type(self).__name__\
             + f"({n_legs_in}, {n_legs_out}, {typ}{str_data})"
         dom, cod = typ ** n_legs_in, typ ** n_legs_out
-        Box.__init__(self, name, dom, cod, data=data, **params)
+        Box.__init__(
+            self, name, dom, cod, data=data, is_dagger=is_dagger, **params)
         self.drawing_name = "" if not data else str(data)
 
     def __setstate__(self, state):
@@ -310,7 +312,8 @@ class Spider(Box):
         >>> x = Ty('x')
         >>> assert Spider(1, 2, x, .5).delay() == Spider(1, 2, x.delay(), .5)
         """
-        return len(self.dom), len(self.cod), self.typ, self.phase
+        return (
+            len(self.dom), len(self.cod), self.typ, self.phase, self.is_dagger)
 
     @property
     def phase(self):

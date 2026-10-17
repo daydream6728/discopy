@@ -300,6 +300,8 @@ class Ty(NamedGeneric['base']):
         """
         if not 0 <= n <= len(self.now):
             raise ValueError(messages.NOT_SPLITTABLE.format(n, self.now))
+        if not n:
+            return type(self)()
         now = self.now[len(self.now) - n:]
         return type(self)(now, None if self.is_constant else (
             lambda: self.later.last(n)))
@@ -632,8 +634,10 @@ class Stream(FeedbackCategory, NamedGeneric['category']):
         .. image:: /_static/stream/feedback-unrolling.svg
             :align: center
         """
-        return self.feed_back(*self.split_memory(
-            n, left, dom=dom, cod=cod, mem=mem))
+        dom, cod, mem = self.split_memory(n, left, dom=dom, cod=cod, mem=mem)
+        if mem.is_constant and not mem.now:
+            return self
+        return self.feed_back(dom, cod, mem)
 
     def feed_back(
             self, dom: Ty, cod: Ty, mem: Ty, is_first: bool = True) -> Stream:

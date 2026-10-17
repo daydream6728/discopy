@@ -65,6 +65,14 @@ def test_feedback_forms():
         f.feedback(3)
 
 
+def test_feedback_of_no_memory():
+    x = symmetric.Ty('x')
+    constant = Stream(symmetric.Box('f', x, x))
+    assert constant.feedback(0) == constant == constant.feedback(mem=Ty())
+    f = Stream.sequence("f", *map(Ty.sequence, "xy"))
+    assert f.feedback(0) is f and f.feedback(mem=Ty()) is f
+
+
 def test_last_and_without():
     from pytest import raises
     X, Y = map(Ty.sequence, "xy")

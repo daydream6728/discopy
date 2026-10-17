@@ -361,7 +361,9 @@ def test_structural_boxes_delay_through_their_arguments():
                                         z.r.d if box.left == z else z.d)
         assert pickle.loads(pickle.dumps(box)) == box
     w = frobenius.Ty('w')
-    spider = frobenius.Spider(1, 2, w, .5)
-    assert spider.delay() == frobenius.Spider(1, 2, w.d, .5)
-    assert spider.delay().delay(-1) == spider
-    assert pickle.loads(pickle.dumps(spider)) == spider
+    for is_dagger in (False, True):
+        spider = frobenius.Spider(1, 2, w, .5, is_dagger=is_dagger)
+        assert spider.delay() == frobenius.Spider(
+            1, 2, w.d, .5, is_dagger=is_dagger)
+        assert spider.delay().delay(-1) == spider
+        assert pickle.loads(pickle.dumps(spider)) == spider

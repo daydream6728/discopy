@@ -608,13 +608,16 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   one `feedback.Box.delay`, which reads the arguments of its constructor
   off `__getnewargs__`, the hook pickling reads, where `Permutation`,
   `Swap`, `Copy`, `Cup` and `Cap` each had their own delay and `Braid`,
-  `Twist` and `frobenius.Spider` had none, so that delaying one raised.
+  `Twist` and `frobenius.Spider` had none, so that delaying one raised;
+  a spider takes its dagger flag as an argument, so that its delay keeps
+  it.
   `Stream.feedback` takes the keyword form `dom`, `cod`, `mem` first and
   a number `n` of objects as fallback, as `abc.FeedbackCategory` does,
   where it took the memory positionally, `split_memory` takes the memory
   by keyword at every level, as `feedback` does, and `Stream` is a
-  `FeedbackCategory`: vanishing, joining, strength and tightening hold on
-  streams up to their unrolling, while sliding holds only up to the
+  `FeedbackCategory`: feeding back no memory gives the stream itself,
+  vanishing, joining, strength and tightening hold on streams up to their
+  unrolling, while sliding holds only up to the
   extensional equivalence of streams and is declared failing,
   `messages.STREAM_SLIDING`. Vanishing reads `f.feedback(0)`, which a
   stream of types, having no slices, can state
