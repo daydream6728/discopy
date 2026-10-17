@@ -17,6 +17,11 @@ Summary
     Cap
     Swap
     Permutation
+    Feedback
+    Trace
+    FollowedBy
+    Head
+    Tail
     Functor
 
 Axioms
@@ -54,7 +59,7 @@ Coherence
 ...     Cap(x, x.r) @ Cap(y, y.r) >> x @ Diagram.swap(x.r, y @ y.r))
 """
 
-from discopy import symmetric, ribbon, pivotal, cmap, hypergraph
+from discopy import symmetric, ribbon, pivotal, feedback, cmap, hypergraph
 from discopy.abc import CompactCategory
 from discopy.cat import factory
 from discopy.utils import deprecated_alias
@@ -171,6 +176,7 @@ CMap = cmap.CMap[Diagram]
 
 Id = Diagram.id
 
+Feedback, Trace, FollowedBy, Head, Tail = feedback.generators(Diagram, Box)
 Diagram.box_factory = Box
 Diagram.swap_factory = Swap
 Diagram.functor_factory = Functor

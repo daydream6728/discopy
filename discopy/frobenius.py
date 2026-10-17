@@ -16,6 +16,8 @@ Summary
     :toctree:
 
     Wire
+    HeadOb
+    TailOb
     Ty
     Dim
     Diagram
@@ -25,6 +27,11 @@ Summary
     Swap
     Spider
     Bubble
+    Feedback
+    Trace
+    FollowedBy
+    Head
+    Tail
     Functor
     CMap
 
@@ -65,7 +72,8 @@ from copy import copy
 from typing import Self
 
 from discopy import (
-    monoidal, rigid, markov, comarkov, compact, pivotal, cmap, hypergraph)
+    monoidal, rigid, markov, comarkov, compact, pivotal, feedback, cmap,
+    hypergraph)
 from discopy.abc import HypergraphCategory
 from discopy.cat import factory
 from discopy.utils import (
@@ -94,6 +102,9 @@ class Wire(pivotal.Wire):
         return result
 
     r = l
+
+
+HeadOb, TailOb = feedback.wire_generators(Wire)
 
 
 @factory
@@ -263,6 +274,7 @@ class Spider(Box):
         n_legs_out : The number of legs out.
         typ : The type of the spider.
         data : The phase of the spider.
+        is_dagger : Whether the spider is marked as a dagger.
 
     Examples
     --------
@@ -274,14 +286,15 @@ class Spider(Box):
     color = "black"
 
     def __init__(self, n_legs_in: int, n_legs_out: int, typ: Ty, data=None,
-                 **params):
+                 is_dagger=False, **params):
         assert_isatomic(typ)
         self.typ = typ
         str_data = "" if data is None else f", {data}"
         name = type(self).__name__\
             + f"({n_legs_in}, {n_legs_out}, {typ}{str_data})"
         dom, cod = typ ** n_legs_in, typ ** n_legs_out
-        Box.__init__(self, name, dom, cod, data=data, **params)
+        Box.__init__(
+            self, name, dom, cod, data=data, is_dagger=is_dagger, **params)
         self.drawing_name = "" if not data else str(data)
 
     def __setstate__(self, state):
@@ -292,6 +305,15 @@ class Spider(Box):
             state["_name"] = type(self).__name__\
                 + f"({dom.n}, {cod.n}, {state['_typ']}{str_data})"
         super().__setstate__(state)
+
+    def __getnewargs__(self):
+        """ The arguments of the constructor, which a pickle and a delay read.
+
+        >>> x = Ty('x')
+        >>> assert Spider(1, 2, x, .5).delay() == Spider(1, 2, x.delay(), .5)
+        """
+        return (
+            len(self.dom), len(self.cod), self.typ, self.phase, self.is_dagger)
 
     @property
     def phase(self):
@@ -462,6 +484,7 @@ def coherence(cls: type, factory: Callable
 
 CMap = cmap.CMap[Diagram]
 
+Feedback, Trace, FollowedBy, Head, Tail = feedback.generators(Diagram, Box)
 Diagram.box_factory = Box
 Diagram.functor_factory = Functor
 Diagram.cup_factory, Diagram.cap_factory = Cup, Cap

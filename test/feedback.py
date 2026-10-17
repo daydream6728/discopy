@@ -283,3 +283,87 @@ def test_FollowedBy_delay():
             == FollowedBy(x, is_dagger, time_step=2)
         assert fby.delay(2).dom == fby.dom.delay(2)
         assert fby.delay(2).cod == fby.cod.delay(2)
+
+
+def test_generated_boxes_at_every_level():
+    import pickle
+    from discopy import (
+        balanced, closed, comarkov, compact, frobenius, markov, pivotal,
+        ribbon, symmetric)
+    from discopy.grammar import abstract
+    from discopy.neural import network
+    from discopy.utils import dumps, factory_name, loads
+    for module in (balanced, symmetric, markov, comarkov, pivotal, ribbon,
+                   compact, frobenius, closed, abstract, network):
+        diagram = getattr(module, "Diagram", getattr(module, "Network", None))
+        for name in ("Feedback", "Trace", "FollowedBy", "Head", "Tail"):
+            cls = getattr(module, name)
+            assert cls.__module__ == module.__name__ and cls.__doc__
+            assert issubclass(cls, module.Box)
+            assert issubclass(cls, globals()[name])
+            assert factory_name(cls) == module.__name__.removeprefix(
+                "discopy.") + "." + name
+        assert diagram.feedback_factory is module.Feedback
+        assert diagram.head_factory is module.Head
+    for module in (balanced, symmetric, markov, comarkov):
+        x = module.Ty('x')
+        f = module.Box('f', x @ x.delay(), x @ x)
+        for box in (f.feedback(), f.head, f.tail, module.Box(
+                'g', x @ x, x @ x).trace(), module.FollowedBy(x)):
+            assert type(box).__module__ == module.__name__
+            assert eval(repr(box), {module.__name__.split('.')[-1]: module,
+                                    'feedback': __import__(
+                                        'discopy.feedback').feedback}) == box
+            assert pickle.loads(pickle.dumps(box)) == box
+            assert loads(dumps(box)) == box
+    assert pivotal.Diagram.trace_factory.__func__\
+        is pivotal.Diagram.__dict__['trace_factory'].__func__
+
+
+def test_heads_of_pivotal_types():
+    import pickle
+    from discopy import compact, frobenius, pivotal
+    from discopy.utils import dumps, loads
+    for module in (pivotal, compact, frobenius):
+        x = module.Ty('x')
+        assert isinstance(x.head.inside[0], module.Wire)
+        assert x.head.l == x.l.head and x.head.r == x.r.head
+        assert x.head.delay().tail == x.head
+        f = module.Box('f', x, x @ x)
+        assert type(f.head).__module__ == module.Diagram.head_factory.__module__
+        assert f.head.dom == x.head and f.head.cod == (x @ x).head
+        for term in (x.head, x.head.delay(), f.head):
+            assert pickle.loads(pickle.dumps(term)) == term
+            assert loads(dumps(term)) == term
+
+
+def test_structural_boxes_delay_through_their_arguments():
+    import pickle
+    from discopy import (
+        balanced, comarkov, frobenius, markov, pivotal, symmetric)
+    x, y = symmetric.Ty('x'), symmetric.Ty('y')
+    for box, delayed in (
+            (symmetric.Swap(x, y), symmetric.Swap(x.d, y.d)),
+            (symmetric.Permutation(x @ y @ x, [2, 0, 1]),
+             symmetric.Permutation((x @ y @ x).d, [2, 0, 1])),
+            (markov.Copy(x, 3), markov.Copy(x.d, 3)),
+            (markov.Discard(x), markov.Discard(x.d)),
+            (comarkov.Merge(x), comarkov.Merge(x.d)),
+            (balanced.Braid(x, y, is_dagger=True),
+             balanced.Braid(x.d, y.d, is_dagger=True)),
+            (balanced.Twist(x).dagger(), balanced.Twist(x.d).dagger())):
+        assert box.delay() == delayed and box.delay().time_step == 0
+        assert box.delay(2) == box.delay().delay()
+        assert pickle.loads(pickle.dumps(box)) == box
+    z = pivotal.Ty('z')
+    for box in (pivotal.Cup(z, z.r), pivotal.Cap(z.r, z)):
+        assert box.delay() == type(box)(z.d if box.left == z else z.r.d,
+                                        z.r.d if box.left == z else z.d)
+        assert pickle.loads(pickle.dumps(box)) == box
+    w = frobenius.Ty('w')
+    for is_dagger in (False, True):
+        spider = frobenius.Spider(1, 2, w, .5, is_dagger=is_dagger)
+        assert spider.delay() == frobenius.Spider(
+            1, 2, w.d, .5, is_dagger=is_dagger)
+        assert spider.delay().delay(-1) == spider
+        assert pickle.loads(pickle.dumps(spider)) == spider

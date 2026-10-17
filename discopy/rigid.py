@@ -750,6 +750,11 @@ class Cup(BinaryBoxConstructor, Box):
         BinaryBoxConstructor.__init__(self, left, right)
         Box.__init__(self, name, dom, cod, draw_as_cup=True)
 
+    def __getnewargs__(self):
+        """ The arguments of the constructor, which a pickle and a delay read.
+        """
+        return self.left, self.right
+
     def rotate(self, left=False):
         return self.cap_factory(self.right.l, self.left.l) if left\
             else self.cap_factory(self.right.r, self.left.r)
@@ -787,6 +792,11 @@ class Cap(BinaryBoxConstructor, Box):
         dom, cod = self.ob(dom=left.dom, cod=left.dom), left @ right
         BinaryBoxConstructor.__init__(self, left, right)
         Box.__init__(self, name, dom, cod, draw_as_cap=True)
+
+    def __getnewargs__(self):
+        """ The arguments of the constructor, which a pickle and a delay read.
+        """
+        return self.left, self.right
 
     def rotate(self, left=False):
         return self.cup_factory(self.right.l, self.left.l) if left\

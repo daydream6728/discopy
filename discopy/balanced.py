@@ -17,6 +17,9 @@ Summary
     Twist
     Feedback
     Trace
+    FollowedBy
+    Head
+    Tail
     Sum
     Functor
 
@@ -253,33 +256,6 @@ class DualRailTwist(braided.Box):
         return type(self)(self.dom, not self.is_dagger)
 
 
-class Feedback(feedback.Feedback, Box):
-    """
-    A feedback in a balanced category.
-
-    Parameters:
-        arg : The diagram to feed back.
-        dom : The domain of the feedback.
-        cod : The codomain of the feedback.
-        mem : The memory to feed back.
-        left : Whether to feed back on the left or right.
-    """
-
-
-class Trace(feedback.Trace, Feedback):
-    """
-    A trace in a balanced category.
-
-    Parameters:
-        arg : The diagram to trace.
-        left : Whether to trace the wires on the left or right.
-
-    See also
-    --------
-    :meth:`Diagram.trace`
-    """
-
-
 class Twist(Box):
     """
     The twist on atomic type :code:`dom`.
@@ -307,6 +283,11 @@ class Twist(Box):
 
     def dagger(self):
         return type(self)(self.dom, not self.is_dagger)
+
+    def __getnewargs__(self):
+        """ The arguments of the constructor, which a pickle and a delay read.
+        """
+        return self.dom, self.is_dagger
 
     def to_tree(self) -> dict:
         """
@@ -395,13 +376,13 @@ class DualRail(Functor):
         return super().__call__(other)
 
 
+Feedback, Trace, FollowedBy, Head, Tail = feedback.generators(Diagram, Box)
 Diagram.box_factory = Box
 Diagram.functor_factory = Functor
 CMap = cmap.CMap[Diagram]
 Hypergraph = hypergraph.Hypergraph[Diagram]
 Diagram.braid_factory = Braid
 Diagram.twist_factory = Twist
-Diagram.feedback_factory, Diagram.trace_factory = Feedback, Trace
 Diagram.sum_factory = Sum
 Diagram.dual_rail_factory = DualRail
 Id = Diagram.id

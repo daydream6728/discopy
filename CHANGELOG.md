@@ -590,6 +590,40 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Changed
 
+- Every level below `feedback` generates its `Feedback`, `Trace`,
+  `FollowedBy`, `Head` and `Tail` with `feedback.generators`, where
+  `markov` wrote its own by hand and the other levels wrote a `Feedback`
+  and a `Trace` or none: each subclasses the generator of every level its
+  `Diagram` subclasses and its own `Box`, lives in its module and is bound
+  to the factory of its `Diagram` that builds it, `feedback_factory`,
+  `trace_factory`, `followed_by_factory`, `head_factory` or `tail_factory`,
+  so that it prints, pickles and reads back from its tree as e.g.
+  `symmetric.Head`. The head of a balanced, symmetric or comarkov diagram
+  was a `feedback.Head`, which composed into a `feedback.Diagram`; `pivotal`
+  keeps the trace it builds from cups and caps. `feedback.wire_generators`
+  does the same for the `HeadOb` and `TailOb` of `pivotal.Wire` and
+  `frobenius.Wire`, so that a pivotal, compact or Frobenius type has a head
+  and a tail, whose adjoints are the head and the tail of its adjoints,
+  where `x.head` raised `TypeError`. A structural box delays through the
+  one `feedback.Box.delay`, which reads the arguments of its constructor
+  off `__getnewargs__`, the hook pickling reads, where `Permutation`,
+  `Swap`, `Copy`, `Cup` and `Cap` each had their own delay and `Braid`,
+  `Twist` and `frobenius.Spider` had none, so that delaying one raised;
+  a spider takes its dagger flag as an argument, so that its delay keeps
+  it.
+  `Stream.feedback` takes the keyword form `dom`, `cod`, `mem` first and
+  a number `n` of objects as fallback, as `abc.FeedbackCategory` does,
+  where it took the memory positionally, `split_memory` takes the memory
+  by keyword at every level, as `feedback` does, and `Stream` is a
+  `FeedbackCategory`: feeding back no memory gives the stream itself, a
+  boundary that does not match raises `AxiomError` through
+  `Stream.assert_feeds_back`, where it failed an `assert`, vanishing,
+  joining, strength and tightening hold on streams up to their
+  unrolling, while sliding holds only up to the
+  extensional equivalence of streams and is declared failing,
+  `messages.STREAM_SLIDING`. Vanishing reads `f.feedback(0)`, which a
+  stream of types, having no slices, can state
+  ([rel-int/discopy-next#95](https://github.com/rel-int/discopy-next/issues/95)).
 - `discopy.feedback` absorbs `discopy.traced`: a traced category is a
   feedback category whose delay is the identity, where DisCoPy had it the
   other way round, `abc.FeedbackCategory` a `MarkovCategory` and
@@ -629,9 +663,7 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `feedback`'s classes, out of the package's imports and the API docs.
   `para.Feedback` is over `markov.Diagram`, which it feeds back with the
   keyword form, and takes either form itself, and `lens.Ty` pairs
-  symmetric types by default. The first
-  of two pull requests: the second generates each level's `Feedback`,
-  `Trace`, `FollowedBy`, `Head` and `Tail` from factories
+  symmetric types by default
   ([rel-int/discopy-next#95](https://github.com/rel-int/discopy-next/issues/95)).
 - `discopy.markov` is Markov only: `markov.Diagram` loses `Merge`, `merge`
   and `merge_factory` to `discopy.comarkov`, and its `spider_factory`

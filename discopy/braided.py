@@ -196,6 +196,11 @@ class Braid(BinaryBoxConstructor, Box):
             self, name, dom, cod, is_dagger=is_dagger, draw_as_braid=True)
         BinaryBoxConstructor.__init__(self, left, right)
 
+    def __getnewargs__(self):
+        """ The arguments of the constructor, which a pickle and a delay read.
+        """
+        return self.left, self.right, self.is_dagger
+
     def __repr__(self):
         str_is_dagger = ", is_dagger=True" if self.is_dagger else ""
         return factory_name(type(self)) + \

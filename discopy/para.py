@@ -478,7 +478,8 @@ class Feedback(Markov, FeedbackCategory):
         """
         if left:
             raise NotImplementedError
-        dom, cod, mem = self.split_memory(n, left, dom, cod, mem)
+        dom, cod, mem = self.split_memory(
+            n, left, dom=dom, cod=cod, mem=mem)
         inside = dom @ self.category.swap(self.param, mem.delay())\
             >> self.inside >> cod @ self.category.swap(mem, self.copar)
         return type(self)(

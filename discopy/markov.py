@@ -208,33 +208,6 @@ class Swap(Permutation, symmetric.Swap, Box):
     """
 
 
-class Feedback(symmetric.Feedback, Box):
-    """
-    A feedback in a Markov category.
-
-    Parameters:
-        arg : The diagram to feed back.
-        dom : The domain of the feedback.
-        cod : The codomain of the feedback.
-        mem : The memory to feed back.
-        left : Whether to feed back on the left or right.
-    """
-
-
-class Trace(symmetric.Trace, Feedback):
-    """
-    A trace in a Markov category.
-
-    Parameters:
-        arg : The diagram to trace.
-        left : Whether to trace the wires on the left or right.
-
-    See also
-    --------
-    :meth:`Diagram.trace`
-    """
-
-
 class Copy(Box):
     """
     The copy of an atomic type :code:`x` some :code:`n` number of times.
@@ -263,9 +236,6 @@ class Copy(Box):
         >>> assert loads(dumps(Discard(x))) == Discard(x)
         """
         return self.dom, len(self.cod)
-
-    def delay(self, n_steps=1):
-        return type(self)(self.dom.delay(n_steps), len(self.cod))
 
     def dagger(self) -> Diagram:
         """
@@ -303,38 +273,6 @@ class Discard(Copy):
         if n:
             raise ValueError(f"A discard has no copies, got n={n}.")
         super().__init__(x, 0)
-
-
-class FollowedBy(feedback.FollowedBy, Box):
-    """
-    The isomorphism between ``x.head @ x.tail.delay()`` and ``x`` in a Markov
-    diagram, see :class:`discopy.feedback.FollowedBy`.
-
-    Parameters:
-        arg : The type followed by itself.
-        is_dagger : Whether to go from ``x`` to its head and its tail.
-        time_step : The number of times the box has been delayed.
-    """
-
-
-class Head(feedback.Head, Box):
-    """
-    The head of a Markov diagram, see :class:`discopy.feedback.Head`.
-
-    Parameters:
-        arg : The diagram to take the head of.
-        time_step : The number of times the box has been delayed.
-    """
-
-
-class Tail(feedback.Tail, Box):
-    """
-    The tail of a Markov diagram, see :class:`discopy.feedback.Tail`.
-
-    Parameters:
-        arg : The diagram to take the tail of.
-        time_step : The number of times the box has been delayed.
-    """
 
 
 class Sum(symmetric.Sum, Box):
@@ -389,15 +327,13 @@ class Functor(symmetric.Functor):
 
 CMap = cmap.CMap[Diagram]
 
+Feedback, Trace, FollowedBy, Head, Tail = feedback.generators(Diagram, Box)
 Diagram.box_factory = Box
 Diagram.functor_factory = Functor
 Hypergraph = hypergraph.Hypergraph[Diagram]
 Diagram.copy_factory = Copy
 Diagram.swap_factory = Swap
 Diagram.permutation_factory = Permutation
-Diagram.feedback_factory, Diagram.trace_factory = Feedback, Trace
-Diagram.head_factory, Diagram.tail_factory = Head, Tail
-Diagram.followed_by_factory = FollowedBy
 Diagram.discard_factory = Discard
 Diagram.sum_factory = Sum
 Id = Diagram.id

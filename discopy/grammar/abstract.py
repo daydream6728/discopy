@@ -25,7 +25,11 @@ Summary
     Discard
     Permutation
     Swap
+    Feedback
     Trace
+    FollowedBy
+    Head
+    Tail
     Sum
     Functor
     Lexicon
@@ -148,7 +152,7 @@ from __future__ import annotations
 
 from typing import ClassVar
 
-from discopy import closed, cmap, hypergraph
+from discopy import closed, feedback, cmap, hypergraph
 from discopy.cat import factory
 from discopy.grammar import categorial
 
@@ -297,10 +301,6 @@ class Swap(Permutation, closed.Swap, Box):
     "The symmetric swap of two abstract types."
 
 
-class Trace(closed.Trace, Box):
-    "A trace in an abstract categorial grammar."
-
-
 class Sum(closed.Sum, Box):
     "A formal sum of abstract diagrams."
 
@@ -377,6 +377,7 @@ class Abstraction(TermBase, closed.Abstraction):
 type Term = Constant | Variable | Application | Abstraction
 
 Id = Diagram.id
+Feedback, Trace, FollowedBy, Head, Tail = feedback.generators(Diagram, Box)
 Diagram.box_factory, Diagram.functor_factory = Box, Functor
 Diagram.copy_factory = Copy
 Diagram.permutation_factory = Permutation
@@ -384,7 +385,6 @@ Diagram.swap_factory = Swap
 Diagram.curry_factory = Curry
 Diagram.eval_factory = Eval
 Diagram.coeval_factory = Coeval
-Diagram.trace_factory = Trace
 Diagram.discard_factory = Discard
 Diagram.sum_factory = Sum
 Ty.exp_factory = Ty.under_factory = Ty.over_factory = staticmethod(Exp)
