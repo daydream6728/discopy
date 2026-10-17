@@ -75,11 +75,15 @@ import time
 from dataclasses import dataclass
 from functools import cache
 
-from egglog import (
+import pytest
+
+pytest.importorskip("egglog")
+
+from egglog import (  # noqa: E402
     EGraph, Expr, i64Like, method, function, rewrite, ruleset, var)
-from egglog.declarations import (
+from egglog.declarations import (  # noqa: E402
     CallDecl, FunctionRef, InitRef, LitDecl, MethodRef)
-from egglog.egraph import expr_parts
+from egglog.egraph import expr_parts  # noqa: E402
 
 __all__ = [
     "X", "Y", "Z", "C0", "C1", "C2",
