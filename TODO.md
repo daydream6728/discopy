@@ -23,7 +23,7 @@ which this branch is stacked on. Earlier in the same session it was agreed that 
 
 The linear e-hypergraphs above, their alternatives, `fits` and `Rewrites` (at `a763134`), and everything
 traced (coinduction on feedback loops, `is_strict`, `markov.Square` and uniformity, the #91 port) moved to
-the pull request targeting this one, as round 3 below asks.
+[#103](https://github.com/rel-int/discopy-next/pull/103), which targets this one, as round 3 below asks.
 
 ## Round 2
 
@@ -49,7 +49,7 @@ it, whose next steps are the boxes above and below. It worked on a pull request 
 The screenshot is egg's: `(a * 2) / 2` under `x * 2 = x << 1`, `(x * y) / z = x * (y / z)`, `x / x = 1` and
 `x * 1 = x`, four e-graphs representing more and more ways to write it, extracting `a`.
 
-- [x] Move the traced rewrites to a pull request targeting this one
+- [x] Move the traced rewrites to [#103](https://github.com/rel-int/discopy-next/pull/103), which targets this one
 - [WIP] @session_01MY1Vs5CEhXgYwJcDnNwx6i-2026-10-17 18:40 E-hypergraphs over copy-discard diagrams: a box is
       deterministic and affine unless it says otherwise, as @toumix asked on discopy#730 ("`is_deterministic`
       for the copy-naturality alone", "shouldn't be a ClassVar"); a section chooses one producer per class,
