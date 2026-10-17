@@ -313,21 +313,22 @@ class Functor(monoidal.Functor):
 
     Example
     -------
-    Let's compute the golden ratio by applying a (hacky) traced functor.
+    Let's compute the golden ratio as the trace of a Python function, i.e.
+    the nested radical iterated from ``float()``, see
+    :meth:`python.Function.trace <discopy.python.Function.trace>`.
 
     >>> from math import sqrt
     >>> from discopy import python
     >>> x = Ty('$\\\\mathbb{R}$')
-    >>> f = Box('$\\\\lambda x . (x, 1 + 1 / x)$', x, x @ x)
+    >>> f = Box('$\\\\lambda x . (x, \\\\sqrt{1 + x})$', x, x @ x)
     >>> g = Box('$\\\\frac{1 + \\\\sqrt{5}}{2}$', Ty(), x)
     >>> F = Functor(
-    ...     ob_map={x: (float, )},
+    ...     ob_map={x: float},
     ...     ar_map={
-    ...         f: lambda x=1.: (x, 1 + 1. / x),
+    ...         f: lambda x: (x, sqrt(1 + x)),
     ...         g: lambda: (1 + sqrt(5)) / 2},
     ...     cod=python.Function)
-    >>> with python.Function.no_type_checking:
-    ...     assert F(f.trace())() == F(g)()
+    >>> assert F(f.trace())() == F(g)()
 
     >>> from discopy.monoidal import Equation
     >>> Equation(f.trace(), g).draw(doctest="docs/_static/traced/golden.svg")
