@@ -590,6 +590,49 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Changed
 
+- `discopy.feedback` absorbs `discopy.traced`: a traced category is a
+  feedback category whose delay is the identity, where DisCoPy had it the
+  other way round, `abc.FeedbackCategory` a `MarkovCategory` and
+  `feedback.Diagram` the symmetric syntax of streams while
+  `abc.TracedCategory` and the planar `traced.Diagram` sat above
+  `balanced` and `pivotal`. `abc.FeedbackCategory` is a
+  `MonoidalCategory` whose `delay` is the identity by default, its
+  `feedback` taking the keyword form `dom`, `cod`, `mem` first and a number
+  `n` of objects as fallback, the two exclusive, read by `split_memory`;
+  vanishing, joining, strength, tightening and sliding are stated once
+  there with `@axiom`, over the new `axioms.Loop` of a morphism
+  `x @ (m @ n).delay() -> y @ m @ n` and the morphisms it composes with.
+  `abc.TracedCategory` extends it, `trace` its hook and its `feedback` the
+  trace over the memory; the additive and multiplicative Python functions
+  declare it, which they implemented without saying so, and the laws hold
+  on the combinatorial maps of a compact category, up to hypergraph.
+  `feedback.Diagram` is the
+  free planar feedback category: wires and boxes carry a time step, a
+  `Feedback` bubble feeds back a delayed memory and `Trace`, its subclass,
+  an undelayed one, printing and drawing as `Trace(f)` as it did, so that
+  `docs/_static/traced/` is unchanged, with `Head`, `Tail` and
+  `FollowedBy` beside them. `balanced.Diagram` and `pivotal.Diagram`
+  subclass it in place of `traced.Diagram`, so every level below is a
+  feedback category whose wires carry a time step: `balanced`,
+  `symmetric`, `markov` and `comarkov` re-export the time-stepped
+  `feedback.Ty` and `feedback.Nat`, `pivotal.Wire` is a `rigid.Wire` and a
+  `feedback.Wire`, so that the adjoints and the boxes of `compact` and
+  `frobenius` keep their time step, delayed cups and caps included, and a
+  daggered or rotated box keeps it too. Each level binds a `Feedback`
+  beside its `Trace`, and `pivotal` beside the trace it builds from cups
+  and caps. The Markov syntax of streams is `markov.Diagram`,
+  with its `FollowedBy`, `Head` and `Tail`, interpreted by
+  `markov.Functor(cod=Stream)`; `Permutation`, `Swap` and `Copy` delay
+  their types and `wait` moves to `symmetric`. `feedback.Swap`,
+  `Permutation`, `Copy` and `Discard` stay one release as deprecated
+  aliases of `markov`'s, and `discopy.traced` as deprecated aliases of
+  `feedback`'s classes, out of the package's imports and the API docs.
+  `para.Feedback` is over `markov.Diagram`, which it feeds back with the
+  keyword form, and takes either form itself, and `lens.Ty` pairs
+  symmetric types by default. The first
+  of two pull requests: the second generates each level's `Feedback`,
+  `Trace`, `FollowedBy`, `Head` and `Tail` from factories
+  ([rel-int/discopy-next#95](https://github.com/rel-int/discopy-next/issues/95)).
 - `discopy.markov` is Markov only: `markov.Diagram` loses `Merge`, `merge`
   and `merge_factory` to `discopy.comarkov`, and its `spider_factory`
   refuses a spider with any number of legs in but one, with the new

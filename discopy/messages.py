@@ -11,6 +11,9 @@ NOT_GLOBULAR = "Expected a globular box, got boundaries {} -> {} and {} -> {}."
 NOT_ATOMIC = "Expected {} of length 1, got length {} instead."
 NOT_CONNECTED = "{} is not boundary-connected."
 NOT_TRACEABLE = "Cannot trace {} with {}."
+NOT_FEEDBACK = "Cannot feed {} back into {}, expected {} as its input."
+FEEDBACK_FORMS = (
+    "Feed back either a number of objects n or a memory dom, cod, mem.")
 NOT_SPLITTABLE = "Cannot split {} atoms off {}."
 NOT_ADJOINT = "{} and {} are not adjoints."
 NOT_MAPPING_OR_CALLABLE = "Expected a Mapping or a Callable, got {!r}."

@@ -17,6 +17,11 @@ Summary
     Swap
     Permutation
     Copy
+    Feedback
+    Trace
+    FollowedBy
+    Head
+    Tail
     Functor
 
 
@@ -60,10 +65,11 @@ from __future__ import annotations
 import warnings
 from typing import ClassVar
 
-from discopy import symmetric, monoidal, cmap, hypergraph, messages
+from discopy import symmetric, monoidal, feedback, cmap, hypergraph, messages
 from discopy.abc import ComarkovCategory, MarkovCategory
 from discopy.cat import factory
-from discopy.monoidal import Ty  # noqa: F401  pylint: disable=unused-import
+from discopy.feedback import (  # noqa: F401  pylint: disable=unused-import
+    Wire, Ty)
 from discopy.utils import (
     AxiomError, assert_isatomic, deprecated_alias, factory_name, from_tree)
 
@@ -101,6 +107,22 @@ class Diagram(symmetric.Diagram, MarkovCategory):
     ...     doctest="docs/_static/markov/copy_and_apply.svg")
 
     .. image:: /_static/markov/copy_and_apply.svg
+
+    Note
+    ----
+    A Markov diagram is a feedback diagram whose wires carry a time step, so
+    that it is the syntax of streams, see :mod:`discopy.stream`.
+
+    >>> x = Ty('x')
+    >>> zero = Box('0', Ty(), x.head)
+    >>> rand = Box('rand', Ty(), x)
+    >>> plus = Box('+', x @ x, x)
+    >>> walk = (rand.delay() @ x.delay() >> zero @ plus.delay()
+    ...         >> FollowedBy(x) >> Copy(x)).feedback()
+    >>> walk.draw(doctest="docs/_static/feedback/feedback-random-walk.svg")
+
+    .. image:: /_static/feedback/feedback-random-walk.svg
+        :align: center
     """
     copy_factory: ClassVar[type["Copy"]]
     discard_factory: ClassVar[type["Discard"]]
@@ -186,7 +208,20 @@ class Swap(Permutation, symmetric.Swap, Box):
     """
 
 
-class Trace(symmetric.Trace, Box):
+class Feedback(symmetric.Feedback, Box):
+    """
+    A feedback in a Markov category.
+
+    Parameters:
+        arg : The diagram to feed back.
+        dom : The domain of the feedback.
+        cod : The codomain of the feedback.
+        mem : The memory to feed back.
+        left : Whether to feed back on the left or right.
+    """
+
+
+class Trace(symmetric.Trace, Feedback):
     """
     A trace in a Markov category.
 
@@ -229,6 +264,9 @@ class Copy(Box):
         """
         return self.dom, len(self.cod)
 
+    def delay(self, n_steps=1):
+        return type(self)(self.dom.delay(n_steps), len(self.cod))
+
     def dagger(self) -> Diagram:
         """
         The merge of the same type, when the category is also comarkov.
@@ -265,6 +303,38 @@ class Discard(Copy):
         if n:
             raise ValueError(f"A discard has no copies, got n={n}.")
         super().__init__(x, 0)
+
+
+class FollowedBy(feedback.FollowedBy, Box):
+    """
+    The isomorphism between ``x.head @ x.tail.delay()`` and ``x`` in a Markov
+    diagram, see :class:`discopy.feedback.FollowedBy`.
+
+    Parameters:
+        arg : The type followed by itself.
+        is_dagger : Whether to go from ``x`` to its head and its tail.
+        time_step : The number of times the box has been delayed.
+    """
+
+
+class Head(feedback.Head, Box):
+    """
+    The head of a Markov diagram, see :class:`discopy.feedback.Head`.
+
+    Parameters:
+        arg : The diagram to take the head of.
+        time_step : The number of times the box has been delayed.
+    """
+
+
+class Tail(feedback.Tail, Box):
+    """
+    The tail of a Markov diagram, see :class:`discopy.feedback.Tail`.
+
+    Parameters:
+        arg : The diagram to take the tail of.
+        time_step : The number of times the box has been delayed.
+    """
 
 
 class Sum(symmetric.Sum, Box):
@@ -325,7 +395,9 @@ Hypergraph = hypergraph.Hypergraph[Diagram]
 Diagram.copy_factory = Copy
 Diagram.swap_factory = Swap
 Diagram.permutation_factory = Permutation
-Diagram.trace_factory = Trace
+Diagram.feedback_factory, Diagram.trace_factory = Feedback, Trace
+Diagram.head_factory, Diagram.tail_factory = Head, Tail
+Diagram.followed_by_factory = FollowedBy
 Diagram.discard_factory = Discard
 Diagram.sum_factory = Sum
 Id = Diagram.id

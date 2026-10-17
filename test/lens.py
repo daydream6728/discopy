@@ -4,7 +4,8 @@ import random
 
 from pytest import raises
 
-from discopy import cat, lens, markov, monoidal, para, python, symmetric
+from discopy import (
+    cat, feedback, lens, markov, monoidal, para, python, symmetric)
 from discopy.abc import Nat
 from discopy.interaction import Diagram as IntDiagram, Ty as IntTy
 from discopy.lens import Markov, Symmetric, Traced, Ty
@@ -38,7 +39,7 @@ def test_ty():
         Nat(4), Nat(6))
     assert -(X @ Y) == -X @ -Y == Ty(x_ @ y_, x @ y)
     scope = {"cat": cat, "monoidal": monoidal, "lens": lens,
-             "symmetric": symmetric, "markov": markov}
+             "symmetric": symmetric, "markov": markov, "feedback": feedback}
     assert eval(repr(X), scope) == X and str(X) == "x @ -x'"
     assert eval(repr(f), scope) == f
     assert eval(repr(markov_lens()), scope) == markov_lens()

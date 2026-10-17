@@ -676,11 +676,11 @@ class Hypergraph(MonoidalCategory, NamedGeneric['category']):
             n : The number of wires to trace.
             left : Whether to trace on the left or right.
 
-        >>> from discopy import symmetric, traced
+        >>> from discopy import symmetric, feedback
         >>> x = symmetric.Ty('x')
         >>> f = symmetric.Box('f', x @ x, x @ x).to_hypergraph()
         >>> assert f.trace().cod == f.trace(left=True).cod == x
-        >>> g = traced.Box('g', x @ x, x @ x)
+        >>> g = feedback.Box('g', x @ x, x @ x)
         >>> assert g.to_hypergraph().trace().boxes == (g.trace(), )
         """
         if n == 0:

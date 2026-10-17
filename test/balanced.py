@@ -4,9 +4,9 @@ from discopy.balanced import *
 def test_repr():
     x = Ty('x')
     assert repr(Twist(Ty('x')))\
-        == "balanced.Twist(monoidal.Ty(cat.Ob('x')))"
+        == "balanced.Twist(feedback.Ty(feedback.Wire('x')))"
     assert repr(Twist(Ty('x')).dagger())\
-        == "balanced.Twist(monoidal.Ty(cat.Ob('x'))).dagger()"
+        == "balanced.Twist(feedback.Ty(feedback.Wire('x'))).dagger()"
 
 
 def test_double_rail():

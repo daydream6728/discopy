@@ -18,6 +18,8 @@ Summary
     Permutation
     Merge
     Noise
+    Feedback
+    Trace
     Functor
 
 Axioms
@@ -62,7 +64,8 @@ from typing import ClassVar
 from discopy import symmetric, monoidal, cmap, hypergraph, messages
 from discopy.abc import ComarkovCategory, MarkovCategory
 from discopy.cat import factory
-from discopy.monoidal import Ty  # noqa: F401  pylint: disable=unused-import
+from discopy.feedback import (  # noqa: F401  pylint: disable=unused-import
+    Wire, Ty)
 from discopy.utils import (
     AxiomError, assert_isatomic, factory_name, from_tree)
 
@@ -134,7 +137,20 @@ class Swap(Permutation, symmetric.Swap, Box):
     """
 
 
-class Trace(symmetric.Trace, Box):
+class Feedback(symmetric.Feedback, Box):
+    """
+    A feedback in a comarkov category.
+
+    Parameters:
+        arg : The diagram to feed back.
+        dom : The domain of the feedback.
+        cod : The codomain of the feedback.
+        mem : The memory to feed back.
+        left : Whether to feed back on the left or right.
+    """
+
+
+class Trace(symmetric.Trace, Feedback):
     """
     A trace in a comarkov category.
 
@@ -271,7 +287,7 @@ Hypergraph = hypergraph.Hypergraph[Diagram]
 Diagram.merge_factory = Merge
 Diagram.swap_factory = Swap
 Diagram.permutation_factory = Permutation
-Diagram.trace_factory = Trace
+Diagram.feedback_factory, Diagram.trace_factory = Feedback, Trace
 Diagram.noise_factory = Noise
 Diagram.sum_factory = Sum
 Id = Diagram.id
