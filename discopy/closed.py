@@ -37,6 +37,11 @@ Summary
     Pack
     Unpack
     Discard
+    Feedback
+    Trace
+    FollowedBy
+    Head
+    Tail
     Sum
     Functor
     CMap

@@ -36,7 +36,11 @@ Summary
     Merge
     Discard
     Noise
+    Feedback
     Trace
+    FollowedBy
+    Head
+    Tail
     Functor
 
 Example

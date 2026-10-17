@@ -17,6 +17,9 @@ Summary
     Twist
     Feedback
     Trace
+    FollowedBy
+    Head
+    Tail
     Sum
     Functor
 

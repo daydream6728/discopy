@@ -25,7 +25,11 @@ Summary
     Discard
     Permutation
     Swap
+    Feedback
     Trace
+    FollowedBy
+    Head
+    Tail
     Sum
     Functor
     Lexicon

@@ -13,6 +13,8 @@ Summary
     :toctree:
 
     Wire
+    HeadOb
+    TailOb
     Ty
     Layer
     Diagram
@@ -20,6 +22,10 @@ Summary
     Cup
     Cap
     Feedback
+    Trace
+    FollowedBy
+    Head
+    Tail
     Functor
 
 Axioms

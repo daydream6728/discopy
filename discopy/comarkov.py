@@ -20,6 +20,9 @@ Summary
     Noise
     Feedback
     Trace
+    FollowedBy
+    Head
+    Tail
     Functor
 
 Axioms

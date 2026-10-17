@@ -17,6 +17,11 @@ Summary
     Cap
     Swap
     Permutation
+    Feedback
+    Trace
+    FollowedBy
+    Head
+    Tail
     Functor
 
 Axioms

@@ -18,6 +18,9 @@ Summary
     Swap
     Feedback
     Trace
+    FollowedBy
+    Head
+    Tail
     Sum
     Functor
 

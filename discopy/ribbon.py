@@ -16,6 +16,11 @@ Summary
     Cup
     Cap
     Braid
+    Feedback
+    Trace
+    FollowedBy
+    Head
+    Tail
     Functor
 
 Axioms
