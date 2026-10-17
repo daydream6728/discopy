@@ -68,7 +68,7 @@ It is well-behaved, i.e. it satisfies the three lens laws:
 from __future__ import annotations
 
 from dataclasses import dataclass
-from discopy import interaction, markov, messages, monoidal, symmetric
+from discopy import interaction, markov, messages, symmetric
 from discopy.abc import (
     MarkovCategory, NamedGeneric, SymmetricCategory, TracedCategory)
 from discopy.utils import (

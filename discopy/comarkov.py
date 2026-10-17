@@ -18,6 +18,8 @@ Summary
     Permutation
     Merge
     Noise
+    Feedback
+    Trace
     Functor
 
 Axioms

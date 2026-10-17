@@ -165,12 +165,12 @@ def test_diagram_to_map_structure_and_errors():
         braided,
         closed,
         compact,
+        feedback,
         frobenius,
         markov,
         monoidal,
         pivotal,
         symmetric,
-        traced,
     )
     from discopy.cmap import Port, PortKind
 
@@ -192,12 +192,13 @@ def test_diagram_to_map_structure_and_errors():
     assert cup.to_map() == compact.CMap.cups(cx, cx.r)
     assert cap.to_map() == compact.CMap.caps(cx.r, cx)
 
-    tx = traced.Ty("x")
-    traced_box = traced.Box("f", tx, tx)
+    tx = feedback.Ty("x")
+    traced_box = feedback.Box("f", tx, tx)
     # A planar trace is a box of the map, which a decoded map's trace is too.
-    assert traced.Trace(traced_box).to_map().boxes == (
-        traced.Trace(traced_box), )
-    assert traced_box.to_map().trace().to_diagram() == traced.Trace(traced_box)
+    assert feedback.Trace(traced_box).to_map().boxes == (
+        feedback.Trace(traced_box), )
+    assert traced_box.to_map().trace().to_diagram()\
+        == feedback.Trace(traced_box)
 
     px, py = map(pivotal.Ty, "xy")
     pbox = pivotal.Box("f", px, py)
@@ -268,7 +269,7 @@ def test_diagram_to_map_structure_and_errors():
     t = monoidal.Box("t", monoidal.Ty(), monoidal.Ty())
     assert monoidal.CMap(
         monoidal.Ty(), monoidal.Ty(), (s, t), ()).to_diagram() == s >> t
-    for module in [closed, traced, symmetric]:
+    for module in [closed, feedback, symmetric]:
         x = module.Ty("x")
         f = module.Box("f", x, x)
         g = module.Box("g", x, x)
@@ -276,11 +277,11 @@ def test_diagram_to_map_structure_and_errors():
             module.Ty(), module.Ty(), (f, g), (3, 2, 1, 0))
         assert not cycle.is_acyclic
 
-    x = traced.Ty("x")
+    x = feedback.Ty("x")
     with raises(TypeError, match="Pregroup"):
-        traced.CMap.cups(x, x)
+        feedback.CMap.cups(x, x)
     with raises(TypeError, match="Pregroup"):
-        traced.CMap.caps(x, x)
+        feedback.CMap.caps(x, x)
     x, y = map(closed.Ty, "xy")
     assert closed.CMap.ev(y, x).boxes == (
         closed.CMap.category.ev(y, x), )
@@ -323,7 +324,7 @@ def test_rigid_handedness():
 
 
 def test_only_to_diagram_needs_the_structure():
-    from discopy import cmap, monoidal, pivotal, traced
+    from discopy import cmap, feedback, monoidal, pivotal
 
     x = monoidal.Ty("x")
     f = monoidal.Box("f", x, x)
@@ -332,10 +333,10 @@ def test_only_to_diagram_needs_the_structure():
     with raises(AxiomError, match="has no traces"):
         cycle.to_diagram()
 
-    tx = traced.Ty("x")
-    feedback = traced.CMap(
-        tx, tx, (traced.Box("f", tx, tx), ), (3, 2, 1, 0))
-    assert not feedback.is_acyclic
+    tx = feedback.Ty("x")
+    loop = feedback.CMap(
+        tx, tx, (feedback.Box("f", tx, tx), ), (3, 2, 1, 0))
+    assert not loop.is_acyclic
 
     class Planar(symmetric.Diagram):
         """ A category with adjoint types but no cups or caps. """

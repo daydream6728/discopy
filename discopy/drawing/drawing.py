@@ -225,7 +225,7 @@ from discopy.utils import (
     assert_isinstance, assert_iscomposable, unbiased, factory, RichDisplay)
 
 if TYPE_CHECKING:
-    from discopy import monoidal
+    from discopy import monoidal, symmetric
 
 
 def trailing_margin(ob) -> float:

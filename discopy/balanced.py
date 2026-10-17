@@ -15,6 +15,8 @@ Summary
     Box
     Braid
     Twist
+    Feedback
+    Trace
     Sum
     Functor
 

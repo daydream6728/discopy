@@ -1345,8 +1345,8 @@ class CMap[C0: Pregroup, C1: CMap](
             n : The number of wires to trace.
             left : Whether to trace the leftmost rather than rightmost wires.
 
-        >>> from discopy import traced
-        >>> f = traced.Box('f', traced.Ty('x'), traced.Ty('x'))
+        >>> from discopy import feedback
+        >>> f = feedback.Box('f', feedback.Ty('x'), feedback.Ty('x'))
         >>> assert f.to_map().trace().boxes == (f.trace(), )
         """
         if n < 0:
@@ -1578,7 +1578,7 @@ class CMap[C0: Pregroup, C1: CMap](
 
         Example
         -------
-        >>> from discopy.traced import Ty, Box, Trace, CMap
+        >>> from discopy.feedback import Ty, Box, Trace, CMap
         >>> f = Box("f", Ty("x"), Ty("x"))
         >>> assert f.to_map().trace().make_causal()\\
         ...     == CMap.from_box(Trace(f))

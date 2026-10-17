@@ -14,10 +14,12 @@ Summary
 
     Wire
     Ty
+    Layer
     Diagram
     Box
     Cup
     Cap
+    Feedback
     Functor
 
 Axioms

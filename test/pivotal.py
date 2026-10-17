@@ -18,6 +18,6 @@ def test_Sum():
 
 
 def test_Box_is_traced():
-    from discopy import traced
+    from discopy import feedback
     x = Ty('x')
-    assert isinstance(Box('f', x, x), traced.Box)
+    assert isinstance(Box('f', x, x), feedback.Box)

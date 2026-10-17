@@ -17,6 +17,11 @@ Summary
     Swap
     Permutation
     Copy
+    Feedback
+    Trace
+    FollowedBy
+    Head
+    Tail
     Functor
 
 

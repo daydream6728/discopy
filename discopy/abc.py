@@ -440,7 +440,8 @@ class FeedbackCategory[C0, C1](MonoidalCategory[C0, C1]):
             size = len(self.cod) - len(cod) if cod is not None\
                 else 1 if n is None else n
             if not 0 <= size <= len(self.cod):
-                raise ValueError(messages.NOT_SPLITTABLE.format(size, self.cod))
+                raise ValueError(
+                    messages.NOT_SPLITTABLE.format(size, self.cod))
             mem = self.cod[:size] if left\
                 else self.cod[len(self.cod) - size:]
         size = len(mem)

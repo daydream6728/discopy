@@ -16,6 +16,8 @@ Summary
     Diagram
     Box
     Swap
+    Feedback
+    Trace
     Sum
     Functor
 

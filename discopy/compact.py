@@ -54,7 +54,7 @@ Coherence
 ...     Cap(x, x.r) @ Cap(y, y.r) >> x @ Diagram.swap(x.r, y @ y.r))
 """
 
-from discopy import symmetric, ribbon, rigid, pivotal, cmap, hypergraph
+from discopy import symmetric, ribbon, pivotal, cmap, hypergraph
 from discopy.abc import CompactCategory
 from discopy.cat import factory
 from discopy.utils import deprecated_alias
