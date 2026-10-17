@@ -29,3 +29,10 @@ def test_to_hypergraph():
         assert representation[Diagram].braid(x, y).boxes == (Braid(x, y), )
         with raises(AxiomError, match="not symmetric"):
             representation[Diagram].swap(x, y)
+
+
+def test_functor_factory():
+    assert Diagram.functor_factory is Functor
+    F = Diagram.functor_factory({x: y, y: x}, {})
+    assert F(Braid(x, y)) == Braid(y, x)
+    assert F(Braid(x, y).dagger()) == Braid(y, x).dagger()

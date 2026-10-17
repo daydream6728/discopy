@@ -100,3 +100,8 @@ def test_to_hypergraph():
         assert representation.twist(x).boxes == (Twist(x), )
     assert symmetric.Hypergraph.twist(x) == symmetric.Hypergraph.id(x)
     assert symmetric.CMap.twist(x) == symmetric.CMap.id(x)
+
+
+def test_functor_twist_dagger():
+    twist = Twist(Ty('x')).dagger()
+    assert Functor(ob_map=lambda x: x, ar_map=lambda f: f)(twist) == twist
