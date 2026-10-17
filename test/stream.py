@@ -66,9 +66,16 @@ def test_feedback_forms():
 
 
 def test_feedback_of_no_memory():
-    x = symmetric.Ty('x')
+    from pytest import raises
+    from discopy.utils import AxiomError
+    x, y = symmetric.Ty('x'), symmetric.Ty('y')
     constant = Stream(symmetric.Box('f', x, x))
     assert constant.feedback(0) == constant == constant.feedback(mem=Ty())
+    with raises(AxiomError):
+        constant.feedback(dom=Ty(y), cod=Ty(y), mem=Ty())
+    with raises(AxiomError):
+        Stream(symmetric.Box('g', x @ y, x @ y)).feedback(
+            dom=Ty(y), cod=Ty(x), mem=Ty(y))
     f = Stream.sequence("f", *map(Ty.sequence, "xy"))
     assert f.feedback(0) is f and f.feedback(mem=Ty()) is f
 

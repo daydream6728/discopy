@@ -615,8 +615,10 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   a number `n` of objects as fallback, as `abc.FeedbackCategory` does,
   where it took the memory positionally, `split_memory` takes the memory
   by keyword at every level, as `feedback` does, and `Stream` is a
-  `FeedbackCategory`: feeding back no memory gives the stream itself,
-  vanishing, joining, strength and tightening hold on streams up to their
+  `FeedbackCategory`: feeding back no memory gives the stream itself, a
+  boundary that does not match raises `AxiomError` through
+  `Stream.assert_feeds_back`, where it failed an `assert`, vanishing,
+  joining, strength and tightening hold on streams up to their
   unrolling, while sliding holds only up to the
   extensional equivalence of streams and is declared failing,
   `messages.STREAM_SLIDING`. Vanishing reads `f.feedback(0)`, which a

@@ -636,8 +636,33 @@ class Stream(FeedbackCategory, NamedGeneric['category']):
         """
         dom, cod, mem = self.split_memory(n, left, dom=dom, cod=cod, mem=mem)
         if mem.is_constant and not mem.now:
+            self.assert_feeds_back(dom, cod, mem)
             return self
         return self.feed_back(dom, cod, mem)
+
+    def assert_feeds_back(
+            self, dom: Ty, cod: Ty, mem: Ty, is_first: bool = True) -> None:
+        """
+        Check that a stream feeds back ``mem`` from ``dom`` to ``cod`` at its
+        first time step, where the memory fed back is the empty delay of
+        ``mem``, or at a later one, where ``mem`` has already been delayed.
+
+        Parameters:
+            dom (Ty) : The domain of the feedback.
+            cod (Ty) : The codomain of the feedback.
+            mem (Ty) : The memory over which we are taking a feedback.
+            is_first : Whether this is the first time step.
+
+        Raises:
+            AxiomError : If the boundary of the stream is not that of the
+                feedback at this time step.
+        """
+        fed = (dom.now, cod.now @ mem.now) if is_first\
+            else (dom.now @ mem.now, cod.now @ mem.later.now)
+        if (self.dom.now, self.cod.now) != fed:
+            raise AxiomError(messages.TYPE_ERROR.format(
+                " -> ".join(map(str, fed)),
+                f"{self.dom.now} -> {self.cod.now}"))
 
     def feed_back(
             self, dom: Ty, cod: Ty, mem: Ty, is_first: bool = True) -> Stream:
@@ -651,10 +676,7 @@ class Stream(FeedbackCategory, NamedGeneric['category']):
             mem (Ty) : The memory over which we are taking a feedback.
             is_first : Whether this is the first time step.
         """
-        assert self.dom.now == dom.now if is_first else (
-            self.dom.now == dom.now @ mem.now)
-        assert self.cod.now == cod.now @ mem.now if is_first else (
-            self.cod.now == cod.now @ mem.later.now)
+        self.assert_feeds_back(dom, cod, mem, is_first)
 
         def _later():
             return self.later.feed_back(dom.later, cod.later, mem.later, False)
