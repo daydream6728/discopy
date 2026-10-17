@@ -98,7 +98,7 @@ class Ty(interaction.Ty):
     >>> assert x @ y == Ty[List[str]](("x", "y"), ("x'", "y'"))
     >>> assert -(x @ y) == -x @ -y
     """
-    natural = monoidal.Ty
+    natural = symmetric.Ty
     negatives = staticmethod(tuple)
 
 

@@ -109,7 +109,7 @@ def test_copy_serialisation():
     for box in (Copy(x), Copy(x, 3), Discard(x)):
         assert loads(dumps(box)) == box
     assert loads(dumps(Copy(x) >> Discard(x) @ x)) == Copy(x) >> Discard(x) @ x
-    assert repr(Copy(x, 3)) == "markov.Copy(monoidal.Ty(cat.Ob('x')), 3)"
+    assert repr(Copy(x, 3)) == "markov.Copy(feedback.Ty(feedback.Wire('x')), 3)"
     tree = dumps(comarkov.Merge(x, 3)).replace("comarkov.Merge", "markov.Merge")
     with warns(DeprecationWarning):
         assert loads(tree) == comarkov.Merge(x, 3)

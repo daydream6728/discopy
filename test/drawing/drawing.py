@@ -420,10 +420,10 @@ def test_region_cells_follow_the_strands_of_a_crossing():
     # visible as soon as the wires inside a permutation carried different
     # colours, see issue #17 (discopy/discopy#614).
     from discopy.drawing.backend import bezier
-    from discopy.symmetric import Permutation, Ty as STy
+    from discopy.symmetric import Permutation, Ty as STy, Wire as SWire
     red, blue = map(monoidal.Colour, ("red", "blue"))
-    x, y, z = (monoidal.Wire("x", red, blue), monoidal.Wire("y", blue, red),
-               monoidal.Wire("z", red, blue))
+    x, y, z = (SWire("x", red, blue), SWire("y", blue, red),
+               SWire("z", red, blue))
     permutation = Permutation(STy(x, y, z), [2, 1, 0])
     drawing = permutation.to_drawing()
     drawing.add_box_corners()
@@ -451,10 +451,10 @@ def test_region_cells_split_where_strands_meet():
     # colouring of the inner regions of a 3-cycle is consistent, so a cell
     # takes the colour of its left boundary as everywhere.
     from discopy.drawing.backend import bezier
-    from discopy.symmetric import Permutation, Ty as STy
+    from discopy.symmetric import Permutation, Ty as STy, Wire as SWire
     red, blue = map(monoidal.Colour, ("red", "blue"))
-    x, y, z = (monoidal.Wire("x", red, red), monoidal.Wire("y", red, blue),
-               monoidal.Wire("z", blue, red))
+    x, y, z = (SWire("x", red, red), SWire("y", red, blue),
+               SWire("z", blue, red))
     drawing = Permutation(STy(x, y, z), [1, 2, 0]).to_drawing()
     drawing.add_box_corners()
     cells = Backend.region_cells(drawing)
@@ -517,7 +517,8 @@ def test_draw_permutation_in_diagram(tmp_path):
     f = Box("f", z @ x @ y, x)
     diagram = Permutation(x @ y @ z, [2, 0, 1]) >> f
     drawing = diagram.to_drawing()
-    assert drawing.dom == x @ y @ z and drawing.cod == x
+    assert drawing.dom == (x @ y @ z).to_drawing()
+    assert drawing.cod == x.to_drawing()
     assert drawing.boxes[0].permutation_indices == (2, 0, 1)
     assert drawing.boxes[1].name == "f"
     diagram.draw(path=str(tmp_path / "permutation.svg"), show=False)

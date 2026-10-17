@@ -199,8 +199,9 @@ The regions of a crossing follow its strands, see
 
 >>> from discopy import symmetric
 >>> red, blue = Colour("red"), Colour("blue")
->>> symmetric.Permutation(symmetric.Ty(
-...     Wire("x", red, blue), Wire("y", blue, red), Wire("z", red, blue)),
+>>> symmetric.Permutation(symmetric.Ty(*(
+...     symmetric.Wire(name, dom, cod) for name, dom, cod in [
+...         ("x", red, blue), ("y", blue, red), ("z", red, blue)])),
 ...     [2, 1, 0]).draw(
 ...     doctest="docs/_static/drawing/coloured-permutation.svg")
 
@@ -609,12 +610,24 @@ class Drawing(TracedCategory, RichDisplay):
     @classmethod
     def permutation(cls, xs: Sequence[int], doms) -> Drawing:
         """ Draw a permutation of the wires in ``dom``. """
-        from discopy.symmetric import Permutation
         xs = finset.Permutation(xs)
         dom = cls.ob().tensor(*doms)
         if xs.is_identity:
             return Drawing.id(dom)
-        return Permutation(dom, xs).to_drawing()
+        return Drawing.from_box(Drawing.permutation_box(dom, xs))
+
+    @staticmethod
+    def permutation_box(dom: "monoidal.Ty", perm) -> "symmetric.Permutation":
+        """
+        The :class:`Permutation <discopy.symmetric.Permutation>` box of a
+        drawing, built on the symmetric wires its labels name, then given the
+        wires of the drawing ``dom`` and their permutation as boundaries.
+        """
+        from discopy.symmetric import Permutation, Ty, Wire
+        box = Permutation(
+            Ty(*(Wire(x.name, x.dom, x.cod) for x in dom.inside)), perm)
+        box.dom, box.cod = dom, dom[:0].tensor(*(dom[i] for i in box.perm))
+        return box
 
     @staticmethod
     def from_box(box: "monoidal.Box") -> Drawing:
@@ -648,14 +661,13 @@ class Drawing(TracedCategory, RichDisplay):
         from discopy.symmetric import Permutation
         box_dom, box_cod = box.dom.to_drawing(), box.cod.to_drawing()
         old_box = box
-        box = Permutation(
-            Permutation.ob(*(x.name for x in box_dom.inside)), old_box.perm)\
+        box = Drawing.permutation_box(box_dom, old_box.perm)\
             if isinstance(old_box, Permutation)\
             else Box(
                 old_box.name, box_dom, box_cod,
                 is_dagger=old_box.is_dagger)
         if isinstance(old_box, Permutation):
-            box.dom, box.cod = box_dom, box_cod
+            box.cod = box_cod
             for i, obj in enumerate(box.cod.inside):
                 if old_box.perm[i] == i:
                     obj.skip_label = True
@@ -944,8 +956,11 @@ class Drawing(TracedCategory, RichDisplay):
 
     def dagger(self) -> Drawing:
         """ The reflection of a drawing along the the horizontal axis. """
+        from discopy.symmetric import Permutation
+
         def box_dagger(box):
-            result = box.dagger()
+            result = Drawing.permutation_box(box.cod, box.perm.dagger())\
+                if isinstance(box, Permutation) else box.dagger()
             for attr in BOX_DRAWING_ATTRIBUTES:
                 if not hasattr(result, attr):
                     setattr(result, attr, getattr(box, attr))

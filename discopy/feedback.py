@@ -28,6 +28,7 @@ Summary
     HeadOb
     TailOb
     Ty
+    Nat
     Layer
     Diagram
     Box
@@ -456,6 +457,20 @@ class Ty(monoidal.Ty):
         return type(self)(*(x.tail for x in self.inside if x.tail))
 
     d = Wire.d
+
+
+@factory
+class Nat(monoidal.Nat, Ty):
+    """
+    A feedback ``Nat`` is a natural number ``n`` seen as a feedback type of
+    length ``n``, i.e. the objects of a PRO below feedback. Its generator
+    has no time step, so it has no delay.
+
+    Parameters
+    ----------
+    n : int
+        The natural number.
+    """
 
 
 class Layer(monoidal.Layer):

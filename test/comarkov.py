@@ -49,8 +49,8 @@ def test_equations():
 
 def test_repr_and_str():
     x = Ty('x')
-    assert repr(Merge(x, 3)) == "comarkov.Merge(monoidal.Ty(cat.Ob('x')), 3)"
-    assert repr(Noise(x)) == "comarkov.Noise(monoidal.Ty(cat.Ob('x')), 0)"
+    assert repr(Merge(x, 3)) == "comarkov.Merge(feedback.Ty(feedback.Wire('x')), 3)"
+    assert repr(Noise(x)) == "comarkov.Noise(feedback.Ty(feedback.Wire('x')), 0)"
     assert str(Merge(x)) == "Merge(x)" and str(Noise(x)) == "Merge(x, 0)"
     for box in (Merge(x), Merge(x, 3), Noise(x)):
         assert eval(repr(box), dict(
