@@ -223,6 +223,8 @@ class Box(rigid.Box, feedback.Box, Diagram):
         self._time_step, self._args, self._params = time_step, args, params
 
     def __repr__(self):
+        if self.is_dagger:
+            return repr(self.dagger()) + ".dagger()"
         time_step = f", time_step={self.time_step}" if self.time_step else ""
         return rigid.Box.__repr__(self)[:-1] + time_step + ")"
 
@@ -232,13 +234,14 @@ class Box(rigid.Box, feedback.Box, Diagram):
     def rotate(self, left=False):
         del left
         return type(self)(
-            self.name, dom=self.cod.r, cod=self.dom.r,
-            data=self.data, is_dagger=self.is_dagger, z=(self.z + 1) % 2)
+            self.name, dom=self.cod.r, cod=self.dom.r, data=self.data,
+            is_dagger=self.is_dagger, z=(self.z + 1) % 2,
+            time_step=self.time_step)
 
     def dagger(self) -> Box:
         return type(self)(
-            name=self.name, dom=self.cod, cod=self.dom,
-            data=self.data, is_dagger=not self.is_dagger, z=self.z)
+            name=self.name, dom=self.cod, cod=self.dom, data=self.data,
+            is_dagger=not self.is_dagger, z=self.z, time_step=self.time_step)
 
     @property
     def is_conjugate(self):
@@ -264,6 +267,10 @@ class Cup(rigid.Cup, Box):
         """ The dagger of a pivotal cup. """
         return self.cap_factory(self.left, self.right)
 
+    def delay(self, n_steps=1) -> Cup:
+        """ The cup of the delayed types. """
+        return type(self)(self.left.delay(n_steps), self.right.delay(n_steps))
+
 
 class Cap(rigid.Cap, Box):
     """
@@ -277,6 +284,10 @@ class Cap(rigid.Cap, Box):
     def dagger(self) -> Cup:
         """ The dagger of a pivotal cap. """
         return self.cup_factory(self.left, self.right)
+
+    def delay(self, n_steps=1) -> Cap:
+        """ The cap of the delayed types. """
+        return type(self)(self.left.delay(n_steps), self.right.delay(n_steps))
 
 
 class Feedback(feedback.Feedback, Box):

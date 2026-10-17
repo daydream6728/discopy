@@ -461,20 +461,24 @@ class Feedback(Markov, FeedbackCategory):
         return type(self)(*(x.delay(n_steps) for x in (
             self.dom, self.cod, self.inside, self.param, self.copar)))
 
-    def feedback(self, dom: Symmetric.ob = None, cod: Symmetric.ob = None,
+    def feedback(self, n: int = None, left: bool = False, *,
+                 dom: Symmetric.ob = None, cod: Symmetric.ob = None,
                  mem: Symmetric.ob = None) -> Feedback:
         """
         The feedback of the underlying category, with the parameters
-        swapped out of the way the same as :meth:`Traced.trace`.
+        swapped out of the way the same as :meth:`Traced.trace`, in either
+        form of :meth:`discopy.abc.FeedbackCategory.feedback`.
 
         Parameters:
+            n : The number of objects to feed back.
+            left : Feeding back on the left, which is not implemented.
             dom : The domain of the feedback.
             cod : The codomain of the feedback.
             mem : The memory type to trace over.
         """
-        mem = self.cod[-1:] if mem is None else mem
-        dom = self.dom[:len(self.dom) - len(mem)] if dom is None else dom
-        cod = self.cod[:len(self.cod) - len(mem)] if cod is None else cod
+        if left:
+            raise NotImplementedError
+        dom, cod, mem = self.split_memory(n, left, dom, cod, mem)
         inside = dom @ self.category.swap(self.param, mem.delay())\
             >> self.inside >> cod @ self.category.swap(mem, self.copar)
         return type(self)(

@@ -155,22 +155,6 @@ class Layer(feedback.Layer):
             and value.is_identity else value
             for value in inside)
 
-    @classmethod
-    def wait(cls, dom: Ty) -> Diagram:
-        """
-        Wait one time step, i.e. `Swap(x, x.delay()).feedback()`.
-
-        Example
-        -------
-        >>> x = Ty('x')
-        >>> assert Diagram.wait(x) == Swap(x, x.delay()).feedback()
-        >>> Diagram.wait(x).draw(doctest="docs/_static/feedback/wait.svg")
-
-        .. image:: /_static/feedback/wait.svg
-            :align: center
-        """
-        return cls.swap(dom, dom.delay()).feedback()
-
     @property
     def is_plumbing(self) -> bool:
         """

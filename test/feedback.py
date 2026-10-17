@@ -175,27 +175,89 @@ def test_left_feedback():
 
 
 def test_traced_category_feedback_is_its_trace():
-    from discopy.matrix import Matrix
-    f, one = Matrix[bool]([[1, 1], [0, 0]], 2, 2), Matrix.ob(1)
-    assert f.feedback() == f.feedback(mem=one) == f.trace()
-    assert f.feedback(mem=one, left=True) == f.trace(left=True)
+    from discopy import compact
+    x = compact.Ty('x')
+    f = compact.Box('f', x @ x, x @ x).to_map()
+    assert f.feedback() == f.feedback(mem=x) == f.feedback(1) == f.trace()
+    assert f.feedback(mem=x, left=True) == f.trace(left=True)
     assert f.delay() is f
     with raises(TypeError):
-        f.feedback(1, mem=one)
+        f.feedback(1, mem=x)
 
 
 def test_feedback_laws_on_a_traced_category():
-    from discopy.axioms import Loop
-    from discopy.matrix import Matrix
-    M = Matrix[bool]
-    x, y, m, n = 1, 1, 1, 1
-    f = M([1, 0, 1, 1, 0, 1, 1, 0, 1], x + m + n, y + m + n)
-    g, h, k, e = M([1], 1, x), M([0, 1], y, 2), M.swap(1, 1), M.id(1)
-    loop = Loop[M](M.ob(x), M.ob(y), M.ob(m), M.ob(n), f, g, h, k, e)
+    from discopy import compact
     from discopy.abc import FeedbackCategory
+    from discopy.axioms import Loop
+    C = compact.CMap
+    x, y, m, n, w, z = map(compact.Ty, "xymnwz")
+    box = lambda name, dom, cod: compact.Box(name, dom, cod).to_map()
+    f = box('f', x @ m @ n, y @ m @ n)
+    loop = Loop[C](
+        x, y, m, n, f, box('g', w, x), box('h', y, z),
+        box('k', m @ n, m @ n), box('e', w, z))
     for law in ("vanishing", "joining", "strength", "tightening", "sliding"):
         args = (f, ) if law == "vanishing" else (loop, )
-        assert getattr(FeedbackCategory, law).bind(M)(*args)
+        axiom = getattr(FeedbackCategory, law).bind(C)
+        assert axiom.modulo(C.to_hypergraph)(*args)
+
+
+def test_Loop_strategy_takes_the_boundary_it_draws():
+    from hypothesis import find
+    from discopy.axioms import Loop
+    from discopy.matrix import Matrix
+    from unittest.mock import patch
+    M = Matrix[bool]
+    with patch.object(M, "delay", lambda self, n_steps=1: self, create=True):
+        loop = find(Loop[M].strategy(dom=M.ob(1)), lambda _: True)
+    x, y, m, n, f, *_ = loop
+    assert (f.dom, f.cod) == (x @ m @ n, y @ m @ n)
+
+
+def test_split_memory_bounds():
+    x, y = Ty('x'), Ty('y')
+    f = Box('f', x, x)
+    with raises(ValueError):
+        f.split_memory(mem=x @ y)
+    with raises(ValueError):
+        f.feedback(mem=x @ y)
+
+
+def test_delayed_dagger():
+    from discopy import feedback
+    x, y = Ty('x'), Ty('y')
+    f = Box('f', x, y, data=42)
+    assert f.delay().dagger() == f.dagger().delay()
+    assert f.delay().dagger().time_step == 1
+    assert f.delay().dagger().dagger() == f.delay()
+    for box in (f.delay().dagger(), f.dagger().delay(2)):
+        assert eval(repr(box)) == box
+
+
+def test_traced_wildcard_import():
+    import warnings
+    namespace = {}
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", DeprecationWarning)
+        exec("from discopy.traced import *", namespace)
+    assert namespace['Box'] is Box and namespace['Trace'] is Trace
+
+
+def test_delayed_pivotal_diagrams():
+    from discopy import pivotal
+    x = pivotal.Ty('x')
+    cup, cap = pivotal.Cup(x, x.r), pivotal.Cap(x.r, x)
+    snake = x @ cap >> cup @ x
+    assert snake.delay() == x.d @ pivotal.Cap(x.r.d, x.d)\
+        >> pivotal.Cup(x.d, x.r.d) @ x.d
+    assert cup.delay().dagger() == cup.dagger().delay()
+    f = pivotal.Box('f', x, x @ x)
+    for g in (f.delay().dagger(), f.delay().r, f.delay().l):
+        assert g.time_step == 1
+    assert f.delay().dagger() == f.dagger().delay()
+    assert f.delay().r == f.r.delay()
+    for box in (f.delay().dagger(), f.delay().r.dagger()):
+        assert eval(repr(box), {'pivotal': pivotal}) == box
 
 
 def test_time_stepped_wires_below_feedback():

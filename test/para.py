@@ -98,7 +98,10 @@ def test_feedback():
                  markov.Box('f', x @ y.delay() @ P, z @ y), P)
     fb = f.feedback()
     assert (fb.dom, fb.cod, fb.param) == (x, z, P)
+    assert fb == f.feedback(1) == f.feedback(mem=y) == f.feedback(cod=z)
     assert f.delay().param == P.delay()
+    with raises(NotImplementedError):
+        f.feedback(left=True)
 
 
 def test_compact():

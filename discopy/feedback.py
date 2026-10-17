@@ -536,7 +536,7 @@ class Diagram(monoidal.Diagram, TracedCategory):
             return self.feedback(
                 dom=dom @ fed[:-1], cod=cod @ mem[:-1], mem=mem[-1:]
             ).feedback(dom=dom, cod=cod, mem=mem[:-1])
-        if fed == mem or not hasattr(mem, "delay"):
+        if fed == mem or not isinstance(mem, Ty):
             return self.trace_factory(self, left)
         return self.feedback_factory(
             self, dom=dom, cod=cod, mem=mem, left=left)
@@ -644,10 +644,17 @@ class Box(monoidal.Box, Diagram):
         dom, cod = [x.delay(-self.time_step) for x in (self.dom, self.cod)]
         return type(self)(self.name, dom, cod, *self._args, **self._params)
 
+    def dagger(self):
+        result = super().dagger()
+        result._time_step = self.time_step  # pylint: disable=protected-access
+        return result
+
     def __str__(self):
         return super().__str__() + str_delayed(self.time_step)
 
     def __repr__(self):
+        if self.is_dagger:
+            return repr(self.dagger()) + ".dagger()"
         time_step = f", time_step={self.time_step}" if self.time_step else ""
         return super().__repr__()[:-1] + time_step + ")"
 
@@ -667,7 +674,8 @@ class Box(monoidal.Box, Diagram):
     @classmethod
     def from_tree(cls, tree: dict) -> Box:
         result = super().from_tree(tree)
-        result._time_step = tree.get('time_step', 0)
+        result._time_step = tree.get(  # pylint: disable=protected-access
+            'time_step', 0)
         return result
 
     def setoid(self):
@@ -707,7 +715,7 @@ class Feedback(Box, monoidal.Bubble):
         fed = self.fed_back(mem)
         expected = (fed @ dom, mem @ cod) if left else (dom @ fed, cod @ mem)
         if (arg.dom, arg.cod) != expected:
-            raise AxiomError(messages.NOT_FEEDBACK.format(arg, mem, fed))
+            raise AxiomError(messages.NOT_FEEDBACK.format(mem, arg, fed))
         self.mem, self.left = mem, left
         name = f"{type(self).__name__}({arg}"\
             + ("" if len(mem) == 1 else f", mem={mem}")\

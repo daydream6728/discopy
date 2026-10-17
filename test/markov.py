@@ -1,6 +1,6 @@
 from __future__ import annotations
 import warnings
-from random import choice, seed
+from random import Random
 
 from pytest import raises, warns
 
@@ -203,7 +203,7 @@ def test_functor_python_stream():
 
 
 def test_walk():
-    seed(420)
+    rng = Random(420)
     X, fby = Ty('X'), FollowedBy(Ty('X'))
     zero, rand, plus = Box('0', Ty(), X), Box('rand', Ty(), X), Box('+', X @ X, X)
 
@@ -216,7 +216,7 @@ def test_walk():
     F = Functor(
         ob_map={X: int},
         ar_map={zero: lambda: 0,
-            rand: lambda: choice([-1, +1]),
+            rand: lambda: rng.choice([-1, +1]),
             plus: lambda x, y: x + y},
         cod=stream.Stream[python.Function])
 

@@ -603,10 +603,10 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   there with `@axiom`, over the new `axioms.Loop` of a morphism
   `x @ (m @ n).delay() -> y @ m @ n` and the morphisms it composes with.
   `abc.TracedCategory` extends it, `trace` its hook and its `feedback` the
-  trace over the memory; `Matrix` and the additive and multiplicative
-  Python functions declare it, as `Stream` declares `FeedbackCategory`,
-  and the laws hold on Boolean matrices, where the property matrix, which
-  draws integer ones, has no trace to check. `feedback.Diagram` is the
+  trace over the memory; the additive and multiplicative Python functions
+  declare it, which they implemented without saying so, and the laws hold
+  on the combinatorial maps of a compact category, up to hypergraph.
+  `feedback.Diagram` is the
   free planar feedback category: wires and boxes carry a time step, a
   `Feedback` bubble feeds back a delayed memory and `Trace`, its subclass,
   an undelayed one, printing and drawing as `Trace(f)` as it did, so that
@@ -617,8 +617,10 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `symmetric`, `markov` and `comarkov` re-export the time-stepped
   `feedback.Ty` and `feedback.Nat`, `pivotal.Wire` is a `rigid.Wire` and a
   `feedback.Wire`, so that the adjoints and the boxes of `compact` and
-  `frobenius` keep their time step, and each level binds a `Feedback`
-  beside its `Trace`. The Markov syntax of streams is `markov.Diagram`,
+  `frobenius` keep their time step, delayed cups and caps included, and a
+  daggered or rotated box keeps it too. Each level binds a `Feedback`
+  beside its `Trace`, and `pivotal` beside the trace it builds from cups
+  and caps. The Markov syntax of streams is `markov.Diagram`,
   with its `FollowedBy`, `Head` and `Tail`, interpreted by
   `markov.Functor(cod=Stream)`; `Permutation`, `Swap` and `Copy` delay
   their types and `wait` moves to `symmetric`. `feedback.Swap`,
@@ -626,7 +628,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   aliases of `markov`'s, and `discopy.traced` as deprecated aliases of
   `feedback`'s classes, out of the package's imports and the API docs.
   `para.Feedback` is over `markov.Diagram`, which it feeds back with the
-  keyword form, and `lens.Ty` pairs symmetric types by default. The first
+  keyword form, and takes either form itself, and `lens.Ty` pairs
+  symmetric types by default. The first
   of two pull requests: the second generates each level's `Feedback`,
   `Trace`, `FollowedBy`, `Head` and `Tail` from factories
   ([rel-int/discopy-next#95](https://github.com/rel-int/discopy-next/issues/95)).

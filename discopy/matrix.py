@@ -43,8 +43,7 @@ from collections.abc import Sequence
 from typing import Union, Literal as L, Callable, TYPE_CHECKING
 
 from discopy import monoidal, config, messages
-from discopy.abc import (
-    ComarkovCategory, MarkovCategory, NamedGeneric, Nat, TracedCategory)
+from discopy.abc import ComarkovCategory, MarkovCategory, NamedGeneric, Nat
 from discopy.axioms import Testable
 from discopy.cat import (
     factory,
@@ -58,8 +57,8 @@ if TYPE_CHECKING:
 
 
 @factory
-class Matrix(MarkovCategory, ComarkovCategory, TracedCategory,
-             Testable["Matrix"], NamedGeneric['dtype']):
+class Matrix(MarkovCategory, ComarkovCategory, Testable["Matrix"],
+             NamedGeneric['dtype']):
     """
     A matrix is an ``array`` with natural numbers as ``dom`` and ``cod``.
 
@@ -171,10 +170,6 @@ class Matrix(MarkovCategory, ComarkovCategory, TracedCategory,
         return matrices()
 
     serialisation = Testable.serialisation.inapplicable(messages.NO_SYNTAX)
-    vanishing, joining, strength, tightening, sliding = (
-        getattr(TracedCategory, law).inapplicable(messages.NO_KLEENE_STAR)
-        for law in (
-            "vanishing", "joining", "strength", "tightening", "sliding"))
 
     def cast(self, dtype: type) -> Matrix:
         """
