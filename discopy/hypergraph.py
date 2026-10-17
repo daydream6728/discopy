@@ -1838,7 +1838,10 @@ class Hypergraph(MonoidalCategory, NamedGeneric['category']):
         :meth:`discopy.python.finset.Permutation.gather`, emitted with
         :meth:`discopy.abc.SymmetricCategory.from_permutation`, i.e. a
         :class:`discopy.symmetric.Permutation` box when the category has a
-        native one and its ``permutation`` otherwise.
+        native one and its ``permutation`` otherwise. An offset recorded on
+        a state by :meth:`discopy.monoidal.Diagram.to_hypergraph` is a hint
+        read in the scan of this pass, which the spider boxes inserted before
+        the state may have shrunk, so it is clamped to the end of the scan.
 
         Note
         ----
@@ -1915,7 +1918,8 @@ class Hypergraph(MonoidalCategory, NamedGeneric['category']):
             positions = [scan.index(spider) for spider in dom_wires]
             if offset is None:
                 offset = positions[0] if positions else 0
-            offset -= sum(j < offset for j in positions)
+            offset = min(offset - sum(j < offset for j in positions),
+                         len(scan) - len(positions))
             perm = Permutation.gather(positions, len(scan), offset)
             if not perm.is_identity:
                 flush()

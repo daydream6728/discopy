@@ -1205,6 +1205,12 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
         boundary scan to follow, so without its offset that scan would default
         every state to the left and then need swaps to reorder them -- which a
         category without symmetry (e.g. a formal grammar) does not have.
+        The offsets are recorded for the states before the first box that
+        the functor into the hypergraph turns into wiring, e.g. a swap, a cup
+        or a copy: up to there the boxes of the hypergraph are those of the
+        diagram, in order, and so are the open wires, while after it an
+        offset counts wires the hypergraph no longer has, so the states that
+        follow are left to the decoder.
 
         Example
         -------
@@ -1214,15 +1220,17 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
         >>> assert diagram.to_hypergraph().to_diagram() == diagram.foliation()
         """
         graph = hypergraph.Hypergraph[type(self).ar].from_diagram(self)
-        has_states = any(not box.dom for box in self.boxes)
-        if has_states and len(graph.boxes) == len(self.boxes):
-            offsets = tuple(
-                offset if not box.dom else None
-                for box, offset in zip(self.boxes, self.offsets))
-            graph = type(graph)(
-                graph.dom, graph.cod, graph.boxes, graph.wires,
-                graph.spider_types, offsets)
-        return graph
+        if all(box.dom for box in self.boxes):
+            return graph
+        offsets = []
+        for box, offset, image in zip(self.boxes, self.offsets, graph.boxes):
+            if image != box:
+                break
+            offsets.append(None if box.dom else offset)
+        offsets += (len(graph.boxes) - len(offsets)) * [None]
+        return type(graph)(
+            graph.dom, graph.cod, graph.boxes, graph.wires,
+            graph.spider_types, tuple(offsets))
 
     def foliation(self):
         """

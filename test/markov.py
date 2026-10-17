@@ -141,3 +141,16 @@ def test_Copy_pickle():
     x = Ty('x')
     for box in (Copy(x), Copy(x, 3), Discard(x)):
         assert loads(dumps(box)) == box
+
+
+def test_hypergraph():
+    x = Ty('x')
+    f, g, h = Box('f', Ty(), x), Box('g', Ty(), x), Box('h', x, x)
+    graph = (f @ g >> x @ Copy(x)).to_hypergraph()
+    assert graph.offsets == (0, 1)
+    assert graph.to_diagram() == Diagram(
+        (Layer(f, g), Layer(x, Copy(x))), Ty(), x @ x @ x)
+    diagram = f @ g >> Copy(x) @ x >> h @ x @ x
+    assert diagram.to_hypergraph().offsets == (0, 1, None)
+    for diagram in (diagram, f @ g >> Discard(x) @ x):
+        assert Equation(diagram.to_hypergraph().to_diagram(), diagram)

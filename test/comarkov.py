@@ -97,10 +97,13 @@ def test_hypergraph():
     graph = diagram.to_hypergraph()
     assert graph.is_right_monogamous and graph.is_cocausal
     assert not graph.is_left_monogamous and not graph.is_causal
-    assert Equation(graph.to_diagram(), diagram)
-    assert graph.to_diagram().boxes == [f, g, Swap(x, x), Merge(x), h]
-    assert diagram.foliation() == Diagram(
+    assert graph.offsets == (0, 1, None)
+    assert graph.to_diagram() == diagram.foliation() == Diagram(
         (Layer(f, g), Layer(Merge(x)), Layer(h)), Ty(), x)
+    s = Box('s', Ty(), x)
+    diagram = f @ g @ s >> Merge(x) @ x
+    assert diagram.to_hypergraph().to_diagram() == Diagram(
+        (Layer(f, g), Layer(Merge(x), s)), Ty(), x @ x)
     assert (Noise(x) >> h).to_hypergraph().to_diagram() == Noise(x) >> h
     decoded = (h @ h >> Merge(x)).to_hypergraph().to_diagram()
     assert Equation(decoded, h @ h >> Merge(x))
