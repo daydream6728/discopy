@@ -61,6 +61,8 @@ class MappingOrCallable(Mapping[KT, VT]):
     def __init__(self, mapping: MappingOrCallable[KT, VT]) -> None:
         while isinstance(mapping, MappingOrCallable):
             mapping = mapping.mapping
+        if not isinstance(mapping, Mapping) and not callable(mapping):
+            raise TypeError(messages.NOT_MAPPING_OR_CALLABLE.format(mapping))
         self.mapping = mapping
 
     def __bool__(self) -> bool:
@@ -74,7 +76,7 @@ class MappingOrCallable(Mapping[KT, VT]):
             yield key
 
     def __getitem__(self, item: KT) -> VT:
-        return self.mapping[item] if hasattr(self.mapping, "__getitem__")\
+        return self.mapping[item] if isinstance(self.mapping, Mapping)\
             else self.mapping(item)
 
     def __setitem__(self, key: KT, value: VT) -> None:
@@ -110,7 +112,7 @@ class MappingOrCallable(Mapping[KT, VT]):
         """
         other = other if isinstance(other, Mapping)\
             else MappingOrCallable(other)
-        if hasattr(self.mapping, "__iter__"):
+        if isinstance(self.mapping, Mapping):
             return MappingOrCallable({
                 key: other[self[key]] for key in self.mapping})
         return MappingOrCallable(lambda key: other[self[key]])
@@ -168,12 +170,21 @@ class NamedGeneric(Generic[TypeVar('T')]):
     ... class C(Category, NamedGeneric["dtype"]):
     ...     pass
     >>> assert C[int].factory is C[int] is C[int].ar
+
+    A DisCoPy class is named by its module, since every level of the
+    hierarchy has a ``Diagram`` of its own:
+
+    >>> from discopy import frobenius
+    >>> frobenius.Hypergraph.__name__
+    'Hypergraph[frobenius.Diagram]'
     """
     _cache = dict()
 
     def __class_getitem__(_, attributes):
         if not isinstance(attributes, tuple):
             attributes = (attributes,)
+        if not all(isinstance(attribute, str) for attribute in attributes):
+            raise TypeError(messages.NO_TYPE_PARAMETER.format(_))
 
         G = Generic.__class_getitem__(tuple(map(TypeVar, attributes)))
 
@@ -209,7 +220,9 @@ class NamedGeneric(Generic[TypeVar('T')]):
                             return func, args, data
 
                     C.__module__ = origin.__module__
-                    names = [getattr(v, "__name__", str(v)) for v in values]
+                    names = [
+                        factory_name(v) if is_discopy_class(v)
+                        else getattr(v, "__name__", str(v)) for v in values]
                     C.__name__ = C.__qualname__ = origin.__name__\
                         + f"[{', '.join(names)}]"
                     C.__origin__ = cls
@@ -288,6 +301,21 @@ def deprecated_alias(module_name: str, aliases: dict[str, str]):
         raise AttributeError(
             f"module {module_name!r} has no attribute {name!r}")
     return __getattr__
+
+
+def is_discopy_class(value) -> bool:
+    """
+    Whether a value is a class defined in DisCoPy, which
+    :class:`NamedGeneric` names by its :func:`factory_name`, e.g.
+    ``hypergraph.Hypergraph[frobenius.Diagram]``, since every level of the
+    hierarchy has a ``Diagram`` of its own.
+
+    >>> from discopy.frobenius import Diagram
+    >>> assert is_discopy_class(Diagram) and not is_discopy_class(int)
+    """
+    return isinstance(value, type) and (
+        value.__module__ == "discopy"
+        or value.__module__.startswith("discopy."))
 
 
 def factory_name(cls: type) -> str:
@@ -735,6 +763,11 @@ class Node:
         if self.__hash is None:
             self.__hash = hash(repr(self))
         return self.__hash
+
+    @property
+    def index(self) -> tuple[int, int]:
+        """ The position of the node in a diagram: its box, then its wire. """
+        return self.data.get("j", -1), self.data.get("i", -1)
 
     def shift_i(self, i):
         return Node(self.kind, **dict(self.data, i=self.i + i))

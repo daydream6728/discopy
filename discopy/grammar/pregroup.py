@@ -30,6 +30,8 @@ Summary
         brute_force
 """
 
+from typing import ClassVar
+
 from discopy import rigid, frobenius, messages
 from discopy.cat import factory
 from discopy.utils import AxiomError, deprecated_alias
@@ -97,6 +99,11 @@ class Diagram(frobenius.Diagram):
     >>> F = tensor.Functor(ob, ar, dom=Diagram, dtype=bool)
     >>> assert F(sentence)
     """
+    swap_factory: ClassVar[type["Swap"]]
+    permutation_factory: ClassVar[type["Permutation"]]
+    cup_factory: ClassVar[type["Cup"]]
+    cap_factory: ClassVar[type["Cap"]]
+    spider_factory: ClassVar[type["Spider"]]
     ob = Ty
 
     def normal_form(self, **params):
@@ -252,6 +259,7 @@ def brute_force(*vocab, target=Ty('s')):
             test.append(words + (word, ))
 
 
+Diagram.box_factory = Box
 Diagram.swap_factory, Diagram.spider_factory = Swap, Spider
 Diagram.permutation_factory = Permutation
 Diagram.cup_factory, Diagram.cap_factory = Cup, Cap

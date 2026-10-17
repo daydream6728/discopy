@@ -69,13 +69,13 @@ from functools import wraps
 
 from discopy import (
     balanced,
-    rigid,
     pivotal,
     ribbon,
     messages
 )
 from discopy.abc import (
-    RibbonCategory, SymmetricCategory, TracedCategory, NamedGeneric)
+    NamedGeneric, Pregroup, RibbonCategory, SymmetricCategory,
+    TracedCategory)
 from discopy.cat import assert_iscomposable
 from discopy.python import finset
 from discopy.utils import (
@@ -84,7 +84,7 @@ from discopy.utils import (
 
 
 @dataclass
-class Ty(NamedGeneric['natural']):
+class Ty(Pregroup, NamedGeneric['natural']):
     """
     An integer type is a pair of :attr:`natural` types.
 
@@ -162,6 +162,11 @@ class Ty(NamedGeneric['natural']):
         return type(self)(positive, negative)
 
     __matmul__ = tensor
+
+    def __rmatmul__(self, other):
+        """ A type does not whisker: the tensor with anything but a type of
+        the same natural numbers is undefined. """
+        return NotImplemented
 
     def __neg__(self):
         positive, negative = self
@@ -492,7 +497,7 @@ class Diagram(RibbonCategory, NamedGeneric['natural']):
         .. image:: /_static/int/int-snake-equations.svg
             :align: center
         """
-        rigid.Ty.assert_isadjoint(left, right)
+        left.assert_isadjoint(right)
         inside = cls.natural.id(left.positive @ left.negative)
         return cls(inside, left @ right, type(left)())
 
@@ -505,7 +510,7 @@ class Diagram(RibbonCategory, NamedGeneric['natural']):
             left : The left-hand side of the caps.
             right : The right-hand side of the caps.
         """
-        rigid.Ty.assert_isadjoint(right, left)
+        right.assert_isadjoint(left)
         inside = cls.natural.id(left.positive @ left.negative)
         return cls(inside, type(left)(), left @ right)
 

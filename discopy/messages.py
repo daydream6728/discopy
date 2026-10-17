@@ -13,6 +13,7 @@ NOT_CONNECTED = "{} is not boundary-connected."
 NOT_TRACEABLE = "Cannot trace {} with {}."
 NOT_SPLITTABLE = "Cannot split {} atoms off {}."
 NOT_ADJOINT = "{} and {} are not adjoints."
+NOT_MAPPING_OR_CALLABLE = "Expected a Mapping or a Callable, got {!r}."
 NOT_RIGID_ADJOINT = "{} is not the left adjoint of {}, maybe you meant to use"\
                     " a pivotal type rather than a rigid one?"
 MISSING_TYPES_FOR_EMPTY_SUM = "Empty sum needs a domain and codomain."
@@ -45,3 +46,9 @@ WRONG_NUMBER_OF_BOUNDARIES = \
 NO_SYNTAX = "Arrays are semantics, not syntax: there is no tree to serialise."
 TERM_IS_A_BOX = \
     "A term is a box: the laws of its category are the diagram's."
+MISSING_BOXES_AND_OFFSETS = (
+    "Decoding needs either boxes and offsets, or the two of them zipped.")
+NO_TYPE_PARAMETER = (
+    "{} has no type parameter to subscript, declare one as in "
+    "class C(NamedGeneric['name']).")
+CURRY_HAS_NO_DAGGER = "A curry has no dagger."

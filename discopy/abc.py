@@ -60,10 +60,11 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import ClassVar
 
+from discopy import messages
 from discopy.axioms import (
     ComposablePair, ComposableTriple, Equation, Testable, axiom)
 from discopy.utils import (  # noqa: F401  pylint: disable=unused-import
-    NamedGeneric, classproperty, factory_name)
+    AxiomError, NamedGeneric, classproperty, factory_name)
 
 
 class Category[C0, C1: Category](ABC):
@@ -487,6 +488,33 @@ class Pregroup[C0, C1: Pregroup](ResiduatedMonoid[C0, C1]):
     """
     l: C1
     r: C1
+
+    def is_adjoint(self: C1, other: C1) -> bool:
+        """
+        Whether ``other`` is an adjoint of ``self``, on either side.
+
+        Parameters:
+            other : The alleged left or right adjoint.
+
+        >>> from discopy.rigid import Ty
+        >>> x = Ty('x')
+        >>> assert x.is_adjoint(x.l) and x.is_adjoint(x.r)
+        >>> assert not x.is_adjoint(x)
+        """
+        return self.r == other or self == other.r
+
+    def assert_isadjoint(self: C1, other: C1):
+        """
+        Raise ``AxiomError`` unless ``other`` is the right adjoint of
+        ``self``, with a hint when it is the left one.
+
+        Parameters:
+            other : The alleged right adjoint.
+        """
+        if not self.is_adjoint(other):
+            raise AxiomError(messages.NOT_ADJOINT.format(self, other))
+        if self.r != other:
+            raise AxiomError(messages.NOT_RIGID_ADJOINT.format(self, other))
 
     def over(self, other: C1) -> C1:
         return self @ other.l

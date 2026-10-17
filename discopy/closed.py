@@ -75,7 +75,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from functools import cached_property, reduce
 from inspect import signature
-from typing import Callable, Dict
+from typing import Callable, ClassVar, Dict
 
 from discopy import monoidal, biclosed, markov, cmap, hypergraph, messages
 from discopy.abc import ClosedCategory
@@ -102,6 +102,12 @@ class Ty(biclosed.Ty):
     .. image:: /_static/closed/diagram.svg
         :align: center
     """
+    product_factory: ClassVar[type["Product"]]
+    variable_factory: ClassVar[type["Variable"]]
+    constant_factory: ClassVar[type["Constant"]]
+    application_factory: ClassVar[type["Application"]]
+    abstraction_factory: ClassVar[type["Abstraction"]]
+
     def __mul__(self, other: Ty) -> Ty:
         return self.product(other)
 
@@ -256,6 +262,19 @@ class Diagram(markov.Diagram, biclosed.Diagram, ClosedCategory):
 
     A diagram applied to another post-composes their tensor with an `Eval`.
     """
+    pack_factory: ClassVar[type["Pack"]]
+    unpack_factory: ClassVar[type["Unpack"]]
+    box_factory: ClassVar[type["Box"]]
+    functor_factory: ClassVar[type["Functor"]]
+    copy_factory: ClassVar[type["Copy"]]
+    swap_factory: ClassVar[type["Swap"]]
+    permutation_factory: ClassVar[type["Permutation"]]
+    curry_factory: ClassVar[type["Curry"]]
+    eval_factory: ClassVar[type["Eval"]]
+    coeval_factory: ClassVar[type["Coeval"]]
+    trace_factory: ClassVar[type["Trace"]]
+    discard_factory: ClassVar[type["Discard"]]
+    sum_factory: ClassVar[type["Sum"]]
     ob = Ty
 
     @property
@@ -264,6 +283,8 @@ class Diagram(markov.Diagram, biclosed.Diagram, ClosedCategory):
 
     @classmethod
     def ev(cls, base: Ty, exponent: Ty, left: bool = True):
+        if not exponent:
+            return cls.id(base)
         return cls.eval_factory(exponent >> base, left=left)
 
     def to_compact(self) -> Diagram:
@@ -540,6 +561,7 @@ Hypergraph = hypergraph.Hypergraph[Diagram]
 Diagram.copy_factory = Copy
 Diagram.swap_factory = Swap
 Diagram.permutation_factory = Permutation
+Diagram.box_factory = Box
 Diagram.pack_factory = Pack
 Diagram.unpack_factory = Unpack
 Diagram.curry_factory = Curry

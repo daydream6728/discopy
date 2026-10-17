@@ -426,3 +426,16 @@ def test_foliation_with_traces_and_permutations():
         assert Equation(foliated, diagram)
         assert F(foliated) == F(diagram)
     assert len((f.trace() @ h).foliation()) == 1
+
+
+def test_foliation_idempotence():
+    """ States keep their offsets and plumbing composes, whatever the
+    number of boxes in a layer. """
+    x, y = Ty('x'), Ty('y')
+    s, t, u = Box('s', Ty(), x), Box('t', Ty(), y), Box('u', Ty(), x)
+    f, g = Box('f', Ty(), x @ x @ x), Box('g', x, x)
+    traced = Trace(Diagram((Layer(x, f), ), x, x @ x @ x @ x), left=False)
+    for diagram in (s @ t @ u, s @ g @ u, s @ t >> Swap(x, y), traced):
+        foliated = diagram.foliation()
+        assert Equation(diagram, foliated)
+        assert foliated.foliation() == foliated

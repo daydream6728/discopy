@@ -34,3 +34,15 @@ def test_python_stream():
     s.unroll().check_later()
     assert s.feedback(T(x), T(y), T(m)).unroll(2).now(1, 2, 3) == (
         True, False, True, '1 2 3')
+
+
+def test_sequence_box_of_its_category():
+    """ A stream builds the boxes of the category it is over. """
+    from discopy import markov, tensor
+    for category in (symmetric.Diagram, markov.Diagram):
+        x = Ty.sequence(category.ob('x'))
+        box = Stream[category].sequence("f", x, x).now
+        assert type(box) is category.box_factory
+    dim = Ty[tensor.Dim](tensor.Dim(2))  # A constant stream of dimensions.
+    box = Stream[tensor.Diagram].sequence("f", dim, dim).now
+    assert type(box) is tensor.Box is tensor.Diagram.box_factory

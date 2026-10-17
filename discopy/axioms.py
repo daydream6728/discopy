@@ -6,13 +6,13 @@ An :class:`Axiom` is an equation stated once on an abstract base class of
 :mod:`discopy.abc` and inherited by every category below it, where
 :meth:`Axiom.failing` and :meth:`Axiom.inapplicable` classify it when a
 category breaks it or has no such structure. A :class:`Testable` category
-generates its own objects and arrows, and states the laws every type that
-does so obeys: a term reads back from its representation, its pickle and
-its tree. An :class:`Equivalence` is a testable type with an equivalence
+generates its own objects and arrows, and states the laws every type that does
+so obeys: a term reads back from its representation, its pickle, its deep copy
+and its tree. An :class:`Equivalence` is a testable type with an equivalence
 relation besides equality, and states the laws of one once: reflexivity,
-symmetry and transitivity. The matrix in ``proptest/`` checks every axiom
-of every category against generated arguments, one cell per pair;
-CONTRIBUTING.md says how to run it.
+symmetry and transitivity. The matrix in ``proptest/`` checks every axiom of
+every category against generated arguments, one cell per pair; CONTRIBUTING.md
+says how to run it.
 
 Summary
 -------
@@ -51,6 +51,7 @@ import __future__
 import inspect
 import pickle
 import sys
+from copy import deepcopy
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from dataclasses import KW_ONLY, dataclass, replace
@@ -113,8 +114,8 @@ class Equation(NamedGeneric["ar"]):
     Parameters:
         terms : The terms of the equation.
         symbol : The symbol between each pair of terms, ``"="`` by default.
-        symbols : The symbols between each pair of terms, overriding
-            ``symbol``; ``len(terms) * (symbol, )`` by default.
+        symbols : The symbols between each pair of consecutive terms, one
+            fewer than the terms, overriding ``symbol``.
         up_to : The function up to which ``bool(equation)`` compares its
             terms, overriding the subclass' :attr:`up_to` if given.
 
@@ -134,8 +135,13 @@ class Equation(NamedGeneric["ar"]):
 
     def __init__(self, *terms, symbol="=", symbols=None, up_to=None):
         self.terms = terms
-        self.symbols = tuple(symbols) if symbols is not None\
-            else len(terms) * (symbol, )
+        gaps = max(len(terms) - 1, 0)
+        self.symbols = gaps * (symbol, ) if symbols is None\
+            else tuple(symbols)
+        if len(self.symbols) != gaps:
+            raise ValueError(
+                f"Expected {gaps} symbols between {len(terms)} terms, "
+                f"got {len(self.symbols)}.")
         if up_to is not None:
             self.up_to = up_to
 
@@ -183,7 +189,7 @@ class AxiomFailure(AxiomError):
 
 
 @dataclass
-class Axiom[**P, T]:
+class Axiom[**P, T](classmethod):
     """
     An axiom of a category, stated once on an abstract base class and
     inherited by every category below it.
@@ -195,7 +201,8 @@ class Axiom[**P, T]:
     are generated from their annotations — an object for the typing of
     identities, three composable arrows for the associativity of
     composition, a term of the category itself for
-    :meth:`Testable.transparency`.
+    :meth:`Testable.transparency`. It is a :class:`classmethod` in the
+    sense of Python too, so that a linter reads a law as one.
 
     Calling a bound axiom returns its own verdict: :obj:`NotImplemented`
     when the structure does not apply to the category, and the equation
@@ -236,6 +243,7 @@ class Axiom[**P, T]:
             raise TypeError(
                 f"{function.__module__} states the axiom {function.__name__} "
                 "without `from __future__ import annotations`.")
+        classmethod.__init__(self, self.equation)
         self.name = self.name or self.equation.__name__
         self.subspaces = dict(self.subspaces or {})
         self.__doc__ = self.equation.__doc__
@@ -424,7 +432,7 @@ class Testable[T](ABC):
     A type that comes with a `search strategy
     <https://hypothesis.readthedocs.io/en/latest/data.html>`_ generating
     its instances, and the laws every such type obeys: a term reads back
-    from its representation, its pickle and its tree.
+    from its representation, its pickle, its deep copy and its tree.
     """
 
     @classmethod
@@ -498,6 +506,17 @@ class Testable[T](ABC):
         """
         loaded = pickle.loads(pickle.dumps(term))
         return Equation((type(loaded), loaded), (type(term), term))
+
+    @axiom
+    def copying(cls, term: Self) -> Equation:
+        """
+        A term is equal to its deep copy, of the same class. Copying goes
+        through the same protocol as :meth:`pickling` without the bytes, so
+        a class whose reduction drops what its state needs breaks one law
+        with the other.
+        """
+        copied = deepcopy(term)
+        return Equation((type(copied), copied), (type(term), term))
 
     @axiom
     def serialisation(cls, term: Self) -> Equation:

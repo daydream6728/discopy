@@ -824,3 +824,8 @@ def test_compound_name_is_lazy():
         == "let(f(x), lambda y: Tuple(y, Projection(Tuple(x, y), 0)))"
     assert Tuple(x, y) == Tuple(x, y) != Tuple(y, x)
     assert hash(Tuple(x, y)) == hash(Tuple(x, y))
+
+
+def test_ev_at_the_unit():
+    x = Ty('x')
+    assert Diagram.ev(x, Ty()) == Id(x) and Ty() >> x == x ** Ty() == x

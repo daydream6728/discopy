@@ -394,7 +394,7 @@ class Closed(Markov, ClosedCategory):
         """
         return cls.lift(cls.category.ev(base, exponent, left))
 
-    def curry(self, n: int = 1, left: bool = False) -> Closed:
+    def curry(self, n: int = 1, left: bool = True) -> Closed:
         """
         Curry the last `n` objects of the domain if `left` else the first,
         i.e. everything but the parameters, which a left currying swaps out
@@ -403,7 +403,16 @@ class Closed(Markov, ClosedCategory):
         Parameters:
             n : The number of objects to curry.
             left : Whether to curry into a left or right exponential.
+
+        Currying no object is the identity, as for every other curry.
+
+        >>> from discopy import closed
+        >>> a, P = closed.Ty('a'), closed.Ty('P')
+        >>> k = Closed(a, a, closed.Box('k', a @ P, a), P)
+        >>> assert k.curry(0) == k == k.curry(0, left=False)
         """
+        if not n:
+            return self
         if not left:
             inside = self.inside.curry(n, left=False)
             return type(self)(self.dom[n:], inside.cod, inside, self.param)

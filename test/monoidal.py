@@ -794,3 +794,29 @@ def test_foliation_up_to_interchangers():
     assert snake.foliation() == snake and len((k @ snake).foliation()) == 2
     F = tensor.Functor({a: 2}, {k: [1, 2, 3, 4]}, dom=rigid.Diagram)
     assert F((k @ snake).foliation()) == F(k @ snake)
+
+
+def test_box_factory():
+    """ Every level with boxes of its own binds them, which a stream of boxes
+    reads: the diagrams of the hierarchy, the tensors, the grammars, the
+    circuits and the networks. """
+    from discopy import (
+        cat, monoidal, braided, balanced, symmetric, traced, markov, rigid,
+        pivotal, ribbon, biclosed, closed, compact, frobenius, feedback,
+        tensor)
+    from discopy.grammar import categorial, abstract, pregroup
+    from discopy.quantum import circuit, zx
+    from discopy.neural import network
+    assert cat.Arrow.box_factory is cat.Box
+    assert circuit.Circuit.box_factory is circuit.Box
+    assert network.Network.box_factory is network.Box
+    for module in (
+            monoidal, braided, balanced, symmetric, traced, markov, rigid,
+            pivotal, ribbon, biclosed, closed, compact, frobenius, feedback,
+            tensor, categorial, abstract, pregroup, zx):
+        assert module.Diagram.box_factory is module.Box, module
+
+
+def test_decode_without_boxes_and_offsets():
+    with raises(ValueError):
+        Diagram.decode(Ty('x'))
