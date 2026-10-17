@@ -1585,13 +1585,14 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   the change introduced, and to claim local green only for the checks run
   locally, with CI on the pushed branch the authority on the real suite
   ([#499](https://github.com/discopy/discopy/issues/499)).
-- pylint reads a law stated with `@axiom` as the classmethod it is,
-  through `.github/scripts/pylint_axioms.py`, a plugin `.pylintrc` loads
-  and `.github/tests` checks: the decorator returns a descriptor binding
-  the law to its category, and astroid infers a classmethod from the
-  `classmethod` decorator alone, so every law read as a method wanting
-  `self`, with the members of its category read as those of an instance.
-  The configuration also declares the `factory` a `NamedGeneric` subscript
+- pylint reads a law stated with `@axiom` as the classmethod it is with
+  no plugin: an `Axiom` is a `classmethod`, which its constructor
+  initialises with the function it states, and astroid reads a function
+  as a classmethod when its decorator returns one. It read a law through
+  `.github/scripts/pylint_axioms.py` first, a plugin `.pylintrc` loaded
+  and `.github/tests` checked, which the `Axiom` of
+  [rel-int/discopy-next#1](https://github.com/rel-int/discopy-next/pull/1)
+  does without. The configuration declares the `factory` a `NamedGeneric` subscript
   sets and the `*_factory` attributes a module sets after its class as
   `generated-members`, lets `hypothesis.strategies` be imported where a
   strategy is built, the convention keeping hypothesis out of the

@@ -188,7 +188,7 @@ class AxiomFailure(AxiomError):
 
 
 @dataclass
-class Axiom[**P, T]:
+class Axiom[**P, T](classmethod):
     """
     An axiom of a category, stated once on an abstract base class and
     inherited by every category below it.
@@ -200,7 +200,8 @@ class Axiom[**P, T]:
     are generated from their annotations — an object for the typing of
     identities, three composable arrows for the associativity of
     composition, a term of the category itself for
-    :meth:`Testable.transparency`.
+    :meth:`Testable.transparency`. It is a :class:`classmethod` in the
+    sense of Python too, so that a linter reads a law as one.
 
     Calling a bound axiom returns its own verdict: :obj:`NotImplemented`
     when the structure does not apply to the category, and the equation
@@ -241,6 +242,7 @@ class Axiom[**P, T]:
             raise TypeError(
                 f"{function.__module__} states the axiom {function.__name__} "
                 "without `from __future__ import annotations`.")
+        classmethod.__init__(self, self.equation)
         self.name = self.name or self.equation.__name__
         self.subspaces = dict(self.subspaces or {})
         self.__doc__ = self.equation.__doc__
