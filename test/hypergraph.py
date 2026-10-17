@@ -393,3 +393,10 @@ def test_to_diagram_routes_with_one_permutation():
             assert functor(decoded) == functor(diagram)
             plumbing = [layer.is_plumbing for layer in decoded.inside]
             assert not any(a and b for a, b in zip(plumbing, plumbing[1:]))
+
+
+def test_make_causal_traces_the_type_of_the_producer():
+    from discopy import compact
+    x = compact.Ty('x')
+    graph = compact.Box('f', x @ x.r, x @ x.r).to_hypergraph().trace()
+    assert graph.to_diagram().to_hypergraph() == graph

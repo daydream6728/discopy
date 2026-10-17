@@ -1390,7 +1390,8 @@ class Hypergraph(MonoidalCategory, NamedGeneric['category']):
                 if input_wire < output_wire and\
                         not has_path(causal_graph, output_wire, input_wire):
                     continue
-                dom, cod = self.dom @ typ, self.cod @ typ
+                obj = self.ports[input_wire].obj
+                dom, cod = self.dom @ obj, self.cod @ obj
                 spider_types = self.spider_types + (typ, )
                 output_spider = len(spider_types) - 1
                 fwires = list(self.flat_wires)
