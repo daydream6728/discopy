@@ -985,6 +985,7 @@ class CMap[C0: Pregroup, C1: CMap](
         >>> Swap(x, y).to_map().boxes
         ()
         """
+        hypergraph.assert_transparent(old)
         category = type(old).ar
         factory = cls if cls.category is category else cls[category]
         functor = (factory.functor if cls.category is None else cls.functor)(

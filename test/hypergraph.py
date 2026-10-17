@@ -426,3 +426,14 @@ def test_cups_and_caps_read_the_host_category():
     x = compact.Ty('x')
     assert compact.Cup(x, x.r).to_hypergraph().boxes == ()
     assert compact.Cap(x.r, x).to_hypergraph().boxes == ()
+
+
+def test_coloured_diagram_has_no_hypergraph():
+    from discopy.monoidal import Box, Colour, Diagram, Ty, Wire
+    red = Colour("red")
+    x, a, b = Ty(Wire('x', red, red)), Wire('a', cod=red), Wire('b', dom=red)
+    scalar = Box('g', Ty(), Ty(a, b)) >> Box('h', Ty(a, b), Ty())
+    for convert in (Diagram.to_hypergraph, Diagram.to_map):
+        for diagram in (Box('f', x, x), scalar):
+            with raises(AxiomError, match="coloured"):
+                convert(diagram)

@@ -35,6 +35,9 @@ NOT_FROBENIUS = \
 NOT_RIGID = "{} has no cups or caps for the wiring of this map."
 NOT_TRACED = "{} has no traces for the cycles of this map."
 NO_CUPS = "{} is not rigid, it has no cups or caps."
+COLOURED_QUOTIENT = (
+    "{} is coloured: a hypergraph or a map is symmetric, and a swap is "
+    "ill-typed across 0-cells, so it would lose its colours.")
 NOT_SYMMETRIC = "{} has no swaps to downgrade this map."
 NOT_MARKOV = "{} has no copy or discard."
 NOT_ACYCLIC = "{} has a directed cycle, its boxes cannot be ordered."

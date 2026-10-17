@@ -98,6 +98,31 @@ Mapping from :class:`Spider` to atomic :class:`frobenius.Ty`.
 """
 
 
+def assert_transparent(diagram: Diagram) -> None:
+    """
+    Raise ``AxiomError`` unless every wire of ``diagram`` is transparent: a
+    hypergraph and a map are symmetric, and a swap is ill-typed across
+    0-cells, so a coloured diagram has neither rather than losing its
+    colours.
+
+    >>> from discopy.monoidal import Box, Colour, Ty, Wire
+    >>> red = Colour('red')
+    >>> x = Ty(Wire('x', dom=red, cod=red))
+    >>> Box('f', x, x).to_hypergraph()
+    Traceback (most recent call last):
+    ...
+    discopy.utils.AxiomError: x is coloured: a hypergraph or a map is ...
+    """
+    from discopy.monoidal import Wire, transparent
+    for typ in (diagram.dom, diagram.cod, *(
+            obj for box in diagram.boxes for obj in (box.dom, box.cod))):
+        if typ.dom != transparent or typ.cod != transparent or any(
+                isinstance(wire, Wire) and (
+                    wire.dom != transparent or wire.cod != transparent)
+                for wire in typ.inside):
+            raise AxiomError(messages.COLOURED_QUOTIENT.format(typ))
+
+
 class Hypergraph(MonoidalCategory, NamedGeneric['category']):
     """
     A hypergraph is given by:
@@ -1605,6 +1630,7 @@ class Hypergraph(MonoidalCategory, NamedGeneric['category']):
         ...           H.spiders(1, 2, x @ y)]:
         ...     assert back_n_forth(d) == d
         """
+        assert_transparent(old)
         category = type(old).ar
         factory = cls if cls.category is category else cls[category]
         functor = factory.functor(
