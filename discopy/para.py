@@ -166,7 +166,6 @@ from discopy.abc import (
     ClosedCategory, ComarkovCategory, CompactCategory, FeedbackCategory,
     HypergraphCategory, MarkovCategory, NamedGeneric, SymmetricCategory,
     TracedCategory)
-from discopy.feedback import Diagram as FeedbackDiagram
 from discopy.utils import (
     assert_iscomposable, assert_isinstance, classproperty, unbiased)
 
@@ -449,7 +448,7 @@ class Feedback(Markov, FeedbackCategory):
     Parametric maps over a feedback underlying `category` form a feedback
     category, with :meth:`delay` applied to all five components.
     """
-    category = FeedbackDiagram
+    category = markov.Diagram
 
     def delay(self, n_steps: int = 1) -> Feedback:
         """
@@ -480,7 +479,8 @@ class Feedback(Markov, FeedbackCategory):
             >> self.inside >> cod @ self.category.swap(mem, self.copar)
         return type(self)(
             dom, cod,
-            inside.feedback(dom @ self.param, cod @ self.copar, mem),
+            inside.feedback(
+                dom=dom @ self.param, cod=cod @ self.copar, mem=mem),
             self.param, self.copar)
 
 

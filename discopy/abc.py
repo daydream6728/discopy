@@ -439,6 +439,8 @@ class FeedbackCategory[C0, C1](MonoidalCategory[C0, C1]):
         if mem is None:
             size = len(self.cod) - len(cod) if cod is not None\
                 else 1 if n is None else n
+            if not 0 <= size <= len(self.cod):
+                raise ValueError(messages.NOT_SPLITTABLE.format(size, self.cod))
             mem = self.cod[:size] if left\
                 else self.cod[len(self.cod) - size:]
         size = len(mem)
@@ -491,9 +493,12 @@ class FeedbackCategory[C0, C1](MonoidalCategory[C0, C1]):
 
 class TracedCategory[C0, C1](FeedbackCategory[C0, C1]):
     """
-    A traced category is a :class:`FeedbackCategory` whose delay is the
-    identity, with a method :code:`trace` for the partial trace of a
-    morphism over some objects, which its :meth:`feedback` is.
+    A traced category is a :class:`FeedbackCategory` with a method
+    :code:`trace` for the partial trace of a morphism over some objects, i.e.
+    the feedback over a memory that is not delayed. When the delay is the
+    identity, the default, the two coincide: its :meth:`feedback` is its
+    trace. The free diagrams of :mod:`discopy.feedback` and the levels below
+    it have both, their wires carrying a time step.
     """
     @abstractmethod
     def trace(self, n: int = 1, left: bool = False) -> C1:

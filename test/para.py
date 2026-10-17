@@ -2,7 +2,7 @@
 
 from pytest import raises
 
-from discopy import closed, comarkov, compact, feedback, frobenius, markov
+from discopy import closed, comarkov, compact, frobenius, markov
 from discopy.para import (
     Closed, Comarkov, Compact, Feedback, Hypergraph, Markov, Symmetric,
     Traced)
@@ -93,9 +93,9 @@ def test_closed():
 
 
 def test_feedback():
-    x, y, z, P = map(feedback.Ty, "xyzP")
+    x, y, z, P = map(markov.Ty, "xyzP")
     f = Feedback(x @ y.delay(), z @ y,
-                 feedback.Box('f', x @ y.delay() @ P, z @ y), P)
+                 markov.Box('f', x @ y.delay() @ P, z @ y), P)
     fb = f.feedback()
     assert (fb.dom, fb.cod, fb.param) == (x, z, P)
     assert f.delay().param == P.delay()
@@ -152,9 +152,9 @@ def test_copar_trace():
 
 
 def test_copar_feedback():
-    x, y, z, m, P = map(feedback.Ty, "xyzmP")
+    x, y, z, m, P = map(markov.Ty, "xyzmP")
     f = Feedback(x @ y.delay(), z @ y,
-                 feedback.Box('f', x @ y.delay() @ P, z @ y @ m), P, m)
+                 markov.Box('f', x @ y.delay() @ P, z @ y @ m), P, m)
     fb = f.feedback()
     assert (fb.dom, fb.cod, fb.param, fb.copar) == (x, z, P, m)
     assert f.delay().copar == m.delay()

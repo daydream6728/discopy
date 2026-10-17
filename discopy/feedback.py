@@ -244,7 +244,7 @@ from copy import copy
 from typing import ClassVar
 
 from discopy import monoidal, cmap, hypergraph, messages
-from discopy.abc import FeedbackCategory, TracedCategory
+from discopy.abc import TracedCategory
 from discopy.monoidal import (  # noqa: F401  pylint: disable=unused-import
     Equation)
 from discopy.utils import (
@@ -482,7 +482,7 @@ class Layer(monoidal.Layer):
 
 
 @factory
-class Diagram(monoidal.Diagram, FeedbackCategory):
+class Diagram(monoidal.Diagram, TracedCategory):
     """
     A feedback diagram is a monoidal diagram with a :meth:`delay` endofunctor
     and a :meth:`feedback` operator, building :class:`Feedback` boxes over a

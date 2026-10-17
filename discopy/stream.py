@@ -39,11 +39,11 @@ Monoidal streams form a feedback category as follows:
 
 ### Fibonacci
 
-We can define the Fibonacci sequence as a feedback diagram interpreted in the
-category of streams of python types and functions.
+We can define the Fibonacci sequence as a Markov diagram, which is a feedback
+diagram, interpreted in the category of streams of python types and functions.
 
 >>> from discopy import *
->>> from discopy.feedback import *
+>>> from discopy.markov import *
 
 >>> X = Ty('X')
 >>> fby, wait = FollowedBy(X), Swap(X, X.d).feedback()
@@ -69,7 +69,7 @@ category of streams of python types and functions.
     :align: center
 
 >>> cod = stream.Stream[python.Function]
->>> F = feedback.Functor(
+>>> F = markov.Functor(
 ...     ob_map={X: int},
 ...     ar_map={zero: cod.singleton(python.Function(lambda: 0, (), int)),
 ...         one: cod.singleton(python.Function(lambda: 1, (), int)),
@@ -166,7 +166,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 
 from discopy import symmetric
-from discopy.abc import MonoidalCategory, NamedGeneric
+from discopy.abc import FeedbackCategory, NamedGeneric
 from discopy.python import finset
 from discopy.utils import (
     AxiomError,
@@ -294,7 +294,7 @@ class Ty(NamedGeneric['base']):
 
 
 @dataclass
-class Stream(MonoidalCategory, NamedGeneric['category']):
+class Stream(FeedbackCategory, NamedGeneric['category']):
     """
     Monoidal streams over an underlying `category`.
 

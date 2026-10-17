@@ -1,8 +1,7 @@
-from pytest import raises
-from random import choice, seed
+from pytest import raises, warns
 
-from discopy import *
 from discopy.feedback import *
+from discopy.utils import AxiomError
 
 
 def test_invalid_inputs():
@@ -12,99 +11,6 @@ def test_invalid_inputs():
         HeadOb(Wire('x').delay())
     with raises(ValueError):
         TailOb(Wire('x').delay())
-
-
-def test_Diagram_repr():
-    x = Ty('x')
-    plus = Box('plus', x @ x, x)
-    zero = Box('zero', Ty(), x.head)
-    zero, one = Box('zero', Ty(), x.head), Box('one', Ty(), x.head)
-    fib =  ((
-            Copy(x) >> one @ Diagram.wait(x) @ x
-            >> FollowedBy(x) @ x >> plus).delay()
-        >> zero @ x.delay() >> FollowedBy(x) >> Copy(x)).feedback()
-    assert eval(str(fib)) == fib
-    assert eval(repr(fib)) == fib
-
-
-def test_functor_python_stream():
-    x = Ty('x')
-    zero, wait = Box('zero', Ty(), x), Diagram.wait(x)
-    F = Functor(
-        ob_map={x: int},
-        ar_map={zero: lambda: 0},
-        cod=stream.Stream[python.Function])
-    assert F(wait @ zero).unroll(2).now(1, 2, 3) == (0, ) + (1, 0) + (2, 0) + (3, )
-
-
-def test_walk():
-    seed(420)
-    X, fby = Ty('X'), FollowedBy(Ty('X'))
-    zero, rand, plus = Box('0', Ty(), X), Box('rand', Ty(), X), Box('+', X @ X, X)
-
-    @Diagram.feedback
-    @Diagram.from_callable(X.d, X @ X)
-    def walk(x):
-        y = fby(zero.head(), plus.d(rand.d(), x))
-        return (y, y)
-
-    F = Functor(
-        ob_map={X: int},
-        ar_map={zero: lambda: 0,
-            rand: lambda: choice([-1, +1]),
-            plus: lambda x, y: x + y},
-        cod=stream.Stream[python.Function])
-
-    assert F(walk).unroll(9).now()[:10] == (0, -1, 0, 1, 2, 1, 0, -1, 0, 1)
-    assert F(walk).unroll(9).now()[:10] == (0, -1, -2, -1, 0, 1, 0, 1, 2, 1)
-    assert F(walk).unroll(9).now()[:10] == (0, -1, 0, 1, 0, 1, 0, -1, 0, -1)
-
-def test_fibonacci():
-    X = Ty('X')
-    fby, wait = FollowedBy(X), Swap(X, X.d).feedback()
-    zero, one = Box('0', Ty(), X), Box('1', Ty(), X)
-    copy, plus = Copy(X), Box('+', X @ X, X)
-
-
-    @Diagram.feedback
-    @Diagram.from_callable(X.d, X @ X)
-    def fib(x):
-        y = fby(zero.head(), plus.d(fby.d(one.head.d(), wait.d(x)), x))
-        return (y, y)
-
-    fib_ = (
-        copy.d >> one.head.d @ wait.d @ X.d
-            >> fby.d @ X.d
-            >> plus.d
-            >> zero.head @ X.d
-            >> fby >> copy).feedback()
-    assert Equation(fib.arg, fib_.arg)
-
-    F = Functor(
-        ob_map={X: (int, )},
-        ar_map={zero: lambda: 0,
-            one: lambda: 1,
-            plus: lambda x, y: x + y},
-        cod=stream.Stream[python.Function])
-
-    assert F(fib).unroll(9).now()[:10] == (0, 1, 1, 2, 3, 5, 8, 13, 21, 34)
-
-
-def test_Permutation_delay():
-    x, y, z = map(Ty, "xyz")
-    perm = Permutation(x @ y @ z, [2, 0, 1])
-    assert perm.delay() == Permutation((x @ y @ z).delay(), [2, 0, 1])
-    assert perm.delay(2) == perm.delay().delay()
-    assert (perm >> Swap(z, x) @ y).delay()\
-        == perm.delay() >> Swap(z, x).delay() @ y.delay()
-
-
-def test_discard_is_a_feedback_diagram():
-    x = Ty('x')
-    discard = Diagram.copy(x, n=0)
-    assert isinstance(discard, Diagram) and isinstance(discard, Discard)
-    assert (discard >> Diagram.id(Ty())).boxes == [discard]
-    assert discard.delay() == Discard(x.delay())
 
 
 def test_trace_is_a_feedback_diagram():
@@ -145,13 +51,6 @@ def test_Feedback_to_tree():
         assert loads(dumps(fb)).mem == fb.mem
 
 
-def test_Copy_pickle():
-    from pickle import dumps, loads
-    x = Ty('x')
-    for box in (Copy(x), Discard(x), Copy(x).delay(), Discard(x).delay()):
-        assert loads(dumps(box)) == box
-
-
 def test_Head_Tail_FollowedBy_to_tree():
     from discopy.utils import dumps, loads
     x, y = Ty(Wire('x', is_constant=False)), Ty('y')
@@ -159,3 +58,155 @@ def test_Head_Tail_FollowedBy_to_tree():
     for term in (x.head, x.tail, x.head.delay(), f.head, f.tail, f.tail.delay(2),
                  FollowedBy(x), FollowedBy(x, is_dagger=True).delay()):
         assert loads(dumps(term)) == term
+
+
+def test_trace_repr():
+    from discopy import feedback
+    trace = Box('f', 'x', 'x').trace()
+    assert repr(trace) == "feedback.Trace(feedback.Box('f', "\
+        "feedback.Ty(feedback.Wire('x')), feedback.Ty(feedback.Wire('x'))))"
+    assert eval(repr(trace)) == trace
+    assert repr(Box('f', 'x', 'x').trace(left=True)).endswith(", left=True)")
+
+
+def test_trace_error():
+    with raises(AxiomError):
+        Box('f', 'x', 'y').trace()
+
+
+def test_trace_dagger():
+    f = Box('f', 'x', 'x')
+    assert f.trace().dagger() == f.dagger().trace()
+
+
+def test_trace_vanishing():
+    from discopy import compact, matrix, ribbon
+    from discopy.python import additive, multiplicative
+
+    x = compact.Ty('x')
+    f = compact.Box('f', x @ x, x @ x)
+    assert f.trace(0) == f
+    assert f.to_hypergraph().trace(0) == f.to_hypergraph()
+    assert f.to_map().trace(0) == f.to_map()
+    assert f.to_drawing().trace(0) == f.to_drawing()
+
+    y = ribbon.Ty('y')
+    g = ribbon.Box('g', y @ y, y @ y)
+    assert g.trace(0) == g
+
+    assert matrix.Matrix[bool].swap(1, 1).trace(0)\
+        == matrix.Matrix[bool].swap(1, 1)
+
+    h = additive.Function(lambda i, tag=0: (i, tag), (int, int), (int, int))
+    assert h.trace(0) == h
+
+    k = multiplicative.Function(lambda i, j: (i, j), (int, int), (int, int))
+    assert k.trace(0) == k
+
+
+def test_Sum():
+    f = Box('f', 'x', 'x')
+    assert Sum([f]) == f
+    assert isinstance(f + f, Sum) and (f + f).terms == (f, f)
+    image = Functor(lambda x: x, {f: f + f})(f)
+    assert isinstance(image, Sum) and image.terms == (f, f)
+
+
+def test_trace_serialisation():
+    from discopy.utils import dumps, loads
+    from discopy import symmetric
+    f = Box('f', 'x', 'x')
+    for trace in (f.trace(), f.trace(left=True)):
+        assert loads(dumps(trace)) == trace
+    x = symmetric.Ty('x')
+    swap = symmetric.Swap(x, x)
+    assert loads(dumps(swap.trace(left=True))) == swap.trace(left=True)
+
+
+def test_trace_foliation():
+    x = Ty('x')
+    f, g = Box('f', x @ x, x @ x), Box('g', x, x)
+    beside, below = f.trace() @ g, f.trace() >> g
+    assert beside.foliation().boxes == [f.trace(), g]
+    assert len(beside.foliation()) == 1 and beside.depth() == 1
+    assert below.foliation() == below and below.depth() == 2
+
+
+def test_traced_is_deprecated():
+    from discopy import feedback, traced
+    with warns(DeprecationWarning):
+        assert traced.Diagram is feedback.Diagram
+    with warns(DeprecationWarning):
+        assert traced.Trace is feedback.Trace
+
+
+def test_feedback_forms():
+    x, m = Ty('x'), Ty('m')
+    f = Box('f', x @ m.delay(), x @ m)
+    assert f.feedback() == f.feedback(1) == f.feedback(mem=m)\
+        == f.feedback(cod=x) == f.feedback(dom=x, cod=x, mem=m)
+    with raises(TypeError):
+        f.feedback(1, mem=m)
+    with raises(ValueError):
+        f.feedback(3)
+
+
+def test_trace_is_an_undelayed_feedback():
+    x, m = Ty('x'), Ty('m')
+    f, g = Box('f', x @ m, x @ m), Box('g', x @ m.delay(), x @ m)
+    assert isinstance(f.feedback(), Trace) and f.feedback() == f.trace()
+    assert isinstance(g.feedback(), Feedback)
+    assert not isinstance(g.feedback(), Trace)
+    assert str(f.trace(mem=m)) == "Trace(f)"
+    assert str(g.feedback()) == "Feedback(g)"
+    assert f.trace(dom=x, cod=x, mem=m) == f.trace()
+    with raises(AxiomError):
+        g.trace()
+    with raises(AxiomError):
+        Feedback(f)
+
+
+def test_left_feedback():
+    x, m = Ty('x'), Ty('m')
+    f = Box('f', m.delay() @ x, m @ x)
+    assert f.feedback(left=True) == Feedback(f, left=True)
+    assert f.feedback(left=True).delay() == f.delay().feedback(left=True)
+    assert str(f.feedback(left=True)) == "Feedback(f, left=True)"
+
+
+def test_traced_category_feedback_is_its_trace():
+    from discopy.matrix import Matrix
+    f, one = Matrix[bool]([[1, 1], [0, 0]], 2, 2), Matrix.ob(1)
+    assert f.feedback() == f.feedback(mem=one) == f.trace()
+    assert f.feedback(mem=one, left=True) == f.trace(left=True)
+    assert f.delay() is f
+    with raises(TypeError):
+        f.feedback(1, mem=one)
+
+
+def test_feedback_laws_on_a_traced_category():
+    from discopy.axioms import Loop
+    from discopy.matrix import Matrix
+    M = Matrix[bool]
+    x, y, m, n = 1, 1, 1, 1
+    f = M([1, 0, 1, 1, 0, 1, 1, 0, 1], x + m + n, y + m + n)
+    g, h, k, e = M([1], 1, x), M([0, 1], y, 2), M.swap(1, 1), M.id(1)
+    loop = Loop[M](M.ob(x), M.ob(y), M.ob(m), M.ob(n), f, g, h, k, e)
+    for law in ("vanishing", "joining", "strength", "tightening", "sliding"):
+        args = (f, ) if law == "vanishing" else (loop, )
+        assert getattr(M, law)(*args)
+
+
+def test_time_stepped_wires_below_feedback():
+    from discopy import markov, pivotal, frobenius
+    x = markov.Ty('x')
+    assert x.delay() != x and x.delay().inside[0].time_step == 1
+    f = markov.Box('f', x @ x.delay(), x @ x)
+    assert isinstance(f.feedback(), markov.Feedback)
+    assert isinstance(markov.Box('g', x @ x, x @ x).trace(), markov.Trace)
+    y = pivotal.Ty('y')
+    assert y.delay().l == y.l.delay() and y.delay().l.l == y.delay()
+    g = pivotal.Box('g', y @ y.delay(), y @ y)
+    assert isinstance(g.feedback(), pivotal.Feedback)
+    assert g.delay().time_step == 1
+    assert frobenius.Ty('z').delay().r == frobenius.Ty('z').r.delay()

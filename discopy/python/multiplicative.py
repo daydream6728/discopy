@@ -30,7 +30,7 @@ from itertools import accumulate
 from typing import Self
 
 from discopy import messages
-from discopy.abc import ClosedCategory
+from discopy.abc import ClosedCategory, TracedCategory
 from discopy.utils import (
     AxiomError, assert_isinstance, assert_istraceable, tuplify, untuplify,
     factory)
@@ -51,7 +51,7 @@ def exp(base: Ty, exponent: Ty) -> Ty:
 
 
 @factory
-class Function(function.Function, ClosedCategory):
+class Function(function.Function, ClosedCategory, TracedCategory):
     """
     Python function with tuple as tensor.
 

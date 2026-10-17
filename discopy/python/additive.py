@@ -20,13 +20,13 @@ from functools import cache
 from itertools import accumulate
 from typing import Self
 
-from discopy.abc import ComarkovCategory
+from discopy.abc import ComarkovCategory, TracedCategory
 from discopy.utils import assert_isinstance
 from discopy.python import finset, function
 from discopy.python.function import Ty
 
 
-class Function(function.Function, ComarkovCategory):
+class Function(function.Function, ComarkovCategory, TracedCategory):
     """
     Python functions with disjoint union as tensor: a comarkov category,
     whose merge is the codiagonal and whose noise is the empty function.
