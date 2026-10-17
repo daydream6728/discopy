@@ -993,6 +993,40 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
+- `frobenius.Dim.unwind`, and so `tensor.Dim.unwind`, is the identity, like
+  its `l` and `r` and like `rigid.Nat.unwind`: it inherited
+  `rigid.Ty.unwind`, which asks the atom of a type for its winding, and the
+  atoms of a dimension are integers, so `Hypergraph.__init__` raised
+  `AttributeError` on any tensor diagram and nothing going through
+  `to_hypergraph` worked on one, neither `foliation`, `simplify` nor
+  `frobenius.Equation`, where `to_map` and `eval` did
+  ([rel-int/discopy-next#104](https://github.com/rel-int/discopy-next/issues/104)).
+- `feedback.FollowedBy.delay` delays the type at time zero, which `reset`
+  and `__repr__` read: it rebuilt the box from its codomain, or its domain
+  when daggered, a type already delayed `time_step` times, so a second delay
+  delayed it twice and `FollowedBy(x).delay().delay()` was an endomorphism
+  of `x.d.d.d` rather than `FollowedBy(x).delay(2)`
+  ([rel-int/discopy-next#105](https://github.com/rel-int/discopy-next/issues/105)).
+- `Hypergraph.make_bijective` inserts the box of a spider at the depth of
+  its first consumer, at the end when it has none, where it inserted it
+  right after its last producer, so that a copy, a discard or a merge comes
+  after the states that came before it in the diagram: their offsets were
+  read in a scan the spider box had grown or shrunk, so
+  `f @ g >> Copy(x) @ x >> h @ x @ x` decoded with a permutation it does
+  not have, `f @ g >> Discard(x) @ x` as `f >> Copy(x, 0) >> g` and
+  `f @ g @ s >> Merge(x) @ x` with `s` after the merge, the last two only
+  because the decoder clamped the stale offset. When the producers of a
+  spider come before its consumers, as in a causal or a cocausal
+  hypergraph, the first consumer is the latest depth between them, and it
+  comes after every state with an offset, since such a state comes before
+  every box of the diagram that became wiring and the first consumer reads
+  a wire out of one: the three decode to the diagram or its foliation. A
+  spider with a producer after its first consumer goes right after its
+  last producer as before. The spiders are taken in order, so the boxes
+  inserted at one depth come in the order of their spiders, the units of
+  the doctest of `make_bijective` included, which came reversed. The clamp
+  stays for a hint past the end of the scan, e.g. one given by hand
+  ([rel-int/discopy-next#106](https://github.com/rel-int/discopy-next/issues/106)).
 - `feedback.HeadOb`, `TailOb`, `Head`, `Tail` and `FollowedBy` read back
   from their tree. The two objects inherited `Wire.from_tree`, which
   rebuilds a wire from its name; `Head` and `Tail` inherited
