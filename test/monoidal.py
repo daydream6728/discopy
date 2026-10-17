@@ -797,11 +797,24 @@ def test_foliation_up_to_interchangers():
 
 
 def test_box_factory():
-    """ Every level binds its own boxes, which a stream of boxes reads. """
-    from discopy import cat, monoidal, symmetric, markov, rigid, closed
+    """ Every level with boxes of its own binds them, which a stream of boxes
+    reads: the diagrams of the hierarchy, the tensors, the grammars, the
+    circuits and the networks. """
+    from discopy import (
+        cat, monoidal, braided, balanced, symmetric, traced, markov, rigid,
+        pivotal, ribbon, biclosed, closed, compact, frobenius, feedback,
+        tensor)
+    from discopy.grammar import categorial, abstract, pregroup
+    from discopy.quantum import circuit, zx
+    from discopy.neural import network
     assert cat.Arrow.box_factory is cat.Box
-    for module in (monoidal, symmetric, markov, rigid, closed):
-        assert module.Diagram.box_factory is module.Box
+    assert circuit.Circuit.box_factory is circuit.Box
+    assert network.Network.box_factory is network.Box
+    for module in (
+            monoidal, braided, balanced, symmetric, traced, markov, rigid,
+            pivotal, ribbon, biclosed, closed, compact, frobenius, feedback,
+            tensor, categorial, abstract, pregroup, zx):
+        assert module.Diagram.box_factory is module.Box, module
 
 
 def test_decode_without_boxes_and_offsets():

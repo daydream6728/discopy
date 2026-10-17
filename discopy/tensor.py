@@ -966,6 +966,7 @@ class Bubble(monoidal.Bubble, Box):
             @ self.arg.grad(var) >> Spider(2, 1, self.cod)
 
 
+Diagram.box_factory = Box
 Diagram.sum_factory, Diagram.swap_factory = Sum, Swap
 Diagram.permutation_factory = Permutation
 Diagram.cup_factory, Diagram.cap_factory = Cup, Cap

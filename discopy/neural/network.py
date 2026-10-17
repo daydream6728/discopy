@@ -364,6 +364,7 @@ class Functor(markov.Functor):
 Id = Network.id
 Equation = markov.Equation
 
+Network.box_factory = Box
 Network.functor_factory = Functor
 Network.copy_factory, Network.merge_factory = Copy, Merge
 Network.discard_factory = Discard

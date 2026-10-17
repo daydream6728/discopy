@@ -259,6 +259,7 @@ def brute_force(*vocab, target=Ty('s')):
             test.append(words + (word, ))
 
 
+Diagram.box_factory = Box
 Diagram.swap_factory, Diagram.spider_factory = Swap, Spider
 Diagram.permutation_factory = Permutation
 Diagram.cup_factory, Diagram.cap_factory = Cup, Cap

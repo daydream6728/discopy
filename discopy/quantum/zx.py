@@ -495,6 +495,7 @@ H.drawing_name, H.tikzstyle_name, = '', 'H'
 H.color, H.shape = "yellow", "rectangle"
 
 SWAP = Swap(Nat(1), Nat(1))
+Diagram.box_factory = Box
 Diagram.swap_factory, Diagram.sum_factory = Swap, Sum
 Diagram.permutation_factory = Permutation
 Id = Diagram.id
