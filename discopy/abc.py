@@ -44,6 +44,7 @@ Summary
     SymmetricCategory
     PROP
     MarkovCategory
+    ComarkovCategory
     ClosedCategory
     FeedbackCategory
     BalancedCategory
@@ -715,7 +716,8 @@ class MarkovCategory[C0, C1](SymmetricCategory[C0, C1]):
     :code:`copy` for the supply of commutative comonoids: ``copy(x, n)`` is
     the comultiplication into ``n`` copies and :meth:`discard` its counit,
     the case ``n = 0``. The laws of a commutative comonoid and the coherence
-    of the supply with the tensor are stated here.
+    of the supply with the tensor are stated here, see
+    :class:`ComarkovCategory` for the dual.
     """
     @classmethod
     @abstractmethod
@@ -768,6 +770,71 @@ class MarkovCategory[C0, C1](SymmetricCategory[C0, C1]):
             cls.copy(x @ y),
             cls.copy(x) @ cls.copy(y)
             >> cls.id(x) @ cls.swap(x, y) @ cls.id(y))
+
+
+class ComarkovCategory[C0, C1](SymmetricCategory[C0, C1]):
+    """
+    A comarkov category is a :class:`SymmetricCategory` with a method
+    :code:`merge` for the supply of commutative monoids: ``merge(x, n)`` is
+    the multiplication of ``n`` copies and :meth:`noise` its unit, the case
+    ``n = 0``. It is the dual of a :class:`MarkovCategory`: a category is
+    comarkov when its opposite is Markov. The laws of a commutative monoid
+    and the coherence of the supply with the tensor are stated here.
+    """
+    @classmethod
+    @abstractmethod
+    def merge(cls, x: C0, n: int = 2) -> C1:
+        """
+        Merge :code:`n` copies of a given object :code:`x` into one.
+
+        Parameters:
+            x : The object to merge.
+            n : The number of copies.
+        """
+
+    @classmethod
+    def noise(cls, x: C0) -> C1:
+        """
+        The unit of the monoid on :code:`x`, i.e. the merge of no copy at
+        all: the state every object carries, dual to
+        :meth:`MarkovCategory.discard`.
+
+        Parameters:
+            x : The object of the noise.
+        """
+        return cls.merge(x, 0)
+
+    @axiom
+    def merge_associativity(cls, x: C0) -> Equation[C1]:
+        """ Merging either of two merges gives the merge of three. """
+        merge, identity = cls.merge(x), cls.id(x)
+        return cls.equation_factory(
+            merge @ identity >> merge, cls.merge(x, 3),
+            identity @ merge >> merge)
+
+    @axiom
+    def merge_commutativity(cls, x: C0) -> Equation[C1]:
+        """ The two copies merged into an object are interchangeable. """
+        merge = cls.merge(x)
+        return cls.equation_factory(cls.swap(x, x) >> merge, merge)
+
+    @axiom
+    def merge_unitality(cls, x: C0) -> Equation[C1]:
+        """ Merging the object with noise on either side leaves it itself. """
+        merge, noise, identity = cls.merge(x), cls.noise(x), cls.id(x)
+        return cls.equation_factory(
+            noise @ identity >> merge, identity, identity @ noise >> merge)
+
+    @axiom
+    def merge_coherence(cls, x: C0, y: C0) -> Equation[C1]:
+        """
+        Merging a tensor is swapping the inner factors so that the copies
+        of each factor come together, then merging its factors.
+        """
+        return cls.equation_factory(
+            cls.merge(x @ y),
+            cls.id(x) @ cls.swap(y, x) @ cls.id(y)
+            >> cls.merge(x) @ cls.merge(y))
 
 
 class ClosedCategory[C0, C1](BiclosedCategory[C0, C1], MarkovCategory[C0, C1]):
@@ -842,12 +909,15 @@ class CompactCategory[C0, C1](
 
 
 class HypergraphCategory[C0, C1](
-        CompactCategory[C0, C1], MarkovCategory[C0, C1]):
+        CompactCategory[C0, C1], MarkovCategory[C0, C1],
+        ComarkovCategory[C0, C1]):
     """
     A hypergraph category is a symmetric category with a supply of spiders,
     i.e. special commutative Frobenius algebras on each objects.
 
-    This makes it both a :class:`CompactCategory` and a :class:`MarkovCategory`
+    This makes it a :class:`CompactCategory`, a :class:`MarkovCategory` and
+    a :class:`ComarkovCategory`, the Frobenius law and speciality
+    identifying the comonoids with the monoids.
     """
     @classmethod
     @abstractmethod

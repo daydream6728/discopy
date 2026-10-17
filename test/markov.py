@@ -1,10 +1,13 @@
 from __future__ import annotations
-from pytest import raises
+import warnings
+
+from pytest import raises, warns
 
 from discopy.python import Function
 
 from discopy.markov import *
 from discopy import *
+from discopy.utils import AxiomError
 
 
 def test_Discard_has_no_copies():
@@ -15,12 +18,33 @@ def test_Discard_has_no_copies():
 
 
 def test_spider_factory():
-    with raises(ValueError):
-        Diagram.spider_factory(2, 2, Ty('x'))
+    x = Ty('x')
+    assert Diagram.spider_factory(1, 3, x) == Copy(x, 3)
+    for n_legs_in, n_legs_out, phase in [(2, 2, None), (2, 1, None), (1, 2, .5)]:
+        with raises(ValueError, match="only spiders of markov.Diagram"):
+            Diagram.spider_factory(n_legs_in, n_legs_out, x, phase)
 
 
-def test_Merge_dagger():
-    assert Merge(Ty('x')).dagger() == Copy(Ty('x'))
+def test_Copy_dagger():
+    """ A Markov category is not a dagger category, see #94 on next. """
+    x = Ty('x')
+    for box in (Copy(x), Copy(x, 3), Discard(x)):
+        with raises(AxiomError, match="not a dagger category"):
+            box.dagger()
+
+
+def test_deprecated_merge():
+    x = Ty('x')
+    with warns(DeprecationWarning, match="use discopy.comarkov.Merge"):
+        assert markov.Merge is comarkov.Merge
+    with warns(DeprecationWarning, match="use discopy.comarkov.Diagram.merge"):
+        assert Diagram.merge(x) == comarkov.Merge(x)
+    with raises(AttributeError):
+        markov.Codiagonal
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        frobenius.Diagram.merge(frobenius.Ty('x'))
+        neural.network.Network.merge(neural.network.Dims(2))
 
 
 def test_Discard():
@@ -79,37 +103,41 @@ def test_Permutation():
     assert Equation(perm, perm.to_swaps())
 
 
-def test_copy_and_merge_serialisation():
+def test_copy_serialisation():
     from discopy.utils import dumps, loads
     x = Ty('x')
-    for box in (Copy(x), Copy(x, 3), Merge(x), Merge(x, 0), Discard(x)):
+    for box in (Copy(x), Copy(x, 3), Discard(x)):
         assert loads(dumps(box)) == box
-    assert loads(dumps(Copy(x) >> Merge(x))) == Copy(x) >> Merge(x)
-    assert repr(Merge(x, 3)) == "markov.Merge(monoidal.Ty(cat.Ob('x')), 3)"
+    assert loads(dumps(Copy(x) >> Discard(x) @ x)) == Copy(x) >> Discard(x) @ x
+    assert repr(Copy(x, 3)) == "markov.Copy(monoidal.Ty(cat.Ob('x')), 3)"
+    tree = dumps(comarkov.Merge(x, 3)).replace("comarkov.Merge", "markov.Merge")
+    with warns(DeprecationWarning):
+        assert loads(tree) == comarkov.Merge(x, 3)
 
 
-def test_copy_and_merge_factories():
+def test_copy_factory():
     from discopy.utils import factory
 
     @factory
     class Recipe(Diagram):
-        """ A subclass with its own copies and merges. """
+        """ A subclass with its own copies. """
 
     class RecipeCopy(Copy, Recipe):
         """ The copy of an ingredient. """
 
-    class RecipeMerge(Merge, Recipe):
-        """ The merge of two ingredients. """
+    class RecipeDiscard(Discard, RecipeCopy):
+        """ The discard of an ingredient. """
 
-    Recipe.copy_factory, Recipe.merge_factory = RecipeCopy, RecipeMerge
+    Recipe.copy_factory, Recipe.discard_factory = RecipeCopy, RecipeDiscard
     x = Ty('x')
-    assert isinstance(RecipeCopy(x).dagger(), RecipeMerge)
-    assert isinstance(RecipeMerge(x).dagger(), RecipeCopy)
-    assert isinstance(Recipe.merge(x).boxes[0], RecipeMerge)
+    assert isinstance(Recipe.copy(x).boxes[0], RecipeCopy)
+    assert isinstance(RecipeCopy(x, 0), RecipeDiscard)
+    with raises(AxiomError, match="Recipe is not a dagger category"):
+        RecipeCopy(x).dagger()
 
 
 def test_Copy_pickle():
     from pickle import dumps, loads
     x = Ty('x')
-    for box in (Copy(x), Copy(x, 3), Discard(x), Merge(x)):
+    for box in (Copy(x), Copy(x, 3), Discard(x)):
         assert loads(dumps(box)) == box

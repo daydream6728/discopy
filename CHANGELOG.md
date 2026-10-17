@@ -9,6 +9,39 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Added
 
+- `discopy.comarkov`, the free comarkov category, i.e. a symmetric
+  category with a supply of commutative monoids, the dual of
+  `discopy.markov`: a category is comarkov exactly when its opposite is
+  Markov. `abc.ComarkovCategory` states `merge(x, n)` and its unit
+  `noise(x)`, the merge of no copy at all as `discard(x)` is the copy of
+  none -- "the time reversal of a causal theory is eternal noise" (toumix,
+  2026-10-17) -- with the four laws dual to `MarkovCategory`'s,
+  `merge_associativity`, `merge_commutativity`, `merge_unitality` and
+  `merge_coherence`, and `abc.HypergraphCategory` extends both, the
+  Frobenius law and speciality identifying the two supplies into spiders.
+  `comarkov.Diagram` has the `Merge` box, `Merge(x, 0)` routed to `Noise(x)`
+  as `Copy(x, 0)` is to `Discard(x)`, a `Functor` sending merges to the
+  `merge` of its codomain, its `CMap` and `Hypergraph` aliases and an
+  `Equation` up to hypergraph. `Hypergraph.to_diagram` decodes into a
+  comarkov category through the mirror of its Markov branch: the new
+  `make_cocausal` makes a hypergraph right-monogamous, one consumer per
+  spider, through `make_right_monogamous`, then traces its backward wires,
+  and `make_bijective` introduces the merges; `is_right_monogamous` and
+  `is_cocausal` mirror `is_left_monogamous` and `is_causal`, and
+  `trace_backward_wires` is the body `make_causal` and `make_cocausal`
+  share. The concrete categories tell the two supplies apart: `Matrix`
+  under the direct sum is Markov and comarkov, `ones` an alias of its
+  `noise`, so that the property matrix runs the four laws on `Matrix[int]`;
+  `python.additive.Function` and `kleisli.additive.Channel` are comarkov,
+  their merge the codiagonal of the disjoint union; `neural.Network` is
+  both, with its own `Merge` and `Noise` boxes and a `spider_factory`
+  serving copies and merges with no Frobenius law between them;
+  `para.Comarkov` lifts the merge of its underlying category as
+  `para.Markov` lifts the copy and `para.Hypergraph` is both; `CMap.noise`
+  is kept as a box like `CMap.discard`; `closed`, `grammar.abstract` and
+  the stream syntax of `feedback` are Markov only
+  ([rel-int/discopy-next#94](https://github.com/rel-int/discopy-next/issues/94)).
+
 - `CMap` and `Hypergraph` serialise with `to_tree`, naming their category,
   and read back through it with `utils.resolve_factory`, the inverse of
   `factory_name` that `from_tree` now goes through
@@ -557,6 +590,29 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Changed
 
+- `discopy.markov` is Markov only: `markov.Diagram` loses `Merge`, `merge`
+  and `merge_factory` to `discopy.comarkov`, and its `spider_factory`
+  refuses a spider with any number of legs in but one, with the new
+  `messages.NO_SUCH_SPIDER`, as `comarkov.Diagram`'s refuses one with any
+  number of legs out but one. The module conflated the two supplies:
+  `merge` was `copy(x, n).dagger()`, and a copy meeting a merge in one
+  diagram satisfied the Frobenius law, so the free Markov category was not
+  free. `markov.Copy.dagger` is the merge of the category when it is also
+  comarkov, `frobenius.Diagram` and `neural.Network`, and raises
+  `AxiomError` with the new `messages.NOT_A_DAGGER` otherwise, since a
+  Markov category is not a dagger category. `markov.Merge` and
+  `markov.Diagram.merge` stay one release as deprecated aliases of
+  `comarkov.Merge` and `comarkov.Diagram.merge`: the former through
+  `utils.deprecated_alias`, which now takes the dotted path of a name that
+  moved to another module, so that a tree serialised with a `markov.Merge`
+  factory loads as a `comarkov.Merge`; the latter a classmethod that warns
+  on a Markov diagram and defers to `comarkov.Diagram.merge` on one that is
+  also comarkov. `frobenius.Diagram` is a compact, Markov and comarkov
+  diagram, its boxes and its functor likewise, reading `comarkov.Merge`
+  where they read `markov.Merge`; the stream syntax of `feedback` keeps
+  `Copy` and drops `Merge`, which `Stream` never interpreted
+  ([rel-int/discopy-next#94](https://github.com/rel-int/discopy-next/issues/94)).
+
 - `Equation` has one symbol fewer than terms, a symbol between each pair of
   consecutive terms, where it stored one per term; `symbols` of any other
   length raise `ValueError`
@@ -936,6 +992,12 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   reviewer first.
 
 ### Fixed
+
+- `closed.Copy(x).dagger()` raises `AxiomError` saying that `closed.Diagram`
+  is not a dagger category, where it returned a stray `markov.Merge` that
+  nothing in a closed diagram composes with, as did the copies of
+  `grammar.abstract` and of `feedback`
+  ([rel-int/discopy-next#94](https://github.com/rel-int/discopy-next/issues/94)).
 
 - `feedback.Diagram.trace` built a `markov.Trace`, which does not compose
   with feedback diagrams: `feedback.Trace` is the trace of a feedback
@@ -1625,6 +1687,10 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Project
 
+- `fail-under` rises from 8.83 to 8.84, by what `discopy.comarkov` lifts
+  the score: 9.0310 on `main` and 9.0481 with it, both read with
+  `--output-format=json2`
+  ([rel-int/discopy-next#94](https://github.com/rel-int/discopy-next/issues/94)).
 - `fail-under` rises from 8.82 to 8.83, by what `discopy.kleisli.token`
   lifts the score: 9.0105 on `main` and 9.0266 with it, both read with
   `--output-format=json2`

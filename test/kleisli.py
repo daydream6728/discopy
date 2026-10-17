@@ -493,6 +493,11 @@ def test_additive_Channel_swap_and_merge():
     assert codiagonal(1, 0) == frozenset({Tagged(1, 0)}) == codiagonal(1, 2)
     assert codiagonal("x", 1) == frozenset(
         {Tagged("x", 1)}) == codiagonal("x", 3)
+    noise = Nondet.noise((int, str))
+    assert noise.dom == Ty() and noise.cod == Ty(int, str)
+    unital = noise @ Nondet.id(Ty(int, str)) >> codiagonal
+    assert unital(1, 0) == frozenset({Tagged(1, 0)})
+    assert unital("x", 1) == frozenset({Tagged("x", 1)})
 
 
 def test_additive_trace_agrees_with_the_pure_trace():

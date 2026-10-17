@@ -19,6 +19,7 @@ Summary
     Symmetric
     Traced
     Markov
+    Comarkov
     Closed
     Feedback
     Compact
@@ -67,9 +68,9 @@ category, with the empty parameter space:
 >>> assert t.trace().dom == x and t.trace().param == p
 
 The construction preserves each level of the hierarchy below symmetric:
-:class:`Traced`, :class:`Markov`, :class:`Closed`, :class:`Feedback`,
-:class:`Compact` and :class:`Hypergraph` lift the extra structure of their
-underlying category with the empty parameter space, e.g.
+:class:`Traced`, :class:`Markov`, :class:`Comarkov`, :class:`Closed`,
+:class:`Feedback`, :class:`Compact` and :class:`Hypergraph` lift the extra
+structure of their underlying category with the empty parameter space, e.g.
 
 >>> from discopy import frobenius
 >>> X = frobenius.Ty('x')
@@ -159,10 +160,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from discopy import symmetric, markov, closed, compact, frobenius
+from discopy import (
+    symmetric, markov, comarkov, closed, compact, frobenius)
 from discopy.abc import (
-    ClosedCategory, CompactCategory, FeedbackCategory, HypergraphCategory,
-    MarkovCategory, NamedGeneric, SymmetricCategory, TracedCategory)
+    ClosedCategory, ComarkovCategory, CompactCategory, FeedbackCategory,
+    HypergraphCategory, MarkovCategory, NamedGeneric, SymmetricCategory,
+    TracedCategory)
 from discopy.feedback import Diagram as FeedbackDiagram
 from discopy.utils import (
     assert_iscomposable, assert_isinstance, classproperty, unbiased)
@@ -374,6 +377,25 @@ class Markov(Symmetric, MarkovCategory):
         return cls.lift(cls.category.copy(x, n))
 
 
+class Comarkov(Symmetric, ComarkovCategory):
+    """
+    Parametric maps over a comarkov underlying `category` form a comarkov
+    category, with the merge of the underlying category as :meth:`merge`.
+    """
+    category = comarkov.Diagram
+
+    @classmethod
+    def merge(cls, x: Symmetric.ob, n: int = 2) -> Comarkov:
+        """
+        The merge of the underlying category, with empty parameter space.
+
+        Parameters:
+            x : The object to merge.
+            n : The number of copies.
+        """
+        return cls.lift(cls.category.merge(x, n))
+
+
 class Closed(Markov, ClosedCategory):
     """
     Parametric maps over a closed underlying `category` form a closed
@@ -495,7 +517,7 @@ class Compact(Traced, CompactCategory):
     curry = Closed.curry
 
 
-class Hypergraph(Compact, Markov, HypergraphCategory):
+class Hypergraph(Compact, Markov, Comarkov, HypergraphCategory):
     """
     Parametric maps over a hypergraph underlying `category` form a
     hypergraph category, with the spiders of the underlying category.

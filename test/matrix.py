@@ -197,6 +197,19 @@ def test_Matrix_comonoid():
             == Matrix.id(x)
 
 
+def test_Matrix_monoid():
+    """ Merge and noise are a commutative monoid under the direct sum. """
+    for x in map(Nat, range(4)):
+        assert Matrix.merge_associativity(x)
+        assert Matrix.merge_commutativity(x)
+        assert Matrix.merge_unitality(x)
+        assert Matrix.merge_coherence(x, Nat(2))
+        assert Matrix.noise(x) == Matrix.ones(x) == Matrix.discard(x).dagger()
+        assert Matrix.noise(x @ Nat(2)) == Matrix.noise(x) @ Matrix.noise(2)
+    assert Matrix.merge(2) == Matrix([[1, 0], [0, 1], [1, 0], [0, 1]], 4, 2)
+    assert {"merge_associativity", "merge_unitality"} <= Matrix[int].axioms.keys()
+
+
 def test_Matrix_ar():
     """ A subscript of Matrix is its own factory, where functors build swaps. """
     assert Matrix[complex].ar is Matrix[complex]

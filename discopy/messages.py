@@ -44,6 +44,8 @@ COLOURED_QUOTIENT = (
     "ill-typed across 0-cells, so it would lose its colours.")
 NOT_SYMMETRIC = "{} has no swaps to downgrade this map."
 NOT_MARKOV = "{} has no copy or discard."
+NOT_A_DAGGER = "{} has no dagger: {} is not a dagger category."
+NO_SUCH_SPIDER = "The only spiders of {} are its {}."
 NOT_ACYCLIC = "{} has a directed cycle, its boxes cannot be ordered."
 NOT_LEFT_MONOGAMOUS = "{} is not left-monogamous."
 NOT_CAUSAL = "{} is not causal."
