@@ -557,27 +557,52 @@ class Hypergraph(MonoidalCategory, NamedGeneric['category']):
 
     def trace(self, n=1, left=False):
         """
-        The trace of a hypergraph is its pre- and post-composition with
-        cups and caps to form a feedback loop.
+        The trace of a hypergraph over a traced category: the traced outputs
+        wired back to the traced inputs over a symmetric one, where this is
+        faithful, and the trace of the category one wire at a time otherwise,
+        see :meth:`explicit_trace`, e.g. a box over a planar traced category
+        or its cups and caps, themselves boxes, over a pivotal one.
 
         Parameters:
             n : The number of wires to trace.
             left : Whether to trace on the left or right.
+
+        >>> from discopy import symmetric, traced
+        >>> x = symmetric.Ty('x')
+        >>> f = symmetric.Box('f', x @ x, x @ x).to_hypergraph()
+        >>> assert f.trace().cod == f.trace(left=True).cod == x
+        >>> g = traced.Box('g', x @ x, x @ x)
+        >>> assert g.to_hypergraph().trace().boxes == (g.trace(), )
         """
         if n == 0:
             return self
+        if not issubclass(self.category, TracedCategory):
+            raise AxiomError(messages.NOT_TRACED.format(
+                factory_name(self.category)))
         assert_istraceable(self, n, left)
-        dom, cod = (self.dom[n:], self.cod[n:]) if left\
-            else (self.dom[:-n], self.cod[:-n])
-        traced_wires = self.dom[:n] if left else self.dom[len(self.dom) - n:]
-        traced_wires_r = traced_wires.r if hasattr(traced_wires, "r")\
-            else traced_wires[::-1]
-        return self.caps(traced_wires_r, traced_wires) @ dom\
-            >> traced_wires_r @ self\
-            >> self.cups(traced_wires_r, traced_wires) @ cod if left\
-            else dom @ self.caps(traced_wires, traced_wires_r)\
-            >> self @ traced_wires_r\
-            >> cod @ self.cups(traced_wires, traced_wires_r)
+        if not issubclass(self.category, SymmetricCategory):
+            return self.explicit_trace(left).trace(n - 1, left)
+        (dom, inputs, dom_wires), (cod, outputs, cod_wires) = (
+            (typ[n:], wires[:n], wires[n:]) if left
+            else (typ[:-n], wires[-n:], wires[:-n])
+            for typ, wires in ((self.dom, self.dom_wires),
+                               (self.cod, self.cod_wires)))
+        parent = {}
+
+        def find(spider):
+            while parent.get(spider, spider) != spider:
+                spider = parent[spider]
+            return spider
+
+        for output, input_ in zip(outputs, inputs):
+            if find(output) != find(input_):
+                parent[find(output)] = find(input_)
+        wires = (tuple(map(find, dom_wires)), tuple(
+            (tuple(map(find, x)), tuple(map(find, y)))
+            for x, y in self.box_wires), tuple(map(find, cod_wires)))
+        spider_types = {
+            find(spider): typ for spider, typ in enumerate(self.spider_types)}
+        return type(self)(dom, cod, self.boxes, wires, spider_types)
 
     def interchange(self, i: int, j: int) -> Hypergraph:
         """
@@ -1534,7 +1559,9 @@ class Hypergraph(MonoidalCategory, NamedGeneric['category']):
         The image of each box is computed by the functor into ``cls``, then
         the images are glued in a single pass with :meth:`from_glued`,
         rather than folding them one at a time with :meth:`then`, which
-        relabels the whole hypergraph built so far at every box.
+        relabels the whole hypergraph built so far at every box. The trace
+        of a planar traced category, which a hypergraph cannot wire, is a box
+        of its own, as decoding its argument would need swaps.
 
         Example
         -------
@@ -1551,8 +1578,12 @@ class Hypergraph(MonoidalCategory, NamedGeneric['category']):
         functor = factory.functor(
             ob_map=lambda typ: typ, ar_map=factory.from_box,
             dom=category, cod=factory)
+        trace = getattr(category, "trace_factory", ())
+        if not isclass(trace) or issubclass(category, SymmetricCategory):
+            trace = ()
         return factory.from_glued(old.dom, old.cod, [
-            (functor(box), offset)
+            (factory.from_box(box) if isinstance(box, trace)
+             else functor(box), offset)
             for layer in old.inside
             for box, offset in layer.boxes_and_offsets])
 

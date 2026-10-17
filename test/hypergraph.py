@@ -400,3 +400,16 @@ def test_make_causal_traces_the_type_of_the_producer():
     x = compact.Ty('x')
     graph = compact.Box('f', x @ x.r, x @ x.r).to_hypergraph().trace()
     assert graph.to_diagram().to_hypergraph() == graph
+
+
+def test_trace_needs_traced_pivotal():
+    from discopy import rigid, pivotal, compact
+    x = rigid.Ty('x')
+    graph = rigid.Box('f', x @ x, x @ x).to_hypergraph()
+    for left in (True, False):
+        with raises(AxiomError):
+            graph.trace(left=left)
+    for module in (pivotal, compact):
+        x = module.Ty('x')
+        graph = module.Box('f', x @ x, x @ x).to_hypergraph()
+        assert graph.trace().cod == graph.trace(left=True).cod == x

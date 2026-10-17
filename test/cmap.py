@@ -194,7 +194,10 @@ def test_diagram_to_map_structure_and_errors():
 
     tx = traced.Ty("x")
     traced_box = traced.Box("f", tx, tx)
-    assert traced.Trace(traced_box).to_map() == traced_box.to_map().trace()
+    # A planar trace is a box of the map, which a decoded map's trace is too.
+    assert traced.Trace(traced_box).to_map().boxes == (
+        traced.Trace(traced_box), )
+    assert traced_box.to_map().trace().to_diagram() == traced.Trace(traced_box)
 
     px, py = map(pivotal.Ty, "xy")
     pbox = pivotal.Box("f", px, py)
@@ -502,13 +505,13 @@ def test_trace():
 
 
 def test_make_causal_cuts_every_backward_wire_at_once():
-    from discopy import traced
-    x = traced.Ty("x")
-    f, g = traced.Box("f", x @ x, x @ x), traced.Box("g", x, x)
+    from discopy import symmetric
+    x = symmetric.Ty("x")
+    f, g = symmetric.Box("f", x @ x, x @ x), symmetric.Box("g", x, x)
     cmap = (f.to_map() >> g.to_map() @ x).trace(2)
     assert not cmap.is_acyclic
     assert cmap.make_causal().boxes == (
-        traced.Trace(traced.Trace(f >> g @ x)), )
+        symmetric.Trace(symmetric.Trace(f >> g @ x)), )
     assert cmap.to_diagram().to_map() == cmap
 
 
