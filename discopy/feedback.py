@@ -607,12 +607,12 @@ class Box(monoidal.Box, Diagram):
     _time_step, _args, _params = 0, (), {}
     time_step = property(lambda self: self._time_step)
 
-    def __init__(self, name, dom, cod, *, time_step: int = 0, **params):
-        self._time_step, self._params = time_step, params
-        monoidal.Box.__init__(self, name, dom, cod, **params)
+    def __init__(self, *args, time_step: int = 0, **params):
+        self._time_step, self._args, self._params = time_step, args[3:], params
+        super().__init__(*args, **params)
 
     def to_drawing(self):
-        result = monoidal.Box.to_drawing(self)
+        result = super().to_drawing()
         if result.box.drawing_name:
             result.box.drawing_name += str_delayed(self.time_step)
         return result
@@ -651,10 +651,9 @@ class Box(monoidal.Box, Diagram):
 
     @classmethod
     def from_tree(cls, tree: dict) -> Box:
-        dom, cod = map(from_tree, (tree['dom'], tree['cod']))
-        return cls(
-            tree['name'], dom, cod, time_step=tree.get('time_step', 0),
-            data=tree.get('data', None), is_dagger='is_dagger' in tree)
+        result = super().from_tree(tree)
+        result._time_step = tree.get('time_step', 0)
+        return result
 
     def setoid(self):
         return super().setoid() + (self.time_step, )
@@ -699,7 +698,7 @@ class Feedback(Box, monoidal.Bubble):
             + ("" if len(mem) == 1 else f", mem={mem}")\
             + (", left=True" if left else "") + ")"
         monoidal.Bubble.__init__(self, arg, dom=dom, cod=cod)
-        Box.__init__(self, name, dom, cod)
+        monoidal.Box.__init__(self, name, dom, cod)
 
     @staticmethod
     def fed_back(mem: Ty) -> Ty:
