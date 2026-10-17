@@ -27,5 +27,8 @@ which this branch is stacked on. Earlier in the same session it was agreed that 
       > "prove" anything about Python though?
 - [ ] Matching: find the regions a left-hand side occurs at, for `rewrite` to apply a rule
 - [ ] A fast extraction, checked against the brute-force one by `extraction_optimality`
-- [WIP] @session_01VFjLpUVTvAs7PfxAhx2igm-2026-10-17 12:00 Mark the maps the trace is uniform along. @toumix, verbatim:
+- [x] Mark the maps the trace is uniform along. @toumix, verbatim:
       > can we add an extra boolean attribute "strict" which characterises for which maps the uniform axiom holds?
+      `is_strict` on traced diagrams and `trace_uniformity` along copy, declared failing on the free
+      categories; checking it on `python.Function` waits on
+      [#91](https://github.com/rel-int/discopy-next/issues/91), its multiplicative trace raising on any loop

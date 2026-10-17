@@ -89,3 +89,7 @@ NOT_DETERMINISTIC = (
 INDUCTIVE_CONGRUENCE = (
     "Congruence is closed as a least fixpoint, which relates nothing on a "
     "feedback loop: two copies of a cycle are related only coinductively.")
+NOT_UNIFORM = (
+    "A free box is not deterministic and a free trace is uniform along no "
+    "map but an isomorphism, which is dinaturality: uniformity along a "
+    "strict map is asked of a model, e.g. a least fixed point.")

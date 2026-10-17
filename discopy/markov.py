@@ -71,13 +71,13 @@ Both copy and merge boxes are translated to spiders, thus when they appear
 in the same diagram they automatically satisfy the :mod:`frobenius` axioms.
 """
 
-from __future__ import annotations
 
-from typing import ClassVar
+from typing import ClassVar, Self
 
-from discopy import symmetric, monoidal, cmap, hypergraph, messages
+from discopy import axioms, symmetric, monoidal, cmap, hypergraph, messages
 from discopy.abc import MarkovCategory
-from discopy.axioms import FUEL
+from discopy.axioms import (
+    FUEL, Atom, Hom, Obj, Tensor, axiom)
 from discopy.cat import factory
 from discopy.monoidal import Ty  # noqa: F401  pylint: disable=unused-import
 from discopy.utils import assert_isatomic, factory_name, from_tree
@@ -150,7 +150,7 @@ class Diagram(symmetric.Diagram, MarkovCategory):
             else cls.merge_factory(typ, n_legs_in)
 
     @classmethod
-    def copy(cls, x: monoidal.Ty, n=2) -> Diagram:
+    def copy(cls, x: monoidal.Ty, n=2) -> "Diagram":
         """
         Make :code:`n` copies of a given type :code:`x`.
 
@@ -163,7 +163,7 @@ class Diagram(symmetric.Diagram, MarkovCategory):
             cls, 1, n, x)  # ty: ignore[invalid-argument-type]
 
     @classmethod
-    def merge(cls, x: monoidal.Ty, n=2) -> Diagram:
+    def merge(cls, x: monoidal.Ty, n=2) -> "Diagram":
         """
         Merge :code:`n` copies of a given type :code:`x`.
 
@@ -174,7 +174,7 @@ class Diagram(symmetric.Diagram, MarkovCategory):
         return cls.copy(x, n).dagger()
 
     @classmethod
-    def discard(cls, x: monoidal.Ty) -> Diagram:
+    def discard(cls, x: monoidal.Ty) -> "Diagram":
         """
         The discard of an atomic type :code:`x`.
 
@@ -185,6 +185,28 @@ class Diagram(symmetric.Diagram, MarkovCategory):
 
     map_agreement = monoidal.Diagram.map_agreement.failing(
         messages.MAP_HAS_NO_SPIDERS)
+
+    @axiom
+    def trace_uniformity[Γ: Obj[Ty], Δ: Obj[Ty], M: Atom[Ty]](
+            cls, f: Hom[Self, Tensor[Γ, M], Tensor[Δ, M]]
+    ) -> axioms.Equation[Hom[Self, Γ, Δ]]:
+        """
+        The trace is uniform along the copy of its memory, a strict map.
+
+        Two copies of a loop are the one loop: ``g`` runs ``f`` on each
+        copy of the memory, with the input copied and one of the outputs
+        discarded, so that ``f >> Δ @ copy(M) == Γ @ copy(M) >> g`` when
+        ``f`` is deterministic, and uniformity then gives ``f.trace()``
+        equal to ``g.trace(2)``. This is what relating two unrollings of
+        a feedback loop by bisimulation relies on.
+        """
+        base, cobase, mem = f.dom[:-1], f.cod[:-1], f.dom[-1:]
+        twice = cls.copy(base) @ mem @ mem\
+            >> base @ cls.swap(base, mem) @ mem >> f @ f\
+            >> cobase @ mem @ cls.discard(cobase) @ mem
+        return cls.equation_factory(f.trace(), twice.trace(2))
+
+    trace_uniformity = trace_uniformity.failing(messages.NOT_UNIFORM)
 
 
 class Box(symmetric.Box, Diagram):
@@ -240,6 +262,8 @@ class Copy(Box):
         x : The type to copy.
         n : The number of copies.
     """
+    is_strict = True
+
     def __init__(self, x: monoidal.Ty, n: int = 2):
         assert_isatomic(x, monoidal.Ty)
         name = f"Copy({x}" + ("" if n == 2 else f", {n}") + ")"
@@ -254,7 +278,7 @@ class Copy(Box):
         """ The arguments of :meth:`__new__`, which a pickle needs. """
         return self.dom, len(self.cod)
 
-    def dagger(self) -> Merge:
+    def dagger(self) -> "Merge":
         """
         The merge of the same type, in the category of the copy.
 
@@ -281,7 +305,7 @@ class Copy(Box):
                 'x': self.dom.to_tree(), 'n': len(self.cod)}
 
     @classmethod
-    def from_tree(cls, tree: dict) -> Copy:
+    def from_tree(cls, tree: dict) -> "Copy":
         return cls(from_tree(tree['x']), tree['n'])
 
 
@@ -293,13 +317,15 @@ class Merge(Box):
         x : The type of wires to merge.
         n : The number of wires to merge.
     """
+    is_strict = True
+
     def __init__(self, x: monoidal.Ty, n: int = 2):
         assert_isatomic(x, monoidal.Ty)
         name = f"Merge({x}" + ("" if n == 2 else f", {n}") + ")"
         Box.__init__(self, name, dom=x ** n, cod=x,
                      draw_as_spider=True, color="black", drawing_name="")
 
-    def dagger(self) -> Copy:
+    def dagger(self) -> "Copy":
         """ The copy of the same type, in the category of the merge. """
         return self.copy_factory(self.cod, len(self.dom))
 
@@ -313,7 +339,7 @@ class Merge(Box):
                 'x': self.cod.to_tree(), 'n': len(self.dom)}
 
     @classmethod
-    def from_tree(cls, tree: dict) -> Merge:
+    def from_tree(cls, tree: dict) -> "Merge":
         return cls(from_tree(tree['x']), tree['n'])
 
 

@@ -37,6 +37,16 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   spiders over a category with none raises `AxiomError`, where it raised
   `AttributeError` for want of a `spider_factory`.
 
+- `traced.Diagram.is_strict`, whether the trace is uniform along a map:
+  `h : U -> V` is strict when `f >> B @ h == A @ h >> g` implies
+  `f.trace() == g.trace()`, after Hasegawa (1997) and Simpson and Plotkin
+  (2000), strict maps preserving the least element of a least fixed point.
+  A diagram is strict when its boxes are: a free box is not, a permutation,
+  a copy, a discard and a merge are, and so is the trace of a strict map.
+  `markov.Diagram.trace_uniformity` states uniformity along the copy of
+  the memory, that two copies of a loop are the one loop, which relating
+  two unrollings of a feedback loop by bisimulation relies on; it fails in
+  every free category, `NOT_UNIFORM`, and is asked of a model.
 - `RigidCategory.rotate_contravariance`, that rotation reverses
   composition, and `adjunction`, that the left and right adjoints of a
   morphism are mutually inverse, which is the class of bug #716; and
