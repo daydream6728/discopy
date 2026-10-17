@@ -279,10 +279,19 @@ is_deterministic=False)
         """
         return super().setoid() + (self.is_deterministic, self.is_affine)
 
+    def flagged(self, other: Box) -> Box:
+        """
+        Give a box built from this one the flags of this one, as
+        :meth:`dagger` does on top of the dagger of the class it extends,
+        e.g. one that keeps a winding number, and so do the rotations of a
+        :class:`discopy.frobenius.Box`.
+        """
+        for name, value in self.flags().items():
+            setattr(other, name, value)
+        return other
+
     def dagger(self) -> Box:
-        return type(self)(
-            self.name, self.cod, self.dom, data=self.data,
-            is_dagger=not self.is_dagger, **self.flags())
+        return self.flagged(super().dagger())
 
     def to_tree(self) -> dict:
         """
@@ -295,13 +304,12 @@ is_deterministic=False)
         return {**super().to_tree(), **self.flags()}
 
     @classmethod
-    def from_tree(cls, tree: dict) -> Box:
-        dom, cod = map(from_tree, (tree['dom'], tree['cod']))
-        return cls(
-            name=tree['name'], dom=dom, cod=cod, data=tree.get('data'),
-            is_dagger='is_dagger' in tree, **{
-                name: tree[name] for name in ("is_deterministic", "is_affine")
-                if name in tree})
+    def from_tree(cls, tree: dict):
+        result = super().from_tree(tree)
+        for name in ("is_deterministic", "is_affine"):
+            if name in tree:
+                setattr(result, name, tree[name])
+        return result
 
 
 class Permutation(symmetric.Permutation, Box):
@@ -440,11 +448,28 @@ class Sum(symmetric.Sum, Box):
     """
     A markov sum is a symmetric sum and a markov box.
 
+    Its flags are read off its terms: copying and discarding are linear, so
+    that a sum is deterministic when it has at most one term and that term
+    is, and affine when it has exactly one and that term is.
+
     Parameters:
         terms (tuple[Diagram, ...]) : The terms of the formal sum.
         dom (Ty) : The domain of the formal sum.
         cod (Ty) : The codomain of the formal sum.
+
+    Example
+    -------
+    >>> x = Ty('x')
+    >>> f = Box('f', x, x)
+    >>> assert Sum((f, )).is_cartesian and not (f + f).is_deterministic
+    >>> zero = Sum((), x, x)
+    >>> assert zero.is_deterministic and not zero.is_affine
     """
+    def __init__(self, terms, dom=None, cod=None):
+        super().__init__(terms, dom, cod)
+        self.is_deterministic = len(self.terms) < 2 and all(
+            term.is_deterministic for term in self.terms)
+        self.is_affine = len(self.terms) == 1 and self.terms[0].is_affine
 
 
 class Functor(symmetric.Functor):

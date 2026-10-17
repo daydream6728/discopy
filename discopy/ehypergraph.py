@@ -154,6 +154,10 @@ class EHypergraph[category](
 
     def __init__(
             self, graph: Hypergraph, classes: tuple[int, ...] | None = None):
+        if not isinstance(self.category, type)\
+                or not issubclass(self.category, markov.Diagram):
+            raise AxiomError(messages.NOT_MARKOV.format(factory_name(
+                type(self))))
         if not graph.is_left_monogamous or not graph.is_acyclic:
             raise AxiomError(messages.NOT_SHARING.format(graph))
         n = graph.n_spiders
@@ -285,12 +289,14 @@ class EHypergraph[category](
     def add(self, box, inputs: tuple[int, ...]) -> tuple[Self, tuple]:
         """
         Add a box reading some spiders, egg's add, and return the spiders of
-        its outputs: an equal box reading the same classes is not added
-        again, its outputs standing for those of the box.
+        its outputs: an equal deterministic box reading the same classes is
+        not added again, its outputs standing for those of the box, while a
+        second sample is another sample.
         """
         key = tuple(self.classes[s] for s in inputs)
         for other, (src, tgt) in zip(self.graph.boxes, self.graph.box_wires):
-            if other == box and tuple(self.classes[s] for s in src) == key:
+            if box.is_deterministic and other == box\
+                    and tuple(self.classes[s] for s in src) == key:
                 return self, tgt
         graph, n = self.graph, self.graph.n_spiders
         outputs = tuple(range(n, n + len(box.cod)))
@@ -314,10 +320,12 @@ class EHypergraph[category](
         if (len(dom), len(cod)) != (len(rhs.dom), len(rhs.cod)) or types != [
                 rhs.spider_types[s] for s in rhs.dom_wires + rhs.cod_wires]:
             raise AxiomError(messages.NOT_A_BOUNDARY.format(rhs, dom, cod))
-        inside = {classes[s] for s in dom} | {
-            classes[s] for j in region for s in graph.box_wires[j][1]}
-        if any(classes[s] not in inside for s in cod + tuple(
-                s for j in region for s in graph.box_wires[j][0])):
+        reached, todo = {classes[s] for s in dom}, set(region)
+        while fired := {j for j in todo if set(self.inputs(j)) <= reached}:
+            todo -= fired
+            reached |= {
+                classes[s] for j in fired for s in graph.box_wires[j][1]}
+        if todo or any(classes[s] not in reached for s in cod):
             raise AxiomError(messages.NOT_A_REGION.format(region, dom, cod))
 
     def rewrite(self, region: tuple[int, ...], dom: tuple[int, ...],
@@ -329,8 +337,10 @@ class EHypergraph[category](
         outputs. The region stays: an e-graph never deletes, a section may.
         It raises :class:`AxiomError` when a box of either side is not
         cartesian, an effect being context, when the boundaries have other
-        types, when the region does not compute ``cod`` from ``dom`` or when
-        ``rhs`` is not a diagram with sharing.
+        types, when the region does not compute ``cod`` from ``dom``, i.e.
+        when its boxes cannot fire in some order from the classes of ``dom``
+        and reach those of ``cod``, or when ``rhs`` is not a diagram with
+        sharing.
 
         Rewriting a box into itself changes nothing:
 
@@ -578,29 +588,16 @@ class EHypergraph[category](
     dagger_monoidality = MonoidalCategory.dagger_monoidality.inapplicable(
         messages.SHARING_HAS_NO_DAGGER)
 
-    # The laws: the hypergraph of an e-hypergraph is a strict monoidal functor.
-
     @axiom
-    def graph_identity[X: Obj[Ty]](
-            cls, x: Var[Ty, X]) -> Equation[Hypergraph]:
-        """ The hypergraph of an identity is the identity hypergraph. """
-        return Equation(cls.id(x).graph, Hypergraph[cls.category].id(x))
-
-    @axiom
-    def graph_composition[A: Obj[Ty], B: Obj[Ty], C: Obj[Ty]](
-            cls, f: Hom[Self, A, B], g: Hom[Self, B, C]
+    def graph_functoriality[
+            A: Obj[Ty], B: Obj[Ty], C: Obj[Ty], D: Obj[Ty], E: Obj[Ty]](
+            cls, f: Hom[Self, A, B], g: Hom[Self, B, C], h: Hom[Self, D, E]
     ) -> Equation[Hypergraph]:
-        """ The hypergraph of a composite composes the hypergraphs. """
-        return Equation((f >> g).graph, f.graph >> g.graph)
-
-    @axiom
-    def graph_tensor[A: Obj[Ty], B: Obj[Ty], C: Obj[Ty], D: Obj[Ty]](
-            cls, f: Hom[Self, A, B], g: Hom[Self, C, D]
-    ) -> Equation[Hypergraph]:
-        """ The hypergraph of a tensor tensors the hypergraphs. """
-        return Equation((f @ g).graph, f.graph @ g.graph)
-
-    # Merging spiders states an equivalence relation.
+        """
+        The hypergraph of an e-hypergraph is a strict monoidal functor, the
+        identity on an object being the identity hypergraph by definition.
+        """
+        return Equation(((f >> g) @ h).graph, (f.graph >> g.graph) @ h.graph)
 
     @axiom
     def merge_reflexivity[I: Count](
@@ -627,8 +624,6 @@ class EHypergraph[category](
         chained = graph.merge(s, t).merge(t, u)
         return Equation(chained.merge(s, u), chained)
 
-    # Congruence closure: the least congruence containing the relation.
-
     @axiom
     def rebuild_idempotence(cls, graph: Self) -> Equation[Self]:
         """ A congruence is its own closure. """
@@ -654,15 +649,35 @@ class EHypergraph[category](
                         graph.rebuild().merge(*pair).rebuild())
 
     @axiom
-    def congruence[A: Obj[Ty], B: Obj[Ty]](
-            cls, f: Hom[Self, A, B]) -> Equation[tuple[bool, ...]]:
+    def rebuild_minimality(cls, graph: Self) -> Equation[tuple[int, ...]]:
         """
-        Relating the inputs of two copies of a hypergraph relates two of
-        their outputs exactly when every box they depend on is deterministic:
-        equal boxes on related inputs have related outputs when they are
-        deterministic, while two samples are independent.
+        Closing a relation relates nothing but what it relates and the
+        outputs at one position of equal deterministic boxes: the closure is
+        generated by the relation and those of its own pairs.
         """
-        graph, n, m = f.graph, len(f.dom), len(f.cod)
+        closed, first, pairs = graph.rebuild(), {}, list(enumerate(
+            graph.classes))
+        for spider, (ports, _) in enumerate(closed.graph.spider_wires):
+            node, boxes = closed.graph.ports[min(ports)], closed.graph.boxes
+            box = boxes[node.depth] if node.kind == "cod" else None
+            if box is not None and box.is_deterministic:
+                key = closed.classes[spider], box, node.i
+                pairs.append((first.setdefault(key, spider), spider))
+        return Equation(partition(len(closed.classes), pairs), closed.classes)
+
+    @axiom
+    def congruence[A: Obj[Ty], B: Obj[Ty], C: Obj[Ty]](
+            cls, f: Hom[Self, A, B], g: Hom[Self, B, C]
+    ) -> Equation[tuple[bool, ...]]:
+        """
+        Relating the inputs of two copies of a composite, whose boxes read
+        one another, relates two of their outputs exactly when every box they
+        depend on is deterministic: equal boxes on related inputs have related
+        outputs when they are deterministic, while two samples are
+        independent.
+        """
+        composite = f >> g
+        graph, n, m = composite.graph, len(f.dom), len(g.cod)
         twice = type(f)(graph @ graph)
         for k in range(n):
             twice = twice.merge(
@@ -670,15 +685,13 @@ class EHypergraph[category](
         cod, classes = twice.graph.cod_wires, twice.rebuild().classes
 
         def determined(spider):
-            box = f.box_of(min(graph.spider_wires[spider][0]))
+            box = composite.box_of(min(graph.spider_wires[spider][0]))
             return box is None or graph.boxes[box].is_deterministic and all(
                 map(determined, graph.box_wires[box][0]))
 
         return Equation(
             tuple(classes[cod[k]] == classes[cod[m + k]] for k in range(m)),
             tuple(map(determined, graph.cod_wires)))
-
-    # Sections and extraction: a section of least tree cost.
 
     @axiom
     def extraction_soundness(cls, graph: Self) -> Equation[bool]:
@@ -693,8 +706,10 @@ class EHypergraph[category](
 
     @axiom
     def extraction_optimality(cls, graph: Self) -> Equation[int]:
-        """ No section costs less than what is extracted. """
-        return Equation(graph.cost(), min(
+        """
+        What is extracted costs :meth:`cost`, and no section costs less.
+        """
+        return Equation(type(graph)(graph.extract()).cost(), graph.cost(), min(
             type(graph)(section).cost() for section in graph.sections()))
 
     @axiom
@@ -706,17 +721,24 @@ class EHypergraph[category](
     @axiom
     def effects_kept(cls, graph: Self) -> Equation[bool]:
         """
-        Every section keeps every box that is not affine, all of those that
-        are not deterministic either, and one of equal deterministic ones.
+        Every section keeps every box that is not affine: all of those that
+        are not deterministic either, and one of the equal deterministic ones
+        on related inputs, checked on two copies side by side, whose equal
+        effects read unrelated inputs.
         """
-        effects = [box for box in graph.graph.boxes if not box.is_affine]
-        samples = Counter(box for box in effects if not box.is_deterministic)
-        return Equation(all(
-            set(effects) <= set(section.boxes)
-            and samples <= Counter(section.boxes)
-            for section in graph.sections()), True)
+        def effects(boxes, inputs):
+            pairs = [(box, src) for box, src in zip(boxes, inputs)
+                     if not box.is_affine]
+            hard = {pair for pair in pairs if pair[0].is_deterministic}
+            return len(hard), Counter(
+                box for box, _ in pairs if not box.is_deterministic)
 
-    # Rewriting: an equation glued onto a region.
+        twice = graph @ graph
+        expected = effects(twice.graph.boxes, map(
+            twice.inputs, range(len(twice.graph.boxes))))
+        return Equation(all(expected == effects(
+            section.boxes, (src for src, _ in section.box_wires))
+            for section in twice.sections()), True)
 
     @axiom
     def rewrite_identity(cls, graph: Self) -> Equation[Self]:
@@ -735,18 +757,20 @@ class EHypergraph[category](
     def extraction_rewrite[A: Obj[Ty], B: Obj[Ty]](
             cls, f: Hom[Self, A, B], g: Hom[Self, A, B]) -> Equation[bool]:
         """
-        Rewriting the whole of ``f`` into what ``g`` extracts costs no more
-        than either: a rewrite adds producers and relates classes, which
-        lowers the least cost of each.
+        What is extracted from rewriting the whole of ``f`` into what ``g``
+        extracts costs no more than either: a rewrite adds producers and
+        relates classes, which lowers the least cost of each.
         """
         rewritten = f.rewrite(
             tuple(range(len(f.graph.boxes))), f.graph.dom_wires,
             f.graph.cod_wires, g.extract())
-        return Equation(rewritten.cost() <= min(f.cost(), g.cost()), True)
+        return Equation(type(f)(rewritten.extract()).cost() <= min(
+            f.cost(), g.cost()), True)
 
     rebuild_idempotence = rebuild_idempotence.weaken(effects=True)
     rebuild_extensivity = rebuild_extensivity.weaken(effects=True)
     rebuild_confluence = rebuild_confluence.weaken(effects=True)
+    rebuild_minimality = rebuild_minimality.weaken(effects=True)
     congruence = congruence.weaken(effects=True)
     extraction_soundness = extraction_soundness.weaken(effects=True)
     extraction_validity = extraction_validity.weaken(effects=True)

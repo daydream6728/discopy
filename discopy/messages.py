@@ -92,8 +92,9 @@ NOT_CARTESIAN = (
     "for each class would decorrelate a stochastic one.")
 NOT_A_BOUNDARY = "{} does not have the types of the spiders {} -> {}."
 NOT_A_REGION = (
-    "The boxes {} do not compute the spiders {} -> {}: they read a class "
-    "that neither the domain nor they write, or do not write the codomain.")
+    "The boxes {} do not compute the spiders {} -> {}: they cannot all fire "
+    "in some order from the classes of the domain, or do not reach those of "
+    "the codomain.")
 SHARING_HAS_NO_DAGGER = (
     "A diagram with sharing has no dagger: the dagger of a copy is a merge, "
     "a spider with two producers.")

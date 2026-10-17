@@ -482,6 +482,11 @@ class Box(markov.Box, Diagram):
     """
     A feedback box is a markov box in a feedback diagram.
 
+    It initialises itself as a plain :class:`monoidal.Box`, as a feedback
+    swap or copy calls it once its own structure is set, where the
+    initialiser of :class:`markov.Box` would hand a swap on to that of its
+    braid. It has the flags of a total function, which it does not take.
+
     Parameters:
         name (str) : The name of the box.
         dom (monoidal.Ty) : The domain of the box, i.e. its input.
@@ -492,8 +497,6 @@ class Box(markov.Box, Diagram):
     _time_step = 0
     time_step = property(lambda self: self._time_step)
 
-    # A swap or a copy calls this once its structure is set, as a plain box:
-    # the cooperative markov.Box.__init__ would send a swap to its braid's.
     def __init__(  # pylint: disable=super-init-not-called
             self, name, dom, cod, time_step: int = 0, **params):
         self._time_step, self._params = time_step, params

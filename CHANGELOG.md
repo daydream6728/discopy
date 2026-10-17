@@ -15,9 +15,11 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   its spiders, whose classes are the e-classes. Over cartesian diagrams,
   which are terms with sharing, it is an e-graph: `from_diagram` hash-conses
   a diagram as egg does a term, `rebuild` is the congruence closure of the
-  relation, `add` hash-conses a box, and `rewrite(region, dom, cod, rhs)`
-  glues the right-hand side of an equation onto the inputs of a region,
-  hash-consing its boxes, then relates the outputs of the region to its own.
+  relation, `add` hash-conses a deterministic box, and `rewrite(region,
+  dom, cod, rhs)` glues the right-hand side of an equation onto the inputs
+  of a region, hash-consing its boxes, then relates the outputs of the
+  region to its own, refusing a region whose boxes cannot fire in some
+  order from the classes of its domain and reach those of its codomain.
   A section chooses a producer for each class it needs, those of the
   codomain and those read by the boxes it keeps, i.e. the boxes it chooses
   and every box that is not affine, and an acyclic choice decodes to a
@@ -28,17 +30,22 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   when they are deterministic, two samples being independent, an equation
   is between cartesian diagrams, an effect being context, and the
   e-hypergraphs over a category form a monoidal category, the relation
-  carried along the pushout. Their laws are checked by the property matrix
-  over `markov.Diagram`, drawn with some boxes that are not deterministic
-  or not affine where the laws need them: the hypergraph is a strict
-  monoidal functor, merging states an equivalence, `rebuild` is a closure
-  operator relating the outputs of two copies of a diagram on related
-  inputs exactly when they depend on deterministic boxes only, extraction
-  is sound, valid, optimal and idempotent, every section keeps every
-  effect, rewriting a rebuilt e-hypergraph into its own hypergraph changes
-  nothing and rewriting never raises the cost of extraction. A semantic
-  test evaluates every section in random tensors, sampling and conditioning
-  included, as the diagram it comes from. `hypergraph.relabeling` is how a
+  carried along the pushout, over a category whose boxes carry the flags
+  of `markov.Box`, `AxiomError` otherwise. Their laws are checked by the
+  property matrix over `markov.Diagram`, drawn with some boxes that are
+  not deterministic or not affine where the laws need them: the hypergraph
+  is a strict monoidal functor, merging states an equivalence, `rebuild`
+  is a closure operator relating the outputs of two copies of a diagram on
+  related inputs exactly when they depend on deterministic boxes only, and
+  the closure of the identity relates nothing but the outputs at one
+  position of equal boxes, what is extracted is a section, valid, of
+  least cost and idempotent, every section keeps every effect, once per
+  class of equal deterministic ones on related inputs, rewriting a rebuilt
+  e-hypergraph into its own hypergraph changes nothing and rewriting never
+  raises the cost of what is extracted. A semantic test evaluates every
+  section in random tensors, sampling and conditioning included, as the
+  diagram it comes from, two boxes interpreted alike only when one was
+  rewritten into the other. `hypergraph.relabeling` is how a
   hypergraph numbers its spiders, factored out of its constructor so that
   the relation follows them, and decoding a hypergraph that needs spiders
   over a category with none raises `AxiomError`, where it raised
@@ -52,13 +59,19 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   not affine is a hard constraint, a soft score not being deterministic.
   The flags are attributes of each box rather than of its class, as an
   identity or a swap is a total function whatever its class, take part in
-  equality and hashing, and are written by `repr` and `to_tree` when they
-  are `False`, so that existing representations are unchanged, and kept by
-  `dagger`. `markov.Diagram.is_deterministic`, `is_affine` and
-  `is_cartesian`, both, hold when they hold of every box: a copy, a discard,
-  a swap and a permutation are cartesian, a merge is deterministic but not
-  affine. `feedback.Box` initialises itself as a plain box, as it did
-  through `markov.Box`, whose initialiser now cooperates.
+  equality and hashing, `tensor.Box`'s included, and are written by `repr`
+  and `to_tree` when they are `False`, so that existing representations are
+  unchanged, `pregroup.Word`'s included. `dagger`, `from_tree` and the
+  rotations of a `frobenius.Box` keep them on top of what the class they
+  extend builds, so that the dagger of a rotated box keeps its winding and
+  that of a word its boundary. `markov.Diagram.is_deterministic`,
+  `is_affine` and `is_cartesian`, both, hold when they hold of every box:
+  a copy, a discard, a swap and a permutation are cartesian, a merge is
+  deterministic but not affine, and a formal sum is deterministic when it
+  has at most one term, which is, and affine when it has exactly one,
+  which is. `feedback.Box` initialises itself as a plain box, as it did
+  through `markov.Box`, whose initialiser now cooperates, and has the flags
+  of a total function.
 
 - `RigidCategory.rotate_contravariance`, that rotation reverses
   composition, and `adjunction`, that the left and right adjoints of a

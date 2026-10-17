@@ -130,3 +130,25 @@ def test_Box_flags():
     assert (Copy(p) >> sample @ p).is_affine
     assert not (sample >> condition).is_cartesian
     assert loads(dumps(Box('f', p, x))).is_cartesian
+
+
+def test_Box_flags_cooperate():
+    import numpy as np
+    from discopy import closed, frobenius, grammar, rigid, tensor
+    from discopy.grammar.pregroup import Ty as Grammatical, Word
+    from discopy.utils import dumps, loads
+    x, d = frobenius.Ty('x'), tensor.Dim(2)
+    f, flagged = frobenius.Box('f', x, x), frobenius.Box(
+        'f', x, x, is_affine=False)
+    assert f.r[::-1][::-1] == f.r and f.r.dagger().z == 1
+    assert flagged.r.l == flagged and not flagged.r.dagger().is_affine
+    n, word = Grammatical('n'), Word('w', Grammatical('n'))
+    assert (word.dagger().dom, word.dagger().cod) == (n, Grammatical())
+    sample = Word('w', n, is_deterministic=False)
+    assert eval(repr(sample), {
+        'Word': Word, 'grammar': grammar, 'rigid': rigid}) == sample
+    constant = closed.Constant('c', closed.Ty('x'))
+    assert loads(dumps(constant)) == constant
+    t = tensor.Box('t', d, d, data=[[1, 2j], [3, 4]])
+    assert np.allclose(t.r.dagger().eval().array, t.r.eval().dagger().array)
+    assert t != tensor.Box('t', d, d, data=t.data, is_deterministic=False)
