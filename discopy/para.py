@@ -68,9 +68,9 @@ category, with the empty parameter space:
 >>> assert t.trace().dom == x and t.trace().param == p
 
 The construction preserves each level of the hierarchy below symmetric:
-:class:`Traced`, :class:`Markov`, :class:`Closed`, :class:`Feedback`,
-:class:`Compact` and :class:`Hypergraph` lift the extra structure of their
-underlying category with the empty parameter space, e.g.
+:class:`Traced`, :class:`Markov`, :class:`Comarkov`, :class:`Closed`,
+:class:`Feedback`, :class:`Compact` and :class:`Hypergraph` lift the extra
+structure of their underlying category with the empty parameter space, e.g.
 
 >>> from discopy import frobenius
 >>> X = frobenius.Ty('x')
