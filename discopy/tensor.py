@@ -776,7 +776,7 @@ class Box[dtype](frobenius.Box, Diagram[dtype]):
         data = () if self.data is None else\
             tuple(self.data) if isinstance(self.data, list) else (self.data, )
         return (self.name, self.dom, self.cod, self.dtype,
-                self.is_deterministic, self.is_affine) + data
+                self.deterministic, self.affine) + data
 
 
 class Cup(frobenius.Cup, Box):

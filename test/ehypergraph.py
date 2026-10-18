@@ -11,7 +11,7 @@ from pytest import raises
 from discopy import symmetric
 from discopy.ehypergraph import EHypergraph, Markov, partition
 from discopy.hypergraph import Hypergraph
-from discopy.markov import Ty, Box, Copy, Diagram, Functor, Swap
+from discopy.markov import Ty, Box, Copy, Diagram, Functor, Merge, Swap
 from discopy.tensor import Dim, Tensor
 from discopy.utils import AxiomError
 
@@ -30,6 +30,8 @@ def test_samples_are_independent():
     graph = Markov.from_diagram(sample)
     assert len(graph.add(sample, (0, ))[0].graph.boxes) == 2
     assert Markov.from_diagram(f).add(f, (0, ))[1] == (1, )
+    unit = Markov.id(Ty()).add(Merge(x, 0), ())[0]
+    assert unit.add(Merge(x, 0), ())[1] == (1, )
 
 
 def test_category_has_flags():
@@ -45,6 +47,8 @@ def test_effects_are_kept():
     unread = Markov.from_diagram(f >> condition)
     assert unread.extract().boxes == (f, condition) and unread.cost() == 3
     assert Markov.from_diagram(f >> Diagram.discard(x)).extract().boxes == ()
+    assert Markov.from_diagram(f.dagger() >> Diagram.discard(x)).extract(
+        ).boxes == (f.dagger(), )
 
 
 def test_rewrite_refusals():

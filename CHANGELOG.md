@@ -96,9 +96,12 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   hypergraph numbers its spiders, factored out of its constructor so that
   the relation follows them, and decoding a hypergraph that needs spiders
   over a category with none raises `AxiomError`, where it raised
-  `AttributeError` for want of a `spider_factory`. A premise of a law
-  annotated `Self` is drawn with the parameters `Axiom.weaken` declares, as
-  a morphism already was.
+  `AttributeError` for want of a `spider_factory`; over a Markov category,
+  `make_bijective` merges the inputs of a spider with neither one input nor
+  one output before copying its outputs, as `to_diagram` already did, where
+  it raised a bare `ValueError`. A premise of a law annotated `Self`, or
+  with a testable shape of it such as `Related[Self]`, is drawn with the
+  parameters `Axiom.weaken` declares, as a morphism already was.
 - `markov.Box` takes the keyword arguments `is_deterministic` and
   `is_affine`, both `True` by default: a box is deterministic when copying
   commutes with it and affine when discarding does, e.g. a sample is not
@@ -108,18 +111,26 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   identity or a swap is a total function whatever its class, take part in
   equality and hashing, `tensor.Box`'s included, and are written by `repr`
   and `to_tree` when they are `False`, so that existing representations are
-  unchanged, `pregroup.Word`'s included. `dagger`, `from_tree` and the
-  rotations of a `frobenius.Box` keep them on top of what the class they
-  extend builds, so that the dagger of a rotated box keeps its winding and
-  that of a word its boundary. `markov.Diagram.is_deterministic`,
+  unchanged, `pregroup.Word`'s included. A box stores the flags it is
+  declared with as `deterministic` and `affine`, which hold of it but not of
+  its dagger nor of its rotations, as the converse or the transpose of a
+  total function need not be one. `dagger`, `subs`, `lambdify`, `from_tree`
+  and the rotations of a `frobenius.Box` or a `pregroup.Box` keep them on
+  top of what the class they extend builds, so that the dagger of a dagger
+  is the box again, the dagger of a rotated box keeps its winding and that
+  of a word its boundary. The flags of a spider are those of its legs and
+  phase, by spider fusion: it is deterministic when it has a leg in and no
+  phase, affine when it has exactly one, so that a cup is deterministic but
+  not affine and a cap neither, and of the ZX spiders only `Z`, that of the
+  basis a tensor copies, has them. `markov.Diagram.is_deterministic`,
   `is_affine` and `is_cartesian`, both, hold when they hold of every box:
   a copy, a discard, printed `Discard(x)` rather than `Copy(x, 0)`, a
-  swap and a permutation are cartesian, a merge is
-  deterministic but not affine, and a formal sum is deterministic when it
-  has at most one term, which is, and affine when it has exactly one,
-  which is. `feedback.Box` initialises itself as a plain box, as it did
-  through `markov.Box`, whose initialiser now cooperates, and has the flags
-  of a total function.
+  swap and a permutation are cartesian, a merge is deterministic when it
+  has an input and affine when it has exactly one, as a spider, and a
+  formal sum is deterministic when it has at most one term, which is, and
+  affine when it has exactly one, which is. `feedback.Box` initialises
+  itself as a plain box, as it did through `markov.Box`, whose initialiser
+  now cooperates, and has the flags of a total function.
 
 - `RigidCategory.rotate_contravariance`, that rotation reverses
   composition, and `adjunction`, that the left and right adjoints of a
@@ -1172,8 +1183,9 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - A member of a subscripted `NamedGeneric`, e.g. `Tensor[int]` or
   `Hypergraph[markov.Diagram]`, unpickled as a member of its origin, since
   the subscripted class never inherited `NamedGeneric.__setstate__`: it is
-  now rebuilt by `NamedGeneric.__reduce__`. `Copy` and `Discard` unpickle,
-  passing their type to `__new__`.
+  now rebuilt by `NamedGeneric.__reduce__`, while a member of a subclass
+  defined by name, e.g. a ZX spider or a circuit box, pickles by its own
+  class. `Copy` and `Discard` unpickle, passing their type to `__new__`.
 - `from_tree` reads back `Trace`, `Twist`, `Spider`, `Copy`, `Merge`,
   `Discard`, `Feedback` and an inverse `Braid`, and the repr of a `Trace`
   evaluates back to it.

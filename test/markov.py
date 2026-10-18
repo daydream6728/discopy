@@ -1,5 +1,5 @@
 from __future__ import annotations
-from pytest import raises
+from pytest import importorskip, raises
 
 from discopy.python import Function
 
@@ -129,6 +129,10 @@ def test_Box_flags():
     assert Copy(x).is_cartesian and Swap(x, x).is_cartesian
     assert Id(x).is_cartesian and Merge(x).is_deterministic
     assert not Merge(x).is_affine and not Merge(x).is_cartesian
+    assert [(Merge(x, n).is_deterministic, Merge(x, n).is_affine)
+            for n in range(3)] == [(False, False), (True, True), (True, False)]
+    f = Box('f', x, x)
+    assert not f.dagger().is_cartesian and f.dagger().dagger() == f
     assert not (Copy(p) >> sample @ p).is_deterministic
     assert (Copy(p) >> sample @ p).is_affine
     assert not (sample >> condition).is_cartesian
@@ -145,9 +149,21 @@ def test_Box_flags_cooperate():
         'f', x, x, is_affine=False)
     assert f.r[::-1][::-1] == f.r and f.r.dagger().z == 1
     assert flagged.r.l == flagged and not flagged.r.dagger().is_affine
+    assert not f.r.is_cartesian and f.r.l.is_cartesian
+    for m, k in [(m, k) for m in range(3) for k in range(3)]:
+        spider = frobenius.Spider(m, k, x)
+        assert (spider.is_deterministic, spider.is_affine) == (m > 0, m == 1)
+        assert spider.r.l == spider and loads(dumps(spider)) == spider
+    assert not frobenius.Spider(1, 1, x, 0.5).is_deterministic
+    with raises(TypeError):
+        frobenius.Spider(1, 2, x, is_affine=False)
+    cup, cap = frobenius.Cup(x, x), frobenius.Cap(x, x)
+    assert cup.is_deterministic and not cup.is_affine
+    assert not cap.is_deterministic and not cap.is_affine
     n, word = Grammatical('n'), Word('w', Grammatical('n'))
     assert (word.dagger().dom, word.dagger().cod) == (n, Grammatical())
     sample = Word('w', n, is_deterministic=False)
+    assert sample.r.l == sample and sample.r.flags() == sample.flags()
     assert eval(repr(sample), {
         'Word': Word, 'grammar': grammar, 'rigid': rigid}) == sample
     constant = closed.Constant('c', closed.Ty('x'))
@@ -155,3 +171,20 @@ def test_Box_flags_cooperate():
     t = tensor.Box('t', d, d, data=[[1, 2j], [3, 4]])
     assert np.allclose(t.r.dagger().eval().array, t.r.eval().dagger().array)
     assert t != tensor.Box('t', d, d, data=t.data, is_deterministic=False)
+
+
+def test_Box_flags_subs():
+    importorskip("sympy")
+    from sympy.abc import phi
+    from discopy import tensor
+    x, d = Ty('x'), tensor.Dim(2)
+    sample = Box('sample', x, x, data=phi, is_deterministic=False)
+    condition = tensor.Box('c', d, d, data=[phi, 0, 0, 1], is_affine=False)
+    assert sample.subs(phi, 1) == Box(
+        'sample', x, x, data=1, is_deterministic=False)
+    samples = (sample.dagger().lambdify(phi)(1),
+               (x @ sample >> sample @ x).subs(phi, 1))
+    conditions = (condition.subs(phi, 1), condition.r.lambdify(phi)(1))
+    assert not any(diagram.is_deterministic for diagram in samples)
+    assert not any(diagram.is_affine for diagram in conditions)
+    assert condition.subs(phi, 1).flags() == {'is_affine': False}
