@@ -3,18 +3,18 @@ from itertools import islice
 
 import numpy as np
 import pytest
-from hypothesis import given, settings, strategies as st
+from hypothesis import assume, given, settings, strategies as st
 from pytest import raises
 
 from discopy import symmetric
 from discopy.ehypergraph import EHypergraph, Markov
 from discopy.hypergraph import Hypergraph
-from discopy.markov import Ty, Box, Copy, Diagram, Functor
+from discopy.markov import Ty, Box, Copy, Diagram, Functor, Swap
 from discopy.tensor import Dim, Tensor
 from discopy.utils import AxiomError
 
 x = Ty('x')
-f, g = Box('f', x, x), Box('g', x, x)
+f, g, h = Box('f', x, x), Box('g', x, x), Box('h', x, x)
 sample = Box('sample', x, x, is_deterministic=False)
 condition = Box('condition', x, Ty(), is_affine=False)
 score = Box('score', x, Ty(), is_deterministic=False, is_affine=False)
@@ -110,6 +110,8 @@ def test_sections_evaluate_as_the_diagram(data):
         effects=True, max_merges=0)).graph.to_diagram()
     if data.draw(st.booleans()):
         diagram = Diagram.copy(diagram.dom) >> diagram @ diagram
+    widths = [len(diagram.dom)] + [len(layer.cod) for layer in diagram.inside]
+    assume(max(widths + [len(b.dom @ b.cod) for b in diagram.boxes]) <= 8)
     graph = Markov(Hypergraph[Diagram].from_diagram(diagram))
     boxes, rewritten, alike = graph.graph.boxes, graph, {}
     pairs = st.tuples(st.integers(0, 9), st.integers(0, 9))
@@ -142,16 +144,33 @@ def test_matches_flags_and_patterns():
     with raises(AxiomError):
         graph.rewrite((0, ), (None, ), (1, ), f.to_hypergraph())
     for rule in [(Diagram.discard(x) >> Box('c', Ty(), x), f),
-                 (f, g @ Diagram.discard(x)), (f, sample)]:
-        with raises(AxiomError):
-            next(graph.saturate(rule))
+                 (f, g @ Diagram.discard(x)), (f, sample), (sample, f)]:
+        with raises(AxiomError, match="is not a rule"):
+            graph.saturate(rule)
 
 
-def test_saturate_stops():
+def test_matches_bind_classes():
+    divide, m = Box('/', x @ x, x), Box('m', x @ x, x)
+    graph = Markov.from_diagram(divide)
+    lhs = (Copy(x) >> divide).to_hypergraph()
+    assert graph.matches(lhs) == []
+    assert graph.merge(0, 1).matches(lhs) == [((0, ), (0, ), (2, ))]
+    assert Markov.from_diagram(f @ g).matches((g >> f).to_hypergraph()) == []
+    twins = Copy(x) @ Copy(x) >> x @ Swap(x, x) @ x\
+        >> x @ x @ Swap(x, x) >> m @ m
+    assert Markov.from_diagram(twins).matches(twins.to_hypergraph()) == [
+        ((0, 1), (1, 0), (3, 2)), ((0, 1), (0, 1), (2, 3))]
+
+
+def test_saturate_stops_and_rebuilds():
     graph = Markov.from_diagram(f >> f)
     rounds = list(graph.saturate((f, g), (g, f)))
     assert len(rounds) == 1 and len(rounds[0].graph.boxes) == 4
     assert rounds[0].extract().boxes == (f, f)
+    *_, last = Markov.from_diagram(
+        Copy(x) >> (g >> f) @ (h >> f)).saturate((g, h))
+    first, second = last.graph.cod_wires
+    assert last.classes[first] == last.classes[second]
 
 
 def to_diagram(term, variables) -> Diagram:
@@ -192,9 +211,10 @@ def lookup(graph: EHypergraph, term, variables) -> int:
     if term[0] == "var":
         return graph.classes[graph.graph.dom_wires[variables.index(term[1])]]
     inputs = tuple(lookup(graph, child, variables) for child in children(term))
+    head = node(term)
     return next(graph.classes[tgt[0]] for j, (box, (_, tgt)) in enumerate(zip(
         graph.graph.boxes, graph.graph.box_wires))
-        if box == node(term) and graph.inputs(j) == inputs)
+        if box == head and graph.inputs(j) == inputs)
 
 
 def trace(term, rules, rounds: int) -> list[tuple]:
@@ -202,9 +222,12 @@ def trace(term, rules, rounds: int) -> list[tuple]:
     For each round of :meth:`EHypergraph.saturate`, as
     :func:`fixtures.egglog_reference.egglog_trace` gives them: whether it
     changed anything, the partition of the subterms of ``term`` and the cost
-    of what is extracted, under egglog's costs.
+    of what is extracted, under the costs of the reference.
     """
-    from fixtures.egglog_reference import subterms
+    from fixtures.egglog_reference import COSTS, subterms
+
+    def box_cost(box):
+        return COSTS.get(box.name, 1)
 
     def variables(term):
         return list(dict.fromkeys(
@@ -222,7 +245,7 @@ def trace(term, rules, rounds: int) -> list[tuple]:
                 sub)
         result.append((k < len(states), tuple(sorted((tuple(sorted(
             group, key=repr)) for group in members.values()), key=repr)),
-            Markov(state.extract(input_cost=0)).cost(input_cost=0)))
+            Markov(state.extract(box_cost, 0)).cost(box_cost, 0)))
     return result
 
 
@@ -241,14 +264,19 @@ def differential(seed: int, rounds: int = 4) -> tuple[list, list]:
         for state in egglog_trace(term, rules, rounds)]
 
 
-def test_egglog_example():
-    pytest.importorskip("egglog")
-    from fixtures.egglog_reference import EGG, C2, egglog_trace
+A, C1, C2 = ("var", "a"), ("const", 1), ("const", 2)
 
-    term = ("/", ("*", ("var", "a"), C2), C2)
+
+@pytest.mark.parametrize("term, rounds", [
+    (("/", ("*", A, C2), C2), 5),
+    (("+", ("<<", ("*", A, C1), C2), ("<<", A, C2)), 3)])
+def test_egglog_example(term, rounds):
+    pytest.importorskip("egglog")
+    from fixtures.egglog_reference import EGG, egglog_trace
+
     expected = [(state.updated, state.classes, state.cost)
                 for state in egglog_trace(term, EGG, 10)]
-    assert trace(term, EGG, 10) == expected and len(expected) == 5
+    assert trace(term, EGG, 10) == expected and len(expected) == rounds
 
 
 @pytest.mark.parametrize("seed", range(30))

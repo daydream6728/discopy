@@ -20,25 +20,30 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   of a region, hash-consing its boxes, then relates the outputs of the
   region to its own, refusing a region whose boxes cannot fire in some
   order from the classes of its domain and reach those of its codomain.
-  `matches(lhs)` is egg's e-matching modulo the classes: a pattern is a
-  cartesian diagram with sharing whose boxes produce its codomain, bound
-  box by box from the codomain up to equal boxes, flags included, so that
-  each of its spiders is bound to one class, and a match is `(region, dom,
-  cod)`, `None` for an input the pattern does not read, so that
-  `rewrite(*match, rhs)` applies a rule. `saturate(*rules)` iterates egg's
+  `matches(lhs)` is egg's e-matching modulo the classes: a pattern,
+  `is_pattern`, is a cartesian diagram with sharing whose boxes produce its
+  codomain, bound top-down by `bind`, from the codomain up, each box to the
+  equal boxes, flags included, producing the class its output is bound to,
+  so that each of its spiders is bound to one class, and a match is
+  `(region, dom, cod)`, `None` for an input the pattern does not read, so
+  that `rewrite(*match, rhs)` applies a rule. `step` is a round of egg's
   schedule, every match of every rule searched as the round begins, all
-  rewritten, then rebuilt, yielding each round that adds a box or relates
-  two classes and stopping at the first that does neither; a rule is a pair
-  of cartesian diagrams of one type, the right-hand side reading only the
-  inputs the left reads, `AxiomError` otherwise. Egg's own example,
-  `(a * 2) / 2` under its four rules, saturates in three rounds and
-  extracts `a`, and a differential test against egglog-python, skipped
-  without it, compares the classes of every subterm, whether each round
-  changed anything and the cost extracted under egglog's costs, round by
-  round, on random terms and egg's rule sets, through the reference in
-  `test/fixtures/egglog_reference.py`: no disagreement on a thousand
-  random terms nor on five hundred full trees. `pattern` drops the wires
-  that go straight from the domain to the codomain of a hypergraph.
+  rewritten, then rebuilt, and `saturate(*rules)` iterates it, yielding
+  each round that adds a box or relates two classes and stopping at the
+  first that does neither; a rule is a pair of cartesian diagrams of one
+  type, the left a pattern and the right reading only the inputs the left
+  reads, which `saturate` checks as it is called, `AxiomError` otherwise.
+  Egg's own example, `(a * 2) / 2` under its four rules, saturates in three
+  rounds and extracts `a`, and a differential test against egglog-python,
+  skipped without it, compares the classes of every subterm, whether each
+  round changed anything and the cost extracted, round by round, on egg's
+  example, on a term that needs congruence after a rewrite and on random
+  terms and rule sets, through the reference in
+  `test/fixtures/egglog_reference.py`, where multiplication costs two:
+  no disagreement on a thousand random terms nor on five hundred full
+  trees. `pattern` drops the wires that go straight from the domain to the
+  codomain of a hypergraph and `rewire` reads one input of a box from
+  another spider before it.
   A section chooses a producer for each class it needs, those of the
   codomain and those read by the boxes it keeps, i.e. the boxes it chooses
   and every box that is not affine, and an acyclic choice decodes to a
@@ -64,8 +69,12 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   hypergraph changes nothing and rewriting never raises the cost of what is
   extracted; matching is complete modulo the classes, binding a pattern to
   two copies of a diagram on related inputs in turn, and sound, flags
-  included, rewriting a match into its own pattern changing nothing; and a
-  round after saturation changes nothing. A semantic test evaluates every
+  included, rewriting a match into its own pattern changing nothing, the
+  pattern of a diagram made cartesian, beside the diagram, and that
+  pattern rewired, which a matcher missing a constraint finds where the
+  original is; and saturation stops on a rebuilt e-hypergraph that no
+  match changes, under rules equating the boxes of a type and each box
+  with a fresh one. A semantic test evaluates every
   section in random tensors, sampling and conditioning included, as the
   diagram it comes from, two boxes interpreted alike only when one was
   rewritten into the other. `hypergraph.relabeling` is how a

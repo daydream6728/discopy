@@ -5,7 +5,8 @@ A term is one of::
 
     ("var", name)            a variable, i.e. an input of the diagram, cost 0
     ("const", n)             an integer constant, a box with no input, cost 1
-    (op, t0, ..., tk)        an operation, a box with k + 1 inputs, cost 1
+    (op, t0, ..., tk)        an operation, a box with k + 1 inputs, cost 1,
+                             but 2 for ``*``
 
 with ``op`` one of ``+ - * / <<`` or any other identifier, of arity one to
 three. A rule is a pair ``(lhs, rhs)`` of terms whose variables are its
@@ -13,10 +14,11 @@ pattern variables, e.g. ``(("*", X, ("const", 2)), ("<<", X, ("const", 1)))``,
 its left-hand side not a variable.
 
 The cost of a term is the design's tree cost: ``t(var) = 0``,
-``t(const) = 1`` and ``t(op(ts)) = 1 + sum(t(ts))``, a shared subterm
+``t(const) = 1`` and ``t(op(ts)) = c(op) + sum(t(ts))``, a shared subterm
 counted once per occurrence, computed natively by egglog: a variable is a
 nullary function of cost 0, a constant a constructor of cost 0 whose ``i64``
-literal costs 1, an operation a method or a function of cost 1.
+literal costs 1, an operation a method or a function of cost ``c(op)``, one
+but for ``*``, which costs two, so that the costs are not egg's ``AstSize``.
 
 The schedule is egg's: one round searches every rule on the e-graph as it
 was when the round began, applies every match, then rebuilds; there is no
@@ -30,9 +32,9 @@ Egg's example, from the egg and egglog documentation:
 >>> for state in egglog_trace(term, EGG):
 ...     print(state.round, state.updated, state.matches, state.cost,
 ...           state.n_classes, state.n_nodes)
-0 True () 4 4 4
+0 True () 5 4 4
 1 True (1, 1, 0, 0) 4 6 8
-2 True (1, 1, 1, 0) 2 5 8
+2 True (1, 1, 1, 0) 3 5 8
 3 True (1, 1, 1, 1) 0 4 8
 4 False (1, 1, 1, 1) 0 4 8
 >>> for members in egglog_classes(term, EGG):
@@ -86,7 +88,7 @@ from egglog.declarations import (  # noqa: E402
 from egglog.egraph import expr_parts  # noqa: E402
 
 __all__ = [
-    "X", "Y", "Z", "C0", "C1", "C2",
+    "X", "Y", "Z", "C0", "C1", "C2", "COSTS",
     "EGG", "COMMUTATIVITY", "IDENTITIES", "RULESETS",
     "cost", "subterms", "random_term",
     "Round", "egglog_trace", "egglog_classes", "egglog_extract",
@@ -101,6 +103,7 @@ class Term(Expr):
     def __init__(self, value: i64Like) -> None: ...
     def __add__(self, other: Term) -> Term: ...
     def __sub__(self, other: Term) -> Term: ...
+    @method(cost=2)
     def __mul__(self, other: Term) -> Term: ...
     def __truediv__(self, other: Term) -> Term: ...
     def __lshift__(self, other: Term) -> Term: ...
@@ -192,6 +195,9 @@ def from_decl(decl):
     raise TypeError(f"unknown callable {ref!r}")
 
 
+COSTS = {"*": 2}
+
+
 def cost(term):
     """The design's tree cost of a term, as egglog computes it."""
     kind, *args = term
@@ -199,7 +205,7 @@ def cost(term):
         return 0
     if kind == "const":
         return 1
-    return 1 + sum(map(cost, args))
+    return COSTS.get(kind, 1) + sum(map(cost, args))
 
 
 def subterms(term):
@@ -305,7 +311,7 @@ def egglog_classes(term, rules, rounds=10):
 
 
 def egglog_extract(term, rules, rounds=10):
-    """A term of least cost equal to ``term`` after the last round, its cost."""
+    """A term of least cost equal to ``term`` after the rounds, its cost."""
     last = egglog_trace(term, rules, rounds)[-1]
     return last.extracted, last.cost
 
