@@ -120,8 +120,9 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   is the box again, the dagger of a rotated box keeps its winding and that
   of a word its boundary. The flags of a spider are those of its legs and
   phase, by spider fusion: it is deterministic when it has a leg in and no
-  phase, affine when it has exactly one, so that a cup is deterministic but
-  not affine and a cap neither, and of the ZX spiders only `Z`, that of the
+  phase, affine when it has exactly one leg in and no phase, so that a cup
+  is deterministic but not affine and a cap neither, and of the ZX spiders
+  only `Z`, that of the
   basis a tensor copies, has them. `markov.Diagram.is_deterministic`,
   `is_affine` and `is_cartesian`, both, hold when they hold of every box:
   a copy, a discard, printed `Discard(x)` rather than `Copy(x, 0)`, a
