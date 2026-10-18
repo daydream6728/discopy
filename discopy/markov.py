@@ -356,7 +356,8 @@ class Copy(Box):
     """
     def __init__(self, x: monoidal.Ty, n: int = 2):
         assert_isatomic(x, monoidal.Ty)
-        name = f"Copy({x}" + ("" if n == 2 else f", {n}") + ")"
+        name = f"Copy({x}" + ("" if n == 2 else f", {n}") + ")" if n\
+            else f"Discard({x})"
         Box.__init__(self, name, dom=x, cod=x ** n,
                      draw_as_spider=True, color="black", drawing_name="")
 

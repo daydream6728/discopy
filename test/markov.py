@@ -26,6 +26,9 @@ def test_Merge_dagger():
 def test_Discard():
     assert isinstance(Discard(Ty('x')), Discard)
     assert isinstance(Copy(Ty('x'), n=0), Discard)
+    x = Ty('x')
+    assert str(Copy(x, 0)) == "Discard(x)" == str(Diagram.discard(x))
+    assert eval(str(Discard(x))) == Copy(x, 0)
 
 
 def test_equations():

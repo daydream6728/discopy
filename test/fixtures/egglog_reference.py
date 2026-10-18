@@ -69,6 +69,13 @@ design's cost of a root, ``1 + t(c)``.
 >>> program = ("observe", s, ("-", ("/", ("*", s, C2), C2), s))
 >>> egglog_extract(program, EGG + ZERO)
 (('observe', ('sample', ('var', 'p'), ('var', 'id0')), ('const', 0)), 3)
+
+A condition registered beside the value of a program, rather than in it,
+is dropped by extraction, which starts from the value:
+
+>>> s, absorb = ("sample", P), [(("*", C0, X), C0)]
+>>> egglog_extract(("*", C0, s), absorb, extra=[("condition", s)])
+(('const', 0), 1)
 """
 from __future__ import annotations
 
@@ -282,15 +289,18 @@ def state(egraph, root, term, index, updated, matches, seconds):
         seconds=seconds)
 
 
-def egglog_trace(term, rules, rounds=10):
+def egglog_trace(term, rules, rounds=10, extra=()):
     """
     The state of egglog's e-graph of ``term`` before any rule, then after
     each round of ``rules``, up to the first round that changes nothing or to
     ``rounds`` rounds, so that the last state's ``updated`` is ``False``
-    exactly when the rules saturated.
+    exactly when the rules saturated. The ``extra`` terms are registered in
+    the e-graph beside ``term``, which extraction starts from.
     """
     egraph = EGraph(seminaive=False)
     root = egraph.let("root", to_egglog(term))
+    for other in extra:
+        egraph.register(to_egglog(other))
     schedule, decls = to_ruleset(rules)
     states = [state(egraph, root, term, 0, True, (), 0.)]
     for index in range(1, rounds + 1):
@@ -310,9 +320,9 @@ def egglog_classes(term, rules, rounds=10):
     return egglog_trace(term, rules, rounds)[-1].classes
 
 
-def egglog_extract(term, rules, rounds=10):
+def egglog_extract(term, rules, rounds=10, extra=()):
     """A term of least cost equal to ``term`` after the rounds, its cost."""
-    last = egglog_trace(term, rules, rounds)[-1]
+    last = egglog_trace(term, rules, rounds, extra)[-1]
     return last.extracted, last.cost
 
 

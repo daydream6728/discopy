@@ -42,15 +42,20 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `test/fixtures/egglog_reference.py`, where multiplication costs two:
   no disagreement on a thousand random terms nor on five hundred full
   trees. The same with a `sample`, not deterministic, and a `condition`,
-  not affine: two samples of `p` stay apart under `x - x = 0` where one
-  sample used twice cancels, then goes, and under `0 * x = 0` the output of
-  `0 * s` is `0` but the condition and the sample it reads stay. A test
-  evaluates these programs in the integers modulo three, samples random
-  stochastic matrices and conditions random weights of zero or one, and
-  contrasts egglog: its naive encoding, a sample a function and a program
-  its value, cancels two samples and drops the condition, which the model
+  not affine: under `x - x = 0`, two samples of `p` stay apart while one
+  sample used twice cancels, then is discarded with `p` unless a condition
+  reads it. A test evaluates every section of two rounds of random
+  programs, their samples shared or not and up to two conditions, under
+  eight rules that hold in the integers modulo three, there, samples
+  random stochastic matrices and conditions random weights of zero or one,
+  and contrasts egglog: its naive encoding, a sample a function and a
+  program its value, cancels two samples and drops a condition registered
+  beside the value, `egglog_trace(extra=...)`, both of which the model
   tells apart from the program, while the faithful one, an id for each
-  sample and the conditions in the term, extracts at the cost we do.
+  sample and the conditions in the term, extracts at the cost we do except
+  where a condition repeats on related inputs: a hard constraint is
+  idempotent, kept and paid once here where egglog's term pays for each
+  occurrence.
   `pattern` drops the wires that go straight from the domain to the
   codomain of a hypergraph and `rewire` reads one input of a box from
   another spider before it.
@@ -108,7 +113,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   extend builds, so that the dagger of a rotated box keeps its winding and
   that of a word its boundary. `markov.Diagram.is_deterministic`,
   `is_affine` and `is_cartesian`, both, hold when they hold of every box:
-  a copy, a discard, a swap and a permutation are cartesian, a merge is
+  a copy, a discard, printed `Discard(x)` rather than `Copy(x, 0)`, a
+  swap and a permutation are cartesian, a merge is
   deterministic but not affine, and a formal sum is deterministic when it
   has at most one term, which is, and affine when it has exactly one,
   which is. `feedback.Box` initialises itself as a plain box, as it did
