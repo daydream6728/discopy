@@ -173,44 +173,75 @@ def test_saturate_stops_and_rebuilds():
     assert last.classes[first] == last.classes[second]
 
 
-def to_diagram(term, variables) -> Diagram:
+def to_diagram(term, names) -> Diagram:
     """
-    The cartesian diagram of a term of :mod:`fixtures.egglog_reference`, one
-    box for each operation or constant and one domain wire for each variable,
-    copied as many times as it occurs.
+    The diagram of a term of :mod:`fixtures.egglog_reference`, a domain wire
+    for each of the ``names`` of its variables and a box for each subterm,
+    e.g. a sample of ``p`` with an id, ``("sample", p, id)``, and
+    ``("observe", c, t)`` the term ``t`` conditioned on ``c``.
     """
-    boxes, box_wires = [], []
+    boxes, box_wires, built = [], [], {}
 
     def build(term):
         if term[0] == "var":
-            return variables.index(term[1])
-        inputs = tuple(map(build, children(term)))
-        boxes.append(node(term))
-        box_wires.append((inputs, (len(variables) + len(boxes) - 1, )))
-        return box_wires[-1][1][0]
+            return names.index(term[1])
+        if term not in built:
+            inputs, box = tuple(map(build, children(term))), node(term)
+            first = len(names) + sum(len(tgt) for _, tgt in box_wires)
+            outputs = tuple(range(first, first + len(box.cod)))
+            boxes.append(box)
+            box_wires.append((inputs, outputs))
+            built[term] = build(term[2]) if term[0] == "observe"\
+                else outputs[0]
+        return built[term]
 
     root = build(term)
     return Hypergraph[Diagram](
-        x ** len(variables), x, tuple(boxes),
-        (tuple(range(len(variables))), tuple(box_wires), (root, ))
+        x ** len(names), x, tuple(boxes),
+        (tuple(range(len(names))), tuple(box_wires), (root, ))
     ).to_diagram()
 
 
 def node(term) -> Box:
     """ The box of the head of a term that is not a variable. """
+    if term[0] in ("sample", "observe"):
+        return sample if term[0] == "sample" else condition
     return Box(str(term[1]), Ty(), x) if term[0] == "const"\
         else Box(term[0], x ** len(term[1:]), x)
 
 
 def children(term) -> tuple:
-    return () if term[0] in ("var", "const") else term[1:]
+    """ The subterms a box reads, not the id of a sample nor what follows. """
+    if term[0] in ("var", "const"):
+        return ()
+    return term[1:2] if term[0] in ("sample", "observe") else term[1:]
 
 
-def lookup(graph: EHypergraph, term, variables) -> int:
+def variables(term) -> list[str]:
+    """ The variables of a term, in the order they first occur. """
+    if term[0] in ("var", "const"):
+        return [term[1]] if term[0] == "var" else []
+    return list(dict.fromkeys(sum(map(variables, term[1:]), [])))
+
+
+def to_rules(rules) -> list[tuple[Diagram, Diagram]]:
+    """ The diagrams of rules of terms, over the variables of the left. """
+    return [(to_diagram(lhs, variables(lhs)), to_diagram(rhs, variables(lhs)))
+            for lhs, rhs in rules]
+
+
+def box_cost(box) -> int:
+    """ The cost of a box in :mod:`fixtures.egglog_reference`. """
+    from fixtures.egglog_reference import COSTS
+
+    return COSTS.get(box.name, 1)
+
+
+def lookup(graph: EHypergraph, term, names) -> int:
     """ The class of a subterm of the term an e-hypergraph comes from. """
     if term[0] == "var":
-        return graph.classes[graph.graph.dom_wires[variables.index(term[1])]]
-    inputs = tuple(lookup(graph, child, variables) for child in children(term))
+        return graph.classes[graph.graph.dom_wires[names.index(term[1])]]
+    inputs = tuple(lookup(graph, child, names) for child in children(term))
     head = node(term)
     return next(graph.classes[tgt[0]] for j, (box, (_, tgt)) in enumerate(zip(
         graph.graph.boxes, graph.graph.box_wires))
@@ -224,19 +255,10 @@ def trace(term, rules, rounds: int) -> list[tuple]:
     changed anything, the partition of the subterms of ``term`` and the cost
     of what is extracted, under the costs of the reference.
     """
-    from fixtures.egglog_reference import COSTS, subterms
-
-    def box_cost(box):
-        return COSTS.get(box.name, 1)
-
-    def variables(term):
-        return list(dict.fromkeys(
-            sub[1] for sub in subterms(term) if sub[0] == "var"))
+    from fixtures.egglog_reference import subterms
 
     graph = Markov.from_diagram(to_diagram(term, variables(term)))
-    states = [graph, *islice(graph.saturate(*(
-        (to_diagram(lhs, variables(lhs)), to_diagram(rhs, variables(lhs)))
-        for lhs, rhs in rules)), rounds)]
+    states = [graph, *islice(graph.saturate(*to_rules(rules)), rounds)]
     result = []
     for k in range(min(len(states) + 1, rounds + 1)):
         state, members = states[min(k, len(states) - 1)], {}
@@ -284,3 +306,93 @@ def test_egglog_differential(seed):
     pytest.importorskip("egglog")
     ours, egglog = differential(seed)
     assert ours == egglog
+
+
+X, C0, P = ("var", "x"), ("const", 0), ("var", "p")
+CANCEL, ABSORB = [(("-", X, X), C0)], [(("*", C0, X), C0)]
+S0, S1 = (("sample", P, ("var", f"id{i}")) for i in range(2))
+TWO, ONE, OBSERVED = ("-", S0, S1), ("-", S0, S0), (
+    "observe", S0, ("*", C0, S0))
+
+
+def arithmetic(seed: int, n: int = 3) -> Functor:
+    """
+    A functor into tensors reading ``x`` as the integers modulo ``n``, where
+    ``x - x = 0`` and ``0 * x = 0`` hold: ``-``, ``*`` and ``0`` are
+    functions, a sample a random stochastic matrix and a condition a random
+    weight, zero or one, zero somewhere.
+    """
+    rng = np.random.default_rng(seed)
+    pairs = [(a, b) for a in range(n) for b in range(n)]
+    arrays = {
+        '0': np.eye(n)[[0]], '-': np.eye(n)[[(a - b) % n for a, b in pairs]],
+        '*': np.eye(n)[[a * b % n for a, b in pairs]],
+        'sample': rng.dirichlet(np.ones(n), size=n),
+        'condition': rng.permutation(np.arange(n) > 0)[:, None] * 1.}
+    return Functor(ob_map=lambda _: Dim(n), ar_map=lambda box: Tensor[float](
+        arrays[box.name], Dim(n) ** len(box.dom), Dim(n) ** len(box.cod)),
+        cod=Tensor[float])
+
+
+def naive(term):
+    """ A term without the ids of its samples nor its conditions. """
+    if term[0] == "observe":
+        return naive(term[2])
+    return term if term[0] in ("var", "const")\
+        else (term[0], *map(naive, children(term)))
+
+
+def saturated(program, rules) -> EHypergraph:
+    """ The last round of saturating a program of ``p`` under some rules. """
+    graph = Markov.from_diagram(to_diagram(program, ["p"]))
+    *_, last = graph, *graph.saturate(*to_rules(rules))
+    return last
+
+
+@settings(max_examples=20, deadline=None)
+@given(seed=st.integers(0, 2 ** 32 - 1))
+@pytest.mark.parametrize("program, rules", [
+    (TWO, CANCEL), (ONE, CANCEL), (OBSERVED, ABSORB)])
+def test_sampling_and_conditioning(program, rules, seed):
+    diagram, functor = to_diagram(program, ["p"]), arithmetic(seed)
+    graph = Markov.from_diagram(diagram)
+    for state in [graph, *graph.saturate(*to_rules(rules))]:
+        for section in state.sections():
+            assert np.allclose(functor(section.to_diagram()).array,
+                               functor(diagram).array)
+
+
+@pytest.mark.parametrize("program, rules, egg", [
+    (TWO, CANCEL, False), (ONE, CANCEL, False), (OBSERVED, ABSORB, False),
+    (("observe", S0, ("-", ("/", ("*", S0, C2), C2), S0)), CANCEL, True)])
+def test_egglog_sampling(program, rules, egg):
+    """
+    egglog extracts at the cost we do from the faithful encoding of a program,
+    an id for each sample and its conditions in the term.
+    """
+    pytest.importorskip("egglog")
+    from fixtures.egglog_reference import EGG, egglog_extract
+
+    rules = rules + (EGG if egg else [])
+    last = saturated(program, rules)
+    assert Markov(last.extract(box_cost, 0)).cost(box_cost, 0)\
+        == egglog_extract(program, rules)[1]
+
+
+def test_egglog_naive_sampling():
+    """
+    The naive encoding, a sample a function and a program its value, is
+    unsound: egglog cancels two samples and drops a condition, which the model
+    tells apart from the program, and what we extract evaluates as it does.
+    """
+    pytest.importorskip("egglog")
+    from fixtures.egglog_reference import egglog_extract
+
+    functor = arithmetic(0)
+    for program, rules in [(TWO, CANCEL), (OBSERVED, ABSORB)]:
+        expected = functor(to_diagram(program, ["p"])).array
+        extracted, _ = egglog_extract(naive(program), rules)
+        assert extracted == C0 and not np.allclose(
+            functor(to_diagram(extracted, ["p"])).array, expected)
+        assert np.allclose(functor(saturated(
+            program, rules).extract().to_diagram()).array, expected)

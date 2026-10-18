@@ -58,5 +58,4 @@ The screenshot is egg's: `(a * 2) / 2` under `x * 2 = x << 1`, `(x * y) / z = x 
       applied until nothing changes, and extraction at least tree cost, as egg's
 - [x] egglog-python as the reference: egg's example, and a
       differential stress test of the relation and the extracted cost
-- [WIP] @session_01MY1Vs5CEhXgYwJcDnNwx6i-2026-10-17 18:40 The same with `sample`, not deterministic, and
-      `condition`, not affine
+- [x] The same with `sample`, not deterministic, and `condition`, not affine

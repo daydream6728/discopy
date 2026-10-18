@@ -41,7 +41,17 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   terms and rule sets, through the reference in
   `test/fixtures/egglog_reference.py`, where multiplication costs two:
   no disagreement on a thousand random terms nor on five hundred full
-  trees. `pattern` drops the wires that go straight from the domain to the
+  trees. The same with a `sample`, not deterministic, and a `condition`,
+  not affine: two samples of `p` stay apart under `x - x = 0` where one
+  sample used twice cancels, then goes, and under `0 * x = 0` the output of
+  `0 * s` is `0` but the condition and the sample it reads stay. A test
+  evaluates these programs in the integers modulo three, samples random
+  stochastic matrices and conditions random weights of zero or one, and
+  contrasts egglog: its naive encoding, a sample a function and a program
+  its value, cancels two samples and drops the condition, which the model
+  tells apart from the program, while the faithful one, an id for each
+  sample and the conditions in the term, extracts at the cost we do.
+  `pattern` drops the wires that go straight from the domain to the
   codomain of a hypergraph and `rewire` reads one input of a box from
   another spider before it.
   A section chooses a producer for each class it needs, those of the

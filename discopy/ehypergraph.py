@@ -45,6 +45,33 @@ then extracts ``a``:
 >>> print(rounds[-1].extract().to_diagram())
 Id(x)
 
+The same with a ``sample``, not deterministic, so that two samples of ``p``
+are two classes and ``x - x = 0`` leaves their difference as it is, while one
+sample used twice cancels, then goes, being affine:
+
+>>> zero, minus = Box('0', Ty(), x), Box('-', x @ x, x)
+>>> sample = Box('sample', x, x, is_deterministic=False)
+>>> cancel = (Diagram.copy(x) >> minus, Diagram.discard(x) >> zero)
+>>> two = Markov.from_diagram(Diagram.copy(x) >> sample @ sample >> minus)
+>>> list(two.saturate(cancel))
+[]
+>>> print(two.extract().to_diagram())
+Copy(x) >> sample @ sample >> -
+>>> *_, one = Markov.from_diagram(
+...     sample >> Diagram.copy(x) >> minus).saturate(cancel)
+>>> print(one.extract().to_diagram())
+Copy(x, 0) @ 0
+
+A ``condition`` is not affine, so that under ``0 * x = 0`` the output of
+``0 * s`` is ``0`` but the sample ``s`` it is conditioned on stays:
+
+>>> condition = Box('condition', x, Ty(), is_affine=False)
+>>> absorb = (zero @ x >> times, Diagram.discard(x) >> zero)
+>>> *_, observed = Markov.from_diagram(sample >> Diagram.copy(x)
+...     >> condition @ (zero @ x >> times)).saturate(absorb)
+>>> print(observed.extract().to_diagram())
+0 @ sample >> x @ condition
+
 Summary
 -------
 
