@@ -1158,6 +1158,66 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
+- Sixteen boxes of `discopy.quantum.gates` come back from their tree.
+  `cat.Box.from_tree` rebuilds a box as
+  `cls(name=, dom=, cod=, data=, is_dagger=)`, so every subclass whose
+  `__init__` takes something else raised instead: `Controlled` (hence `CX`,
+  `CZ`), `CRx`, `CRz`, `CU1`, `Scalar`, `MixedScalar`, `Sqrt`, `Ket`, `Bra`,
+  `Copy`, `Match`, `Digits`, and — not named by the issue, found by round-tripping
+  every box the module exposes rather than the ten it listed — `Discard`,
+  `MixedState`, `Measure` and `Encode`. For six of them the tree did not hold
+  what the constructor reads, so those get a `to_tree` as well as a
+  `from_tree`: `Controlled` writes the gate it controls and its `distance`,
+  `Scalar` its `is_mixed`, `Digits` its digits and their dimension, `Measure`
+  and `Encode` their two flags each, and `Sqrt` reads back the `is_dagger`
+  its tree already keeps, so a conjugated root comes back conjugated. A subclass reads back through
+  `Controlled` itself rather than through `cls`, since `CRz` takes the phase
+  of the rotation it controls where `Controlled` takes the gate, and
+  `Controlled.__eq__` compares the gate and the distance rather than the
+  class, so the two are equal. `Discard` and `MixedState` need no `to_tree`:
+  their one argument is the boundary the tree already carries.
+  `Ket`/`Bra` are written as [#664](https://github.com/discopy/discopy/pull/664)
+  writes them, which fixes those two locally, so the two heads agree rather
+  than collide. This is what keeps the `serialisation` cell of the property
+  matrix honest for the quantum categories
+  ([#780](https://github.com/discopy/discopy/issues/780)). The same defect
+  reaches beyond this module — `markov.Copy`/`Merge`/`Discard`,
+  `frobenius.Spider`, `traced.Trace`, `zx.Scalar`/`Spider`, `grammar.cfg.Id`
+  and `grammar.categorial.Constant` all raise the same way — which is a
+  maintainer's call on one mechanism against another two dozen pairs, measured
+  and reported on discopy/discopy#780 rather than folded in here.
+- A `monoidal.List` whose atoms have an evaluable representation is
+  transparent, i.e. `eval(repr(x)) == x`, which is `STYLE.md`'s own line
+  and failed on `main` for the public `discopy.python.Ty`: `repr(Ty(int, str))` printed
+  `monoidal.List[type](<class 'int'>, <class 'str'>)`, which is not an
+  expression, so `eval` raised `SyntaxError`. `List.__repr__` joined `repr`
+  over its atoms, which is right for every generator in the library but
+  one -- `type`, whose `repr` is `<class 'int'>` where the name `int` is
+  what reads back -- and `python.Ty` became `List[type]` with
+  [#728](https://github.com/discopy/discopy/issues/728). An atom now prints
+  through the new `List.generator_repr`, which defaults to `repr` and gives
+  a class to `utils.factory_name`, the printer the library already uses for
+  one: a list of DisCoPy classes therefore reads back qualified by module
+  too, e.g. `List[type](cat.Ob)`. Nothing caught it because `Ty` and `List`
+  are not enrolled in `proptest/categories.py`, so the matrix quantifies
+  *over* them without ever stating `transparency` *of* them
+  ([#773](https://github.com/discopy/discopy/issues/773)).
+- `utils.dumps` no longer crashes on a box whose `data` carries a complex
+  number, i.e. on every quantum gate with an array — `H`, `X`, `Y`, `Z`,
+  `CX`, ... — where `Rz(0.25)` escaped only because its data is a float.
+  JSON has no complex numbers and a complex number is a pair of reals, so
+  `utils.encode_complex` writes one as `{"factory": "complex", "re": ...,
+  "im": ...}` and `utils.decode_complex` reads it back, as the `default` of
+  `dumps` and the `object_hook` of `loads`. The encoding lives at the JSON
+  boundary rather than in `to_tree`, which stays a tree of Python objects,
+  and it is tagged with its factory like every other node of a tree, so a
+  box whose `data` is a dictionary of its own — `{"re": ..., "im": ...}`
+  included — is left alone. Fixing it in `utils` rather than in
+  `QuantumGate.to_tree` is what the extent of the crash asks for: `dumps`
+  raised on `Scalar(1j)` and on `tensor.Box('f', Dim(1), Dim(1), [1j])`
+  too, and neither is a `QuantumGate`; and it changes no output that works
+  today, since every tree holding a complex raised
+  ([#775](https://github.com/discopy/discopy/issues/775)).
 - `Nat` at every level, `monoidal.Dim`, so `frobenius.Dim` and
   `tensor.Dim`, and `neural.network.Dims` are their own `delay`, `head`
   and `tail`, a type whose atoms are not wires having no time step: since
