@@ -116,10 +116,10 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   acyclic e-graphs. The law `translation` checks that distributing its
   joins gives the sections modulo the naturality of copy and discard, i.e.
   that a section chooses an e-node once per class, as the copy after an
-  e-box says, where egg's extraction chooses per occurrence. `nodes` are
-  the e-nodes of each class, equal deterministic boxes on related inputs
-  being one, egg's hashcons invariant, and `sections` chooses among them,
-  so that it lists each section once. A notebook, *Equivalence
+  e-box says, where the terms an e-graph represents choose per occurrence.
+  `nodes` are the e-nodes of each class, equal deterministic boxes on
+  related inputs being one, egg's hashcons invariant, and `sections`
+  chooses among them, so that it lists each section once. A notebook, *Equivalence
   hypergraphs*, reproduces the paper's Figs. 1, 4, 17, 25, 26 and 27,
   which tests pin, and says what is left: their e-hypergraphs are
   hierarchical, nested e-boxes of any arity representing any symmetric

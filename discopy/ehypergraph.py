@@ -23,9 +23,9 @@ choice per class as the copy after an e-box says, see the law
 nested e-boxes of any arity, so as to represent any symmetric monoidal
 theory, where these are flat with one output per e-box, the image of
 e-graphs: an equation with several outputs is entered as its projections,
-which is sound for cartesian diagrams only. Unlike theirs, a class may depend
-on itself, as in egg, which :meth:`EHypergraph.to_diagram` refuses as the
-paper does.
+which is sound for cartesian diagrams only. Unlike the paper's, a class may
+depend on itself, as in egg, which :meth:`EHypergraph.to_diagram` refuses, as
+drawing it would need a trace.
 
 Example
 -------
@@ -574,8 +574,9 @@ class EHypergraph[category](
         return result.topological_order()
 
     def sections(self) -> list[Hypergraph]:
-        """ The section of every acyclic choice of an e-node, per class where
-        egg chooses per occurrence, so that relating classes removes some. """
+        """ The section of every acyclic choice of an e-node per class, where
+        the terms of an e-graph choose per occurrence, so that relating
+        classes removes some. """
         producers, result = self.nodes, []
 
         def extend(choice, todo):

@@ -96,7 +96,7 @@ steps[3].to_diagram().foliation()
 
 The copy after each e-box says that a term of the e-graph chooses an e-node once per class, however many times the class is read: by Fig. 4, $(p + q) ; \Delta = p ; \Delta + q ; \Delta$.
 A *section* of an `EHypergraph` makes the same choice, so that the law `EHypergraph.translation`, checked by the property matrix, states that distributing the joins of the translation gives the sections, up to the naturality of copy and discard.
-Egg's extraction chooses per occurrence instead, which only agrees up to the equations of the theory:
+The terms an e-graph represents choose per occurrence instead, here $r(p, q)$ and $r(q, p)$ too, which only agrees up to the equations of the theory, while egg's extraction of a best term chooses per class as well:
 
 ```python {.marimo}
 p, q, r = Box("p", Ty(), x), Box("q", Ty(), x), Box("r", x @ x, x)
