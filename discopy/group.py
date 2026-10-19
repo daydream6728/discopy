@@ -45,7 +45,6 @@ Summary
         :toctree:
 
         kronecker
-        assert_ismember
 
 Example
 -------
@@ -77,10 +76,10 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 from typing import ClassVar, Self
 
-from discopy import abc, messages
+from discopy import abc
 from discopy.axioms import Testable
 from discopy.python.finset import Permutation
-from discopy.utils import NamedGeneric, factory_name
+from discopy.utils import NamedGeneric, assert_ismember, factory_name
 
 
 NO_TREE = "A group has no tree: utils.resolve_factory reads one class "\
@@ -106,23 +105,6 @@ def kronecker(left: Permutation, right: Permutation) -> Permutation:
     return Permutation(
         (left[i] * m + right[j] for i in range(len(left)) for j in range(m)),
         len(left) * m)
-
-
-def assert_ismember(element, group: type[Group]):
-    """
-    Raise :class:`TypeError` unless ``element`` is an element of ``group``,
-    of exactly that class: unlike :func:`discopy.utils.assert_isinstance`,
-    the parameters of a subscript count, ``Cyclic[3](1)`` is not an
-    element of ``Cyclic[2]``.
-
-    >>> assert_ismember(Cyclic[3](1), Cyclic[2])
-    Traceback (most recent call last):
-        ...
-    TypeError: Expected group.Cyclic[2], got group.Cyclic[3] instead.
-    """
-    if type(element) is not group:  # pylint: disable=unidiomatic-typecheck
-        raise TypeError(messages.TYPE_ERROR.format(
-            factory_name(group), factory_name(type(element))))
 
 
 class Group(Testable, abc.Group):

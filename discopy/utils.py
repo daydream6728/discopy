@@ -546,6 +546,24 @@ def assert_isinstance(object_, cls: type | tuple[type, ...]):
         cls_name, factory_name(type(object_))))
 
 
+def assert_ismember(object_, cls: type):
+    """
+    Raise ``TypeError`` unless ``object_`` is an instance of exactly ``cls``:
+    unlike :func:`assert_isinstance`, the parameters of a subscript count,
+    e.g. ``Cyclic[3](1)`` is not an element of ``Cyclic[2]`` and a channel of
+    the maybe monad is not a channel of the powerset monad.
+
+    >>> from discopy.group import Cyclic
+    >>> assert_ismember(Cyclic[3](1), Cyclic[2])
+    Traceback (most recent call last):
+        ...
+    TypeError: Expected group.Cyclic[2], got group.Cyclic[3] instead.
+    """
+    if type(object_) is not cls:  # pylint: disable=unidiomatic-typecheck
+        raise TypeError(messages.TYPE_ERROR.format(
+            factory_name(cls), factory_name(type(object_))))
+
+
 def unbiased(binary_method):
     """
     Turn a biased method with signature (self, other) to an unbiased one, i.e.
