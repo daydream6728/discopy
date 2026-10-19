@@ -1224,6 +1224,28 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
+- The `tensor` and `matrix` categories round-trip through JSON, where
+  neither did. A tensor box with any dtype but `complex` was written as
+  e.g. `tensor.Box[float64]` and `utils.resolve_factory` looked its
+  parameter up in `builtins` alone, so `dumps` succeeded and `loads` never
+  could; it now looks in `builtins` and then in `numpy`, the two places a
+  data type parameterising a category comes from, and raises
+  `AttributeError` saying so on a name that is neither, e.g. sympy's
+  `Expr`, rather than guessing. Nothing about the format or any `repr`
+  moves, so a tree written before reads back. And `matrix.Matrix` had no
+  `to_tree` at all, so `dumps` raised on one: it gains the
+  `to_tree`/`from_tree` pair that `tensor.Tensor` inherits, its dtype
+  travelling in the factory name as it does in the `repr`, since
+  `Matrix[float]` and `Matrix[int64]` are not equal matrices and
+  re-inferring it from the array would give back something else. So
+  `serialisation` is a law of `Matrix` and `Tensor` in the property matrix,
+  where it was declared inapplicable for want of a tree, and
+  `messages.NO_SYNTAX` goes with that declaration. The other two defects
+  the upstream pull request fixed, the trees of `monoidal.Dim` and of
+  `abc.Nat`, were fixed here already
+  ([#175](https://github.com/rel-int/discopy-next/issues/175),
+  [#794](https://github.com/discopy/discopy/pull/794)).
+
 - Sixteen boxes of `discopy.quantum.gates` come back from their tree.
   `cat.Box.from_tree` rebuilds a box as
   `cls(name=, dom=, cod=, data=, is_dagger=)`, so every subclass whose

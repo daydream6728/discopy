@@ -62,7 +62,6 @@ NOT_CAUSAL = "{} is not causal."
 WRONG_NUMBER_OF_WIRES = "Expected {} wires for {}, got {} instead."
 WRONG_NUMBER_OF_BOUNDARIES = \
     "Expected one boundary of wires for each of {} boxes, got {} instead."
-NO_SYNTAX = "Arrays are semantics, not syntax: there is no tree to serialise."
 TERM_IS_A_BOX = \
     "A term is a box: the laws of its category are the diagram's."
 MISSING_BOXES_AND_OFFSETS = (
@@ -72,3 +71,5 @@ NO_TYPE_PARAMETER = (
     "class C(NamedGeneric['name']).")
 CURRY_HAS_NO_DAGGER = "A curry has no dagger."
 NOT_JSON_SERIALISABLE = "Object of type {} is not JSON serialisable."
+NO_SUCH_TYPE = "No type named {!r} in builtins or numpy, so the name of the "\
+               "class it parameterises cannot be resolved."

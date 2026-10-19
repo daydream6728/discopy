@@ -235,3 +235,12 @@ def test_trace_takes_the_keyword_form():
     assert f.trace(left=True) == f.trace(mem=Nat(1), left=True)
     with raises(TypeError):
         f.trace(1, mem=1)
+
+def test_Matrix_to_tree():
+    # A matrix had no tree at all, see #781.
+    for m in (Matrix[float]([1], 1, 1), Matrix([0, 1, 1, 0], 2, 2),
+              Matrix[bool]([1, 0], 1, 2), Matrix[int].zero(2, 3)):
+        assert loads(dumps(m)) == m
+    # The dtype is part of the matrix, so it has to travel with it.
+    assert Matrix[float]([1], 1, 1) != Matrix([1], 1, 1)
+    assert loads(dumps(Matrix[float]([1], 1, 1))).dtype == float
