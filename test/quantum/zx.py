@@ -364,3 +364,8 @@ def test_Spider_to_tree():
     diagram = Z(1, 2, .5) >> X(1, 1) @ H
     assert loads(dumps(diagram)) == diagram
     assert loads(dumps(diagram.to_map())) == diagram.to_map()
+
+
+def test_delay_is_the_identity():
+    for diagram in (Z(1, 1, .5), H, SWAP, Z(1, 2) >> X(2, 1, .25) >> H):
+        assert diagram.delay() == diagram == diagram.delay(2)

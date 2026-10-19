@@ -58,7 +58,7 @@ from __future__ import annotations
 import itertools
 from dataclasses import dataclass, field
 from functools import cached_property
-from typing import Iterator, Callable, ClassVar, TYPE_CHECKING
+from typing import Iterator, Callable, ClassVar, Self, TYPE_CHECKING
 from warnings import warn
 
 from discopy import abc, cat, drawing, hypergraph, cmap, messages
@@ -634,6 +634,24 @@ class Nat(abc.Nat, Ty):
     def __pow__(self, n_times):
         return self.factory(n_times * self.n)
 
+    def delay(self, n_steps: int = 1) -> Self:
+        """
+        The identity: a type whose atoms are not wires has no time step, so
+        its :attr:`head` and :attr:`tail` are itself too, see
+        :class:`discopy.feedback.Ty`.
+
+        Parameters:
+            n_steps : The number of time steps to delay.
+
+        Example
+        -------
+        >>> assert Nat(2).delay() == Nat(2).head == Nat(2).tail == Nat(2)
+        """
+        del n_steps
+        return self
+
+    head = tail = property(lambda self: self)
+
     def to_tree(self):
         return {'factory': factory_name(type(self)), 'n': self.n}
 
@@ -680,6 +698,8 @@ class Dim(Ty):
         return f"Dim({', '.join(map(repr, self.inside)) or '1'})"
 
     __str__ = __repr__
+
+    delay, head, tail = Nat.delay, Nat.head, Nat.tail
 
     def to_tree(self) -> dict:
         return {'factory': factory_name(type(self)),

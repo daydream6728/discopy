@@ -304,8 +304,8 @@ class Axiom[**P, T](classmethod):
         """
         The same law declared not to apply to the category: it takes no
         argument and returns :obj:`NotImplemented`, with the reason as its
-        documentation, e.g. ``trace_vanishing =
-        TracedCategory.trace_vanishing.inapplicable("No trace.")``.
+        documentation, e.g. ``vanishing =
+        FeedbackCategory.vanishing.inapplicable("No feedback.")``.
         """
         def law(_category):
             return NotImplemented
