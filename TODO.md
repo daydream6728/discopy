@@ -14,11 +14,11 @@ symmetric monoidal theory; an e-graph translates to flat ones, with one output p
 that flat, Cartesian case, as round 3 asked, so the boxes are to check it against the paper there and reproduce
 the figures.
 
-- [WIP] @session_01KNULn8MaXHE4DEmAMcdCz7-2026-10-19 15:02 `EHypergraph.nodes`: the e-nodes of each class, congruent producers being one, egg's hashcons invariant
+- [x] `EHypergraph.nodes`: the e-nodes of each class, congruent producers being one, egg's hashcons invariant
       (Definition A.40); `sections` chooses among them, so that it lists each section once
-- [WIP] @session_01KNULn8MaXHE4DEmAMcdCz7-2026-10-19 15:02 `EHypergraph.to_diagram`: the translation of Fig. 3 and Algorithm 1, a class of several e-nodes drawn as an
+- [x] `EHypergraph.to_diagram`: the translation of Fig. 3 and Algorithm 1, a class of several e-nodes drawn as an
       e-box, the join of its e-nodes; boxes that are not cartesian stay outside, as context
-- [WIP] @session_01KNULn8MaXHE4DEmAMcdCz7-2026-10-19 15:02 The law `translation`: distributing the joins of the translation (Fig. 4) gives the sections, modulo the
+- [x] The law `translation`: distributing the joins of the translation (Fig. 4) gives the sections, modulo the
       naturality of copy and discard, i.e. per class as the paper's copies after an e-box say, not per occurrence
 - [ ] A notebook reproducing the paper's examples: Fig. 1 rule by rule, Figs. 3 and 25, Figs. 26 and 27, the
       deletion of Fig. 17 and Appendix G, and the cycle the paper leaves out, with tests pinning each
