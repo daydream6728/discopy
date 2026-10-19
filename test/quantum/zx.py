@@ -369,3 +369,9 @@ def test_Spider_to_tree():
 def test_delay_is_the_identity():
     for diagram in (Z(1, 1, .5), H, SWAP, Z(1, 2) >> X(2, 1, .25) >> H):
         assert diagram.delay() == diagram == diagram.delay(2)
+
+
+def test_feedback_is_the_trace():
+    f = Z(2, 2, .25)
+    assert f.feedback() == f.trace() == f.feedback(mem=Nat(1))
+    assert f.feedback(left=True) == f.trace(left=True)
