@@ -631,6 +631,41 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Changed
 
+- A traced category is "a feedback category with the identity as delay
+  plus the yanking axiom" (toumix, 2026-10-19), as the docstring of
+  `abc.TracedCategory` now says, the free diagrams below `feedback`, whose
+  wires carry a time step, being traced on their undelayed wires. Yanking
+  is a law where it was a doctest of `discopy.feedback`:
+  `TracedCategory.yanking`, the trace over an object of its swap with
+  itself is its identity, and `BalancedCategory.yanking`, the trace of its
+  braid is its twist, after Joyal, Street and Verity, the identity on a
+  swap. A planar traced category has no braid and declares it inapplicable:
+  `PivotalCategory`, the free `feedback.Diagram` and `Drawing`. The free
+  balanced diagrams declare it failing, a free trace being a bubble and a
+  free twist a box, the free symmetric ones check it up to hypergraph and
+  terms, being boxes, declare it inapplicable like the other laws of their
+  category
+  ([rel-int/discopy-next#95](https://github.com/rel-int/discopy-next/issues/95)).
+- Every concrete `trace` takes the keyword form `trace(dom=, cod=, mem=)`
+  of `feedback` as well as `trace(n, left)`, the two exclusive, as the
+  free diagrams' trace already did: that of `Matrix`, the Python functions,
+  `Hypergraph`, `CMap`, `Drawing`, the Kleisli channels, integer diagrams,
+  ribbon diagrams, `para.Traced` and `lens.Traced`, where it took a number
+  of objects alone. One wrapper does it, `abc.keyword_form`, which
+  `MonoidalCategory.__init_subclass__` applies to the `trace` a subclass
+  defines, whether the subclass declares `TracedCategory` or only has a
+  trace, as `Matrix` and `Hypergraph` do, and which leaves a trace that
+  takes `mem` already as it is. It reads the memory with `split_memory`,
+  which moves from `FeedbackCategory` to `MonoidalCategory` and casts its
+  arguments into the type of the codomain, so that
+  `Matrix[bool](...).trace(mem=1)` and `Function(...).trace(mem=int)` read,
+  checks it against the codomain, and the domain against the result, and
+  counts it with the new `memory_size`.
+  `TracedCategory.feedback` is the trace in either form. Integer diagrams
+  and lenses read a memory with
+  `interaction.Ty.split`, a pair of types not being a sequence, so that a
+  lens traces one number of atoms per half as an integer diagram does
+  ([rel-int/discopy-next#95](https://github.com/rel-int/discopy-next/issues/95)).
 - Every level below `feedback` generates its `Feedback`, `Trace`,
   `FollowedBy`, `Head` and `Tail` with `feedback.generators`, where
   `markov` wrote its own by hand and the other levels wrote a `Feedback`
@@ -1109,6 +1144,22 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
+- `Nat` at every level, `monoidal.Dim`, so `frobenius.Dim` and
+  `tensor.Dim`, and `neural.network.Dims` are their own `delay`, `head`
+  and `tail`, a type whose atoms are not wires having no time step: since
+  [rel-int/discopy-next#110](https://github.com/rel-int/discopy-next/pull/110)
+  a tensor, ZX or neural network diagram is a feedback diagram, whose delay
+  asked each integer atom of its types for a delay, or found none on a
+  `monoidal.Nat`, a `rigid.Nat` or a `Dims`, so that delaying any of them
+  raised `AttributeError`. A box of a category whose objects are not made
+  of wires is its own delay too, so that a tensor, ZX or network diagram
+  delays to itself, as the feedback over a memory that is its own delay is
+  a trace ([rel-int/discopy-next#112](https://github.com/rel-int/discopy-next/issues/112)).
+- `feedback` on an integer diagram or a lens raised `TypeError` whatever
+  its form, even with no argument: `TracedCategory.feedback` read the
+  memory by slicing the codomain, which a pair of types does not allow.
+  It is the trace in either form now, see above
+  ([rel-int/discopy-next#95](https://github.com/rel-int/discopy-next/issues/95)).
 - A class subscripted by a subscripted class pickles:
   `pickle.dumps(Equation[Matrix[int]](m, m))` and the identity of
   `Hypergraph[tensor.Diagram[complex]]` raised `PicklingError`, since

@@ -619,6 +619,51 @@ class Diagram(RibbonCategory, NamedGeneric['natural']):
                 u @ u_, a_)
         return type(self)(inside.trace(len(u @ u_)), dom, cod)
 
+    def split_memory(
+            self, n: int | tuple[int, int] = None, left: bool = False, *,
+            dom: Ty = None, cod: Ty = None, mem: Ty = None
+            ) -> tuple[Ty, Ty, Ty]:
+        """
+        The domain, codomain and memory of a trace, read off either form of
+        :meth:`discopy.abc.FeedbackCategory.feedback` with :meth:`Ty.split`,
+        since an integer type is not a sequence: ``n`` counts the atoms of
+        each half, or one number per half, one by default, and the memory is
+        ``mem``, or what ``cod`` leaves of the codomain.
+
+        Example
+        -------
+        >>> from discopy.compact import Ty as T, Box, Diagram as D
+        >>> a, a_, u, u_ = map(T, ["a", "a'", "u", "u'"])
+        >>> A, U = Ty[T](a, a_), Ty[T](u, u_)
+        >>> box = Box('f', a @ u @ u_ @ a_, a @ u @ u_ @ a_)
+        >>> f = Diagram[D](box, A @ U, A @ U)
+        >>> assert f.split_memory() == f.split_memory(mem=U) == (A, A, U)
+        >>> assert f.trace(mem=U) == f.trace() == f.feedback(cod=A)
+        """
+        if n is not None and (dom, cod, mem) != (None, None, None):
+            raise TypeError(messages.FEEDBACK_FORMS)
+        if mem is not None:
+            n = self.memory_size(mem)
+        elif cod is not None:
+            n = tuple(len(x) - len(y) for x, y in zip(self.cod, cod))
+        (rest_dom, _), (rest_cod, traced) = (
+            x.split(1 if n is None else n, left)[::-1] if left
+            else x.split(1 if n is None else n, left)
+            for x in (self.dom, self.cod))
+        return (rest_dom if dom is None else dom,
+                rest_cod if cod is None else cod,
+                traced if mem is None else mem)
+
+    def memory_size(self, mem: Ty) -> tuple[int, int]:
+        """
+        The number of atoms of each half of a memory, as :meth:`trace`
+        counts them.
+
+        Parameters:
+            mem : The memory.
+        """
+        return tuple(map(len, mem))
+
     @classmethod
     def twist(cls, dom: Ty) -> Diagram:
         """

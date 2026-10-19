@@ -520,3 +520,12 @@ def test_Tensor_strategy():
     tensor = find(Tensor.strategy(), lambda t: len(t.dom) == 2 and t.cod)
     assert isinstance(tensor, Tensor[int])
     assert tensor.array.shape == tensor.dom.inside + tensor.cod.inside
+
+
+def test_delay_is_the_identity():
+    f = Box('f', Dim(2), Dim(2), [1, 0, 0, 1])
+    diagram = f @ Dim(3) >> Spider(1, 2, Dim(2)) @ Dim(3)\
+        >> Dim(2) @ Swap(Dim(2), Dim(3))
+    assert Dim(2).delay() == Dim(2) == Dim(2).head == Dim(2).tail
+    for d in (f, diagram):
+        assert d.delay() == d == d.delay(2) and d.delay().eval() == d.eval()

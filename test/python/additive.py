@@ -48,3 +48,19 @@ def test_trace_unequal_arity():
 
     f = Function(inside, (int, int), (int, int, int))
     assert f.trace()(7) == (7, 1)
+
+
+def test_trace_takes_the_keyword_form():
+    from pytest import raises
+    from discopy.python.additive import Function
+    from discopy.utils import AxiomError
+
+    def inside(obj, tag=0):
+        return obj, 2 if tag == 0 else 1
+
+    f = Function(inside, (int, int), (int, int, int))
+    assert f.trace(mem=int)(7) == f.trace(cod=(int, int))(7) == (7, 1)
+    with raises(TypeError):
+        f.trace(1, mem=int)
+    with raises(AxiomError):
+        f.trace(mem=str)
