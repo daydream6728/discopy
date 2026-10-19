@@ -5,7 +5,7 @@ import pytest
 from pytest import raises
 
 from discopy import axioms
-from discopy.abc import Nat
+from discopy.abc import DaggerCategory, Nat
 from discopy.matrix import Matrix, backend
 from discopy.symmetric import Ty, Permutation, Swap, Functor
 from discopy.tensor import Tensor, Dim
@@ -42,6 +42,7 @@ def test_matrix_add():
         m + 123
     with raises(AxiomError):
         m + m.dagger()
+    assert isinstance(m, DaggerCategory)
 
 
 def test_repeat():
@@ -218,6 +219,14 @@ def test_Matrix_ar():
     assert F(Swap(x, y)).dtype == complex
     assert F(Permutation(x @ y @ x, [1, 2, 0])).dtype == complex
 
+
+def test_Matrix_copy_dtype():
+    for x in range(4):
+        dtype = Matrix.id(x).dtype
+        assert Matrix.copy(x, 2).dtype == dtype
+        assert Matrix.discard(x).dtype == Matrix.ones(x).dtype == dtype
+    for dtype in (bool, int, float, complex):
+        assert Matrix[dtype].copy(2, 2).dtype == dtype
 
 def test_trace_takes_the_keyword_form():
     f = Matrix[bool]([[1, 1], [0, 0]], 2, 2)
