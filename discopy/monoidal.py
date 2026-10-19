@@ -58,7 +58,7 @@ from __future__ import annotations
 import itertools
 from dataclasses import dataclass, field
 from functools import cached_property
-from typing import Iterator, Callable, ClassVar, TYPE_CHECKING
+from typing import Iterator, Callable, ClassVar, Self, TYPE_CHECKING
 from warnings import warn
 
 from discopy import abc, cat, drawing, hypergraph, cmap, messages
@@ -595,7 +595,7 @@ class Nat(abc.Nat, Ty):
     def __pow__(self, n_times):
         return self.factory(n_times * self.n)
 
-    def delay(self, n_steps: int = 1) -> Nat:
+    def delay(self, n_steps: int = 1) -> Self:
         """
         The identity: a type whose atoms are not wires has no time step, so
         its :attr:`head` and :attr:`tail` are itself too, see

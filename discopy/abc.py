@@ -576,12 +576,12 @@ def keyword_form(trace: Callable) -> Callable:
     memory is read off the boundary with
     :meth:`MonoidalCategory.split_memory`, checked to be what the codomain
     feeds back and passed on as its :meth:`MonoidalCategory.memory_size`.
-    The domain is left to the trace to check, since it takes in the delay
-    of the memory when the trace is the :meth:`TracedCategory.feedback` of
-    a category that labels the two apart, e.g. a
-    :class:`discopy.drawing.Drawing`. A method that takes ``mem`` already
-    is returned as it is, so that a class wraps the trace it defines once,
-    whichever trace that one calls.
+    The domain is checked on the result, since the boundary takes in the
+    delay of the memory when the trace is the
+    :meth:`TracedCategory.feedback` of a category that labels the two apart,
+    e.g. a :class:`discopy.drawing.Drawing`. A method that takes ``mem``
+    already is returned as it is, so that a class wraps the trace it defines
+    once, whichever trace that one calls.
 
     Parameters:
         trace : The method in its positional form.
@@ -606,7 +606,10 @@ def keyword_form(trace: Callable) -> Callable:
             n, left, dom=dom, cod=cod, mem=mem)
         if self.cod != (mem @ cod if left else cod @ mem):
             raise AxiomError(messages.NOT_TRACEABLE.format(self, mem))
-        return trace(self, self.memory_size(mem), left)
+        result = trace(self, self.memory_size(mem), left)
+        if result.dom != dom:
+            raise AxiomError(messages.NOT_TRACEABLE.format(self, mem))
+        return result
     method.__signature__ = signature(method, follow_wrapped=False)
     return method
 

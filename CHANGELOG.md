@@ -644,7 +644,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   which moves from `FeedbackCategory` to `MonoidalCategory` and casts its
   arguments into the type of the codomain, so that
   `Matrix[bool](...).trace(mem=1)` and `Function(...).trace(mem=int)` read,
-  checks it against the codomain and counts it with the new `memory_size`.
+  checks it against the codomain, and the domain against the result, and
+  counts it with the new `memory_size`.
   `TracedCategory.feedback` is the trace in either form, and a
   `TracedCategory` is a feedback category with a trace, the feedback over
   an undelayed memory, where `FeedbackCategory` said one whose delay is the

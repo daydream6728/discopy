@@ -243,3 +243,5 @@ def test_trace_takes_the_keyword_form():
         f.trace(1, mem=U)
     with raises(AxiomError):
         f.trace(mem=A)
+    with raises(AxiomError):
+        f.trace(dom=B, mem=U)
