@@ -61,7 +61,7 @@ from warnings import warn
 
 from discopy import abc, axioms, cat, drawing, hypergraph, cmap, messages
 from discopy.abc import (
-    ColouredMonoid, Monoid, MonoidalCategory)
+    ColouredMonoid, FeedbackCategory, Monoid, MonoidalCategory)
 from discopy.axioms import Hom, Obj, TestableGeneric, Var, axiom
 from discopy.drawing import Drawing
 from discopy.config import (
@@ -339,6 +339,9 @@ class Ty(cat.Ob, cat.FreeCategory, ColouredMonoid):
     ob = Colour
     generator_factory = Wire
     box_factory = classproperty(lambda cls: cls.generator_factory)
+    delay = FeedbackCategory.delay
+    """ A monoidal type has no time step: its delay is itself, see
+    :class:`discopy.feedback.Ty` for one that has. """
     """
     The generators of a type as a free category, i.e. its wires, a
     :class:`cat.Ob` that :meth:`cast` embeds as a type of length one.

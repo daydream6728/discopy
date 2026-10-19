@@ -263,7 +263,6 @@ class Unitype(Exp):
 
 
 @factory
-@feedback.untimed
 class Diagram(markov.Diagram, biclosed.Diagram, ClosedCategory):
     """
     A closed diagram is both a markov and a biclosed diagram.

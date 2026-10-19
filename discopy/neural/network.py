@@ -143,7 +143,6 @@ class Dims(monoidal.Ty):
 
 
 @factory
-@feedback.untimed
 class Network(markov.Diagram, comarkov.Diagram):
     """
     A network is a Markov and comarkov diagram with lists of shapes as

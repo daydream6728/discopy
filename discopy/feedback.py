@@ -704,11 +704,14 @@ class Box(monoidal.Box, Diagram):
         The delay of a box: a structural box, one whose ``__getnewargs__``
         gives the arguments it is built from, e.g. a swap or a copy, is built
         from their delays; any other box from its delayed boundary, one more
-        time step on.
+        time step on. A box whose types have no time step, e.g. a closed
+        one, is its own delay, as a traced category delays nothing.
 
         Parameters:
             n_steps : The number of time steps to delay.
         """
+        if type(self.dom).delay is FeedbackCategory.delay:
+            return self
         arguments = getattr(self, "__getnewargs__", None)
         if arguments is not None:
             return type(self)(*(
@@ -1145,20 +1148,6 @@ def subclass(name: str, bases: list[type], module: str, doc: str) -> type:
             other is not base and issubclass(other, base) for other in bases)))
     return type(name, bases, {
         "__module__": module, "__qualname__": name, "__doc__": doc})
-
-
-def untimed[T: type](cls: T) -> T:
-    """
-    Declare the laws and rules of time inapplicable to a class of diagrams
-    whose types are not time-stepped, e.g. :class:`discopy.closed.Diagram`.
-    """
-    for name in (
-            "delay_unit", "delay_composition", "feedback_joining",
-            "feedback_tightening", "feedback_sliding", "feedback_superposing",
-            "delaying", "feedback_right"):
-        setattr(cls, name, getattr(FeedbackCategory, name).inapplicable(
-            messages.NOT_TIME_STEPPED))
-    return cls
 
 
 def generators(
