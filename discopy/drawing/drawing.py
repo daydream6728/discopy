@@ -283,7 +283,8 @@ class Drawing(TracedCategory, RichDisplay):
     edges = property(lambda self: self.graph.edges)
     positions = property(lambda self: self.inside.positions)
 
-    yanking = TracedCategory.yanking.inapplicable(messages.NO_BRAID)
+    yanking = TracedCategory.yanking.inapplicable(
+        messages.PLANAR_YANKING)
 
     def nodes_of_kind(self, kind):
         """

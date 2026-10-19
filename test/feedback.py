@@ -228,6 +228,7 @@ def test_yanking():
     assert lens.Traced[Matrix[bool]].yanking(lens.Ty[Nat](Nat(1), Nat(2)))
     for planar in (Diagram, pivotal.Diagram, Drawing, PivotalCategory):
         assert planar.yanking() is NotImplemented
+        assert "planar" in planar.yanking.__doc__
     with raises(AxiomFailure):
         balanced.Diagram.yanking(balanced.Ty('x'))
 

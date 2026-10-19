@@ -11,7 +11,7 @@ NOT_GLOBULAR = "Expected a globular box, got boundaries {} -> {} and {} -> {}."
 NOT_ATOMIC = "Expected {} of length 1, got length {} instead."
 NOT_CONNECTED = "{} is not boundary-connected."
 NOT_TRACEABLE = "Cannot trace {} with {}."
-NO_BRAID = "A planar traced category has no braid to yank."
+PLANAR_YANKING = "A planar traced category has no braid to yank."
 FREE_YANKING = (
     "A free trace is a bubble and a free twist a box: the free balanced "
     "diagrams are not quotiented by the yanking axiom.")

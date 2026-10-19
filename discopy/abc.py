@@ -902,7 +902,8 @@ class PivotalCategory[C0, C1](RigidCategory[C0, C1], TracedCategory[C0, C1]):
     adjoints coincide, hence it is also a :class:`TracedCategory`, a planar
     one with no swap to yank.
     """
-    yanking = TracedCategory.yanking.inapplicable(messages.NO_BRAID)
+    yanking = TracedCategory.yanking.inapplicable(
+        messages.PLANAR_YANKING)
 
 
 class BraidedCategory[C0, C1](MonoidalCategory[C0, C1]):
