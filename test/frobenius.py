@@ -111,3 +111,11 @@ def test_Wire_adjoints():
         assert adjoint.l == adjoint.r == x
     assert Ty(x).l == Ty(x).r == Ty(x.l) and Ty(x).l.dom == b
     assert Wire('y').l == Wire('y').r == Wire('y')
+
+
+def test_feedback_is_the_trace():
+    x = Ty('x')
+    f = Box('f', x @ x, x @ x)
+    for traced in (f.feedback(), f.feedback(mem=x), f.trace(mem=x)):
+        assert isinstance(traced, Diagram) and traced == f.trace()
+    assert Equation(f.feedback(2, left=True), f.trace(2, left=True))

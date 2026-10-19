@@ -1144,6 +1144,17 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
+- The feedback of a compact, Frobenius, tensor, ZX or circuit diagram is
+  its trace, where it raised `TypeError`: `compact.Diagram` bound the
+  `trace_factory` it read off `ribbon.Diagram`, a classmethod already bound
+  to `ribbon.Diagram`, so the feedback loop of every level below was built
+  from ribbon cups and caps, which compose with nothing there. It binds
+  the function, as a classmethod of whichever level reads it, and
+  `pivotal.Diagram.trace_factory` builds the loop with `caps` and `cups`,
+  as `ribbon.Diagram.trace` does, rather than with `cap_factory` and
+  `cup_factory`, which a ZX or a circuit diagram cannot build on its
+  wires: `f.feedback()` and `f.trace()` are one diagram in either form
+  ([rel-int/discopy-next#128](https://github.com/rel-int/discopy-next/issues/128)).
 - `Nat` at every level, `monoidal.Dim`, so `frobenius.Dim` and
   `tensor.Dim`, and `neural.network.Dims` are their own `delay`, `head`
   and `tail`, a type whose atoms are not wires having no time step: since
