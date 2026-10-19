@@ -9,7 +9,7 @@ from pytest import warns
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
-from discopy import rigid
+from discopy import cat, rigid
 from discopy.cat import Ob
 from discopy.utils import *
 from discopy.tensor import Box
@@ -185,3 +185,66 @@ def test_NamedGeneric_without_type_parameter():
 
     with pytest.raises(TypeError):
         X[int]
+
+def test_encode_complex():
+    assert encode_complex(1 + 2j) == {
+        'factory': 'complex', 're': 1.0, 'im': 2.0}
+    assert encode_complex(complex(0)) == {
+        'factory': 'complex', 're': 0.0, 'im': 0.0}
+    with pytest.raises(TypeError) as err:
+        encode_complex(Ob('x'))
+    assert "Ob" in str(err.value)
+
+
+def test_decode_complex():
+    assert decode_complex(encode_complex(1 + 2j)) == 1 + 2j
+    for tree in ({'factory': 'cat.Ob', 'name': 'x'},
+                 {'re': 1, 'im': 2},
+                 {'factory': 'complex', 're': 1},
+                 {'factory': 'complex', 're': 1, 'im': 2, 'name': 'x'}):
+        assert decode_complex(tree) == tree
+
+
+@pytest.mark.parametrize('data', [
+    1j, [1, 1j], [[1j, 2], {'key': 3j}], {'re': 'a', 'im': 'b'},
+    {'factory': 'cat.Ob', 'name': 'x'}])
+def test_dumps_complex_data(data):
+    """ JSON has no complex numbers, so ``dumps`` encodes them as a pair of
+    reals and ``loads`` reads them back, leaving every other datum alone. """
+    box = cat.Box('f', Ob('x'), Ob('y'), data=data)
+    assert loads(dumps(box)) == box
+
+
+def test_dumps_complex_gate():
+    """ Every quantum gate carries a complex array, so none of them used to
+    serialise at all (discopy/discopy#775). """
+    from discopy.quantum.gates import H, X, Y, Z, S, T
+    for gate in (H, X, Y, Z, S, T, H >> X, H @ X):
+        assert loads(dumps(gate)) == gate
+
+def test_named_generic_pickle_roundtrip():
+    from discopy.frobenius import Diagram, Ty
+    from discopy.matrix import Matrix
+    from discopy.monoidal import List
+    from discopy.quantum import Circuit, Ket, qubit
+    from discopy.tensor import Dim, Tensor
+    for x in (Tensor[float]([1.0], dom=Dim(1), cod=Dim(1)),
+              Matrix[float]([1.0], 1, 1),
+              List[int]((1, 2)), List[type]((int, )),
+              Box("f", Dim(1), Dim(1), data=[1.0]),
+              Diagram.id(Ty('x')).to_hypergraph(),
+              Ket(0) >> Circuit.id(qubit)):
+        y = pickle.loads(pickle.dumps(x))
+        assert type(y) is type(x) and y == x
+        assert "__class_getitem__values__" not in y.__dict__
+
+
+def test_named_generic_setstate_reads_an_old_pickle():
+    from discopy.tensor import Dim
+    box, state = Box.__new__(Box), {
+        "z": 0, "name": "f", "data": None, "is_dagger": False,
+        "dom": Dim(1), "cod": Dim(1), "inside": (),
+        "__class_getitem__values__": (float, )}
+    box.__setstate__(state)
+    assert type(box) is Box[float] and box.dtype is float
+    assert "__class_getitem__values__" not in box.__dict__
