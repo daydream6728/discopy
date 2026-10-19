@@ -10,6 +10,7 @@ DisCoPy's computational core: categories of functions, matrices and tensors.
     discopy.python
     discopy.group
     discopy.kleisli
+    discopy.monad
     discopy.matrix
     discopy.tensor
     discopy.hopf

@@ -51,6 +51,29 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   ([#773](https://github.com/discopy/discopy/issues/773),
   [#775](https://github.com/discopy/discopy/issues/775)).
 
+- `discopy.monad`, the categories of algebras of a
+  `kleisli.monad.Monad`, the first slice of
+  [rel-int/discopy-next#134](https://github.com/rel-int/discopy-next/issues/134).
+  `monad.free.Homomorphism[M]` is a homomorphism between free algebras, a
+  function from `M(X)` to `M(Y)` commuting with the multiplication: these
+  compose as functions, and `from_channel` and `to_channel`, the bind of a
+  channel and its restriction along the unit, are inverse, so the Kleisli
+  category is isomorphic to the category of free algebras.
+  `monad.algebra.Algebra[M]` is a carrier with a structure from `M` of it,
+  equal to another with the same monad, name and carrier, as a `Monad` is
+  equal to another with the same name, with `free` the free algebra on a
+  type, and `monad.algebra.Homomorphism[M]` a function between carriers
+  preserving their structure, the Eilenberg-Moore category, into which
+  `from_free` includes the free algebras. Functions cannot be compared, so
+  the laws are checked at a value: `unitality`, `associativity` and
+  `preservation` return an `Equation`. The algebras of `Maybe` are pointed
+  types, of `Powerset` join semilattices with a least element, de Morgan's
+  law saying that `not` is a homomorphism from `any` to `all`, and the
+  expectation of numbers is an algebra of `Subdistribution`, its
+  homomorphisms linear. `assert_ismember`, the check
+  that an object is of exactly a class, the parameters of a subscript
+  included, moves from `discopy.group` to `discopy.utils`.
+
 - A notebook, *Categorical deep learning*, reproducing the examples of
   Gavranović et al., [*Categorical Deep Learning is an Algebraic Theory of
   All Architectures*](https://arxiv.org/abs/2402.15332) (ICML 2024), with
