@@ -893,7 +893,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   ([#539](https://github.com/discopy/discopy/issues/539),
   [#546](https://github.com/discopy/discopy/pull/546)).
 - Every `tensor` takes `(self, *others)`, the signature that
-  `abc.MonoidalCategory.tensor` has always declared. The implementing
+  `abc.MonoidalCategory.tensor` has always declared, but those of the
+  `kleisli` channels, which are binary still. The implementing
   classes were never adapted when `abc` was introduced, so they came in
   two non-conforming shapes: `(self, other=None, *others)` on
   `monoidal.Diagram`, `monoidal.Sum`, `symmetric.Permutation`,
@@ -906,12 +907,15 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   at all -- `Tensor`, `Matrix` and `Channel` -- reached for
   `monoidal.Diagram.tensor` to fold for them, borrowing a method of a
   category they do not belong to for its recursion alone. Neither is
-  needed once the signature is the declared one: `f.tensor()` is `f`
-  because the empty product of one thing is itself, and each class folds
+  needed once the signature is the declared one: `f.tensor()` is `f`,
+  the tensor of the one factor it is given, and each class folds
   or, where that costs, tensors its `n` arguments at once.
   `Matrix.promote` takes `(self, *others)` too, so that the direct sum and
   the tensor of `n` matrices are built in the class of the `dtype` they
-  promote to, as those of two are
+  promote to, as those of two are, on every backend: the promotion folds
+  `result_type` two arrays at a time, as PyTorch takes them, and the direct
+  sum concatenates its blocks rather than writing into an array, which JAX
+  refused for two matrices as much as for more
   ([#489](https://github.com/discopy/discopy/pull/489#discussion_r3896050565),
   [#761](https://github.com/discopy/discopy/pull/761)).
 

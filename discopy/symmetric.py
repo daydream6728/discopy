@@ -590,11 +590,12 @@ class Permutation(Box):
         >>> assert perm.tensor(x, perm) == Permutation(
         ...     x ** 5, [1, 0, 2, 4, 3])
         """
-        perms, dom, rest = [self.perm], self.dom, list(others)
-        while rest and (
-                isinstance(rest[0], (Permutation, monoidal.Ty))
-                or isinstance(rest[0], Diagram) and not rest[0].inside):
-            other = rest.pop(0)
+        perms, dom, plumbing = [self.perm], self.dom, 0
+        while plumbing < len(others) and (
+                isinstance(others[plumbing], (Permutation, monoidal.Ty))
+                or isinstance(others[plumbing], Diagram)
+                and not others[plumbing].inside):
+            other, plumbing = others[plumbing], plumbing + 1
             if isinstance(other, Permutation):
                 perms.append(other.perm)
                 dom = dom @ other.dom
@@ -604,6 +605,7 @@ class Permutation(Box):
                 dom = dom @ typ
         result = self if len(perms) == 1 else self.permutation_factory(
             dom, perms[0].tensor(*perms[1:]))
+        rest = others[plumbing:]
         return result if not rest\
             else super(Permutation, result).tensor(*rest)
 

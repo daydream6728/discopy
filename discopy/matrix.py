@@ -206,8 +206,10 @@ class Matrix(MarkovCategory, ComarkovCategory, DaggerCategory,
         ...     == Matrix[bool]
         """
         with backend() as np:
-            dtype = np.result_type(
-                self.array, *(other.array for other in others))
+            dtype = self.array.dtype
+            for other in others:
+                dtype = np.result_type(
+                    np.zeros((), dtype=dtype), other.array)
         if dtype == self.array.dtype:
             return type(self)
         for other in others:
@@ -340,11 +342,17 @@ class Matrix(MarkovCategory, ComarkovCategory, DaggerCategory,
         cls = self.promote(*others)
         dom = self.dom.tensor(*(other.dom for other in others))
         cod = self.cod.tensor(*(other.cod for other in others))
-        array, i, j = cls.zero(dom, cod).array, 0, 0
-        for factor in (self, ) + others:
-            rows, columns = index(factor.dom), index(factor.cod)
-            array[i:i + rows, j:j + columns] = factor.array
-            i, j = i + rows, j + columns
+        blocks, width, j = [], index(cod), 0
+        with backend() as np:
+            for factor in (self, ) + others:
+                rows, columns = index(factor.dom), index(factor.cod)
+                left = cls.zero(rows, j).array
+                right = cls.zero(rows, width - j - columns).array
+                blocks.append(np.concatenate([
+                    left, cls(factor.array, factor.dom, factor.cod).array,
+                    right], axis=1))
+                j += columns
+            array = np.concatenate(blocks, axis=0)
         return cls(array, dom, cod)
 
     def __add__(self, other):
