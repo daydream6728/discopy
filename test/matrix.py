@@ -144,6 +144,28 @@ def test_composition_promotes_dtype():
     assert one_plus_one == Matrix[bool].id(1)
 
 
+@pytest.mark.parametrize('name', ['pytorch', 'jax'])
+def test_tensor_of_many_on_backend(name):
+    """ The direct sum of three matrices is built on a backend that takes
+    the dtypes of two arrays at a time, and on one whose arrays are
+    immutable. """
+    pytest.importorskip({'pytorch': 'torch'}.get(name, name))
+    with backend(name):
+        one, two = Matrix([1.], 1, 1), Matrix([2., 2.], 1, 2)
+        result = one.tensor(two, one)
+    assert np.array_equal(np.asarray(result.array), [
+        [1, 0, 0, 0], [0, 2, 2, 0], [0, 0, 0, 1]])
+
+
+def test_tensor_of_many_promotes_dtype():
+    """ The tensor of ``n`` matrices is built in the class the ``dtype`` of
+    all of them promotes to, wherever the float one comes. """
+    m, v = Matrix([.5], 1, 1), Tensor([.5, .5], Dim(1), Dim(2))
+    i, j = Matrix.id(1), Tensor.id(Dim(2))
+    assert i.tensor(i, m) == i @ i @ m and i.tensor(i, m).array[2, 2] == .5
+    assert j.tensor(v, j) == j @ v @ j and type(j.tensor(v, j)) is type(v)
+
+
 def test_Nat_strategy():
     """ The objects of a matrix generate, as the search asks of Matrix.ob. """
     from hypothesis import find
