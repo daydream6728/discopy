@@ -515,7 +515,8 @@ class Controlled(QuantumGate):
 
     def _decompose_grad(self):
         if self.time_step:
-            return self.reset()._decompose_grad().delay(self.time_step)
+            return Controlled._decompose_grad(self.reset()).delay(
+                self.time_step)
         controlled, distance = self.controlled, self.distance
         if isinstance(controlled, (Rx, Rz)):
             phase = self.phase

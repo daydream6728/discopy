@@ -794,6 +794,7 @@ class Circuit(tensor.Diagram[complex]):
 
     @staticmethod
     def cap_factory(left, right):
+        """ The cap of a circuit, the dagger of its cup. """
         return Circuit.cup_factory(left, right).dagger()
 
     @staticmethod

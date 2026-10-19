@@ -71,6 +71,7 @@ class Diagram(tensor.Diagram[complex]):
 
     @staticmethod
     def cap_factory(left, right):
+        """ The cap of a ZX diagram, the dagger of its cup. """
         del left, right
         return Z(0, 2)
 
