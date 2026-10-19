@@ -218,3 +218,12 @@ def test_Matrix_ar():
     F = Functor(ob_map={x: 2, y: 3}, ar_map={}, cod=Matrix[complex])
     assert F(Swap(x, y)).dtype == complex
     assert F(Permutation(x @ y @ x, [1, 2, 0])).dtype == complex
+
+
+def test_Matrix_copy_dtype():
+    for x in range(4):
+        dtype = Matrix.id(x).dtype
+        assert Matrix.copy(x, 2).dtype == dtype
+        assert Matrix.discard(x).dtype == Matrix.ones(x).dtype == dtype
+    for dtype in (bool, int, float, complex):
+        assert Matrix[dtype].copy(2, 2).dtype == dtype
