@@ -668,9 +668,9 @@ class Box(monoidal.Box, Diagram):
         The delay of a box: a box of a category whose objects are not made of
         wires, e.g. a tensor box over dimensions, is its own delay, as its
         objects are; a structural box, one whose ``__getnewargs__`` gives the
-        arguments it is built from, e.g. a swap or a copy, is built from
-        their delays; any other box from its delayed boundary, one more time
-        step on.
+        arguments it is built from, e.g. a swap, a copy or a controlled gate,
+        is built from their delays, those of its types and its diagrams; any
+        other box from its delayed boundary, one more time step on.
 
         Parameters:
             n_steps : The number of time steps to delay.
@@ -680,7 +680,7 @@ class Box(monoidal.Box, Diagram):
         arguments = getattr(self, "__getnewargs__", None)
         if arguments is not None:
             return type(self)(*(
-                x.delay(n_steps) if isinstance(x, Ty) else x
+                x.delay(n_steps) if isinstance(x, (Ty, Diagram)) else x
                 for x in arguments()))
         dom, cod = self.dom.delay(n_steps), self.cod.delay(n_steps)
         time_step = self.time_step + n_steps

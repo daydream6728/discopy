@@ -1144,6 +1144,23 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
+- A delayed qubit or bit prints and serialises with its time step,
+  `Qudit(2, time_step=1)`, where both dropped it, so that
+  `eval(repr(x)) == x` and `loads(dumps(x)) == x` failed on it. A
+  controlled gate and a rotation delay, where `CX.delay()` and
+  `Rz(.5).delay()` raised `TypeError`, as the delay of a named box rebuilds
+  it with a `time_step` neither constructor took. `Controlled` is a
+  structural box, its `__getnewargs__` the gate it controls and the
+  distance, so that `CX.delay() == Controlled(X.delay())`, at the time step
+  of the gate it controls, and `feedback.Box.delay` delays the diagrams
+  among the arguments of a structural box as it does its types. A rotation
+  and a controlled rotation take a `time_step`, kept by their delay,
+  dagger, rotation, `subs`, `lambdify`, `grad`, `repr` and tree, and a
+  controlled gate at a distance decomposes on its own qubits, so that a
+  delayed one evaluates. The other gates with a constructor of their own
+  still do not delay
+  ([rel-int/discopy-next#176](https://github.com/rel-int/discopy-next/issues/176))
+  ([rel-int/discopy-next#130](https://github.com/rel-int/discopy-next/issues/130)).
 - Closed types carry a time step, as every wire below `feedback` does, so
   that a closed diagram delays box by box, where
   `closed.Box('f', x, y).delay()` raised `AttributeError`: since

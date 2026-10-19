@@ -766,3 +766,39 @@ def test_feedback_is_the_trace():
     assert np.allclose(CX.feedback(left=True).eval().array,
                        np.einsum('iaib->ab', array))
     assert CX.feedback(mem=qubit) == CX.trace(mem=qubit)
+
+
+def test_delay():
+    from discopy.quantum import gates
+    from discopy.utils import loads, dumps
+    env = Circuit.environment() | vars(gates)
+    for typ in (qubit, bit, qubit @ bit.delay()):
+        delayed = typ.delay()
+        assert delayed != typ and delayed.delay(-1) == typ
+        assert eval(repr(delayed), env) == delayed
+        assert loads(dumps(delayed)) == delayed
+    for gate in (CX, CCX, CRz(.5), CRx(.25, distance=-1), Rz(.5), Ry(.25),
+                 Controlled(H, distance=-2), Controlled(X, distance=2)):
+        delayed = gate.delay()
+        assert (delayed.dom, delayed.cod) == (
+            gate.dom.delay(), gate.cod.delay())
+        assert delayed != gate and delayed.delay(-1) == gate
+        assert delayed.delay(2) == gate.delay(3)
+        assert eval(repr(delayed), env) == delayed
+        assert np.allclose(delayed.eval().array, gate.eval().array)
+        assert delayed.dagger() == gate.dagger().delay()
+    assert CX.delay() == Controlled(X.delay())
+    assert CRz(.5).delay() == Controlled(Rz(.5).delay())
+    assert loads(dumps(Rz(.5).delay())) == Rz(.5).delay()
+    phi = sympy.Symbol('phi')
+    for gate in (Rz(phi), CRz(phi), CRx(phi, distance=2)):
+        delayed = gate.delay()
+        assert delayed.subs(phi, .5) == gate.subs(phi, .5).delay()
+        assert delayed.lambdify(phi)(.5) == gate.lambdify(phi)(.5).delay()
+        grad = delayed.grad(phi)
+        assert grad.dom == gate.dom.delay() and np.allclose(
+            grad.subs(phi, .5).eval().array,
+            gate.grad(phi).subs(phi, .5).eval().array)
+    circuit = CX >> Rz(.5) @ H
+    assert np.allclose(
+        circuit.delay().eval().array, circuit.eval().array)
