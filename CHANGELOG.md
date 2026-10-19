@@ -39,15 +39,17 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   round changed anything and the cost extracted, round by round, on egg's
   example, on a term that needs congruence after a rewrite and on random
   terms and rule sets, through the reference in
-  `test/fixtures/egglog_reference.py`, where multiplication costs two:
-  no disagreement on a thousand random terms nor on five hundred full
-  trees. The same with a `sample`, not deterministic, and a `condition`,
+  `test/fixtures/egglog_reference.py`, where multiplication costs two,
+  thirty random terms in the suite, and a stress run outside it found no
+  disagreement on a thousand random terms nor on five hundred full trees.
+  The same with a `sample`, not deterministic, and a `condition`,
   not affine: under `x - x = 0`, two samples of `p` stay apart while one
   sample used twice cancels, then is discarded with `p` unless a condition
-  reads it. A test evaluates every section of two rounds of random
-  programs, their samples shared or not and up to two conditions, under
-  eight rules that hold in the integers modulo three, there, samples
-  random stochastic matrices and conditions random weights of zero or one,
+  reads it. A test evaluates the sections of two rounds of random
+  programs, those small enough to contract, their samples shared or not
+  and up to two conditions, under eight rules that hold in the integers
+  modulo three, there, samples random stochastic matrices and conditions
+  random weights of zero or one,
   and contrasts egglog: its naive encoding, a sample a function and a
   program its value, cancels two samples and drops a condition registered
   beside the value, `egglog_trace(extra=...)`, both of which the model

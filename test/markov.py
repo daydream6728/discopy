@@ -118,7 +118,7 @@ def test_Box_flags():
     sample = Box('sample', p, x, is_deterministic=False)
     condition = Box('condition', x, Ty(), is_affine=False)
     assert Box('sample', p, x) != sample
-    assert hash(Box('sample', p, x)) != hash(sample)
+    assert hash(sample) == hash(Box('sample', p, x, is_deterministic=False))
     assert repr(Box('f', p, x)) == "markov.Box('f', monoidal.Ty(cat.Ob('p')), "\
         "monoidal.Ty(cat.Ob('x')))"
     for box in (sample, condition, sample.dagger(), sample @ condition):
