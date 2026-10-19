@@ -32,6 +32,7 @@ from discopy import (
     matrix,
     tensor,
     hopf,
+    group,
     quantum,
     grammar,
     drawing,

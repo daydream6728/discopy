@@ -99,6 +99,19 @@ def test_named_generic_pickle():
         assert type(copied) is type(term) and copied == term
 
 
+def test_named_generic_pickle_subscript():
+    """ A class subscripted by a subscripted class pickles too. """
+    from discopy import tensor
+    from discopy.axioms import Equation
+    from discopy.hypergraph import Hypergraph
+    from discopy.matrix import Matrix
+    m = Matrix[int].id(2)
+    for term in (Equation[Matrix[int]](m, m),
+                 Hypergraph[tensor.Diagram[complex]].id(tensor.Dim(2))):
+        loaded = pickle.loads(pickle.dumps(term))
+        assert type(loaded) is type(term)
+
+
 def test_deprecated_ob():
     from discopy import (
         biclosed, braided, compact, feedback, frobenius, pivotal, rigid)

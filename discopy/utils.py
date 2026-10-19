@@ -217,7 +217,8 @@ class NamedGeneric(Generic[TypeVar('T')]):
                             if '[' in args[0].__name__:
                                 args = (origin, ) + args[1:]
                                 data = dict(
-                                    data, __class_getitem__values__=values)
+                                    data, __class_getitem__values__=tuple(
+                                        map(Subscript.encode, values)))
                             return func, args, data
 
                     C.__module__ = origin.__module__
@@ -226,7 +227,7 @@ class NamedGeneric(Generic[TypeVar('T')]):
                         else getattr(v, "__name__", str(v)) for v in values]
                     C.__name__ = C.__qualname__ = origin.__name__\
                         + f"[{', '.join(names)}]"
-                    C.__origin__ = cls
+                    C.__origin__, C.__values__ = cls, values
                     for attr, value in zip(attributes, values):
                         setattr(C, attr, value)
                     if getattr(origin, "factory", None) is origin:
@@ -242,8 +243,9 @@ class NamedGeneric(Generic[TypeVar('T')]):
                 """
                 if "__class_getitem__values__" in state:
                     state = dict(state)
-                    self.__class__ = type(self)[
-                        state.pop("__class_getitem__values__")]
+                    self.__class__ = type(self)[tuple(map(
+                        Subscript.decode,
+                        state.pop("__class_getitem__values__")))]
                 if hasattr(super(), "__setstate__"):
                     super().__setstate__(state)
                 else:
@@ -255,6 +257,44 @@ class NamedGeneric(Generic[TypeVar('T')]):
         for attr in attributes:
             setattr(Result, attr, getattr(Result, attr, None))
         return Result
+
+
+class Subscript:
+    """
+    A class subscripted by :class:`NamedGeneric`, as its origin and its
+    values. Such a class is created on the fly, so it cannot be pickled by
+    name: a value that is one, e.g. the ``Matrix[int]`` of
+    ``Equation[Matrix[int]]``, is pickled as its subscript instead.
+
+    Parameters:
+        origin : The class subscripted.
+        values : The values it is subscripted by.
+
+    Example
+    -------
+    >>> from discopy.matrix import Matrix
+    >>> subscript = Subscript.encode(Matrix[int])
+    >>> subscript.origin is Matrix and subscript.values == (int, )
+    True
+    >>> assert Subscript.decode(subscript) is Matrix[int]
+    """
+    def __init__(self, origin: type, values: tuple):
+        self.origin, self.values = origin, values
+
+    @classmethod
+    def encode(cls, value):
+        """ The subscript of a subscripted class, else the value itself. """
+        if isinstance(value, type) and "__is_named_generic__" in vars(value):
+            return cls(value.__origin__,
+                       tuple(map(cls.encode, value.__values__)))
+        return value
+
+    @staticmethod
+    def decode(value):
+        """ The class of a subscript, else the value itself. """
+        if isinstance(value, Subscript):
+            return value.origin[tuple(map(Subscript.decode, value.values))]
+        return value
 
 
 def product(xs: list, unit=1):
