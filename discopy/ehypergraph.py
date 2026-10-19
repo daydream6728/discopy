@@ -13,6 +13,20 @@ chooses a producer for each class it needs. Two samples are independent and
 every section keeps a condition: equations are between cartesian diagrams,
 effects being context.
 
+Tiurin, Barrett, Ghica and Hu :cite:`TiurinEtAl24` give e-graphs their
+semantics in the free semilattice-enriched Cartesian category, where an
+e-class is the :class:`Join` of its e-nodes, drawn as an e-box, and
+composition and tensor distribute over joins. :meth:`EHypergraph.to_diagram`
+is their translation, and distributing its joins gives the sections, one
+choice per class as the copy after an e-box says, see the law
+:meth:`EHypergraph.translation`. Their e-hypergraphs are hierarchical, with
+nested e-boxes of any arity, so as to represent any symmetric monoidal
+theory, where these are flat with one output per e-box, the image of
+e-graphs: an equation with several outputs is entered as its projections,
+which is sound for cartesian diagrams only. Unlike theirs, a class may depend
+on itself, as in egg, which :meth:`EHypergraph.to_diagram` refuses as the
+paper does.
+
 Example
 -------
 Egg's example, ``(a * 2) / 2`` with ``a`` an input and each constant a box
@@ -61,6 +75,7 @@ Summary
     :toctree:
 
     EHypergraph
+    Join
 
 .. admonition:: Functions
 
@@ -72,6 +87,7 @@ Summary
         partition
         is_pattern
         ast_size
+        distribute
 """
 
 from collections import Counter
@@ -196,7 +212,8 @@ class Join(monoidal.Bubble, markov.Box):
     is_id_on_objects = True
 
     def __init__(self, *terms, **params):
-        super().__init__(*terms, **params | {"method": "join"})
+        params.pop("method", None)
+        super().__init__(*terms, method="join", **params)
         for term in terms:
             assert_isparallel(self, term)
         self.deterministic = len(terms) == 1 and terms[0].is_deterministic
@@ -206,17 +223,15 @@ class Join(monoidal.Bubble, markov.Box):
         return f"Join({', '.join(map(str, self.args))})"
 
 
-def distribute(diagram: markov.Diagram) -> markov.Sum:
+def distribute(diagram: monoidal.Diagram) -> markov.Sum:
     """
     The formal sum of the terms of a diagram with joins, composition and
     tensor distributing over each of them :cite:`TiurinEtAl24` (Fig. 4), see
     :class:`Join`.
     """
-    def ar_map(box):
-        return reduce(add, map(distribute, box.args))\
-            if isinstance(box, Join) else box
-
-    result = markov.Functor(lambda ob: ob, ar_map)(diagram)
+    functor = markov.Functor(lambda ob: ob, lambda box: reduce(
+        add, map(functor, box.args)) if isinstance(box, Join) else box)
+    result = functor(diagram)
     return result if isinstance(result, markov.Sum)\
         else markov.Sum((result, ))
 
@@ -621,7 +636,7 @@ class EHypergraph[category](
         return self.graph.boxes[box].is_cartesian and len(
             self.graph.boxes[box].cod) == 1
 
-    def to_diagram(self) -> markov.Diagram:
+    def to_diagram(self) -> monoidal.Diagram:
         """
         The string diagram of the e-hypergraph, the translation of e-graphs
         :cite:`TiurinEtAl24` (Fig. 3 and Algorithm 1): a class of several

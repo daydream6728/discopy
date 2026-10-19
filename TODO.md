@@ -20,7 +20,7 @@ the figures.
       e-box, the join of its e-nodes; boxes that are not cartesian stay outside, as context
 - [x] The law `translation`: distributing the joins of the translation (Fig. 4) gives the sections, modulo the
       naturality of copy and discard, i.e. per class as the paper's copies after an e-box say, not per occurrence
-- [WIP] @session_01KNULn8MaXHE4DEmAMcdCz7-2026-10-19 15:58 A notebook reproducing the paper's examples: Fig. 1 rule by rule, Figs. 3 and 25, Figs. 26 and 27, the
+- [x] A notebook reproducing the paper's examples: Fig. 1 rule by rule, Figs. 3 and 25, Figs. 26 and 27, the
       deletion of Fig. 17 and Appendix G, and the cycle the paper leaves out, with tests pinning each
-- [WIP] @session_01KNULn8MaXHE4DEmAMcdCz7-2026-10-19 15:58 Say in the module docstring how the implementation reads the paper, and what it leaves to #103: nested
+- [x] Say in the module docstring how the implementation reads the paper, and what it leaves to #103: nested
       e-boxes of any arity, the join of Definition VI.1, DPO rewriting over monoidal theories

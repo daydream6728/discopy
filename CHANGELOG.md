@@ -102,6 +102,28 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   it raised a bare `ValueError`. A premise of a law annotated `Self`, or
   with a testable shape of it such as `Related[Self]`, is drawn with the
   parameters `Axiom.weaken` declares, as a morphism already was.
+  Read against Tiurin, Barrett, Ghica and Hu's *Equivalence Hypergraphs*
+  ([arXiv:2406.15882](https://arxiv.org/abs/2406.15882)), whose semantics
+  of an e-graph is a string diagram of the free semilattice-enriched
+  Cartesian category: `Join` is the join of parallel diagrams, an e-box
+  drawn as a frame with a slot for each term, `distribute` expands the
+  joins of a diagram into a formal sum as the equations of their Fig. 4
+  say, and `EHypergraph.to_diagram` is their translation of an e-graph
+  (Fig. 3, Algorithm 1): a class of several e-nodes is their join, each
+  reading the inputs of the class it needs and discarding the others, a
+  box that is not cartesian with one output stays outside as context, and
+  a class that depends on itself is refused, as the paper only translates
+  acyclic e-graphs. The law `translation` checks that distributing its
+  joins gives the sections modulo the naturality of copy and discard, i.e.
+  that a section chooses an e-node once per class, as the copy after an
+  e-box says, where egg's extraction chooses per occurrence. `nodes` are
+  the e-nodes of each class, equal deterministic boxes on related inputs
+  being one, egg's hashcons invariant, and `sections` chooses among them,
+  so that it lists each section once. A notebook, *Equivalence
+  hypergraphs*, reproduces the paper's Figs. 1, 4, 17, 25, 26 and 27,
+  which tests pin, and says what is left: their e-hypergraphs are
+  hierarchical, nested e-boxes of any arity representing any symmetric
+  monoidal theory, where these are the flat image of e-graphs.
 - `markov.Box` takes the keyword arguments `is_deterministic` and
   `is_affine`, both `True` by default: a box is deterministic when copying
   commutes with it and affine when discarding does, e.g. a sample is not

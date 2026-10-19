@@ -165,12 +165,14 @@ def test_figure_1():
     assert list(map(len, map(EHypergraph.sections, steps))) == [1, 2, 3, 5]
     assert list(map(len, (joins(step.to_diagram()) for step in steps))) == [
         0, 1, 2, 3]
+    assert all(map(Markov.translation, steps))
     cyclic = steps[-1].step([(
         (x @ one >> times).to_hypergraph(), Diagram.id(x).to_hypergraph())])
     assert ['*', '/', 'a'] in names(cyclic)
     assert cyclic.extract() == a.to_hypergraph()
     with raises(AxiomError):
         cyclic.to_diagram()
+    assert Markov.translation(cyclic)
 
 
 def test_figures_26_and_27():
