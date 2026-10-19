@@ -5,7 +5,7 @@ import pytest
 from pytest import raises
 
 from discopy import axioms
-from discopy.abc import Nat
+from discopy.abc import DaggerCategory, Nat
 from discopy.matrix import Matrix, backend
 from discopy.symmetric import Ty, Permutation, Swap, Functor
 from discopy.tensor import Tensor, Dim
@@ -42,6 +42,7 @@ def test_matrix_add():
         m + 123
     with raises(AxiomError):
         m + m.dagger()
+    assert isinstance(m, DaggerCategory)
 
 
 def test_repeat():

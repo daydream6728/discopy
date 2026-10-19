@@ -55,8 +55,9 @@ from networkx.algorithms.isomorphism import is_isomorphic
 from discopy import cat, cmap, messages
 from discopy.abc import (
     BalancedCategory, BraidedCategory, ColouredMonoid, ComarkovCategory,
-    CompactCategory, HypergraphCategory, MarkovCategory, MonoidalCategory,
-    NamedGeneric, RigidCategory, SymmetricCategory, TracedCategory)
+    CompactCategory, DaggerCategory, HypergraphCategory, MarkovCategory,
+    MonoidalCategory, NamedGeneric, RigidCategory, SymmetricCategory,
+    TracedCategory)
 from discopy.drawing import Node, backend
 from discopy.python.finset import Permutation
 from discopy.utils import (
@@ -126,7 +127,8 @@ def assert_transparent(diagram: Diagram) -> None:
             raise AxiomError(messages.COLOURED_QUOTIENT.format(typ))
 
 
-class Hypergraph(MonoidalCategory, NamedGeneric['category']):
+class Hypergraph(
+        MonoidalCategory, DaggerCategory, NamedGeneric['category']):
     """
     A hypergraph is given by:
 
