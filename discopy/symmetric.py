@@ -99,7 +99,7 @@ from collections.abc import Sequence
 from typing import ClassVar
 
 from discopy import monoidal, feedback, balanced, hypergraph, cmap, messages
-from discopy.abc import SymmetricCategory
+from discopy.abc import BalancedCategory, SymmetricCategory
 from discopy.cat import factory
 from discopy.feedback import (  # noqa: F401  pylint: disable=unused-import
     Wire, Ty, Nat)
@@ -714,3 +714,6 @@ class Equation(monoidal.Equation):
     >>> assert Equation(Swap(x, y) >> Swap(y, x), Id(x @ y))
     """
     up_to = staticmethod(Diagram.to_hypergraph)
+
+
+Diagram.yanking = BalancedCategory.yanking.modulo(Diagram.to_hypergraph)

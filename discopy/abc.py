@@ -494,7 +494,7 @@ class FeedbackCategory[C0, C1](MonoidalCategory[C0, C1]):
 
     The laws of feedback are stated once here: vanishing, joining, strength,
     tightening and sliding. A :class:`TracedCategory` is a feedback category
-    with a trace, the feedback over a memory that is not delayed.
+    whose delay is the identity.
     """
     def delay(self, n_steps: int = 1) -> C1:
         """
@@ -616,12 +616,15 @@ def keyword_form(trace: Callable) -> Callable:
 
 class TracedCategory[C0, C1](FeedbackCategory[C0, C1]):
     """
-    A traced category is a :class:`FeedbackCategory` with a method
-    :code:`trace` for the partial trace of a morphism over some objects, i.e.
-    the feedback over a memory that is not delayed. When the delay is the
-    identity, the default, the two coincide: its :meth:`feedback` is its
-    trace. The free diagrams of :mod:`discopy.feedback` and the levels below
-    it have both, their wires carrying a time step.
+    A traced category is a feedback category with the identity as delay plus
+    the yanking axiom: its :meth:`feedback` is its :meth:`trace`, the partial
+    trace of a morphism over some objects, and the trace of the swap of an
+    object with itself is its identity, that of a braid its twist, see
+    :meth:`yanking`, :meth:`BalancedCategory.yanking` and
+    :cite:t:`JoyalEtAl96`. The free diagrams of :mod:`discopy.feedback` and the
+    levels below it, whose wires carry a time step, are traced on their
+    undelayed wires, the :class:`discopy.feedback.Trace` bubble being the
+    feedback over an undelayed memory.
     """
     @abstractmethod
     def trace(self, n: int = 1, left: bool = False) -> C1:
@@ -649,6 +652,17 @@ class TracedCategory[C0, C1](FeedbackCategory[C0, C1]):
         """
         # pylint: disable-next=unexpected-keyword-arg  # see keyword_form
         return self.trace(n, left, dom=dom, cod=cod, mem=mem)
+
+    @axiom
+    def yanking(cls, x: C0) -> Equation[C1]:
+        """
+        Tracing the swap of an object with itself gives its identity, the
+        yanking axiom of a symmetric traced category: a braided one states it
+        with its twist, see :meth:`BalancedCategory.yanking`, and a planar
+        one, which has no swap, declares it inapplicable.
+        """
+        # pylint: disable-next=no-member  # stated where there is a swap
+        return cls.equation_factory(cls.swap(x, x).trace(mem=x), cls.id(x))
 
 
 class ResiduatedMonoid[C0, C1: ResiduatedMonoid](ColouredMonoid[C0, C1]):
@@ -885,8 +899,10 @@ class RigidCategory[C0: Pregroup, C1: RigidCategory](BiclosedCategory[C0, C1]):
 class PivotalCategory[C0, C1](RigidCategory[C0, C1], TracedCategory[C0, C1]):
     """
     A pivotal category is a :class:`RigidCategory` where the left and right
-    adjoints coincide, hence it is also a :class:`TracedCategory`.
+    adjoints coincide, hence it is also a :class:`TracedCategory`, a planar
+    one with no swap to yank.
     """
+    yanking = TracedCategory.yanking.inapplicable(messages.NO_BRAID)
 
 
 class BraidedCategory[C0, C1](MonoidalCategory[C0, C1]):
@@ -1118,13 +1134,27 @@ class BalancedCategory[C0, C1](
             dom : The object on which to take the twist.
         """
 
+    @axiom
+    def yanking(cls, x: C0) -> Equation[C1]:
+        """
+        Tracing the braid of an object with itself gives its twist, the
+        yanking axiom of a balanced traced category, see
+        :cite:t:`JoyalEtAl96`: the twist is the identity when the braid is a
+        swap.
+        """
+        return cls.equation_factory(
+            cls.braid(x, x).trace(mem=x), cls.twist(x))
+
 
 class RibbonCategory[C0, C1](
         PivotalCategory[C0, C1], BalancedCategory[C0, C1]):
     """
     A ribbon category is a :class:`PivotalCategory` which is also a
-    :class:`BalancedCategory`, i.e. where diagrams can draw knots and links.
+    :class:`BalancedCategory`, i.e. where diagrams can draw knots and links:
+    it yanks as a balanced category does, with the braid a planar pivotal
+    category lacks.
     """
+    yanking = BalancedCategory.yanking
 
 
 class CompactCategory[C0, C1](

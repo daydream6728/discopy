@@ -245,3 +245,14 @@ def test_trace_takes_the_keyword_form():
         f.trace(mem=A)
     with raises(AxiomError):
         f.trace(dom=B, mem=U)
+
+
+def test_yanking():
+    from discopy import compact
+    from discopy.abc import Nat
+    from discopy.matrix import Matrix
+    x = Ty[Nat](Nat(1), Nat(2))
+    assert Diagram[Matrix[bool]].yanking(x)
+    X = Ty[compact.Ty](compact.Ty('x'), compact.Ty("x'", "y'"))
+    assert Diagram[compact.Diagram].yanking.modulo(
+        lambda diagram: diagram.inside.to_hypergraph())(X)

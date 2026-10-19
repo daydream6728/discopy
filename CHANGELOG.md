@@ -631,6 +631,21 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Changed
 
+- A traced category is "a feedback category with the identity as delay
+  plus the yanking axiom" (toumix, 2026-10-19), as the docstring of
+  `abc.TracedCategory` now says, the free diagrams below `feedback`, whose
+  wires carry a time step, being traced on their undelayed wires. Yanking
+  is a law where it was a doctest of `discopy.feedback`:
+  `TracedCategory.yanking`, the trace over an object of its swap with
+  itself is its identity, and `BalancedCategory.yanking`, the trace of its
+  braid is its twist, after Joyal, Street and Verity, the identity on a
+  swap. A planar traced category has no braid and declares it inapplicable:
+  `PivotalCategory`, the free `feedback.Diagram` and `Drawing`. The free
+  balanced diagrams declare it failing, a free trace being a bubble and a
+  free twist a box, the free symmetric ones check it up to hypergraph and
+  terms, being boxes, declare it inapplicable like the other laws of their
+  category
+  ([rel-int/discopy-next#95](https://github.com/rel-int/discopy-next/issues/95)).
 - Every concrete `trace` takes the keyword form `trace(dom=, cod=, mem=)`
   of `feedback` as well as `trace(n, left)`, the two exclusive, as the
   free diagrams' trace already did: that of `Matrix`, the Python functions,
@@ -646,10 +661,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `Matrix[bool](...).trace(mem=1)` and `Function(...).trace(mem=int)` read,
   checks it against the codomain, and the domain against the result, and
   counts it with the new `memory_size`.
-  `TracedCategory.feedback` is the trace in either form, and a
-  `TracedCategory` is a feedback category with a trace, the feedback over
-  an undelayed memory, where `FeedbackCategory` said one whose delay is the
-  identity. Integer diagrams and lenses read a memory with
+  `TracedCategory.feedback` is the trace in either form. Integer diagrams
+  and lenses read a memory with
   `interaction.Ty.split`, a pair of types not being a sequence, so that a
   lens traces one number of atoms per half as an integer diagram does
   ([rel-int/discopy-next#95](https://github.com/rel-int/discopy-next/issues/95)).

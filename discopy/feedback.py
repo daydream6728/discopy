@@ -528,6 +528,8 @@ class Diagram(monoidal.Diagram, TracedCategory):
     tail_factory: ClassVar[type["Tail"]]
     followed_by_factory: ClassVar[type["FollowedBy"]]
 
+    yanking = TracedCategory.yanking.inapplicable(messages.NO_BRAID)
+
     def delay(self, n_steps=1):
         """ The delay of a feedback diagram. """
         dom, cod = self.dom.delay(n_steps), self.cod.delay(n_steps)

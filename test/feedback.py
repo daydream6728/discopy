@@ -212,6 +212,26 @@ def test_every_trace_takes_the_keyword_form():
         g.trace(1, mem=x)
 
 
+def test_yanking():
+    from discopy import balanced, compact, lens, para, pivotal, symmetric
+    from discopy.abc import Nat, PivotalCategory
+    from discopy.matrix import Matrix
+    from discopy.axioms import AxiomFailure
+    from discopy.drawing import Drawing
+    from discopy.python import Function, Ty as PythonTy
+    x, y = symmetric.Ty('x'), compact.Ty('y')
+    assert symmetric.Diagram.yanking(x) and compact.Diagram.yanking(y)
+    assert compact.CMap.yanking(y)
+    yanked, identity = Function.yanking(PythonTy(int)).terms
+    assert yanked(42) == identity(42) == 42
+    assert para.Traced[Matrix[bool]].yanking(Nat(2))
+    assert lens.Traced[Matrix[bool]].yanking(lens.Ty[Nat](Nat(1), Nat(2)))
+    for planar in (Diagram, pivotal.Diagram, Drawing, PivotalCategory):
+        assert planar.yanking() is NotImplemented
+    with raises(AxiomFailure):
+        balanced.Diagram.yanking(balanced.Ty('x'))
+
+
 def test_types_without_wires_are_their_own_delay():
     from discopy import frobenius, monoidal, pivotal, rigid, symmetric
     from discopy.neural.network import Dims
