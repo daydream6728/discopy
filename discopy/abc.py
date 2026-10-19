@@ -17,7 +17,9 @@ every free category inherits along with the structure they axiomatise:
 :class:`Category` states the unitality and associativity of composition,
 the typing of its identities and composites, and the involution and
 contravariance of its dagger; a :class:`ColouredMonoid` inherits them as
-the unitality and associativity of its product, its composition.
+the unitality and associativity of its product, its composition; a
+:class:`Groupoid` adds the invertibility of its arrows, which its dagger
+inverts.
 
 Summary
 -------
@@ -30,6 +32,8 @@ Summary
     Category
     ColouredMonoid
     Monoid
+    Groupoid
+    Group
     Nat
     MonoidalCategory
     PRO
@@ -268,6 +272,39 @@ class ColouredMonoid[C0, C1: ColouredMonoid](Category[C0, C1]):
 
 class Monoid[C1: Monoid](ColouredMonoid[type(None), C1]):
     """ A monoid is a coloured monoid with a single, trivial colour. """
+
+
+class Groupoid[C0, C1: Groupoid](Category[C0, C1]):
+    """
+    A groupoid is a category in which every arrow is invertible, its inverse
+    being its dagger.
+    """
+    @abstractmethod
+    def dagger(self) -> C1:
+        """ The inverse of an arrow. """
+
+    @axiom
+    def invertibility(
+            cls, f: C1) -> Equation[C1]:
+        """ An arrow followed or preceded by its dagger is an identity. """
+        return cls.equation_factory(
+            (f.then(f.dagger()), f.dagger().then(f)),
+            (cls.id(f.dom), cls.id(f.cod)))
+
+
+class Group[C1: Group](Groupoid[type(None), C1], Monoid[C1]):
+    """
+    A group is a monoid whose elements are invertible, i.e. a groupoid with
+    a single object :obj:`None`, which every element goes from and to.
+    """
+    dom = cod = None
+
+    identity_typing = Category.identity_typing.inapplicable(
+        "A group has a single object.")
+    composition_dom_typing = Category.composition_dom_typing.inapplicable(
+        "A group has a single object.")
+    composition_cod_typing = Category.composition_cod_typing.inapplicable(
+        "A group has a single object.")
 
 
 @dataclass

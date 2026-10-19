@@ -9,6 +9,34 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Added
 
+- `discopy.group`, finite groups as normal forms and their actions on
+  finite sets, the first step of
+  [rel-int/discopy-next#121](https://github.com/rel-int/discopy-next/issues/121),
+  geometric deep learning from group constructions. `abc.Groupoid` is a
+  category whose dagger inverts its arrows, with the law `invertibility`,
+  and `abc.Group` a groupoid with one object, i.e. a monoid of invertible
+  elements; `finset.Permutation` is a groupoid. Direct products
+  `Product[G, H]` and wreath products `Wreath[G, H]` build groups up from
+  `Cyclic[n]` and `Symmetric[n]`, each element a normal form, an integer, a
+  permutation, a pair or a tuple and an element of the top group, so that
+  the `order`, the `elements`, a uniform `sample` and the `word` of an
+  element in the `generators` are computed from those of the factors. An
+  `Action` of a group on `range(size)` is a functor into
+  `finset.Permutation` given by the images of the generators, extended
+  along words: each group acts on a set of its own, a product on the pairs
+  of points acted on by its factors, a wreath product on blocks or on
+  tuples of points, and the `tensor` of two actions on pairs. Its `orbits`
+  are computed from the generators alone, by
+  `finset.Permutation.coequalizer`, which takes any number of permutations
+  rather than two: the orbits of the tensor of two actions are what an
+  equivariant linear map between them is constant on. The sudoku group,
+  `Wreath[Wreath[Symmetric[3], Symmetric[3]], Cyclic[2]]` acting on the
+  cells times `Symmetric[9]` on the digits, has 1,218,998,108,160
+  elements, and the linear maps on the cells commuting with it have six
+  parameters. The four kinds of groups join the property matrix; their
+  `serialisation` is inapplicable, since `utils.resolve_factory` reads one
+  class as the parameter of a class, not an integer nor several.
+
 - `discopy.comarkov`, the free comarkov category, i.e. a symmetric
   category with a supply of commutative monoids, the dual of
   `discopy.markov`: a category is comarkov exactly when its opposite is
@@ -1068,6 +1096,14 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
+- A class subscripted by a subscripted class pickles:
+  `pickle.dumps(Equation[Matrix[int]](m, m))` and the identity of
+  `Hypergraph[tensor.Diagram[complex]]` raised `PicklingError`, since
+  `NamedGeneric` pickles the values of a subscript in the state of a term
+  and a class such as `Matrix[int]`, created on the fly, cannot be found by
+  name. A value that is a subscripted class is pickled as its
+  `utils.Subscript`, its origin and its values, recursively
+  ([rel-int/discopy-next#121](https://github.com/rel-int/discopy-next/issues/121)).
 - `frobenius.Dim.unwind`, and so `tensor.Dim.unwind`, is the identity, like
   its `l` and `r` and like `rigid.Nat.unwind`: it inherited
   `rigid.Ty.unwind`, which asks the atom of a type for its winding, and the
@@ -1831,6 +1867,10 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Project
 
+- `fail-under` rises from 8.84 to 8.85, by what `discopy.group` lifts the
+  score: 9.0297 on `main` and 9.0472 with it, both read with
+  `--output-format=json2`
+  ([rel-int/discopy-next#121](https://github.com/rel-int/discopy-next/issues/121)).
 - `fail-under` rises from 8.83 to 8.84, by what `discopy.comarkov` lifts
   the score: 9.0310 on `main` and 9.0481 with it, both read with
   `--output-format=json2`
