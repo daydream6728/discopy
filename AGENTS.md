@@ -15,10 +15,10 @@ Read the following documents (<10k tokens) before any work on the package:
 
 This repo is the *next* repo of [discopy/discopy](https://github.com/discopy/discopy), which stays fully human-reviewed: here agents merge into `main` themselves, and their job is to keep the drift between the two small. The rules are the `Next repos` section of [toumix/desire](https://github.com/toumix/desire/blob/main/AGENTS.md#next-repos); in short:
 
-- `main` is upstream `main` plus work meant to go upstream: agents merge into it once its checks pass, with no human sign-off. The `TODO.md` of `RULES.md` still claims and tracks the work, its deletion is just not a merge gate here
+- `main` is upstream `main` plus work meant to go upstream: agents merge into it once its checks pass and its `TODO.md` is deleted, with no human sign-off: the human approval of `CONTRIBUTING.md`'s LLM guidelines binds upstream, not here
 - down: upstream `main` is merged into `main` every night, never rebased
 - up: an upstream pull request is opened only when a human asks, cut from upstream `main` and small enough to read; agents propose the slices on [#55](https://github.com/rel-int/discopy-next/issues/55)
-- drift is `git diff upstream/main...main -- . ':!.github'`, split `discopy/`, `test/` and `docs/`, and tended down by slicing; it never freezes `main`, and moving work from upstream adds none, it only moves it
+- drift is `git diff upstream/main...main -- . ':!.github'`, split `discopy/`, `test/` and `docs/`, and tended down by slicing; it never freezes `main`: moving an open upstream pull request here raises the measured drift but adds nothing to read, it only moves where the work waits
 - experiments do not live on long branches: a big, speculative one gets a repository of its own, a small one lands in `main` as a notebook
 - `#N` is this repo, `discopy/discopy#N` upstream
 
@@ -27,7 +27,7 @@ Each human's agents move their own open work from upstream, never somebody else'
 1) triage every open agent pull request upstream in one issue here: **next** (merge or port), **own repo** or **close**, with its size and how far behind it is, and let its human rule on it
 2) merge the ones that merge as they stand, a few per pull request, each as a merge commit of the upstream head so its commits survive, each conflict resolved once; `CHANGELOG.md` by hand, since git's union driver brings back lines one side deleted
 3) port the ones that do not merge in a pull request each, carrying the upstream description
-4) close each upstream pull request with a comment pointing to the pull request here that merged it, and close an **own repo** or **close** row only once its human agrees
+4) close the upstream pull request of each **next** row with a comment pointing to the pull request here that merged it, and an **own repo** or **close** row only once its human agrees, with a comment saying where it went or why it closed
 5) re-file each open agent issue here, its body headed `Ported from discopy/discopy#N (<author>, <date>)`, and close the upstream one with `Moved to rel-int/discopy-next#M`
 
 ## Where
