@@ -1170,9 +1170,10 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   closed… I would say the safest choice is to give them a time step too
   but for now I don't see an example where it would be used"*, then *"wait
   no a time step on closed means that exponentials do not commute with
-  delay!!"* (toumix, 2026-10-19): `closed.Wire` is a `feedback.Wire`, and
-  an exponential, a `Product` and the `Unitype` are closed wires of their
-  own, delayed as a whole, leaving their base, exponent and factors alone,
+  delay!!"* (toumix, 2026-10-19): `closed.Wire` is a `feedback.Wire`, the
+  generator of `closed.Ty`, which prints its atoms as `closed.Wire('x')`
+  where it printed `cat.Ob('x')`, and an exponential, a `Product` and the
+  `Unitype` are closed wires of their own, delayed as a whole, leaving their base, exponent and factors alone,
   so that `(x << y).delay() != x.delay() << y.delay()`: the delay is not a
   closed functor. The boxes built from them, `Eval`, `Coeval`, `Curry`,
   `Pack` and `Unpack`, are `closed.Timed`: delayed, each keeps its
