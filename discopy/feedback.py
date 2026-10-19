@@ -295,8 +295,8 @@ class Wire(monoidal.Wire):
         assert_isinstance(is_constant, bool)
         if time_step < 0:
             raise NotImplementedError
-        self.time_step, self.is_constant = time_step, is_constant
         super().__init__(name, *args, **params)
+        self.time_step, self.is_constant = time_step, is_constant
 
     def __setstate__(self, state):
         state.setdefault('time_step', 0)
@@ -690,8 +690,7 @@ class Box(monoidal.Box, Diagram):
 
     def reset(self):
         """ Reset a box to time step zero, used in :class:`Functor`. """
-        dom, cod = [x.delay(-self.time_step) for x in (self.dom, self.cod)]
-        return type(self)(self.name, dom, cod, *self._args, **self._params)
+        return self.delay(-self.time_step)
 
     def dagger(self):
         result = super().dagger()

@@ -1144,6 +1144,30 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
+- Closed types carry a time step, as every wire below `feedback` does, so
+  that a closed diagram delays box by box, where
+  `closed.Box('f', x, y).delay()` raised `AttributeError`: since
+  [rel-int/discopy-next#110](https://github.com/rel-int/discopy-next/pull/110)
+  a closed diagram is a feedback diagram, but its wires were
+  `monoidal.Wire`s, with no delay. *"ha i hadn't thought about delayed +
+  closed… I would say the safest choice is to give them a time step too
+  but for now I don't see an example where it would be used"*, then *"wait
+  no a time step on closed means that exponentials do not commute with
+  delay!!"* (toumix, 2026-10-19): `closed.Wire` is a `feedback.Wire`, and
+  an exponential, a `Product` and the `Unitype` are closed wires of their
+  own, delayed as a whole, leaving their base, exponent and factors alone,
+  so that `(x << y).delay() != x.delay() << y.delay()`: the delay is not a
+  closed functor. The boxes built from them, `Eval`, `Coeval`, `Curry`,
+  `Pack` and `Unpack`, are `closed.Timed`: delayed, each keeps its
+  arguments and takes a time step of its own, its boundary the delay of
+  its boundary, e.g. the delay of the evaluation of `x << y` evaluates
+  `(x << y).delay()` at `y.delay()` into `x.delay()`, where the evaluation
+  of `x.delay() << y.delay()` is another box. A `Constant`, a state of its
+  type, delays to the constant of the delayed type. `feedback.Box.reset`
+  is the delay back to time step zero, so that a functor maps a delayed box
+  whatever its constructor, and `closed.Functor` sends a delayed wire or
+  box there before it reads an exponential
+  ([rel-int/discopy-next#129](https://github.com/rel-int/discopy-next/issues/129)).
 - The feedback of a compact, Frobenius, tensor, ZX or circuit diagram is
   its trace, where it raised `TypeError`: `compact.Diagram` bound the
   `trace_factory` it read off `ribbon.Diagram`, a classmethod already bound
