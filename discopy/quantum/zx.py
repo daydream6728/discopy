@@ -69,6 +69,12 @@ class Diagram(tensor.Diagram[complex]):
         del left, right
         return Z(2, 0)
 
+    @staticmethod
+    def cap_factory(left, right):
+        """ The cap of a ZX diagram, the dagger of its cup. """
+        del left, right
+        return Z(0, 2)
+
     def grad(self, var, **params) -> rigid.Sum:
         """
         Gradient with respect to `var`, a formal sum by the product rule

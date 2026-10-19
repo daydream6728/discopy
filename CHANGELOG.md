@@ -1254,7 +1254,64 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   inherited by `python.multiplicative.Function` and
   `python.additive.Function`; a chain built with `>>` still nests, since
   that operator is binary.
-
+- A delayed qubit or bit prints and serialises with its time step,
+  `Qudit(2, time_step=1)`, where both dropped it, so that
+  `eval(repr(x)) == x` and `loads(dumps(x)) == x` failed on it. A
+  controlled gate and a rotation delay, where `CX.delay()` and
+  `Rz(.5).delay()` raised `TypeError`, as the delay of a named box rebuilds
+  it with a `time_step` neither constructor took. `Controlled` is a
+  structural box, its `__getnewargs__` the gate it controls and the
+  distance, so that `CX.delay() == Controlled(X.delay())`, at the time step
+  of the gate it controls, and `feedback.Box.delay` delays the diagrams
+  among the arguments of a structural box as it does its types. A rotation
+  and a controlled rotation take a `time_step`, kept by their delay,
+  dagger, rotation, `subs`, `lambdify`, `grad`, `repr` and tree, and a
+  controlled gate at a distance decomposes on its own qubits, so that a
+  delayed one evaluates. The other gates with a constructor of their own
+  still do not delay
+  ([rel-int/discopy-next#176](https://github.com/rel-int/discopy-next/issues/176))
+  ([rel-int/discopy-next#130](https://github.com/rel-int/discopy-next/issues/130)).
+- Closed types carry a time step, as every wire below `feedback` does, so
+  that a closed diagram delays box by box, where
+  `closed.Box('f', x, y).delay()` raised `AttributeError`: since
+  [rel-int/discopy-next#110](https://github.com/rel-int/discopy-next/pull/110)
+  a closed diagram is a feedback diagram, but its wires were
+  `monoidal.Wire`s, with no delay. *"ha i hadn't thought about delayed +
+  closed… I would say the safest choice is to give them a time step too
+  but for now I don't see an example where it would be used"*, then *"wait
+  no a time step on closed means that exponentials do not commute with
+  delay!!"* (toumix, 2026-10-19): `closed.Wire` is a `feedback.Wire`, the
+  generator of `closed.Ty`, which prints its atoms as `closed.Wire('x')`
+  where it printed `cat.Ob('x')`, and an exponential, a `Product` and the
+  `Unitype` are closed wires of their own, delayed as a whole, leaving
+  their base, exponent and factors alone, so that
+  `(x << y).delay() != x.delay() << y.delay()`: the delay is not a closed
+  functor. The boxes built from them, `Eval`, `Coeval`, `Curry`,
+  `Pack` and `Unpack`, are `closed.Timed`: delayed, each keeps its
+  arguments and takes a time step of its own, its boundary the delay of
+  its boundary, e.g. the delay of the evaluation of `x << y` evaluates
+  `(x << y).delay()` at `y.delay()` into `x.delay()`, where the evaluation
+  of `x.delay() << y.delay()` is another box. A `Constant`, a state of its
+  type, delays to the constant of the delayed type. `feedback.Box.reset`
+  is the delay back to time step zero, so that a functor maps a delayed box
+  whatever its constructor, and `closed.Functor` sends a delayed wire or
+  box there before it reads an exponential. Two things do not delay yet,
+  as nothing uses them: the uncurrying of a delayed exponential, whose
+  evaluation is the delay of an evaluation, which `ev(base, exponent)`
+  cannot build, and a term box other than a constant, which delays once
+  evaluated
+  ([rel-int/discopy-next#129](https://github.com/rel-int/discopy-next/issues/129)).
+- The feedback of a compact, Frobenius, tensor, ZX or circuit diagram is
+  its trace, where it raised `TypeError`: `compact.Diagram` bound the
+  `trace_factory` it read off `ribbon.Diagram`, a classmethod already bound
+  to `ribbon.Diagram`, so the feedback loop of every level below was built
+  from ribbon cups and caps, which compose with nothing there. It binds
+  the function, as a classmethod of whichever level reads it, and
+  `zx.Diagram` and `Circuit` have a `cap_factory`, the dagger of their
+  `cup_factory`, where they inherited the cap box of `frobenius`, which
+  cannot be built on their wires: `f.feedback()` and `f.trace()` are one
+  diagram in either form
+  ([rel-int/discopy-next#128](https://github.com/rel-int/discopy-next/issues/128)).
 - Sixteen boxes of `discopy.quantum.gates` come back from their tree.
   `cat.Box.from_tree` rebuilds a box as
   `cls(name=, dom=, cod=, data=, is_dagger=)`, so every subclass whose

@@ -529,3 +529,17 @@ def test_delay_is_the_identity():
     assert Dim(2).delay() == Dim(2) == Dim(2).head == Dim(2).tail
     for d in (f, diagram):
         assert d.delay() == d == d.delay(2) and d.delay().eval() == d.eval()
+
+
+def test_feedback_is_the_trace():
+    array = np.arange(36).reshape(2, 3, 2, 3)
+    f = Box('f', Dim(2, 3), Dim(2, 3), array.flatten())
+    right = np.einsum('aibi->ab', array)
+    for traced in (f.feedback(), f.feedback(1), f.feedback(mem=Dim(3)),
+                   f.feedback(dom=Dim(2), cod=Dim(2), mem=Dim(3)),
+                   f.trace(), f.trace(1), f.trace(mem=Dim(3))):
+        assert isinstance(traced, Diagram)
+        assert np.array_equal(traced.eval().array, right)
+    left = np.einsum('iaib->ab', array)
+    for traced in (f.feedback(left=True), f.trace(mem=Dim(2), left=True)):
+        assert np.array_equal(traced.eval().array, left)
