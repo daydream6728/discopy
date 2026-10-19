@@ -69,6 +69,11 @@ class Diagram(tensor.Diagram[complex]):
         del left, right
         return Z(2, 0)
 
+    @staticmethod
+    def cap_factory(left, right):
+        del left, right
+        return Z(0, 2)
+
     def grad(self, var, **params) -> rigid.Sum:
         """
         Gradient with respect to `var`, a formal sum by the product rule

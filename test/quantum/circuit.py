@@ -757,3 +757,12 @@ def test_logical_vs_physical_swap():
     # The gate is a box: it stays whiskered and it is drawn as a crossing.
     assert str(qubit @ physical) == "qubit @ SWAP"
     assert physical.to_drawing().boxes[0].is_crossing
+
+
+def test_feedback_is_the_trace():
+    array = CX.eval().array
+    assert np.allclose(CX.feedback().eval().array,
+                       np.einsum('aibi->ab', array))
+    assert np.allclose(CX.feedback(left=True).eval().array,
+                       np.einsum('iaib->ab', array))
+    assert CX.feedback(mem=qubit) == CX.trace(mem=qubit)

@@ -792,6 +792,10 @@ class Circuit(tensor.Diagram[complex]):
         raise ValueError
 
     @staticmethod
+    def cap_factory(left, right):
+        return Circuit.cup_factory(left, right).dagger()
+
+    @staticmethod
     def spider_factory(n_legs_in, n_legs_out, typ, phase=None):
         if phase is not None:
             raise NotImplementedError

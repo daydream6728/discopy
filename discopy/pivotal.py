@@ -209,12 +209,12 @@ class Diagram(rigid.Diagram, feedback.Diagram, PivotalCategory):
         traced_wire = diagram.dom[:1] if left else diagram.dom[-1:]
         dom, cod = (diagram.dom[1:], diagram.cod[1:]) if left\
             else (diagram.dom[:-1], diagram.cod[:-1])
-        return cls.caps(traced_wire.r, traced_wire) @ dom\
+        return cls.cap_factory(traced_wire.r, traced_wire) @ dom\
             >> traced_wire.r @ diagram\
-            >> cls.cups(traced_wire.r, traced_wire) @ cod if left\
-            else dom @ cls.caps(traced_wire, traced_wire.r)\
+            >> cls.cup_factory(traced_wire.r, traced_wire) @ cod if left\
+            else dom @ cls.cap_factory(traced_wire, traced_wire.r)\
             >> diagram @ traced_wire.r\
-            >> cod @ cls.cups(traced_wire, traced_wire.r)
+            >> cod @ cls.cup_factory(traced_wire, traced_wire.r)
 
 
 class Box(rigid.Box, feedback.Box, Diagram):

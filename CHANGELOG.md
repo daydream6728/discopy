@@ -1150,10 +1150,10 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   to `ribbon.Diagram`, so the feedback loop of every level below was built
   from ribbon cups and caps, which compose with nothing there. It binds
   the function, as a classmethod of whichever level reads it, and
-  `pivotal.Diagram.trace_factory` builds the loop with `caps` and `cups`,
-  as `ribbon.Diagram.trace` does, rather than with `cap_factory` and
-  `cup_factory`, which a ZX or a circuit diagram cannot build on its
-  wires: `f.feedback()` and `f.trace()` are one diagram in either form
+  `zx.Diagram` and `Circuit` have a `cap_factory`, the dagger of their
+  `cup_factory`, where they inherited the cap box of `frobenius`, which
+  cannot be built on their wires: `f.feedback()` and `f.trace()` are one
+  diagram in either form
   ([rel-int/discopy-next#128](https://github.com/rel-int/discopy-next/issues/128)).
 - `Nat` at every level, `monoidal.Dim`, so `frobenius.Dim` and
   `tensor.Dim`, and `neural.network.Dims` are their own `delay`, `head`
