@@ -248,3 +248,12 @@ def test_named_generic_setstate_reads_an_old_pickle():
     box.__setstate__(state)
     assert type(box) is Box[float] and box.dtype is float
     assert "__class_getitem__values__" not in box.__dict__
+
+
+def test_unbiased_keyword_operand():
+    """ An operand passed by keyword is composed, not dropped. """
+    from discopy.cat import Functor
+    x, y, z = Ob('x'), Ob('y'), Ob('z')
+    F, G = Functor({x: y}, {}), Functor({y: z}, {})
+    assert F.then(other=G)(x) == F.then(G)(x) == z
+    assert F.then() == F

@@ -622,13 +622,15 @@ def unbiased(binary_method):
 
     One argument is the base case, more are folded by calling the method by
     its name on the running result, so that a subclass overriding the binary
-    case has its own folded rather than the one decorated.
+    case has its own folded rather than the one decorated. An operand passed
+    by keyword, e.g. ``f.then(other=g)``, goes to the binary method as it is,
+    rather than being dropped as if there were none.
 
     .. _nLab: https://ncatlab.org/nlab/show/biased+definition
     """
     @wraps(binary_method)
     def method(self, *others, **params):
-        if len(others) == 1:
+        if len(others) == 1 or not others and params:
             return binary_method(self, *others, **params)
         result = self
         for other in others:
