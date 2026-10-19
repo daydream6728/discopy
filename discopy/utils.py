@@ -415,12 +415,15 @@ def resolve_factory(name: str) -> type:
     """
     The DisCoPy class with a given :func:`factory_name`, the inverse of it:
     a subscripted class is resolved by its origin and its parameter, which
-    may be a builtin type.
+    may be a type of ``builtins`` or of ``numpy``, the two places a data type
+    parameterising a category comes from.
 
     >>> from discopy.markov import Diagram
     >>> assert resolve_factory(factory_name(Diagram)) is Diagram
+    >>> from numpy import float64
     >>> from discopy.tensor import Diagram
     >>> assert resolve_factory("tensor.Diagram[complex]") is Diagram[complex]
+    >>> assert resolve_factory("tensor.Diagram[float64]") is Diagram[float64]
     """
     if name.endswith(']'):
         origin, parameter = name[:-1].split('[', 1)
@@ -431,7 +434,11 @@ def resolve_factory(name: str) -> type:
     for attr in modules:
         module = getattr(module, attr)
     if not modules and factory not in vars(discopy):
-        return getattr(builtins, factory)
+        import numpy
+        for module in (builtins, numpy):
+            if isinstance(getattr(module, factory, None), type):
+                return getattr(module, factory)
+        raise AttributeError(messages.NO_SUCH_TYPE.format(factory))
     return getattr(module, factory)
 
 
