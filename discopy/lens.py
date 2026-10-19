@@ -382,27 +382,30 @@ class Traced(Symmetric, TracedCategory):
     ...     == (f.forward >> x @ Diagram.swap(u, m)).trace()
     >>> assert f.trace().backward == f.backward.trace()
     """
-    def trace(self, n: int = 1, left: bool = False) -> Traced:
+    def trace(self, n: int | tuple[int, int] = 1, left: bool = False
+              ) -> Traced:
         """
         The trace of a lens over the last `n` atoms of each half of its
-        domain and codomain, the residual never being traced.
+        domain and codomain, or one number per half, the residual never being
+        traced.
 
         Parameters:
-            n : The number of atoms to trace over on each half.
+            n : The number of atoms to trace over on each half, or one number
+                per half.
             left : Whether to trace on the left, not implemented.
         """
-        if n == 0:
+        (x, (u, u_)), (y, _) = self.dom.split(n), self.cod.split(n)
+        if not u and not u_:
             return self
         if left:
             raise NotImplementedError
-        identity, swap = self.category.id, self.category.swap
-        (x, x_), (y, y_) = (
-            (positive[:-n], negative[:-n])
-            for positive, negative in (self.dom, self.cod))
-        u = self.dom.positive[-n:]
-        forward = self.forward >> identity(y) @ swap(u, self.residual)
-        return type(self)(self.ob(x, x_), self.ob(y, y_), forward.trace(n),
-                          self.backward.trace(n), self.residual)
+        forward = self.forward >> self.category.id(y.positive)\
+            @ self.category.swap(u, self.residual)
+        return type(self)(x, y, forward.trace(len(u)),
+                          self.backward.trace(len(u_)), self.residual)
+
+    split_memory = interaction.Diagram.split_memory
+    memory_size = interaction.Diagram.memory_size
 
 
 class Markov(Symmetric):

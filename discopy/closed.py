@@ -835,7 +835,7 @@ type Term = Constant | Variable | Application | Abstraction\
 
 for law in ("copy_coassociativity", "copy_cocommutativity",
             "copy_counitality", "copy_coherence", "vanishing", "joining",
-            "strength", "tightening", "sliding"):
+            "strength", "tightening", "sliding", "yanking"):
     setattr(TermBase, law, getattr(Box, law).inapplicable(
         messages.TERM_IS_A_BOX))
 
