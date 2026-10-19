@@ -58,13 +58,24 @@ Summary
     CompactCategory
     HypergraphCategory
     NamedGeneric
+
+.. admonition:: Functions
+
+    .. autosummary::
+        :template: function.rst
+        :nosignatures:
+        :toctree:
+
+        keyword_form
 """
 
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
+from functools import wraps
+from inspect import signature
 from typing import ClassVar, Self
 
 from discopy import messages
@@ -393,7 +404,18 @@ class MonoidalCategory[C0: ColouredMonoid, C1: MonoidalCategory](
     both its objects and its morphisms.
 
     This base class also implements syntactic sugar :code:`@` for whiskering.
+
+    A ``trace`` defined in a subclass, in the positional form
+    ``trace(n, left)``, takes the keyword form ``trace(dom=, cod=, mem=)``
+    of :meth:`FeedbackCategory.feedback` too, through :func:`keyword_form`,
+    whether the subclass declares :class:`TracedCategory` or only has a
+    trace, as :class:`discopy.matrix.Matrix` and
+    :class:`discopy.hypergraph.Hypergraph` do.
     """
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        if "trace" in vars(cls):
+            cls.trace = keyword_form(vars(cls)["trace"])
 
     @classmethod
     @abstractmethod
@@ -420,6 +442,58 @@ class MonoidalCategory[C0: ColouredMonoid, C1: MonoidalCategory](
 
     def __rmatmul__(self, other):
         return self.whisker(other).tensor(self)
+
+    def split_memory(
+            self, n: int = None, left: bool = False, *,
+            dom: C0 = None, cod: C0 = None, mem: C0 = None
+            ) -> tuple[C0, C0, C0]:
+        """
+        The domain, codomain and memory of a feedback or a trace, read off
+        either form of :meth:`FeedbackCategory.feedback`: the memory is
+        ``mem``, or the objects of the codomain beside ``cod``, or the last
+        ``n`` objects of the codomain, the first when ``left``, one by
+        default; the domain and codomain default to what the memory leaves.
+        Each of them is cast into the type of the codomain, e.g. an integer
+        into the :class:`Nat` of a :class:`discopy.matrix.Matrix`.
+
+        Example
+        -------
+        >>> from discopy.feedback import Ty, Box
+        >>> x, y, m = map(Ty, "xym")
+        >>> f = Box('f', x @ m.delay(), y @ m)
+        >>> assert f.split_memory() == f.split_memory(mem=m) == (x, y, m)
+        >>> assert f.split_memory(cod=y) == f.split_memory(1) == (x, y, m)
+        """
+        if n is not None and (dom, cod, mem) != (None, None, None):
+            raise TypeError(messages.FEEDBACK_FORMS)
+        dom, cod, mem = (x if x is None else type(self.cod).cast(x)
+                         for x in (dom, cod, mem))
+        if mem is None:
+            size = len(self.cod) - len(cod) if cod is not None\
+                else 1 if n is None else n
+            if not 0 <= size <= len(self.cod):
+                raise ValueError(
+                    messages.NOT_SPLITTABLE.format(size, self.cod))
+            mem = self.cod[:size] if left\
+                else self.cod[len(self.cod) - size:]
+        size = len(mem)
+        if size > min(len(self.dom), len(self.cod)):
+            raise ValueError(messages.NOT_SPLITTABLE.format(size, self))
+        if dom is None:
+            dom = self.dom[size:] if left else self.dom[:len(self.dom) - size]
+        if cod is None:
+            cod = self.cod[size:] if left else self.cod[:len(self.cod) - size]
+        return dom, cod, mem
+
+    def memory_size(self, mem: C0) -> int:
+        """
+        The number of objects in a memory, as the positional form of
+        :meth:`FeedbackCategory.feedback` counts them, i.e. its length.
+
+        Parameters:
+            mem : The memory.
+        """
+        return len(mem)
 
 
 class PRO[C1: PRO](MonoidalCategory[Nat, C1]):
@@ -471,44 +545,6 @@ class FeedbackCategory[C0, C1](MonoidalCategory[C0, C1]):
             mem : The memory to feed back.
         """
 
-    def split_memory(
-            self, n: int = None, left: bool = False, *,
-            dom: C0 = None, cod: C0 = None, mem: C0 = None
-            ) -> tuple[C0, C0, C0]:
-        """
-        The domain, codomain and memory of a feedback, read off either form
-        of :meth:`feedback`: the memory is ``mem``, or the objects of the
-        codomain beside ``cod``, or the last ``n`` objects of the codomain,
-        the first when ``left``, one by default; the domain and codomain
-        default to what the memory leaves.
-
-        Example
-        -------
-        >>> from discopy.feedback import Ty, Box
-        >>> x, y, m = map(Ty, "xym")
-        >>> f = Box('f', x @ m.delay(), y @ m)
-        >>> assert f.split_memory() == f.split_memory(mem=m) == (x, y, m)
-        >>> assert f.split_memory(cod=y) == f.split_memory(1) == (x, y, m)
-        """
-        if n is not None and (dom, cod, mem) != (None, None, None):
-            raise TypeError(messages.FEEDBACK_FORMS)
-        if mem is None:
-            size = len(self.cod) - len(cod) if cod is not None\
-                else 1 if n is None else n
-            if not 0 <= size <= len(self.cod):
-                raise ValueError(
-                    messages.NOT_SPLITTABLE.format(size, self.cod))
-            mem = self.cod[:size] if left\
-                else self.cod[len(self.cod) - size:]
-        size = len(mem)
-        if size > min(len(self.dom), len(self.cod)):
-            raise ValueError(messages.NOT_SPLITTABLE.format(size, self))
-        if dom is None:
-            dom = self.dom[size:] if left else self.dom[:len(self.dom) - size]
-        if cod is None:
-            cod = self.cod[size:] if left else self.cod[:len(self.cod) - size]
-        return dom, cod, mem
-
     @axiom
     def vanishing(cls, f: C1) -> Equation[C1]:
         """ Feeding back the unit does nothing. """
@@ -550,19 +586,71 @@ class FeedbackCategory[C0, C1](MonoidalCategory[C0, C1]):
             (x @ k.delay() >> f).feedback(dom=x, cod=y, mem=m @ n))
 
 
+def keyword_form(trace: Callable) -> Callable:
+    """
+    A method in the positional form ``(n, left)``, e.g. a trace, that takes
+    the keyword form ``dom``, ``cod``, ``mem`` of
+    :meth:`FeedbackCategory.feedback` as well, the two forms exclusive: the
+    memory is read off the boundary with
+    :meth:`MonoidalCategory.split_memory`, checked to be what the codomain
+    feeds back and passed on as its :meth:`MonoidalCategory.memory_size`.
+    The domain is checked on the result, since the boundary takes in the
+    delay of the memory when the trace is the
+    :meth:`TracedCategory.feedback` of a category that labels the two apart,
+    e.g. a :class:`discopy.drawing.Drawing`. A method that takes ``mem``
+    already is returned as it is, so that a class wraps the trace it defines
+    once, whichever trace that one calls.
+
+    Parameters:
+        trace : The method in its positional form.
+
+    Example
+    -------
+    >>> from discopy.matrix import Matrix
+    >>> f = Matrix[bool]([[1, 1], [0, 0]], 2, 2)
+    >>> assert f.trace(mem=1) == f.trace() != f.trace(mem=1, left=True)
+    >>> assert keyword_form(Matrix.trace) is Matrix.trace
+    """
+    if "mem" in signature(trace).parameters:
+        return trace
+
+    @wraps(trace)
+    def method(self, n: int = None, left: bool = False, *,
+               dom=None, cod=None, mem=None):
+        if (dom, cod, mem) == (None, None, None):
+            return trace(self, left=left) if n is None\
+                else trace(self, n, left)
+        dom, cod, mem = self.split_memory(
+            n, left, dom=dom, cod=cod, mem=mem)
+        if self.cod != (mem @ cod if left else cod @ mem):
+            raise AxiomError(messages.NOT_TRACEABLE.format(self, mem))
+        result = trace(self, self.memory_size(mem), left)
+        if result.dom != dom:
+            raise AxiomError(messages.NOT_TRACEABLE.format(self, mem))
+        return result
+    method.__signature__ = signature(method, follow_wrapped=False)
+    return method
+
+
 class TracedCategory[C0, C1](FeedbackCategory[C0, C1]):
     """
-    A traced category is a :class:`FeedbackCategory` with a method
-    :code:`trace` for the partial trace of a morphism over some objects, i.e.
-    the feedback over a memory that is not delayed. When the delay is the
-    identity, the default, the two coincide: its :meth:`feedback` is its
-    trace. The free diagrams of :mod:`discopy.feedback` and the levels below
-    it have both, their wires carrying a time step.
+    A traced category is a feedback category with the identity as delay plus
+    the yanking axiom: its :meth:`feedback` is its :meth:`trace`, the partial
+    trace of a morphism over some objects, and the trace of the swap of an
+    object with itself is its identity, that of a braid its twist, see
+    :meth:`yanking`, :meth:`BalancedCategory.yanking` and
+    :cite:t:`JoyalEtAl96`. The free diagrams of :mod:`discopy.feedback` and the
+    levels below it, whose wires carry a time step, are traced on their
+    undelayed wires, the :class:`discopy.feedback.Trace` bubble being the
+    feedback over an undelayed memory.
     """
     @abstractmethod
     def trace(self, n: int = 1, left: bool = False) -> C1:
         """
-        The trace of a morphism, to be instantiated.
+        The trace of a morphism, to be instantiated in its positional form,
+        over the last ``n`` objects or the first when ``left``: it takes the
+        keyword form ``dom``, ``cod``, ``mem`` of :meth:`feedback` as well,
+        see :func:`keyword_form`.
 
         Tracing no object at all is the identity, i.e. the vanishing axiom
         ``f.trace(0) == f``, see `nLab
@@ -578,14 +666,21 @@ class TracedCategory[C0, C1](FeedbackCategory[C0, C1]):
             dom: C0 = None, cod: C0 = None, mem: C0 = None) -> C1:
         """
         The feedback of a traced category is its :meth:`trace` over the
-        memory, whose delay is itself.
+        memory, whose delay is itself, in either form.
         """
-        if n is None:
-            n = len(self.split_memory(
-                left=left, dom=dom, cod=cod, mem=mem)[2])
-        elif (dom, cod, mem) != (None, None, None):
-            raise TypeError(messages.FEEDBACK_FORMS)
-        return self.trace(n, left)
+        # pylint: disable-next=unexpected-keyword-arg  # see keyword_form
+        return self.trace(n, left, dom=dom, cod=cod, mem=mem)
+
+    @axiom
+    def yanking(cls, x: C0) -> Equation[C1]:
+        """
+        Tracing the swap of an object with itself gives its identity, the
+        yanking axiom of a symmetric traced category: a braided one states it
+        with its twist, see :meth:`BalancedCategory.yanking`, and a planar
+        one, which has no swap, declares it inapplicable.
+        """
+        # pylint: disable-next=no-member  # stated where there is a swap
+        return cls.equation_factory(cls.swap(x, x).trace(mem=x), cls.id(x))
 
 
 class ResiduatedMonoid[C0, C1: ResiduatedMonoid](ColouredMonoid[C0, C1]):
@@ -822,8 +917,11 @@ class RigidCategory[C0: Pregroup, C1: RigidCategory](BiclosedCategory[C0, C1]):
 class PivotalCategory[C0, C1](RigidCategory[C0, C1], TracedCategory[C0, C1]):
     """
     A pivotal category is a :class:`RigidCategory` where the left and right
-    adjoints coincide, hence it is also a :class:`TracedCategory`.
+    adjoints coincide, hence it is also a :class:`TracedCategory`, a planar
+    one with no swap to yank.
     """
+    yanking = TracedCategory.yanking.inapplicable(
+        messages.PLANAR_YANKING)
 
 
 class BraidedCategory[C0, C1](MonoidalCategory[C0, C1]):
@@ -1055,13 +1153,27 @@ class BalancedCategory[C0, C1](
             dom : The object on which to take the twist.
         """
 
+    @axiom
+    def yanking(cls, x: C0) -> Equation[C1]:
+        """
+        Tracing the braid of an object with itself gives its twist, the
+        yanking axiom of a balanced traced category, see
+        :cite:t:`JoyalEtAl96`: the twist is the identity when the braid is a
+        swap.
+        """
+        return cls.equation_factory(
+            cls.braid(x, x).trace(mem=x), cls.twist(x))
+
 
 class RibbonCategory[C0, C1](
         PivotalCategory[C0, C1], BalancedCategory[C0, C1]):
     """
     A ribbon category is a :class:`PivotalCategory` which is also a
-    :class:`BalancedCategory`, i.e. where diagrams can draw knots and links.
+    :class:`BalancedCategory`, i.e. where diagrams can draw knots and links:
+    it yanks as a balanced category does, with the braid a planar pivotal
+    category lacks.
     """
+    yanking = BalancedCategory.yanking
 
 
 class CompactCategory[C0, C1](

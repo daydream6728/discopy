@@ -217,6 +217,7 @@ from dataclasses import dataclass
 
 import networkx as nx
 
+from discopy import messages
 from discopy.drawing import backend, Node, Point
 from discopy.config import BOX_DRAWING_ATTRIBUTES, TRANSPARENT
 from discopy.abc import TracedCategory
@@ -281,6 +282,9 @@ class Drawing(TracedCategory, RichDisplay):
     nodes = property(lambda self: self.graph.nodes)
     edges = property(lambda self: self.graph.edges)
     positions = property(lambda self: self.inside.positions)
+
+    yanking = TracedCategory.yanking.inapplicable(
+        messages.PLANAR_YANKING)
 
     def nodes_of_kind(self, kind):
         """

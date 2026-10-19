@@ -299,3 +299,18 @@ def test_learner():
     assert network.inside.get(2., 3., 5.) == 30.
     assert network.inside.put(2., 3., 5., 1.) == (15., 10., 6.)
     assert (layer @ layer).inside.get(1., 2., 3., 4.) == (3., 8.)
+
+
+def test_trace_takes_the_keyword_form():
+    x, x_, u, u_, m = map(T, ["x", "x'", "u", "u'", "m"])
+    X, U = Ty(x, x_), Ty(u, u_)
+    f = Traced(X @ U, X @ U, Box('f', x @ u, x @ u @ m),
+               Box("f'", m @ x_ @ u_, x_ @ u_), m)
+    assert f.trace() == f.trace(mem=U) == f.trace(cod=X) == f.feedback()\
+        == f.feedback(mem=U) == f.trace((1, 1))
+    assert f.trace(mem=Ty(u, T())) == f.trace((1, 0))
+    assert f.trace((1, 0)).backward == f.backward
+    with raises(TypeError):
+        f.trace(1, mem=U)
+    with raises(AxiomError):
+        f.trace(mem=X)

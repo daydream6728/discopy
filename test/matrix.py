@@ -227,3 +227,11 @@ def test_Matrix_copy_dtype():
         assert Matrix.discard(x).dtype == Matrix.ones(x).dtype == dtype
     for dtype in (bool, int, float, complex):
         assert Matrix[dtype].copy(2, 2).dtype == dtype
+
+def test_trace_takes_the_keyword_form():
+    f = Matrix[bool]([[1, 1], [0, 0]], 2, 2)
+    assert f.trace() == f.trace(mem=1) == f.trace(cod=1)\
+        == f.trace(dom=1, cod=1, mem=1) != f.trace(left=True)
+    assert f.trace(left=True) == f.trace(mem=Nat(1), left=True)
+    with raises(TypeError):
+        f.trace(1, mem=1)

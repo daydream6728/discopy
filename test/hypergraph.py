@@ -474,3 +474,16 @@ def test_trace_keeps_the_offsets():
     graph = diagram.to_hypergraph()
     assert graph.trace().offsets == graph.offsets == (None, 1, 2)
     assert graph.trace().to_diagram() == symmetric.Trace(diagram.foliation())
+
+
+def test_trace_takes_the_keyword_form():
+    from discopy import symmetric
+    from discopy.utils import AxiomError
+    x, y = symmetric.Ty('x'), symmetric.Ty('y')
+    f = symmetric.Box('f', x @ y, x @ y).to_hypergraph()
+    assert f.trace() == f.trace(mem=y) == f.trace(dom=x, cod=x, mem=y)
+    assert f.trace(left=True) == f.trace(mem=x, left=True) != f.trace()
+    with raises(TypeError):
+        f.trace(1, mem=y)
+    with raises(AxiomError):
+        f.trace(mem=x)

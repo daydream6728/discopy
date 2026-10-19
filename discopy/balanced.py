@@ -40,7 +40,8 @@ from __future__ import annotations
 from copy import copy
 from dataclasses import dataclass
 
-from discopy import config, monoidal, braided, feedback, cmap, hypergraph
+from discopy import (
+    config, monoidal, braided, feedback, cmap, hypergraph, messages)
 from discopy.abc import BalancedCategory
 from discopy.cat import factory
 from discopy.feedback import Ty
@@ -137,6 +138,7 @@ class Diagram(braided.Diagram, feedback.Diagram, BalancedCategory):
     .. _nLab: https://ncatlab.org/nlab/show/traced+monoidal+category)
     """
     ob = Ty
+    yanking = BalancedCategory.yanking.failing(messages.FREE_YANKING)
 
     @classmethod
     def twist(cls, dom: monoidal.Ty) -> Diagram:
