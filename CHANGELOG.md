@@ -9,6 +9,19 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Added
 
+- A notebook, *Categorical deep learning*, reproducing the examples of
+  Gavranović et al., [*Categorical Deep Learning is an Algebraic Theory of
+  All Architectures*](https://arxiv.org/abs/2402.15332) (ICML 2024), with
+  what DisCoPy has: the weight tying of Examples H.1 and H.3 and of graph
+  networks as orbits of `discopy.group` actions, parametric maps and weight
+  tying as a `reparam` by `copy` in `para.Markov`, folds over lists and
+  trees as functors on diagrams of constructors into `para`, checked
+  against the recursion they define, and unfolds as `feedback` unrolled by
+  `stream.Stream`, the Mealy, Moore and unfolding cells of the paper's
+  Figure 1 among them. The gaps it hit are filed as
+  [rel-int/discopy-next#124](https://github.com/rel-int/discopy-next/issues/124)
+  and [#125](https://github.com/rel-int/discopy-next/issues/125)
+  ([rel-int/discopy-next#121](https://github.com/rel-int/discopy-next/issues/121)).
 - `discopy.group`, finite groups as normal forms and their actions on
   finite sets, the first step of
   [rel-int/discopy-next#121](https://github.com/rel-int/discopy-next/issues/121),
