@@ -1018,3 +1018,15 @@ def test_CMap_to_tree_over_a_parameterised_category():
     swap = cmap.CMap[tensor.Diagram[complex]].swap(Dim(2), Dim(3))
     loaded = loads(dumps(swap))
     assert loaded == swap and loaded.category is tensor.Diagram[complex]
+
+
+def test_trace_takes_the_keyword_form():
+    from discopy.compact import Ty, Box, CMap as M
+    x, y = map(Ty, "xy")
+    f = M.from_box(Box("f", x @ y, x @ y))
+    assert f.trace() == f.trace(mem=y) == f.trace(cod=x)
+    assert f.trace(left=True) == f.trace(dom=y, cod=y, mem=x, left=True)
+    with raises(TypeError):
+        f.trace(1, mem=y)
+    with raises(AxiomError):
+        f.trace(mem=x)

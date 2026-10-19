@@ -238,3 +238,13 @@ def test_fix_vanishing_and_range():
             f.fix(n)
         with raises(ValueError):
             f.trace(n)
+
+
+def test_trace_takes_the_keyword_form():
+    f = Function(lambda x, y: (x + y, 1), (int, int), (int, int))
+    assert f.trace()(5) == f.trace(mem=int)(5)\
+        == f.trace(dom=int, cod=int, mem=int)(5) == 6
+    with raises(TypeError):
+        f.trace(1, mem=int)
+    with raises(AxiomError):
+        f.trace(mem=str)

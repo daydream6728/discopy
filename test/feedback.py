@@ -185,6 +185,43 @@ def test_traced_category_feedback_is_its_trace():
         f.feedback(1, mem=x)
 
 
+def test_every_trace_takes_the_keyword_form():
+    from inspect import signature
+    from discopy import ribbon
+    from discopy.abc import keyword_form
+    from discopy.matrix import Matrix
+    from discopy.python import Function
+
+    class Sub(Function):
+        def trace(self, n=1, left=False):
+            return super().trace(n, left)
+
+    for trace in (Matrix.trace, Function.trace, Sub.trace,
+                  ribbon.Diagram.trace, Diagram.trace):
+        assert list(signature(trace).parameters)\
+            == ["self", "n", "left", "dom", "cod", "mem"]
+        assert keyword_form(trace) is trace
+    f = Sub(lambda x, y: (x + y, 1), (int, int), (int, int))
+    assert f.trace(mem=int)(5) == f.trace()(5) == 6
+    x = ribbon.Ty('x')
+    g = ribbon.Box('g', x @ x, x @ x)
+    assert g.trace(mem=x) == g.trace()
+    assert g.trace(cod=x, left=True) == g.trace(left=True)
+    with raises(TypeError):
+        g.trace(1, mem=x)
+
+
+def test_types_without_wires_are_their_own_delay():
+    from discopy import frobenius, monoidal, pivotal, rigid, symmetric
+    from discopy.neural.network import Dims
+    for x in (monoidal.Nat(2), rigid.Nat(2), Nat(2), symmetric.Nat(2),
+              pivotal.Nat(2), frobenius.Nat(2), monoidal.Dim(2, 3),
+              frobenius.Dim(2, 3), Dims(2, 3)):
+        assert x.delay() == x.delay(2) == x.head == x.tail == x
+    f = frobenius.Box('f', frobenius.Nat(1), frobenius.Nat(1))
+    assert f.delay().dom == f.dom and f.delay().time_step == 1
+
+
 def test_feedback_laws_on_a_traced_category():
     from discopy import compact
     from discopy.abc import FeedbackCategory
