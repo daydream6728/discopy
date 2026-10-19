@@ -162,6 +162,16 @@ def test_rules():
     assert braided.Diagram.braiding.given(braided.Ty('x', 'y')) == {}
 
 
+def test_equation_symbols():
+    x = Ob('x')
+    f, g = Box('f', x, x), Box('g', x, x)
+    assert Equation(f).symbols == ()
+    assert Equation(f, g, symbol="<").symbols == ("<", )
+    assert Equation(f, f, g).symbols == ("=", "=")
+    with raises(ValueError):
+        Equation(f, g, symbols=("=", "="))
+
+
 def test_weaken():
     law = rigid.Diagram.dagger_involution_monoidal
     assert law.params == {"within": MonoidalCategory}
@@ -265,3 +275,9 @@ def test_testable_generic():
             or issubclass(testable, TestableGeneric)
     assert additive.Channel[Maybe] not in Testable.enrolled()
     assert additive.Channel[Powerset] in Testable.enrolled()
+
+
+def test_copying():
+    x, y = Ob('x'), Ob('y')
+    assert Arrow.copying(Box('f', x, y))
+    assert "copying" in Arrow.axioms and "copying" in Ob.axioms

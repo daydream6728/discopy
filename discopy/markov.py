@@ -17,6 +17,11 @@ Summary
     Swap
     Permutation
     Copy
+    Feedback
+    Trace
+    FollowedBy
+    Head
+    Tail
     Functor
 
 
@@ -25,21 +30,7 @@ Axioms
 
 >>> x = Ty('x')
 
->>> copy, merge = Copy(x), Merge(x)
->>> unit, delete = Merge(x, n=0), Copy(x, n=0)
-
-Commutative monoid
-==================
-
->>> unitality = Equation(unit @ x >> merge, Id(x), x @ unit >> merge)
->>> associativity = Equation(merge @ x >> merge, x @ merge >> merge)
->>> commutativity = Equation(Swap(x, x) >> merge, merge)
->>> assert unitality and associativity and commutativity
->>> Equation(unitality, associativity, commutativity, symbol='').draw(
-...     doctest="docs/_static/frobenius/monoid.svg")
-
-.. image:: /_static/frobenius/monoid.svg
-    :align: center
+>>> copy, delete = Copy(x), Copy(x, n=0)
 
 Cocommutative comonoid
 ======================
@@ -60,27 +51,28 @@ Coherence
 >>> assert Equation(Diagram.copy(x @ x, n=0), delete @ delete)
 >>> assert Equation(Diagram.copy(x @ x),
 ...     copy @ copy >> x @ Swap(x, x) @ x)
->>> assert Equation(Diagram.merge(x @ x, n=0), unit @ unit)
->>> assert Equation(Diagram.merge(x @ x),
-...     x @ Swap(x, x) @ x >> merge @ merge)
 
 Note
 ----
 Equality of Markov diagrams is computed by translation to hypergraph.
-Both copy and merge boxes are translated to spiders, thus when they appear
-in the same diagram they automatically satisfy the :mod:`frobenius` axioms.
+Copy boxes are translated to spiders, thus when they appear in the same
+diagram as the merge boxes of :mod:`comarkov` they automatically satisfy
+the :mod:`frobenius` axioms.
 """
 
 from __future__ import annotations
 
+import warnings
 from typing import ClassVar
 
-from discopy import symmetric, monoidal, cmap, hypergraph, messages
-from discopy.abc import MarkovCategory
+from discopy import symmetric, monoidal, feedback, cmap, hypergraph, messages
+from discopy.abc import ComarkovCategory, MarkovCategory
 from discopy.axioms import FUEL
 from discopy.cat import factory
-from discopy.monoidal import Ty  # noqa: F401  pylint: disable=unused-import
-from discopy.utils import assert_isatomic, factory_name, from_tree
+from discopy.feedback import (  # noqa: F401  pylint: disable=unused-import
+    Wire, Ty)
+from discopy.utils import (
+    AxiomError, assert_isatomic, deprecated_alias, factory_name, from_tree)
 
 
 Layer = symmetric.Layer
@@ -116,16 +108,25 @@ class Diagram(symmetric.Diagram, MarkovCategory):
     ...     doctest="docs/_static/markov/copy_and_apply.svg")
 
     .. image:: /_static/markov/copy_and_apply.svg
+
+    Note
+    ----
+    A Markov diagram is a feedback diagram whose wires carry a time step, so
+    that it is the syntax of streams, see :mod:`discopy.stream`.
+
+    >>> x = Ty('x')
+    >>> zero = Box('0', Ty(), x.head)
+    >>> rand = Box('rand', Ty(), x)
+    >>> plus = Box('+', x @ x, x)
+    >>> walk = (rand.delay() @ x.delay() >> zero @ plus.delay()
+    ...         >> FollowedBy(x) >> Copy(x)).feedback()
+    >>> walk.draw(doctest="docs/_static/feedback/feedback-random-walk.svg")
+
+    .. image:: /_static/feedback/feedback-random-walk.svg
+        :align: center
     """
-    box_factory: ClassVar[type["Box"]]
-    functor_factory: ClassVar[type["Functor"]]
     copy_factory: ClassVar[type["Copy"]]
-    merge_factory: ClassVar[type["Merge"]]
-    swap_factory: ClassVar[type["Swap"]]
-    permutation_factory: ClassVar[type["Permutation"]]
-    trace_factory: ClassVar[type["Trace"]]
     discard_factory: ClassVar[type["Discard"]]
-    sum_factory: ClassVar[type["Sum"]]
 
     @classmethod
     def sample(cls, *, dom=None, cod=None, fuel=FUEL):
@@ -144,10 +145,10 @@ class Diagram(symmetric.Diagram, MarkovCategory):
 
     @classmethod
     def spider_factory(cls, n_legs_in, n_legs_out, typ, phase=None):
-        if phase is not None or 1 not in (n_legs_in, n_legs_out):
-            raise ValueError
-        return cls.copy_factory(typ, n_legs_out) if n_legs_in == 1\
-            else cls.merge_factory(typ, n_legs_in)
+        if phase is not None or n_legs_in != 1:
+            raise ValueError(messages.NO_SUCH_SPIDER.format(
+                factory_name(cls), "copies"))
+        return cls.copy_factory(typ, n_legs_out)
 
     @classmethod
     def copy(cls, x: monoidal.Ty, n=2) -> Diagram:
@@ -163,20 +164,9 @@ class Diagram(symmetric.Diagram, MarkovCategory):
             cls, 1, n, x)  # ty: ignore[invalid-argument-type]
 
     @classmethod
-    def merge(cls, x: monoidal.Ty, n=2) -> Diagram:
-        """
-        Merge :code:`n` copies of a given type :code:`x`.
-
-        Parameters:
-            x : The type to copy.
-            n : The number of copies.
-        """
-        return cls.copy(x, n).dagger()
-
-    @classmethod
     def discard(cls, x: monoidal.Ty) -> Diagram:
         """
-        The discard of an atomic type :code:`x`.
+        The discard of a type :code:`x`, i.e. no copy of it at all.
 
         Parameters:
             x : The type to discard.
@@ -185,6 +175,26 @@ class Diagram(symmetric.Diagram, MarkovCategory):
 
     map_agreement = monoidal.Diagram.map_agreement.failing(
         messages.MAP_HAS_NO_SPIDERS)
+
+    @classmethod
+    def merge(cls, x: monoidal.Ty, n=2) -> Diagram:
+        """
+        Deprecated: a Markov diagram has no merge, see
+        :meth:`discopy.comarkov.Diagram.merge`, which a diagram that is
+        also comarkov, e.g. :class:`discopy.frobenius.Diagram`, inherits.
+
+        Parameters:
+            x : The type to merge.
+            n : The number of copies.
+        """
+        if issubclass(cls, ComarkovCategory):
+            return super().merge(x, n)
+        warnings.warn(
+            f"{factory_name(cls)}.merge is deprecated, "
+            "use discopy.comarkov.Diagram.merge instead.",
+            DeprecationWarning, stacklevel=2)
+        from discopy import comarkov
+        return comarkov.Diagram.merge(x, n)
 
 
 class Box(symmetric.Box, Diagram):
@@ -218,20 +228,6 @@ class Swap(Permutation, symmetric.Swap, Box):
     """
 
 
-class Trace(symmetric.Trace, Box):
-    """
-    A trace in a Markov category.
-
-    Parameters:
-        arg : The diagram to trace.
-        left : Whether to trace the wires on the left or right.
-
-    See also
-    --------
-    :meth:`Diagram.trace`
-    """
-
-
 class Copy(Box):
     """
     The copy of an atomic type :code:`x` some :code:`n` number of times.
@@ -251,18 +247,31 @@ class Copy(Box):
             cls.discard_factory.__new__(cls.discard_factory, x)
 
     def __getnewargs__(self):
-        """ The arguments of :meth:`__new__`, which a pickle needs. """
+        """
+        The arguments of :meth:`__new__`, which a pickle needs.
+
+        >>> from pickle import dumps, loads
+        >>> x = Ty('x')
+        >>> assert loads(dumps(Copy(x))) == Copy(x)
+        >>> assert loads(dumps(Discard(x))) == Discard(x)
+        """
         return self.dom, len(self.cod)
 
-    def dagger(self) -> Merge:
+    def dagger(self) -> Diagram:
         """
-        The merge of the same type, in the category of the copy.
+        The merge of the same type, when the category is also comarkov.
 
-        >>> x = Ty('x')
-        >>> assert Copy(x).dagger() == Merge(x)
-        >>> assert Diagram.discard(x).dagger().dagger() == Discard(x)
+        >>> from discopy import closed
+        >>> closed.Copy(closed.Ty('x')).dagger()
+        Traceback (most recent call last):
+            ...
+        discopy.utils.AxiomError: Copy(x) has no dagger: closed.Diagram \
+is not a dagger category.
         """
-        return self.merge_factory(self.dom, len(self.cod))
+        if not issubclass(self.ar, ComarkovCategory):
+            raise AxiomError(messages.NOT_A_DAGGER.format(
+                self, factory_name(self.ar)))
+        return self.ar.merge_factory(self.dom, len(self.cod))
 
     def __repr__(self):
         return (
@@ -274,7 +283,7 @@ class Copy(Box):
 
         >>> from discopy.utils import dumps, loads
         >>> x = Ty('x')
-        >>> for box in (Copy(x), Copy(x, 3), Discard(x), Merge(x)):
+        >>> for box in (Copy(x), Copy(x, 3), Discard(x)):
         ...     assert loads(dumps(box)) == box
         """
         return {'factory': factory_name(type(self)),
@@ -282,38 +291,6 @@ class Copy(Box):
 
     @classmethod
     def from_tree(cls, tree: dict) -> Copy:
-        return cls(from_tree(tree['x']), tree['n'])
-
-
-class Merge(Box):
-    """
-    The merge of an atomic type :code:`x` some :code:`n` number of times.
-
-    Parameters:
-        x : The type of wires to merge.
-        n : The number of wires to merge.
-    """
-    def __init__(self, x: monoidal.Ty, n: int = 2):
-        assert_isatomic(x, monoidal.Ty)
-        name = f"Merge({x}" + ("" if n == 2 else f", {n}") + ")"
-        Box.__init__(self, name, dom=x ** n, cod=x,
-                     draw_as_spider=True, color="black", drawing_name="")
-
-    def dagger(self) -> Copy:
-        """ The copy of the same type, in the category of the merge. """
-        return self.copy_factory(self.cod, len(self.dom))
-
-    def __repr__(self):
-        return (
-            factory_name(type(self)) + f"({repr(self.cod)}, {len(self.dom)})")
-
-    def to_tree(self) -> dict:
-        """ Serialise a merge by its type and number of wires merged. """
-        return {'factory': factory_name(type(self)),
-                'x': self.cod.to_tree(), 'n': len(self.dom)}
-
-    @classmethod
-    def from_tree(cls, tree: dict) -> Merge:
         return cls(from_tree(tree['x']), tree['n'])
 
 
@@ -377,20 +354,18 @@ class Functor(symmetric.Functor):
     def __call__(self, other):
         if isinstance(other, Copy) and hasattr(self.cod, "copy"):
             return self.cod.copy(self(other.dom), len(other.cod))
-        if isinstance(other, Merge) and hasattr(self.cod, "merge"):
-            return self.cod.merge(self(other.cod), len(other.dom))
         return super().__call__(other)
 
 
 CMap = cmap.CMap[Diagram]
 
+Feedback, Trace, FollowedBy, Head, Tail = feedback.generators(Diagram, Box)
 Diagram.box_factory = Box
 Diagram.functor_factory = Functor
 Hypergraph = hypergraph.Hypergraph[Diagram]
-Diagram.copy_factory, Diagram.merge_factory = Copy, Merge
+Diagram.copy_factory = Copy
 Diagram.swap_factory = Swap
 Diagram.permutation_factory = Permutation
-Diagram.trace_factory = Trace
 Diagram.discard_factory = Discard
 Diagram.sum_factory = Sum
 Id = Diagram.id
@@ -399,3 +374,6 @@ Id = Diagram.id
 class Equation(symmetric.Equation):
     """ The :class:`symmetric.Equation` of Markov diagrams. """
     up_to = staticmethod(Diagram.to_hypergraph)
+
+
+__getattr__ = deprecated_alias(__name__, {"Merge": "discopy.comarkov.Merge"})

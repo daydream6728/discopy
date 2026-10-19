@@ -7,7 +7,7 @@ from pytest import raises
 from discopy.cat import *
 from discopy.monoidal import *
 from discopy.drawing import spiral
-from discopy.utils import AxiomError, from_tree
+from discopy.utils import AxiomError, dumps, from_tree, loads
 
 
 def test_Ty():
@@ -202,6 +202,9 @@ def test_Dim_identity_and_slicing():
     assert Dim(2, 3, 4)[1:] == Dim(3, 4)
     # Reversing reverses the factors.
     assert Dim(2, 3, 4)[::-1] == Dim(4, 3, 2)
+    # The tree of a dimension reads back, the unit included.
+    assert loads(dumps(Dim(2, 3))) == Dim(2, 3)
+    assert loads(dumps(Dim())) == Dim() == Dim(1)
 
 
 def test_Layer_init():
@@ -451,6 +454,18 @@ def test_Bubble_dagger():
     f = Box('f', x, y)
     assert f.bubble().dagger() == f.dagger().bubble()
     assert f.bubble().dagger().dagger() == f.bubble()
+
+
+def test_Bubble_data():
+    f = Box('f', Ty('x'), Ty('y'))
+    bubble = f.bubble(data=42, is_dagger=True)
+    for b in (bubble, from_tree(bubble.to_tree()), loads(dumps(bubble))):
+        assert b == bubble and (b.data, b.is_dagger) == (42, True)
+    assert (bubble.dagger().data, bubble.dagger().is_dagger) == (42, False)
+    named = f.bubble(name="b", method="frame")
+    for b in (from_tree(named.to_tree()), loads(dumps(named))):
+        assert b == named and (b.name, b.method) == ("b", "frame")
+    assert "method" not in bubble.to_tree() and "name" not in bubble.to_tree()
 
 
 def test_Box_globularity():
@@ -769,3 +784,47 @@ def test_coloured_diagram_has_no_hypergraph():
     for convert in (Diagram.to_hypergraph, Diagram.to_map):
         with raises(AxiomError):
             convert(Box('f', x, x))
+
+
+def test_foliation_up_to_interchangers():
+    from discopy import rigid, tensor
+    interchangers = lambda d: d.to_staircases().normal_form(
+        normalize=Diagram.normalize)
+    x, y = Ty('x'), Ty('y')
+    f, g, h = Box('f', x, y), Box('g', y, x), Box('h', x, x)
+    a = rigid.Ty('a')
+    k = rigid.Box('k', a, a)
+    snake = a @ rigid.Cap(a.r, a) >> rigid.Cup(a, a.r) @ a
+    for diagram in [f @ g >> g @ f, f.bubble(name="N") @ h, snake, k @ snake]:
+        foliated = diagram.foliation()
+        assert foliated.boxes == diagram.boxes
+        assert interchangers(foliated) == interchangers(diagram)
+    assert snake.foliation() == snake and len((k @ snake).foliation()) == 2
+    F = tensor.Functor({a: 2}, {k: [1, 2, 3, 4]}, dom=rigid.Diagram)
+    assert F((k @ snake).foliation()) == F(k @ snake)
+
+
+def test_box_factory():
+    """ Every level with boxes of its own binds them, which a stream of boxes
+    reads: the diagrams of the hierarchy, the tensors, the grammars, the
+    circuits and the networks. """
+    from discopy import (
+        cat, monoidal, braided, balanced, symmetric, traced, markov, rigid,
+        pivotal, ribbon, biclosed, closed, compact, frobenius, feedback,
+        tensor)
+    from discopy.grammar import categorial, abstract, pregroup
+    from discopy.quantum import circuit, zx
+    from discopy.neural import network
+    assert cat.Arrow.box_factory is cat.Box
+    assert circuit.Circuit.box_factory is circuit.Box
+    assert network.Network.box_factory is network.Box
+    for module in (
+            monoidal, braided, balanced, symmetric, traced, markov, rigid,
+            pivotal, ribbon, biclosed, closed, compact, frobenius, feedback,
+            tensor, categorial, abstract, pregroup, zx):
+        assert module.Diagram.box_factory is module.Box, module
+
+
+def test_decode_without_boxes_and_offsets():
+    with raises(ValueError):
+        Diagram.decode(Ty('x'))

@@ -68,6 +68,7 @@ Summary
 import inspect
 import pickle
 import sys
+from copy import deepcopy
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from copy import deepcopy
@@ -394,17 +395,19 @@ class R[Object](Former):
         return obj.r
 
 
-class Delay[Object](Former):
+class Delay[Arrow, Object](Former):
     """
-    The delay of an object by one time step in a signature, ``M.delay()``.
+    The delay of an object by one time step in a signature, read off the
+    delay of its identity in the category, so that a category whose delay
+    is the identity, e.g. a traced one, delays no object.
 
-    >>> from discopy.feedback import Ty
-    >>> assert Delay[Ty('x')] == Ty('x').delay()
+    >>> from discopy.feedback import Ty, Diagram
+    >>> assert Delay[Diagram, Ty('x')] == Ty('x').delay()
     """
     @staticmethod
     def form(*args):
-        obj, = args
-        return obj.delay()
+        category, obj = args
+        return category.id(obj).delay().dom
 
 
 class Over[Base, Exponent](Former):
@@ -535,6 +538,8 @@ class Declaration[**P, T](classmethod):
             declaration quantifies over, see :meth:`Axiom.weaken`.
         broken : Whether the declaration is declared broken by
             :meth:`failing`.
+        applicable : Whether the structure applies at all, ``False`` once
+            declared :meth:`inapplicable`.
     """
 
     function: Callable[Concatenate[Any, P], T]
@@ -543,6 +548,7 @@ class Declaration[**P, T](classmethod):
     name: str = None  # ty: ignore[invalid-assignment]
     params: dict[str, Any] = None  # ty: ignore[invalid-assignment]
     broken: bool = False
+    applicable: bool = True
 
     def __post_init__(self):
         function = inspect.unwrap(self.function)
@@ -585,7 +591,8 @@ class Declaration[**P, T](classmethod):
         def law(_category):
             return NotImplemented
         law.__doc__ = reason
-        return replace(self, function=law, params={}, broken=False)
+        return replace(
+            self, function=law, params={}, broken=False, applicable=False)
 
     def __repr__(self):
         """
@@ -935,7 +942,7 @@ class Rule[**P, T](Declaration[P, T]):
             name: side for name, side in zip(self.conclusion, (dom, cod))
             if name is not None and side is not None
             and (get_origin(variables[name].__bound__) is not Atom
-                 or len(side) == 1)}
+                 or side.is_atomic)}
 
     def strategy(
             self, dom=None, cod=None, **params) -> "st.SearchStrategy[dict]":
@@ -997,11 +1004,11 @@ class Testable[T](ABC):
         :func:`abc.abstractmethod`, which would make every category that has
         not implemented one uninstantiable rather than merely unchecked.
 
-        >>> from discopy.abc import Nat
-        >>> Nat.strategy()
+        >>> from discopy.abc import Category
+        >>> Category.strategy()
         Traceback (most recent call last):
          ...
-        NotImplementedError: No strategy implemented for abc.Nat.
+        NotImplementedError: No strategy implemented for abc.Category.
         """
         raise NotImplementedError(
             f"No strategy implemented for {factory_name(cls)}.")

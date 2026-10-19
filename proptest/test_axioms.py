@@ -19,7 +19,7 @@ def cells():
     """
     for law in Testable.matrix(once=PROFILE == "fast"):
         reason = (law.__doc__ or "").strip()
-        if not law.parameters and law() is NotImplemented:
+        if not law.applicable:
             marks = pytest.mark.skip(reason=reason)
         elif law.broken:
             marks = pytest.mark.xfail(reason=reason, strict=True)

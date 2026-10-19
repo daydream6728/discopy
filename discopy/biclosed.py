@@ -554,6 +554,13 @@ class Curry(monoidal.Bubble, Box):
         return self.name
 
     def to_drawing(self):
+        """
+        A curry is drawn as its argument followed by a coevaluation, traced
+        over the ``n`` wires it curries; a curry of no wire is drawn as its
+        argument, as :meth:`Diagram.curry` of no wire is the diagram itself.
+        """
+        if not self.n:
+            return self.arg.to_drawing()
         f, e = self.arg, self.coeval_factory(self.cod, left=self.left)
         return (f >> e).to_drawing().trace(self.n, left=not self.left)
 
@@ -1212,6 +1219,10 @@ class Variable(TermBase):
         super().__init__(name, dom=cod, cod=cod)
         self.freevars = [self]
 
+    @classmethod
+    def from_tree(cls, tree):
+        return cls(tree['name'], from_tree(tree['cod']))
+
     def eval(self, functor=None):
         functor = functor or self.functor
         return functor.cod.id(functor(self.cod))
@@ -1310,6 +1321,15 @@ class Application(TermBase):
         left = ", left=True" if self.left else ""
         return factory_name(type(self)) + f"({func}, {args}{left})"
 
+    def to_tree(self):
+        return dict(factory=factory_name(type(self)), func=self.func.to_tree(),
+                    args=self.args.to_tree(), left=self.left)
+
+    @classmethod
+    def from_tree(cls, tree):
+        return cls(*map(from_tree, (tree['func'], tree['args'])),
+                   left=tree['left'])
+
     def setoid(self):
         """
         Applications are equal when their functions, arguments and sides
@@ -1380,6 +1400,15 @@ class Abstraction(TermBase):
         left = ", left=True" if self.left else ""
         return factory_name(type(self)) + f"({var}, {body}{left})"
 
+    def to_tree(self):
+        return dict(factory=factory_name(type(self)), var=self.var.to_tree(),
+                    body=self.body.to_tree(), left=self.left)
+
+    @classmethod
+    def from_tree(cls, tree):
+        return cls(*map(from_tree, (tree['var'], tree['body'])),
+                   left=tree['left'])
+
     def setoid(self):
         """
         Abstractions are equal when their variables, bodies and sides are,
@@ -1409,8 +1438,7 @@ type Term = Constant | Variable | Application | Abstraction
 for law in sorted(
         set(Box.axioms) - set(Serialisable.axioms) | set(Box.rules)):
     setattr(TermBase, law, getattr(Box, law).inapplicable(
-        "A term is a box: the laws and rules of its category are the "
-        "diagram's."))
+        messages.TERM_IS_A_BOX))
 
 
 @dataclass

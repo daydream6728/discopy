@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import builtins
 import json
 from functools import lru_cache, wraps
 from math import ceil
@@ -170,6 +171,23 @@ class NamedGeneric:
     ...     inside: list
     >>> assert L[int]([1, 2, 3]).dtype == int
     >>> assert L[int]([1, 2, 3]) != L[float]([1, 2, 3])
+
+    A subscript of a class that is its own :func:`factory`, i.e. the arrows
+    of a category, is its own factory in turn, so that the structural arrows
+    it builds through ``cls.ar`` carry the parameter.
+
+    >>> from discopy.abc import Category
+    >>> @factory
+    ... class C[dtype](Category, NamedGeneric):
+    ...     pass
+    >>> assert C[int].factory is C[int] is C[int].ar
+
+    A DisCoPy class is named by its module, since every level of the
+    hierarchy has a ``Diagram`` of its own:
+
+    >>> from discopy import frobenius
+    >>> frobenius.Hypergraph.__name__
+    'Hypergraph[frobenius.Diagram]'
     """
     if TYPE_CHECKING:
         #: The names of the type parameters in DisCoPy, declared so that
@@ -249,6 +267,8 @@ class NamedGeneric:
             C.__origin__ = cls
             for attr, value in zip(attributes, values):
                 setattr(C, attr, value)
+            if getattr(origin, "factory", None) is origin:
+                C.factory = C
             NamedGeneric._cache[cls][values] = C
         return NamedGeneric._cache[cls][values]
 
@@ -283,28 +303,33 @@ def deprecated_alias(module_name: str, aliases: dict[str, str]):
 
     Parameters:
         module_name : The ``__name__`` of the module deprecating names.
-        aliases : A mapping from each deprecated name to its new name.
+        aliases : A mapping from each deprecated name to its new name, in
+            the same module, or to its new dotted path when it moved.
 
     Example
     -------
     >>> import warnings
-    >>> from discopy import rigid
+    >>> from discopy import rigid, markov, comarkov
     >>> with warnings.catch_warnings(record=True) as w:
     ...     warnings.simplefilter("always")
     ...     assert rigid.PRO is rigid.Nat
-    >>> print(w[-1].message)
+    ...     assert markov.Merge is comarkov.Merge
+    >>> print(w[0].message)
     discopy.rigid.PRO is deprecated, use discopy.rigid.Nat instead.
+    >>> print(w[1].message)
+    discopy.markov.Merge is deprecated, use discopy.comarkov.Merge instead.
     """
     def __getattr__(name):
         if name in aliases:
-            import sys
             import warnings
-            new_name = aliases[name]
+            from importlib import import_module
+            new_module, _, new_name = aliases[name].rpartition('.')
+            new_module = new_module or module_name
             warnings.warn(
                 f"{module_name}.{name} is deprecated, "
-                f"use {module_name}.{new_name} instead.",
+                f"use {new_module}.{new_name} instead.",
                 DeprecationWarning, stacklevel=2)
-            return getattr(sys.modules[module_name], new_name)
+            return getattr(import_module(new_module), new_name)
         raise AttributeError(
             f"module {module_name!r} has no attribute {name!r}")
     return __getattr__
@@ -374,16 +399,25 @@ def from_tree(tree: dict):
 
 def resolve_factory(name: str) -> type:
     """
-    The DisCoPy class with a given :func:`factory_name`, the inverse of it.
+    The DisCoPy class with a given :func:`factory_name`, the inverse of it:
+    a subscripted class is resolved by its origin and its parameter, which
+    may be a builtin type.
 
     >>> from discopy.markov import Diagram
     >>> assert resolve_factory(factory_name(Diagram)) is Diagram
+    >>> from discopy.tensor import Diagram
+    >>> assert resolve_factory("tensor.Diagram[complex]") is Diagram[complex]
     """
+    if name.endswith(']'):
+        origin, parameter = name[:-1].split('[', 1)
+        return resolve_factory(origin)[resolve_factory(parameter)]
     *modules, factory = name.removeprefix('discopy.').split('.')
     import discopy  # pylint: disable=import-outside-toplevel
     module = discopy
     for attr in modules:
         module = getattr(module, attr)
+    if not modules and factory not in vars(discopy):
+        return getattr(builtins, factory)
     return getattr(module, factory)
 
 
@@ -503,13 +537,19 @@ def unbiased(binary_method):
     Turn a biased method with signature (self, other) to an unbiased one, i.e.
     with signature (self, *others), see the `nLab`_.
 
+    One argument is the base case, more are folded by calling the method by
+    its name on the running result, so that a subclass overriding the binary
+    case has its own folded rather than the one decorated.
+
     .. _nLab: https://ncatlab.org/nlab/show/biased+definition
     """
     @wraps(binary_method)
     def method(self, *others, **params):
+        if len(others) == 1:
+            return binary_method(self, *others, **params)
         result = self
         for other in others:
-            result = binary_method(result, other, **params)
+            result = getattr(result, binary_method.__name__)(other, **params)
         return result
     return method
 
@@ -659,7 +699,9 @@ def factory(cls):
     ----
     The factory method pattern (`FMP`_) is used all over DisCoPy. For
     backward compatibility, the factory is also available as the class
-    property ``cls.ar``, see :class:`discopy.abc.Category`.
+    property ``cls.ar``, see :class:`discopy.abc.Category`. A subscript of
+    a factory, e.g. ``Tensor[complex]``, is its own factory, see
+    :class:`NamedGeneric`.
 
     .. _FMP: https://en.wikipedia.org/wiki/Factory_method_pattern
 
@@ -734,6 +776,8 @@ def assert_isatomic(typ: Ty, cls: type | None = None):
 
 def assert_istraceable(arg, n=1, left=False):
     """ Raise :class:`AxiomError` if a diagram is not traceable. """
+    if n < 0 or n > min(len(arg.dom), len(arg.cod)):
+        raise ValueError
     traced_dom, traced_cod = (arg.dom[:n], arg.cod[:n]) if left\
         else (arg.dom[len(arg.dom) - n:], arg.cod[len(arg.cod) - n:])
     if traced_dom != traced_cod:

@@ -311,3 +311,7 @@ def test_ambiguity():
     assert tokens(forms[0]) == tokens(forms[1]) == ["visit", "bank"]
     assert [semantics(reading) for reading in readings]\
         == [VISIT(RIVER), VISIT(FINANCE)]
+
+
+def test_box_factory():
+    assert Diagram.box_factory is Box

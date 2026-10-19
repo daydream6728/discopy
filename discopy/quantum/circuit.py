@@ -1002,6 +1002,7 @@ def bitstring2index(bitstring):
     return sum(value * 2 ** i for i, value in enumerate(bitstring[::-1]))
 
 
+Circuit.box_factory = Box
 Circuit.swap_factory, Circuit.sum_factory = Swap, Sum
 Circuit.permutation_factory = Permutation
 bit, qubit = Ty(Digit(2)), Ty(Qudit(2))

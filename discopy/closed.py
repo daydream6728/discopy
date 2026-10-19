@@ -37,6 +37,11 @@ Summary
     Pack
     Unpack
     Discard
+    Feedback
+    Trace
+    FollowedBy
+    Head
+    Tail
     Sum
     Functor
     CMap
@@ -77,7 +82,8 @@ from functools import cached_property, reduce
 from inspect import signature
 from typing import Callable, ClassVar, Dict, Self
 
-from discopy import monoidal, biclosed, markov, cmap, hypergraph, messages
+from discopy import (
+    monoidal, biclosed, markov, feedback, cmap, hypergraph, messages)
 from discopy.abc import ClosedCategory, MonoidalCategory
 from discopy.axioms import Serialisable
 from discopy.cat import factory
@@ -257,6 +263,7 @@ class Unitype(Exp):
 
 
 @factory
+@feedback.untimed
 class Diagram(markov.Diagram, biclosed.Diagram, ClosedCategory):
     """
     A closed diagram is both a markov and a biclosed diagram.
@@ -268,7 +275,6 @@ class Diagram(markov.Diagram, biclosed.Diagram, ClosedCategory):
     box_factory: ClassVar[type["Box"]]
     functor_factory: ClassVar[type["Functor"]]
     copy_factory: ClassVar[type["Copy"]]
-    merge_factory: ClassVar[type["Merge"]]
     swap_factory: ClassVar[type["Swap"]]
     permutation_factory: ClassVar[type["Permutation"]]
     curry_factory: ClassVar[type["Curry"]]
@@ -494,14 +500,6 @@ class Swap(Permutation, markov.Swap, Box):
     "Symmetric swap in a closed diagram."
 
 
-class Trace(markov.Trace, Box):
-    "A trace in a closed category, linear when its argument is."
-
-    @property
-    def is_linear(self):
-        return self.arg.is_linear
-
-
 class Copy(markov.Copy, Box):
     "A markov copy in a closed category"
 
@@ -510,18 +508,6 @@ class Copy(markov.Copy, Box):
 
 class Discard(markov.Discard, Copy):
     "A markov discard in a closed category."
-
-
-class Merge(markov.Merge, Box):
-    """
-    A markov merge in a closed category, the dagger of a copy.
-
-    >>> x = Ty('x')
-    >>> assert Copy(x).dagger() == Merge(x)
-    >>> assert Diagram.discard(x).dagger().dagger() == Discard(x)
-    """
-
-    is_linear = False
 
 
 class Sum(markov.Sum, biclosed.Sum, Box):
@@ -581,15 +567,18 @@ CMap = cmap.CMap[Diagram]
 Diagram.box_factory = Box
 Diagram.functor_factory = Functor
 Hypergraph = hypergraph.Hypergraph[Diagram]
-Diagram.copy_factory, Diagram.merge_factory = Copy, Merge
+Diagram.copy_factory = Copy
 Diagram.swap_factory = Swap
 Diagram.permutation_factory = Permutation
+Feedback, Trace, FollowedBy, Head, Tail = feedback.generators(Diagram, Box)
+Feedback.is_linear = Head.is_linear = Tail.is_linear = property(
+    lambda self: self.arg.is_linear)
+Diagram.box_factory = Box
 Diagram.pack_factory = Pack
 Diagram.unpack_factory = Unpack
 Diagram.curry_factory = Curry
 Diagram.eval_factory = Eval
 Diagram.coeval_factory = Coeval
-Diagram.trace_factory = Trace
 Diagram.discard_factory = Discard
 Diagram.sum_factory = Sum
 Ty.exp_factory = Ty.under_factory = Ty.over_factory = staticmethod(Exp)
@@ -1657,8 +1646,7 @@ TermBase.reduction_strategies = (LeftmostOutermost, RightmostFirst)
 for law in sorted(
         set(Box.axioms) - set(Serialisable.axioms) | set(Box.rules)):
     setattr(TermBase, law, getattr(Box, law).inapplicable(
-        "A term is a box: the laws and rules of its category are the "
-        "diagram's."))
+        messages.TERM_IS_A_BOX))
 
 
 class Equation(markov.Equation):

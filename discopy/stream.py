@@ -39,11 +39,11 @@ Monoidal streams form a feedback category as follows:
 
 ### Fibonacci
 
-We can define the Fibonacci sequence as a feedback diagram interpreted in the
-category of streams of python types and functions.
+We can define the Fibonacci sequence as a Markov diagram, which is a feedback
+diagram, interpreted in the category of streams of python types and functions.
 
 >>> from discopy import *
->>> from discopy.feedback import *
+>>> from discopy.markov import *
 
 >>> X = Ty('X')
 >>> fby, wait = FollowedBy(X), Swap(X, X.d).feedback()
@@ -69,7 +69,7 @@ category of streams of python types and functions.
     :align: center
 
 >>> cod = stream.Stream[python.Function]
->>> F = feedback.Functor(
+>>> F = markov.Functor(
 ...     ob_map={X: int},
 ...     ar_map={zero: cod.singleton(python.Function(lambda: 0, (), int)),
 ...         one: cod.singleton(python.Function(lambda: 1, (), int)),
@@ -165,8 +165,8 @@ from typing import Optional
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 
-from discopy import symmetric
-from discopy.abc import MonoidalCategory, NamedGeneric
+from discopy import messages, symmetric
+from discopy.abc import FeedbackCategory, NamedGeneric
 from discopy.axioms import TestableGeneric
 from discopy.python import finset
 from discopy.utils import (
@@ -291,12 +291,45 @@ class Ty[base](NamedGeneric):
             lambda: self.later.tensor(other.later))
         return type(self)(self.now @ other.now, _later)
 
+    def last(self, n: int) -> Ty:
+        """
+        The last ``n`` objects of a stream of types, at every time step.
+
+        >>> XY = Ty.sequence(symmetric.Ty('x', 'y')).last(1)
+        >>> for x in [XY.now, XY.later.now]: print(x)
+        y0
+        y1
+        """
+        if not 0 <= n <= len(self.now):
+            raise ValueError(messages.NOT_SPLITTABLE.format(n, self.now))
+        if not n:
+            return type(self)()
+        now = self.now[len(self.now) - n:]
+        return type(self)(now, None if self.is_constant else (
+            lambda: self.later.last(n)))
+
+    def without(self, suffix: Ty) -> Ty:
+        """
+        A stream of types less a suffix, at every time step.
+
+        >>> X, Y = map(Ty.sequence, "xy")
+        >>> X_ = (X @ Y.delay()).without(Y.delay())
+        >>> for x in [X_.now, X_.later.now]: print(x)
+        x0
+        x1
+        """
+        if self.now[len(self.now) - len(suffix.now):] != suffix.now:
+            raise ValueError(messages.NOT_SPLITTABLE.format(suffix, self))
+        now = self.now[:len(self.now) - len(suffix.now)]
+        return type(self)(now, None if self.is_constant and suffix.is_constant
+                          else lambda: self.later.without(suffix.later))
+
     __matmul__ = symmetric.Ty.__matmul__
     __pow__ = symmetric.Ty.__pow__
 
 
 @dataclass
-class Stream[category](MonoidalCategory, TestableGeneric):
+class Stream[category](FeedbackCategory, TestableGeneric):
     """
     Monoidal streams over an underlying `category`.
 
@@ -350,6 +383,8 @@ class Stream[category](MonoidalCategory, TestableGeneric):
 
     later, is_constant = Ty.later, Ty.is_constant
     head, tail = Ty.head, Ty.tail
+    feedback_sliding = FeedbackCategory.feedback_sliding.failing(
+        messages.STREAM_SLIDING)
 
     def __init__(
             self, now: category,
@@ -402,8 +437,8 @@ class Stream[category](MonoidalCategory, TestableGeneric):
 
     @classmethod
     def sequence(
-            cls, name: str, dom: Ty, cod: Ty, mem: Ty | None = None,
-            n_steps: int = 0, box_factory=None) -> Stream:
+            cls, name: str, dom: Ty, cod: Ty, mem: Ty = None, n_steps: int = 0,
+            box_factory=None) -> Stream:
         """
         Produce a stream of boxes indexed by a time step.
 
@@ -417,7 +452,7 @@ class Stream[category](MonoidalCategory, TestableGeneric):
         f1 : x1 @ m0 -> y1 @ m1
         f2 : x2 @ m1 -> y2 @ m2
         """
-        mem = cls.ob() if mem is None else mem
+        mem = Ty[cls.category.ob]() if mem is None else mem
         if box_factory is None:
             box_factory = cls.category.box_factory
         now = box_factory(
@@ -560,23 +595,45 @@ class Stream[category](MonoidalCategory, TestableGeneric):
         return cls(now, dom, cod,
                    _later=_later)
 
-    def feedback(
-        self, dom: Ty | None = None, cod: Ty | None = None,
-        mem: Ty | None = None, _first_call=True
-    ) -> Stream:
+    def split_memory(
+            self, n: int = None, left: bool = False, *,
+            dom: Ty = None, cod: Ty = None, mem: Ty = None
+            ) -> tuple[Ty, Ty, Ty]:
         """
-        The delayed feedback of a monoidal stream.
+        The domain, codomain and memory of a feedback of a stream, at every
+        time step: the memory is ``mem``, or the last ``n`` objects of the
+        codomain, one by default; the codomain defaults to what the memory
+        leaves of it, the domain to what its delay leaves.
+        """
+        if n is not None and (dom, cod, mem) != (None, None, None):
+            raise TypeError(messages.FEEDBACK_FORMS)
+        if left or (mem is None and cod is not None):
+            raise NotImplementedError
+        mem = self.cod.last(1 if n is None else n) if mem is None else mem
+        dom = self.dom.without(mem.delay()) if dom is None else dom
+        cod = self.cod.without(mem) if cod is None else cod
+        return dom, cod, mem
+
+    def feedback(
+            self, n: int = None, left: bool = False, *,
+            dom: Ty = None, cod: Ty = None, mem: Ty = None) -> Stream:
+        """
+        The delayed feedback of a monoidal stream, in either form of
+        :meth:`discopy.abc.FeedbackCategory.feedback`, on the right only.
 
         Parameters:
+            n : The number of objects to feed back.
+            left : Feeding back on the left, which is not implemented.
             dom (Ty) : The domain of the result.
-            cod (Ty) : The domain of the result.
+            cod (Ty) : The codomain of the result.
             mem (Ty) : The memory over which we are taking a feedback.
 
         Example
         -------
         >>> x, y, m = [Ty.sequence(symmetric.Ty(n)) for n in "xym"]
         >>> f = Stream.sequence("f", x @ m.delay(), y @ m)
-        >>> fb = f.feedback(x, y, m)
+        >>> fb = f.feedback(dom=x, cod=y, mem=m)
+        >>> assert fb.unroll(2).now == f.feedback().unroll(2).now
 
         >>> from discopy.monoidal import Equation
         >>> Equation(f.unroll(2).now, fb.unroll(2).now, symbol="$\\\\mapsto$"
@@ -585,20 +642,53 @@ class Stream[category](MonoidalCategory, TestableGeneric):
         .. image:: /_static/stream/feedback-unrolling.svg
             :align: center
         """
-        if mem is None or dom is None or cod is None:
-            if not self.is_constant or dom is not None or cod is not None:
-                raise NotImplementedError
+        dom, cod, mem = self.split_memory(n, left, dom=dom, cod=cod, mem=mem)
+        if mem.is_constant and not mem.now:
+            self.assert_feeds_back(dom, cod, mem)
+            return self
+        return self.feed_back(dom, cod, mem)
 
-        assert self.dom.now == dom.now if _first_call else (
-            self.dom.now == dom.now @ mem.now)
-        assert self.cod.now == cod.now @ mem.now if _first_call else (
-            self.cod.now == cod.now @ mem.later.now)
+    def assert_feeds_back(
+            self, dom: Ty, cod: Ty, mem: Ty, is_first: bool = True) -> None:
+        """
+        Check that a stream feeds back ``mem`` from ``dom`` to ``cod`` at its
+        first time step, where the memory fed back is the empty delay of
+        ``mem``, or at a later one, where ``mem`` has already been delayed.
+
+        Parameters:
+            dom (Ty) : The domain of the feedback.
+            cod (Ty) : The codomain of the feedback.
+            mem (Ty) : The memory over which we are taking a feedback.
+            is_first : Whether this is the first time step.
+
+        Raises:
+            AxiomError : If the boundary of the stream is not that of the
+                feedback at this time step.
+        """
+        fed = (dom.now, cod.now @ mem.now) if is_first\
+            else (dom.now @ mem.now, cod.now @ mem.later.now)
+        if (self.dom.now, self.cod.now) != fed:
+            raise AxiomError(messages.TYPE_ERROR.format(
+                " -> ".join(map(str, fed)),
+                f"{self.dom.now} -> {self.cod.now}"))
+
+    def feed_back(
+            self, dom: Ty, cod: Ty, mem: Ty, is_first: bool = True) -> Stream:
+        """
+        The delayed feedback of a stream from its first time step, or from a
+        later one, where the memory has already been delayed.
+
+        Parameters:
+            dom (Ty) : The domain of the result.
+            cod (Ty) : The codomain of the result.
+            mem (Ty) : The memory over which we are taking a feedback.
+            is_first : Whether this is the first time step.
+        """
+        self.assert_feeds_back(dom, cod, mem, is_first)
 
         def _later():
-            return self.later.feedback(dom.later, cod.later, mem.later, False)
-        mem = mem.delay() if _first_call else mem
-        return type(self)(
-            self.now, dom, cod,
-            mem @ self.mem, _later)  # ty: ignore[unsupported-operator]
+            return self.later.feed_back(dom.later, cod.later, mem.later, False)
+        mem = mem.delay() if is_first else mem
+        return type(self)(self.now, dom, cod, mem @ self.mem, _later)
 
     followed_by = id

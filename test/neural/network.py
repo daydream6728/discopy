@@ -8,7 +8,7 @@ from pytest import importorskip, raises
 from discopy import neural, python
 from discopy.neural.network import (
     Box, Copy, Dim, Dims, Discard, Equation, Functor, Id, Merge, Network,
-    Permutation, Swap, Trace)
+    Noise, Permutation, Swap, Trace)
 from discopy.utils import AxiomError, dumps, loads
 
 
@@ -78,13 +78,20 @@ def test_structure():
     assert Network.copy(x) == Copy(x) and Network.copy(x, 0) == Discard(x)
     assert Network.copy(x @ y) == Copy(x) @ Copy(y) >> x @ Swap(x, y) @ y
     assert Network.merge(x) == Merge(x) == Copy(x).dagger()
-    assert Merge(x).dagger() == Copy(x) and Discard(x).dagger() == Merge(x, 0)
+    assert Merge(x).dagger() == Copy(x) and Discard(x).dagger() == Noise(x)
+    assert Network.noise(x) == Noise(x) == Merge(x, 0) == Discard(x).dagger()
+    assert Network.merge(x @ y) == x @ Swap(y, x) @ y >> Merge(x) @ Merge(y)
     assert isinstance(Network.discard(x).boxes[0], Discard)
     assert isinstance(Network.merge(x).boxes[0], Merge)
-    for box in (Copy(x), Merge(x, 3), Discard(x)):
+    assert isinstance(Network.noise(x).boxes[0], Noise)
+    for box in (Copy(x), Merge(x, 3), Discard(x), Noise(x)):
         assert loads(dumps(box)) == box
     with raises(ValueError):
         Copy(x @ y)
+    with raises(ValueError, match="only spiders of neural.network.Network"):
+        Network.spider_factory(2, 2, x)
+    bialgebra = Merge(x) >> Copy(x)
+    assert bialgebra.to_hypergraph().to_diagram() == bialgebra
 
 
 def test_trace():

@@ -174,9 +174,10 @@ class Channel(Tensor):
         assert_isinstance(dom, CQ)
         return cls(Tensor[cls.dtype].id(dom.to_dim()).array, dom, dom)
 
-    def then(self, other: Channel | None = None, *others: Channel) -> Channel:
-        if other is None or others:
-            return super().then(other, *others)
+    def then(self, *others: Channel) -> Channel:
+        if len(others) != 1:
+            return super().then(*others)
+        other, = others
         assert_isinstance(other, type(self))
         array = (self.to_tensor() >> other.to_tensor()).array
         return type(self)(array, self.dom, other.cod)

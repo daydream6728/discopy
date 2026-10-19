@@ -3,10 +3,12 @@
 
 def test_additive_Function():
     from discopy.interaction import Ty, Diagram
-    from discopy.python.additive import Function, Id, Swap, Merge
+    from discopy.python.additive import Function, Id, Swap, Merge, Noise
 
     X, xs = Function.ob(int), []
-    m, e = Function.merge(X, n=2), Function.merge(X, n=0)
+    m, e = Function.merge(X, n=2), Function.noise(X)
+    assert Merge == Function.merge and Noise == Function.noise
+    assert (e.dom, e.cod) == (Function.ob(), X)
 
     def f_inside(m, n=0):
         xs.append(m)

@@ -80,6 +80,25 @@ def test_parameterised_box_pickle():
     assert pickle.loads(pickle.dumps(box)) == box
 
 
+def test_named_generic_pickle():
+    from copy import deepcopy
+    from discopy import interaction, matrix, tensor
+    from discopy.cmap import CMap
+    from discopy.hypergraph import Hypergraph
+    from discopy.monoidal import List
+    from discopy.symmetric import Diagram, Ty
+    x = Ty('x')
+    for term in (interaction.Ty[int](1, 2), Hypergraph[Diagram].id(x),
+                 List[int](2, 3), matrix.Matrix[int]([1, 0, 0, 1], 2, 2),
+                 tensor.Tensor[complex]([1j], tensor.Dim(1), tensor.Dim(1)),
+                 CMap[Diagram].id(x)):
+        loaded = pickle.loads(pickle.dumps(term))
+        assert "__class_getitem__values__" not in vars(term)
+        assert type(loaded) is type(term) and loaded == term
+        copied = deepcopy(term)
+        assert type(copied) is type(term) and copied == term
+
+
 def test_deprecated_ob():
     from discopy import (
         biclosed, braided, compact, feedback, frobenius, pivotal, rigid)
@@ -110,3 +129,52 @@ def test_MappingOrCallable():
     assert MappingOrCallable({0: 1})[0] == MappingOrCallable(lambda x: 1)[0]
     with pytest.raises(TypeError):
         MappingOrCallable([10, 20])
+
+
+def test_NamedGeneric_factory():
+    """ A subscript of a factory is its own; the others keep ar as itself. """
+    from discopy import symmetric
+    from discopy.abc import Category
+    from discopy.cmap import CMap
+    from discopy.hypergraph import Hypergraph
+    from discopy.utils import NamedGeneric, factory
+
+    @factory
+    class F[dtype](Category, NamedGeneric):
+        """ The arrows of a category parameterised by a dtype. """
+
+    class G(F):
+        """ A box of F, which is not a factory. """
+
+    class H[dtype](Category, NamedGeneric):
+        """ A category that is not a factory, like Hypergraph. """
+
+    assert F[int].factory is F[int] is F[int].ar
+    assert G[int].ar is F
+    assert H[int].ar is H[int] and not hasattr(H[int], "factory")
+    for wiring in (Hypergraph, CMap):
+        assert wiring[symmetric.Diagram].ar is wiring[symmetric.Diagram]
+
+
+def test_resolve_factory():
+    from discopy import tensor, monoidal
+    from discopy.utils import resolve_factory, factory_name
+    for cls in (tensor.Diagram[complex], monoidal.List[int], rigid.Ty):
+        assert resolve_factory(factory_name(cls)) is cls
+    assert resolve_factory("complex") is complex
+    with pytest.raises(AttributeError):
+        resolve_factory("nonsense")
+
+
+def test_MappingOrCallable():
+    assert MappingOrCallable({0: 1})[0] == MappingOrCallable(lambda x: 1)[0]
+    with pytest.raises(TypeError):
+        MappingOrCallable([10, 20])
+
+
+def test_NamedGeneric_without_type_parameter():
+    class X(NamedGeneric):
+        """ A class that declares no type parameter. """
+
+    with pytest.raises(TypeError):
+        X[int]

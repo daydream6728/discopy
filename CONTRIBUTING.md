@@ -43,7 +43,7 @@ Different dependency groups are available (switch with `uv sync --group <group-n
 - no group: minimal set of dependencies required to work with DisCoPy.
 - `dev`: testing and linting tools.
 - `quantum`: includes quantum computating dependencies
-- `grammar`: natural language processing libraries
+- `grammar`: natural language processing libraries, PyTorch included for the neural parser
 - `docs`: for generating the documentation
 Since dependency groups are not standard, we also provide equivalents via optional dependencies.
 
@@ -76,12 +76,12 @@ authority on the real suite: claim local green only for the checks you actually 
 `pylint` fails on any unused import, variable or argument, and on a score below the
 `fail-under` of `.pylintrc`, which is the score of `main` when it was last raised: fix the
 finding, or disable the message on that line with the reason, and raise `fail-under` to the
-new score when your change lifts it, so that the score never goes down. `.pylintrc` declares
-the `factory` attribute that subscripting a `NamedGeneric` sets, so that pylint knows it exists,
-and allows `hypothesis.strategies` to be imported inside the methods that build strategies, so
-that importing the package does not import Hypothesis. It also disables, each with its reason,
-the messages the code deliberately does not follow, e.g. `cyclic-import`, since the package
-imports every module.
+new score when your change lifts it, so that the score never goes down. A law stated with
+`@axiom` is an `Axiom`, a `classmethod`, which pylint reads as one with no plugin; `.pylintrc`
+declares the `factory` members a `NamedGeneric` subscript sets and lets `hypothesis.strategies`
+be imported inside a method, where a strategy is built, so that the package never imports it; a
+category of messages the code is not going to follow is disabled there with its reason, as
+`cyclic-import` is: the package imports every module.
 
 ## Run the property tests
 

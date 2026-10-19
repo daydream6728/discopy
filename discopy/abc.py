@@ -35,6 +35,7 @@ Summary
     Nat
     MonoidalCategory
     PRO
+    FeedbackCategory
     TracedCategory
     ResiduatedMonoid
     BiclosedCategory
@@ -46,8 +47,8 @@ Summary
     SymmetricCategory
     PROP
     MarkovCategory
+    ComarkovCategory
     ClosedCategory
-    FeedbackCategory
     BalancedCategory
     RibbonCategory
     CompactCategory
@@ -61,12 +62,12 @@ from dataclasses import dataclass
 from types import NoneType
 from typing import TYPE_CHECKING, ClassVar
 
+from discopy import messages
 from discopy.axioms import (
     Atom, Count, Delay, Equation, Hom, L, Obj, Objs, Over, Perm, R, Repeat,
     Tensor, Testable, Under, Unit, Var, axiom, rule)
-from discopy import messages
 from discopy.utils import (  # noqa: F401  pylint: disable=unused-import
-    AxiomError, NamedGeneric, classproperty)
+    AxiomError, NamedGeneric, classproperty, factory_name)
 
 
 class Category[C0, C1: Category](Testable[C1], ABC):
@@ -221,6 +222,16 @@ class ColouredMonoid[C0, C1: ColouredMonoid](Category[C0, C1]):
         def __getitem__(self, key) -> C1:
             """ The slices of a free monoid, assumed to stay inside it. """
 
+    @property
+    def is_atomic(self) -> bool:
+        """
+        Whether an element is atomic, i.e. a generator: by default, one of
+        length 1.
+
+        >>> assert Nat(1).is_atomic and not Nat(2).is_atomic
+        """
+        return len(self) == 1
+
     @classmethod
     def id(cls: type[C1], dom: C0 | None = None) -> C1:
         """The monoidal unit, i.e. the empty tensor ``cls()``."""
@@ -281,6 +292,8 @@ class ColouredMonoid[C0, C1: ColouredMonoid](Category[C0, C1]):
 
 class Monoid[C1: Monoid](ColouredMonoid[NoneType, C1]):
     """ A monoid is a coloured monoid with a single, trivial colour. """
+    ob = NoneType
+    dom = cod = None
 
 
 @dataclass
@@ -304,6 +317,13 @@ class Nat(Monoid["Nat"]):
     def __len__(self) -> int:
         return self.n
 
+    def __pow__(self, n_times: int) -> "Nat":
+        return type(self)(n_times * self.n)
+
+    def dagger(self) -> "Nat":
+        """ The dagger of a commutative monoid, i.e. the identity. """
+        return self
+
     def __index__(self) -> int:
         return self.n
 
@@ -322,6 +342,34 @@ class Nat(Monoid["Nat"]):
         if key >= self.n or key < -self.n:
             raise IndexError
         return type(self)(1)
+
+    def to_tree(self) -> dict:
+        """ The tree of a natural number, see :func:`discopy.utils.dumps`. """
+        return {'factory': factory_name(type(self)), 'n': self.n}
+
+    @classmethod
+    def from_tree(cls, tree: dict) -> "Nat":
+        """ The natural number of a tree, see :func:`discopy.utils.loads`. """
+        return cls(tree['n'])
+
+    @classmethod
+    def strategy(cls, *, max_size=3, **_):
+        """
+        Generate natural numbers up to ``max_size``, so that a category
+        whose objects they are, e.g. :class:`discopy.matrix.Matrix`,
+        quantifies over them like any other :class:`discopy.axioms.Testable`,
+        a natural number having one colour for a boundary to ask for.
+        """
+        from hypothesis import strategies as st
+
+        return st.integers(min_value=0, max_value=max_size).map(cls)
+
+    @classmethod
+    def generators(cls, **_):
+        """ Generate the one generator, ``Nat(1)``. """
+        from hypothesis import strategies as st
+
+        return st.just(cls(1))
 
 
 class MonoidalCategory[C0: ColouredMonoid, C1: MonoidalCategory](
@@ -402,11 +450,178 @@ class PRO[C1: PRO](MonoidalCategory[Nat, C1]):
     """
 
 
-class TracedCategory[
-        C0: ColouredMonoid, C1: TracedCategory](MonoidalCategory[C0, C1]):
+class FeedbackCategory[
+        C0: ColouredMonoid, C1: FeedbackCategory](MonoidalCategory[C0, C1]):
     """
-    A traced category is a :class:`MonoidalCategory` with a method
-    :code:`trace` for the partial trace of a morphism over some objects.
+    A feedback category is a :class:`MonoidalCategory` with a monoidal
+    endofunctor :meth:`delay` and an operator :meth:`feedback` from
+    morphisms ``x @ m.delay() -> y @ m`` to morphisms ``x -> y``, see
+    :cite:t:`KatisEtAl02` and :cite:t:`DiLavoreEtAl22`.
+
+    The laws of feedback are stated once here: vanishing, joining, strength,
+    tightening and sliding. A :class:`TracedCategory` is a feedback category
+    whose delay is the identity.
+    """
+    def delay(self, n_steps: int = 1) -> C1:
+        """
+        The delay endofunctor applied to a morphism, the identity by default.
+
+        Parameters:
+            n_steps : The number of time steps to delay.
+        """
+        del n_steps
+        return self
+
+    @abstractmethod
+    def feedback(
+            self, n: int = None, left: bool = False, *,
+            dom: C0 = None, cod: C0 = None, mem: C0 = None) -> C1:
+        """
+        The feedback operator on a morphism ``dom @ mem.delay() -> cod @ mem``
+        giving a morphism ``dom -> cod``, to be instantiated.
+
+        The keyword form ``dom``, ``cod``, ``mem`` is primary and the
+        positional form ``n`` its fallback, the memory being the last ``n``
+        objects of the codomain, the first when ``left``: the two forms are
+        exclusive, see :meth:`split_memory`.
+
+        Parameters:
+            n : The number of objects to feed back.
+            left : Whether to feed back on the left rather than the right.
+            dom : The domain of the feedback.
+            cod : The codomain of the feedback.
+            mem : The memory to feed back.
+        """
+
+    def split_memory(
+            self, n: int = None, left: bool = False, *,
+            dom: C0 = None, cod: C0 = None, mem: C0 = None
+            ) -> tuple[C0, C0, C0]:
+        """
+        The domain, codomain and memory of a feedback, read off either form
+        of :meth:`feedback`: the memory is ``mem``, or the objects of the
+        codomain beside ``cod``, or the last ``n`` objects of the codomain,
+        the first when ``left``, one by default; the domain and codomain
+        default to what the memory leaves.
+
+        Example
+        -------
+        >>> from discopy.feedback import Ty, Box
+        >>> x, y, m = map(Ty, "xym")
+        >>> f = Box('f', x @ m.delay(), y @ m)
+        >>> assert f.split_memory() == f.split_memory(mem=m) == (x, y, m)
+        >>> assert f.split_memory(cod=y) == f.split_memory(1) == (x, y, m)
+        """
+        if n is not None and (dom, cod, mem) != (None, None, None):
+            raise TypeError(messages.FEEDBACK_FORMS)
+        if mem is None:
+            size = len(self.cod) - len(cod) if cod is not None\
+                else 1 if n is None else n
+            if not 0 <= size <= len(self.cod):
+                raise ValueError(
+                    messages.NOT_SPLITTABLE.format(size, self.cod))
+            mem = self.cod[:size] if left\
+                else self.cod[len(self.cod) - size:]
+        size = len(mem)
+        if size > min(len(self.dom), len(self.cod)):
+            raise ValueError(messages.NOT_SPLITTABLE.format(size, self))
+        if dom is None:
+            dom = self.dom[size:] if left else self.dom[:len(self.dom) - size]
+        if cod is None:
+            cod = self.cod[size:] if left else self.cod[:len(self.cod) - size]
+        return dom, cod, mem
+
+    @axiom
+    def delay_unit[A: Obj[C0], B: Obj[C0]](
+            cls, f: Hom[C1, A, B]) -> Equation[Hom[C1, A, B]]:
+        """ Delaying by no time step is the identity. """
+        return cls.equation_factory(f.delay(0), f)
+
+    @axiom
+    def delay_composition[A: Obj[C0], B: Obj[C0]](
+            cls, f: Hom[C1, A, B]
+    ) -> Equation[Hom[
+            C1, Delay[C1, Delay[C1, A]], Delay[C1, Delay[C1, B]]]]:
+        """ Delaying twice is delaying by two time steps. """
+        return cls.equation_factory(f.delay().delay(), f.delay(2))
+
+    @axiom
+    def feedback_vanishing[A: Obj[C0], B: Obj[C0]](
+            cls, f: Hom[C1, A, B]) -> Equation[Hom[C1, A, B]]:
+        """ Vanishing of feedback over the unit. """
+        return cls.equation_factory(f.feedback(0), f)
+
+    @axiom
+    def feedback_joining[Γ: Obj[C0], Δ: Obj[C0], M: Obj[C0], N: Obj[C0]](
+            cls, f: Hom[
+                C1, Tensor[Γ, Delay[C1, M], Delay[C1, N]], Tensor[Δ, M, N]],
+            x: Var[C0, Γ], y: Var[C0, Δ], m: Var[C0, M], n: Var[C0, N]
+    ) -> Equation[Hom[C1, Γ, Δ]]:
+        """ Feeding back a tensor is feeding back its factors in turn. """
+        return cls.equation_factory(
+            f.feedback(dom=x, cod=y, mem=m @ n),
+            f.feedback(
+                dom=x @ cls.id(m).delay().dom, cod=y @ m, mem=n
+            ).feedback(dom=x, cod=y, mem=m))
+
+    @axiom
+    def feedback_tightening[
+            Γ: Obj[C0], Δ: Obj[C0], Θ: Obj[C0], Λ: Obj[C0], M: Obj[C0]](
+            cls, f: Hom[C1, Tensor[Γ, Delay[C1, M]], Tensor[Δ, M]],
+            g: Hom[C1, Θ, Γ], h: Hom[C1, Δ, Λ],
+            x: Var[C0, Γ], y: Var[C0, Δ], mem: Var[C0, M]
+    ) -> Equation[Hom[C1, Θ, Λ]]:
+        """ Feedback is natural in its domain and codomain. """
+        return cls.equation_factory(
+            (g @ cls.id(mem).delay() >> f >> h @ mem).feedback(
+                dom=g.dom, cod=h.cod, mem=mem),
+            g >> f.feedback(dom=x, cod=y, mem=mem) >> h)
+
+    @axiom
+    def feedback_sliding[Γ: Obj[C0], Δ: Obj[C0], M: Obj[C0], N: Obj[C0]](
+            cls, f: Hom[C1, Tensor[Γ, Delay[C1, M]], Tensor[Δ, N]],
+            k: Hom[C1, N, M], x: Var[C0, Γ], y: Var[C0, Δ]
+    ) -> Equation[Hom[C1, Γ, Δ]]:
+        """ A morphism slides around a feedback loop, delayed on its way
+        back in. """
+        return cls.equation_factory(
+            (f >> y @ k).feedback(dom=x, cod=y, mem=k.cod),
+            (x @ k.delay() >> f).feedback(dom=x, cod=y, mem=k.dom))
+
+    @axiom
+    def feedback_superposing[
+            Γ: Obj[C0], Δ: Obj[C0], A: Obj[C0], B: Obj[C0], M: Obj[C0]](
+            cls, f: Hom[C1, Tensor[Γ, Delay[C1, M]], Tensor[Δ, M]],
+            e: Hom[C1, A, B], x: Var[C0, Γ], y: Var[C0, Δ], mem: Var[C0, M]
+    ) -> Equation[Hom[C1, Tensor[A, Γ], Tensor[B, Δ]]]:
+        """ Feedback commutes with tensoring a morphism on the left. """
+        return cls.equation_factory(
+            e @ f.feedback(dom=x, cod=y, mem=mem),
+            (e @ f).feedback(dom=e.dom @ x, cod=e.cod @ y, mem=mem))
+
+    @rule
+    def delaying[A: Obj[C0], B: Obj[C0]](
+            cls, f: Hom[C1, A, B]) -> Hom[C1, Delay[C1, A], Delay[C1, B]]:
+        """ The delay of a morphism by one time step. """
+        return f.delay()
+
+    @rule
+    def feedback_right[Γ: Obj[C0], Δ: Obj[C0], M: Obj[C0]](
+            cls, f: Hom[C1, Tensor[Γ, Delay[C1, M]], Tensor[Δ, M]],
+            mem: Var[C0, M]) -> Hom[C1, Γ, Δ]:
+        """ The feedback of a memory on the right. """
+        return f.feedback(mem=mem)
+
+
+class TracedCategory[
+        C0: ColouredMonoid, C1: TracedCategory](FeedbackCategory[C0, C1]):
+    """
+    A traced category is a :class:`FeedbackCategory` with a method
+    :code:`trace` for the partial trace of a morphism over some objects, i.e.
+    the feedback over a memory that is not delayed. When the delay is the
+    identity, the default, the two coincide: its :meth:`feedback` is its
+    trace. The free diagrams of :mod:`discopy.feedback` and the levels below
+    it have both, their wires carrying a time step.
     """
     @abstractmethod
     def trace(self, n: int = 1, left: bool = False) -> C1:
@@ -421,6 +636,20 @@ class TracedCategory[
             n : The number of objects to trace over.
             left : Whether to trace the wires on the left or right.
         """
+
+    def feedback(
+            self, n: int = None, left: bool = False, *,
+            dom: C0 = None, cod: C0 = None, mem: C0 = None) -> C1:
+        """
+        The feedback of a traced category is its :meth:`trace` over the
+        memory, whose delay is itself.
+        """
+        if n is None:
+            n = len(self.split_memory(
+                left=left, dom=dom, cod=cod, mem=mem)[2])
+        elif (dom, cod, mem) != (None, None, None):
+            raise TypeError(messages.FEEDBACK_FORMS)
+        return self.trace(n, left)
 
     @axiom
     def trace_vanishing[A: Obj[C0], B: Obj[C0]](
@@ -1040,6 +1269,16 @@ class SymmetricCategory[
         return result
 
     @classmethod
+    def from_permutation(cls, perm: Sequence[int], dom: C0) -> C1:
+        """
+        The permutation of the atomic objects of ``dom`` by
+        :meth:`permutation`, i.e. a composition of swaps unless the category
+        writes it directly; a free category overrides it with a native box,
+        see :meth:`discopy.symmetric.Diagram.from_permutation`.
+        """
+        return cls.permutation(perm, dom)
+
+    @classmethod
     def braid(cls, left: C0, right: C0) -> C1:
         return cls.swap(left, right)
 
@@ -1088,6 +1327,18 @@ class SymmetricCategory[
         return cls.equation_factory(
             cls.swap(x, y) >> cls.swap(y, x), cls.id(x @ y))
 
+    @rule
+    def inverse_braiding[X: Atom[C0], Y: Atom[C0]](
+            cls, x: Var[C0, X], y: Var[C0, Y]
+    ) -> Hom[C1, Tensor[Y, X], Tensor[X, Y]]:
+        """ The inverse of the braid of two atoms, the swap the other way. """
+        return cls.swap(y, x)
+
+    braid_then_inverse = BraidedCategory.braid_then_inverse.inapplicable(
+        messages.SWAP_INVOLUTION)
+    inverse_then_braid = BraidedCategory.inverse_then_braid.inapplicable(
+        messages.SWAP_INVOLUTION)
+
 
 class PROP[C1: PROP](PROB[C1], SymmetricCategory[Nat, C1]):
     """
@@ -1099,8 +1350,12 @@ class PROP[C1: PROP](PROB[C1], SymmetricCategory[Nat, C1]):
 class MarkovCategory[
         C0: ColouredMonoid, C1: MarkovCategory](SymmetricCategory[C0, C1]):
     """
-    A Markov category is a :class:`SymmetricCategory` with methods
-    :code:`copy` and :code:`merge` for the supply of commutative comonoids.
+    A Markov category is a :class:`SymmetricCategory` with a method
+    :code:`copy` for the supply of commutative comonoids: ``copy(x, n)`` is
+    the comultiplication into ``n`` copies and :meth:`discard` its counit,
+    the case ``n = 0``. The laws of a commutative comonoid and the coherence
+    of the supply with the tensor are stated here, see
+    :class:`ComarkovCategory` for the dual.
     """
     @classmethod
     @abstractmethod
@@ -1112,6 +1367,16 @@ class MarkovCategory[
             x : The object to copy.
             n : The number of copies.
         """
+
+    @classmethod
+    def discard(cls, x: C0) -> C1:
+        """
+        The counit of the comonoid on :code:`x`, i.e. no copy of it at all.
+
+        Parameters:
+            x : The object to discard.
+        """
+        return cls.copy(x, 0)
 
     @axiom
     def copy_counitality[X: Obj[C0]](
@@ -1160,6 +1425,79 @@ class MarkovCategory[
         return cls.copy(x, n)
 
 
+class ComarkovCategory[
+        C0: ColouredMonoid, C1: ComarkovCategory](SymmetricCategory[C0, C1]):
+    """
+    A comarkov category is a :class:`SymmetricCategory` with a method
+    :code:`merge` for the supply of commutative monoids: ``merge(x, n)`` is
+    the multiplication of ``n`` copies and :meth:`noise` its unit, the case
+    ``n = 0``. It is the dual of a :class:`MarkovCategory`: a category is
+    comarkov when its opposite is Markov. The laws of a commutative monoid
+    and the coherence of the supply with the tensor are stated here.
+    """
+    @classmethod
+    @abstractmethod
+    def merge(cls, x: C0, n: int = 2) -> C1:
+        """
+        Merge :code:`n` copies of a given object :code:`x` into one.
+
+        Parameters:
+            x : The object to merge.
+            n : The number of copies.
+        """
+
+    @classmethod
+    def noise(cls, x: C0) -> C1:
+        """
+        The unit of the monoid on :code:`x`, i.e. the merge of no copy at
+        all: the state every object carries, dual to
+        :meth:`MarkovCategory.discard`.
+
+        Parameters:
+            x : The object of the noise.
+        """
+        return cls.merge(x, 0)
+
+    @axiom
+    def merge_associativity[X: Obj[C0]](
+            cls, x: Var[C0, X]) -> Equation[Hom[C1, Tensor[X, X, X], X]]:
+        """ Merging either of two merges gives the merge of three. """
+        merge = cls.merge(x)
+        return cls.equation_factory(
+            merge @ x >> merge, cls.merge(x, 3), x @ merge >> merge)
+
+    @axiom
+    def merge_commutativity[X: Obj[C0]](
+            cls, x: Var[C0, X]) -> Equation[Hom[C1, Tensor[X, X], X]]:
+        """ The two copies merged into an object are interchangeable. """
+        merge = cls.merge(x)
+        return cls.equation_factory(cls.swap(x, x) >> merge, merge)
+
+    @axiom
+    def merge_unitality[X: Obj[C0]](
+            cls, x: Var[C0, X]) -> Equation[Hom[C1, X, X]]:
+        """ Merging the object with noise on either side leaves it itself. """
+        merge, noise = cls.merge(x), cls.noise(x)
+        return cls.equation_factory(
+            noise @ x >> merge, cls.id(x), x @ noise >> merge)
+
+    @axiom
+    def merge_coherence[X: Obj[C0], Y: Obj[C0]](
+            cls, x: Var[C0, X], y: Var[C0, Y]
+    ) -> Equation[Hom[C1, Tensor[X, Y, X, Y], Tensor[X, Y]]]:
+        """ Monoidal coherence of merging. """
+        return cls.equation_factory(
+            cls.merge(x @ y),
+            x @ cls.swap(y, x) @ y >> cls.merge(x) @ cls.merge(y))
+
+    @rule
+    def multiplication[X: Atom[C0], N: Count](
+            cls, x: Var[C0, X], n: Var[int, N]
+    ) -> Hom[C1, Repeat[X, N], X]:
+        """ The multiplication of an atom, ``n`` copies ``X ** n -> X``. """
+        return cls.merge(x, n)
+
+
 class ClosedCategory[
         C0: ResiduatedMonoid, C1: ClosedCategory](
             BiclosedCategory[C0, C1], MarkovCategory[C0, C1]):
@@ -1177,109 +1515,6 @@ class ClosedCategory[
         base = f.dom[:len(f.dom) - n]
         return cls.equation_factory(
             f.curry(n), (cls.swap(exponent, base) >> f).curry(n, left=False))
-
-
-class FeedbackCategory[
-        C0: ColouredMonoid, C1: FeedbackCategory](MarkovCategory[C0, C1]):
-    """
-    A feedback category is a :class:`MarkovCategory` with a :code:`delay`
-    endofunctor and a :code:`feedback` operator.
-    """
-    @abstractmethod
-    def delay(self, n_steps: int = 1) -> C1:
-        """
-        The delay endofunctor applied to a morphism.
-
-        Parameters:
-            n_steps : The number of time steps to delay.
-        """
-
-    @abstractmethod
-    def feedback(self, dom: C0 | None = None, cod: C0 | None = None,
-                 mem: C0 | None = None) -> C1:
-        """
-        The feedback operator on a morphism.
-
-        Parameters:
-            dom : The domain of the feedback.
-            cod : The codomain of the feedback.
-            mem : The memory type to trace over.
-        """
-
-    @axiom
-    def delay_unit[A: Obj[C0], B: Obj[C0]](
-            cls, f: Hom[C1, A, B]) -> Equation[Hom[C1, A, B]]:
-        """ Delaying by no time step is the identity. """
-        return cls.equation_factory(f.delay(0), f)
-
-    @axiom
-    def delay_composition[A: Obj[C0], B: Obj[C0]](
-            cls, f: Hom[C1, A, B]
-    ) -> Equation[Hom[C1, Delay[Delay[A]], Delay[Delay[B]]]]:
-        """ Delaying twice is delaying by two time steps. """
-        return cls.equation_factory(f.delay().delay(), f.delay(2))
-
-    @axiom
-    def feedback_vanishing[A: Obj[C0], B: Obj[C0]](
-            cls, f: Hom[C1, A, B]) -> Equation[Hom[C1, A, B]]:
-        """ Vanishing of feedback over the unit. """
-        return cls.equation_factory(f.feedback(mem=f.dom[:0]), f)
-
-    @axiom
-    def feedback_joining[Γ: Obj[C0], M: Obj[C0]](
-            cls, f: Hom[C1, Tensor[Γ, Delay[M]], Tensor[Γ, M]],
-            mem: Var[C0, M]) -> Equation[Hom[C1, Γ, Γ]]:
-        """ The feedback of many wires is that of each, the last first. """
-        joined = f
-        for _ in range(len(mem)):
-            joined = joined.feedback()
-        return cls.equation_factory(f.feedback(mem=mem), joined)
-
-    @axiom
-    def feedback_tightening[
-            Γ: Obj[C0], Δ: Obj[C0], Θ: Obj[C0], Λ: Obj[C0], M: Obj[C0]](
-            cls, f: Hom[C1, Tensor[Γ, Delay[M]], Tensor[Δ, M]],
-            g: Hom[C1, Θ, Γ], h: Hom[C1, Δ, Λ], mem: Var[C0, M]
-    ) -> Equation[Hom[C1, Θ, Λ]]:
-        """ Feedback is natural in its domain and codomain. """
-        return cls.equation_factory(
-            (g @ mem.delay() >> f >> h @ mem).feedback(mem=mem),
-            g >> f.feedback(mem=mem) >> h)
-
-    @axiom
-    def feedback_sliding[Γ: Obj[C0], Δ: Obj[C0], M: Obj[C0], N: Obj[C0]](
-            cls, f: Hom[C1, Tensor[Γ, Delay[M]], Tensor[Δ, N]],
-            k: Hom[C1, N, M]) -> Equation[Hom[C1, Γ, Δ]]:
-        """ A morphism slides around a feedback loop, delayed on its way
-        back in. """
-        base = f.dom[:len(f.dom) - len(k.cod)]
-        cobase = f.cod[:len(f.cod) - len(k.dom)]
-        return cls.equation_factory(
-            (f >> cobase @ k).feedback(mem=k.cod),
-            (base @ k.delay() >> f).feedback(mem=k.dom))
-
-    @axiom
-    def feedback_superposing[
-            Γ: Obj[C0], Δ: Obj[C0], X: Obj[C0], M: Obj[C0]](
-            cls, f: Hom[C1, Tensor[Γ, Delay[M]], Tensor[Δ, M]],
-            x: Var[C0, X], mem: Var[C0, M]
-    ) -> Equation[Hom[C1, Tensor[X, Γ], Tensor[X, Δ]]]:
-        """ Feedback is natural with respect to the tensor. """
-        return cls.equation_factory(
-            (x @ f).feedback(mem=mem), x @ f.feedback(mem=mem))
-
-    @rule
-    def delaying[A: Obj[C0], B: Obj[C0]](
-            cls, f: Hom[C1, A, B]) -> Hom[C1, Delay[A], Delay[B]]:
-        """ The delay of a morphism by one time step. """
-        return f.delay()
-
-    @rule
-    def feedback_right[Γ: Obj[C0], Δ: Obj[C0], M: Obj[C0]](
-            cls, f: Hom[C1, Tensor[Γ, Delay[M]], Tensor[Δ, M]],
-            mem: Var[C0, M]) -> Hom[C1, Γ, Δ]:
-        """ The feedback of a memory on the right. """
-        return f.feedback(mem=mem)
 
 
 class BalancedCategory[C0: ColouredMonoid, C1: BalancedCategory](
@@ -1379,12 +1614,15 @@ class CompactCategory[C0: Pregroup, C1: CompactCategory](
 
 
 class HypergraphCategory[C0: Pregroup, C1: HypergraphCategory](
-        CompactCategory[C0, C1], MarkovCategory[C0, C1]):
+        CompactCategory[C0, C1], MarkovCategory[C0, C1],
+        ComarkovCategory[C0, C1]):
     """
     A hypergraph category is a symmetric category with a supply of spiders,
     i.e. special commutative Frobenius algebras on each objects.
 
-    This makes it both a :class:`CompactCategory` and a :class:`MarkovCategory`
+    This makes it a :class:`CompactCategory`, a :class:`MarkovCategory` and
+    a :class:`ComarkovCategory`, the Frobenius law and speciality
+    identifying the comonoids with the monoids.
     """
     @classmethod
     @abstractmethod

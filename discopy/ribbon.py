@@ -16,6 +16,11 @@ Summary
     Cup
     Cap
     Braid
+    Feedback
+    Trace
+    FollowedBy
+    Head
+    Tail
     Functor
 
 Axioms
@@ -78,7 +83,7 @@ cap becomes a ribbon folding back.
 
 from typing import ClassVar
 
-from discopy import rigid, pivotal, balanced
+from discopy import rigid, pivotal, balanced, feedback
 from discopy.abc import RibbonCategory
 from discopy.cat import factory
 from discopy.pivotal import (  # noqa: F401  pylint: disable=unused-import
@@ -357,6 +362,7 @@ class DualRail(balanced.DualRail, Functor):
         return super().__call__(other)
 
 
+Feedback, Trace, FollowedBy, Head, Tail = feedback.generators(Diagram, Box)
 Diagram.box_factory = Box
 Diagram.braid_factory, Diagram.functor_factory = Braid, Functor
 Diagram.cup_factory, Diagram.cap_factory = Cup, Cap

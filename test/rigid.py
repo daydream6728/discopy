@@ -1,5 +1,6 @@
 from pytest import raises
 
+from discopy import messages
 from discopy.monoidal import Colour
 from discopy.rigid import *
 

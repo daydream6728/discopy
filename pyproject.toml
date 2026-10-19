@@ -82,6 +82,7 @@ quantum = [
 ]
 grammar = [
     "nltk",
+    "torch",
 ]
 test = [
     "discopy[grammar,quantum]",

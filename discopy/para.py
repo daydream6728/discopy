@@ -19,6 +19,7 @@ Summary
     Symmetric
     Traced
     Markov
+    Comarkov
     Closed
     Feedback
     Compact
@@ -67,9 +68,9 @@ category, with the empty parameter space:
 >>> assert t.trace().dom == x and t.trace().param == p
 
 The construction preserves each level of the hierarchy below symmetric:
-:class:`Traced`, :class:`Markov`, :class:`Closed`, :class:`Feedback`,
-:class:`Compact` and :class:`Hypergraph` lift the extra structure of their
-underlying category with the empty parameter space, e.g.
+:class:`Traced`, :class:`Markov`, :class:`Comarkov`, :class:`Closed`,
+:class:`Feedback`, :class:`Compact` and :class:`Hypergraph` lift the extra
+structure of their underlying category with the empty parameter space, e.g.
 
 >>> from discopy import frobenius
 >>> X = frobenius.Ty('x')
@@ -160,12 +161,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Self
 
-from discopy import symmetric, markov, closed, compact, frobenius, messages
+from discopy import (
+    symmetric, markov, comarkov, closed, compact, frobenius, messages)
 from discopy.axioms import TestableGeneric, Equation
 from discopy.abc import (
-    ClosedCategory, CompactCategory, FeedbackCategory, HypergraphCategory,
-    MarkovCategory, SymmetricCategory, TracedCategory)
-from discopy.feedback import Diagram as FeedbackDiagram
+    ClosedCategory, ComarkovCategory, CompactCategory, FeedbackCategory,
+    HypergraphCategory, MarkovCategory, SymmetricCategory, TracedCategory)
 from discopy.utils import (
     assert_iscomposable, assert_isinstance, classproperty, unbiased)
 
@@ -218,16 +219,10 @@ class Symmetric[category](
         .inapplicable(messages.NO_DAGGER)
     dagger_monoidality = SymmetricCategory.dagger_monoidality.inapplicable(
         messages.NO_DAGGER)
-    braid_then_inverse = SymmetricCategory.braid_then_inverse.inapplicable(
-        messages.NO_DAGGER)
-    inverse_then_braid = SymmetricCategory.inverse_then_braid.inapplicable(
-        messages.NO_DAGGER)
     bifunctoriality = SymmetricCategory.bifunctoriality.failing(
         messages.PARA_REPARAM)
     braid_naturality = SymmetricCategory.braid_naturality.failing(
         messages.PARA_REPARAM)
-    inverse_braiding = SymmetricCategory.inverse_braiding.inapplicable(
-        messages.NO_DAGGER)
 
     @classmethod
     def equation_factory(cls, *terms: Symmetric) -> Equation:
@@ -393,6 +388,8 @@ class Traced(Symmetric, TracedCategory):
         messages.PARA_REPARAM)
     trace_dinaturality_right = TracedCategory.trace_dinaturality_right.failing(
         messages.PARA_REPARAM)
+    feedback_sliding = TracedCategory.feedback_sliding.failing(
+        messages.PARA_REPARAM)
 
     def trace(self, n: int = 1, left: bool = False) -> Traced:
         """
@@ -433,6 +430,25 @@ class Markov(Symmetric, MarkovCategory):
             n : The number of copies.
         """
         return cls.lift(cls.category.copy(x, n))
+
+
+class Comarkov(Symmetric, ComarkovCategory):
+    """
+    Parametric maps over a comarkov underlying `category` form a comarkov
+    category, with the merge of the underlying category as :meth:`merge`.
+    """
+    category = comarkov.Diagram
+
+    @classmethod
+    def merge(cls, x: Symmetric.ob, n: int = 2) -> Comarkov:
+        """
+        The merge of the underlying category, with empty parameter space.
+
+        Parameters:
+            x : The object to merge.
+            n : The number of copies.
+        """
+        return cls.lift(cls.category.merge(x, n))
 
 
 class Closed(Markov, ClosedCategory):
@@ -478,7 +494,16 @@ class Closed(Markov, ClosedCategory):
         Parameters:
             n : The number of objects to curry.
             left : Whether to curry into a left or right exponential.
+
+        Currying no object is the identity, as for every other curry.
+
+        >>> from discopy import closed
+        >>> a, P = closed.Ty('a'), closed.Ty('P')
+        >>> k = Closed(a, a, closed.Box('k', a @ P, a), P)
+        >>> assert k.curry(0) == k == k.curry(0, left=False)
         """
+        if not n:
+            return self
         if self.copar:
             raise ValueError(messages.PARA_CURRY_COPAR.format(self.copar))
         if not left:
@@ -503,7 +528,7 @@ class Feedback(Markov, FeedbackCategory):
         messages.FREE_FEEDBACK)
     feedback_tightening = FeedbackCategory.feedback_tightening.failing(
         messages.FREE_FEEDBACK)
-    category = FeedbackDiagram
+    category = markov.Diagram
 
     def delay(self, n_steps: int = 1) -> Feedback:
         """
@@ -516,25 +541,31 @@ class Feedback(Markov, FeedbackCategory):
         return type(self)(*(x.delay(n_steps) for x in (
             self.dom, self.cod, self.inside, self.param, self.copar)))
 
-    def feedback(self, dom: Symmetric.ob = None, cod: Symmetric.ob = None,
+    def feedback(self, n: int = None, left: bool = False, *,
+                 dom: Symmetric.ob = None, cod: Symmetric.ob = None,
                  mem: Symmetric.ob = None) -> Feedback:
         """
         The feedback of the underlying category, with the parameters
-        swapped out of the way the same as :meth:`Traced.trace`.
+        swapped out of the way the same as :meth:`Traced.trace`, in either
+        form of :meth:`discopy.abc.FeedbackCategory.feedback`.
 
         Parameters:
+            n : The number of objects to feed back.
+            left : Feeding back on the left, which is not implemented.
             dom : The domain of the feedback.
             cod : The codomain of the feedback.
             mem : The memory type to trace over.
         """
-        mem = self.cod[-1:] if mem is None else mem
-        dom = self.dom[:len(self.dom) - len(mem)] if dom is None else dom
-        cod = self.cod[:len(self.cod) - len(mem)] if cod is None else cod
+        if left:
+            raise NotImplementedError
+        dom, cod, mem = self.split_memory(
+            n, left, dom=dom, cod=cod, mem=mem)
         inside = dom @ self.category.swap(self.param, mem.delay())\
             >> self.inside >> cod @ self.category.swap(mem, self.copar)
         return type(self)(
             dom, cod,
-            inside.feedback(dom @ self.param, cod @ self.copar, mem),
+            inside.feedback(
+                dom=dom @ self.param, cod=cod @ self.copar, mem=mem),
             self.param, self.copar)
 
 
@@ -578,7 +609,7 @@ class Compact(Traced, CompactCategory):
     ev = classmethod(Closed.ev.__func__)
 
 
-class Hypergraph(Compact, Markov, HypergraphCategory):
+class Hypergraph(Compact, Markov, Comarkov, HypergraphCategory):
     """
     Parametric maps over a hypergraph underlying `category` form a
     hypergraph category, with the spiders of the underlying category.

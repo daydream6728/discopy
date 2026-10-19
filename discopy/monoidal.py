@@ -216,9 +216,6 @@ class List[generator_factory](Monoid["List"], TestableGeneric):
         """
         return (type, )
 
-    ob = type(None)
-    dom = cod = None
-
     dagger_involution = Monoid.dagger_involution.inapplicable(
         messages.NO_DAGGER)
     dagger_contravariance = Monoid.dagger_contravariance.inapplicable(
@@ -240,6 +237,16 @@ class List[generator_factory](Monoid["List"], TestableGeneric):
 
     def __len__(self) -> int:
         return len(self.inside)
+
+    def unwind(self) -> "List":
+        """
+        The identity: a list has no winding, see :meth:`Ty.unwind`, so that
+        a :class:`hypergraph.Hypergraph` over any free monoid labels its
+        spiders the same way.
+
+        >>> assert List[int](2).unwind() == List[int](2)
+        """
+        return self
 
     def __getitem__(self, key: int | slice) -> "List":
         if isinstance(key, slice):
@@ -462,11 +469,6 @@ class Ty(cat.Ob, cat.FreeCategory, ColouredMonoid):
         """
         return self
 
-    @property
-    def is_atomic(self) -> bool:
-        """ Whether a type is atomic, i.e. it has length 1. """
-        return len(self) == 1
-
     def __str__(self):
         name = type(self).__name__
         if not self.inside:
@@ -601,6 +603,7 @@ class Nat(abc.Nat, Ty):  # ty: ignore[invalid-generic-class]
 
     >>> assert CX @ 2 >> 2 @ CX == CX @ CX
     """
+    ob = Colour
     generator_factory = int
     box_factory = None
     """ No generator of one colour is named, so there is no canonical
@@ -654,9 +657,6 @@ class Nat(abc.Nat, Ty):  # ty: ignore[invalid-generic-class]
 
     def __hash__(self):
         return hash(repr(self))
-
-    def __pow__(self, n_times):
-        return self.factory(n_times * self.n)
 
     def to_tree(self):
         return {'factory': factory_name(type(self)), 'n': self.n}
@@ -974,7 +974,9 @@ class Layer(cat.Box, ColouredMonoid):
     def merge(self, other: "Layer") -> "Layer":
         """
         Merge two layers into one or raise :class:`AxiomError`,
-        used by :meth:`Diagram.foliation`.
+        used by :meth:`Diagram.foliation`: two layers merge when their
+        composite is one layer up to interchangers alone, whatever rewrites
+        the level of the diagram adds, e.g. a snake is never yanked.
 
         Parameters:
             other : The other layer with which to merge.
@@ -988,9 +990,11 @@ class Layer(cat.Box, ColouredMonoid):
         >>> assert layer0.merge(layer1) == Layer(e, f, e, g, e)
         """
         assert_iscomposable(self, other)
+        staircases = self.boxes_and_types[1].ar(
+            (self, other), self.dom, other.cod).to_staircases()
         try:
-            diagram = Diagram.normal_form(self.boxes_and_types[1].ar(
-                (self, other), self.dom, other.cod).to_staircases())
+            diagram = Diagram.normal_form(
+                staircases, normalize=Diagram.normalize)
         except NotImplementedError as exception:  # Eckmann-Hilton argument.
             diagram = exception.last_step
         if not diagram.inside:  # The layers compose to the identity,
@@ -1284,7 +1288,8 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
 
     def to_staircases(self):
         """
-        Splits layers with more than one box into staircases.
+        Splits layers with more than one box into staircases, i.e. decodes
+        the boxes of the diagram with their offsets, one layer each.
 
         Example
         -------
@@ -1296,7 +1301,7 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
         >>> print(diagram.foliation().to_staircases())
         f0 @ y >> y @ f1
         """
-        return self.functor_factory.id(self.ar)(self)
+        return self.ar.decode(*self.encode())
 
     @axiom
     def hypergraph_identity[X: Obj[Ty]](
@@ -1376,6 +1381,12 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
         boundary scan to follow, so without its offset that scan would default
         every state to the left and then need swaps to reorder them -- which a
         category without symmetry (e.g. a formal grammar) does not have.
+        The offsets are recorded for the states before the first box that
+        the functor into the hypergraph turns into wiring, e.g. a swap, a cup
+        or a copy: up to there the boxes of the hypergraph are those of the
+        diagram, in order, and so are the open wires, while after it an
+        offset counts wires the hypergraph no longer has, so the states that
+        follow are left to the decoder.
 
         Example
         -------
@@ -1389,15 +1400,17 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
         self.assert_transparent()
         graph = hypergraph.Hypergraph[
             type(self).ar].from_diagram(self)  # ty: ignore[invalid-type-form]
-        has_states = any(not box.dom for box in self.boxes)
-        if has_states and len(graph.boxes) == len(self.boxes):
-            offsets = tuple(
-                offset if not box.dom else None
-                for box, offset in zip(self.boxes, self.offsets))
-            graph = type(graph)(
-                graph.dom, graph.cod, graph.boxes, graph.wires,
-                graph.spider_types, offsets)
-        return graph
+        if all(box.dom for box in self.boxes):
+            return graph
+        offsets = []
+        for box, offset, image in zip(self.boxes, self.offsets, graph.boxes):
+            if image != box:
+                break
+            offsets.append(None if box.dom else offset)
+        offsets += (len(graph.boxes) - len(offsets)) * [None]
+        return type(graph)(
+            graph.dom, graph.cod, graph.boxes, graph.wires,
+            graph.spider_types, tuple(offsets))
 
     def foliation(self):
         """
@@ -1588,11 +1601,17 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
             if no_more_moves:
                 break
 
-    def normal_form(self, **params) -> "Diagram":
+    def normal_form(self, normalize: Callable = None, **params) -> "Diagram":
         """
         Returns the normal form of a diagram.
 
-        params : Passed to :meth:`Diagram.normalize`.
+        Parameters:
+            normalize : The rewriting to normalise with, the diagram's own
+                :meth:`normalize` by default, which from :mod:`rigid` up
+                yanks snakes before it interchanges boxes:
+                :meth:`Layer.merge` passes :meth:`Diagram.normalize`
+                to interchange alone.
+            params : Passed to ``normalize``.
 
         Raises
         ------
@@ -1600,8 +1619,9 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
             Whenever ``normalize`` yields the same rewrite steps twice, e.g.
             the diagram is not boundary-connected.
         """
+        normalize = type(self).normalize if normalize is None else normalize
         cache = set()
-        for diagram in itertools.chain([self], self.normalize(**params)):
+        for diagram in itertools.chain([self], normalize(self, **params)):
             if str(diagram) in cache:
                 exception = NotImplementedError(
                     messages.NOT_CONNECTED.format(self))
@@ -1790,7 +1810,8 @@ class Bubble(cat.Bubble, Box):
             draw_as_square: bool | None = None,
             draw_vertically=False, **kwargs):
         cat.Bubble.__init__(self, *args, **kwargs)
-        Box.__init__(self, self.name, self.dom, self.cod)
+        Box.__init__(self, self.name, self.dom, self.cod,
+                     data=self.data, is_dagger=self.is_dagger)
         self.drawing_name = "" if drawing_name is None else drawing_name
         self.draw_vertically = draw_vertically
         self.frame_colour = BOX_DRAWING_ATTRIBUTES['frame_colour'](self)

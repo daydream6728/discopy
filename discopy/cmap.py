@@ -70,6 +70,7 @@ from discopy.utils import (
     factory_name,
     from_tree,
     resolve_factory,
+    get_origin,
     unbiased,
 )
 
@@ -310,6 +311,25 @@ class CMap[category](CompactCategory, TestableGeneric, Serialisable):
             result.append(tuple(range(start, stop)))
             start = stop
         return tuple(result)
+
+    @staticmethod
+    def logical_order(arity: int, coarity: int) -> tuple[int, ...]:
+        """
+        The offsets of the ports of a box in logical order, i.e. its domain
+        ports followed by its codomain ports, within the clockwise order
+        which stores the codomain ports reversed.
+
+        Parameters:
+            arity : The number of domain ports.
+            coarity : The number of codomain ports.
+
+        Example
+        -------
+        >>> CMap.logical_order(2, 3)
+        (0, 1, 4, 3, 2)
+        """
+        return tuple(range(arity)) + tuple(
+            reversed(range(arity, arity + coarity)))
 
     @property
     def faces(self) -> Permutation:
@@ -804,7 +824,7 @@ class CMap[category](CompactCategory, TestableGeneric, Serialisable):
         >>> assert loads(dumps(cmap)) == cmap
         """
         return {
-            'factory': 'cmap.CMap',
+            'factory': factory_name(get_origin(type(self))),
             'category': factory_name(self.category),
             'dom': self.dom.to_tree(),
             'cod': self.cod.to_tree(),
@@ -989,6 +1009,70 @@ class CMap[category](CompactCategory, TestableGeneric, Serialisable):
         return cls(dom, cod, boxes, edges, loops=loops)
 
     @classmethod
+    def from_wiring(cls, boxes: tuple, wires, loops: tuple = ()) -> "CMap":
+        """
+        A closed map given by boxes and wires between pairs ``(box_index,
+        port_position)``, where the position counts the domain ports of the
+        box followed by its codomain ports, in :meth:`logical_order`.
+
+        Parameters:
+            boxes : The boxes of the map.
+            wires : Pairs of ``(box_index, port_position)`` pairs.
+            loops : The types of the closed components with no ports.
+
+        Raises:
+            ValueError : If a wire names a box or a port that does not exist,
+                or if a port is left unwired or wired twice.
+
+        Example
+        -------
+        >>> from discopy.symmetric import Ty, Box, CMap
+        >>> x = Ty('x')
+        >>> f, g = Box('f', x, x @ x), Box('g', x @ x, x)
+        >>> cm = CMap.from_wiring((f, g), [
+        ...     ((0, 0), (1, 2)), ((0, 1), (1, 0)), ((0, 2), (1, 1))])
+        >>> assert cm.edges.is_fixpoint_free_involution()
+        >>> assert CMap.from_wiring((), [], loops=(x, )).loops == (x, )
+        >>> CMap.from_wiring((f, ), [((0, 0), (0, 0))])
+        Traceback (most recent call last):
+            ...
+        ValueError: Port (0, 0) is wired to itself.
+        """
+        boxes = tuple(boxes)
+        starts, n_ports = [], 0
+        for box in boxes:
+            assert_isinstance(box, cls.category)
+            starts.append(n_ports)
+            n_ports += len(box.dom) + len(box.cod)
+
+        def global_index(box_index: int, position: int) -> int:
+            if not isinstance(box_index, int) \
+                    or not 0 <= box_index < len(boxes):
+                raise ValueError(f"There is no box {box_index}.")
+            box = boxes[box_index]
+            offsets = cls.logical_order(len(box.dom), len(box.cod))
+            if not isinstance(position, int) \
+                    or not 0 <= position < len(offsets):
+                raise ValueError(f"Box {box_index} has no port {position}.")
+            return starts[box_index] + offsets[position]
+
+        pairs, seen = [], set()
+        for (one, other) in wires:
+            i, j = global_index(*one), global_index(*other)
+            if i == j:
+                raise ValueError(f"Port {one} is wired to itself.")
+            for port, position in ((i, one), (j, other)):
+                if port in seen:
+                    raise ValueError(f"Port {position} is wired twice.")
+            seen.update((i, j))
+            pairs.append((i, j))
+        if len(seen) != n_ports:
+            missing = sorted(set(range(n_ports)) - seen)
+            raise ValueError(f"Ports {missing} are left unwired.")
+        edges = Permutation.from_transpositions(pairs, n_ports)
+        return cls(cls.ob(), cls.ob(), boxes, edges, loops=loops)
+
+    @classmethod
     def from_diagram(cls, old: "Diagram") -> "CMap":
         """
         Turn a :class:`Diagram` into a :class:`CMap`.
@@ -1011,6 +1095,7 @@ class CMap[category](CompactCategory, TestableGeneric, Serialisable):
         >>> Swap(x, y).to_map().boxes
         ()
         """
+        hypergraph.assert_transparent(old)
         category = type(old).ar
         factory = cls if cls.category is category else cls[category]
         functor = (factory.functor if cls.category is None else cls.functor)(
@@ -1018,7 +1103,7 @@ class CMap[category](CompactCategory, TestableGeneric, Serialisable):
             dom=category, cod=factory)
         trace = getattr(category, "trace_factory", ())
         if not isclass(trace) or issubclass(category, SymmetricCategory):
-            trace = ()  # a trace the functor wires rather than boxes
+            trace = ()
         return factory.from_glued(old.dom, old.cod, [
             (factory.from_box(box) if isinstance(box, trace)
              else functor(box), offset)
@@ -1026,7 +1111,7 @@ class CMap[category](CompactCategory, TestableGeneric, Serialisable):
             for box, offset in layer.boxes_and_offsets])
 
     @classmethod
-    def swap(cls, left, right):
+    def swap(cls, left: "Ty", right: "Ty") -> "CMap":
         """
         The swap of a symmetric category, absorbed into the edges.
 
@@ -1052,7 +1137,7 @@ class CMap[category](CompactCategory, TestableGeneric, Serialisable):
         return cls(dom, cod, (), edge, check=False)
 
     @classmethod
-    def braid(cls, left, right):
+    def braid(cls, left: "Ty", right: "Ty") -> "CMap":
         """
         The braid of a braided category: the :meth:`swap` of a symmetric one,
         and boxes otherwise, a braid being no swap.
@@ -1072,7 +1157,7 @@ class CMap[category](CompactCategory, TestableGeneric, Serialisable):
         return cls.from_diagram(cls.category.braid(left, right))
 
     @classmethod
-    def twist(cls, dom):
+    def twist(cls, dom: "Ty") -> "CMap":
         """
         The twist of a balanced category: the identity of a symmetric one,
         and boxes otherwise, a twist being no identity.
@@ -1140,11 +1225,16 @@ class CMap[category](CompactCategory, TestableGeneric, Serialisable):
         that is not compact, whose cups are planar and oriented, see
         :meth:`Hypergraph.cups`, and boundary wiring otherwise, a map being
         compact whatever hosts it.
+
+        >>> from discopy import rigid, compact
+        >>> x = rigid.Ty('x')
+        >>> assert rigid.Cup(x, x.r).to_map().boxes == (rigid.Cup(x, x.r), )
+        >>> x = compact.Ty('x')
+        >>> assert compact.Cup(x, x.r).to_map().boxes == ()
         """
         if cls.is_planar_rigid():
-            if len(left) == 1:
-                return cls.from_box(cls.category.cup_factory(left, right))
-            return cls.from_diagram(cls.category.cups(left, right))
+            return cls.cup_factory(left, right) if len(left) == 1\
+                else cls.from_diagram(cls.category.cups(left, right))
         assert_isinstance(left, Pregroup)
         assert_isinstance(right, Pregroup)
         left.assert_isadjoint(right)
@@ -1158,9 +1248,8 @@ class CMap[category](CompactCategory, TestableGeneric, Serialisable):
     def caps(cls, left: "Ty", right: "Ty") -> "CMap":
         """ A cap between a type and its left adjoint, see :meth:`cups`. """
         if cls.is_planar_rigid():
-            if len(left) == 1:
-                return cls.from_box(cls.category.cap_factory(left, right))
-            return cls.from_diagram(cls.category.caps(left, right))
+            return cls.cap_factory(left, right) if len(left) == 1\
+                else cls.from_diagram(cls.category.caps(left, right))
         assert_isinstance(left, Pregroup)
         assert_isinstance(right, Pregroup)
         right.assert_isadjoint(left)
@@ -1191,6 +1280,11 @@ class CMap[category](CompactCategory, TestableGeneric, Serialisable):
     def discard(cls, typ: "Ty") -> "CMap":
         """ Discard is kept as a box. """
         return cls.copy(typ, 0)
+
+    @classmethod
+    def noise(cls, typ: "Ty") -> "CMap":
+        """ Noise is kept as a box. """
+        return cls.merge(typ, 0)
 
     @classmethod
     def ev(cls, base: "Ty", exponent: "Ty", left: bool = True) -> "CMap":
@@ -1329,8 +1423,8 @@ class CMap[category](CompactCategory, TestableGeneric, Serialisable):
             n : The number of wires to trace.
             left : Whether to trace the leftmost rather than rightmost wires.
 
-        >>> from discopy import traced
-        >>> f = traced.Box('f', traced.Ty('x'), traced.Ty('x'))
+        >>> from discopy import feedback
+        >>> f = feedback.Box('f', feedback.Ty('x'), feedback.Ty('x'))
         >>> assert f.to_map().trace().boxes == (f.trace(), )
         """
         if n < 0:
@@ -1562,7 +1656,7 @@ class CMap[category](CompactCategory, TestableGeneric, Serialisable):
 
         Example
         -------
-        >>> from discopy.traced import Ty, Box, Trace, CMap
+        >>> from discopy.feedback import Ty, Box, Trace, CMap
         >>> f = Box("f", Ty("x"), Ty("x"))
         >>> assert f.to_map().trace().make_causal()\\
         ...     == CMap.from_box(Trace(f))
@@ -1666,15 +1760,20 @@ class CMap[category](CompactCategory, TestableGeneric, Serialisable):
 cycles of this map.
 
         What remains is decoded like in :meth:`Hypergraph.to_diagram`: we scan
-        the currently open wires from left to right, for each box we swap its
-        domain wires to the front, apply the box, and replace the consumed
-        domain labels by the box codomain labels.
+        the currently open wires from left to right, for each box we gather
+        its domain wires at the position of the first one with a single
+        permutation, see :meth:`discopy.python.finset.Permutation.gather`,
+        apply the box, and replace the consumed domain labels by the box
+        codomain labels. A box with no domain is applied on the right of the
+        open wires.
 
         >>> from discopy.compact import Ty, Box, CMap
-        >>> x, y = map(Ty, "xy")
+        >>> x, y, z = map(Ty, "xyz")
         >>> cmap = Box("f", x, y).to_map()
         >>> cmap.to_diagram().to_map() == cmap
         True
+        >>> print(CMap.permutation([2, 0, 1], x @ y @ z).to_diagram())
+        Permutation(x @ y @ z, [2, 0, 1])
         """
         if not self.is_causal:
             return self.make_causal().to_diagram()
@@ -1684,42 +1783,28 @@ cycles of this map.
             if i <= j:
                 edge_wire[i] = edge_wire[j] = len(edge_wire) // 2
 
-        def swap(left, right):
+        diagram = self.category.id(self.dom)
+        scan = [edge_wire[i] for i in range(len(self.dom))]
+
+        def permute(perm):
             if not issubclass(self.category, SymmetricCategory):
                 raise AxiomError(messages.NOT_SYMMETRIC.format(
                     factory_name(self.category)))
-            return self.category.swap(left, right)
+            return self.category.from_permutation(perm, diagram.cod)
 
-        diagram = self.category.id(self.dom)
-        scan = [edge_wire[i] for i in range(len(self.dom))]
         for depth, box in enumerate(self.boxes):
             box_ports = self._box_port_indices[depth]
             dom_ports = box_ports[:len(box.dom)]
             cod_ports = tuple(reversed(box_ports[len(box.dom):]))
             dom_wires = [edge_wire[i] for i in dom_ports]
             cod_wires = [edge_wire[i] for i in cod_ports]
-
-            offset = None
-            for i, wire_id in enumerate(dom_wires):
-                j = scan.index(wire_id)
-                if offset is None:
-                    offset = j
-                elif j != offset + i:
-                    if j > offset + i:
-                        diagram >>= diagram.cod[:offset + i] @ swap(
-                            diagram.cod[offset + i:j], diagram.cod[j]
-                        ) @ diagram.cod[j + 1:]
-                        scan = (scan[:offset + i] + scan[j:j + 1]) + (
-                            scan[offset + i:j] + scan[j + 1:])
-                    else:
-                        diagram >>= diagram.cod[:j] @ swap(
-                            diagram.cod[j], diagram.cod[j + 1:offset + i]
-                        ) @ diagram.cod[offset + i:]
-                        scan = (scan[:j] + scan[j + 1:offset + i]) + (
-                            scan[j:j + 1] + scan[offset + i:])
-                        offset -= 1
-
-            offset = len(scan) if offset is None else offset
+            positions = [scan.index(wire_id) for wire_id in dom_wires]
+            offset = positions[0] if positions else len(scan)
+            offset -= sum(j < offset for j in positions)
+            perm = Permutation.gather(positions, len(scan), offset)
+            if not perm.is_identity:
+                diagram >>= permute(perm)
+                scan = [scan[j] for j in perm]
             scan = scan[:offset] + cod_wires + scan[offset + len(box.dom):]
             diagram >>= diagram.cod[:offset] @ box @ diagram.cod[
                 offset + len(box.dom):]
@@ -1727,13 +1812,10 @@ cycles of this map.
         cod_wires = [
             edge_wire[self.n_ports - len(self.cod) + i]
             for i in range(len(self.cod))]
-        for i, wire_id in enumerate(cod_wires):
-            j = scan.index(wire_id)
-            if i < j:
-                diagram >>= diagram.cod[:i] @ swap(
-                    diagram.cod[i:j], diagram.cod[j:j + 1]
-                ) @ diagram.cod[j + 1:]
-                scan = scan[:i] + scan[j:j + 1] + scan[i:j] + scan[j + 1:]
+        perm = Permutation(
+            [scan.index(wire_id) for wire_id in cod_wires], len(scan))
+        if not perm.is_identity:
+            diagram >>= permute(perm)
         return diagram
 
     def to_hypergraph(self):

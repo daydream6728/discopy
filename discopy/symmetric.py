@@ -16,6 +16,11 @@ Summary
     Diagram
     Box
     Swap
+    Feedback
+    Trace
+    FollowedBy
+    Head
+    Tail
     Sum
     Functor
 
@@ -93,20 +98,20 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import ClassVar
 
-from discopy import monoidal, balanced, hypergraph, cmap, messages
+from discopy import monoidal, feedback, balanced, hypergraph, cmap, messages
 from discopy.abc import (
     BalancedCategory, BiclosedCategory, CompactCategory, PivotalCategory,
     RigidCategory, SymmetricCategory, TracedCategory)
 from discopy.axioms import FUEL, Axiom, Rule
 from discopy.cat import factory
-from discopy.monoidal import (  # noqa: F401  pylint: disable=unused-import
+from discopy.feedback import (  # noqa: F401  pylint: disable=unused-import
     Wire, Ty, Nat)
 from discopy.python import finset
 from discopy.utils import (
     AxiomError, assert_iscomposable, classproperty, factory_name, from_tree)
 
 
-class Layer(monoidal.Layer):
+class Layer(feedback.Layer):
     """
     A tensor product of generators and non-empty plumbing, where plumbing is a
     type when it is the identity and a :class:`Permutation` otherwise.
@@ -271,10 +276,14 @@ class Diagram(balanced.Diagram, SymmetricCategory):
     """
     # A hypergraph is faithful from symmetric categories on.
     bifunctoriality = SymmetricCategory.bifunctoriality
-    dagger_monoidality = SymmetricCategory.dagger_monoidality
+    dagger_monoidality = SymmetricCategory.dagger_monoidality.failing(
+        messages.FEEDBACK_HAS_NO_DAGGER)
+    dagger_monoidality_symmetric = SymmetricCategory.dagger_monoidality\
+        .weaken(within=SymmetricCategory)
     braid_naturality = SymmetricCategory.braid_naturality
     braid_then_inverse = SymmetricCategory.braid_then_inverse
     inverse_then_braid = SymmetricCategory.inverse_then_braid
+    inverse_braiding = SymmetricCategory.inverse_braiding
     twist_naturality = BalancedCategory.twist_naturality
     yanking = BalancedCategory.yanking
     trace_naturality_left = TracedCategory.trace_naturality_left
@@ -288,6 +297,7 @@ class Diagram(balanced.Diagram, SymmetricCategory):
     functor_factory: ClassVar[type["Functor"]]
     swap_factory: ClassVar[type["Swap"]]
     permutation_factory: ClassVar[type["Permutation"]]
+    feedback_factory: ClassVar[type["Feedback"]]
     trace_factory: ClassVar[type["Trace"]]
     sum_factory: ClassVar[type["Sum"]]
     braid_factory = classproperty(lambda cls: cls.swap_factory)
@@ -347,6 +357,22 @@ class Diagram(balanced.Diagram, SymmetricCategory):
         return cmap.CMap[cls].strategy(  # ty: ignore[invalid-type-form]
             dom=dom, cod=cod, max_leaves=fuel + 1).map(
                 lambda graph: graph.to_diagram())
+
+    @classmethod
+    def wait(cls, dom: Ty) -> Diagram:
+        """
+        Wait one time step, i.e. `Swap(x, x.delay()).feedback()`.
+
+        Example
+        -------
+        >>> x = Ty('x')
+        >>> assert Diagram.wait(x) == Swap(x, x.delay()).feedback()
+        >>> Diagram.wait(x).draw(doctest="docs/_static/feedback/wait.svg")
+
+        .. image:: /_static/feedback/wait.svg
+            :align: center
+        """
+        return cls.swap(dom, dom.delay()).feedback()
 
     @property
     def is_plumbing(self) -> bool:
@@ -564,6 +590,16 @@ class Permutation(Box):
             draw_as_wires=True, draw_as_permutation=True,
             permutation_indices=tuple(self.perm))
 
+    def __getnewargs__(self):
+        """
+        The arguments of :meth:`__new__`, which a pickle and a delay read.
+
+        >>> x, y, z = map(Ty, "xyz")
+        >>> perm = Permutation(x @ y @ z, [2, 0, 1])
+        >>> assert perm.delay() == Permutation((x @ y @ z).delay(), [2, 0, 1])
+        """
+        return self.dom, list(self.perm)
+
     @property
     def is_identity(self) -> bool:
         """
@@ -682,6 +718,9 @@ class Swap(Permutation, balanced.Braid, Box):
     def dagger(self):
         return type(self)(self.right, self.left)
 
+    def __getnewargs__(self):
+        return self.left, self.right
+
     def to_swaps(self):
         return self
 
@@ -693,20 +732,6 @@ class Swap(Permutation, balanced.Braid, Box):
 
     def __str__(self):
         return self.name
-
-
-class Trace(balanced.Trace, Box):
-    """
-    A trace in a symmetric category.
-
-    Parameters:
-        arg : The diagram to trace.
-        left : Whether to trace the wires on the left or right.
-
-    See also
-    --------
-    :meth:`Diagram.trace`
-    """
 
 
 class Sum(balanced.Sum, Box):
@@ -754,12 +779,12 @@ for level in (
         if isinstance(law, (Axiom, Rule)):
             setattr(CMap, name, law.inapplicable(messages.MAP_HAS_NO_ADJOINTS))
 
+Feedback, Trace, FollowedBy, Head, Tail = feedback.generators(Diagram, Box)
 Diagram.box_factory = Box
 Diagram.functor_factory = Functor
 Hypergraph = hypergraph.Hypergraph[Diagram]
 Diagram.swap_factory = Swap
 Diagram.permutation_factory = Permutation
-Diagram.trace_factory = Trace
 Diagram.sum_factory = Sum
 Id = Diagram.id
 

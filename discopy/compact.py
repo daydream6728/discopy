@@ -17,6 +17,11 @@ Summary
     Cap
     Swap
     Permutation
+    Feedback
+    Trace
+    FollowedBy
+    Head
+    Tail
     Functor
 
 Axioms
@@ -56,7 +61,8 @@ Coherence
 
 from typing import ClassVar
 
-from discopy import symmetric, ribbon, rigid, cmap, hypergraph, monoidal
+from discopy import (
+    symmetric, ribbon, pivotal, feedback, cmap, hypergraph, monoidal)
 from discopy.abc import CompactCategory
 from discopy.cat import factory
 from discopy.utils import deprecated_alias
@@ -64,7 +70,7 @@ from discopy.pivotal import (  # noqa: F401  pylint: disable=unused-import
     Wire, Ty)
 
 
-class Layer(symmetric.Layer, rigid.Layer):
+class Layer(symmetric.Layer, pivotal.Layer):
     """ A compact layer with permutation plumbing and rigid rotation. """
 
 
@@ -194,6 +200,7 @@ CMap = cmap.CMap[Diagram]
 
 Id = Diagram.id
 
+Feedback, Trace, FollowedBy, Head, Tail = feedback.generators(Diagram, Box)
 Diagram.box_factory = Box
 Diagram.swap_factory = Swap
 Diagram.functor_factory = Functor

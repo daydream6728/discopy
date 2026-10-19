@@ -46,7 +46,7 @@ Token machines
 --------------
 
 Dal Lago & Hoshino's `Geometry of Bayesian Programming
-<https://arxiv.org/abs/1904.11324>`_ (2019) reads a probabilistic program
+<https://arxiv.org/abs/1904.07425>`_ (2019) reads a probabilistic program
 as a net and its execution as a token walking through it. A machine with
 entry wires ``dom``, exit wires ``cod`` and ``n`` internal wires is a
 channel over the subdistribution monad
@@ -112,13 +112,14 @@ from __future__ import annotations
 from collections.abc import Callable
 
 from discopy import messages
-from discopy.abc import TracedCategory
+from discopy.abc import ComarkovCategory, TracedCategory
 from discopy.axioms import Equation, TestableGeneric
 from discopy.kleisli import channel
 from discopy.kleisli.monad import Monad, Powerset, Subdistribution
 from discopy.python import function
 from discopy.python.additive import Function, Ty
-from discopy.utils import assert_isinstance, assert_iscomposable, factory_name
+from discopy.utils import (
+    assert_isinstance, assert_iscomposable, factory, factory_name)
 
 
 class Tagged:
@@ -224,11 +225,13 @@ def injection(offset: int, source: Ty, target: Ty) -> function.Function:
     return function.Function(inside, pack(source), pack(target))
 
 
-class Channel[monad](TracedCategory, TestableGeneric):
+@factory
+class Channel[monad](TracedCategory, ComarkovCategory, TestableGeneric):
     """
     A channel is a morphism in the Kleisli category of a monad ``M`` with
     disjoint union as tensor, i.e. a Python function from a tagged value of
-    ``dom`` to the packed monadic type ``M(pack(cod))``.
+    ``dom`` to the packed monadic type ``M(pack(cod))``: a comarkov
+    category, whose :meth:`merge` is the codiagonal of the coproduct.
 
     Parameters:
         inside : The underlying function, from ``pack(dom)`` to

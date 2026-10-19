@@ -327,17 +327,26 @@ class Ty(Pregroup, biclosed.Ty):
 class Nat(monoidal.Nat, Ty):
     """
     A rigid ``Nat`` is a natural number ``n`` seen as a rigid type of
-    length ``n``.
+    length ``n``. It is self-dual, so it has no winding: ``l``, ``r`` and
+    :meth:`unwind` are the identity.
 
     Parameters
     ----------
     n : int
         The natural number.
+
+    Example
+    -------
+    >>> assert Nat(1).l == Nat(1).r == Nat(1).unwind() == Nat(1)
     """
     l = r = property(lambda self: self)
 
     dagger_involution = Pregroup.dagger_involution
     dagger_contravariance = Pregroup.dagger_contravariance
+
+    def unwind(self) -> "Nat":
+        """ The identity: a natural number has no winding. """
+        return self
 
 
 class Layer(monoidal.Layer):
@@ -792,6 +801,11 @@ class Cup(BinaryBoxConstructor, Box):
         BinaryBoxConstructor.__init__(self, left, right)
         Box.__init__(self, name, dom, cod, draw_as_cup=True)
 
+    def __getnewargs__(self):
+        """ The arguments of the constructor, which a pickle and a delay read.
+        """
+        return self.left, self.right
+
     def rotate(self, left=False):
         return self.cap_factory(self.right.l, self.left.l) if left\
             else self.cap_factory(self.right.r, self.left.r)
@@ -829,6 +843,11 @@ class Cap(BinaryBoxConstructor, Box):
         dom, cod = self.ob(dom=left.dom, cod=left.dom), left @ right
         BinaryBoxConstructor.__init__(self, left, right)
         Box.__init__(self, name, dom, cod, draw_as_cap=True)
+
+    def __getnewargs__(self):
+        """ The arguments of the constructor, which a pickle and a delay read.
+        """
+        return self.left, self.right
 
     def rotate(self, left=False):
         return self.cup_factory(self.right.l, self.left.l) if left\

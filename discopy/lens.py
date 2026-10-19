@@ -68,7 +68,7 @@ It is well-behaved, i.e. it satisfies the three lens laws:
 from __future__ import annotations
 
 from dataclasses import dataclass
-from discopy import interaction, markov, messages, monoidal, symmetric
+from discopy import interaction, markov, messages, symmetric
 from discopy.abc import (
     MarkovCategory, SymmetricCategory, TracedCategory)
 from discopy.axioms import Equation, TestableGeneric
@@ -99,7 +99,7 @@ class Ty(interaction.Ty):
     >>> assert x @ y == Ty[List[str]](("x", "y"), ("x'", "y'"))
     >>> assert -(x @ y) == -x @ -y
     """
-    natural = monoidal.Ty
+    natural = symmetric.Ty
     negatives = staticmethod(tuple)
 
 
@@ -170,12 +170,6 @@ class Symmetric[category](SymmetricCategory, TestableGeneric):
     dagger_contravariance = SymmetricCategory.dagger_contravariance\
         .inapplicable(messages.NO_DAGGER)
     dagger_monoidality = SymmetricCategory.dagger_monoidality.inapplicable(
-        messages.NO_DAGGER)
-    braid_then_inverse = SymmetricCategory.braid_then_inverse.inapplicable(
-        messages.NO_DAGGER)
-    inverse_then_braid = SymmetricCategory.inverse_then_braid.inapplicable(
-        messages.NO_DAGGER)
-    inverse_braiding = SymmetricCategory.inverse_braiding.inapplicable(
         messages.NO_DAGGER)
 
     @classmethod
@@ -459,6 +453,16 @@ class Traced(Symmetric, TracedCategory):
     trace_left = TracedCategory.trace_left.inapplicable(
         messages.LENS_TRACES_RIGHT)
     trace_right = TracedCategory.trace_right.inapplicable(
+        messages.PAIR_LENGTH)
+    feedback_joining = TracedCategory.feedback_joining.inapplicable(
+        messages.PAIR_LENGTH)
+    feedback_tightening = TracedCategory.feedback_tightening.inapplicable(
+        messages.PAIR_LENGTH)
+    feedback_sliding = TracedCategory.feedback_sliding.inapplicable(
+        messages.PAIR_LENGTH)
+    feedback_superposing = TracedCategory.feedback_superposing.inapplicable(
+        messages.PAIR_LENGTH)
+    feedback_right = TracedCategory.feedback_right.inapplicable(
         messages.PAIR_LENGTH)
 
     def trace(self, n: int = 1, left: bool = False) -> Traced:
