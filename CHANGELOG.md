@@ -1225,10 +1225,12 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 ### Fixed
 
 - The `tensor` and `matrix` categories round-trip through JSON, where
-  neither did. A tensor box with any dtype but `complex` was written as
-  e.g. `tensor.Box[float64]` and `utils.resolve_factory` looked its
-  parameter up in `builtins` alone, so `dumps` succeeded and `loads` never
-  could; it now looks in `builtins` and then in `numpy`, the two places a
+  neither did. A tensor box whose dtype NumPy names, e.g. one inferred
+  from its array, was written as `tensor.Box[float64]` and
+  `utils.resolve_factory` looked its parameter up in `builtins` alone, so
+  `dumps` succeeded and `loads` never could, where `int`, `float`, `bool`
+  and `complex` read back; it now looks in `builtins` and then in
+  `numpy`, the two places a
   data type parameterising a category comes from, and raises
   `AttributeError` saying so on a name that is neither, e.g. sympy's
   `Expr`, rather than guessing. Nothing about the format or any `repr`
