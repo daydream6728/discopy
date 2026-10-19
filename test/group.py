@@ -42,7 +42,7 @@ def test_group_laws(G):
     for g in elements:
         assert G() >> g == g == g >> G()
         assert g >> g.dagger() == G() == g.dagger() >> g
-        for h in elements[:8]:
+        for h in elements:
             assert (g >> h).dagger() == h.dagger() >> g.dagger()
             assert g @ h == g >> h
 
@@ -51,9 +51,10 @@ def test_group_laws(G):
 def test_functoriality(action):
     elements = list(action.group.elements())
     assert action(action.group()) == Permutation.id(action.size)
+    images = {g: action(g) for g in elements}
     for g in elements:
-        for h in elements[:8]:
-            assert action(g >> h) == action(g) >> action(h)
+        for h in elements:
+            assert images[g >> h] == images[g] >> images[h]
 
 
 @mark.parametrize("G", GROUPS)
@@ -84,13 +85,19 @@ def test_subscript():
         Product[Cyclic[2], Cyclic[3]](Cyclic[3](), Cyclic[2]())
     with raises(ValueError):
         Wreath[Cyclic[2], Cyclic[3]]((Cyclic[2](), ))
+    with raises(ValueError):
+        Product[Cyclic[2], Cyclic[3]](Cyclic[2]())
+    with raises(ValueError):
+        Cyclic[0]()
 
 
 def test_kronecker():
     p, q = Permutation((1, 2, 0)), Permutation((1, 0))
-    assert kronecker(p, q).then(kronecker(q, p)) is not None
-    assert kronecker(p, q).then(kronecker(p.dagger(), q.dagger()))\
-        == Permutation.id(6)
+    assert kronecker(p, q) == (3, 2, 5, 4, 1, 0)
+    assert kronecker(p, q) >> kronecker(q.dagger(), p.dagger())\
+        != Permutation.id(6)
+    assert kronecker(p, q) >> kronecker(p.dagger(), q.dagger())\
+        == kronecker(p >> p.dagger(), q >> q.dagger()) == Permutation.id(6)
 
 
 def test_action():
@@ -118,6 +125,9 @@ def test_orbits():
     assert len(rest) == 12
     trivial = Action(Symmetric[1], 3, ())
     assert trivial.orbits() == ((0, ), (1, ), (2, ))
+    reversal = Action(Cyclic[2], 4, ((3, 2, 1, 0), ))
+    assert reversal.orbits() == ((0, 3), (1, 2))
+    assert Action(Cyclic[4], 4, ((1, 3, 0, 2), )).orbits() == ((0, 1, 2, 3), )
 
 
 def test_sudoku():

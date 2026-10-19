@@ -15,9 +15,9 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   geometric deep learning from group constructions. `abc.Groupoid` is a
   category whose dagger inverts its arrows, with the law `invertibility`,
   and `abc.Group` a groupoid with one object, i.e. a monoid of invertible
-  elements; `finset.Permutation` is a groupoid. `Cyclic[n]` and
-  `Symmetric[n]` are built up by direct products `Product[G, H]` and wreath
-  products `Wreath[G, H]`, each element a normal form, an integer, a
+  elements; `finset.Permutation` is a groupoid. Direct products
+  `Product[G, H]` and wreath products `Wreath[G, H]` build groups up from
+  `Cyclic[n]` and `Symmetric[n]`, each element a normal form, an integer, a
   permutation, a pair or a tuple and an element of the top group, so that
   the `order`, the `elements`, a uniform `sample` and the `word` of an
   element in the `generators` are computed from those of the factors. An
@@ -32,7 +32,7 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   equivariant linear map between them is constant on. The sudoku group,
   `Wreath[Wreath[Symmetric[3], Symmetric[3]], Cyclic[2]]` acting on the
   cells times `Symmetric[9]` on the digits, has 1,218,998,108,160
-  elements, and the linear maps on the cells commuting with it six
+  elements, and the linear maps on the cells commuting with it have six
   parameters. The four kinds of groups join the property matrix; their
   `serialisation` is inapplicable, since `utils.resolve_factory` reads one
   class as the parameter of a class, not an integer nor several.

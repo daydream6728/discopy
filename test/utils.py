@@ -110,6 +110,7 @@ def test_named_generic_pickle_subscript():
                  Hypergraph[tensor.Diagram[complex]].id(tensor.Dim(2))):
         loaded = pickle.loads(pickle.dumps(term))
         assert type(loaded) is type(term)
+        assert vars(loaded) == vars(term)
 
 
 def test_deprecated_ob():

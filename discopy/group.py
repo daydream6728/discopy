@@ -226,6 +226,8 @@ class Cyclic(NamedGeneric["n"], Group):
         if self.n is None:
             raise TypeError(
                 f"Expected a subscript, e.g. {type(self).__name__}[2].")
+        if self.n < 1:
+            raise ValueError(f"Expected a positive order, got {self.n}.")
         self.inside = (k % self.n, )
 
     @property
@@ -361,6 +363,8 @@ class Product(NamedGeneric["left", "right"], Group):
             raise TypeError(
                 f"Expected subscripts, e.g. {type(self).__name__}[G, H].")
         self.inside = inside or (self.left(), self.right())
+        if len(self.inside) != 2:
+            raise ValueError("Expected an element of each factor.")
         for element, group in zip(self.inside, (self.left, self.right)):
             assert_ismember(element, group)
 
@@ -638,6 +642,6 @@ class Action:
         """
         quotient = Permutation.id(self.size).coequalizer(*self.images)
         orbits = {}
-        for point, orbit in quotient.items():
-            orbits.setdefault(orbit, []).append(point)
-        return tuple(tuple(orbit) for orbit in orbits.values())
+        for point in range(self.size):
+            orbits.setdefault(quotient[point], []).append(point)
+        return tuple(map(tuple, orbits.values()))
