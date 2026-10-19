@@ -71,3 +71,4 @@ NO_TYPE_PARAMETER = (
     "{} has no type parameter to subscript, declare one as in "
     "class C(NamedGeneric['name']).")
 CURRY_HAS_NO_DAGGER = "A curry has no dagger."
+NOT_JSON_SERIALISABLE = "Object of type {} is not JSON serialisable."

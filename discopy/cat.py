@@ -82,7 +82,7 @@ from typing import (
     Callable, ClassVar, Mapping, Iterable, TYPE_CHECKING)
 
 from discopy import messages, utils
-from discopy.abc import Category
+from discopy.abc import Category, DaggerCategory
 from discopy.axioms import GENERATORS, Equation as AbstractEquation, Testable
 from discopy.utils import (  # noqa: F401
     factory,
@@ -262,7 +262,7 @@ class FreeCategory(Category):
 
 
 @factory
-class Arrow(FreeCategory, Testable["Arrow"]):
+class Arrow(FreeCategory, DaggerCategory, Testable["Arrow"]):
     """
     An arrow is a tuple of composable boxes :code:`inside` with a pair of
     objects :code:`dom` and :code:`cod` as domain and codomain.

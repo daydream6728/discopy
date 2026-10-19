@@ -9,6 +9,86 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Added
 
+- `abc.DaggerCategory`, a `Category` with an abstract `dagger`, so that the
+  dagger laws — contravariance and involution — are stated only where there
+  is a dagger. `cat.Arrow` inherits it, and the diagram classes inherit it
+  down the hierarchy, while `cat.Functor` and `monoidal.Ty` do not: a functor
+  has no dagger and a type's generators need not either, so the property
+  tests of [#658](https://github.com/discopy/discopy/pull/658) can generate
+  the dagger axioms for the carriers that declare one instead of every
+  carrier opting out by hand. `cat.FreeCategory` keeps the implementation —
+  reversal by slicing, shared with `monoidal.Ty` — without the
+  declaration. `matrix.Matrix`, `hypergraph.Hypergraph` and `cmap.CMap`
+  declare it too: the conjugate transpose and the boundary swaps are
+  daggers of their own, and so does `abc.Groupoid`, whose dagger is the
+  inverse, so that its groups keep both laws
+  ([#731](https://github.com/discopy/discopy/issues/731)).
+
+- The property matrix says what it checked, not only that it was green. A
+  passing cell says the law held on the terms its strategy drew, and two
+  things make that weaker than it reads while changing no pass count, so
+  every run now ends with a section naming both. **A cell that cannot
+  fail**: one that drew fewer distinct terms than its budget allowed, so a
+  larger budget buys it nothing — `cat.Arrow.identity_typing` quantifies
+  over one object and `Ob.strategy` samples `axioms.GENERATORS`, so it draws
+  five terms under `pr`'s twenty examples and the same five under
+  `explore`'s thousand, and is green about `Ob('a')` through `Ob('e')`
+  rather than about the law. **A cell that stopped being checked**: one a
+  baseline run passed and this one skips, declares broken, or no longer
+  collects, since a law nobody states is as green as one that held —
+  learning that one merge had lost no cell cost two full matrix runs
+  captured cell by cell and a diff of the two by hand. A run that
+  collected no cell at all reports that too, being the largest loss there is,
+  and so does a cell that started and never finished: a cell is `passed` only
+  once a phase settles it, never from a passing setup, since a run interrupted
+  between setup and call would otherwise report a law nobody stated as one
+  that held on a distinct term per example. A passing cell that recorded no
+  count at all — one whose test does not take the `drawn` fixture — is
+  reported as unknown rather than counted among those that drew a distinct
+  term per example, and one unknown withholds that line, which is a claim
+  about all of them.
+  `--proptest-report` writes a run's reading and `--proptest-baseline` names
+  the one to compare against; the `proptest` workflow carries it between runs
+  as an artifact, on narrower terms than the example database, since a
+  baseline is a claim about what `main` checks rather than a pile of examples
+  any run may add to: a **successful** run of **`main`** only, so that a
+  dispatch on a branch that legitimately skips a cell cannot become the
+  baseline that cell is missing from and a run that died mid-suite stays
+  available to look at without being compared against. Neither reading is a
+  gate: a law that becomes inapplicable and a strategy with a finite support
+  are both legitimate, and failing the run for either would only teach
+  everyone to declare their way past it. `proptest/report.py` is the pure
+  half, `proptest/conftest.py` the plugin — the count of distinct terms
+  reaches the summary through `record_property`, since `-n auto` collects it
+  in a worker and prints it in the controller — and a cell is a test marked
+  `pytest.mark.cell` rather than any parametrised one, the suite's own unit
+  tests in `proptest/test_report.py` being parametrised too
+  ([#773](https://github.com/discopy/discopy/issues/773),
+  [#775](https://github.com/discopy/discopy/issues/775)).
+
+- `discopy.monad`, the categories of algebras of a
+  `kleisli.monad.Monad`, the first slice of
+  [rel-int/discopy-next#134](https://github.com/rel-int/discopy-next/issues/134).
+  `monad.free.Homomorphism[M]` is a homomorphism between free algebras, a
+  function from `M(X)` to `M(Y)` commuting with the multiplication: these
+  compose as functions, and `from_channel` and `to_channel`, the bind of a
+  channel and its restriction along the unit, are inverse, so the Kleisli
+  category is isomorphic to the category of free algebras.
+  `monad.algebra.Algebra[M]` is a carrier with a structure from `M` of it,
+  equal to another with the same monad, name and carrier, as a `Monad` is
+  equal to another with the same name, with `free` the free algebra on a
+  type, and `monad.algebra.Homomorphism[M]` a function between carriers
+  preserving their structure, the Eilenberg-Moore category, into which
+  `from_free` includes the free algebras. Functions cannot be compared, so
+  the laws are checked at a value: `unitality`, `associativity` and
+  `preservation` return an `Equation`. The algebras of `Maybe` are pointed
+  types, of `Powerset` join semilattices with a least element, de Morgan's
+  law saying that `not` is a homomorphism from `any` to `all`, and the
+  expectation of numbers is an algebra of `Subdistribution`, its
+  homomorphisms linear. `assert_ismember`, the check
+  that an object is of exactly a class, the parameters of a subscript
+  included, moves from `discopy.group` to `discopy.utils`.
+
 - A notebook, *Categorical deep learning*, reproducing the examples of
   Gavranović et al., [*Categorical Deep Learning is an Algebraic Theory of
   All Architectures*](https://arxiv.org/abs/2402.15332) (ICML 2024), with
@@ -1173,9 +1253,10 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   delay!!"* (toumix, 2026-10-19): `closed.Wire` is a `feedback.Wire`, the
   generator of `closed.Ty`, which prints its atoms as `closed.Wire('x')`
   where it printed `cat.Ob('x')`, and an exponential, a `Product` and the
-  `Unitype` are closed wires of their own, delayed as a whole, leaving their base, exponent and factors alone,
-  so that `(x << y).delay() != x.delay() << y.delay()`: the delay is not a
-  closed functor. The boxes built from them, `Eval`, `Coeval`, `Curry`,
+  `Unitype` are closed wires of their own, delayed as a whole, leaving
+  their base, exponent and factors alone, so that
+  `(x << y).delay() != x.delay() << y.delay()`: the delay is not a closed
+  functor. The boxes built from them, `Eval`, `Coeval`, `Curry`,
   `Pack` and `Unpack`, are `closed.Timed`: delayed, each keeps its
   arguments and takes a time step of its own, its boundary the delay of
   its boundary, e.g. the delay of the evaluation of `x << y` evaluates
@@ -1197,6 +1278,66 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   cannot be built on their wires: `f.feedback()` and `f.trace()` are one
   diagram in either form
   ([rel-int/discopy-next#128](https://github.com/rel-int/discopy-next/issues/128)).
+- Sixteen boxes of `discopy.quantum.gates` come back from their tree.
+  `cat.Box.from_tree` rebuilds a box as
+  `cls(name=, dom=, cod=, data=, is_dagger=)`, so every subclass whose
+  `__init__` takes something else raised instead: `Controlled` (hence `CX`,
+  `CZ`), `CRx`, `CRz`, `CU1`, `Scalar`, `MixedScalar`, `Sqrt`, `Ket`, `Bra`,
+  `Copy`, `Match`, `Digits`, and — not named by the issue, found by round-tripping
+  every box the module exposes rather than the ten it listed — `Discard`,
+  `MixedState`, `Measure` and `Encode`. For six of them the tree did not hold
+  what the constructor reads, so those get a `to_tree` as well as a
+  `from_tree`: `Controlled` writes the gate it controls and its `distance`,
+  `Scalar` its `is_mixed`, `Digits` its digits and their dimension, `Measure`
+  and `Encode` their two flags each, and `Sqrt` reads back the `is_dagger`
+  its tree already keeps, so a conjugated root comes back conjugated. A subclass reads back through
+  `Controlled` itself rather than through `cls`, since `CRz` takes the phase
+  of the rotation it controls where `Controlled` takes the gate, and
+  `Controlled.__eq__` compares the gate and the distance rather than the
+  class, so the two are equal. `Discard` and `MixedState` need no `to_tree`:
+  their one argument is the boundary the tree already carries.
+  `Ket`/`Bra` are written as [#664](https://github.com/discopy/discopy/pull/664)
+  writes them, which fixes those two locally, so the two heads agree rather
+  than collide. This is what keeps the `serialisation` cell of the property
+  matrix honest for the quantum categories
+  ([#780](https://github.com/discopy/discopy/issues/780)). The same defect
+  reaches beyond this module — `markov.Copy`/`Merge`/`Discard`,
+  `frobenius.Spider`, `traced.Trace`, `zx.Scalar`/`Spider`, `grammar.cfg.Id`
+  and `grammar.categorial.Constant` all raise the same way — which is a
+  maintainer's call on one mechanism against another two dozen pairs, measured
+  and reported on discopy/discopy#780 rather than folded in here.
+- A `monoidal.List` whose atoms have an evaluable representation is
+  transparent, i.e. `eval(repr(x)) == x`, which is `STYLE.md`'s own line
+  and failed on `main` for the public `discopy.python.Ty`: `repr(Ty(int, str))` printed
+  `monoidal.List[type](<class 'int'>, <class 'str'>)`, which is not an
+  expression, so `eval` raised `SyntaxError`. `List.__repr__` joined `repr`
+  over its atoms, which is right for every generator in the library but
+  one -- `type`, whose `repr` is `<class 'int'>` where the name `int` is
+  what reads back -- and `python.Ty` became `List[type]` with
+  [#728](https://github.com/discopy/discopy/issues/728). An atom now prints
+  through the new `List.generator_repr`, which defaults to `repr` and gives
+  a class to `utils.factory_name`, the printer the library already uses for
+  one: a list of DisCoPy classes therefore reads back qualified by module
+  too, e.g. `List[type](cat.Ob)`. Nothing caught it because `Ty` and `List`
+  are not enrolled in `proptest/categories.py`, so the matrix quantifies
+  *over* them without ever stating `transparency` *of* them
+  ([#773](https://github.com/discopy/discopy/issues/773)).
+- `utils.dumps` no longer crashes on a box whose `data` carries a complex
+  number, i.e. on every quantum gate with an array — `H`, `X`, `Y`, `Z`,
+  `CX`, ... — where `Rz(0.25)` escaped only because its data is a float.
+  JSON has no complex numbers and a complex number is a pair of reals, so
+  `utils.encode_complex` writes one as `{"factory": "complex", "re": ...,
+  "im": ...}` and `utils.decode_complex` reads it back, as the `default` of
+  `dumps` and the `object_hook` of `loads`. The encoding lives at the JSON
+  boundary rather than in `to_tree`, which stays a tree of Python objects,
+  and it is tagged with its factory like every other node of a tree, so a
+  box whose `data` is a dictionary of its own — `{"re": ..., "im": ...}`
+  included — is left alone. Fixing it in `utils` rather than in
+  `QuantumGate.to_tree` is what the extent of the crash asks for: `dumps`
+  raised on `Scalar(1j)` and on `tensor.Box('f', Dim(1), Dim(1), [1j])`
+  too, and neither is a `QuantumGate`; and it changes no output that works
+  today, since every tree holding a complex raised
+  ([#775](https://github.com/discopy/discopy/issues/775)).
 - `Nat` at every level, `monoidal.Dim`, so `frobenius.Dim` and
   `tensor.Dim`, and `neural.network.Dims` are their own `delay`, `head`
   and `tail`, a type whose atoms are not wires having no time step: since

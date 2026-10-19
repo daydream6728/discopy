@@ -785,6 +785,7 @@ def test_delay():
         assert delayed != gate and delayed.delay(-1) == gate
         assert delayed.delay(2) == gate.delay(3)
         assert eval(repr(delayed), env) == delayed
+        assert loads(dumps(delayed)) == delayed
         assert np.allclose(delayed.eval().array, gate.eval().array)
         assert delayed.dagger() == gate.dagger().delay()
     assert CX.delay() == Controlled(X.delay())

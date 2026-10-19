@@ -15,6 +15,8 @@ def test_Ty():
     assert Ty.ob is Colour and Ty.ar is Ty
     assert isinstance(transparent, cat.Ob)
     assert isinstance(x, cat.FreeCategory)
+    assert not isinstance(x, DaggerCategory) and issubclass(
+        Diagram, DaggerCategory)
     assert isinstance(x, cat.Ob) and not isinstance(x, Wire)
     assert x @ y != y @ x
     assert x.then(y) == x @ y  # >> is overridden by closed exponentials.
@@ -820,3 +822,15 @@ def test_box_factory():
 def test_decode_without_boxes_and_offsets():
     with raises(ValueError):
         Diagram.decode(Ty('x'))
+
+def test_List_repr():
+    from discopy import cat, monoidal
+    from discopy.python import Ty as PyTy
+
+    assert repr(List[int](2, 3)) == "monoidal.List[int](2, 3)"
+    assert repr(List[type](int, str)) == "monoidal.List[type](int, str)"
+    assert repr(List[type](cat.Ob)) == "monoidal.List[type](cat.Ob)"
+
+    assert PyTy is monoidal.List[type]
+    for x in (List[int](2, 3), List[type](int, str), PyTy(int), PyTy()):
+        assert eval(repr(x)) == x and eval(str(x)) == x
