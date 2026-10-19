@@ -541,7 +541,7 @@ class Diagram(monoidal.Diagram, TracedCategory):
         back is the memory itself and :attr:`feedback_factory` when it is its
         delay. The keyword form ``dom``, ``cod``, ``mem`` is primary, the
         positional ``n`` its fallback, see
-        :meth:`discopy.abc.FeedbackCategory.split_memory`.
+        :meth:`discopy.abc.MonoidalCategory.split_memory`.
 
         >>> x, y = Ty('x'), Ty('y')
         >>> f = Box('f', x @ (x @ y).delay(), x @ x @ y)
@@ -662,14 +662,18 @@ class Box(monoidal.Box, Diagram):
 
     def delay(self, n_steps=1):
         """
-        The delay of a box: a structural box, one whose ``__getnewargs__``
-        gives the arguments it is built from, e.g. a swap or a copy, is built
-        from their delays; any other box from its delayed boundary, one more
-        time step on.
+        The delay of a box: a box of a category whose objects are not made of
+        wires, e.g. a tensor box over dimensions, is its own delay, as its
+        objects are; a structural box, one whose ``__getnewargs__`` gives the
+        arguments it is built from, e.g. a swap or a copy, is built from
+        their delays; any other box from its delayed boundary, one more time
+        step on.
 
         Parameters:
             n_steps : The number of time steps to delay.
         """
+        if not issubclass(self.ob.generator_factory, monoidal.Wire):
+            return self
         arguments = getattr(self, "__getnewargs__", None)
         if arguments is not None:
             return type(self)(*(

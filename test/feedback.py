@@ -192,7 +192,7 @@ def test_every_trace_takes_the_keyword_form():
     from discopy.matrix import Matrix
     from discopy.python import Function
 
-    class Sub(Function):
+    class Sub(Matrix[bool]):
         def trace(self, n=1, left=False):
             return super().trace(n, left)
 
@@ -201,8 +201,9 @@ def test_every_trace_takes_the_keyword_form():
         assert list(signature(trace).parameters)\
             == ["self", "n", "left", "dom", "cod", "mem"]
         assert keyword_form(trace) is trace
-    f = Sub(lambda x, y: (x + y, 1), (int, int), (int, int))
-    assert f.trace(mem=int)(5) == f.trace()(5) == 6
+    f = Sub([[1, 1], [0, 0]], 2, 2)
+    assert f.trace(mem=1) == f.trace() == Sub([[1]], 1, 1)
+    assert f.trace(mem=1, left=True) == f.trace(left=True) == Sub([[0]], 1, 1)
     x = ribbon.Ty('x')
     g = ribbon.Box('g', x @ x, x @ x)
     assert g.trace(mem=x) == g.trace()

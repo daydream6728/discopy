@@ -631,6 +631,27 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Changed
 
+- Every concrete `trace` takes the keyword form `trace(dom=, cod=, mem=)`
+  of `feedback` as well as `trace(n, left)`, the two exclusive, as the
+  free diagrams' trace already did: that of `Matrix`, the Python functions,
+  `Hypergraph`, `CMap`, `Drawing`, the Kleisli channels, integer diagrams,
+  ribbon diagrams, `para.Traced` and `lens.Traced`, where it took a number
+  of objects alone. One wrapper does it, `abc.keyword_form`, which
+  `MonoidalCategory.__init_subclass__` applies to the `trace` a subclass
+  defines, whether the subclass declares `TracedCategory` or only has a
+  trace, as `Matrix` and `Hypergraph` do, and which leaves a trace that
+  takes `mem` already as it is. It reads the memory with `split_memory`,
+  which moves from `FeedbackCategory` to `MonoidalCategory` and casts its
+  arguments into the type of the codomain, so that
+  `Matrix[bool](...).trace(mem=1)` and `Function(...).trace(mem=int)` read,
+  checks it against the codomain and counts it with the new `memory_size`.
+  `TracedCategory.feedback` is the trace in either form, and a
+  `TracedCategory` is a feedback category with a trace, the feedback over
+  an undelayed memory, where `FeedbackCategory` said one whose delay is the
+  identity. Integer diagrams and lenses read a memory with
+  `interaction.Ty.split`, a pair of types not being a sequence, so that a
+  lens traces one number of atoms per half as an integer diagram does
+  ([rel-int/discopy-next#95](https://github.com/rel-int/discopy-next/issues/95)).
 - Every level below `feedback` generates its `Feedback`, `Trace`,
   `FollowedBy`, `Head` and `Tail` with `feedback.generators`, where
   `markov` wrote its own by hand and the other levels wrote a `Feedback`
@@ -1109,6 +1130,22 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
+- `Nat` at every level, `monoidal.Dim`, so `frobenius.Dim` and
+  `tensor.Dim`, and `neural.network.Dims` are their own `delay`, `head`
+  and `tail`, a type whose atoms are not wires having no time step: since
+  [rel-int/discopy-next#110](https://github.com/rel-int/discopy-next/pull/110)
+  a tensor, ZX or neural network diagram is a feedback diagram, whose delay
+  asked each integer atom of its types for a delay, or found none on a
+  `monoidal.Nat`, a `rigid.Nat` or a `Dims`, so that delaying any of them
+  raised `AttributeError`. A box of a category whose objects are not made
+  of wires is its own delay too, so that a tensor, ZX or network diagram
+  delays to itself, as the feedback over a memory that is its own delay is
+  a trace ([rel-int/discopy-next#112](https://github.com/rel-int/discopy-next/issues/112)).
+- `feedback` on an integer diagram or a lens raised `TypeError` whatever
+  its form, even with no argument: `TracedCategory.feedback` read the
+  memory by slicing the codomain, which a pair of types does not allow.
+  It is the trace in either form now, see above
+  ([rel-int/discopy-next#95](https://github.com/rel-int/discopy-next/issues/95)).
 - A class subscripted by a subscripted class pickles:
   `pickle.dumps(Equation[Matrix[int]](m, m))` and the identity of
   `Hypergraph[tensor.Diagram[complex]]` raised `PicklingError`, since
