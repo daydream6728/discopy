@@ -18,7 +18,7 @@ This repo is the *next* repo of [discopy/discopy](https://github.com/discopy/dis
 - `main` is upstream `main` plus work meant to go upstream: agents merge into it once its checks pass, with no human sign-off. The `TODO.md` of `RULES.md` still claims and tracks the work, its deletion is just not a merge gate here
 - down: upstream `main` is merged into `main` every night, never rebased
 - up: an upstream pull request is opened only when a human asks, cut from upstream `main` and small enough to read; agents propose the slices on [#55](https://github.com/rel-int/discopy-next/issues/55)
-- drift is `git diff upstream/main...main -- . ':!.github'`, split `discopy/`, `test/` and `docs/`: while what lands here outpaces what is merged upstream two weeks running, nothing new lands until slicing catches up
+- drift is `git diff upstream/main...main -- . ':!.github'`, split `discopy/`, `test/` and `docs/`, and tended down by slicing; it never freezes `main`, and moving work from upstream adds none, it only moves it
 - experiments do not live on long branches: a big, speculative one gets a repository of its own, a small one lands in `main` as a notebook
 - `#N` is this repo, `discopy/discopy#N` upstream
 
