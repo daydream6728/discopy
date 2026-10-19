@@ -13,7 +13,7 @@ USER, live 2026-10-19, verbatim:
 
 The plan is #134; this pull request is its first slice, the two cases.
 
-- [ ] `discopy.monad` package, `discopy.monad.free`: `Homomorphism[M]` between free algebras, `id` and `then` without the monad, `from_channel` and `to_channel` inverse to each other
+- [WIP] @session_01WREYbtVNgZQwbtqTkPP6wD-2026-10-19 15:40 `discopy.monad` package, `discopy.monad.free`: `Homomorphism[M]` between free algebras, `id` and `then` without the monad, `from_channel` and `to_channel` inverse to each other
 - [ ] `discopy.monad.algebra`: `Algebra[M]` with `free`, its laws pointwise, `Homomorphism[M]` between algebras, the inclusion of free algebras
 - [ ] examples: pointed sets for `Maybe`, `any` for `Powerset`, expectation for `Subdistribution`
 - [ ] tests, API docs, `CHANGELOG.md`, `pflake8`, `pylint`, `pytest`
