@@ -93,9 +93,10 @@ class Cell:
     def exhausted(self):
         """
         Whether the cell drew fewer distinct terms than its budget allowed —
-        a finite support, a filter rejecting most of one, or a search that
-        stopped early. Whichever it is, the terms this cell can fail on have
-        run out, so a larger budget buys it nothing.
+        a finite support, a filter rejecting most of one, a search that
+        stopped early, or duplicates drawn from a support that is large.
+        This run cannot tell these apart, so it is a reason to look at the
+        cell's strategy, not a proof that a larger budget buys it nothing.
 
         An uncounted cell is not this, and not its opposite either: nothing
         is known about how hard its law was tried, which :func:`render`
@@ -229,8 +230,9 @@ def render(cells, baseline=None):
     elif not baseline:
         lines.append("the baseline names no cell to compare against")
     elif not (lost := stopped(baseline, cells)):
+        compared = sum(cell.outcome in CHECKED for cell in baseline)
         lines.append(f"every cell the baseline checked is still checked "
-                     f"({len(baseline)} cell(s) compared)")
+                     f"({compared} cell(s) compared)")
     else:
         lines.append(f"{len(lost)} cell(s) the baseline checked and this run "
                      "did not:")

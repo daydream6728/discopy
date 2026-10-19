@@ -136,7 +136,8 @@ def to_gif(diagram, *diagrams, **params):  # pragma: no cover
             save(path)
         with open(path, 'rb') as file:
             source = b64encode(file.read()).decode()
-    image = f'<img src="data:image/gif;base64,{source}">'
+    image = ('<img alt="animated diagram" '
+             f'src="data:image/gif;base64,{source}">')
     try:
         from IPython.display import HTML
         return HTML(image)

@@ -135,7 +135,7 @@ hands back.
 ### What the matrix checked
 
 A green cell says the law held on the terms its strategy drew, which is
-weaker than the law holding. Every run therefore ends with a section saying
+weaker than the law holding. Every run of the matrix therefore ends with a section saying
 what it actually checked, and every line of it is a report rather than a
 gate:
 
