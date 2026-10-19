@@ -834,3 +834,9 @@ def test_List_repr():
     assert PyTy is monoidal.List[type]
     for x in (List[int](2, 3), List[type](int, str), PyTy(int), PyTy()):
         assert eval(repr(x)) == x and eval(str(x)) == x
+
+def test_tensor_of_sum_with_diagram():
+    x = Ty('x')
+    f, g = Box('f', x, x), Box('g', x, x)
+    assert f.tensor(g + g, f) == (f @ g @ f) + (f @ g @ f)
+    assert (f + f).tensor(g, f) == (f @ g @ f) + (f @ g @ f)
