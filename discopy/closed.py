@@ -242,9 +242,8 @@ class Product(Wire):
         return f"{first}.product({', '.join(map(str, others))}){delayed}"
 
     def __repr__(self):
-        factors = ', '.join(map(repr, self.factors))
-        return factory_name(type(self))\
-            + f"({factors}{self.repr_time_step()})"
+        args = ', '.join(map(repr, self.factors)) + self.repr_time_step()
+        return factory_name(type(self)) + f"({args.removeprefix(', ')})"
 
     def to_tree(self):
         return feedback.Wire.to_tree(self) | {

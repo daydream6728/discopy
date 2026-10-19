@@ -1265,7 +1265,11 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   type, delays to the constant of the delayed type. `feedback.Box.reset`
   is the delay back to time step zero, so that a functor maps a delayed box
   whatever its constructor, and `closed.Functor` sends a delayed wire or
-  box there before it reads an exponential
+  box there before it reads an exponential. Two things do not delay yet,
+  as nothing uses them: the uncurrying of a delayed exponential, whose
+  evaluation is the delay of an evaluation, which `ev(base, exponent)`
+  cannot build, and a term box other than a constant, which delays once
+  evaluated
   ([rel-int/discopy-next#129](https://github.com/rel-int/discopy-next/issues/129)).
 - The feedback of a compact, Frobenius, tensor, ZX or circuit diagram is
   its trace, where it raised `TypeError`: `compact.Diagram` bound the

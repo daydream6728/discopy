@@ -833,7 +833,8 @@ def test_ev_at_the_unit():
 
 def test_delay_types():
     x, y = Ty('x'), Ty('y')
-    for typ in (x, x << y, y >> x, x ** y, x * y, x.product(y, x), U):
+    for typ in (x, x << y, y >> x, x ** y, x * y, x.product(y, x),
+                Ty(Product()), U):
         delayed = typ.delay()
         assert delayed != typ and delayed.delay(-1) == typ == delayed.tail
         assert delayed.delay(2) == typ.delay(3) and delayed.head == Ty()
