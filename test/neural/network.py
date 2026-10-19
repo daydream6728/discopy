@@ -203,3 +203,8 @@ def test_to_function_jax():
         network(weights).to_function(jax.Array)(inputs))
     gradient = jax.grad(loss)(weights, jnp.ones((4, 2)))
     assert gradient.shape == (2, 3) and float(gradient[0, 0]) == 8.
+
+
+def test_delay_is_the_identity():
+    f = Box('f', Dims(2), Dims(3)) >> Copy(Dims(3))
+    assert Dims(2).delay() == Dims(2) and f.delay() == f
