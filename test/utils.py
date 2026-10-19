@@ -217,7 +217,7 @@ def test_dumps_complex_data(data):
 
 def test_dumps_complex_gate():
     """ Every quantum gate carries a complex array, so none of them used to
-    serialise at all (#775). """
+    serialise at all (discopy/discopy#775). """
     from discopy.quantum.gates import H, X, Y, Z, S, T
     for gate in (H, X, Y, Z, S, T, H >> X, H @ X):
         assert loads(dumps(gate)) == gate

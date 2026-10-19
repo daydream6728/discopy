@@ -212,7 +212,7 @@ class List(Monoid, NamedGeneric['generator_factory']):
     where the name ``int`` is what reads back — so the free monoid on
     Python's ``type``, i.e. :obj:`discopy.python.Ty`, prints its atoms with
     :func:`.factory_name` instead. A generator with no such representation
-    at all, e.g. ``object``, has no transparent list until it overrides the
+    at all, e.g. ``object()``, has no transparent list until it overrides the
     hook.
 
     >>> from discopy import monoidal

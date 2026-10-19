@@ -468,7 +468,9 @@ def decode_complex(tree: dict) -> Any:
     This is the ``object_hook`` of :func:`loads`, i.e. :mod:`json` calls it on
     every object it decodes, so it answers a node that is not a complex number
     with that node itself. A box whose ``data`` is a dictionary of its own is
-    left alone by the factory tag, which a tree reserves.
+    left alone by the factory tag, which a tree reserves: the one dictionary
+    read as a complex number is ``{'factory': 'complex', 're': x, 'im': y}``,
+    with exactly those three keys, as :func:`encode_complex` writes it.
 
     Example
     -------

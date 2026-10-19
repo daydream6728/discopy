@@ -67,6 +67,7 @@ BOXES = [
     CRx(.25), CRz(.25), CU1(.25), CRz(.25, distance=3),
     Controlled(X, distance=-2), Controlled(CX, distance=2),
     Scalar(.5), Scalar(.5, is_mixed=True), MixedScalar(.5), Sqrt(2),
+    Sqrt(-1), Sqrt(-1).dagger(),
     Ket(1, 0), Bra(1, 0), Ket(0).dagger(), Copy(), Match(),
     Bits(1, 0), Bits(1, 0).dagger(), Digits(2, dim=4),
     Discard(), Discard(2), MixedState(), MixedState(2),

@@ -1113,14 +1113,15 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `cat.Box.from_tree` rebuilds a box as
   `cls(name=, dom=, cod=, data=, is_dagger=)`, so every subclass whose
   `__init__` takes something else raised instead: `Controlled` (hence `CX`,
-  `CZ`), `CRz`, `CU1`, `Scalar`, `MixedScalar`, `Sqrt`, `Ket`, `Bra`, `Copy`,
-  `Match`, `Digits`, and — not named by the issue, found by round-tripping
+  `CZ`), `CRx`, `CRz`, `CU1`, `Scalar`, `MixedScalar`, `Sqrt`, `Ket`, `Bra`,
+  `Copy`, `Match`, `Digits`, and — not named by the issue, found by round-tripping
   every box the module exposes rather than the ten it listed — `Discard`,
   `MixedState`, `Measure` and `Encode`. For six of them the tree did not hold
   what the constructor reads, so those get a `to_tree` as well as a
   `from_tree`: `Controlled` writes the gate it controls and its `distance`,
   `Scalar` its `is_mixed`, `Digits` its digits and their dimension, `Measure`
-  and `Encode` their two flags each. A subclass reads back through
+  and `Encode` their two flags each, and `Sqrt` reads back the `is_dagger`
+  its tree already keeps, so a conjugated root comes back conjugated. A subclass reads back through
   `Controlled` itself rather than through `cls`, since `CRz` takes the phase
   of the rotation it controls where `Controlled` takes the gate, and
   `Controlled.__eq__` compares the gate and the distance rather than the

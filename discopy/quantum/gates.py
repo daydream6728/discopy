@@ -870,7 +870,16 @@ class Sqrt(Scalar):
         self.is_dagger = is_dagger
         self.drawing_name = f"sqrt({format_number(data)})"
 
-    from_tree = classmethod(MixedScalar.from_tree.__func__)
+    @classmethod
+    def from_tree(cls, tree: dict):
+        """
+        Reads the dagger flag a box's tree keeps, so that the square root of
+        a negative number comes back conjugated when it was.
+
+        >>> root = Sqrt(-1).dagger()
+        >>> assert from_tree(root.to_tree()) == root
+        """
+        return cls(tree['data'], tree.get('is_dagger', False))
 
     def __setstate__(self, state):
         super().__setstate__(state)
