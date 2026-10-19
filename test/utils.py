@@ -273,3 +273,10 @@ def test_tensor_tree_roundtrip():
     subscripted = Box[complex]('f', Dim(1), Dim(1), [1.])
     assert loads(dumps(subscripted)) == subscripted\
         != Box('f', Dim(1), Dim(1), [1.])
+def test_unbiased_keyword_operand():
+    """ An operand passed by keyword is composed, not dropped. """
+    from discopy.cat import Functor
+    x, y, z = Ob('x'), Ob('y'), Ob('z')
+    F, G = Functor({x: y}, {}), Functor({y: z}, {})
+    assert F.then(other=G)(x) == F.then(G)(x) == z
+    assert F.then() == F

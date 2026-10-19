@@ -711,6 +711,30 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Changed
 
+- Six more `then`s take `(self, *others)`, the signature that
+  `abc.Category.then` declares and `cat.Arrow` implements: they had
+  a plain binary `(self, other)` with no `utils.unbiased`, so that a third
+  argument raised `TypeError`, `cat.Functor`, `cat.Transformation`,
+  `monoidal.Functor`, `python.function.Function`,
+  `python.finset.Function` and `python.finset.Permutation`
+  ([#760](https://github.com/discopy/discopy/issues/760),
+  [#763](https://github.com/discopy/discopy/pull/763)).
+  The three outside `discopy.python` take `utils.unbiased`, which already
+  spells the signature; the three in `discopy.python` are written out
+  instead: `python.function.Function` because folding it nests one closure
+  per composition, and the two `python.finset` ones because the wrapper
+  costs more than the call it wraps there -- composing two finite functions
+  is cheap enough that the extra frame was 29% of it. `tensor.Tensor` and
+  `quantum.channel.Channel` already took the signature
+  ([rel-int/discopy-next#60](https://github.com/rel-int/discopy-next/issues/60)).
+  `utils.MappingOrCallable.then` is binary too and stays that way:
+  it post-composes a mapping with a functor rather than composing two
+  morphisms, and `MappingOrCallable` is not an `abc.Category`. The `then`
+  of the `kleisli` channels and monads, of `lens.Markov` and of the
+  `monad` homomorphisms are binary still. `utils.unbiased` passes an
+  operand given by keyword, `F.then(other=G)`, to the binary method, where
+  it dropped it and returned `F`.
+
 - A traced category is "a feedback category with the identity as delay
   plus the yanking axiom" (toumix, 2026-10-19), as the docstring of
   `abc.TracedCategory` now says, the free diagrams below `feedback`, whose
@@ -1247,6 +1271,16 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `abc.Nat`, were fixed here already
   ([#175](https://github.com/rel-int/discopy-next/issues/175),
   [#794](https://github.com/discopy/discopy/pull/794)).
+- `python.function.Function.then` composes its `n` functions in one Python
+  frame rather than nesting one closure per composition, so that a long
+  chain can be called at all: composing two thousand functions and calling
+  the result raised `RecursionError`, the same nesting that made the tensor
+  of a few hundred `python` functions raise
+  ([#760](https://github.com/discopy/discopy/issues/760),
+  [#763](https://github.com/discopy/discopy/pull/763)). This is
+  inherited by `python.multiplicative.Function` and
+  `python.additive.Function`; a chain built with `>>` still nests, since
+  that operator is binary.
 - A delayed qubit or bit prints and serialises with its time step,
   `Qudit(2, time_step=1)`, where both dropped it, so that
   `eval(repr(x)) == x` and `loads(dumps(x)) == x` failed on it. A
@@ -2105,6 +2139,14 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   ([#484](https://github.com/discopy/discopy/pull/484)).
 
 ### Performance
+
+- `python.finset.Permutation.then` walks each index through the
+  permutations in one pass over their `inside` lists, rather than reading
+  both operands through `__getitem__` at every element and re-casting
+  the second through the `Sequence` protocol: composing two permutations of
+  five elements takes 5.6 us rather than 7.6, and `Permutation.conjugate`,
+  which composes twice, 19.5 us rather than 23.2
+  ([#763](https://github.com/discopy/discopy/pull/763)).
 
 - The elements of a Hopf algebra (`drinfeld_element`, `pivotal_element`,
   `ribbon_element`) contract each structural generator once through the
