@@ -29,6 +29,25 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   only non-trivial one on three, while its finite points need four
   ([#626](https://github.com/discopy/discopy/pull/626),
   [#688](https://github.com/discopy/discopy/pull/688)).
+
+- `Hypergraph.pass_token`, the evaluation of a hypergraph over a category
+  whose tensor is a disjoint union, the dual of `Hypergraph.__call__` over
+  one whose tensor is a product: a single token enters on one domain wire,
+  goes to the one consumer of each wire it reaches and is moved by each box
+  from one of its domain wires to one of its codomain wires, until it
+  leaves on a codomain wire. Where `__call__` asks for left monogamy and
+  causality, one producer per wire and no cycle, this asks for right
+  monogamy, one consumer per wire, and a cycle is a while loop, the trace
+  of `python.additive.Function`. `__call__` defers to it over a
+  `ComarkovCategory` that is not a `MarkovCategory`, so that a traced or
+  merging diagram mapped by `hypergraph.Functor` into `additive.Function`
+  runs as a token machine, and a hypergraph that is not right-monogamous
+  raises `messages.NOT_RIGHT_MONOGAMOUS`. The token machine of
+  [#366](https://github.com/discopy/discopy/pull/366), on the hypergraphs
+  of [#363](https://github.com/discopy/discopy/pull/363); its compilation
+  of linear lambda terms is `kleisli.token`'s, which walks the term itself
+  ([#639](https://github.com/discopy/discopy/pull/639)).
+
 - `abc.DaggerCategory`, a `Category` with an abstract `dagger`, so that the
   dagger laws — contravariance and involution — are stated only where there
   is a dagger. `cat.Arrow` inherits it, and the diagram classes inherit it
