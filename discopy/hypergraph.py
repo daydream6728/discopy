@@ -1422,7 +1422,7 @@ class Hypergraph(
         values = dict(zip(self.dom_wires, xs))
         for box, (box_dom, box_cod) in zip(self.boxes, self.box_wires):
             result = box(*(values[spider] for spider in box_dom))
-            ys = (result, ) if len(box_cod) == 1 else tuplify(result)
+            ys = tuplify(result, len(box_cod))
             if len(ys) != len(box_cod):
                 raise ValueError(messages.WRONG_NUMBER_OF_WIRES.format(
                     len(box_cod), box.cod, len(ys)))

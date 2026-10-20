@@ -755,14 +755,21 @@ def text_width(text: str, fontsize=12, points_per_inch=72., grid=16):
     return ceil(width / points_per_inch * grid) / grid
 
 
-def tuplify(stuff: any) -> tuple:
+def tuplify(stuff: any, n: int | None = None) -> tuple:
     """
     Turns anything into a tuple, do nothing if it is already.
 
     Parameters:
         stuff : The stuff to turn into a tuple.
+        n : The number of values ``stuff`` stands for, if known, so that a
+            single value is wrapped whatever it is, a tuple included.
+
+    Example
+    -------
+    >>> assert tuplify(1) == (1, ) and tuplify((1, 2)) == (1, 2)
+    >>> assert tuplify((1, 2), n=1) == ((1, 2), )
     """
-    return stuff if isinstance(stuff, tuple) else (stuff, )
+    return stuff if n != 1 and isinstance(stuff, tuple) else (stuff, )
 
 
 def untuplify(stuff: tuple) -> any:

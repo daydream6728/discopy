@@ -254,6 +254,16 @@ def test_trace_takes_the_keyword_form():
         f.trace(dom=str, cod=int, mem=int)
 
 
+def test_tuple_valued_wire():
+    pair = Function(lambda x: (x, x), int, tuple)
+    assert pair(1) == (1, 1)
+    assert (Function.id(Ty(int)) @ pair)(1, 2) == (1, (2, 2))
+    assert (pair >> Function.id(Ty(tuple)))(3) == (3, 3)
+    assert Function.swap(Ty(tuple), Ty(int))((1, 2), 3) == (3, (1, 2))
+    step = Function(lambda x, t: (x, ) * 2, (int, tuple), tuple)
+    assert step.fix()(1) == (1, 1)
+
+
 def test_functor_casts_a_tuple_image():
     x = feedback.Ty('x')
     F = feedback.Functor(
