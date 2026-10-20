@@ -813,8 +813,8 @@ class Bubble(Box):
     >>> Bubble(Box('f', x, x), Box('g', y, x))
     Traceback (most recent call last):
     ...
-    ValueError: The args of a bubble have no common dom: cat.Ob('x'), \
-cat.Ob('y'), so it needs one given.
+    ValueError: A bubble needs a dom given when its args do not all share \
+one, they have [cat.Ob('x'), cat.Ob('y')].
     """
     def __init__(self, *args: Arrow, dom: Ob = None, cod: Ob = None,
                  name="", method="bubble", **kwargs):

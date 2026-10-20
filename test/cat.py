@@ -406,8 +406,10 @@ def test_Functor_then_left_unit():
 def test_Bubble_no_common_boundary():
     x, y = Ob('x'), Ob('y')
     f, g = Box('f', x, x), Box('g', y, x)
-    with raises(ValueError, match="no common dom"):
+    with raises(ValueError, match="needs a dom given"):
         Bubble(f, g)
-    with raises(ValueError, match="no common cod"):
+    with raises(ValueError, match="needs a cod given"):
         Bubble(f, g[::-1], dom=x)
     assert Bubble(f, g, dom=x).cod == x
+    with raises(ValueError, match=r"they have \[\]"):
+        Bubble()
