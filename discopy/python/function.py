@@ -100,7 +100,7 @@ class Function(Category):
 
         def inside(*args):
             for factor in before:
-                args = tuplify(factor(*args))
+                args = tuplify(factor(*args), len(factor.cod))
             return last(*args)
         return type(self)(inside, self.dom, others[-1].cod)
 
