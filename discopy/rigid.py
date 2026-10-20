@@ -729,11 +729,9 @@ class Box(biclosed.Box, Diagram):
         >>> f = Box('f', Ty('x'), Ty('y'))
         >>> assert loads(dumps(f.r)) == f.r and loads(dumps(f.l.l)) == f.l.l
         """
-        if not tree.get('z', 0):
-            return super().from_tree(tree)
-        dom, cod = map(cat.from_tree, (tree['dom'], tree['cod']))
-        return cls(tree['name'], dom, cod, data=tree.get('data', None),
-                   is_dagger='is_dagger' in tree, z=tree['z'])
+        box = super().from_tree(tree)
+        box.z = tree.get('z', 0)
+        return box
 
     @property
     def is_transpose(self):

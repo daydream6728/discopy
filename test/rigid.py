@@ -208,6 +208,11 @@ def test_rotated_box_serialisation():
     for z in [-2, -1, 1, 2]:
         assert find(Box.strategy(), lambda box, z=z: box.z == z).z == z
 
+    from discopy import pivotal
+    f = pivotal.Box('f', pivotal.Ty('x'), pivotal.Ty('y'))
+    for box in [f.r.delay(), f.delay().l.l]:
+        assert loads(dumps(box)) == box
+
     @settings(max_examples=50)
     @given(Box.strategy())
     def round_trip(box):
