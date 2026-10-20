@@ -1275,6 +1275,11 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
+- `utils.dumps` serialises a list of objects as the JSON list that
+  `utils.loads` already read back as a list, e.g. the corpus
+  `load_corpus` reads, where it raised `AttributeError` on a list, so a
+  corpus could only be written by hand
+  ([rel-int/discopy-next#168](https://github.com/rel-int/discopy-next/issues/168)).
 - A rotated rigid box reads back from its tree: `rigid.Box` writes its
   winding number `z` when it is not zero and reads it back, where it
   inherited the tree of `cat.Box`, which has no `z`, so that

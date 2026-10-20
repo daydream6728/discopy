@@ -497,7 +497,8 @@ def dumps(obj, **kwargs):
     Serialise a DisCoPy object as JSON.
 
     Parameters:
-        obj : The DisCoPy object to serialise.
+        obj : The DisCoPy object to serialise, or a list of them, which
+            :func:`loads` reads back as a list, e.g. a corpus.
         kwargs : Passed to ``json.dumps``.
 
     Example
@@ -534,7 +535,9 @@ def dumps(obj, **kwargs):
     }
     """
     kwargs.setdefault('default', encode_complex)
-    return json.dumps(obj.to_tree(), **kwargs)
+    tree = [x.to_tree() for x in obj] if isinstance(obj, list)\
+        else obj.to_tree()
+    return json.dumps(tree, **kwargs)
 
 
 def loads(raw):
@@ -548,6 +551,7 @@ def loads(raw):
     >>> assert loads(raw) == Ob('x')
     >>> assert dumps(loads(raw)) == raw
     >>> assert loads(dumps(Ob('x'))) == Ob('x')
+    >>> assert loads(dumps([Ob('x'), Ob('y')])) == [Ob('x'), Ob('y')]
     """
     obj = json.loads(raw, object_hook=decode_complex)
     if isinstance(obj, list):
