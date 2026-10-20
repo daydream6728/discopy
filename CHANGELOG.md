@@ -1275,6 +1275,15 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
+- Three one-liners of `discopy.tensor` found by the third read of the
+  codebase: `Diagram.to_tn` builds the copy node of a spider with no input
+  from the spider's own dimension, where it read the wire to its right,
+  which has the wrong shape beside another wire and raised `IndexError` at
+  the end of the scan (B64); a `tensor.Functor` with no `dtype` has a
+  `repr`, where it read `None.__name__`; and the algebraic conjugate of a
+  tensor is in its own class, a `Channel` included, where it was a
+  `Tensor` (B80)
+  ([rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
 - A `cat.Bubble` whose args do not all share a domain, or a codomain,
   and that is given none raises `ValueError` saying so, through
   `messages.NO_COMMON_BOUNDARY` and the new `Bubble.common`, where it

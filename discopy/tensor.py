@@ -386,8 +386,7 @@ class Tensor(Matrix):
         """
         if not diagrammatic:
             with backend() as np:
-                return Tensor[self.dtype](
-                    np.conj(self.array), self.dom, self.cod)
+                return type(self)(np.conj(self.array), self.dom, self.cod)
         # reverse the wires for both inputs and outputs
         source = list(range(len(self.dom @ self.cod)))
         target = [
@@ -498,6 +497,7 @@ class Functor(frobenius.Functor):
         super().__init__(ob_map, ar_map, dom=dom or type(self).dom, cod=cod)
 
     def __repr__(self):
+        dtype = None if self.dtype is None else self.dtype.__name__
         optimize = "" if self.optimize == "greedy"\
             else f", optimize={self.optimize!r}"
         params = "".join(
@@ -505,7 +505,7 @@ class Functor(frobenius.Functor):
         return factory_name(type(self))\
             + f"(ob_map={self.ob_map}, ar_map={self.ar_map}, "\
             + f"dom={factory_name(self.dom)}, "\
-            + f"dtype={self.dtype.__name__}{optimize}{params})"
+            + f"dtype={dtype}{optimize}{params})"
 
     def __call__(self, other):
         if isinstance(other, Dim):
@@ -758,7 +758,7 @@ class Diagram(NamedGeneric['dtype'], frobenius.Diagram):
                     continue
                 else:
                     node = tn.CopyNode(
-                        sum(dims), outputs[offset].dimension, dtype=dtype)
+                        sum(dims), box.typ.inside[0], dtype=dtype)
             else:
                 array = box.eval(dtype=dtype).array
                 node = tn.Node(array, str(box))
