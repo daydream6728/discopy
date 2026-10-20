@@ -558,3 +558,12 @@ def test_Tensor_trace():
     g = Tensor[int](list(range(8)), Dim(2, 2), Dim(2))
     assert g.trace() == Tensor[int]([0 + 3, 4 + 7], Dim(2), Dim(1))
     assert g.trace(left=True) == Tensor[int]([0 + 5, 2 + 7], Dim(2), Dim(1))
+
+
+def test_Tensor_repeat():
+    swap = Tensor[bool].swap(Dim(2), Dim(2))
+    assert swap.repeat() == swap + Tensor[bool].id(Dim(2, 2))
+    with raises(TypeError):
+        Tensor[int].swap(Dim(2), Dim(2)).repeat()
+    with raises(TypeError):
+        Tensor[bool]([1, 0, 0, 1, 1, 0], Dim(2), Dim(3)).repeat()
