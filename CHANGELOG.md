@@ -1280,6 +1280,35 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `load_corpus` reads, where it raised `AttributeError` on a list, so a
   corpus could only be written by hand
   ([rel-int/discopy-next#168](https://github.com/rel-int/discopy-next/issues/168)).
+- `zx.Diagram.spider_factory` is the `Z` spider on one qubit, as its
+  `cup_factory` and `cap_factory` are `Z(2, 0)` and `Z(0, 2)`. It used to
+  be `tensor.Diagram.spider_factory`, which reads a dimension from its type
+  and raised `TypeError` on a `Nat`, so neither a functor into ZX diagrams
+  nor `zx.Diagram.spiders` could build a spider
+  ([rel-int/discopy-next#149](https://github.com/rel-int/discopy-next/issues/149)).
+- `python.finset.Function.swap` is the symmetry, where it was its inverse
+  whenever the two halves differ in length: a `Function` lists, for each
+  output, the input it reads, and `swap` borrowed `Permutation.swap`, which
+  lists where each input goes. Braid naturality, the hexagons and
+  `swap(x, y) >> swap(y, x) == id(x + y)` now hold, e.g.
+  `Function.swap(2, 1)` is `[2, 0, 1]` rather than `[1, 2, 0]`
+  ([rel-int/discopy-next#147](https://github.com/rel-int/discopy-next/issues/147)).
+- A `cat.Bubble` whose args do not all share a domain, or a codomain,
+  and that is given none raises `ValueError` saying so, through
+  `messages.NO_COMMON_BOUNDARY` and the new `Bubble.common`, where it
+  raised `too many values to unpack` from a tuple assignment, and the
+  docstrings of `cat.Bubble` and `monoidal.Bubble` say it the right way
+  round: they said a bubble raised when its args did share one
+  ([rel-int/discopy-next#133](https://github.com/rel-int/discopy-next/issues/133)).
+- The tensor spider with no legs is the circle, the dimension of its wire,
+  as spider fusion says it is, `Tensor.spiders(0, 0, Dim(2))` being `2`
+  like `Tensor.spiders(0, 1, Dim(2)) >> Tensor.spiders(1, 0, Dim(2))`,
+  where it was `1`
+  ([rel-int/discopy-next#116](https://github.com/rel-int/discopy-next/issues/116)).
+- A `tensor.Box` is not equal to its dagger: its `setoid` reads
+  `is_dagger` as that of `cat.Box` does, where a box and its dagger were
+  equal and hashed alike although they evaluate to transposed arrays
+  ([rel-int/discopy-next#119](https://github.com/rel-int/discopy-next/issues/119)).
 - A rotated rigid box reads back from its tree: `rigid.Box` writes its
   winding number `z` when it is not zero and reads it back, where it
   inherited the tree of `cat.Box`, which has no `z`, so that

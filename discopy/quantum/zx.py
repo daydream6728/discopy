@@ -33,7 +33,7 @@ from discopy.quantum.gates import (
 from discopy.quantum.gates import Scalar as GatesScalar
 from discopy.rigid import Sum, Nat
 from discopy.tensor import Dim, backend
-from discopy.utils import factory_name
+from discopy.utils import assert_isatomic, factory_name
 
 
 @factory
@@ -74,6 +74,18 @@ class Diagram(tensor.Diagram[complex]):
         """ The cap of a ZX diagram, the dagger of its cup. """
         del left, right
         return Z(0, 2)
+
+    @staticmethod
+    def spider_factory(n_legs_in, n_legs_out, typ, phase=None):
+        """
+        The spider of a ZX diagram on one qubit, a :class:`Z` spider, so that
+        a functor into ZX diagrams rebuilds a spider as the cups and caps.
+
+        >>> assert Diagram.spiders(1, 2, Nat(2)) == Z(1, 2) @ Z(1, 2)\\
+        ...     >> Nat(1) @ SWAP @ Nat(1)
+        """
+        assert_isatomic(typ, Nat)
+        return Z(n_legs_in, n_legs_out, phase or 0)
 
     def grad(self, var, **params) -> rigid.Sum:
         """
