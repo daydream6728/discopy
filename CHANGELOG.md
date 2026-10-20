@@ -2391,6 +2391,13 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Project
 
+- The `docs` extra installs `torch` and `jax`, which the notebooks *Parsing
+  arithmetic* and *Neural Church arithmetic* import: Read the Docs installs
+  `.[docs]` alone and publishes a notebook that fails to execute as a link
+  page, so neither was rendered.
+  Read the Docs installs torch from its CPU index first, as uv does on Linux,
+  through `docs/requirements.txt`, since pip does not read `tool.uv.sources`
+  ([rel-int/discopy-next#201](https://github.com/rel-int/discopy-next/issues/201)).
 - `fail-under` rises from 8.84 to 8.85, by what `discopy.group` lifts the
   score: 9.0297 on `main` and 9.0472 with it, both read with
   `--output-format=json2`
