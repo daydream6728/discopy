@@ -543,3 +543,15 @@ def test_feedback_is_the_trace():
     left = np.einsum('iaib->ab', array)
     for traced in (f.feedback(left=True), f.trace(mem=Dim(2), left=True)):
         assert np.array_equal(traced.eval().array, left)
+
+
+def test_spider_with_no_legs_is_the_circle():
+    for d in [Dim(2), Dim(3), Dim(2, 3)]:
+        circle = Tensor.spiders(0, 1, d) >> Tensor.spiders(1, 0, d)
+        assert Tensor.spiders(0, 0, d) == circle
+
+
+def test_Box_dagger_is_not_the_box():
+    t = Box('t', Dim(2), Dim(2), data=[1, 2, 3, 4])
+    assert t.dagger() != t and t.dagger().dagger() == t
+    assert hash(t.dagger()) != hash(t)

@@ -267,7 +267,7 @@ class Tensor(Matrix):
         with backend('numpy'):
             result = cls.zero(dom, cod)
             for i in range(n):
-                result.array[len(dom @ cod) * (i, )] = 1
+                result.array[len(dom @ cod) * (i, )] += 1
         if isinstance(get_backend(), NumPy):
             return result
         with backend() as np:
@@ -820,7 +820,8 @@ class Box(frobenius.Box, Diagram):
         """ Compare boxes by turning their internal `data` into tuples. """
         data = () if self.data is None else\
             tuple(self.data) if isinstance(self.data, list) else (self.data, )
-        return (self.name, self.dom, self.cod, self.dtype) + data
+        return (self.name, self.dom, self.cod, self.dtype, self.is_dagger)\
+            + data
 
 
 class Cup(frobenius.Cup, Box):

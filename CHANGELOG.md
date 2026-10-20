@@ -1275,6 +1275,15 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
+- The tensor spider with no legs is the circle, the dimension of its wire,
+  as spider fusion says it is, `Tensor.spiders(0, 0, Dim(2))` being `2`
+  like `Tensor.spiders(0, 1, Dim(2)) >> Tensor.spiders(1, 0, Dim(2))`,
+  where it was `1`
+  ([rel-int/discopy-next#116](https://github.com/rel-int/discopy-next/issues/116)).
+- A `tensor.Box` is not equal to its dagger: its `setoid` reads
+  `is_dagger` as that of `cat.Box` does, where a box and its dagger were
+  equal and hashed alike although they evaluate to transposed arrays
+  ([rel-int/discopy-next#119](https://github.com/rel-int/discopy-next/issues/119)).
 - A wire of type `tuple` carries a tuple through
   `python.multiplicative.Function`: the outputs of a function are read by
   the arity of its codomain, through `utils.tuplify(stuff, n)`, where they
