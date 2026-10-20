@@ -990,8 +990,9 @@ class Functor(Category):
     def __call__(self, other):
         if isinstance(other, Ob):
             result = self.ob_map[other]
-            origin = get_origin(self.cod.ob)
-            return result if isinstance(result, origin)\
+            if isinstance(result, get_origin(self.cod.ob)):
+                return result
+            return self.cod.ob(*result) if isinstance(result, tuple)\
                 else self.cod.ob(result)
         if isinstance(other, Sum):
             return sum(map(self, other.terms),

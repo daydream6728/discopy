@@ -4,6 +4,7 @@ import itertools
 from typing import List
 from pytest import raises
 
+from discopy import feedback
 from discopy.biclosed import *
 from discopy.hypergraph import Functor, Hypergraph
 from discopy.python import Function, Ty, exp
@@ -250,3 +251,10 @@ def test_trace_takes_the_keyword_form():
         f.trace(mem=str)
     with raises(AxiomError):
         f.trace(dom=str, cod=int, mem=int)
+
+
+def test_functor_casts_a_tuple_image():
+    x = feedback.Ty('x')
+    F = feedback.Functor(
+        ob_map={x: (float, int)}, ar_map={}, cod=Function)
+    assert F(x) == Ty(float, int) and len(F(x)) == 2
