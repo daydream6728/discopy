@@ -1692,6 +1692,15 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `Nat`-typed diagram and nothing going through `to_hypergraph` worked on a
   ZX diagram, neither `simplify` nor `frobenius.Equation`
   ([rel-int/discopy-next#76](https://github.com/rel-int/discopy-next/issues/76)).
+- The pyzx round trip keeps its scalar: `zx.Diagram.from_pyzx` reads
+  `graph.scalar` back as a `Scalar` box, where it dropped it, so that
+  `from_pyzx(d.to_pyzx())` evaluates to `d` on the nose rather than up to
+  the scalar of the Hopf rule or of a `Scalar` box, and `to_pyzx` folds a
+  spider with no legs, or a pair of spiders connected to nothing else, into
+  `graph.scalar` with pyzx's `remove_isolated_vertices`, where pyzx's
+  `to_matrix` raised `ValueError` on it, e.g. on `X(0, 2) >> Z(2, 0, .5)`,
+  whose Hopf cancellation leaves such a pair
+  ([rel-int/discopy-next#82](https://github.com/rel-int/discopy-next/issues/82)).
 - `zx.Diagram.to_pyzx` keeps parallel wires: a pyzx graph is simple and a
   second wire between the same two spiders overwrote the first, so
   `to_pyzx().to_matrix()` disagreed with `eval()` on
@@ -2051,6 +2060,13 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   run when the branch has already moved past the event it is handling,
   rather than drafting a head that no longer exists behind its back
   ([#640](https://github.com/discopy/discopy/issues/640)).
+- `no-todo-on-main.yml`'s guard says why it fails: each of its calls
+  that can fail -- reading a tree, reading the pull request, either
+  mutation -- raises an `::error::` annotation naming itself, and a
+  mutation that answers with `isDraft` in the wrong state says which state
+  it found. The step used to go from its environment dump straight to
+  `exit code 1`, leaving a red required check with no diagnosis
+  ([rel-int/discopy-next#21](https://github.com/rel-int/discopy-next/issues/21)).
 - `Matrix` is a `MarkovCategory` rather than a `MonoidalCategory` and gets a
   native `Matrix.permutation`, so a matrix-valued functor applied to a
   diagram with an explicit `Permutation` layer no longer raises
