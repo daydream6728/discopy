@@ -111,9 +111,16 @@ class Function(MonoidalCategory, Sequence):
 
     @staticmethod
     def swap(x: int | Nat, y: int | Nat) -> Function:
+        """
+        The symmetry of ``x @ y``, which sends each output of ``y @ x`` to
+        the input it reads: the ``y`` that come after the ``m = x`` inputs,
+        then the ``x``.
+
+        >>> assert Function.swap(2, 1) == Function([2, 0, 1], 3, 3)
+        >>> assert Function.swap(2, 1) >> Function.swap(1, 2) == Function.id(3)
+        """
         m, n = int(x), int(y)
-        inside = list(Permutation.swap(m, n))
-        return Function(inside, m + n, m + n)
+        return Function(list(range(m, m + n)) + list(range(m)), m + n, m + n)
 
     def is_swap(self) -> bool:
         """
