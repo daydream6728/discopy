@@ -1275,6 +1275,13 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
+- `python.finset.Function.swap` is the symmetry, where it was its inverse
+  whenever the two halves differ in length: a `Function` lists, for each
+  output, the input it reads, and `swap` borrowed `Permutation.swap`, which
+  lists where each input goes. Braid naturality, the hexagons and
+  `swap(x, y) >> swap(y, x) == id(x + y)` now hold, e.g.
+  `Function.swap(2, 1)` is `[2, 0, 1]` rather than `[1, 2, 0]`
+  ([rel-int/discopy-next#147](https://github.com/rel-int/discopy-next/issues/147)).
 - `Hypergraph.make_monogamous` inserts a cap at the depth of the first of
   its two consumers, or last when both are outputs, where it inserted it
   before every box: a state with a recorded offset after it was read in a
