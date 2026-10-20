@@ -401,3 +401,13 @@ def test_Functor_then_left_unit():
     assert F >> Functor.id() == F
     assert Functor.id() >> F != F
     assert (Functor.id() >> F)(x) == F(x)
+
+
+def test_Bubble_no_common_boundary():
+    x, y = Ob('x'), Ob('y')
+    f, g = Box('f', x, x), Box('g', y, x)
+    with raises(ValueError, match="no common dom"):
+        Bubble(f, g)
+    with raises(ValueError, match="no common cod"):
+        Bubble(f, g[::-1], dom=x)
+    assert Bubble(f, g, dom=x).cod == x
