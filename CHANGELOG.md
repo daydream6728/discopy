@@ -1275,6 +1275,13 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
+- A `cat.Bubble` whose args do not all share a domain, or a codomain,
+  and that is given none raises `ValueError` saying so, through
+  `messages.NO_COMMON_BOUNDARY` and the new `Bubble.common`, where it
+  raised `too many values to unpack` from a tuple assignment, and the
+  docstrings of `cat.Bubble` and `monoidal.Bubble` say it the right way
+  round: they said a bubble raised when its args did share one
+  ([rel-int/discopy-next#133](https://github.com/rel-int/discopy-next/issues/133)).
 - The tensor spider with no legs is the circle, the dimension of its wire,
   as spider fusion says it is, `Tensor.spiders(0, 0, Dim(2))` being `2`
   like `Tensor.spiders(0, 1, Dim(2)) >> Tensor.spiders(1, 0, Dim(2))`,

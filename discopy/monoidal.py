@@ -1679,7 +1679,8 @@ class Bubble(cat.Bubble, Box):
         kwargs : Passed to :class:`cat.Bubble`.
 
     Raises:
-        ValueError : When dom is None but all the args have the same dom.
+        ValueError : When dom (resp. cod) is None and the args do not all
+            have the same dom (resp. cod).
 
     Examples
     --------
