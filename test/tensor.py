@@ -553,3 +553,8 @@ def test_Tensor_trace():
     assert f.trace(0) == f and f.trace(3).dom == f.trace(3).cod == Dim(1)
     with raises(AxiomError):
         Tensor[int]([0, 1, 2, 3, 4, 5], Dim(2), Dim(3)).trace()
+    with raises(ValueError):
+        Tensor[int]([0, 1, 2, 3], Dim(2), Dim(2)).trace(2)
+    g = Tensor[int](list(range(8)), Dim(2, 2), Dim(2))
+    assert g.trace() == Tensor[int]([0 + 3, 4 + 7], Dim(2), Dim(1))
+    assert g.trace(left=True) == Tensor[int]([0 + 5, 2 + 7], Dim(2), Dim(1))

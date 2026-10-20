@@ -56,7 +56,8 @@ from discopy.matrix import (  # noqa: F401  pylint: disable=unused-import
 from discopy.abc import NamedGeneric
 from discopy.python import finset
 from discopy.utils import (
-    AxiomError, factory_name, assert_isinstance, product, assert_isatomic)
+    factory_name, assert_isinstance, product, assert_isatomic,
+    assert_istraceable)
 
 if TYPE_CHECKING:
     import sympy
@@ -231,20 +232,22 @@ class Tensor(Matrix):
         >>> assert f.trace(left=True)\\
         ...     == Tensor[int]([10, 12, 18, 20], Dim(2), Dim(2))
         """
-        traced = slice(0, n) if left else slice(len(self.dom) - n, None)
-        rest = slice(n, None) if left else slice(0, len(self.dom) - n)
-        if self.dom[traced] != self.cod[traced]:
-            raise AxiomError(messages.NOT_TRACEABLE.format(
-                self.dom[traced], self.cod[traced]))
+        assert_istraceable(self, n, left)
         a, b = len(self.dom), len(self.cod)
-        letters = [chr(ord("a") + i) for i in range(a + b)]
-        for i, j in zip(range(a)[traced], range(b)[traced]):
-            letters[a + j] = letters[i]
-        output = letters[:a][rest] + letters[a:][rest]
+        dom_rest, cod_rest = (
+            (slice(n, None), slice(n, None)) if left
+            else (slice(0, a - n), slice(0, b - n)))
+        dom_traced, cod_traced = (
+            (range(n), range(a, a + n)) if left
+            else (range(a - n, a), range(a + b - n, a + b)))
+        labels = list(range(a + b))
+        for i, j in zip(dom_traced, cod_traced):
+            labels[j] = labels[i]
+        output = labels[:a][dom_rest] + labels[a:][cod_rest]
         with backend() as np:
-            array = np.einsum(
-                "".join(letters) + "->" + "".join(output), self.array)
-        return type(self)(array, self.dom[rest], self.cod[rest])
+            array = np.einsum(self.array, labels, output)
+        dom, cod = self.dom[dom_rest], self.cod[cod_rest]
+        return type(self)(array, dom, cod)
 
     def repeat(self) -> Tensor:
         """
