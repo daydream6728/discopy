@@ -545,6 +545,18 @@ def test_feedback_is_the_trace():
         assert np.array_equal(traced.eval().array, left)
 
 
+def test_spider_with_no_legs_is_the_circle():
+    for d in [Dim(2), Dim(3), Dim(2, 3)]:
+        circle = Tensor.spiders(0, 1, d) >> Tensor.spiders(1, 0, d)
+        assert Tensor.spiders(0, 0, d) == circle
+
+
+def test_Box_dagger_is_not_the_box():
+    t = Box('t', Dim(2), Dim(2), data=[1, 2, 3, 4])
+    assert t.dagger() != t and t.dagger().dagger() == t
+    assert hash(t.dagger()) != hash(t)
+
+
 def test_Tensor_trace():
     f = Tensor[int](list(range(64)), Dim(2, 2, 2), Dim(2, 2, 2))
     x, y = Dim(2), Dim(2, 2)
@@ -567,3 +579,8 @@ def test_Tensor_repeat():
         Tensor[int].swap(Dim(2), Dim(2)).repeat()
     with raises(TypeError):
         Tensor[bool]([1, 0, 0, 1, 1, 0], Dim(2), Dim(3)).repeat()
+
+
+def test_spider_with_no_legs_in_every_dtype():
+    for dtype, circle in [(bool, True), (int, 2), (float, 2.), (complex, 2)]:
+        assert Tensor[dtype].spiders(0, 0, Dim(2)).array == circle
