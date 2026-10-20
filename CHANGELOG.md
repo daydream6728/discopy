@@ -9,6 +9,26 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Added
 
+- A notebook, *Minimality of the pure qubit ZX calculus*, reproducing
+  Stoltz & Vilmart's [arXiv:2608.14872](https://arxiv.org/abs/2608.14872)
+  from two independent proofs of its result, one notebook where upstream
+  had two. The rulesets ZX_opt and ZX'_opt are
+  pairs of `zx.Diagram`, sound under `zx.Diagram.eval`, and every model is a
+  `symmetric.Functor` into `tensor.Diagram` or a predicate on diagrams, run
+  against every rule of both: the paper's dual-number model of the
+  bialgebra, evaluated as a first-order jet, i.e. forward-mode
+  differentiation by diagram surgery, down to its witness coefficient, and
+  its relational model of the green identity; a finite bialgebra
+  countermodel over the complex numbers in dimension sixteen, checked
+  exactly in SymPy, and a separating model for every other rule, which
+  separate the seven rules of ZX'_opt too. The red identity is derived twice, by the
+  lemmas of the paper's appendices and by a shorter algebraic argument
+  through the same scalar identities. The bialgebra countermodels are a
+  tangent and a point of one group of deformations of the Hadamard: its
+  admissible tangents exist from three qubits up, the paper's being the
+  only non-trivial one on three, while its finite points need four
+  ([#626](https://github.com/discopy/discopy/pull/626),
+  [#688](https://github.com/discopy/discopy/pull/688)).
 - `abc.DaggerCategory`, a `Category` with an abstract `dagger`, so that the
   dagger laws — contravariance and involution — are stated only where there
   is a dagger. `cat.Arrow` inherits it, and the diagram classes inherit it
