@@ -1275,6 +1275,13 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
+- `Tensor.trace` is the trace of the compact structure, the contraction of
+  each of the last `n` factors of the domain with the matching factor of
+  the codomain, or of the first `n` with `left=True`, in one `einsum`, and
+  `Tensor.repeat` the reflexive transitive closure of the square Boolean
+  matrix a tensor reshapes to: both were inherited from `Matrix`, whose
+  objects are numbers, and raised `TypeError` on any `Dim`
+  ([rel-int/discopy-next#89](https://github.com/rel-int/discopy-next/issues/89)).
 - The `tensor` and `matrix` categories round-trip through JSON, where
   neither did. A tensor box whose dtype NumPy names, e.g. one inferred
   from its array, was written as `tensor.Box[float64]` and

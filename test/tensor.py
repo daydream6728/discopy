@@ -543,3 +543,13 @@ def test_feedback_is_the_trace():
     left = np.einsum('iaib->ab', array)
     for traced in (f.feedback(left=True), f.trace(mem=Dim(2), left=True)):
         assert np.array_equal(traced.eval().array, left)
+
+
+def test_Tensor_trace():
+    f = Tensor[int](list(range(64)), Dim(2, 2, 2), Dim(2, 2, 2))
+    x, y = Dim(2), Dim(2, 2)
+    feedback = y @ Tensor[int].caps(x, x) >> f @ x >> y @ Tensor[int].cups(x, x)
+    assert f.trace() == f.trace(mem=x) == feedback
+    assert f.trace(0) == f and f.trace(3).dom == f.trace(3).cod == Dim(1)
+    with raises(AxiomError):
+        Tensor[int]([0, 1, 2, 3, 4, 5], Dim(2), Dim(3)).trace()

@@ -47,7 +47,7 @@ from itertools import count
 from typing import TYPE_CHECKING, ClassVar, Sequence
 
 from discopy import (
-    cat, monoidal, rigid, frobenius, cmap, config)
+    cat, monoidal, rigid, frobenius, cmap, config, messages)
 from discopy.cat import factory, assert_iscomposable
 from discopy.frobenius import Dim, Cup
 from discopy.matrix import (  # noqa: F401  pylint: disable=unused-import
@@ -56,7 +56,7 @@ from discopy.matrix import (  # noqa: F401  pylint: disable=unused-import
 from discopy.abc import NamedGeneric
 from discopy.python import finset
 from discopy.utils import (
-    factory_name, assert_isinstance, product, assert_isatomic)
+    AxiomError, factory_name, assert_isinstance, product, assert_isatomic)
 
 if TYPE_CHECKING:
     import sympy
@@ -212,6 +212,56 @@ class Tensor(Matrix):
         with backend() as np:
             array = np.conj(np.moveaxis(self.array, source, target))
         return type(self)(array, self.cod, self.dom)
+
+    def trace(self, n=1, left=False) -> Tensor:
+        """
+        The trace of a tensor over its last ``n`` factors, i.e. the
+        contraction of each of the last ``n`` axes of its domain with the
+        matching axis of its codomain.
+
+        Parameters:
+            n : The number of factors to trace.
+            left : Whether to trace the first ``n`` factors instead.
+
+        Example
+        -------
+        >>> assert Tensor.swap(Dim(2), Dim(2)).trace() == Tensor.id(Dim(2))
+        >>> f = Tensor[int](list(range(16)), Dim(2, 2), Dim(2, 2))
+        >>> assert f.trace() == Tensor[int]([5, 9, 21, 25], Dim(2), Dim(2))
+        >>> assert f.trace(left=True)\\
+        ...     == Tensor[int]([10, 12, 18, 20], Dim(2), Dim(2))
+        """
+        traced = slice(0, n) if left else slice(len(self.dom) - n, None)
+        rest = slice(n, None) if left else slice(0, len(self.dom) - n)
+        if self.dom[traced] != self.cod[traced]:
+            raise AxiomError(messages.NOT_TRACEABLE.format(
+                self.dom[traced], self.cod[traced]))
+        a, b = len(self.dom), len(self.cod)
+        letters = [chr(ord("a") + i) for i in range(a + b)]
+        for i, j in zip(range(a)[traced], range(b)[traced]):
+            letters[a + j] = letters[i]
+        output = letters[:a][rest] + letters[a:][rest]
+        with backend() as np:
+            array = np.einsum(
+                "".join(letters) + "->" + "".join(output), self.array)
+        return type(self)(array, self.dom[rest], self.cod[rest])
+
+    def repeat(self) -> Tensor:
+        """
+        The reflexive transitive closure of a Boolean tensor, i.e. of the
+        square matrix it reshapes to, with :meth:`Matrix.repeat`.
+
+        Example
+        -------
+        >>> swap = Tensor[bool].swap(Dim(2), Dim(2))
+        >>> assert swap.repeat() == swap + Tensor[bool].id(Dim(2, 2))
+        """
+        if self.dtype != bool or self.dom != self.cod:
+            raise TypeError(messages.MATRIX_REPEAT_ERROR)
+        size = product(self.dom.inside)
+        array = Matrix[bool](self.array.reshape(size, size), size, size)\
+            .repeat().array
+        return type(self)(array, self.dom, self.cod)
 
     @classmethod
     def cup_factory(cls, left: Dim, right: Dim) -> Tensor:
