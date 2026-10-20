@@ -82,7 +82,7 @@ from typing import (
     Callable, ClassVar, Mapping, Iterable, TYPE_CHECKING)
 
 from discopy import messages, utils
-from discopy.abc import Category, DaggerCategory
+from discopy.abc import Category, DaggerCategory, Nat
 from discopy.axioms import GENERATORS, Equation as AbstractEquation, Testable
 from discopy.utils import (  # noqa: F401
     factory,
@@ -991,8 +991,11 @@ class Functor(Category):
         if isinstance(other, Ob):
             result = self.ob_map[other]
             origin = get_origin(self.cod.ob)
-            return result if isinstance(result, origin)\
-                else self.cod.ob(result)
+            if isinstance(result, origin):
+                return result
+            if isinstance(result, tuple) and not issubclass(origin, Nat):
+                return self.cod.ob(*result)
+            return self.cod.ob(result)
         if isinstance(other, Sum):
             return sum(map(self, other.terms),
                        self.cod.zero(self(other.dom), self(other.cod)))

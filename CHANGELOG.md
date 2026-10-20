@@ -1275,6 +1275,13 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
+- A functor whose `ob_map` sends an atom to a tuple casts it into its
+  codomain's objects as `abc.ColouredMonoid.cast` does, one atom per entry,
+  where `cat.Functor` made the whole tuple one atom: `ob_map={x: (float,
+  int)}` into `python.Function` gave `List[type]((float, int))`, a list of
+  length one, which type checking let through since `isinstance` takes a
+  tuple of types
+  ([rel-int/discopy-next#83](https://github.com/rel-int/discopy-next/issues/83)).
 - The `tensor` and `matrix` categories round-trip through JSON, where
   neither did. A tensor box whose dtype NumPy names, e.g. one inferred
   from its array, was written as `tensor.Box[float64]` and
