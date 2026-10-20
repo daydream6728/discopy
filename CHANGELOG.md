@@ -1275,6 +1275,15 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
+- A rotated rigid box reads back from its tree: `rigid.Box` writes its
+  winding number `z` when it is not zero and reads it back, where it
+  inherited the tree of `cat.Box`, which has no `z`, so that
+  `loads(dumps(f.r)) == f` at every level with windings, `rigid`,
+  `pivotal`, `compact` and `frobenius`. `rigid.Box.strategy` rotates the
+  boxes it draws up to twice either way when their boundaries are free,
+  so that a law or a test drawing rigid boxes sees a winding number; no
+  rigid category is in the property matrix yet
+  ([rel-int/discopy-next#113](https://github.com/rel-int/discopy-next/issues/113)).
 - `Hypergraph.make_monogamous` inserts a cap at the depth of the first of
   its two consumers, or last when both are outputs, where it inserted it
   before every box: a state with a recorded offset after it was read in a
