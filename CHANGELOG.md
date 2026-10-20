@@ -1284,6 +1284,24 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   tensor is in its own class, a `Channel` included, where it was a
   `Tensor` (B80)
   ([rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
+- `utils.dumps` serialises a list of objects as the JSON list that
+  `utils.loads` already read back as a list, e.g. the corpus
+  `load_corpus` reads, where it raised `AttributeError` on a list, so a
+  corpus could only be written by hand
+  ([rel-int/discopy-next#168](https://github.com/rel-int/discopy-next/issues/168)).
+- `zx.Diagram.spider_factory` is the `Z` spider on one qubit, as its
+  `cup_factory` and `cap_factory` are `Z(2, 0)` and `Z(0, 2)`. It used to
+  be `tensor.Diagram.spider_factory`, which reads a dimension from its type
+  and raised `TypeError` on a `Nat`, so neither a functor into ZX diagrams
+  nor `zx.Diagram.spiders` could build a spider
+  ([rel-int/discopy-next#149](https://github.com/rel-int/discopy-next/issues/149)).
+- `python.finset.Function.swap` is the symmetry, where it was its inverse
+  whenever the two halves differ in length: a `Function` lists, for each
+  output, the input it reads, and `swap` borrowed `Permutation.swap`, which
+  lists where each input goes. Braid naturality, the hexagons and
+  `swap(x, y) >> swap(y, x) == id(x + y)` now hold, e.g.
+  `Function.swap(2, 1)` is `[2, 0, 1]` rather than `[1, 2, 0]`
+  ([rel-int/discopy-next#147](https://github.com/rel-int/discopy-next/issues/147)).
 - A `cat.Bubble` whose args do not all share a domain, or a codomain,
   and that is given none raises `ValueError` saying so, through
   `messages.NO_COMMON_BOUNDARY` and the new `Bubble.common`, where it
