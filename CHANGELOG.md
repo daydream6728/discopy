@@ -1276,10 +1276,10 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 ### Fixed
 
 - `zx.Diagram.spider_factory` is the `Z` spider on one qubit, as its
-  `cup_factory` and `cap_factory` are `Z(2, 0)` and `Z(0, 2)`, where it
-  inherited that of `tensor.Diagram`, which reads a dimension from its type
-  and raised `TypeError` on a `Nat`: a functor into ZX diagrams can rebuild
-  a spider, and `zx.Diagram.spiders` builds
+  `cup_factory` and `cap_factory` are `Z(2, 0)` and `Z(0, 2)`. It used to
+  be `tensor.Diagram.spider_factory`, which reads a dimension from its type
+  and raised `TypeError` on a `Nat`, so neither a functor into ZX diagrams
+  nor `zx.Diagram.spiders` could build a spider
   ([rel-int/discopy-next#149](https://github.com/rel-int/discopy-next/issues/149)).
 - `python.finset.Function.swap` is the symmetry, where it was its inverse
   whenever the two halves differ in length: a `Function` lists, for each
