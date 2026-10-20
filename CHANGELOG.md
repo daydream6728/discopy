@@ -1283,6 +1283,13 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   type check, and its tensor, composite, swap and fixed point flattened the
   tuple into wires
   ([rel-int/discopy-next#86](https://github.com/rel-int/discopy-next/issues/86)).
+- A functor whose `ob_map` sends an atom to a tuple casts it into its
+  codomain's objects as `abc.ColouredMonoid.cast` does, one atom per entry,
+  where `cat.Functor` made the whole tuple one atom: `ob_map={x: (float,
+  int)}` into `python.Function` gave `List[type]((float, int))`, a list of
+  length one, which type checking let through since `isinstance` takes a
+  tuple of types
+  ([rel-int/discopy-next#83](https://github.com/rel-int/discopy-next/issues/83)).
 - The `tensor` and `matrix` categories round-trip through JSON, where
   neither did. A tensor box whose dtype NumPy names, e.g. one inferred
   from its array, was written as `tensor.Box[float64]` and
@@ -1693,6 +1700,15 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `Nat`-typed diagram and nothing going through `to_hypergraph` worked on a
   ZX diagram, neither `simplify` nor `frobenius.Equation`
   ([rel-int/discopy-next#76](https://github.com/rel-int/discopy-next/issues/76)).
+- The pyzx round trip keeps its scalar: `zx.Diagram.from_pyzx` reads
+  `graph.scalar` back as a `Scalar` box, where it dropped it, so that
+  `from_pyzx(d.to_pyzx())` evaluates to `d` on the nose rather than up to
+  the scalar of the Hopf rule or of a `Scalar` box, and `to_pyzx` folds a
+  spider with no legs, or a pair of spiders connected to nothing else, into
+  `graph.scalar` with pyzx's `remove_isolated_vertices`, where pyzx's
+  `to_matrix` raised `ValueError` on it, e.g. on `X(0, 2) >> Z(2, 0, .5)`,
+  whose Hopf cancellation leaves such a pair
+  ([rel-int/discopy-next#82](https://github.com/rel-int/discopy-next/issues/82)).
 - `zx.Diagram.to_pyzx` keeps parallel wires: a pyzx graph is simple and a
   second wire between the same two spiders overwrote the first, so
   `to_pyzx().to_matrix()` disagreed with `eval()` on

@@ -4,6 +4,8 @@ import itertools
 from typing import List
 from pytest import raises
 
+from discopy import feedback
+from discopy.quantum import zx
 from discopy.biclosed import *
 from discopy.hypergraph import Functor, Hypergraph
 from discopy.python import Function, Ty, exp
@@ -260,3 +262,12 @@ def test_tuple_valued_wire():
     assert Function.swap(Ty(tuple), Ty(int))((1, 2), 3) == (3, (1, 2))
     step = Function(lambda x, t: (x, ) * 2, (int, tuple), tuple)
     assert step.fix()(1) == (1, 1)
+
+
+def test_functor_casts_a_tuple_image():
+    x = feedback.Ty('x')
+    F = feedback.Functor(
+        ob_map={x: (float, int)}, ar_map={}, cod=Function)
+    assert F(x) == Ty(float, int) and len(F(x)) == 2
+    G = feedback.Functor(ob_map={x: (1, 1)}, ar_map={}, cod=zx.Diagram)
+    assert G(x) == zx.Nat(2)

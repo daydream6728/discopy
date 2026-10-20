@@ -126,6 +126,13 @@ class Diagram(tensor.Diagram[complex]):
         >>> hopf = X(1, 2, .75) >> Z(2, 1, 1 / 3)
         >>> graph = hopf.to_pyzx()  # doctest: +EXTRA
         >>> assert graph.num_edges() == 2 and graph.scalar.power2 == -2
+
+        A spider left with no legs, which pyzx cannot contract, is folded
+        into ``graph.scalar`` with :meth:`pyzx.Graph.remove_isolated_vertices`,
+        as is a pair of spiders connected to nothing else.
+
+        >>> graph = (X(0, 2) >> Z(2, 0, .25)).to_pyzx()  # doctest: +EXTRA
+        >>> assert not graph.vertices() and graph.scalar.to_number() != 1
         """
         from pyzx import Graph, VertexType, EdgeType
         diagram = frobenius.Functor(
@@ -170,6 +177,7 @@ class Diagram(tensor.Diagram[complex]):
             graph.add_edge((source, target), etype)
             graph.set_position(target, i, len(diagram) + 1)
             graph.set_outputs(graph.outputs() + (target,))
+        graph.remove_isolated_vertices()
         return graph
 
     @staticmethod
@@ -184,6 +192,12 @@ class Diagram(tensor.Diagram[complex]):
         ...     >> Id(1) @ SWAP @ Id(1) >> X(2, 1, .5) @ X(2, 1, .5)
         >>> graph = bialgebra.to_pyzx()  # doctest: +EXTRA
         >>> assert Diagram.from_pyzx(graph) == bialgebra
+
+        The scalar of the graph comes back as a :class:`Scalar`, so that the
+        round trip is right on the nose rather than up to a scalar.
+
+        >>> graph = (scalar(2) @ Nat(1)).to_pyzx()  # doctest: +EXTRA
+        >>> assert Diagram.from_pyzx(graph) == scalar(2) @ Nat(1)
 
         Note
         ----
@@ -261,7 +275,8 @@ class Diagram(tensor.Diagram[complex]):
             scan, swaps = move(scan, scan.index(node), target)
             diagram = diagram >> swaps\
                 >> Id(target) @ hadamard @ Id(len(scan) - target - 1)
-        return diagram
+        number = graph.scalar.to_number()
+        return diagram if number == 1 else scalar(number) @ diagram
 
 
 class Box(tensor.Box[complex], Diagram):
