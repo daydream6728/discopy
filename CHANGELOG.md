@@ -1275,6 +1275,15 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
+- A rotated rigid box reads back from its tree: `rigid.Box` writes its
+  winding number `z` when it is not zero and reads it back, where it
+  inherited the tree of `cat.Box`, which has no `z`, so that
+  `loads(dumps(f.r)) == f` at every level with windings, `rigid`,
+  `pivotal`, `compact` and `frobenius`. `rigid.Box.strategy` rotates the
+  boxes it draws up to twice either way when their boundaries are free,
+  so that a rigid category in the property matrix sees boxes with a
+  winding number
+  ([rel-int/discopy-next#113](https://github.com/rel-int/discopy-next/issues/113)).
 - A wire of type `tuple` carries a tuple through
   `python.multiplicative.Function`: the outputs of a function are read by
   the arity of its codomain, through `utils.tuplify(stuff, n)`, where they

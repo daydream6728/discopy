@@ -200,3 +200,16 @@ def test_Layer_merge_to_identity():
     x = Ty('x')
     with raises(AxiomError):  # a snake is no layer, see #599.
         Layer(Cap(x, x.l), x).merge(Layer(x, Cup(x.l, x)))
+
+
+def test_rotated_box_serialisation():
+    from hypothesis import find, given, settings
+    from discopy.utils import dumps, loads
+    for z in [-2, -1, 1, 2]:
+        assert find(Box.strategy(), lambda box, z=z: box.z == z).z == z
+
+    @settings(max_examples=50)
+    @given(Box.strategy())
+    def round_trip(box):
+        assert loads(dumps(box)) == box
+    round_trip()
