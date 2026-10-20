@@ -1095,9 +1095,11 @@ Concretely:
 1. **Every admissible $N$ gives a model of everything but $(B)$, and $(B)$
    fails exactly when the perturbation does something.** $(B)$ holds if
    and only if $N$ commutes with $H_0$, in which case $H' = H_0$ on the nose
-   and the model is the unperturbed one. On four qubits each rule schema is
-   run on its smaller instances to keep the notebook fast; on three qubits,
-   on its full instance family.
+   and the model is the unperturbed one. A rule schema is a family indexed
+   by phases and arities, so the cells check this on the instances of
+   `rules` on three qubits and on smaller ones on four, to keep the
+   notebook fast: the three conditions above are why it holds beyond them,
+   and the checks sample that argument rather than prove it.
 2. **The kernel of the bialgebra defect is exactly the space of trivial
    perturbations**: stacking the defects of the basis cycles gives the
    defect as a matrix on the admissible space, whose rank is that of
@@ -1148,15 +1150,16 @@ mo.md("  \n".join(generalisation_report))
 ```
 
 So the admissible perturbations modulo the trivial ones form a space of
-dimension $0, 0, 1, 12$ on $1, 2, 3, 4$ qubits. Up to three qubits every
-rule was checked on its full instance family, so these are exactly the
-countermodels of this shape: **three qubits is the least possible size**,
-and **at that size the countermodel is unique** up to scale and trivial
-perturbations — the second basis cycle, the mirror of the paper's $N$ on the
+dimension $0, 0, 1, 12$ on $1, 2, 3, 4$ qubits. The rank count is exact,
+$(B)$ having no parameter; that every other rule holds rests on the three
+conditions above and is checked on sampled instances only. Granting it,
+these are exactly the countermodels of this shape: **three qubits is the
+least possible size**, and **at that size the countermodel is unique** up
+to scale and trivial perturbations — the second basis cycle, the mirror of the paper's $N$ on the
 weight-two subspace, differs from $-N$ by a perturbation commuting with
-$H_0$, so it defines the same interpretation. On four qubits the rules were
-only checked on their smaller instances, so the twelve dimensions there are
-candidate countermodels rather than a classification.
+$H_0$, so it defines the same interpretation. On four qubits the sample is
+smaller still, so the twelve dimensions there are candidate countermodels
+rather than a classification.
 
 ```python {.marimo}
 mirror_N, minus_paper_N = admissible_basis(3)[1], -paper_N.real
