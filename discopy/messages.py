@@ -73,3 +73,6 @@ CURRY_HAS_NO_DAGGER = "A curry has no dagger."
 NOT_JSON_SERIALISABLE = "Object of type {} is not JSON serialisable."
 NO_SUCH_TYPE = "No type named {!r} in builtins or numpy, so the name of the "\
                "class it parameterises cannot be resolved."
+
+NO_COMMON_BOUNDARY = "A bubble needs a {} given when its args do not "\
+    "all share one, they have [{}]."
