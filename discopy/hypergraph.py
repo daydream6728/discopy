@@ -1392,12 +1392,15 @@ class Hypergraph(
         :meth:`pass_token` instead.
 
         Parameters:
-            xs : One value for each wire in :attr:`dom_wires`.
+            xs : One value for each wire in :attr:`dom_wires`, or the
+                value of a token and the domain wire it enters on, as
+                :meth:`pass_token` reads them.
 
         Raises
         ------
             AxiomError :
-                If the hypergraph is not left-monogamous or not causal.
+                If the hypergraph is not left-monogamous or not causal, or
+                not right-monogamous when it passes a token.
             ValueError :
                 If there is not one value for each domain wire, or a box
                 returns a different number of values than it has codomain
