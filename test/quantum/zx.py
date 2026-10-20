@@ -386,3 +386,13 @@ def test_feedback_is_the_trace():
     f = Z(2, 2, .25)
     assert f.feedback() == f.trace() == f.feedback(mem=Nat(1))
     assert f.feedback(left=True) == f.trace(left=True)
+
+
+def test_functor_into_zx_rebuilds_spiders():
+    x = frobenius.Ty('x')
+    F = frobenius.Functor(ob_map={x: Nat(1)}, ar_map={}, cod=Diagram)
+    assert F(frobenius.Spider(1, 2, x)) == Z(1, 2)
+    assert F(frobenius.Diagram.spiders(2, 1, x @ x)).eval().is_close(
+        Diagram.spiders(2, 1, Nat(2)).eval())
+    with raises(ValueError):
+        Diagram.spider_factory(1, 1, Nat(2))

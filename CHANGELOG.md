@@ -1275,6 +1275,12 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
+- `zx.Diagram.spider_factory` is the `Z` spider on one qubit, as its
+  `cup_factory` and `cap_factory` are `Z(2, 0)` and `Z(0, 2)`, where it
+  inherited that of `tensor.Diagram`, which reads a dimension from its type
+  and raised `TypeError` on a `Nat`: a functor into ZX diagrams can rebuild
+  a spider, and `zx.Diagram.spiders` builds
+  ([rel-int/discopy-next#149](https://github.com/rel-int/discopy-next/issues/149)).
 - `Hypergraph.make_monogamous` inserts a cap at the depth of the first of
   its two consumers, or last when both are outputs, where it inserted it
   before every box: a state with a recorded offset after it was read in a
