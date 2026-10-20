@@ -5,6 +5,7 @@ from typing import List
 from pytest import raises
 
 from discopy import feedback
+from discopy.quantum import zx
 from discopy.biclosed import *
 from discopy.hypergraph import Functor, Hypergraph
 from discopy.python import Function, Ty, exp
@@ -258,3 +259,5 @@ def test_functor_casts_a_tuple_image():
     F = feedback.Functor(
         ob_map={x: (float, int)}, ar_map={}, cod=Function)
     assert F(x) == Ty(float, int) and len(F(x)) == 2
+    G = feedback.Functor(ob_map={x: (1, 1)}, ar_map={}, cod=zx.Diagram)
+    assert G(x) == zx.Nat(2)
