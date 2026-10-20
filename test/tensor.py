@@ -579,3 +579,8 @@ def test_Tensor_repeat():
         Tensor[int].swap(Dim(2), Dim(2)).repeat()
     with raises(TypeError):
         Tensor[bool]([1, 0, 0, 1, 1, 0], Dim(2), Dim(3)).repeat()
+
+
+def test_spider_with_no_legs_in_every_dtype():
+    for dtype, circle in [(bool, True), (int, 2), (float, 2.), (complex, 2)]:
+        assert Tensor[dtype].spiders(0, 0, Dim(2)).array == circle

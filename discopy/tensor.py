@@ -320,7 +320,8 @@ class Tensor(Matrix):
         with backend('numpy'):
             result = cls.zero(dom, cod)
             for i in range(n):
-                result.array[len(dom @ cod) * (i, )] += 1
+                index = len(dom @ cod) * (i, )
+                result.array[index] = result.array[index] + 1
         if isinstance(get_backend(), NumPy):
             return result
         with backend() as np:
