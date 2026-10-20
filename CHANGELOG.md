@@ -2181,6 +2181,21 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   it found. The step used to go from its environment dump straight to
   `exit code 1`, leaving a red required check with no diagnosis
   ([rel-int/discopy-next#21](https://github.com/rel-int/discopy-next/issues/21)).
+- `no-todo-on-main.yml`'s guard can draft a pull request and make it ready
+  again: its bot token asks for `contents: write` beside
+  `pull-requests: write`, since changing the draft state of a pull request
+  takes write access to its repository. Every mutation was refused with
+  `Resource not accessible by integration` since
+  `actions/create-github-app-token` went from 1.12.0 to 3.2.0
+  ([#674](https://github.com/discopy/discopy/pull/674)): 1.12.0 read the
+  `permission-*` inputs from `INPUT_PERMISSION_` variables where the runner
+  writes `INPUT_PERMISSION-`, so it never narrowed the token and the
+  missing permission went unnoticed. The token is also requested with
+  `client-id`, which replaces the deprecated `app-id`, from
+  `DISCOPY_BOT_CLIENT_ID` or else the App ID, which the action takes too
+  ([rel-int/discopy-next#34](https://github.com/rel-int/discopy-next/issues/34),
+  [#159](https://github.com/rel-int/discopy-next/issues/159),
+  [#170](https://github.com/rel-int/discopy-next/issues/170)).
 - `Matrix` is a `MarkovCategory` rather than a `MonoidalCategory` and gets a
   native `Matrix.permutation`, so a matrix-valued functor applied to a
   diagram with an explicit `Permutation` layer no longer raises
