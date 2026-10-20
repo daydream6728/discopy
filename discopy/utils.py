@@ -761,17 +761,15 @@ def tuplify(stuff: any, n: int | None = None) -> tuple:
 
     Parameters:
         stuff : The stuff to turn into a tuple.
-        n : The number of values ``stuff`` stands for, if known, so that one
-            value is wrapped whatever it is, a tuple included.
+        n : The number of values ``stuff`` stands for, if known, so that a
+            single value is wrapped whatever it is, a tuple included.
 
     Example
     -------
     >>> assert tuplify(1) == (1, ) and tuplify((1, 2)) == (1, 2)
     >>> assert tuplify((1, 2), n=1) == ((1, 2), )
     """
-    if n == 1 or n is None and not isinstance(stuff, tuple):
-        return (stuff, )
-    return tuple(stuff)
+    return stuff if n != 1 and isinstance(stuff, tuple) else (stuff, )
 
 
 def untuplify(stuff: tuple) -> any:

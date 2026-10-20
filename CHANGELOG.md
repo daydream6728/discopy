@@ -1280,7 +1280,7 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   the arity of its codomain, through `utils.tuplify(stuff, n)`, where they
   were read by value, so that a single tuple-valued output was taken for
   several outputs, `Function(lambda x: (x, x), int, tuple)(1)` failed its
-  type check, and its tensor, composite, swap and fixed point flattened the
+  type check, and its tensor, composite and fixed point flattened the
   tuple into wires
   ([rel-int/discopy-next#86](https://github.com/rel-int/discopy-next/issues/86)).
 - A functor whose `ob_map` sends an atom to a tuple casts it into its
