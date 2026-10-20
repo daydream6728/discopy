@@ -33,6 +33,7 @@ DisCoPy documentation
     notebooks/higher-order-discocat
     notebooks/parsing-arithmetic
     notebooks/categorical-deep-learning
+    notebooks/neural-church
 
 
 .. toctree::

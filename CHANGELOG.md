@@ -102,6 +102,25 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   [rel-int/discopy-next#124](https://github.com/rel-int/discopy-next/issues/124)
   and [#125](https://github.com/rel-int/discopy-next/issues/125)
   ([rel-int/discopy-next#121](https://github.com/rel-int/discopy-next/issues/121)).
+- A notebook, *Neural Church arithmetic*, running Church numerals through
+  an exact geometry-of-interaction token machine and learning the
+  constants as opaque boxes. A closed `closed` term over the unitype is
+  encoded as a `symmetric.CMap` with application and abstraction nodes, a
+  delta node for a variable used several times and an epsilon node for one
+  never used; the token carries a stack of application and abstraction
+  symbols and one stack of copy indices per delta, and reads back the Böhm
+  tree `reduce` computes. It is exact on numerals, sums, products,
+  exponent towers, predecessor and subtraction and on random polynomials
+  with shared variables, and fails, as the notebook shows, on a variable
+  shared across both sides of an exponentiation. The constants `zero` to
+  `three`, `plus`, `times` and `square` collapse to 2 to 16 rules each,
+  learned by a two-layer MLP in JAX in seconds, exact on 91 training
+  equations, 23 held-out compositions and sums and products up to 32, and
+  the term of each constant reads back out of the trained weights. It is
+  the result of [discopy/discopy#677](https://github.com/discopy/discopy/pull/677),
+  which put the encoding in the library as `TermBase.to_map`, shadowing the
+  `to_map` every diagram has: here the notebook defines it, through
+  `CMap.logical_order`, and no module changes.
 - `discopy.group`, finite groups as normal forms and their actions on
   finite sets, the first step of
   [rel-int/discopy-next#121](https://github.com/rel-int/discopy-next/issues/121),
