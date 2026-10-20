@@ -584,3 +584,18 @@ def test_Tensor_repeat():
 def test_spider_with_no_legs_in_every_dtype():
     for dtype, circle in [(bool, True), (int, 2), (float, 2.), (complex, 2)]:
         assert Tensor[dtype].spiders(0, 0, Dim(2)).array == circle
+
+
+def test_to_tn_state_spider():
+    for diagram in [Spider(0, 1, Dim(2)) @ Id(Dim(3)), Spider(0, 2, Dim(2))]:
+        nodes, order = diagram.to_tn()
+        array = tn.contractors.auto(nodes, output_edge_order=order).tensor
+        assert array.tolist() == diagram.eval().array.tolist()
+
+
+def test_Functor_no_dtype_repr_and_algebraic_conjugate():
+    from discopy.quantum.channel import Channel, Q
+    F = Functor({frobenius.Ty('x'): 2}, {}, dtype=None)
+    assert "dtype=None" in repr(F)
+    conjugate = Channel.id(Q(Dim(2))).conjugate(diagrammatic=False)
+    assert isinstance(conjugate, Channel)
