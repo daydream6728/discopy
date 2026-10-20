@@ -141,6 +141,25 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   [rel-int/discopy-next#124](https://github.com/rel-int/discopy-next/issues/124)
   and [#125](https://github.com/rel-int/discopy-next/issues/125)
   ([rel-int/discopy-next#121](https://github.com/rel-int/discopy-next/issues/121)).
+- A notebook, *Neural Church arithmetic*, running Church numerals through
+  an exact geometry-of-interaction token machine and learning the
+  constants as opaque boxes. A closed term over the unitype is
+  encoded as a `symmetric.CMap` with application and abstraction nodes, a
+  delta node for a variable used several times and an epsilon node for one
+  never used; the token carries a stack of application and abstraction
+  symbols and one stack of copy indices per delta, and reads back the Böhm
+  tree `reduce` computes. It is exact on numerals, sums, products,
+  exponent towers, predecessor and subtraction and on random polynomials
+  with shared variables, and fails, as the notebook shows, on a variable
+  shared across both sides of an exponentiation. The constants `zero` to
+  `three`, `plus`, `times` and `square` collapse to 2 to 16 rules each,
+  learned by a two-layer MLP in JAX in seconds, exact on 91 training
+  equations, 23 held-out compositions and sums and products up to 32, and
+  the term of each constant reads back out of the trained weights. It is
+  the result of [discopy/discopy#677](https://github.com/discopy/discopy/pull/677),
+  which put the encoding in the library as `TermBase.to_map`, shadowing the
+  `to_map` every diagram has: here the notebook defines it, through
+  `CMap.logical_order`, and no module changes.
 - `discopy.group`, finite groups as normal forms and their actions on
   finite sets, the first step of
   [rel-int/discopy-next#121](https://github.com/rel-int/discopy-next/issues/121),
@@ -2181,6 +2200,21 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   it found. The step used to go from its environment dump straight to
   `exit code 1`, leaving a red required check with no diagnosis
   ([rel-int/discopy-next#21](https://github.com/rel-int/discopy-next/issues/21)).
+- `no-todo-on-main.yml`'s guard can draft a pull request and make it ready
+  again: its bot token asks for `contents: write` beside
+  `pull-requests: write`, since changing the draft state of a pull request
+  takes write access to its repository. Every mutation was refused with
+  `Resource not accessible by integration` since
+  `actions/create-github-app-token` went from 1.12.0 to 3.2.0
+  ([#674](https://github.com/discopy/discopy/pull/674)): 1.12.0 read the
+  `permission-*` inputs from `INPUT_PERMISSION_` variables where the runner
+  writes `INPUT_PERMISSION-`, so it never narrowed the token and the
+  missing permission went unnoticed. The token is also requested with
+  `client-id`, which replaces the deprecated `app-id`, from
+  `DISCOPY_BOT_CLIENT_ID` or else the App ID, which the action takes too
+  ([rel-int/discopy-next#34](https://github.com/rel-int/discopy-next/issues/34),
+  [#159](https://github.com/rel-int/discopy-next/issues/159),
+  [#170](https://github.com/rel-int/discopy-next/issues/170)).
 - `Matrix` is a `MarkovCategory` rather than a `MonoidalCategory` and gets a
   native `Matrix.permutation`, so a matrix-valued functor applied to a
   diagram with an explicit `Permutation` layer no longer raises
