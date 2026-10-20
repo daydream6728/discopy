@@ -1685,6 +1685,14 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `Nat`-typed diagram and nothing going through `to_hypergraph` worked on a
   ZX diagram, neither `simplify` nor `frobenius.Equation`
   ([rel-int/discopy-next#76](https://github.com/rel-int/discopy-next/issues/76)).
+- The pyzx round trip keeps its scalar: `zx.Diagram.from_pyzx` reads
+  `graph.scalar` back as a `Scalar` box, where it dropped it, so that
+  `from_pyzx(d.to_pyzx())` evaluates to `d` on the nose rather than up to
+  the scalar of the Hopf rule or of a `Scalar` box, and `to_pyzx` folds a
+  spider left with no legs into `graph.scalar` with pyzx's
+  `remove_isolated_vertices`, where pyzx's `to_matrix` raised `ValueError`
+  on it, e.g. on `X(0, 2) >> Z(2, 0, .5)`
+  ([rel-int/discopy-next#82](https://github.com/rel-int/discopy-next/issues/82)).
 - `zx.Diagram.to_pyzx` keeps parallel wires: a pyzx graph is simple and a
   second wire between the same two spiders overwrote the first, so
   `to_pyzx().to_matrix()` disagreed with `eval()` on
