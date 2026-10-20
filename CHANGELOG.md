@@ -2048,8 +2048,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   that can fail -- reading a tree, reading the pull request, either
   mutation -- raises an `::error::` annotation naming itself, and a
   mutation that answers with `isDraft` in the wrong state says which state
-  it found, where the step went from its environment to `exit code 1` with
-  nothing in between, so that a red required check carried no diagnosis
+  it found. The step used to go from its environment dump straight to
+  `exit code 1`, leaving a red required check with no diagnosis
   ([rel-int/discopy-next#21](https://github.com/rel-int/discopy-next/issues/21)).
 - `Matrix` is a `MarkovCategory` rather than a `MonoidalCategory` and gets a
   native `Matrix.permutation`, so a matrix-valued functor applied to a
