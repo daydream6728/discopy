@@ -813,6 +813,7 @@ dependencies = [
 docs = [
     { name = "ipykernel" },
     { name = "ipython" },
+    { name = "jax" },
     { name = "jinja2" },
     { name = "marimo" },
     { name = "myst-parser" },
@@ -823,6 +824,8 @@ docs = [
     { name = "sphinxcontrib-tikz" },
     { name = "sphinxcontrib-youtube" },
     { name = "sympy" },
+    { name = "torch", version = "2.13.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'linux'" },
+    { name = "torch", version = "2.13.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform == 'linux'" },
 ]
 grammar = [
     { name = "nltk" },
@@ -909,6 +912,7 @@ requires-dist = [
     { name = "hypothesis", marker = "extra == 'test'" },
     { name = "ipykernel", marker = "extra == 'docs'", specifier = "==6.23.*" },
     { name = "ipython", marker = "extra == 'docs'" },
+    { name = "jax", marker = "extra == 'docs'" },
     { name = "jax", marker = "extra == 'quantum'" },
     { name = "jaxlib", marker = "extra == 'quantum'" },
     { name = "jinja2", marker = "extra == 'docs'", specifier = "==3.1.*" },
@@ -940,8 +944,10 @@ requires-dist = [
     { name = "sympy", marker = "extra == 'docs'" },
     { name = "sympy", marker = "extra == 'quantum'" },
     { name = "tensornetwork", marker = "extra == 'quantum'" },
+    { name = "torch", marker = "sys_platform == 'linux' and extra == 'docs'", index = "https://download.pytorch.org/whl/cpu" },
     { name = "torch", marker = "sys_platform == 'linux' and extra == 'grammar'", index = "https://download.pytorch.org/whl/cpu" },
     { name = "torch", marker = "sys_platform == 'linux' and extra == 'quantum'", index = "https://download.pytorch.org/whl/cpu" },
+    { name = "torch", marker = "sys_platform != 'linux' and extra == 'docs'" },
     { name = "torch", marker = "sys_platform != 'linux' and extra == 'grammar'" },
     { name = "torch", marker = "sys_platform != 'linux' and extra == 'quantum'" },
 ]
