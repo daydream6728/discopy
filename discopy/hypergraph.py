@@ -1544,11 +1544,17 @@ class Hypergraph(
                         fwires = fwires[:len(fwires) - len(self.cod)] + [
                             left, right] + fwires[len(fwires) - len(self.cod):]
                     else:
-                        boxes = (self.category.cap_factory(
-                            source_obj, target_obj), ) + self.boxes
-                        offsets = (None, ) + self.offsets
-                        fwires = fwires[:len(self.dom)] + [
-                            left, right] + fwires[len(self.dom):]
+                        depth = getattr(
+                            self.ports[source], "depth", len(self.boxes))
+                        boxes = self.boxes[:depth] + (
+                            self.category.cap_factory(
+                                source_obj, target_obj), ) + self.boxes[depth:]
+                        offsets = self.offsets[:depth] + (None, )\
+                            + self.offsets[depth:]
+                        i = len(self.dom) + len(sum(
+                            [sum(ports, ()) for ports
+                             in self.box_wires[:depth]], ()))
+                        fwires = fwires[:i] + [left, right] + fwires[i:]
                     wires = self.rebracket(fwires, boxes=boxes)
                     spider_types[left] = spider_types[right] = typ
                     del spider_types[spider]

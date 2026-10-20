@@ -1275,6 +1275,14 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
+- `Hypergraph.make_monogamous` inserts a cap at the depth of the first of
+  its two consumers, or last when both are outputs, where it inserted it
+  before every box: a state with a recorded offset after it was read in a
+  scan the cap had grown by two wires, so `x @ f >> Cap(x, x) @ x @ x`
+  decoded with `f` between the legs of the cap and a permutation the
+  diagram does not have. That depth comes after every such state, as for
+  the spider boxes of `make_bijective`; no drawing moves
+  ([rel-int/discopy-next#108](https://github.com/rel-int/discopy-next/issues/108)).
 - A functor whose `ob_map` sends an atom to a tuple casts it into its
   codomain's objects as `abc.ColouredMonoid.cast` does, one atom per entry,
   where `cat.Functor` made the whole tuple one atom: `ob_map={x: (float,
