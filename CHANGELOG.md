@@ -1275,6 +1275,14 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
+- A wire of type `tuple` carries a tuple through
+  `python.multiplicative.Function`: the outputs of a function are read by
+  the arity of its codomain, through `utils.tuplify(stuff, n)`, where they
+  were read by value, so that a single tuple-valued output was taken for
+  several outputs, `Function(lambda x: (x, x), int, tuple)(1)` failed its
+  type check, and its tensor, composite, swap and fixed point flattened the
+  tuple into wires
+  ([rel-int/discopy-next#86](https://github.com/rel-int/discopy-next/issues/86)).
 - The `tensor` and `matrix` categories round-trip through JSON, where
   neither did. A tensor box whose dtype NumPy names, e.g. one inferred
   from its array, was written as `tensor.Box[float64]` and
