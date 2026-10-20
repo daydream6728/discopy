@@ -2152,7 +2152,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `permission-*` inputs from `INPUT_PERMISSION_` variables where the runner
   writes `INPUT_PERMISSION-`, so it never narrowed the token and the
   missing permission went unnoticed. The token is also requested with
-  `client-id`, which replaces the deprecated `app-id`
+  `client-id`, which replaces the deprecated `app-id`, from
+  `DISCOPY_BOT_CLIENT_ID` or else the App ID, which the action takes too
   ([rel-int/discopy-next#34](https://github.com/rel-int/discopy-next/issues/34),
   [#159](https://github.com/rel-int/discopy-next/issues/159),
   [#170](https://github.com/rel-int/discopy-next/issues/170)).
