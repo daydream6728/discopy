@@ -2044,6 +2044,13 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   run when the branch has already moved past the event it is handling,
   rather than drafting a head that no longer exists behind its back
   ([#640](https://github.com/discopy/discopy/issues/640)).
+- `no-todo-on-main.yml`'s guard says why it fails: each of its calls
+  that can fail -- reading a tree, reading the pull request, either
+  mutation -- raises an `::error::` annotation naming itself, and a
+  mutation that answers with `isDraft` in the wrong state says which state
+  it found. The step used to go from its environment dump straight to
+  `exit code 1`, leaving a red required check with no diagnosis
+  ([rel-int/discopy-next#21](https://github.com/rel-int/discopy-next/issues/21)).
 - `Matrix` is a `MarkovCategory` rather than a `MonoidalCategory` and gets a
   native `Matrix.permutation`, so a matrix-valued functor applied to a
   diagram with an explicit `Permutation` layer no longer raises
