@@ -1284,6 +1284,30 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `is_dagger` as that of `cat.Box` does, where a box and its dagger were
   equal and hashed alike although they evaluate to transposed arrays
   ([rel-int/discopy-next#119](https://github.com/rel-int/discopy-next/issues/119)).
+- A rotated rigid box reads back from its tree: `rigid.Box` writes its
+  winding number `z` when it is not zero and reads it back, where it
+  inherited the tree of `cat.Box`, which has no `z`, so that
+  `loads(dumps(f.r)) == f` at every level with windings, `rigid`,
+  `pivotal`, `compact` and `frobenius`. `rigid.Box.strategy` rotates the
+  boxes it draws up to twice either way when their boundaries are free,
+  so that a law or a test drawing rigid boxes sees a winding number; no
+  rigid category is in the property matrix yet
+  ([rel-int/discopy-next#113](https://github.com/rel-int/discopy-next/issues/113)).
+- `Hypergraph.make_monogamous` inserts a cap at the depth of the first of
+  its two consumers, or last when both are outputs, where it inserted it
+  before every box: a state with a recorded offset after it was read in a
+  scan the cap had grown by two wires, so `x @ f >> Cap(x, x) @ x @ x`
+  decoded with `f` between the legs of the cap and a permutation the
+  diagram does not have. That depth comes after every such state, as for
+  the spider boxes of `make_bijective`; no drawing moves
+  ([rel-int/discopy-next#108](https://github.com/rel-int/discopy-next/issues/108)).
+- `Tensor.trace` is the trace of the compact structure, the contraction of
+  each of the last `n` factors of the domain with the matching factor of
+  the codomain, or of the first `n` with `left=True`, in one `einsum`, and
+  `Tensor.repeat` the reflexive transitive closure of the square Boolean
+  matrix a tensor reshapes to: both were inherited from `Matrix`, whose
+  objects are numbers, and raised `TypeError` on any `Dim`
+  ([rel-int/discopy-next#89](https://github.com/rel-int/discopy-next/issues/89)).
 - A wire of type `tuple` carries a tuple through
   `python.multiplicative.Function`: the outputs of a function are read by
   the arity of its codomain, through `utils.tuplify(stuff, n)`, where they

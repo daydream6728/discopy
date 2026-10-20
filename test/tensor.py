@@ -555,3 +555,27 @@ def test_Box_dagger_is_not_the_box():
     t = Box('t', Dim(2), Dim(2), data=[1, 2, 3, 4])
     assert t.dagger() != t and t.dagger().dagger() == t
     assert hash(t.dagger()) != hash(t)
+
+
+def test_Tensor_trace():
+    f = Tensor[int](list(range(64)), Dim(2, 2, 2), Dim(2, 2, 2))
+    x, y = Dim(2), Dim(2, 2)
+    feedback = y @ Tensor[int].caps(x, x) >> f @ x >> y @ Tensor[int].cups(x, x)
+    assert f.trace() == f.trace(mem=x) == feedback
+    assert f.trace(0) == f and f.trace(3).dom == f.trace(3).cod == Dim(1)
+    with raises(AxiomError):
+        Tensor[int]([0, 1, 2, 3, 4, 5], Dim(2), Dim(3)).trace()
+    with raises(ValueError):
+        Tensor[int]([0, 1, 2, 3], Dim(2), Dim(2)).trace(2)
+    g = Tensor[int](list(range(8)), Dim(2, 2), Dim(2))
+    assert g.trace() == Tensor[int]([0 + 3, 4 + 7], Dim(2), Dim(1))
+    assert g.trace(left=True) == Tensor[int]([0 + 5, 2 + 7], Dim(2), Dim(1))
+
+
+def test_Tensor_repeat():
+    swap = Tensor[bool].swap(Dim(2), Dim(2))
+    assert swap.repeat() == swap + Tensor[bool].id(Dim(2, 2))
+    with raises(TypeError):
+        Tensor[int].swap(Dim(2), Dim(2)).repeat()
+    with raises(TypeError):
+        Tensor[bool]([1, 0, 0, 1, 1, 0], Dim(2), Dim(3)).repeat()
