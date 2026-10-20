@@ -1282,6 +1282,31 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `swap(x, y) >> swap(y, x) == id(x + y)` now hold, e.g.
   `Function.swap(2, 1)` is `[2, 0, 1]` rather than `[1, 2, 0]`
   ([rel-int/discopy-next#147](https://github.com/rel-int/discopy-next/issues/147)).
+- A `cat.Bubble` whose args do not all share a domain, or a codomain,
+  and that is given none raises `ValueError` saying so, through
+  `messages.NO_COMMON_BOUNDARY` and the new `Bubble.common`, where it
+  raised `too many values to unpack` from a tuple assignment, and the
+  docstrings of `cat.Bubble` and `monoidal.Bubble` say it the right way
+  round: they said a bubble raised when its args did share one
+  ([rel-int/discopy-next#133](https://github.com/rel-int/discopy-next/issues/133)).
+- The tensor spider with no legs is the circle, the dimension of its wire,
+  as spider fusion says it is, `Tensor.spiders(0, 0, Dim(2))` being `2`
+  like `Tensor.spiders(0, 1, Dim(2)) >> Tensor.spiders(1, 0, Dim(2))`,
+  where it was `1`
+  ([rel-int/discopy-next#116](https://github.com/rel-int/discopy-next/issues/116)).
+- A `tensor.Box` is not equal to its dagger: its `setoid` reads
+  `is_dagger` as that of `cat.Box` does, where a box and its dagger were
+  equal and hashed alike although they evaluate to transposed arrays
+  ([rel-int/discopy-next#119](https://github.com/rel-int/discopy-next/issues/119)).
+- A rotated rigid box reads back from its tree: `rigid.Box` writes its
+  winding number `z` when it is not zero and reads it back, where it
+  inherited the tree of `cat.Box`, which has no `z`, so that
+  `loads(dumps(f.r)) == f` at every level with windings, `rigid`,
+  `pivotal`, `compact` and `frobenius`. `rigid.Box.strategy` rotates the
+  boxes it draws up to twice either way when their boundaries are free,
+  so that a law or a test drawing rigid boxes sees a winding number; no
+  rigid category is in the property matrix yet
+  ([rel-int/discopy-next#113](https://github.com/rel-int/discopy-next/issues/113)).
 - `Hypergraph.make_monogamous` inserts a cap at the depth of the first of
   its two consumers, or last when both are outputs, where it inserted it
   before every box: a state with a recorded offset after it was read in a
