@@ -209,22 +209,19 @@ token* between visits.
 ```python {.marimo}
 ROLES = {"@": (0, (2, 1)), "λ": (1, (0, 2))}
 L0, L1, A0, A1 = ("λ", 0), ("λ", 1), ("@", 0), ("@", 1)
-TABLES = {}
 
 
 def port_table(cmap):
     """The ports of each node in logical order, and the node of each port."""
-    if id(cmap) not in TABLES:
-        box_ports, table, start = [], {}, len(cmap.dom)
-        for index, box in enumerate(cmap.boxes):
-            box_ports.append(tuple(
-                start + offset for offset in cmap.logical_order(
-                len(box.dom), len(box.cod))))
-            start += len(box.dom) + len(box.cod)
-            for wire, port in enumerate(box_ports[-1]):
-                table[port] = (index, box.name, wire)
-        TABLES[id(cmap)] = (cmap, box_ports, table)
-    return TABLES[id(cmap)][1:]
+    box_ports, table, start = [], {}, len(cmap.dom)
+    for index, box in enumerate(cmap.boxes):
+        box_ports.append(tuple(
+            start + offset for offset in cmap.logical_order(
+            len(box.dom), len(box.cod))))
+        start += len(box.dom) + len(box.cod)
+        for wire, port in enumerate(box_ports[-1]):
+            table[port] = (index, box.name, wire)
+    return box_ports, table
 
 
 def transition(index, name, wire, mult_, exp, prefix, boxes):

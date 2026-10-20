@@ -104,7 +104,7 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   ([rel-int/discopy-next#121](https://github.com/rel-int/discopy-next/issues/121)).
 - A notebook, *Neural Church arithmetic*, running Church numerals through
   an exact geometry-of-interaction token machine and learning the
-  constants as opaque boxes. A closed `closed` term over the unitype is
+  constants as opaque boxes. A closed term over the unitype is
   encoded as a `symmetric.CMap` with application and abstraction nodes, a
   delta node for a variable used several times and an epsilon node for one
   never used; the token carries a stack of application and abstraction
