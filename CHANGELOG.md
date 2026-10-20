@@ -1282,6 +1282,21 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   matrix a tensor reshapes to: both were inherited from `Matrix`, whose
   objects are numbers, and raised `TypeError` on any `Dim`
   ([rel-int/discopy-next#89](https://github.com/rel-int/discopy-next/issues/89)).
+- A wire of type `tuple` carries a tuple through
+  `python.multiplicative.Function`: the outputs of a function are read by
+  the arity of its codomain, through `utils.tuplify(stuff, n)`, where they
+  were read by value, so that a single tuple-valued output was taken for
+  several outputs, `Function(lambda x: (x, x), int, tuple)(1)` failed its
+  type check, and its tensor, composite and fixed point flattened the
+  tuple into wires
+  ([rel-int/discopy-next#86](https://github.com/rel-int/discopy-next/issues/86)).
+- A functor whose `ob_map` sends an atom to a tuple casts it into its
+  codomain's objects as `abc.ColouredMonoid.cast` does, one atom per entry,
+  where `cat.Functor` made the whole tuple one atom: `ob_map={x: (float,
+  int)}` into `python.Function` gave `List[type]((float, int))`, a list of
+  length one, which type checking let through since `isinstance` takes a
+  tuple of types
+  ([rel-int/discopy-next#83](https://github.com/rel-int/discopy-next/issues/83)).
 - The `tensor` and `matrix` categories round-trip through JSON, where
   neither did. A tensor box whose dtype NumPy names, e.g. one inferred
   from its array, was written as `tensor.Box[float64]` and
