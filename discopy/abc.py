@@ -14,8 +14,10 @@ forgetful functors between categories go the other way.
 
 Each class also declares its :func:`discopy.axioms.axiom` equations, which
 every free category inherits along with the structure they axiomatise:
-:class:`Category` states the unitality and associativity of composition
-and the typing of its identities and composites; a :class:`DaggerCategory`
+:class:`Category` states the unitality and associativity of composition; a
+law quantifies over the type parameters of its signature, objects of the
+category, and over morphisms between them, see
+:class:`discopy.axioms.Declaration`; a :class:`DaggerCategory`
 adds the involution and contravariance of its dagger; a
 :class:`ColouredMonoid` inherits the first two as the unitality and
 associativity of its product, its composition; a :class:`Groupoid` is a
@@ -69,18 +71,17 @@ Summary
         keyword_form
 """
 
-from __future__ import annotations
-
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from functools import wraps
 from inspect import signature
-from typing import ClassVar, Self
+from types import NoneType
+from typing import ClassVar
 
 from discopy import messages
 from discopy.axioms import (
-    ComposablePair, ComposableTriple, Equation, Loop, Testable, axiom)
+    Delay, Equation, Hom, Obj, Tensor, Testable, Var, axiom)
 from discopy.utils import (  # noqa: F401  pylint: disable=unused-import
     AxiomError, NamedGeneric, classproperty, factory_name)
 
@@ -110,6 +111,19 @@ class Category[C0, C1: Category](ABC):
     #: Backward-compatible alias for :attr:`factory`, since types are
     #: themselves the objects of diagrams.
     ar = classproperty(lambda cls: getattr(cls, "factory", cls))
+
+    @classmethod
+    def parameters(cls) -> tuple[type, type]:
+        """
+        What the type parameters of the category stand for, in order: its
+        objects ``C0`` and its arrows ``C1``, so that a sequent stated with
+        them reads as one of the category it is bound to, see
+        :func:`discopy.axioms.position`.
+
+        >>> from discopy.monoidal import Ty, Diagram
+        >>> assert Diagram.parameters() == (Ty, Diagram)
+        """
+        return getattr(cls, "ob", cls), cls.ar
 
     @classmethod
     def equation_factory(cls, *terms) -> Equation:
@@ -153,7 +167,7 @@ class Category[C0, C1: Category](ABC):
         """
         return self.cod == other.dom
 
-    def is_parallel(self, other: Category) -> bool:
+    def is_parallel(self, other: "Category") -> bool:
         """
         Whether two morphisms are parallel, i.e. they have the same
         domain and codomain.
@@ -164,40 +178,19 @@ class Category[C0, C1: Category](ABC):
         return (self.dom, self.cod) == (other.dom, other.cod)
 
     @axiom
-    def unitality(
-            cls, f: C1) -> Equation[C1]:
+    def unitality[A: Obj[C0], B: Obj[C0]](
+            cls, f: Hom[C1, A, B]) -> Equation[Hom[C1, A, B]]:
         """ Left and right unitality of composition. """
         return cls.equation_factory(
             cls.id(f.dom).then(f), f, f.then(cls.id(f.cod)))
 
     @axiom
-    def associativity(
-            cls, triple: ComposableTriple[C1]) -> Equation[C1]:
+    def associativity[A: Obj[C0], B: Obj[C0], C: Obj[C0], D: Obj[C0]](
+            cls, f: Hom[C1, A, B], g: Hom[C1, B, C], h: Hom[C1, C, D]
+    ) -> Equation[Hom[C1, A, D]]:
         """ Associativity of composition. """
-        f, g, h = triple
         return cls.equation_factory(
             f.then(g).then(h), f.then(g.then(h)))
-
-    @axiom
-    def identity_typing(
-            cls, x: C0) -> Equation[C0]:
-        """ Typing of identity morphisms. """
-        identity = cls.id(x)
-        return cls.ob.equation_factory(identity.dom, x, identity.cod)
-
-    @axiom
-    def composition_dom_typing(
-            cls, pair: ComposablePair[C1]) -> Equation[C0]:
-        """ Domain typing of composition. """
-        f, g = pair
-        return cls.ob.equation_factory(f.then(g).dom, f.dom)
-
-    @axiom
-    def composition_cod_typing(
-            cls, pair: ComposablePair[C1]) -> Equation[C0]:
-        """ Codomain typing of composition. """
-        f, g = pair
-        return cls.ob.equation_factory(f.then(g).cod, g.cod)
 
     __rshift__ = __llshift__ = lambda self, other: self.then(other)
     __lshift__ = __lrshift__ = lambda self, other: other.then(self)
@@ -219,16 +212,16 @@ class DaggerCategory[C0, C1: DaggerCategory](Category[C0, C1]):
         """ The dagger of a morphism, to be instantiated. """
 
     @axiom
-    def dagger_involution(
-            cls, f: C1) -> Equation[C1]:
+    def dagger_involution[A: Obj[C0], B: Obj[C0]](
+            cls, f: Hom[C1, A, B]) -> Equation[Hom[C1, A, B]]:
         """ The dagger is involutive. """
         return cls.equation_factory(f.dagger().dagger(), f)
 
     @axiom
-    def dagger_contravariance(
-            cls, pair: ComposablePair[C1]) -> Equation[C1]:
+    def dagger_contravariance[A: Obj[C0], B: Obj[C0], C: Obj[C0]](
+            cls, f: Hom[C1, A, B], g: Hom[C1, B, C]
+    ) -> Equation[Hom[C1, C, A]]:
         """ The dagger reverses composition. """
-        f, g = pair
         return cls.equation_factory(
             f.then(g).dagger(), g.dagger().then(f.dagger()))
 
@@ -313,8 +306,9 @@ class Groupoid[C0, C1: Groupoid](DaggerCategory[C0, C1]):
         """ The inverse of an arrow. """
 
     @axiom
-    def invertibility(
-            cls, f: C1) -> Equation[C1]:
+    def invertibility[A: Obj[C0], B: Obj[C0]](
+            cls, f: Hom[C1, A, B]
+    ) -> Equation[tuple[Hom[C1, A, A], Hom[C1, B, B]]]:
         """ An arrow followed or preceded by its dagger is an identity. """
         return cls.equation_factory(
             (f.then(f.dagger()), f.dagger().then(f)),
@@ -328,12 +322,10 @@ class Group[C1: Group](Groupoid[type(None), C1], Monoid[C1]):
     """
     dom = cod = None
 
-    identity_typing = Category.identity_typing.inapplicable(
-        "A group has a single object.")
-    composition_dom_typing = Category.composition_dom_typing.inapplicable(
-        "A group has a single object.")
-    composition_cod_typing = Category.composition_cod_typing.inapplicable(
-        "A group has a single object.")
+    @classmethod
+    def parameters(cls) -> tuple[type, type]:
+        """ The objects of a group are the one :obj:`None`. """
+        return NoneType, cls
 
 
 @dataclass
@@ -349,7 +341,7 @@ class Nat(Testable["Nat"], Monoid["Nat"]):
     """
     n: int = 0
 
-    def tensor(self, *others: Nat) -> Nat:
+    def tensor(self, *others: "Nat") -> "Nat":
         if any(not isinstance(other, Nat) for other in others):
             return NotImplemented  # This allows whiskering on the left.
         return type(self)(self.n + sum(other.n for other in others))
@@ -363,7 +355,7 @@ class Nat(Testable["Nat"], Monoid["Nat"]):
     def __str__(self) -> str:
         return str(self.n)
 
-    def __getitem__(self, key: int | slice) -> Nat:
+    def __getitem__(self, key: int | slice) -> "Nat":
         """
         Slicing a natural number reads it off as a sequence of ``1``'s.
 
@@ -381,7 +373,7 @@ class Nat(Testable["Nat"], Monoid["Nat"]):
         return {'factory': factory_name(type(self)), 'n': self.n}
 
     @classmethod
-    def from_tree(cls, tree: dict) -> Nat:
+    def from_tree(cls, tree: dict) -> "Nat":
         """ The natural number of a tree, see :func:`discopy.utils.loads`. """
         return cls(tree['n'])
 
@@ -546,44 +538,57 @@ class FeedbackCategory[C0, C1](MonoidalCategory[C0, C1]):
         """
 
     @axiom
-    def vanishing(cls, f: C1) -> Equation[C1]:
+    def vanishing[A: Obj[C0], B: Obj[C0]](
+            cls, f: Hom[C1, A, B]) -> Equation[Hom[C1, A, B]]:
         """ Feeding back the unit does nothing. """
         return cls.equation_factory(f.feedback(0), f)
 
     @axiom
-    def joining(cls, loop: Loop[Self]) -> Equation[C1]:
+    def joining[X: Obj[C0], Y: Obj[C0], M: Obj[C0], N: Obj[C0]](
+            cls, f: Hom[C1, Tensor[X, Delay[C1, Tensor[M, N]]],
+                        Tensor[Y, M, N]],
+            x: Var[C0, X], y: Var[C0, Y], m: Var[C0, M], n: Var[C0, N]
+    ) -> Equation[Hom[C1, X, Y]]:
         """ Feeding back a tensor is feeding back its factors in turn. """
-        x, y, m, n, f, *_ = loop
         return cls.equation_factory(
             f.feedback(dom=x, cod=y, mem=m @ n),
             f.feedback(dom=x @ cls.id(m).delay().dom, cod=y @ m, mem=n
                        ).feedback(dom=x, cod=y, mem=m))
 
     @axiom
-    def strength(cls, loop: Loop[Self]) -> Equation[C1]:
+    def strength[
+            U: Obj[C0], V: Obj[C0], X: Obj[C0], Y: Obj[C0], M: Obj[C0]](
+            cls, e: Hom[C1, U, V],
+            f: Hom[C1, Tensor[X, Delay[C1, M]], Tensor[Y, M]],
+            x: Var[C0, X], y: Var[C0, Y], m: Var[C0, M]
+    ) -> Equation[Hom[C1, Tensor[U, X], Tensor[V, Y]]]:
         """ Feedback commutes with tensoring a morphism on the left. """
-        x, y, m, n, f, *_, e = loop
         return cls.equation_factory(
-            e @ f.feedback(dom=x, cod=y, mem=m @ n),
-            (e @ f).feedback(dom=e.dom @ x, cod=e.cod @ y, mem=m @ n))
+            e @ f.feedback(dom=x, cod=y, mem=m),
+            (e @ f).feedback(dom=e.dom @ x, cod=e.cod @ y, mem=m))
 
     @axiom
-    def tightening(cls, loop: Loop[Self]) -> Equation[C1]:
+    def tightening[
+            W: Obj[C0], X: Obj[C0], Y: Obj[C0], Z: Obj[C0], M: Obj[C0]](
+            cls, f: Hom[C1, Tensor[X, Delay[C1, M]], Tensor[Y, M]],
+            g: Hom[C1, W, X], h: Hom[C1, Y, Z],
+            x: Var[C0, X], y: Var[C0, Y], m: Var[C0, M]
+    ) -> Equation[Hom[C1, W, Z]]:
         """ Feedback is natural in its domain and its codomain. """
-        x, y, m, n, f, g, h, *_ = loop
-        delayed = cls.id(m @ n).delay()
         return cls.equation_factory(
-            (g @ delayed >> f >> h @ (m @ n)).feedback(
-                dom=g.dom, cod=h.cod, mem=m @ n),
-            g >> f.feedback(dom=x, cod=y, mem=m @ n) >> h)
+            (g @ cls.id(m).delay() >> f >> h @ m).feedback(
+                dom=g.dom, cod=h.cod, mem=m),
+            g >> f.feedback(dom=x, cod=y, mem=m) >> h)
 
     @axiom
-    def sliding(cls, loop: Loop[Self]) -> Equation[C1]:
+    def sliding[X: Obj[C0], Y: Obj[C0], M: Obj[C0]](
+            cls, f: Hom[C1, Tensor[X, Delay[C1, M]], Tensor[Y, M]],
+            k: Hom[C1, M, M], x: Var[C0, X], y: Var[C0, Y], m: Var[C0, M]
+    ) -> Equation[Hom[C1, X, Y]]:
         """ A morphism on the memory slides along the feedback, delayed. """
-        x, y, m, n, f, *_, k, _ = loop
         return cls.equation_factory(
-            (f >> y @ k).feedback(dom=x, cod=y, mem=m @ n),
-            (x @ k.delay() >> f).feedback(dom=x, cod=y, mem=m @ n))
+            (f >> y @ k).feedback(dom=x, cod=y, mem=m),
+            (x @ k.delay() >> f).feedback(dom=x, cod=y, mem=m))
 
 
 def keyword_form(trace: Callable) -> Callable:
@@ -672,7 +677,8 @@ class TracedCategory[C0, C1](FeedbackCategory[C0, C1]):
         return self.trace(n, left, dom=dom, cod=cod, mem=mem)
 
     @axiom
-    def yanking(cls, x: C0) -> Equation[C1]:
+    def yanking[X: Obj[C0]](
+            cls, x: Var[C0, X]) -> Equation[Hom[C1, X, X]]:
         """
         Tracing the swap of an object with itself gives its identity, the
         yanking axiom of a symmetric traced category: a braided one states it
@@ -1033,27 +1039,34 @@ class MarkovCategory[C0, C1](SymmetricCategory[C0, C1]):
         return cls.copy(x, 0)
 
     @axiom
-    def copy_coassociativity(cls, x: C0) -> Equation[C1]:
+    def copy_coassociativity[X: Obj[C0]](
+            cls, x: Var[C0, X])\
+            -> Equation[Hom[C1, X, Tensor[X, X, X]]]:
         """ Copying either of two copies gives the three copies. """
         copy, identity = cls.copy(x), cls.id(x)
         return cls.equation_factory(
             copy >> copy @ identity, cls.copy(x, 3), copy >> identity @ copy)
 
     @axiom
-    def copy_cocommutativity(cls, x: C0) -> Equation[C1]:
+    def copy_cocommutativity[X: Obj[C0]](
+            cls, x: Var[C0, X])\
+            -> Equation[Hom[C1, X, Tensor[X, X]]]:
         """ The two copies of an object are interchangeable. """
         copy = cls.copy(x)
         return cls.equation_factory(copy >> cls.swap(x, x), copy)
 
     @axiom
-    def copy_counitality(cls, x: C0) -> Equation[C1]:
+    def copy_counitality[X: Obj[C0]](
+            cls, x: Var[C0, X]) -> Equation[Hom[C1, X, X]]:
         """ Discarding either of two copies leaves the object itself. """
         copy, discard, identity = cls.copy(x), cls.discard(x), cls.id(x)
         return cls.equation_factory(
             copy >> discard @ identity, identity, copy >> identity @ discard)
 
     @axiom
-    def copy_coherence(cls, x: C0, y: C0) -> Equation[C1]:
+    def copy_coherence[X: Obj[C0], Y: Obj[C0]](
+            cls, x: Var[C0, X], y: Var[C0, Y])\
+            -> Equation[Hom[C1, Tensor[X, Y], Tensor[X, Y, X, Y]]]:
         """
         Copying a tensor is copying its factors, with the inner copies
         swapped so that each copy of the tensor comes together.
@@ -1097,7 +1110,9 @@ class ComarkovCategory[C0, C1](SymmetricCategory[C0, C1]):
         return cls.merge(x, 0)
 
     @axiom
-    def merge_associativity(cls, x: C0) -> Equation[C1]:
+    def merge_associativity[X: Obj[C0]](
+            cls, x: Var[C0, X])\
+            -> Equation[Hom[C1, Tensor[X, X, X], X]]:
         """ Merging either of two merges gives the merge of three. """
         merge, identity = cls.merge(x), cls.id(x)
         return cls.equation_factory(
@@ -1105,20 +1120,25 @@ class ComarkovCategory[C0, C1](SymmetricCategory[C0, C1]):
             identity @ merge >> merge)
 
     @axiom
-    def merge_commutativity(cls, x: C0) -> Equation[C1]:
+    def merge_commutativity[X: Obj[C0]](
+            cls, x: Var[C0, X])\
+            -> Equation[Hom[C1, Tensor[X, X], X]]:
         """ The two copies merged into an object are interchangeable. """
         merge = cls.merge(x)
         return cls.equation_factory(cls.swap(x, x) >> merge, merge)
 
     @axiom
-    def merge_unitality(cls, x: C0) -> Equation[C1]:
+    def merge_unitality[X: Obj[C0]](
+            cls, x: Var[C0, X]) -> Equation[Hom[C1, X, X]]:
         """ Merging the object with noise on either side leaves it itself. """
         merge, noise, identity = cls.merge(x), cls.noise(x), cls.id(x)
         return cls.equation_factory(
             noise @ identity >> merge, identity, identity @ noise >> merge)
 
     @axiom
-    def merge_coherence(cls, x: C0, y: C0) -> Equation[C1]:
+    def merge_coherence[X: Obj[C0], Y: Obj[C0]](
+            cls, x: Var[C0, X], y: Var[C0, Y])\
+            -> Equation[Hom[C1, Tensor[X, Y, X, Y], Tensor[X, Y]]]:
         """
         Merging a tensor is swapping the inner factors so that the copies
         of each factor come together, then merging its factors.
@@ -1154,7 +1174,8 @@ class BalancedCategory[C0, C1](
         """
 
     @axiom
-    def yanking(cls, x: C0) -> Equation[C1]:
+    def yanking[X: Obj[C0]](
+            cls, x: Var[C0, X]) -> Equation[Hom[C1, X, X]]:
         """
         Tracing the braid of an object with itself gives its twist, the
         yanking axiom of a balanced traced category, see

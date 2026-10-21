@@ -105,8 +105,16 @@ shorter, targeted tests.
 
 ```shell
 uv run pytest proptest/ -k unitality -v
-uv run pytest proptest/ -k 'Arrow and not typing'
+uv run pytest proptest/ -k 'Arrow and not dagger'
 ```
+
+A law's signature is a sequent, e.g.
+`def unitality[A: Obj[C0], B: Obj[C0]](cls, f: Hom[C1, A, B]) ->
+Equation[Hom[C1, A, B]]`: the cell draws the objects `A` and `B`, then a
+morphism `f` between them from the strategy of the category, and checks
+the equation it returns against its return annotation as well as checking
+that it holds. The module stating a law does without `from __future__
+import annotations`, since a sequent is read as objects, not strings.
 
 A cell is skipped when its axiom declares that the structure does not
 apply, and xfailed when the law is declared broken, each carrying its
@@ -141,12 +149,13 @@ what it actually checked, and every line of it is a report rather than a
 gate:
 
 - **the cells that cannot fail**, i.e. those that drew fewer distinct terms
-  than the budget allowed. `cat.Arrow.identity_typing` quantifies over one
-  object and `Ob.strategy` samples `axioms.GENERATORS`, so it draws five
-  terms under `pr`'s twenty examples and the same five under `explore`'s
-  thousand: it is green about `Ob('a')` through `Ob('e')` and says nothing
-  about the law. A finite support is not a bug — knowing which cells have
-  one is what stops a passing cell being read as evidence a fix is right.
+  than the budget allowed. `matrix.Matrix[int].copy_counitality`
+  quantifies over one object and `abc.Nat.strategy` samples the numbers up
+  to three, so it draws four terms under `pr`'s twenty examples and the
+  same four under `explore`'s thousand: it is green about copying zero to
+  three wires and says nothing about the law at four. A finite support is
+  not a bug — knowing which cells have one is what stops a passing cell
+  being read as evidence a fix is right.
 - **the cells a baseline checked and this run did not**, named with
   `--proptest-baseline`. A law skipped as inapplicable or declared broken is
   as green as one that held, so a change that stops checking a law reads
