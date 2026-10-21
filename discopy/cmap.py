@@ -68,6 +68,7 @@ from discopy.utils import (
     from_tree,
     resolve_factory,
     assert_isatomic,
+    assert_istraceable,
     assert_isinstance,
     classproperty,
     factory_name,
@@ -1354,8 +1355,7 @@ class CMap[C0: Pregroup, C1: CMap](
             raise ValueError
         if not n:
             return self
-        if n > min(len(self.dom), len(self.cod)):
-            raise ValueError
+        assert_istraceable(self, n, left)
         if issubclass(self.category, TracedCategory)\
                 and not issubclass(self.category, SymmetricCategory):
             result = self
