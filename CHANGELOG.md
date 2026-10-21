@@ -708,6 +708,9 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   linear readout is trained, with a `Rydberg` reservoir as example
   ([#519](https://github.com/discopy/discopy/pull/519),
   [#586](https://github.com/discopy/discopy/pull/586)).
+- A `notebooks` dependency group and optional extra gathering the
+  notebook-related packages, reused by `docs`
+  ([#466](https://github.com/discopy/discopy/pull/466)).
 - Composition benchmark suite for diagram operations, reproducing the
   scaling experiments of arXiv:2105.09257
   ([#346](https://github.com/discopy/discopy/pull/346)).
