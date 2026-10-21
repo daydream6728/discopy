@@ -23,6 +23,7 @@ It can also be run as a script::
 from __future__ import annotations
 
 import argparse
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -31,6 +32,11 @@ from tempfile import TemporaryDirectory
 DOCS = Path(__file__).resolve().parent
 NOTEBOOKS = DOCS / "notebooks"
 HTML_DIR = DOCS / "_static" / "notebooks"
+REPOSITORY = os.environ.get(
+    "READTHEDOCS_GIT_CLONE_URL", "https://github.com/discopy/discopy")
+SOURCE = "{}/blob/{}".format(
+    REPOSITORY.removesuffix(".git"),
+    os.environ.get("READTHEDOCS_GIT_COMMIT_HASH", "main"))
 
 IFRAME = """\
 .. raw:: html
@@ -59,7 +65,7 @@ FALLBACK = """\
 
     This notebook could not be rendered in this build (a dependency needed to
     execute it may be missing). You can read its source on GitHub:
-    `{name}.md <https://github.com/discopy/discopy/blob/main/docs/notebooks/{name}.md>`_.
+    `{name}.md <{source}/docs/notebooks/{name}.md>`_.
 """
 
 
@@ -100,7 +106,7 @@ def write_page(notebook: Path, *, rendered: bool) -> None:
     """Write the reStructuredText page for ``notebook``."""
     title = title_of(notebook)
     body = (IFRAME if rendered else FALLBACK).format(
-        name=notebook.stem, title=title)
+        name=notebook.stem, title=title, source=SOURCE)
     (NOTEBOOKS / f"{notebook.stem}.rst").write_text(
         f"{title}\n{'=' * len(title)}\n\n" + body)
 
