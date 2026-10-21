@@ -7,7 +7,6 @@ from __future__ import annotations
 import builtins
 import json
 from functools import lru_cache, wraps
-from importlib.util import find_spec
 from math import ceil
 from pathlib import Path
 from typing import (
@@ -940,9 +939,6 @@ class Point(NamedTuple):
         return Point(self.x + x, self.y + y)
 
 
-WIDGET_VIEW = "application/vnd.jupyter.widget-view+json"
-
-
 class RichDisplay:
     """
     Mixin implementing IPython's rich display protocol, see
@@ -952,10 +948,8 @@ class RichDisplay:
     :class:`discopy.monoidal.Diagram`, a :class:`discopy.drawing.Drawing`
     or an :class:`discopy.drawing.Equation`, is displayed as an SVG image
     (with a PNG fallback in the mimebundle) when it is the output of a cell
-    in Jupyter, marimo and other frontends that support the protocol. With
-    `anywidget <https://anywidget.dev>`_ installed, the mimebundle also
-    holds the view of a :class:`discopy.drawing.widget.DiagramWidget`,
-    which these frontends show instead.
+    in Jupyter, marimo and other frontends that support the protocol.
+    :meth:`to_widget` shows it as a widget instead, on demand.
 
     Example
     -------
@@ -1002,9 +996,6 @@ class RichDisplay:
 
     def _repr_mimebundle_(self, include=None, exclude=None) -> dict:
         data = {"image/svg+xml": self.to_svg, "image/png": self.to_png}
-        if find_spec("anywidget") is not None:
-            data[WIDGET_VIEW] = lambda: (
-                self.to_widget()._repr_mimebundle_()[0][WIDGET_VIEW])
         return {mimetype: draw() for mimetype, draw in data.items()
                 if (include is None or mimetype in include)
                 and (exclude is None or mimetype not in exclude)}

@@ -7,7 +7,7 @@ from discopy.utils import AxiomError
 from discopy.config import DRAWING_DEFAULT
 from discopy.compact import *
 from discopy.drawing import *
-from discopy import config, monoidal, utils
+from discopy import config, monoidal
 
 TIKZ_FOLDER = 'test/drawing/tikz/'
 
@@ -696,7 +696,7 @@ def test_tikz_controlled_node_ids():
     assert all(source != target for source, target in wires)
 
 
-def test_rich_display(monkeypatch):
+def test_rich_display():
     from io import StringIO
     import matplotlib.pyplot as plt
     from discopy.monoidal import Ty, Box
@@ -704,7 +704,6 @@ def test_rich_display(monkeypatch):
     f = Box('f', Ty('x'), Ty('y'))
     diagram, drawing, equation = f, f.to_drawing(), Equation(f, f)
     plt.close('all')
-    monkeypatch.setattr(utils, "find_spec", lambda _: None)
 
     for obj in (diagram, drawing, equation):
         svg, png = obj._repr_svg_(), obj.to_png()
@@ -758,11 +757,7 @@ def test_widget():
     f = Box('f', Ty('x'), Ty('y'))
     widget = f.to_widget()
     assert isinstance(widget, DiagramWidget) and widget.svg == f.to_svg()
-    bundle = f._repr_mimebundle_()
-    assert set(bundle) == {'image/svg+xml', 'image/png', utils.WIDGET_VIEW}
-    assert bundle[utils.WIDGET_VIEW]['model_id']
-    assert f._repr_mimebundle_(exclude=[utils.WIDGET_VIEW]) == {
-        'image/svg+xml': f.to_svg(), 'image/png': f.to_png()}
+    assert set(f._repr_mimebundle_()) == {'image/svg+xml', 'image/png'}
     assert pickle.loads(pickle.dumps(f)) == f
 
 
