@@ -346,6 +346,13 @@ class Ty(cat.Ob, cat.FreeCategory, ColouredMonoid):
     >>> assert t[0] == t[:1] == Ty('x')
     >>> assert t[0] != t.inside[0] == Wire('x')
     >>> assert t[1:] == t[-2:] == Ty('y', 'z')
+
+    Note
+    ----
+    The ``name`` of a type is that of its class: its objects are printed by
+    ``str``.
+
+    >>> assert t.name == "Ty" and str(t) == "x @ y @ z"
     """
     ob = Colour
     generator_factory = Wire

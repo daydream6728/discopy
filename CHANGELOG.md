@@ -137,10 +137,15 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   trees as functors on diagrams of constructors into `para`, checked
   against the recursion they define, and unfolds as `feedback` unrolled by
   `stream.Stream`, the Mealy, Moore and unfolding cells of the paper's
-  Figure 1 among them. The gaps it hit are filed as
+  Figure 1 among them. The weights of a recurrent network are tied over a
+  finite prefix by a `reparam` after unrolling, and across every time step
+  by a constant stream, the parameter read once at time zero and copied
+  to every later step through its own feedback,
+  `(FollowedBy(P) >> Diagram.copy(P)).feedback(dom=P.head, cod=P, mem=P)`.
+  The gap it hit is filed as
   [rel-int/discopy-next#124](https://github.com/rel-int/discopy-next/issues/124)
-  and [#125](https://github.com/rel-int/discopy-next/issues/125)
-  ([rel-int/discopy-next#121](https://github.com/rel-int/discopy-next/issues/121)).
+  ([rel-int/discopy-next#121](https://github.com/rel-int/discopy-next/issues/121),
+  [#125](https://github.com/rel-int/discopy-next/issues/125)).
 - A notebook, *Neural Church arithmetic*, running Church numerals through
   an exact geometry-of-interaction token machine and learning the
   constants as opaque boxes. A closed term over the unitype is
@@ -1215,8 +1220,6 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   ([#369](https://github.com/discopy/discopy/pull/369),
   [#411](https://github.com/discopy/discopy/pull/411),
   [#417](https://github.com/discopy/discopy/pull/417)).
-- `Ty.name` is a cached property computed from its `inside`
-  ([#421](https://github.com/discopy/discopy/pull/421)).
 - SVG drawings are made deterministic by ordering spiders and boxes
   reproducibly
   ([#457](https://github.com/discopy/discopy/pull/457),
