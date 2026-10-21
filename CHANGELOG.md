@@ -708,8 +708,16 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   linear readout is trained, with a `Rydberg` reservoir as example
   ([#519](https://github.com/discopy/discopy/pull/519),
   [#586](https://github.com/discopy/discopy/pull/586)).
-- A `notebooks` dependency group and optional extra gathering the
-  notebook-related packages, reused by `docs`
+- `discopy.drawing.widget.DiagramWidget`, an
+  [anywidget](https://anywidget.dev) showing the SVG of a drawing, built
+  by `RichDisplay.to_widget`. With `anywidget` installed, the mimebundle of
+  a diagram, a drawing or an equation holds the widget's view beside the
+  SVG and the PNG, so Jupyter, marimo and VS Code show the widget; without
+  it, the mimebundle is the SVG and the PNG as before. The widget is built
+  afresh on each display rather than cached on the diagram, which a
+  displayed diagram would then carry into its pickle. `anywidget` comes
+  with a new `notebooks` dependency group and optional extra, gathering the
+  notebook-related packages and reused by `docs`
   ([#466](https://github.com/discopy/discopy/pull/466)).
 - Composition benchmark suite for diagram operations, reproducing the
   scaling experiments of arXiv:2105.09257

@@ -7,7 +7,7 @@ from discopy.utils import AxiomError
 from discopy.config import DRAWING_DEFAULT
 from discopy.compact import *
 from discopy.drawing import *
-from discopy import config, monoidal
+from discopy import config, monoidal, utils
 
 TIKZ_FOLDER = 'test/drawing/tikz/'
 
@@ -696,8 +696,7 @@ def test_tikz_controlled_node_ids():
     assert all(source != target for source, target in wires)
 
 
-def test_rich_display():
-    importorskip("anywidget")
+def test_rich_display(monkeypatch):
     from io import StringIO
     import matplotlib.pyplot as plt
     from discopy.monoidal import Ty, Box
@@ -705,20 +704,18 @@ def test_rich_display():
     f = Box('f', Ty('x'), Ty('y'))
     diagram, drawing, equation = f, f.to_drawing(), Equation(f, f)
     plt.close('all')
+    monkeypatch.setattr(utils, "find_spec", lambda _: None)
 
     for obj in (diagram, drawing, equation):
         svg, png = obj._repr_svg_(), obj.to_png()
         assert svg.startswith('<?xml') and '</svg>\n' in svg
         assert png.startswith(b'\x89PNG')
-        bundle = obj._repr_mimebundle_()
-        assert 'image/svg+xml' in bundle
-        assert 'image/png' in bundle
-        assert 'application/vnd.jupyter.widget-view+json' in bundle
+        assert obj._repr_mimebundle_() == {
+            'image/svg+xml': svg, 'image/png': png}
         assert obj._repr_mimebundle_(include=['image/svg+xml']) == {
             'image/svg+xml': svg}
-        sub = obj._repr_mimebundle_(exclude=['image/svg+xml'])
-        assert 'image/png' in sub
-        assert 'image/svg+xml' not in sub
+        assert obj._repr_mimebundle_(exclude=['image/svg+xml']) == {
+            'image/png': png}
         assert obj._repr_mimebundle_(include=['text/html']) == {}
 
     assert plt.get_fignums() == []
@@ -750,6 +747,23 @@ print((boxes[0] @ boxes[1] @ boxes[2] @ boxes[3]).to_svg())
             env=dict(os.environ, PYTHONHASHSEED=str(seed)))
         for seed in range(3)]
     assert outputs[0] == outputs[1] == outputs[2]
+
+
+def test_widget():
+    importorskip("anywidget")
+    import pickle
+    from discopy.monoidal import Ty, Box
+    from discopy.drawing.widget import DiagramWidget
+
+    f = Box('f', Ty('x'), Ty('y'))
+    widget = f.to_widget()
+    assert isinstance(widget, DiagramWidget) and widget.svg == f.to_svg()
+    bundle = f._repr_mimebundle_()
+    assert set(bundle) == {'image/svg+xml', 'image/png', utils.WIDGET_VIEW}
+    assert bundle[utils.WIDGET_VIEW]['model_id']
+    assert f._repr_mimebundle_(exclude=[utils.WIDGET_VIEW]) == {
+        'image/svg+xml': f.to_svg(), 'image/png': f.to_png()}
+    assert pickle.loads(pickle.dumps(f)) == f
 
 
 RIBBON_COLOURS = ("red", "green", "blue", "yellow")

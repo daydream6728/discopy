@@ -1,48 +1,49 @@
 """
-A simple anywidget that displays a DisCoPy diagram as an SVG.
+A diagram as an `anywidget <https://anywidget.dev>`_, i.e. a widget of any
+frontend that speaks the Jupyter widgets protocol: Jupyter, marimo, VS Code.
+
+Summary
+-------
+
+.. autosummary::
+    :template: class.rst
+    :nosignatures:
+    :toctree:
+
+    DiagramWidget
 
 Example
 -------
 >>> from discopy.monoidal import Ty, Box
 >>> f = Box('f', Ty('x'), Ty('y'))
 >>> widget = f.to_widget()  # doctest: +EXTRA
->>> widget  # doctest: +SKIP
+>>> assert isinstance(widget, DiagramWidget)
+>>> assert widget.svg == f.to_svg()
 """
 
-try:
-    import anywidget
-    import traitlets
-    _HAS_ANYWIDGET = True
-except ImportError:  # pragma: no cover
-    anywidget = None  # type: ignore
-    traitlets = None  # type: ignore
-    _HAS_ANYWIDGET = False
+import anywidget
+import traitlets
 
 
-if _HAS_ANYWIDGET:
+class DiagramWidget(anywidget.AnyWidget):
+    """
+    A widget showing the SVG of a drawing, synced with its ``svg`` trait.
 
-    class DiagramWidget(anywidget.AnyWidget):
-        _esm = """
-        function render({ model, el }) {
-          el.style.cssText = `
-            display: inline-block;
-          `;
-          let update = () => { el.innerHTML = model.get("svg") || ""; };
-          model.on("change:svg", update);
-          update();
-        }
-        export default { render };
-        """
-        _css = """
-        .jupyter-widgets.anywidget-widget { display: inline-block; }
-        """
-        svg = traitlets.Unicode("").tag(sync=True)
-
-else:
-
-    class DiagramWidget:  # type: ignore
-        def __init__(self, svg=""):
-            raise ImportError(
-                "anywidget is required for interactive widgets. "
-                "Install it with: pip install anywidget"
-            )
+    Parameters:
+        svg : The SVG to show, e.g. from :meth:`RichDisplay.to_svg`.
+    """
+    _esm = """
+    function render({ model, el }) {
+      el.style.cssText = `
+        display: inline-block;
+      `;
+      let update = () => { el.innerHTML = model.get("svg") || ""; };
+      model.on("change:svg", update);
+      update();
+    }
+    export default { render };
+    """
+    _css = """
+    .jupyter-widgets.anywidget-widget { display: inline-block; }
+    """
+    svg = traitlets.Unicode("").tag(sync=True)

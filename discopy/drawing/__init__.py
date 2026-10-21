@@ -6,7 +6,7 @@ from PIL import Image
 from tempfile import TemporaryDirectory
 
 from discopy.utils import Node, Point
-from discopy.drawing import backend, drawing, widget
+from discopy.drawing import backend, drawing
 from discopy.drawing.backend import (
     Backend,
     TikZ,
@@ -21,7 +21,6 @@ from discopy.drawing.drawing import (
     PlaneGraph,
     Drawing,
 )
-from discopy.drawing.widget import DiagramWidget
 
 
 def __getattr__(name):
