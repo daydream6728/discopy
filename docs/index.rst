@@ -29,6 +29,7 @@ DisCoPy documentation
     notebooks/qnlp
     notebooks/zx-minimality
     notebooks/diag-diff
+    notebooks/learning-intertwiners
     notebooks/21-05-03-tallcat
     notebooks/21-05-05-tallcat
     notebooks/higher-order-discocat
