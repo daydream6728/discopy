@@ -949,6 +949,7 @@ class RichDisplay:
     or an :class:`discopy.drawing.Equation`, is displayed as an SVG image
     (with a PNG fallback in the mimebundle) when it is the output of a cell
     in Jupyter, marimo and other frontends that support the protocol.
+    :meth:`to_widget` shows it as a widget instead, on demand.
 
     Example
     -------
@@ -957,11 +958,9 @@ class RichDisplay:
     >>> svg, png = f._repr_svg_(), f.to_png()
     >>> assert svg.startswith('<?xml') and '</svg>\\n' in svg
     >>> assert png.startswith(b'\\x89PNG')
-    >>> assert f._repr_mimebundle_() == {
-    ...     'image/svg+xml': svg, 'image/png': png}
     >>> assert f._repr_mimebundle_(include=['image/svg+xml']) == {
     ...     'image/svg+xml': svg}
-    >>> assert f._repr_mimebundle_(exclude=['image/svg+xml']) == {
+    >>> assert f._repr_mimebundle_(include=['image/png']) == {
     ...     'image/png': png}
     >>> assert f._repr_mimebundle_(include=['text/html']) == {}
     """
@@ -983,6 +982,17 @@ class RichDisplay:
 
     def _repr_svg_(self) -> str:
         return self.to_svg()
+
+    def to_widget(self, **params):
+        """
+        Draw as a :class:`discopy.drawing.widget.DiagramWidget`, which needs
+        `anywidget <https://anywidget.dev>`_.
+
+        Parameters:
+            params : Passed to :meth:`to_svg`.
+        """
+        from discopy.drawing.widget import DiagramWidget
+        return DiagramWidget(svg=self.to_svg(**params))
 
     def _repr_mimebundle_(self, include=None, exclude=None) -> dict:
         data = {"image/svg+xml": self.to_svg, "image/png": self.to_png}

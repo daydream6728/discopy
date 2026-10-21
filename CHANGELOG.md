@@ -729,6 +729,15 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   the memory at every time step. The readout fits an intercept by default,
   which the regularisation leaves out, as in Fujii and Nakajima's paper;
   `bias=False` fits without one.
+- `discopy.drawing.widget.DiagramWidget`, an
+  [anywidget](https://anywidget.dev) showing the SVG of a drawing, built
+  on demand by `RichDisplay.to_widget`, for Jupyter, marimo and VS Code.
+  The display of a diagram, a drawing or an equation stays the SVG and the
+  PNG: a widget is opt-in, since a notebook saved without its widget state
+  shows an empty widget where the SVG would have stayed. `anywidget` comes
+  with a new `notebooks` dependency group and optional extra, gathering the
+  notebook-related packages and reused by `docs`
+  ([#466](https://github.com/discopy/discopy/pull/466)).
 - Composition benchmark suite for diagram operations, reproducing the
   scaling experiments of arXiv:2105.09257
   ([#346](https://github.com/discopy/discopy/pull/346)).
