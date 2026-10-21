@@ -427,8 +427,8 @@ def test_chart_zero_and_no_algebra():
     try:
         Intertwiner[D].chart(anyons[1], anyons[2])
         assert False
-    except ValueError:
-        pass
+    except ValueError as error:
+        assert str(error) == "the space of intertwiners is zero"
     try:
         Intertwiner.chart(anyons[1], anyons[2])
         assert False
@@ -608,6 +608,7 @@ def test_fusion_rules_from_braiding():
                 Q = Intertwiner[D].chart(anyons[a] @ anyons[b], anyons[c])
                 r = Q.eval(dtype=complex).array.size \
                     // (dims[a] * dims[b] * dims[c])
-            except ValueError:
+            except ValueError as error:
+                assert str(error) == "the space of intertwiners is zero"
                 r = 0
             assert r == N[a, b, c]

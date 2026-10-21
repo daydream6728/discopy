@@ -113,7 +113,7 @@ $$N_{ab}^c = \sum_x \frac{S_{ax} S_{bx} \bar{S}_{cx}}{S_{0x}}.$$
 Nothing on the right-hand side mentions intertwiner spaces — this is how
 ground-state and interferometry experiments infer fusion rules without
 presupposing them (Zhang, Grover, Turner, Oshikawa, Vishwanath 2012; Iqbal et
-al. 2023).
+al. 2024).
 
 ```python {.marimo}
 def s_matrix(double, anyons):
