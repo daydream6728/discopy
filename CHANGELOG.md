@@ -9,6 +9,20 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Added
 
+- `hopf.Intertwiner.chart(dom, cod)`, the parametrised intertwiner
+  `Dim(r) @ dom -> cod` whose slices are an orthonormal basis of
+  `Hom_H(dom, cod)`, solved as one SVD nullspace of the commutant
+  constraints, so that it needs no semisimplicity and works over Sweedler's
+  algebra; `Algebra.symmetric(n)`, the group algebra of `S_n`; and
+  `Representation.anyon` over the double of any group algebra, the module
+  induced from a conjugacy class and an irrep of its centraliser. A
+  notebook, *Learning intertwiners*, reads the fusion rules of `D(k[Z2])`
+  and `D(k[S3])` off the braiding through the modular S-matrix and
+  Verlinde's formula, learns them from simulated finite-shot
+  interferometry, and reads anyons as an error-correcting code whose
+  covariant encoders are the slices of a chart
+  ([#408](https://github.com/discopy/discopy/pull/408)).
+
 - A notebook, *Minimality of the pure qubit ZX calculus*, reproducing
   Stoltz & Vilmart's [arXiv:2608.14872](https://arxiv.org/abs/2608.14872)
   from two independent proofs of its result, one notebook where upstream
@@ -707,7 +721,14 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   Born probabilities of the memory qubits and only a ridge-regression
   linear readout is trained, with a `Rydberg` reservoir as example
   ([#519](https://github.com/discopy/discopy/pull/519),
-  [#586](https://github.com/discopy/discopy/pull/586)).
+  [#586](https://github.com/discopy/discopy/pull/586)). A reservoir is a
+  monoidal stream of circuits, `Reservoir.stream`, from the input qubits to
+  nothing with the memory fed back, and a time series the stream of state
+  preparations `Reservoir.encoding` composed with it: the features are read
+  between its slices, and unrolling the composite gives the same state of
+  the memory at every time step. The readout fits an intercept by default,
+  which the regularisation leaves out, as in Fujii and Nakajima's paper;
+  `bias=False` fits without one.
 - `discopy.drawing.widget.DiagramWidget`, an
   [anywidget](https://anywidget.dev) showing the SVG of a drawing, built
   on demand by `RichDisplay.to_widget`, for Jupyter, marimo and VS Code.
@@ -2453,6 +2474,11 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Project
 
+- The canonical address of the docs, Sphinx's `html_baseurl`, is the one
+  Read the Docs serves them from, `READTHEDOCS_CANONICAL_URL`, falling back
+  to `https://docs.discopy.org` in a local build: a project of its own on
+  Read the Docs, as this fork's, would otherwise have every page tell
+  search engines that it is a copy of upstream's.
 - The `docs` extra installs `torch` and `jax`, which the notebooks *Parsing
   arithmetic* and *Neural Church arithmetic* import: Read the Docs installs
   `.[docs]` alone and publishes a notebook that fails to execute as a link
