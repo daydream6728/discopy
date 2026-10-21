@@ -2475,10 +2475,10 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 ### Project
 
 - A notebook that fails to execute in a docs build links its source in the
-  repository and at the commit Read the Docs builds, read from
-  `READTHEDOCS_GIT_CLONE_URL` and `READTHEDOCS_GIT_COMMIT_HASH`, where it
-  linked `discopy/discopy` on `main` whichever repository was built;
-  `discopy/discopy` on `main` stays the link of a local build.
+  repository and at the commit Read the Docs builds,
+  `READTHEDOCS_GIT_CLONE_URL` at `READTHEDOCS_GIT_COMMIT_HASH`, where it
+  linked `discopy/discopy` on `main` whatever the repository; a local
+  build still links `discopy/discopy` on `main`.
 - The canonical address of the docs, Sphinx's `html_baseurl`, is the one
   Read the Docs serves them from, `READTHEDOCS_CANONICAL_URL`, falling back
   to `https://docs.discopy.org` in a local build: a project of its own on
