@@ -9,6 +9,20 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Added
 
+- `hopf.Intertwiner.chart(dom, cod)`, the parametrised intertwiner
+  `Dim(r) @ dom -> cod` whose slices are an orthonormal basis of
+  `Hom_H(dom, cod)`, solved as one SVD nullspace of the commutant
+  constraints, so that it needs no semisimplicity and works over Sweedler's
+  algebra; `Algebra.symmetric(n)`, the group algebra of `S_n`; and
+  `Representation.anyon` over the double of any group algebra, the module
+  induced from a conjugacy class and an irrep of its centraliser. A
+  notebook, *Learning intertwiners*, reads the fusion rules of `D(k[Z2])`
+  and `D(k[S3])` off the braiding through the modular S-matrix and
+  Verlinde's formula, learns them from simulated finite-shot
+  interferometry, and reads anyons as an error-correcting code whose
+  covariant encoders are the slices of a chart
+  ([#408](https://github.com/discopy/discopy/pull/408)).
+
 - A notebook, *Minimality of the pure qubit ZX calculus*, reproducing
   Stoltz & Vilmart's [arXiv:2608.14872](https://arxiv.org/abs/2608.14872)
   from two independent proofs of its result, one notebook where upstream
