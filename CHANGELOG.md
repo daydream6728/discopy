@@ -1336,6 +1336,16 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
+- Five one-liners found by the third read of the codebase: the derivative
+  of a mixed `Scalar` is mixed, where `grad` dropped `is_mixed` so that it
+  was squared under mixed evaluation (B59); `biclosed.Diagram.to_rigid`
+  keeps the `data` of a box (B82); the dual rail encoding of the dagger of
+  a `Twist` is the dagger of its encoding, where `balanced.DualRail` drew it
+  as the twist itself (B51); a TikZ wire with a style and a looseness
+  separates the two keys, where it wrote `->looseness=` (B83); and the
+  benchmark comment refuses a pull request whose head repository is gone,
+  where `mismatch` raised `TypeError` on its `null` (B84)
+  ([rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
 - Three one-liners of `discopy.tensor` found by the third read of the
   codebase: `Diagram.to_tn` builds the copy node of a spider with no input
   from the spider's own dimension, where it read the wire to its right,
