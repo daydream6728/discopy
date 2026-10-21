@@ -85,15 +85,14 @@ Equation(spiral(8), spiral(8).dagger())
 ## The golden ratio as the trace of a string diagram
 
 ```python {.marimo}
-from discopy import traced
-x_2 = traced.Ty('x')
-add, div, one = (traced.Box('+', x_2 @ x_2, x_2), traced.Box('/', x_2 @ x_2, x_2), traced.Box('1', traced.Ty(), x_2))
-copy = traced.Box('', x_2, x_2 @ x_2, draw_as_spider=True, color='black')
-phi = ((one >> copy) @ x_2 >> x_2 @ div >> add >> copy).trace()
-F = traced.Functor(ob_map={x_2: float}, ar_map={div: lambda x, y=1.0: x / y, add: lambda x, y: x + y, copy: lambda x: (x, x), one: lambda: 1.0}, cod=python.Function)
-with python.Function.no_type_checking:
-    assert F(phi)() == 0.5 * (1 + 5 ** 0.5)
-# The default y=1 is the initial value for the fixed point.
+from discopy import feedback
+x_2 = feedback.Ty('x')
+add, root, one = (feedback.Box('+', x_2 @ x_2, x_2), feedback.Box('√', x_2, x_2), feedback.Box('1', feedback.Ty(), x_2))
+copy = feedback.Box('', x_2, x_2 @ x_2, draw_as_spider=True, color='black')
+phi = (one @ x_2 >> add >> root >> copy).trace()
+F = feedback.Functor(ob_map={x_2: float}, ar_map={add: lambda x, y: x + y, root: lambda x: x ** 0.5, copy: lambda x: (x, x), one: lambda: 1.0}, cod=python.Function)
+# The feedback loop starts from float(), i.e. zero, and stops at the fixed point.
+assert F(phi)() == 0.5 * (1 + 5 ** 0.5)
 phi
 ```
 

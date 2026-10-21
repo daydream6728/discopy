@@ -91,10 +91,9 @@ from typing import (
     TYPE_CHECKING, Callable, ClassVar, Iterator, Self, Sequence)
 
 from discopy import cat, monoidal, cmap, messages
-from discopy.abc import BiclosedCategory, MonoidalCategory
+from discopy.abc import BiclosedCategory
 from discopy.axioms import (
-    GENERATORS, Equation as AbstractEquation, Equivalence, Serialisable,
-    Testable, axiom)
+    GENERATORS, Equation as AbstractEquation, Equivalence, Testable, axiom)
 from discopy.drawing import Drawing
 from discopy.cat import factory
 from discopy.utils import (
@@ -132,11 +131,11 @@ class Ty(monoidal.Ty):
     under_factory: ClassVar[Callable[..., "Exp"]]
     exp_factory: ClassVar[Callable[..., "Exp"]]
 
-    def __pow__(self, other: "Ty | int") -> Self:
+    def __pow__(self, other: "Ty") -> "Ty":
         return self.exp(other) if isinstance(other, Ty)\
             else monoidal.Ty.__pow__(self, other)
 
-    def exp(self, other: "Ty") -> Self:
+    def exp(self, other: "Ty") -> "Ty":
         """
         The exponential of a type, which is the type itself when the
         exponent is the unit, as is any exponential of the unit.
@@ -177,23 +176,19 @@ class Ty(monoidal.Ty):
         raise ValueError
 
     @classmethod
-    def strategy(cls, *, max_leaves=3, **params):
+    def strategy(cls, *, max_leaves=3):
         """
         Generate atomic types and their exponentials, ``max_leaves`` atoms
-        at most, or with ``params`` the types the search of the free monoid
-        derives within them, e.g. between a given ``dom`` and ``cod``.
+        at most.
         """
         from hypothesis import strategies as st
-
-        if params:
-            return super().strategy(**params)
 
         def exponentials(types):
             return st.builds(lambda x, y: x << y, types, types)\
                 | st.builds(lambda x, y: x >> y, types, types)
 
         return st.recursive(
-            cls.generators(), exponentials, max_leaves=max_leaves)
+            super().strategy(), exponentials, max_leaves=max_leaves)
 
     def __repr__(self):
         return factory_name(type(self))\
@@ -404,32 +399,6 @@ class Diagram(monoidal.Diagram, BiclosedCategory):
     def to_drawing(self):
         return monoidal.Diagram.to_drawing(self, functor_factory=Functor)
 
-    map_agreement = monoidal.Diagram.map_agreement.failing(
-        messages.MAP_OF_A_CURRY)
-    dagger_involution = BiclosedCategory.dagger_involution.failing(
-        messages.CURRY_HAS_NO_DAGGER)
-    dagger_involution_monoidal = BiclosedCategory.dagger_involution.weaken(
-        within=MonoidalCategory)
-    dagger_contravariance = BiclosedCategory.dagger_contravariance.failing(
-        messages.CURRY_HAS_NO_DAGGER)
-    dagger_contravariance_monoidal = BiclosedCategory.dagger_contravariance\
-        .weaken(within=MonoidalCategory)
-    dagger_monoidality = BiclosedCategory.dagger_monoidality.failing(
-        messages.CURRY_HAS_NO_DAGGER)
-    dagger_monoidality_monoidal = BiclosedCategory.dagger_monoidality.weaken(
-        within=MonoidalCategory).failing(messages.NO_PLANAR_NORMAL_FORM)
-    currying_left = BiclosedCategory.currying_left.failing(messages.FREE_CURRY)
-    currying_right = BiclosedCategory.currying_right.failing(
-        messages.FREE_CURRY)
-    currying_eta_left = BiclosedCategory.currying_eta_left.failing(
-        messages.FREE_CURRY)
-    currying_eta_right = BiclosedCategory.currying_eta_right.failing(
-        messages.FREE_CURRY)
-    currying_naturality_left = BiclosedCategory.currying_naturality_left\
-        .failing(messages.FREE_CURRY)
-    currying_naturality_right = BiclosedCategory.currying_naturality_right\
-        .failing(messages.FREE_CURRY)
-
 
 class Box(monoidal.Box, Diagram):
     """
@@ -555,6 +524,13 @@ class Curry(monoidal.Bubble, Box):
         return self.name
 
     def to_drawing(self):
+        """
+        A curry is drawn as its argument followed by a coevaluation, traced
+        over the ``n`` wires it curries; a curry of no wire is drawn as its
+        argument, as :meth:`Diagram.curry` of no wire is the diagram itself.
+        """
+        if not self.n:
+            return self.arg.to_drawing()
         f, e = self.arg, self.coeval_factory(self.cod, left=self.left)
         return (f >> e).to_drawing().trace(self.n, left=not self.left)
 
@@ -664,8 +640,7 @@ class Functor(monoidal.Functor):
             result = self.cod.ob.variable_factory(name, cod)
         return result
 
-    def map_term(
-            self, term: "TermBase", context: dict | None = None) -> "TermBase":
+    def map_term(self, term: "TermBase", context: dict = None) -> "TermBase":
         """
         The image of a term, a term in the internal language of the codomain,
         checked to have the image of its type and exactly the images of its
@@ -702,7 +677,7 @@ CMap = cmap.CMap[Diagram]
 Diagram.functor_factory = Functor
 
 
-class Renamed[factory](Testable, NamedGeneric, tuple):
+class Renamed(Testable, NamedGeneric["factory"], tuple):
     """
     Alpha-equivalent terms of the ``factory``: one shape generated under two
     or more namings of its bound variables, see :meth:`TermBase.generate`.
@@ -732,7 +707,7 @@ class Renamed[factory](Testable, NamedGeneric, tuple):
             st.lists(category.namings(), min_size=2, max_size=3))
 
 
-class Canonical[factory](Testable, NamedGeneric, tuple):
+class Canonical(Testable, NamedGeneric["factory"], tuple):
     """
     Two terms of the ``factory`` followed by their canonical forms: two
     shapes of one type, the second the first's or another, each generated
@@ -827,7 +802,7 @@ class TermBase(Box, Equivalence):
     functor: ClassVar[Functor] = Functor.id(Diagram)
 
     @abstractmethod
-    def eval(self, functor: Functor | None = None) -> BiclosedCategory:
+    def eval(functor: Functor = None) -> BiclosedCategory:
         """
         The evaluation of a :class:`Functor` on a term gives a morphism in its
         codomain. By default, this is the identity functor on the free biclosed
@@ -835,7 +810,7 @@ class TermBase(Box, Equivalence):
         """
 
     @abstractmethod
-    def map(self, functor: Functor, context: dict) -> "Term":
+    def map(functor: Functor, context: dict) -> "Term":
         """
         The image of a term under a :class:`Functor` whose codomain objects
         are biclosed types, i.e. a term in the codomain's internal language
@@ -1015,8 +990,7 @@ class TermBase(Box, Equivalence):
         from hypothesis import strategies as st
 
         return st.builds(
-            lambda shape, letters: cls.generate(
-                shape[0], shape[1], shape[2], letters),
+            lambda shape, letters: cls.generate(*shape, letters),
             cls.shapes(**params), cls.namings())
 
     @classmethod
@@ -1034,10 +1008,7 @@ class TermBase(Box, Equivalence):
 
         return st.builds(
             lambda terms: (terms[0], terms[2], terms[1]),
-            Canonical[cls].strategy(**params))  # ty: ignore[invalid-type-form]
-
-    serialisation = Serialisable.serialisation.failing(
-        "A term does not read back from its tree, see #692.")
+            Canonical[cls].strategy(**params))
 
     @axiom
     def alpha_renaming(cls, terms: Renamed[Self]) -> AbstractEquation:
@@ -1138,6 +1109,10 @@ class Variable(TermBase):
         super().__init__(name, dom=cod, cod=cod)
         self.freevars = [self]
 
+    @classmethod
+    def from_tree(cls, tree):
+        return cls(tree['name'], from_tree(tree['cod']))
+
     def eval(self, functor=None):
         functor = functor or self.functor
         return functor.cod.id(functor(self.cod))
@@ -1195,7 +1170,7 @@ class Application(TermBase):
         args (Term): The arguments to which the function is applied.
         left (bool): Whether the argument comes in from the left or right.
     """
-    def __init__(self, func: TermBase, args: TermBase, left: bool = False):
+    def __init__(self, func: "Term", args: "Term", left: bool = False):
         assert_isinstance(func, TermBase)
         assert_isinstance(args, TermBase)
         if not func.cod.is_exp:
@@ -1236,6 +1211,15 @@ class Application(TermBase):
         left = ", left=True" if self.left else ""
         return factory_name(type(self)) + f"({func}, {args}{left})"
 
+    def to_tree(self):
+        return dict(factory=factory_name(type(self)), func=self.func.to_tree(),
+                    args=self.args.to_tree(), left=self.left)
+
+    @classmethod
+    def from_tree(cls, tree):
+        return cls(*map(from_tree, (tree['func'], tree['args'])),
+                   left=tree['left'])
+
     def setoid(self):
         """
         Applications are equal when their functions, arguments and sides
@@ -1262,10 +1246,10 @@ class Application(TermBase):
 
 class Abstraction(TermBase):
     var: Variable
-    body: TermBase
+    body: "Term"
     left: bool = False
 
-    def __init__(self, var: Variable, body: TermBase, left: bool = False):
+    def __init__(self, var: Variable, body: "Term", left: bool = False):
         self.var, self.body, self.left = var, body, left
         left_str = ", left=True" if left else ""
         name = f"{var.cod}(lambda {var.name}{left_str}: {body})"
@@ -1290,8 +1274,8 @@ class Abstraction(TermBase):
     def eval(self, functor=None):
         functor = functor or self.functor
         return functor.cod.curry(
-            self.body.eval(functor),  # ty: ignore[invalid-argument-type]
-            len(functor(self.var.cod)), not self.left)
+            self.body.eval(functor), len(functor(self.var.cod)),
+            not self.left)
 
     def map(self, functor, context):
         context = {key: value for key, value in context.items()
@@ -1305,6 +1289,15 @@ class Abstraction(TermBase):
         var, body = repr(self.var), repr(self.body)
         left = ", left=True" if self.left else ""
         return factory_name(type(self)) + f"({var}, {body}{left})"
+
+    def to_tree(self):
+        return dict(factory=factory_name(type(self)), var=self.var.to_tree(),
+                    body=self.body.to_tree(), left=self.left)
+
+    @classmethod
+    def from_tree(cls, tree):
+        return cls(*map(from_tree, (tree['var'], tree['body'])),
+                   left=tree['left'])
 
     def setoid(self):
         """
@@ -1332,9 +1325,11 @@ class Abstraction(TermBase):
 type Term = Constant | Variable | Application | Abstraction
 
 
-for law in sorted(set(Box.axioms) - set(Serialisable.axioms)):
+for law in (
+        "unitality", "associativity",
+        "dagger_involution", "dagger_contravariance"):
     setattr(TermBase, law, getattr(Box, law).inapplicable(
-        "A term is a box: the laws of its category are the diagram's."))
+        messages.TERM_IS_A_BOX))
 
 
 @dataclass
@@ -1500,7 +1495,7 @@ class Sampler:
             level=constraints.level + 1))
         return self.category.ob.abstraction_factory(var, body, left)
 
-    def term(self, cod: Ty, constraints: "Constraints | None" = None) -> Term:
+    def term(self, cod: Ty, constraints: "Constraints" = None) -> Term:
         """
         A term of a given type under the constraints, none by default: a
         leaf when the choices ran out, or the spine when none fits, else the

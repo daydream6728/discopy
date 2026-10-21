@@ -104,7 +104,7 @@ from networkx.algorithms.isomorphism import is_isomorphic
 from discopy import markov, messages, monoidal
 from discopy.abc import HypergraphCategory, MonoidalCategory
 from discopy.axioms import (
-    GENERATORS, Count, Equation, Hom, Obj, Serialisable, Var, axiom)
+    GENERATORS, Count, Equation, Hom, Obj, Testable, Var, axiom)
 from discopy.drawing import Node
 from discopy.hypergraph import Hypergraph
 from discopy.monoidal import Ty
@@ -236,8 +236,8 @@ def distribute(diagram: monoidal.Diagram) -> markov.Sum:
         else markov.Sum((result, ))
 
 
-class EHypergraph[category](
-        MonoidalCategory["Ty", "EHypergraph"], NamedGeneric, Serialisable):
+class EHypergraph(
+        MonoidalCategory, NamedGeneric['category'], Testable):
     """
     An e-hypergraph over a copy-discard ``category``, equal to another up to
     renaming its spiders, see :mod:`discopy.ehypergraph`.
@@ -269,7 +269,7 @@ class EHypergraph[category](
             raise AxiomError(messages.NOT_MARKOV.format(factory_name(
                 type(self))))
         if not graph.is_left_monogamous or not graph.is_acyclic:
-            raise AxiomError(messages.NOT_SHARING.format(graph))
+            raise AxiomError(messages.NOT_SHARING.format(repr(graph)))
         n = graph.n_spiders
         classes = tuple(range(n) if classes is None else classes)
         if len(classes) != n or any(
@@ -391,7 +391,7 @@ class EHypergraph[category](
             if not box.is_cartesian:
                 raise AxiomError(messages.NOT_CARTESIAN.format(box))
         if not rhs.is_left_monogamous or not rhs.is_acyclic:
-            raise AxiomError(messages.NOT_SHARING.format(rhs))
+            raise AxiomError(messages.NOT_SHARING.format(repr(rhs)))
         if (len(dom), len(cod)) != (len(rhs.dom), len(rhs.cod)) or not all(
                 not rhs.spider_wires[t][1] if s is None
                 else graph.spider_types[s] == rhs.spider_types[t]
@@ -775,12 +775,6 @@ class EHypergraph[category](
             return result
 
         return ehypergraphs()
-
-    dagger_involution, dagger_contravariance, dagger_monoidality = (
-        law.inapplicable(messages.SHARING_HAS_NO_DAGGER) for law in (
-            MonoidalCategory.dagger_involution,
-            MonoidalCategory.dagger_contravariance,
-            MonoidalCategory.dagger_monoidality))
 
     @axiom
     def graph_functoriality[

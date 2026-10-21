@@ -12,7 +12,7 @@ from discopy import symmetric
 from discopy.ehypergraph import (
     EHypergraph, Join, Markov, distribute, partition)
 from discopy.hypergraph import Hypergraph
-from discopy.markov import Ty, Box, Copy, Diagram, Functor, Merge, Swap
+from discopy.markov import Ty, Box, Copy, Diagram, Functor, Swap
 from discopy.tensor import Dim, Tensor
 from discopy.utils import AxiomError, dumps, loads
 
@@ -31,8 +31,9 @@ def test_samples_are_independent():
     graph = Markov.from_diagram(sample)
     assert len(graph.add(sample, (0, ))[0].graph.boxes) == 2
     assert Markov.from_diagram(f).add(f, (0, ))[1] == (1, )
-    unit = Markov.id(Ty()).add(Merge(x, 0), ())[0]
-    assert unit.add(Merge(x, 0), ())[1] == (1, )
+    noise = Box('noise', Ty(), x, is_deterministic=False, is_affine=False)
+    unit = Markov.id(Ty()).add(noise, ())[0]
+    assert unit.add(noise, ())[1] == (1, )
 
 
 def test_category_has_flags():
@@ -186,8 +187,8 @@ def test_figures_26_and_27():
     assert list(map(len, map(set, (
         g.classes for g in (graph, merged, rebuilt))))) == [6, 5, 4]
     assert names(rebuilt) == [['+'], ['a'], ['b', 'c'], ['f']]
-    assert rebuilt.to_diagram() == (
-        a @ Join(b, c) >> k >> Copy(x) >> plus).to_hypergraph().to_diagram()
+    assert rebuilt.to_diagram().to_hypergraph() == (
+        a @ Join(b, c) >> k >> Copy(x) >> plus).to_hypergraph()
 
 
 def test_figure_17():
