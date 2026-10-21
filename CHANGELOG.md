@@ -1337,10 +1337,10 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 ### Fixed
 
 - `CMap.trace` raises `AxiomError` when the wires it traces have different
-  types, as `Hypergraph.trace` and the trace of a diagram do, through
-  `utils.assert_istraceable`, where it spliced them, so that the trace of
-  `Box('f', x, y).to_map()` built a map whose one wire was both `x` and
-  `y` (B65 of
+  types, as `Hypergraph.trace` and the trace of a diagram do, checking them
+  with `utils.assert_istraceable` before it splices them. It used to splice
+  them unchecked, so that the trace of `Box('f', x, y).to_map()` built a
+  map whose one wire was both `x` and `y` (B65 of
   [rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
 - Five one-liners found by the third read of the codebase: the derivative
   of a mixed `Scalar` is mixed, where `grad` dropped `is_mixed` so that it
