@@ -2444,6 +2444,11 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Project
 
+- The canonical address of the docs, Sphinx's `html_baseurl`, is the one
+  Read the Docs serves them from, `READTHEDOCS_CANONICAL_URL`, falling back
+  to `https://docs.discopy.org` in a local build: a project of its own on
+  Read the Docs, as this fork's, would otherwise have every page tell
+  search engines that it is a copy of upstream's.
 - The `docs` extra installs `torch` and `jax`, which the notebooks *Parsing
   arithmetic* and *Neural Church arithmetic* import: Read the Docs installs
   `.[docs]` alone and publishes a notebook that fails to execute as a link
