@@ -870,7 +870,7 @@ class Scalar(Parametrized):
     def grad(self, var, **params):
         if var not in self.free_symbols:
             return Sum([], self.dom, self.cod)
-        return Scalar(self.data.diff(var))
+        return Scalar(self.data.diff(var), is_mixed=self.is_mixed)
 
     def dagger(self):
         return Scalar(self.data.conjugate(), self.name, self.is_mixed)
