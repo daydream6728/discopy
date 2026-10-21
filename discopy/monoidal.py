@@ -58,7 +58,7 @@ from __future__ import annotations
 import itertools
 from dataclasses import dataclass, field
 from functools import cached_property
-from typing import Iterator, Callable, ClassVar, TYPE_CHECKING
+from typing import Iterator, Callable, ClassVar, Self, TYPE_CHECKING
 from warnings import warn
 
 from discopy import abc, cat, drawing, hypergraph, cmap, messages
@@ -78,6 +78,7 @@ from discopy.utils import (
     deprecated_alias,
     MappingOrCallable,
     RichDisplay,
+    unbiased,
 )
 
 if TYPE_CHECKING:
@@ -201,6 +202,24 @@ class List(Monoid, NamedGeneric['generator_factory']):
     A list is a sequence of its length-one sublists, e.g.
     ``List[int](2, 3)[0] == List[int](2)``; the atoms themselves are its
     :attr:`inside`, e.g. ``List[int](2, 3).inside[0] == 2``.
+
+    Note
+    ----
+    A ``List[X]`` is transparent, i.e. ``eval(repr(x)) == x``, exactly when
+    the representation of an atom of ``X`` is an expression that evaluates
+    back to it. :meth:`generator_repr` is what secures that for every
+    generator the library uses: ``repr`` is such an expression for an
+    ``int``, and for a class it is not — ``repr(int)`` is ``<class 'int'>``
+    where the name ``int`` is what reads back — so the free monoid on
+    Python's ``type``, i.e. :obj:`discopy.python.Ty`, prints its atoms with
+    :func:`.factory_name` instead. A generator with no such representation
+    at all, e.g. ``object()``, has no transparent list until it overrides the
+    hook.
+
+    >>> from discopy import monoidal
+    >>> x = List[type](int, str)
+    >>> assert repr(x) == "monoidal.List[type](int, str)"
+    >>> assert eval(repr(x)) == x
     """
     ob = type(None)
     dom = cod = None
@@ -261,9 +280,30 @@ class List(Monoid, NamedGeneric['generator_factory']):
     def __hash__(self):
         return hash((type(self), self.inside))
 
+    @classmethod
+    def generator_repr(cls, generator) -> str:
+        """
+        The representation of one atom, which :meth:`__repr__` joins.
+
+        It is the ``repr`` of a generator whose own representation is an
+        expression, e.g. an ``int``, and :func:`.factory_name` for a class,
+        whose is not: ``repr(int)`` is ``<class 'int'>`` where ``int`` is
+        the name that evaluates back to it. A generator with neither — one
+        printing its address, say — overrides this to say what reads back
+        to it, since nothing can be inferred from such a ``repr``.
+
+        Example
+        -------
+        >>> assert List[int].generator_repr(2) == "2"
+        >>> assert List[type].generator_repr(int) == "int"
+        >>> assert List[type].generator_repr(cat.Ob) == "cat.Ob"
+        """
+        return factory_name(generator) if isinstance(generator, type)\
+            else repr(generator)
+
     def __repr__(self):
         return factory_name(type(self))\
-            + f"({', '.join(map(repr, self.inside))})"
+            + f"({', '.join(map(self.generator_repr, self.inside))})"
 
 
 @factory
@@ -602,6 +642,24 @@ class Nat(abc.Nat, Ty):
     def __pow__(self, n_times):
         return self.factory(n_times * self.n)
 
+    def delay(self, n_steps: int = 1) -> Self:
+        """
+        The identity: a type whose atoms are not wires has no time step, so
+        its :attr:`head` and :attr:`tail` are itself too, see
+        :class:`discopy.feedback.Ty`.
+
+        Parameters:
+            n_steps : The number of time steps to delay.
+
+        Example
+        -------
+        >>> assert Nat(2).delay() == Nat(2).head == Nat(2).tail == Nat(2)
+        """
+        del n_steps
+        return self
+
+    head = tail = property(lambda self: self)
+
     def to_tree(self):
         return {'factory': factory_name(type(self)), 'n': self.n}
 
@@ -648,6 +706,8 @@ class Dim(Ty):
         return f"Dim({', '.join(map(repr, self.inside)) or '1'})"
 
     __str__ = __repr__
+
+    delay, head, tail = Nat.delay, Nat.head, Nat.tail
 
     def to_tree(self) -> dict:
         return {'factory': factory_name(type(self)),
@@ -833,23 +893,33 @@ class Layer(cat.Box, ColouredMonoid):
         return factory_name(type(self))\
             + f"({', '.join(map(repr, self))})"
 
-    def tensor(self, other: Ty | Box | Layer) -> Layer:
+    def tensor(self, *others: Ty | Box | Layer) -> Layer:
         """
-        Tensor another layer on the right, normalising the common boundary.
+        Tensor more layers on the right, normalising each common boundary.
 
         A type is merged into the boundary rather than embedded as a layer,
         so that whiskering never builds one out of empty plumbing.
+
+        Parameters:
+            others : The types, boxes or layers to tensor on the right.
+
+        Example
+        -------
+        >>> x = Ty('x')
+        >>> f, g, h = (Box(name, x, x) for name in "fgh")
+        >>> assert Layer(f).tensor(Layer(g), Layer(h)) == Layer(f, g, h)
+        >>> assert Layer(f).tensor(x, Layer(g)) == Layer(f, x, g)
         """
-        other = type(self).whisker(other)
-        if isinstance(other, self.ob):
-            type(self).check((self[-1], other))
-            return type(self)(
-                *self[:-1], *type(self).normalise((self[-1], other)),
-                normalise=False)
-        type(self).check((self[-1], other[0]))
-        return type(self)(
-            *self[:-1], *type(self).normalise((self[-1], other[0])),
-            *other[1:], normalise=False)
+        factory = type(self)
+        inside = list(self.boxes_or_types)
+        for other in others:
+            other = factory.whisker(other)
+            pieces = (other, ) if isinstance(other, self.ob)\
+                else other.boxes_or_types
+            factory.check((inside[-1], pieces[0]))
+            inside[-1:] = [
+                *factory.normalise((inside[-1], pieces[0])), *pieces[1:]]
+        return factory(*inside, normalise=False)
 
     def __rmatmul__(self, other):
         other = type(self).whisker(other)
@@ -1045,13 +1115,12 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
 
         return decorator
 
-    def tensor(self, other: Diagram = None, *others: Diagram) -> Diagram:
+    def tensor(self, *others: Diagram) -> Diagram:
         """
         Parallel composition, called using :code:`@`.
 
         Parameters:
-            other : The other diagram to tensor.
-            rest : More diagrams to tensor.
+            others : The other diagrams to tensor.
 
         Important
         ---------
@@ -1059,11 +1128,15 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
 
             self @ other == self @ other.dom >> self.cod @ other
 
+        Each layer of the ``i``-th diagram is whiskered by the codomains of
+        the diagrams before it and the domains of those after it.
+
         Example
         -------
         >>> x, y, z, w = Ty('x'), Ty('y'), Ty('z'), Ty('w')
         >>> f0, f1 = Box('f0', x, y), Box('f1', z, w)
         >>> assert f0 @ f1 == f0.tensor(f1) == f0 @ Id(z) >> Id(y) @ f1
+        >>> assert f0 @ f1 @ f0 == f0.tensor(f1, f0)
 
         >>> (f0 @ f1).draw(
         ...     doctest='docs/_static/monoidal/tensor-example.svg')
@@ -1071,18 +1144,29 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
         .. image:: /_static/monoidal/tensor-example.svg
             :align: center
         """
-        if other is None:
+        if not others:
             return self
-        if others:
-            return self.tensor(other).tensor(*others)
-        if isinstance(other, Sum):
-            return self.sum_factory((self, )).tensor(other)
-        assert_isinstance(other, self.ar)
-        assert_isinstance(self, other.ar)
-        inside = tuple(layer @ other.dom for layer in self.inside)\
-            + tuple(self.cod @ layer for layer in other.inside)
-        dom, cod = self.dom @ other.dom, self.cod @ other.cod
-        return self.ar(inside, dom, cod, _scan=False)
+        for other in others:
+            if isinstance(other, Sum):
+                return self.sum_factory((self, )).tensor(*others)
+            assert_isinstance(other, self.ar)
+            assert_isinstance(self, other.ar)
+        suffixes = [others[-1].dom]
+        for other in reversed(others[:-1]):
+            suffixes.append(other.dom @ suffixes[-1])
+        dom, prefix, inside = self.dom @ suffixes[-1], None, []
+        for diagram in (self, ) + others:
+            suffix = suffixes.pop() if suffixes else None
+            if prefix and suffix:
+                inside += [prefix @ layer @ suffix for layer in diagram.inside]
+            elif prefix:
+                inside += [prefix @ layer for layer in diagram.inside]
+            elif suffix:
+                inside += [layer @ suffix for layer in diagram.inside]
+            else:
+                inside += diagram.inside
+            prefix = diagram.cod if prefix is None else prefix @ diagram.cod
+        return self.ar(tuple(inside), dom, prefix, _scan=False)
 
     @property
     def boxes(self) -> list[Box]:
@@ -1564,13 +1648,25 @@ class Sum(cat.Sum, Box):
     def size(self):
         return 1
 
-    def tensor(self, other=None, *others):
-        if other is None or others:
-            return Diagram.tensor(self, other, *others)
-        other = other if isinstance(other, Sum)\
-            else self.sum_factory((other, ))
-        dom, cod = self.dom @ other.dom, self.cod @ other.cod
-        terms = tuple(f.tensor(g) for f in self.terms for g in other.terms)
+    def tensor(self, *others):
+        """
+        The tensor of sums distributes over the sum, i.e. its terms are the
+        ``n``-ary tensors of one term from each factor.
+
+        >>> f = Box('f', 'x', 'x')
+        >>> assert (f + f) @ (f + f) == sum(4 * [f @ f])
+        """
+        if not others:
+            return self
+        sums = [
+            other if isinstance(other, Sum) else self.sum_factory((other, ))
+            for other in others]
+        dom = self.dom.tensor(*(other.dom for other in sums))
+        cod = self.cod.tensor(*(other.cod for other in sums))
+        terms = tuple(
+            term.tensor(*rest) for term in self.terms
+            for rest in itertools.product(
+                *(other.terms for other in sums)))
         return self.sum_factory(terms, dom, cod)
 
     to_drawing = Diagram.to_drawing
@@ -1590,7 +1686,8 @@ class Bubble(cat.Bubble, Box):
         kwargs : Passed to :class:`cat.Bubble`.
 
     Raises:
-        ValueError : When dom is None but all the args have the same dom.
+        ValueError : When dom (resp. cod) is None and the args do not all
+            have the same dom (resp. cod).
 
     Examples
     --------
@@ -1728,6 +1825,7 @@ class Functor(cat.Functor):
     def id(cls, dom=None):
         return cls(lambda x: x, lambda f: f, dom=dom, cod=dom)
 
+    @unbiased
     def then(self, other):
         assert_isinstance(other, Functor)
         assert_iscomposable(self, other)

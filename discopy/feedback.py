@@ -295,8 +295,8 @@ class Wire(monoidal.Wire):
         assert_isinstance(is_constant, bool)
         if time_step < 0:
             raise NotImplementedError
-        self.time_step, self.is_constant = time_step, is_constant
         super().__init__(name, *args, **params)
+        self.time_step, self.is_constant = time_step, is_constant
 
     def __setstate__(self, state):
         state.setdefault('time_step', 0)
@@ -528,6 +528,9 @@ class Diagram(monoidal.Diagram, TracedCategory):
     tail_factory: ClassVar[type["Tail"]]
     followed_by_factory: ClassVar[type["FollowedBy"]]
 
+    yanking = TracedCategory.yanking.inapplicable(
+        messages.PLANAR_YANKING)
+
     def delay(self, n_steps=1):
         """ The delay of a feedback diagram. """
         dom, cod = self.dom.delay(n_steps), self.cod.delay(n_steps)
@@ -541,7 +544,7 @@ class Diagram(monoidal.Diagram, TracedCategory):
         back is the memory itself and :attr:`feedback_factory` when it is its
         delay. The keyword form ``dom``, ``cod``, ``mem`` is primary, the
         positional ``n`` its fallback, see
-        :meth:`discopy.abc.FeedbackCategory.split_memory`.
+        :meth:`discopy.abc.MonoidalCategory.split_memory`.
 
         >>> x, y = Ty('x'), Ty('y')
         >>> f = Box('f', x @ (x @ y).delay(), x @ x @ y)
@@ -662,18 +665,22 @@ class Box(monoidal.Box, Diagram):
 
     def delay(self, n_steps=1):
         """
-        The delay of a box: a structural box, one whose ``__getnewargs__``
-        gives the arguments it is built from, e.g. a swap or a copy, is built
-        from their delays; any other box from its delayed boundary, one more
-        time step on.
+        The delay of a box: a box of a category whose objects are not made of
+        wires, e.g. a tensor box over dimensions, is its own delay, as its
+        objects are; a structural box, one whose ``__getnewargs__`` gives the
+        arguments it is built from, e.g. a swap, a copy or a controlled gate,
+        is built from their delays, those of its types and its diagrams; any
+        other box from its delayed boundary, one more time step on.
 
         Parameters:
             n_steps : The number of time steps to delay.
         """
+        if not issubclass(self.ob.generator_factory, monoidal.Wire):
+            return self
         arguments = getattr(self, "__getnewargs__", None)
         if arguments is not None:
             return type(self)(*(
-                x.delay(n_steps) if isinstance(x, Ty) else x
+                x.delay(n_steps) if isinstance(x, (Ty, Diagram)) else x
                 for x in arguments()))
         dom, cod = self.dom.delay(n_steps), self.cod.delay(n_steps)
         time_step = self.time_step + n_steps
@@ -683,8 +690,7 @@ class Box(monoidal.Box, Diagram):
 
     def reset(self):
         """ Reset a box to time step zero, used in :class:`Functor`. """
-        dom, cod = [x.delay(-self.time_step) for x in (self.dom, self.cod)]
-        return type(self)(self.name, dom, cod, *self._args, **self._params)
+        return self.delay(-self.time_step)
 
     def dagger(self):
         result = super().dagger()

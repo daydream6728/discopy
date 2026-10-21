@@ -224,3 +224,35 @@ def test_Ty_pregroup():
         Diagram.cups(x, y)
     with raises(TypeError):
         1 @ x
+
+
+def test_trace_takes_the_keyword_form():
+    from discopy import symmetric
+    from discopy.symmetric import Ty as T, Box
+    a, a_, u, u_, b, b_ = map(T, ["a", "a'", "u", "u'", "b", "b'"])
+    A, U, B = Ty[T](a, a_), Ty[T](u, u_), Ty[T](b, b_)
+    D = Diagram[symmetric.Diagram]
+    f = D(Box('f', a @ u @ u_ @ b_, b @ u @ u_ @ a_), A @ U, B @ U)
+    g = D(Box('g', u @ a @ b_ @ u_, u @ b @ a_ @ u_), U @ A, U @ B)
+    assert f.trace() == f.trace(mem=U) == f.trace(cod=B)\
+        == f.trace(dom=A, cod=B, mem=U) == f.feedback() == f.feedback(mem=U)
+    assert f.trace((1, 0)) == f.trace(mem=Ty[T](u)) == f.feedback((1, 0))
+    assert g.trace(left=True) == g.trace(mem=U, left=True)
+    assert f.split_memory() == f.split_memory(mem=U) == (A, B, U)
+    with raises(TypeError):
+        f.trace(1, mem=U)
+    with raises(AxiomError):
+        f.trace(mem=A)
+    with raises(AxiomError):
+        f.trace(dom=B, mem=U)
+
+
+def test_yanking():
+    from discopy import compact
+    from discopy.abc import Nat
+    from discopy.matrix import Matrix
+    x = Ty[Nat](Nat(1), Nat(2))
+    assert Diagram[Matrix[bool]].yanking(x)
+    X = Ty[compact.Ty](compact.Ty('x'), compact.Ty("x'", "y'"))
+    assert Diagram[compact.Diagram].yanking.modulo(
+        lambda diagram: diagram.inside.to_hypergraph())(X)

@@ -4,6 +4,7 @@ import pytest
 from pytest import raises
 
 from discopy import closed, biclosed, comarkov, compact, symmetric
+from discopy.abc import DaggerCategory
 from discopy.python.finset import Permutation
 from discopy.utils import AxiomError
 
@@ -32,6 +33,7 @@ def test_default_compact_setting():
     f = Box("f", x, y)
     cm = M.from_box(f)
     assert isinstance(f, M.category)
+    assert isinstance(cm, DaggerCategory)
     assert cm.to_hypergraph().category == M.category
 
 
@@ -1018,3 +1020,15 @@ def test_CMap_to_tree_over_a_parameterised_category():
     swap = cmap.CMap[tensor.Diagram[complex]].swap(Dim(2), Dim(3))
     loaded = loads(dumps(swap))
     assert loaded == swap and loaded.category is tensor.Diagram[complex]
+
+
+def test_trace_takes_the_keyword_form():
+    from discopy.compact import Ty, Box, CMap as M
+    x, y = map(Ty, "xy")
+    f = M.from_box(Box("f", x @ y, x @ y))
+    assert f.trace() == f.trace(mem=y) == f.trace(cod=x)
+    assert f.trace(left=True) == f.trace(dom=y, cod=y, mem=x, left=True)
+    with raises(TypeError):
+        f.trace(1, mem=y)
+    with raises(AxiomError):
+        f.trace(mem=x)

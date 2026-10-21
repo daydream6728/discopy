@@ -82,7 +82,7 @@ from typing import (
     Callable, ClassVar, Mapping, Iterable, TYPE_CHECKING)
 
 from discopy import messages, utils
-from discopy.abc import Category
+from discopy.abc import Category, DaggerCategory, Nat
 from discopy.axioms import GENERATORS, Equation as AbstractEquation, Testable
 from discopy.utils import (  # noqa: F401
     factory,
@@ -262,7 +262,7 @@ class FreeCategory(Category):
 
 
 @factory
-class Arrow(FreeCategory, Testable["Arrow"]):
+class Arrow(FreeCategory, DaggerCategory, Testable["Arrow"]):
     """
     An arrow is a tuple of composable boxes :code:`inside` with a pair of
     objects :code:`dom` and :code:`cod` as domain and codomain.
@@ -804,14 +804,34 @@ class Bubble(Box):
         kwargs : Passed to the `__init__` of :class:`Box`.
 
     Raises:
-        ValueError : When dom is None but all the args have the same dom.
+        ValueError : When dom (resp. cod) is None and the args do not all
+            have the same dom (resp. cod).
+
+    Example
+    -------
+    >>> x, y = Ob('x'), Ob('y')
+    >>> Bubble(Box('f', x, x), Box('g', y, x))
+    Traceback (most recent call last):
+    ...
+    ValueError: A bubble needs a dom given when its args do not all share \
+one, they have [cat.Ob('x'), cat.Ob('y')].
     """
     def __init__(self, *args: Arrow, dom: Ob = None, cod: Ob = None,
                  name="", method="bubble", **kwargs):
-        dom, = set(arg.dom for arg in args) if dom is None else (dom, )
-        cod, = set(arg.cod for arg in args) if cod is None else (cod, )
+        dom, cod = (
+            given if given is not None else self.common(args, attr)
+            for attr, given in [("dom", dom), ("cod", cod)])
         self.args, self.method = args, method
         Box.__init__(self, name, dom, cod, **kwargs)
+
+    @staticmethod
+    def common(args: tuple[Arrow, ...], attr: str) -> Ob:
+        """ The domain or codomain the args all share. """
+        values = list(dict.fromkeys(getattr(arg, attr) for arg in args))
+        if len(values) != 1:
+            raise ValueError(messages.NO_COMMON_BOUNDARY.format(
+                attr, ", ".join(map(repr, values))))
+        return values[0]
 
     @property
     def arg(self):
@@ -937,6 +957,7 @@ class Functor(Category):
         """
         return cls(lambda x: x, lambda f: f, dom=dom, cod=dom)
 
+    @unbiased
     def then(self, other: Functor) -> Functor:
         """
         The composition of functor with another.
@@ -990,8 +1011,11 @@ class Functor(Category):
         if isinstance(other, Ob):
             result = self.ob_map[other]
             origin = get_origin(self.cod.ob)
-            return result if isinstance(result, origin)\
-                else self.cod.ob(result)
+            if isinstance(result, origin):
+                return result
+            if isinstance(result, tuple) and not issubclass(origin, Nat):
+                return self.cod.ob(*result)
+            return self.cod.ob(result)
         if isinstance(other, Sum):
             return sum(map(self, other.terms),
                        self.cod.zero(self(other.dom), self(other.cod)))
@@ -1100,6 +1124,7 @@ class Transformation(Category):
         """
         return cls(lambda x: dom.cod.id(dom(x)), dom, dom)
 
+    @unbiased
     def then(self, other: Transformation) -> Transformation:
         """
         The vertical composition of a transformation with another.
