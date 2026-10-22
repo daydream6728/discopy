@@ -96,3 +96,13 @@ def test_Function_swap_is_symmetric():
     for a, b in [(f, g), (g, f)]:
         assert a @ b >> Function.swap(a.cod, b.cod)\
             == Function.swap(a.dom, b.dom) >> b @ a
+
+
+def test_Function_permutation_moves_blocks():
+    from discopy.python.finset import Function, Permutation
+    assert Function.permutation([1, 0], [2, 3]) == Function.swap(2, 3)
+    assert Function.permutation([2, 0, 1], [1, 2, 1])\
+        == Function([3, 0, 1, 2], 4, 4)
+    assert Function.permutation([1, 2, 0], [1, 1, 1])\
+        == Function(list(Permutation([1, 2, 0])), 3, 3)
+    assert Function.permutation([0, 1], [2, 3]) == Function.id(5)
