@@ -86,6 +86,20 @@ def test_Hypergraph_make_causal_does_not_assume_topological_order():
     assert h.topological_order().is_causal
 
 
+def test_Hypergraph_depth_counts_states_and_effects():
+    from discopy import symmetric
+    x = Ty('x')
+    state, effect = Box('f', Ty(), x), Box('g', x, Ty())
+    scalar, f = Box('s', Ty(), Ty()), Box('f', x, x)
+    for diagram, depth in [
+            (state, 1), (effect, 1), (scalar, 1), (state >> effect, 2),
+            (f @ (state >> effect), 2), (f >> f, 2), (f.trace(), 3)]:
+        assert diagram.depth() == len(diagram.foliation()) == depth
+    sx = symmetric.Ty('x')
+    assert symmetric.Box('f', symmetric.Ty(), sx).depth() == 1
+    assert symmetric.Box('f', sx, sx).trace().depth() == 1
+
+
 def test_Hypergraph_draw_is_reproducible(tmp_path):
     x = Ty('x')
     diagram = Box('f', x, x).to_hypergraph()

@@ -46,7 +46,6 @@ from networkx import (
     spring_layout,
     draw_networkx,
     has_path,
-    dag_longest_path_length,
     topological_sort,
     weisfeiler_lehman_graph_hash,
 )
@@ -2201,8 +2200,24 @@ class Hypergraph(
         return graph
 
     def depth(self) -> int:
-        """ The depth of a causal hypergraph. """
-        return dag_longest_path_length(self.make_causal().to_graph()) // 4
+        """
+        The depth of a hypergraph, i.e. the largest number of boxes on a
+        directed path once it is made causal by :meth:`make_causal`: the
+        number of layers of its shortest foliation, swaps being wiring.
+
+        >>> from discopy.frobenius import Ty, Box, Hypergraph as H
+        >>> x = Ty('x')
+        >>> state, effect = Box('f', Ty(), x), Box('g', x, Ty())
+        >>> assert H.id(x).depth() == 0
+        >>> assert state.to_hypergraph().depth() == 1
+        >>> assert (state >> effect).to_hypergraph().depth() == 2
+        """
+        graph, depth = self.make_causal().to_graph(), {}
+        for node in topological_sort(graph):
+            depth[node] = (node.kind == "box") + max(
+                (depth[before] for before in graph.predecessors(node)),
+                default=0)
+        return max(depth.values(), default=0)
 
     def spring_layout(self, seed=None, k=None):
         """ Computes a layout using a force-directed algorithm. """
