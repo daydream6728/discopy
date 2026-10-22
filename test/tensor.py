@@ -276,6 +276,14 @@ def test_Box():
     assert {f: 42}[f] == 42
 
 
+def test_Box_with_array_data_compares_and_hashes():
+    a = Box('h', Dim(2), Dim(2), np.array([0, 1, 1, 0]))
+    b = Box('h', Dim(2), Dim(2), np.array([0, 1, 1, 1]))
+    c = Box('h', Dim(2), Dim(2), [[0, 1], [1, 0]])
+    assert a != b and a == c == Box('h', Dim(2), Dim(2), [0, 1, 1, 0])
+    assert len({a, b, c, a @ b}) == 3
+
+
 def test_Spider():
     assert repr(Spider(1, 2, Dim(3))) == "tensor.Spider(1, 2, Dim(3))"
     assert Spider(1, 2, Dim(2)).dagger() == Spider(2, 1, Dim(2))
