@@ -275,7 +275,8 @@ def test_functor_maps_winding_to_dual():
 def test_twist_is_the_trace_of_the_braid():
     """The twist of the D(Z/3) anyon of flux f and charge omega is
     omega ** f, the trace of the braid on either side: neither is its own
-    inverse, as every twist of D(Z/2) is, e.g. minus one on the fermion."""
+    inverse, as every twist of D(Z/2) is, e.g. minus one on the fermion,
+    and on their direct sum it is diagonal."""
     omega = np.exp(2j * np.pi / 3)
     D2, D3 = Double(Algebra.cyclic(2)), Double(Algebra.cyclic(3))
     x = ribbon.Ty('x')
@@ -286,6 +287,13 @@ def test_twist_is_the_trace_of_the_braid():
         for diagram in [ribbon.Twist(x), ribbon.Braid(x, x).trace(),
                         ribbon.Braid(x, x).trace(left=True)]:
             assert np.isclose(complex(F(diagram).eval(dtype=complex)), theta)
+    V = Representation[D3].direct_sum([
+        Representation[D3].anyon(flux, omega) for flux in (1, 2)])
+    F = Functor(ob_map={x: V}, ar_map={}, cod=Intertwiner[D3])
+    for diagram in [ribbon.Twist(x), ribbon.Braid(x, x).trace(),
+                    ribbon.Braid(x, x).trace(left=True)]:
+        assert np.allclose(F(diagram).eval(dtype=complex).array,
+                           np.diag([omega, omega ** 2]))
 
 
 def test_is_module_rejects_non_module():

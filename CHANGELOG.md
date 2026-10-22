@@ -1993,8 +1993,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   element, which is the trace of the braid as `ribbon` defines the twist,
   on either side. It was the action of the ribbon element itself, so that
   `hopf.Functor` sent `Twist(x)` to the inverse of the trace of
-  `Braid(x, x)` on the anyons of `D(Z/3)` and over `Double(taft(3))`,
-  which no test saw: the twists of `D(Z/2)` are their own inverses, and
+  `Braid(x, x)` on the anyons of `D(Z/3)` and over
+  `Double(Algebra.taft(3))`, which no test saw: the twists of `D(Z/2)` are their own inverses, and
   the twist tests of `test/hopf.py` compared a trivial twist with the
   identity. They check the twists of `D(Z/3)` anyons and of their product
   instead (B52 and B87 of
