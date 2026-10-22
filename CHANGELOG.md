@@ -1549,6 +1549,16 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
+- The identity functor is the identity on a `Permutation`:
+  `symmetric.Functor` sends one into a codomain with a
+  `permutation_factory` to its `from_permutation`, each wire moving the
+  block of its image, where it built the staircase of swaps of
+  `permutation`, so `Functor.id(Diagram)(p) != p` in `symmetric`, `markov`,
+  `compact` and `frobenius` alike. A functor with non-atomic images gives
+  one permutation box instead of a staircase, equal to it up to `Equation`;
+  concrete codomains such as `Matrix` and `Tensor` keep their `permutation`
+  (B60 of
+  [rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
 - A tree saying `"is_dagger": false` reads back as no dagger: `cat.Box`,
   and so every box, `monoidal.Wire`, `frobenius.Spider`,
   `feedback.FollowedBy` and `quantum.gates.Digits` took the presence of the
