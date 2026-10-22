@@ -13,4 +13,4 @@ USER's live ruling of 10-22, as relayed on the issue:
 - [x] #163: strategy boxes named by identifiers, so that the cells check something
 - [x] #163: carriers that break the law for a real reason declared `.failing`, reported as new bugs: no carrier of the matrix breaks it; `Hypergraph` is not `Testable` and `abc.Nat` no cell, both reported
 - [x] CHANGELOG `### Added`, at the end
-- [ ] full suite, pflake8, pylint, the whole property matrix
+- [x] full suite, pflake8, pylint, the whole property matrix
