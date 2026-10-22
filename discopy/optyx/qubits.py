@@ -305,8 +305,6 @@ We can also create a graph state as follows
 from typing import Literal
 from enum import Enum
 import numpy as np
-from pyzx.graph.base import BaseGraph
-import graphix
 from discopy import quantum as quantum_discopy
 from discopy import symmetric
 from sympy import lambdify
@@ -355,16 +353,19 @@ class Circuit(Diagram):
         """
         Detect the type of the underlying circuit.
         """
+        # pylint: disable=import-outside-toplevel
         if isinstance(underlying_circuit,
                       quantum_discopy.circuit.Circuit):
             return ImportObjectType.DISCOPY
+        if isinstance(underlying_circuit, Diagram):
+            return ImportObjectType.ZX
+        from pyzx.graph.base import BaseGraph
         if isinstance(underlying_circuit, BaseGraph):
             return ImportObjectType.PYZX
         # if isinstance(underlying_circuit, tket_circuit.Circuit):
         #     return ImportObjectType.TKET
-        if isinstance(underlying_circuit, Diagram):
-            return ImportObjectType.ZX
-        if isinstance(underlying_circuit, graphix.pattern.Pattern):
+        from graphix.pattern import Pattern
+        if isinstance(underlying_circuit, Pattern):
             return ImportObjectType.GRAPHIX
         raise TypeError("Unsupported circuit type")  # pragma: no cover
 
@@ -437,19 +438,64 @@ class Circuit(Diagram):
     @classmethod
     def _to_optyx_from_graphix(cls, underlying_circuit):
         """
-        Convert a Graphix measurement pattern to an optyx ZX diagram.
+        Convert a Graphix measurement pattern to an optyx ZX diagram,
+        through the pyzx graph of its open graph.
+        """
+        open_graph = underlying_circuit.to_opengraph().to_bloch()
+        if open_graph.output_cliffords:
+            raise NotImplementedError(
+                "A pattern with Clifford commands on its outputs.")
+        return cls._to_optyx_from_pyzx(cls._to_pyzx_from_graphix(open_graph))
+
+    @staticmethod
+    def _to_pyzx_from_graphix(open_graph):
+        """
+        The pyzx graph of a graphix open graph with Bloch measurements:
+        a Z spider per node, a Hadamard edge per edge, the angle of an XY
+        measurement as the phase of its node and a YZ measurement as a
+        phase gadget. Adapted from ``to_pyzx_graph`` in graphix 0.2's
+        ``graphix.pyzx``, which graphix 0.4 dropped (Apache-2.0,
+        https://github.com/TeamGraphix/graphix).
         """
         # pylint: disable=import-outside-toplevel
-        from graphix import opengraph
-        from graphix import pyzx
+        from graphix.fundamentals import Plane
+        from pyzx import Graph, VertexType, EdgeType
 
-        og = opengraph.OpenGraph.from_pattern(underlying_circuit)
-        pyzx_diagram = pyzx.to_pyzx_graph(og)
-        # pylint: disable=protected-access
-        pyzx_diagram._inputs = tuple(pyzx_diagram._inputs)
-        # pylint: disable=protected-access
-        pyzx_diagram._outputs = tuple(pyzx_diagram._outputs)
-        return cls._to_optyx_from_pyzx(pyzx_diagram)
+        graph = Graph()
+
+        def add_vertices(number, vertex_type):
+            vertices = graph.add_vertices(number)
+            for vertex in vertices:
+                graph.set_type(vertex, vertex_type)
+            return vertices
+
+        inputs = add_vertices(
+            len(open_graph.input_nodes), VertexType.BOUNDARY)
+        graph.set_inputs(tuple(inputs))
+        body = add_vertices(len(open_graph.graph), VertexType.Z)
+        gadgets = [node for node, measurement
+                   in open_graph.measurements.items()
+                   if measurement.plane == Plane.YZ]
+        gadget_vertices = add_vertices(len(gadgets), VertexType.Z)
+        outputs = add_vertices(
+            len(open_graph.output_nodes), VertexType.BOUNDARY)
+        graph.set_outputs(tuple(outputs))
+
+        to_pyzx = dict(zip(open_graph.graph.nodes(), body))
+        for vertex, node in zip(inputs, open_graph.input_nodes):
+            graph.add_edge((vertex, to_pyzx[node]))
+        for vertex, node in zip(outputs, open_graph.output_nodes):
+            graph.add_edge((vertex, to_pyzx[node]))
+        graph.add_edges(
+            ((to_pyzx[a], to_pyzx[b]) for a, b in open_graph.graph.edges()),
+            EdgeType.HADAMARD)
+        for node, measurement in open_graph.measurements.items():
+            if measurement.plane == Plane.XY:
+                graph.set_phase(to_pyzx[node], measurement.angle)
+        for node, vertex in zip(gadgets, gadget_vertices):
+            graph.add_edge((to_pyzx[node], vertex), EdgeType.HADAMARD)
+            graph.set_phase(vertex, open_graph.measurements[node].angle)
+        return graph
 
 
 class QubitChannel(Channel):

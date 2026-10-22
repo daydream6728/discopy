@@ -46,9 +46,17 @@ def test_graphix():
         optyx_res = (qubits.Ket("+")**2 >> qubits.Circuit(pattern)).eval().amplitudes()
 
         simulator = PatternSimulator(pattern, backend="statevector")
-        graphix_result = simulator.run().psi.conj()
+        simulator.run()
+        state = simulator.backend.state
+        graphix_result = state.psi.reshape((2, ) * state.nqubit).conj()
+        # an open graph defines its state up to a scalar, and graphix 0.4
+        # absorbs Cliffords into measurements, so compare up to a phase
+        largest = max(optyx_res, key=lambda keys: abs(optyx_res[keys]))
+        phase = graphix_result[largest] / optyx_res[largest]
+        assert np.isclose(abs(phase), 1, atol=1e-6)
         for keys in optyx_res.keys():
-            assert np.isclose(optyx_res[keys], graphix_result[keys], atol=1e-6)
+            assert np.isclose(
+                phase * optyx_res[keys], graphix_result[keys], atol=1e-6)
 
 
 # def test_tket_discopy():
