@@ -9,6 +9,32 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Added
 
+- `discopy.op`, the opposite of a category: `op.Category`, `Monoidal`,
+  `Symmetric`, `Markov` and `Comarkov` wrap an arrow `inside` of the
+  underlying `category` with its domain and codomain swapped, composition
+  reversed and the tensor kept; the copies of `op.Markov` are the merges of
+  its category and vice versa. `op.Comarkov[finset.Function]` is finite sets
+  and functions, `finset.Function` being now declared a Markov category, and
+  the opposites of `matrix.Matrix[int]` join the property matrix
+  ([discopy/discopy#646](https://github.com/discopy/discopy/issues/646)).
+
+- Markov and comarkov plumbing
+  ([discopy/discopy#472](https://github.com/discopy/discopy/issues/472)):
+  `markov.Function(dom, func)` copies, discards and permutes so that output
+  `i` reads input `func[i]`, holding a `finset.Function`, and
+  `comarkov.Cofunction(cod, cofunc)` merges, adds noise and permutes so
+  that input `i` goes to output `cofunc[i]`, holding an
+  `op.Comarkov[finset.Function]`; each is the dagger of the other with the
+  same list. `Copy`, `Discard`, `Permutation` and `Swap` are functions,
+  `Merge`, `Noise`, `Permutation` and `Swap` cofunctions, and
+  `Function(x, [0, 0]) == Copy(x)`. `markov.Layer` and `comarkov.Layer`
+  alternate them with generators: plumbing tensors into one box,
+  `Diagram.copy` and `Diagram.merge` of a type build one, and foliation
+  fuses plumbing layers.
+  `abc.MarkovCategory.function` and `ComarkovCategory.cofunction` decompose
+  them in any category, `finset.Function.factorise` being the copies then
+  the permutation. `closed` and `neural.network` have their own.
+
 - Double-pushout rewriting for planar diagrams, on `cmap.CMap`: the map of a
   diagram in a monoidal category is the diagram up to interchange, faithfully
   when it is connected (Delpeuch & Vicary, Section 8), so matching it needs
@@ -983,6 +1009,12 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Changed
 
+- `symmetric.Layer.merge` fuses two layers of plumbing alone whatever
+  plumbing they hold, through the `fuse` of its boxes, and
+  `symmetric.Diagram.merge_layers` drops two that compose to the identity
+  likewise, e.g. a copy then a discard; `Hypergraph.to_diagram` fuses the
+  copies and merges it inserts with the permutations next to them.
+
 - The `quantum` extra pins pyzx 0.10.7, where it pinned 0.7.3, so that it
   installs next to `pytket-pyzx`, which needs pyzx 0.9 or later. pyzx 0.10
   takes no `float` phase, so `zx.Diagram.to_pyzx` hands it the exact
@@ -991,6 +1023,7 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   its `input` or `output` flag, so `test/fixtures/zx-graph.json` gives one
   instead of `true` and `false`
   ([rel-int/discopy-next#225](https://github.com/rel-int/discopy-next/issues/225)).
+
 - A law of `discopy.axioms` is stated as a sequent, the sequent calculus
   of [rel-int/discopy-next#1](https://github.com/rel-int/discopy-next/pull/1)
   without its search: its type parameters are variables, objects `A:
@@ -1576,6 +1609,12 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   reviewer first.
 
 ### Fixed
+
+- `python.multiplicative.Function.copy(x, 1)` returns its argument rather
+  than a tuple of one, which failed its own type check.
+
+- A law stated on `abc.Category` reads its type parameters when a class of
+  another module shares its name, e.g. `op.Category`.
 
 - The identity functor is the identity on a `Permutation`:
   `symmetric.Functor` sends one into a codomain with a
