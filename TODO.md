@@ -2,7 +2,7 @@
 
 Agent `core` (`cat.py`, `utils.py`, `abc.py`, `test/cat.py`, `test/utils.py`):
 
-- [WIP] @session_01YCJQ3Xco3ydQ6AsdTtYJ5x-2026-10-22 16:02 B63 of #31: `utils.rmap` rebuilds an ndarray with its shape constructor, recurses forever on `str` data, and `Box.subs`/`rsubs` parse `*args` in incompatible shapes
+- [x] B63 of #31: `utils.rmap` rebuilds an ndarray with its shape constructor, recurses forever on `str` data, and `Box.subs`/`rsubs` parse `*args` in incompatible shapes
 - [WIP] @session_01YCJQ3Xco3ydQ6AsdTtYJ5x-2026-10-22 16:02 #118: `cat.Box.subs`/`lambdify` rebuild `type(self)(name, dom, cod, data=..., is_dagger=...)` and lose what a subclass carries (`z`, `Word`'s argument order, `time_step`)
 - [ ] B61 of #31: `to_staircases`, `Layer.merge`, `foliation()`, `depth()` and `Functor.id` rebuild bubbles through `cod.bubble(*args, dom=, cod=)`, dropping `name` and drawing flags
 - [ ] B39/B86 of #31, the `cat.Bubble` part: `repr` and `to_tree` drop `name` and `method`

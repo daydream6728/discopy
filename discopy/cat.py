@@ -466,12 +466,13 @@ class Arrow(FreeCategory, DaggerCategory, Testable["Arrow"]):
         Substitute a variable by an expression.
 
         Parameters:
-            var (sympy.Symbol) : The subtituted variable.
+            var (sympy.Symbol) : The substituted variable.
             expr (sympy.Expr) : The substituting expression.
 
         Tip
         ---
-        You can give a list of :code:`(var, expr)` for multiple substitution.
+        As with :code:`sympy.subs`, you can give a list of :code:`(var, expr)`
+        or a dict :code:`{var: expr}` for multiple substitution.
 
         Example
         -------
@@ -482,6 +483,9 @@ class Arrow(FreeCategory, DaggerCategory, Testable["Arrow"]):
         >>> assert (f >> g).subs(phi, phi + 1) == f.subs(phi, phi + 1) >> g
         >>> assert (f >> g).subs(phi, 1) == f.subs(phi, 1) >> g
         >>> assert (f >> g).subs(psi, 1) == f >> g.subs(psi, 1)
+        >>> assert (f >> g).subs([(phi, 1), (psi, 2)])\\
+        ...     == (f >> g).subs({phi: 1, psi: 2})\\
+        ...     == f.subs(phi, 1) >> g.subs(psi, 2)
         """
         inside = tuple(box.subs(*args) for box in self.inside)
         return self.ar(inside, self.dom, self.cod, _scan=False)
@@ -605,7 +609,7 @@ class Box(Arrow):
         def recursive_free_symbols(data):
             if isinstance(data, Mapping):
                 data = data.values()
-            if isinstance(data, Iterable):
+            if isinstance(data, Iterable) and not isinstance(data, str):
                 # Handles numpy 0-d arrays, which are actually not iterable.
                 if not hasattr(data, "shape") or data.shape != ():
                     return set().union(*map(recursive_free_symbols, data))
@@ -613,20 +617,18 @@ class Box(Arrow):
         return recursive_free_symbols(self.data)
 
     def subs(self, *args) -> Box:
-        if not any(var in self.free_symbols for var in (
-                {var for var, _ in args[0]} if len(args) == 1 else {args[0]})):
+        variables = tuple(self.free_symbols)
+        values = rsubs(variables, *args)
+        if all(x is y for x, y in zip(values, variables)):
             return self
-        return type(self)(
-            self.name, self.dom, self.cod, is_dagger=self.is_dagger,
-            data=rsubs(self.data, *args))
+        return self.lambdify(*variables)(*values)
 
     def lambdify(self, *symbols: "sympy.Symbol", **kwargs) -> Callable:
-        if not any(x in self.free_symbols for x in symbols):
+        if not self.free_symbols & set(symbols):
             return lambda *xs: self
-        from sympy import lambdify
         return lambda *xs: type(self)(
             self.name, self.dom, self.cod, is_dagger=self.is_dagger,
-            data=lambdify(symbols, self.data, **kwargs)(*xs))
+            data=rsubs(self.data, dict(zip(symbols, xs)), **kwargs))
 
     def dagger(self) -> Box:
         return type(self)(
@@ -871,29 +873,15 @@ one, they have [cat.Ob('x'), cat.Ob('y')].
     def free_symbols(self):
         return super().free_symbols.union(*[f.free_symbols for f in self.args])
 
-    def subs(self, *args) -> Bubble:
-        variables = {var for var, _ in args[0]} if len(args) == 1 else {
-            args[0]}
-        if not variables & self.free_symbols:
-            return self
-        data = rsubs(self.data, *args) if variables & super().free_symbols\
-            else self.data
-        return type(self)(
-            *(arg.subs(*args) for arg in self.args),
-            dom=self.dom, cod=self.cod, name=self.name, method=self.method,
-            data=data, is_dagger=self.is_dagger)
-
     def lambdify(self, *symbols: "sympy.Symbol", **kwargs) -> Callable:
         if not set(symbols) & self.free_symbols:
             return lambda *xs: self
-        from sympy import lambdify
         args = [arg.lambdify(*symbols, **kwargs) for arg in self.args]
-        data = lambdify(symbols, self.data, **kwargs)\
-            if set(symbols) & super().free_symbols else lambda *_: self.data
         return lambda *xs: type(self)(
             *(f(*xs) for f in args),
             dom=self.dom, cod=self.cod, name=self.name, method=self.method,
-            data=data(*xs), is_dagger=self.is_dagger)
+            data=rsubs(self.data, dict(zip(symbols, xs)), **kwargs),
+            is_dagger=self.is_dagger)
 
     def dagger(self) -> Bubble:
         return type(self)(

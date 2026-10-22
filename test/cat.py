@@ -380,6 +380,26 @@ def test_Bubble_subs_lambdify():
     assert bubble.subs(psi, 1) == bubble.lambdify(psi)(1) == bubble
 
 
+def test_subs_forms_and_data():
+    pytest.importorskip("sympy")
+    import numpy as np
+    from sympy.abc import phi, psi
+    x, y = Ob('x'), Ob('y')
+    f = Box('f', x, y, data=phi + psi)
+    expected = Box('f', x, y, data=3)
+    assert f.subs(phi, 1).data == f.subs([(phi, 1)]).data == psi + 1
+    for args in [([(phi, 1), (psi, 2)], ), ({phi: 1, psi: 2}, ),
+                 ((phi, 1), (psi, 2))]:
+        assert f.subs(*args) == expected
+    g = Box('g', x, y, data=["phi", {"phase": phi}])
+    assert g.free_symbols == {phi}
+    assert Box('h', x, y, data="h").free_symbols == set()
+    assert g.subs(phi, 1).data == g.lambdify(phi)(1).data\
+        == ["phi", {"phase": 1}]
+    h = Box('h', x, y, data=np.array([[phi, 1], [psi, 2]], dtype=object))
+    assert np.array_equal(h.subs(psi, 4).subs(phi, 3).data, [[3, 1], [4, 2]])
+
+
 def test_Sum():
     x, y, z = map(Ob, "xyz")
     f = Box('f', x, y)

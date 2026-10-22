@@ -561,28 +561,61 @@ def loads(raw):
 
 def rmap(func, data):
     """
-    Apply :code:`func` recursively to :code:`data`.
+    Apply :code:`func` recursively to :code:`data`, i.e. to the leaves of its
+    mappings, iterables and numpy arrays, where a string is a leaf.
 
     Example
     -------
     >>> data = {'A': [0, 1, 2], 'B': ({'C': 3, 'D': [4, 5, 6]}, {7, 8, 9})}
     >>> rmap(lambda x: x + 1, data)
     {'A': [1, 2, 3], 'B': ({'C': 4, 'D': [5, 6, 7]}, {8, 9, 10})}
+    >>> rmap(str.upper, ["ab", ("c", )])
+    ['AB', ('C',)]
+    >>> import numpy
+    >>> rmap(lambda x: x / 2, numpy.array([[0, 1], [2, 3]]))
+    array([[0. , 0.5],
+           [1. , 1.5]])
     """
+    import numpy
     if isinstance(data, Mapping):
         return {key: rmap(func, value) for key, value in data.items()}
-    if isinstance(data, Iterable):
+    if isinstance(data, numpy.ndarray):
+        return numpy.array(rmap(func, data.tolist()))
+    if isinstance(data, Iterable) and not isinstance(data, str):
         return type(data)([rmap(func, elem) for elem in data])
     return func(data)
 
 
-def rsubs(data, *args):
-    """ Substitute recursively along nested data. """
+def rsubs(data, *args, **kwargs):
+    """
+    Substitute recursively along nested data, see :func:`rmap`.
+
+    Parameters:
+        data : The data in which to substitute.
+        args : A variable and an expression, or for multiple substitution,
+            a list or a mapping of them, as in :code:`sympy.subs`, or the
+            pairs themselves.
+        kwargs : Passed to :code:`sympy.lambdify`.
+
+    Example
+    -------
+    >>> from sympy.abc import phi, psi  # doctest: +EXTRA
+    >>> data = {"name": "phi", "phases": [phi, phi + psi]}
+    >>> rsubs(data, phi, 1)
+    {'name': 'phi', 'phases': [1, psi + 1]}
+    >>> rsubs(data, [(phi, 1), (psi, 2)])
+    {'name': 'phi', 'phases': [1, 3]}
+    >>> assert rsubs(data, [(phi, 1), (psi, 2)])\\
+    ...     == rsubs(data, {phi: 1, psi: 2}) == rsubs(data, (phi, 1), (psi, 2))
+    """
     from sympy import lambdify
-    if isinstance(args, Iterable) and not isinstance(args[0], Iterable):
-        args = (args, )
-    keys, values = zip(*args)
-    return rmap(lambda x: lambdify(keys, x)(*values), data)
+    pairs = args[0] if len(args) == 1\
+        else args if isinstance(args[0], Iterable) else [args]
+    substitution = dict(pairs)
+    variables, values = tuple(substitution), tuple(substitution.values())
+    return rmap(lambda x: lambdify(variables, x, **kwargs)(*values)
+                if set(variables) & getattr(x, "free_symbols", set()) else x,
+                data)
 
 
 def load_corpus(url):
