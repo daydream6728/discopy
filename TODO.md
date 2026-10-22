@@ -43,19 +43,19 @@ Ruled in the same session: experiments copied as draft PRs, each optyx original 
 pointer, the move as one PR with one commit per layer, the library PRs ported and merged. Triage
 and the copied PRs and issues: #225.
 
-- [ ] merge optyx `main` `c8b7117`, rewritten into `discopy/optyx/`, `test/optyx/`,
+- [x] merge optyx `main` `c8b7117`, rewritten into `discopy/optyx/`, `test/optyx/`,
   `docs/notebooks/optyx/`, `docs/_static/optyx/`, with its 198 commits and their authors
-- [ ] merge the 160 pre-squash commits of optyx#12, #15 and #57 (`backup/main-before-squash`,
+- [x] merge the 160 pre-squash commits of optyx#12, #15 and #57 (`backup/main-before-squash`,
   same tree as `1e3eab9`), so the copied PRs merge from their true merge base
-- [ ] license: `LICENSE` and a `NOTICE` carrying `docs/conf.py`'s copyright line in
+- [x] license: `LICENSE` and a `NOTICE` carrying `docs/conf.py`'s copyright line in
   `discopy/optyx/`, Apache-2.0 said in the module docstring and the CHANGELOG
-- [ ] an `optyx` extra and dependency group, nothing of it in core
-- [ ] optyx's pins onto next `main`: numpy 2, Python 3.12–3.14, discopy's `pyzx` pin
-- [ ] imports from `optyx.` to `discopy.optyx.`
-- [ ] the API drift since discopy `88895277`, in dependency order: `core`, then `channel`,
+- [x] an `optyx` extra and dependency group, nothing of it in core
+- [x] optyx's pins onto next `main`: numpy 2, Python 3.12–3.14, discopy's `pyzx` pin
+- [x] imports from `optyx.` to `discopy.optyx.`
+- [x] the API drift since discopy `88895277`, in dependency order: `core`, then `channel`,
   `classical`, `qubits`, `photonic`, then `compiler` and `utils`
-- [ ] `import discopy` and `import discopy.optyx` import no extra, and a test says so
-- [ ] `--skip-extra` skips what needs the extra
-- [ ] docs: the API page, the docstring images under `docs/_static/optyx/`
-- [ ] one issue per overlap: `core.zx`, channels, backends
+- [x] `import discopy` and `import discopy.optyx` import no extra, and a test says so
+- [x] `--skip-extra` skips what needs the extra
+- [x] docs: the API page, the docstring images under `docs/_static/optyx/`
+- [x] one issue per overlap: `core.zx` #270, channels #271, backends #272
 - [ ] pflake8, pylint at or above `fail-under`, the full suite with the extra, CHANGELOG under `Added`
