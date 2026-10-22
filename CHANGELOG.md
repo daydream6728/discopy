@@ -875,6 +875,19 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   affine map from the features to the targets that `predict` applies, with
   an intercept by default, which the regularisation leaves out, as in
   Fujii and Nakajima's paper; `bias=False` fits without one.
+- The contextual fraction, `discopy.quantum.contextuality`, after Abramsky,
+  Barbosa and Mansfield ([arXiv:1705.07918](https://arxiv.org/abs/1705.07918),
+  [rel-int/discopy-next#283](https://github.com/rel-int/discopy-next/pull/283)):
+  a `Scenario` of measurement contexts and an empirical `Model`, a
+  distribution on the outcomes of each context, built from local measurement
+  circuits on a state by `Model.from_circuits`. `contextual_fraction` solves
+  the linear program for the largest non-contextual part with `scipy`, now in
+  the `quantum` extra; `decompose` splits a model into non-contextual and
+  strongly contextual models, and `bell_inequality` gives the `Inequality`
+  whose normalised violation is the contextual fraction. Models combine by
+  `mix`, controlled choice `&` and product `@`. The tests and the
+  `contextual-fraction` notebook reproduce the examples of the paper,
+  Figure 1 included.
 - `discopy.drawing.widget.DiagramWidget`, an
   [anywidget](https://anywidget.dev) showing the SVG of a drawing, built
   on demand by `RichDisplay.to_widget`, for Jupyter, marimo and VS Code.

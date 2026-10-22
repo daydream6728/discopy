@@ -63,7 +63,7 @@ def test_Scenario_errors():
 
 
 def test_Table_repr():
-    assert eval(repr(PR)) == PR
+    assert eval(repr(PR)) == PR and hash(eval(repr(PR))) == hash(PR)
     inequality = CHSH.bell_inequality()
     assert eval(repr(inequality)) == inequality
     assert hash(inequality) == hash(eval(repr(inequality)))

@@ -6,4 +6,4 @@ The attached paper is Abramsky, Barbosa & Mansfield, [The contextual fraction as
 - [x] quantum empirical models: local measurement circuits on a state, evaluated as channels
 - [x] the operations of Theorem 2: mixing, choice `&`, product `@`, relabelling
 - [x] tests reproducing Tables I, II and III, the maxima (14) and (15), Proposition 4 and Theorems 1 and 2
-- [WIP] @session_012vx8TovHEkAieTr5eN2Ab5-2026-10-22 20:05 notebook reproducing Figure 1 and the tables; api docs, bibliography, `CHANGELOG.md`, `scipy` in the `quantum` extra
+- [x] notebook reproducing Figure 1 and the tables; api docs, bibliography, `CHANGELOG.md`, `scipy` in the `quantum` extra
