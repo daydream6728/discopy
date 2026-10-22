@@ -444,15 +444,14 @@ class Matrix[dtype](
         >>> Matrix.swap(2,1)
         Matrix[int64]([0, 1, 0, 0, 0, 1, 1, 0, 0], dom=3, cod=3)
         """
-        return cls.permutation(
-            [1, 0], [left, right])  # ty: ignore[invalid-argument-type]
+        return cls.permutation([1, 0], [left, right])
 
     braid = swap
 
     @classmethod
     def permutation(
             cls, xs: Sequence[int],
-            doms: Sequence[int] | None = None) -> Matrix:
+            doms: Sequence[Nat | int] | None = None) -> Matrix:
         """
         The matrix that permutes blocks of dimensions.
 
@@ -526,14 +525,12 @@ class Matrix[dtype](
         >>> assert Matrix.copy(2) >> Matrix.id(2) @ Matrix.discard(2)\\
         ...     == Matrix.id(2)
         """
-        x = index(x)  # ty: ignore[invalid-assignment]
+        dim = index(x)
         with backend() as np:
             array = np.array([
-                [j % x == i  # ty: ignore[unsupported-operator]
-                 for j in range(n * x)]  # ty: ignore[unsupported-operator]
-                for i in range(x)],
+                [j % dim == i for j in range(n * dim)] for i in range(dim)],
                 dtype=cls.dtype or int)
-        return cls(array, x, n * x)  # ty: ignore[unsupported-operator]
+        return cls(array, dim, n * dim)
 
     @classmethod
     def merge(cls, x: Nat, n: int = 2) -> Matrix:
@@ -541,7 +538,7 @@ class Matrix[dtype](
         return cls.copy(x, n).dagger()
 
     @classmethod
-    def ones(cls, x: Nat) -> Matrix:
+    def ones(cls, x: Nat | int) -> Matrix:
         """ The unit ``0 -> x`` of the direct sum, an alias of :meth:`noise`.
         """
         return cls.noise(x)
@@ -596,12 +593,8 @@ class Matrix[dtype](
         if left:
             return (self.swap(dom, n) >> self >> self.swap(n, cod)).trace(n)
         A, B, C, D = (row >> self >> column
-                      for row in [
-                          self.id(dom) @ self.ones(
-                              n),  # ty: ignore[invalid-argument-type]
-                          self.ones(
-                              dom)  # ty: ignore[invalid-argument-type]
-                          @ self.id(n)]
+                      for row in [self.id(dom) @ self.ones(n),
+                                  self.ones(dom) @ self.id(n)]
                       for column in [self.id(cod) @ self.discard(n),
                                      self.discard(cod) @ self.id(n)])
         return A + (B >> D.repeat() >> C)

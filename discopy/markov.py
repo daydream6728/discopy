@@ -63,7 +63,7 @@ the :mod:`frobenius` axioms.
 from __future__ import annotations
 
 import warnings
-from typing import ClassVar
+from typing import TYPE_CHECKING, ClassVar
 
 from discopy import symmetric, monoidal, feedback, cmap, hypergraph, messages
 from discopy.abc import ComarkovCategory, MarkovCategory
@@ -73,6 +73,9 @@ from discopy.feedback import (  # noqa: F401  pylint: disable=unused-import
     Wire, Ty)
 from discopy.utils import (
     AxiomError, assert_isatomic, deprecated_alias, factory_name, from_tree)
+
+if TYPE_CHECKING:
+    from discopy import comarkov
 
 
 Layer = symmetric.Layer
@@ -177,7 +180,7 @@ class Diagram(symmetric.Diagram, MarkovCategory):
         messages.MAP_HAS_NO_SPIDERS)
 
     @classmethod
-    def merge(cls, x: monoidal.Ty, n=2) -> Diagram:
+    def merge(cls, x: monoidal.Ty, n=2) -> Diagram | comarkov.Diagram:
         """
         Deprecated: a Markov diagram has no merge, see
         :meth:`discopy.comarkov.Diagram.merge`, which a diagram that is
@@ -194,7 +197,7 @@ class Diagram(symmetric.Diagram, MarkovCategory):
             "use discopy.comarkov.Diagram.merge instead.",
             DeprecationWarning, stacklevel=2)
         from discopy import comarkov
-        return comarkov.Diagram.merge(x, n)  # ty: ignore[invalid-return-type]
+        return comarkov.Diagram.merge(x, n)
 
 
 class Box(symmetric.Box, Diagram):

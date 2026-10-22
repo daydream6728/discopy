@@ -609,8 +609,8 @@ Diagram.eval_factory, Diagram.coeval_factory = Eval, Coeval
 
 Ty.variable_factory = Variable
 Ty.constant_factory = Constant
-Ty.application_factory = (  # ty: ignore[invalid-assignment]
-    lambda func, args, left=False: BA(args, func) if left else FA(func, args))
+Ty.application_factory =\
+    lambda func, args, left=False: BA(args, func) if left else FA(func, args)
 Ty.abstraction_factory = Abstraction
 
 Ty.over_factory, Ty.under_factory = Over, Under

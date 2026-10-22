@@ -134,7 +134,7 @@ class Ty(biclosed.Ty, feedback.Ty):
     product_factory: ClassVar[type["Product"]]
     variable_factory: ClassVar[type["Variable"]]
     constant_factory: ClassVar[type["Constant"]]
-    application_factory: ClassVar[type["Application"]]
+    application_factory: ClassVar[Callable[..., "Application"]]
     abstraction_factory: ClassVar[type["Abstraction"]]
 
     def __mul__(self, other: Ty) -> Ty:
@@ -1168,9 +1168,11 @@ class Tuple(Compound):
         self.freevars = list(dict.fromkeys(
             sum([term.freevars for term in terms], [])))
         dom = self.ob().tensor(*[x.cod for x in self.freevars])
-        cod = self.ob(self.ob.product_factory(
-            *[t.cod for t in terms])) if terms\
-            else self.ob()  # ty: ignore[invalid-argument-type]
+        cod = self.ob()
+        if terms:
+            product = self.ob.product_factory(
+                *[t.cod for t in terms])  # ty: ignore[invalid-argument-type]
+            cod = self.ob(product)
         super().__init__(dom, cod)
 
     @property

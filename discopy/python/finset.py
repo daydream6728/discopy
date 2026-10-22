@@ -122,8 +122,7 @@ class Function(MonoidalCategory[Nat, "Function"], Sequence):
         """
         m, n = int(x), int(y)
         return Function(
-            list(range(m, m + n)) + list(range(m)),
-            m + n, m + n)  # ty: ignore[invalid-argument-type]
+            list(range(m, m + n)) + list(range(m)), Nat(m + n), Nat(m + n))
 
     def is_swap(self: Function | Sequence[int]) -> bool:
         """
@@ -374,8 +373,7 @@ class Permutation(Function, PROP, Groupoid):
         >>> Permutation((1, 2, 0, 3)).coequalizer()
         {0: 0, 1: 0, 2: 0, 3: 1}
         """
-        others = [  # ty: ignore[invalid-assignment]
-            type(self)(other, len(self)) for other in others]
+        others = tuple(type(self)(other, len(self)) for other in others)
         component_of = {}
         component = 0
         for start in range(len(self)):
