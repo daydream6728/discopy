@@ -772,6 +772,8 @@ class Diagram(NamedGeneric['dtype'], frobenius.Diagram):
         """ Gradient with respect to :code:`var`. """
         if var not in self.free_symbols:
             return self.sum_factory((), self.dom, self.cod)
+        if len(self.inside[0].boxes) > 1:
+            return (self[:1].to_staircases() >> self[1:]).grad(var, **params)
         left, box, right = self.inside[0].boxes_and_types
         tail = self[1:]
         t1 = self.id(left) @ box.grad(var, **params) @ self.id(right) >> tail
