@@ -535,6 +535,16 @@ class Controlled(QuantumGate):
         controlled_conj = self.controlled.conjugate()
         return Controlled(controlled_conj, distance=-self.distance)
 
+    def rotate(self, left=False):
+        """
+        The transpose of a controlled gate controls the transpose of its
+        gate, with the order of the qubits reversed.
+
+        >>> assert CRz(.3).l.eval().is_close(CRz(.3).eval().l)
+        """
+        return Controlled(
+            self.controlled.rotate(left), distance=-self.distance)
+
     def lambdify(self, *symbols, **kwargs):
         c_fn = self.controlled.lambdify(*symbols)
         return lambda *xs: type(self)(c_fn(*xs), distance=self.distance)
@@ -579,7 +589,6 @@ class Controlled(QuantumGate):
         return self.controlled.phase
 
     __hash__ = QuantumGate.__hash__
-    l = r = property(conjugate)
 
     def _decompose_grad(self):
         if self.time_step:

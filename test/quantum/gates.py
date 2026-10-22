@@ -128,3 +128,12 @@ def test_Controlled_array_reads_the_dagger_of_its_gate():
         assert numpy.allclose(
             (controlled >> controlled.dagger()).eval().array.reshape(
                 dim, dim), numpy.eye(dim))
+
+
+def test_Controlled_rotation_commutes_with_evaluation():
+    for gate in (CRz(.3), CRx(.3), CU1(.3, distance=-2), Controlled(S),
+                 Controlled(Y, distance=2), Controlled(CRz(.4), distance=-1)):
+        assert gate.l.eval().is_close(gate.eval().l)
+        assert gate.r.eval().is_close(gate.eval().r)
+        assert gate.l.r == gate == gate.r.l
+    assert isinstance(CRz(.5).rotate(), Controlled)
