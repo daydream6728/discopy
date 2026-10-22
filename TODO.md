@@ -6,12 +6,12 @@ USER's ruling on decision 8 of #56, live (10-22): "8a now, 8b next", recorded as
 
 This branch is 8a only.
 
-- [ ] `interchange`, `normalize`, `snake_removal`, `normal_form`: say in their docstrings that they are planar rewrites, scoped to the levels from `monoidal` to `rigid`, and split a foliated diagram into staircases so that they are correct on it
-- [ ] port `monoidal.Layer.merge`, `Diagram.interchange`, `Diagram.substitute` off `boxes_and_types`
-- [ ] port `braided.Diagram.simplify`, `naturality`
-- [ ] port `rigid.Diagram.transpose_box`
-- [ ] port `tensor.Diagram.grad`
-- [ ] port `grammar.pregroup.Diagram.normal_form`
-- [ ] port `quantum.tk.to_tk`, `quantum.circuit.Circuit.to_tn`
-- [ ] delete `Layer.boxes_and_types`, port its tests and docs
-- [ ] `CHANGELOG.md`
+- [x] `interchange`, `normalize`, `snake_removal`, `normal_form`: say in their docstrings that they are planar rewrites, scoped to the levels from `monoidal` to `rigid`, and split a foliated diagram into staircases so that they are correct on it
+- [x] port `monoidal.Layer.merge`, `Diagram.interchange`, `Diagram.substitute` off `boxes_and_types`
+- [x] port `braided.Diagram.simplify`, `naturality`
+- [x] port `rigid.Diagram.transpose_box`
+- [x] port `tensor.Diagram.grad`
+- [x] port `grammar.pregroup.Diagram.normal_form`
+- [x] port `quantum.tk.to_tk`, `quantum.circuit.Circuit.to_tn`
+- [x] delete `Layer.boxes_and_types`, port its tests and docs
+- [x] `CHANGELOG.md`
