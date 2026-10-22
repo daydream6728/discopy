@@ -42,7 +42,7 @@ def test_M_init():
     x, y = map(Ty, "xy")
     with raises(ValueError):
         M(x, x, (), ())
-    with raises(ValueError):
+    with raises(ValueError, match="involution"):
         M(x, x, (), (0, 1))
     with raises(ValueError):
         M(x, x, (), (0,))
@@ -53,7 +53,9 @@ def test_M_init():
 
 
 def test_repr_eq_and_hash():
+    from discopy import cmap
     from discopy.compact import Ty, Box, CMap as M
+    from discopy.utils import factory_name
 
     x, y = map(Ty, "xy")
     cm = M.from_box(Box("f", x, y))
@@ -66,6 +68,11 @@ def test_repr_eq_and_hash():
     assert cm == M.from_box(Box("f", x, y))
     assert cm != object()
     assert hash(cm) == hash(M.from_box(Box("f", x, y)))
+
+    class Map(cmap.CMap):
+        category = compact.Diagram
+
+    assert repr(Map.id(x) @ Map.id(y)).startswith(factory_name(Map) + "(")
 
     g = M.from_box(Box("g", y, x))
     interchanged = (cm @ g).interchange(0, 1)
@@ -217,7 +224,9 @@ def test_diagram_to_map_structure_and_errors():
     ev = closed.Eval(cy << cx)
     assert ev.to_map() == closed.CMap.ev(cy, cx, left=False)
     assert ev.to_map().boxes == (ev, )
-    assert closed.Box("f", cx, cx).to_map().trace()
+    loop = closed.Box("f", cx, cx)
+    assert loop.to_map().trace() == closed.CMap(
+        closed.Ty(), closed.Ty(), (loop, ), (1, 0))
 
     mx = markov.Ty("x")
     copy = markov.Copy(mx, 2)
@@ -245,7 +254,7 @@ def test_diagram_to_map_structure_and_errors():
             Port(PortKind.COD, 0, x, 0, "down"))
     f = compact.CMap.from_box(compact.Box("f", x, y))
     assert f.trace(0) is f
-    with raises(ValueError):
+    with raises(ValueError, match="split"):
         f.trace(-1)
     with raises(ValueError):
         f.trace(2)
@@ -683,11 +692,11 @@ def test_plug_input():
         0, Box("lambda", x, x @ y), y, root_index=1)
     assert right_root.dom == Ty()
     assert right_root.cod == y
-    with raises(ValueError):
+    with raises(ValueError, match="range"):
         f.plug_input(-1, Box("lambda", x, y @ z), y)
-    with raises(ValueError):
+    with raises(ValueError, match="range"):
         f.plug_input(0, Box("lambda", x, y @ z), y, root_index=2)
-    with raises(ValueError):
+    with raises(ValueError, match="Cannot plug"):
         f.plug_input(0, Box("bad", Ty(), y @ z), y)
 
 
