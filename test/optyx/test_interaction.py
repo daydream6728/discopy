@@ -239,9 +239,9 @@ def test_drawing():
 def test_gradient_through_the_memory_wire():
     torch = pytest.importorskip("torch")
     from discopy import tensor
-    from optyx.channel import Channel
-    from optyx.core.diagram import Box as CoreBox, bit as core_bit
-    from optyx.qubits import Bra
+    from discopy.optyx.channel import Channel
+    from discopy.optyx.core.diagram import Box as CoreBox, bit as core_bit
+    from discopy.optyx.qubits import Bra
 
     theta = torch.tensor(0.3, dtype=torch.float64, requires_grad=True)
     array = torch.stack((
@@ -270,7 +270,7 @@ def test_gradient_through_the_memory_wire():
         diagram = network.get_kraus().to_tensor()
         diagram = tensor.Diagram.decode(
             diagram.dom, cod=diagram.cod, offsets=diagram.offsets, boxes=[
-                box if isinstance(box, tensor.Swap) else to_torch(box)
+                box if isinstance(box, tensor.Permutation) else to_torch(box)
                 for box in diagram.boxes])
         result = diagram.eval(dtype=float)
     probability = result.array ** 2
