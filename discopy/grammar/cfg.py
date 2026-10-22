@@ -207,6 +207,7 @@ class Word(thue.Word, Rule):
     """
     def __init__(self, name: str, cod: monoidal.Ty, dom: monoidal.Ty = Ty(),
                  **params):
+        thue.Word.__init__(self, name=name, dom=dom, cod=cod, **params)
         Rule.__init__(self, dom=dom, cod=cod, name=name, **params)
 
 
