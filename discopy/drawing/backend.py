@@ -32,7 +32,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 
-from matplotlib.colors import to_hex
+from matplotlib.colors import to_hex, to_rgb
 from matplotlib.testing.compare import compare_images
 from matplotlib.patches import PathPatch, Patch
 from matplotlib.path import Path
@@ -1149,8 +1149,8 @@ class Backend(ABC):
             # and of `bottom`. The two crossings pinch off a lens where the
             # ribbon has turned over: fill it with a darker shade of the
             # front colour, for a nicer visual of the twist.
-            back = color if color == TRANSPARENT\
-                else config.darken(to_hex(COLORS.get(color, color)))
+            back = color if color == TRANSPARENT else config.darken(
+                to_hex(COLORS.get(color, color), keep_alpha=True))
             front_top0, back_top0 = (
                 bezier_subcurve(top0, 0, .5), bezier_subcurve(top0, .5, 1))
             back_bottom0, front_bottom0 = (
@@ -1309,22 +1309,23 @@ class TikZ(Backend):
     @staticmethod
     def format_color(color):
         """
-        Formats a color: a name in :data:`COLORS` or a hexcode as its RGB
-        values, any other color as it is, e.g. transparency, which TikZ spells
-        like matplotlib, or an xcolor name.
+        Formats a color: a name in :data:`COLORS` or a hexcode, in any form
+        matplotlib reads, as its RGB values, any other color as it is, e.g.
+        transparency, which TikZ spells like matplotlib, or an xcolor name.
+        A TikZ color has no alpha channel, so that of a hexcode is dropped.
 
         >>> TikZ.format_color("red")
         '{rgb,255: red,232; green,165; blue,165}'
-        >>> TikZ.format_color("#e8a5a5")
-        '{rgb,255: red,232; green,165; blue,165}'
+        >>> assert TikZ.format_color("#e8a5a5") == TikZ.format_color("red")
+        >>> assert TikZ.format_color("#abc") == TikZ.format_color("#aabbcc80")
         >>> TikZ.format_color("lightgray")
         'lightgray'
         """
         hexcode = COLORS.get(color, color)
-        if not re.fullmatch("#[0-9a-fA-F]{6}", str(hexcode)):
+        if not str(hexcode).startswith("#"):
             return color
-        rgb = [int(hexcode[i:i + 2], 16) for i in (1, 3, 5)]
-        return f"{{rgb,255: red,{rgb[0]}; green,{rgb[1]}; blue,{rgb[2]}}}"
+        red, green, blue = (round(255 * x) for x in to_rgb(hexcode))
+        return f"{{rgb,255: red,{red}; green,{green}; blue,{blue}}}"
 
     def add_node(self, i, j, text=None, options=None, rounded=4):
         """ Add a node to the tikz picture, return its unique id. """
@@ -1372,7 +1373,9 @@ class TikZ(Backend):
                 self.edge_styles.append(style)
             options = f"style={style_name}"
         else:
-            options = f"-, fill={{{facecolor}}}"
+            options = "-, fill=" + (
+                self.format_color(facecolor) if str(facecolor).startswith("#")
+                else f"{{{facecolor}}}")
         str_connections = " to ".join(f"({node}.center)" for node in nodes)
         self.edgelayer.append(f"\\draw [{options}] {str_connections};\n")
         super().draw_polygon(*points)
@@ -1458,7 +1461,9 @@ class TikZ(Backend):
                     self.node_styles.append(style)
                 options = f"style={node.box.tikzstyle_name}"
             else:
-                options = f"{shape}, fill={color}"
+                options = f"{shape}, fill=" + (
+                    self.format_color(color) if str(color).startswith("#")
+                    else color)
             if params.get("nodesize", 1) != 1:
                 options +=\
                     f", scale={params.get('nodesize')}"  # pragma: no cover

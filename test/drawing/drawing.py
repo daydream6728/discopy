@@ -880,7 +880,9 @@ def test_draw_is_pure(tmp_path):
     assert drawing == (f >> g).to_drawing()
     X = ribbon.Ty('x')
     dual_rail = ribbon.Braid(X, X).trace().to_ribbons().to_drawing()
+    snapshot = dual_rail.relabel_nodes()
     assert dual_rail.to_svg() == dual_rail.to_svg()
+    assert dual_rail == snapshot and dual_rail.height == snapshot.height
     plt.close('all')
     f.draw(show=False)
     assert plt.get_fignums() == []
@@ -898,15 +900,30 @@ def test_draw_any_colour_a_box_draws_in(tmp_path):
     from matplotlib.colors import to_hex
     from discopy import ribbon
     x, X = monoidal.Ty('x'), ribbon.Ty('x')
+    front, back = 'lightgrey', config.darken(to_hex('lightgrey'))
     spider = monoidal.Box('f', x, x, draw_as_spider=True, color='lightgrey')
     cup, twist = (diagram.to_ribbons(colour='lightgrey') for diagram in (
         ribbon.Diagram.cups(X, X.r), ribbon.Diagram.twist(X)))
-    svg, tikz = tmp_path / "drawing.svg", tmp_path / "drawing.tikz"
-    for diagram in (spider, cup, twist):
+    for name, diagram, fills in [
+            ("spider", spider, [front]), ("cup", cup, [front]),
+            ("twist", twist, [front, back])]:
+        svg, tikz = tmp_path / f"{name}.svg", tmp_path / f"{name}.tikz"
         diagram.draw(path=svg, show=False)
         diagram.draw(path=str(tikz), to_tikz=True, use_tikzstyles=True)
-    back = config.darken(to_hex('lightgrey'))
-    assert f"fill: {back}" in svg.read_text()
-    assert TikZ.format_color(back) in tikz.read_text()
+        tikz_code = tikz.read_text() + tikz.with_suffix(".tikzstyles")\
+            .read_text()
+        for fill in fills:
+            assert f"fill: {to_hex(fill)}" in svg.read_text()
+            assert TikZ.format_color(fill) in tikz_code
+    svg = tmp_path / "translucent.svg"
+    ribbon.Diagram.twist(X).to_ribbons(colour='#abcdef80').draw(
+        path=svg, show=False)
+    assert f"fill: {config.darken('#abcdef')}; fill-opacity: 0.5"\
+        in svg.read_text()
     ribbon.Diagram.twist(X).to_ribbons(colour=config.TRANSPARENT).draw(
         path=svg, show=False)
+    tikz = tmp_path / "hexcode.tikz"
+    for diagram in (monoidal.Box('f', x, x, color='#abc'), monoidal.Box(
+            'f', x, x, draw_as_spider=True, color='#abc')):
+        diagram.draw(path=str(tikz), to_tikz=True)
+        assert TikZ.format_color('#aabbcc') in tikz.read_text()

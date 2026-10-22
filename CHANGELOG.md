@@ -2433,13 +2433,16 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   left one open (B85 of
   [rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
 - A spider, a ribbon and a twist draw in any colour a box draws in:
-  `TikZ.format_color` gives the RGB values of a named colour or a hexcode
-  and passes any other colour through, as a TikZ box does, where it indexed
-  `COLORS` and raised `KeyError`, so that a ribbon in TikZ and a spider or
-  a box with `use_tikzstyles` could only take the seven named colours; and
-  the back of a twist is filled with `config.darken` of its colour, where it
-  looked up `f"dark_{color}"` and raised on any other colour in both
-  backends, a transparent twist keeping a transparent back (B83 of
+  `TikZ.format_color` gives the RGB values of a named colour or of a
+  hexcode in any form matplotlib reads, and passes any other colour
+  through, as a TikZ box does, where it indexed `COLORS` and raised
+  `KeyError`, so that a ribbon in TikZ and a spider or a box with
+  `use_tikzstyles` could only take the seven named colours; a TikZ box or
+  spider in a hexcode writes its RGB values, where it wrote `fill={#336699}`,
+  which TikZ rejects; and the back of a twist is filled with
+  `config.darken` of its colour, which keeps its alpha, where it looked up
+  `f"dark_{color}"` and raised on any other colour in both backends, a
+  transparent twist keeping a transparent back (B83 of
   [rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
 - Region painting computes the exact extents of each coloured region —
   polygons bounded by the wires on both sides, subdivided per height band —
