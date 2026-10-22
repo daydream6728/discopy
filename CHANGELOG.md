@@ -2593,7 +2593,7 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - `pregroup.Diagram.normal_form` of a foliated diagram, splitting a layer
   of more than one box into staircases first, and of a word with a wire on
   its left that is not a word, as in `n @ Alice`, which goes to the rigid
-  normal form, where both raised (B31 of
+  normal form, where both raised an error (B31 of
   [rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
 - `eval(repr(x)) == x` for `cfg.Tree`, `cfg.Rule`, `cfg.Id` and
   `pregroup.Word`, which printed the `str` of their root, `Id(x)` and a bare
