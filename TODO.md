@@ -28,7 +28,7 @@ hypergraph isomorphism that forgets those orders decides.
     matrix
   - [x] §3.3 𝐋(K) over GF(p), the relations of Fig. 36, with ℤ₂ as p = 2
   - [x] §2.1, §2.2 and §2.4 say why 𝔖, 𝔐 and 𝔄 are trivial or out of scope once τ is absorbed
-- [ ] the later parts, filed as issues when this one is done:
+- [x] the later parts, filed as #311:
   - §3.1–§3.2 𝐆𝐋(ℤ₂) and the κ presentations of 𝐋(ℤ₂) and its surjections (Theorems 6–8), 𝐆𝐋(K)
   - §3.4 the isometries 𝐎 and Euler angles (Theorem 9)
   - §4 𝔉[2], ℤ(ℤ₂), 𝔄(ℤ₂) and 𝐆𝐀(ℤ₂) (Theorems 10–11)
