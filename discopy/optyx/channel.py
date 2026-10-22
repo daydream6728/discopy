@@ -472,20 +472,22 @@ class Diagram(frobenius.Diagram):
             burn_in : The number of ticks discarded first, certified from
                 `tol` for a passive diagram when not given.
             cap : The most photons an optical mode holds in an
-                :class:`optyx.sampling.Unravelling`.
+                :class:`discopy.optyx.sampling.Unravelling`.
             shots : The number of independent trajectories, from the same
                 sampler; a list of them when given.
-            source : The :class:`optyx.sampling.Source` feeding the inputs,
-                one mode per input: :class:`optyx.sampling.Fock`,
-                :class:`optyx.sampling.Coherent`,
-                :class:`optyx.sampling.Thermal` or a tensor of them.
+            source : The :class:`discopy.optyx.sampling.Source` feeding the
+                inputs, one mode per input:
+                :class:`discopy.optyx.sampling.Fock`,
+                :class:`discopy.optyx.sampling.Coherent`,
+                :class:`discopy.optyx.sampling.Thermal` or a tensor of them.
 
         **Passive diagrams** — beam splitters, phase shifters and any other
-        linear optics, :class:`optyx.photonic.Create` boxes, photon loss and
-        discards, on optical modes only, with loops starting in the vacuum —
-        are sampled by their :class:`optyx.sampling.Interferometer`: the
-        loop is a Fock state evolved by the unitary of the step, each output
-        measured as soon as the modes it depends on are, so a tick costs
+        linear optics, :class:`discopy.optyx.photonic.Create` boxes, photon
+        loss and discards, on optical modes only, with loops starting in the
+        vacuum — are sampled by their
+        :class:`discopy.optyx.sampling.Interferometer`: the loop is a Fock
+        state evolved by the unitary of the step, each output measured as
+        soon as the modes it depends on are, so a tick costs
         what the photons in the loop and the inputs cost, not what every
         mode would. Loss and discards are environment modes, measured and
         forgotten. The burn-in is certified within `tol`. Photons are
@@ -494,8 +496,8 @@ class Diagram(frobenius.Diagram):
         probability and in one of its own otherwise.
 
         **Every other diagram** is sampled by its
-        :class:`optyx.sampling.Unravelling`, one box at a time on a pure
-        state of the quantum wires and definite values of the classical
+        :class:`discopy.optyx.sampling.Unravelling`, one box at a time on a
+        pure state of the quantum wires and definite values of the classical
         ones:
 
         - linear optics is applied through the Givens decomposition of its
@@ -507,8 +509,9 @@ class Diagram(frobenius.Diagram):
           measurement have their environment or their classical outputs
           measured, sampled and collapsed: these are the quantum
           trajectories of the channel;
-        - a classical box, a :class:`optyx.classical.ClassicalFunction`
-          or a random one, samples its outputs from its inputs, and a
+        - a classical box, a
+          :class:`discopy.optyx.classical.ClassicalFunction` or a random
+          one, samples its outputs from its inputs, and a
           classically controlled box applies the box its values select;
         - photons with internal states are sampled on the diagram inflated
           to as many internal levels, the detectors adding up the counts.
@@ -530,7 +533,7 @@ class Diagram(frobenius.Diagram):
         transient, and every tick of the stationary regime detects one
         photon:
 
-        >>> from optyx.photonic import Create
+        >>> from discopy.optyx.photonic import Create
         >>> delay = (Create(1) @ qmode >> Diagram.swap(qmode, qmode)
         ...     ).feedback(state=Create(0))
         >>> delay.sample(ticks=3, burn_in=0, seed=0)
@@ -541,15 +544,15 @@ class Diagram(frobenius.Diagram):
         The same delay line with its input left open, fed with coherent
         light:
 
-        >>> from optyx.sampling import Coherent
+        >>> from discopy.optyx.sampling import Coherent
         >>> fibre = Diagram.swap(qmode, qmode).feedback(state=Create(0))
         >>> fibre.sample(ticks=4, burn_in=0, seed=0, source=Coherent((1., )))
         [(0,), (1,), (0,), (2,)]
 
         A loop that measures its photon and re-injects it:
 
-        >>> from optyx.photonic import NumberResolvingMeasurement
-        >>> from optyx.classical import CopyN
+        >>> from discopy.optyx.photonic import NumberResolvingMeasurement
+        >>> from discopy.optyx.classical import CopyN
         >>> recycle = (NumberResolvingMeasurement(1) >> CopyN(2)
         ...     >> mode @ Encode(mode)).feedback(state=Create(1))
         >>> recycle.sample(ticks=2, burn_in=0, seed=0)
@@ -568,10 +571,10 @@ class Diagram(frobenius.Diagram):
                 burn_in: int = None, cap: int = 4, source=None) -> tuple:
         """
         The sampler of :meth:`sample` and its burn-in: the
-        :class:`optyx.sampling.Interferometer` of a passive diagram, with
-        the burn-in it certifies within `tol` unless `burn_in` is given,
-        and the :class:`optyx.sampling.Unravelling` of any other, with the
-        `burn_in` given, both fed by `source`.
+        :class:`discopy.optyx.sampling.Interferometer` of a passive diagram,
+        with the burn-in it certifies within `tol` unless `burn_in` is given,
+        and the :class:`discopy.optyx.sampling.Unravelling` of any other,
+        with the `burn_in` given, both fed by `source`.
         """
         try:
             network = Interferometer.from_diagram(
@@ -2101,7 +2104,7 @@ class Observable(CQMap):
     The number of photons a beam splitter sends to its first output, from
     one photon in each input, is one on average:
 
-    >>> from optyx import photonic
+    >>> from discopy.optyx import photonic
     >>> hom = photonic.Create(1, 1) >> photonic.BS
     >>> number = Observable(function=lambda n: n[0], dom=qmode @ qmode)
     >>> assert np.isclose(number.expectation(hom), 1)

@@ -36,6 +36,26 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   [#272](https://github.com/rel-int/discopy-next/issues/272)
   ([#225](https://github.com/rel-int/discopy-next/issues/225)).
 
+- `discopy.optyx.sampling`, copied from
+  [rel-int/optyx#76](https://github.com/rel-int/optyx/pull/76):
+  `channel.Diagram.sample` records the outputs of a diagram with feedback
+  loops tick after tick, photon numbers, qubits in the computational basis
+  and classical values, its inputs fed by a `Source` (`Fock`, `Coherent` or
+  `Thermal`). A passive diagram is sampled by its `Interferometer`, a
+  recurrent linear-optical network measured one output at a time, with a
+  certified burn-in, partially distinguishable photons and its exact
+  `distribution`; any other diagram by its `Unravelling`, a quantum
+  trajectory run one box at a time on a `CQState`, measurements, classical
+  control, qubits and non-linear boxes included. `channel.Observable` is the
+  effect of a normal operator or of a classical function of the outcomes,
+  the latter through the new `control.Weight`, with its exact
+  `expectation`; `Channel.inflate` now inflates the environment of a box,
+  and the *What is a channel?* notebook samples every circuit next to its
+  tensor network. Ported onto this `main`: a swap and the wires around it
+  are one `Permutation`, which the `Unravelling` applies to the values and
+  axes of the wires it permutes
+  ([#225](https://github.com/rel-int/discopy-next/issues/225)).
+
 - `discopy.ehypergraph`, e-graphs of diagrams with sharing: an
   `EHypergraph` over a copy-discard category is a left-monogamous acyclic
   `Hypergraph`, whose boxes are the e-nodes, with an equivalence relation on

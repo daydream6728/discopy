@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 from scipy.stats import unitary_group
 
-from optyx.sampling import (
+from discopy.optyx.sampling import (
     Interferometer, FockState, Sweep, Unravelling, Fock, Coherent, Thermal,
     Source, levels, sector, position, givens, interfere, twomode)
 
@@ -314,8 +314,8 @@ def test_sources():
 
 
 def test_sources_on_diagrams():
-    from optyx.channel import Diagram, Encode, qmode, mode
-    from optyx.photonic import (
+    from discopy.optyx.channel import Diagram, Encode, qmode, mode
+    from discopy.optyx.photonic import (
         Create, NumberResolvingMeasurement, PhotonLoss, BS)
     fibre = Diagram.swap(qmode, qmode).feedback(state=Create(0))
     network, _ = fibre.sampler(source=Coherent((2., )))
@@ -352,8 +352,8 @@ def test_sources_on_diagrams():
 
 
 def lossy_diagram():
-    from optyx.channel import qmode, Discard
-    from optyx.photonic import Create, MZI, PhotonLoss
+    from discopy.optyx.channel import qmode, Discard
+    from discopy.optyx.photonic import Create, MZI, PhotonLoss
     step = (Create(1) @ Create(1) @ qmode
             >> MZI(0.3, 0.2) @ qmode >> qmode @ MZI(0.15, 0.7)
             >> qmode @ Discard(qmode) @ PhotonLoss(0.7))
@@ -362,7 +362,7 @@ def lossy_diagram():
 
 @pytest.mark.parametrize("unrollings", [1, 2])
 def test_from_diagram_matches_the_unrolled_diagram(unrollings):
-    from optyx.photonic import NumberResolvingMeasurement
+    from discopy.optyx.photonic import NumberResolvingMeasurement
     diagram = lossy_diagram()
     network = Interferometer.from_diagram(diagram)
     assert (network.loop, network.inputs, network.visible) \
@@ -376,8 +376,8 @@ def test_from_diagram_matches_the_unrolled_diagram(unrollings):
 
 def test_partially_distinguishable_photons():
     from collections import Counter
-    from optyx.channel import qmode, Discard
-    from optyx.photonic import Create, MZI, NumberResolvingMeasurement
+    from discopy.optyx.channel import qmode, Discard
+    from discopy.optyx.photonic import Create, MZI, NumberResolvingMeasurement
     p, mzi = .5, MZI(.2, .3)
 
     def internal(photon):
@@ -413,8 +413,8 @@ def test_distinguishable_photons_walk_alone():
 
 
 def test_sample_and_its_errors():
-    from optyx.channel import Diagram, qmode
-    from optyx.photonic import Create, NumberResolvingMeasurement
+    from discopy.optyx.channel import Diagram, qmode
+    from discopy.optyx.photonic import Create, NumberResolvingMeasurement
     assert len(lossy_diagram().sample(ticks=3, tol=1e-2, seed=0)) == 3
     with pytest.raises(ValueError):
         Interferometer.from_diagram(Diagram.swap(qmode, qmode).feedback(
@@ -429,7 +429,7 @@ def test_sample_and_its_errors():
 
 
 def test_complete_refuses_a_non_isometry():
-    from optyx.sampling import complete
+    from discopy.optyx.sampling import complete
     with pytest.raises(ValueError):
         complete(np.array([[1.], [1.]]))
 
@@ -439,7 +439,7 @@ def exact(diagram, ticks):
     The exact distribution of the outputs of `ticks` ticks of a closed
     diagram, every quantum output measured, from its unrolling.
     """
-    from optyx.channel import Diagram, Measure
+    from discopy.optyx.channel import Diagram, Measure
     measured = diagram.unroll(ticks - 1)
     for i, ob in enumerate(measured.cod.inside):
         if ob.name in ("qmode", "qubit"):
@@ -455,10 +455,10 @@ def exact(diagram, ticks):
 
 
 def feedforward():
-    from optyx.channel import qmode, mode, bit
-    from optyx.photonic import Create, MZI, Phase, PhotonLoss
-    from optyx.photonic import NumberResolvingMeasurement
-    from optyx import classical
+    from discopy.optyx.channel import qmode, mode, bit
+    from discopy.optyx.photonic import Create, MZI, Phase, PhotonLoss
+    from discopy.optyx.photonic import NumberResolvingMeasurement
+    from discopy.optyx import classical
     parity = classical.ClassicalFunction(lambda x: [x[0] % 2], mode, bit)
     step = (Create(1) @ qmode @ qmode >> MZI(.3, .2) @ qmode
             >> NumberResolvingMeasurement(1) @ qmode @ qmode
@@ -469,8 +469,8 @@ def feedforward():
 
 
 def qubit_loop():
-    from optyx.channel import qubit, bit, Diagram
-    from optyx import classical, qubits
+    from discopy.optyx.channel import qubit, bit, Diagram
+    from discopy.optyx import classical, qubits
     cnot = qubits.Z(1, 2) @ qubit \
         >> qubit @ qubits.X(2, 1) @ qubits.Scalar(2 ** .5)
     step = (qubit @ qubits.Ket(0) >> qubits.X(1, 1, .15) @ qubit >> cnot
@@ -481,9 +481,9 @@ def qubit_loop():
 
 
 def adder():
-    from optyx.channel import qmode
-    from optyx.photonic import Create, BS, NumberResolvingMeasurement
-    from optyx import classical
+    from discopy.optyx.channel import qmode
+    from discopy.optyx.photonic import Create, BS, NumberResolvingMeasurement
+    from discopy.optyx import classical
     step = (Create(1) @ Create(1) @ qmode >> qmode @ BS >> BS @ qmode
             >> NumberResolvingMeasurement(2) @ qmode
             >> classical.Add(2) @ qmode)
@@ -491,8 +491,8 @@ def adder():
 
 
 def internal_states():
-    from optyx.channel import qmode
-    from optyx.photonic import Create, MZI, PhotonLoss
+    from discopy.optyx.channel import qmode
+    from discopy.optyx.photonic import Create, MZI, PhotonLoss
     step = Create(1, internal_states=([.3 ** .5, .7 ** .5], )) @ qmode \
         >> MZI(.2, .3) >> qmode @ PhotonLoss(.6)
     return step.feedback(
@@ -500,18 +500,35 @@ def internal_states():
 
 
 def kerr():
-    from optyx.core import zw
-    from optyx.channel import Channel, qmode
-    from optyx.photonic import Create, BS
+    from discopy.optyx.core import zw
+    from discopy.optyx.channel import Channel, qmode
+    from discopy.optyx.photonic import Create, BS
     nonlinear = Channel(
         "Kerr", zw.ZBox(1, 1, lambda n: 1j ** (n * n)), qmode, qmode)
     step = Create(1) @ qmode >> BS >> qmode @ nonlinear >> BS
     return step.feedback(mem=qmode, state=Create(1))
 
 
+def coalesced():
+    from discopy.optyx.channel import Diagram, qmode, mode
+    from discopy.optyx.photonic import (
+        Create, BS, MZI, NumberResolvingMeasurement)
+    step = (Create(1) @ qmode @ Create(1) >> BS @ qmode
+            >> NumberResolvingMeasurement(1) @ qmode @ qmode
+            >> mode @ Diagram.swap(qmode, qmode) >> mode @ MZI(.2, .3)
+            >> Diagram.swap(mode, qmode) @ qmode)
+    return step.feedback(mem=qmode, state=Create(0))
+
+
+def test_swaps_and_their_wires_are_one_permutation():
+    from discopy.optyx.channel import Permutation
+    assert [list(box.perm) for box in coalesced().one_step().boxes
+            if isinstance(box, Permutation)] == [[0, 2, 1], [1, 0, 2]]
+
+
 @pytest.mark.parametrize("diagram, ticks", [
     (feedforward, 2), (qubit_loop, 3), (adder, 2), (internal_states, 2),
-    (kerr, 2), (lossy_diagram, 2)])
+    (kerr, 2), (lossy_diagram, 2), (coalesced, 2)])
 def test_unravelling_matches_the_unrolled_diagram(diagram, ticks):
     from collections import Counter
     diagram = diagram()
@@ -523,9 +540,9 @@ def test_unravelling_matches_the_unrolled_diagram(diagram, ticks):
 
 
 def test_unravelling_refuses_what_it_cannot_sample():
-    from optyx.channel import qmode, Diagram
-    from optyx.photonic import Create, BS, Select
-    from optyx import classical
+    from discopy.optyx.channel import qmode, Diagram
+    from discopy.optyx.photonic import Create, BS, Select
+    from discopy.optyx import classical
     selected = (Create(1) @ qmode >> BS >> Select(1) @ qmode).feedback(
         mem=qmode, state=Create(0))
     with pytest.raises(NotImplementedError):
@@ -559,9 +576,9 @@ def test_sample_dispatches_on_passivity():
         adder().sample(ticks=2, burn_in=1, indistinguishability=.5)
     with pytest.raises(NotImplementedError):
         Interferometer.from_diagram(internal_states())
-    from optyx.channel import qmode, mode, bit
-    from optyx.photonic import Create, BS, Phase, NumberResolvingMeasurement
-    from optyx import classical
+    from discopy.optyx.channel import qmode, mode, bit
+    from discopy.optyx.photonic import Create, BS, Phase, NumberResolvingMeasurement
+    from discopy.optyx import classical
     parity = classical.ClassicalFunction(lambda n: [n[0] % 2], mode, bit)
     controlled = Create(1, 1) >> BS \
         >> NumberResolvingMeasurement(1) @ qmode >> parity @ qmode \
@@ -573,8 +590,8 @@ def test_sample_dispatches_on_passivity():
 
 @pytest.mark.parametrize("name", ["delay", "mzi", "two inputs"])
 def test_stationary_distribution_matches_fix(name):
-    from optyx.channel import Diagram, qmode
-    from optyx.photonic import (
+    from discopy.optyx.channel import Diagram, qmode
+    from discopy.optyx.photonic import (
         Create, MZI, BS, PhotonLoss, NumberResolvingMeasurement)
     step = {
         "delay": Create(1) @ qmode >> Diagram.swap(qmode, qmode)

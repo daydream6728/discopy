@@ -383,7 +383,7 @@ class Weight(ClassicalBox):
     their values, a list as for :class:`ClassicalFunctionBox`: the diagonal
     functional :math:`|n\\rangle \\mapsto f(n)`.
 
-    >>> from optyx.core.zw import Create
+    >>> from discopy.optyx.core.zw import Create
     >>> parity = Weight(lambda n: (-1) ** n[0], diagram.Mode(1))
     >>> [complex((Create(n) >> parity).to_tensor().eval().array)
     ...  for n in (1, 2)]

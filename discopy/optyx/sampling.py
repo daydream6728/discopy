@@ -3,7 +3,7 @@ Overview
 --------
 
 Sampling the outputs of closed diagrams with feedback loops, tick after
-tick: :meth:`optyx.channel.Diagram.sample`.
+tick: :meth:`discopy.optyx.channel.Diagram.sample`.
 
 Any such diagram is sampled by its :class:`Unravelling`, a quantum
 trajectory: one tick runs :meth:`one_step` box by box on a :class:`CQState`,
@@ -818,7 +818,7 @@ transmissivity=1.0, efficiency=1.0, visible=(0,), indistinguishability=1.0)
     def from_diagram(cls, diagram, indistinguishability: float = 1.,
                      source: Source = None):
         """
-        The recurrent network of a :class:`optyx.channel.Diagram` with
+        The recurrent network of a :class:`discopy.optyx.channel.Diagram` with
         feedback loops: its :meth:`one_step` is dilated to a passive matrix
         from the memory, the inputs and the created photons to the outputs,
         the memory and the environment of its discards and losses, then
@@ -826,12 +826,12 @@ transmissivity=1.0, efficiency=1.0, visible=(0,), indistinguishability=1.0)
         are fed by `source` at every tick, its outputs are recorded and its
         environment is not.
 
-        >>> from optyx.channel import Diagram, qmode
-        >>> from optyx.photonic import Create
+        >>> from discopy.optyx.channel import Diagram, qmode
+        >>> from discopy.optyx.photonic import Create
         >>> delay = (Create(1) @ qmode >> Diagram.swap(qmode, qmode)
         ...     ).feedback(state=Create(0))
         >>> Interferometer.from_diagram(delay).distribution(2)
-        {((0,), (1,)): 1.0}
+        {((0,), (1,)): np.float64(1.0)}
         """
         initial, _ = diagram.boundary()
         step = diagram.one_step()
@@ -842,7 +842,7 @@ transmissivity=1.0, efficiency=1.0, visible=(0,), indistinguishability=1.0)
             raise NotImplementedError(
                 "Photons with internal states are not passive.")
         if any(not hasattr(box, "kraus")
-               and not isinstance(box, symmetric.Swap)
+               and not isinstance(box, symmetric.Permutation)
                for box in initial.boxes + step.boxes):
             raise NotImplementedError(
                 "Classical boxes are not passive linear optics.")
@@ -1097,7 +1097,7 @@ transmissivity=1.0, efficiency=1.0, visible=(0,), indistinguishability=1.0)
 
         >>> delay = Interferometer([[0, 1], [1, 0]], loop=1, inputs=(1, ))
         >>> delay.distribution(2)
-        {((0,), (1,)): 1.0}
+        {((0,), (1,)): np.float64(1.0)}
         """
         if self.indistinguishability != 1 \
                 or not isinstance(self.source, Fock):
@@ -1199,7 +1199,7 @@ def observe(vector: np.ndarray, axes: list, rng: np.random.Generator):
 
 class Unravelling:
     """
-    The quantum trajectories of a closed :class:`optyx.channel.Diagram`
+    The quantum trajectories of a closed :class:`discopy.optyx.channel.Diagram`
     with feedback loops, whatever it holds: optical modes, qubits,
     measurements, classical boxes and classically controlled boxes.
 
@@ -1225,8 +1225,8 @@ class Unravelling:
     exponential in the number of quantum wires alive at once: passive
     diagrams are better sampled by their :class:`Interferometer`.
 
-    >>> from optyx.channel import Diagram, qmode
-    >>> from optyx.photonic import Create
+    >>> from discopy.optyx.channel import Diagram, qmode
+    >>> from discopy.optyx.photonic import Create
     >>> delay = (Create(1) @ qmode >> Diagram.swap(qmode, qmode)
     ...     ).feedback(state=Create(0))
     >>> Unravelling(delay).sample(ticks=3, seed=0)
@@ -1400,8 +1400,10 @@ class Unravelling:
         each to `cap + 1` levels, raising when the cut loses amplitude.
         """
         width = len(box.dom)
-        if isinstance(box, symmetric.Swap):
-            return np.swapaxes(vector, start, start + 1)
+        if isinstance(box, symmetric.Permutation):
+            order = list(range(vector.ndim))
+            order[start:start + width] = [start + i for i in box.perm]
+            return np.transpose(vector, order)
         array = self.tensor(box, vector.shape[start:start + width])
         outputs = array.ndim - width
         vector = np.tensordot(vector, array, axes=(
@@ -1416,11 +1418,8 @@ class Unravelling:
         """ The state after `box`, on the wires from `offset`. """
         stop = offset + len(box.dom)
         values = state.values[offset:stop]
-        if isinstance(box, symmetric.Swap):
-            vector = np.swapaxes(state.vector, *state.axes(offset, stop)) \
-                if values.count(None) == 2 else state.vector
-            return CQState(vector, state.values[:offset] + values[::-1]
-                           + state.values[stop:], state.weight)
+        if isinstance(box, symmetric.Permutation):
+            return self.permute(state, offset, box.perm)
         if not hasattr(box, "kraus"):
             dims = tuple(self.dimension(ob, value)
                          for ob, value in zip(box.dom.inside, values))
@@ -1432,6 +1431,26 @@ class Unravelling:
                 state.vector, state.axes(offset, stop), unitary),
                 state.values, state.weight)
         return self.contract(state, offset, box, rng)
+
+    @staticmethod
+    def permute(state: CQState, offset: int, perm) -> CQState:
+        """
+        The state after the wires from `offset` are permuted by `perm`, the
+        output wire :math:`j` being the input wire `perm[j]`: their values
+        and the axes of the quantum ones.
+        """
+        values = state.values[offset:offset + len(perm)]
+        axes = state.axes(offset, offset + len(perm))
+        quantum = dict(zip(
+            [i for i, value in enumerate(values) if value is None], axes))
+        order = list(range(state.vector.ndim))
+        for axis, source in zip(axes, [
+                quantum[i] for i in perm if values[i] is None]):
+            order[axis] = source
+        return CQState(
+            np.transpose(state.vector, order), state.values[:offset]
+            + [values[i] for i in perm] + state.values[offset + len(perm):],
+            state.weight)
 
     def contract(self, state: CQState, offset: int, box,
                  rng: np.random.Generator) -> CQState:
@@ -1522,7 +1541,7 @@ class Unravelling:
         does not end with weight one is a postselection.
         """
         for layer in diagram:
-            left, box, _ = layer.inside[0]
+            left, box, _ = layer.inside[0].boxes_and_types
             state = self.apply(state, len(left), box, rng)
         if not np.isclose(state.weight, 1, atol=1e-6):
             raise NotImplementedError(
@@ -1562,7 +1581,7 @@ def levels(diagram) -> int:
     the length of the internal states of its boxes, zero when they have
     none.
 
-    >>> from optyx.photonic import Create
+    >>> from discopy.optyx.photonic import Create
     >>> levels(Create(1, internal_states=([1, 0], ))), levels(Create(1))
     (2, 0)
     """

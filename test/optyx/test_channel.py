@@ -115,8 +115,8 @@ def test_from_bosonic_op():
     assert np.allclose(sum_2, sum_1)
 
 def test_observables_agree_with_their_samples():
-    from optyx.channel import Observable, Discard, Diagram, qmode, qubit
-    from optyx import photonic, qubits
+    from discopy.optyx.channel import Observable, Discard, Diagram, qmode, qubit
+    from discopy.optyx import photonic, qubits
     hom = photonic.Create(1, 1) >> photonic.BS
     number = Observable(Diagram.from_bosonic_operator(
         2, ((0, False), (0, True))))
@@ -136,8 +136,8 @@ def test_observables_agree_with_their_samples():
 
 
 def test_observable_errors():
-    from optyx.channel import Observable, Diagram, qmode, bit
-    from optyx import photonic
+    from discopy.optyx.channel import Observable, Diagram, qmode, bit
+    from discopy.optyx import photonic
     with pytest.raises(ValueError):
         Observable()
     with pytest.raises(ValueError):
