@@ -393,8 +393,10 @@ def test_reduce_strategy():
 
     with raises(NotImplementedError):
         Strategy().order((c, ))
-    with raises(TypeError):
-        Constant('e', X).reduce()
+    e, g = Constant('e', X), Constant('g', X >> X)
+    assert e.reduce().to_term(1) == e == e.normal_form()
+    assert X(lambda x: g(x))(e).normal_form() == g(e)
+    assert g(X(lambda x: x)(c)).normal_form() == g(c)
 
 
 def test_bohm_tree_cod():

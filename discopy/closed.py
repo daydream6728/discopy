@@ -925,9 +925,15 @@ class TermBase(Box, biclosed.TermBase):
         >>> assert tree.spine == (f(x), )
         >>> assert tree[0][0] == BohmTree(X, (f, x), 1, tree.strategy, ())
         >>> assert two(X(lambda x: x))(x).reduce(budget=1) is None
+
+        The constants of the term are free variables of its tree, in scope
+        before the free variables of the term.
+
+        >>> g, a = (X >> X)('g'), X('a')
+        >>> assert g(a).reduce().variables == (g, a)
         """
         return (strategy or self.strategy_factory)(budget)(
-            self, tuple(self.freevars))
+            self, tuple(dict.fromkeys(self.constants)) + tuple(self.freevars))
 
     def normal_form(self, budget: int | None = None,
                     strategy: type[Strategy] | None = None) -> Term:
@@ -947,6 +953,8 @@ class TermBase(Box, biclosed.TermBase):
         >>> x = Variable('x', X)
         >>> term = X(lambda x: x)(x)
         >>> assert term.normal_form() == x == x.normal_form()
+        >>> g = (X >> X)('g')
+        >>> assert X(lambda x: g(x))(x).normal_form() == g(x)
         >>> term.normal_form(budget=0)
         Traceback (most recent call last):
             ...
@@ -958,7 +966,8 @@ X(lambda x: x)(x).
             raise ValueError(
                 f"The budget of {budget} beta redexes ran out "
                 f"reducing {self}.")
-        return tree.to_term(len(self.freevars))
+        return tree.to_term(
+            len(set(self.constants)) + len(self.freevars))
 
 
 type Term = Constant | Variable | Application | Abstraction\
@@ -1533,7 +1542,8 @@ class BohmTree:
             i.e. of the tree without abstracting its own bound variables.
             Use :meth:`cod` for the type of the term it represents.
         variables : The variables in scope, those of the parent followed by
-            the ones bound at this node.
+            the ones bound at this node, the constants and free variables of
+            the term at the root.
         head : The index in ``variables`` of the head variable.
         strategy : The strategy used to reduce the arguments, shared with
             every node of the tree so that its budget is spent only once.
@@ -1664,8 +1674,9 @@ class Strategy:
 
         Parameters:
             term : The term to reduce.
-            variables : The variables in scope, i.e. the free variables of
-                the term followed by the ones bound by its parents.
+            variables : The variables in scope, i.e. the constants and free
+                variables of the term followed by the ones bound by its
+                parents.
         """
         variables, spine = list(variables), []
         while isinstance(term, (Application, Abstraction)):
@@ -1679,7 +1690,7 @@ class Strategy:
             else:
                 variables.append(term.var)
                 term = term.body
-        assert_isinstance(term, Variable)
+        assert_isinstance(term, (Variable, Constant))
         head = len(variables) - 1 - variables[::-1].index(term)
         cod = term.cod
         for _ in spine:
