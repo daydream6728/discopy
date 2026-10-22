@@ -3,6 +3,7 @@ from pytest import raises
 from discopy import *
 from discopy.stream import *
 
+
 def test_errors():
     T, S = Ty[python.Ty], Stream[python.Function]
     with raises(ValueError):
@@ -106,7 +107,7 @@ def test_feedback_laws():
             ("tightening", dict(f=f, g=g, h=h, x=x, y=y, m=m @ n))):
         assert getattr(FeedbackCategory, law).bind(Stream).modulo(up_to)(
             **arguments)
-    sliding = dict(f=f, k=k, x=x, y=y, m=m @ n)
+    sliding = dict(f=f, k=k, x=x, y=y)
     assert not FeedbackCategory.sliding.bind(Stream).modulo(up_to)(**sliding)
     with raises(AxiomFailure):
         Stream.sliding(**sliding)

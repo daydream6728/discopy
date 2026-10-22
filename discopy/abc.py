@@ -596,6 +596,20 @@ class FeedbackCategory[
         """
 
     @axiom
+    def delay_unit[A: Obj[C0], B: Obj[C0]](
+            cls, f: Hom[C1, A, B]) -> Equation[Hom[C1, A, B]]:
+        """ Delaying by no time step is the identity. """
+        return cls.equation_factory(f.delay(0), f)
+
+    @axiom
+    def delay_composition[A: Obj[C0], B: Obj[C0]](
+            cls, f: Hom[C1, A, B]
+    ) -> Equation[Hom[
+            C1, Delay[C1, Delay[C1, A]], Delay[C1, Delay[C1, B]]]]:
+        """ Delaying twice is delaying by two time steps. """
+        return cls.equation_factory(f.delay().delay(), f.delay(2))
+
+    @axiom
     def vanishing[A: Obj[C0], B: Obj[C0]](
             cls, f: Hom[C1, A, B]) -> Equation[Hom[C1, A, B]]:
         """ Feeding back the unit does nothing. """
@@ -639,14 +653,17 @@ class FeedbackCategory[
             g >> f.feedback(dom=x, cod=y, mem=m) >> h)
 
     @axiom
-    def sliding[X: Obj[C0], Y: Obj[C0], M: Obj[C0]](
-            cls, f: Hom[C1, Tensor[X, Delay[C1, M]], Tensor[Y, M]],
-            k: Hom[C1, M, M], x: Var[C0, X], y: Var[C0, Y], m: Var[C0, M]
+    def sliding[X: Obj[C0], Y: Obj[C0], M: Obj[C0], N: Obj[C0]](
+            cls, f: Hom[C1, Tensor[X, Delay[C1, M]], Tensor[Y, N]],
+            k: Hom[C1, N, M], x: Var[C0, X], y: Var[C0, Y]
     ) -> Equation[Hom[C1, X, Y]]:
-        """ A morphism on the memory slides along the feedback, delayed. """
+        """
+        A morphism slides around the feedback, delayed on its way back in:
+        the memory is its codomain on one side and its domain on the other.
+        """
         return cls.equation_factory(
-            (f >> y @ k).feedback(dom=x, cod=y, mem=m),
-            (x @ k.delay() >> f).feedback(dom=x, cod=y, mem=m))
+            (f >> y @ k).feedback(dom=x, cod=y, mem=k.cod),
+            (x @ k.delay() >> f).feedback(dom=x, cod=y, mem=k.dom))
 
     @rule
     def delaying[A: Obj[C0], B: Obj[C0]](
@@ -755,7 +772,7 @@ class TracedCategory[
             mem=mem)  # ty: ignore[unknown-argument]
 
     @axiom
-    def yanking[X: Obj[C0]](
+    def yanking[X: Atom[C0]](
             cls, x: Var[C0, X]) -> Equation[Hom[C1, X, X]]:
         """
         Tracing the swap of an object with itself gives its identity, the
@@ -765,6 +782,99 @@ class TracedCategory[
         """
         # pylint: disable-next=no-member  # stated where there is a swap
         return cls.equation_factory(cls.swap(x, x).trace(mem=x), cls.id(x))
+
+    @axiom
+    def trace_vanishing[A: Obj[C0], B: Obj[C0]](
+            cls, f: Hom[C1, A, B]) -> Equation[Hom[C1, A, B]]:
+        """ Vanishing of a trace over the unit, on either side. """
+        return cls.equation_factory(f.trace(0, left=True), f, f.trace(0))
+
+    @axiom
+    def trace_iteration_left[Γ: Obj[C0], Δ: Obj[C0], M: Obj[C0]](
+            cls, f: Hom[C1, Tensor[M, Γ], Tensor[M, Δ]], mem: Var[C0, M]
+    ) -> Equation[Hom[C1, Γ, Δ]]:
+        """ The left trace of many wires is that of each, the first first. """
+        traced = f
+        for _ in range(len(mem)):
+            traced = traced.trace(left=True)
+        return cls.equation_factory(f.trace(len(mem), left=True), traced)
+
+    @axiom
+    def trace_iteration_right[Γ: Obj[C0], Δ: Obj[C0], M: Obj[C0]](
+            cls, f: Hom[C1, Tensor[Γ, M], Tensor[Δ, M]], mem: Var[C0, M]
+    ) -> Equation[Hom[C1, Γ, Δ]]:
+        """ The right trace of many wires is that of each, the last first. """
+        traced = f
+        for _ in range(len(mem)):
+            traced = traced.trace()
+        return cls.equation_factory(f.trace(len(mem)), traced)
+
+    @axiom
+    def trace_superposing_left[
+            Γ: Obj[C0], Δ: Obj[C0], X: Obj[C0], M: Atom[C0]](
+            cls, f: Hom[C1, Tensor[M, Γ], Tensor[M, Δ]], x: Var[C0, X]
+    ) -> Equation[Hom[C1, Tensor[Γ, X], Tensor[Δ, X]]]:
+        """ The left trace is natural with respect to the tensor. """
+        return cls.equation_factory(
+            (f @ x).trace(left=True), f.trace(left=True) @ x)
+
+    @axiom
+    def trace_superposing_right[
+            Γ: Obj[C0], Δ: Obj[C0], X: Obj[C0], M: Atom[C0]](
+            cls, f: Hom[C1, Tensor[Γ, M], Tensor[Δ, M]], x: Var[C0, X]
+    ) -> Equation[Hom[C1, Tensor[X, Γ], Tensor[X, Δ]]]:
+        """ The right trace is natural with respect to the tensor. """
+        return cls.equation_factory((x @ f).trace(), x @ f.trace())
+
+    @axiom
+    def trace_naturality_left[
+            M: Atom[C0], X: Obj[C0], Γ: Obj[C0], Δ: Obj[C0]](
+            cls, mem: Var[C0, Tensor[M, X]],
+            f: Hom[C1, Tensor[M, X, Δ], Tensor[M, X, Γ]], g: Hom[C1, Γ, Δ]
+    ) -> Equation[Hom[C1, Γ, Δ]]:
+        """ The left trace is natural in its domain and codomain. """
+        n = len(mem)
+        return cls.equation_factory(
+            (mem @ g >> f >> mem @ g).trace(n, left=True),
+            g >> f.trace(n, left=True) >> g)
+
+    @axiom
+    def trace_naturality_right[
+            M: Atom[C0], X: Obj[C0], Γ: Obj[C0], Δ: Obj[C0]](
+            cls, mem: Var[C0, Tensor[M, X]],
+            f: Hom[C1, Tensor[Δ, M, X], Tensor[Γ, M, X]], g: Hom[C1, Γ, Δ]
+    ) -> Equation[Hom[C1, Γ, Δ]]:
+        """ The right trace is natural in its domain and codomain. """
+        n = len(mem)
+        return cls.equation_factory(
+            (g @ mem >> f >> g @ mem).trace(n), g >> f.trace(n) >> g)
+
+    @axiom
+    def trace_dinaturality_left[
+            M: Atom[C0], N: Atom[C0], S: Obj[C0], T: Obj[C0], Γ: Obj[C0],
+            Δ: Obj[C0]](
+            cls, f: Hom[C1, Tensor[M, S, Γ], Tensor[N, T, Δ]],
+            g: Hom[C1, Tensor[N, T], Tensor[M, S]]
+    ) -> Equation[Hom[C1, Γ, Δ]]:
+        """ A morphism slides around a left trace. """
+        base, cobase = f.dom[len(g.cod):], f.cod[len(g.dom):]
+        return cls.equation_factory(
+            (f >> g @ cobase).trace(len(g.cod), left=True),
+            (g @ base >> f).trace(len(g.dom), left=True))
+
+    @axiom
+    def trace_dinaturality_right[
+            M: Atom[C0], N: Atom[C0], S: Obj[C0], T: Obj[C0], Γ: Obj[C0],
+            Δ: Obj[C0]](
+            cls, f: Hom[C1, Tensor[Γ, M, S], Tensor[Δ, N, T]],
+            g: Hom[C1, Tensor[N, T], Tensor[M, S]]
+    ) -> Equation[Hom[C1, Γ, Δ]]:
+        """ A morphism slides around a right trace. """
+        base = f.dom[:len(f.dom) - len(g.cod)]
+        cobase = f.cod[:len(f.cod) - len(g.dom)]
+        return cls.equation_factory(
+            (f >> cobase @ g).trace(len(g.cod)),
+            (base @ g >> f).trace(len(g.dom)))
 
     @rule
     def trace_left[Γ: Obj[C0], Δ: Obj[C0], M: Obj[C0]](

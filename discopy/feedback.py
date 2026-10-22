@@ -254,7 +254,8 @@ from copy import copy
 from typing import ClassVar
 
 from discopy import monoidal, cmap, hypergraph, messages
-from discopy.abc import FeedbackCategory, TracedCategory
+from discopy.abc import (
+    DaggerCategory, FeedbackCategory, MonoidalCategory, TracedCategory)
 from discopy.monoidal import (  # noqa: F401  pylint: disable=unused-import
     Equation)
 from discopy.utils import (
@@ -640,6 +641,26 @@ class Diagram(monoidal.Diagram, TracedCategory):
 
     d = Wire.d
 
+    trace_naturality_left = TracedCategory.trace_naturality_left.failing(
+        messages.NO_PLANAR_NORMAL_FORM)
+    trace_naturality_right = TracedCategory.trace_naturality_right.failing(
+        messages.NO_PLANAR_NORMAL_FORM)
+    trace_dinaturality_left = TracedCategory.trace_dinaturality_left.failing(
+        messages.NO_PLANAR_NORMAL_FORM)
+    trace_dinaturality_right = TracedCategory.trace_dinaturality_right.failing(
+        messages.NO_PLANAR_NORMAL_FORM)
+    trace_superposing_left = TracedCategory.trace_superposing_left.failing(
+        messages.NO_PLANAR_NORMAL_FORM)
+    trace_superposing_right = TracedCategory.trace_superposing_right.failing(
+        messages.NO_PLANAR_NORMAL_FORM)
+    dagger_involution = DaggerCategory.dagger_involution.failing(
+        messages.FEEDBACK_HAS_NO_DAGGER)
+    dagger_involution_traced = DaggerCategory.dagger_involution.weaken(
+        within=MonoidalCategory)
+    dagger_contravariance = DaggerCategory.dagger_contravariance.failing(
+        messages.FEEDBACK_HAS_NO_DAGGER)
+    dagger_contravariance_traced = DaggerCategory.dagger_contravariance\
+        .weaken(within=MonoidalCategory)
     tightening = FeedbackCategory.tightening.failing(
         messages.FREE_FEEDBACK)
     sliding = FeedbackCategory.sliding.failing(
@@ -663,7 +684,10 @@ class Box(monoidal.Box, Diagram):
     time_step = property(lambda self: self._time_step)
 
     def __init__(self, *args, time_step: int = 0, **params):
-        self._time_step, self._args, self._params = time_step, args[3:], params
+        self._time_step, self._args = time_step, args[3:]
+        self._params = {
+            key: value for key, value in params.items()
+            if key not in ("name", "dom", "cod")}
         super().__init__(*args, **params)
 
     def to_drawing(self):
@@ -698,8 +722,23 @@ class Box(monoidal.Box, Diagram):
             **self._params)
 
     def reset(self):
-        """ Reset a box to time step zero, used in :class:`Functor`. """
-        return self.delay(-self.time_step)
+        """
+        Reset a box to time step zero, used in :class:`Functor`: a box by its
+        time step, a structural box, whose delay lives in its types, see
+        :meth:`delay`, by that of the earliest of its wires.
+
+        >>> from discopy.markov import Swap
+        >>> x, y = Ty('x'), Ty('y')
+        >>> assert Swap(x, y).delay(2).reset() == Swap(x, y)
+        >>> assert Box('f', x, y).delay().reset() == Box('f', x, y)
+        """
+        if not issubclass(self.ob.generator_factory, monoidal.Wire):
+            return self
+        if getattr(self, "__getnewargs__", None) is None:
+            return self.delay(-self.time_step)
+        return self.delay(-min(
+            (wire.time_step for wire in (self.dom @ self.cod).inside),
+            default=0))
 
     def dagger(self):
         result = super().dagger()
@@ -819,7 +858,26 @@ class Feedback(Box, monoidal.Bubble):
         arg, dom, cod, mem = (
             from_tree(tree[key]) if key in tree else None
             for key in ('arg', 'dom', 'cod', 'mem'))
-        return cls(arg, dom=dom, cod=cod, mem=mem, left='left' in tree)
+        return cls(
+            arg,  # ty: ignore[invalid-argument-type]
+            dom=dom, cod=cod, mem=mem, left='left' in tree)
+
+    def dagger(self):
+        """
+        Feedback has no dagger: that of ``arg`` goes from ``cod @ mem`` to
+        ``dom @ mem.delay()``, so its memory would be fed back in time.
+
+        >>> x = Ty('x')
+        >>> Box('f', x @ x.delay(), x @ x).feedback().dagger()
+        Traceback (most recent call last):
+        ...
+        discopy.utils.AxiomError: Feedback has no dagger...
+        """
+        raise AxiomError(messages.FEEDBACK_HAS_NO_DAGGER)
+
+    def rotate(self, left=False):
+        """ Feedback has no rotation, for the same reason as its dagger. """
+        raise AxiomError(messages.FEEDBACK_HAS_NO_DAGGER)
 
     def to_drawing(self):
         return self.arg.to_drawing().trace(len(self.mem), left=self.left)

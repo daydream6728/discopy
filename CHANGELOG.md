@@ -9,6 +9,16 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Added
 
+- The laws of traced and feedback categories on `discopy.abc`: the
+  vanishing, iteration, superposing, naturality and dinaturality of the
+  trace on either side, `trace_*`, `delay_unit` and `delay_composition`,
+  and `sliding` generalised to a morphism whose domain and codomain
+  differ, the memory being its codomain on one side of the feedback and its
+  domain on the other. Free feedback diagrams declare the laws they break,
+  a free feedback being a box that nothing slides into, `FREE_FEEDBACK`,
+  and a planar law compared on the nose having no normal form yet,
+  `NO_PLANAR_NORMAL_FORM`.
+
 - `axioms.Rule` and the decorator `rule`: an inference rule of a structure,
   stated like a law with a morphism as its conclusion, e.g. `def cut[A:
   Obj[C0], B: Obj[C0], C: Obj[C0]](cls, f: Hom[C1, A, B], g: Hom[C1, B, C])
@@ -1429,6 +1439,20 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   reviewer first.
 
 ### Fixed
+
+- Bugs found by the property matrix of
+  [#1](https://github.com/rel-int/discopy-next/pull/1), each with its
+  regression test: a `feedback.Box` built with keywords can be delayed, and
+  `feedback.Box.reset` resets a structural box, e.g. a delayed swap, by its
+  earliest wire; `feedback.Feedback.dagger` and `rotate` raise `AxiomError`
+  where they crashed with `TypeError`, as feedback cannot be fed back in
+  time; `Layer.merge` raises `AxiomError` on layers that compose to the
+  identity, e.g. a snake, where it raised `UnboundLocalError`; a bubble
+  rebuilds itself from its `keywords`, so that `subs`, `lambdify` and
+  `dagger` keep the drawing options of a monoidal bubble and the `func` of a
+  tensor one; `para.Closed.curry` refuses a map with coparameters, which its
+  exponential would swallow, and a compact para map curries by cups and caps.
+  The left unitality of `cat.Functor` is a strict xfail until #648 is fixed.
 
 - A tree saying `"is_dagger": false` reads back as no dagger: `cat.Box`,
   and so every box, `monoidal.Wire`, `frobenius.Spider`,
