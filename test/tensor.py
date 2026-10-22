@@ -182,6 +182,15 @@ def test_Functor_call():
     assert Functor(ob_map={x: Dim(2, 3)}, ar_map=None)(x) == Dim(2, 3)
 
 
+def test_Functor_maps_Dim_with_its_ob_map():
+    f = Box('f', Dim(2), Dim(2), [0, 1, 1, 0])
+    F = Functor({Dim(2): Dim(3)}, {f: list(range(9))}, dom=Diagram)
+    assert F(Dim(2)) == Dim(3) and F(Dim(2, 2)) == Dim(3, 3)
+    assert F(Dim(1)) == Dim(1)
+    assert F(f) == F(f >> Diagram.id(Dim(2)))\
+        == Tensor[float](list(range(9)), Dim(3), Dim(3))
+
+
 def test_Functor_call_opt_einsum_missing(monkeypatch):
     """ opt_einsum is not a declared dependency: contracting past
     ``MAX_EINSUM_INDICES`` without it installed should raise a helpful

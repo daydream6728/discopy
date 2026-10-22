@@ -508,8 +508,6 @@ class Functor(frobenius.Functor):
             + f"dtype={dtype}{optimize}{params})"
 
     def __call__(self, other):
-        if isinstance(other, Dim):
-            return other
         if isinstance(other, Bubble):
             return self(other.arg).map(other.func)
         if isinstance(other, (
