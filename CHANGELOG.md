@@ -9,6 +9,17 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Added
 
+- The trainers of recursive message passing, the networks of *Tiny
+  Recursive Message Passing* ([arXiv:2610.18649](https://arxiv.org/abs/2610.18649)),
+  moved out of its experiments op for op, so that they keep only their
+  datasets and recipes: the same bits on CPU, end to end. `neural.lattice` is
+  lattice deduction, its `project`, `losses`, persistent `Pool` and chain
+  search `solve`; `neural.act` its halting counterpart, `terms`,
+  `nearest_terms` for puzzles with several solutions, the slot pool `ActPool`
+  and `rollout`; `neural.train` the AdamW on matrices, the cosine schedule,
+  the bias-corrected `EMA` and the per-sample gradient clip
+  `per_board_backward` ([rel-int/Recursive_GNNs#1](https://github.com/rel-int/Recursive_GNNs/issues/1)).
+
 - `discopy.ehypergraph`, e-graphs of diagrams with sharing: an
   `EHypergraph` over a copy-discard category is a left-monogamous acyclic
   `Hypergraph`, whose boxes are the e-nodes, with an equivalence relation on

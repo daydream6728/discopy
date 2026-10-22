@@ -10,6 +10,14 @@ a PyTorch module and ``jax.jit`` takes as it is.
 promises: its legs grouped into orbits, the symmetry each orbit carries, and
 the wirings drawn out of a family's combinatorics.
 
+
+Recursive message passing, the networks of *Tiny Recursive Message Passing*
+(arXiv:2610.18649), is read out and trained by three modules:
+:mod:`discopy.neural.lattice` by lattice deduction and
+:mod:`discopy.neural.act` by adaptive computation time, each with its
+trainer, while :mod:`discopy.neural.train` holds the optimiser, the
+schedule, the weight average and the per-sample clip.
+
 .. autosummary::
     :template: module.rst
     :toctree: ../_api
@@ -17,6 +25,9 @@ the wirings drawn out of a family's combinatorics.
     discopy.neural.network
     discopy.neural.signature
     discopy.neural.torch
+    discopy.neural.lattice
+    discopy.neural.act
+    discopy.neural.train
 
 Note
 ----
