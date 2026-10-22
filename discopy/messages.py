@@ -45,6 +45,10 @@ NOT_FROBENIUS = \
     "{} has no spiders, cups or caps to downgrade this hypergraph."
 NOT_RIGID = "{} has no cups or caps for the wiring of this map."
 NOT_TRACED = "{} has no traces for the cycles of this map."
+NO_PLANAR_NORMAL_FORM = (
+    "A planar law is compared on the nose: a hypergraph is faithful only "
+    "from symmetric categories on, and there is no normal form for this "
+    "doctrine yet.")
 NO_SWAP = "{} is not symmetric, it has no swaps."
 NO_BRAID = "{} is not braided, it has no braids."
 NO_TWIST = "{} is not balanced, it has no twists."
@@ -57,7 +61,12 @@ NOT_MARKOV = "{} has no copy or discard."
 NOT_A_DAGGER = "{} has no dagger: {} is not a dagger category."
 NO_SUCH_SPIDER = "The only spiders of {} are its {}."
 NOT_ACYCLIC = "{} has a directed cycle, its boxes cannot be ordered."
+FREE_FEEDBACK = (
+    "A free feedback is a bubble, which a hypergraph keeps as a box: nothing "
+    "slides into it.")
 RIGID_TYPE_HAS_NO_DAGGER = "Rigid types have no dagger, use pivotal instead."
+RIGID_HAS_NO_DAGGER = (
+    "Rigid cups and caps have no dagger, use pivotal instead.")
 NO_TYPE_PARAMETER = (
     "{} has no type parameter to subscript, declare one as in class C[name].")
 NOT_LEFT_MONOGAMOUS = "{} is not left-monogamous."
@@ -67,7 +76,7 @@ WRONG_NUMBER_OF_WIRES = "Expected {} wires for {}, got {} instead."
 WRONG_NUMBER_OF_BOUNDARIES = \
     "Expected one boundary of wires for each of {} boxes, got {} instead."
 TERM_IS_A_BOX = \
-    "A term is a box: the laws of its category are the diagram's."
+    "A term is a box: the laws and rules of its category are the diagram's."
 MISSING_BOXES_AND_OFFSETS = (
     "Decoding needs either boxes and offsets, or the two of them zipped.")
 CURRY_HAS_NO_DAGGER = "A curry has no dagger."

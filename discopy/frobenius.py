@@ -102,6 +102,7 @@ class Wire(pivotal.Wire):
         return result
 
     r = l
+    windings = (0, )
 
 
 HeadOb, TailOb = feedback.wire_generators(Wire)

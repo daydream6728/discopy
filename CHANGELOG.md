@@ -9,6 +9,30 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Added
 
+- `axioms.Rule` and the decorator `rule`: an inference rule of a structure,
+  stated like a law with a morphism as its conclusion, e.g. `def cut[A:
+  Obj[C0], B: Obj[C0], C: Obj[C0]](cls, f: Hom[C1, A, B], g: Hom[C1, B, C])
+  -> Hom[C1, A, C]`. `Rule` and `Axiom` share a `Declaration`, whose
+  `failing`, `inapplicable` and `weaken` they both have, and
+  `Testable.rules` lists the rules of a category as `Testable.axioms` its
+  laws. `discopy.abc` declares the rules of each structure: `ax` and `cut`,
+  `mix`, `trace_left` and `trace_right`, `curry_left`, `curry_right`,
+  `ev_left` and `ev_right`, `counit` and `unit`, `braiding` and
+  `inverse_braiding`, `twisting` and `inverse_twisting`, `comultiplication`
+  and `multiplication`, `delaying` and `feedback_right`, and `spider`.
+  The sequent calculus gains the sorts `Atom[C0]` and `Count` and the
+  premises `Perm[N]` and `Objs[C0, N]`.
+- `cat.FreeCategory.search` derives the terms of every free category from
+  its rules, with less `fuel` for each premise, a generator of the
+  category, drawn by `generators`, at the leaves: the boxes of a diagram,
+  the wires of a type. `Testable.enrolled` lists the categories that
+  generate their terms and `Testable.matrix` their laws, which
+  `proptest/test_axioms.py` checks, and `proptest/test_rules.py` the
+  conclusion of every rule; the `fast` profile checks each law once.
+  `axioms.Serialisable` holds the laws of writing a term down and reading
+  it back, `repr_transparency`, `pickling`, `copying` and `serialisation`,
+  and `Equation` is generic in the type of its terms, `Equation[T]`.
+
 - `hopf.Intertwiner.chart(dom, cod)`, the parametrised intertwiner
   `Dim(r) @ dom -> cod` whose slices are an orthonormal basis of
   `Hom_H(dom, cod)`, solved as one SVD nullspace of the commutant

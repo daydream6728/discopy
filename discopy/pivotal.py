@@ -100,6 +100,7 @@ class Wire(feedback.Wire, rigid.Wire):
 
     def __repr__(self):
         return rigid.Wire.__repr__(self)[:-1] + self.repr_time_step() + ")"
+    windings = (0, 1)
 
     def dagger(self) -> Wire:
         """

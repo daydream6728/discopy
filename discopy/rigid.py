@@ -164,6 +164,7 @@ from discopy.utils import (
     deprecated_alias,
     factory_name,
 )
+from discopy.axioms import GENERATORS
 
 
 class Wire(monoidal.Wire):
@@ -218,6 +219,19 @@ class Wire(monoidal.Wire):
         result = copy.copy(self)
         result.z = 0
         return result
+
+    windings = (0, 1, -1)
+    """ The winding numbers :meth:`strategy` draws from, simplest first. """
+
+    @classmethod
+    def strategy(cls):
+        """ Generate named objects with a winding number in
+        :attr:`windings`. """
+        from hypothesis import strategies as st
+
+        return st.tuples(
+            st.sampled_from(GENERATORS), st.sampled_from(cls.windings),
+        ).map(lambda args: cls(args[0], z=args[1]))
 
     def __eq__(self, other):
         return monoidal.Wire.__eq__(self, other)\

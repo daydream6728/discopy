@@ -176,6 +176,14 @@ class Ty(frobenius.Ty):
     """
     generator_factory = Wire
 
+    @classmethod
+    def generators(cls, *, dom=None, cod=None):
+        """ Generate a bit or a qubit, see :class:`frobenius.Ty`. """
+        # pylint: disable=unused-argument  # a circuit type has one colour
+        from hypothesis import strategies as st
+
+        return st.sampled_from([Digit(2), Qudit(2)]).map(cls)
+
 
 @factory
 class Circuit(tensor.Diagram[complex]):

@@ -58,6 +58,7 @@ from discopy.python import finset
 from discopy.utils import (
     factory_name, assert_isinstance, product, assert_isatomic,
     assert_istraceable)
+from discopy.axioms import no_strategy
 
 if TYPE_CHECKING:
     import sympy
@@ -816,6 +817,11 @@ class Diagram[dtype](NamedGeneric, frobenius.Diagram):
             result += Box(str(var), Dim(1), dim, onehot.array)\
                 @ self.grad(var, **params)
         return result
+
+    # A tensor box carries an array, which the strategy of a free category
+    # does not draw: tensor diagrams, circuits and ZX diagrams stay out of
+    # the matrix.
+    strategy = no_strategy
 
 
 CMap = cmap.CMap[Diagram]

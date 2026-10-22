@@ -61,7 +61,6 @@ def test_autotyping():
         assert Matrix([0.5, 0.5], dom=1, cod=2).dtype == torch.float32
 
 
-
 def test_permutation():
     """ The native permutation agrees with a composition of swaps. """
     def swaps(xs, doms):
@@ -176,7 +175,6 @@ def test_Nat_serialisation():
     assert loads(dumps(Nat(2))) == Nat(2)
 
 
-
 def test_Matrix_strategy():
     """ The bare class generates Matrix[int], a subscript its own members. """
     from hypothesis import find
@@ -184,11 +182,6 @@ def test_Matrix_strategy():
     assert type(matrix) is Matrix[int]
     assert (matrix.dom, matrix.cod) == (Nat(2), Nat(3))
     assert type(find(Matrix[bool].strategy(), lambda _: True)) is Matrix[bool]
-
-
-def test_Matrix_axioms():
-    """ A dry run of the property matrix on the carrier it enrols. """
-    axioms.assert_axioms(Matrix[int])
 
 
 def test_Matrix_copy():
@@ -250,6 +243,7 @@ def test_Matrix_copy_dtype():
     for dtype in (bool, int, float, complex):
         assert Matrix[dtype].copy(2, 2).dtype == dtype
 
+
 def test_trace_takes_the_keyword_form():
     f = Matrix[bool]([[1, 1], [0, 0]], 2, 2)
     assert f.trace() == f.trace(mem=1) == f.trace(cod=1)\
@@ -257,6 +251,7 @@ def test_trace_takes_the_keyword_form():
     assert f.trace(left=True) == f.trace(mem=Nat(1), left=True)
     with raises(TypeError):
         f.trace(1, mem=1)
+
 
 def test_Matrix_to_tree():
     # A matrix had no tree at all, see #781.

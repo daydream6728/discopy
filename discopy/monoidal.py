@@ -100,6 +100,13 @@ class Colour(cat.Ob):
     name: str = TRANSPARENT
     label: "str | None" = field(default=None, compare=False)
 
+    @classmethod
+    def strategy(cls):
+        """ Generate the transparent colour, the one generated types have. """
+        from hypothesis import strategies as st
+
+        return st.just(cls())
+
     def __post_init__(self):
         assert_isinstance(self.name, str)
         if self.label is not None:
@@ -349,6 +356,31 @@ class Ty(cat.Ob, cat.FreeCategory, ColouredMonoid):
     ob = Colour
     generator_factory = Wire
 
+    @classmethod
+    def strategy(cls, **params):
+        """
+        Generate types by the :meth:`search` of the free monoid, i.e. from
+        the identity and the composition of its rules with a wire as the
+        generator, with less fuel than a diagram since its types are the
+        boundaries of one.
+
+        Parameters are those of :meth:`search`.
+
+        >>> from hypothesis import find
+        >>> assert len(find(Ty.strategy(), lambda x: len(x) > 1)) == 2
+        """
+        return cls.search(**{"fuel": 1, **params})
+
+    @classmethod
+    def generators(cls, *, dom=None, cod=None):
+        """
+        Generate the types of one wire. Their colours are transparent, as
+        are those :meth:`Colour.strategy` draws: a coloured type is not
+        generated yet, so the boundary is not read.
+        """
+        # pylint: disable=unused-argument  # every colour is transparent
+        return cls.generator_factory.strategy().map(cls)
+
     def cast_wire(self, x: str | cat.Ob) -> cat.Ob:
         """
         Turn a constructor argument into a ``self.generator_factory``.
@@ -583,7 +615,16 @@ class Nat(abc.Nat, Ty):  # ty: ignore[invalid-generic-class]
 
     >>> assert CX @ 2 >> 2 @ CX == CX @ CX
     """
+    ob = Colour
     generator_factory = int
+
+    @classmethod
+    def generators(cls, *, dom=None, cod=None):
+        """ Generate the one generator of the free monoid, ``Nat(1)``. """
+        # pylint: disable=unused-argument  # a Nat has one colour
+        from hypothesis import strategies as st
+
+        return st.just(cls(1))
 
     def __init__(self, inside: int | tuple = 0, dom: Colour | None = None,
                  cod: Colour | None = None, _scan: bool = True):
@@ -666,6 +707,14 @@ class Dim(Ty):
     >>> assert loads(dumps(Dim(2, 3))) == Dim(2, 3)
     """
     generator_factory = int
+
+    @classmethod
+    def generators(cls, *, dom=None, cod=None):
+        """ Generate the dimensions of one wire, two or three. """
+        # pylint: disable=unused-argument  # a Dim has one colour
+        from hypothesis import strategies as st
+
+        return st.integers(2, 3).map(cls)
 
     def __init__(self, *inside: int, dom=None, cod=None, _scan=True, **kwargs):
         inside = kwargs.pop('inside', inside)

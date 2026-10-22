@@ -95,7 +95,8 @@ from typing import (
 from discopy import cat, monoidal, cmap, messages
 from discopy.abc import BiclosedCategory
 from discopy.axioms import (
-    GENERATORS, Equation as AbstractEquation, Equivalence, Testable, axiom)
+    GENERATORS, Equation as AbstractEquation, Equivalence, Testable, axiom,
+    Serialisable)
 from discopy.drawing import Drawing
 from discopy.cat import factory
 from discopy.utils import (
@@ -178,19 +179,23 @@ class Ty(monoidal.Ty):
         raise ValueError
 
     @classmethod
-    def strategy(cls, *, max_leaves=3):
+    def strategy(cls, *, max_leaves=3, **params):
         """
         Generate atomic types and their exponentials, ``max_leaves`` atoms
-        at most.
+        at most, or with ``params`` the types the search of the free monoid
+        derives within them, e.g. between a given ``dom`` and ``cod``.
         """
         from hypothesis import strategies as st
+
+        if params:
+            return super().strategy(**params)
 
         def exponentials(types):
             return st.builds(lambda x, y: x << y, types, types)\
                 | st.builds(lambda x, y: x >> y, types, types)
 
         return st.recursive(
-            super().strategy(), exponentials, max_leaves=max_leaves)
+            cls.generators(), exponentials, max_leaves=max_leaves)
 
     def __repr__(self):
         return factory_name(type(self))\
@@ -935,6 +940,9 @@ class TermBase(Box, Equivalence):
             lambda terms: (terms[0], terms[2], terms[1]),
             Canonical[cls].strategy(**params))
 
+    serialisation = Serialisable.serialisation.failing(
+        "A term does not read back from its tree, see #692.")
+
     @axiom
     def alpha_renaming(cls, terms: Renamed[Self]) -> AbstractEquation:
         """ A term is alpha-equivalent to its renamings, however many. """
@@ -1250,9 +1258,8 @@ class Abstraction(TermBase):
 type Term = Constant | Variable | Application | Abstraction
 
 
-for law in (
-        "unitality", "associativity",
-        "dagger_involution", "dagger_contravariance"):
+for law in sorted(
+        set(Box.axioms) - set(Serialisable.axioms) | set(Box.rules)):
     setattr(TermBase, law, getattr(Box, law).inapplicable(
         messages.TERM_IS_A_BOX))
 

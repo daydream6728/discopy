@@ -83,12 +83,13 @@ from typing import TYPE_CHECKING, ClassVar
 
 from discopy import messages
 from discopy.axioms import (
-    Delay, Equation, Hom, Obj, Tensor, Testable, Var, axiom)
+    Atom, Count, Delay, Equation, Hom, L, Obj, Over, R, Repeat, Tensor,
+    Testable, Under, Unit, Var, axiom, rule)
 from discopy.utils import (  # noqa: F401  pylint: disable=unused-import
     AxiomError, NamedGeneric, classproperty, factory_name)
 
 
-class Category[C0, C1: Category](ABC):
+class Category[C0, C1: Category](Testable[C1], ABC):
     """
     A category is a class with two class variables ``ob, ar``, two attributes
     ``dom, cod`` and two methods ``id, then``.
@@ -197,6 +198,17 @@ class Category[C0, C1: Category](ABC):
 
     __rshift__ = __llshift__ = lambda self, other: self.then(other)
     __lshift__ = __lrshift__ = lambda self, other: other.then(self)
+
+    @rule
+    def ax[X: Obj[C0]](cls, x: Var[C0, X]) -> Hom[C1, X, X]:
+        """ The axiom rule: the identity on an object. """
+        return cls.id(x)
+
+    @rule
+    def cut[A: Obj[C0], B: Obj[C0], C: Obj[C0]](
+            cls, f: Hom[C1, A, B], g: Hom[C1, B, C]) -> Hom[C1, A, C]:
+        """ The cut rule: the composition of two morphisms. """
+        return f.then(g)
 
 
 class DaggerCategory[C0, C1: DaggerCategory](Category[C0, C1]):
@@ -314,8 +326,10 @@ class ColouredMonoid[C0, C1: ColouredMonoid](Category[C0, C1]):
         return self.whisker(other).tensor(self)
 
 
-class Monoid[C1: Monoid](ColouredMonoid[type(None), C1]):
+class Monoid[C1: Monoid](ColouredMonoid[NoneType, C1]):
     """ A monoid is a coloured monoid with a single, trivial colour. """
+    ob = NoneType
+    dom = cod = None
 
 
 class Groupoid[C0, C1: Groupoid](DaggerCategory[C0, C1]):
@@ -344,16 +358,10 @@ class Group[C1: Group](
     A group is a monoid whose elements are invertible, i.e. a groupoid with
     a single object :obj:`None`, which every element goes from and to.
     """
-    dom = cod = None
-
-    @classmethod
-    def parameters(cls) -> tuple[type, type]:
-        """ The objects of a group are the one :obj:`None`. """
-        return NoneType, cls
 
 
 @dataclass
-class Nat(Testable["Nat"], Monoid["Nat"]):
+class Nat(Monoid["Nat"]):
     """
     ``Nat`` is the free monoid on one generator, i.e. the natural numbers
     with addition as tensor. It is also a sequence over its unary encoding:
@@ -372,6 +380,13 @@ class Nat(Testable["Nat"], Monoid["Nat"]):
 
     def __len__(self) -> int:
         return self.n
+
+    def __pow__(self, n_times: int) -> "Nat":
+        return type(self)(n_times * self.n)
+
+    def dagger(self) -> "Nat":
+        """ The dagger of a commutative monoid, i.e. the identity. """
+        return self
 
     def __index__(self) -> int:
         return self.n
@@ -402,15 +417,23 @@ class Nat(Testable["Nat"], Monoid["Nat"]):
         return cls(tree['n'])
 
     @classmethod
-    def strategy(cls, *, max_size=3):
+    def strategy(cls, *, max_size=3, **_):
         """
         Generate natural numbers up to ``max_size``, so that a category
         whose objects they are, e.g. :class:`discopy.matrix.Matrix`,
-        quantifies over them like any other :class:`discopy.axioms.Testable`.
+        quantifies over them like any other :class:`discopy.axioms.Testable`,
+        a natural number having one colour for a boundary to ask for.
         """
         from hypothesis import strategies as st
 
         return st.integers(min_value=0, max_value=max_size).map(cls)
+
+    @classmethod
+    def generators(cls, **_):
+        """ Generate the one generator, ``Nat(1)``. """
+        from hypothesis import strategies as st
+
+        return st.just(cls(1))
 
 
 class MonoidalCategory[C0: ColouredMonoid, C1: MonoidalCategory](
@@ -460,6 +483,13 @@ class MonoidalCategory[C0: ColouredMonoid, C1: MonoidalCategory](
 
     def __rmatmul__(self: C1, other):
         return self.whisker(other).tensor(self)
+
+    @rule
+    def mix[A: Obj[C0], B: Obj[C0], C: Obj[C0], D: Obj[C0]](
+            cls, f: Hom[C1, A, B], g: Hom[C1, C, D]
+    ) -> Hom[C1, Tensor[A, C], Tensor[B, D]]:
+        """ The mix rule: the tensor of two morphisms. """
+        return f.tensor(g)
 
     def split_memory(
             self, n: int | None = None, left: bool = False, *,
@@ -618,6 +648,19 @@ class FeedbackCategory[
             (f >> y @ k).feedback(dom=x, cod=y, mem=m),
             (x @ k.delay() >> f).feedback(dom=x, cod=y, mem=m))
 
+    @rule
+    def delaying[A: Obj[C0], B: Obj[C0]](
+            cls, f: Hom[C1, A, B]) -> Hom[C1, Delay[C1, A], Delay[C1, B]]:
+        """ The delay of a morphism by one time step. """
+        return f.delay()
+
+    @rule
+    def feedback_right[Γ: Obj[C0], Δ: Obj[C0], M: Obj[C0]](
+            cls, f: Hom[C1, Tensor[Γ, Delay[C1, M]], Tensor[Δ, M]],
+            mem: Var[C0, M]) -> Hom[C1, Γ, Δ]:
+        """ The feedback of a memory on the right. """
+        return f.feedback(mem=mem)
+
 
 def keyword_form(trace: Callable) -> Callable:
     """
@@ -723,6 +766,20 @@ class TracedCategory[
         # pylint: disable-next=no-member  # stated where there is a swap
         return cls.equation_factory(cls.swap(x, x).trace(mem=x), cls.id(x))
 
+    @rule
+    def trace_left[Γ: Obj[C0], Δ: Obj[C0], M: Obj[C0]](
+            cls, f: Hom[C1, Tensor[M, Γ], Tensor[M, Δ]], mem: Var[C0, M]
+    ) -> Hom[C1, Γ, Δ]:
+        """ The trace of a memory on the left. """
+        return f.trace(len(mem), left=True)
+
+    @rule
+    def trace_right[Γ: Obj[C0], Δ: Obj[C0], M: Obj[C0]](
+            cls, f: Hom[C1, Tensor[Γ, M], Tensor[Δ, M]], mem: Var[C0, M]
+    ) -> Hom[C1, Γ, Δ]:
+        """ The trace of a memory on the right. """
+        return f.trace(len(mem))
+
 
 class ResiduatedMonoid[C0, C1: ResiduatedMonoid](ColouredMonoid[C0, C1]):
     """
@@ -810,6 +867,34 @@ class BiclosedCategory[
         result = self @ exponent >> self.ev(base, exponent, True) if left\
             else exponent @ self >> self.ev(base, exponent, False)
         return result.uncurry(n - len(exponent), left)
+
+    @rule
+    def curry_left[Γ: Obj[C0], E: Obj[C0], B: Obj[C0]](
+            cls, f: Hom[C1, Tensor[Γ, E], B], exponent: Var[C0, E]
+    ) -> Hom[C1, Γ, Over[B, E]]:
+        """ The currying of an exponent on the left, ``Γ -> B << E``. """
+        return f.curry(len(exponent))
+
+    @rule
+    def curry_right[Γ: Obj[C0], E: Obj[C0], B: Obj[C0]](
+            cls, f: Hom[C1, Tensor[E, Γ], B], exponent: Var[C0, E]
+    ) -> Hom[C1, Γ, Under[E, B]]:
+        """ The currying of an exponent on the right, ``Γ -> E >> B``. """
+        return f.curry(len(exponent), left=False)
+
+    @rule
+    def ev_left[B: Obj[C0], E: Obj[C0]](
+            cls, base: Var[C0, B], exponent: Var[C0, E]
+    ) -> Hom[C1, Tensor[Over[B, E], E], B]:
+        """ The evaluation on the left, ``(B << E) @ E -> B``. """
+        return cls.ev(base, exponent)
+
+    @rule
+    def ev_right[B: Obj[C0], E: Obj[C0]](
+            cls, base: Var[C0, B], exponent: Var[C0, E]
+    ) -> Hom[C1, Tensor[E, Under[E, B]], B]:
+        """ The evaluation on the right, ``E @ (E >> B) -> B``. """
+        return cls.ev(base, exponent, left=False)
 
 
 class Pregroup[C0, C1: Pregroup](ResiduatedMonoid[C0, C1]):
@@ -954,6 +1039,18 @@ class RigidCategory[C0: Pregroup, C1: RigidCategory](BiclosedCategory[C0, C1]):
             >> self.dom.r @ self @ self.cod.r\
             >> self.dom.r @ self.cups(self.cod, self.cod.r)
 
+    @rule
+    def counit[X: Obj[C0]](
+            cls, x: Var[C0, X]) -> Hom[C1, Tensor[X, R[X]], Unit[C0]]:
+        """ The counit of a duality, i.e. a cup ``X @ X.r -> X[:0]``. """
+        return cls.cups(x, x.r)
+
+    @rule
+    def unit[X: Obj[C0]](
+            cls, x: Var[C0, X]) -> Hom[C1, Unit[C0], Tensor[X, L[X]]]:
+        """ The unit of a duality, i.e. a cap ``X[:0] -> X @ X.l``. """
+        return cls.caps(x, x.l)
+
 
 class PivotalCategory[
         C0: Pregroup, C1: PivotalCategory](
@@ -983,6 +1080,20 @@ class BraidedCategory[
             left : The object on the left of the braid.
             right : The object on the right of the braid.
         """
+
+    @rule
+    def braiding[X: Atom[C0], Y: Atom[C0]](
+            cls, x: Var[C0, X], y: Var[C0, Y]
+    ) -> Hom[C1, Tensor[X, Y], Tensor[Y, X]]:
+        """ The braid of two atoms. """
+        return cls.braid(x, y)
+
+    @rule
+    def inverse_braiding[X: Atom[C0], Y: Atom[C0]](
+            cls, x: Var[C0, X], y: Var[C0, Y]
+    ) -> Hom[C1, Tensor[Y, X], Tensor[X, Y]]:
+        """ The inverse of the braid of two atoms. """
+        return cls.braid(x, y).dagger()
 
 
 class PROB[C1: PROB](PRO[C1], BraidedCategory[Nat, C1]):
@@ -1038,6 +1149,13 @@ class SymmetricCategory[
     @classmethod
     def braid(cls, left: C0, right: C0) -> C1:
         return cls.swap(left, right)
+
+    @rule
+    def inverse_braiding[X: Atom[C0], Y: Atom[C0]](
+            cls, x: Var[C0, X], y: Var[C0, Y]
+    ) -> Hom[C1, Tensor[Y, X], Tensor[X, Y]]:
+        """ The inverse of the braid of two atoms, the swap the other way. """
+        return cls.swap(y, x)
 
 
 class PROP[C1: PROP](PROB[C1], SymmetricCategory[Nat, C1]):
@@ -1116,6 +1234,13 @@ class MarkovCategory[
             cls.copy(x) @ cls.copy(y)
             >> cls.id(x) @ cls.swap(x, y) @ cls.id(y))
 
+    @rule
+    def comultiplication[X: Atom[C0], N: Count](
+            cls, x: Var[C0, X], n: Var[int, N]
+    ) -> Hom[C1, X, Repeat[X, N]]:
+        """ The comultiplication of an atom, ``n`` copies ``X -> X ** n``. """
+        return cls.copy(x, n)
+
 
 class ComarkovCategory[
         C0: ColouredMonoid, C1: ComarkovCategory](SymmetricCategory[C0, C1]):
@@ -1189,6 +1314,13 @@ class ComarkovCategory[
             cls.id(x) @ cls.swap(y, x) @ cls.id(y)
             >> cls.merge(x) @ cls.merge(y))
 
+    @rule
+    def multiplication[X: Atom[C0], N: Count](
+            cls, x: Var[C0, X], n: Var[int, N]
+    ) -> Hom[C1, Repeat[X, N], X]:
+        """ The multiplication of an atom, ``n`` copies ``X ** n -> X``. """
+        return cls.merge(x, n)
+
 
 class ClosedCategory[
         C0: ResiduatedMonoid, C1: ClosedCategory](
@@ -1227,6 +1359,17 @@ class BalancedCategory[C0: ColouredMonoid, C1: BalancedCategory](
         """
         return cls.equation_factory(
             cls.braid(x, x).trace(mem=x), cls.twist(x))
+
+    @rule
+    def twisting[X: Atom[C0]](cls, x: Var[C0, X]) -> Hom[C1, X, X]:
+        """ The twist of an atom. """
+        return cls.twist(x)
+
+    @rule
+    def inverse_twisting[X: Atom[C0]](
+            cls, x: Var[C0, X]) -> Hom[C1, X, X]:
+        """ The inverse of the twist of an atom. """
+        return cls.twist(x).dagger()
 
 
 class RibbonCategory[C0: Pregroup, C1: RibbonCategory](
@@ -1274,3 +1417,10 @@ class HypergraphCategory[C0: Pregroup, C1: HypergraphCategory](
             n_legs_out : The number of legs out for each spider.
             typ : The type of the spiders.
         """
+
+    @rule
+    def spider[X: Atom[C0], M: Count, N: Count](
+            cls, x: Var[C0, X], m: Var[int, M], n: Var[int, N]
+    ) -> Hom[C1, Repeat[X, M], Repeat[X, N]]:
+        """ The spider of an atom, ``X ** m -> X ** n``. """
+        return cls.spiders(m, n, x)

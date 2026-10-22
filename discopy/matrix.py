@@ -45,7 +45,6 @@ from typing import Callable, TYPE_CHECKING, Literal
 from discopy import config, messages
 from discopy.abc import (
     ComarkovCategory, DaggerCategory, MarkovCategory, NamedGeneric, Nat)
-from discopy.axioms import Testable
 from discopy.cat import (
     factory,
     assert_iscomposable,
@@ -53,14 +52,16 @@ from discopy.cat import (
 )
 from discopy.utils import (
     assert_isinstance, factory_name, from_tree, unbiased)
+from discopy.axioms import Serialisable
 
 if TYPE_CHECKING:
     import sympy
 
 
 @factory
-class Matrix[dtype](MarkovCategory, ComarkovCategory, DaggerCategory,
-                    Testable["Matrix"], NamedGeneric):
+class Matrix[dtype](
+        MarkovCategory, ComarkovCategory, DaggerCategory,
+        Serialisable["Matrix"], NamedGeneric):
     """
     A matrix is an ``array`` with natural numbers as ``dom`` and ``cod``.
 

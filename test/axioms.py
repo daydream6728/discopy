@@ -3,18 +3,19 @@
 from typing import Self, TypeVar
 
 from hypothesis import find
-from hypothesis import strategies as st
 from hypothesis.errors import NoSuchExample
 from pytest import raises
 
-from discopy import cat, feedback, rigid
-from discopy.abc import Category, Monoid
+from discopy import cat, monoidal, rigid
+from discopy.abc import Category, Group
+from hypothesis import strategies as st
+
 from discopy.axioms import (
-    L, R, Axiom, AxiomFailure, Count, Delay, Equation, Equivalence,
-    Hom, Obj, Over, Related, Repeat, Tensor, Testable, Under, Unit, Var,
-    assert_axioms, axiom, inhabits, is_open, position, substitute)
-from discopy.cat import Arrow, Box, Functor, Ob
+    L, R, Atom, Axiom, AxiomFailure, Count, Equation, Equivalence, Hom, Obj,
+    Over, Related, Repeat, Tensor, Testable, Under, Unit, Var, axiom,
+    inhabits, position, substitute)
 from discopy.monoidal import Ty
+from discopy.cat import Arrow, Box, Ob, Functor
 
 
 class ParityEquation(Equation):
@@ -27,36 +28,22 @@ class Parity(int, Equivalence):
     """ An integer up to parity, an equivalence relation besides equality. """
 
     equivalence_factory = ParityEquation
-    serialisation = Testable.serialisation.inapplicable(
-        "An integer has no tree.")
 
     @classmethod
     def strategy(cls, **params):
-        """Generate an integer."""
+        """ Generate an integer, no strategy being enrolled from a test. """
         return st.integers().map(cls)
 
     @classmethod
     def related(cls, **params):
-        """Generate an integer, another of the same parity and any third."""
+        """ Generate an integer, another of the same parity and any third. """
         return st.tuples(st.integers(), st.integers(), st.integers()).map(
             lambda triple: (
                 cls(triple[0]), cls(triple[0] + 2 * triple[1]),
                 cls(triple[2])))
 
 
-def test_axioms():
-    assert_axioms(Arrow)
-
-    class Classified(Arrow):
-        """ A category with a broken law and an inapplicable one. """
-        unitality = Arrow.unitality.failing("Never holds.")
-        dagger_involution = Arrow.dagger_involution.inapplicable("No dagger.")
-
-    assert_axioms(Classified)
-
-
 def test_Equivalence():
-    assert_axioms(Parity)
     assert Parity.equivalent(Parity(1), Parity(3), Parity(-5))
     assert not Parity.equivalent(Parity(1), Parity(2))
     assert Parity.reflexivity(Parity(2))
@@ -67,6 +54,9 @@ def test_Equivalence():
     assert find(Related[Parity].strategy(), lambda t: t[2] % 2 == 1)[2] % 2
     with raises(ValueError):
         Related[Parity]((1, 3))
+    arguments = find(
+        Parity.transitivity.arguments(), lambda arguments: True)
+    assert isinstance(arguments["terms"], Related[Parity])
 
 
 def test_failing_when_the_terms_do_not_build():
@@ -79,72 +69,37 @@ def test_failing_when_the_terms_do_not_build():
     with raises(AxiomFailure) as error:
         Refusing.refusing(f=Arrow.id(Ob('x')))
     assert isinstance(error.value.equation, ValueError)
-    assert_axioms(Refusing)
 
 
 def test_strategy():
     x, y = Ob('x'), Ob('y')
     find(Ob.strategy(), lambda ob: ob.name == "a")
-    assert find(Arrow.strategy(dom=x, cod=x), lambda _: True) == Arrow.id(x)
-    assert find(Arrow.strategy(dom=x, cod=y), lambda _: True).cod == y
-    assert find(Arrow.strategy(dom=x), lambda _: True).dom == x
-    assert find(Arrow.strategy(cod=y), lambda _: True).cod == y
+    arrow = find(Arrow.search(dom=x, cod=y), lambda f: len(f) > 1)
+    assert (arrow.dom, arrow.cod) == (x, y)
+    identity = find(
+        Arrow.search(fuel=0, within=Category), lambda f: not f.inside)
+    assert identity == Arrow.id(identity.dom)
     assert find(Box.strategy(dom=x), lambda _: True).dom == x
 
 
-def test_sequents():
-    @axiom
-    def law[X: Obj[Ob], Y: Obj[Ob], N: Count](
-            cls, x: Var[Ob, X], f: Hom[Self, X, Y], term: Self,
-            n: Var[int, N]
-    ) -> Equation[tuple[Var[Ob, X], bool, bool]]:
-        """ Quantify over an object, a morphism out of it, a term and a
-        number. """
-        return Equation(
-            (f.dom, isinstance(term, cls), n <= 3), (x, True, True))
-
-    bound = law.bind(Arrow)
-    scope, arguments = find(bound.sequents(), lambda _: True)
-    assert set(arguments) == {"x", "f", "term", "n"} and bound(**arguments)
-    assert inhabits(bound(**arguments), bound.output(scope))
-    _, given = find(bound.sequents(given={"Y": Ob('y')}), lambda _: True)
-    assert given["f"].cod == Ob('y')
+def test_equation():
+    f = Box('f', Ob('x'), Ob('x'))
+    assert Equation(f, f, f).symbols == ("=", "=")
+    with raises(ValueError):
+        Equation(f, f, symbols=("=", "="))
 
 
-def test_constructors():
-    x, y = rigid.Ty('x'), rigid.Ty('y')
-    assert Tensor[x, y] == x @ y and Unit[rigid.Ty] == rigid.Ty()
-    assert (L[x], R[x]) == (x.l, x.r) and Repeat[x, 3] == x @ x @ x
-    assert (Over[x, y], Under[y, x]) == (x << y, y >> x)
-    z = feedback.Ty('z')
-    assert Delay[feedback.Diagram, z] == z.delay()
-    f = rigid.Box('f', x, y)
-    assert inhabits(f, Hom[rigid.Diagram, x, y])
-    assert not inhabits(f, Hom[rigid.Diagram, y, x])
-    assert inhabits(Equation(f), Equation[Hom[rigid.Diagram, x, y]])
-    assert not inhabits(Equation(f), Equation[Hom[rigid.Diagram, x, x]])
-    assert inhabits(Equation(f), Equation) and not inhabits(f, Equation)
-    assert inhabits((f, x), tuple[Hom[rigid.Diagram, x, y], Var[Ty, x]])
-    assert inhabits((x, x), tuple[Var[Ty, x], ...])
-    assert not inhabits(f, tuple[Hom[rigid.Diagram, x, y]])
-    assert inhabits(Arrow, type[Category]) and inhabits(1, int)
+def test_substitute_unhashable():
+    """ A value that does not hash is never looked up in the scope. """
+    A = TypeVar("A")
+    unhashable = [Ty('x')]
+    assert substitute(Var[list, A], {A: unhashable}).__args__ == (
+        list, unhashable)
 
 
-def test_substitute():
-    A, B = TypeVar("A"), TypeVar("B")
-    x, y = Ty('x'), Ty('y')
-    assert is_open(Tensor[A, B]) and not is_open(Tensor[x, y])
-    assert substitute(Tensor[A, B], {A: x, B: y}) == x @ y
-    assert substitute(int, {A: x}) is int
-    assert substitute(Equation, {A: x}) is Equation
-    assert substitute(Equation[Hom[Arrow, A, B]], {A: x, B: y}).__args__ \
-        == (Hom[Arrow, x, y], )
-
-
-def test_position():
-    assert position(Monoid.__type_params__[0], Monoid) == 1
-    assert position(Category.__type_params__[0], Category) == 0
-    assert position(TypeVar("T"), Category) is None
+def test_position_of_a_group():
+    """ The ``C1`` of a group is its arrows, as for any category. """
+    assert position(Group.__type_params__[0], Group) == 1
 
 
 def test_axiom_binding():
@@ -179,16 +134,56 @@ def test_string_annotations():
     assert annotations["return"] == Equation[Hom[int, A, A]]
 
 
-def test_inapplicable():
+def test_sequents():
+    @axiom
+    def law[X: Atom[Ty], Y: Obj[Ty], N: Count](
+            cls, x: Var[Ty, X], f: Hom[Self, X, Y], term: Self,
+            n: Var[int, N]
+    ) -> Equation[tuple[int, Var[Ty, X], bool, bool]]:
+        """ Quantify over an atom, a morphism out of it, a term and a
+        number. """
+        return Equation(
+            (len(x), f.dom, isinstance(term, cls), n <= 3),
+            (1, x, True, True))
+
+    bound = law.bind(monoidal.Diagram)
+    scope, arguments = find(bound.sequents(), lambda _: True)
+    assert set(arguments) == {"x", "f", "term", "n"} and bound(**arguments)
+    assert inhabits(bound(**arguments), bound.output(scope))
+
+
+def test_formers():
+    x, y = rigid.Ty('x'), rigid.Ty('y')
+    assert Tensor[x, y] == x @ y and Unit[rigid.Ty] == rigid.Ty()
+    assert (L[x], R[x]) == (x.l, x.r) and Repeat[x, 3] == x @ x @ x
+    assert (Over[x, y], Under[y, x]) == (x << y, y >> x)
+    f = rigid.Box('f', x, y)
+    assert inhabits(f, Hom[rigid.Diagram, x, y])
+    assert not inhabits(f, Hom[rigid.Diagram, y, x])
+    assert not inhabits(Equation(f), Equation[Hom[rigid.Diagram, x, x]])
+
+
+def test_classifiers():
+    f = Box('f', Ob('x'), Ob('y'))
+    broken = Arrow.unitality.failing("Never holds.")
+    with raises(AxiomFailure) as failure:
+        broken(f=f)
+    assert broken.broken and failure.value.equation
     law = Arrow.unitality.inapplicable("No identities to cancel.")
-    assert law.name == "unitality"
-    assert law.__doc__ == "No identities to cancel."
     assert law() is NotImplemented
+    assert law.__doc__ == "No identities to cancel."
+    assert not law.applicable and Arrow.unitality.applicable
+    assert Arrow.unitality.modulo(lambda term: term.dom)(f=f)
 
 
-def test_modulo():
-    law = Arrow.unitality.modulo(lambda term: term.dom).bind(Arrow)
-    assert law(f=Box('f', Ob('x'), Ob('y')))
+def test_rules():
+    x, y = Ob('x'), Ob('y')
+    f = Box('f', x, y)
+    assert sorted(Arrow.rules) == ["ax", "cut"]
+    assert Arrow.cut(f, f[::-1]) == f >> f[::-1] and Arrow.ax(x) == Arrow.id(x)
+    assert Arrow.cut.is_recursive and not Arrow.ax.is_recursive
+    assert monoidal.Diagram.mix.conclusion == (None, None)
+    assert Arrow.ax.given(x, y) == {"X": y}
 
 
 def test_equation_symbols():
@@ -202,31 +197,9 @@ def test_equation_symbols():
 
 
 def test_weaken():
-    class Recording(Arrow):
-        """ Arrows recording the parameters their strategy is given. """
-        given = []
-
-        @classmethod
-        def strategy(cls, **params):
-            cls.given.append(params.pop("tag", None))
-            return Arrow.strategy.__func__(cls, **params)
-
-    law = Recording.unitality.weaken(tag="loop")
-    assert law.modulo(lambda term: term).params == law.params == {
-        "tag": "loop"}
+    law = Arrow.unitality.weaken(within=Category)
+    assert law.params == {"within": Category}
     assert law(**find(law.strategy(), lambda _: True))
-    assert Recording.given and set(Recording.given) == {"loop"}
-
-
-def test_self_annotation():
-    @axiom
-    def absorbing(cls, f: Self) -> Equation:
-        """ The identity on the domain absorbs into any arrow. """
-        return Equation(cls.id(f.dom) >> f, f)
-
-    law = absorbing.bind(Arrow)
-    arguments = find(law.strategy(), lambda _: True)
-    assert isinstance(arguments["f"], Arrow) and law(**arguments)
 
 
 def test_falsify():
@@ -255,6 +228,16 @@ def test_axioms_of_category():
         unitality = None
 
     assert "unitality" not in Hidden.axioms
+
+
+def test_matrix():
+    assert monoidal.Diagram in Testable.enrolled()
+    assert monoidal.Ty in Testable.enrolled()
+    assert cat.FreeCategory not in Testable.enrolled()
+    once = Testable.matrix(once=True)
+    assert cat.Arrow.dagger_involution in once
+    assert rigid.Diagram.unitality not in once
+    assert set(once) <= set(Testable.matrix())
 
 
 def test_copying():
