@@ -13,6 +13,8 @@ from discopy import frobenius
 
 
 def test_backend():
+    pytest.importorskip("jax")
+    pytest.importorskip("torch")
     import jax.numpy
     import torch
     assert isinstance(Tensor.id().array, np.ndarray)
@@ -87,6 +89,7 @@ def test_Spider_to_tn():
 
 
 def test_Spider_to_tn_pytorch():
+    pytest.importorskip("torch")
     try:
         with backend('pytorch') as np:
             tn.set_default_backend('pytorch')
@@ -370,6 +373,7 @@ def test_Box_pickled_before_dtype_inference():
 
 
 def test_non_numpy_eval():
+    pytest.importorskip("torch")
     reference = Swap(Dim(2), Dim(2)).eval()
     with backend('pytorch'):
         result = Swap(Dim(2), Dim(2)).eval()
@@ -386,6 +390,7 @@ def test_eval_over_52_indices():
     diagram = g
     for _ in range(60):
         diagram = diagram >> g
+    pytest.importorskip("torch")
     with backend('pytorch'):
         result = diagram.eval()
     assert np.allclose(np.asarray(result.array), np.eye(2))
@@ -421,7 +426,7 @@ def test_CMap_eval():
 
 
 def test_CMap_eval_jax():
-    import jax
+    jax = pytest.importorskip("jax")
     import jax.numpy as jnp
     with backend('jax'):
         b = lambda x: Box[float]('v', Dim(1), Dim(2), x * jnp.ones(2))
@@ -431,6 +436,7 @@ def test_CMap_eval_jax():
 
 
 def test_Functor_backend():
+    pytest.importorskip("jax")
     x = frobenius.Ty('x')
     f = frobenius.Box('f', x, x @ x)
     diagram = f >> frobenius.Spider(1, 1, x) @ x >> f.dagger()
@@ -451,7 +457,7 @@ def test_Functor_markov_copy():
 
 
 def test_Functor_pytorch():
-    import torch
+    torch = pytest.importorskip("torch")
     from torch import float64
     x = frobenius.Ty('x')
     v = frobenius.Box('v', frobenius.Ty(), x)
@@ -464,7 +470,7 @@ def test_Functor_pytorch():
 
 
 def test_spider_eval_pytorch():
-    import torch
+    torch = pytest.importorskip("torch")
     with backend('pytorch'):
         result = (Spider(0, 1, Dim(2)) >> Spider(1, 0, Dim(2))).eval()
         assert isinstance(result.array, torch.Tensor)
