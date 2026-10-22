@@ -66,7 +66,7 @@ the :mod:`frobenius` axioms.
 from __future__ import annotations
 
 import warnings
-from typing import ClassVar
+from typing import Callable, ClassVar
 
 from discopy import symmetric, monoidal, feedback, cmap, hypergraph, messages
 from discopy.abc import ComarkovCategory, MarkovCategory
@@ -239,16 +239,165 @@ class Diagram(symmetric.Diagram, MarkovCategory):
         from discopy import comarkov
         return comarkov.Diagram.merge(x, n)
 
+    @property
+    def is_deterministic(self) -> bool:
+        """
+        Whether copying commutes with the diagram, i.e. its boxes are
+        deterministic, see :class:`Box`.
+
+        >>> x = Ty('x')
+        >>> sample = Box('sample', x, x, is_deterministic=False)
+        >>> assert Copy(x).is_deterministic
+        >>> assert not (Copy(x) >> sample @ x).is_deterministic
+        """
+        return all(box.is_deterministic for box in self.boxes)
+
+    @property
+    def is_affine(self) -> bool:
+        """
+        Whether discarding commutes with the diagram, i.e. its boxes are
+        affine, see :class:`Box`.
+
+        >>> x = Ty('x')
+        >>> condition = Box('condition', x, Ty(), is_affine=False)
+        >>> assert Copy(x).is_affine
+        >>> assert not (Copy(x) >> condition @ x).is_affine
+        """
+        return all(box.is_affine for box in self.boxes)
+
+    @property
+    def is_cartesian(self) -> bool:
+        """
+        Whether the diagram is deterministic and affine, i.e. a total
+        function: copying and discarding both commute with it.
+        """
+        return self.is_deterministic and self.is_affine
+
 
 class Box(symmetric.Box, Diagram):
     """
-    A Markov box is a symmetric box in a Markov diagram.
+    A Markov box is a symmetric box in a Markov diagram, a total function
+    unless it says otherwise.
+
+    A box ``f`` is deterministic when ``f >> copy == copy >> f @ f`` and
+    affine when ``f >> discard == discard``, e.g. a sample is affine but not
+    deterministic, a condition deterministic but not affine. A deterministic
+    box that is not affine is a hard constraint, i.e. a partial function: a
+    weight ``w`` copied is ``w * w``, so it is zero or one, and a soft score
+    is not deterministic. Both flags are attributes of each box rather than
+    of its class, as an identity or a swap is a total function whatever its
+    class, and they are part of its equality. They are declared of the box
+    as ``deterministic`` and ``affine`` and hold of it but not of its dagger,
+    as the converse of a total function need not be one, so that the dagger
+    of a dagger is the box again.
 
     Parameters:
         name (str) : The name of the box.
         dom (monoidal.Ty) : The domain of the box, i.e. its input.
         cod (monoidal.Ty) : The codomain of the box, i.e. its output.
+        is_deterministic : Whether copying commutes with the box.
+        is_affine : Whether discarding commutes with the box.
+
+    Example
+    -------
+    >>> p, x = Ty('p'), Ty('x')
+    >>> sample = Box('sample', p, x, is_deterministic=False)
+    >>> assert sample != Box('sample', p, x)
+    >>> sample
+    markov.Box('sample', feedback.Ty(feedback.Wire('p')), \
+feedback.Ty(feedback.Wire('x')), is_deterministic=False)
+    >>> assert not sample.dagger().dagger().is_deterministic
+
+    >>> f = Box('f', p, x)
+    >>> assert f.is_cartesian and not f.dagger().is_cartesian
+    >>> assert f.dagger().dagger() == f and f.dagger().deterministic
     """
+    deterministic = affine = True
+
+    def __init__(self, *args, is_deterministic=True, is_affine=True,
+                 **params):
+        self.deterministic, self.affine = is_deterministic, is_affine
+        super().__init__(*args, **params)
+
+    @property
+    def is_deterministic(self) -> bool:
+        """ Whether the box is declared deterministic and is no dagger. """
+        return self.deterministic and not self.is_dagger
+
+    @property
+    def is_affine(self) -> bool:
+        """ Whether the box is declared affine and is no dagger. """
+        return self.affine and not self.is_dagger
+
+    def flags(self) -> dict[str, bool]:
+        """
+        The flags declared of the box that differ from those of a total
+        function, by name, as :meth:`__repr__` and :meth:`to_tree` write them
+        down.
+        """
+        return {name: False for name, value in [
+            ("is_deterministic", self.deterministic),
+            ("is_affine", self.affine)] if not value}
+
+    def __repr__(self):
+        flags = "".join(f", {name}=False" for name in self.flags())
+        if self.is_dagger or not flags:
+            return super().__repr__()
+        return super().__repr__()[:-1] + flags + ")"
+
+    def setoid(self):
+        """
+        Markov boxes are equal when they are equal as :class:`cat.Box` and
+        their flags are equal too.
+        """
+        return super().setoid() + (self.deterministic, self.affine)
+
+    def flagged(self, other: Box) -> Box:
+        """
+        Give a box built from this one the flags declared of this one, as
+        :meth:`dagger`, :meth:`subs` and :meth:`lambdify` do on top of those
+        of the class they extend, e.g. one that keeps a winding number, and so
+        do the rotations of a :class:`discopy.frobenius.Box`.
+        """
+        other.deterministic, other.affine = self.deterministic, self.affine
+        return other
+
+    def dagger(self) -> Box:
+        return self.flagged(super().dagger())
+
+    def subs(self, *args) -> Box:
+        """
+        Substitute a variable in the data of a box, keeping its flags.
+
+        >>> from sympy.abc import phi  # doctest: +EXTRA
+        >>> sample = Box('sample', Ty('x'), Ty('x'), data=phi,
+        ...              is_deterministic=False)
+        >>> assert not sample.subs(phi, 1).is_deterministic
+        >>> assert not sample.lambdify(phi)(1).is_deterministic
+        """
+        return self.flagged(super().subs(*args))
+
+    def lambdify(self, *symbols, **kwargs) -> Callable:
+        function = super().lambdify(*symbols, **kwargs)
+        return lambda *xs: self.flagged(function(*xs))
+
+    def to_tree(self) -> dict:
+        """
+        Serialise a box, with the flags it does not have.
+
+        >>> from discopy.utils import dumps, loads
+        >>> box = Box('condition', Ty('x'), Ty(), is_affine=False)
+        >>> assert loads(dumps(box)) == box
+        """
+        return {**super().to_tree(), **self.flags()}
+
+    @classmethod
+    def from_tree(cls, tree: dict):
+        result = super().from_tree(tree)
+        for name in ("is_deterministic", "is_affine"):
+            if name in tree:
+                setattr(result, name.removeprefix("is_"), tree[name])
+        return result
 
 
 class Function(Box):
@@ -483,7 +632,8 @@ class Copy(Function):
     def __init__(self, x: monoidal.Ty, n: int = 2):
         assert_isatomic(x, monoidal.Ty)
         n = n if isinstance(n, int) else len(n)
-        name = f"Copy({x}" + ("" if n == 2 else f", {n}") + ")"
+        name = f"Copy({x}" + ("" if n == 2 else f", {n}") + ")" if n\
+            else f"Discard({x})"
         Box.__init__(self, name, dom=x, cod=x ** n,
                      draw_as_spider=True, color="black", drawing_name="")
 
@@ -539,11 +689,28 @@ class Sum(symmetric.Sum, Box):
     """
     A markov sum is a symmetric sum and a markov box.
 
+    Its flags are read off its terms: copying and discarding are linear, so
+    that a sum is deterministic when it has at most one term and that term
+    is, and affine when it has exactly one and that term is.
+
     Parameters:
         terms (tuple[Diagram, ...]) : The terms of the formal sum.
         dom (Ty) : The domain of the formal sum.
         cod (Ty) : The codomain of the formal sum.
+
+    Example
+    -------
+    >>> x = Ty('x')
+    >>> f = Box('f', x, x)
+    >>> assert Sum((f, )).is_cartesian and not (f + f).is_deterministic
+    >>> zero = Sum((), x, x)
+    >>> assert zero.is_deterministic and not zero.is_affine
     """
+    def __init__(self, terms, dom=None, cod=None):
+        super().__init__(terms, dom, cod)
+        self.deterministic = len(self.terms) < 2 and all(
+            term.is_deterministic for term in self.terms)
+        self.affine = len(self.terms) == 1 and self.terms[0].is_affine
 
 
 class Functor(symmetric.Functor):
