@@ -395,7 +395,8 @@ def test_subs_forms_and_data():
     x, y = Ob('x'), Ob('y')
     f = Box('f', x, y, data=phi + psi)
     expected = Box('f', x, y, data=3)
-    assert f.subs(phi, 1).data == f.subs([(phi, 1)]).data == psi + 1
+    assert f.subs(phi, 1).data == f.subs([(phi, 1)]).data\
+        == f.subs((phi, 1)).data == psi + 1
     for args in [([(phi, 1), (psi, 2)], ), ({phi: 1, psi: 2}, ),
                  ((phi, 1), (psi, 2))]:
         assert f.subs(*args) == expected
@@ -406,6 +407,11 @@ def test_subs_forms_and_data():
         == ["phi", {"phase": 1}]
     h = Box('h', x, y, data=np.array([[phi, 1], [psi, 2]], dtype=object))
     assert np.array_equal(h.subs(psi, 4).subs(phi, 3).data, [[3, 1], [4, 2]])
+    import sympy
+    for data in (h.data, sympy.Matrix(h.data), sympy.Array(h.data)):
+        h = Box('h', x, y, data=data)
+        for result in (h.subs([(phi, 3), (psi, 4)]), h.lambdify(phi, psi)(3, 4)):
+            assert np.array_equal(np.array(result.data), [[3, 1], [4, 2]])
 
 
 def test_Sum():

@@ -5,9 +5,9 @@
 > 4. P2 discopy/utils.py:612: Passing one pair as `rsubs(data, (var, expr))` now makes `dict(pairs)` raise `TypeError`; normalize it as one pair before building the dict.
 > 5. P3 CHANGELOG.md:1572: `B88` is cited for three unrelated bugs in this changelog. Check the issue tracker and correct the IDs so each bullet points to its own bug.
 
-- [ ] merge `origin/main` (5e95a3f4)
-- [ ] 1: check ndarray, sympy `Matrix` and `Array` data keep their shape through `subs` and `lambdify`, with a test
+- [x] merge `origin/main` (5e95a3f4)
+- [x] 1: check ndarray, sympy `Matrix` and `Array` data keep their shape through `subs` and `lambdify`, with a test
 - [ ] 2: forward a bubble's `data` and `is_dagger` through functors into free categories
 - [ ] 3: `Feedback.subs`/`lambdify` rebuild through its own constructor
-- [ ] 4: `rsubs(data, (var, expr))` takes one pair, as it did on main
+- [x] 4: `rsubs(data, (var, expr))` takes one pair, as it did on main
 - [ ] 5: name which item of B88 each changelog bullet fixes

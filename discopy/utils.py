@@ -592,9 +592,9 @@ def rsubs(data, *args, **kwargs):
 
     Parameters:
         data : The data in which to substitute.
-        args : A variable and an expression, or for multiple substitution,
-            a list or a mapping of them, as in :code:`sympy.subs`, or the
-            pairs themselves.
+        args : A variable and an expression or the pair of them, or for
+            multiple substitution, a list or a mapping of them, as in
+            :code:`sympy.subs`, or the pairs themselves.
         kwargs : Passed to :code:`sympy.lambdify`.
 
     Example
@@ -607,10 +607,14 @@ def rsubs(data, *args, **kwargs):
     {'name': 'phi', 'phases': [1, 3]}
     >>> assert rsubs(data, [(phi, 1), (psi, 2)])\\
     ...     == rsubs(data, {phi: 1, psi: 2}) == rsubs(data, (phi, 1), (psi, 2))
+    >>> assert rsubs(data, (phi, 1)) == rsubs(data, phi, 1)
     """
     from sympy import lambdify
-    pairs = args[0] if len(args) == 1\
-        else args if isinstance(args[0], Iterable) else [args]
+    pairs = args[0] if len(args) == 1 else args
+    if not isinstance(pairs, Mapping):
+        pairs = tuple(pairs)
+        if pairs and not isinstance(pairs[0], Iterable):
+            pairs = (pairs, )
     substitution = dict(pairs)
     variables, values = tuple(substitution), tuple(substitution.values())
     return rmap(lambda x: lambdify(variables, x, **kwargs)(*values)
