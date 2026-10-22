@@ -416,12 +416,12 @@ def get_max_dim_for_box(
     input_dims: List[int],
     prev_layers,
 ):
-    from discopy.optyx.core.diagram import Swap, mode
+    from discopy.optyx.core.diagram import Permutation, mode
     from discopy.optyx.core.zw import Create, Endo, Divide, Multiply
 
     if (
         len(box.dom) == 0 or
-        isinstance(box, (Swap, Endo, Divide, Multiply))
+        isinstance(box, (Permutation, Endo, Divide, Multiply))
     ):
         return 1e20
 
@@ -467,12 +467,12 @@ def get_max_dim_for_box(
                 if idxs:
                     dim_for_box += sum(previous_box.photons[i] for i in idxs)
 
-        if isinstance(previous_box, Swap):
+        if isinstance(previous_box, Permutation):
+            segment = wires_in_light_cone[adj_left:adj_left + cod_len]
             wires_in_light_cone = (
                 wires_in_light_cone[:adj_left]
-                + [wires_in_light_cone[adj_left + 1]]
-                + [wires_in_light_cone[adj_left]]
-                + wires_in_light_cone[adj_left + 2:]
+                + [segment[i] for i in previous_box.perm.dagger()]
+                + wires_in_light_cone[adj_left + cod_len:]
             )
         else:
             wires_in_light_cone = update_connections(

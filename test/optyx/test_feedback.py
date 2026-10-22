@@ -275,14 +275,15 @@ def test_simplify_picks_the_diagram_with_fewest_swaps():
     simplified = unrolled.simplify()
 
     def n_swaps(diagram):
-        return sum(isinstance(box, core.Swap) for box in diagram.boxes)
+        return sum(box.crossings for box in diagram.boxes
+                   if isinstance(box, core.Permutation))
 
     assert n_swaps(simplified) < n_swaps(unrolled)
     assert sorted(
         box.name for box in simplified.boxes
-        if not isinstance(box, core.Swap)) == sorted(
+        if not isinstance(box, core.Permutation)) == sorted(
         box.name for box in unrolled.boxes
-        if not isinstance(box, core.Swap))
+        if not isinstance(box, core.Permutation))
     assert np.allclose(
         simplified.to_tensor().eval().array,
         unrolled.to_tensor().eval().array)

@@ -503,8 +503,8 @@ class Diagram(frobenius.Diagram):
         >>> assert swaps.simplify() == Diagram.id(bit @ bit)
         """
         def n_swaps(diagram):
-            return sum(
-                isinstance(box, self.braid_factory) for box in diagram.boxes)
+            return sum(box.crossings for box in diagram.boxes
+                       if isinstance(box, Permutation))
 
         graph = self.hypergraph_factory[self.factory]
         candidates = [self, graph.from_diagram(self).to_diagram()]
@@ -1052,6 +1052,19 @@ class Permutation(frobenius.Permutation, Box):
     def __init__(self, dom, perm):
         super().__init__(dom, perm)
         self.photon_preservation_behaviour = PhotonNumberPreservation.LO
+
+    @property
+    def crossings(self) -> int:
+        """
+        The number of pairs of wires that cross, i.e. of swaps the
+        permutation decomposes into.
+
+        >>> assert Swap(bit, bit).crossings == 1
+        >>> assert Permutation(bit ** 3, [2, 0, 1]).crossings == 2
+        """
+        size = len(self.perm)
+        return sum(self.perm[i] > self.perm[j]
+                   for i in range(size) for j in range(i + 1, size))
 
     def conjugate(self):
         return self

@@ -854,6 +854,6 @@ LO_ELEMENTS = (
     Select,
     Add,
     Endo,
-    diagram.Swap,
+    diagram.Permutation,
     Add
 )
