@@ -1573,6 +1573,9 @@ class CMap[C0: Pregroup, C1: CMap](
         >>> print(cmap.to_diagram())
         Cap(x.r, x) >> x.r @ g
         """
+        if not issubclass(self.category, SymmetricCategory):
+            return legs
+
         def logical(port):
             for box, ports in zip(self.boxes, self._box_port_indices):
                 if port in ports:

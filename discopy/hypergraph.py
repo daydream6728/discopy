@@ -1606,7 +1606,8 @@ class Hypergraph(
         the outputs they reach, or the inputs that reach them, and by their
         order in the first box that reads or writes both. They stay in port
         order when this does not tell them apart, e.g. when a reader is an
-        effect, and outside a symmetric category, which has no swap to save.
+        effect, and outside a symmetric category, where they were checked in
+        port order and there is no swap to save.
 
         Parameters:
             legs : The indices of the ports, in :attr:`ports`.
@@ -2180,8 +2181,9 @@ class Hypergraph(
         Turn a box into a hypergraph with binary spiders for each wire.
 
         Over a rigid category, a box with a winding number ``z``, i.e. a
-        rotation of a generator, is the :meth:`rotate` of that generator, so
-        its transpose, as it is for a functor.
+        rotation of a generator, is the image of the functor of
+        :meth:`from_diagram`: the :meth:`rotate` of the hypergraph of that
+        generator, i.e. its transpose.
 
         Parameters:
             box : The box to turn into a hypergraph.
@@ -2201,15 +2203,8 @@ class Hypergraph(
         >>> f = Box('f', x, y)
         >>> assert H.from_box(f.r) == H.from_box(f).transpose()
         """
-        winding = getattr(box, "z", 0)\
-            if issubclass(cls.category, RigidCategory) else 0
-        if winding:
-            for _ in range(abs(winding)):
-                box = box.l if winding > 0 else box.r
-            result = cls.from_box(box)
-            for _ in range(abs(winding)):
-                result = result.l if winding < 0 else result.r
-            return result
+        if issubclass(cls.category, RigidCategory) and getattr(box, "z", 0):
+            return cls.from_diagram(box)
         spider_types = tuple(box.dom @ box.cod)
         left = tuple(range(len(box.dom)))
         right = tuple(range(len(box.dom), len(box.dom @ box.cod)))
