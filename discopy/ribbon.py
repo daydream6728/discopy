@@ -202,9 +202,17 @@ class Braid(balanced.Braid, Box):
     z = 0
 
     def rotate(self, left=False):
+        """
+        The half-turn rotation of a braid is the braid of the adjoints, from
+        ``cod.r`` to ``dom.r``, with the same strand over.
+
+        >>> x, y = Ty('x'), Ty('y')
+        >>> for braid in [Braid(x, y), Braid(x, y).dagger()]:
+        ...     assert (braid.r.dom, braid.r.cod) == (braid.cod.r, braid.dom.r)
+        ...     assert braid.r.is_dagger == braid.is_dagger
+        """
         del left
-        braid = type(self)(*self.cod.r)
-        return braid.dagger() if self.is_dagger else braid
+        return type(self)(*self.cod.r, is_dagger=self.is_dagger)
 
 
 class DualRailBraid(balanced.DualRailBraid, Box):

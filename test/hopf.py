@@ -368,6 +368,19 @@ def test_twist_in_diagram():
     assert np.isclose(complex(twist), omega ** 2)
 
 
+def test_rotated_braid_is_transposed_braid():
+    """The half-turn rotation of either crossing is its transpose, which
+    keeps the same strand over."""
+    D = Double(Algebra.cyclic(3))
+    omega = np.exp(2j * np.pi / 3)
+    a, b = Representation[D].anyon(1, omega), Representation[D].anyon(2, omega)
+    x, y = ribbon.Ty('x'), ribbon.Ty('y')
+    F = Functor(ob_map={x: a, y: b}, ar_map={}, cod=Intertwiner[D])
+    for braid in [ribbon.Braid(x, y), ribbon.Braid(x, y).dagger()]:
+        assert F(braid.r).eval(dtype=complex).is_close(
+            F(braid.transpose()).eval(dtype=complex))
+
+
 def test_taft_algebra():
     for n, T in [(2, Algebra.taft(2)), (3, taft)]:
         assert T.is_valid() and T.dim == n * n

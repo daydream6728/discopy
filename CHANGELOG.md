@@ -1790,6 +1790,13 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   identity. They check the twists of `D(Z/3)` anyons and of their product
   instead (B52 and B87 of
   [rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
+- The rotation of the dagger of a `ribbon.Braid` goes from the adjoint of
+  its codomain to the adjoint of its domain and keeps the same strand
+  over, so that it is its transpose under a ribbon functor, as it already
+  was for a braid. It had the type of the rotation of the braid itself,
+  so that rotating a diagram with an inverse braid built one that did not
+  compose (B17 of
+  [discopy/discopy#606](https://github.com/discopy/discopy/issues/606)).
 - `braided.Diagram` and `ribbon.Diagram` bind their own `functor_factory`,
   where they read those of `monoidal` and `pivotal`, so that their
   conversions map a braid to a braid and a twist to a twist, as `balanced`

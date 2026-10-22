@@ -90,8 +90,11 @@ def test_Kauffman():
 
 
 def test_rotate():
-    x = Ty('x')
+    x, y = Ty('x'), Ty('y')
     assert Twist(x).r == Twist(x)
+    assert Braid(x, y).dagger().r == Braid(x.r, y.r).dagger()
+    rotated = (Box('f', Ty(), y @ x) >> Braid(x, y).dagger()).r
+    assert Diagram(rotated.inside, rotated.dom, rotated.cod) == rotated
 
 
 def test_to_hypergraph():
