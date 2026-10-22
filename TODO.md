@@ -6,4 +6,4 @@ USER's ruling on #88 (10-22, [comment](https://github.com/rel-int/discopy-next/i
 
 - [x] #88: a subscript by numpy's default-precision scalar type is the subscript by the Python type, for `Matrix` and `tensor.Diagram` and their subclasses; doctests respelled; pickles and trees of `Matrix[int64]` still load; bare `Matrix` enrollable in the property matrix
 - [x] B9: `Matrix.map` with no dtype widens through `promote` rather than casting to the old dtype; `tensor.Diagram.eval()` with no dtype infers it from the boxes
-- [ ] #162: `Testable.environment()` binds numpy's scalar types that builtins lacks, so an inferred `tensor.Box[float32]` reads back
+- [WIP] @session_01YCJQ3Xco3ydQ6AsdTtYJ5x-2026-10-22 19:52 #162: `Testable.environment()` binds numpy's scalar types that builtins lacks, so an inferred `tensor.Box[float32]` reads back
