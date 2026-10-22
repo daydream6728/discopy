@@ -231,7 +231,7 @@ def test_Layer_init():
 def test_Layer_getitem():
     f = Box('f', 'x', 'x')
     layer = Layer(Ty(), f, Ty())
-    assert layer[0] == f and layer.boxes_and_types == (Ty(), f, Ty())
+    assert layer[0] == f and layer.boxes_or_types == (f, )
 
 
 def test_Layer_legacy_serialisation():
@@ -335,17 +335,20 @@ def test_Diagram_eq():
     assert Diagram((), Ty('x'), Ty('x')) == Id(Ty('x'))
 
 
+def whiskered(layers):
+    """ Each layer of one box, as the whiskered box. """
+    for layer in layers:
+        (box, offset), = layer.boxes_and_offsets
+        yield layer.dom[:offset] @ box @ layer.dom[offset + len(box.dom):]
+
+
 def test_Diagram_iter():
     x, y = Ty('x'), Ty('y')
     f0, f1 = Box('f0', x, y), Box('f1', y, y)
     g0 = Box('g', y @ y, x)
     g1 = g0.dagger()
     d = (f0 >> f1) @ Id(y @ x) >> g0 @ g1 >> f0 @ g0
-    assert Id(x @ y @ x).then(*(
-        left @ box @ right
-        for left, box, right in (
-            layer.boxes_and_types for layer in d)))\
-        == d
+    assert Id(x @ y @ x).then(*whiskered(d)) == d
 
 
 def test_Diagram_getitem():
@@ -361,28 +364,15 @@ def test_Diagram_getitem():
     assert diagram[::-1] == diagram.dagger()
     with raises(TypeError):
         diagram["Alice"]
-    for depth, layer_ in enumerate(diagram.inside):
-        left, box, right = layer_.boxes_and_types
-        layer = Id(left) @ box @ Id(right)
+    layers = list(whiskered(diagram.inside))
+    for depth, layer in enumerate(layers):
         assert diagram[depth] == layer
-        assert (diagram[-depth], ) == tuple(
-            Id(left) @ box @ Id(right)
-            for left, box, right in (
-                diagram.inside[-depth].boxes_and_types, ))
+        assert diagram[-depth] == layers[-depth]
         assert diagram[depth:depth] == Id(layer.dom)
-        assert diagram[depth:] == Id(layer.dom).then(*(
-            Id(left) @ box @ Id(right)
-            for left, box, right in (
-                layer.boxes_and_types for layer in diagram.inside[depth:])))
-        assert diagram[:depth] == Id(diagram.dom).then(*(
-            Id(left) @ box @ Id(right)
-            for left, box, right in (
-                layer.boxes_and_types for layer in diagram.inside[:depth])))
-        assert diagram[depth: depth + 2] == Id(layer.dom).then(*(
-            Id(left) @ box @ Id(right)
-            for left, box, right in (
-                layer.boxes_and_types
-                for layer in diagram.inside[depth: depth + 2])))
+        assert diagram[depth:] == Id(layer.dom).then(*layers[depth:])
+        assert diagram[:depth] == Id(diagram.dom).then(*layers[:depth])
+        assert diagram[depth: depth + 2]\
+            == Id(layer.dom).then(*layers[depth: depth + 2])
 
 
 def test_Diagram_offsets():

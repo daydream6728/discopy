@@ -855,26 +855,6 @@ class Layer(cat.Box, ColouredMonoid):
             yield box_or_typ
 
     @property
-    def boxes_and_types(self):
-        """
-        The layer expanded to alternating types and boxes.
-
-        Empty types are inserted around consecutive boxes for compatibility
-        with algorithms defined on the old layer representation.
-        """
-        result = []
-        for value in self.boxes_or_types:
-            if isinstance(value, Ty):
-                result.append(value)
-            else:
-                if not result or not isinstance(result[-1], Ty):
-                    result.append(value.dom[:0])
-                result.append(value)
-        if not isinstance(result[-1], Ty):
-            result.append(result[-1].cod[len(result[-1].cod):])
-        return tuple(result)
-
-    @property
     def boxes(self):
         return [
             box_or_typ for box_or_typ in self.boxes_or_types
