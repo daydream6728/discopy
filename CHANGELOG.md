@@ -2835,14 +2835,13 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   quimb tests of `test/quantum/circuit.py` skip without their extra,
   rather than failing or, for `circuit.py`, skipping the whole file with
   torch absent, and the pyzx tests skip below the version
-  `pyproject.toml` pins. Coverage measures `discopy/` alone, not the test
-  files, which counted towards the 98% gate while all but fully covered
-  by construction ([rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
+  `pyproject.toml` pins ([rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
 - Tests that could not fail now can: `test/cat.py` asserted `str(a == b)`,
   `test/markov.py`'s equations asserted nothing and are checked in the
   integers, `test/readme.py` skipped a README block that did not compile,
   `test/quantum/circuit.py` compared the int `0` an empty sum evaluates
-  to with `0` and left numpy's print options changed. `config`,
+  to with `0`, or only checked that it was falsy, and left numpy's print
+  options changed. `config`,
   `messages`, `python.function`, `grammar.cfg` and `grammar.thue` get the
   test file `AGENTS.md` says each module has ([rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
 - `CONTRIBUTING.md` names `setuptools` as the build backend, which it is,
