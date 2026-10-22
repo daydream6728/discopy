@@ -955,6 +955,14 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Changed
 
+- The `quantum` extra pins pyzx 0.10.7, where it pinned 0.7.3, so that it
+  installs next to `pytket-pyzx`, which needs pyzx 0.9 or later. pyzx 0.10
+  takes no `float` phase, so `zx.Diagram.to_pyzx` hands it the exact
+  `Fraction` of the float, which pyzx 0.7 stored as it was, and it reads
+  the boundaries of a graph in the legacy JSON format from the index of
+  its `input` or `output` flag, so `test/fixtures/zx-graph.json` gives one
+  instead of `true` and `false`
+  ([rel-int/discopy-next#225](https://github.com/rel-int/discopy-next/issues/225)).
 - A law of `discopy.axioms` is stated as a sequent, the sequent calculus
   of [rel-int/discopy-next#1](https://github.com/rel-int/discopy-next/pull/1)
   without its search: its type parameters are variables, objects `A:
