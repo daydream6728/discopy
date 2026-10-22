@@ -101,9 +101,9 @@ Let's use the beam-splitter to experiment with the Hong-Ou-Mandel effect.
 Beam-splitter is just a box in the diagram, which we can draw:
 
 >>> BS = BBS(0)
->>> BS.draw(path='docs/_static/BS.png')
+>>> BS.draw(path='docs/_static/optyx/BS.png')
 
-.. image:: /_static/BS.png
+.. image:: /_static/optyx/BS.png
     :align: center
 
 Some of the diagrams of the module can be converted to :class:`zw` diagrams.
@@ -114,9 +114,9 @@ construct the tensor network for evaluation.
 >>> BS = BBS(0)
 >>> double_BS = BS.get_kraus()
 >>> Equation(BS, double_BS, symbol="$\\\\mapsto$").draw(\\
-... path="docs/_static/double_BS.png")
+... path="docs/_static/optyx/double_BS.png")
 
-.. image:: /_static/double_BS.png
+.. image:: /_static/optyx/double_BS.png
     :align: center
 
 **Evaluating circuits with tensor networks**
@@ -129,9 +129,9 @@ photons on two output modes using postselection.
 
 >>> from discopy.optyx.photonic import Select
 >>> diagram_qpath = Create(1, 1) >> BS >> Select(1, 1)
->>> diagram_qpath.draw(path='docs/_static/BS_hom_2.png', figsize=(3, 3))
+>>> diagram_qpath.draw(path='docs/_static/optyx/BS_hom_2.png', figsize=(3, 3))
 
-.. image:: /_static/BS_hom_2.png
+.. image:: /_static/optyx/BS_hom_2.png
     :align: center
 
 >>> float(np.round(diagram_qpath.double().to_tensor().to_quimb()^..., 1))
@@ -168,9 +168,9 @@ probability.
 ...     BS >>
 ...     Select(1, 0)
 ... )
->>> diagram_qpath.draw(path='docs/_static/BS_loss.png', figsize=(3, 3))
+>>> diagram_qpath.draw(path='docs/_static/optyx/BS_loss.png', figsize=(3, 3))
 
-.. image:: /_static/BS_loss.png
+.. image:: /_static/optyx/BS_loss.png
     :align: center
 
 >>> float(np.round(diagram_qpath.double().to_tensor().to_quimb()^..., 1))
@@ -212,10 +212,10 @@ The two internal states are random:
 ...     BS >> NumberResolvingMeasurement(2)
 ... )
 
->>> channel_HOM.draw(path='docs/_static/BS_hom_distinguishable.png',
+>>> channel_HOM.draw(path='docs/_static/optyx/BS_hom_distinguishable.png',
 ... figsize=(3, 3))
 
-.. image:: /_static/BS_hom_distinguishable.png
+.. image:: /_static/optyx/BS_hom_distinguishable.png
     :align: center
 
 Let's evaluate the circuit with distinguishable photons.
@@ -844,13 +844,13 @@ def ansatz(width, depth):
 
     Example
     -------
-    >>> ansatz(6, 4).draw(path='docs/_static/ansatz6_4.png')
-    >>> ansatz(5, 4).draw(path='docs/_static/ansatz5_4.png')
+    >>> ansatz(6, 4).draw(path='docs/_static/optyx/ansatz6_4.png')
+    >>> ansatz(5, 4).draw(path='docs/_static/optyx/ansatz5_4.png')
 
-    .. image:: /_static/ansatz6_4.png
+    .. image:: /_static/optyx/ansatz6_4.png
         :align: center
 
-    .. image:: /_static/ansatz5_4.png
+    .. image:: /_static/optyx/ansatz5_4.png
         :align: center
     """
 
@@ -964,9 +964,9 @@ class FusionTypeI(Diagram):
     --------
     >>> from discopy.optyx.photonic import Create, FusionTypeI
     >>> circuit = Create(1, 0, 1, 0) >> FusionTypeI()
-    >>> circuit.draw(path="docs/_static/fusioni.svg")
+    >>> circuit.draw(path="docs/_static/optyx/fusioni.svg")
 
-    .. image:: /_static/fusioni.svg
+    .. image:: /_static/optyx/fusioni.svg
         :align: center
     """
     def __new__(cls):
@@ -1103,9 +1103,9 @@ class FusionTypeII(Diagram):
     --------
     >>> from discopy.optyx.photonic import Create, FusionTypeII
     >>> circuit = Create(1, 0, 1, 0) >> FusionTypeII()
-    >>> circuit.draw(path="docs/_static/fusionii.svg")
+    >>> circuit.draw(path="docs/_static/optyx/fusionii.svg")
 
-    .. image:: /_static/fusionii.svg
+    .. image:: /_static/optyx/fusionii.svg
         :align: center
     """
     def __new__(cls):

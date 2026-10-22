@@ -89,26 +89,26 @@ SWAP                    ``(X(1, 2) @ Id(1)) >> (Id(1) @ Z(2, 1)) >> (X(1, 2) @ I
 A single-qubit phase gate:
 
 >>> rz = Z(1, 1, 0.5)      # Rz(pi)
->>> rz.draw(path='docs/_static/rz.svg')
+>>> rz.draw(path='docs/_static/optyx/rz.svg')
 
-.. image:: /_static/rz.svg
+.. image:: /_static/optyx/rz.svg
    :align: center
 
 
 CNOT expressed in ZX:
 
 >>> cnot_zx = (Id(1) @ Z(1, 2)) >> (X(2, 1) @ Id(1))
->>> cnot_zx.draw(path='docs/_static/cnot_zx.svg', figsize=(4, 2))
+>>> cnot_zx.draw(path='docs/_static/optyx/cnot_zx.svg', figsize=(4, 2))
 
-.. image:: /_static/cnot_zx.svg
+.. image:: /_static/optyx/cnot_zx.svg
    :align: center
 
 CZ gate expressed in ZX:
 
 >>> cz_zx = (Id(1) @ Z(1, 2)) >> Id(1) @ H() @ Id(1) >> (Z(2, 1) @ Id(1))
->>> cz_zx.draw(path='docs/_static/cz_zx.svg', figsize=(4, 2))
+>>> cz_zx.draw(path='docs/_static/optyx/cz_zx.svg', figsize=(4, 2))
 
-.. image:: /_static/cz_zx.svg
+.. image:: /_static/optyx/cz_zx.svg
     :align: center
 
 **Classical-quantum ZX diagrams**
@@ -132,10 +132,10 @@ operations on the results, such as copying or discarding bits.
 
 :code:`XClassical(1, 1, 0.5)` acts as a NOT gate on the classical bit result.
 
->>> classical_state_operation.draw(path='docs/_static/classical_state.svg',
+>>> classical_state_operation.draw(path='docs/_static/optyx/classical_state.svg',
 ... figsize=(3, 5))
 
-.. image:: /_static/classical_state.svg
+.. image:: /_static/optyx/classical_state.svg
     :align: center
 
 **Quantum teleportation**
@@ -159,10 +159,10 @@ to correct the state of the qubit depending on the measurement result.
 ...     BitControlledGate(Z(1, 1, 0.5))
 ... )
 
->>> teleportation.draw(path='docs/_static/teleportation_qubit.svg',
+>>> teleportation.draw(path='docs/_static/optyx/teleportation_qubit.svg',
 ... figsize=(4, 6))
 
-.. image:: /_static/teleportation_qubit.svg
+.. image:: /_static/optyx/teleportation_qubit.svg
     :align: center
 
 This produces the same protocol as an identity operation:
@@ -193,19 +193,19 @@ GHZ state:
 >>> #ghz_circ = pytket.Circuit(3).H(0).CX(0, 1).CX(1, 2).measure_all()
 >>> #fig = circuit_drawer(tk_to_qiskit(ghz_circ), output="mpl",
 >>>   #interactive=False)
->>> #fig.savefig("docs/_static/ghz_circuit_qiskit.png")
+>>> #fig.savefig("docs/_static/optyx/ghz_circuit_qiskit.png")
 >>> #plt.close(fig)
 
-.. image:: /_static/ghz_circuit_qiskit.png
+.. image:: /_static/optyx/ghz_circuit_qiskit.png
     :align: center
 
 We can explicitly convert it to optyx. The resulting circuit involves
 explicit manipulation of classical data.
 
->>> #Circuit(ghz_circ).draw(path="docs/_static/ghz_circuit_exp.svg",
+>>> #Circuit(ghz_circ).draw(path="docs/_static/optyx/ghz_circuit_exp.svg",
 >>> #figsize=(6, 9))
 
-.. image:: /_static/ghz_circuit_exp.svg
+.. image:: /_static/optyx/ghz_circuit_exp.svg
     :align: center
 
 We can evaluate these two curcuits.
@@ -246,10 +246,10 @@ Let us use the GHZ state from the example above.
 
 >>> #from discopy.optyx.photonic import DualRail, HadamardBS, XMeasurementDR
 >>> #circ_photonic = circ >> DualRail(3) >> HadamardBS() @ XMeasurementDR(0.5)**2
->>> #circ_photonic.draw(path="docs/_static/ghz_circ_photonic.svg",
+>>> #circ_photonic.draw(path="docs/_static/optyx/ghz_circ_photonic.svg",
 >>> #figsize=(6, 12))
 
-.. image:: /_static/ghz_circ_photonic.svg
+.. image:: /_static/optyx/ghz_circ_photonic.svg
     :align: center
 
 **Direct convertion to dual-rail encoding**
@@ -263,10 +263,10 @@ We can create a graph state as follows
 ... Id(2) @ H() >> Id(2) @ Z(1, 2))
 >>> Equation(graph >> DualRail(4), graph.to_dual_rail(), \\
 ... symbol="$\\\\mapsto$").draw(figsize=(15, 20), \\
-... path="docs/_static/graph_dr_qubit.svg", draw_type_labels=False, \\
+... path="docs/_static/optyx/graph_dr_qubit.svg", draw_type_labels=False, \\
 ... draw_box_labels=False)
 
-.. image:: /_static/graph_dr_qubit.svg
+.. image:: /_static/optyx/graph_dr_qubit.svg
     :align: center
 
 We can map ZX diagrams to dual-rail encoding.
@@ -280,9 +280,9 @@ For example, we can create a GHZ state:
 >>> ghz_path = ghz_decom.to_dual_rail()
 >>> Equation(ghz >> DualRail(3), ghz_path, \\
 ... symbol="$\\\\mapsto$").draw(figsize=(10, 10), \\
-... path="docs/_static/ghz_dr.svg")
+... path="docs/_static/optyx/ghz_dr.svg")
 
-.. image:: /_static/ghz_dr.svg
+.. image:: /_static/optyx/ghz_dr.svg
     :align: center
 
 We can also create a graph state as follows
@@ -294,10 +294,10 @@ We can also create a graph state as follows
 >>> graph_path = graph_decom.to_dual_rail()
 >>> Equation(graph >> DualRail(4), graph_path, \\
 ... symbol="$\\\\mapsto$").draw(figsize=(10, 14), \\
-... path="docs/_static/graph_dr.svg", draw_type_labels=False, \\
+... path="docs/_static/optyx/graph_dr.svg", draw_type_labels=False, \\
 ... draw_box_labels=False)
 
-.. image:: /_static/graph_dr.svg
+.. image:: /_static/optyx/graph_dr.svg
     :align: center
 
 """  # noqa E501

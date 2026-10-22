@@ -114,9 +114,9 @@ and feed the result into a controlled quantum gate.
 >>> zgate = PhaseShiftDR(0.5)
 >>> cZ    = BitControlledGate(zgate)   # applies Z only when control bit = 1
 >>> hybrid = ctrl @ DualRail(1) >> cZ
->>> hybrid.draw(path="docs/_static/controlled_Z.svg")
+>>> hybrid.draw(path="docs/_static/optyx/controlled_Z.svg")
 
-.. image:: /_static/controlled_Z.svg
+.. image:: /_static/optyx/controlled_Z.svg
    :align: center
 
 **3. Arithmetic on natural-number modes**

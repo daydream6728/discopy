@@ -71,9 +71,9 @@ using the rules of the :class:`path` calculus:
 ... Id(1) @ SWAP @ Id(1) >> \\
 ... W(2).dagger() @ W(2).dagger() >> \\
 ... Select(1, 1))
->>> left_hs.draw(path="docs/_static/left_hs.png")
+>>> left_hs.draw(path="docs/_static/optyx/left_hs.png")
 
-.. image:: /_static/left_hs.png
+.. image:: /_static/optyx/left_hs.png
     :align: center
 
 >>> left_hs.to_path().prob_with_perceval().array[0, 0]
@@ -88,9 +88,9 @@ this should be equal to:
 ... (Create(1, 1) >> \\
 ... SWAP >> \\
 ... Select(1, 1)))
->>> right_hs.draw(path="docs/_static/right_hs.png")
+>>> right_hs.draw(path="docs/_static/optyx/right_hs.png")
 
-.. image:: /_static/right_hs.png
+.. image:: /_static/optyx/right_hs.png
 
 Let us now evaluate this using :code:`DisCoPy` tensor:
 
