@@ -2266,6 +2266,26 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   extra. `import discopy.grammar` still imports no framework, which a test
   pins the way `test/neural/network.py` does for `discopy.neural`
   ([rel-int/discopy-next#52](https://github.com/rel-int/discopy-next/issues/52)).
+- A symmetric functor maps a whiskered swap, which is a `Permutation`, into
+  a codomain with no `permutation`: it is sent to the images of the swaps of
+  `Permutation.to_swaps`, where it used to fall through to the `ar_map` and
+  raise `KeyError`. So `(Swap(x, y) @ z).to_braided()` is one dual rail
+  braid, through a new `symmetric.DualRail` and `compact.DualRail`, where it
+  raised `TypeError` (and drew an opaque box in `compact`). A permutation of
+  a `Nat` is sent to the `permutation` of one block per wire, like any
+  other, so `Functor({Nat(1): x @ y})` maps a swap of `Nat(1)`, where it
+  raised `Expected a permutation of length 6, got 3`
+  ([rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
+- `braided.Diagram.simplify` on a foliated diagram splits its layers of more
+  than one box into staircases first, as `tensor.Diagram.grad` does, where
+  it unpacked every layer as one box and raised `ValueError`
+  ([rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
+- `symmetric.Diagram.foliation` drops two layers of plumbing that compose
+  to the identity, as it did for `Swap(x, y) >> Swap(y, x)` before a swap
+  became a `Permutation`: `Layer.merge` refuses such a pair, since the
+  identity is no layer, so `p >> p[::-1] >> p` stayed three layers instead
+  of one. `merge_layers` drops the pair
+  ([rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
 - `Matrix.then`, `tensor` and `__add__`, and `Tensor.then` and `tensor`,
   built their result as `type(self)(...)`, casting it to the dtype of the
   left operand: the unparametrised structural matrices -- `id`, `swap`,
