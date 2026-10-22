@@ -1305,7 +1305,7 @@ class Hypergraph(
         """
         n_dom, n_cod = len(hole.dom), len(hole.cod)
         if self.dom[:n_cod] != hole.cod or self.cod[:n_dom] != hole.dom:
-            raise AxiomError(messages.NOT_PLUGGABLE.format(hole, self))
+            raise AxiomError(messages.NOT_A_HOLE.format(hole, self))
         result = (hole @ self.dom[n_cod:] >> self).trace(n_dom, left=True)
         return result.topological_order() if result.is_acyclic else result
 

@@ -695,7 +695,7 @@ def test_rewrite_errors():
     f = Box('f', x, y).to_hypergraph()
     with raises(AxiomError):
         list(f.rewrite((f, H.id(x))))
-    with raises(AxiomError):
+    with raises(AxiomError, match="not the hole"):
         f.plug(f)
 
 

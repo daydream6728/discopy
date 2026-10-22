@@ -708,7 +708,8 @@ def pushout(
 
 def set_partitions(items: list) -> Iterator[list[list]]:
     """
-    The partitions of a list into non-empty blocks, the finest first.
+    The partitions of a list into non-empty blocks, all singletons first
+    and one block last.
 
     >>> for blocks in set_partitions([0, 1, 2]): print(blocks)
     [[0], [1], [2]]
