@@ -1733,7 +1733,11 @@ class Hypergraph(
 
     def make_causal(self) -> Hypergraph:
         """
-        Introduce trace boxes to make self causal.
+        Introduce trace boxes to make self causal. A spider that is not left
+        monogamous is first given a merge, see :meth:`make_left_monogamous`,
+        unless the category has cups and caps but no merges, i.e. it is a
+        :class:`RigidCategory` but not a :class:`ComarkovCategory`: it is
+        then bent with cups and caps, see :meth:`make_monogamous`.
 
         Example
         -------
@@ -1746,10 +1750,18 @@ class Hypergraph(
         >>> from discopy.frobenius import Hypergraph as H, Spider
         >>> assert H.spiders(2, 1, x).make_causal().boxes\\
         ...     == (Spider(2, 1, x),)
+
+        >>> from discopy import compact
+        >>> y = compact.Ty('y')
+        >>> assert compact.Cup(y, y.r).to_hypergraph().make_causal().boxes\\
+        ...     == (compact.Cup(y, y.r), )
         """
-        if not self.is_left_monogamous:
-            return self.make_left_monogamous().make_causal()
-        return self.trace_backward_wires()
+        if self.is_left_monogamous:
+            return self.trace_backward_wires()
+        if issubclass(self.category, RigidCategory)\
+                and not issubclass(self.category, ComarkovCategory):
+            return self.make_monogamous().make_causal()
+        return self.make_left_monogamous().make_causal()
 
     def make_cocausal(self) -> Hypergraph:
         """
@@ -2278,7 +2290,9 @@ class Hypergraph(
         read in the scan of this pass, which :meth:`make_bijective` keeps as
         it was recorded, its spider boxes coming after every such state; a
         hint past the end of the scan, e.g. one given by hand, is clamped to
-        it.
+        it. A state with no offset goes on the left, unless it is a cap, e.g.
+        one of :meth:`make_monogamous`: it then goes beside the wire that the
+        first box or output reading it reads next to it, if there is one.
 
         Note
         ----
@@ -2338,6 +2352,24 @@ class Hypergraph(
                     factory_name(self.category)))
             return self.category.from_permutation(perm, diagram.cod)
 
+        caps = getattr(self.category, "cap_factory", None)
+        caps = caps if isclass(caps) else ()
+
+        def beside(depth):
+            _, cod_wires = self.box_wires[depth]
+            first, last = (next((
+                dom for dom, _ in self.box_wires[depth + 1:] if wire in dom),
+                self.cod_wires) for wire in (cod_wires[0], cod_wires[-1]))
+            if cod_wires[0] in first[1:]:
+                before = first[first.index(cod_wires[0]) - 1]
+                if before in scan:
+                    return scan.index(before) + 1
+            if cod_wires[-1] in last[:-1]:
+                after = last[last.index(cod_wires[-1]) + 1]
+                if after in scan:
+                    return scan.index(after)
+            return 0
+
         def flush():
             nonlocal diagram, pending, layer_right, shift
             if pending:
@@ -2354,7 +2386,8 @@ class Hypergraph(
             dom_wires, cod_wires = self.box_wires[depth]
             positions = [scan.index(spider) for spider in dom_wires]
             if offset is None:
-                offset = positions[0] if positions else 0
+                offset = positions[0] if positions\
+                    else beside(depth) if isinstance(box, caps) else 0
             offset -= sum(j < offset for j in positions)
             if not box.dom:
                 offset = min(offset, len(scan))
