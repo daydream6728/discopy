@@ -865,9 +865,12 @@ one, they have [cat.Ob('x'), cat.Ob('y')].
 
     def __repr__(self):
         repr_args = ", ".join(map(repr, self.args))
-        repr_dom_cod = "" if self.is_id_on_objects else (
+        repr_kwargs = "" if self.is_id_on_objects else (
             f", dom={repr(self.dom)}, cod={repr(self.cod)}")
-        return factory_name(type(self)) + (f"({repr_args}{repr_dom_cod})")
+        repr_kwargs += f", name={repr(self.name)}" if self.name else ""
+        repr_kwargs += "" if self.method == "bubble"\
+            else f", method={repr(self.method)}"
+        return factory_name(type(self)) + (f"({repr_args}{repr_kwargs})")
 
     @property
     def free_symbols(self):
@@ -1033,8 +1036,9 @@ class Functor(Category):
                        self.cod.zero(self(other.dom), self(other.cod)))
         if isinstance(other, Bubble) and hasattr(self.cod, other.method):
             dom, cod = map(self, (other.dom, other.cod))
+            name = {"name": other.name} if other.method == "bubble" else {}
             return getattr(self.cod, other.method)(
-                *map(self, other.args), dom=dom, cod=cod)
+                *map(self, other.args), dom=dom, cod=cod, **name)
         if isinstance(other, Box) and other.is_dagger:
             return self(other.dagger()).dagger()
         if isinstance(other, Box):

@@ -339,6 +339,11 @@ def test_Bubble():
     assert repr((f).bubble())\
         == "cat.Bubble(cat.Box('f', cat.Ob('x'), cat.Ob('y')))"
     assert str(f.bubble()) == "(f).bubble()"
+    named = f.bubble(name="N", method="m")
+    assert repr(named) == "cat.Bubble(cat.Box('f', cat.Ob('x'), cat.Ob('y')),"\
+        " name='N', method='m')"
+    assert eval(repr(named), {"cat": __import__("discopy").cat}) == named
+    assert Functor.id()(f.bubble(name="N")) == f.bubble(name="N")
 
 
 def test_Box_call():
