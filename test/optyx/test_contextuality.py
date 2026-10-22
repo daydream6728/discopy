@@ -1,11 +1,12 @@
 import numpy as np
 import pytest
 
-from optyx import bit, mode, qubit, Diagram, Encode
-from optyx.classical import BitControlledGate
-from optyx.contextuality import BellInequality, EmpiricalModel, Scenario
-from optyx.photonic import NumberResolvingMeasurement
-from optyx.qubits import H, Measure, Scalar, Z
+from discopy.optyx import bit, mode, qubit, Diagram, Encode
+from discopy.optyx.classical import BitControlledGate
+from discopy.optyx.contextuality import (
+    BellInequality, EmpiricalModel, Scenario)
+from discopy.optyx.photonic import NumberResolvingMeasurement
+from discopy.optyx.qubits import H, Measure, Scalar, Z
 
 
 chsh = Scenario(("a0", "a1", "b0", "b1"), (

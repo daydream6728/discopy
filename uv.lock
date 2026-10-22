@@ -879,6 +879,8 @@ optyx = [
     { name = "pytket-qiskit", extra = ["aer"] },
     { name = "pyzx" },
     { name = "quimb" },
+    { name = "scipy", version = "1.17.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.15'" },
+    { name = "scipy", version = "1.18.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.15'" },
     { name = "sympy" },
 ]
 quantum = [
@@ -923,6 +925,8 @@ test = [
     { name = "qiskit-aer" },
     { name = "qoolqit" },
     { name = "quimb" },
+    { name = "scipy", version = "1.17.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.15'" },
+    { name = "scipy", version = "1.18.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.15'" },
     { name = "sympy" },
     { name = "tensornetwork" },
     { name = "torch", version = "2.13.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'linux'" },
@@ -1013,6 +1017,7 @@ requires-dist = [
     { name = "qoolqit", marker = "extra == 'quantum'" },
     { name = "quimb", marker = "extra == 'optyx'" },
     { name = "quimb", marker = "extra == 'quantum'" },
+    { name = "scipy", marker = "extra == 'optyx'" },
     { name = "sphinx", marker = "extra == 'docs'", specifier = "==7.4.*" },
     { name = "sphinx-book-theme", marker = "extra == 'docs'", specifier = "==1.1.*" },
     { name = "sphinxcontrib-bibtex", marker = "extra == 'docs'", specifier = "==2.5.*" },

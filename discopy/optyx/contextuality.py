@@ -93,9 +93,9 @@ The empirical model of an optyx diagram with a classical input for the
 setting and a classical output for the outcome of each party, here a
 Bell test on the singlet at the Tsirelson bound:
 
->>> from optyx import bit, qubit, Diagram
->>> from optyx.qubits import Z, H, Scalar, Measure
->>> from optyx.classical import BitControlledGate
+>>> from discopy.optyx import bit, qubit, Diagram
+>>> from discopy.optyx.qubits import Z, H, Scalar, Measure
+>>> from discopy.optyx.classical import BitControlledGate
 >>> alice = BitControlledGate(Z(1, 1, .25)) >> H() >> Measure(1)
 >>> bob = Diagram.swap(qubit, bit) >> bit @ Z(1, 1, -.125)\\
 ...     >> BitControlledGate(Z(1, 1, .25)) >> H() >> Measure(1)
@@ -118,8 +118,8 @@ from itertools import product
 import numpy as np
 from scipy.optimize import linprog
 
-from optyx import channel
-from optyx.classical import Bit, Digit
+from discopy.optyx import channel
+from discopy.optyx.classical import Bit, Digit
 
 Measurement = Hashable
 Context = tuple[Measurement, ...]

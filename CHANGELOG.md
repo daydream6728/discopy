@@ -36,6 +36,19 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   [#272](https://github.com/rel-int/discopy-next/issues/272)
   ([#225](https://github.com/rel-int/discopy-next/issues/225)).
 
+- `discopy.optyx.contextuality`, copied from
+  [rel-int/optyx#87](https://github.com/rel-int/optyx/pull/87): measurement
+  scenarios and their empirical models after Abramsky and Brandenburger
+  (2011), with the contextual fraction of Abramsky, Barbosa and Mansfield
+  (2017) as a linear program solved by scipy's HiGHS, and the Bell
+  inequality its dual reads off, which every noncontextual model satisfies
+  and the model violates by exactly its contextual fraction.
+  `EmpiricalModel.from_diagram` is the empirical model of a channel diagram
+  with one classical input choosing each party's measurement and one
+  classical output giving its outcome. The `optyx` extra now names scipy,
+  which it already pulled in
+  ([#225](https://github.com/rel-int/discopy-next/issues/225)).
+
 - `discopy.ehypergraph`, e-graphs of diagrams with sharing: an
   `EHypergraph` over a copy-discard category is a left-monogamous acyclic
   `Hypergraph`, whose boxes are the e-nodes, with an equivalence relation on
