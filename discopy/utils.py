@@ -7,7 +7,6 @@ from __future__ import annotations
 import builtins
 import dataclasses
 import json
-from copy import copy
 from inspect import signature
 from functools import lru_cache, wraps
 from math import ceil
@@ -758,35 +757,12 @@ def untuplify(stuff: tuple) -> any:
     return stuff[0] if len(stuff) == 1 else stuff
 
 
-def frozen(cls: type) -> type:
-    """
-    Decorate a class as a frozen dataclass whose ``__init__``, ``__eq__`` and
-    ``__repr__`` are written by hand, i.e. its fields declare what
-    :func:`replace` gives back to its constructor by keyword.
-
-    Parameters:
-        cls : The class to decorate.
-
-    Example
-    -------
-    >>> @frozen
-    ... class Point:
-    ...     x: int
-    ...     y: int = 0
-    ...     def __init__(self, x, y=0):
-    ...         setattrs(self, x=int(x), y=int(y))
-    >>> assert replace(Point("1"), y="2").y == 2
-    """
-    cls = dataclasses.dataclass(
-        frozen=True, init=False, eq=False, repr=False)(cls)
-    inherit_fields(cls)
-    return cls
-
-
 def derived(**params) -> dataclasses.Field:
     """
     A field the constructor computes rather than takes, so that
-    :func:`replace` does not give it back.
+    :func:`replace` does not give it back to a constructor that takes
+    ``**kwargs``. A constructor without ``**kwargs`` takes the fields it has
+    a parameter for, whatever they declare.
 
     Parameters:
         params : Passed to :func:`dataclasses.field`.
@@ -794,48 +770,34 @@ def derived(**params) -> dataclasses.Field:
     return dataclasses.field(init=False, **params)
 
 
-def setattrs(obj: object, **attributes):
+@lru_cache
+def constructor_fields(cls: type) -> tuple[str, ...]:
     """
-    Set the fields of a :func:`frozen` object from its own constructor.
+    The fields that the constructor of a dataclass takes, i.e. those
+    :func:`replace` gives back to it: those it has a parameter for, or those
+    declared ``init`` when it also takes ``**kwargs``.
 
     Parameters:
-        obj : The object under construction.
-        attributes : The values of its fields.
-    """
-    for key, value in attributes.items():
-        object.__setattr__(obj, key, value)
-
-
-def replace(obj: object, **changes):
-    """
-    The object with some of its fields changed, i.e. :func:`copy.replace`,
-    which Python 3.12 does not have, unless its constructor takes something
-    that is not a field: rather than building it from a default, this fails.
-
-    Parameters:
-        obj : A dataclass instance, or any object with a ``__replace__``.
-        changes : The new values of the fields.
+        cls : A dataclass.
 
     Example
     -------
-    >>> @frozen
-    ... class Range:
-    ...     stop: int
-    ...     def __init__(self, stop, start=0):
-    ...         setattrs(self, stop=stop - start)
-    >>> replace(Range(3, start=1))
-    Traceback (most recent call last):
-    ...
-    TypeError: Range takes start, which is not a field.
+    >>> @dataclasses.dataclass(init=False)
+    ... class Interval:
+    ...     start: int
+    ...     length: int
+    ...     def __init__(self, start, stop):
+    ...         self.start, self.length = start, stop - start
+    ...         self.stop = stop
+    >>> assert constructor_fields(Interval) == ('start', )
     """
-    method = getattr(type(obj), "__replace__", None)
-    if method is not None and method.__module__ != "dataclasses":
-        return method(obj, **changes)
-    missing = fieldless_parameters(type(obj))
-    if missing:
-        raise TypeError(messages.NOT_A_FIELD.format(
-            type(obj).__name__, ", ".join(missing)))
-    return dataclasses.replace(obj, **changes)
+    parameters = signature(cls.__init__).parameters.values()
+    fields = dataclasses.fields(cls)
+    if any(p.kind is p.VAR_KEYWORD for p in parameters):
+        return tuple(f.name for f in fields if f.init)
+    names = {p.name for p in parameters
+             if p.kind in (p.POSITIONAL_OR_KEYWORD, p.KEYWORD_ONLY)}
+    return tuple(f.name for f in fields if f.name in names)
 
 
 @lru_cache
@@ -857,26 +819,76 @@ def fieldless_parameters(cls: type) -> tuple[str, ...]:
                  if p.name not in names and not p.name.startswith("_"))
 
 
+def replace(obj: object, **changes):
+    """
+    The object with some of its fields changed, i.e. :func:`copy.replace`,
+    built by its constructor from the :func:`constructor_fields` it takes.
+    A hand-written ``__replace__`` wins, and a constructor that takes
+    something that is not a field fails rather than use its default.
+
+    Parameters:
+        obj : A dataclass instance, or any object with a ``__replace__``.
+        changes : The new values of the fields.
+
+    Example
+    -------
+    >>> @dataclasses.dataclass(init=False)
+    ... class Interval:
+    ...     start: int
+    ...     length: int
+    ...     def __init__(self, start, length=1):
+    ...         self.start, self.length = start, length
+    >>> assert replace(Interval(1, 3), start=2) == Interval(2, 3)
+    >>> replace(Interval(1, 3), stop=4)
+    Traceback (most recent call last):
+    ...
+    TypeError: Interval does not take stop.
+
+    >>> @dataclasses.dataclass(init=False)
+    ... class Range:
+    ...     length: int
+    ...     def __init__(self, stop, start=0):
+    ...         self.length = stop - start
+    >>> replace(Range(3, start=1))
+    Traceback (most recent call last):
+    ...
+    TypeError: Range takes stop, start, which is not a field.
+    """
+    method = getattr(type(obj), "__replace__", None)
+    if method is not None and method.__module__ != "dataclasses":
+        return method(obj, **changes)
+    missing = fieldless_parameters(type(obj))
+    if missing:
+        raise TypeError(messages.NOT_A_FIELD.format(
+            type(obj).__name__, ", ".join(missing)))
+    names = constructor_fields(type(obj))
+    unexpected = [name for name in changes if name not in names]
+    if unexpected:
+        raise TypeError(messages.NOT_TAKEN.format(
+            type(obj).__name__, ", ".join(unexpected)))
+    return type(obj)(**{
+        name: getattr(obj, name) for name in names} | changes)
+
+
 def inherit_fields(cls: type):
     """
-    Give a class the fields of all its bases, as
+    Give a class that is not decorated the fields of all its bases, as
     :func:`dataclasses.dataclass` would, rather than those of the first one
-    in its method resolution order, and take as the fields its constructor
-    takes, i.e. those :func:`replace` gives back to it, exactly those it has
-    a parameter for, unless it has a ``**kwargs`` too.
+    in its method resolution order: a field is that of the nearest base that
+    has it, as an attribute is.
 
     Parameters:
         cls : A subclass of some dataclasses.
 
     Example
     -------
-    A diamond, i.e. a class with a frozen base on either side, keeps the
+    A diamond, i.e. a class with a dataclass on either side, keeps the
     fields of both sides.
 
-    >>> @frozen
+    >>> @dataclasses.dataclass
     ... class A:
     ...     a: int
-    >>> @frozen
+    >>> @dataclasses.dataclass
     ... class B:
     ...     b: int
     >>> class C(A, B):
@@ -884,36 +896,17 @@ def inherit_fields(cls: type):
     >>> assert list(C.__dataclass_fields__) == ['a']
     >>> inherit_fields(C)
     >>> assert list(C.__dataclass_fields__) == ['b', 'a']
-
-    A field is that of the nearest base that has it, as an attribute is, and
-    a class that computes a field rather than takes it does not get it back.
-
-    >>> class D(C):
-    ...     def __init__(self, a):
-    ...         setattrs(self, a=a, b=2 * a)
-    >>> inherit_fields(D)
-    >>> assert replace(D(1), a=2).b == 4
     """
     owners = [base for base in cls.__mro__
               if "__dataclass_fields__" in vars(base)]
     names = dict.fromkeys(
         name for base in reversed(owners)
         for name in base.__dataclass_fields__)
-    if not names:
-        return
-    fields = cls.__dataclass_fields__ = {
-        name: next(base.__dataclass_fields__[name] for base in owners
-                   if name in vars(base)["__dataclass_fields__"])
-        for name in names}
-    parameters = signature(cls.__init__).parameters.values()
-    if any(p.kind is p.VAR_KEYWORD for p in parameters):
-        return
-    names = {p.name for p in parameters
-             if p.kind in (p.POSITIONAL_OR_KEYWORD, p.KEYWORD_ONLY)}
-    for field in dataclasses.fields(cls):
-        if field.init != (field.name in names):
-            fields[field.name] = field = copy(field)
-            field.init = field.name in names
+    if names:
+        cls.__dataclass_fields__ = {
+            name: next(base.__dataclass_fields__[name] for base in owners
+                       if name in vars(base)["__dataclass_fields__"])
+            for name in names}
 
 
 @lru_cache
@@ -927,7 +920,7 @@ def compared_fields(cls: type) -> tuple[str, ...]:
     return tuple(f.name for f in dataclasses.fields(cls) if f.compare)
 
 
-@frozen
+@dataclasses.dataclass(init=False, eq=False, repr=False)
 class BinaryBoxConstructor:
     """
     Box constructor with attributes ``left`` and ``right`` as input.
@@ -942,7 +935,8 @@ class BinaryBoxConstructor:
     right: Any
 
     def __init__(self, left, right):
-        setattrs(self, left=left, right=right)
+        self.left = left
+        self.right = right
 
     def __setstate__(self, state):
         if "_name" in state:

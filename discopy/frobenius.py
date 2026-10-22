@@ -73,6 +73,8 @@ from collections.abc import Callable
 from copy import copy
 from typing import Self
 
+from dataclasses import dataclass
+
 from discopy import (
     monoidal, rigid, markov, comarkov, compact, pivotal, feedback, cmap,
     hypergraph, symmetric)
@@ -81,8 +83,6 @@ from discopy.cat import factory
 from discopy.python import finset
 from discopy.utils import (
     derived,
-    frozen,
-    setattrs,
     assert_isatomic, assert_iscomposable, deprecated_alias, factory_name,
     from_tree)
 
@@ -343,7 +343,7 @@ class Box(compact.Box, markov.Box, comarkov.Box, Diagram):
         return super().is_affine and not self.z
 
 
-@frozen
+@dataclass(init=False, eq=False, repr=False)
 class Cospan(Box):
     """
     A cospan of finite sets as plumbing: input ``i`` and output ``j`` are
@@ -404,9 +404,8 @@ class Cospan(Box):
 
     def __init__(self, apex: Ty, left, right):
         order = finset.Cospan.order(left, right, len(apex))
-        setattrs(
-            self, apex=apex[:0].tensor(*(apex[k:k + 1] for k in order)),
-            legs=finset.Cospan(left, right, len(apex)))
+        self.apex = apex[:0].tensor(*(apex[k:k + 1] for k in order))
+        self.legs = finset.Cospan(left, right, len(apex))
         dom, cod = (self.apex[:0].tensor(*(
             self.apex[k:k + 1] for k in leg))
             for leg in (self.legs.left, self.legs.right))
@@ -599,7 +598,7 @@ class Cup(compact.Cup, Box):
 
     def __init__(self, left, right):
         super().__init__(left, right)
-        setattrs(self, affine=False)
+        self.affine = False
 
 
 class Cap(compact.Cap, Box):
@@ -618,7 +617,8 @@ class Cap(compact.Cap, Box):
 
     def __init__(self, left, right):
         super().__init__(left, right)
-        setattrs(self, deterministic=False, affine=False)
+        self.deterministic = False
+        self.affine = False
 
 
 class Permutation(
@@ -651,7 +651,7 @@ class Swap(Permutation, compact.Swap, markov.Swap, comarkov.Swap, Box):
         return self
 
 
-@frozen
+@dataclass(init=False, eq=False, repr=False)
 class Spider(Box):
     """
     The spider with :code:`n_legs_in` and :code:`n_legs_out`
@@ -697,7 +697,9 @@ class Spider(Box):
     def __init__(self, n_legs_in: int, n_legs_out: int, typ: Ty, data=None,
                  is_dagger=False, **params):
         assert_isatomic(typ)
-        setattrs(self, n_legs_in=n_legs_in, n_legs_out=n_legs_out, typ=typ)
+        self.n_legs_in = n_legs_in
+        self.n_legs_out = n_legs_out
+        self.typ = typ
         str_data = "" if data is None else f", {data}"
         name = type(self).__name__\
             + f"({n_legs_in}, {n_legs_out}, {typ}{str_data})"
@@ -706,7 +708,7 @@ class Spider(Box):
             self, name, dom, cod, data=data, is_dagger=is_dagger,
             is_deterministic=n_legs_in > 0 and not data,
             is_affine=n_legs_in == 1 and not data, **params)
-        setattrs(self, drawing_name="" if not data else str(data))
+        self.drawing_name = "" if not data else str(data)
 
     def __setstate__(self, state):
         if "_name" in state and state["_name"] == type(self).__name__:
@@ -717,12 +719,12 @@ class Spider(Box):
                 + f"({dom.n}, {cod.n}, {state['_typ']}{str_data})"
         super().__setstate__(state)
         if "affine" not in state:
-            setattrs(
-                self, deterministic=len(self.dom) > 0 and not self.phase,
-                affine=len(self.dom) == 1 and not self.phase)
+            self.deterministic = len(self.dom) > 0 and not self.phase
+            self.affine = len(self.dom) == 1 and not self.phase
         if "n_legs_in" not in state:
-            setattrs(self, n_legs_in=len(self.dom), n_legs_out=len(self.cod),
-                     typ=state.get("typ", state.get("_typ")))
+            self.n_legs_in = len(self.dom)
+            self.n_legs_out = len(self.cod)
+            self.typ = state.get("typ", state.get("_typ"))
 
     def __getnewargs__(self):
         """ The arguments of the constructor, which a pickle reads.

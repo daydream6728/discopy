@@ -91,7 +91,6 @@ from discopy.abc import ClosedCategory
 from discopy.cat import factory
 from discopy.drawing import Drawing
 from discopy.utils import (
-    setattrs,
     AxiomError, assert_isinstance, factory_name, from_tree)
 
 
@@ -465,7 +464,7 @@ class Timed(Box):
     def __init__(self, *args, time_step: int = 0, **params):
         super().__init__(*args, **params)
         if time_step:
-            setattrs(self, time_step=time_step)
+            self.time_step = time_step
             monoidal.Box.__init__(self, self.name, self.dom.delay(time_step),
                                   self.cod.delay(time_step))
 
@@ -1123,7 +1122,7 @@ class Compound(TermBase):
     """
     def __init__(self, dom: Ty, cod: Ty):
         super().__init__(type(self).__name__, dom, cod)
-        vars(self).pop("name")
+        del self.name
 
     @property
     def parts(self) -> tuple:

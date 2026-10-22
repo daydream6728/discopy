@@ -214,9 +214,11 @@ Equation(
 **Lemma:** Given a boundary-connected diagram with $n$ boxes, a normal form can be reached in at most $O(n^3)$ steps.
 
 ```python {.marimo}
-spider = dict(draw_as_spider=True, color="black")
-unit, counit = Box('unit', Ty(), x, **spider), Box('counit', x, Ty(), **spider)
-cup, cap = Box('cup', x @ x, Ty(), **spider), Box('cap', Ty(), x @ x, **spider)
+unit, counit = Box('unit', Ty(), x), Box('counit', x, Ty())
+cup, cap = Box('cup', x @ x, Ty()), Box('cap', Ty(), x @ x)
+
+for box in [unit, counit, cup, cap]:
+    box.draw_as_spider, box.color = True, "black"
 
 def spiral(n_cups):
     result = unit

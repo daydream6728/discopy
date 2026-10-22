@@ -68,6 +68,7 @@ from __future__ import annotations
 import warnings
 from typing import ClassVar
 
+from dataclasses import dataclass
 from discopy import symmetric, monoidal, feedback, cmap, hypergraph, messages
 from discopy.abc import ComarkovCategory, MarkovCategory
 from discopy.cat import factory
@@ -75,7 +76,6 @@ from discopy.feedback import (  # noqa: F401  pylint: disable=unused-import
     Wire, Ty)
 from discopy.python import finset
 from discopy.utils import (
-    frozen, setattrs,
     AxiomError, assert_isatomic, assert_iscomposable, deprecated_alias,
     factory_name, from_tree)
 
@@ -275,7 +275,7 @@ class Diagram(symmetric.Diagram, MarkovCategory):
         return self.is_deterministic and self.is_affine
 
 
-@frozen
+@dataclass(init=False, eq=False, repr=False)
 class Box(symmetric.Box, Diagram):
     """
     A Markov box is a symmetric box in a Markov diagram, a total function
@@ -319,9 +319,7 @@ feedback.Ty(feedback.Wire('x')), is_deterministic=False)
 
     def __init__(self, *args, is_deterministic=True, is_affine=True,
                  **params):
-        setattrs(
-            self, deterministic=params.pop("deterministic", is_deterministic),
-            affine=params.pop("affine", is_affine))
+        self.deterministic, self.affine = is_deterministic, is_affine
         super().__init__(*args, **params)
 
     @property
@@ -376,13 +374,13 @@ feedback.Ty(feedback.Wire('x')), is_deterministic=False)
     @classmethod
     def from_tree(cls, tree: dict):
         result = super().from_tree(tree)
-        setattrs(result, **{
-            name.removeprefix("is_"): tree[name]
-            for name in ("is_deterministic", "is_affine") if name in tree})
+        for name in ("is_deterministic", "is_affine"):
+            if name in tree:
+                setattr(result, name.removeprefix("is_"), tree[name])
         return result
 
 
-@frozen
+@dataclass(init=False, eq=False, repr=False)
 class Function(Box):
     """
     A function between finite sets read backwards as plumbing: output ``i``
@@ -437,7 +435,7 @@ class Function(Box):
     func: finset.Function
 
     def __init__(self, dom: monoidal.Ty, func):
-        setattrs(self, func=finset.Function(list(func), len(dom), len(func)))
+        self.func = finset.Function(list(func), len(dom), len(func))
         cod = dom[:0].tensor(*(dom[i] for i in self.func))
         Box.__init__(self, f"Function({list(self.func)})", dom, cod)
 
@@ -613,7 +611,7 @@ class Swap(Permutation, symmetric.Swap, Box):
     """
 
 
-@frozen
+@dataclass(init=False, eq=False, repr=False)
 class Copy(Function):
     """
     The copy of an atomic type :code:`x` some :code:`n` number of times,
@@ -713,10 +711,9 @@ class Sum(symmetric.Sum, Box):
     """
     def __init__(self, terms, dom=None, cod=None):
         super().__init__(terms, dom, cod)
-        setattrs(
-            self, deterministic=len(self.terms) < 2 and all(
-                term.is_deterministic for term in self.terms),
-            affine=len(self.terms) == 1 and self.terms[0].is_affine)
+        self.deterministic = len(self.terms) < 2 and all(
+                term.is_deterministic for term in self.terms)
+        self.affine = len(self.terms) == 1 and self.terms[0].is_affine
 
 
 class Functor(symmetric.Functor):

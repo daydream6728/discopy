@@ -304,4 +304,4 @@ def test_every_class_has_the_fields_of_all_its_bases():
             name for base in cls.__mro__ for name, field in vars(base).get(
                 "__dataclass_fields__", {}).items()
             if field._field_type is not dataclasses._FIELD_CLASSVAR}
-        assert expected <= set(cls.__dataclass_fields__), cls
+        assert expected <= set(getattr(cls, "__dataclass_fields__", {})), cls

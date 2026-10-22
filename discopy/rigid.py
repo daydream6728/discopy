@@ -153,12 +153,12 @@ from collections.abc import Callable
 
 from typing import ClassVar, Iterator
 
+from dataclasses import dataclass
 from discopy import cat, monoidal, biclosed, messages
 from discopy.abc import Pregroup, RigidCategory
 from discopy.cat import factory
 from discopy.utils import (
-    frozen, replace, setattrs,
-    assert_isatomic,
+    replace, assert_isatomic,
     assert_isinstance,
     AxiomError,
     BinaryBoxConstructor,
@@ -645,7 +645,7 @@ class Diagram(biclosed.Diagram, RigidCategory):
         return super().normal_form(**params)
 
 
-@frozen
+@dataclass(init=False, eq=False, repr=False)
 class Box(biclosed.Box, Diagram):
     """
     A rigid box is a biclosed box in a rigid diagram.
@@ -673,7 +673,7 @@ class Box(biclosed.Box, Diagram):
         super().__setstate__(state)
 
     def __init__(self, name: str, dom: Ty, cod: Ty, data=None, z=0, **params):
-        setattrs(self, z=z)
+        self.z = z
         biclosed.Box.__init__(self, name, dom, cod, data=data, **params)
 
     def __str__(self):
@@ -740,7 +740,7 @@ class Box(biclosed.Box, Diagram):
         >>> assert loads(dumps(f.r)) == f.r and loads(dumps(f.l.l)) == f.l.l
         """
         box = super().from_tree(tree)
-        setattrs(box, z=tree.get('z', 0))
+        box.z = tree.get('z', 0)
         return box
 
     @property

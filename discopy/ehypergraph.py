@@ -109,7 +109,6 @@ from discopy.drawing import Node
 from discopy.hypergraph import Hypergraph
 from discopy.monoidal import Ty
 from discopy.utils import (
-    setattrs,
     AxiomError, NamedGeneric, assert_isparallel, classproperty, factory_name,
     from_tree, pushout, resolve_factory, unbiased)
 
@@ -217,9 +216,8 @@ class Join(monoidal.Bubble, markov.Box):
         super().__init__(*terms, method="join", **params)
         for term in terms:
             assert_isparallel(self, term)
-        setattrs(
-            self, deterministic=len(terms) == 1 and terms[0].is_deterministic,
-            affine=all(term.is_affine for term in terms))
+        self.deterministic = len(terms) == 1 and terms[0].is_deterministic
+        self.affine = all(term.is_affine for term in terms)
 
     def __str__(self):
         return f"Join({', '.join(map(str, self.args))})"

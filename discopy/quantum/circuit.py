@@ -70,12 +70,14 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
+from dataclasses import dataclass
+
 from discopy import messages, tensor, frobenius
 from discopy.cat import factory
 from discopy.matrix import backend
 from discopy.tensor import Dim, Tensor
 from discopy.utils import (
-    assert_isinstance, deprecated_alias, factory_name, frozen, setattrs)
+    assert_isinstance, deprecated_alias, factory_name)
 
 
 class Wire(frobenius.Wire):
@@ -855,7 +857,7 @@ class Circuit(tensor.Diagram[complex]):
             >> self.cod[:offset] @ gate @ self.cod[offset + len(gate.dom):]
 
 
-@frozen
+@dataclass(init=False, eq=False, repr=False)
 class Box(tensor.Box[complex], Circuit):
     """
     A circuit box is a tensor box in a circuit diagram.
@@ -874,12 +876,12 @@ class Box(tensor.Box[complex], Circuit):
                  data=None, is_mixed=True, **params):
         if not is_mixed:
             if all(isinstance(x, Digit) for x in (dom @ cod).inside):
-                setattrs(self, is_classical=True)
+                self.is_classical = True
             elif all(isinstance(x, Qudit) for x in (dom @ cod).inside):
-                setattrs(self, is_classical=False)
+                self.is_classical = False
             else:
                 raise ValueError(messages.BOX_IS_MIXED)
-        setattrs(self, is_mixed=is_mixed)
+        self.is_mixed = is_mixed
         tensor.Box[complex].__init__(self, name, dom, cod, data, **params)
 
     def __setstate__(self, state):
@@ -920,7 +922,7 @@ class Sum(tensor.Sum[complex], Box):
     """ Sums of circuits. """
     def __init__(self, terms, dom=None, cod=None):
         super().__init__(terms, dom, cod)
-        setattrs(self, is_mixed=any(circuit.is_mixed for circuit in terms))
+        self.is_mixed = any(circuit.is_mixed for circuit in terms)
 
     def get_counts(self, backend=None, **params):
         if not self.terms:
@@ -955,9 +957,9 @@ class Permutation(tensor.Permutation[complex], Box):
 
     def __init__(self, dom: Ty, perm):
         super().__init__(dom, perm)
-        setattrs(self, is_mixed=any(
+        self.is_mixed = any(
             type(left.inside[0]) is not type(right.inside[0])
-            for left, right in zip(self.dom, self.cod)))
+            for left, right in zip(self.dom, self.cod))
 
     @property
     def is_classical(self):

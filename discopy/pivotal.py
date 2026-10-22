@@ -64,10 +64,12 @@ from __future__ import annotations
 
 from copy import copy
 
+from dataclasses import dataclass
+
 from discopy import cat, cmap, rigid, feedback
 from discopy.abc import PivotalCategory
 from discopy.cat import factory
-from discopy.utils import deprecated_alias, frozen, replace, setattrs
+from discopy.utils import deprecated_alias, replace
 
 
 class Wire(feedback.Wire, rigid.Wire):
@@ -217,7 +219,7 @@ class Diagram(rigid.Diagram, feedback.Diagram, PivotalCategory):
             >> cod @ cls.cup_factory(traced_wire, traced_wire.r)
 
 
-@frozen
+@dataclass(init=False, eq=False, repr=False)
 class Box(rigid.Box, feedback.Box, Diagram):
     """
     A pivotal box is a rigid box in a pivotal diagram.
@@ -230,7 +232,7 @@ class Box(rigid.Box, feedback.Box, Diagram):
     """
     def __init__(self, name, dom, cod, *args, time_step: int = 0, **params):
         rigid.Box.__init__(self, name, dom, cod, *args, **params)
-        setattrs(self, time_step=time_step)
+        self.time_step = time_step
 
     def __repr__(self):
         if self.is_dagger:

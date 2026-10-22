@@ -77,7 +77,7 @@ Functors are bubble-preserving.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field, fields
+from dataclasses import dataclass, field
 from functools import total_ordering, cached_property
 from typing import (
     Any, Callable, ClassVar, Mapping, Iterable, TYPE_CHECKING)
@@ -89,12 +89,11 @@ from discopy.utils import (  # noqa: F401
     factory,
     factory_name,
     from_tree,
-    frozen,
     derived,
     replace,
     rsubs,
-    setattrs,
     compared_fields,
+    constructor_fields,
     unbiased,
     MappingOrCallable,
     assert_isinstance,
@@ -110,7 +109,6 @@ dumps, loads = utils.dumps, utils.loads
 
 
 @total_ordering
-@dataclass(frozen=True, repr=False)
 class Ob(Testable["Ob"]):
     """
     An object with a string as :code:`name`.
@@ -125,16 +123,15 @@ class Ob(Testable["Ob"]):
     """
     equation_factory: ClassVar[type["Equation"]]
 
-    name: str = ""
-
     def __setstate__(self, state):
         if "name" not in state and "_name" in state:
             state["name"] = state["_name"]
             del state["_name"]
         self.__dict__.update(state)
 
-    def __post_init__(self):
-        assert_isinstance(self.name, str)
+    def __init__(self, name: str = ""):
+        assert_isinstance(name, str)
+        self.name = name
 
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
@@ -145,6 +142,12 @@ class Ob(Testable["Ob"]):
 
     def __str__(self):
         return str(self.name)
+
+    def __eq__(self, other):
+        return isinstance(other, type(self)) and self.name == other.name
+
+    def __hash__(self):
+        return hash(repr(self))
 
     def __lt__(self, other):
         return self.name < other.name
@@ -205,9 +208,7 @@ class FreeCategory(Category):
         ob = type(self).ob
         dom = dom if isinstance(dom, ob) else ob(dom)
         cod = cod if isinstance(cod, ob) else ob(cod)
-        object.__setattr__(self, "dom", dom)
-        object.__setattr__(self, "cod", cod)
-        object.__setattr__(self, "inside", tuple(inside))
+        self.dom, self.cod, self.inside = dom, cod, tuple(inside)
         if _scan:
             for generator in inside:
                 assert_isinstance(generator, self.generator_factory)
@@ -270,7 +271,7 @@ class FreeCategory(Category):
 
 
 @factory
-@frozen
+@dataclass(init=False, eq=False, repr=False)
 class Arrow(FreeCategory, DaggerCategory, Testable["Arrow"]):
     """
     An arrow is a tuple of composable boxes :code:`inside` with a pair of
@@ -634,7 +635,7 @@ def field_lambdify(value, *symbols: "sympy.Symbol", **kwargs) -> Callable:
 
 
 @total_ordering
-@frozen
+@dataclass(init=False, eq=False, repr=False)
 class Box(Arrow):
     """
     A box is an arrow with a :code:`name` and the tuple of just itself inside.
@@ -655,9 +656,9 @@ class Box(Arrow):
 
     Note
     ----
-    A box is a frozen dataclass: its fields are what its constructor takes,
-    so that :meth:`subs`, :meth:`lambdify` and :meth:`dagger` rebuild it
-    with :func:`utils.replace`, keeping every field they do not change.
+    A box is a dataclass: its fields are what its constructor takes, so that
+    :meth:`subs`, :meth:`lambdify` and :meth:`dagger` rebuild it with
+    :func:`utils.replace`, keeping every field they do not change.
 
     >>> from dataclasses import replace
     >>> assert replace(f, name='g') == Box('g', x, y, data=[42])
@@ -694,9 +695,7 @@ class Box(Arrow):
     def __init__(
             self, name: str, dom: Ob, cod: Ob, data=None, is_dagger=False):
         assert_isinstance(name, str)
-        object.__setattr__(self, "name", name)
-        object.__setattr__(self, "data", data)
-        object.__setattr__(self, "is_dagger", is_dagger)
+        self.name, self.data, self.is_dagger = name, data, is_dagger
         Arrow.__init__(self, (self, ), dom, cod, _scan=False)
 
     @property
@@ -712,14 +711,16 @@ class Box(Arrow):
         >>> assert f.symbolic_fields == {'data': phi}
         """
         return {
-            f.name: getattr(self, f.name) for f in fields(self)
-            if f.init and field_free_symbols(getattr(self, f.name))}
+            name: getattr(self, name)
+            for name in constructor_fields(type(self))
+            if field_free_symbols(getattr(self, name))}
 
     @cached_property
     def free_symbols(self) -> "set[sympy.Symbol]":
+        names = dict.fromkeys(
+            constructor_fields(type(self)) + compared_fields(type(self)))
         return set().union(*(
-            field_free_symbols(getattr(self, f.name)) for f in fields(self)
-            if f.init or f.compare))
+            field_free_symbols(getattr(self, name)) for name in names))
 
     def subs(self, *args) -> Box:
         pairs = args[0] if len(args) == 1 else args\
@@ -799,7 +800,7 @@ class Box(Arrow):
         return cls(name=name, dom=dom, cod=cod, data=data, is_dagger=is_dagger)
 
 
-@frozen
+@dataclass(init=False, eq=False, repr=False)
 class Sum(Box):
     """
     A sum is a tuple of arrows :code:`terms` with the same domain and codomain.
@@ -842,7 +843,7 @@ class Sum(Box):
             assert_isparallel(Sum((), dom, cod), arrow)
         str_args = f", dom={repr(dom)}, cod={repr(cod)}" if not terms else ""
         name = f"{factory_name(type(self))}(terms={repr(terms)}{str_args})"
-        setattrs(self, terms=terms)
+        self.terms = terms
         super().__init__(name, dom, cod)
 
     @property
@@ -919,7 +920,7 @@ class Sum(Box):
         return cls(terms=terms, dom=dom, cod=cod)
 
 
-@frozen
+@dataclass(init=False, eq=False, repr=False)
 class Bubble(Box):
     """
     A bubble is a box with arrow :code:`args` inside and an optional pair of
@@ -967,7 +968,8 @@ one, they have [cat.Ob('x'), cat.Ob('y')].
         dom, cod = (
             given if given is not None else self.common(args, attr)
             for attr, given in [("dom", dom), ("cod", cod)])
-        setattrs(self, args=args, method=method)
+        self.args = args
+        self.method = method
         super().__init__(name, dom, cod, **kwargs)
 
     @staticmethod

@@ -66,6 +66,8 @@ from __future__ import annotations
 
 from typing import ClassVar
 
+from dataclasses import dataclass
+
 from discopy import (
     symmetric, monoidal, feedback, cmap, hypergraph, messages, op)
 from discopy.abc import ComarkovCategory, MarkovCategory
@@ -75,7 +77,7 @@ from discopy.feedback import (  # noqa: F401  pylint: disable=unused-import
 from discopy.python import finset
 from discopy.utils import (
     AxiomError, assert_isatomic, assert_iscomposable, factory_name,
-    from_tree, frozen, setattrs)
+    from_tree)
 
 
 class Layer(symmetric.Layer):
@@ -183,7 +185,7 @@ class Box(symmetric.Box, Diagram):
     """
 
 
-@frozen
+@dataclass(init=False, eq=False, repr=False)
 class Cofunction(Box):
     """
     A function between finite sets as plumbing: input ``i`` goes to output
@@ -237,8 +239,8 @@ class Cofunction(Box):
 
     def __init__(self, cod: monoidal.Ty, cofunc):
         cofunc = cofunc.inside if isinstance(cofunc, op.Comarkov) else cofunc
-        setattrs(self, cofunc=op.Comarkov(
-            finset.Function(list(cofunc), len(cod), len(cofunc))))
+        self.cofunc = op.Comarkov(
+            finset.Function(list(cofunc), len(cod), len(cofunc)))
         dom = cod[:0].tensor(*(cod[i] for i in cofunc))
         Box.__init__(self, f"Cofunction({list(cofunc)})", dom, cod)
 
@@ -411,7 +413,7 @@ class Swap(Permutation, symmetric.Swap, Box):
     """
 
 
-@frozen
+@dataclass(init=False, eq=False, repr=False)
 class Merge(Cofunction):
     """
     The merge of an atomic type :code:`x` some :code:`n` number of times,

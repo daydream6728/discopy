@@ -223,7 +223,6 @@ from discopy.config import BOX_DRAWING_ATTRIBUTES, TRANSPARENT
 from discopy.abc import TracedCategory
 from discopy.python import finset
 from discopy.utils import (
-    setattrs,
     assert_isinstance, assert_iscomposable, unbiased, factory, RichDisplay)
 
 if TYPE_CHECKING:
@@ -642,8 +641,7 @@ class Drawing(TracedCategory, RichDisplay):
         from discopy.symmetric import Permutation, Ty, Wire
         box = Permutation(
             Ty(*(Wire(x.name, x.dom, x.cod) for x in dom.inside)), perm)
-        setattrs(
-            box, dom=dom, cod=dom[:0].tensor(*(dom[i] for i in box.perm)))
+        box.dom, box.cod = dom, dom[:0].tensor(*(dom[i] for i in box.perm))
         return box
 
     @staticmethod
@@ -684,13 +682,13 @@ class Drawing(TracedCategory, RichDisplay):
                 old_box.name, box_dom, box_cod,
                 is_dagger=old_box.is_dagger)
         if isinstance(old_box, Permutation):
-            setattrs(box, cod=box_cod)
+            box.cod = box_cod
             for i, obj in enumerate(box.cod.inside):
                 if old_box.perm[i] == i:
                     obj.skip_label = True
 
         for attr, default in BOX_DRAWING_ATTRIBUTES.items():
-            setattrs(box, **{attr: getattr(old_box, attr, default(box))})
+            setattr(box, attr, getattr(old_box, attr, default(box)))
 
         if box.draw_as_wires and not box.frame_boundary:
             for i, obj in enumerate(box.cod.inside):
@@ -980,7 +978,7 @@ class Drawing(TracedCategory, RichDisplay):
                 if isinstance(box, Permutation) else box.dagger()
             for attr in BOX_DRAWING_ATTRIBUTES:
                 if not hasattr(result, attr):
-                    setattrs(result, **{attr: getattr(box, attr)})
+                    setattr(result, attr, getattr(box, attr))
             return result
 
         if self.is_box:
@@ -1131,6 +1129,7 @@ class Drawing(TracedCategory, RichDisplay):
         from discopy.monoidal import Wire, Ty
         left = Ty(Wire(name or "", dom.dom, arg_dom.dom))
         right = Ty(Wire("", arg_dom.cod, dom.cod))
+        left[0].always_draw_label = True
         wires_can_go_straight = (
             len(dom), len(cod)) == (len(arg_dom), len(arg_cod))
         if frame_sides:

@@ -376,7 +376,7 @@ class BTR(TypeRaising):
         return Abstraction(f, f(child), left=True)
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(eq=False, repr=False)
 class BinaryTerm(TermBase):
     "Abstract superclass of :class:`FC`, :class:`BC`, :class:`FX`, :class:`BX`"
     dom: Ty = derived(compare=False)
@@ -431,7 +431,7 @@ class BinaryTerm(TermBase):
         return self.left.constants + self.right.constants
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(eq=False, repr=False)
 class FC(BinaryTerm):
     "Forward composition ``A << C`` with subterms ``A << B`` and ``B << C``. "
     def __post_init__(self):
@@ -454,7 +454,7 @@ class FC(BinaryTerm):
         return Abstraction(x, f(g(x)))
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(eq=False, repr=False)
 class BC(BinaryTerm):
     "Backward composition ``A >> C`` with subterms ``A >> B`` and ``B >> C``."
     def __post_init__(self):
@@ -477,7 +477,7 @@ class BC(BinaryTerm):
         return Abstraction(x, x(f, left=True)(g, left=True), left=True)
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(eq=False, repr=False)
 class FX(BinaryTerm):
     "Forward crossing ``A >> C`` with subterms ``B << A`` and ``B >> C``."
     def __post_init__(self):
@@ -506,7 +506,7 @@ class FX(BinaryTerm):
         return ob.abstraction_factory(var, f(g(var)))
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(eq=False, repr=False)
 class BX(BinaryTerm):
     "Backward crossing ``A << C`` with subterms ``A << B`` and ``C >> B``."
     def __post_init__(self):

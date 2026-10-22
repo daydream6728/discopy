@@ -46,6 +46,8 @@ from __future__ import annotations
 from itertools import count
 from typing import TYPE_CHECKING, Callable, ClassVar, Sequence
 
+from dataclasses import dataclass
+
 from discopy import (
     cat, monoidal, rigid, frobenius, cmap, config, messages)
 from discopy.cat import factory, assert_iscomposable
@@ -57,7 +59,7 @@ from discopy.abc import NamedGeneric
 from discopy.python import finset
 from discopy.utils import (
     factory_name, assert_isinstance, product, assert_isatomic,
-    assert_istraceable, compared_fields, frozen, setattrs)
+    assert_istraceable, compared_fields)
 
 if TYPE_CHECKING:
     import sympy
@@ -837,7 +839,7 @@ class Box(frobenius.Box, Diagram):
             del state["_array"]
         if self.dtype is None and state.get("data", None) is not None:
             state["data"], dtype = self._get_data_dtype(state["data"])
-            setattrs(self, __class__=type(self)[dtype])
+            self.__class__ = type(self)[dtype]
         super().__setstate__(state)
 
     def __new__(
@@ -979,7 +981,7 @@ class Sum(monoidal.Sum, Box):
     """
 
 
-@frozen
+@dataclass(init=False, eq=False, repr=False)
 class Bubble(monoidal.Bubble, Box):
     """
     Bubble in a tensor diagram, applies a function elementwise.
@@ -1026,7 +1028,7 @@ class Bubble(monoidal.Bubble, Box):
     func: Callable = lambda x: int(not x)
 
     def __init__(self, *args, func=lambda x: int(not x), **params):
-        setattrs(self, func=func)
+        self.func = func
         super().__init__(*args, **params)
 
     def grad(self, var, **params):

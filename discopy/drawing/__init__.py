@@ -151,12 +151,11 @@ def spiral(n_cups):
     """
     from discopy.monoidal import Ty, Box, Id
     x = Ty('x')
-    spider = dict(
-        draw_as_spider=True, drawing_name="", shape="circle", color="black")
-    unit, counit = (Box(name, *ends, **spider) for name, ends in [
-        ('unit', (Ty(), x)), ('counit', (x, Ty()))])
-    cup, cap = (Box(name, *ends, **spider) for name, ends in [
-        ('cup', (x @ x, Ty())), ('cap', (Ty(), x @ x))])
+    unit, counit = Box('unit', Ty(), x), Box('counit', x, Ty())
+    cup, cap = Box('cup', x @ x, Ty()), Box('cap', Ty(), x @ x)
+    for box in [unit, counit, cup, cap]:
+        box.draw_as_spider, box.drawing_name = True, ""
+        box.shape, box.color = "circle", "black"
     result = unit
     for i in range(n_cups):
         result = result >> Id(x ** i) @ cap @ Id(x ** (i + 1))

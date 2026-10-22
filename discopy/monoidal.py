@@ -71,8 +71,6 @@ from discopy.config import (
 from discopy.utils import (
     factory,
     derived,
-    frozen,
-    setattrs,
     factory_name,
     from_tree,
     assert_isinstance,
@@ -311,7 +309,7 @@ class List(Monoid, NamedGeneric['generator_factory']):
 
 
 @factory
-@frozen
+@dataclass(init=False, eq=False, repr=False)
 class Ty(cat.Ob, cat.FreeCategory, ColouredMonoid):
     """
     A type is a composable path of objects with :meth:`Ty.tensor`
@@ -399,7 +397,7 @@ class Ty(cat.Ob, cat.FreeCategory, ColouredMonoid):
         if cod is None:
             cod = inside[-1].cod if inside else transparent
         cat.FreeCategory.__init__(self, inside, dom, cod, _scan)
-        setattrs(self, name=type(self).__name__)
+        self.name = type(self).__name__
 
     def tensor(self, *others: Ty) -> Ty:
         if any(not isinstance(other, self.factory) for other in others):
@@ -611,9 +609,9 @@ class Nat(abc.Nat, Ty):
     def __init__(self, inside: int | tuple = 0, dom: Colour = None,
                  cod: Colour = None, _scan: bool = True):
         # pylint: disable=unused-argument  # a Nat has one colour
-        setattrs(
-            self, n=inside if isinstance(inside, int) else len(inside),
-            dom=transparent, cod=transparent)
+        self.n = inside if isinstance(inside, int) else len(inside)
+        self.dom = transparent
+        self.cod = transparent
         cat.Ob.__init__(self, type(self).__name__)
 
     def __setstate__(self, state):
@@ -729,7 +727,7 @@ class Dim(Ty):
         return cls(*tree['inside'])
 
 
-@frozen
+@dataclass(init=False, eq=False, repr=False)
 class Layer(cat.Box, ColouredMonoid):
     """
     A layer is a tensor product of boxes and plumbing, i.e. non-empty types.
@@ -756,13 +754,13 @@ class Layer(cat.Box, ColouredMonoid):
         super().__setstate__(state)
         for key in [key for key in vars(self) if isinstance(
                 getattr(type(self), key, None), cached_property)]:
-            vars(self).pop(key)
+            delattr(self, key)
 
     def __init__(self, *inside: Ty | Box, normalise: bool = True):
         if normalise:
             type(self).check(inside)
             inside = type(self).normalise(inside)
-        setattrs(self, boxes_or_types=tuple(inside))
+        self.boxes_or_types = tuple(inside)
         if normalise and not self.boxes:
             raise ValueError(messages.LAYERS_MUST_HAVE_A_BOX)
 
@@ -1084,7 +1082,6 @@ class Layer(cat.Box, ColouredMonoid):
 
 
 @factory
-@frozen
 class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
     """
     A diagram is a tuple of composable layers :code:`inside` with a pair of
@@ -1609,7 +1606,6 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
         return super().from_tree(tree)
 
 
-@frozen
 class Box(cat.Box, Diagram):
     """
     A box is a diagram with a :code:`name` and the layer of just itself inside.
@@ -1670,9 +1666,9 @@ class Box(cat.Box, Diagram):
         if (dom.dom, dom.cod) != (cod.dom, cod.cod):
             raise AxiomError(messages.NOT_GLOBULAR.format(
                 dom.dom, dom.cod, cod.dom, cod.cod))
-        setattrs(self, **{
-            attr: params.pop(attr)
-            for attr in BOX_DRAWING_ATTRIBUTES if attr in params})
+        for attr in BOX_DRAWING_ATTRIBUTES:
+            if attr in params:
+                setattr(self, attr, params.pop(attr))
         cat.Box.__init__(self, name, dom, cod, **params)
         inside = () if self.is_identity\
             else (self.layer_factory(self, normalise=False), )
@@ -1732,7 +1728,7 @@ class Sum(cat.Sum, Box):
     to_drawing = Diagram.to_drawing
 
 
-@frozen
+@dataclass(init=False, eq=False, repr=False)
 class Bubble(cat.Bubble, Box):
     """
     A bubble is a box with diagrams :code:`args` inside and an optional pair of
@@ -1801,20 +1797,19 @@ class Bubble(cat.Bubble, Box):
             draw_vertically=False, **kwargs):
         cat.Bubble.__init__(self, *args, **kwargs)
         args = self.args
-        setattrs(
-            self, drawing_name="" if drawing_name is None else drawing_name,
-            draw_vertically=draw_vertically,
-            frame_colour=BOX_DRAWING_ATTRIBUTES['frame_colour'](self))
+        self.drawing_name = "" if drawing_name is None else drawing_name
+        self.draw_vertically = draw_vertically
+        self.frame_colour = BOX_DRAWING_ATTRIBUTES['frame_colour'](self)
         if len(args) == 1:
             can_draw_as_bubble = (len(self.dom), len(self.cod)) == (
                 len(self.arg.dom), len(self.arg.cod))
             draw_as_square = draw_as_square or not can_draw_as_bubble
-            setattrs(
-                self, draw_as_square=draw_as_square,
-                draw_as_frame=draw_as_frame or (
-                    not can_draw_as_bubble and not draw_as_square))
+            self.draw_as_square = draw_as_square
+            self.draw_as_frame = draw_as_frame or (
+                    not can_draw_as_bubble and not draw_as_square)
         else:
-            setattrs(self, draw_as_frame=True, draw_as_square=False)
+            self.draw_as_frame = True
+            self.draw_as_square = False
 
     @property
     def size(self):

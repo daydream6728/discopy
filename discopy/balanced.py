@@ -47,7 +47,7 @@ from discopy.cat import factory
 from discopy.feedback import Ty
 from discopy.monoidal import Colour
 from discopy.utils import (
-    factory_name, assert_isatomic, from_tree, frozen, setattrs)
+    factory_name, assert_isatomic, from_tree)
 
 
 @dataclass(frozen=True)
@@ -207,7 +207,7 @@ class Braid(braided.Braid, Box):
     """
 
 
-@frozen
+@dataclass(init=False, eq=False, repr=False)
 class DualRailBraid(braided.Box):
     """
     The crossing of two ribbons in the dual rail encoding of a swap.
@@ -225,7 +225,7 @@ class DualRailBraid(braided.Box):
     right: monoidal.Ty
 
     def __init__(self, left: monoidal.Ty, right: monoidal.Ty, is_dagger=False):
-        setattrs(self, left=left, right=right)
+        self.left, self.right = left, right
         name = type(self).__name__ + f"({left}, {right})"
         braided.Box.__init__(
             self, name, left @ right, right @ left,

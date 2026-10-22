@@ -251,7 +251,7 @@ In the category of streams, this is just the identity.
 from __future__ import annotations
 
 from copy import copy
-from dataclasses import fields
+from dataclasses import dataclass
 from typing import ClassVar
 
 from discopy import monoidal, cmap, hypergraph, messages
@@ -259,9 +259,8 @@ from discopy.abc import FeedbackCategory, TracedCategory
 from discopy.monoidal import (  # noqa: F401  pylint: disable=unused-import
     Equation)
 from discopy.utils import (
-    frozen,
+    constructor_fields,
     replace,
-    setattrs,
     deprecated_alias,
     factory, factory_name, assert_isinstance, AxiomError, from_tree,
 )
@@ -643,7 +642,7 @@ class Diagram(monoidal.Diagram, TracedCategory):
     d = Wire.d
 
 
-@frozen
+@dataclass(init=False, eq=False, repr=False)
 class Box(monoidal.Box, Diagram):
     """
     A feedback box is a monoidal box in a feedback diagram.
@@ -657,14 +656,13 @@ class Box(monoidal.Box, Diagram):
     time_step: int = 0
 
     def __init__(self, *args, time_step: int = 0, **params):
-        setattrs(self, time_step=time_step)
+        self.time_step = time_step
         super().__init__(*args, **params)
 
     def to_drawing(self):
         result = super().to_drawing()
         if result.box.drawing_name:
-            setattrs(result.box, drawing_name=result.box.drawing_name
-                     + str_delayed(self.time_step))
+            result.box.drawing_name += str_delayed(self.time_step)
         return result
 
     def delay(self, n_steps=1):
@@ -680,7 +678,7 @@ class Box(monoidal.Box, Diagram):
         """
         if not issubclass(self.ob.generator_factory, monoidal.Wire):
             return self
-        names = [f.name for f in fields(self) if f.init]
+        names = constructor_fields(type(self))
         changes = {
             name: getattr(self, name).delay(n_steps) for name in names
             if isinstance(getattr(self, name), (Ty, Diagram))}
@@ -717,11 +715,11 @@ class Box(monoidal.Box, Diagram):
     @classmethod
     def from_tree(cls, tree: dict) -> Box:
         result = super().from_tree(tree)
-        setattrs(result, time_step=tree.get('time_step', 0))
+        result.time_step = tree.get('time_step', 0)
         return result
 
 
-@frozen
+@dataclass(init=False, eq=False, repr=False)
 class Feedback(Box, monoidal.Bubble):
     """
     Feedback is a bubble that takes a diagram from `dom @ mem.delay()` to
@@ -763,7 +761,7 @@ class Feedback(Box, monoidal.Bubble):
         expected = (fed @ dom, mem @ cod) if left else (dom @ fed, cod @ mem)
         if (arg.dom, arg.cod) != expected:
             raise AxiomError(messages.NOT_FEEDBACK.format(mem, arg, fed))
-        setattrs(self, mem=mem, left=left)
+        self.mem, self.left = mem, left
         name = f"{type(self).__name__}({arg}"\
             + ("" if len(mem) == 1 else f", mem={mem}")\
             + (", left=True" if left else "") + ")"
@@ -854,7 +852,7 @@ class Trace(Feedback):
         return self.ar.to_drawing(self)
 
 
-@frozen
+@dataclass(init=False, eq=False, repr=False)
 class Head(monoidal.Bubble, Box):
     """
     The head of a feedback diagram, interpreted as the first element followed
@@ -881,7 +879,7 @@ class Head(monoidal.Bubble, Box):
     __str__ = Box.__str__
 
 
-@frozen
+@dataclass(init=False, eq=False, repr=False)
 class Tail(monoidal.Bubble, Box):
     """
     The tail of a feedback diagram, interpreted as the stream starting from the
@@ -902,7 +900,7 @@ class Tail(monoidal.Bubble, Box):
     __str__ = Box.__str__
 
 
-@frozen
+@dataclass(init=False, eq=False, repr=False)
 class FollowedBy(Box):
     """
     The isomorphism between `x.head @ x.tail.delay()` and `x`.
@@ -935,7 +933,7 @@ class FollowedBy(Box):
     arg: Ty
 
     def __init__(self, arg: Ty, is_dagger=False, time_step=0):
-        setattrs(self, arg=arg)
+        self.arg = arg
         dagger_name = ", is_dagger=True" if is_dagger else ""
         name = f"FollowedBy({arg}{dagger_name})"
         dom, cod = arg.head @ arg.tail.delay(), arg

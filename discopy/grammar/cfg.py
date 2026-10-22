@@ -45,7 +45,6 @@ from discopy.config import BOX_DRAWING_ATTRIBUTES
 from discopy.grammar import thue
 from discopy.monoidal import Ty
 from discopy.utils import (
-    setattrs,
     assert_isinstance, factory_name, assert_isatomic, AxiomError)
 
 if TYPE_CHECKING:
@@ -79,7 +78,7 @@ class Tree:
         if not isinstance(self, Rule) and not root.dom == Ty().tensor(
                 *[branch.cod for branch in branches]):
             raise AxiomError
-        setattrs(self, cod=root.cod, root=root, branches=branches)
+        self.cod, self.root, self.branches = root.cod, root, branches
 
     def __repr__(self):
         return factory_name(type(self))\

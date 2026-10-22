@@ -98,6 +98,8 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import ClassVar
 
+from dataclasses import dataclass
+
 from discopy import monoidal, feedback, balanced, hypergraph, cmap, messages
 from discopy.abc import BalancedCategory, SpacialCategory, SymmetricCategory
 from discopy.cat import factory
@@ -105,8 +107,7 @@ from discopy.feedback import (  # noqa: F401  pylint: disable=unused-import
     Wire, Ty, Nat)
 from discopy.python import finset
 from discopy.utils import (
-    AxiomError, assert_iscomposable, classproperty, factory_name, from_tree,
-    frozen, setattrs)
+    AxiomError, assert_iscomposable, classproperty, factory_name, from_tree)
 
 
 class Layer(feedback.Layer):
@@ -469,7 +470,7 @@ class Box(balanced.Box, Diagram):
     """
 
 
-@frozen
+@dataclass(init=False, eq=False, repr=False)
 class Permutation(Box):
     """
     A permutation box, i.e. a :class:`Box` that reorders its input wires.
@@ -530,7 +531,7 @@ class Permutation(Box):
         return super(Permutation, factory).__new__(factory)
 
     def __init__(self, dom: monoidal.Ty, perm: Sequence[int]):
-        setattrs(self, perm=finset.Permutation(perm, len(dom)))
+        self.perm = finset.Permutation(perm, len(dom))
         cod = dom[:0].tensor(*(dom[i] for i in self.perm))
         name = f"Permutation({list(self.perm)})"
         super().__init__(
@@ -696,7 +697,7 @@ class Swap(Permutation, balanced.Braid, Box):
             if not perm.is_swap():
                 raise ValueError
             left, right = left[:1], left[1:]
-        setattrs(self, perm=finset.Permutation([1, 0], 2))
+        self.perm = finset.Permutation([1, 0], 2)
         balanced.Braid.__init__(self, left, right)
         Box.__init__(self, self.name, self.dom, self.cod,
                      draw_as_wires=True, draw_as_braid=False)

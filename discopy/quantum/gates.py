@@ -53,6 +53,7 @@ from typing import Any
 from collections.abc import Sized
 from math import e, pi
 
+from dataclasses import dataclass
 from discopy import messages
 from discopy.feedback import str_delayed
 from discopy.matrix import get_backend
@@ -60,7 +61,7 @@ from discopy.quantum.circuit import (
     Circuit, Digit, Ty, bit, qubit, Box, Sum, Id)
 from discopy.tensor import backend
 from discopy.utils import (
-    factory_name, assert_isinstance, from_tree, frozen, replace, setattrs)
+    factory_name, assert_isinstance, from_tree, replace)
 
 
 def format_number(data):
@@ -594,7 +595,7 @@ class Bra(SelfConjugate, QuantumGate):
             Bra(b, time_step=self.time_step) for b in self.bitstring])
 
 
-@frozen
+@dataclass(init=False, eq=False, repr=False)
 class Controlled(QuantumGate):
     """
     Abstract class for controled quantum gates.
@@ -625,7 +626,7 @@ class Controlled(QuantumGate):
         assert_isinstance(controlled, QuantumGate)
         if not distance:
             raise ValueError(messages.ZERO_DISTANCE_CONTROLLED)
-        setattrs(self, controlled=controlled, distance=distance)
+        self.controlled, self.distance = controlled, distance
         n_qubits = len(controlled.dom) + abs(distance)
         name = f'C{controlled.reset()}'
         time_step = controlled.time_step
@@ -852,7 +853,7 @@ class Parametrized(Box):
         return factory_name(type(self)) + f"({format_number(self.data)})"
 
 
-@frozen
+@dataclass(init=False, eq=False, repr=False)
 class Rotation(Parametrized, QuantumGate):
     """ Abstract class for rotation gates. """
     n_qubits = 1
@@ -862,7 +863,7 @@ class Rotation(Parametrized, QuantumGate):
     phase: Any = None
 
     def __init__(self, phase, z=0, time_step=0):
-        setattrs(self, phase=phase)
+        self.phase = phase
         name, n_qubits = type(self).__name__, type(self).n_qubits
         dom = cod = qubit.delay(time_step) ** n_qubits
         QuantumGate.__init__(self, name, dom, cod, z=z, time_step=time_step)
@@ -1118,7 +1119,7 @@ class Sqrt(Scalar):
         super().__init__(data, name="sqrt", time_step=time_step)
         if is_dagger and self.is_self_adjoint:
             raise ValueError(messages.REAL_SQRT_IS_SELF_ADJOINT)
-        setattrs(self, is_dagger=is_dagger)
+        self.is_dagger = is_dagger
         self.drawing_name = f"sqrt({format_number(data)})"
 
     @classmethod

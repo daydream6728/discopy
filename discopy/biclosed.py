@@ -99,8 +99,6 @@ from discopy.axioms import (
 from discopy.drawing import Drawing
 from discopy.cat import factory
 from discopy.utils import (
-    frozen,
-    setattrs,
     AxiomError,
     NamedGeneric,
     assert_isinstance,
@@ -415,7 +413,7 @@ class Box(monoidal.Box, Diagram):
     """
 
 
-@frozen
+@dataclass(init=False, eq=False, repr=False)
 class Eval(Box):
     """
     The evaluation of an exponential type.
@@ -433,9 +431,9 @@ class Eval(Box):
 
     def __init__(self, x: Exp, left=None):
         assert x.is_exp
+        self.x = x
         exp = x.inside[0]
-        setattrs(self, x=x, left=not isinstance(exp, Under)
-                 if left is None else left)
+        self.left = not isinstance(exp, Under) if left is None else left
         if isinstance(exp, Under if self.left else Over):
             raise AxiomError(messages.WRONG_SIDE.format(
                 not self.left, x, self.left))
@@ -462,7 +460,7 @@ class Eval(Box):
         return "<<" if self.left else ">>"
 
 
-@frozen
+@dataclass(init=False, eq=False, repr=False)
 class Coeval(Box):
     """
     The coevaluation of an exponential type, i.e. the dagger of :class:`Eval`.
@@ -491,9 +489,9 @@ class Coeval(Box):
 
     def __init__(self, x: Exp, left=None):
         assert x.is_exp
+        self.x = x
         exp = x.inside[0]
-        setattrs(self, x=x, left=not isinstance(exp, Under)
-                 if left is None else left)
+        self.left = not isinstance(exp, Under) if left is None else left
         if isinstance(exp, Under if self.left else Over):
             raise AxiomError(messages.WRONG_SIDE.format(
                 not self.left, x, self.left))
@@ -505,7 +503,7 @@ class Coeval(Box):
         return self.eval_factory(self.x, self.left)
 
 
-@frozen
+@dataclass(init=False, eq=False, repr=False)
 class Curry(monoidal.Bubble, Box):
     """
     The currying of a biclosed diagram.
@@ -530,7 +528,7 @@ class Curry(monoidal.Bubble, Box):
     def __init__(self, arg: Diagram, n=1, left=True):
         if not 0 <= n <= len(arg.dom):
             raise AxiomError(messages.NOT_SPLITTABLE.format(n, arg.dom))
-        setattrs(self, n=n, left=left)
+        self.n, self.left = n, left
         name = f"Curry({arg}, {n}, {left})"
         if left:
             dom = arg.dom[:len(arg.dom) - n]

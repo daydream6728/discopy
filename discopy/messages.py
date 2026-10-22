@@ -117,3 +117,5 @@ NO_SYMBOLIC_FIELD = (
     "declare the fields it is built from.")
 
 NOT_A_FIELD = "{} takes {}, which is not a field."
+
+NOT_TAKEN = "{} does not take {}."

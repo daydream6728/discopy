@@ -26,6 +26,7 @@ from fractions import Fraction
 from functools import reduce
 from math import pi
 
+from dataclasses import dataclass
 from discopy import cat, frobenius, rigid, tensor, quantum
 from discopy.cat import factory
 from discopy.quantum.circuit import qubit, Circuit
@@ -34,7 +35,7 @@ from discopy.quantum.gates import (
 from discopy.quantum.gates import Scalar as GatesScalar
 from discopy.rigid import Sum, Nat
 from discopy.tensor import Dim, backend
-from discopy.utils import assert_isatomic, factory_name, frozen, setattrs
+from discopy.utils import assert_isatomic, factory_name
 
 
 @factory
@@ -329,7 +330,7 @@ class Swap(Permutation, tensor.Swap[complex], Box):
         return "SWAP"
 
 
-@frozen
+@dataclass(init=False, eq=False, repr=False)
 class Spider(tensor.Spider[complex], Box):
     """
     Abstract spider box, i.e. a phased spider in the eigenbasis of a Pauli.
@@ -365,10 +366,10 @@ class Spider(tensor.Spider[complex], Box):
         super().__init__(n_legs_in, n_legs_out, Nat(1), phase)
         factory_str = type(self).__name__
         phase_str = f", {self.phase}" if self.phase else ""
-        setattrs(
-            self, name=f"{factory_str}({n_legs_in}, {n_legs_out}{phase_str})")
+        self.name = f"{factory_str}({n_legs_in}, {n_legs_out}{phase_str})"
         if not isinstance(self, Z):
-            setattrs(self, deterministic=False, affine=False)
+            self.deterministic = False
+            self.affine = False
 
     def __getnewargs__(self):
         return len(self.dom), len(self.cod), self.phase
@@ -383,7 +384,8 @@ class Spider(tensor.Spider[complex], Box):
             )
         super().__setstate__(state)
         if not isinstance(self, Z):
-            setattrs(self, deterministic=False, affine=False)
+            self.deterministic = False
+            self.affine = False
 
     def __repr__(self):
         return str(self).replace(type(self).__name__, factory_name(type(self)))
