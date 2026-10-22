@@ -1,0 +1,335 @@
+"""Contains the fundamental classes requirement to define MBQC patterns"""
+
+from dataclasses import dataclass
+from typing import Callable, Optional
+
+import graphix as gx
+import graphix.opengraph
+import networkx as nx
+from graphix.pauli import Plane
+
+
+@dataclass(frozen=True)
+class Measurement(gx.opengraph.Measurement):
+    """An MBQC measurement.
+
+    :param angle: the angle of the measurement. Should be between [0, 2pi)
+    :param plane: the measurement plane: 'XY', 'XZ', 'YZ'
+    """
+
+    angle: float
+    plane: str
+
+
+@dataclass
+class Fusion:
+    """A fusion between two nodes
+
+    :param node1: ID of one of the nodes in the fusion
+    :param node2: ID of the other node in the fusion
+    :param fusion_type: The type of fusion. Currently either: "X", "Y"
+    """
+
+    node1: int
+    node2: int
+    fusion_type: str
+
+    def __eq__(self, other) -> bool:
+        """Indicates equality between fusions
+
+        Example
+        -------
+        >>> Fusion(0, 1, "X") == Fusion(0, 1, "X")
+        True
+        >>> Fusion(1, 0, "X") == Fusion(0, 1, "X")
+        True
+        >>> Fusion(0, 1, "X") == Fusion(0, 1, "Y")
+        False
+        >>> Fusion(0, 2, "X") == Fusion(0, 1, "X")
+        False
+        """
+        if self.fusion_type != other.fusion_type:
+            return False
+
+        if self.node1 == other.node1 and self.node2 == other.node2:
+            return True
+
+        if self.node1 == other.node2 and self.node2 == other.node1:
+            return True
+
+        return False
+
+    def contains(self, node_id: int) -> bool:
+        """Indicates whether the node is part of the fusion"""
+        return node_id in (self.node1, self.node2)
+
+
+@dataclass
+class FusionNetwork:
+    """A fusion network for a single emitter linear resource state
+
+    Specifies the measurements and fusions to perform on the nodes.
+    Nodes are indexed by their position in the single linear resource state
+    i.e. the first node is 0, second is 1 etc.
+
+
+    :param path: IDs of the nodes in the path. A node may be implemented by
+        many photons
+    :param measurements: The measurements applied to each of the nodes. Key is
+        the indexed by the Node ID
+    :param fusions: Tuples containing the IDs of nodes connected by a fusion
+    """
+
+    path: list[int]
+
+    measurements: dict[int, Measurement]
+
+    fusions: list[Fusion]
+
+
+# Given a node, returns all the nodes in it's past
+PartialOrder = Callable[[int], list[int]]
+
+
+@dataclass
+class GFlow:
+    """The g-flow structure on an open graph.
+
+    :param g: the function which returns the correction set of a node
+    :param layers: the layers of the partial order. The key is a node ID and
+        the value is the layer it belongs to in a particular foliation of the
+        partial order.
+    """
+
+    g: dict[int, set[int]]
+    layers: dict[int, int]
+
+    def partial_order(self) -> PartialOrder:
+        """Returns a function representing the partial order of the flow"""
+
+        def order(n: int):
+            l = self.layers[n]
+
+            return [i for i, layer in self.layers.items() if layer >= l]
+
+        return order
+
+
+@dataclass(frozen=True)
+class OpenGraph(gx.opengraph.OpenGraph):
+    """Open graph contains the graph, measurement, and input and output
+    nodes. This is the graph we wish to implement deterministically
+
+
+    :param inside: the underlying graph state
+    :param measurements: a dictionary whose key is the ID of a node and the
+        value is the measurement at that node
+    :param inputs: a set of IDs of the nodes that are inputs to the graph
+    :param outputs: a set of IDs of the nodes that are outputs of the graph
+
+    Example
+    -------
+    >>> import networkx as nx
+    >>> from . import OpenGraph, Measurement
+    >>>
+    >>> inside_graph = nx.Graph([(0, 1), (1, 2), (2, 0)])
+    >>>
+    >>> measurements = {i: Measurement(0.5 * i, "XY") for i in range(2)}
+    >>> inputs = {0}
+    >>> outputs = {2}
+    >>> og = OpenGraph(inside_graph, measurements, inputs, outputs)
+    """
+
+    inside: nx.Graph
+
+    measurements: dict[int, Measurement]
+
+    inputs: set[int]
+    outputs: set[int]
+
+    def find_gflow(self) -> Optional[GFlow]:
+        """Finds gflow of the open graph.
+
+        Returns None if it does not exist.
+
+        Example
+        -------
+        >>> g = nx.Graph([(0, 1), (1, 2), (2, 3)])
+        >>> meas = {
+        ...     0: Measurement(0, "XY"),
+        ...     1: Measurement(0, "YZ"),
+        ...     2: Measurement(0, "XZ"),
+        ... }
+        >>> og = OpenGraph(g, meas, [0], [3])
+        >>> og.find_gflow()
+        """
+
+        def to_graphix_plane(plane: str) -> Plane:
+            if plane == "XY":
+                return Plane.XY
+            if plane == "YZ":
+                return Plane.YZ
+            if plane == "XZ":
+                return Plane.XZ
+            raise ValueError(
+                f"unexpected measurement plane {plane}, "
+                + "expected: 'XY', 'YZ', or 'XZ'"
+            )
+
+        meas_planes = {}
+        for node_id, m in self.measurements.items():
+            plane = to_graphix_plane(m.plane)
+            meas_planes[node_id] = plane
+
+        g, layers = graphix.gflow.find_gflow(
+            self.inside, set(self.inputs), set(self.outputs), meas_planes
+        )
+
+        if g is None or layers is None:
+            return None
+
+        return GFlow(g, layers)
+
+
+def add_fusion_order(
+    fusions: list[Fusion], order: PartialOrder
+) -> PartialOrder:
+    """Returns a new partial order that ensures Pauli errors from Hadamard edge
+    fusions can be corrected.
+
+    :param fusions: A list of tuples of node IDs representing a fusion between
+                    the two nodes
+    :param order: A partial order on the nodes
+
+    We achieve this the simplest way possible, namely, we want the following
+    condition to be satisfied in the new order: if nodes v and w are fused,
+    then any node that has w in its past, should now contain v and its past and
+    vice versa.
+    """
+
+    def fusion_with_node_order(node: int) -> list[int]:
+        past = order(node)
+
+        # We temporarily remove the node itself since we don't want to add the
+        # past of the nodes it itself is fused to. We will add it back at the
+        # end
+        past.remove(node)
+
+        past_set: set[int] = set()
+        for el in past:
+            fused_nbrs = _get_all_connected_fusions(fusions, el)
+            for nbr in fused_nbrs:
+                past_set = past_set.union(set(fusion_with_node_order(nbr)))
+            past_set = past_set.union(set(fused_nbrs))
+
+        past_set.add(node)
+        return list(past_set)
+
+    return fusion_with_node_order
+
+
+def _get_all_connected_fusions(fusions: list[Fusion], node: int) -> list[int]:
+    """Find every node that is connected to the given node through fusions. It
+    uses a breadth first search to achieve this.
+
+    :param fusions: A list of tuples of node IDs representing a fusion between
+                    the two nodes
+    :param node: The ID of the node in question.
+
+    Example
+    -------
+    >>> fusions = [Fusion(1, 0, "X"), Fusion(2, 4, "X"), Fusion(0, 3, "X")]
+    >>> _get_all_connected_fusions(fusions, 0)
+    [0, 1, 3]
+    >>> _get_all_connected_fusions(fusions, 1)
+    [0, 1, 3]
+    >>> _get_all_connected_fusions(fusions, 4)
+    [2, 4]
+    """
+    seen: set[int] = {node}
+    frontier: set[int] = {node}
+
+    while len(frontier) != 0:
+        v = frontier.pop()
+
+        nbrs = get_fused_neighbours(fusions, v)
+        new_nbrs = set(nbrs) - seen
+        seen = seen.union(set(nbrs))
+        frontier = frontier.union(new_nbrs)
+
+    return list(seen)
+
+
+def get_fused_neighbours(fusions: list[Fusion], node: int) -> list[int]:
+    """Returns the nodes that are fused to the given node.
+
+    :param fusions: A list of tuples of node IDs representing a fusion between
+                    the two nodes
+    :param node: The ID of the node in question.
+
+    Example
+    -------
+    >>> fusions = [Fusion(1, 0, "X"), Fusion(2, 3, "X"), Fusion(0, 3, "X")]
+    >>> get_fused_neighbours(fusions, 0)
+    [1, 3]
+    >>> get_fused_neighbours(fusions, 2)
+    [3]
+    >>> get_fused_neighbours(fusions, 4)
+    []
+    """
+    fusion_nbrs = []
+
+    for fusion in fusions:
+        if fusion.node1 == node:
+            fusion_nbrs.append(fusion.node2)
+        elif fusion.node2 == node:
+            fusion_nbrs.append(fusion.node1)
+
+    return fusion_nbrs
+
+
+def fn_to_open_graph(
+    sfn: FusionNetwork, inputs: set[int], outputs: set[int]
+) -> OpenGraph:
+    """Converts a fusion network into an open graph
+
+    Example
+    -------
+    >>> path = [0, 1, 2]
+    >>> meas = {i: Measurement(i, "XY") for i in range(2)}
+    >>> fusions = [Fusion(0, 1, "Y")]
+    >>> fn = FusionNetwork(path, meas, fusions)
+    >>> og = fn_to_open_graph(fn, {0}, {2})
+    """
+
+    g = nx.path_graph(sfn.path)
+
+    for fusion in sfn.fusions:
+        g.add_edge(fusion.node1, fusion.node2)
+
+    return OpenGraph(g, sfn.measurements, inputs, outputs)
+
+
+def pattern_satisfies_order(
+    measurements: list[tuple[int, Measurement]], order: PartialOrder
+) -> bool:
+    """Checks every measurement happens only after everything in its past has
+    been measured.
+
+    Example
+    -------
+    >>> meas = [(0, Measurement(0, "XY")), (1, Measurement(0, "YZ"))]
+    >>> # Linear order
+    >>> order = lambda n: list(range(n))
+    >>> pattern_satisfies_order(meas, order)
+    True
+    """
+    seen: set[int] = set()
+
+    for v, _ in measurements:
+        past = order(v)
+        seen.add(v)
+        if not set(past).issubset(seen):
+            return False
+
+    return True
