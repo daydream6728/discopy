@@ -2,7 +2,7 @@
 
 Agent `symmetric`, bullets of #31:
 
-- [WIP] @session_01YCJQ3Xco3ydQ6AsdTtYJ5x-2026-10-22 15:57 B72: whiskered `Swap` is a `Permutation` that functors cannot map: into `Matrix` (`KeyError`), `to_braided()` (`TypeError`), `Functor({Nat(1): x @ y})` (`Expected a permutation of length 6, got 3`); without changing what a functor sends a `Permutation` to when its codomain has `permutation` (B60, decision 3 of #56)
+- [x] B72: whiskered `Swap` is a `Permutation` that functors cannot map: into `Matrix` (`KeyError`), `to_braided()` (`TypeError`), `Functor({Nat(1): x @ y})` (`Expected a permutation of length 6, got 3`); without changing what a functor sends a `Permutation` to when its codomain has `permutation` (B60, decision 3 of #56)
 - [ ] B78, simplify part: `braided.Diagram.simplify()` dies on a foliated diagram; split into staircases first, as #219 did for `grad`
 - [ ] B86: `Permutation(x @ y, iter([1, 0]))` is not a `Swap` and compares unequal to one
 - [ ] B88: `symmetric.Layer.merge` refuses a pair that composes to the identity, so `foliation` leaves `p >> p[::-1] >> p` at three layers
