@@ -486,16 +486,15 @@ class Diagram(biclosed.Diagram, RigidCategory):
 
         .. image:: /_static/rigid/transpose_box.svg
         """
-        box = self.inside[i].boxes_and_types[2 * j + 1]
-        transposed_box = (box.r if left else box.l).transpose(left)
+        layer = self.inside[i]
+        k = [position for position, x in enumerate(layer)
+             if isinstance(x, monoidal.Box)][j]
+        transposed_box = (layer[k].r if left else layer[k].l).transpose(left)
         top, bottom = self[:i], self[i + 1:]
-        boxes_and_types = list(self.inside[i].boxes_and_types)
-        left_boxes_and_types = boxes_and_types[:2 * j + 1]
-        right_boxes_and_types = boxes_and_types[2 * j + 2:]
         left_layer, right_layer = [
-            self.id().tensor(
-                *(x if k % 2 else self.id(x) for k, x in enumerate(xs)))
-            for xs in [left_boxes_and_types, right_boxes_and_types]]
+            self.id().tensor(*(
+                x if isinstance(x, monoidal.Box) else self.id(x) for x in xs))
+            for xs in [layer[:k], layer[k + 1:]]]
         return top >> left_layer @ transposed_box @ right_layer >> bottom
 
     def snake_removal(self, left=False) -> Iterator[Diagram]:
