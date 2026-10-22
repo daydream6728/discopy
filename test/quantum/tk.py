@@ -70,6 +70,20 @@ def test_Circuit_from_tk():
     assert c == back_n_forth(c)
 
 
+def test_controlled_gates_to_tk():
+    gates = [CY, CCX, U1(.25), CU1(.25), Controlled(Ry(.25))]
+    for gate in gates:
+        assert Circuit.from_tk(gate.to_tk()) == gate.init_and_discard()
+    gates += [
+        Controlled(CX, distance=-1),
+        Controlled(Controlled(X, distance=-1), distance=2)]
+    for gate in gates:
+        unitary = gate.to_tk().get_unitary()
+        assert np.allclose(unitary, gate.eval().array.reshape(unitary.shape).T)
+    with raises(NotImplementedError):
+        CCZ.to_tk()
+
+
 def test_mixed_permutation_to_tk():
     measure = Ket(1, 0, 0) >> Measure() @ qubit @ Measure()
     swap_bits = Circuit.permutation([2, 1, 0], bit @ qubit @ bit)
