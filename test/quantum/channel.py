@@ -93,3 +93,9 @@ def test_Channel_then_unbiased():
 def test_Channel_then_checks_classical_and_quantum():
     with raises(AxiomError):
         Channel.id(Q(Dim(2))) >> Channel.id(C(Dim(2, 2)))
+
+
+def test_CQ_repr():
+    import discopy
+    for cq in [CQ(), C(Dim(2)), C(Dim(2)) @ Q(Dim(3, 4))]:
+        assert eval(repr(cq), {'quantum': discopy.quantum, 'Dim': Dim}) == cq

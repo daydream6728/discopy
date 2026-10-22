@@ -8,6 +8,6 @@ Agent `converters`: `quantum/tk.py`, `quantum/zx.py`, `quantum/pennylane.py`, `q
 - [x] B24: pennylane uses the removed `Operation.inv()` and scales by `_scale ** 2`
 - [x] B33: `to_tn` crashes on bit discards and non-destructive measures; classical `measure()` crashes
 - [x] B68 of #31, channel part: `Channel.then` checks the flattened `Dim` only; `CQ.__str__` prints a classical type as `Q(...)`
-- [ ] B39 quantum part and #168: repr of a measure, `quantum.zx.Swap` reprs as `"SWAP"`, `quantum.channel.CQ` str-interpolates unqualified fields
+- [x] B39 quantum part and #168: repr of a measure, `quantum.zx.Swap` reprs as `"SWAP"`, `quantum.channel.CQ` str-interpolates unqualified fields
 - [ ] B44: quantum interop tests are phase-0 and structural-only: numerical tk round trip, zx translation of a non-zero-phase controlled gate
 - [ ] CHANGELOG

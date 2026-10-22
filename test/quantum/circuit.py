@@ -129,12 +129,19 @@ def test_Swap():
 def test_Discard():
     assert Discard().dagger() == MixedState()
     assert MixedState().dagger() == Discard()
+    import discopy
+    for box in [Discard(), Discard(bit @ qubit), MixedState(bit)]:
+        assert eval(repr(box), {'quantum': discopy.quantum}) == box
 
 
 def test_Measure():
     assert Measure(destructive=False, override_bits=True).dagger()\
         == Encode(constructive=False, reset_bits=True)
     assert Encode().dagger() == Measure()
+    import discopy
+    for box in [Measure(), Measure(2, destructive=False, override_bits=True),
+                Encode(), Encode(2, constructive=False, reset_bits=True)]:
+        assert eval(repr(box), {'quantum': discopy.quantum}) == box
 
 
 def test_ClassicalGate():

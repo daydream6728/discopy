@@ -124,6 +124,9 @@ class Discard(SelfConjugate):
     def from_tree(cls, tree: dict):
         return cls(from_tree(tree['dom']))
 
+    def __repr__(self):
+        return f"{factory_name(type(self))}({self.dom!r})"
+
     def dagger(self):
         return MixedState(self.dom)
 
@@ -151,6 +154,9 @@ class MixedState(SelfConjugate):
     @classmethod
     def from_tree(cls, tree: dict):
         return cls(from_tree(tree['cod']))
+
+    def __repr__(self):
+        return f"{factory_name(type(self))}({self.cod!r})"
 
     def dagger(self):
         return Discard(self.cod)
@@ -198,6 +204,9 @@ class Measure(SelfConjugate):
     def from_tree(cls, tree: dict):
         return cls(tree['n_qubits'], tree['destructive'],
                    tree['override_bits'])
+
+    def __repr__(self):
+        return factory_name(type(self)) + self.name.removeprefix("Measure")
 
     def dagger(self):
         return Encode(self.n_qubits,
@@ -252,6 +261,9 @@ class Encode(SelfConjugate):
     @classmethod
     def from_tree(cls, tree: dict):
         return cls(tree['n_bits'], tree['constructive'], tree['reset_bits'])
+
+    def __repr__(self):
+        return factory_name(type(self)) + self.name.removeprefix("Encode")
 
     def dagger(self):
         return Measure(self.n_bits,
