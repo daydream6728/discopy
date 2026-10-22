@@ -9,6 +9,32 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Added
 
+- `discopy.op`, the opposite of a category: `op.Category`, `Monoidal`,
+  `Symmetric`, `Markov` and `Comarkov` wrap an arrow `inside` of the
+  underlying `category` with its domain and codomain swapped, composition
+  reversed and the tensor kept; the copies of `op.Markov` are the merges of
+  its category and vice versa. `op.Comarkov[finset.Function]` is finite sets
+  and functions, `finset.Function` being now declared a Markov category, and
+  the opposites of `matrix.Matrix[int]` join the property matrix
+  ([discopy/discopy#646](https://github.com/discopy/discopy/issues/646)).
+
+- Markov and comarkov plumbing
+  ([discopy/discopy#472](https://github.com/discopy/discopy/issues/472)):
+  `markov.Function(dom, func)` copies, discards and permutes so that output
+  `i` reads input `func[i]`, holding a `finset.Function`, and
+  `comarkov.Cofunction(cod, cofunc)` merges, adds noise and permutes so
+  that input `i` goes to output `cofunc[i]`, holding an
+  `op.Comarkov[finset.Function]`; each is the dagger of the other with the
+  same list. `Copy`, `Discard`, `Permutation` and `Swap` are functions,
+  `Merge`, `Noise`, `Permutation` and `Swap` cofunctions, and
+  `Function(x, [0, 0]) == Copy(x)`. `markov.Layer` and `comarkov.Layer`
+  alternate them with generators: plumbing tensors into one box,
+  `Diagram.copy` and `Diagram.merge` of a type build one, and foliation
+  fuses plumbing layers, see `symmetric.Diagram.fuse_plumbing`.
+  `abc.MarkovCategory.function` and `ComarkovCategory.cofunction` decompose
+  them in any category, `finset.Function.factorise` being the copies then
+  the permutation. `closed` and `neural.network` have their own.
+
 - `hopf.Intertwiner.chart(dom, cod)`, the parametrised intertwiner
   `Dim(r) @ dom -> cod` whose slices are an orthonormal basis of
   `Hom_H(dom, cod)`, solved as one SVD nullspace of the commutant
@@ -811,6 +837,11 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Changed
 
+- The foliation of a symmetric diagram with plumbing fuses consecutive
+  layers of plumbing alone, into the identity when they cancel, e.g. a
+  permutation and its inverse, and `Hypergraph.to_diagram` fuses the
+  copies and merges it inserts with the permutations next to them.
+
 - A law of `discopy.axioms` is stated as a sequent, the sequent calculus
   of [rel-int/discopy-next#1](https://github.com/rel-int/discopy-next/pull/1)
   without its search: its type parameters are variables, objects `A:
@@ -1396,6 +1427,12 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   reviewer first.
 
 ### Fixed
+
+- `python.multiplicative.Function.copy(x, 1)` returns its argument rather
+  than a tuple of one, which failed its own type check.
+
+- A law stated on `abc.Category` reads its type parameters when a class of
+  another module shares its name, e.g. `op.Category`.
 
 - A tree saying `"is_dagger": false` reads back as no dagger: `cat.Box`,
   and so every box, `monoidal.Wire`, `frobenius.Spider`,
