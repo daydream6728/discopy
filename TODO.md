@@ -19,7 +19,7 @@ and `ε = δ_0`, and rules instantiated for each match, as for the ZX rules of #
 then unique up to the order of the inputs of a sum and of the outputs of a copy, which a
 hypergraph isomorphism that forgets those orders decides.
 
-- [ ] `docs/notebooks/boolean-circuits.md`, part I, in this pull request:
+- [WIP] @session_01M8CWacKqbJVKPcDMd2m3AD-2026-10-22 21:00 `docs/notebooks/boolean-circuits.md`, part I, in this pull request:
   - [ ] the encoding: τ absorbed, sums and copies flattened, rules as DPO steps of #224 built for
     each match, equality up to commutativity
   - [ ] §2.3 𝔉, maps of finite sets (Theorem 3), and its surjections and injections
