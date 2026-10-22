@@ -30,7 +30,9 @@ from discopy.abc import Groupoid, MarkovCategory, PROP, Nat
 @dataclass
 class Function(MarkovCategory, Sequence):
     """
-    A function between finite sets encoded as a Python list.
+    A function between finite sets encoded as a Python list, read backwards
+    as an arrow from ``dom`` to ``cod``, i.e. an arrow of the free Markov
+    category on one object: output ``i`` is a copy of input ``inside[i]``.
 
     Functions implement the standard Python sequence protocol.
 
@@ -49,6 +51,7 @@ class Function(MarkovCategory, Sequence):
             swap
             is_swap
             copy
+            factorise
     """
     inside: list[int]
     dom: Nat
@@ -64,6 +67,8 @@ class Function(MarkovCategory, Sequence):
         else:
             self.inside = list(self.inside)
         if len(self.inside) != len(self.cod):
+            raise ValueError
+        if any(not 0 <= i < len(self.dom) for i in self.inside):
             raise ValueError
 
     def __getitem__(self, key):
@@ -144,6 +149,27 @@ class Function(MarkovCategory, Sequence):
     def copy(x: int | Nat, n=2) -> Function:
         k = int(x)
         return Function([i % k for i in range(n * k)], k, n * k)
+
+    def factorise(self) -> tuple[list[int], Permutation]:
+        """
+        The copies then the permutation that the function factors as, i.e.
+        how many outputs read each input and the permutation that puts each
+        of its copies in their place, the inputs copied in order.
+
+        >>> f = Function([1, 0, 1], 2, 3)
+        >>> counts, perm = f.factorise()
+        >>> counts, perm
+        ([1, 2], (1, 0, 2))
+        >>> copies = [Function.copy(1, n) for n in counts]
+        >>> assert copies[0].tensor(*copies[1:]) >> perm == f
+        """
+        counts = [self.inside.count(j) for j in range(len(self.dom))]
+        offsets = [sum(counts[:j]) for j in range(len(self.dom))]
+        perm = []
+        for i in self.inside:
+            perm.append(offsets[i])
+            offsets[i] += 1
+        return counts, Permutation(perm, len(self))
 
 
 type Cycle = Iterable[int]

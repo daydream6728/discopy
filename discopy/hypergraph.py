@@ -2025,8 +2025,26 @@ class Hypergraph(
                     factory_name(self.category)))
             return self.category.from_permutation(perm, diagram.cod)
 
+        def then(other):
+            """
+            Compose with ``other``, fusing a layer of plumbing alone into the
+            one before it, e.g. the copies of a Markov category into the
+            permutation that follows them.
+            """
+            nonlocal diagram
+            last, first = diagram.inside[-1:], other.inside[:1]
+            if last and first and all(
+                    getattr(layer, "is_plumbing", False)
+                    and layer.is_generator for layer in last + first):
+                fused = last[0].generator.fuse(first[0].generator)
+                diagram = diagram.ar(
+                    diagram.inside[:-1] + fused.inside + other.inside[1:],
+                    diagram.dom, other.cod)
+            else:
+                diagram >>= other
+
         def flush():
-            nonlocal diagram, pending, layer_right, shift
+            nonlocal pending, layer_right, shift
             if pending:
                 parts, cursor = [], 0
                 for placed, placed_offset in pending:
@@ -2034,7 +2052,7 @@ class Hypergraph(
                     cursor = placed_offset + len(placed.dom)
                 parts.append(layer_dom[cursor:])
                 layer = diagram.layer_factory(*parts)
-                diagram >>= diagram.ar((layer,), layer.dom, layer.cod)
+                then(diagram.ar((layer,), layer.dom, layer.cod))
             pending, layer_right, shift = [], 0, 0
 
         for depth, (box, offset) in enumerate(zip(self.boxes, self.offsets)):
@@ -2048,7 +2066,7 @@ class Hypergraph(
             perm = Permutation.gather(positions, len(scan), offset)
             if not perm.is_identity:
                 flush()
-                diagram >>= permute(perm)
+                then(permute(perm))
                 scan = tuple(scan[j] for j in perm)
             if pending and offset < layer_right:
                 flush()
@@ -2064,7 +2082,7 @@ class Hypergraph(
         perm = Permutation(
             [scan.index(spider) for spider in self.cod_wires], len(scan))
         if not perm.is_identity:
-            diagram >>= permute(perm)
+            then(permute(perm))
         return diagram
 
     @classmethod

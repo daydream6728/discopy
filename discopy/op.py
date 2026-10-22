@@ -235,4 +235,3 @@ class Markov(Symmetric, MarkovCategory):
             n : The number of copies.
         """
         return cls(cls.category.merge(x, n))
-

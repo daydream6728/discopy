@@ -201,7 +201,7 @@ def test_Layer_factory_ownership():
         assert type(layer.boxes_and_types[1]) is module.Swap
         assert issubclass(module.Swap, module.Permutation)
         assert type(x @ permutation) is module.Permutation
-    assert markov.Layer is symmetric.Layer
+    assert issubclass(markov.Layer, symmetric.Layer)
     assert not hasattr(symmetric.Layer, 'permutation_factory')
 
 
@@ -348,7 +348,7 @@ def test_Permutation_foliation():
     with raises(AxiomError):
         foliated.inside[0].merge(foliated.inside[1])
     inverse = reverse.dagger() >> reverse
-    assert inverse.foliation() == inverse
+    assert inverse.foliation() == Id(reverse.cod)
     with raises(AxiomError):
         inverse.inside[0].merge(inverse.inside[1])
 

@@ -27,10 +27,10 @@ This pull request is the first of the two: markov and comarkov. The second, stac
 
 - [x] `discopy.op`: `Category`, `Monoidal`, `Symmetric`, `Markov`, `Comarkov`, each wrapping an arrow `inside` of `category` with `dom == inside.cod`; testable from the underlying category's strategy
 - [x] `finset.Function` is declared a `MarkovCategory`
-- [ ] `markov.Function`, with `Copy`, `Discard`, `Permutation` and `Swap` as functions, and `Function(x, [0, 0]) == Copy(x)`
-- [ ] `markov.Layer` alternates functions and generators; foliation fuses them
-- [ ] `comarkov.Cofunction` holding an `op.Comarkov[finset.Function]`, with `Merge`, `Noise`, `Permutation` and `Swap` as cofunctions
-- [ ] `comarkov.Layer`
-- [ ] functors, drawing, daggers, pickling, trees
-- [ ] `closed` and `neural.network` get their own functions and cofunctions
+- [x] `markov.Function`, with `Copy`, `Discard`, `Permutation` and `Swap` as functions, and `Function(x, [0, 0]) == Copy(x)`
+- [x] `markov.Layer` alternates functions and generators; foliation fuses them
+- [x] `comarkov.Cofunction` holding an `op.Comarkov[finset.Function]`, with `Merge`, `Noise`, `Permutation` and `Swap` as cofunctions
+- [x] `comarkov.Layer`
+- [x] functors, drawing, daggers, pickling, trees
+- [x] `closed` and `neural.network` get their own functions and cofunctions
 - [ ] tests, docs, CHANGELOG

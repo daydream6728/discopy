@@ -4,8 +4,6 @@ from random import Random
 
 from pytest import raises, warns
 
-from discopy.python import Function
-
 from discopy.markov import *
 from discopy import *
 from discopy.utils import AxiomError
@@ -85,7 +83,7 @@ def test_neural_network():
             bias: lambda: -1, **{
                 weight: lambda x, w=w: x * w
                 for weight, w in zip(weights, range(4))}},
-        cod=Function)
+        cod=python.Function)
 
     assert F(network)(42, 43) == max(0, sum([42 * 0, 43 * 1, 42 * 2, 43 * 3, -1]))
 
@@ -173,9 +171,8 @@ def test_from_callable():
         f(b, a)
         return f(a, b)
 
-    swap = Permutation(x @ x @ x @ x, [0, 2, 1, 3])
     assert diagram == Diagram((
-        Layer(Copy(x), Copy(x)), Layer(swap),
+        Layer(Function(x @ x, [0, 1, 0, 1])),
         Layer(x, f, x), Layer(x, Discard(y), x), Layer(f)), x @ x, y)
 
 
@@ -278,3 +275,49 @@ def test_delayed_Copy_pickle():
     x = Ty('x')
     for box in (Copy(x), Discard(x), Copy(x).delay(), Discard(x).delay()):
         assert loads(dumps(box)) == box
+
+
+def test_Function():
+    x, y = Ty('x'), Ty('y')
+    f = Function(x @ y, [1, 0, 0])
+    assert f.cod == y @ x @ x and f.size == 0 and isinstance(f, Box)
+    assert Function(x, [0, 0, 0]) == Copy(x, 3)
+    assert isinstance(Swap(x, y), Function) and isinstance(Copy(x), Function)
+    assert Diagram.copy(x @ y, 0) == Discard(x) @ Discard(y)
+    assert Equation(f, Swap(x, y) >> y @ Copy(x))
+    with raises(ValueError):
+        Function(x @ y, [2])
+    for box in (f, Copy(x), Swap(x, y)):
+        assert eval(repr(box)) == box
+
+
+def test_Function_serialisation():
+    from pickle import dumps as pickle_dumps, loads as pickle_loads
+    from discopy.utils import dumps, loads
+    x, y = Ty('x'), Ty('y')
+    f = Function(x @ y, [1, 0, 0])
+    assert loads(dumps(f)) == f == pickle_loads(pickle_dumps(f))
+    assert loads(dumps(f >> y @ Discard(x) @ x)) == f >> y @ Discard(x) @ x
+
+
+def test_Function_Functor():
+    x, y = Ty('x'), Ty('y')
+    f = Function(x @ y, [1, 0, 0])
+    F = Functor({x: int, y: str}, {}, cod=python.Function)
+    assert F(f)(1, "a") == ("a", 1, 1)
+    G = Functor({x: x @ y, y: x}, {})
+    assert Equation(G(f), Function(x @ y @ x, [2, 0, 1, 0, 1]))
+    assert (f >> Box('g', y @ x @ x, x)).to_hypergraph().to_diagram()\
+        == f >> Box('g', y @ x @ x, x)
+
+
+def test_Layer():
+    x, y = Ty('x'), Ty('y')
+    g = Box('g', x, y)
+    assert Layer(Copy(x), Copy(y)).boxes_or_types == (
+        Function(x @ y, [0, 0, 1, 1]), )
+    assert Layer(x, g, Copy(x)).is_plumbing
+    diagram = Copy(x) @ y >> x @ Swap(x, y) >> Discard(x) @ y @ x
+    assert diagram.foliation() == Function(x @ y, [1, 0])\
+        == Swap(x, y) == diagram.foliation().inside[0].boxes_or_types[0]
+    assert (Copy(x) >> Discard(x) @ x).foliation() == Id(x)

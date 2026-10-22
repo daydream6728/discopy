@@ -148,15 +148,28 @@ class Layer(feedback.Layer):
     @classmethod
     def normalise(cls, inside):
         """
-        Normalise identity permutations to their underlying types, so a
-        layer whose only component is an identity permutation raises the
-        same :class:`ValueError` as a layer without a box.
+        Normalise identity plumbing to its underlying type, so a layer whose
+        only component is an identity permutation raises the same
+        :class:`ValueError` as a layer without a box. A box being unpickled
+        has no data yet, hence is not an identity.
         """
         return super().normalise(
-            value.dom
-            if isinstance(value, Permutation) and hasattr(value, 'perm')
-            and value.is_identity else value
+            value.dom if cls.is_plumbing_box(value)
+            and getattr(value, 'is_identity', False) else value
             for value in inside)
+
+    @classmethod
+    def is_plumbing_box(cls, value: monoidal.Ty | Box) -> bool:
+        """
+        Whether a component of a layer is plumbing other than a type, e.g. a
+        :class:`Permutation` here and a :class:`discopy.markov.Function` in a
+        Markov layer.
+
+        Parameters:
+            value : The component of a layer.
+        """
+        return isinstance(value, cls.plumbing)\
+            and not isinstance(value, monoidal.Ty)
 
     @property
     def is_plumbing(self) -> bool:
@@ -168,12 +181,13 @@ class Layer(feedback.Layer):
         >>> assert Layer(Permutation(x @ y, [1, 0])).is_plumbing
         >>> assert not Layer(x, Box('f', x, y), y).is_plumbing
         """
-        return any(isinstance(value, Permutation) for value in self)
+        return any(map(self.is_plumbing_box, self))
 
     def merge(self, other: Layer) -> Layer:
         """
-        Merge two layers of pure plumbing by composing their permutations,
-        otherwise fall back to :meth:`discopy.monoidal.Layer.merge`.
+        Merge two layers of pure plumbing by fusing their boxes, see
+        :meth:`Permutation.fuse`, otherwise fall back to
+        :meth:`discopy.monoidal.Layer.merge`.
 
         Parameters:
             other : The other layer with which to merge.
@@ -188,12 +202,10 @@ class Layer(feedback.Layer):
         """
         if len(self.boxes_or_types) == 1 == len(other.boxes_or_types)\
                 and self.is_plumbing and other.is_plumbing:
-            assert_iscomposable(self, other)
-            first, second = self.boxes_or_types[0], other.boxes_or_types[0]
-            perm = [first.perm[i] for i in second.perm]
-            if perm == sorted(perm):
+            result = self.boxes_or_types[0].fuse(other.boxes_or_types[0])
+            if not result.inside:
                 raise AxiomError(messages.NOT_MERGEABLE.format(self, other))
-            return type(self)(first.permutation_factory(self.dom, perm))
+            return type(self)(result)
         return super().merge(other)
 
 
@@ -409,15 +421,35 @@ class Diagram(balanced.Diagram, SymmetricCategory):
         Merge independent generators, keeping native plumbing compact.
 
         A hypergraph forgets that plumbing is native, so a diagram with a
-        :class:`Permutation` is foliated by merging its layers instead.
+        :class:`Permutation` is foliated by fusing its plumbing, see
+        :meth:`fuse_plumbing`, then merging its layers instead.
 
         >>> x, y = Ty('x'), Ty('y')
         >>> perm = Permutation(x @ y, [1, 0])
         >>> assert perm.foliation() == perm
         """
         if self.is_plumbing:
-            return self.merge_layers()
+            return self.fuse_plumbing().merge_layers()
         return super().foliation()
+
+    def fuse_plumbing(self) -> Diagram:
+        """
+        Fuse each layer of plumbing alone into the one before it, see
+        :meth:`Permutation.fuse`, dropping both when they compose to the
+        identity.
+
+        >>> x, y = Ty('x'), Ty('y')
+        >>> assert (Swap(x, y) >> Swap(y, x)).fuse_plumbing() == Id(x @ y)
+        """
+        inside = []
+        for layer in self.inside:
+            if inside and all(
+                    layer.is_generator and layer.is_plumbing
+                    for layer in (inside[-1], layer)):
+                inside += inside.pop().generator.fuse(layer.generator).inside
+            else:
+                inside.append(layer)
+        return self.ar(tuple(inside), self.dom, self.cod)
 
     def depth(self):
         """
@@ -575,6 +607,21 @@ class Permutation(Box):
 
     def dagger(self) -> Permutation:
         return type(self)(self.cod, self.perm.dagger())
+
+    def fuse(self, other: Permutation) -> Diagram:
+        """
+        The composite with another permutation as one permutation, i.e. the
+        identity diagram when they are inverse.
+
+        Parameters:
+            other : The permutation to compose with.
+
+        >>> x, y = Ty('x'), Ty('y')
+        >>> assert Swap(x, y).fuse(Swap(y, x)) == Id(x @ y)
+        """
+        assert_iscomposable(self, other)
+        return self.ar.from_permutation(
+            [self.perm[i] for i in other.perm], self.dom)
 
     def tensor(self, *others):
         """
