@@ -9,6 +9,18 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Added
 
+- `neural.geometric`, the same networks run along the blocks of their
+  symmetry group rather than along their tables. A wiring invariant under a
+  group built from symmetric groups by products and wreath products is a
+  union of orbitals, each a signed sum of blocks by Möbius inversion
+  (`wiring.chains`, `Block`, `decompose`, `families`), and a sum over a
+  block is a reduction, so the `Geometric` mixin's `cycle` gathers nothing:
+  it computes the reference cycle from and to the same state, with the
+  linear maps composed where that saves work, and reads its blocks off the
+  network's own table under the `group` it is given: the sudoku peer graph
+  under `Product[S3 wr S3, S3 wr S3]` is its rows, columns and boxes less
+  their overlaps, and a grid's neighbours are `Shift`s ([rel-int/Recursive_GNNs#1](https://github.com/rel-int/Recursive_GNNs/issues/1)).
+
 - The networks of recursive message passing, moved out of the experiments of
   *Tiny Recursive Message Passing* op for op, on top of their trainers: the
   same checkpoints, the same initial weights from the same seed and the same

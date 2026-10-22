@@ -11,6 +11,10 @@ promises: its legs grouped into orbits, the symmetry each orbit carries, and
 the wirings drawn out of a family's combinatorics.
 
 
+:mod:`discopy.neural.geometric` runs a recursive network along the blocks
+of its symmetry group rather than along its tables.
+
+
 The networks themselves: :mod:`discopy.neural.wiring` reads the tables a
 network gathers along off a factor graph; :mod:`discopy.neural.cell` holds
 the boxes, a site on every node and a Deep Sets unit on every factor;
@@ -38,6 +42,7 @@ schedule, the weight average and the per-sample clip.
     discopy.neural.wiring
     discopy.neural.cell
     discopy.neural.recursion
+    discopy.neural.geometric
 
 Note
 ----
