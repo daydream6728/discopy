@@ -889,9 +889,8 @@ class Box(tensor.Box[complex], Circuit):
 
     def dagger(self):
         """
-        The dagger of a box, which is mixed when the box is: a box rebuilt
-        mixed would be evaluated as a channel, where its array is no longer
-        transposed, and a quantum box could not be evaluated at all.
+        The dagger of a box, pure when the box is, as its rotation and its
+        delay are.
 
         >>> f = Box('f', bit, bit, data=[1, 2, 3, 4], is_mixed=False)
         >>> assert not f.dagger().is_mixed and not f.rotate().is_mixed
