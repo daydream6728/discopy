@@ -410,7 +410,8 @@ class Config:
         theta : The kill threshold of the projection.
         theta_cls : Its threshold on the board conflict probability.
         temp : Its softmax temperature.
-        seed : The seed of the projection's generator.
+        seed : The seed a trainer draws the projection's generator from,
+               see :meth:`Pool.iterate`.
         compile : Whether to compile the loss.
         compile_mode : The mode it is compiled in, ``None`` for the default.
         amp_dtype : The CUDA autocast dtype, ``None`` for no autocast.
@@ -565,7 +566,8 @@ class Pool:
             optimizer : The optimizer of the net.
             scheduler : Its learning-rate schedule.
             ema : The weight average, with ``update(net)``, or ``None``.
-            generator : The generator of the projection's draws.
+            generator : The generator of the projection's draws, ``None`` for
+                        the global one: the pool does not seed it.
         """
         cfg = self.cfg
         given = self.x0.sum(-1) == 1
@@ -691,7 +693,8 @@ def solve(model, puzzles, solutions, cfg: SolveConfig, grade=exact,
             solution's.
         prefer : Which finished chains to accept first, from the lattices
             and the chains' labels, or ``None``.
-        label : A per-puzzle tensor copied onto its chains, for ``prefer``.
+        label : One value per puzzle ``(n, )``, copied onto its chains, for
+                ``prefer``.
 
     Example
     -------
