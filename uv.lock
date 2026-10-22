@@ -973,7 +973,7 @@ requires-dist = [
     { name = "pytest-xdist", marker = "extra == 'test'" },
     { name = "pytket", marker = "extra == 'docs'" },
     { name = "pytket", marker = "extra == 'quantum'" },
-    { name = "pyzx", marker = "extra == 'quantum'", specifier = "==0.7.3" },
+    { name = "pyzx", marker = "extra == 'quantum'", specifier = "==0.10.7" },
     { name = "qiskit", marker = "extra == 'quantum'" },
     { name = "qiskit-aer", marker = "extra == 'quantum'" },
     { name = "qoolqit", marker = "extra == 'quantum'" },
@@ -3374,18 +3374,19 @@ wheels = [
 
 [[package]]
 name = "pyzx"
-version = "0.7.3"
+version = "0.10.7"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "ipywidgets" },
+    { name = "lark" },
     { name = "numpy" },
     { name = "pyperclip" },
     { name = "tqdm" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/4b/9e/34364a7b395cc230e9a2b8f246c8f8e6224ac38dd76bf9db1f1649cca691/pyzx-0.7.3.tar.gz", hash = "sha256:911eb38a1cb3788ff726859fb97ffcda55fcc0ba104a9da8e932e4d52fd6f8f8", size = 297201, upload-time = "2023-02-22T15:01:51.4Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/92/0a/df4db9b2c5b0b573f108499c2fadb2ed286c49acf52130e091f84570f5f3/pyzx-0.10.7.tar.gz", hash = "sha256:8f076c67fc79be694dbf85429fd92697143697f44a7f53401f98f3dd5983e720", size = 545691, upload-time = "2026-10-01T15:54:49.293Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/bf/72/2aae403eddefef981aeac6635f0adb0b6e871b52bd99e8f3186eda5e4f10/pyzx-0.7.3-py3-none-any.whl", hash = "sha256:a616c1a3004dc4d3edc734b370e77ed062f0f392ffc4bcb08b4320604759d682", size = 331730, upload-time = "2023-02-22T15:01:49.154Z" },
+    { url = "https://files.pythonhosted.org/packages/c8/62/9b8721e5d61c03d86cec21ec2c2cbdcfed67dd6c71d8d76c76106ece2ec5/pyzx-0.10.7-py3-none-any.whl", hash = "sha256:63b53fff19b1e2b00173b3dac3746bfb8f3ebca02487e192831ffe27cf0f9076", size = 567223, upload-time = "2026-10-01T15:54:47.832Z" },
 ]
 
 [[package]]

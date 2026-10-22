@@ -69,7 +69,7 @@ all = [
 [project.optional-dependencies]
 quantum = [
     "pytket",
-    "pyzx == 0.7.3",
+    "pyzx == 0.10.7",
     "sympy",
     "tensornetwork",
     "jax",
@@ -133,11 +133,6 @@ torch = [
 name = "pytorch-cpu"
 url = "https://download.pytorch.org/whl/cpu"
 explicit = true
-
-[tool.uv.build-backend]
-module-root = ""
-source-exclude = ["discopy/version.py"]
-wheel-exclude = ["discopy/version.py"]
 
 [project.urls]
 Homepage = "https://discopy.org"

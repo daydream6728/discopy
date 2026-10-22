@@ -22,6 +22,7 @@ Summary
 """
 
 import cmath
+from fractions import Fraction
 from functools import reduce
 from math import pi
 
@@ -161,7 +162,7 @@ class Diagram(tensor.Diagram[complex]):
             if isinstance(box, Spider):
                 node = graph.add_vertex(
                     VertexType.Z if isinstance(box, Z) else VertexType.X,
-                    phase=box.phase * 2 if box.phase else None)
+                    phase=Fraction(box.phase * 2) if box.phase else None)
                 graph.set_position(node, offset, row + 1)
                 edge_table = {}
                 for i, _ in enumerate(box.dom):

@@ -419,3 +419,10 @@ def test_parse_k_best():
                 (score for _, score in every(sentence, 0, len(sentence))),
                 reverse=True)[:k]
             assert [score for _, score in parse(sentence, k)] == expected
+
+
+def test_Word_dagger():
+    n = Ty('n')
+    Bob = Word('Bob', n)
+    assert (Bob[::-1].dom, Bob[::-1].cod) == (n, Ty())
+    assert (Bob >> Bob[::-1]).cod == Ty() and Bob[::-1][::-1] == Bob

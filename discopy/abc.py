@@ -40,6 +40,7 @@ Summary
     Group
     Nat
     MonoidalCategory
+    SpacialCategory
     PRO
     FeedbackCategory
     TracedCategory
@@ -83,7 +84,7 @@ from typing import ClassVar
 
 from discopy import messages
 from discopy.axioms import (
-    Delay, Equation, Hom, Obj, Tensor, Testable, Var, axiom)
+    Delay, Equation, Hom, Obj, Tensor, Testable, Unit, Var, axiom)
 from discopy.utils import (  # noqa: F401  pylint: disable=unused-import
     AxiomError, NamedGeneric, classproperty, factory_name)
 
@@ -490,6 +491,23 @@ class MonoidalCategory[C0: ColouredMonoid, C1: MonoidalCategory](
         return len(mem)
 
 
+class SpacialCategory[C0, C1](MonoidalCategory[C0, C1]):
+    """
+    A spacial category is a :class:`MonoidalCategory` where scalars slide:
+    a scalar ``s : I -> I`` on the left of any morphism is the same scalar on
+    its right, see :cite:t:`Selinger10`. Its diagrams are planar up to the
+    face each scalar lies in, i.e. a component that touches nothing else can
+    be lifted out of the plane and put down anywhere, see
+    :meth:`discopy.cmap.CMap.match`.
+    """
+    @axiom
+    def scalar_sliding[A: Obj[C0], B: Obj[C0]](
+            cls, scalar: Hom[C1, Unit[C0], Unit[C0]], f: Hom[C1, A, B])\
+            -> Equation[Hom[C1, A, B]]:
+        """ A scalar on the left of a morphism is a scalar on its right. """
+        return cls.equation_factory(scalar @ f, f @ scalar)
+
+
 class PRO[C1: PRO](MonoidalCategory[Nat, C1]):
     """
     A PRO is a :class:`MonoidalCategory` whose objects are the natural
@@ -604,9 +622,11 @@ def keyword_form(trace: Callable) -> Callable:
     The domain is checked on the result, since the boundary takes in the
     delay of the memory when the trace is the
     :meth:`TracedCategory.feedback` of a category that labels the two apart,
-    e.g. a :class:`discopy.drawing.Drawing`. A method that takes ``mem``
-    already is returned as it is, so that a class wraps the trace it defines
-    once, whichever trace that one calls.
+    e.g. a :class:`discopy.drawing.Drawing`. The positional form is split
+    too, so that an ``n`` the boundary cannot spare raises ``ValueError`` in
+    either form. A method that takes ``mem`` already is returned as it is,
+    so that a class wraps the trace it defines once, whichever trace that
+    one calls.
 
     Parameters:
         trace : The method in its positional form.
@@ -617,6 +637,10 @@ def keyword_form(trace: Callable) -> Callable:
     >>> f = Matrix[bool]([[1, 1], [0, 0]], 2, 2)
     >>> assert f.trace(mem=1) == f.trace() != f.trace(mem=1, left=True)
     >>> assert keyword_form(Matrix.trace) is Matrix.trace
+    >>> f.trace(3)
+    Traceback (most recent call last):
+        ...
+    ValueError: Cannot split 3 atoms off 2.
     """
     if "mem" in signature(trace).parameters:
         return trace
@@ -625,6 +649,7 @@ def keyword_form(trace: Callable) -> Callable:
     def method(self, n: int = None, left: bool = False, *,
                dom=None, cod=None, mem=None):
         if (dom, cod, mem) == (None, None, None):
+            self.split_memory(n, left)
             return trace(self, left=left) if n is None\
                 else trace(self, n, left)
         dom, cod, mem = self.split_memory(
@@ -932,10 +957,11 @@ class PivotalCategory[C0, C1](RigidCategory[C0, C1], TracedCategory[C0, C1]):
         messages.PLANAR_YANKING)
 
 
-class BraidedCategory[C0, C1](MonoidalCategory[C0, C1]):
+class BraidedCategory[C0, C1](SpacialCategory[C0, C1]):
     """
     A braided category is a :class:`MonoidalCategory` with a method
-    :code:`braid` for the natural isomorphism :code:`x @ y -> y @ x`.
+    :code:`braid` for the natural isomorphism :code:`x @ y -> y @ x`. It is
+    a :class:`SpacialCategory`: a scalar slides along the braid of the unit.
     """
     @classmethod
     @abstractmethod
