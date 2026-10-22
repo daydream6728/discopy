@@ -2535,8 +2535,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   bit gets a `Discard` in the post-processing, so `eval(backend=...)` has
   the codomain of the circuit. It also exports `CY`, `CCX`, `U1`, `CU1` and
   a controlled `Ry`, reading every controlled gate from its controls and
-  their distances, and raises `NotImplementedError` on one tket does not
-  name; `Circuit.from_tk` reads back every parametrised gate
+  their distances, and raises `NotImplementedError` for a gate tket has no
+  name for; `Circuit.from_tk` reads back every parametrised gate
   ([rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
 - `Circuit.to_tn` contracts a discarded bit and a measurement that keeps its
   qubits or overrides its bits, and `Circuit.measure` measures a circuit
