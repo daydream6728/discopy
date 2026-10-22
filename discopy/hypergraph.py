@@ -298,10 +298,8 @@ class Hypergraph(
                 producers if not consumers and len(producers) == 2 else None
             if legs is not None:  # a cup or a cap, its legs in port order
                 left, right = (ports[i].obj for i in sorted(legs))
-                if producers:
-                    self.assert_isadjoint(left, right)
-                else:
-                    self.assert_isadjoint(right, left)
+                self.assert_isadjoint(
+                    *((left, right) if producers else (right, left)))
 
         self.offsets = offsets or tuple(len(boxes) * [None])
 
@@ -1625,21 +1623,20 @@ class Hypergraph(
         """
         if not issubclass(self.category, SymmetricCategory):
             return legs
-        ports, ends = self.ports, {}
-        for producers, consumers in self.spider_wires:
-            for port in producers | consumers:
-                ends[port] = (producers | consumers) - {port}
+        ports, wires = self.ports, self.spider_wires
         reads = ports[legs[0]].kind in ("dom", "output")
-        keys = {port: (node.i, ) for port, node in enumerate(ports)
-                if node.kind == ("output" if reads else "input")}
-        box_ports, start = [], len(self.dom)
-        for box in self.boxes:
-            middle, stop = start + len(box.dom), start + len(box.dom @ box.cod)
-            box_ports.append((range(start, middle), range(middle, stop)))
-            start = stop
-        for dom, cod in reversed(box_ports) if reads else box_ports:
-            sides, legs_of_box = (cod, dom) if reads else (dom, cod)
-            found = [keys[end] for side in sides for end in ends[side]
+        keys, box_ports = {}, {}
+        for port, node in enumerate(ports):
+            if node.kind == ("output" if reads else "input"):
+                keys[port] = (node.i, )
+            elif node.kind in ("dom", "cod"):
+                box_ports.setdefault(node.depth, ([], []))[
+                    node.kind == "cod"].append(port)
+        for depth in sorted(box_ports, reverse=reads):
+            sides, legs_of_box = box_ports[depth][::-1] if reads\
+                else box_ports[depth]
+            found = [keys[end] for side in sides
+                     for end in set.union(*wires[self.flat_wires[side]])
                      if end in keys]
             keys.update({port: min(found) + (ports[port].i, )
                          for port in legs_of_box if found})
@@ -1679,12 +1676,14 @@ class Hypergraph(
                 if self.ports[target].kind in kinds:
                     spider_types = dict(enumerate(self.spider_types))
                     typ = spider_types[spider]
-                    first, second = self.leg_order(source, target)
+                    depth = getattr(
+                        self.ports[source], "depth", len(self.boxes))
+                    source, target = self.leg_order(source, target)
                     source_obj, target_obj = (
-                        self.ports[first].obj, self.ports[second].obj)
+                        self.ports[source].obj, self.ports[target].obj)
                     left, right = len(spider_types), len(spider_types) + 1
                     fwires = list(self.flat_wires)
-                    fwires[first], fwires[second] = left, right
+                    fwires[source], fwires[target] = left, right
                     if cups_or_caps == "cups":
                         boxes = self.boxes + (self.category.cup_factory(
                             source_obj, target_obj), )
@@ -1692,8 +1691,6 @@ class Hypergraph(
                         fwires = fwires[:len(fwires) - len(self.cod)] + [
                             left, right] + fwires[len(fwires) - len(self.cod):]
                     else:
-                        depth = getattr(
-                            self.ports[source], "depth", len(self.boxes))
                         boxes = self.boxes[:depth] + (
                             self.category.cap_factory(
                                 source_obj, target_obj), ) + self.boxes[depth:]
