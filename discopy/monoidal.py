@@ -1510,8 +1510,9 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
         normal form for the axioms of the level, e.g. in
         :mod:`discopy.symmetric` the diagrams
         ``Swap(x, y) >> y @ f >> Swap(y, x)`` and ``f @ y`` have the same
-        hypergraph and neither is rewritten into the other. The ``Equation``
-        of such a level compares diagrams up to its axioms instead.
+        hypergraph and neither is rewritten into the other. From
+        :mod:`discopy.symmetric` up, the ``Equation`` of the level compares
+        diagrams up to their hypergraph instead.
         """
         diagram = self
         if any(len(layer.boxes) > 1 for layer in self.inside):
