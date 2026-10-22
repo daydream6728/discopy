@@ -141,18 +141,31 @@ class Matrix(MarkovCategory, ComarkovCategory, DaggerCategory,
            [4, 0],
            [0, 2],
            [0, 4]])
+
+    A matrix reads back from its representation up to the rounding of its
+    entries and only up to ``config.NUMPY_THRESHOLD`` of them, past which
+    NumPy elides the array, so that :meth:`transparency` is weakened to
+    those:
+
+    >>> Matrix[int]([0] * 24, 4, 6)
+    Matrix[int]([0, 0, 0, ..., 0, 0, 0], dom=4, cod=6)
     """
     ob = Nat
 
+    transparency = Testable.transparency.weaken(
+        max_entries=config.NUMPY_THRESHOLD)
+
     @classmethod
-    def strategy(cls, *, dom=None, cod=None, max_size=3, max_entry=3):
+    def strategy(cls, *, dom=None, cod=None, max_size=3, max_entry=3,
+                 max_entries=None):
         """
         Generate matrices with entries in ``range(max_entry + 1)`` between
-        the given dimensions, or between dimensions up to ``max_size``:
-        small integers are exact in every ``dtype``, so the laws are checked
-        without rounding. The bare class generates ``Matrix[int]``, which
-        reads back from its representation where the ``int64`` it infers
-        names a type no namespace binds.
+        the given dimensions, or between dimensions up to ``max_size``, and
+        with at most ``max_entries`` entries if given: small integers are
+        exact in every ``dtype``, so the laws are checked without rounding.
+        The bare class generates ``Matrix[int]``, which reads back from its
+        representation where the ``int64`` it infers names a type no
+        namespace binds.
         """
         from hypothesis import strategies as st
 
@@ -169,7 +182,8 @@ class Matrix(MarkovCategory, ComarkovCategory, DaggerCategory,
                 min_size=size, max_size=size)
             return typed(draw(entries), *shape)
 
-        return matrices()
+        return matrices() if max_entries is None else matrices().filter(
+            lambda matrix: matrix.array.size <= max_entries)
 
     def cast(self, dtype: type) -> Matrix:
         """

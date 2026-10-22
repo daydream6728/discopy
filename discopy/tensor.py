@@ -139,11 +139,13 @@ class Tensor(Matrix):
         return cls(Matrix.id(product(dom.inside)).array, dom, dom)
 
     @classmethod
-    def strategy(cls, *, dom=None, cod=None, max_size=3, max_entry=3):
+    def strategy(cls, *, dom=None, cod=None, max_size=3, max_entry=3,
+                 max_entries=None):
         """
         Generate tensors between dimensions of at most two factors up to
-        ``max_size``, with entries in ``range(max_entry + 1)`` as
-        :meth:`Matrix.strategy` does between natural numbers.
+        ``max_size``, with entries in ``range(max_entry + 1)`` and at most
+        ``max_entries`` of them as :meth:`Matrix.strategy` does between
+        natural numbers.
         """
         from hypothesis import strategies as st
 
@@ -161,7 +163,8 @@ class Tensor(Matrix):
                 min_size=size, max_size=size)
             return typed(draw(entries), *shape)
 
-        return tensors()
+        return tensors() if max_entries is None else tensors().filter(
+            lambda tensor: tensor.array.size <= max_entries)
 
     def then(self, *others: Tensor) -> Tensor:
         if len(others) != 1:

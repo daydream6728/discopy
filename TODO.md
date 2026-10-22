@@ -12,8 +12,8 @@ USER's live rulings of 10-22, as relayed on the issues:
 
 ([#140 (comment)](https://github.com/rel-int/discopy-next/issues/140#issuecomment-6349551782))
 
-- [ ] #156: `transparency` on `Matrix` and `Tensor` weakened to arrays of at most `config.NUMPY_THRESHOLD` entries, with a test
-- [ ] #156: STYLE.md's transparency paragraph says arrays read back up to elision and rounding
+- [x] #156: `transparency` on `Matrix` and `Tensor` weakened to arrays of at most `config.NUMPY_THRESHOLD` entries, with a test
+- [x] #156: STYLE.md's transparency paragraph says arrays read back up to elision and rounding
 - [ ] #140: an uncoloured `monoidal.Wire` reprs as `monoidal.Wire('x')`, pinned expectations updated
 - [ ] CHANGELOG `### Changed`, at the end
 - [ ] merge `origin/main` once #268 lands, full suite, pflake8, pylint, proptest cells of `matrix`

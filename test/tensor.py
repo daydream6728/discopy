@@ -548,6 +548,18 @@ def test_Tensor_strategy():
     assert tensor.array.shape == tensor.dom.inside + tensor.cod.inside
 
 
+def test_Tensor_transparency_up_to_elision():
+    from hypothesis import settings
+    from hypothesis.errors import NoSuchExample
+    from discopy import config
+    law = Tensor[int].transparency
+    assert law.params == {"max_entries": config.NUMPY_THRESHOLD}
+    assert law(Tensor[int]([0] * 16, Dim(2, 2), Dim(2, 2)))
+    assert "..." in repr(Tensor[int]([0] * 24, Dim(2, 2), Dim(2, 3)))
+    with raises(NoSuchExample):
+        law.falsify(settings=settings(max_examples=50, database=None))
+
+
 def test_delay_is_the_identity():
     f = Box('f', Dim(2), Dim(2), [1, 0, 0, 1])
     diagram = f @ Dim(3) >> Spider(1, 2, Dim(2)) @ Dim(3)\
