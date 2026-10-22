@@ -594,8 +594,8 @@ def field_free_symbols(value) -> "set[sympy.Symbol]":
 def field_subs(value, *args):
     """
     Substitute variables in the value of a field: an arrow by its own
-    :meth:`Arrow.subs`, a tuple pointwise and anything else by
-    :func:`utils.rsubs`.
+    :meth:`Arrow.subs`, an object not at all, a tuple pointwise and anything
+    else by :func:`utils.rsubs`.
 
     Parameters:
         value : The value of a field.
@@ -603,6 +603,8 @@ def field_subs(value, *args):
     """
     if isinstance(value, Arrow):
         return value.subs(*args)
+    if isinstance(value, Ob):
+        return value
     if isinstance(value, tuple):
         return tuple(field_subs(x, *args) for x in value)
     return rsubs(value, *args)
@@ -620,6 +622,8 @@ def field_lambdify(value, *symbols: "sympy.Symbol", **kwargs) -> Callable:
     """
     if isinstance(value, Arrow):
         return value.lambdify(*symbols, **kwargs)
+    if isinstance(value, Ob):
+        return lambda *_: value
     if isinstance(value, tuple):
         funcs = [field_lambdify(x, *symbols, **kwargs) for x in value]
         return lambda *xs: tuple(func(*xs) for func in funcs)

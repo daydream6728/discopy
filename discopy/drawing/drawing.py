@@ -690,7 +690,7 @@ class Drawing(TracedCategory, RichDisplay):
                     obj.skip_label = True
 
         for attr, default in BOX_DRAWING_ATTRIBUTES.items():
-            setattr(box, attr, getattr(old_box, attr, default(box)))
+            setattrs(box, **{attr: getattr(old_box, attr, default(box))})
 
         if box.draw_as_wires and not box.frame_boundary:
             for i, obj in enumerate(box.cod.inside):
@@ -980,7 +980,7 @@ class Drawing(TracedCategory, RichDisplay):
                 if isinstance(box, Permutation) else box.dagger()
             for attr in BOX_DRAWING_ATTRIBUTES:
                 if not hasattr(result, attr):
-                    setattr(result, attr, getattr(box, attr))
+                    setattrs(result, **{attr: getattr(box, attr)})
             return result
 
         if self.is_box:
@@ -1131,7 +1131,6 @@ class Drawing(TracedCategory, RichDisplay):
         from discopy.monoidal import Wire, Ty
         left = Ty(Wire(name or "", dom.dom, arg_dom.dom))
         right = Ty(Wire("", arg_dom.cod, dom.cod))
-        left[0].always_draw_label = True
         wires_can_go_straight = (
             len(dom), len(cod)) == (len(arg_dom), len(arg_cod))
         if frame_sides:

@@ -905,7 +905,8 @@ def inherit_fields(cls: type):
     parameters = signature(cls.__init__).parameters.values()
     if any(p.kind is p.VAR_KEYWORD for p in parameters):
         return
-    names = {p.name for p in parameters}
+    names = {p.name for p in parameters
+             if p.kind in (p.POSITIONAL_OR_KEYWORD, p.KEYWORD_ONLY)}
     for field in dataclasses.fields(cls):
         if field.init != (field.name in names):
             fields[field.name] = field = copy(field)

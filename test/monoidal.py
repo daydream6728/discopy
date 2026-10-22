@@ -244,7 +244,7 @@ def test_Layer_legacy_serialisation():
     assert from_tree(tree).boxes_or_types == (f, )
 
     legacy = Layer(f)
-    legacy.boxes_or_types = (Ty(), f, Ty())
+    object.__setattr__(legacy, "boxes_or_types", (Ty(), f, Ty()))
     assert legacy.name == "Ty() @ f @ Ty()"
     restored = pickle.loads(pickle.dumps(legacy))
     assert restored == Layer(f)

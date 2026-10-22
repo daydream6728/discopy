@@ -662,7 +662,8 @@ class Box(monoidal.Box, Diagram):
     def to_drawing(self):
         result = super().to_drawing()
         if result.box.drawing_name:
-            result.box.drawing_name += str_delayed(self.time_step)
+            setattrs(result.box, drawing_name=result.box.drawing_name
+                     + str_delayed(self.time_step))
         return result
 
     def delay(self, n_steps=1):

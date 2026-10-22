@@ -70,7 +70,9 @@ from discopy.config import (
     COLOUR_DRAWING_ATTRIBUTES, TRANSPARENT)
 from discopy.utils import (
     factory,
+    derived,
     frozen,
+    replace,
     setattrs,
     factory_name,
     from_tree,
@@ -310,6 +312,7 @@ class List(Monoid, NamedGeneric['generator_factory']):
 
 
 @factory
+@frozen
 class Ty(cat.Ob, cat.FreeCategory, ColouredMonoid):
     """
     A type is a composable path of objects with :meth:`Ty.tensor`
@@ -360,6 +363,11 @@ class Ty(cat.Ob, cat.FreeCategory, ColouredMonoid):
     ob = Colour
     generator_factory = Wire
 
+    inside: tuple
+    dom: Colour
+    cod: Colour
+    name: str = derived()
+
     def cast_wire(self, x: str | cat.Ob) -> cat.Ob:
         """
         Turn a constructor argument into a ``self.generator_factory``.
@@ -392,7 +400,7 @@ class Ty(cat.Ob, cat.FreeCategory, ColouredMonoid):
         if cod is None:
             cod = inside[-1].cod if inside else transparent
         cat.FreeCategory.__init__(self, inside, dom, cod, _scan)
-        cat.Ob.__init__(self, type(self).__name__)
+        setattrs(self, name=type(self).__name__)
 
     def tensor(self, *others: Ty) -> Ty:
         if any(not isinstance(other, self.factory) for other in others):
@@ -604,8 +612,9 @@ class Nat(abc.Nat, Ty):
     def __init__(self, inside: int | tuple = 0, dom: Colour = None,
                  cod: Colour = None, _scan: bool = True):
         # pylint: disable=unused-argument  # a Nat has one colour
-        self.n = inside if isinstance(inside, int) else len(inside)
-        self.dom = self.cod = transparent
+        setattrs(
+            self, n=inside if isinstance(inside, int) else len(inside),
+            dom=transparent, cod=transparent)
         cat.Ob.__init__(self, type(self).__name__)
 
     def __setstate__(self, state):
@@ -721,6 +730,7 @@ class Dim(Ty):
         return cls(*tree['inside'])
 
 
+@frozen
 class Layer(cat.Box, ColouredMonoid):
     """
     A layer is a tensor product of boxes and plumbing, i.e. non-empty types.
@@ -734,6 +744,8 @@ class Layer(cat.Box, ColouredMonoid):
             tensoring ``n`` layers takes linear rather than quadratic time.
     """
     ob = Ty
+
+    boxes_or_types: tuple
 
     def __setstate__(self, state):
         if 'boxes_or_types' not in state:
@@ -751,9 +763,23 @@ class Layer(cat.Box, ColouredMonoid):
         if normalise:
             type(self).check(inside)
             inside = type(self).normalise(inside)
-        self.boxes_or_types = tuple(inside)
+        setattrs(self, boxes_or_types=tuple(inside))
         if normalise and not self.boxes:
             raise ValueError(messages.LAYERS_MUST_HAVE_A_BOX)
+
+    def __replace__(self, **changes):
+        """
+        A layer is rebuilt from its boxes and types, normalised: whether to
+        normalise is an instruction to the constructor rather than a field.
+
+        >>> x = Ty('x')
+        >>> f, g = Box('f', x, x), Box('g', x, x)
+        >>> assert replace(Layer(f), boxes_or_types=(x, g, Ty())) == Layer(x, g)
+        """
+        boxes_or_types = changes.pop("boxes_or_types", self.boxes_or_types)
+        if changes:
+            raise TypeError(f"Unexpected fields: {list(changes)}.")
+        return type(self)(*boxes_or_types)
 
     data, is_dagger = None, False
 
@@ -1057,6 +1083,7 @@ class Layer(cat.Box, ColouredMonoid):
 
 
 @factory
+@frozen
 class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
     """
     A diagram is a tuple of composable layers :code:`inside` with a pair of
@@ -1581,6 +1608,7 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
         return super().from_tree(tree)
 
 
+@frozen
 class Box(cat.Box, Diagram):
     """
     A box is a diagram with a :code:`name` and the layer of just itself inside.
