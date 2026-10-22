@@ -182,3 +182,22 @@ def test_act_pool_without_clip():
     assert stats["clip"] is None and net.slot_ref_running is None
     assert net.cell.weight.grad is not None
     assert not pool.state.answer.requires_grad
+
+
+def test_act_pool_window_loss():
+    torch = importorskip("torch")
+    from discopy.neural.act import ActConfig, ActPool, terms
+    Net, Stream = toy()
+
+    class Wrong(ActPool):
+        def window_loss(self, every, halt, x, target, given):
+            return terms(every, halt, every[-1], x, target, given,
+                         self.cfg.halt_weight, self.cfg.halt_board_weight)[
+                :3] + (torch.ones_like(target, dtype=torch.bool), None)
+
+    for clip in (5, None):
+        torch.manual_seed(0)
+        cfg = ActConfig(steps=4, batch_size=6, n_sup=2, slot_clip=clip)
+        pool = Wrong(Net(), Stream(0), cfg)
+        assert pool.segment()[5].all()
+        assert not ActPool(Net(), Stream(0), cfg).segment()[5].all()

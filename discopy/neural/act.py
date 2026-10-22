@@ -383,7 +383,7 @@ class ActPool:
     ----
     A variant of the protocol overrides a method, never the op order:
     :meth:`segment` (the gradient of one segment), :meth:`board_loss`,
-    :meth:`targets`, :meth:`slots` and :meth:`load`.
+    :meth:`window_loss`, :meth:`targets`, :meth:`slots` and :meth:`load`.
 
     Example
     -------
@@ -459,6 +459,21 @@ class ActPool:
         given)``. """
         return self.x, self.target, self.given
 
+    def window_loss(self, every, halt, x, *labels) -> tuple:
+        """
+        The loss of a window, :func:`terms` on the last readout: ``(loss,
+        ce, q, cell_ok, board)``. A variant grading the halt head on
+        another decoding overrides it.
+
+        Parameters:
+            every : The readouts of the window.
+            halt : The per-cell halt logits.
+            x : The puzzle lattices.
+            labels : The rest of :meth:`targets`.
+        """
+        return terms(every, halt, every[-1], x, *labels,
+                     self.cfg.halt_weight, self.cfg.halt_board_weight)
+
     def board_loss(self, net, *args) -> tuple:
         """
         One board's window and loss, for
@@ -473,9 +488,7 @@ class ActPool:
         n = len(self.state)
         s, every, halt = net.window(type(self.state)(*args[:n]), args[n],
                                     cycle=net.cycle)
-        loss, ce, q, cell_ok, _ = terms(
-            every, halt, every[-1], *args[n:], self.cfg.halt_weight,
-            self.cfg.halt_board_weight)
+        loss, ce, q, cell_ok, _ = self.window_loss(every, halt, *args[n:])
         return loss, (ce.detach(), q.detach(), cell_ok, halt.detach(),
                       *(t.detach() for t in s))
 
@@ -509,11 +522,9 @@ class ActPool:
         Parameters:
             s : The state the prefix returned.
         """
-        cfg, (x, *labels) = self.cfg, self.targets()
+        x, *labels = self.targets()
         s, every, halt = self.net.window(s, x)
-        loss, ce, q, cell_ok, _ = terms(
-            every, halt, every[-1], x, *labels, cfg.halt_weight,
-            cfg.halt_board_weight)
+        loss, ce, q, cell_ok, _ = self.window_loss(every, halt, x, *labels)
         loss.backward()
         return (detach_state(s), halt.detach(), loss.detach(), ce.detach(),
                 q.detach(), cell_ok.all(-1), None)
