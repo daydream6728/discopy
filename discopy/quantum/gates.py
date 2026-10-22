@@ -128,7 +128,7 @@ class Discard(SelfConjugate):
         return MixedState(self.dom)
 
     def _decompose(self):
-        return Id().tensor(*[Discard()] * self.n_qubits)
+        return Id().tensor(*map(Discard, self.dom))
 
 
 class MixedState(SelfConjugate):
@@ -156,7 +156,7 @@ class MixedState(SelfConjugate):
         return Discard(self.cod)
 
     def _decompose(self):
-        return Id().tensor(*[MixedState()] * len(self.cod))
+        return Id().tensor(*map(MixedState, self.cod))
 
 
 class Measure(SelfConjugate):
@@ -205,9 +205,15 @@ class Measure(SelfConjugate):
                       reset_bits=self.override_bits)
 
     def _decompose(self):
-        return Id().tensor(*[
+        n = self.n_qubits
+        interleave = [i + j * n for i in range(n) for j in (0, 1)]
+        dom = Circuit.permutation(interleave, self.dom)\
+            if self.override_bits else Id(self.dom)
+        cod = Id(self.cod) if self.destructive\
+            else Circuit.permutation(interleave, self.cod)[::-1]
+        return dom >> Id().tensor(*n * [
             Measure(destructive=self.destructive,
-                    override_bits=self.override_bits)] * self.n_qubits)
+                    override_bits=self.override_bits)]) >> cod
 
 
 class Encode(SelfConjugate):
@@ -253,9 +259,7 @@ class Encode(SelfConjugate):
                        override_bits=self.reset_bits)
 
     def _decompose(self):
-        return Id().tensor(*[
-            Encode(constructive=self.constructive,
-                   reset_bits=self.reset_bits)] * self.n_bits)
+        return self.dagger()._decompose().dagger()
 
 
 class QuantumGate(Box):

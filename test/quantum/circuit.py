@@ -89,6 +89,7 @@ def test_Circuit_conjugate():
 def test_Circuit_measure():
     assert Id().measure() == 1
     assert all(Bits(0).measure(mixed=True) == np.array([1, 0]))
+    assert np.allclose(Copy().measure(), [[1, 0], [0, 0]])
     circuit = Ket(0, 0, 0) >> H @ H @ H
     assert np.allclose(circuit.measure(), np.ones((2, 2, 2)) / 8)
     assert np.allclose(
@@ -683,7 +684,11 @@ mixed_circuits = [
         >> qubit @ CX @ qubit >> qubit ** 3 @ H >> Measure(4)),
     Ket(0, 0, 0, 0) >> Discard(2) @ Measure(2) @ sqrt(2),
     Circuit.swap(bit, bit) @ (MixedState(2) >> SWAP),
-    Measure() >> Copy() >> Match() >> Encode()
+    Measure() >> Copy() >> Match() >> Encode(),
+    Bits(1, 0) >> Discard(bit) @ bit >> MixedState(bit) @ bit,
+    H @ Ry(0.3) >> Measure(2, destructive=False),
+    Ket(0) @ Bits(1) >> Measure(override_bits=True),
+    Encode(2, constructive=False, reset_bits=True)
 ]
 
 pure_circuits = [
