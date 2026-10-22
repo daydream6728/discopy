@@ -1396,6 +1396,34 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
+- `subs` takes every form its docstring and `sympy.subs` give, a variable
+  and an expression, a list of pairs or a dict, as well as the pairs as
+  arguments that `utils.rsubs` already took, where `Box.subs` and `rsubs`
+  read their arguments in two shapes so that the list form raised and the
+  pairs were a silent no-op; `utils.rmap` rebuilds a numpy array, where it
+  called its shape constructor and `subs` returned uninitialised memory,
+  and takes a string as a leaf, where `free_symbols`, `subs` and
+  `lambdify` recursed forever into it (B63 of
+  [rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
+- `subs` and `lambdify` keep what a box has beyond its name and data: the
+  winding number `z` of a rotated `rigid.Box`, the time step of a delayed
+  `feedback.Box`, both on a `pivotal.Box`, and the order of a
+  `pregroup.Word`'s domain and codomain, which they swapped, each class
+  rebuilding the box the way its `dagger` or `rotate` already did
+  ([rel-int/discopy-next#118](https://github.com/rel-int/discopy-next/issues/118)).
+- A functor keeps the name of a bubble, and a functor into monoidal
+  diagrams its drawing flags, so that `Functor.id()` is the identity on
+  bubbles, where it rebuilt them through `cod.bubble(*args, dom=, cod=)`
+  (B61); the `repr` of `cat.Bubble` carries its `name` and `method`, as its
+  `to_tree` does (B39, B86); `Functor.__eq__` compares domains, and the
+  `repr` of a functor names its domain when it is not the default (B88)
+  ([rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
+- `abc.MonoidalCategory.tensor` is declared an instance method, as all its
+  implementations are, where it was a classmethod; the nine bare
+  `ValueError`s of `abc.py` and `utils.py` say what went wrong; and a `Sum`
+  builds its name when it is first asked for, so that adding a thousand
+  boxes one at a time takes under a second, where it took seven (B88 of
+  [rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
 - A tree saying `"is_dagger": false` reads back as no dagger: `cat.Box`,
   and so every box, `monoidal.Wire`, `frobenius.Spider`,
   `feedback.FollowedBy` and `quantum.gates.Digits` took the presence of the
