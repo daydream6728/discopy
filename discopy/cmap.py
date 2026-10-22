@@ -1786,12 +1786,14 @@ cycles of this map.
         if not self.is_monogamous or self.loops:
             raise AxiomError(messages.NOT_DOWNWARD.format(self))
         ends = set(ends)
-        name = lambda port: port if port in ends else self.edges[port]
+        names = [port if port in ends else wire
+                 for port, wire in enumerate(self.edges)]
         boxes = [
-            (tuple(map(name, ports[:len(box.dom)])), ports[len(box.dom):][::-1])
+            (tuple(names[port] for port in ports[:len(box.dom)]),
+             ports[len(box.dom):][::-1])
             for box, ports in zip(self.boxes, self._box_port_indices)]
-        outputs = range(self.n_ports - len(self.cod), self.n_ports)
-        return tuple(range(len(self.dom))), boxes, tuple(map(name, outputs))
+        return tuple(range(len(self.dom))), boxes, tuple(
+            names[self.n_ports - len(self.cod):])
 
     @staticmethod
     def turns(vertices, cut, cod) -> tuple[dict, dict]:
@@ -2000,8 +2002,8 @@ cycles of this map.
         return all(
             self.edges[self.image(pattern, port, boxes)]
             == self.image(pattern, pattern.edges[port], boxes)
-            for port in pattern._box_port_indices[box]
-            if pattern.owners.get(pattern.edges[port], (None, ))[0] in boxes)
+            for port, (owner, _) in pattern.owners.items() if owner == box
+            and pattern.owners.get(pattern.edges[port], (None, ))[0] in boxes)
 
     def candidates(
             self, pattern: CMap, todo: list[int], boxes: dict
@@ -2012,9 +2014,9 @@ cycles of this map.
         wire in ``self``, otherwise the first box left and all the boxes.
         """
         anchored = (
-            (box, port) for box in todo
-            for port in pattern._box_port_indices[box]
-            if pattern.owners.get(pattern.edges[port], (None, ))[0] in boxes)
+            (box, port) for port, (box, _) in pattern.owners.items()
+            if box in todo
+            and pattern.owners.get(pattern.edges[port], (None, ))[0] in boxes)
         box, port = next(anchored, (todo[0], None))
         images = range(len(self.boxes))
         if port is not None:
@@ -2083,8 +2085,9 @@ cycles of this map.
             homomorphism : A homomorphism from it, see :meth:`homomorphisms`.
         """
         boxes, wires = homomorphism
-        straight = dict(zip((i for i in range(len(pattern.dom))
-                             if pattern.edges[i] not in pattern.owners), wires))
+        straight = dict(zip((
+            i for i in range(len(pattern.dom))
+            if pattern.edges[i] not in pattern.owners), wires))
         start = pattern.n_ports - len(pattern.cod)
         inputs, outputs = [], [None] * len(pattern.cod)
         for i in range(len(pattern.dom)):
@@ -2123,7 +2126,6 @@ cycles of this map.
             pattern : The map matched.
             homomorphism : A homomorphism from it, see :meth:`homomorphisms`.
         """
-        from discopy.monoidal import Match  # pylint: disable=C0415
         hole, (boxes, _) = self.hole(pattern, homomorphism), homomorphism
         closed = not pattern.dom and not pattern.cod
         if hole is None or closed and len(boxes) < len(self.boxes):
@@ -2136,19 +2138,35 @@ cycles of this map.
             order = self.sweep(dom, vertices, cod)
         except AxiomError:
             return None
-        cut, step = list(dom), [v for v, _ in order].index(len(kept))
+        return self.context(vertices, order, kept)
+
+    def context(
+            self, vertices: list, order: list[tuple[int, int]],
+            kept: list[int]) -> Match:
+        """
+        The diagram with a hole met by a line sweeping down a map, see
+        :meth:`sweep`, the hole being the last of the vertices.
+
+        Parameters:
+            vertices : The inputs and outputs of each box and of the hole.
+            order : The order of the vertices and the offset of each.
+            kept : The boxes of ``self`` that each vertex but the last is.
+        """
+        from discopy.monoidal import Match  # pylint: disable=C0415
+        cut, step = list(range(len(self.dom))), [
+            vertex for vertex, _ in order].index(len(kept))
         for vertex, offset in order[:step]:
             inputs, outputs = vertices[vertex]
             cut[offset:offset + len(inputs)] = outputs
-        offset = order[step][1]
-        left, right = (self.ob().tensor(*(self.ports[w].obj for w in wires))
-                       for wires in (cut[:offset],
-                                     cut[offset + len(pattern.dom):]))
-        above, below = ([(self.boxes[kept[v]], i) for v, i in part]
+        (inputs, outputs), offset = vertices[-1], order[step][1]
+        left, middle, right = (
+            self.ob().tensor(*(self.ports[wire].obj for wire in wires))
+            for wires in (cut[:offset], outputs, cut[offset + len(inputs):]))
+        above, below = ([(self.boxes[kept[vertex]], i) for vertex, i in part]
                         for part in (order[:step], order[step + 1:]))
         return Match(
             above=self.category.decode(self.dom, above),
-            below=self.category.decode(left @ pattern.cod @ right, below),
+            below=self.category.decode(left @ middle @ right, below),
             left=left, right=right)
 
     def match(self, pattern: CMap) -> Iterator[Match]:
