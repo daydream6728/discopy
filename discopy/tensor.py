@@ -650,7 +650,8 @@ class Diagram(NamedGeneric['dtype'], frobenius.Diagram):
 
         Parameters:
             dtype : The datatype for spiders and the result,
-                inferred from the boxes by default, i.e. the one
+                inferred from the boxes by default, those inside sums
+                and bubbles included, i.e. the one
                 :meth:`Matrix.promote` gives for their ``dtype``.
             optimize : The contraction path, passed verbatim to the
                 backend ``einsum``.
@@ -670,10 +671,15 @@ class Diagram(NamedGeneric['dtype'], frobenius.Diagram):
         """
         category = self.category if isinstance(self, cmap.CMap) else self.ar
         dtype = dtype or getattr(self, "dtype", None)
-        if dtype is None:
-            typed = [Matrix[box.dtype].zero(0, 0)
-                     for box in self.boxes if box.dtype is not None]
-            dtype = typed[0].promote(*typed[1:]).dtype if typed else None
+        boxes = list(self.boxes) if dtype is None else []
+        for box in boxes:
+            inside = box.terms if isinstance(box, Sum)\
+                else (box.arg, ) if isinstance(box, Bubble) else ()
+            boxes += [b for diagram in inside for b in diagram.boxes]
+        typed = [Matrix[box.dtype].zero(0, 0)
+                 for box in boxes if box.dtype is not None]
+        if typed:
+            dtype = typed[0].promote(*typed[1:]).dtype
         return Functor(
             ob_map=category.dim, ar_map=lambda box: box.array,
             dtype=dtype, optimize=optimize, **params)(self)

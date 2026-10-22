@@ -362,6 +362,8 @@ def test_eval_infers_dtype_from_boxes():
     assert (h @ h >> Swap(Dim(2), Dim(2))).eval().dtype == bool
     assert (f >> f).eval(dtype=float).dtype == float
     assert h.bubble().eval(dtype=bool) == Tensor[bool]([0, 1, 1, 0], Dim(2), Dim(2))
+    assert (f >> g.bubble(func=lambda x: x)).eval() == g.eval()
+    assert ((f >> f) + (f >> f)).eval() == Tensor([2, 0, 0, 2], Dim(2), Dim(2))
 
 
 def test_Box_pickled_before_dtype_inference():
