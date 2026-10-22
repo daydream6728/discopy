@@ -123,8 +123,8 @@ class Discard(SelfConjugate):
 
     def __getnewargs__(self):
         """
-        The argument of the constructor, which a delay reads: a discard is
-        delayed by delaying the type it discards.
+        The argument of the constructor, which a pickle reads: a discard is
+        delayed by delaying the type it discards, its field.
 
         >>> assert Discard(2).delay() == Discard(qubit.delay() ** 2)
         """
@@ -635,8 +635,8 @@ class Controlled(QuantumGate):
 
     def __getnewargs__(self):
         """
-        The arguments of the constructor, which a delay reads: a controlled
-        gate is at the time step of the gate it controls.
+        The arguments of the constructor, which a pickle reads: a controlled
+        gate is delayed by delaying the gate it controls, its field.
 
         >>> assert CX.delay() == Controlled(X.delay())
         """

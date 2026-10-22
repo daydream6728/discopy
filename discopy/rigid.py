@@ -799,7 +799,7 @@ class Cup(BinaryBoxConstructor, Box):
         Box.__init__(self, name, dom, cod, draw_as_cup=True)
 
     def __getnewargs__(self):
-        """ The arguments of the constructor, which a pickle and a delay read.
+        """ The arguments of the constructor, which a pickle reads.
         """
         return self.left, self.right
 
@@ -842,7 +842,7 @@ class Cap(BinaryBoxConstructor, Box):
         Box.__init__(self, name, dom, cod, draw_as_cap=True)
 
     def __getnewargs__(self):
-        """ The arguments of the constructor, which a pickle and a delay read.
+        """ The arguments of the constructor, which a pickle reads.
         """
         return self.left, self.right
 

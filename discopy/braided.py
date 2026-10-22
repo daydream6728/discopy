@@ -211,7 +211,7 @@ class Braid(BinaryBoxConstructor, Box):
         BinaryBoxConstructor.__init__(self, left, right)
 
     def __getnewargs__(self):
-        """ The arguments of the constructor, which a pickle and a delay read.
+        """ The arguments of the constructor, which a pickle reads.
         """
         return self.left, self.right, self.is_dagger
 

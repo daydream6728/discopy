@@ -225,7 +225,8 @@ class Cofunction(Box):
     def __new__(cls, cod: monoidal.Ty = None, cofunc=None):
         if cod is None or cls is not cls.ar.cofunction_factory:
             return super().__new__(cls)
-        cofunc = list(cofunc)
+        cofunc = list(
+            cofunc.inside if isinstance(cofunc, op.Comarkov) else cofunc)
         if sorted(cofunc) == list(range(len(cod))):
             return cls.ar.from_cofunction(cofunc, cod)
         if len(cod) == 1 and not any(cofunc):
@@ -243,7 +244,7 @@ class Cofunction(Box):
 
     def __getnewargs__(self):
         """
-        The arguments of :meth:`__new__`, which a pickle and a delay read.
+        The arguments of :meth:`__new__`, which a pickle reads.
 
         >>> x, y = map(Ty, "xy")
         >>> f = Cofunction(x @ y, [1, 0, 0])

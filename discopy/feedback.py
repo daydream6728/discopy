@@ -251,6 +251,7 @@ In the category of streams, this is just the identity.
 from __future__ import annotations
 
 from copy import copy
+from dataclasses import fields
 from typing import ClassVar
 
 from discopy import monoidal, cmap, hypergraph, messages
@@ -670,24 +671,22 @@ class Box(monoidal.Box, Diagram):
         """
         The delay of a box: a box of a category whose objects are not made of
         wires, e.g. a tensor box over dimensions, is its own delay, as its
-        objects are; a structural box, one whose ``__getnewargs__`` gives the
-        arguments it is built from, e.g. a swap, a copy or a controlled gate,
-        is built from their delays, those of its types and its diagrams; any
-        other box from its delayed boundary, one more time step on.
+        objects are; any other is built from the delays of the types and
+        diagrams it is built from, e.g. the boundary of a box or the sides of
+        a swap, one more time step on when it takes a time step.
 
         Parameters:
             n_steps : The number of time steps to delay.
         """
         if not issubclass(self.ob.generator_factory, monoidal.Wire):
             return self
-        arguments = getattr(self, "__getnewargs__", None)
-        if arguments is not None:
-            return type(self)(*(
-                x.delay(n_steps) if isinstance(x, (Ty, Diagram)) else x
-                for x in arguments()))
-        return replace(
-            self, dom=self.dom.delay(n_steps), cod=self.cod.delay(n_steps),
-            time_step=self.time_step + n_steps)
+        names = [f.name for f in fields(self) if f.init]
+        changes = {
+            name: getattr(self, name).delay(n_steps) for name in names
+            if isinstance(getattr(self, name), (Ty, Diagram))}
+        if "time_step" in names and "dom" in names:
+            changes["time_step"] = self.time_step + n_steps
+        return replace(self, **changes)
 
     def reset(self):
         """ Reset a box to time step zero, used in :class:`Functor`. """

@@ -292,7 +292,7 @@ class Twist(Box):
         return type(self)(self.dom, not self.is_dagger)
 
     def __getnewargs__(self):
-        """ The arguments of the constructor, which a pickle and a delay read.
+        """ The arguments of the constructor, which a pickle reads.
         """
         return self.dom, self.is_dagger
 
