@@ -7,4 +7,4 @@
 - [x] B86 of #31, closed part: `biclosed.Eval`/`Coeval` round-trip through `repr` and `dumps`: already on `main` since d9c0d66 (discopy/discopy#400), `test_transparency` in `test/biclosed.py`
 - [x] #168: the `biclosed`/`closed` bubbles `Curry`, `Eval`, `Coeval` read back their trees, nested in a diagram too: already on `main` since d9c0d66
 - [x] #177: `g(X('a')).eval().to_hypergraph()` does not send a constant to `map_term`
-- [ ] CHANGELOG
+- [x] CHANGELOG
