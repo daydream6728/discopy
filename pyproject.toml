@@ -81,6 +81,7 @@ quantum = [
     "pennylane-qiskit>=0.45.0",
     "quimb",
     "qoolqit",
+    "scipy",
 ]
 grammar = [
     "nltk",
@@ -109,6 +110,7 @@ docs  = [
     # executed by marimo when rendering the notebooks at docs build time
     "jax",
     "pytket",
+    "scipy",
     "sympy",
     "torch",
     "sphinx == 7.4.*",
