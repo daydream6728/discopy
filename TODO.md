@@ -8,4 +8,4 @@ Agent `hypergraph`, bullets of [#31](https://github.com/rel-int/discopy-next/iss
 - [x] #168: `Hypergraph` repr prints its class parameter by bare `__name__` (already fixed on `main` by 0aec5eb)
 - [x] #168: `CMap` repr hardcodes the `"cmap.CMap["` prefix
 - [x] B88, cmap/hypergraph part: message-less `ValueError`/`AxiomError`s get messages
-- [ ] B87, cmap part: `test/cmap.py:206` asserts truthiness; `test_curry_is_wiring_only_when_the_category_is_rigid` expects a failure
+- [x] B87, cmap part: `test/cmap.py:206` asserts truthiness (the curry test was fixed on `main` by 6dcf5ee2)

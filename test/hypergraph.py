@@ -172,8 +172,9 @@ def test_non_adjoint_wire():
     with raises(AxiomError):
         K(compact.Ty(), x @ x, (), ((), (), (0, 0)))
     # Adjoint cups and caps, and self-dual frobenius caps, are fine.
-    assert K.cups(x, x.r) and K.caps(x.r, x)
-    assert Cap(Ty('x'), Ty('x')).to_hypergraph()
+    assert K.cups(x, x.r).wires == ((0, 0), (), ())
+    assert K.caps(x.r, x).wires == ((), (), (0, 0))
+    assert Cap(Ty('x'), Ty('x')).to_hypergraph() == H.spiders(0, 2, Ty('x'))
 
 
 def test_spider_producers_and_consumers():

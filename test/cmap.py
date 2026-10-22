@@ -224,7 +224,9 @@ def test_diagram_to_map_structure_and_errors():
     ev = closed.Eval(cy << cx)
     assert ev.to_map() == closed.CMap.ev(cy, cx, left=False)
     assert ev.to_map().boxes == (ev, )
-    assert closed.Box("f", cx, cx).to_map().trace()
+    loop = closed.Box("f", cx, cx)
+    assert loop.to_map().trace() == closed.CMap(
+        closed.Ty(), closed.Ty(), (loop, ), (1, 0))
 
     mx = markov.Ty("x")
     copy = markov.Copy(mx, 2)
