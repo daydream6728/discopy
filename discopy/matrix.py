@@ -612,9 +612,18 @@ class Matrix(MarkovCategory, ComarkovCategory, DaggerCategory,
 
 
 def array2string(array, **params):
-    """ Numpy array pretty print. """
+    """
+    Numpy array pretty print, eliding past ``config.NUMPY_THRESHOLD`` entries
+    without touching numpy's global print options.
+
+    >>> import numpy
+    >>> threshold = numpy.get_printoptions()['threshold']
+    >>> array2string(numpy.arange(3))
+    '[0, 1, 2]'
+    >>> assert numpy.get_printoptions()['threshold'] == threshold
+    """
     import numpy
-    numpy.set_printoptions(threshold=config.NUMPY_THRESHOLD)
+    params = dict({'threshold': config.NUMPY_THRESHOLD}, **params)
     return numpy.array2string(array, **dict(params, separator=', '))\
         .replace('[ ', '[').replace('  ', ' ')
 

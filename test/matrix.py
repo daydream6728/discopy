@@ -266,3 +266,11 @@ def test_Matrix_to_tree():
     # The dtype is part of the matrix, so it has to travel with it.
     assert Matrix[float]([1], 1, 1) != Matrix([1], 1, 1)
     assert loads(dumps(Matrix[float]([1], 1, 1))).dtype == float
+
+
+def test_repr_leaves_numpy_printoptions_alone():
+    threshold = np.get_printoptions()['threshold']
+    with np.printoptions(threshold=1000):
+        repr(Matrix(list(range(25)), 5, 5))
+        assert np.get_printoptions()['threshold'] == 1000
+    assert np.get_printoptions()['threshold'] == threshold
