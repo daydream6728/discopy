@@ -17,9 +17,10 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   hypergraph category every pushout complement is a rewrite, sound and
   complete modulo the Frobenius axioms; over any other symmetric category
   the hypergraphs are monogamous and acyclic, matches are convex and the
-  context is the boundary complement, sound and complete modulo the symmetric
-  monoidal axioms. Lafont's interaction combinators are the test case: his
-  six rules reduce the net of his Fig. 11 to a wiring in five steps.
+  context is the boundary complement, sound modulo the symmetric monoidal
+  axioms and complete without a trace, which DisCoPy's symmetric diagrams
+  have. Lafont's interaction combinators are the test case: his six rules
+  reduce the net of his Fig. 11 to a wiring in five steps.
 
 - `discopy.ehypergraph`, e-graphs of diagrams with sharing: an
   `EHypergraph` over a copy-discard category is a left-monogamous acyclic
