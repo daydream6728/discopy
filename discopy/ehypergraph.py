@@ -109,7 +109,7 @@ from discopy.drawing import Node
 from discopy.hypergraph import Hypergraph
 from discopy.monoidal import Ty
 from discopy.utils import (
-    frozen, replace, setattrs,
+    setattrs,
     AxiomError, NamedGeneric, assert_isparallel, classproperty, factory_name,
     from_tree, pushout, resolve_factory, unbiased)
 

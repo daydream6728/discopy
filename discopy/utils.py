@@ -7,6 +7,8 @@ from __future__ import annotations
 import builtins
 import dataclasses
 import json
+from copy import copy
+from inspect import signature
 from functools import lru_cache, wraps
 from math import ceil
 from pathlib import Path
@@ -810,8 +812,10 @@ def frozen(cls: type) -> type:
     ...         setattrs(self, x=int(x), y=int(y))
     >>> assert replace(Point("1"), y="2").y == 2
     """
-    return dataclasses.dataclass(
+    cls = dataclasses.dataclass(
         frozen=True, init=False, eq=False, repr=False)(cls)
+    inherit_fields(cls)
+    return cls
 
 
 def derived(**params) -> dataclasses.Field:
@@ -853,16 +857,20 @@ def replace(obj: object, **changes):
 
 def inherit_fields(cls: type):
     """
-    Give a subclass that is not decorated the fields of all its bases, as
+    Give a class the fields of all its bases, as
     :func:`dataclasses.dataclass` would, rather than those of the first one
-    in its method resolution order: a diamond, e.g. a class with a frozen
-    base on either side, keeps the fields of both sides.
+    in its method resolution order, and take as the fields its constructor
+    takes, i.e. those :func:`replace` gives back to it, exactly those it has
+    a parameter for, unless it has a ``**kwargs`` too.
 
     Parameters:
         cls : A subclass of some dataclasses.
 
     Example
     -------
+    A diamond, i.e. a class with a frozen base on either side, keeps the
+    fields of both sides.
+
     >>> @frozen
     ... class A:
     ...     a: int
@@ -874,12 +882,29 @@ def inherit_fields(cls: type):
     >>> assert list(C.__dataclass_fields__) == ['a']
     >>> inherit_fields(C)
     >>> assert list(C.__dataclass_fields__) == ['b', 'a']
+
+    A class that computes a field rather than takes it does not get it back.
+
+    >>> class D(C):
+    ...     def __init__(self, a):
+    ...         setattrs(self, a=a, b=2 * a)
+    >>> inherit_fields(D)
+    >>> assert replace(D(1), a=2).b == 4
     """
     fields = {}
-    for base in reversed(cls.__mro__[1:]):
+    for base in reversed(cls.__mro__):
         fields.update(vars(base).get("__dataclass_fields__", {}))
-    if fields:
-        cls.__dataclass_fields__ = fields
+    if not fields:
+        return
+    cls.__dataclass_fields__ = fields
+    parameters = signature(cls.__init__).parameters.values()
+    if any(p.kind is p.VAR_KEYWORD for p in parameters):
+        return
+    names = {p.name for p in parameters}
+    for field in dataclasses.fields(cls):
+        if field.init != (field.name in names):
+            fields[field.name] = field = copy(field)
+            field.init = field.name in names
 
 
 @lru_cache

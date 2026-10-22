@@ -71,8 +71,6 @@ from discopy.config import (
 from discopy.utils import (
     factory,
     frozen,
-    derived,
-    replace,
     setattrs,
     factory_name,
     from_tree,

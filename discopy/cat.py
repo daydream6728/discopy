@@ -709,19 +709,23 @@ class Box(Arrow):
 
     @cached_property
     def free_symbols(self) -> "set[sympy.Symbol]":
-        return set().union(*map(
-            field_free_symbols, self.symbolic_fields.values()))
+        return set().union(*(
+            field_free_symbols(getattr(self, f.name)) for f in fields(self)
+            if f.init or f.compare))
 
     def subs(self, *args) -> Box:
-        variables = {var for var, _ in args[0]} if len(args) == 1\
-            else {args[0]}
+        pairs = args[0] if len(args) == 1 else args\
+            if isinstance(args[0], Iterable) else (args, )
+        variables = {var for var, _ in pairs}
         if not variables & self.free_symbols:
             return self
         changes = {
             key: field_subs(value, *args)
             for key, value in self.symbolic_fields.items()
             if variables & field_free_symbols(value)}
-        return replace(self, **changes) if changes else self
+        if not changes:
+            raise TypeError(messages.NO_SYMBOLIC_FIELD.format(type(self)))
+        return replace(self, **changes)
 
     def lambdify(self, *symbols: "sympy.Symbol", **kwargs) -> Callable:
         if not set(symbols) & self.free_symbols:
@@ -730,6 +734,8 @@ class Box(Arrow):
             key: field_lambdify(value, *symbols, **kwargs)
             for key, value in self.symbolic_fields.items()
             if set(symbols) & field_free_symbols(value)}
+        if not funcs:
+            raise TypeError(messages.NO_SYMBOLIC_FIELD.format(type(self)))
         return lambda *xs: replace(
             self, **{key: func(*xs) for key, func in funcs.items()})
 

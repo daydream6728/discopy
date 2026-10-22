@@ -66,7 +66,7 @@ the :mod:`frobenius` axioms.
 from __future__ import annotations
 
 import warnings
-from typing import Callable, ClassVar
+from typing import ClassVar
 
 from discopy import symmetric, monoidal, feedback, cmap, hypergraph, messages
 from discopy.abc import ComarkovCategory, MarkovCategory
@@ -75,7 +75,7 @@ from discopy.feedback import (  # noqa: F401  pylint: disable=unused-import
     Wire, Ty)
 from discopy.python import finset
 from discopy.utils import (
-    frozen, replace, setattrs,
+    frozen, setattrs,
     AxiomError, assert_isatomic, assert_iscomposable, deprecated_alias,
     factory_name, from_tree)
 

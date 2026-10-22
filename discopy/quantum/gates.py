@@ -49,18 +49,18 @@ Summary
         scalar
 """
 import copy
+from typing import Any
 from collections.abc import Sized
 from math import e, pi
 
 from discopy import messages
 from discopy.feedback import str_delayed
-from discopy.cat import rsubs
 from discopy.matrix import get_backend
 from discopy.quantum.circuit import (
     Circuit, Digit, Ty, bit, qubit, Box, Sum, Id)
 from discopy.tensor import backend
 from discopy.utils import (
-    factory_name, assert_isinstance, from_tree, setattrs)
+    factory_name, assert_isinstance, from_tree, frozen, replace, setattrs)
 
 
 def format_number(data):
@@ -833,15 +833,9 @@ class Parametrized(Box):
         else:
             return get_backend()
 
-    def subs(self, *args):
-        data = rsubs(self.data, *args)
-        return type(self)(data)
-
     def lambdify(self, *symbols, **kwargs):
-        from sympy import lambdify
         with backend() as np:
-            data = lambdify(symbols, self.data, dict(kwargs, modules=np))
-        return lambda *xs: type(self)(data(*xs))
+            return super().lambdify(*symbols, **dict(kwargs, modules=np))
 
     def __str__(self):
         if isinstance(self, Controlled):
@@ -854,11 +848,17 @@ class Parametrized(Box):
         return factory_name(type(self)) + f"({format_number(self.data)})"
 
 
+@frozen
 class Rotation(Parametrized, QuantumGate):
     """ Abstract class for rotation gates. """
     n_qubits = 1
 
+    __match_args__ = ("phase", "z", "time_step")
+
+    phase: Any = None
+
     def __init__(self, phase, z=0, time_step=0):
+        setattrs(self, phase=phase)
         name, n_qubits = type(self).__name__, type(self).n_qubits
         dom = cod = qubit.delay(time_step) ** n_qubits
         QuantumGate.__init__(self, name, dom, cod, z=z, time_step=time_step)
@@ -869,33 +869,20 @@ class Rotation(Parametrized, QuantumGate):
     def from_tree(cls, tree: dict):
         return cls(tree['data'], tree.get('z', 0), tree.get('time_step', 0))
 
-    @property
-    def phase(self):
-        """ The phase of a rotation gate. """
-        return self.data
-
     def delay(self, n_steps=1):
         """
         The rotation by the same phase, one more time step on.
 
         >>> assert Rz(.5).delay().dom == qubit.delay()
         """
-        return type(self)(self.phase, self.z, self.time_step + n_steps)
+        return replace(self, time_step=self.time_step + n_steps)
 
     def dagger(self):
-        return type(self)(-self.phase, time_step=self.time_step)
+        return replace(self, phase=-self.phase, z=0)
 
     def rotate(self, left=False):
         del left
-        return type(self)(
-            self.phase, z=int(not self.z), time_step=self.time_step)
-
-    def subs(self, *args):
-        return super().subs(*args).delay(self.time_step)
-
-    def lambdify(self, *symbols, **kwargs):
-        function = super().lambdify(*symbols, **kwargs)
-        return lambda *xs: function(*xs).delay(self.time_step)
+        return replace(self, z=int(not self.z))
 
     def __repr__(self):
         time_step = f", time_step={self.time_step}" if self.time_step else ""
@@ -1049,18 +1036,14 @@ class Scalar(Parametrized):
         return super().__repr__()[:-1] + (
             ', is_mixed=True' if self.is_mixed else '') + time_step + ')'
 
-    def setoid(self):
+    def delay(self, n_steps=1):
         """
         A scalar and its delay differ only by their time step, as the delay
         of an empty boundary is itself.
 
         >>> assert scalar(2).delay() != scalar(2) == scalar(2).d.delay(-1)
         """
-        return super().setoid() + (self.time_step, )
-
-    def delay(self, n_steps=1):
-        return type(self)(
-            self.data, self.name, self.is_mixed, self.time_step + n_steps)
+        return replace(self, time_step=self.time_step + n_steps)
 
     @property
     def array(self):
@@ -1085,13 +1068,7 @@ class Scalar(Parametrized):
         >>> from sympy.abc import phi  # doctest: +EXTRA
         >>> assert scalar(2 * phi, is_mixed=True).subs(phi, .5).is_mixed
         """
-        return type(self)(rsubs(self.data, *args), self.name, self.is_mixed,
-                          self.time_step)
-
-    def lambdify(self, *symbols, **kwargs):
-        function = super().lambdify(*symbols, **kwargs)
-        return lambda *xs: type(self)(
-            function(*xs).data, self.name, self.is_mixed, self.time_step)
+        return super().subs(*args)
 
     def to_tree(self) -> dict:
         return dict(is_mixed=self.is_mixed, **super().to_tree())
@@ -1125,13 +1102,6 @@ class MixedScalar(Scalar):
         >>> assert isinstance(MixedScalar(.5).delay(), MixedScalar)
         """
         return MixedScalar(self.data, self.time_step + n_steps)
-
-    def subs(self, *args):
-        return Parametrized.subs(self, *args).delay(self.time_step)
-
-    def lambdify(self, *symbols, **kwargs):
-        function = Parametrized.lambdify(self, *symbols, **kwargs)
-        return lambda *xs: function(*xs).delay(self.time_step)
 
 
 class Sqrt(Scalar):
@@ -1183,17 +1153,20 @@ class Sqrt(Scalar):
         return Sqrt(self.data, self.is_dagger, self.time_step + n_steps)
 
     def subs(self, *args):
-        result = Parametrized.subs(self, *args).delay(self.time_step)
-        return result.dagger() if self.is_dagger else result
+        """
+        Substitute in the root of the dagger, then take the dagger again, as
+        the root may become real.
+        """
+        if self.is_dagger:
+            return replace(self, is_dagger=False).subs(*args).dagger()
+        return super().subs(*args)
 
     def lambdify(self, *symbols, **kwargs):
-        function = Parametrized.lambdify(self, *symbols, **kwargs)
-        return lambda *xs: function(*xs).delay(self.time_step).dagger()\
-            if self.is_dagger else function(*xs).delay(self.time_step)
-
-    def setoid(self):
-        """ A square root and its dagger differ only by ``is_dagger``. """
-        return super().setoid() + (self.is_dagger, )
+        if self.is_dagger:
+            function = replace(self, is_dagger=False).lambdify(
+                *symbols, **kwargs)
+            return lambda *xs: function(*xs).dagger()
+        return super().lambdify(*symbols, **kwargs)
 
     def __repr__(self):
         return super().__repr__() + ("[::-1]" if self.is_dagger else "")

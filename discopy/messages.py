@@ -111,3 +111,7 @@ NOT_A_PATTERN = (
 NOT_A_RULE = (
     "{} = {} is not a rule: its sides are cartesian diagrams of one type, the "
     "left a pattern and the right reading only the inputs the left reads.")
+
+NO_SYMBOLIC_FIELD = (
+    "{} has free symbols only in fields its constructor does not take, "
+    "declare the fields it is built from.")

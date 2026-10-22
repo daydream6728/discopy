@@ -75,8 +75,7 @@ from discopy.cat import factory
 from discopy.matrix import backend
 from discopy.tensor import Dim, Tensor
 from discopy.utils import (
-    assert_isinstance, deprecated_alias, derived, factory_name, frozen,
-    setattrs)
+    assert_isinstance, deprecated_alias, factory_name, frozen, setattrs)
 
 
 class Wire(frobenius.Wire):

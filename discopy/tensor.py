@@ -57,7 +57,7 @@ from discopy.abc import NamedGeneric
 from discopy.python import finset
 from discopy.utils import (
     factory_name, assert_isinstance, product, assert_isatomic,
-    assert_istraceable, setattrs)
+    assert_istraceable, compared_fields, setattrs)
 
 if TYPE_CHECKING:
     import sympy
@@ -889,8 +889,9 @@ class Box(frobenius.Box, Diagram):
                 data = np.array(data).reshape(-1).tolist()
         entries = () if data is None\
             else tuple(data) if isinstance(data, list) else (data, )
-        return (self.name, self.dom, self.cod, self.dtype, self.is_dagger,
-                self.deterministic, self.affine) + entries
+        return tuple(
+            getattr(self, key) for key in compared_fields(type(self))
+            if key != "data") + (self.dtype, ) + entries
 
 
 class Cup(frobenius.Cup, Box):

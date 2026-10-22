@@ -80,7 +80,7 @@ from discopy.abc import HypergraphCategory
 from discopy.cat import factory
 from discopy.python import finset
 from discopy.utils import (
-    frozen, replace, setattrs,
+    setattrs,
     assert_isatomic, assert_iscomposable, deprecated_alias, factory_name,
     from_tree)
 
@@ -339,7 +339,6 @@ class Box(compact.Box, markov.Box, comarkov.Box, Diagram):
     @property
     def is_affine(self) -> bool:
         return super().is_affine and not self.z
-
 
 
 class Cospan(Box):
