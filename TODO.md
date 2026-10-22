@@ -4,7 +4,7 @@
 - [x] B41: the coverage gate counts the test files themselves
 - [x] B42: tests that cannot fail in `test/cat.py`, `test/markov.py`, `test/readme.py`
 - [ ] B43: nine modules have no test file; `test/test_para.py` naming drift
-- [ ] B45: self-contradictory and type-only error messages, the stale `pytest_plugin` pointer, `quantum.CY` (only if it exists unexported)
+- [x] B45: self-contradictory and type-only error messages, the stale `pytest_plugin` pointer, `quantum.CY` (only if it exists unexported)
 - [ ] B84 of #31: `post.py` dying before `record()` leaves `clean` unset; the discopy/discopy#679 guard reads `steps.review.outcome` only
 - [ ] B87 of #31, circuit part: `test/quantum/circuit.py` skipped whole without torch; `test_CCX_decompose` leaks `np.set_printoptions`; `test_grad_basic`/`test_Sum` compare the int `0` to `0`
 - [ ] B88 of #31, static part: `uv_build` in `CONTRIBUTING.md` and the dead `[tool.uv.build-backend]`; `persist-credentials: false` claim; `pytest .github/tests/*.py` needs `--import-mode=importlib`; stray root `readme.py`; CHANGELOG `Ty.name` line; `docs/conf.py` mocks `sympy` and `pytket`

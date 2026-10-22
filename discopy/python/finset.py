@@ -177,9 +177,7 @@ class Permutation(Function, PROP, Groupoid):
                 messages.WRONG_PERMUTATION.format(size, len(inside))
             )
         if sorted(inside) != list(range(size)):
-            raise ValueError(
-                messages.WRONG_PERMUTATION.format(size, len(inside))
-            )
+            raise ValueError(messages.NOT_A_PERMUTATION.format(size, inside))
         super().__init__(list(inside), size, size)
 
     def __iter__(self):

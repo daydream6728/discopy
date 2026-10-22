@@ -1097,7 +1097,7 @@ class Application(TermBase):
         assert_isinstance(func, TermBase)
         assert_isinstance(args, TermBase)
         if not func.cod.is_exp:
-            raise TypeError(f"Expected {Exp}, got {type(func.cod)}")
+            raise TypeError(messages.NOT_EXPONENTIAL.format(func, func.cod))
         self.func, self.args, self.left = func, args, left
         if self.func.cod.exponent != self.args.cod:
             raise ValueError(
