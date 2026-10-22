@@ -890,8 +890,8 @@ class Box(frobenius.Box, Diagram):
         entries = () if data is None\
             else tuple(data.flat) if isinstance(data, numpy.ndarray)\
             else tuple(data) if isinstance(data, list) else (data, )
-        return (self.name, self.dom, self.cod, self.dtype, self.is_dagger)\
-            + entries
+        return (self.name, self.dom, self.cod, self.dtype, self.is_dagger,
+                self.deterministic, self.affine) + entries
 
 
 class Cup(frobenius.Cup, Box):

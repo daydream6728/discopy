@@ -52,6 +52,7 @@ NO_CUPS = "{} is not rigid, it has no cups or caps."
 COLOURED_QUOTIENT = (
     "{} is coloured: a hypergraph or a map is symmetric, and a swap is "
     "ill-typed across 0-cells, so it would lose its colours.")
+NO_SUMS = "{} has no sums, it encodes a single diagram."
 NOT_SYMMETRIC = "{} has no swaps to downgrade this map."
 NOT_MARKOV = "{} has no copy or discard."
 NOT_A_DAGGER = "{} has no dagger: {} is not a dagger category."
@@ -60,6 +61,12 @@ NOT_ACYCLIC = "{} has a directed cycle, its boxes cannot be ordered."
 NOT_LEFT_MONOGAMOUS = "{} is not left-monogamous."
 NOT_RIGHT_MONOGAMOUS = "{} is not right-monogamous."
 NOT_CAUSAL = "{} is not causal."
+NOT_BIJECTIVE = "{} is not bijective: a spider has neither zero nor two legs."
+NOT_AN_INVOLUTION = \
+    "Expected a fixpoint-free involution, got edges {} instead."
+NOT_PLUGGABLE = "Cannot plug {} into a map with codomain {}: expected a box "\
+                "with one input and two outputs, and a map with one output."
+NOT_AN_INDEX = "Expected an index in range({}), got {} instead."
 WRONG_NUMBER_OF_WIRES = "Expected {} wires for {}, got {} instead."
 WRONG_NUMBER_OF_BOUNDARIES = \
     "Expected one boundary of wires for each of {} boxes, got {} instead."
@@ -77,3 +84,22 @@ NO_SUCH_TYPE = "No type named {!r} in builtins or numpy, so the name of the "\
 
 NO_COMMON_BOUNDARY = "A bubble needs a {} given when its args do not "\
     "all share one, they have [{}]."
+NOT_SHARING = (
+    "{} is not a diagram with sharing, i.e. a left-monogamous acyclic "
+    "hypergraph: a spider has no producer or several, or a box depends on "
+    "itself.")
+NOT_CARTESIAN = (
+    "{} is not cartesian, i.e. deterministic and affine: an effect is "
+    "context, which a rewrite keeps, as a section that chooses a producer "
+    "for each class would decorrelate a stochastic one.")
+NOT_A_BOUNDARY = "{} does not have the types of the spiders {} -> {}."
+NOT_A_REGION = (
+    "The boxes {} do not compute the spiders {} -> {}: they cannot all fire "
+    "in some order from the classes of the domain, or do not reach those of "
+    "the codomain.")
+NOT_A_PATTERN = (
+    "{} is not a pattern, i.e. a cartesian diagram with sharing whose "
+    "codomain is produced by its boxes: a variable alone matches anything.")
+NOT_A_RULE = (
+    "{} = {} is not a rule: its sides are cartesian diagrams of one type, the "
+    "left a pattern and the right reading only the inputs the left reads.")
