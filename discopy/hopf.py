@@ -995,7 +995,8 @@ class Intertwiner(NamedGeneric["algebra"], tensor.Diagram, RibbonCategory):
         ...     getattr(Intertwiner[D], f) for f in ("braid", "cups", "caps"))
         >>> trace = V @ caps(V, V.r) >> braid(V, V) @ V.r >> V @ cups(V, V.r)
         >>> twist = Intertwiner[D].twist(V)
-        >>> assert twist.eval(dtype=complex).is_close(trace.eval(dtype=complex))
+        >>> assert twist.eval(dtype=complex).is_close(
+        ...     trace.eval(dtype=complex))
         >>> assert np.isclose(complex(twist.eval(dtype=complex)), omega)
         """
         H = cls.algebra
@@ -1032,8 +1033,7 @@ class Intertwiner(NamedGeneric["algebra"], tensor.Diagram, RibbonCategory):
         """
         body = Diagram.cups(Dim(*left.inside), Dim(*right.inside))
         if cls.algebra is not None \
-                and isinstance(left, Representation) \
-                and isinstance(right, Representation) \
+                and all(isinstance(x, Representation) for x in (left, right)) \
                 and (right.action == left.r.action
                      or left.action == right.l.action) \
                 and cls.algebra.pivotal_element != cls.algebra.unit:
@@ -1066,8 +1066,7 @@ class Intertwiner(NamedGeneric["algebra"], tensor.Diagram, RibbonCategory):
         """
         body = Diagram.caps(Dim(*left.inside), Dim(*right.inside))
         if cls.algebra is not None \
-                and isinstance(left, Representation) \
-                and isinstance(right, Representation) \
+                and all(isinstance(x, Representation) for x in (left, right)) \
                 and (left.action == right.r.action
                      or right.action == left.l.action) \
                 and cls.algebra.pivotal_element != cls.algebra.unit:
