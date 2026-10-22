@@ -414,6 +414,8 @@ def test_subs_forms_and_data():
         h = Box('h', x, y, data=data)
         for result in (h.subs([(phi, 3), (psi, 4)]), h.lambdify(phi, psi)(3, 4)):
             assert np.array_equal(np.array(result.data), [[3, 1], [4, 2]])
+    empty = Box('e', x, y, data=np.zeros((0, 3))).subs(phi, 1).data
+    assert empty.shape == (0, 3)
 
 
 def test_Sum():

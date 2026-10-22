@@ -580,7 +580,8 @@ def rmap(func, data):
     if isinstance(data, Mapping):
         return {key: rmap(func, value) for key, value in data.items()}
     if isinstance(data, numpy.ndarray):
-        return numpy.array(rmap(func, data.tolist()))
+        return numpy.array(rmap(func, data.tolist())) if data.size\
+            else data.copy()
     if isinstance(data, Iterable) and not isinstance(data, str):
         return type(data)([rmap(func, elem) for elem in data])
     return func(data)
