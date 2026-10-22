@@ -34,10 +34,10 @@ from __future__ import annotations
 from collections.abc import Callable, Mapping
 from functools import cached_property
 from inspect import isclass
-from itertools import chain
+from itertools import chain, product
 
 import random
-from typing import Any, Iterable, Union, TYPE_CHECKING, Sequence
+from typing import Any, Iterable, Iterator, Union, TYPE_CHECKING, Sequence
 
 import matplotlib.pyplot as plt
 
@@ -67,6 +67,7 @@ from discopy.utils import (
     resolve_factory,
     assert_isinstance,
     pushout,
+    set_partitions,
     unbiased,
     AxiomError,
     assert_isatomic,
@@ -99,6 +100,19 @@ while ``box_wires`` are the boundaries for each of its boxes.
 SpiderTypes = Union[Mapping[Spider, "Ty"], Iterable["Ty"]]
 """
 Mapping from :class:`Spider` to atomic :class:`frobenius.Ty`.
+"""
+
+Match = tuple[tuple[int, ...], tuple[int, ...]]
+"""
+A match of a pattern in a hypergraph is a homomorphism of their underlying
+hypergraphs, given by the image of each spider and the image of each box.
+"""
+
+Rule = tuple["Hypergraph", "Hypergraph"]
+"""
+A rule is a pair of parallel hypergraphs ``left, right : dom -> cod``, i.e.
+the span ``left <- dom + cod -> right`` of double-pushout rewriting whose legs
+are the boundary wires of each side.
 """
 
 
@@ -783,6 +797,447 @@ class Hypergraph(
                 if result.to_diagram().size < size:
                     return result.simplify()
         return self
+
+    @cached_property
+    def incidence(self) -> list[list[tuple[int, int, int]]]:
+        """
+        The box ports at each spider, as triples ``(box, side, position)``
+        with ``side`` zero for the domain of the box and one for its codomain.
+
+        Example
+        -------
+        >>> from discopy.frobenius import Ty, Box
+        >>> x = Ty('x')
+        >>> f = Box('f', x, x @ x).to_hypergraph()
+        >>> assert (f >> f[::-1]).incidence == [
+        ...     [(0, 0, 0)], [(0, 1, 0), (1, 0, 0)], [(0, 1, 1), (1, 0, 1)],
+        ...     [(1, 1, 0)]]
+        """
+        result = [[] for _ in range(self.n_spiders)]
+        for box, wires in enumerate(self.box_wires):
+            for side, position, spider in (
+                    (side, position, spider)
+                    for side, spiders in enumerate(wires)
+                    for position, spider in enumerate(spiders)):
+                result[spider].append((box, side, position))
+        return result
+
+    def homomorphisms(
+            self, pattern: Hypergraph, spiders: dict[int, int] = None,
+            boxes: dict[int, int] = None) -> Iterator[Match]:
+        """
+        The homomorphisms from the underlying hypergraph of a pattern,
+        injective on boxes: each box goes to an equal box, each spider to a
+        spider of the same type, and the wires of each box to the wires of
+        its image. The boundary of the pattern is free to go anywhere.
+
+        Parameters:
+            pattern : The hypergraph to match.
+            spiders : A partial map on spiders to extend, empty by default.
+            boxes : A partial map on boxes to extend, empty by default.
+
+        The search extends the partial map one box at a time, through the
+        spiders it has already mapped whenever it can.
+
+        Example
+        -------
+        >>> from discopy.frobenius import Ty, Box
+        >>> x = Ty('x')
+        >>> f = Box('f', x, x).to_hypergraph()
+        >>> assert list((f >> f).homomorphisms(f)) == [
+        ...     ((0, 1), (0, )), ((1, 2), (1, ))]
+        """
+        spiders = {} if spiders is None else spiders
+        boxes = {} if boxes is None else boxes
+        todo = [i for i in range(len(pattern.boxes)) if i not in boxes]
+        if not todo:
+            yield from self.extend_spiders(pattern, spiders, boxes)
+            return
+        i, candidates = self.candidates(pattern, todo, spiders, boxes)
+        for j in candidates:
+            extended = dict(spiders)
+            for spider, image in zip(
+                    chain(*pattern.box_wires[i]), chain(*self.box_wires[j])):
+                if extended.setdefault(spider, image) != image:
+                    break
+            else:
+                yield from self.homomorphisms(
+                    pattern, extended, boxes | {i: j})
+
+    def candidates(
+            self, pattern: Hypergraph, todo: list[int],
+            spiders: dict[int, int], boxes: dict[int, int]
+            ) -> tuple[int, list[int]]:
+        """
+        The next box of a pattern to map and its candidate images: a box
+        with a port on a spider already mapped and the boxes with the same
+        port on its image, otherwise the first box left and all the boxes.
+        """
+        anchored = (
+            (i, side, position, spiders[spider])
+            for i in todo
+            for side, wires in enumerate(pattern.box_wires[i])
+            for position, spider in enumerate(wires) if spider in spiders)
+        i, side, position, image = next(anchored, (todo[0], 0, 0, None))
+        candidates = range(len(self.boxes)) if image is None else (
+            j for j, *port in self.incidence[image]
+            if port == [side, position])
+        used = set(boxes.values())
+        return i, [j for j in candidates
+                   if j not in used and self.boxes[j] == pattern.boxes[i]]
+
+    def extend_spiders(
+            self, pattern: Hypergraph, spiders: dict[int, int],
+            boxes: dict[int, int]) -> Iterator[Match]:
+        """
+        Extend a homomorphism defined on every box of a pattern to the
+        spiders without box ports, sent to any spider of the same type.
+        """
+        rest = [s for s in range(pattern.n_spiders) if s not in spiders]
+        images = (
+            [w for w, typ in enumerate(self.spider_types)
+             if typ == pattern.spider_types[s]] for s in rest)
+        for choice in product(*images):
+            extended = spiders | dict(zip(rest, choice))
+            yield (tuple(extended[s] for s in range(pattern.n_spiders)),
+                   tuple(boxes[i] for i in range(len(pattern.boxes))))
+
+    def glues(self, pattern: Hypergraph, match: Match) -> bool:
+        """
+        Whether a homomorphism satisfies the gluing conditions of
+        double-pushout rewriting with interfaces, i.e. whether it has a
+        pushout complement, see :cite:t:`BonchiEtAl22`, Proposition 3.17:
+
+        - no identification: the spiders it merges are on the boundary of
+          the pattern,
+        - no dangling: the spiders it deletes, i.e. the images of the
+          others, have no port outside the image, the boundary included.
+
+        Example
+        -------
+        >>> from discopy.frobenius import Ty, Box, Hypergraph as H
+        >>> x = Ty('x')
+        >>> f, g = (Box(name, x, x).to_hypergraph() for name in "fg")
+        >>> graph = f >> H.copy(x) >> g @ x
+        >>> match, = graph.homomorphisms(f >> g)
+        >>> assert not graph.glues(f >> g, match)
+        """
+        spiders, boxes = match
+        interface, matched = set(pattern.dom_wires + pattern.cod_wires), set(
+            boxes)
+        inner = {image: spider for spider, image in enumerate(spiders)
+                 if spider not in interface}
+        merged = len(set(spiders)) < len(spiders) and any(
+            spiders.count(image) > 1 for image in inner)
+        dangling = any(
+            self.ports[port].kind in ("input", "output")
+            or self.ports[port].depth not in matched
+            for image in inner for port in set.union(
+                *self.spider_wires[image]))
+        return not merged and not dangling
+
+    def is_convex(self, match: Match) -> bool:
+        """
+        Whether a match is convex, i.e. injective and such that no directed
+        path leaves its image and comes back to it, see
+        :cite:t:`BonchiEtAl22b`, Definition 25.
+
+        Example
+        -------
+        >>> from discopy.symmetric import Ty, Box
+        >>> x = Ty('x')
+        >>> f, g = Box('f', x, x), Box('g', x, x)
+        >>> graph = (f >> g >> f).to_hypergraph()
+        >>> assert graph.is_convex(((0, 1), (0, )))
+        >>> assert not graph.is_convex(((0, 1, 2, 3), (0, 2)))
+        """
+        spiders, boxes = match
+        if len(set(spiders)) < len(spiders) or len(set(boxes)) < len(boxes):
+            return False
+        image, inside = set(spiders), set(boxes)
+        _, consumer, _, _, _ = self.box_dependencies()
+        outside = [consumer[spider] for spider in image
+                   if consumer[spider] not in inside | {-1}]
+        seen = set()
+        while outside:
+            box = outside.pop()
+            seen.add(box)
+            if image & set(self.box_wires[box][1]):
+                return False
+            outside += [consumer[spider] for spider in self.box_wires[box][1]
+                        if consumer[spider] not in inside | seen | {-1}]
+        return True
+
+    def assert_isrewritable(self) -> None:
+        """
+        Raise ``AxiomError`` unless double-pushout rewriting is sound and
+        complete for the hypergraph: over a hypergraph category, see
+        :cite:t:`BonchiEtAl22`, Theorem 4.9, and over a symmetric category
+        when it is monogamous and acyclic, see :cite:t:`BonchiEtAl22b`,
+        Theorem 27.
+
+        Example
+        -------
+        >>> from discopy.markov import Ty, Hypergraph as H
+        >>> H.copy(Ty('x')).assert_isrewritable()
+        Traceback (most recent call last):
+        ...
+        discopy.utils.AxiomError: ... is not rewritable: ...
+        """
+        if issubclass(self.category, HypergraphCategory):
+            return
+        if not issubclass(self.category, SymmetricCategory)\
+                or not self.is_monogamous or not self.is_acyclic:
+            raise AxiomError(messages.NOT_REWRITABLE.format(self))
+
+    def match(self, pattern: Hypergraph) -> Iterator[Match]:
+        """
+        The matches of a pattern, i.e. the :meth:`homomorphisms` that have a
+        pushout complement, see :meth:`glues`, and that are convex over a
+        symmetric category that is not a hypergraph category, see
+        :meth:`is_convex`.
+
+        Parameters:
+            pattern : The hypergraph to match, e.g. the left of a rule.
+
+        Example
+        -------
+        The two boxes ``f`` match the pattern ``f @ f`` in a hypergraph
+        category, but not convexly in a symmetric one, as ``g`` sits between.
+
+        >>> from discopy import frobenius, symmetric
+        >>> for module in (frobenius, symmetric):
+        ...     x = module.Ty('x')
+        ...     f, g = module.Box('f', x, x), module.Box('g', x, x)
+        ...     graph = (f >> g >> f).to_hypergraph()
+        ...     print(list(graph.match((f @ f).to_hypergraph())))
+        [((0, 2, 1, 3), (0, 2)), ((2, 0, 3, 1), (2, 0))]
+        []
+        """
+        self.assert_isrewritable()
+        pattern.assert_isrewritable()
+        convex = not issubclass(self.category, HypergraphCategory)
+        for match in self.homomorphisms(pattern):
+            if self.glues(pattern, match) and (
+                    not convex or self.is_convex(match)):
+                yield match
+
+    def complements(
+            self, pattern: Hypergraph, match: Match) -> Iterator[Hypergraph]:
+        """
+        The pushout complements of a match, i.e. the contexts
+        ``pattern.cod @ self.dom -> pattern.dom @ self.cod`` that give
+        ``self`` back once the pattern is plugged in, see :meth:`plug`.
+
+        The boxes of a context are those of ``self`` outside the match, its
+        spiders those outside the image, and for each spider in the image of
+        the boundary, a partition of the ports glued there: the ports of the
+        boundary of the pattern, each block holding at least one and the
+        pattern being connected through them, and the ports outside the
+        match, in any block, see :cite:t:`BonchiEtAl22`, Section 4.5.
+
+        Over a symmetric category that is not a hypergraph category, the
+        only complement is the boundary complement, i.e. the monogamous one,
+        see :cite:t:`BonchiEtAl22b`, Definition 23.
+
+        Parameters:
+            pattern : The hypergraph matched, e.g. the left of a rule.
+            match : A match of the pattern, see :meth:`match`.
+
+        Example
+        -------
+        The identity wire has five pushout complements in this graph, one
+        for each way to split the spider between ``f`` and ``g`` below.
+
+        >>> from discopy.frobenius import Ty, Box, Hypergraph as H
+        >>> x = Ty('x')
+        >>> f, g = (Box(name, x, x).to_hypergraph() for name in "fg")
+        >>> graph = H.copy(x) >> (f >> g) @ (f >> g)
+        >>> match = ((3, ), ())
+        >>> contexts = list(graph.complements(H.id(x), match))
+        >>> assert len(contexts) == 5
+        >>> assert all(context.plug(H.id(x)) == graph for context in contexts)
+        """
+        if not self.glues(pattern, match):
+            return
+        spiders, boxes = match
+        interface = pattern.dom_wires + pattern.cod_wires
+        image, n_dom = set(spiders), len(pattern.dom)
+        kept = tuple(self.boxes[j] for j in range(len(self.boxes))
+                     if j not in boxes)
+        dom, cod = pattern.cod @ self.dom, pattern.dom @ self.cod
+        ports = [("hole", k) for k in range(n_dom, len(interface))] + [
+            ("leg", spider) for spider in self.dom_wires + tuple(chain(*(
+                x + y for j, (x, y) in enumerate(self.box_wires)
+                if j not in boxes)))
+        ] + [("hole", k) for k in range(n_dom)] + [
+            ("leg", spider) for spider in self.cod_wires]
+        fibres = {}
+        for port, (kind, x) in enumerate(ports):
+            spider = spiders[interface[x]] if kind == "hole" else x
+            if spider in image:
+                fibres.setdefault(spider, ([], []))[kind == "leg"].append(
+                    port)
+        flat_wires = [x if kind == "leg" else None for kind, x in ports]
+        outside = {spider: typ for spider, typ in enumerate(self.spider_types)
+                   if spider not in image}
+        convex = not issubclass(self.category, HypergraphCategory)
+        for choice in product(*(
+                self.partitions(spider, fibre, legs, [
+                    interface[ports[port][1]] for port in fibre])
+                for spider, (fibre, legs) in fibres.items())):
+            labels = {port: label for part in choice
+                      for port, label in part.items()}
+            for port, label in labels.items():
+                flat_wires[port] = label
+            spider_types = outside | {
+                label: self.spider_types[label[0]]
+                for label in labels.values()}
+            context = type(self)(
+                dom, cod, kept, self.rebracket(flat_wires, kept, dom),
+                spider_types)
+            if not convex or context.is_monogamous:
+                yield context
+
+    @staticmethod
+    def partitions(
+            spider: int, fibre: list[int], legs: list[int],
+            sources: list[int]) -> Iterator[dict[int, tuple[int, int]]]:
+        """
+        The ways to split a spider in the image of the boundary of a
+        pattern, i.e. the partitions of the ports of the boundary glued there
+        that connect their ``sources`` in the pattern, with each other port
+        in any block, as labels ``(spider, block)`` for each port.
+
+        Parameters:
+            spider : The spider to split.
+            fibre : The ports of the boundary of the pattern glued there.
+            legs : The other ports glued there.
+            sources : The spider of the pattern for each port in ``fibre``.
+
+        Example
+        -------
+        >>> from discopy.hypergraph import Hypergraph
+        >>> for labels in Hypergraph.partitions(0, [0, 1], [2], [0, 0]):
+        ...     print(sorted(labels.values()))
+        [(0, 0), (0, 0), (0, 1)]
+        [(0, 0), (0, 1), (0, 1)]
+        [(0, 0), (0, 0), (0, 0)]
+        """
+        for blocks in set_partitions(list(range(len(fibre)))):
+            components = []
+            for block in blocks:
+                component = {sources[k] for k in block}
+                for other in [c for c in components if c & component]:
+                    components.remove(other)
+                    component |= other
+                components.append(component)
+            if len(components) > 1:
+                continue
+            labels = {fibre[k]: (spider, i)
+                      for i, block in enumerate(blocks) for k in block}
+            for choice in product(range(len(blocks)), repeat=len(legs)):
+                yield labels | {
+                    leg: (spider, i) for leg, i in zip(legs, choice)}
+
+    def plug(self, hole: Hypergraph) -> Hypergraph:
+        """
+        Plug a hole into a context, i.e. the pushout that glues the boundary
+        of the hole ``dom -> cod`` to the start of the boundary of the
+        context ``cod @ x -> dom @ y``, giving a hypergraph ``x -> y``.
+
+        Over a traced category, this is the trace of the hole tensored with
+        the context, as the pushout of a composition is the composition of
+        pushouts.
+
+        Parameters:
+            hole : The hypergraph to plug in.
+
+        Example
+        -------
+        >>> from discopy.frobenius import Ty, Box, Hypergraph as H
+        >>> x, y, z = map(Ty, "xyz")
+        >>> f = Box('f', x, y).to_hypergraph()
+        >>> context = Box('g', y @ z, x @ z).to_hypergraph()
+        >>> assert context.plug(f)\\
+        ...     == (f @ z >> context).trace(left=True)
+        """
+        n_dom, n_cod = len(hole.dom), len(hole.cod)
+        if self.dom[:n_cod] != hole.cod or self.cod[:n_dom] != hole.dom:
+            raise AxiomError(messages.NOT_PLUGGABLE.format(hole, self))
+        left, right = pushout(
+            self.n_spiders, hole.n_spiders,
+            self.cod_wires[:n_dom] + self.dom_wires[:n_cod],
+            hole.dom_wires + hole.cod_wires)
+        dom_wires = tuple(left[i] for i in self.dom_wires[n_cod:])
+        box_wires = tuple(
+            tuple(tuple(relabel[i] for i in wires) for wires in boundary)
+            for relabel, graph in ((left, self), (right, hole))
+            for boundary in graph.box_wires)
+        cod_wires = tuple(left[i] for i in self.cod_wires[n_dom:])
+        spider_types = {
+            left[i]: t for i, t in enumerate(self.spider_types)}
+        spider_types.update({
+            right[i]: t for i, t in enumerate(hole.spider_types)})
+        return type(self)(
+            self.dom[n_cod:], self.cod[n_dom:], self.boxes + hole.boxes,
+            (dom_wires, box_wires, cod_wires), spider_types)
+
+    def rewrite(self, *rules: Rule) -> Iterator[Hypergraph]:
+        """
+        The rewrites of a hypergraph in one step, i.e. for each rule
+        ``left, right``, each :meth:`match` of ``left`` and each of its
+        :meth:`complements`, the hypergraph with ``right`` plugged in.
+
+        This is sound and complete for rewriting modulo the axioms of
+        hypergraph categories, see :cite:t:`BonchiEtAl22`, Theorem 4.9, and
+        convex rewriting is for symmetric categories, see
+        :cite:t:`BonchiEtAl22b`, Theorem 27.
+
+        Parameters:
+            rules : The rules, each a pair of parallel hypergraphs.
+
+        Example
+        -------
+        >>> from discopy.frobenius import Ty, Box, Hypergraph as H
+        >>> x = Ty('x')
+        >>> f, g = (Box(name, x, x).to_hypergraph() for name in "fg")
+        >>> rewrites = list((f >> g >> f).rewrite((f >> g, g >> f)))
+        >>> assert rewrites == [g >> f >> f]
+        """
+        for left, right in rules:
+            if not left.is_parallel(right):
+                raise AxiomError(messages.NOT_PARALLEL.format(left, right))
+            right.assert_isrewritable()
+            for match in self.match(left):
+                for context in self.complements(left, match):
+                    yield context.plug(right)
+
+    def normalize(self, *rules: Rule) -> Iterator[Hypergraph]:
+        """
+        Rewrite with the first of the :meth:`rewrite` steps until there are
+        none, yielding each step: it terminates if the rules do.
+
+        Parameters:
+            rules : The rules, each a pair of parallel hypergraphs.
+        """
+        graph = next(self.rewrite(*rules), None)
+        while graph is not None:
+            yield graph
+            graph = next(graph.rewrite(*rules), None)
+
+    def normal_form(self, *rules: Rule) -> Hypergraph:
+        """
+        The last step of :meth:`normalize`, i.e. a hypergraph to which no
+        rule applies.
+
+        Parameters:
+            rules : The rules, each a pair of parallel hypergraphs.
+        """
+        result = self
+        for result in self.normalize(*rules):
+            pass
+        return result
 
     def __getitem__(self, key):
         if key == slice(None, None, -1):

@@ -14,6 +14,7 @@ from typing import (
     Generic,
     Mapping,
     Iterable,
+    Iterator,
     TypeVar,
     Any,
     Collection,
@@ -703,6 +704,27 @@ def pushout(
         j: len(left_proper) + len(components) + i
         for i, j in enumerate(right_proper)})
     return left_pushout, right_pushout
+
+
+def set_partitions(items: list) -> Iterator[list[list]]:
+    """
+    The partitions of a list into non-empty blocks, the finest first.
+
+    >>> for blocks in set_partitions([0, 1, 2]): print(blocks)
+    [[0], [1], [2]]
+    [[0, 1], [2]]
+    [[1], [0, 2]]
+    [[0], [1, 2]]
+    [[0, 1, 2]]
+    """
+    if not items:
+        yield []
+        return
+    first, rest = items[0], items[1:]
+    for blocks in set_partitions(rest):
+        yield [[first]] + blocks
+        for i, block in enumerate(blocks):
+            yield blocks[:i] + [[first] + block] + blocks[i + 1:]
 
 
 class BinaryBoxConstructor:

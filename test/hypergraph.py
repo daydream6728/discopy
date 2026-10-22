@@ -497,3 +497,123 @@ def test_trace_takes_the_keyword_form():
         f.trace(1, mem=y)
     with raises(AxiomError):
         f.trace(mem=x)
+
+
+def interaction_combinators():
+    x = Ty('x')
+    gamma, delta = (Box(name, x, x @ x).to_hypergraph() for name in "γδ")
+    epsilon = Box("ε", x, Ty()).to_hypergraph()
+    rules = [
+        (gamma.transpose() >> gamma, H.id(x @ x)),
+        (delta.transpose() >> delta, H.swap(x, x)),
+        (gamma.transpose() >> delta, delta @ delta >> x @ H.swap(x, x) @ x
+         >> gamma.transpose() @ gamma.transpose()),
+        (gamma.transpose() >> epsilon, epsilon @ epsilon),
+        (delta.transpose() >> epsilon, epsilon @ epsilon),
+        (epsilon.transpose() >> epsilon, H.id())]
+    return x, gamma, delta, epsilon, rules
+
+
+def test_interaction_combinators_rules():
+    *_, rules = interaction_combinators()
+    for left, right in rules:
+        rewrites = list(left.rewrite(*rules))
+        assert rewrites and all(rewrite == right for rewrite in rewrites)
+        assert list(right.rewrite(*rules)) == []
+    automorphic = [len(list(left.rewrite(*rules))) for left, _ in rules]
+    assert automorphic == [2, 2, 1, 1, 1, 2]
+
+
+def test_interaction_combinators_net_reducing_to_a_wiring():
+    x, gamma, delta, _, rules = interaction_combinators()
+    net = H.caps(x, x) >> delta @ delta >> x @ H.cups(x, x) @ x\
+        >> gamma.transpose() >> delta >> gamma @ gamma
+    for order in (rules, rules[::-1]):
+        steps = list(net.normalize(*order))
+        assert len(steps) == 5 and all(step.is_bijective for step in steps)
+        assert steps[-1] == H.caps(x, x) @ H.caps(x, x)
+    assert [len(step.boxes) for step in net.normalize(*rules)]\
+        == [4, 6, 4, 2, 0]
+
+
+def test_interaction_combinators_vicious_circle():
+    x, gamma, _, _, rules = interaction_combinators()
+    circle = (gamma.transpose() >> gamma).trace(2)
+    loops = circle.normal_form(*rules)
+    assert loops == H.spiders(0, 0, x @ x)
+
+
+def test_rewrite_needs_an_interface():
+    x = Ty('x')
+    f, g = (Box(name, x, x).to_hypergraph() for name in "fg")
+    rule = (f >> g, g >> f)
+    assert list((f >> g >> f).rewrite(rule)) == [g >> f >> f]
+    graph = f >> H.copy(x) >> (g >> f) @ x
+    assert list(graph.rewrite(rule)) == []
+
+
+def test_rewrite_modulo_frobenius_has_many_contexts():
+    x = Ty('x')
+    f, g = (Box(name, x, x).to_hypergraph() for name in "fg")
+    graph = H.copy(x) >> (f >> g) @ (f >> g)
+    rule = (H.id(x), f >> g)
+    match = ((3, ), ())
+    contexts = list(graph.complements(H.id(x), match))
+    assert len(contexts) == 5
+    assert all(context.plug(H.id(x)) == graph for context in contexts)
+    rewrites = [context.plug(f >> g) for context in contexts]
+    assert H.copy(x) >> (f >> g) @ (f >> f >> g >> g) in rewrites
+    assert len(list(graph.rewrite(rule))) == 9 + 4 * 5
+
+
+def test_rewrite_symmetric_boundary_complement():
+    from discopy import symmetric
+    x = symmetric.Ty('x')
+    a1, a2, a3 = (symmetric.Box(name, dom, cod) for name, dom, cod in [
+        ('a1', symmetric.Ty(), x), ('a2', x, symmetric.Ty()), ('a3', x, x)])
+    graph, rule = (a1 >> a2).to_hypergraph(), (
+        symmetric.Hypergraph.id(x), a3.to_hypergraph())
+    assert list(graph.rewrite(rule)) == [(a1 >> a3 >> a2).to_hypergraph()]
+    x = Ty('x')
+    a1, a2, a3 = (Box(name, dom, cod).to_hypergraph() for name, dom, cod in [
+        ('a1', Ty(), x), ('a2', x, Ty()), ('a3', x, x)])
+    assert len(list((a1 >> a2).rewrite((H.id(x), a3)))) == 5
+
+
+def test_rewrite_symmetric_needs_convex_match():
+    from discopy import frobenius, symmetric
+    results = []
+    for module in (frobenius, symmetric):
+        x = module.Ty('x')
+        e1, e2 = module.Box('e1', x, x @ x), module.Box('e2', x @ x, x)
+        e3, e4 = module.Box('e3', x, x), module.Box('e4', x, x)
+        left = x @ e1 >> module.Diagram.swap(x, x) @ x >> x @ e2
+        right = module.Diagram.swap(x, x) >> e4 @ e4
+        graph = e1 >> e3 @ x >> e2
+        rule = (left.to_hypergraph(), right.to_hypergraph())
+        results.append(list(graph.to_hypergraph().rewrite(rule)))
+    frobenius_rewrites, symmetric_rewrites = results
+    x = frobenius.Ty('x')
+    e3, e4 = (frobenius.Box(name, x, x) for name in ("e3", "e4"))
+    assert frobenius_rewrites == [(e4 >> e3 >> e4).to_hypergraph()]
+    assert symmetric_rewrites == []
+
+
+def test_rewrite_is_not_rewritable():
+    from discopy import monoidal, markov
+    x = monoidal.Ty('x')
+    f = monoidal.Box('f', x, x).to_hypergraph()
+    with raises(AxiomError):
+        list(f.rewrite((f, f)))
+    copy = markov.Hypergraph.copy(markov.Ty('x'))
+    with raises(AxiomError):
+        list(copy.match(copy))
+
+
+def test_rewrite_errors():
+    x, y = map(Ty, "xy")
+    f = Box('f', x, y).to_hypergraph()
+    with raises(AxiomError):
+        list(f.rewrite((f, H.id(x))))
+    with raises(AxiomError):
+        f.plug(f)
