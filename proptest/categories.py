@@ -7,14 +7,15 @@ rather than in any one of them.
 
 import pytest
 
-from discopy import biclosed, cat, closed, group, matrix
+from discopy import biclosed, cat, closed, ehypergraph, group, markov, matrix
 from discopy.utils import factory_name
 
 CATEGORIES = (
     cat.Arrow, biclosed.TermBase, closed.TermBase, matrix.Matrix[int],
     group.Cyclic[4], group.Symmetric[4],
     group.Product[group.Cyclic[2], group.Symmetric[3]],
-    group.Wreath[group.Symmetric[3], group.Cyclic[2]])
+    group.Wreath[group.Symmetric[3], group.Cyclic[2]],
+    ehypergraph.EHypergraph[markov.Diagram])
 
 
 def category_parameters(classify=lambda category: ()):

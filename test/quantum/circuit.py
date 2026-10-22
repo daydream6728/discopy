@@ -107,6 +107,18 @@ def test_pure_Box():
         Box('f', bit, qubit, is_mixed=False)
 
 
+def test_pure_Box_stays_pure():
+    quantum = Box('f', qubit ** 2, qubit, data=list(range(8)), is_mixed=False)
+    classical = Box('g', bit, bit, data=[1, 2, 3, 4], is_mixed=False)
+    for box in (quantum, classical):
+        for rebuilt in (box.dagger(), box.rotate(), box.delay()):
+            assert not rebuilt.is_mixed
+        assert box.dagger().eval().is_close(box.eval().dagger())
+        assert box.rotate().eval().is_close(box.eval().r)
+        assert box.rotate(left=True) == box.rotate()
+        assert box.rotate(left=True).rotate() == box
+
+
 def test_gate_hash():
     """
     Quantum gates carry their matrix as data, which numpy makes unhashable.
@@ -154,7 +166,7 @@ def test_Digits():
 
 
 def test_Bits():
-    assert repr(Bits(0).dagger()) == "Bits(0).dagger()"
+    assert repr(Bits(0).dagger()) == "quantum.gates.Bits(0).dagger()"
     assert Bits(0).dagger().dagger() == Bits(0)
 
 
