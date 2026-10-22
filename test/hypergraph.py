@@ -580,7 +580,9 @@ def test_rewrite_symmetric_boundary_complement():
     assert len(list((a1 >> a2).rewrite((H.id(x), a3)))) == 5
 
 
-def test_rewrite_symmetric_needs_convex_match():
+def test_rewrite_symmetric_is_convex():
+    # Bonchi et al. II, Example 4.2: the rewrite needs a trace, so convex
+    # rewriting misses it, even though DisCoPy's symmetric diagrams are traced.
     from discopy import frobenius, symmetric
     results = []
     for module in (frobenius, symmetric):
@@ -608,6 +610,48 @@ def test_rewrite_is_not_rewritable():
     copy = markov.Hypergraph.copy(markov.Ty('x'))
     with raises(AxiomError):
         list(copy.match(copy))
+
+
+def test_homomorphisms_check_the_partial_maps():
+    x, y = map(Ty, "xy")
+    f, g = (Box(name, x, x).to_hypergraph() for name in "fg")
+    assert list((f >> g).homomorphisms(f, boxes={0: 0})) == [((0, 1), (0, ))]
+    assert list((f >> g).homomorphisms(f, boxes={0: 1})) == []
+    assert list(H.id(x @ y).homomorphisms(H.id(x), spiders={0: 1})) == []
+    assert list((f >> f).homomorphisms(f >> f, injective=True)) == [
+        ((0, 1, 2), (0, 1))]
+
+
+def test_is_convex_walks_every_consumer():
+    x = Ty('x')
+    f, g, k = (Box(name, x, x).to_hypergraph() for name in "fgk")
+    host = f >> H.spiders(1, 2, x) >> g @ x >> H.spiders(2, 1, x) >> k
+    reordered = type(host)(
+        host.dom, host.cod, (host.boxes[0], host.boxes[2], host.boxes[1]), (
+            host.dom_wires, (host.box_wires[0], host.box_wires[2],
+                             host.box_wires[1]), host.cod_wires))
+    for graph in (host, reordered):
+        assert [graph.is_convex(match)
+                for match in graph.homomorphisms(f >> k)] == [False]
+
+
+def test_rewrite_symmetric_reads_back_without_trace():
+    from discopy import symmetric
+    x = symmetric.Ty('x')
+    f, g, h = (symmetric.Box(name, x, x) for name in "fgh")
+    rewrite, = (f >> g).to_hypergraph().rewrite(
+        (f.to_hypergraph(), h.to_hypergraph()))
+    assert str(rewrite) == "h >> g"
+
+
+def test_boundary_complement_is_linear_in_identity_wires():
+    from discopy import symmetric
+    x = symmetric.Ty('x')
+    f = symmetric.Box('f', x, x).to_hypergraph()
+    host = symmetric.Hypergraph.id(x).tensor(*8 * [f])
+    pattern = symmetric.Hypergraph.id(x ** 8)
+    match = next(host.match(pattern))
+    assert len(list(host.complements(pattern, match))) == 1
 
 
 def test_rewrite_errors():

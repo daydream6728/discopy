@@ -827,7 +827,8 @@ class Hypergraph(
 
     def homomorphisms(
             self, pattern: Hypergraph, spiders: dict[int, int] = None,
-            boxes: dict[int, int] = None) -> Iterator[Match]:
+            boxes: dict[int, int] = None, injective: bool = False
+            ) -> Iterator[Match]:
         """
         The homomorphisms from the underlying hypergraph of a pattern,
         injective on boxes: each box goes to an equal box, each spider to a
@@ -838,9 +839,10 @@ class Hypergraph(
             pattern : The hypergraph to match.
             spiders : A partial map on spiders to extend, empty by default.
             boxes : A partial map on boxes to extend, empty by default.
+            injective : Whether to keep only the maps injective on spiders.
 
-        The search extends the partial map one box at a time, through the
-        spiders it has already mapped whenever it can.
+        The search extends the partial maps one box at a time, through the
+        spiders already mapped whenever it can, see :meth:`extend_boxes`.
 
         Example
         -------
@@ -850,22 +852,57 @@ class Hypergraph(
         >>> assert list((f >> f).homomorphisms(f)) == [
         ...     ((0, 1), (0, )), ((1, 2), (1, ))]
         """
-        spiders = {} if spiders is None else spiders
-        boxes = {} if boxes is None else boxes
+        spiders, boxes = dict(spiders or {}), dict(boxes or {})
+        if len(set(boxes.values())) < len(boxes) or injective and len(
+                set(spiders.values())) < len(spiders) or any(
+                self.spider_types[image] != pattern.spider_types[spider]
+                for spider, image in spiders.items()):
+            return
+        for i, j in boxes.items():
+            spiders = self.extend_box(pattern, i, j, spiders, injective)
+            if spiders is None:
+                return
+        yield from self.extend_boxes(pattern, spiders, boxes, injective)
+
+    def extend_box(
+            self, pattern: Hypergraph, i: int, j: int,
+            spiders: dict[int, int], injective: bool = False
+            ) -> dict[int, int] | None:
+        """
+        Extend a partial map on spiders with the box ``i`` of a pattern sent
+        to the box ``j``, or ``None`` when the boxes differ or their wires
+        disagree with the map, or with its injectivity if required.
+        """
+        if self.boxes[j] != pattern.boxes[i]:
+            return None
+        extended, used = dict(spiders), set(spiders.values())
+        for spider, image in zip(
+                chain(*pattern.box_wires[i]), chain(*self.box_wires[j])):
+            if spider not in extended and injective and image in used:
+                return None
+            if extended.setdefault(spider, image) != image:
+                return None
+            used.add(image)
+        return extended
+
+    def extend_boxes(
+            self, pattern: Hypergraph, spiders: dict[int, int],
+            boxes: dict[int, int], injective: bool = False
+            ) -> Iterator[Match]:
+        """
+        Extend a homomorphism defined on some boxes of a pattern to all of
+        them, one box at a time, then to its other spiders.
+        """
         todo = [i for i in range(len(pattern.boxes)) if i not in boxes]
         if not todo:
-            yield from self.extend_spiders(pattern, spiders, boxes)
+            yield from self.extend_spiders(pattern, spiders, boxes, injective)
             return
         i, candidates = self.candidates(pattern, todo, spiders, boxes)
         for j in candidates:
-            extended = dict(spiders)
-            for spider, image in zip(
-                    chain(*pattern.box_wires[i]), chain(*self.box_wires[j])):
-                if extended.setdefault(spider, image) != image:
-                    break
-            else:
-                yield from self.homomorphisms(
-                    pattern, extended, boxes | {i: j})
+            extended = self.extend_box(pattern, i, j, spiders, injective)
+            if extended is not None:
+                yield from self.extend_boxes(
+                    pattern, extended, boxes | {i: j}, injective)
 
     def candidates(
             self, pattern: Hypergraph, todo: list[int],
@@ -886,24 +923,27 @@ class Hypergraph(
             j for j, *port in self.incidence[image]
             if port == [side, position])
         used = set(boxes.values())
-        return i, [j for j in candidates
-                   if j not in used and self.boxes[j] == pattern.boxes[i]]
+        return i, [j for j in candidates if j not in used]
 
     def extend_spiders(
             self, pattern: Hypergraph, spiders: dict[int, int],
-            boxes: dict[int, int]) -> Iterator[Match]:
+            boxes: dict[int, int], injective: bool = False
+            ) -> Iterator[Match]:
         """
         Extend a homomorphism defined on every box of a pattern to the
-        spiders without box ports, sent to any spider of the same type.
+        spiders without box ports, sent to any spider of the same type, one
+        at a time and to one not used yet if it must be injective.
         """
         rest = [s for s in range(pattern.n_spiders) if s not in spiders]
-        images = (
-            [w for w, typ in enumerate(self.spider_types)
-             if typ == pattern.spider_types[s]] for s in rest)
-        for choice in product(*images):
-            extended = spiders | dict(zip(rest, choice))
-            yield (tuple(extended[s] for s in range(pattern.n_spiders)),
+        if not rest:
+            yield (tuple(spiders[s] for s in range(pattern.n_spiders)),
                    tuple(boxes[i] for i in range(len(pattern.boxes))))
+            return
+        used = set(spiders.values()) if injective else set()
+        for image, typ in enumerate(self.spider_types):
+            if typ == pattern.spider_types[rest[0]] and image not in used:
+                yield from self.extend_spiders(
+                    pattern, spiders | {rest[0]: image}, boxes, injective)
 
     def glues(self, pattern: Hypergraph, match: Match) -> bool:
         """
@@ -958,26 +998,34 @@ class Hypergraph(
         if len(set(spiders)) < len(spiders) or len(set(boxes)) < len(boxes):
             return False
         image, inside = set(spiders), set(boxes)
-        _, consumer, _, _, _ = self.box_dependencies()
-        outside = [consumer[spider] for spider in image
-                   if consumer[spider] not in inside | {-1}]
+        outside = [box for spider in image
+                   for box, side, _ in self.incidence[spider]
+                   if side == 0 and box not in inside]
         seen = set()
         while outside:
             box = outside.pop()
+            if box in seen:
+                continue
             seen.add(box)
             if image & set(self.box_wires[box][1]):
                 return False
-            outside += [consumer[spider] for spider in self.box_wires[box][1]
-                        if consumer[spider] not in inside | seen | {-1}]
+            outside += [next_box for spider in self.box_wires[box][1]
+                        for next_box, side, _ in self.incidence[spider]
+                        if side == 0 and next_box not in inside]
         return True
 
     def assert_isrewritable(self) -> None:
         """
-        Raise ``AxiomError`` unless double-pushout rewriting is sound and
-        complete for the hypergraph: over a hypergraph category, see
-        :cite:t:`BonchiEtAl22`, Theorem 4.9, and over a symmetric category
-        when it is monogamous and acyclic, see :cite:t:`BonchiEtAl22b`,
-        Theorem 27.
+        Raise ``AxiomError`` unless double-pushout rewriting is sound for
+        the hypergraph: over a hypergraph category, where it is complete
+        modulo the Frobenius axioms, see :cite:t:`BonchiEtAl22`, Theorem 4.9,
+        and over a symmetric category when it is monogamous and acyclic,
+        where convex rewriting is complete modulo the axioms of symmetric
+        monoidal categories, see :cite:t:`BonchiEtAl22b`, Theorem 27.
+
+        The symmetric diagrams of DisCoPy are traced: convex rewriting is
+        sound for them but not complete, it misses the rewrites that need a
+        trace, e.g. :cite:t:`BonchiEtAl22b`, Example 4.2.
 
         Example
         -------
@@ -1020,7 +1068,7 @@ class Hypergraph(
         self.assert_isrewritable()
         pattern.assert_isrewritable()
         convex = not issubclass(self.category, HypergraphCategory)
-        for match in self.homomorphisms(pattern):
+        for match in self.homomorphisms(pattern, injective=convex):
             if self.glues(pattern, match) and (
                     not convex or self.is_convex(match)):
                 yield match
@@ -1069,25 +1117,29 @@ class Hypergraph(
         kept = tuple(self.boxes[j] for j in range(len(self.boxes))
                      if j not in boxes)
         dom, cod = pattern.cod @ self.dom, pattern.dom @ self.cod
-        ports = [("hole", k) for k in range(n_dom, len(interface))] + [
-            ("leg", spider) for spider in self.dom_wires + tuple(chain(*(
-                x + y for j, (x, y) in enumerate(self.box_wires)
-                if j not in boxes)))
-        ] + [("hole", k) for k in range(n_dom)] + [
-            ("leg", spider) for spider in self.cod_wires]
+        ports = [("hole", k, True) for k in range(n_dom, len(interface))]
+        ports += [("leg", spider, True) for spider in self.dom_wires]
+        ports += [
+            ("leg", spider, side == 1)
+            for j, wires in enumerate(self.box_wires) if j not in boxes
+            for side, spiders_ in enumerate(wires) for spider in spiders_]
+        ports += [("hole", k, False) for k in range(n_dom)]
+        ports += [("leg", spider, False) for spider in self.cod_wires]
         fibres = {}
-        for port, (kind, x) in enumerate(ports):
+        for port, (kind, x, _) in enumerate(ports):
             spider = spiders[interface[x]] if kind == "hole" else x
             if spider in image:
                 fibres.setdefault(spider, ([], []))[kind == "leg"].append(
                     port)
-        flat_wires = [x if kind == "leg" else None for kind, x in ports]
+        flat_wires = [x if kind == "leg" else None for kind, x, _ in ports]
         outside = {spider: typ for spider, typ in enumerate(self.spider_types)
                    if spider not in image}
         convex = not issubclass(self.category, HypergraphCategory)
+        producers = {port for port, (*_, producer) in enumerate(ports)
+                     if producer} if convex else None
         for choice in product(*(
-                self.partitions(spider, fibre, legs, [
-                    interface[ports[port][1]] for port in fibre])
+                list(self.partitions(spider, fibre, legs, [
+                    interface[ports[port][1]] for port in fibre], producers))
                 for spider, (fibre, legs) in fibres.items())):
             labels = {port: label for part in choice
                       for port, label in part.items()}
@@ -1105,7 +1157,8 @@ class Hypergraph(
     @staticmethod
     def partitions(
             spider: int, fibre: list[int], legs: list[int],
-            sources: list[int]) -> Iterator[dict[int, tuple[int, int]]]:
+            sources: list[int], producers: set[int] = None
+            ) -> Iterator[dict[int, tuple[int, int]]]:
         """
         The ways to split a spider in the image of the boundary of a
         pattern, i.e. the partitions of the ports of the boundary glued there
@@ -1117,6 +1170,9 @@ class Hypergraph(
             fibre : The ports of the boundary of the pattern glued there.
             legs : The other ports glued there.
             sources : The spider of the pattern for each port in ``fibre``.
+            producers : The ports that produce, if given then only the
+                monogamous splits, each block with one producer and one
+                consumer, see :cite:t:`BonchiEtAl22b`, Definition 23.
 
         Example
         -------
@@ -1140,8 +1196,15 @@ class Hypergraph(
             labels = {fibre[k]: (spider, i)
                       for i, block in enumerate(blocks) for k in block}
             for choice in product(range(len(blocks)), repeat=len(legs)):
-                yield labels | {
+                split = labels | {
                     leg: (spider, i) for leg, i in zip(legs, choice)}
+                count = Counter((label, port in producers)
+                                for port, label in split.items()
+                                ) if producers is not None else None
+                if count is None or all(
+                        count[label, True] == count[label, False] == 1
+                        for label in split.values()):
+                    yield split
 
     def plug(self, hole: Hypergraph) -> Hypergraph:
         """
@@ -1182,9 +1245,10 @@ class Hypergraph(
             left[i]: t for i, t in enumerate(self.spider_types)}
         spider_types.update({
             right[i]: t for i, t in enumerate(hole.spider_types)})
-        return type(self)(
+        result = type(self)(
             self.dom[n_cod:], self.cod[n_dom:], self.boxes + hole.boxes,
             (dom_wires, box_wires, cod_wires), spider_types)
+        return result.topological_order() if result.is_acyclic else result
 
     def rewrite(self, *rules: Rule) -> Iterator[Hypergraph]:
         """
@@ -1194,8 +1258,8 @@ class Hypergraph(
 
         This is sound and complete for rewriting modulo the axioms of
         hypergraph categories, see :cite:t:`BonchiEtAl22`, Theorem 4.9, and
-        convex rewriting is for symmetric categories, see
-        :cite:t:`BonchiEtAl22b`, Theorem 27.
+        convex rewriting modulo those of symmetric monoidal categories, see
+        :cite:t:`BonchiEtAl22b`, Theorem 27, and :meth:`assert_isrewritable`.
 
         Parameters:
             rules : The rules, each a pair of parallel hypergraphs.
