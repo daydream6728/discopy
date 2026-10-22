@@ -6,8 +6,8 @@ from hypothesis import find
 from hypothesis.errors import NoSuchExample
 from pytest import raises
 
-from discopy import cat, monoidal, rigid
-from discopy.abc import Category, Group
+from discopy import braided, cat, monoidal, rigid
+from discopy.abc import Category, ColouredMonoid, Group, MonoidalCategory
 from hypothesis import strategies as st
 
 from discopy.axioms import (
@@ -150,6 +150,7 @@ def test_sequents():
     scope, arguments = find(bound.sequents(), lambda _: True)
     assert set(arguments) == {"x", "f", "term", "n"} and bound(**arguments)
     assert inhabits(bound(**arguments), bound.output(scope))
+    assert bound.canonical()
 
 
 def test_formers():
@@ -184,6 +185,7 @@ def test_rules():
     assert Arrow.cut.is_recursive and not Arrow.ax.is_recursive
     assert monoidal.Diagram.mix.conclusion == (None, None)
     assert Arrow.ax.given(x, y) == {"X": y}
+    assert braided.Diagram.braiding.given(braided.Ty('x', 'y')) == {}
 
 
 def test_equation_symbols():
@@ -197,9 +199,11 @@ def test_equation_symbols():
 
 
 def test_weaken():
-    law = Arrow.unitality.weaken(within=Category)
-    assert law.params == {"within": Category}
-    assert law(**find(law.strategy(), lambda _: True))
+    law = rigid.Diagram.dagger_involution_monoidal
+    assert law.params == {"within": MonoidalCategory}
+    args = find(law.strategy(), lambda _: True)
+    assert not any(
+        isinstance(box, (rigid.Cup, rigid.Cap)) for box in args["f"].boxes)
 
 
 def test_falsify():
@@ -213,6 +217,13 @@ def test_falsify():
     assert Arrow.unitality.failing("Never holds.").falsify()
     with raises(NoSuchExample):
         Arrow.associativity.falsify()
+
+
+def test_canonical():
+    assert str(Arrow.associativity.canonical()) \
+        == "Equation(f >> g >> h, f >> g >> h)"
+    equation = rigid.Diagram.dagger_involution.canonical()
+    assert equation.terms[1] == rigid.Box('f', rigid.Ty('A'), rigid.Ty('B'))
 
 
 def test_axioms_of_category():
@@ -230,14 +241,42 @@ def test_axioms_of_category():
     assert "unitality" not in Hidden.axioms
 
 
+def test_canonical_unnamed_objects():
+    from discopy.neural.network import Network
+    with raises(TypeError, match="no canonical instance"):
+        Network.associativity.draw()
+
+
 def test_matrix():
     assert monoidal.Diagram in Testable.enrolled()
     assert monoidal.Ty in Testable.enrolled()
     assert cat.FreeCategory not in Testable.enrolled()
     once = Testable.matrix(once=True)
+    assert rigid.Diagram.dagger_involution in once
     assert cat.Arrow.dagger_involution in once
     assert rigid.Diagram.unitality not in once
     assert set(once) <= set(Testable.matrix())
+
+
+def test_canonical_instances():
+    """ Every law of a free category holds on its canonical instance unless
+    declared broken, types included, so that a law that crashes on its own
+    statement fails here before the property matrix ever searches for a
+    counterexample. """
+    for category in Testable.enrolled():
+        box = getattr(category, "box_factory", None)
+        if box is None or not (issubclass(box, category)
+                               or issubclass(category, ColouredMonoid)):
+            continue  # a map, a hypergraph, a type of one colour or a test
+        try:
+            category.ob("A")
+        except TypeError:
+            continue  # objects that take no name, e.g. the shapes of networks
+        for law in category.axioms.values():
+            if law.broken:
+                continue
+            equation = law.canonical()
+            assert equation is NotImplemented or equation, (category, law.name)
 
 
 def test_copying():
