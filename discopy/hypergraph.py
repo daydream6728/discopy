@@ -241,30 +241,11 @@ class Hypergraph(
     def __init__(
             self, dom: Ty, cod: Ty, boxes: tuple[Box, ...],
             wires: Wiring, spider_types: SpiderTypes = None,
-            offsets: tuple[int | None, ...] = None):
-        assert_isinstance(dom, self.category.ob)
-        assert_isinstance(cod, self.category.ob)
-        for box in boxes:
-            assert_isinstance(box, self.category)
+            offsets: tuple[int | None, ...] = None, _scan: bool = True):
         self.dom, self.cod, self.boxes = dom, cod, boxes
         dom_wires, box_wires, cod_wires = wires
-
-        if len(dom_wires) != len(dom):
-            raise ValueError(messages.WRONG_NUMBER_OF_WIRES.format(
-                len(dom), dom, len(dom_wires)))
-        if len(cod_wires) != len(cod):
-            raise ValueError(messages.WRONG_NUMBER_OF_WIRES.format(
-                len(cod), cod, len(cod_wires)))
-        if len(box_wires) != len(boxes):
-            raise ValueError(messages.WRONG_NUMBER_OF_BOUNDARIES.format(
-                len(boxes), len(box_wires)))
-        for box, (box_dom_wires, box_cod_wires) in zip(boxes, box_wires):
-            if len(box_dom_wires) != len(box.dom):
-                raise ValueError(messages.WRONG_NUMBER_OF_WIRES.format(
-                    len(box.dom), box.dom, len(box_dom_wires)))
-            if len(box_cod_wires) != len(box.cod):
-                raise ValueError(messages.WRONG_NUMBER_OF_WIRES.format(
-                    len(box.cod), box.cod, len(box_cod_wires)))
+        if _scan:
+            self.scan_wires(wires)
 
         flat_wires = dom_wires + tuple(
             chain.from_iterable(x + y for x, y in box_wires)) + cod_wires
@@ -287,7 +268,46 @@ class Hypergraph(
         self.flat_wires = tuple(new_index[s] for s in flat_wires)
         self.wires = self.rebracket(self.flat_wires)
         self.dom_wires, self.box_wires, self.cod_wires = self.wires
+        if _scan:
+            self.scan_types()
 
+        self.offsets = offsets or tuple(len(boxes) * [None])
+
+    def scan_wires(self, wires: Wiring) -> None:
+        """
+        Raise unless the boundary and the boxes have objects of the category
+        and as many wires as ports, checked by :meth:`__init__` unless it is
+        given ``_scan=False``, e.g. by a rewriting that builds a rule for
+        each match out of a hypergraph already checked.
+        """
+        assert_isinstance(self.dom, self.category.ob)
+        assert_isinstance(self.cod, self.category.ob)
+        for box in self.boxes:
+            assert_isinstance(box, self.category)
+        dom_wires, box_wires, cod_wires = wires
+        if len(dom_wires) != len(self.dom):
+            raise ValueError(messages.WRONG_NUMBER_OF_WIRES.format(
+                len(self.dom), self.dom, len(dom_wires)))
+        if len(cod_wires) != len(self.cod):
+            raise ValueError(messages.WRONG_NUMBER_OF_WIRES.format(
+                len(self.cod), self.cod, len(cod_wires)))
+        if len(box_wires) != len(self.boxes):
+            raise ValueError(messages.WRONG_NUMBER_OF_BOUNDARIES.format(
+                len(self.boxes), len(box_wires)))
+        for box, (box_dom_wires, box_cod_wires) in zip(
+                self.boxes, box_wires):
+            if len(box_dom_wires) != len(box.dom):
+                raise ValueError(messages.WRONG_NUMBER_OF_WIRES.format(
+                    len(box.dom), box.dom, len(box_dom_wires)))
+            if len(box_cod_wires) != len(box.cod):
+                raise ValueError(messages.WRONG_NUMBER_OF_WIRES.format(
+                    len(box.cod), box.cod, len(box_cod_wires)))
+
+    def scan_types(self) -> None:
+        """
+        Raise unless each spider is atomic, typed like each of its ports, and
+        joins adjoint types when it is a cup or a cap, see :meth:`scan_wires`.
+        """
         ports = self.ports
         for obj in self.spider_types:
             assert_isatomic(obj, self.category.ob)
@@ -304,8 +324,6 @@ class Hypergraph(
                 if getattr(left, "r", left) != right\
                         and getattr(right, "r", right) != left:
                     raise AxiomError(messages.NOT_ADJOINT.format(left, right))
-
-        self.offsets = offsets or tuple(len(boxes) * [None])
 
     @cached_property
     def spider_wires(self) -> list[tuple[set[int], set[int]]]:
@@ -2828,6 +2846,235 @@ class Hypergraph(
             finally:
                 plt.close()
         plt.show()
+
+
+class Rewriter:
+    """
+    A hypergraph rewritten in place with left-linear rules, i.e. rules whose
+    boundary wires go to distinct spiders on the left: their pushout
+    complement is unique, the host without the image of the left side minus
+    its boundary, see :cite:t:`BonchiEtAl22`, Proposition 3.18. Over a
+    symmetric category that is not a hypergraph category, the matches are
+    convex and this is the boundary complement, see :cite:t:`BonchiEtAl22b`,
+    Proposition 24.
+
+    Each step costs the size of the rule rather than of the host, as the
+    boxes and spiders are kept with their ids and deleted ones are ``None``.
+    The match search is the one of :class:`Hypergraph`, sharing its methods.
+
+    Parameters:
+        graph : The hypergraph to rewrite.
+
+    Example
+    -------
+    >>> from discopy.frobenius import Ty, Box, Hypergraph as H
+    >>> x = Ty('x')
+    >>> f, g, h = (Box(name, x, x).to_hypergraph() for name in "fgh")
+    >>> rewriter = Rewriter(f >> g >> f >> g)
+    >>> assert rewriter.normalize((f >> g, h)) == 2
+    >>> assert rewriter.to_hypergraph() == h >> h
+    """
+    homomorphisms = Hypergraph.homomorphisms
+    extend_box = Hypergraph.extend_box
+    extend_boxes = Hypergraph.extend_boxes
+    candidates = Hypergraph.candidates
+    extend_spiders = Hypergraph.extend_spiders
+    is_convex = Hypergraph.is_convex
+
+    def __init__(self, graph: Hypergraph):
+        self.factory, self.dom, self.cod = type(graph), graph.dom, graph.cod
+        self.boxes, self.box_wires = list(graph.boxes), list(graph.box_wires)
+        self.spider_types = list(graph.spider_types)
+        self.incidence = [dict.fromkeys(ports) for ports in graph.incidence]
+        self.dom_wires = list(graph.dom_wires)
+        self.cod_wires = list(graph.cod_wires)
+        self.ports = [0] * graph.n_spiders
+        for spider in self.dom_wires + self.cod_wires:
+            self.ports[spider] += 1
+        self.parent = list(range(graph.n_spiders))
+        self.convex = not issubclass(graph.category, HypergraphCategory)
+        if self.convex:
+            graph.assert_isrewritable()
+
+    def find(self, spider: int) -> int:
+        """ The spider that ``spider`` was merged into, itself if none. """
+        while self.parent[spider] != spider:
+            self.parent[spider] = self.parent[self.parent[spider]]
+            spider = self.parent[spider]
+        return spider
+
+    def neighbours(self, spider: int) -> Iterator[int]:
+        """ The boxes with a port on a spider, each once. """
+        return iter(dict.fromkeys(box for box, *_ in self.incidence[spider]))
+
+    def add_spider(self, typ: Ty) -> int:
+        """ Add a spider of a given type, returning its id. """
+        self.spider_types.append(typ)
+        self.incidence.append({})
+        self.ports.append(0)
+        self.parent.append(len(self.parent))
+        return len(self.spider_types) - 1
+
+    def add_box(self, box: Box, dom: Wires, cod: Wires) -> int:
+        """ Add a box with its domain and codomain wires, returning its id. """
+        j = len(self.boxes)
+        self.boxes.append(box)
+        self.box_wires.append((tuple(dom), tuple(cod)))
+        for side, wires in enumerate((dom, cod)):
+            for position, spider in enumerate(wires):
+                self.incidence[spider][j, side, position] = None
+        return j
+
+    def remove_box(self, j: int) -> None:
+        """ Remove a box, keeping its spiders. """
+        for side, wires in enumerate(self.box_wires[j]):
+            for position, spider in enumerate(wires):
+                del self.incidence[spider][j, side, position]
+        self.boxes[j] = self.box_wires[j] = None
+
+    def merge(self, spider: int, other: int) -> int:
+        """
+        Merge two spiders, i.e. the pushout that glues them, returning the
+        one that is kept: the one with more ports, so that a sequence of
+        merges moves each port a logarithmic number of times.
+        """
+        if spider == other:
+            return spider
+        if len(self.incidence[spider]) + self.ports[spider] < len(
+                self.incidence[other]) + self.ports[other]:
+            spider, other = other, spider
+        for j, side, position in self.incidence[other]:
+            wires = list(self.box_wires[j][side])
+            wires[position] = spider
+            self.box_wires[j] = (tuple(wires), self.box_wires[j][1])\
+                if side == 0 else (self.box_wires[j][0], tuple(wires))
+            self.incidence[spider][j, side, position] = None
+        if self.ports[other]:
+            for wires in (self.dom_wires, self.cod_wires):
+                wires[:] = [spider if s == other else s for s in wires]
+        self.ports[spider] += self.ports[other]
+        self.incidence[other], self.ports[other] = {}, 0
+        self.spider_types[other], self.parent[other] = None, spider
+        return spider
+
+    def glues(self, pattern: Hypergraph, match: Match) -> bool:
+        """
+        The gluing conditions of :meth:`Hypergraph.glues`, read off the ports
+        of each spider deleted.
+        """
+        spiders, boxes = match
+        interface = set(pattern.dom_wires + pattern.cod_wires)
+        inner = [image for spider, image in enumerate(spiders)
+                 if spider not in interface]
+        if len(set(inner)) < len(inner) or set(inner) & {
+                spiders[spider] for spider in interface}:
+            return False
+        matched = set(boxes)
+        return not any(
+            self.ports[image] or any(
+                j not in matched for j, *_ in self.incidence[image])
+            for image in inner)
+
+    def substitute(
+            self, left: Hypergraph, right: Hypergraph, match: Match
+            ) -> list[int]:
+        """
+        Rewrite a match of a left-linear rule ``left, right`` in place, i.e.
+        delete the image of ``left`` minus its boundary, then glue ``right``
+        along its boundary, merging the spiders it identifies. The match is
+        assumed to satisfy :meth:`glues`.
+
+        Parameters:
+            left : The left side of the rule, left-linear.
+            right : Its right side, parallel to it.
+            match : A match of ``left``.
+
+        Returns the new boxes.
+        """
+        interface = left.dom_wires + left.cod_wires
+        if len(set(interface)) < len(interface):
+            raise AxiomError(messages.NOT_LEFT_LINEAR.format(left))
+        spiders, boxes = match
+        spiders = [self.find(spider) for spider in spiders]
+        for j in boxes:
+            self.remove_box(j)
+        for spider in set(range(left.n_spiders)) - set(interface):
+            self.spider_types[spiders[spider]] = None
+        image = {}
+        for k, spider in enumerate(right.dom_wires + right.cod_wires):
+            host = spiders[interface[k]]
+            image[spider] = self.merge(self.find(image[spider]), self.find(
+                host)) if spider in image else self.find(host)
+        for spider, typ in enumerate(right.spider_types):
+            if spider not in image:
+                image[spider] = self.add_spider(typ)
+        return [self.add_box(box, *(
+            [self.find(image[spider]) for spider in wires]
+            for wires in right.box_wires[i]))
+            for i, box in enumerate(right.boxes)]
+
+    def matches(self, left: Hypergraph, j: int) -> Iterator[Match]:
+        """
+        The matches of a pattern with one of its boxes sent to the box ``j``,
+        convex and injective over a symmetric category.
+        """
+        for i, box in enumerate(left.boxes):
+            if box != self.boxes[j]:
+                continue
+            for match in self.homomorphisms(
+                    left, boxes={i: j}, injective=self.convex):
+                if self.glues(left, match) and (
+                        not self.convex or self.is_convex(match)):
+                    yield match
+
+    def normalize(self, *rules: Rule) -> int:
+        """
+        Rewrite with left-linear rules, each with at least one box on the
+        left, until none applies, returning the number of steps: each box is
+        tried once, and again whenever a step touches one of its spiders.
+
+        Parameters:
+            rules : The rules, each a pair of parallel hypergraphs.
+        """
+        for left, right in rules:
+            if not left.boxes:
+                raise AxiomError(messages.NOT_LEFT_LINEAR.format(left))
+            if not left.is_parallel(right):
+                raise AxiomError(messages.NOT_PARALLEL.format(left, right))
+        todo, steps = dict.fromkeys(range(len(self.boxes))), 0
+        while todo:
+            j = next(iter(todo))
+            del todo[j]
+            if self.boxes[j] is None:
+                continue
+            for left, right in rules:
+                match = next(self.matches(left, j), None)
+                if match is None:
+                    continue
+                touched = [self.find(spider) for spider in match[0]]
+                todo.update(dict.fromkeys(
+                    self.substitute(left, right, match)))
+                for spider in {self.find(spider) for spider in touched}:
+                    if self.spider_types[spider] is not None:
+                        todo.update(dict.fromkeys(self.neighbours(spider)))
+                steps += 1
+                break
+        return steps
+
+    def to_hypergraph(self) -> Hypergraph:
+        """ The hypergraph rewritten so far. """
+        spiders = [s for s, typ in enumerate(self.spider_types)
+                   if typ is not None]
+        index = {spider: i for i, spider in enumerate(spiders)}
+        kept = [j for j, box in enumerate(self.boxes) if box is not None]
+        wires = (
+            tuple(index[s] for s in self.dom_wires),
+            tuple(tuple(tuple(index[s] for s in side)
+                        for side in self.box_wires[j]) for j in kept),
+            tuple(index[s] for s in self.cod_wires))
+        return self.factory(
+            self.dom, self.cod, tuple(self.boxes[j] for j in kept), wires,
+            tuple(self.spider_types[s] for s in spiders))
 
 
 class Functor(cat.Functor):

@@ -661,3 +661,47 @@ def test_rewrite_errors():
         list(f.rewrite((f, H.id(x))))
     with raises(AxiomError):
         f.plug(f)
+
+
+def test_Rewriter_interaction_combinators():
+    x, gamma, delta, _, rules = interaction_combinators()
+    net = H.caps(x, x) >> delta @ delta >> x @ H.cups(x, x) @ x\
+        >> gamma.transpose() >> delta >> gamma @ gamma
+    rewriter = Rewriter(net)
+    assert rewriter.normalize(*rules) == 5
+    assert rewriter.to_hypergraph() == net.normal_form(*rules)
+
+
+def test_Rewriter_substitute_is_the_pushout():
+    from discopy import symmetric
+    for module in (symmetric, None):
+        x = Ty('x') if module is None else module.Ty('x')
+        box = Box if module is None else module.Box
+        f, g, m = box('f', x, x), box('g', x, x), box('m', x @ x, x)
+        host = (f @ g >> m >> f >> g).to_hypergraph()
+        left, right = (f >> g).to_hypergraph(), (g >> f).to_hypergraph()
+        for match in host.match(left):
+            context, = host.complements(left, match)
+            rewriter = Rewriter(host)
+            rewriter.substitute(left, right, match)
+            assert rewriter.to_hypergraph() == context.plug(right)
+
+
+def test_Rewriter_merges_spiders():
+    x = Ty('x')
+    f, g = (Box(name, x, x).to_hypergraph() for name in "fg")
+    rewriter = Rewriter(H.copy(x) >> (f >> g) @ (f >> g))
+    assert rewriter.normalize((f >> g, H.id(x))) == 2
+    assert rewriter.to_hypergraph() == H.copy(x)
+
+
+def test_Rewriter_errors():
+    x = Ty('x')
+    f = Box('f', x, x).to_hypergraph()
+    with raises(AxiomError):
+        Rewriter(f).normalize((H.id(x), f))
+    with raises(AxiomError):
+        Rewriter(f).normalize((f, H.id(Ty())))
+    left = H.copy(x) >> f @ x
+    with raises(AxiomError):
+        Rewriter(left).substitute(left, left, ((0, 1), (0, )))
