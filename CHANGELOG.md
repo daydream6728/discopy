@@ -960,10 +960,13 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `inside`, with `Representation` ends `dom` and `cod`, the way
   `interaction.Diagram` holds a diagram of its underlying category. It was
   a `tensor.Diagram` whose composites were plain tensor diagrams, so that
-  a module was sliced down to its space by every operation. `>>`, `@` and
-  `dagger` compose the networks and the modules, `eval`, `to_map` and
-  `draw` are those of the network, and a plain `Dim` end is the trivial
-  module. `isinstance(f, tensor.Diagram)` and `f.boxes` stop working on an
+  a module was sliced down to its space by every operation, and which
+  declared it a dagger, symmetric, compact and hypergraph category, none of
+  which `Rep(H)` is. `>>`, `@` and `dagger` compose the networks and the
+  modules, the dagger being the adjoint in `Vect`, no morphism of `Rep(H)`
+  between modules that are not unitary; `eval`, `to_map` and `draw` are
+  those of the network, and a plain `Dim` end is the trivial module.
+  `isinstance(f, tensor.Diagram)` and `f.boxes` stop working on an
   intertwiner: compose its `inside` with an action, as the doctests do.
   `Algebra`, `Double`, `Representation` and `Intertwiner` have trees that
   carry the generators of the algebra and the action of each module, so

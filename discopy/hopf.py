@@ -954,9 +954,12 @@ class Intertwiner(NamedGeneric["algebra"], RibbonCategory):
     :class:`.tensor.Diagram`, in :math:`\\mathbf{Vect}`, and only its ends
     ``dom`` and ``cod`` are ``Representation[H]``, the way an
     :class:`.interaction.Diagram` holds a diagram of its underlying category:
-    composition, tensor and dagger compose both the networks and the
+    composition, tensor and :meth:`dagger` compose both the networks and the
     modules, while :meth:`eval`, :meth:`to_map` and :meth:`draw` are those of
-    the network. Its ribbon structure is given by its classmethods — the
+    the network. It is a ribbon category, neither symmetric nor compact nor
+    a hypergraph category, and no dagger category: the inverses of the braid
+    and the twist are their ``is_dagger`` forms. Its ribbon structure is
+    given by its classmethods — the
     braiding is :meth:`braid` (the R-matrix acting on the two strands, then a
     swap), the :meth:`twist` is the trace of the self-braiding, and the
     (co)evaluations :meth:`cups`/:meth:`caps` pair a module with its dual
@@ -1079,7 +1082,13 @@ class Intertwiner(NamedGeneric["algebra"], RibbonCategory):
                           self.dom @ other.dom, self.cod @ other.cod)
 
     def dagger(self):
-        """ The dagger of the network, from the codomain to the domain. """
+        """
+        The adjoint in :math:`\\mathbf{Vect}` of the network, from the
+        codomain to the domain: between modules that are not unitary it is no
+        morphism of :math:`\\mathrm{Rep}(H)`, e.g. the dagger of a twist over
+        ``Double(Algebra.taft(3))`` is not its inverse
+        ``twist(dom, is_dagger=True)``.
+        """
         return type(self)(self.inside.dagger(), self.cod, self.dom)
 
     def trace(self, n=1, left=False):
