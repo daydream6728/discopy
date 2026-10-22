@@ -141,7 +141,7 @@ def test_effects_stay_outside_joins():
         spider(Markov.from_diagram(sample @ f), f))
     diagram = graph.to_diagram()
     assert sample in diagram.boxes and joins(diagram) == [
-        ['Discard(x) @ f', 'x @ Discard(x)']]
+        ['Discard(x) @ f', 'Function(x @ x, [0])']]
     assert len(graph.sections()) == 2
 
 
