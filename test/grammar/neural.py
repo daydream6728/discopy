@@ -4,7 +4,7 @@ torch = pytest.importorskip("torch")
 
 from discopy.grammar.abstract import Ty
 from discopy.grammar.neural import *
-from discopy.grammar.proofnet import ProofNet
+from discopy.grammar.proofnet import ProofNet, Sequent
 
 n, s = Ty("n"), Ty("s")
 Alice, Bob = n("Alice"), n("Bob")
@@ -66,3 +66,54 @@ def test_Linker():
     loss = linker.loss(states, mask, [net, net])
     loss.backward()
     assert loss > 0 and torch.isfinite(linker.bilinear.grad).all()
+
+
+def test_Signature_mask():
+    x = Ty("x")
+    assert signature.mask() == [True] * 3
+    assert Signature((n, s, x)).mask([x, n]) == [True, True, False, True]
+
+
+def test_Tagger_loss():
+    torch.manual_seed(0)
+    x = Ty("x")
+    tagger = Tagger(Signature((n, s, x)), hidden=8, dim=8)
+    states = torch.randn(1, 3, 8)
+    mask, types = torch.ones(1, 3) > 0, [n, n >> (n >> s), n]
+    outputs = []
+    tagger.output.register_forward_hook(
+        lambda module, inputs, output: outputs.append(output))
+    tagger.smoothing = .1
+    loss = tagger.loss(states, mask, types)
+    targets = torch.tensor([[1] + [-1] * 4, [0, 1, 0, 1, 2], [1] + [-1] * 4])
+    assert torch.allclose(loss, torch.nn.functional.cross_entropy(
+        outputs[0].flatten(0, 1), targets.flatten(),
+        ignore_index=-1, label_smoothing=.1))
+    tagger.smoothing = 0.
+    within = tagger.loss(states, mask, types, atoms=[n, s])
+    within.backward()
+    assert within < tagger.loss(states, mask, types)
+    assert tagger.loss(
+        states[:, :1], mask[:, :1], [x], atoms=[n, s]) == torch.inf
+
+
+def test_Tagger_beam_atoms():
+    torch.manual_seed(0)
+    x = Ty("x")
+    tagger = Tagger(Signature((n, s, x)), hidden=8, dim=8)
+    states, mask = torch.randn(1, 4, 8), torch.ones(1, 4) > 0
+    beams = tagger.beam(states, mask, k=8, max_length=5, atoms=[n, s])
+    assert all(x not in Signature.from_types([ty]).atoms
+               for beam in beams for ty, _ in beam)
+    assert all(len(beam) == 8 for beam in beams)
+
+
+def test_Parser_infers_the_goal():
+    torch.manual_seed(0)
+    parser = Parser(signature, hidden=8, dim=8)
+    parser.tagger.beam = lambda *args, **kwargs: [
+        [(n, 0.)], [(n >> (n >> s), 0.)], [(n, 0.)]]
+    states = torch.randn(3, 8)
+    assert parser(["Alice", "loves", "Bob"], states).sequent\
+        == Sequent((Alice, loves, Bob), s)
+    assert parser(["Alice", "loves"], states[:2]).sequent.goal == n >> s
