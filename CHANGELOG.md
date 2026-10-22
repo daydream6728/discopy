@@ -2745,6 +2745,10 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Project
 
+- `fail-under` rises from 8.85 to 8.92, by what `discopy.optyx` lifts the
+  score: 9.0979 on `main` and 9.1755 with it, both read with
+  `--output-format=json2`
+  ([#225](https://github.com/rel-int/discopy-next/issues/225)).
 - A notebook that fails to execute in a docs build links its source in the
   repository and at the commit Read the Docs builds,
   `READTHEDOCS_GIT_CLONE_URL` at `READTHEDOCS_GIT_COMMIT_HASH`, where it
