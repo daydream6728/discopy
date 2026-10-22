@@ -2183,8 +2183,9 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   ([rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
 - `to_hypergraph` and `foliation` of a closed diagram with a constant, e.g.
   `g(X('a')).eval()`, raised `AxiomError: Expected a term for g, got g.`:
-  `biclosed.Functor` maps terms to terms into a hypergraph of closed
-  diagrams no more than into a `CMap`
+  `biclosed.Functor` sent its constants to `map_term`, since the objects of
+  a hypergraph of closed diagrams are biclosed types, and a hypergraph,
+  which has no terms, is now exempt from that as a `CMap` already was
   ([rel-int/discopy-next#177](https://github.com/rel-int/discopy-next/issues/177)).
 - A variable of a composite type, e.g. `Variable("v", x @ y)`, is bound
   whole. The abstraction machinery indexed contexts and free variables by
