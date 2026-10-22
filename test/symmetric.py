@@ -259,6 +259,28 @@ def test_permutation_factory():
     assert Equation(functor(perm), functor(perm.to_swaps()))
 
 
+def test_Functor_on_whiskered_Swap():
+    from discopy import balanced
+    from discopy.matrix import Matrix
+    x, y, z = Ty('x'), Ty('y'), Ty('z')
+    braided = Functor({x: x, y: y, z: z}, {}, cod=balanced.Diagram)
+    assert braided(Swap(x, y) @ z) == balanced.Braid(x, y) @ z
+    assert braided(Permutation(x @ y @ z, [2, 0, 1]))\
+        == x @ balanced.Braid(y, z) >> balanced.Braid(x, z) @ y
+    assert braided(Permutation(x @ y, [0, 1])) == balanced.Diagram.id(x @ y)
+    assert [type(box) for box in (Swap(x, y) @ z).to_braided().boxes]\
+        == [balanced.DualRailBraid]
+    widen = Functor({Nat(1): x @ y}, {})
+    assert Equation(
+        widen(Diagram.swap(Nat(1), Nat(1)) @ Nat(1)),
+        Diagram.swap(x @ y, x @ y) @ (x @ y))
+    assert Functor({Nat(1): 2}, {}, cod=Matrix)(Permutation(
+        Nat(3), [1, 0, 2])) == Matrix.permutation([1, 0, 2], [2, 2, 2])
+    perm = Permutation(Nat(3), [2, 0, 1])
+    assert Functor({Nat(1): Nat(1)}, {})(perm)\
+        == Diagram.permutation(perm.perm, perm.dom)
+
+
 def test_inherited_permutation_factory():
     from discopy import closed, markov, frobenius, tensor
 
@@ -348,7 +370,9 @@ def test_Permutation_foliation():
     with raises(AxiomError):
         foliated.inside[0].merge(foliated.inside[1])
     inverse = reverse.dagger() >> reverse
-    assert inverse.foliation() == inverse
+    assert inverse.foliation() == Id(inverse.dom)
+    assert (inverse >> reverse.dagger()).foliation() == reverse.dagger()
+    assert (Swap(x, y) >> Swap(y, x)).foliation() == Id(x @ y)
     with raises(AxiomError):
         inverse.inside[0].merge(inverse.inside[1])
 
