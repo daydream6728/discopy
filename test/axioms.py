@@ -2,7 +2,7 @@
 
 from typing import Self, TypeVar
 
-from hypothesis import find
+from hypothesis import find, settings
 from hypothesis import strategies as st
 from hypothesis.errors import NoSuchExample
 from pytest import raises
@@ -227,6 +227,18 @@ def test_self_annotation():
     law = absorbing.bind(Arrow)
     arguments = find(law.strategy(), lambda _: True)
     assert isinstance(arguments["f"], Arrow) and law(**arguments)
+
+
+def test_weaken_shape_of_self():
+    from discopy.biclosed import TermBase, Ty as Type
+    x = Type("x")
+    for law in (TermBase.symmetry, TermBase.alpha_renaming,
+                TermBase.alpha_completeness):
+        with raises(NoSuchExample):
+            find(law.weaken(cod=x).strategy(),
+                 lambda arguments: any(
+                     term.cod != x for term in arguments["terms"]),
+                 settings=settings(max_examples=50, database=None))
 
 
 def test_falsify():
