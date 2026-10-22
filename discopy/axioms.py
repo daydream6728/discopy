@@ -60,6 +60,8 @@ Summary
         assert_axioms
 """
 
+from __future__ import annotations
+
 import inspect
 import pickle
 import sys
@@ -141,7 +143,7 @@ class Equation(NamedGeneric["ar"]):
         if up_to is not None:
             self.up_to = up_to
 
-    def modulo(self, up_to: Callable) -> "Equation":
+    def modulo(self, up_to: Callable) -> Equation:
         """
         The same equation compared up to the given function, rebinding
         :attr:`up_to`, whose name the attribute already takes.
@@ -446,11 +448,11 @@ class Declaration[**P, T](classmethod):
     expressions are built by :class:`Tensor`, :class:`Unit`, :class:`L`,
     :class:`R`, :class:`Delay`, :class:`Over`, :class:`Under` and
     :class:`Repeat`, which stay expressions until the variables are
-    substituted, see :func:`substitute`. The annotations are read as
-    objects, the type parameters of the classes above the category standing
-    for what :meth:`discopy.abc.Category.parameters` says, see
-    :func:`position`: a function compiled with ``from __future__ import
-    annotations`` has strings for annotations, and is refused.
+    substituted, see :func:`substitute`. The type parameters of the class
+    stating it stand for what :meth:`discopy.abc.Category.parameters` says,
+    see :func:`position`, and the annotations are read as objects, see
+    :meth:`annotations`, so that a module stating a law may use ``from
+    __future__ import annotations``.
 
     Parameters:
         function : The function the declaration states, from the category and
@@ -470,13 +472,6 @@ class Declaration[**P, T](classmethod):
     params: dict[str, Any] = None
 
     def __post_init__(self):
-        function = inspect.unwrap(self.function)
-        if any(isinstance(annotation, str)
-               for annotation in function.__annotations__.values()):
-            raise TypeError(
-                f"{function.__module__} states {function.__name__} with "
-                "string annotations, e.g. under `from __future__ import "
-                "annotations`.")
         classmethod.__init__(self, self.function)
         self.name = self.name or self.function.__name__
         self.params = dict(self.params or {})
@@ -513,6 +508,27 @@ class Declaration[**P, T](classmethod):
                 inspect.signature(self.function).parameters.values())[1:]
             if parameter.default is inspect.Parameter.empty)
 
+    def annotations(self) -> dict[str, Any]:
+        """
+        The annotations of the function read as objects, where ``from
+        __future__ import annotations`` leaves strings: each is evaluated in
+        the module of the function, with the type parameters of the class
+        stating it and then those of the function itself in scope.
+        """
+        function = inspect.unwrap(self.function)
+        owner = next((
+            klass for klass in (self.category or object).__mro__
+            if f"{klass.__qualname__}.{function.__name__}"
+            == function.__qualname__), None)
+        names = {
+            parameter.__name__: parameter for parameter in (
+                getattr(owner, "__type_params__", ())
+                + function.__type_params__)}
+        return {
+            name: eval(annotation, function.__globals__, names)
+            if isinstance(annotation, str) else annotation
+            for name, annotation in function.__annotations__.items()}
+
     def scope(self, variable: Callable, given: dict | None = None) -> dict:
         """
         The values of the variables of a signature: the category for
@@ -541,9 +557,10 @@ class Declaration[**P, T](classmethod):
         The arguments of the bound declaration: ``value(name, kind)`` for each
         of its :attr:`parameters`, their annotation substituted in the scope.
         """
+        annotations = self.annotations()
         return {
             parameter.name: value(
-                parameter.name, substitute(parameter.annotation, scope))
+                parameter.name, substitute(annotations[parameter.name], scope))
             for parameter in self.parameters}
 
     def output(self, scope: dict):
@@ -552,12 +569,11 @@ class Declaration[**P, T](classmethod):
         substituted in the scope its arguments were sampled in, which the
         output :func:`inhabits`.
         """
-        return substitute(
-            inspect.signature(self.function).return_annotation, scope)
+        return substitute(self.annotations()["return"], scope)
 
     def sequents(
             self, given: dict | None = None, **params
-    ) -> "st.SearchStrategy[tuple]":
+    ) -> st.SearchStrategy[tuple]:
         """
         Generate the scope and the arguments of the bound declaration: a
         variable of sort ``Obj`` from the strategy of the objects
@@ -600,7 +616,7 @@ class Declaration[**P, T](classmethod):
 
     def arguments(
             self, given: dict | None = None, **params
-    ) -> "st.SearchStrategy[dict]":
+    ) -> st.SearchStrategy[dict]:
         """ Generate the arguments of the bound declaration, see
         :meth:`sequents`. """
         return self.sequents(given, **params).map(lambda sequent: sequent[1])
@@ -637,7 +653,7 @@ class Axiom[**P, T](Declaration[P, T]):
 
     __hash__ = Declaration.__hash__
 
-    def modulo(self, up_to) -> "Axiom[P, T]":
+    def modulo(self, up_to) -> Axiom[P, T]:
         """
         The same law with its equation compared up to a function, so that a
         category weakens an inherited axiom in one statement, e.g.
@@ -649,7 +665,7 @@ class Axiom[**P, T](Declaration[P, T]):
             return self.function(*args, **kwargs).modulo(up_to)
         return replace(self, function=equation)
 
-    def failing(self, reason: str) -> "Axiom[P, T]":
+    def failing(self, reason: str) -> Axiom[P, T]:
         """
         The same law declared broken: calling it raises an
         :class:`AxiomFailure` with the reason as message and the equation
@@ -667,7 +683,7 @@ class Axiom[**P, T](Declaration[P, T]):
         equation.__doc__ = reason
         return replace(self, function=equation, broken=True)
 
-    def inapplicable(self, reason: str) -> "Axiom[P, T]":
+    def inapplicable(self, reason: str) -> Axiom[P, T]:
         """
         The same law declared not to apply to the category: it takes no
         argument and returns :obj:`NotImplemented`, with the reason as its
@@ -679,7 +695,7 @@ class Axiom[**P, T](Declaration[P, T]):
         law.__doc__ = reason
         return replace(self, function=law, params={}, broken=False)
 
-    def weaken(self, **params) -> "Axiom[P, T]":
+    def weaken(self, **params) -> Axiom[P, T]:
         """
         The same law quantified over the terms the strategy of the category
         generates with the given parameters, e.g. ``unitality_of_boxes =
@@ -690,7 +706,7 @@ class Axiom[**P, T](Declaration[P, T]):
         """
         return replace(self, params=dict(self.params, **params))
 
-    def strategy(self) -> "st.SearchStrategy[dict]":
+    def strategy(self) -> st.SearchStrategy[dict]:
         """
         Generate the arguments of the bound axiom, with the parameters
         :meth:`weaken` declared, see :meth:`Declaration.arguments`.
@@ -745,7 +761,7 @@ class Testable[T](ABC):
 
     @classmethod
     @abstractmethod
-    def strategy(cls, **params) -> "st.SearchStrategy[T]":
+    def strategy(cls, **params) -> st.SearchStrategy[T]:
         """
         Build a strategy for instances of ``cls``.
 
@@ -848,7 +864,7 @@ class Related(Testable, NamedGeneric["factory"], tuple):
         return super().__new__(cls, terms)
 
     @classmethod
-    def strategy(cls, **params) -> "st.SearchStrategy[Related]":
+    def strategy(cls, **params) -> st.SearchStrategy[Related]:
         """ Generate the triples the factory relates. """
         from hypothesis import strategies as st
 
@@ -883,7 +899,7 @@ class Equivalence(Testable):
 
     @classmethod
     @abstractmethod
-    def related(cls, **params) -> "st.SearchStrategy[tuple]":
+    def related(cls, **params) -> st.SearchStrategy[tuple]:
         """
         Generate three instances: two related by construction and a third
         comparable to them, related or not.

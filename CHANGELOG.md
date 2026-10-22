@@ -821,9 +821,10 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   the laws of feedback quantify over a morphism `x @ Delay[C1, M] -> y @ M`
   and the objects it is typed by. An axiom is called with keyword
   arguments, `Axiom.weaken` passes parameters to the strategy of the
-  category where it named a subspace per argument, and a module stating a
-  law, `abc` and `biclosed`, does without `from __future__ import
-  annotations`, which a declaration refuses, where an `Axiom` required it.
+  category where it named a subspace per argument, and
+  `Declaration.annotations` reads the annotations of a module under `from
+  __future__ import annotations` back as objects, the type parameters of
+  the class stating the law in scope.
   `abc.Category.parameters` says what `C0` and `C1` stand for, a group's
   objects being the one `None`.
 
