@@ -1986,8 +1986,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   them, raises `ValueError` in the positional form as it did in the keyword
   form, where `ribbon`, `compact` and `frobenius` diagrams, drawings and
   additive Python functions traced what their slicing made of it, e.g.
-  `Box('g', x @ x, x @ x).trace(5)` over two wires and `trace(-1)` over the
-  first one, and a matrix raised a NumPy error: `abc.keyword_form` splits
+  `trace(5)` of a box on two wires as `trace(2)` and `trace(-1)` as
+  `trace(1)`, and a matrix raised a NumPy error: `abc.keyword_form` splits
   the boundary for both forms
   ([rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
 - `interaction.Diagram.trace` traces an integer diagram, where it raised
