@@ -134,6 +134,10 @@ class Ob(Testable["Ob"]):
     def __str__(self):
         return str(self.name)
 
+    def atoms(self) -> list[Ob]:
+        """ An object is its own atom, the generator its string names. """
+        return [self]
+
     def __eq__(self, other):
         return isinstance(other, type(self)) and self.name == other.name
 
@@ -358,6 +362,14 @@ class Arrow(FreeCategory, DaggerCategory, Testable["Arrow"]):
 
     def __str__(self):
         return ' >> '.join(map(str, self.inside)) or f"Id({self.dom})"
+
+    def atoms(self) -> list:
+        """
+        The atoms of an arrow, i.e. the generators its string names: those of
+        its domain and of each box inside.
+        """
+        return self.dom.atoms() + [
+            atom for box in self.inside for atom in box.atoms()]
 
     def __add__(self, other):
         return self.sum_factory((self, )) + other
@@ -652,6 +664,11 @@ class Box(Arrow):
     def __str__(self):
         return str(self.name) + ("[::-1]" if self.is_dagger else '')
 
+    def atoms(self) -> list:
+        """ The atoms of a box: itself undaggered, and its boundary's. """
+        return [self.dagger() if self.is_dagger else self]\
+            + self.dom.atoms() + self.cod.atoms()
+
     def setoid(self):
         """
         The equality and hash of a box is given by hashing its type as well as
@@ -741,6 +758,11 @@ class Sum(Box):
         return " + ".join(f"({arrow})" for arrow in self.terms)\
             if self.terms else\
             f"{factory_name(type(self))}((), {self.dom}, {self.cod})"
+
+    def atoms(self) -> list:
+        """ The atoms of a sum: those of its boundary and of its terms. """
+        return self.dom.atoms() + self.cod.atoms() + [
+            atom for term in self.terms for atom in term.atoms()]
 
     def __add__(self, other):
         assert_isparallel(self, other)
@@ -863,6 +885,11 @@ one, they have [cat.Ob('x'), cat.Ob('y')].
         str_dom_cod = '' if self.is_id_on_objects else (
             f'dom={self.dom}, cod={self.cod}')
         return f"({str_args}).bubble({str_dom_cod})"
+
+    def atoms(self) -> list:
+        """ The atoms of a bubble: those of its boundary and arguments. """
+        return self.dom.atoms() + self.cod.atoms() + [
+            atom for arg in self.args for atom in arg.atoms()]
 
     def __repr__(self):
         repr_args = ", ".join(map(repr, self.args))

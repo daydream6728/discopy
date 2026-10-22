@@ -8,9 +8,9 @@ USER's live ruling of 10-22, as relayed on the issue:
 
 ([#163 (comment)](https://github.com/rel-int/discopy-next/issues/163#issuecomment-6349551175))
 
-- [ ] #163: `Testable.str_environment`, the environment with each generator of a term bound to itself by its name, walked per level: types, boxes, exponentials, sums, bubbles, terms
-- [ ] #163: `Testable.str_transparency` beside `transparency`, clashing or non-identifier names assumed away
-- [ ] #163: strategy boxes named by identifiers, so that the cells check something
+- [x] #163: `Testable.str_environment`, the environment with each generator of a term bound to itself by its name, walked per level: types, boxes, exponentials, sums, bubbles, terms
+- [x] #163: `Testable.str_transparency` beside `transparency`, clashing or non-identifier names assumed away
+- [x] #163: strategy boxes named by identifiers, so that the cells check something
 - [ ] #163: carriers that break the law for a real reason declared `.failing`, reported as new bugs
 - [ ] CHANGELOG `### Added`, at the end
 - [ ] full suite, pflake8, pylint, the whole property matrix

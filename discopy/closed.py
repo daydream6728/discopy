@@ -982,6 +982,10 @@ class Constant(TermBase, biclosed.Constant):
     def __str__(self):
         return self.name
 
+    def atoms(self) -> list[Constant]:
+        """ A closed constant prints as its bare name, it is its own atom. """
+        return [self]
+
     def delay(self, n_steps=1):
         """
         The constant of the delayed type, as a constant is a state of its
