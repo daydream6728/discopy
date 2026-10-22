@@ -716,12 +716,16 @@ class Functor(balanced.Functor):
 
     Note
     ----
-    A :class:`Permutation` is sent to the codomain's ``permutation`` of the
-    images of its wires, one block per wire. Into a codomain without one, it
-    is sent to the images of the swaps of :meth:`Permutation.to_swaps`, so
-    that a whiskered swap maps like a swap.
+    A :class:`Permutation` is sent to the permutation of the images of its
+    wires, one block per wire: the codomain's ``from_permutation`` when it
+    has a ``permutation_factory``, i.e. a native permutation box, so that the
+    identity functor is the identity, and its ``permutation`` otherwise. Into
+    a codomain with neither, it is sent to the images of the swaps of
+    :meth:`Permutation.to_swaps`, so that a whiskered swap maps like a swap.
 
     >>> x, y, z = map(Ty, "xyz")
+    >>> perm = Permutation(x @ y @ z, [1, 2, 0])
+    >>> assert Functor.id(Diagram)(perm) == perm
     >>> F = Functor({x: x, y: y, z: z}, {}, cod=balanced.Diagram)
     >>> print(F(Swap(x, y) @ z))
     Braid(x, y) @ z
@@ -731,6 +735,11 @@ class Functor(balanced.Functor):
     def __call__(self, other):
         if isinstance(other, Swap) and hasattr(self.cod.ar, "swap"):
             return self.cod.ar.swap(self(other.dom[0]), self(other.dom[1]))
+        if isinstance(other, Permutation) and hasattr(
+                self.cod.ar, "permutation_factory"):
+            sizes = [len(self(x)) for x in other.dom]
+            return self.cod.ar.from_permutation(finset.Function.permutation(
+                other.perm, sizes).inside, self(other.dom))
         if isinstance(other, Permutation) and hasattr(
                 self.cod.ar, "permutation"):
             return self.cod.ar.permutation(
