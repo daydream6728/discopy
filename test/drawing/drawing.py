@@ -893,3 +893,20 @@ def test_Drawing_then_and_tensor_return_new_drawings():
                    Drawing.id() @ f, f @ Drawing.id()):
         assert result == f and result is not f
 
+
+def test_draw_any_colour_a_box_draws_in(tmp_path):
+    from matplotlib.colors import to_hex
+    from discopy import ribbon
+    x, X = monoidal.Ty('x'), ribbon.Ty('x')
+    spider = monoidal.Box('f', x, x, draw_as_spider=True, color='lightgrey')
+    cup, twist = (diagram.to_ribbons(colour='lightgrey') for diagram in (
+        ribbon.Diagram.cups(X, X.r), ribbon.Diagram.twist(X)))
+    svg, tikz = tmp_path / "drawing.svg", tmp_path / "drawing.tikz"
+    for diagram in (spider, cup, twist):
+        diagram.draw(path=svg, show=False)
+        diagram.draw(path=str(tikz), to_tikz=True, use_tikzstyles=True)
+    back = config.darken(to_hex('lightgrey'))
+    assert f"fill: {back}" in svg.read_text()
+    assert TikZ.format_color(back) in tikz.read_text()
+    ribbon.Diagram.twist(X).to_ribbons(colour=config.TRANSPARENT).draw(
+        path=svg, show=False)
