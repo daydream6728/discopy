@@ -37,13 +37,14 @@ then cross any wire, so a floating component lies in no face in particular, the 
 the diagram up to the axioms, and matching on maps is sound for every host. Every braided category
 is spacial, by naturality of the braid with the unit.)
 
-- [WIP] @session_013PzWbScb5vkcym2x9JkEda-2026-10-22 20:00 `abc.SpacialCategory`, a monoidal category
+- [x] `abc.SpacialCategory`, a monoidal category
   with the axiom `scalar_sliding`; `BraidedCategory` is one, so the matrix checks it on
   `matrix.Matrix[int]` and `EHypergraph`
-- [WIP] @session_013PzWbScb5vkcym2x9JkEda-2026-10-22 20:00 `discopy.spacial`, the free spacial
+- [x] `discopy.spacial`, the free spacial
   category: `Ty`, `Box`, `Diagram`, `Sum`, `Functor`, `CMap`, `Equation`
-- [ ] `CMap.match` over a spacial category takes any host, and a closed pattern any union of
+- [x] `CMap.match` over a spacial category takes any host, and a closed pattern any union of
   floating components; over a planar one, connected hosts only as before
-- [ ] tests: a scalar inside a circle is a scalar beside it; `f @ s` matches `f`; the
+- [x] tests: a scalar inside a circle is a scalar beside it; `f @ s` matches `f`; the
   `scalar_sliding` cells of the matrix pass
-- [ ] docs (`syntax.rst`, the abc summary), `CHANGELOG.md`, checks
+- [WIP] @session_013PzWbScb5vkcym2x9JkEda-2026-10-22 20:30 docs (`syntax.rst`, the abc summary),
+  `CHANGELOG.md`, checks

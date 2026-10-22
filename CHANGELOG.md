@@ -23,11 +23,20 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `match(pattern)` keeps those whose image, contracted into one box, still
   sweeps, and yields the one pushout complement as a `monoidal.Match`, the
   diagram with a hole; `rewrite`, `normalize` and `normal_form` take rules
-  as pairs of parallel maps. A host must be connected: a map does not say in
-  which face a component touching nothing else lies. The spiral unwinds to
-  the empty diagram in `2n + 1` steps under three rules, from its centre,
-  whether drawn as built or in normal form, where the counit is the last
-  box.
+  as pairs of parallel maps. Over a planar category a host must be
+  connected: a map does not say in which face a component touching nothing
+  else lies. The spiral unwinds to the empty diagram in `2n + 1` steps under
+  three rules, from its centre, whether drawn as built or in normal form,
+  where the counit is the last box.
+- `discopy.spacial`, the free spacial category, and `abc.SpacialCategory`: a
+  monoidal category whose scalars slide, `s @ f == f @ s`, the axiom
+  `scalar_sliding` (Selinger's survey). A floating component then lies in
+  no face in particular, so `CMap.match` takes any spacial host, connected
+  or not, and a closed pattern any union of floating components: a scalar
+  inside a circle is a scalar beside it. `BraidedCategory` is a
+  `SpacialCategory`, so the matrix checks the law on `matrix.Matrix[int]`;
+  `closed.TermBase` declares it inapplicable, like the other laws of its
+  diagrams.
 - `discopy.ehypergraph`, e-graphs of diagrams with sharing: an
   `EHypergraph` over a copy-discard category is a left-monogamous acyclic
   `Hypergraph`, whose boxes are the e-nodes, with an equivalence relation on
