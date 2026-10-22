@@ -60,6 +60,7 @@ from discopy.rigid import Nat
 
 Hypergraph = hypergraph.Hypergraph[zx.Diagram]
 qubit = Nat(1)
+ZERO = Fraction(0)
 
 Step = tuple[Hypergraph, Hypergraph, hypergraph.Match]
 """ A rule for one match: its left and right sides, and the match. """
@@ -126,7 +127,9 @@ class Simplifier(Rewriter):
         self.phases = [[] for _ in self.spider_types]
         self.others = [0 for _ in self.spider_types]
         self.merged = set()
-        for j in range(len(self.boxes)):
+        for j, box in enumerate(self.boxes):
+            if kind(box) == "phase":
+                self.boxes[j] = phase_box(Fraction(box.phase) % 1)
             self.index(j)
 
     def index(self, j: int, remove: bool = False) -> None:
@@ -187,9 +190,9 @@ class Simplifier(Rewriter):
         shares its lists, so it holds until the next step.
         """
         phases = self.phases[spider]
-        phase = Fraction(self.boxes[phases[0]].phase) if len(phases) == 1\
-            else Fraction(sum(self.boxes[j].phase for j in phases)) % 1\
-            if phases else Fraction(0)
+        phase = self.boxes[phases[0]].phase if len(phases) == 1\
+            else sum(self.boxes[j].phase for j in phases) % 1 if phases\
+            else ZERO
         return Local(phases, phase, self.edges[spider], self.loops[spider],
                      self.ports[spider], bool(self.others[spider]))
 
