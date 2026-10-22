@@ -668,11 +668,11 @@ class Diagram(monoidal.Diagram, TracedCategory):
         .weaken(within=MonoidalCategory)
     dagger_monoidality = DaggerCategory.dagger_monoidality.failing(
         messages.FEEDBACK_HAS_NO_DAGGER)
-    feedback_tightening = FeedbackCategory.feedback_tightening.failing(
+    tightening = FeedbackCategory.tightening.failing(
         messages.FREE_FEEDBACK)
-    feedback_sliding = FeedbackCategory.feedback_sliding.failing(
+    sliding = FeedbackCategory.sliding.failing(
         messages.FREE_FEEDBACK)
-    feedback_superposing = FeedbackCategory.feedback_superposing.failing(
+    strength = FeedbackCategory.strength.failing(
         messages.FREE_FEEDBACK)
 
 

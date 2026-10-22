@@ -16,9 +16,10 @@ those of the combinatorial representation their equations compare by, see
 :meth:`discopy.symmetric.Diagram.strategy`. Every strategy of a free category
 honours any boundary it is asked for.
 
-A law a category breaks is declared :meth:`Axiom.failing` where it breaks,
-one that does not apply :meth:`Axiom.inapplicable`, and one that holds up to
-a quotient or on a subspace :meth:`Axiom.modulo` and :meth:`Axiom.weaken`.
+A law a category breaks is declared :meth:`Declaration.failing` where it
+breaks, one that does not apply :meth:`Declaration.inapplicable`, and one
+that holds up to a quotient or on a subspace :meth:`Axiom.modulo` and
+:meth:`Axiom.weaken`.
 A :class:`Testable` category generates its own terms and
 :meth:`Testable.matrix` lists every law of every such category, which the
 suite in ``proptest/`` checks; CONTRIBUTING.md says how to run it. A
@@ -63,19 +64,19 @@ Summary
         axiom
         rule
         inhabits
+        substitute
 """
 
 import inspect
 import pickle
 import sys
-from copy import deepcopy
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from copy import deepcopy
 from dataclasses import KW_ONLY, dataclass, replace
 from functools import cached_property, reduce, wraps
 from operator import matmul
-from types import GenericAlias, UnionType
+from types import GenericAlias, NoneType, UnionType
 from typing import (
     TYPE_CHECKING, Annotated, Any, ClassVar, Concatenate, ParamSpec, Self,
     TypeVar,
@@ -153,7 +154,7 @@ class Equation[T]:
         if up_to is not None:
             self.up_to = up_to
 
-    def modulo(self, up_to: Callable) -> "Equation":
+    def modulo(self, up_to: Callable) -> "Equation[T]":
         """
         The same equation compared up to the given function, rebinding
         :attr:`up_to`, whose name the attribute already takes.
@@ -341,11 +342,9 @@ def substitute(annotation, scope: dict):
     >>> x, y = Ty('x'), Ty('y')
     >>> assert substitute(Tensor[A, B], {A: x, B: y}) == x @ y
     """
-    try:
-        if annotation in scope:
-            return scope[annotation]
-    except TypeError:
-        return annotation
+    if isinstance(annotation, TypeVar | TypeVarTuple | ParamSpec)\
+            or annotation is Self:
+        return scope.get(annotation, annotation)
     origin, args = get_origin(annotation), get_args(annotation)
     if origin is None or not args:
         return annotation
@@ -358,7 +357,15 @@ class Former:
     A former of object expressions in a signature, e.g. ``Tensor[A, B]``: a
     type for a typechecker, an expression while a variable is left in it,
     see :func:`is_open`, and the object :meth:`form` builds once there is
-    none.
+    none. Subscripting a former is therefore not always a type: once every
+    variable is substituted, see :func:`substitute`, ``Tensor[x, y]`` *is*
+    the object ``x @ y``, which is how an annotation becomes the boundary a
+    premise is drawn with.
+
+    >>> from discopy.monoidal import Ty
+    >>> A = TypeVar("A")
+    >>> assert isinstance(Tensor[A, Ty('y')], GenericAlias)
+    >>> assert Tensor[Ty('x'), Ty('y')] == Ty('x', 'y')
     """
     def __class_getitem__(cls, args):
         args = args if isinstance(args, tuple) else (args, )
@@ -415,11 +422,12 @@ class R[Object](Former):
         return obj.r
 
 
-class Delay[Arrow, Object](Former):
+class Delay[Coarse, Object](Former):
     """
     The delay of an object by one time step in a signature, read off the
-    delay of its identity in the category, so that a category whose delay
-    is the identity, e.g. a traced one, delays no object.
+    delay of its identity in a category ``Coarse``, i.e.
+    ``Coarse.id(M).delay().dom``, so that an object with no time step of
+    its own, e.g. a natural number, is its own delay.
 
     >>> from discopy.feedback import Ty, Diagram
     >>> assert Delay[Diagram, Ty('x')] == Ty('x').delay()
@@ -509,7 +517,8 @@ def inhabits(value, kind) -> bool:
     if origin is Var:
         return value == args[1]
     if origin is Equation:
-        return all(inhabits(term, args[0]) for term in value.terms)
+        return isinstance(value, Equation) and all(
+            inhabits(term, args[0]) for term in value.terms)
     if origin is tuple:
         if not isinstance(value, tuple):
             return False
@@ -692,10 +701,11 @@ class Declaration[**P, T](classmethod):
     ) -> "st.SearchStrategy[tuple]":
         """
         Generate the scope and the arguments of the bound declaration: a
-        variable of sort ``Obj`` from the strategy of ``category.ob``, or
-        ``None`` for the single object of a monoid, of
-        sort ``Atom`` from the ``generators`` of ``category.ob`` and of sort
-        :class:`Count` a number up to :data:`MAX_COUNT`, then a premise
+        variable of sort ``Obj`` from the strategy of the objects
+        :meth:`discopy.abc.Category.parameters` names, :obj:`None` for the
+        single object of a monoid, of sort ``Atom`` from their
+        ``generators`` and of sort :class:`Count` a number up to
+        :data:`MAX_COUNT`, then a premise
         ``Hom[C1, A, B]`` from the strategy of the category with its boundary
         and ``params``, a premise ``Var[T, x]`` the value ``x``, a premise
         ``Perm[N]`` a permutation, ``Objs[C0, N]`` that many atomic objects
@@ -708,8 +718,8 @@ class Declaration[**P, T](classmethod):
             def variable(name, sort):
                 if sort is Count:
                     return draw(st.integers(0, MAX_COUNT), label=name)
-                ob = self.category.ob
-                if ob is type(None):
+                ob = self.category.parameters()[0]
+                if ob is NoneType:
                     return None
                 return draw(ob.generators() if get_origin(sort) is Atom
                             else ob.strategy(), label=name)

@@ -383,7 +383,7 @@ class Traced(Symmetric, TracedCategory):
         messages.PARA_REPARAM)
     trace_dinaturality_right = TracedCategory.trace_dinaturality_right.failing(
         messages.PARA_REPARAM)
-    feedback_sliding = TracedCategory.feedback_sliding.failing(
+    sliding = TracedCategory.sliding.failing(
         messages.PARA_REPARAM)
 
     def trace(self, n: int = 1, left: bool = False) -> Traced:
@@ -515,13 +515,13 @@ class Feedback(Markov, FeedbackCategory):
     Parametric maps over a feedback underlying `category` form a feedback
     category, with :meth:`delay` applied to all five components.
     """
-    feedback_joining = FeedbackCategory.feedback_joining.failing(
+    joining = FeedbackCategory.joining.failing(
         messages.FREE_FEEDBACK)
-    feedback_sliding = FeedbackCategory.feedback_sliding.failing(
+    sliding = FeedbackCategory.sliding.failing(
         messages.FREE_FEEDBACK)
-    feedback_superposing = FeedbackCategory.feedback_superposing.failing(
+    strength = FeedbackCategory.strength.failing(
         messages.FREE_FEEDBACK)
-    feedback_tightening = FeedbackCategory.feedback_tightening.failing(
+    tightening = FeedbackCategory.tightening.failing(
         messages.FREE_FEEDBACK)
     category = markov.Diagram
 

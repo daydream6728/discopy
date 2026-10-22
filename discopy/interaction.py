@@ -878,8 +878,8 @@ for name in (
         "trace_naturality_left", "trace_naturality_right",
         "currying_eta_left", "currying_eta_right",
         "currying_naturality_left", "currying_naturality_right",
-        "feedback_joining", "feedback_tightening", "feedback_sliding",
-        "feedback_superposing", "feedback_right", "trace_left",
+        "joining", "tightening", "sliding",
+        "strength", "feedback_right", "trace_left",
         "trace_right", "curry_left", "curry_right"):
     setattr(Diagram, name, getattr(RibbonCategory, name).inapplicable(
         messages.PAIR_LENGTH))

@@ -383,7 +383,7 @@ class Stream[category](FeedbackCategory, TestableGeneric):
 
     later, is_constant = Ty.later, Ty.is_constant
     head, tail = Ty.head, Ty.tail
-    feedback_sliding = FeedbackCategory.feedback_sliding.failing(
+    sliding = FeedbackCategory.sliding.failing(
         messages.STREAM_SLIDING)
 
     def __init__(

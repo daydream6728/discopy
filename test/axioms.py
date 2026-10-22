@@ -1,19 +1,19 @@
 """ DisCoPy's property-testing module in action. """
 
-from typing import Self
+from typing import Self, TypeVar
 
 from hypothesis import find
 from hypothesis.errors import NoSuchExample
 from pytest import raises
 
 from discopy import braided, cat, monoidal, rigid
-from discopy.abc import Category, ColouredMonoid, MonoidalCategory
+from discopy.abc import Category, ColouredMonoid, Group, MonoidalCategory
 from hypothesis import strategies as st
 
 from discopy.axioms import (
     L, R, Atom, Axiom, AxiomFailure, Count, Equation, Equivalence, Hom, Obj,
     Over, Related, Repeat, Tensor, Testable, TestableGeneric, Under, Unit,
-    Var, axiom, inhabits)
+    Var, axiom, inhabits, position, substitute)
 from discopy.monoidal import Ty
 from discopy.cat import Arrow, Box, Ob
 
@@ -67,7 +67,7 @@ def test_failing_when_the_terms_do_not_build():
         refusing = refusing.failing("Declared broken.")
 
     with raises(AxiomFailure) as error:
-        Refusing.refusing(Arrow.id(Ob('x')))
+        Refusing.refusing(f=Arrow.id(Ob('x')))
     assert isinstance(error.value.equation, ValueError)
 
 
@@ -87,6 +87,19 @@ def test_equation():
     assert Equation(f, f, f).symbols == ("=", "=")
     with raises(ValueError):
         Equation(f, f, symbols=("=", "="))
+
+
+def test_substitute_unhashable():
+    """ A value that does not hash is never looked up in the scope. """
+    A = TypeVar("A")
+    unhashable = [Ty('x')]
+    assert substitute(Var[list, A], {A: unhashable}).__args__ == (
+        list, unhashable)
+
+
+def test_position_of_a_group():
+    """ The ``C1`` of a group is its arrows, as for any category. """
+    assert position(Group.__type_params__[0], Group) == 1
 
 
 def test_axiom_binding():
@@ -148,6 +161,7 @@ def test_classifiers():
     law = Arrow.unitality.inapplicable("No identities to cancel.")
     assert law() is NotImplemented
     assert law.__doc__ == "No identities to cancel."
+    assert not law.applicable and Arrow.unitality.applicable
     assert Arrow.unitality.modulo(lambda term: term.dom)(f=f)
 
 
@@ -276,5 +290,5 @@ def test_testable_generic():
 
 def test_copying():
     x, y = Ob('x'), Ob('y')
-    assert Arrow.copying(Box('f', x, y))
+    assert Arrow.copying(term=Box('f', x, y))
     assert "copying" in Arrow.axioms and "copying" in Ob.axioms

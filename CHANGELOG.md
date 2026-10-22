@@ -28,32 +28,17 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   feedback of an acyclic wiring, each the `sample` of its level.
   A requested boundary is always honoured with no filtering, by one
   balancing box. `Ty.strategy` draws words and rigid wires a winding number.
-- Every rule and axiom states its sequent in its signature, in types a
-  typechecker reads as coarse ones and a sampler evaluates as fine ones: its
-  type parameters are variables of a sort, `A: Obj[C0]` an object, `X:
-  Atom[C0]` an atomic one and `N: Count` a number, its parameters are
-  premises, `f: Hom[C1, A, B]` a morphism, `x: Var[C0, X]` the value of an
-  object expression and `Self` a term, and its return annotation is the type
-  of its output, `Hom[C1, A, B]` for a rule and `Equation[T]` for an axiom,
-  e.g. `def cut[A: Obj[C0], B: Obj[C0], C: Obj[C0]](cls, f: Hom[C1, A, B],
-  g: Hom[C1, B, C]) -> Hom[C1, A, C]`. `Obj`, `Atom`, `Var` and `Hom` are
-  `Annotated` aliases of their first argument, the object expressions are
-  built by `Tensor`, `Unit`, `L`, `R`, `Delay`, `Over`, `Under` and
-  `Repeat`, the `Former`s whose subscript stays an expression while a
-  variable is left in it and computes the object once there is none, and
-  `Equation` is a generic class, so that `ty check` reports nothing on any
-  of the signatures. The annotations are read as objects, never evaluated
-  from strings: `C0` and `C1` are the type parameters of the abstract
-  classes, each standing for what `Category.parameters` says, its objects
-  and its arrows, by its `axioms.position` among the parameters of a
-  `Category`, and both sides of a sequent are the annotations with the
-  variables of a draw substituted, `axioms.substitute`, in
-  `Declaration.sequents` and `Declaration.output`; a module stating a
-  declaration does without `from __future__ import annotations`, which
-  would make its annotations strings, and a declaration whose annotations
-  are strings is refused. `axioms.inhabits` checks a value against its
-  type: every cell of the matrix checks the equation of its law against it,
-  and `test_rule` the conclusion of every rule. The abstract base classes
+- The sequent calculus of the laws, see its entry under *Changed*, gains
+  the sorts and formers the laws of this pull request read: `X: Atom[C0]`
+  an atomic object and `N: Count` a number, the premises `Perm[N]` and
+  `Objs[C0, N]`, and the formers `Unit`, `Over`, `Under` and `Repeat`.
+  A `Rule` states its sequent as an axiom does, its return annotation
+  `Hom[C1, A, B]` being its conclusion, e.g. `def cut[A: Obj[C0], B:
+  Obj[C0], C: Obj[C0]](cls, f: Hom[C1, A, B], g: Hom[C1, B, C]) -> Hom[C1,
+  A, C]`, and `test_rule` checks the conclusion of every rule with
+  `inhabits`. `Obj`, `Atom`, `Var` and `Hom` are `Annotated` aliases of
+  their first argument, so that `ty check` reports nothing on any of the
+  signatures. The abstract base classes
   state that a term of a category is one of its arrows, `self: C1` and
   `cls: type[C1]`, so that their methods typecheck with no `ty: ignore`,
   and the categories that are not free bind the parameters of their base,
@@ -1115,6 +1100,34 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   abstract class it subclasses states.
 - `Equation` has one symbol fewer than terms, a symbol between each pair of
   consecutive terms; `symbols` of any other length raise `ValueError`.
+- A law of `discopy.axioms` is stated as a sequent, the sequent calculus
+  of [rel-int/discopy-next#1](https://github.com/rel-int/discopy-next/pull/1)
+  without its search: its type parameters are variables, objects `A:
+  Obj[C0]`, its parameters premises, a morphism `f: Hom[C1, A, B]` from `A`
+  to `B` or the value `x: Var[C0, X]` of an object expression built with
+  `Tensor`, `L`, `R` and `Delay`, and its return annotation the type of its
+  output, e.g. `Equation[Hom[C1, A, B]]`, `Equation` being a generic class
+  rather than a `NamedGeneric`. `Declaration.sequents` draws the
+  variables, then each premise from the strategy of the category with its
+  boundary, and the property matrix checks every verdict against the type
+  its law states with `inhabits`, as well as that it holds. So the typing
+  laws `identity_typing`, `composition_dom_typing` and
+  `composition_cod_typing` go, every law typing its terms, and so do the
+  premise wrappers `ComposablePair`, `ComposableTriple`, `Grid` and `Loop`:
+  the laws of feedback quantify over a morphism `x @ Delay[C1, M] -> y @ M`
+  and the objects it is typed by, and `sliding` over one `x @ Delay[C1, M]
+  -> y @ N` and a morphism `k: N -> M` slid around its loop, so that the
+  memory changes type, where its `Loop` slid an endomorphism of it. An
+  axiom is called with keyword
+  arguments, `Axiom.weaken` passes parameters to the strategy of the
+  category where it named a subspace per argument, and a module stating a
+  law, `abc` and `biclosed`, does without `from __future__ import
+  annotations`, which a declaration refuses, where an `Axiom` required it.
+  `abc.Category.parameters` says what `C0` and `C1` stand for, a monoid's
+  objects being the one `None`, its `ob`. `failing` and `inapplicable` are
+  methods of any `Declaration`, which says whether it is `broken` and
+  whether it is `applicable`, and the property matrix skips the laws that
+  are not rather than calling each law to find out.
 
 - Six more `then`s take `(self, *others)`, the signature that
   `abc.Category.then` declares and `cat.Arrow` implements: they had

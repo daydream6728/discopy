@@ -106,16 +106,17 @@ def test_feedback_laws():
     from discopy.axioms import AxiomFailure
     x, y, m, n, w, z = (Ty.sequence(symmetric.Ty(name)) for name in "xymnwz")
     f = Stream.sequence('f', x @ (m @ n).delay(), y @ m @ n)
-    g, h, k = (Stream.sequence(name, dom, cod) for name, (dom, cod) in zip(
-        "ghk", [(w, x), (y, z), (m @ n, m @ n)]))
+    g, h, k, e = (Stream.sequence(name, dom, cod) for name, (dom, cod) in zip(
+        "ghke", [(w, x), (y, z), (m @ n, m @ n), (w, z)]))
     up_to = lambda stream: stream.unroll(2).now.to_hypergraph()
-
-    def law(name):
-        return getattr(FeedbackCategory, name).bind(Stream).modulo(up_to)
-    assert law("feedback_vanishing")(f)
-    assert law("feedback_joining")(f, x, y, m, n)
-    assert law("feedback_tightening")(f, g, h, x, y, m @ n)
-    assert law("feedback_superposing")(f, g, x, y, m @ n)
-    assert not law("feedback_sliding")(f, k, x, y)
+    assert FeedbackCategory.vanishing.bind(Stream).modulo(up_to)(f=f)
+    for law, arguments in (
+            ("joining", dict(f=f, x=x, y=y, m=m, n=n)),
+            ("strength", dict(e=e, f=f, x=x, y=y, m=m @ n)),
+            ("tightening", dict(f=f, g=g, h=h, x=x, y=y, m=m @ n))):
+        assert getattr(FeedbackCategory, law).bind(Stream).modulo(up_to)(
+            **arguments)
+    sliding = dict(f=f, k=k, x=x, y=y)
+    assert not FeedbackCategory.sliding.bind(Stream).modulo(up_to)(**sliding)
     with raises(AxiomFailure):
-        Stream.feedback_sliding(f, k, x, y)
+        Stream.sliding(**sliding)

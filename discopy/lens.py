@@ -448,13 +448,13 @@ class Traced(Symmetric, TracedCategory):
         messages.LENS_TRACES_RIGHT)
     trace_right = TracedCategory.trace_right.inapplicable(
         messages.PAIR_LENGTH)
-    feedback_joining = TracedCategory.feedback_joining.inapplicable(
+    joining = TracedCategory.joining.inapplicable(
         messages.PAIR_LENGTH)
-    feedback_tightening = TracedCategory.feedback_tightening.inapplicable(
+    tightening = TracedCategory.tightening.inapplicable(
         messages.PAIR_LENGTH)
-    feedback_sliding = TracedCategory.feedback_sliding.inapplicable(
+    sliding = TracedCategory.sliding.inapplicable(
         messages.PAIR_LENGTH)
-    feedback_superposing = TracedCategory.feedback_superposing.inapplicable(
+    strength = TracedCategory.strength.inapplicable(
         messages.PAIR_LENGTH)
     feedback_right = TracedCategory.feedback_right.inapplicable(
         messages.PAIR_LENGTH)

@@ -7,7 +7,8 @@ import pytest
 from hypothesis import Phase, given, note, settings
 from hypothesis import strategies as st
 
-from discopy.axioms import Testable, inhabits
+from discopy.axioms import Testable, inhabits, position
+from discopy.utils import factory_name
 
 from proptest.conftest import PROFILE
 
@@ -52,3 +53,19 @@ def test_axiom(law, drawn):
         assert verdict
 
     check()
+
+
+@pytest.mark.parametrize(
+    "category", Testable.enrolled(), ids=factory_name)
+def test_position(category):
+    """
+    Every ``C0`` and ``C1`` above an enrolled category stands for its
+    objects and its arrows, as :meth:`discopy.abc.Category.parameters` says,
+    whichever class states it and however its bases pass it on, so that a
+    sequent bound to the category reads as one of its own.
+    """
+    for klass in category.__mro__:
+        for parameter in getattr(klass, "__type_params__", ()):
+            if parameter.__name__ in ("C0", "C1"):
+                assert position(parameter, category)\
+                    == int(parameter.__name__[1]), (klass, parameter)

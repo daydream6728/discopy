@@ -123,7 +123,7 @@ class Category[C0, C1: Category](Testable[C1], ABC):
         >>> from discopy.monoidal import Ty, Diagram
         >>> assert Diagram.parameters() == (Ty, Diagram)
         """
-        return getattr(cls, "ob", cls), cls
+        return getattr(cls, "ob", cls), cls.ar
 
     @classmethod
     def equation_factory(cls, *terms) -> Equation:
@@ -189,7 +189,8 @@ class Category[C0, C1: Category](Testable[C1], ABC):
             cls, f: Hom[C1, A, B], g: Hom[C1, B, C], h: Hom[C1, C, D]
     ) -> Equation[Hom[C1, A, D]]:
         """ Associativity of composition. """
-        return cls.equation_factory(f.then(g).then(h), f.then(g.then(h)))
+        return cls.equation_factory(
+            f.then(g).then(h), f.then(g.then(h)))
 
     __rshift__ = __llshift__ = lambda self, other: self.then(other)
     __lshift__ = __lrshift__ = lambda self, other: other.then(self)
@@ -347,7 +348,8 @@ class Groupoid[C0, C1: Groupoid](DaggerCategory[C0, C1]):
 
     @axiom
     def invertibility[A: Obj[C0], B: Obj[C0]](
-            cls, f: Hom[C1, A, B]) -> Equation[tuple]:
+            cls, f: Hom[C1, A, B]
+    ) -> Equation[tuple[Hom[C1, A, A], Hom[C1, B, B]]]:
         """ An arrow followed or preceded by its dagger is an identity. """
         return cls.equation_factory(
             (f.then(f.dagger()), f.dagger().then(f)),
@@ -633,58 +635,60 @@ class FeedbackCategory[
         return cls.equation_factory(f.delay().delay(), f.delay(2))
 
     @axiom
-    def feedback_vanishing[A: Obj[C0], B: Obj[C0]](
+    def vanishing[A: Obj[C0], B: Obj[C0]](
             cls, f: Hom[C1, A, B]) -> Equation[Hom[C1, A, B]]:
-        """ Vanishing of feedback over the unit. """
+        """ Feeding back the unit does nothing. """
         return cls.equation_factory(f.feedback(0), f)
 
     @axiom
-    def feedback_joining[Γ: Obj[C0], Δ: Obj[C0], M: Obj[C0], N: Obj[C0]](
-            cls, f: Hom[
-                C1, Tensor[Γ, Delay[C1, M], Delay[C1, N]], Tensor[Δ, M, N]],
-            x: Var[C0, Γ], y: Var[C0, Δ], m: Var[C0, M], n: Var[C0, N]
-    ) -> Equation[Hom[C1, Γ, Δ]]:
+    def joining[X: Obj[C0], Y: Obj[C0], M: Obj[C0], N: Obj[C0]](
+            cls, f: Hom[C1, Tensor[X, Delay[C1, Tensor[M, N]]],
+                        Tensor[Y, M, N]],
+            x: Var[C0, X], y: Var[C0, Y], m: Var[C0, M], n: Var[C0, N]
+    ) -> Equation[Hom[C1, X, Y]]:
         """ Feeding back a tensor is feeding back its factors in turn. """
         return cls.equation_factory(
             f.feedback(dom=x, cod=y, mem=m @ n),
-            f.feedback(
-                dom=x @ cls.id(m).delay().dom, cod=y @ m, mem=n
-            ).feedback(dom=x, cod=y, mem=m))
+            f.feedback(dom=x @ cls.id(m).delay().dom, cod=y @ m, mem=n
+                       ).feedback(dom=x, cod=y, mem=m))
 
     @axiom
-    def feedback_tightening[
-            Γ: Obj[C0], Δ: Obj[C0], Θ: Obj[C0], Λ: Obj[C0], M: Obj[C0]](
-            cls, f: Hom[C1, Tensor[Γ, Delay[C1, M]], Tensor[Δ, M]],
-            g: Hom[C1, Θ, Γ], h: Hom[C1, Δ, Λ],
-            x: Var[C0, Γ], y: Var[C0, Δ], mem: Var[C0, M]
-    ) -> Equation[Hom[C1, Θ, Λ]]:
-        """ Feedback is natural in its domain and codomain. """
+    def strength[
+            U: Obj[C0], V: Obj[C0], X: Obj[C0], Y: Obj[C0], M: Obj[C0]](
+            cls, e: Hom[C1, U, V],
+            f: Hom[C1, Tensor[X, Delay[C1, M]], Tensor[Y, M]],
+            x: Var[C0, X], y: Var[C0, Y], m: Var[C0, M]
+    ) -> Equation[Hom[C1, Tensor[U, X], Tensor[V, Y]]]:
+        """ Feedback commutes with tensoring a morphism on the left. """
         return cls.equation_factory(
-            (g @ cls.id(mem).delay() >> f >> h @ mem).feedback(
-                dom=g.dom, cod=h.cod, mem=mem),
-            g >> f.feedback(dom=x, cod=y, mem=mem) >> h)
+            e @ f.feedback(dom=x, cod=y, mem=m),
+            (e @ f).feedback(dom=e.dom @ x, cod=e.cod @ y, mem=m))
 
     @axiom
-    def feedback_sliding[Γ: Obj[C0], Δ: Obj[C0], M: Obj[C0], N: Obj[C0]](
-            cls, f: Hom[C1, Tensor[Γ, Delay[C1, M]], Tensor[Δ, N]],
-            k: Hom[C1, N, M], x: Var[C0, Γ], y: Var[C0, Δ]
-    ) -> Equation[Hom[C1, Γ, Δ]]:
-        """ A morphism slides around a feedback loop, delayed on its way
-        back in. """
+    def tightening[
+            W: Obj[C0], X: Obj[C0], Y: Obj[C0], Z: Obj[C0], M: Obj[C0]](
+            cls, f: Hom[C1, Tensor[X, Delay[C1, M]], Tensor[Y, M]],
+            g: Hom[C1, W, X], h: Hom[C1, Y, Z],
+            x: Var[C0, X], y: Var[C0, Y], m: Var[C0, M]
+    ) -> Equation[Hom[C1, W, Z]]:
+        """ Feedback is natural in its domain and its codomain. """
+        return cls.equation_factory(
+            (g @ cls.id(m).delay() >> f >> h @ m).feedback(
+                dom=g.dom, cod=h.cod, mem=m),
+            g >> f.feedback(dom=x, cod=y, mem=m) >> h)
+
+    @axiom
+    def sliding[X: Obj[C0], Y: Obj[C0], M: Obj[C0], N: Obj[C0]](
+            cls, f: Hom[C1, Tensor[X, Delay[C1, M]], Tensor[Y, N]],
+            k: Hom[C1, N, M], x: Var[C0, X], y: Var[C0, Y]
+    ) -> Equation[Hom[C1, X, Y]]:
+        """
+        A morphism slides around the feedback, delayed on its way back in:
+        the memory is its codomain on one side and its domain on the other.
+        """
         return cls.equation_factory(
             (f >> y @ k).feedback(dom=x, cod=y, mem=k.cod),
             (x @ k.delay() >> f).feedback(dom=x, cod=y, mem=k.dom))
-
-    @axiom
-    def feedback_superposing[
-            Γ: Obj[C0], Δ: Obj[C0], A: Obj[C0], B: Obj[C0], M: Obj[C0]](
-            cls, f: Hom[C1, Tensor[Γ, Delay[C1, M]], Tensor[Δ, M]],
-            e: Hom[C1, A, B], x: Var[C0, Γ], y: Var[C0, Δ], mem: Var[C0, M]
-    ) -> Equation[Hom[C1, Tensor[A, Γ], Tensor[B, Δ]]]:
-        """ Feedback commutes with tensoring a morphism on the left. """
-        return cls.equation_factory(
-            e @ f.feedback(dom=x, cod=y, mem=mem),
-            (e @ f).feedback(dom=e.dom @ x, cod=e.cod @ y, mem=mem))
 
     @rule
     def delaying[A: Obj[C0], B: Obj[C0]](
@@ -1537,22 +1541,25 @@ class MarkovCategory[
     @axiom
     def copy_counitality[X: Obj[C0]](
             cls, x: Var[C0, X]) -> Equation[Hom[C1, X, X]]:
-        """ Counitality of copying. """
-        copy, discard = cls.copy(x), cls.copy(x, 0)
+        """ Discarding either of two copies leaves the object itself. """
+        copy, discard, identity = cls.copy(x), cls.discard(x), cls.id(x)
         return cls.equation_factory(
-            copy >> discard @ x, cls.id(x), copy >> x @ discard)
+            copy >> discard @ identity, identity, copy >> identity @ discard)
 
     @axiom
     def copy_coassociativity[X: Obj[C0]](
-            cls, x: Var[C0, X]) -> Equation[Hom[C1, X, Tensor[X, X, X]]]:
-        """ Coassociativity of copying. """
-        copy = cls.copy(x)
-        return cls.equation_factory(copy >> copy @ x, copy >> x @ copy)
+            cls, x: Var[C0, X])\
+            -> Equation[Hom[C1, X, Tensor[X, X, X]]]:
+        """ Copying either of two copies gives the three copies. """
+        copy, identity = cls.copy(x), cls.id(x)
+        return cls.equation_factory(
+            copy >> copy @ identity, cls.copy(x, 3), copy >> identity @ copy)
 
     @axiom
     def copy_cocommutativity[X: Obj[C0]](
-            cls, x: Var[C0, X]) -> Equation[Hom[C1, X, Tensor[X, X]]]:
-        """ Cocommutativity of copying. """
+            cls, x: Var[C0, X])\
+            -> Equation[Hom[C1, X, Tensor[X, X]]]:
+        """ The two copies of an object are interchangeable. """
         copy = cls.copy(x)
         return cls.equation_factory(copy >> cls.swap(x, x), copy)
 
@@ -1566,12 +1573,16 @@ class MarkovCategory[
 
     @axiom
     def copy_coherence[X: Obj[C0], Y: Obj[C0]](
-            cls, x: Var[C0, X], y: Var[C0, Y]
-    ) -> Equation[Hom[C1, Tensor[X, Y], Tensor[X, Y, X, Y]]]:
-        """ Monoidal coherence of copying. """
+            cls, x: Var[C0, X], y: Var[C0, Y])\
+            -> Equation[Hom[C1, Tensor[X, Y], Tensor[X, Y, X, Y]]]:
+        """
+        Copying a tensor is copying its factors, with the inner copies
+        swapped so that each copy of the tensor comes together.
+        """
         return cls.equation_factory(
             cls.copy(x @ y),
-            cls.copy(x) @ cls.copy(y) >> x @ cls.swap(x, y) @ y)
+            cls.copy(x) @ cls.copy(y)
+            >> cls.id(x) @ cls.swap(x, y) @ cls.id(y))
 
     @rule
     def comultiplication[X: Atom[C0], N: Count](
@@ -1616,15 +1627,18 @@ class ComarkovCategory[
 
     @axiom
     def merge_associativity[X: Obj[C0]](
-            cls, x: Var[C0, X]) -> Equation[Hom[C1, Tensor[X, X, X], X]]:
+            cls, x: Var[C0, X])\
+            -> Equation[Hom[C1, Tensor[X, X, X], X]]:
         """ Merging either of two merges gives the merge of three. """
-        merge = cls.merge(x)
+        merge, identity = cls.merge(x), cls.id(x)
         return cls.equation_factory(
-            merge @ x >> merge, cls.merge(x, 3), x @ merge >> merge)
+            merge @ identity >> merge, cls.merge(x, 3),
+            identity @ merge >> merge)
 
     @axiom
     def merge_commutativity[X: Obj[C0]](
-            cls, x: Var[C0, X]) -> Equation[Hom[C1, Tensor[X, X], X]]:
+            cls, x: Var[C0, X])\
+            -> Equation[Hom[C1, Tensor[X, X], X]]:
         """ The two copies merged into an object are interchangeable. """
         merge = cls.merge(x)
         return cls.equation_factory(cls.swap(x, x) >> merge, merge)
@@ -1633,18 +1647,22 @@ class ComarkovCategory[
     def merge_unitality[X: Obj[C0]](
             cls, x: Var[C0, X]) -> Equation[Hom[C1, X, X]]:
         """ Merging the object with noise on either side leaves it itself. """
-        merge, noise = cls.merge(x), cls.noise(x)
+        merge, noise, identity = cls.merge(x), cls.noise(x), cls.id(x)
         return cls.equation_factory(
-            noise @ x >> merge, cls.id(x), x @ noise >> merge)
+            noise @ identity >> merge, identity, identity @ noise >> merge)
 
     @axiom
     def merge_coherence[X: Obj[C0], Y: Obj[C0]](
-            cls, x: Var[C0, X], y: Var[C0, Y]
-    ) -> Equation[Hom[C1, Tensor[X, Y, X, Y], Tensor[X, Y]]]:
-        """ Monoidal coherence of merging. """
+            cls, x: Var[C0, X], y: Var[C0, Y])\
+            -> Equation[Hom[C1, Tensor[X, Y, X, Y], Tensor[X, Y]]]:
+        """
+        Merging a tensor is swapping the inner factors so that the copies
+        of each factor come together, then merging its factors.
+        """
         return cls.equation_factory(
             cls.merge(x @ y),
-            x @ cls.swap(y, x) @ y >> cls.merge(x) @ cls.merge(y))
+            cls.id(x) @ cls.swap(y, x) @ cls.id(y)
+            >> cls.merge(x) @ cls.merge(y))
 
     @rule
     def multiplication[X: Atom[C0], N: Count](
