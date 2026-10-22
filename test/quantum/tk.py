@@ -70,6 +70,26 @@ def test_Circuit_from_tk():
     assert c == back_n_forth(c)
 
 
+def test_mixed_permutation_to_tk():
+    measure = Ket(1, 0, 0) >> Measure() @ qubit @ Measure()
+    swap_bits = Circuit.permutation([2, 1, 0], bit @ qubit @ bit)
+    swap_qubits = Circuit.permutation([2, 1, 0], qubit @ bit @ qubit)
+    assert repr(measure.to_tk())\
+        == "tk.Circuit(3, 2).Measure(2, 1).X(0).Measure(0, 0)"
+    assert repr((measure >> swap_bits).to_tk())\
+        == "tk.Circuit(3, 2).Measure(2, 0).X(0).Measure(0, 1)"
+    assert repr((Ket(1, 0, 0) >> qubit @ Measure() @ qubit >> swap_qubits
+                 >> X @ bit @ qubit).to_tk())\
+        == "tk.Circuit(3, 1).Measure(1, 0).X(0).X(2)"
+    post = ClassicalGate('post', bit ** 2, bit ** 2, np.eye(4).flatten())
+    circuit = Ket(0, 0, 0) >> H @ qubit ** 2 >> Measure(2) @ qubit\
+        >> post @ qubit >> Swap(bit, bit) @ qubit
+    backend = tk.mockBackend({(0, 0): 512, (1, 0): 512})
+    assert np.allclose(
+        circuit.eval(backend=backend).array,
+        circuit.init_and_discard().eval().array.real)
+
+
 def test_ClassicalGate_to_tk():
     post = ClassicalGate('post', bit ** 2, bit ** 0, data=[0, 0, 0, 1])
     assert (post[::-1] >> Swap(bit, bit)).to_tk().post_processing\

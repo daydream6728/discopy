@@ -253,6 +253,28 @@ def to_tk(circuit):
         tk_circ.rename_units({new: old})
         tk_circ.rename_units({tmp: new})
 
+    def permute(box, left, typ):
+        positions = [i for i, x in enumerate(box.dom) if x == typ]
+        perm = [positions.index(i) for i in box.perm if box.dom[i] == typ]
+        offset = left.count(typ)
+        if perm == sorted(perm):
+            return
+        if typ == bit and tk_circ.post_processing:
+            right = Id(tk_circ.post_processing.cod[offset + len(perm):])
+            tk_circ.post_process(
+                Id(bit ** offset)
+                @ Diagram.permutation(perm, bit ** len(perm)) @ right)
+            return
+        units, unit_factory = (qubits, Qubit) if typ == qubit else (bits, Bit)
+        current, position = list(range(len(perm))), list(range(len(perm)))
+        for i, source in enumerate(perm):
+            j = position[source]
+            if i != j:
+                swap(units[offset + i], units[offset + j],
+                     unit_factory=unit_factory)
+                current[i], current[j] = current[j], current[i]
+                position[current[j]], position[source] = j, i
+
     def add_gate(qubits, box, offset):
         i_qubits = [qubits[offset + j] for j in range(len(box.dom))]
 
@@ -301,28 +323,8 @@ def to_tk(circuit):
             qubits = qubits[:left.count(qubit)]\
                 + qubits[left.count(qubit) + box.dom.count(qubit):]
         elif isinstance(box, Permutation):
-            if all(typ == qubit for typ in box.dom):
-                units, offset, unit_factory = qubits, left.count(qubit), Qubit
-            elif all(typ == bit for typ in box.dom):
-                offset = left.count(bit)
-                if tk_circ.post_processing:
-                    right = Id(tk_circ.post_processing.cod[
-                        offset + len(box.dom):])
-                    tk_circ.post_process(
-                        Id(bit ** offset) @ box @ right)
-                    continue
-                units, unit_factory = bits, Bit
-            else:  # pragma: no cover
-                continue  # bits and qubits live in different registers.
-            current = list(range(len(box.dom)))
-            position = list(range(len(box.dom)))
-            for i, source in enumerate(box.perm):
-                j = position[source]
-                if i != j:
-                    swap(units[offset + i], units[offset + j],
-                         unit_factory=unit_factory)
-                    current[i], current[j] = current[j], current[i]
-                    position[current[j]], position[source] = j, i
+            permute(box, left, qubit)
+            permute(box, left, bit)
         elif isinstance(box, Scalar):
             tk_circ.scale(
                 box.array if box.is_mixed else abs(box.array) ** 2)
