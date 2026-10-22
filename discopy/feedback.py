@@ -697,6 +697,22 @@ class Box(monoidal.Box, Diagram):
         result._time_step = self.time_step  # pylint: disable=protected-access
         return result
 
+    def lambdify(self, *symbols, **kwargs):
+        """
+        Lambdify a feedback box, keeping its time step.
+
+        >>> from sympy.abc import phi  # doctest: +EXTRA
+        >>> f = Box('f', Ty('x'), Ty('y'), data=phi)
+        >>> assert f.delay().subs(phi, 1) == f.subs(phi, 1).delay()
+        """
+        function = super().lambdify(*symbols, **kwargs)
+
+        def delayed(*xs):
+            box = function(*xs)
+            box._time_step = self.time_step  # pylint: disable=protected-access
+            return box
+        return delayed
+
     def __str__(self):
         return super().__str__() + str_delayed(self.time_step)
 
