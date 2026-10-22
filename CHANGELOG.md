@@ -1739,9 +1739,10 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   difference of its shifts by a quarter turn, where it was its shift by
   half a turn, the derivative of `Rz` (B12). `QuantumGate` takes a 2-D
   array or a list with free symbols as `data`, as `circuit.Box` does,
-  where it raised (B82), and `Ket` and `Bra` read a boolean bit as an
-  integer, where `Ket(True)` was `|0> + |1>` and a bitstring of numpy
-  booleans the zero vector (B68)
+  where it raised (B82), and `Ket`, `Bra` and `Digits` read a boolean as
+  an integer, where `Ket(True)` was `|0> + |1>` and a bitstring of numpy
+  booleans the zero vector, `Digits` raising on a digit that is no integer
+  below its dimension (B68)
   ([rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
 - Every gate with a constructor of its own delays, where `Ket(0).delay()`,
   `Measure().delay()`, `scalar(2).delay()` and the rest raised
