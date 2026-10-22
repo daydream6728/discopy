@@ -2488,6 +2488,23 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   bare `Curry(box)` curried the opposite side of `box.curry()`, and
   `grammar.categorial.Diagram.bc` passed `n` without `left`, so backward
   composition curried on the wrong side by the same drift.
+- `biclosed.Eval` and `Coeval` evaluate an exponential that is neither
+  `Over` nor `Under` on the left by default, so that `closed.Eval(X >> Y)`
+  is `closed.Diagram.ev(Y, X)`, left since discopy/discopy#560, rather than
+  its mirror image. They raise `AxiomError` on the side an `Over` or an
+  `Under` does not have, e.g. `Eval(x << y, left=False)`, which the identity
+  functor rebuilt as `Eval(y >> x)`. `biclosed.Curry(f, n)` raises unless
+  `0 <= n <= len(f.dom)`: `Curry(f, 5)` of a box with one input curried it
+  whole and named itself `Curry(f, 5, True)`
+  ([rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
+- `to_hypergraph` and `foliation` of a closed diagram with a constant, e.g.
+  `g(X('a')).eval()`, raised `AxiomError: Expected a term for g, got g.`:
+  `biclosed.Functor` sent its constants to `map_term`, since the objects of
+  a hypergraph of closed diagrams are biclosed types, and a hypergraph,
+  which has no terms, is now exempt from that as a `CMap` already was. A
+  term itself, e.g. `g(X('a'))`, goes to a hypergraph as its diagram does,
+  since a hypergraph has no `ev` to evaluate it with
+  ([rel-int/discopy-next#177](https://github.com/rel-int/discopy-next/issues/177)).
 - A variable of a composite type, e.g. `Variable("v", x @ y)`, is bound
   whole. The abstraction machinery indexed contexts and free variables by
   variable, counting on that index to coincide with a wire index, so such
