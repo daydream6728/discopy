@@ -293,6 +293,15 @@ def test_Box_with_array_data_compares_and_hashes():
     assert len({a, b, c, a @ b}) == 3
 
 
+@pytest.mark.parametrize("module", ["torch", "jax.numpy"])
+def test_Box_with_backend_array_data_compares_and_hashes(module):
+    array = pytest.importorskip(module).asarray
+    a = Box('h', Dim(2), Dim(2), array([[0, 1], [1, 0]]))
+    b = Box('h', Dim(2), Dim(2), array([[0, 1], [1, 1]]))
+    assert a == Box('h', Dim(2), Dim(2), array([0, 1, 1, 0])) != b
+    assert len({a, b, Box('h', Dim(2), Dim(2), array([0, 1, 1, 0]))}) == 2
+
+
 def test_Spider():
     assert repr(Spider(1, 2, Dim(3))) == "tensor.Spider(1, 2, Dim(3))"
     assert Spider(1, 2, Dim(2)).dagger() == Spider(2, 1, Dim(2))

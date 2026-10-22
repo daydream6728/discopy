@@ -12,5 +12,5 @@ cubic's review of d2673841:
 
 - [x] finset offsets in one pass
 - [x] `basis` under the current backend, as `copy`
-- [WIP] @session_01YCJQ3Xco3ydQ6AsdTtYJ5x-2026-10-22 16:50 `setoid` on any backend's array, no direct numpy import
-- [WIP] @session_01YCJQ3Xco3ydQ6AsdTtYJ5x-2026-10-22 16:50 nan: reply, no code
+- [x] `setoid` on any backend's array, no direct numpy import
+- [x] nan: reply, no code

@@ -2021,9 +2021,10 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - `finset.Function.permutation(xs, doms)` permutes blocks of the sizes
   `doms`, the `i`-th block of its codomain being the `xs[i]`-th of its
   domain as in `Matrix.permutation`, where it raised unless every block had
-  size one; `tensor.Box` compares and hashes an array or a list of lists as
-  data by its flattened entries, where `==` raised `The truth value of an
-  array is ambiguous` and nested lists were unhashable; and
+  size one; `tensor.Box` compares and hashes an array of any backend or a
+  list of lists as data by its flattened entries, where `==` raised `The
+  truth value of an array is ambiguous` and nested lists were unhashable;
+  and
   `multiplicative.Function.curry(n)` raises `ValueError` when `n` is
   negative or more than the domain has, where it silently curried all of it
   ([rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
