@@ -4,7 +4,7 @@ Agent `gates`: `quantum/gates.py`, box-level `quantum/circuit.py`, `test/quantum
 
 - [x] B10: `Controlled.array` ignores the dagger and the rotation of the gate it controls, so `Controlled(S).dagger()` is a numeric no-op
 - [x] B11: `subs`/`lambdify` drop `distance` and `is_mixed`; `Sqrt.dagger` is unconjugated
-- [ ] B12: `U1.grad(mixed=False)` disagrees with the finite difference
+- [x] B12: `U1.grad(mixed=False)` disagrees with the finite difference
 - [x] B54: `Controlled.l`/`.r` are the conjugate, not the transpose; `CRz(.5).rotate()` crashes
 - [x] B55: `circuit.Box(..., is_mixed=False).dagger()` and `.rotate()` come back mixed
 - [ ] B82 (gates part): `QuantumGate` rejects a 2-D array or a symbolic list as `data`

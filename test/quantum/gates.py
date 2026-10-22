@@ -155,3 +155,15 @@ def test_subs_and_lambdify_keep_distance_and_is_mixed():
     assert numpy.allclose(gradient, (
         Rz(.3 + step).eval(mixed=True).array
         - Rz(.3 - step).eval(mixed=True).array) / (2 * step), atol=1e-4)
+
+
+@mark.parametrize("mixed", [False, True])
+@mark.parametrize("rotation", [Rx, Ry, Rz, U1])
+def test_rotation_grad_is_the_finite_difference(rotation, mixed):
+    phi = importorskip("sympy").Symbol("phi")
+    gradient = rotation(2 * phi).grad(phi, mixed=mixed).lambdify(phi)(.3)
+    step = 1e-6
+    assert numpy.allclose(gradient.eval(mixed=mixed).array, (
+        rotation(.6 + 2 * step).eval(mixed=mixed).array
+        - rotation(.6 - 2 * step).eval(mixed=mixed).array) / (2 * step),
+        atol=1e-4)

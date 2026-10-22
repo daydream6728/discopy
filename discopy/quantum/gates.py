@@ -826,6 +826,29 @@ class Rz(AntiConjugate, Rotation):
 
 class U1(AntiConjugate, Rotation):
     """ Z rotation, differ from :class:`Rz` by a global phase. """
+    def grad(self, var, **params):
+        """
+        The derivative of a U1 gate: the one of :class:`Rz` under mixed
+        evaluation, where the global phase cancels, and under pure evaluation
+        the difference of the gate shifted by a quarter turn either way, as
+        the gate is no multiple of its shift by half a turn.
+
+        >>> from sympy.abc import phi  # doctest: +EXTRA
+        >>> import numpy as np
+        >>> grad = U1(phi).grad(phi, mixed=False).subs(phi, .3).eval()
+        >>> assert np.allclose(grad.array, [[0, 0], [0, 2j * np.pi * (
+        ...     U1(.3).array[1, 1])]])
+        """
+        if params.get('mixed', True) or var not in self.free_symbols:
+            return super().grad(var, **params)
+        gradient = self.phase.diff(var)
+        gradient = complex(gradient) if not gradient.free_symbols else gradient
+        plus, minus = (
+            U1(self.phase + shift).delay(self.time_step)
+            for shift in (.25, -.25))
+        with backend() as np:
+            return scalar(np.pi * gradient) @ (plus + scalar(-1) @ minus)
+
     @property
     def array(self):
         with backend() as np:
