@@ -1865,6 +1865,25 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   name. A value that is a subscripted class is pickled as its
   `utils.Subscript`, its origin and its values, recursively
   ([rel-int/discopy-next#121](https://github.com/rel-int/discopy-next/issues/121)).
+- `CMap.to_diagram` applies a box with no domain, a state or a cap, in the
+  gap of the scan its face reaches rather than on the right of the open
+  wires: `(s @ x).to_map().to_diagram()` raised `NOT_SYMMETRIC` in
+  `monoidal`, `rigid` and `pivotal` and was `x @ s >> Swap` in `symmetric`,
+  and most random planar diagrams could not be decoded. Walking its face
+  back to the wire on its left, or on to the wire on its right, turns by
+  half a turn when that wire is its neighbour, and when the two walks
+  disagree it goes beside the wire its first reader reads next to it.
+  `CMap.make_causal` cuts only the wires that close a cycle, as it says,
+  where a scalar loop beside merely unordered boxes cut those too
+  ([rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
+- `Hypergraph.to_diagram` puts a cap with no offset, e.g. one of
+  `make_monogamous`, beside the wire that its first reader reads next to
+  it rather than on the left: `(f @ Cap(x, x)).to_hypergraph().to_diagram()`
+  had a permutation that `f @ Cap(x, x)` does not have
+  ([rel-int/discopy-next#187](https://github.com/rel-int/discopy-next/issues/187)).
+  `Hypergraph.make_causal` bends a wire with cups and caps in a category
+  with no merges, where it asked for a `spider_factory`:
+  `compact.Box('g', x, x).transpose().depth()` raised `AttributeError`.
 - `frobenius.Dim.unwind`, and so `tensor.Dim.unwind`, is the identity, like
   its `l` and `r` and like `rigid.Nat.unwind`: it inherited
   `rigid.Ty.unwind`, which asks the atom of a type for its winding, and the
