@@ -493,7 +493,7 @@ class Curry(monoidal.Bubble, Box):
 
     Parameters:
         arg : The diagram to curry.
-        n : The number of atomic types to curry.
+        n : The number of atomic types to curry, at most ``len(arg.dom)``.
         left : Whether to curry on the left or right, default is ``True``.
 
     Example
@@ -503,6 +503,8 @@ class Curry(monoidal.Bubble, Box):
     Curry(f, 1, True)
     """
     def __init__(self, arg: Diagram, n=1, left=True):
+        if not 0 <= n <= len(arg.dom):
+            raise AxiomError(messages.NOT_SPLITTABLE.format(n, arg.dom))
         self.n, self.left = n, left
         name = f"Curry({arg}, {n}, {left})"
         if left:

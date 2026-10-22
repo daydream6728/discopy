@@ -354,6 +354,14 @@ def test_Curry_dagger():
         Box('f', x @ x, x).curry().dagger()
 
 
+def test_Curry_too_many_wires():
+    x, z = Ty('x'), Ty('z')
+    for n in (-1, 2):
+        for left in (True, False):
+            with raises(AxiomError):
+                Curry(Box('f', x, z), n, left)
+
+
 def test_Curry_to_drawing():
     x = Ty('x')
     f = Box('f', x @ x @ x, x)
