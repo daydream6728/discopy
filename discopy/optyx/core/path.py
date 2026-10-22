@@ -47,8 +47,8 @@ Examples of usage
 We can check the Hong-Ou-Mandel effect by
 evaluating the permanent of the underlying matrix:
 
->>> from optyx.core.zw import Create, Select, Split, Merge, Id
->>> from optyx.photonic import BS
+>>> from discopy.optyx.core.zw import Create, Select, Split, Merge, Id
+>>> from discopy.optyx.photonic import BS
 >>> HOM = Create(1, 1) >> BS.get_kraus()
 >>> assert np.allclose(HOM.to_path().eval().array,\\
 ... Amplitudes([0.+0.70710678j, -0.+0.j    , 0.+0.70710678j],\\
@@ -64,7 +64,7 @@ Probabilities[complex]([0.5+0.j], dom=1, cod=1)
 We can also show the Hong-Ou-Mandel effect by
 using the rules of the :class:`path` calculus:
 
->>> from optyx.core.zw import W, Endo, SWAP, Create, Select
+>>> from discopy.optyx.core.zw import W, Endo, SWAP, Create, Select
 >>> left_hs = (Create(1, 1) >> \\
 ... W(2) @ W(2) >> \\
 ... Endo(1j) @ Id(1) @ Id(1) @ Endo(1j) >> \\
@@ -135,7 +135,7 @@ from discopy.cat import assert_iscomposable
 from discopy.utils import unbiased
 import discopy.matrix as underlying
 from discopy.tensor import Tensor
-from optyx.utils.misc import occupation_numbers, amplitudes_2_tensor
+from discopy.optyx.utils.misc import occupation_numbers, amplitudes_2_tensor
 
 
 def npperm(matrix):
@@ -179,7 +179,7 @@ class Matrix(underlying.Matrix):
 
     Example
     -------
-    >>> from optyx.core.zw import Split, Select, Create, Merge, Id
+    >>> from discopy.optyx.core.zw import Split, Select, Create, Merge, Id
     >>> array = np.array([[1, 1], [1, 0]])
     >>> matrix = Matrix(array, 1, 1, creations=(1,), selections=(1,))
     >>> matrix.eval(3)
@@ -307,7 +307,7 @@ class Matrix(underlying.Matrix):
 
         Example
         -------
-        >>> from optyx.core.zw import Split, Select, Create, Merge, Id
+        >>> from discopy.optyx.core.zw import Split, Select, Create, Merge, Id
         >>> num_op = Split(2) >> Select() @ Id(1) \\
         ...           >> Create() @ Id(1) >> Merge(2)
         >>> U = num_op.to_path().dilate()
@@ -416,7 +416,7 @@ class Matrix(underlying.Matrix):
         Example
         -------
         >>> import numpy as np
-        >>> from optyx.core.zw import (
+        >>> from discopy.optyx.core.zw import (
         ...   Split, Select, Create,
         ...   Merge, Id, Endo, SWAP
         ... )
@@ -489,8 +489,8 @@ class Amplitudes(underlying.Matrix):
 
     Example
     -------
-    >>> from optyx.core.zw import Select, Id
-    >>> from optyx.photonic import BS
+    >>> from discopy.optyx.core.zw import Select, Id
+    >>> from discopy.optyx.photonic import BS
     >>> BS.get_kraus().to_path().eval(1)
     Amplitudes([0.    +0.70710678j, 0.70710678+0.j    , 0.70710678+0.j    ,
      0.    +0.70710678j], dom=2, cod=2)
@@ -513,8 +513,8 @@ class Probabilities(underlying.Matrix):
 
     Example
     -------
-    >>> from optyx.core.zw import Create
-    >>> from optyx.photonic import BS
+    >>> from discopy.optyx.core.zw import Create
+    >>> from discopy.optyx.photonic import BS
     >>> BS.get_kraus().to_path().prob(1).round(1)
     Probabilities[complex]([0.5+0.j, 0.5+0.j, 0.5+0.j, 0.5+0.j], dom=2, cod=2)
     >>> (Create(1, 1) >> BS.get_kraus()).to_path().prob().round(1)

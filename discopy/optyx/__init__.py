@@ -1,11 +1,11 @@
-from optyx import channel
-from optyx.core import zw
-from optyx.core import zx
-from optyx.core import path
-from optyx.core import backends
-from optyx.core import diagram
-from optyx.core import control
-from optyx.channel import (
+from discopy.optyx import channel
+from discopy.optyx.core import zw
+from discopy.optyx.core import zx
+from discopy.optyx.core import path
+from discopy.optyx.core import backends
+from discopy.optyx.core import diagram
+from discopy.optyx.core import control
+from discopy.optyx.channel import (
     Channel,
     CQMap,
     Discard,
@@ -20,9 +20,4 @@ from optyx.channel import (
     qmode,
     qubit,
     bit
-)
-
-from optyx._version import (
-    version as __version__,
-    version_tuple as __version_info__,
 )

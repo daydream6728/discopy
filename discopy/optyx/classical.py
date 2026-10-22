@@ -109,7 +109,7 @@ In particular, given classical measurement outcomes,
 we can perform postprocessing
 and feed the result into a controlled quantum gate.
 
->>> from optyx.photonic import DualRail, PhaseShiftDR
+>>> from discopy.optyx.photonic import DualRail, PhaseShiftDR
 >>> ctrl  = Bit(1)           # 1 post-selection (classical control wire)
 >>> zgate = PhaseShiftDR(0.5)
 >>> cZ    = BitControlledGate(zgate)   # applies Z only when control bit = 1
@@ -133,14 +133,14 @@ and feed the result into a controlled quantum gate.
 
 from typing import Callable, List
 import numpy as np
-from optyx import channel
-from optyx.core import (
+from discopy.optyx import channel
+from discopy.optyx.core import (
     control,
     zw,
     zx,
     diagram
 )
-from optyx.channel import (
+from discopy.optyx.channel import (
     bit,
     mode,
     qmode,
@@ -601,7 +601,7 @@ class ClassicalFunction(ControlChannel):
 
     Example
     -------
-    >>> from optyx.classical import X, Scalar
+    >>> from discopy.optyx.classical import X, Scalar
     >>> xor = X(2, 1) @ Scalar(2**0.5)
     >>> f_res = (ClassicalFunction(lambda x: [x[0] ^ x[1]],
     ...         bit**2,
@@ -635,7 +635,7 @@ class BinaryMatrix(ControlChannel):
 
     Example
     -------
-    >>> from optyx.classical import X, Scalar
+    >>> from discopy.optyx.classical import X, Scalar
     >>> xor = X(2, 1) @ Scalar(2**0.5)
     >>> matrix = [[1, 1]]
     >>> m_res = BinaryMatrix(matrix).double().to_tensor().eval().array

@@ -1,11 +1,11 @@
 import pytest
 import pyzx
-from optyx import qubits
+from discopy.optyx import qubits
 from pytket import Circuit
 from pytket.extensions.qiskit import AerBackend
 from pytket.utils import probs_from_counts
-from optyx import channel
-from optyx.core import zx
+from discopy.optyx import channel
+from discopy.optyx.core import zx
 import numpy as np
 
 def _extract(graph):
@@ -52,7 +52,7 @@ def test_graphix():
 
 
 # def test_tket_discopy():
-#     from optyx import classical, bit
+#     from discopy.optyx import classical, bit
 #     ghz_circ = Circuit(3)
 #     ghz_circ.H(0)
 #     ghz_circ.CX(0, 1)
@@ -123,7 +123,7 @@ def test_dephasingerror():
     assert np.allclose(a,  np.array([[-.14, 1.], [1, -0.14]]))
 
 def test_ket():
-    from optyx.core import diagram
+    from discopy.optyx.core import diagram
     a = (qubits.Ket(1).get_kraus().to_tensor().to_quimb() ^ ...).data
     b = zx.X(0, 1, 0.5) @ diagram.Scalar(1 / np.sqrt(2))
 
@@ -131,7 +131,7 @@ def test_ket():
     assert np.allclose(a, b)
 
 def test_bra():
-    from optyx.core import diagram
+    from discopy.optyx.core import diagram
     a = (qubits.Bra(1).get_kraus().to_tensor().to_quimb() ^ ...).data
     b = zx.X(1, 0, 0.5) @ diagram.Scalar(1 / np.sqrt(2))
     b = (b.to_tensor().to_quimb() ^ ...).data

@@ -6,7 +6,7 @@ Overview
 Back-end abstraction layer for **Optyx** diagram evaluation.
 
 This module gathers several numerical engines under a single
-interface so that any :class:`optyx.channel.Diagram` can be reduced
+interface so that any :class:`discopy.optyx.channel.Diagram` can be reduced
 to concrete data - amplitudes, density matrices or classical probability
 distributions.
 
@@ -38,8 +38,8 @@ Examples of usage
 
 **Exact tensor-network contraction with Quimb**
 
->>> from optyx.photonic import Create, BS
->>> from optyx.core.backends import QuimbBackend
+>>> from discopy.optyx.photonic import Create, BS
+>>> from discopy.optyx.core.backends import QuimbBackend
 >>> diag = Create(1, 1) >> BS
 >>> backend = QuimbBackend()
 >>> result = diag.eval(backend)
@@ -57,7 +57,7 @@ Examples of usage
 
 **Unitary circuit simulation with Perceval**
 
->>> from optyx.core.backends import PercevalBackend
+>>> from discopy.optyx.core.backends import PercevalBackend
 >>> backend = PercevalBackend()
 >>> result = (Create(1, 1) >> BS).eval(backend)
 >>> np.round(result.single_prob((2, 0)), 1)
@@ -80,8 +80,8 @@ from discopy import tensor as discopy_tensor
 import numpy as np
 import perceval as pcvl
 from quimb.tensor import TensorNetwork
-from optyx.channel import Diagram, Ty, mode, bit
-from optyx.core.path import Matrix
+from discopy.optyx.channel import Diagram, Ty, mode, bit
+from discopy.optyx.core.path import Matrix
 
 
 @dataclass

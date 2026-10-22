@@ -3,12 +3,12 @@ import pytest
 
 from discopy.utils import AxiomError
 
-from optyx import photonic
-from optyx import classical, qubits
-from optyx.channel import (
+from discopy.optyx import photonic
+from discopy.optyx import classical, qubits
+from discopy.optyx.channel import (
     Diagram, Discard, Feedback, Functor, bit, qmode, qubit
 )
-from optyx.core import diagram as core, path, zw, zx
+from discopy.optyx.core import diagram as core, path, zw, zx
 
 
 def delay(state=None, effect=None):

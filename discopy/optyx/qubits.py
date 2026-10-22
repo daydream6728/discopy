@@ -123,7 +123,7 @@ mixed channels with classical data:
 We can therefore measure a quantum register and perform classical
 operations on the results, such as copying or discarding bits.
 
->>> from optyx.classical import (
+>>> from discopy.optyx.classical import (
 ...    X as XClassical
 ... )
 >>> quantum_state = Ket(0) >> H() >> Z(1, 1, 0.5)
@@ -142,13 +142,13 @@ operations on the results, such as copying or discarding bits.
 
 Quantum teleportation is the canonical example of
 a ZX diagram that uses classical data. In :code:`optyx`,
-we can make use of controlled boxes from :code:`optyx.classical`
+we can make use of controlled boxes from :code:`discopy.optyx.classical`
 to correct the state of the qubit depending on the measurement result.
 
->>> from optyx.classical import (
+>>> from discopy.optyx.classical import (
 ...    BitControlledGate, Id as IdClassical
 ... )
->>> from optyx import bit
+>>> from discopy.optyx import bit
 >>> teleportation = (
 ...     Id(1) @ Z(0, 2) @ Scalar(2**0.5)>>
 ...     Z(1, 2) @ Id(2) >>
@@ -222,7 +222,7 @@ First, let's evaluate with tket:
 
 Then, let us evaluate with Optyx:
 
->>> #from optyx import classical
+>>> #from discopy.optyx import classical
 >>> #circ = Circuit(ghz_circ)
 >>> #circ = Ket(0)**3 @ classical.Bit(0)**3 >> circ >> Discard(3) @ bit**3
 >>> #res = (circ.double().to_tensor().to_quimb()^...).data
@@ -240,11 +240,11 @@ We can use a circuit from an external package to define a
 graph state, which can then be used for photonic quantum computing.
 Let us use the GHZ state from the example above.
 
->>> #from optyx.classical import DiscardBit, Z as ZClassical
+>>> #from discopy.optyx.classical import DiscardBit, Z as ZClassical
 >>> #circ = Circuit(ghz_circ)
 >>> #circ = Ket(0)**3 @ classical.Bit(0)**3 >> circ >> qubit**3 @ ZClassical(1, 0)**3
 
->>> #from optyx.photonic import DualRail, HadamardBS, XMeasurementDR
+>>> #from discopy.optyx.photonic import DualRail, HadamardBS, XMeasurementDR
 >>> #circ_photonic = circ >> DualRail(3) >> HadamardBS() @ XMeasurementDR(0.5)**2
 >>> #circ_photonic.draw(path="docs/_static/ghz_circ_photonic.svg",
 >>> #figsize=(6, 12))
@@ -258,7 +258,7 @@ We can create a graph state as follows
 (where we omit the labels):
 
 >>> from discopy.drawing import Equation
->>> from optyx.photonic import DualRail
+>>> from discopy.optyx.photonic import DualRail
 >>> graph = (Z(0, 2) >> Id(1) @ H() >> Id(1) @ Z(1, 2) >> \\
 ... Id(2) @ H() >> Id(2) @ Z(1, 2))
 >>> Equation(graph >> DualRail(4), graph.to_dual_rail(), \\
@@ -273,8 +273,8 @@ We can map ZX diagrams to dual-rail encoding.
 For example, we can create a GHZ state:
 
 >>> from discopy.drawing import Equation
->>> from optyx.photonic import DualRail
->>> from optyx.core.diagram import embedding_tensor
+>>> from discopy.optyx.photonic import DualRail
+>>> from discopy.optyx.core.diagram import embedding_tensor
 >>> ghz = Z(0, 3)
 >>> ghz_decom = ghz.decomp()
 >>> ghz_path = ghz_decom.to_dual_rail()
@@ -311,13 +311,13 @@ from discopy import quantum as quantum_discopy
 from discopy import symmetric
 from sympy import lambdify
 # from pytket import circuit as tket_circuit
-from optyx.utils.misc import explode_channel
-from optyx import channel
-from optyx.core import (
+from discopy.optyx.utils.misc import explode_channel
+from discopy.optyx import channel
+from discopy.optyx.core import (
     diagram,
     zx
 )
-from optyx.channel import (
+from discopy.optyx.channel import (
     bit,
     qubit,
     Measure as MeasureChannel,
@@ -457,7 +457,7 @@ class QubitChannel(Channel):
 
     # def decomp(self):
     #     """Decompose into elementary gates."""
-    #     from optyx.utils.misc import decomp_ar
+    #     from discopy.optyx.utils.misc import decomp_ar
     #     from discopy import symmetric
     #     return symmetric.Functor(
     #         ob=lambda x: qubit**len(x),
@@ -467,8 +467,8 @@ class QubitChannel(Channel):
 
     # def to_dual_rail(self):
     #     """Convert to dual-rail encoding."""
-    #     from optyx.utils.misc import ar_zx2path
-    #     from optyx import qmode
+    #     from discopy.optyx.utils.misc import ar_zx2path
+    #     from discopy.optyx import qmode
     #     from discopy import symmetric
 
     #     return symmetric.Functor(
@@ -493,7 +493,7 @@ class QubitChannel(Channel):
             Ket as Ket_
         )
         from discopy.quantum.gates import Scalar as GatesScalar
-        # from optyx import classical
+        # from discopy.optyx import classical
 
         # pylint: disable=invalid-name
         def get_perm(n):
@@ -669,7 +669,7 @@ class Z(Channel):
 
         >>> assert len(Z._make_spiders(6)) == 5
         """
-        from optyx import qubits
+        from discopy.optyx import qubits
 
         spider = qubits.Id(1)
         for k in range(n - 1):
@@ -679,11 +679,11 @@ class Z(Channel):
     def _to_dual_rail(self):
         """Convert to dual-rail encoding."""
 
-        from optyx import (
+        from discopy.optyx import (
             photonic,
             qmode
         )
-        from optyx.core import zw
+        from discopy.optyx.core import zw
         create = photonic.Create(1)
         annil = photonic.Select(1)
         comonoid = Channel("Split", zw.Split(2))
@@ -767,7 +767,7 @@ class X(Channel):
 
     def _to_dual_rail(self):  # pragma: no cover
         """Convert to dual-rail encoding."""
-        from optyx import (
+        from discopy.optyx import (
             photonic
         )
 
@@ -821,7 +821,7 @@ class H(Channel):
 
     def _to_dual_rail(self):
         """Convert to dual-rail encoding."""
-        from optyx import photonic
+        from discopy.optyx import photonic
         return photonic.HadamardBS()
 
     def dagger(self):
@@ -847,7 +847,7 @@ class Scalar(Channel):
 
     def _to_dual_rail(self):
         """Convert to dual-rail encoding."""
-        from optyx import photonic
+        from discopy.optyx import photonic
         return photonic.Scalar(self.data)
 
     def dagger(self):

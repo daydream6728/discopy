@@ -127,7 +127,7 @@ we need to feed the circuit with two photons.
 Finally, let's check the effect of having both
 photons on two output modes using postselection.
 
->>> from optyx.photonic import Select
+>>> from discopy.optyx.photonic import Select
 >>> diagram_qpath = Create(1, 1) >> BS >> Select(1, 1)
 >>> diagram_qpath.draw(path='docs/_static/BS_hom_2.png', figsize=(3, 3))
 
@@ -253,17 +253,17 @@ import sympy as sp
 from sympy import Expr, lambdify, Symbol, Mul
 from discopy.cat import rsubs
 
-from optyx import channel
-from optyx.core import (
+from discopy.optyx import channel
+from discopy.optyx.core import (
     diagram,
     zw,
     path
 )
 
-from optyx.classical import ClassicalFunction, DiscardMode
-from optyx.utils.misc import matrix_to_zw
+from discopy.optyx.classical import ClassicalFunction, DiscardMode
+from discopy.optyx.utils.misc import matrix_to_zw
 
-from optyx.channel import (
+from discopy.optyx.channel import (
     bit,
     mode,
     qmode,
@@ -565,7 +565,7 @@ class BBS(AbstractGate):
 
     We can check the Hong-Ou-Mandel effect:
 
-    >>> from optyx.photonic import Select
+    >>> from discopy.optyx.photonic import Select
     >>> d = Create(1, 1) >> BS
     >>> assert np.isclose((d >> Select(0, 2)).to_path().prob().array,
     ...                                                                0.5)
@@ -962,7 +962,7 @@ class FusionTypeI(Diagram):
 
     Examples
     --------
-    >>> from optyx.photonic import Create, FusionTypeI
+    >>> from discopy.optyx.photonic import Create, FusionTypeI
     >>> circuit = Create(1, 0, 1, 0) >> FusionTypeI()
     >>> circuit.draw(path="docs/_static/fusioni.svg")
 
@@ -1101,7 +1101,7 @@ class FusionTypeII(Diagram):
 
     Examples
     --------
-    >>> from optyx.photonic import Create, FusionTypeII
+    >>> from discopy.optyx.photonic import Create, FusionTypeII
     >>> circuit = Create(1, 0, 1, 0) >> FusionTypeII()
     >>> circuit.draw(path="docs/_static/fusionii.svg")
 

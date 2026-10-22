@@ -39,7 +39,7 @@ or using :code:`quimb` (with :code:`tensor.to_quimb()`).
 
 **W commutativity**
 
->>> from optyx.utils.misc import compare_arrays_of_different_sizes
+>>> from discopy.optyx.utils.misc import compare_arrays_of_different_sizes
 >>> from discopy.drawing import Equation
 >>> bSym_l = W(2)
 >>> bSym_r = W(2) >> SWAP
@@ -149,13 +149,13 @@ from typing import List, Union, Tuple, Iterable
 import numpy as np
 from discopy.frobenius import Dim
 from discopy import tensor
-from optyx.core import diagram
-from optyx.utils.misc import (
+from discopy.optyx.core import diagram
+from discopy.optyx.utils.misc import (
     occupation_numbers,
     multinomial,
     BasisTransition
 )
-from optyx.core.path import Matrix
+from discopy.optyx.core.path import Matrix
 
 
 class ZWBox(diagram.Box, diagram.Diagram):
@@ -801,7 +801,7 @@ class Mod2(ZWBox):
             diagram.PhotonNumberPreservation.CUSTOM
 
     def photon_number_transform(self, dims_in, dims_out):
-        from optyx.core.zx import Z
+        from discopy.optyx.core.zx import Z
         prev_layers = []
         if self.is_dagger:
             prev_layers.append(Z(1, 0))

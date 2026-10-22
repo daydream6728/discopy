@@ -19,7 +19,7 @@ from numbers import Number
 
 def _build_w_layer(n_nonzero_counts, dagger=False):
     # pylint: disable=import-outside-toplevel
-    from optyx.core import zw
+    from discopy.optyx.core import zw
     layer = zw.Id(0)
     for count in n_nonzero_counts:
         if count > 1:
@@ -32,7 +32,7 @@ def _build_w_layer(n_nonzero_counts, dagger=False):
 
 def matrix_to_zw(U):
     # pylint: disable=import-outside-toplevel
-    from optyx.core import zw
+    from discopy.optyx.core import zw
     from sympy import Expr
 
     n = U.shape[0]
@@ -225,7 +225,7 @@ def explode_channel(
     circuit_class=None,
 ):
     # pylint: disable=import-outside-toplevel
-    from optyx.channel import Channel, Ty, Diagram
+    from discopy.optyx.channel import Channel, Ty, Diagram
 
     if channel_class is None:
         channel_class = Channel
@@ -255,7 +255,7 @@ def explode_channel(
 def calculate_num_creations_selections(dgrm) -> tuple:
     """Calculate the number of creations and selections in the diagram"""
     # pylint: disable=import-outside-toplevel
-    from optyx.core import diagram, zw
+    from discopy.optyx.core import diagram, zw
 
     n_selections = 0
     n_creations = 0
@@ -326,7 +326,7 @@ def update_connections(
     previous_box,
     previous_right_offset: int,
 ) -> List[bool]:
-    from optyx.core.diagram import mode
+    from discopy.optyx.core.diagram import mode
     """
     Replace the previous box's cod segment in the light-cone by a dom-length
     segment that is either all True (if connected) or all False.
@@ -416,8 +416,8 @@ def get_max_dim_for_box(
     input_dims: List[int],
     prev_layers,
 ):
-    from optyx.core.diagram import Swap, mode
-    from optyx.core.zw import Create, Endo, Divide, Multiply
+    from discopy.optyx.core.diagram import Swap, mode
+    from discopy.optyx.core.zw import Create, Endo, Divide, Multiply
 
     if (
         len(box.dom) == 0 or
@@ -487,7 +487,7 @@ def get_max_dim_for_box(
 
 
 def is_diagram_LO(diagram):
-    from optyx.core.zw import LO_ELEMENTS
+    from discopy.optyx.core.zw import LO_ELEMENTS
     if is_identity(diagram):
         return True
 

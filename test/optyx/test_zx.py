@@ -5,9 +5,9 @@ from pytest import raises, fixture
 
 from discopy.quantum.gates import CRz, CRx, CU1, Ket, Rx, H
 from discopy import quantum
-from optyx.core.zx import *
-from optyx import qubits
-from optyx.core.diagram import Diagram, Bit
+from discopy.optyx.core.zx import *
+from discopy.optyx import qubits
+from discopy.optyx.core.diagram import Diagram, Bit
 
 @fixture
 def random_had_cnot_diagram():

@@ -29,7 +29,7 @@ A channel doubles into its Kraus map beside the conjugate, with the
 environment bent round and shared:
 
 >>> from discopy.symmetric import Equation
->>> from optyx import photonic
+>>> from discopy.optyx import photonic
 >>> Equation(photonic.PhotonLoss(.5), photonic.PhotonLoss(.5).double(),
 ...          symbol="$\\\\mapsto$").draw(
 ...     figsize=(9, 3), path="docs/_static/doubling.png")
@@ -128,8 +128,8 @@ Examples
 
 A Channel is initialised by its Kraus map from `dom` to `cod @ env`.
 
->>> from optyx.core import zx, zw, diagram
->>> from optyx import photonic
+>>> from discopy.optyx.core import zx, zw, diagram
+>>> from discopy.optyx import photonic
 >>> circ = (
 ...     photonic.Phase(0.25) @
 ...     photonic.BS @
@@ -181,9 +181,9 @@ We can construct a lossy optical channel and compute its probabilities:
 The :code:`from_bosonic_operator` method
 supports creating :class:`path` diagrams:
 
->>> from optyx.core.zw import Split, Select, Id
->>> from optyx.core.diagram import Mode
->>> from optyx.photonic import Scalar
+>>> from discopy.optyx.core.zw import Split, Select, Id
+>>> from discopy.optyx.core.diagram import Mode
+>>> from discopy.optyx.photonic import Scalar
 >>> d1 = Diagram.from_bosonic_operator(
 ...     n_modes=2,
 ...     operators=((0, False), (1, False), (0, True)),
@@ -204,8 +204,8 @@ We can map ZX diagrams to :class:`path` diagrams using
 dual-rail encoding. For example, we can create a GHZ state:
 
 >>> from discopy.drawing import Equation
->>> from optyx.qubits import Z
->>> from optyx.photonic import DualRail
+>>> from discopy.optyx.qubits import Z
+>>> from discopy.optyx.photonic import DualRail
 >>> ghz = Z(0, 3)
 >>> ghz_path = ghz.to_dual_rail()
 >>> Equation(ghz >> DualRail(3), ghz_path, \\
@@ -235,7 +235,7 @@ from discopy.cat import factory
 from discopy.utils import AxiomError
 from pytket.extensions.pyzx import pyzx_to_tk
 from pyzx import extract_circuit
-from optyx.core import diagram
+from discopy.optyx.core import diagram
 
 
 class Ob(frobenius.Ob):
@@ -435,7 +435,7 @@ class Diagram(frobenius.Diagram):
         :meth:`Feedback.default_effect` is `Discard(mem)` here while
         :meth:`Feedback.default_state` stays the open wire.
 
-        >>> from optyx.photonic import Create
+        >>> from discopy.optyx.photonic import Create
         >>> wait = Diagram.swap(qmode, qmode).feedback(state=Create(0))
         >>> assert wait.dom == wait.cod == qmode
         >>> assert wait.mem == qmode
@@ -473,7 +473,7 @@ class Diagram(frobenius.Diagram):
         A loop that reprepares `Ket(0)` each tick reads out `Ket(0)` at
         every time, whatever its memory started as:
 
-        >>> from optyx.qubits import Ket
+        >>> from discopy.optyx.qubits import Ket
         >>> source = (Discard(qubit) @ Ket(0) @ Ket(0)).feedback(
         ...     mem=qubit, state=Ket(1))
         >>> assert (source.at_time(2).dom, source.at_time(2).cod) \\
@@ -507,7 +507,7 @@ class Diagram(frobenius.Diagram):
         of it are in range. Raises rather than returning, since every
         failure is a mistake in the call.
 
-        >>> from optyx.qubits import Ket
+        >>> from discopy.optyx.qubits import Ket
         >>> try:
         ...     Ket(0).check_fixpoint()
         ... except ValueError as error:
@@ -536,7 +536,7 @@ class Diagram(frobenius.Diagram):
         output. For a state this is its trace, and it is the factor which
         rescales it to a causal one.
 
-        >>> from optyx.qubits import Ket
+        >>> from discopy.optyx.qubits import Ket
         >>> assert np.isclose(Ket(0).normalisation(), 1)
         >>> assert np.isclose((Scalar(.5) @ Ket(0)).normalisation(), .25)
 
@@ -560,7 +560,7 @@ class Diagram(frobenius.Diagram):
     def dilate(self):
         """
         The pure Kraus map of this channel diagram with every environment
-        routed to the end of the codomain: a :class:`optyx.core.diagram`
+        routed to the end of the codomain: a :class:`discopy.optyx.core.diagram`
         diagram from `dom.single()` to `cod.single() @ env`.
 
         This is Stinespring dilation, layer by layer: a lossy channel is an
@@ -573,7 +573,7 @@ class Diagram(frobenius.Diagram):
         The dilation of a loss channel is the beam splitter it is: one
         mode in, system and environment out, split by the transmissivity.
 
-        >>> from optyx.photonic import PhotonLoss
+        >>> from discopy.optyx.photonic import PhotonLoss
         >>> assert np.allclose(np.abs(np.asarray(
         ...     PhotonLoss(.8).dilate().to_path().array,
         ...     dtype=complex)) ** 2, [[.8, .2]])
@@ -581,7 +581,7 @@ class Diagram(frobenius.Diagram):
 
         The dilation of a pure diagram is its Kraus map:
 
-        >>> from optyx.photonic import BS
+        >>> from discopy.optyx.photonic import BS
         >>> assert BS.dilate() == BS.get_kraus()
         """
         kraus, env = diagram.Id(self.dom.single()), diagram.Ty()
@@ -616,7 +616,7 @@ class Diagram(frobenius.Diagram):
         and :meth:`fix` warns with it before falling back on
         :meth:`power_fix`.
 
-        >>> from optyx import photonic, qubits
+        >>> from discopy.optyx import photonic, qubits
         >>> loop = (photonic.Create(1) @ qmode >> photonic.BS).feedback(
         ...     mem=qmode, state=photonic.Create(0))
         >>> assert loop.certificate_obstruction() is None
@@ -684,7 +684,7 @@ class Diagram(frobenius.Diagram):
 
         Loss is read off the diagram, not passed in: the one-step matrix is
         the path matrix of the loop's :meth:`dilate`, so a
-        :class:`optyx.photonic.PhotonLoss` or any other discarded
+        :class:`discopy.optyx.photonic.PhotonLoss` or any other discarded
         environment in the loop enters `V_ll` as the isometry block it is,
         and shrinks its singular values by the amplitude it leaks.
 
@@ -715,7 +715,7 @@ class Diagram(frobenius.Diagram):
         a lossless loop block with spectral radius one. :meth:`fix` warns
         with the same obstruction and falls back on :meth:`power_fix`.
 
-        >>> from optyx import photonic
+        >>> from discopy.optyx import photonic
         >>> loop = (photonic.Create(1) @ qmode
         ...     >> Diagram.swap(qmode, qmode)).feedback(
         ...         mem=qmode, state=photonic.Create(0))
@@ -823,7 +823,7 @@ class Diagram(frobenius.Diagram):
         The budget is *not* uniform, because a photon only reaches the wires
         downstream of where it enters:
 
-        >>> from optyx import photonic
+        >>> from discopy.optyx import photonic
         >>> chain = photonic.Create(1) @ photonic.Create(0) >> photonic.BS
         >>> for _ in range(3):
         ...     tail = photonic.Id(1) @ photonic.Create(1) >> photonic.BS
@@ -873,7 +873,7 @@ class Diagram(frobenius.Diagram):
             max_steps : The maximum number of time steps, including the final
                 readout. The public `DEFAULT_MAX_STEPS` is sixty-four.
             backend : An optional
-                :class:`optyx.core.backends.AbstractBackend` for the
+                :class:`discopy.optyx.core.backends.AbstractBackend` for the
                 certified contraction. DisCoPy evaluates with
                 ``tensor.Functor``; Quimb contracts the same doubled network
                 with an optimised path, compressed to `max_chi`. The
@@ -883,7 +883,7 @@ class Diagram(frobenius.Diagram):
         step; the following step reads its stationary output. With loss on
         the loop, the stationary photon is lost half the time:
 
-        >>> from optyx import photonic
+        >>> from discopy.optyx import photonic
         >>> delay = (photonic.Create(1) @ qmode
         ...     >> Diagram.swap(qmode, qmode)
         ...     >> qmode @ photonic.PhotonLoss(.5)).feedback(
@@ -900,7 +900,7 @@ class Diagram(frobenius.Diagram):
             raise ValueError(
                 "max_steps must be at least 2: one burn-in step and one "
                 "readout step.")
-        backends = import_module("optyx.core.backends")
+        backends = import_module("discopy.optyx.core.backends")
         if backend is None:
             backend = backends.QuimbBackend(
                 hyperoptimiser=None if max_chi is None
@@ -980,7 +980,7 @@ class Diagram(frobenius.Diagram):
         There is no backend to choose: every state is contracted with the
         default one.
 
-        >>> from optyx.qubits import Ket, X, Z
+        >>> from discopy.optyx.qubits import Ket, X, Z
         >>> loop = (X(1, 1, .25) >> Z(1, 2)).feedback(
         ...     mem=qubit, state=Ket(0))
         >>> result = loop.power_fix(1e-3)
@@ -994,7 +994,7 @@ class Diagram(frobenius.Diagram):
             if not isinstance(value, Integral) or isinstance(value, bool) \
                     or value <= 0:
                 raise ValueError(f"{name} must be a positive integer.")
-        backends = import_module("optyx.core.backends")
+        backends = import_module("discopy.optyx.core.backends")
         backend = backends.QuimbBackend(
             hyperoptimiser=None if max_chi is None
             else HyperCompressedOptimizer())
@@ -1093,8 +1093,8 @@ class Diagram(frobenius.Diagram):
         state it cannot justify, and so does a non-unique stationary memory
         rather than an arbitrary eigenvector.
 
-        >>> from optyx import photonic
-        >>> from optyx.channel import qmode
+        >>> from discopy.optyx import photonic
+        >>> from discopy.optyx.channel import qmode
         >>> delay = (photonic.Create(1) @ qmode
         ...     >> Diagram.swap(qmode, qmode)).feedback(
         ...         mem=qmode, state=photonic.Create(0))
@@ -1163,7 +1163,7 @@ class Diagram(frobenius.Diagram):
         memory_state = tensor.Box(
             "Stationary memory", tensor.Dim(1), tensor_readout.dom,
             state / trace)
-        backends = import_module("optyx.core.backends")
+        backends = import_module("discopy.optyx.core.backends")
         return backends.EvalResult(
             tensor.Box(
                 "Result", tensor.Dim(1), tensor_readout.cod, np.real_if_close(
@@ -1290,7 +1290,7 @@ class Diagram(frobenius.Diagram):
         In other words, it is the underlying matrix
         representation of a :class:`path` and :class:`photonic` diagrams."""
         # pylint: disable=import-outside-toplevel
-        from optyx.core import path
+        from discopy.optyx.core import path
 
         assert self.is_pure, "Diagram must be pure to convert to path."
 
@@ -1357,21 +1357,21 @@ class Diagram(frobenius.Diagram):
     def from_tket(cls, tket_circuit):
         """Convert from tket circuit."""
         # pylint: disable=import-outside-toplevel
-        from optyx.qubits import Circuit
+        from discopy.optyx.qubits import Circuit
         return Circuit(tket_circuit)
 
     @classmethod
     def from_pyzx(cls, pyzx_circuit):
         """Convert from PyZX circuit."""
         # pylint: disable=import-outside-toplevel
-        from optyx.qubits import Circuit
+        from discopy.optyx.qubits import Circuit
         return Circuit(pyzx_circuit)
 
     @classmethod
     def from_discopy(cls, discopy_circuit):
         """Convert from discopy circuit."""
         # pylint: disable=import-outside-toplevel
-        from optyx.qubits import Circuit
+        from discopy.optyx.qubits import Circuit
         return Circuit(discopy_circuit)
 
     # @classmethod
@@ -1387,8 +1387,8 @@ class Diagram(frobenius.Diagram):
     def from_bosonic_operator(cls, n_modes, operators, scalar=1):
         """Create a :class:`zw` diagram from a bosonic operator."""
         # pylint: disable=import-outside-toplevel
-        from optyx.core import zw
-        from optyx.photonic import Scalar
+        from discopy.optyx.core import zw
+        from discopy.optyx.photonic import Scalar
 
         # pylint: disable=invalid-name
         d = Diagram.id(qmode**n_modes)
@@ -1409,7 +1409,7 @@ class Diagram(frobenius.Diagram):
     def from_graphix(cls, measurement_pattern):
         """Convert from Graphix measurement pattern."""
         # pylint: disable=import-outside-toplevel
-        from optyx.qubits import Circuit
+        from discopy.optyx.qubits import Circuit
         return Circuit(measurement_pattern)
 
     @classmethod
@@ -1423,8 +1423,8 @@ class Diagram(frobenius.Diagram):
         and with symbols.
         """
         # pylint: disable=import-outside-toplevel
-        from optyx import photonic
-        from optyx.utils import perceval_conversion
+        from discopy.optyx import photonic
+        from discopy.optyx.utils import perceval_conversion
         import perceval as pcvl
 
         if isinstance(p, pcvl.Circuit):
@@ -1494,7 +1494,7 @@ class Diagram(frobenius.Diagram):
         If no backend is specified, it uses the QuimbBackend.
         """
         # pylint: disable=import-outside-toplevel
-        from optyx.core.backends import QuimbBackend
+        from discopy.optyx.core.backends import QuimbBackend
         if backend is None:
             backend = QuimbBackend()
 
@@ -1705,7 +1705,7 @@ class Feedback(monoidal.Bubble, Diagram, frobenius.Box):
     A feedback loop connecting the last `mem` outputs of a channel diagram
     back to its last `mem` inputs, one time step later.
 
-    See :class:`optyx.core.diagram.Feedback`; doubling the loop gives the
+    See :class:`discopy.optyx.core.diagram.Feedback`; doubling the loop gives the
     loop of the doubled diagram, so `double` and `unroll` commute.
 
     The one boundary with a natural default is the effect: discarding is the
@@ -1718,7 +1718,7 @@ class Feedback(monoidal.Bubble, Diagram, frobenius.Box):
     here with the plus state as initial state and the output memory
     discarded by default; doubling commutes with unrolling on the nose:
 
-    >>> from optyx.qubits import Z, X, Scalar, Ket
+    >>> from discopy.optyx.qubits import Z, X, Scalar, Ket
     >>> cnot = Z(1, 2) @ qubit >> qubit @ X(2, 1) @ Scalar(2 ** 0.5)
     >>> ladder = (cnot >> Diagram.swap(qubit, qubit)).feedback(
     ...     state=Ket("+"))
@@ -1811,7 +1811,7 @@ class Measure(Channel):
     def _measure_wire(self, ob, d):
         """Return the diagram that measures one `ob`."""
         # pylint: disable=import-outside-toplevel
-        from optyx.core.zw import Add
+        from discopy.optyx.core.zw import Add
         if ob.needs_inflation():
             return Measure(ob ** d) >> CQMap(
                 "Gather photons", Add(d), mode ** d, mode
@@ -1876,7 +1876,7 @@ class Encode(Channel):
         `amps_iter` yields the internal‑state vectors for `mode` wires.
         """
         # pylint: disable=import-outside-toplevel
-        from optyx.core.zw import Add, Endo
+        from discopy.optyx.core.zw import Add, Endo
 
         if ob == mode:
             amps = next(amps_iter)

@@ -58,7 +58,7 @@ from discopy import cat
 from discopy.utils import factory_name
 from discopy.frobenius import Dim
 from discopy import tensor
-from optyx.core import diagram, zw
+from discopy.optyx.core import diagram, zw
 
 pyzx.settings.strict_phase_types = False
 
@@ -74,7 +74,7 @@ class ZXDiagram(diagram.Diagram):
         Examples
         --------
 
-        >>> import optyx.core.zx as zx
+        >>> import discopy.optyx.core.zx as zx
         >>> bialgebra = Z(1, 2, .25) @ Z(1, 2, .75) >> \\
         ...    Id(diagram.Bit(1)) @ SWAP @ Id(diagram.Bit(1)) >> \\
         ...    X(2, 1, .5) @ X(2, 1, .5)
@@ -210,7 +210,7 @@ class ZXDiagram(diagram.Diagram):
         """
         Returns a :class:`pyzx.Graph`.
 
-        >>> import optyx.core.zx as zx
+        >>> import discopy.optyx.core.zx as zx
         >>> bialgebra = Z(1, 2, .25) @ Z(1, 2, .75) >> Id(diagram.Bit(1)) @ \\
         ...   SWAP @ Id(diagram.Bit(1)) >> X(2, 1, .5) @ X(2, 1, .5)
         >>> graph = bialgebra.to_pyzx()

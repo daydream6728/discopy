@@ -1,8 +1,8 @@
 import networkx as nx
 import pytest
 
-from optyx.compiler.mbqc import Measurement, OpenGraph
-from optyx.compiler.semm import compile_to_semm, decompile_from_semm
+from discopy.optyx.compiler.mbqc import Measurement, OpenGraph
+from discopy.optyx.compiler.semm import compile_to_semm, decompile_from_semm
 
 
 # Generate many random graphs and confirm all of them can be compiled and
