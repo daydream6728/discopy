@@ -99,7 +99,7 @@ from collections.abc import Sequence
 from typing import ClassVar
 
 from discopy import monoidal, feedback, balanced, hypergraph, cmap, messages
-from discopy.abc import BalancedCategory, SymmetricCategory
+from discopy.abc import BalancedCategory, SpacialCategory, SymmetricCategory
 from discopy.cat import factory
 from discopy.feedback import (  # noqa: F401  pylint: disable=unused-import
     Wire, Ty, Nat)
@@ -788,3 +788,5 @@ class Equation(monoidal.Equation):
 
 
 Diagram.yanking = BalancedCategory.yanking.modulo(Diagram.to_hypergraph)
+Diagram.scalar_sliding = SpacialCategory.scalar_sliding.modulo(
+    Diagram.to_hypergraph)

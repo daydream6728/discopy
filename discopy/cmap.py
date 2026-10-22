@@ -1992,6 +1992,13 @@ cycles of this map.
             return False
         return True
 
+    def assert_isprogressive(self) -> None:
+        """
+        Raise ``AxiomError`` unless the map :attr:`is_progressive`, e.g. when
+        it has a loop, a cup or a cap, see :meth:`wiring`.
+        """
+        self.encode()
+
     @cached_property
     def owners(self) -> dict[int, tuple[int, int]]:
         """ The box of each box port, and its position among those of it. """
@@ -2191,11 +2198,12 @@ cycles of this map.
             pattern : The map to match, e.g. the left side of a rule.
 
         Raises:
-            AxiomError : If the map is not connected and the category is not
-                a :class:`SpacialCategory`: the map of a diagram does not say
-                in which face a component that touches nothing else lies,
-                which only a spacial category does not mind, see
-                :mod:`discopy.spacial`.
+            AxiomError : If the map or the pattern is not
+                :attr:`is_progressive`, or if the map is not connected and the
+                category is not a :class:`SpacialCategory`: the map of a
+                diagram does not say in which face a component that touches
+                nothing else lies, which only a spacial category does not
+                mind, see :mod:`discopy.spacial`.
 
         Example
         -------
@@ -2218,6 +2226,8 @@ cycles of this map.
         if len(self.connected_components) > 1 and not issubclass(
                 self.category, SpacialCategory):
             raise AxiomError(messages.NOT_CONNECTED.format(self))
+        self.assert_isprogressive()
+        pattern.assert_isprogressive()
         for homomorphism in self.homomorphisms(pattern):
             context = self.complement(pattern, homomorphism)
             if context is not None:

@@ -1068,10 +1068,12 @@ def test_sweep_decodes_planar_maps():
         cmap = diagram.to_map()
         order = list(range(len(cmap.boxes)))
         rng.shuffle(order)
-        decoded = cmap.reorder(order).to_diagram()
-        assert sorted(decoded.boxes, key=str) == sorted(diagram.boxes, key=str)
+        decoded = cmap.reorder(order).to_diagram().to_map()
+        assert decoded.reorder(
+            decoded.boxes.index(box) for box in diagram.boxes) == cmap
         if len(cmap.connected_components) <= 1:
-            assert decoded.normal_form() == diagram.normal_form()
+            assert decoded.to_diagram().normal_form()\
+                == diagram.normal_form()
 
 
 def every_layering(dom, vertices, cod, cut=None, placed=frozenset()):

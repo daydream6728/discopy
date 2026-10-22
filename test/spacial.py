@@ -11,6 +11,14 @@ def test_braided_categories_are_spacial():
         assert issubclass(module.Diagram, SpacialCategory)
 
 
+def test_free_braided_diagrams_declare_the_law():
+    from discopy.symmetric import Ty, Box
+    x = Ty('x')
+    f, s = Box('f', x, x), Box('s', Ty(), Ty())
+    assert symmetric.Diagram.scalar_sliding(scalar=s, f=f)
+    assert braided.Diagram.scalar_sliding.broken
+
+
 def test_scalars_slide_on_maps():
     from discopy.spacial import Ty, Box
     x = Ty('x')
@@ -39,3 +47,11 @@ def test_planar_maps_still_need_to_be_connected():
     f, s = Box('f', x, x), Box('s', Ty(), Ty())
     with raises(AxiomError):
         next((f @ s).to_map().match(f.to_map()))
+
+
+def test_a_pattern_with_a_loop_does_not_match():
+    from discopy.compact import Ty, CMap
+    x = Ty('x')
+    loop = CMap.caps(x.r, x) >> CMap.cups(x.r, x)
+    with raises(AxiomError):
+        next(CMap.id(x).match(loop))

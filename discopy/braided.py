@@ -60,8 +60,8 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from discopy import monoidal
-from discopy.abc import BraidedCategory
+from discopy import monoidal, messages
+from discopy.abc import BraidedCategory, SpacialCategory
 from discopy.cat import factory
 from discopy.monoidal import Ty, Match
 from discopy.utils import (
@@ -90,6 +90,8 @@ class Diagram(monoidal.Diagram, BraidedCategory):
         dom (monoidal.Ty) : The domain of the diagram, i.e. its input.
         cod (monoidal.Ty) : The codomain of the diagram, i.e. its output.
     """
+    scalar_sliding = SpacialCategory.scalar_sliding.failing(
+        messages.FREE_SCALAR)
 
     @classmethod
     def braid(cls, left: monoidal.Ty, right: monoidal.Ty) -> Diagram:
