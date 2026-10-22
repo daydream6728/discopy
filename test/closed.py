@@ -897,3 +897,10 @@ def test_delay_diagrams():
         == Diagram.ev(z, y).dagger().delay()
     assert f.curry().delay().cod == (z << y).delay() != z.d << y.d
     assert f.curry().delay().arg == f
+
+
+def test_Curry_subs():
+    phi = __import__("pytest").importorskip("sympy").Symbol("phi")
+    c = Ty('c')
+    h = Box('h', c @ c, c, data=phi)
+    assert h.curry().subs(phi, 1) == h.subs(phi, 1).curry()

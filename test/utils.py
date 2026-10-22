@@ -280,3 +280,28 @@ def test_unbiased_keyword_operand():
     F, G = Functor({x: y}, {}), Functor({y: z}, {})
     assert F.then(other=G)(x) == F.then(G)(x) == z
     assert F.then() == F
+
+
+def test_every_class_has_the_fields_of_all_its_bases():
+    import dataclasses
+    import importlib
+    import pkgutil
+    import discopy
+
+    for module in pkgutil.walk_packages(discopy.__path__, "discopy."):
+        try:
+            importlib.import_module(module.name)
+        except ImportError:
+            continue
+
+    def subclasses(cls):
+        for subclass in cls.__subclasses__():
+            yield subclass
+            yield from subclasses(subclass)
+
+    for cls in [*subclasses(cat.Ob), *subclasses(cat.Arrow)]:
+        expected = {
+            name for base in cls.__mro__ for name, field in vars(base).get(
+                "__dataclass_fields__", {}).items()
+            if field._field_type is not dataclasses._FIELD_CLASSVAR}
+        assert expected <= set(cls.__dataclass_fields__), cls

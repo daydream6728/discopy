@@ -653,3 +653,10 @@ def test_Bubble_subs_lambdify():
     for result in (bubble.subs(phi, 3), bubble.lambdify(phi)(3)):
         assert result.func is bubble.func
         assert np.allclose(result.eval().array, expected)
+
+
+def test_Bubble_dagger_keeps_its_func():
+    phi = pytest.importorskip("sympy").Symbol("phi")
+    d = Dim(2)
+    bubble = Bubble(Box('t', d, d, [phi, 0, 0, 1]), func=abs)
+    assert bubble.dagger().func is abs and bubble.dagger().dagger() == bubble

@@ -511,6 +511,9 @@ class Coeval(Timed, biclosed.Coeval, Box):
 class Curry(Timed, biclosed.Curry, Box):
     "The currying of a closed diagram, linear when its argument is."
 
+    def __init__(self, arg: Diagram, n=1, left=True, time_step: int = 0):
+        super().__init__(arg, n, left, time_step=time_step)
+
     @property
     def is_linear(self):
         return self.arg.is_linear

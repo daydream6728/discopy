@@ -430,3 +430,10 @@ def test_structural_boxes_delay_through_their_arguments():
             1, 2, w.d, .5, is_dagger=is_dagger)
         assert spider.delay().delay(-1) == spider
         assert pickle.loads(pickle.dumps(spider)) == spider
+
+
+def test_Feedback_subs():
+    phi = __import__("pytest").importorskip("sympy").Symbol("phi")
+    x = Ty('x')
+    g = Box('g', x @ x.delay(), x @ x, data=phi)
+    assert g.feedback().subs(phi, 1) == g.subs(phi, 1).feedback()

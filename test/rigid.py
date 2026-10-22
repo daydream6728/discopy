@@ -237,3 +237,9 @@ def test_rotated_box_serialisation():
     def round_trip(box):
         assert loads(dumps(box)) == box
     round_trip()
+
+
+def test_Box_subs_keeps_z():
+    phi = __import__("pytest").importorskip("sympy").Symbol("phi")
+    box = Box('r', Ty('a'), Ty('b'), data=phi, z=1)
+    assert box.subs(phi, 1).z == 1 and box.lambdify(phi)(1).z == 1

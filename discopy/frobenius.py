@@ -80,6 +80,8 @@ from discopy.abc import HypergraphCategory
 from discopy.cat import factory
 from discopy.python import finset
 from discopy.utils import (
+    derived,
+    frozen,
     setattrs,
     assert_isatomic, assert_iscomposable, deprecated_alias, factory_name,
     from_tree)
@@ -643,6 +645,7 @@ class Swap(Permutation, compact.Swap, markov.Swap, comarkov.Swap, Box):
         return self
 
 
+@frozen
 class Spider(Box):
     """
     The spider with :code:`n_legs_in` and :code:`n_legs_out`
@@ -674,10 +677,21 @@ class Spider(Box):
         len(self.dom), len(self.cod), 1) if self.phase is None else None)
     tensor, __rmatmul__, fuse = Cospan.tensor, Cospan.__rmatmul__, Cospan.fuse
 
+    __match_args__ = ("n_legs_in", "n_legs_out", "typ", "data")
+
+    n_legs_in: int
+    n_legs_out: int
+    typ: Ty
+    name: str = derived()
+    dom: Ty = derived()
+    cod: Ty = derived()
+    deterministic: bool = derived()
+    affine: bool = derived()
+
     def __init__(self, n_legs_in: int, n_legs_out: int, typ: Ty, data=None,
                  is_dagger=False, **params):
         assert_isatomic(typ)
-        self.typ = typ
+        setattrs(self, n_legs_in=n_legs_in, n_legs_out=n_legs_out, typ=typ)
         str_data = "" if data is None else f", {data}"
         name = type(self).__name__\
             + f"({n_legs_in}, {n_legs_out}, {typ}{str_data})"
@@ -686,7 +700,7 @@ class Spider(Box):
             self, name, dom, cod, data=data, is_dagger=is_dagger,
             is_deterministic=n_legs_in > 0 and not data,
             is_affine=n_legs_in == 1 and not data, **params)
-        self.drawing_name = "" if not data else str(data)
+        setattrs(self, drawing_name="" if not data else str(data))
 
     def __setstate__(self, state):
         if "_name" in state and state["_name"] == type(self).__name__:
@@ -700,6 +714,9 @@ class Spider(Box):
             setattrs(
                 self, deterministic=len(self.dom) > 0 and not self.phase,
                 affine=len(self.dom) == 1 and not self.phase)
+        if "n_legs_in" not in state:
+            setattrs(self, n_legs_in=len(self.dom), n_legs_out=len(self.cod),
+                     typ=state.get("typ", state.get("_typ")))
 
     def __getnewargs__(self):
         """ The arguments of the constructor, which a pickle and a delay read.

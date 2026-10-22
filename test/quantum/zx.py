@@ -410,3 +410,9 @@ def test_functor_into_zx_rebuilds_spiders():
         Diagram.spiders(2, 1, Nat(2)).eval())
     with raises(ValueError):
         Diagram.spider_factory(1, 1, Nat(2))
+
+
+def test_Spider_lambdify():
+    phi = pytest.importorskip("sympy").Symbol("phi")
+    assert Z(1, 1, phi).lambdify(phi)(0.5) == Z(1, 1, 0.5)
+    assert X(2, 1, phi).subs(phi, 0.25) == X(2, 1, 0.25)

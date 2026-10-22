@@ -488,3 +488,10 @@ def test_tensor_coalesces_plumbing():
     assert perm.tensor(f, perm) == reduce(
         lambda g, h: g.tensor(h), [perm, f, perm])
     assert perm.tensor(x, f) == reduce(lambda g, h: g.tensor(h), [perm, x, f])
+
+
+def test_Trace_subs():
+    phi = __import__("pytest").importorskip("sympy").Symbol("phi")
+    y = Ty('y')
+    f = Box('f', y @ y, y @ y, data=phi)
+    assert f.trace().subs(phi, 1) == f.subs(phi, 1).trace()

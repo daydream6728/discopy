@@ -1,3 +1,4 @@
+import pytest
 # -*- coding: utf-8 -*-
 
 import pickle
@@ -869,3 +870,12 @@ def test_tensor_of_sum_with_diagram():
     f, g = Box('f', x, x), Box('g', x, x)
     assert f.tensor(g + g, f) == (f @ g @ f) + (f @ g @ f)
     assert (f + f).tensor(g, f) == (f @ g @ f) + (f @ g @ f)
+
+
+def test_Bubble_subs_and_dagger_keep_the_drawing_options():
+    phi = pytest.importorskip("sympy").Symbol("phi")
+    x = Ty('x')
+    bubble = Box('f', x, x, data=phi).bubble(
+        drawing_name="g", draw_as_square=True)
+    assert bubble.subs(phi, 1).drawing_name == "g"
+    assert bubble.dagger().draw_as_square

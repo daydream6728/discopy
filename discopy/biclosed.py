@@ -99,6 +99,8 @@ from discopy.axioms import (
 from discopy.drawing import Drawing
 from discopy.cat import factory
 from discopy.utils import (
+    frozen,
+    setattrs,
     AxiomError,
     NamedGeneric,
     assert_isinstance,
@@ -495,6 +497,7 @@ class Coeval(Box):
         return self.eval_factory(self.x, self.left)
 
 
+@frozen
 class Curry(monoidal.Bubble, Box):
     """
     The currying of a biclosed diagram.
@@ -510,10 +513,16 @@ class Curry(monoidal.Bubble, Box):
     >>> print(Curry(Box('f', x @ y, z)))
     Curry(f, 1, True)
     """
+    __match_args__ = ("arg", "n", "left")
+
+    arg: Diagram
+    n: int = 1
+    left: bool = True
+
     def __init__(self, arg: Diagram, n=1, left=True):
         if not 0 <= n <= len(arg.dom):
             raise AxiomError(messages.NOT_SPLITTABLE.format(n, arg.dom))
-        self.n, self.left = n, left
+        setattrs(self, n=n, left=left)
         name = f"Curry({arg}, {n}, {left})"
         if left:
             dom = arg.dom[:len(arg.dom) - n]

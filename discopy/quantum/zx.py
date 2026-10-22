@@ -34,7 +34,7 @@ from discopy.quantum.gates import (
 from discopy.quantum.gates import Scalar as GatesScalar
 from discopy.rigid import Sum, Nat
 from discopy.tensor import Dim, backend
-from discopy.utils import assert_isatomic, factory_name, setattrs
+from discopy.utils import assert_isatomic, factory_name, frozen, setattrs
 
 
 @factory
@@ -329,6 +329,7 @@ class Swap(Permutation, tensor.Swap[complex], Box):
         return "SWAP"
 
 
+@frozen
 class Spider(tensor.Spider[complex], Box):
     """
     Abstract spider box, i.e. a phased spider in the eigenbasis of a Pauli.
@@ -355,6 +356,10 @@ class Spider(tensor.Spider[complex], Box):
     >>> assert Z(1, 2).is_cartesian and not X(1, 2).is_deterministic
     """
     basis = ((1, 0), (0, 1))
+
+    __match_args__ = ("n_legs_in", "n_legs_out", "phase")
+
+    phase: float
 
     def __init__(self, n_legs_in, n_legs_out, phase=0):
         super().__init__(n_legs_in, n_legs_out, Nat(1), phase)
@@ -394,10 +399,6 @@ class Spider(tensor.Spider[complex], Box):
         """
         return cls(
             tree['n_legs_in'], tree['n_legs_out'], tree.get('phase', 0))
-
-    def subs(self, *args):
-        phase = cat.rsubs(self.phase, *args)
-        return type(self)(len(self.dom), len(self.cod), phase=phase)
 
     def grad(self, var, **params):
         """

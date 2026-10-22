@@ -721,6 +721,7 @@ class Box(monoidal.Box, Diagram):
         return result
 
 
+@frozen
 class Feedback(Box, monoidal.Bubble):
     """
     Feedback is a bubble that takes a diagram from `dom @ mem.delay()` to
@@ -748,6 +749,12 @@ class Feedback(Box, monoidal.Bubble):
     >>> from discopy import feedback
     >>> assert str(fb) == "Feedback(f)" and eval(repr(fb)) == fb
     """
+    __match_args__ = ("arg", "dom", "cod", "mem", "left")
+
+    arg: Diagram
+    mem: Ty
+    left: bool = False
+
     def __init__(self, arg: Diagram, dom=None, cod=None, mem=None, left=False):
         assert_isinstance(arg, self.ar)
         dom, cod, mem = arg.split_memory(
@@ -756,7 +763,7 @@ class Feedback(Box, monoidal.Bubble):
         expected = (fed @ dom, mem @ cod) if left else (dom @ fed, cod @ mem)
         if (arg.dom, arg.cod) != expected:
             raise AxiomError(messages.NOT_FEEDBACK.format(mem, arg, fed))
-        self.mem, self.left = mem, left
+        setattrs(self, mem=mem, left=left)
         name = f"{type(self).__name__}({arg}"\
             + ("" if len(mem) == 1 else f", mem={mem}")\
             + (", left=True" if left else "") + ")"

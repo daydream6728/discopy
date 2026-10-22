@@ -883,7 +883,8 @@ def inherit_fields(cls: type):
     >>> inherit_fields(C)
     >>> assert list(C.__dataclass_fields__) == ['b', 'a']
 
-    A class that computes a field rather than takes it does not get it back.
+    A field is that of the nearest base that has it, as an attribute is, and
+    a class that computes a field rather than takes it does not get it back.
 
     >>> class D(C):
     ...     def __init__(self, a):
@@ -891,12 +892,16 @@ def inherit_fields(cls: type):
     >>> inherit_fields(D)
     >>> assert replace(D(1), a=2).b == 4
     """
-    fields = {}
-    for base in reversed(cls.__mro__):
-        fields.update(vars(base).get("__dataclass_fields__", {}))
-    if not fields:
+    owners = [base for base in cls.__mro__
+              if "__dataclass_fields__" in vars(base)]
+    names = dict.fromkeys(
+        name for base in reversed(owners) for name in base.__dataclass_fields__)
+    if not names:
         return
-    cls.__dataclass_fields__ = fields
+    fields = cls.__dataclass_fields__ = {
+        name: next(base.__dataclass_fields__[name] for base in owners
+                   if name in vars(base)["__dataclass_fields__"])
+        for name in names}
     parameters = signature(cls.__init__).parameters.values()
     if any(p.kind is p.VAR_KEYWORD for p in parameters):
         return

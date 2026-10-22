@@ -44,7 +44,7 @@ indices. Swaps, cups and caps become wiring while spiders stay as boxes.
 from __future__ import annotations
 
 from itertools import count
-from typing import TYPE_CHECKING, ClassVar, Sequence
+from typing import TYPE_CHECKING, Callable, ClassVar, Sequence
 
 from discopy import (
     cat, monoidal, rigid, frobenius, cmap, config, messages)
@@ -57,7 +57,7 @@ from discopy.abc import NamedGeneric
 from discopy.python import finset
 from discopy.utils import (
     factory_name, assert_isinstance, product, assert_isatomic,
-    assert_istraceable, compared_fields, setattrs)
+    assert_istraceable, compared_fields, frozen, setattrs)
 
 if TYPE_CHECKING:
     import sympy
@@ -979,6 +979,7 @@ class Sum(monoidal.Sum, Box):
     """
 
 
+@frozen
 class Bubble(monoidal.Bubble, Box):
     """
     Bubble in a tensor diagram, applies a function elementwise.
@@ -1022,20 +1023,11 @@ class Bubble(monoidal.Bubble, Box):
         :align: center
     """
 
-    def __init__(self, inside, func=lambda x: int(not x), **params):
-        self.func = func
-        super().__init__(inside, **params)
+    func: Callable = lambda x: int(not x)
 
-    def subs(self, *args) -> Bubble:
-        return type(self)(
-            self.arg.subs(*args), func=self.func, dom=self.dom, cod=self.cod,
-            drawing_name=self.drawing_name)
-
-    def lambdify(self, *symbols, **kwargs):
-        inside = self.arg.lambdify(*symbols, **kwargs)
-        return lambda *xs: type(self)(
-            inside(*xs), func=self.func, dom=self.dom, cod=self.cod,
-            drawing_name=self.drawing_name)
+    def __init__(self, *args, func=lambda x: int(not x), **params):
+        setattrs(self, func=func)
+        super().__init__(*args, **params)
 
     def grad(self, var, **params):
         """
