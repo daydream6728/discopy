@@ -2159,21 +2159,22 @@ cycles of this map.
             order : The order of the vertices and the offset of each.
             kept : The boxes of ``self`` that each vertex but the last is.
         """
-        from discopy.monoidal import Match  # pylint: disable=C0415
+        # pylint: disable=import-outside-toplevel
+        from discopy.monoidal import Match
         cut, step = list(range(len(self.dom))), [
             vertex for vertex, _ in order].index(len(kept))
-        for vertex, offset in order[:step]:
+        for vertex, offset in order[:step + 1]:
             inputs, outputs = vertices[vertex]
+            left, right = (
+                self.ob().tensor(*(self.ports[wire].obj for wire in wires))
+                for wires in (cut[:offset], cut[offset + len(inputs):]))
             cut[offset:offset + len(inputs)] = outputs
-        (inputs, outputs), offset = vertices[-1], order[step][1]
-        left, middle, right = (
-            self.ob().tensor(*(self.ports[wire].obj for wire in wires))
-            for wires in (cut[:offset], outputs, cut[offset + len(inputs):]))
         above, below = ([(self.boxes[kept[vertex]], i) for vertex, i in part]
                         for part in (order[:step], order[step + 1:]))
         return Match(
             above=self.category.decode(self.dom, above),
-            below=self.category.decode(left @ middle @ right, below),
+            below=self.category.decode(self.ob().tensor(*(
+                self.ports[wire].obj for wire in cut)), below),
             left=left, right=right)
 
     def match(self, pattern: CMap) -> Iterator[Match]:
