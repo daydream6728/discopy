@@ -15,13 +15,13 @@ on a map that has a layering. A match of a left side is an injective map morphis
 contracted into a single box, leaves a map that still sweeps. Planar, unlike Frobenius, has
 exactly one pushout complement per match: `monoidal.Match`, the diagram with a hole.
 
-- [WIP] @session_013PzWbScb5vkcym2x9JkEda-2026-10-22 17:30 `CMap.sweep` and `CMap.is_progressive`; `CMap.to_diagram` sweeps when the category has no
+- [x] `CMap.sweep` and `CMap.is_progressive`; `CMap.to_diagram` sweeps when the category has no
   swaps, so a state left of a wire decodes again
-- [WIP] @session_013PzWbScb5vkcym2x9JkEda-2026-10-22 17:30 `CMap.homomorphisms`, `CMap.match` yielding `monoidal.Match`, `CMap.rewrite`, `normalize`,
+- [x] `CMap.homomorphisms`, `CMap.match` yielding `monoidal.Match`, `CMap.rewrite`, `normalize`,
   `normal_form`
-- [ ] the spiral: three rules unwind `spiral(n)` from its centre to the empty diagram in `2n + 1`
+- [x] the spiral: three rules unwind `spiral(n)` from its centre to the empty diagram in `2n + 1`
   steps, from the spiral as drawn and from its normal form, where the counit sits at the bottom
-- [ ] planar-only tests: genus zero but not progressive (`cap >> swap >> cup` read as a monoidal
+- [x] planar-only tests: genus zero but not progressive (`cap >> swap >> cup` read as a monoidal
   map); caps that look nested in the spiral but can be pulled side by side, and those that cannot
-- [ ] docs, bibliography (Bertolazzi et al.), `CHANGELOG.md`
-- [ ] `pflake8`, `pylint` (raise `fail-under` if it rises), `coverage run -m pytest`
+- [x] docs, bibliography (Bertolazzi et al.), `CHANGELOG.md`
+- [WIP] @session_013PzWbScb5vkcym2x9JkEda-2026-10-22 18:40 `pflake8`, `pylint` (raise `fail-under` if it rises), `coverage run -m pytest`
