@@ -1197,7 +1197,9 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
         >>> diagram = f @ x ** 2 >> x ** 2 @ f.dagger()
         >>> assert diagram.width == 6 and Diagram.id(x ** 2).width == 2
         """
-        return max([len(self.dom)] + [len(layer.cod) for layer in self])
+        return max(
+            len(self.dom),
+            max((len(layer.cod) for layer in self), default=0))
 
     def encode(self) -> tuple[Ty, list[tuple[Box, int]]]:
         """
