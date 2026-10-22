@@ -154,6 +154,12 @@ def test_Application_freevars_order():
         assert term.freevars == [a, b]
 
 
+def test_Application_of_a_non_function():
+    v, w = Variable('v', Ty('x')), Variable('w', Ty('y'))
+    with raises(TypeError, match="Expected v to have an exponential type"):
+        Application(v, w)
+
+
 def test_Abstraction_well_typed():
     """Abstraction agrees with eval on both dom and cod, nesting included."""
     x, y, z = Ty('x'), Ty('y'), Ty('z')
