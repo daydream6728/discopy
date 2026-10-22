@@ -33,6 +33,7 @@ Summary
 
 from __future__ import annotations
 
+from collections import Counter
 from collections.abc import Callable, Mapping
 from functools import cached_property
 from inspect import isclass
@@ -927,10 +928,10 @@ class Hypergraph(
         spiders, boxes = match
         interface, matched = set(pattern.dom_wires + pattern.cod_wires), set(
             boxes)
-        inner = {image: spider for spider, image in enumerate(spiders)
-                 if spider not in interface}
-        merged = len(set(spiders)) < len(spiders) and any(
-            spiders.count(image) > 1 for image in inner)
+        inner = [image for spider, image in enumerate(spiders)
+                 if spider not in interface]
+        preimages = Counter(spiders)
+        merged = any(preimages[image] > 1 for image in inner)
         dangling = any(
             self.ports[port].kind in ("input", "output")
             or self.ports[port].depth not in matched
