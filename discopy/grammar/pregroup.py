@@ -114,7 +114,8 @@ class Diagram(frobenius.Diagram):
         """
         words, is_pregroup = self.id(), True
         for layer in self.inside:
-            _, box, right = layer.boxes_and_types
+            (box, offset), = layer.boxes_and_offsets
+            right = layer.dom[offset + len(box.dom):]
             if isinstance(box, Word):
                 if right:  # word boxes should be tensored left to right.
                     is_pregroup = False
