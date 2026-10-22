@@ -13,7 +13,7 @@ rewrite. All pushout complements are enumerated (I, §4.5) over a hypergraph cat
 other symmetric category, matches are convex and the context is the boundary complement, the unique
 monogamous one (II, Defs. 23, 25, 26).
 
-- [ ] `Hypergraph.match`: homomorphisms with the gluing conditions, convex for symmetric categories
+- [WIP] @session_01M8CWacKqbJVKPcDMd2m3AD-2026-10-22 15:10 `Hypergraph.match`: homomorphisms with the gluing conditions, convex for symmetric categories
 - [ ] `Hypergraph.complements`: all pushout complements, the boundary complement for symmetric ones
 - [ ] `Hypergraph.plug`, `rewrite`, `normalize`, `normal_form`
 - [ ] interaction combinators: Lafont's six rules (Fig. 2) and the net of Fig. 11 normalising to a
