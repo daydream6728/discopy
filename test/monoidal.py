@@ -120,7 +120,17 @@ def test_Ty_eq():
 
 
 def test_Ty_repr():
-    assert repr(Ty('x', 'y')) == "monoidal.Ty(cat.Ob('x'), cat.Ob('y'))"
+    assert repr(Ty('x', 'y'))\
+        == "monoidal.Ty(monoidal.Wire('x'), monoidal.Wire('y'))"
+
+
+def test_Wire_repr():
+    from discopy import cat, monoidal
+    env = {"cat": cat, "monoidal": monoidal}
+    for wire in [Wire('x'), Wire('x', Colour('red'), Colour('blue'))]:
+        assert eval(repr(wire), env) == wire
+    assert repr(Wire('x')) == "monoidal.Wire('x')"
+    assert eval("monoidal.Ty(cat.Ob('x'))", env) == Ty('x')
 
 
 def test_Ty_str():
@@ -544,7 +554,7 @@ def test_Id_init():
 
 def test_Id_repr():
     assert repr(Id(Ty('x')))\
-        == "monoidal.Diagram.id(monoidal.Ty(cat.Ob('x')))"
+        == "monoidal.Diagram.id(monoidal.Ty(monoidal.Wire('x')))"
 
 
 def test_Id_str():
@@ -574,7 +584,8 @@ def test_Functor_init():
 def test_Functor_repr():
     assert repr(Functor({Ty('x'): Ty('y')}, {})) ==\
         "monoidal.Functor("\
-        "ob_map={monoidal.Ty(cat.Ob('x')): monoidal.Ty(cat.Ob('y'))}, ar_map={})"
+        "ob_map={monoidal.Ty(monoidal.Wire('x')): "\
+        "monoidal.Ty(monoidal.Wire('y'))}, ar_map={})"
 
 
 def test_Functor_call():

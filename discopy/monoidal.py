@@ -158,10 +158,9 @@ class Wire(cat.Ob):
         return hash((type(self), self.name, self.dom, self.cod))
 
     def __repr__(self):
-        if self.dom == self.cod == transparent:
-            return repr(cat.Ob(self.name))
-        return (f"{factory_name(type(self))}({self.name!r}, "
-                f"dom={self.dom!r}, cod={self.cod!r})")
+        colours = "" if self.dom == self.cod == transparent\
+            else f", dom={self.dom!r}, cod={self.cod!r}"
+        return f"{factory_name(type(self))}({self.name!r}{colours})"
 
     def to_tree(self):
         tree = super().to_tree()
