@@ -60,6 +60,18 @@ def test_Scenario_errors():
         PR.mix(Model(Scenario([('x', 'y')]), [[1, 0, 0, 0]]), 1 / 2)
     with raises(ValueError):
         Inequality(bell, [[0] * 4] * 4).violation(PR)
+    with raises(ValueError):
+        Inequality(bell, [[1, 0, 0, 0]] * 4)(Model(
+            Scenario([('x', 'y')] * 4), [[1, 0, 0, 0]] * 4))
+    with raises(ValueError):
+        PR.mix(noise, 3 / 2)
+    with raises(ValueError):
+        Model(bell, [[1.1, -0.1, 0, 0]] + [[1 / 4] * 4] * 3
+              ).contextual_fraction()
+    for measurements in ([[measure(0)], [measure(0), measure(1)]],
+                         [[measure(0)], [measure(0) @ measure(0)]]):
+        with raises(ValueError):
+            Model.from_circuits(GHZ(2), measurements)
 
 
 def test_Table_repr():
@@ -138,7 +150,9 @@ def test_theorem_1(model):
     assert weight == approx(1 - fraction)
     assert SC.contextual_fraction() == approx(1)
     assert inequality(SC) == approx(1)
-    if NC is not None:
+    if NC is None:
+        assert weight == approx(0, abs=1e-9)
+    else:
         assert NC.contextual_fraction() == approx(0, abs=1e-9)
         assert inequality(NC) == approx(0, abs=1e-9)
         assert NC.mix(SC, weight).is_close(model)
@@ -148,6 +162,8 @@ def test_theorem_2():
     local = Model(bell, [[1, 0, 0, 0]] * 4)
     weight, NC, SC = local.decompose()
     assert weight == approx(1) and NC.is_close(local) and SC is None
+    weight, NC, SC = PR.mix(noise, 1 / 2 + 1e-6).decompose()
+    assert NC.mix(SC, weight).is_close(PR.mix(noise, 1 / 2 + 1e-6))
     cd = {'a1': 'c1', 'a2': 'c2', 'b1': 'd1', 'b2': 'd2'}
     e, f, weight = CHSH.mix(local, 1 / 2), PR.relabel(cd), 1 / 3
     CF = Model.contextual_fraction

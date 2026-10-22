@@ -18,6 +18,15 @@ Summary
     Model
     Inequality
 
+.. admonition:: Functions
+
+    .. autosummary::
+        :template: function.rst
+        :nosignatures:
+        :toctree:
+
+        maximise
+
 Note
 ----
 A measurement scenario :math:`\\langle X, \\mathcal{M}, O \\rangle` is a set
@@ -84,6 +93,23 @@ import numpy as np
 
 from discopy.quantum.channel import Channel
 from discopy.quantum.circuit import Circuit
+
+
+def maximise(objective: np.ndarray, matrix: np.ndarray, vector: np.ndarray,
+             bounds: tuple) -> np.ndarray:
+    """
+    An optimal solution :math:`x` of the linear program maximising
+    :math:`\\mathrm{objective} \\cdot x` subject to
+    :math:`\\mathrm{matrix} \\, x \\leq \\mathrm{vector}` and ``bounds`` on
+    each component of :math:`x`, raising ``ValueError`` when there is none.
+    """
+    # pylint: disable=import-outside-toplevel
+    # scipy is an optional dependency, in the quantum extra.
+    from scipy.optimize import linprog
+    result = linprog(-objective, A_ub=matrix, b_ub=vector, bounds=bounds)
+    if not result.success:
+        raise ValueError(result.message)
+    return result.x
 
 
 class Scenario:
@@ -285,13 +311,9 @@ class Model(Table):
         with :math:`M b \\leq v^e`, an optimal solution of the linear program
         (3) of :cite:`AbramskyEtAl17`.
         """
-        # pylint: disable=import-outside-toplevel
-        # scipy is an optional dependency, in the quantum extra.
-        from scipy.optimize import linprog
         incidence = self.scenario.incidence()
-        return linprog(
-            -np.ones(incidence.shape[1]), A_ub=incidence, b_ub=self.vector,
-            bounds=(0, None)).x
+        return maximise(
+            np.ones(incidence.shape[1]), incidence, self.vector, (0, None))
 
     def non_contextual_fraction(self) -> float:
         """ The non-contextual fraction :math:`\\mathsf{NCF}(e)`. """
@@ -305,7 +327,8 @@ class Model(Table):
         """
         The decomposition :math:`e = \\mathsf{NCF}(e) e^{NC}
         + \\mathsf{CF}(e) e^{SC}` into a non-contextual and a strongly
-        contextual model, the one of weight zero being ``None``.
+        contextual model, the one of weight zero up to :math:`10^{-9}` being
+        ``None``.
 
         Example
         -------
@@ -322,9 +345,11 @@ class Model(Table):
         subdistribution = self.global_subdistribution()
         weight = float(subdistribution.sum())
         local = self.scenario.incidence() @ subdistribution
-        non_contextual = None if np.isclose(weight, 0) else Model(
-            self.scenario, self.scenario.rows(local / weight))
-        strongly_contextual = None if np.isclose(weight, 1) else Model(
+        non_contextual = None if np.isclose(
+            weight, 0, rtol=0, atol=1e-9) else Model(
+                self.scenario, self.scenario.rows(local / weight))
+        strongly_contextual = None if np.isclose(
+            weight, 1, rtol=0, atol=1e-9) else Model(
             self.scenario,
             self.scenario.rows((self.vector - local) / (1 - weight)))
         return weight, non_contextual, strongly_contextual
@@ -345,13 +370,10 @@ class Model(Table):
         >>> round(inequality.violation(CHSH), 6)
         0.25
         """
-        # pylint: disable=import-outside-toplevel
-        # scipy is an optional dependency, in the quantum extra.
-        from scipy.optimize import linprog
         incidence = self.scenario.incidence()
-        coefficients = linprog(
-            -self.vector, A_ub=incidence.T, b_ub=np.zeros(incidence.shape[1]),
-            bounds=(None, 1 / len(self.scenario.contexts))).x
+        coefficients = maximise(
+            self.vector, incidence.T, np.zeros(incidence.shape[1]),
+            (None, 1 / len(self.scenario.contexts)))
         return Inequality(self.scenario, self.scenario.rows(coefficients))
 
     def mix(self, other: Model, weight: float) -> Model:
@@ -365,6 +387,8 @@ class Model(Table):
         """
         if self.scenario != other.scenario:
             raise ValueError(f"{self.scenario} != {other.scenario}.")
+        if not 0 <= weight <= 1:
+            raise ValueError(f"{weight} is not in the unit interval.")
         return Model(self.scenario, self.scenario.rows(
             weight * self.vector + (1 - weight) * other.vector))
 
@@ -405,6 +429,10 @@ class Model(Table):
         density = state.eval(mixed=True)
         channels = [[m.eval(mixed=True) for m in party]
                     for party in measurements]
+        if len({len(party) for party in channels}) != 1 or len(
+                {channel.cod for party in channels for channel in party}) != 1:
+            raise ValueError("Every party needs as many measurements, "
+                             "all with the same outcomes.")
         scenario = Scenario.bell(
             len(measurements), len(measurements[0]),
             channels[0][0].cod.classical.inside[0])
@@ -455,6 +483,8 @@ class Inequality(Table):
 
     def __call__(self, model: Model) -> float:
         """ The value :math:`a \\cdot v^e` of the inequality at a model. """
+        if self.scenario != model.scenario:
+            raise ValueError(f"{self.scenario} != {model.scenario}.")
         return float(self.vector @ model.vector)
 
     @property
