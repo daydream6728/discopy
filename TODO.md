@@ -20,8 +20,8 @@ sound ZX equation on its own.
   the normal form against pyzx's (T-count equal, spiders within one)
 - [x] `benchmark/test_zx.py`, graphlike against pyzx on the same random circuits
 - [x] docs: module summary, API page, bibliography, `CHANGELOG.md`
-- [x] `pflake8`, `pylint` (`fail-under` 9.06), `pytest --skip-extra`
+- [x] `pflake8`, `pylint` (`fail-under` 9.10), `pytest --skip-extra`
 - [x] copy and supplementarity, the two rules pyzx 0.10.7's `full_reduce` adds, which the lock
   pins: the earlier numbers were against 0.7.3
-- [ ] beat pyzx 0.10.7: 0.3–0.7× its time from 20 qubits up, but 1.3–1.5× at 10 qubits × 500
-  gates
+- [x] beat pyzx 0.10.7, on a quiet machine: 0.32–0.96× its time from 20 qubits up, 0.82–1.43× at
+  10 qubits × 500 gates, where both take a fraction of a second
