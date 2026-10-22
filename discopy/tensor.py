@@ -268,8 +268,19 @@ class Tensor(Matrix):
 
     @classmethod
     def cup_factory(cls, left: Dim, right: Dim) -> Tensor:
+        """
+        The cup of an atomic dimension, and of a compound one its
+        :meth:`cups`, which pair the factors nested.
+
+        Example
+        -------
+        >>> x = Dim(2, 3)
+        >>> assert Tensor.cup_factory(x, x.r) == Tensor.cups(x, x.r)
+        """
         assert_isinstance(left, Dim)
         assert_isinstance(right, Dim)
+        if len(left) != 1:
+            return cls.cups(left, right)
         left.assert_isadjoint(right)
         return cls(cls.id(left).array, left @ right, Dim(1))
 

@@ -117,6 +117,14 @@ def test_Tensor_cups():
         Tensor.cups(Dim(3), Dim(2))
 
 
+def test_Tensor_cup_factory_nests_compound_dims():
+    x = Dim(2, 3)
+    nested = np.einsum("ad,bc->abcd", np.identity(2), np.identity(3))
+    assert np.all(Tensor.cup_factory(x, x.r).array == nested)
+    assert Tensor.cup_factory(x, x.r) == Tensor.cups(x, x.r)
+    assert np.all(Tensor.caps(x, x.l).array == nested)
+
+
 def test_Tensor_caps():
     assert np.all(Tensor.caps(Dim(2), Dim(2)).array == np.identity(2))
     with raises(TypeError):
