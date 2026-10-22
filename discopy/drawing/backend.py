@@ -1669,5 +1669,7 @@ class Matplotlib(Backend):
                     tol=params.get("tol", DEFAULT['plt_tol']))
             finally:
                 plt.close()
+        elif not show:
+            plt.close(self.axis.figure)
         if show:
             plt.show()

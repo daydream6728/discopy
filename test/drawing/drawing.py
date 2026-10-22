@@ -868,3 +868,28 @@ def test_Drawing_dagger():
     assert drawing.dagger().dagger() == drawing
     empty = monoidal.Id(monoidal.Ty()).to_drawing()
     assert empty.dagger() == empty
+
+
+def test_draw_is_pure(tmp_path):
+    from matplotlib import pyplot as plt
+    from discopy import ribbon
+    x, y = monoidal.Ty('x'), monoidal.Ty('y')
+    f, g = monoidal.Box('f', x, y), monoidal.Box('g', y, x)
+    drawing = (f >> g).to_drawing()
+    drawing.draw(path=tmp_path / "drawing.svg", show=False)
+    assert drawing == (f >> g).to_drawing()
+    X = ribbon.Ty('x')
+    dual_rail = ribbon.Braid(X, X).trace().to_ribbons().to_drawing()
+    assert dual_rail.to_svg() == dual_rail.to_svg()
+    plt.close('all')
+    f.draw(show=False)
+    assert plt.get_fignums() == []
+
+
+def test_Drawing_then_and_tensor_return_new_drawings():
+    x = monoidal.Ty('x')
+    f = monoidal.Box('f', x, x).to_drawing()
+    for result in (Drawing.id(x) >> f, f >> Drawing.id(x),
+                   Drawing.id() @ f, f @ Drawing.id()):
+        assert result == f and result is not f
+
