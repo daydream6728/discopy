@@ -251,6 +251,9 @@ def test_Functor():
 def test_Functor_eq():
     x, y = Ob('x'), Ob('y')
     assert Functor({x: y, y: x}, {}) == Functor({y: x, x: y}, {})
+    F, G = Functor({}, {}), Functor({}, {}, dom=Box)
+    assert F != G
+    assert repr(G) == "cat.Functor(ob_map={}, ar_map={}, dom=cat.Box)"
 
 
 def test_Functor_repr():

@@ -1013,14 +1013,16 @@ class Functor(Category):
 
     def __eq__(self, other):
         return type(self) is type(other)\
-            and (self.ob_map, self.ar_map, self.cod)\
-            == (other.ob_map, other.ar_map, other.cod)
+            and (self.ob_map, self.ar_map, self.dom, self.cod)\
+            == (other.ob_map, other.ar_map, other.dom, other.cod)
 
     def __repr__(self):
-        cod_repr = "" if self.cod == type(self).cod\
-            else f", cod={factory_name(self.cod)}"
+        dom_cod_repr = "".join(
+            "" if value == getattr(type(self), attr)
+            else f", {attr}={factory_name(value)}"
+            for attr, value in [("dom", self.dom), ("cod", self.cod)])
         return factory_name(type(self))\
-            + f"(ob_map={self.ob_map}, ar_map={self.ar_map}{cod_repr})"
+            + f"(ob_map={self.ob_map}, ar_map={self.ar_map}{dom_cod_repr})"
 
     def __call__(self, other):
         if isinstance(other, Ob):
