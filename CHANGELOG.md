@@ -14,7 +14,9 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   double-pushout rewriting of symmetric hypergraphs: the swap is wiring, sums
   and copies of every arity absorb the (co)commutative (co)monoids, and every
   random diagram over GF(p) reduces to the canonical form of its matrix,
-  Theorems 3 and 5 and the scalars of §3.3.
+  Theorems 3 and 5 and the scalars of §3.3. With the conjunction and the
+  truth, every Boolean circuit reduces to its algebraic normal form, Theorem
+  10, and so do the zero-preserving and the affine ones.
 
 - Double-pushout rewriting of hypergraphs, after Bonchi et al.'s *String
   diagram rewrite theory* I and II: a rule is a pair of parallel hypergraphs,

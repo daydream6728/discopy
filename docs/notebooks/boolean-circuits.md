@@ -70,7 +70,7 @@ def Scalar(a: int) -> Box:
 
 
 def kind(box: Box) -> str:
-    return {"μ": "sum", "δ": "copy"}.get(box.name, "scalar")
+    return {"μ": "sum", "δ": "copy", "∧": "prod"}.get(box.name, "scalar")
 
 
 mu, eta, delta, epsilon = Sum(2), Sum(0), Copy(2), Copy(0)
@@ -100,12 +100,15 @@ def hypergraph(dom: list, boxes: list, cod: list) -> Hypergraph:
         dict.fromkeys(labels, x))
 
 
+COMMUTATIVE = {("dom", "sum"), ("dom", "prod"), ("cod", "copy")}
+
+
 def forget_order(graph: Hypergraph):
     """ The labelled graph of a hypergraph, with sums and copies unordered. """
     result = graph.to_graph()
     for node, attributes in result.nodes(data=True):
-        if node.kind in ("dom", "cod") and (node.kind, kind(
-                graph.boxes[node.i])) in (("dom", "sum"), ("cod", "copy")):
+        if node.kind in ("dom", "cod") and (
+                node.kind, kind(graph.boxes[node.i])) in COMMUTATIVE:
             attributes["j"] = None
     return result
 
@@ -122,7 +125,7 @@ def equal(left: Hypergraph, right: Hypergraph) -> bool:
 A rule is found by a function of the host that returns its instance at one match: the left side, made of boxes of the host, the right side, and the match.
 `step` is the double-pushout step of `discopy.hypergraph`.
 Over a symmetric category the only pushout complement is the boundary complement (Bonchi et al. II, Definition 23), and the match must be convex, which `step` checks.
-`normal_form` checks every step in the semantics, a check that the schemas are sound.
+`normal_form` checks that every step keeps the meaning of the diagram, a check that the schemas are sound.
 
 ```python {.marimo}
 def producers(graph: Hypergraph) -> dict:
@@ -182,11 +185,12 @@ def flatten(graph, p):
                 continue
             inner = graph.box_wires[i][side]
             rest = (ins, outs)[side][:k] + (ins, outs)[side][k + 1:]
+            n = len(inner + rest)
             if side:
                 return instance(graph, [j, i], ins, list(inner + rest),
-                                Copy(len(inner + rest)).to_hypergraph())
+                                Box(box.name, x, x ** n).to_hypergraph())
             return instance(graph, [i, j], list(inner + rest), outs,
-                            Sum(len(inner + rest)).to_hypergraph())
+                            Box(box.name, x ** n, x).to_hypergraph())
     return None
 
 
@@ -218,11 +222,11 @@ def push(graph, p):
             continue
         below, cod = graph.boxes[i], graph.box_wires[i][1]
         n, m = len(ins), len(cod)
-        if (kind(box), kind(below)) == ("sum", "copy"):
+        if kind(box) in ("sum", "prod") and kind(below) == "copy":
             right = hypergraph(names(n, "i"), [
                 (Copy(m), [f"i{a}"], [f"e{a},{b}" for b in range(m)])
                 for a in range(n)] + [
-                (Sum(n), [f"e{a},{b}" for a in range(n)], [f"o{b}"])
+                (box, [f"e{a},{b}" for a in range(n)], [f"o{b}"])
                 for b in range(m)], names(m, "o"))
         elif (kind(box), kind(below)) == ("scalar", "copy"):
             right = hypergraph(["i"], [(Copy(m), ["i"], names(m, "e"))] + [
@@ -265,6 +269,9 @@ def parallel(graph, p):
             if total == 0:
                 edge = [(Copy(a), ["c"], names(a, "o")),
                         (Sum(b), names(b, "r"), ["t"])]
+            elif total == 1:
+                edge = [(Copy(a + 1), ["c"], names(a, "o") + ["e"]),
+                        (Sum(b + 1), ["e"] + names(b, "r"), ["t"])]
             else:
                 edge = [(Copy(a + 1), ["c"], names(a, "o") + ["e"]),
                         (Scalar(total), ["e"], ["f"]),
@@ -277,16 +284,16 @@ def parallel(graph, p):
     return None
 
 
-def normal_form(graph, rules, p, limit=10_000):
+def normal_form(graph, rules, p, meaning=matrix, limit=10_000):
     """ Rewrite with the first rule that applies, checking each step. """
+    before = meaning(graph, p)
     for steps in range(limit):
         found = next((found for rule in rules
                       if (found := rule(graph, p)) is not None), None)
         if found is None:
             return graph, steps
-        left, right, match = found
-        assert matrix(left, p) == matrix(right, p)
-        graph = step(graph, left, right, match)
+        graph = step(graph, *found)
+        assert meaning(graph, p) == before
     raise RuntimeError(f"no normal form in {limit} steps")
 ```
 
@@ -333,15 +340,16 @@ def random_diagram(rng, generators, inputs, size) -> Hypergraph:
     return hypergraph(list(range(inputs)), boxes, wires)
 
 
-def check(generators, rules, p, trials, seed=0):
-    """ Random diagrams each reduce to the canonical form of their matrix. """
+def check(generators, rules, p, trials, seed=0,
+          meaning=matrix, canonical=canonical):
+    """ Random diagrams each reduce to the canonical form of their meaning. """
     import random
     rng, steps = random.Random(seed), []
     for _ in range(trials):
         graph = random_diagram(rng, generators, rng.randint(0, 3), 12)
-        result, count = normal_form(graph, rules, p)
-        rows = matrix(graph, p)
-        assert equal(result, canonical(rows, p, len(graph.dom), len(graph.cod)))
+        result, count = normal_form(graph, rules, p, meaning)
+        assert equal(result, canonical(
+            meaning(graph, p), p, len(graph.dom), len(graph.cod)))
         steps.append(count)
     return max(steps), sum(steps) / len(steps)
 ```
@@ -454,12 +462,261 @@ mo.md("\n".join(["| field | most steps | mean steps |", "|---|---|---|"] + [
     for _p, (most, mean) in results_K.items()]))
 ```
 
+## Boolean functions: Theorem 10
+
+$\mathfrak{F}[2]$ has the functions $\mathbb{Z}_2^p \to \mathbb{Z}_2^q$, with the cartesian product as tensor.
+It adds two generators to those of $\mathbf{L}(\mathbb{Z}_2)$: the conjunction $\mu' : 2 \to 1$ and the truth $\eta' : 0 \to 1$, flattened as $\wedge_n : n \to 1$ with $\mu' = \wedge_2$ and $\eta' = \wedge_0$.
+The semantics is now a functor into `python.Function`, which sends $x$ to `int` and each generator to its function on bits, with the cartesian product as tensor: Lafont's classical case.
+
+```python {.marimo}
+from itertools import product
+
+from discopy import python
+from discopy.utils import tuplify, untuplify
+
+
+def Prod(n: int) -> Box:
+    """ The conjunction of n inputs, with mu' = Prod(2) and eta' = Prod(0). """
+    return Box("∧", x ** n, x)
+
+
+conjunction, truth = Prod(2), Prod(0)
+
+
+def function(box: Box):
+    """ The function of a sum, a copy or a conjunction, on bits. """
+    if kind(box) == "copy":
+        return lambda bit: untuplify((bit, ) * len(box.cod))
+    if kind(box) == "sum":
+        return lambda *bits: sum(bits) % 2
+    return lambda *bits: int(all(bits))
+
+
+boolean = Functor(ob_map={x: int}, ar_map=function, cod=python.Function)
+
+
+def truth_table(graph: Hypergraph, p: int = 2) -> dict:
+    """ The outputs of a Boolean circuit on each input. """
+    circuit = boolean(graph.to_diagram())
+    return {bits: tuplify(circuit(*bits))
+            for bits in product((0, 1), repeat=len(graph.dom))}
+```
+
+The canonical form of a Boolean function is its algebraic normal form.
+Each output is a sum of monomials, each monomial a conjunction of inputs, which are copied as many times as the monomials need them.
+The coefficient of a monomial is the sum of the function over the inputs below it, its Möbius transform.
+
+```python {.marimo}
+def normal_polynomial(table, p, inputs, outputs):
+    """ The algebraic normal form of each output, as a diagram. """
+    monomials = [[s for s in product((0, 1), repeat=inputs) if sum(
+        table[bits][b] for bits in product((0, 1), repeat=inputs)
+        if all(i <= j for i, j in zip(bits, s))) % 2] for b in range(outputs)]
+    boxes, wire = [], {}
+    for a in range(inputs):
+        places = [(b, m) for b in range(outputs)
+                  for m, s in enumerate(monomials[b]) if s[a]]
+        wires = [f"c{a},{b},{m}" for b, m in places]\
+            if len(places) != 1 else [f"i{a}"]
+        if len(places) != 1:
+            boxes.append((Copy(len(places)), [f"i{a}"], wires))
+        wire.update(((b, m, a), w) for (b, m), w in zip(places, wires))
+    cod = []
+    for b in range(outputs):
+        terms = []
+        for m, s in enumerate(monomials[b]):
+            ins = [wire[b, m, a] for a in range(inputs) if s[a]]
+            if len(ins) != 1:
+                boxes.append((Prod(len(ins)), ins, [f"m{b},{m}"]))
+            terms.append(ins[0] if len(ins) == 1 else f"m{b},{m}")
+        if len(terms) != 1:
+            boxes.append((Sum(len(terms)), terms, [f"o{b}"]))
+        cod.append(terms[0] if len(terms) == 1 else f"o{b}")
+    return hypergraph(names(inputs, "i"), boxes, cod)
+```
+
+Lafont's ten relations of Fig. 40 that are not on $\tau$ say that a conjunction and the truth can be copied and discarded, that they form a commutative monoid, that the conjunction distributes over sums, that $0 \wedge x = 0$ and that $x \wedge x = x$.
+Two schemas of part one cover the first five, once `flatten` and `push` take conjunctions as they take sums.
+Three more cover the rest:
+
+* `distribute`: $(x + y) \wedge z = (x \wedge z) + (y \wedge z)$ for a conjunction fed by a sum, $0 \wedge z = 0$ when the sum is empty.
+* `idempotence`: $x \wedge x = x$ and $x + x = 0$, for a conjunction or a sum fed twice by one copy. Part one's `parallel` did the latter, but here another path from the copy to the sum may go through a conjunction, so it too takes the convex hull.
+* `cancel`: two equal monomials summed cancel, i.e. $m + m = 0$, from $x + x = 0$ once both are seen as copies of one conjunction.
+
+The third has to be careful.
+Two equal monomials read the same copies, but a third monomial of the same sum may read one of those copies too.
+That gives a path from a copy to the sum outside the two monomials, so the match is not convex.
+`rule` takes the convex hull of the boxes a schema is about, i.e. those boxes and every box on a path between two of them.
+Its right side is a transformation of those boxes, keeping the boundary.
+
+```python {.marimo}
+def rule(graph, core, transform):
+    """ The rule on the convex hull of some boxes, its right side transformed. """
+    made, used = producers(graph), consumers(graph)
+
+    def reach(start, step):
+        seen, todo = set(), list(start)
+        while todo:
+            for k in step(todo.pop()):
+                if k is not None and k not in seen:
+                    seen.add(k)
+                    todo.append(k)
+        return seen
+
+    below = reach(core, lambda j: [used[s] for s in graph.box_wires[j][1]])
+    above = reach(core, lambda j: [made[s] for s in graph.box_wires[j][0]])
+    boxes = {j: (graph.boxes[j], *map(list, graph.box_wires[j]))
+             for j in sorted(set(core) | below & above)}
+    dom = [s for _, ins, _ in boxes.values() for s in ins
+           if made[s] not in boxes]
+    cod = [s for _, _, outs in boxes.values() for s in outs
+           if used[s] not in boxes]
+    inside = [s for _, ins, outs in boxes.values() for s in ins + outs]
+    return (hypergraph(dom, list(boxes.values()), cod),
+            hypergraph(dom, transform(dict(boxes)), cod),
+            (tuple(dict.fromkeys(dom + inside + cod)), tuple(boxes)))
+
+
+def unwire(boxes, drop):
+    """ The boxes without the wires to drop, shrunk to the wires left. """
+    result = []
+    for box, ins, outs in boxes.values():
+        ins = [s for s in ins if s not in drop]
+        outs = [s for s in outs if s not in drop]
+        if (len(ins), len(outs)) != (len(box.dom), len(box.cod)):
+            box = Box(box.name, x ** len(ins), x ** len(outs))
+        result.append((box, ins, outs))
+    return result
+
+
+def distribute(graph, p):
+    made = producers(graph)
+    for j, box in enumerate(graph.boxes):
+        ins = graph.box_wires[j][0] if kind(box) == "prod" else ()
+        for k, i in enumerate(made[s] for s in ins):
+            if i is None or kind(graph.boxes[i]) != "sum":
+                continue
+
+            def spread(boxes, i=i, j=j, k=k):
+                (_, terms, _), (_, ins, outs) = boxes.pop(i), boxes.pop(j)
+                rest, n = ins[:k] + ins[k + 1:], len(terms)
+                return [(Copy(n), [z], [f"c{a},{b}" for b in range(n)])
+                        for a, z in enumerate(rest)] + [
+                    (Prod(len(ins)), [y] + [f"c{a},{b}" for a in range(
+                        len(rest))], [f"t{b}"]) for b, y in enumerate(terms)
+                ] + [(Sum(n), names(n, "t"), outs)] + list(boxes.values())
+            return rule(graph, [i, j], spread)
+    return None
+
+
+def idempotence(graph, p):
+    made = producers(graph)
+    for j, box in enumerate(graph.boxes):
+        if kind(box) not in ("prod", "sum"):
+            continue
+        copies = {}
+        for s in graph.box_wires[j][0]:
+            if made[s] is not None and kind(graph.boxes[made[s]]) == "copy":
+                copies.setdefault(made[s], []).append(s)
+        for i, wires in copies.items():
+            keep = 1 if kind(box) == "prod" else len(wires) % 2
+            if len(wires) > 1:
+                return rule(graph, [i, j], lambda boxes, drop=set(
+                    wires[keep:]): unwire(boxes, drop))
+    return None
+
+
+def cancel(graph, p):
+    made = producers(graph)
+    for j, box in enumerate(graph.boxes):
+        seen = {}
+        for i in (made[s] for s in graph.box_wires[j][0]
+                  if kind(box) == "sum"):
+            sources = [made[s] for s in graph.box_wires[i][0]]\
+                if i is not None and kind(graph.boxes[i]) == "prod" else [None]
+            if any(s is None or kind(graph.boxes[s]) != "copy"
+                   for s in sources):
+                continue
+            key = tuple(sorted(sources))
+            if key not in seen:
+                seen[key] = i
+                continue
+            pair = (seen[key], i)
+            drop = {s for n in pair for wires in graph.box_wires[n]
+                    for s in wires}
+            return rule(graph, list(key) + list(pair) + [j],
+                        lambda boxes, pair=pair, drop=drop: unwire({
+                            n: b for n, b in boxes.items() if n not in pair},
+                            drop))
+    return None
+
+
+rules_F2 = [flatten, push, distribute, idempotence, cancel]
+```
+
+The relations of Fig. 13 and Fig. 40 hold in the semantics, and their two sides have the same normal form:
+
+```python {.marimo}
+relations_F2 = dict(relations_L, **{
+    "copied conjunction": (conjunction >> delta, delta @ delta
+                           >> x @ Diagram.swap(x, x) @ x
+                           >> conjunction @ conjunction),
+    "copied truth": (truth >> delta, truth @ truth),
+    "discarded conjunction": (conjunction >> epsilon, epsilon @ epsilon),
+    "discarded truth": (truth >> epsilon, Diagram.id(Ty())),
+    "conjunction associativity": (conjunction @ x >> conjunction,
+                                  x @ conjunction >> conjunction),
+    "conjunction unit": (truth @ x >> conjunction, Diagram.id(x)),
+    "conjunction commutativity": (Diagram.swap(x, x) >> conjunction,
+                                  conjunction),
+    "distributivity": (mu @ x >> conjunction, x @ x @ delta
+                       >> x @ Diagram.swap(x, x) @ x
+                       >> conjunction @ conjunction >> mu),
+    "zero": (eta @ x >> conjunction, epsilon >> eta),
+    "idempotence": (delta >> conjunction, Diagram.id(x))})
+for _left, _right in relations_F2.values():
+    _left, _right = _left.to_hypergraph(), _right.to_hypergraph()
+    assert truth_table(_left) == truth_table(_right)
+    assert equal(normal_form(_left, rules_F2, 2, truth_table)[0],
+                 normal_form(_right, rules_F2, 2, truth_table)[0])
+Equation(*relations_F2["distributivity"])
+```
+
+Every Boolean circuit reduces to the algebraic normal form of its function, which is Theorem 10 on these circuits.
+Lafont gets presentations of two subcategories by leaving a generator out: without the truth $\eta'$, the zero-preserving functions $\mathbb{Z}(\mathbb{Z}_2)$, and without the conjunction $\mu'$, the affine functions $\mathbf{A}(\mathbb{Z}_2)$.
+Their normal forms are those that have no constant monomial, respectively no monomial of degree two or more, and the same rules reach them:
+
+```python {.marimo}
+results_F2 = {name: check(generators, rules_F2, 2, 40, meaning=truth_table,
+                          canonical=normal_polynomial)
+              for name, generators in [
+                  ("𝔉[2]", [mu, eta, delta, epsilon, conjunction, truth]),
+                  ("ℤ(ℤ_2)", [mu, eta, delta, epsilon, conjunction]),
+                  ("𝐀(ℤ_2)", [mu, eta, delta, epsilon, truth])]}
+mo.md("\n".join(["| category | most steps | mean steps |", "|---|---|---|"] + [
+    f"| ${name}$ | {most} | {mean:.1f} |"
+    for name, (most, mean) in results_F2.items()]))
+```
+
+For instance, a full adder: its sum bit is the sum of three inputs, and its carry is the majority, $xy + xz + yz$.
+Written with the carry as $xy + (x + y)z$, it reduces to that polynomial:
+
+```python {.marimo}
+_copy3 = delta >> x @ delta
+_adder = _copy3 @ _copy3 @ delta >> Diagram.permutation(
+    [0, 3, 6, 1, 4, 2, 5, 7], x ** 8) >> (mu @ x >> mu) @ (
+    conjunction @ (mu @ x >> conjunction) >> mu)
+_result, _ = normal_form(_adder.to_hypergraph(), rules_F2, 2, truth_table)
+assert equal(_result, normal_polynomial(truth_table(_result), 2, 3, 2))
+Equation(_adder, _result.to_diagram(), symbol="$\\mapsto$")
+```
+
 ## What is left
 
-The other parts of the paper are left to follow-ups:
+The other parts of the paper are left to follow-ups, see [rel-int/discopy-next#311](https://github.com/rel-int/discopy-next/issues/311):
 
 * $\mathbf{GL}(\mathbb{Z}_2)$ and the presentations by the linear permutation $\kappa$ (§3.1–§3.2, Theorems 6 to 8). Lafont's rewrite system there does not terminate, and its rules are used in both directions, one for stairs and one for antistairs.
 * The isometries $\mathbf{O}$ and their Euler angles (§3.4, Theorem 9).
-* The Boolean functions $\mathfrak{F}[2]$, with the conjunction $\mu'$ and the truth $\eta'$, and the affine permutations $\mathbf{GA}(\mathbb{Z}_2)$ (§4, Theorems 10 and 11).
+* The affine permutations $\mathbf{GA}(\mathbb{Z}_2)$, with the negation $\nu$ (§4.1, Theorem 11).
 * The Toffoli gates and Theorem 12 (§4.2).
 * The termination orders and critical peaks of Appendix A.

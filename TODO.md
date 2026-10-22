@@ -11,9 +11,9 @@ each output. Cancelling two equal monomials is not a convex match when a third m
 of their variables, so the rules here take the convex hull of the boxes they are about.
 
 - [WIP] @session_01M8CWacKqbJVKPcDMd2m3AD-2026-10-22 21:34 §4 in `docs/notebooks/boolean-circuits.md`:
-  - [ ] the semantics, a functor into `Tensor[int]` with each generator as the graph of its
-    function, and a rule as the convex hull of some boxes with its right side transformed
-  - [ ] Theorem 10: the relations of Fig. 40 that are not on τ checked in the semantics, every
+  - [x] the semantics, a functor into `python.Function` with each generator as its function on
+    bits, and a rule as the convex hull of some boxes with its right side transformed
+  - [x] Theorem 10: the relations of Fig. 40 that are not on τ checked in the semantics, every
     Boolean circuit reduced to its algebraic normal form
-  - [ ] ℤ(ℤ₂) and 𝔄(ℤ₂), the zero-preserving and the affine maps, by the generators they keep
-- [ ] `docs/export_notebooks.py --check`
+  - [x] ℤ(ℤ₂) and 𝔄(ℤ₂), the zero-preserving and the affine maps, by the generators they keep
+- [x] `docs/export_notebooks.py --check`
