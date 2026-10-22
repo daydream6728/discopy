@@ -9,6 +9,19 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Added
 
+- The lambda terms enrol in the property matrix with the laws of beta
+  reduction: `biclosed.Normalising` states that a normal form is its own,
+  that reduction strategies agree and keep the type, over closed terms the
+  generator draws, `Reducible[Self]`, and `Renamed` and `Canonical` are
+  `TestableGeneric`s; `grammar.proofnet.ProofNet` states that a net reads
+  back from its term.
+
+- `kleisli` channels, monad homomorphisms and `python.Function` enrol in
+  the property matrix, compared extensionally by `axioms.Extensional`: an
+  equation of functions compares their graphs on a finite sample of their
+  domain, `axioms.values`, rather than their insides, callables compared by
+  identity. `monoidal.List` is a `TestableGeneric` of Python types.
+
 - The constructions enrol in the property matrix: `lens`, `para` and
   `interaction` diagrams draw their parts from the strategy of the
   category they are built on and compare them up to its equation, by

@@ -78,13 +78,14 @@ from copy import deepcopy
 from dataclasses import KW_ONLY, dataclass, replace
 from functools import cached_property, reduce, wraps
 from operator import matmul
-from types import GenericAlias, NoneType
+from types import GenericAlias, NoneType, UnionType
 from typing import (
     TYPE_CHECKING, Annotated, Any, ClassVar, Concatenate, ParamSpec, Self,
     TypeVar,
     TypeVarTuple,
     get_args, get_origin)
 
+from discopy import messages
 from discopy.utils import (
     AxiomError,
     NamedGeneric,
@@ -203,6 +204,57 @@ def quotient(category, term):
     """
     up_to = category.equation_factory(term).up_to
     return term if up_to is None else up_to(term)
+
+
+def values(typ: type) -> tuple:
+    """
+    A finite sample of the values of a Python type, the same every time, so
+    that the two sides of an :class:`Extensional` equation are called on the
+    same arguments: a few of each base type, the union of the samples of a
+    union type, and ``TypeError`` for a type with no sample.
+
+    Parameters:
+        typ : The type to sample, e.g. ``int`` or ``int | None``.
+
+    >>> assert values(bool) == (False, True)
+    >>> assert values(int | None) == values(int) + (None, )
+    """
+    if typ is type(None):
+        return (None, )
+    if isinstance(typ, UnionType):
+        return tuple(value for arg in get_args(typ) for value in values(arg))
+    if typ not in VALUES:
+        raise TypeError(messages.NO_VALUES.format(typ))
+    return VALUES[typ]
+
+
+VALUES: dict[type, tuple] = {
+    bool: (False, True),
+    int: (0, 1, -1, 2),
+    float: (0., 1.5, -1.),
+    str: ("", "a", "ab"),
+}
+""" The sample :func:`values` gives each base type. """
+
+
+class Extensional[T](Equation[T]):
+    """
+    An equation of functions, compared by their graphs on a finite sample of
+    their domain rather than by their insides, which are callables compared
+    by identity: each term is called on every argument that the
+    ``arguments`` of its category gives for its domain, see :func:`values`.
+
+    >>> from discopy.python import Function
+    >>> f = Function(lambda x: x + 1, int, int)
+    >>> g = Function(lambda x: 1 + x, int, int)
+    >>> assert f != g and Extensional(f, g)
+    >>> assert not Extensional(f, Function(lambda x: x, int, int))
+    """
+    @staticmethod
+    def up_to(term):
+        """ The graph of a term on the arguments of its domain. """
+        return tuple(
+            (args, term(*args)) for args in type(term).arguments(term.dom))
 
 
 class AxiomFailure(AxiomError):
@@ -1072,8 +1124,12 @@ class Testable[T](ABC):
 
         >>> from discopy.cat import Arrow, Box
         >>> from discopy.monoidal import Ty
+        >>> from discopy.biclosed import TermBase
         >>> assert Arrow in Testable.enrolled() and Ty in Testable.enrolled()
         >>> assert Box not in Testable.enrolled()
+        >>> from discopy.grammar.proofnet import ProofNet
+        >>> assert TermBase in Testable.enrolled()
+        >>> assert ProofNet in Testable.enrolled()
         """
         def generates(testable):
             try:

@@ -21,6 +21,7 @@ from dataclasses import dataclass
 from contextlib import contextmanager
 
 from discopy.abc import Category
+from discopy.axioms import Extensional, values
 from discopy.cat import Functor
 from discopy.monoidal import List
 from discopy.utils import (
@@ -62,7 +63,25 @@ class Function(Category[Ty, "Function"]):
     ob = Ty
     type_checking = True
 
-    def __init__(self, inside: Callable, dom: Ty, cod: Ty):
+    @classmethod
+    def equation_factory(cls, *terms: "Function") -> Extensional:
+        """
+        The equation of a law, compared by the graphs of its terms on the
+        :meth:`arguments` of their domain, see :class:`axioms.Extensional`.
+        """
+        return Extensional(*terms)
+
+    @classmethod
+    def arguments(cls, dom: Ty) -> tuple[tuple, ...]:
+        """
+        The arguments a function on ``dom`` is called with by an
+        extensional equation: one value of one of its types.
+
+        >>> assert Function.arguments(Ty(bool)) == ((False, ), (True, ))
+        """
+        return tuple((value, ) for typ in dom.inside for value in values(typ))
+
+    def __init__(self, inside: Callable, dom: Ty | type, cod: Ty | type):
         self.inside, self.dom, self.cod = (
             inside, self.ob.cast(dom), self.ob.cast(cod))
 
