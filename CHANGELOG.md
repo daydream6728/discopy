@@ -9,6 +9,13 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Added
 
+- `quantum.graphlike`, graph-like ZX diagrams as hypergraphs over
+  `zx.Diagram` with one box for Hadamard, simplified by the rules of PyZX's
+  `full_reduce` as double-pushout rules of a `hypergraph.Rewriter`, each one
+  built for its match and a sound ZX equation: `from_diagram`, `from_pyzx`,
+  `to_pyzx`, `full_reduce` and `size`, with `benchmark/test_zx.py` racing it
+  against PyZX.
+
 - `hypergraph.Rewriter`, double-pushout rewriting in place with left-linear
   rules, whose pushout complement is unique: each step costs the size of the
   rule rather than of the host, and the match search is shared with

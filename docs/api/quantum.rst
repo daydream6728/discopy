@@ -13,5 +13,6 @@ quantum
     ansatze
     reservoir
     zx
+    graphlike
     tk
     pennylane

@@ -27,6 +27,7 @@ Summary
     :nosignatures:
     :toctree:
 
+    from_diagram
     from_pyzx
     to_pyzx
     size
@@ -105,7 +106,7 @@ def kind(box) -> str:
     """ Whether a box is a Hadamard edge, a phase, or some other box. """
     if box is zx.H:
         return "edge"
-    if type(box) is zx.Z and len(box.dom) == 1 and not len(box.cod):
+    if isinstance(box, zx.Z) and len(box.dom) == 1 and not box.cod:
         return "phase"
     return "edge" if box == zx.H else "other"
 
@@ -292,7 +293,7 @@ def is_interior(rewriter: Simplifier, spider: int, here: Local) -> bool:
         and not is_boundary(rewriter, spider)
 
 
-def toggle(rewriter: Simplifier, locals_: dict[int, Local],
+def toggle(locals_: dict[int, Local],
            pairs: list[tuple[int, int]]) -> tuple[list[int], list[tuple]]:
     """
     The Hadamard edges between each pair of spiders to delete, and those to
@@ -371,7 +372,8 @@ def complement(rewriter: Simplifier, spider: int) -> Step | None:
     near = list(here.edges)
     if any(locals_[t].other or is_boundary(rewriter, t) for t in near):
         return None
-    old_edges, new_edges = toggle(rewriter, locals_, list(combinations(near, 2)))
+    old_edges, new_edges = toggle(
+        locals_, list(combinations(near, 2)))
     old_phases, new_phases = add_phases(
         locals_, dict.fromkeys(near, -here.phase))
     return step(
@@ -380,7 +382,7 @@ def complement(rewriter: Simplifier, spider: int) -> Step | None:
         + old_edges, new_phases + new_edges)
 
 
-def boundaries(rewriter: Simplifier, spider: int, here: Local) -> list:
+def boundaries(rewriter: Simplifier, here: Local) -> list:
     """
     The boundaries of a spider: its ports, and the boundary spiders it has a
     Hadamard edge to.
@@ -398,7 +400,7 @@ def pivot(rewriter: Simplifier, spider: int) -> Step | None:
     if here.other or here.loops or not is_pauli(here.phase)\
             or is_boundary(rewriter, spider):
         return None
-    bound = boundaries(rewriter, spider, here)
+    bound = boundaries(rewriter, here)
     if len(bound) > 1:
         return None
     for other in here.edges:
@@ -406,7 +408,7 @@ def pivot(rewriter: Simplifier, spider: int) -> Step | None:
             continue
         there = rewriter.local(other)
         if there.other or there.loops or not is_pauli(there.phase)\
-                or len(bound) + len(boundaries(rewriter, other, there)) > 1:
+                or len(bound) + len(boundaries(rewriter, there)) > 1:
             continue
         result = pivot_along(rewriter, spider, other)
         if result is not None:
@@ -421,8 +423,8 @@ def pivot_along(rewriter: Simplifier, u: int, v: int) -> Step | None:
     if there.other or there.loops or not is_pauli(there.phase)\
             or is_boundary(rewriter, v):
         return None
-    bound_u = boundaries(rewriter, u, locals_[u])
-    bound_v = boundaries(rewriter, v, there)
+    bound_u = boundaries(rewriter, locals_[u])
+    bound_v = boundaries(rewriter, there)
     if len(bound_u) + len(bound_v) > 1:
         return None
     if bound_v:
@@ -433,7 +435,7 @@ def pivot_along(rewriter: Simplifier, u: int, v: int) -> Step | None:
         return None
     a_u, a_v = locals_[u].phase, locals_[v].phase
     old_edges, new_edges = toggle(
-        rewriter, locals_, across(near_u, near_v, both))
+        locals_, across(near_u, near_v, both))
     shift = dict.fromkeys(near_u, a_v)
     shift.update(dict.fromkeys(near_v, a_u))
     shift.update(dict.fromkeys(both, a_u + a_v + Fraction(1, 2)))
@@ -501,7 +503,7 @@ def pivot_gadget_along(rewriter: Simplifier, u: int, w: int,
     near_u, near_w, both = classes(locals_, u, w)
     a_u, a_w = locals_[u].phase, locals_[w].phase
     old_edges, new_edges = toggle(
-        rewriter, locals_, across(near_u, near_w, both))
+        locals_, across(near_u, near_w, both))
     shift = dict.fromkeys(near_w, a_u)
     shift.update(dict.fromkeys(both, a_u + Fraction(1, 2)))
     old_phases, new_phases = add_phases(locals_, shift)
@@ -521,7 +523,7 @@ def pivot_boundary(rewriter: Simplifier, spider: int) -> Step | None:
     phase gadget: the boundary goes to ``v``.
     """
     here = rewriter.local(spider)
-    if here.other or len(boundaries(rewriter, spider, here)) != 1:
+    if here.other or len(boundaries(rewriter, here)) != 1:
         return None
     for v in here.edges:
         there = rewriter.local(v)
@@ -556,34 +558,35 @@ def pivot_boundary_from(rewriter: Simplifier, v: int, here: Local
             or locals_[t].degree == 1 for t in here.edges):
         return None
     eligible = [t for t in here.edges if len(boundaries(
-        rewriter, t, locals_[t])) == 1 and not locals_[t].loops]
+        rewriter, locals_[t])) == 1 and not locals_[t].loops]
     if not eligible:
         return None
     quarter = [t for t in eligible if not is_pauli(locals_[t].phase)
                and is_clifford(locals_[t].phase)]
     w = quarter[-1] if quarter else eligible[0]
     locals_.update(neighbourhood(rewriter, w))
-    bound, = boundaries(rewriter, w, locals_[w])
+    bound, = boundaries(rewriter, locals_[w])
     near_v, near_w, both = classes(
         locals_, v, w, set() if bound is None else {bound})
     if any(locals_[t].other for t in near_w):
         return None
     a_v = here.phase
     old_edges, new_edges = toggle(
-        rewriter, locals_, across(near_v, near_w, both))
+        locals_, across(near_v, near_w, both))
     shift = dict.fromkeys(near_w, a_v)
     shift.update(dict.fromkeys(both, a_v + Fraction(1, 2)))
     old_phases, new_phases = add_phases(locals_, shift)
-    gadget = [(zx.H, ["hub"], ["leaf"])] + [
+    new_gadget = [(zx.H, ["hub"], ["leaf"])] + [
         (zx.H, ["hub"], [t]) for t in near_v + both]
-    gadget += [(phase_box(locals_[w].phase), ["leaf"], [])]\
+    new_gadget += [(phase_box(locals_[w].phase), ["leaf"], [])]\
         if locals_[w].phase else []
-    gadget += [(phase_box(a_v), ["hub"], [])] if a_v else []
+    new_gadget += [(phase_box(a_v), ["hub"], [])] if a_v else []
     deleted = locals_[v].phases + locals_[w].phases + [
         j for t in (v, w) for target, js in locals_[t].edges.items()
         if t == w or target != w for j in js] + old_phases + old_edges
     interface = near_v + near_w + both
-    new = new_phases + new_edges + gadget + spider_like(a_v, near_v + both)
+    new = new_phases + new_edges + new_gadget + spider_like(
+        a_v, near_v + both)
     if bound is None:
         return step(rewriter, interface + [w], [v], deleted,
                     new + [(zx.H, [w], ["kept"])])
@@ -794,7 +797,7 @@ def from_diagram(diagram: zx.Diagram) -> Hypergraph:
         return spider
 
     for box, (dom, cod) in zip(graph.boxes, graph.box_wires):
-        if type(box) is zx.Z:
+        if isinstance(box, zx.Z):
             for spider in dom + cod:
                 parent[find(spider)] = find((dom + cod)[0])
     spiders = list(dict.fromkeys(find(s) for s in range(graph.n_spiders)))
@@ -802,9 +805,9 @@ def from_diagram(diagram: zx.Diagram) -> Hypergraph:
     boxes, wires = [], []
     for box, (dom, cod) in zip(graph.boxes, graph.box_wires):
         legs = [index[find(s)] for s in dom + cod]
-        if type(box) in (zx.Z, zx.X):
-            centre = legs[0] if type(box) is zx.Z else len(spiders)
-            if type(box) is zx.X:
+        if isinstance(box, (zx.Z, zx.X)):
+            centre = legs[0] if isinstance(box, zx.Z) else len(spiders)
+            if isinstance(box, zx.X):
                 spiders.append(None)
                 boxes += len(legs) * [zx.H]
                 wires += [((centre, ), (leg, )) for leg in legs]
@@ -835,7 +838,8 @@ def from_pyzx(graph) -> Hypergraph:
     """
     from pyzx import VertexType, EdgeType
     boundary = set(graph.inputs()) | set(graph.outputs())
-    red = {v for v in graph.vertices() if graph.type(v) == VertexType.X}
+    red = {v for v in graph.vertices()
+           if graph.type(v) == VertexType.X}  # noqa: E721
     parent = {v: v for v in graph.vertices()}
 
     def find(v):
