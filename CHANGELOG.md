@@ -1965,6 +1965,12 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - `Diagram.width` of an identity is the number of its wires, where
   `Id(x).width` raised `ValueError` on the `max` of no layers
   ([rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
+- `rigid.Diagram.cups` and `caps`, and `tensor.Tensor.cups`, raise
+  `AxiomError` on two types of different lengths, which are no adjoints,
+  where `cups(Ty(), n)` returned the identity on `Ty()` and
+  `cups(n, Ty())` raised `IndexError`: `rigid.nesting` never compared the
+  lengths
+  ([rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
 - `interaction.Diagram.trace` traces an integer diagram, where it raised
   `TypeError` on every input: it was borrowed from `traced.Diagram` through
   a `trace_factory` slicing the type, and an integer type is a pair of

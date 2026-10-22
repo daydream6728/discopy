@@ -153,7 +153,7 @@ from collections.abc import Callable
 
 from typing import ClassVar, Iterator
 
-from discopy import cat, monoidal, biclosed
+from discopy import cat, monoidal, biclosed, messages
 from discopy.abc import Pregroup, RigidCategory
 from discopy.cat import factory
 from discopy.utils import (
@@ -924,14 +924,24 @@ class Functor(biclosed.Functor):
 def nesting(cls: type, factory: Callable) -> Callable[[Ty, Ty], Diagram]:
     """
     Take a :code:`factory` for cups or caps of atomic types
-    and extends it recursively.
+    and extends it recursively, to types of the same length.
 
     Parameters:
         cls : A diagram factory, e.g. :class:`Diagram`.
         factory :
             A factory for cups (or caps) of atomic types, e.g. :class:`Cup`.
+
+    Example
+    -------
+    >>> x = Ty('x')
+    >>> Diagram.cups(x @ x, x.r)
+    Traceback (most recent call last):
+        ...
+    discopy.utils.AxiomError: x @ x and x.r are not adjoints.
     """
     def method(left: Ty, right: Ty) -> Diagram:
+        if len(left) != len(right):
+            raise AxiomError(messages.NOT_ADJOINT.format(left, right))
         if len(left) == 0:
             return cls.id(left[:0])
         head, tail = factory(left[0], right[-1]), method(left[1:], right[:-1])

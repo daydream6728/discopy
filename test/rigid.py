@@ -97,6 +97,15 @@ def test_Diagram_caps():
         Diagram.caps(Ty('x'), 'x')
 
 
+def test_Diagram_cups_caps_of_unequal_lengths():
+    x = Ty('x')
+    for left, right in [(Ty(), x.r), (x, Ty()), (x @ x, x.r)]:
+        with raises(AxiomError):
+            Diagram.cups(left, right)
+        with raises(AxiomError):
+            Diagram.caps(right, left)
+
+
 def test_Diagram_normal_form():
     x = Ty('x')
     assert Id(x).transpose(left=True).normal_form() == Id(x.l)
