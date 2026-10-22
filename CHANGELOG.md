@@ -1616,9 +1616,10 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   [#438](https://github.com/discopy/discopy/pull/438) kept for the
   algorithms written against the old one: `Layer.merge`, `interchange`,
   `substitute`, `braided.Diagram.simplify` and `naturality`,
-  `rigid.Diagram.transpose_box`, `tensor.Diagram.grad`,
-  `pregroup.Diagram.normal_form`, `to_tk` and `Circuit.to_tn` read
-  `boxes_and_offsets` instead. It was never in a release, so it goes
+  `tensor.Diagram.grad`, `pregroup.Diagram.normal_form`, `to_tk` and
+  `Circuit.to_tn` read each box with its offset instead, see
+  `Layer.boxes_and_offsets`, and `rigid.Diagram.transpose_box` the
+  `boxes_or_types` of its layer. It was never in a release, so it goes
   without a deprecated alias
   ([rel-int/discopy-next#9](https://github.com/rel-int/discopy-next/issues/9)).
 - Parameters nothing read: `grammar.cfg.Tree.to_diagram`'s
