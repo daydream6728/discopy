@@ -406,6 +406,10 @@ class Digits(ClassicalGate):
     def __init__(self, *digits, dim=None, is_dagger=False, time_step=0):
         if not isinstance(dim, int):
             raise TypeError(int, dim)
+        if not all(digit in range(dim) for digit in digits):
+            raise ValueError(
+                f"Digits of dimension {dim} are integers from 0 to {dim - 1}.")
+        digits = tuple(map(int, digits))
         self._digits, self._dim = digits, dim
         str_digits = ', '.join(map(str, digits))
         name = f"Digits({str_digits}, dim={dim})" if dim != 2 \
@@ -1035,7 +1039,7 @@ class Scalar(Parametrized):
         return super().setoid() + (self.time_step, )
 
     def delay(self, n_steps=1):
-        return Scalar(
+        return type(self)(
             self.data, self.name, self.is_mixed, self.time_step + n_steps)
 
     @property
@@ -1061,12 +1065,12 @@ class Scalar(Parametrized):
         >>> from sympy.abc import phi  # doctest: +EXTRA
         >>> assert scalar(2 * phi, is_mixed=True).subs(phi, .5).is_mixed
         """
-        return Scalar(rsubs(self.data, *args), self.name, self.is_mixed,
-                      self.time_step)
+        return type(self)(rsubs(self.data, *args), self.name, self.is_mixed,
+                          self.time_step)
 
     def lambdify(self, *symbols, **kwargs):
         function = super().lambdify(*symbols, **kwargs)
-        return lambda *xs: Scalar(
+        return lambda *xs: type(self)(
             function(*xs).data, self.name, self.is_mixed, self.time_step)
 
     def to_tree(self) -> dict:
@@ -1093,6 +1097,21 @@ class MixedScalar(Scalar):
     @classmethod
     def from_tree(cls, tree: dict):
         return cls(tree['data'], tree.get('time_step', 0))
+
+    def delay(self, n_steps=1):
+        """
+        The same mixed scalar, one more time step on.
+
+        >>> assert isinstance(MixedScalar(.5).delay(), MixedScalar)
+        """
+        return MixedScalar(self.data, self.time_step + n_steps)
+
+    def subs(self, *args):
+        return Parametrized.subs(self, *args).delay(self.time_step)
+
+    def lambdify(self, *symbols, **kwargs):
+        function = Parametrized.lambdify(self, *symbols, **kwargs)
+        return lambda *xs: function(*xs).delay(self.time_step)
 
 
 class Sqrt(Scalar):

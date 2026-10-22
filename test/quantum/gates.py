@@ -135,7 +135,7 @@ def test_Controlled_rotation_commutes_with_evaluation():
                  Controlled(Y, distance=2), Controlled(CRz(.4), distance=-1)):
         assert gate.l.eval().is_close(gate.eval().l)
         assert gate.r.eval().is_close(gate.eval().r)
-        assert gate.l.r == gate == gate.r.l
+        assert gate.l.r == gate == gate.r.l and gate.l == gate.r
     assert isinstance(CRz(.5).rotate(), Controlled)
 
 
@@ -176,10 +176,23 @@ def test_QuantumGate_takes_what_a_circuit_box_takes():
     assert phi in QuantumGate('U', qubit, qubit, [phi, 0, 0, phi]).free_symbols
 
 
-def test_Ket_Bra_read_booleans_as_bits():
+def test_Ket_Bra_Bits_read_booleans_as_bits():
     for bits in [(True, False), tuple(numpy.array([1, 0]) > 0)]:
-        assert Ket(*bits) == Ket(1, 0) and Bra(*bits) == Bra(1, 0)
-        assert numpy.allclose(Ket(*bits).eval().array, Ket(1, 0).eval().array)
+        for state in (Ket, Bra, Bits):
+            assert state(*bits) == state(1, 0)
+            assert numpy.allclose(
+                state(*bits).eval().array, state(1, 0).eval().array)
+    for digits, dim in [((2.5, ), 4), ((2, ), 2)]:
+        with raises(ValueError):
+            Digits(*digits, dim=dim)
+
+
+def test_MixedScalar_stays_mixed_scalar():
+    phi = importorskip("sympy").Symbol("phi")
+    gate = MixedScalar(2 * phi)
+    for result in (gate.delay(), gate.subs(phi, .5), gate.lambdify(phi)(.5)):
+        assert isinstance(result, MixedScalar) and result.is_mixed
+    assert gate.delay().subs(phi, .5) == MixedScalar(1).delay()
 
 
 @mark.parametrize("gate", [

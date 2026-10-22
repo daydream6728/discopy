@@ -115,6 +115,8 @@ def test_pure_Box_stays_pure():
             assert not rebuilt.is_mixed
         assert box.dagger().eval().is_close(box.eval().dagger())
         assert box.rotate().eval().is_close(box.eval().r)
+        assert box.rotate(left=True) == box.rotate()
+        assert box.rotate(left=True).rotate() == box
 
 
 def test_gate_hash():
