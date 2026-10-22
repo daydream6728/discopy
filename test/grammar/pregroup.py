@@ -1,5 +1,6 @@
 from pytest import raises
 
+from discopy import grammar, rigid
 from discopy.grammar.pregroup import *
 from discopy.utils import from_tree
 
@@ -13,6 +14,9 @@ def test_Word():
         Word('Alice', Ty('n'), dom=1)
     Alice = Word('Alice', Ty('n'))
     assert Alice.r[::-1].z == 1 and Alice.r[::-1][::-1] == Alice.r
+    namespace = dict(rigid=rigid, grammar=grammar)
+    for word in (Alice, Alice.r, Alice[::-1], Word('x', Ty('n'), data=[1])):
+        assert eval(repr(word), dict(namespace)) == word
 
 
 def test_eager_parse():

@@ -1,5 +1,6 @@
 from pytest import importorskip
 
+from discopy import cat, grammar, monoidal
 from discopy.grammar.cfg import Tree, Rule, Word, Id, Ty
 
 x = Ty('x')
@@ -12,6 +13,12 @@ def test_eq_and_hash():
     assert {tree: 1, f: 2, w: 3}[f(f(w, w), Id(x))] == 1
     assert Tree(w) == w == Tree(w) and hash(Tree(w)) == hash(w)
     assert Word('w', x, draw_as_spider=True).draw_as_spider
+
+
+def test_repr():
+    namespace = dict(cat=cat, monoidal=monoidal, grammar=grammar)
+    for tree in (f, f[::-1], w, Id(x), f(w, w), f(f(w, w), w)):
+        assert eval(repr(tree), dict(namespace)) == tree
 
 
 def test_dagger():

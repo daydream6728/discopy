@@ -34,7 +34,7 @@ from typing import ClassVar
 
 from discopy import rigid, frobenius, messages
 from discopy.cat import factory
-from discopy.utils import AxiomError, deprecated_alias
+from discopy.utils import AxiomError, deprecated_alias, factory_name
 from discopy.grammar import thue
 from discopy.rigid import Wire  # noqa: F401  pylint: disable=unused-import
 
@@ -218,7 +218,9 @@ class Word(thue.Word, Box):
         extra = f", dom={repr(self.dom)}" if self.dom else ""
         extra += ", is_dagger=True" if self.is_dagger else ""
         extra += f", z={self.z}" if self.z != 0 else ""
-        return f"Word({repr(self.name)}, {repr(self.cod)}{extra})"
+        extra += "" if self.data is None else f", data={self.data!r}"
+        return factory_name(type(self))\
+            + f"({self.name!r}, {self.cod!r}{extra})"
 
 
 class Functor(frobenius.Functor):

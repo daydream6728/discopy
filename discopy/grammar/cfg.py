@@ -80,7 +80,8 @@ class Tree:
         self.cod, self.root, self.branches = root.cod, root, branches
 
     def __repr__(self):
-        return factory_name(type(self)) + f"({self.root}, *{self.branches})"
+        return factory_name(type(self))\
+            + f"({', '.join(map(repr, (self.root, ) + self.branches))})"
 
     def __str__(self):
         return f"{self.root}({', '.join(map(str, self.branches))})"
@@ -188,6 +189,7 @@ class Rule(Tree, thue.Rule):
             and other.root == self and not other.branches
 
     __hash__, __str__ = thue.Rule.__hash__, thue.Rule.__str__
+    __repr__ = thue.Rule.__repr__
 
     def to_diagram(self) -> monoidal.Box:
         return monoidal.Box(self.name, self.dom, self.cod,
@@ -214,7 +216,7 @@ class Id(Rule):
         Rule.__init__(self, dom, dom, name=f"Id({dom})")
 
     def __repr__(self):
-        return f"Id({self.dom})"
+        return factory_name(type(self)) + f"({self.dom!r})"
 
     def dagger(self) -> Id:
         return self
