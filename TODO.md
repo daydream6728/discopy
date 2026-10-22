@@ -11,14 +11,14 @@ geometry of interaction, sequentialisation) is already here since #51; lambek#1'
 calculus is `closed.BohmTree` since #442. Datasets, readers, training runs and results stay
 in lambek.
 
-- [WIP] @session_01KbBG77r4dz5RennpDkce2y-2026-10-22 18:40 **Goal inference by the count invariant** (lambek#8 `decode.decode_sentence`,
+- [x] **Goal inference by the count invariant** (lambek#8 `decode.decode_sentence`,
   `french.formula_balance`): the signed count of the atoms of a type, and the sequent of
   some words whose goal is the smallest type with their count; `Parser` infers the goal
   when none is given
-- [WIP] @session_01KbBG77r4dz5RennpDkce2y-2026-10-22 18:40 **Decoding within a sub-signature** (lambek#8 `Tagger.constrain`, its per-language
+- [x] **Decoding within a sub-signature** (lambek#8 `Tagger.constrain`, its per-language
   inventory masks): `Tagger.beam` and `Tagger.loss` restricted to some atoms
-- [WIP] @session_01KbBG77r4dz5RennpDkce2y-2026-10-22 18:40 **Label smoothing over the symbols allowed** (lambek#8 `Tagger.forward`)
-- [ ] **lambek#8's switching regressions as tests of `ProofNet.to_term`**
+- [x] **Label smoothing over the symbols allowed** (lambek#8 `Tagger.forward`)
+- [x] **lambek#8's switching regressions as tests of `ProofNet.to_term`**
   (`test_proofnets.py`: the disconnected cycle, the stuck par, the crossed identity)
 - [ ] **A chart parser for categorial grammars** (lambek#2 `CYK`, lambek#8 `chart.Chart`):
   the k best terms of a sentence from the scored types of its words, by CKY over the

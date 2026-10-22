@@ -51,7 +51,14 @@ normalises scores to the nearest such matrix in entropy, and the linker is
 trained on the likelihood of the gold permutation there (Mena et al.,
 `Learning latent permutations with Gumbel-Sinkhorn networks (2018)
 <https://arxiv.org/abs/1802.08665>`_). The best linking does not depend on
-the normalisation, so that decoding takes the raw scores.
+the normalisation, so that decoding takes the raw scores. The goal of the
+sentence need not be given: by default it is the smallest type that the count
+invariant of the predicted types allows, see
+:meth:`discopy.grammar.proofnet.Sequent.infer`.
+
+A tagger trained on several languages at once over one signature can keep each
+language within its own atoms, a sub-signature, both in its loss and in its
+beam search.
 
 Example
 -------
@@ -74,7 +81,7 @@ Example
 ...     parser.loss(encoder(sentences), mask, nets).backward()
 ...     optimiser.step()
 >>> states = encoder(sentences)[1]
->>> net = parser.eval()(["Bob", "loves", "Alice"], states, s)
+>>> net = parser.eval()(["Bob", "loves", "Alice"], states)
 >>> print(net.to_term())
 loves(Alice)(Bob)
 """
@@ -120,6 +127,25 @@ class Signature:
     def arities(self) -> list[int]:
         "The number of arguments of each symbol."
         return [2] + [0] * len(self.atoms)
+
+    def mask(self, atoms=None) -> list[bool]:
+        """
+        Whether each symbol writes types over some of the atoms, i.e. the
+        exponential and these atoms, all of them by default.
+
+        Parameters:
+            atoms : The atoms of a sub-signature, e.g. those of a language.
+
+        Example
+        -------
+        >>> x, y, z = map(Ty, "xyz")
+        >>> Signature((x, y, z)).mask([z, x])
+        [True, True, False, True]
+        """
+        if atoms is None:
+            return [True] * len(self)
+        atoms = set(atoms)
+        return [True] + [atom in atoms for atom in self.atoms]
 
     @classmethod
     def from_types(cls, types) -> Signature:
@@ -169,7 +195,14 @@ class Tagger(nn.Module):
         hidden : The size of the states.
         dim : The size of the embedding of each symbol.
         dropout : The probability of dropping a feature in training.
+
+    The :meth:`loss` is smoothed when ``smoothing``, zero by default, is set
+    to the share of each target to spread over the symbols (Szegedy et al.,
+    `Rethinking the inception architecture for computer vision (2016)
+    <https://arxiv.org/abs/1512.00567>`_).
     """
+    smoothing: float = 0.
+
     def __init__(self, signature: Signature, hidden: int, dim: int = 256,
                  dropout: float = 0.):
         super().__init__()
@@ -203,14 +236,17 @@ class Tagger(nn.Module):
         return self.output(self.dropout(
             torch.cat([outputs, context], -1))), hidden
 
-    def loss(self, states, mask, types) -> torch.Tensor:
+    def loss(self, states, mask, types, atoms=None) -> torch.Tensor:
         """
-        The mean negative log-likelihood of each symbol of the types.
+        The mean negative log-likelihood of each symbol of the types, among
+        the symbols over some atoms, with a ``smoothing`` share of each
+        target spread evenly over these symbols.
 
         Parameters:
             states : The states of a batch, ``(batch, length, hidden)``.
             mask : Whether each state is a word, ``(batch, length)``.
             types : The type of each word, in order.
+            atoms : The atoms of the types, all of them by default.
         """
         hidden, keys, key_mask = words(states, mask)
         targets = nn.utils.rnn.pad_sequence([
@@ -219,28 +255,35 @@ class Tagger(nn.Module):
         symbols = torch.cat([
             torch.full_like(targets[:, :1], -1), targets[:, :-1]], 1)
         symbols = symbols.masked_fill(symbols < 0, len(self.signature))
-        scores, _ = self(symbols, hidden[None], keys, key_mask)
-        return nn.functional.cross_entropy(
-            scores.flatten(0, 1), targets.flatten(), ignore_index=-1)
+        allowed = torch.tensor(self.signature.mask(atoms), device=mask.device)
+        log_p = self(symbols, hidden[None], keys, key_mask)[0].masked_fill(
+            ~allowed, -torch.inf).log_softmax(-1)
+        likelihood = log_p.gather(-1, targets.clamp(min=0)[..., None])[..., 0]
+        uniform = log_p.masked_fill(~allowed, 0.).sum(-1) / allowed.sum()
+        return -((1 - self.smoothing) * likelihood
+                 + self.smoothing * uniform)[targets >= 0].mean()
 
     @torch.no_grad()
-    def beam(self, states, mask, k: int = 1, max_length: int = 32
-             ) -> list[list[tuple[Ty, float]]]:
+    def beam(  # pylint: disable=too-many-arguments
+            self, states, mask, k: int = 1, max_length: int = 32, *,
+            atoms=None) -> list[list[tuple[Ty, float]]]:
         """
         The ``k`` most likely types of each word with their log-probability,
         by beam search over the symbols that can still be completed into a
-        type of at most ``max_length`` symbols.
+        type of at most ``max_length`` symbols over some atoms.
 
         Parameters:
             states : The states of a batch, ``(batch, length, hidden)``.
             mask : Whether each state is a word, ``(batch, length)``.
             k : The number of types of each word.
             max_length : The largest number of symbols of a type.
+            atoms : The atoms of the types, all of them by default.
         """
         hidden, keys, key_mask = (
             x.repeat_interleave(k, 0) for x in words(states, mask))
         n_words, start = len(hidden) // k, len(self.signature)
         arities = torch.cat([self.arities, self.arities.new_ones(1)])
+        over = torch.tensor(self.signature.mask(atoms), device=states.device)
         scores = torch.full((n_words, k), -torch.inf, device=states.device)
         scores[:, 0] = 0
         slots = torch.ones_like(scores, dtype=torch.long).flatten()
@@ -250,7 +293,8 @@ class Tagger(nn.Module):
             if not slots[scores.flatten() > -torch.inf].any():
                 break
             logits, hidden = self(symbols, hidden, keys, key_mask)
-            allowed = slots[:, None] + arities[None, :-1] <= max_length - step
+            allowed = over & (
+                slots[:, None] + arities[None, :-1] <= max_length - step)
             log_p = logits[:, -1].masked_fill(~allowed, -torch.inf)
             log_p = log_p.where(allowed.any(-1, keepdim=True), 0.)\
                 .log_softmax(-1).masked_fill(
@@ -394,7 +438,7 @@ class Parser(nn.Module):
         self.tagger = Tagger(signature, hidden, dim)
         self.linker = Linker(signature, hidden, dim)
 
-    def loss(self, states, mask, nets) -> torch.Tensor:
+    def loss(self, states, mask, nets, atoms=None) -> torch.Tensor:
         """
         The sum of the losses of the tagger and of the linker.
 
@@ -402,23 +446,30 @@ class Parser(nn.Module):
             states : The states of a batch, ``(batch, length, hidden)``.
             mask : Whether each state is a word, ``(batch, length)``.
             nets : The proof net of each sentence, its words in order.
+            atoms : The atoms of the types, all of them by default.
         """
         types = [word.cod for net in nets for word in net.sequent.words]
-        return self.tagger.loss(states, mask, types)\
+        return self.tagger.loss(states, mask, types, atoms)\
             + self.linker.loss(states, mask, nets)
 
     @torch.no_grad()
-    def forward(self, sentence: list[str], states, goal: Ty) -> ProofNet:
+    def forward(self, sentence: list[str], states, goal: Ty | None = None,
+                atoms=None) -> ProofNet:
         """
         The proof net of the most likely types and the best linking.
 
         Parameters:
             sentence : The words.
             states : Their states, ``(length, hidden)``.
-            goal : The type of the sentence.
+            goal : The type of the sentence, by default the smallest one
+                their types allow, see
+                :meth:`discopy.grammar.proofnet.Sequent.infer`.
+            atoms : The atoms of the types, all of them by default.
         """
         mask = states.new_ones(1, len(states), dtype=torch.bool)
-        types = [beam[0][0] for beam in self.tagger.beam(states[None], mask)]
-        sequent = Sequent(
-            tuple(ty(word) for word, ty in zip(sentence, types)), goal)
+        types = [beam[0][0] for beam in self.tagger.beam(
+            states[None], mask, atoms=atoms)]
+        constants = tuple(ty(word) for word, ty in zip(sentence, types))
+        sequent = Sequent.infer(constants) if goal is None\
+            else Sequent(constants, goal)
         return sequent.decode(self.linker(states, sequent).cpu())
