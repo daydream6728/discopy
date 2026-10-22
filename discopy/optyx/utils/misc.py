@@ -42,7 +42,7 @@ def matrix_to_zw(U):
     if isinstance(U[0, 0], Expr):
         n_cols_nonzero = [U.shape[1]]*n
     else:
-        n_cols_nonzero = np.abs(np.sign(U)).sum(axis=1).astype(int)
+        n_cols_nonzero = (U != 0).sum(axis=1)
     diagram @= _build_w_layer(n_cols_nonzero, dagger=False)
 
     # endomorphism layer
@@ -66,7 +66,7 @@ def matrix_to_zw(U):
         swap_list.append(int(n * r + c))
 
     if not isinstance(U[0, 0], Expr):
-        n_s_output_flat = np.abs(np.sign(U)).flatten()
+        n_s_output_flat = (U != 0).flatten().astype(int)
         adjusted_swap_list = []
         for idx in swap_list:
             sum_missing = np.abs(np.array(n_s_output_flat)[:idx] - 1).sum()
@@ -81,7 +81,7 @@ def matrix_to_zw(U):
     if isinstance(U[0, 0], Expr):
         n_rows_nonzero = [U.shape[0]]*U.shape[1]
     else:
-        n_rows_nonzero = np.abs(np.sign(U)).sum(axis=0).astype(int)
+        n_rows_nonzero = (U != 0).sum(axis=0)
     diagram >>= _build_w_layer(n_rows_nonzero, dagger=True)
 
     return diagram
@@ -234,16 +234,16 @@ def explode_channel(
 
     arrows = []
     for layer in kraus:
-        generator = layer.inside[0][1]
+        left, generator, right = layer.inside[0].boxes_and_types
         channel = channel_class(
             generator.name,
             generator,
         )
 
         arrows.append(
-            Ty.from_optyx(layer.inside[0][0]) @
+            Ty.from_optyx(left) @
             channel @
-            Ty.from_optyx(layer.inside[0][2])
+            Ty.from_optyx(right)
         )
 
     if len(arrows) == 0:
