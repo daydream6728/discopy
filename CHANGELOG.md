@@ -809,6 +809,10 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   strategies defaulting to leftmost-outermost
   ([#442](https://github.com/discopy/discopy/pull/442)).
 
+- `ruff check` and `ty check` in the lint job beside `pylint`, each gating on
+  every rule `main` passes, with the rules it still breaks listed in
+  `pyproject.toml` to be removed one by one.
+
 ### Changed
 
 - A law of `discopy.axioms` is stated as a sequent, the sequent calculus
