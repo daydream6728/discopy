@@ -72,7 +72,6 @@ from discopy.utils import (
     factory,
     derived,
     frozen,
-    replace,
     setattrs,
     factory_name,
     from_tree,
@@ -772,9 +771,11 @@ class Layer(cat.Box, ColouredMonoid):
         A layer is rebuilt from its boxes and types, normalised: whether to
         normalise is an instruction to the constructor rather than a field.
 
+        >>> from discopy.utils import replace
         >>> x = Ty('x')
-        >>> f, g = Box('f', x, x), Box('g', x, x)
-        >>> assert replace(Layer(f), boxes_or_types=(x, g, Ty())) == Layer(x, g)
+        >>> f = Box('f', x, x)
+        >>> layer = replace(Layer(f), boxes_or_types=(x, f, Ty()))
+        >>> assert layer == Layer(x, f)
         """
         boxes_or_types = changes.pop("boxes_or_types", self.boxes_or_types)
         if changes:

@@ -895,7 +895,8 @@ def inherit_fields(cls: type):
     owners = [base for base in cls.__mro__
               if "__dataclass_fields__" in vars(base)]
     names = dict.fromkeys(
-        name for base in reversed(owners) for name in base.__dataclass_fields__)
+        name for base in reversed(owners)
+        for name in base.__dataclass_fields__)
     if not names:
         return
     fields = cls.__dataclass_fields__ = {
