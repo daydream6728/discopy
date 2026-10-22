@@ -512,7 +512,25 @@ class Matrix(MarkovCategory, ComarkovCategory, DaggerCategory,
         return self.conjugate().transpose()
 
     def map(self, func: Callable, dtype: type | None = None) -> Matrix:
+        """
+        Apply a function to each entry of a matrix.
+
+        Parameters:
+            func : The function to apply.
+            dtype : The ``dtype`` of the result, by default the one
+                :meth:`promote` gives for the matrix and the entries
+                computed, so that a map widens and never truncates.
+
+        Example
+        -------
+        >>> Matrix([1, 2], 1, 2).map(lambda x: x + 0.5)
+        Matrix[float]([1.5, 2.5], dom=1, cod=2)
+        >>> Matrix([1, 2], 1, 2).map(lambda x: x + 0.5, dtype=int)
+        Matrix[int]([1, 2], dom=1, cod=2)
+        """
         array = list(map(func, self.array.reshape(-1)))
+        if dtype is None and array:
+            dtype = self.promote(Matrix(array, 1, len(array))).dtype
         return type(self)[dtype or self.dtype](array, self.dom, self.cod)
 
     def round(self, decimals=0) -> Matrix:

@@ -348,6 +348,19 @@ def test_Tensor_dtype_inference():
     assert Box[np.int64] is Box[int] and Spider[np.complex128] is Spider[complex]
 
 
+def test_eval_infers_dtype_from_boxes():
+    """ The dtype of an evaluation is promoted across the boxes, see B9 of
+    #31, and a structural box takes the dtype of the others. """
+    f = Box('f', Dim(2), Dim(2), [1, 0, 0, 1])
+    g = Box('g', Dim(2), Dim(2), [.5, 0, 0, 1])
+    h = Box('h', Dim(2), Dim(2), [True, False, False, True])
+    assert (f >> f).eval().dtype == f.eval().dtype == int
+    assert (f >> g).eval() == (g >> f).to_map().eval() == g.eval()
+    assert (h @ h >> Swap(Dim(2), Dim(2))).eval().dtype == bool
+    assert (f >> f).eval(dtype=float).dtype == float
+    assert h.bubble().eval(dtype=bool) == Tensor[bool]([0, 1, 1, 0], Dim(2), Dim(2))
+
+
 def test_Box_pickled_before_dtype_inference():
     """ A box pickled with its data alone gets the dtype of its class. """
     import pickle

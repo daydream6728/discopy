@@ -509,7 +509,7 @@ class Functor(frobenius.Functor):
 
     def __call__(self, other):
         if isinstance(other, Bubble):
-            return self(other.arg).map(other.func)
+            return self(other.arg).map(other.func, self.dtype)
         if isinstance(other, (
                 cat.Ob, cat.Box, monoidal.Colour, monoidal.Ty)):
             return super().__call__(other)
@@ -650,7 +650,8 @@ class Diagram(NamedGeneric['dtype'], frobenius.Diagram):
 
         Parameters:
             dtype : The datatype for spiders and the result,
-                inferred from the boxes by default.
+                inferred from the boxes by default, i.e. the one
+                :meth:`Matrix.promote` gives for their ``dtype``.
             optimize : The contraction path, passed verbatim to the
                 backend ``einsum``.
             params : Any other optional parameter of the backend
@@ -662,12 +663,20 @@ class Diagram(NamedGeneric['dtype'], frobenius.Diagram):
         >>> assert (vector >> vector[::-1]).eval().array == 1
         >>> assert (vector >> vector[::-1]).eval(
         ...     optimize="optimal").array == 1
+        >>> (vector >> vector[::-1]).eval()
+        Tensor[int]([1], dom=Dim(1), cod=Dim(1))
+        >>> (vector @ Box('half', Dim(1), Dim(1), [0.5])).eval()
+        Tensor[float]([0. , 0.5], dom=Dim(1), cod=Dim(2))
         """
         category = self.category if isinstance(self, cmap.CMap) else self.ar
+        dtype = dtype or getattr(self, "dtype", None)
+        if dtype is None:
+            typed = [Matrix[box.dtype].zero(0, 0)
+                     for box in self.boxes if box.dtype is not None]
+            dtype = typed[0].promote(*typed[1:]).dtype if typed else None
         return Functor(
             ob_map=category.dim, ar_map=lambda box: box.array,
-            dtype=dtype or getattr(self, "dtype", None),
-            optimize=optimize, **params)(self)
+            dtype=dtype, optimize=optimize, **params)(self)
 
     def to_quimb(self, dtype: type = None) -> "quimb.tensor.Tensor":
         """

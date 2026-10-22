@@ -293,6 +293,16 @@ def test_repr_leaves_numpy_printoptions_alone():
     assert np.get_printoptions()['threshold'] == threshold
 
 
+def test_Matrix_map_widens():
+    """ A map with no dtype widens to its entries, see B9 of #31. """
+    m = Matrix([1, 2], 1, 2)
+    assert m.map(lambda x: x + 0.5) == Matrix[float]([1.5, 2.5], 1, 2)
+    assert m.map(lambda x: 2 * x) == Matrix([2, 4], 1, 2)
+    assert m.map(lambda x: x + 0.5, dtype=int) == m
+    assert Matrix[complex]([1j], 1, 1).map(abs).dtype == complex
+    assert Matrix.zero(0, 0).map(float) == Matrix.zero(0, 0)
+
+
 def test_Matrix_basis_dtype():
     for x in range(4):
         assert Matrix.basis(x, 0).dtype == Matrix.id(x).dtype

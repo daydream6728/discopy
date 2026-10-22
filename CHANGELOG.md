@@ -1654,6 +1654,16 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - A subclass of `CMap` reprs as its own class, named by `factory_name` as
   a `Hypergraph` is, where the repr of every map began with `cmap.CMap[`
   ([rel-int/discopy-next#168](https://github.com/rel-int/discopy-next/issues/168)).
+- `Matrix.map` with no `dtype` builds its result in the class `promote`
+  gives for the matrix and the entries it computed, so a map widens and
+  never truncates: `Matrix([1, 2], 1, 2).map(lambda x: x + 0.5)` is
+  `Matrix[float]([1.5, 2.5])` where it cast back to `[1, 2]`. And
+  `tensor.Diagram.eval()` with no `dtype` infers it from the boxes,
+  promoting across them, as its docstring says, so `(f >> f).eval()` has
+  the dtype of `f.eval()` where the identities of the network made it a
+  float; a bubble evaluated by a `tensor.Functor` lands in its codomain
+  (B9 of
+  [rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
 - The tensor spider with no legs is the circle, the dimension of its wire,
   as spider fusion says it is, `Tensor.spiders(0, 0, Dim(2))` being `2`
   like `Tensor.spiders(0, 1, Dim(2)) >> Tensor.spiders(1, 0, Dim(2))`,
