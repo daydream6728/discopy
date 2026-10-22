@@ -283,13 +283,15 @@ def test_Hypergraph_to_diagram_offset():
 
 
 def test_Hypergraph_cap_after_states():
-    x = Ty('x')
-    f = Box('f', Ty(), x)
-    diagram = x @ f >> Cap(x, x) @ x @ x
-    assert diagram.to_hypergraph().to_diagram() == diagram
-    for diagram in [f @ Cap(x, x), x @ f >> x @ Cap(x, x) @ x]:
+    """ A cap goes beside the wire its first reader reads next to it, see
+    #108 and #187. """
+    x, y = Ty('x'), Ty('y')
+    f, g = Box('f', Ty(), x), Box('g', y @ x, x)
+    for diagram in [
+            x @ f >> Cap(x, x) @ x @ x, f @ Cap(x, x),
+            x @ f >> x @ Cap(x, x) @ x, y @ Cap(x, x) >> g @ x]:
         decoded = diagram.to_hypergraph().to_diagram()
-        assert decoded.to_hypergraph() == diagram.to_hypergraph()
+        assert decoded in (diagram, diagram.foliation())
 
 
 def test_Hypergraph_from_glued():

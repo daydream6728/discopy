@@ -1965,7 +1965,9 @@ class Hypergraph(
         read in the scan of this pass, which :meth:`make_bijective` keeps as
         it was recorded, its spider boxes coming after every such state; a
         hint past the end of the scan, e.g. one given by hand, is clamped to
-        it.
+        it. A state with no offset, e.g. a cap of :meth:`make_monogamous`,
+        goes beside the wire that the first box or output reading it reads
+        next to it, and on the left when there is none.
 
         Note
         ----
@@ -2025,6 +2027,23 @@ class Hypergraph(
                     factory_name(self.category)))
             return self.category.from_permutation(perm, diagram.cod)
 
+        def beside(depth):
+            _, cod_wires = self.box_wires[depth]
+            if not cod_wires:
+                return 0
+            first, last = (next((
+                dom for dom, _ in self.box_wires[depth + 1:] if wire in dom),
+                self.cod_wires) for wire in (cod_wires[0], cod_wires[-1]))
+            if cod_wires[0] in first[1:]:
+                before = first[first.index(cod_wires[0]) - 1]
+                if before in scan:
+                    return scan.index(before) + 1
+            if cod_wires[-1] in last[:-1]:
+                after = last[last.index(cod_wires[-1]) + 1]
+                if after in scan:
+                    return scan.index(after)
+            return 0
+
         def flush():
             nonlocal diagram, pending, layer_right, shift
             if pending:
@@ -2041,7 +2060,7 @@ class Hypergraph(
             dom_wires, cod_wires = self.box_wires[depth]
             positions = [scan.index(spider) for spider in dom_wires]
             if offset is None:
-                offset = positions[0] if positions else 0
+                offset = positions[0] if positions else beside(depth)
             offset -= sum(j < offset for j in positions)
             if not box.dom:
                 offset = min(offset, len(scan))
