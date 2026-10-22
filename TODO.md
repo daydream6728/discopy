@@ -7,7 +7,7 @@ needs pyzx ≥ 0.9, against the `quantum` extra's `pyzx == 0.7.3`, so the `optyx
 in the `all` group until discopy reads pyzx 0.10. That is a change to discopy, so it goes first,
 on its own.
 
-- [ ] `quantum` pins pyzx 0.10.7
-- [ ] `zx.Diagram.to_pyzx` gives pyzx exact `Fraction` phases, which pyzx 0.10 requires
-- [ ] `test/fixtures/zx-graph.json` says which boundary is which in the way pyzx 0.10 reads
-- [ ] CHANGELOG under `Changed`
+- [x] `quantum` pins pyzx 0.10.7
+- [x] `zx.Diagram.to_pyzx` gives pyzx exact `Fraction` phases, which pyzx 0.10 requires
+- [x] `test/fixtures/zx-graph.json` says which boundary is which in the way pyzx 0.10 reads
+- [x] CHANGELOG under `Changed`
