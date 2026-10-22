@@ -578,14 +578,17 @@ class Box(Arrow):
     @classmethod
     def strategy(
             cls, *, types=None, dom=None, cod=None):
-        """Generate fresh free boxes with optional exact boundaries."""
+        """
+        Generate fresh free boxes with optional exact boundaries, each named
+        by an identifier, as the law of :meth:`str_transparency` asks.
+        """
         from hypothesis import strategies as st
 
         types = cls.ob.strategy() if types is None else types
         doms = types if dom is None else st.just(dom)
         cods = types if cod is None else st.just(cod)
         return st.tuples(st.uuids(), doms, cods).map(
-            lambda args: cls(str(args[0]), args[1], args[2]))
+            lambda args: cls(f"f_{args[0].hex}", args[1], args[2]))
 
     def __setstate__(self, state):
         if '_name' in state:  # Backward compatibility
