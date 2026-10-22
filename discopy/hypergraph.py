@@ -1735,8 +1735,9 @@ class Hypergraph(
         """
         Introduce trace boxes to make self causal. A spider that is not left
         monogamous is first given a merge, see :meth:`make_left_monogamous`,
-        when the category has merges, i.e. it is a :class:`ComarkovCategory`,
-        and is bent with cups and caps otherwise, see :meth:`make_monogamous`.
+        unless the category has cups and caps but no merges, i.e. it is a
+        :class:`RigidCategory` but not a :class:`ComarkovCategory`: it is
+        then bent with cups and caps, see :meth:`make_monogamous`.
 
         Example
         -------
@@ -1757,12 +1758,10 @@ class Hypergraph(
         """
         if self.is_left_monogamous:
             return self.trace_backward_wires()
-        if issubclass(self.category, ComarkovCategory):
-            return self.make_left_monogamous().make_causal()
-        if not issubclass(self.category, RigidCategory):
-            raise AxiomError(messages.NOT_RIGID.format(
-                factory_name(self.category)))
-        return self.make_monogamous().make_causal()
+        if issubclass(self.category, RigidCategory)\
+                and not issubclass(self.category, ComarkovCategory):
+            return self.make_monogamous().make_causal()
+        return self.make_left_monogamous().make_causal()
 
     def make_cocausal(self) -> Hypergraph:
         """
@@ -2291,9 +2290,9 @@ class Hypergraph(
         read in the scan of this pass, which :meth:`make_bijective` keeps as
         it was recorded, its spider boxes coming after every such state; a
         hint past the end of the scan, e.g. one given by hand, is clamped to
-        it. A state with no offset, e.g. a cap of :meth:`make_monogamous`,
-        goes beside the wire that the first box or output reading it reads
-        next to it, and on the left when there is none.
+        it. A state with no offset goes on the left, unless it is a cap, e.g.
+        one of :meth:`make_monogamous`: it then goes beside the wire that the
+        first box or output reading it reads next to it, if there is one.
 
         Note
         ----
@@ -2353,10 +2352,11 @@ class Hypergraph(
                     factory_name(self.category)))
             return self.category.from_permutation(perm, diagram.cod)
 
+        caps = getattr(self.category, "cap_factory", None)
+        caps = caps if isclass(caps) else ()
+
         def beside(depth):
             _, cod_wires = self.box_wires[depth]
-            if not cod_wires:
-                return 0
             first, last = (next((
                 dom for dom, _ in self.box_wires[depth + 1:] if wire in dom),
                 self.cod_wires) for wire in (cod_wires[0], cod_wires[-1]))
@@ -2386,7 +2386,8 @@ class Hypergraph(
             dom_wires, cod_wires = self.box_wires[depth]
             positions = [scan.index(spider) for spider in dom_wires]
             if offset is None:
-                offset = positions[0] if positions else beside(depth)
+                offset = positions[0] if positions\
+                    else beside(depth) if isinstance(box, caps) else 0
             offset -= sum(j < offset for j in positions)
             if not box.dom:
                 offset = min(offset, len(scan))
