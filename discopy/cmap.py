@@ -1728,11 +1728,12 @@ cycles of this map.
         or on to the wire on its right, the turns add up to half a turn when
         that wire is its neighbour in a planar drawing: a corner between two
         wires turns by half a turn, a corner around a state or an effect by
-        minus half a turn and the side of a box not at all. The box waits
-        while the two walks disagree or neither reaches the scan; the first
-        box that reads it then puts it next to the wire it reads beside it,
-        and it goes on the right of the open wires when nothing says where,
-        e.g. when the map is not planar.
+        minus half a turn and the side of a box not at all. When the two
+        walks disagree, it goes next to the wire that its first reader reads
+        beside it. When neither reaches the scan yet, the box waits for its
+        first reader if it is a cap or the category has no swaps, so that
+        the other boxes keep their order, and it goes on the right of the
+        open wires when nothing says where, e.g. when the map is not planar.
 
         >>> from discopy.monoidal import Ty, Box
         >>> x, y = Ty('x'), Ty('y')
@@ -1756,10 +1757,14 @@ cycles of this map.
             else len(self.dom) - 1 if self.dom else first_output
         diagram = self.category.id(self.dom)
         scan = [edge_wire[i] for i in range(len(self.dom))]
+        outputs = [edge_wire[i] for i in range(first_output, self.n_ports)]
         placed, waiting = set(), []
+        symmetric = issubclass(self.category, SymmetricCategory)
+        caps = getattr(self.category, "cap_factory", None)
+        caps = caps if isclass(caps) else ()
 
         def permute(perm):
-            if not issubclass(self.category, SymmetricCategory):
+            if not symmetric:
                 raise AxiomError(messages.NOT_SYMMETRIC.format(
                     factory_name(self.category)))
             return self.category.from_permutation(perm, diagram.cod)
@@ -1829,14 +1834,23 @@ cycles of this map.
                     return scan.index(after)
             return None
 
-        def force(depth, reads=()):
-            while beside(depth, reads) is None and not gaps(depth)\
+        def reader(depth):
+            _, cod_wires = wires(depth)
+            return next((
+                wires(later)[0] for later in range(depth + 1, len(self.boxes))
+                if set(cod_wires).intersection(wires(later)[0])), outputs)
+
+        def where(depth):
+            found = gaps(depth)
+            near = None if len(found) == 1 else beside(depth, reader(depth))
+            return min(found, default=len(scan)) if near is None else near
+
+        def force(depth):
+            while not gaps(depth) and beside(depth, reader(depth)) is None\
                     and waiting[0] != depth:
                 force(waiting[0])
-            offset = beside(depth, reads)
             waiting.remove(depth)
-            place(depth, min(gaps(depth), default=len(scan))
-                  if offset is None else offset)
+            place(depth, where(depth))
 
         def place(depth, offset=None):
             nonlocal diagram, scan
@@ -1855,31 +1869,28 @@ cycles of this map.
             placed.add(depth)
 
         def settle():
-            ready = [depth for depth in waiting if len(gaps(depth)) == 1]
+            ready = [depth for depth in waiting if gaps(depth)]
             while ready:
                 waiting.remove(ready[0])
-                place(ready[0], *gaps(ready[0]))
-                ready = [depth for depth in waiting if len(gaps(depth)) == 1]
+                place(ready[0], where(ready[0]))
+                ready = [depth for depth in waiting if gaps(depth)]
 
         for depth, box in enumerate(self.boxes):
             reads, _ = wires(depth)
             for other in [other for other in waiting
                           if set(reads).intersection(wires(other)[1])]:
                 if other in waiting:
-                    force(other, reads)
-            if box.dom:
-                place(depth)
+                    force(other)
+            if box.dom or symmetric and not isinstance(box, caps):
+                place(depth, None if box.dom else where(depth))
             else:
                 waiting.append(depth)
             settle()
         while waiting:
             force(waiting[0])
 
-        cod_wires = [
-            edge_wire[self.n_ports - len(self.cod) + i]
-            for i in range(len(self.cod))]
         perm = Permutation(
-            [scan.index(wire_id) for wire_id in cod_wires], len(scan))
+            [scan.index(wire_id) for wire_id in outputs], len(scan))
         if not perm.is_identity:
             diagram >>= permute(perm)
         return diagram
