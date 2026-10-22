@@ -20,6 +20,7 @@ def double_and_module():
 
 
 taft = Algebra.taft(3)
+taft_double = Double(taft)
 sweedler_double = Double(Algebra.sweedler())
 
 
@@ -288,6 +289,23 @@ def test_twist_is_the_trace_of_the_braid():
             assert np.isclose(complex(F(diagram).eval(dtype=complex)), theta)
 
 
+def test_twist_dagger_is_its_inverse():
+    """B51 of #31: over the double of the Taft algebra, which is not
+    unitary, the dagger of the twist is its inverse, the action of the
+    ribbon element, not the conjugate transpose which is no intertwiner."""
+    D = taft_double
+    V = Representation[D].regular()
+    x = ribbon.Ty('x')
+    F = Functor(ob_map={x: V}, ar_map={}, cod=Intertwiner[D])
+    twist = ribbon.Twist(x)
+    identity = F(ribbon.Id(x)).eval(dtype=complex)
+    for diagram in [twist >> twist.dagger(), twist.dagger() >> twist]:
+        assert F(diagram).eval(dtype=complex).is_close(identity)
+    untwist = F(twist.dagger())
+    lhs, rhs = V.action >> untwist, D.ty @ untwist >> V.action
+    assert lhs.eval(dtype=complex).is_close(rhs.eval(dtype=complex))
+
+
 def test_is_module_rejects_non_module():
     Z2 = Algebra.cyclic(2)
     zero = Box('bad', Z2.ty @ Dim(2), Dim(2), np.zeros((2, 2, 2)))
@@ -482,7 +500,7 @@ def test_ribbon_element_criterion():
     """The double of an odd Taft algebra is ribbon, of an even one is not,
     by Kauffman-Radford: accessing the ribbon element validates centrality,
     S(v) = v and v^2 = uS(u), raising when they fail."""
-    assert Double(taft).ribbon_element is not None
+    assert taft_double.ribbon_element is not None
     try:
         sweedler_double.ribbon_element
         assert False

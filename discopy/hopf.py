@@ -982,11 +982,12 @@ class Intertwiner(NamedGeneric["algebra"], tensor.Diagram, RibbonCategory):
         return cls(body.inside, body.dom, body.cod)
 
     @classmethod
-    def twist(cls, dom):
+    def twist(cls, dom, is_dagger=False):
         """
         The twist of ``dom``, i.e. the trace of the braid: the action of the
         inverse :math:`v^{-1}` of the ribbon element
-        :attr:`Algebra.ribbon_element`.
+        :attr:`Algebra.ribbon_element` (its inverse, the action of :math:`v`,
+        when ``is_dagger``), as twists have their dagger as inverse.
 
         >>> D = Double(Algebra.cyclic(3))
         >>> omega = np.exp(2j * np.pi / 3)
@@ -998,15 +999,20 @@ class Intertwiner(NamedGeneric["algebra"], tensor.Diagram, RibbonCategory):
         >>> assert twist.eval(dtype=complex).is_close(
         ...     trace.eval(dtype=complex))
         >>> assert np.isclose(complex(twist.eval(dtype=complex)), omega)
+        >>> untwist = Intertwiner[D].twist(V, is_dagger=True)
+        >>> assert (twist >> untwist).eval(dtype=complex).is_close(
+        ...     Id(V).eval(dtype=complex))
         """
         H = cls.algebra
         if H is None:
             raise ValueError("the twist needs a quasitriangular structure")
-        unit, _, mult, *_ = H.arrays
-        v = H.ribbon_element.eval(dtype=complex).array.reshape(H.dim)
-        inverse = np.linalg.solve(np.einsum('i,ijk->kj', v, mult), unit)
-        body = Box[complex]('v⁻¹', Dim(1), H.ty, inverse.tolist()) \
-            @ Id(Dim(*dom.inside)) >> dom.action
+        state = H.ribbon_element
+        if not is_dagger:
+            unit, _, mult, *_ = H.arrays
+            v = state.eval(dtype=complex).array.reshape(H.dim)
+            inverse = np.linalg.solve(np.einsum('i,ijk->kj', v, mult), unit)
+            state = Box[complex]('v⁻¹', Dim(1), H.ty, inverse.tolist())
+        body = state @ Id(Dim(*dom.inside)) >> dom.action
         return cls(body.inside, body.dom, body.cod)
 
     @classmethod
@@ -1156,8 +1162,9 @@ class Functor(ribbon.Functor):
     :attr:`~Representation.r` when the winding is odd), a product of atoms to
     the product of modules, and a cup/cap/twist to
     ``Intertwiner.cups``/``caps``/:meth:`~Intertwiner.twist`. The one override
-    routes both crossings of a braid to :meth:`Intertwiner.braid`, the
-    under-crossing being the antipode inverse rather than the tensor adjoint.
+    routes both crossings of a braid to :meth:`Intertwiner.braid` and both
+    twists to :meth:`Intertwiner.twist`, the dagger being the inverse rather
+    than the tensor adjoint, which is not an intertwiner.
 
     Example
     -------
@@ -1195,4 +1202,6 @@ class Functor(ribbon.Functor):
         if isinstance(other, ribbon.Braid):
             return self.cod.braid(self(other.dom[:1]), self(other.dom[1:]),
                                   is_dagger=other.is_dagger)
+        if isinstance(other, ribbon.Twist):
+            return self.cod.twist(self(other.dom), is_dagger=other.is_dagger)
         return super().__call__(other)

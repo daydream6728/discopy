@@ -2006,6 +2006,13 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   so that rotating a diagram with an inverse braid built one that did not
   compose (B17 of
   [discopy/discopy#606](https://github.com/discopy/discopy/issues/606)).
+- `hopf.Intertwiner.twist` takes `is_dagger`, as `braid` does, and
+  `hopf.Functor` sends the dagger of a twist to the inverse twist, the
+  action of the ribbon element, as it sends the dagger of a braid to the
+  inverse R-matrix. It sent it to the conjugate transpose of the twist,
+  which over `Double(taft(3))` is neither its inverse nor an intertwiner
+  (B51 of
+  [rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
 - `braided.Diagram` and `ribbon.Diagram` bind their own `functor_factory`,
   where they read those of `monoidal` and `pivotal`, so that their
   conversions map a braid to a braid and a twist to a twist, as `balanced`
