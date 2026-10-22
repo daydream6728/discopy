@@ -467,7 +467,8 @@ def per_board_backward(net: nn.Module, board_loss, batched: tuple, k: float,
     out of the norm and summed unscaled; a parameter the loss never touches
     keeps ``.grad`` ``None``, as autograd would leave it (``torch.func``
     reports zeros there, and AdamW decays a zero gradient but skips a
-    missing one). The norms sum the parameters in registration order.
+    missing one), and so does a frozen one, ``requires_grad=False``. The
+    norms sum the parameters in registration order.
     Returns ``(aux stacked over the boards, stats)``.
 
     Parameters:
@@ -495,7 +496,8 @@ def per_board_backward(net: nn.Module, board_loss, batched: tuple, k: float,
     # pylint: disable=too-many-locals
     k = positive(k)
     bound = Bound(net, board_loss)
-    params = {name: p.detach() for name, p in bound.named_parameters()}
+    params = {name: p.detach() for name, p in bound.named_parameters()
+              if p.requires_grad}
     buffers = dict(bound.named_buffers())
     counted = {name for name in params
                if not any(name[len("net."):].startswith(e) for e in exclude)}
@@ -523,8 +525,8 @@ def per_board_backward(net: nn.Module, board_loss, batched: tuple, k: float,
     stats = statistics(norms, losses, scale)
     with torch.no_grad():
         for name, p in bound.named_parameters():
-            row = rows[name]
-            if not bool(row.any()):
+            row = rows.get(name)
+            if row is None or not bool(row.any()):
                 continue
             if name in counted:
                 row = rescale(row, scale)

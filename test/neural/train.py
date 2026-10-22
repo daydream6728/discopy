@@ -112,6 +112,12 @@ def test_per_board_backward():
         [net.body.weight, net.halt.weight])
     assert torch.allclose(net.body.weight.grad, grads[0])
     assert torch.allclose(net.halt.weight.grad, grads[1])
+    net.zero_grad(set_to_none=True)
+    net.body.bias.requires_grad_(False)
+    per_board_backward(net, board_loss, (x, y), k=1e9)
+    assert net.body.bias.grad is None
+    assert torch.allclose(net.body.weight.grad, grads[0])
+    net.body.bias.requires_grad_(True)
     before = net.halt.weight.grad.clone()
     _, stats = per_board_backward(
         net, board_loss, (x, y), k=1e-6, reference=1.)
