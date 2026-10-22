@@ -232,7 +232,7 @@ def substitute(annotation, scope: dict):
     """
     The annotation with each variable of the scope replaced by its value,
     from the leaves up, so that an object expression is computed once its
-    variables are, see :class:`Former`.
+    variables are, see :class:`Constructor`.
 
     >>> from discopy.monoidal import Ty
     >>> A, B = TypeVar("A"), TypeVar("B")
@@ -256,12 +256,12 @@ def substitute(annotation, scope: dict):
     return origin[args if len(args) > 1 else args[0]]
 
 
-class Former:
+class Constructor:
     """
-    A former of object expressions in a signature, e.g. ``Tensor[A, B]``: a
-    type for a typechecker, an expression while a variable is left in it,
-    see :func:`is_open`, and the object :meth:`form` builds once there is
-    none.
+    A constructor of object expressions in a signature, e.g.
+    ``Tensor[A, B]``: a type for a typechecker, an expression while a
+    variable is left in it, see :func:`is_open`, and the object
+    :meth:`form` builds once there is none.
     """
     def __class_getitem__(cls, args):
         args = args if isinstance(args, tuple) else (args, )
@@ -271,11 +271,11 @@ class Former:
 
     @staticmethod
     def form(*args):
-        """ The object the former builds from objects, to be instantiated. """
+        """ The object the constructor builds from objects. """
         raise NotImplementedError
 
 
-class Tensor[*Objects](Former):
+class Tensor[*Objects](Constructor):
     """
     The tensor of objects in a signature: ``Tensor[A, B]`` is a type for a
     typechecker and the object ``A @ B`` once the variables are sampled.
@@ -288,7 +288,7 @@ class Tensor[*Objects](Former):
         return reduce(matmul, objects)
 
 
-class Unit[Coarse](Former):
+class Unit[Coarse](Constructor):
     """
     The unit of a monoid of objects in a signature: ``Unit[C0]`` is the
     object ``C0()``.
@@ -302,7 +302,7 @@ class Unit[Coarse](Former):
         return ob()
 
 
-class L[Object](Former):
+class L[Object](Constructor):
     """ The left adjoint of an object in a signature, ``x.l``. """
     @staticmethod
     def form(*args):
@@ -310,7 +310,7 @@ class L[Object](Former):
         return obj.l
 
 
-class R[Object](Former):
+class R[Object](Constructor):
     """ The right adjoint of an object in a signature, ``x.r``. """
     @staticmethod
     def form(*args):
@@ -318,7 +318,7 @@ class R[Object](Former):
         return obj.r
 
 
-class Delay[Coarse, Object](Former):
+class Delay[Coarse, Object](Constructor):
     """
     The delay of an object by one time step in a signature, read off the
     delay of its identity in a category ``Coarse``, i.e.
@@ -334,7 +334,7 @@ class Delay[Coarse, Object](Former):
         return category.id(obj).delay().dom
 
 
-class Over[Base, Exponent](Former):
+class Over[Base, Exponent](Constructor):
     """ The exponential on the left in a signature, ``base << exponent``. """
     @staticmethod
     def form(*args):
@@ -342,7 +342,7 @@ class Over[Base, Exponent](Former):
         return base << exponent
 
 
-class Under[Exponent, Base](Former):
+class Under[Exponent, Base](Constructor):
     """ The exponential on the right in a signature, ``exponent >> base``. """
     @staticmethod
     def form(*args):
@@ -350,7 +350,7 @@ class Under[Exponent, Base](Former):
         return exponent >> base
 
 
-class Repeat[Object, N](Former):
+class Repeat[Object, N](Constructor):
     """
     An object repeated a number of times in a signature, ``x ** n``.
 
@@ -365,12 +365,15 @@ class Repeat[Object, N](Former):
 
 def position(variable: TypeVar, category: type) -> int | None:
     """
-    The position of a type parameter of a class above a category among
-    those of the class that says what they stand for, i.e. that defines
-    ``parameters``, following each generic base that passes the parameter
-    on, e.g. the ``C1`` of a ``Monoid`` is the second parameter of a
-    ``Category``, since a monoid is a ``ColouredMonoid[NoneType, C1]``.
-    :obj:`None` for a parameter that is not passed on to such a class.
+    Which parameter of :meth:`discopy.abc.Category.parameters` a type
+    parameter of a class above a category stands for.
+
+    The answer is read off the class that defines ``parameters``. A type
+    parameter of a subclass gets there through the generic bases: e.g. a
+    ``Monoid[C1]`` is a ``ColouredMonoid[NoneType, C1]``, which is a
+    ``Category[NoneType, C1]``, so the ``C1`` of a monoid is the second
+    parameter of a category. :obj:`None` when the bases lose the parameter
+    before they reach that class.
 
     >>> from discopy.abc import Category, Monoid
     >>> assert position(Monoid.__type_params__[0], Monoid) == 1
