@@ -19,7 +19,7 @@ This pull request is the second of the two, stacked on #243: frobenius.
 
 ## Points
 
-- [ ] `finset.Cospan`: pushout, disjoint union, swaps, spiders, cups, caps, trace; a `HypergraphCategory` in the property matrix
+- [x] `finset.Cospan`: pushout, disjoint union, swaps, spiders, cups, caps, trace; a `HypergraphCategory` in the property matrix
 - [ ] `abc.HypergraphCategory.cospan` and `from_cospan`, a cospan in any hypergraph category
 - [ ] `frobenius.Cospan`, with `Permutation`, `Swap`, `Cup`, `Cap` and phase-free `Spider` as cospans, and `Cospan(x, [0], [0, 0]) == Spider(1, 2, x)`
 - [ ] `frobenius.Layer` alternates cospans and generators; foliation fuses them; `Diagram.spiders` of a type is one cospan
