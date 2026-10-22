@@ -2026,6 +2026,27 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   loses a guard on an attribute no layer has, which raised a message that
   did not exist
   ([rel-int/discopy-next#1](https://github.com/rel-int/discopy-next/pull/1)).
+- `finset.Function.permutation(xs, doms)` permutes blocks of the sizes
+  `doms`, the `i`-th block of its codomain being the `xs[i]`-th of its
+  domain as in `Matrix.permutation`, where it raised unless every block had
+  size one; `tensor.Box` compares and hashes an array of any backend or a
+  list of lists as data by its flattened entries, where `==` raised `The
+  truth value of an array is ambiguous` and nested lists were unhashable;
+  and
+  `multiplicative.Function.curry(n)` raises `ValueError` when `n` is
+  negative or more than the domain has, where it silently curried all of it
+  ([rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
+- `Matrix.__repr__` leaves numpy's global print options alone: it passes
+  `config.NUMPY_THRESHOLD` to `numpy.array2string`, where it set it for
+  every array printed afterwards. `Matrix.basis` builds its array in the
+  `dtype` of its carrier like `copy`, so that `basis(0, i)` is `int64` like
+  `id(0)` rather than `float64`
+  ([rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31),
+  [rel-int/discopy-next#88](https://github.com/rel-int/discopy-next/issues/88)).
+- `tensor.Functor` maps a `Dim` with its `ob_map`, atom by atom like any
+  other type, where it returned it untouched, so that on tensor diagrams,
+  whose objects are dimensions, the object mapping was never read
+  ([rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
 - `Matrix.copy(x, n)` is the diagonal of the direct sum, `n` identities
   side by side, i.e. `array[i, j]` iff `j % x == i`, where it was the
   Kronecker diagonal, the copy of the tensor product: under the direct sum
