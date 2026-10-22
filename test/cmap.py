@@ -53,7 +53,9 @@ def test_M_init():
 
 
 def test_repr_eq_and_hash():
+    from discopy import cmap
     from discopy.compact import Ty, Box, CMap as M
+    from discopy.utils import factory_name
 
     x, y = map(Ty, "xy")
     cm = M.from_box(Box("f", x, y))
@@ -66,6 +68,11 @@ def test_repr_eq_and_hash():
     assert cm == M.from_box(Box("f", x, y))
     assert cm != object()
     assert hash(cm) == hash(M.from_box(Box("f", x, y)))
+
+    class Map(cmap.CMap):
+        category = compact.Diagram
+
+    assert repr(Map.id(x) @ Map.id(y)).startswith(factory_name(Map) + "(")
 
     g = M.from_box(Box("g", y, x))
     interchanged = (cm @ g).interchange(0, 1)

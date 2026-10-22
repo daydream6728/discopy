@@ -784,8 +784,7 @@ class CMap[C0: Pregroup, C1: CMap](
             and self.is_topologically_ordered
 
     def __repr__(self):
-        factory = f"cmap.CMap[{factory_name(self.category)}]"
-        return factory\
+        return factory_name(type(self))\
             + f"(dom={self.dom!r}, cod={self.cod!r}, " \
               f"boxes={self.boxes!r}, edges={self.edges!r}, " \
               f"loops={self.loops!r})"
