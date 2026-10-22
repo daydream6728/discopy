@@ -722,7 +722,7 @@ class Sum(Box):
         del self.name
 
     @cached_property
-    def name(self):
+    def name(self):  # pylint: disable=method-hidden  # deleted by __init__
         """ The name of a sum is its :code:`repr`, computed when needed. """
         str_args = "" if self.terms\
             else f", dom={repr(self.dom)}, cod={repr(self.cod)}"
