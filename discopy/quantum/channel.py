@@ -51,7 +51,7 @@ from discopy.quantum.circuit import (
     Digit, Qudit)
 from discopy.quantum.gates import Discard, Measure, MixedState, Encode, Scalar
 from discopy.tensor import Dim, Tensor
-from discopy.utils import assert_isinstance, unbiased
+from discopy.utils import assert_isinstance, assert_iscomposable, unbiased
 
 
 class CQ:
@@ -179,6 +179,7 @@ class Channel(Tensor):
             return super().then(*others)
         other, = others
         assert_isinstance(other, type(self))
+        assert_iscomposable(self, other)
         array = (self.to_tensor() >> other.to_tensor()).array
         return type(self)(array, self.dom, other.cod)
 

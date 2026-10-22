@@ -88,3 +88,8 @@ def test_Channel_then_unbiased():
         channel.then(None)
     assert channel.then(channel, channel) == channel >> channel >> channel
     assert Channel[float].ar is Channel[float]
+
+
+def test_Channel_then_checks_classical_and_quantum():
+    with raises(AxiomError):
+        Channel.id(Q(Dim(2))) >> Channel.id(C(Dim(2, 2)))
