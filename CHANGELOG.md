@@ -82,11 +82,11 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   things make that weaker than it reads while changing no pass count, so
   every run now ends with a section naming both. **A cell that cannot
   fail**: one that drew fewer distinct terms than its budget allowed, so a
-  larger budget buys it nothing — `cat.Arrow.identity_typing` quantifies
-  over one object and `Ob.strategy` samples `axioms.GENERATORS`, so it draws
-  five terms under `pr`'s twenty examples and the same five under
-  `explore`'s thousand, and is green about `Ob('a')` through `Ob('e')`
-  rather than about the law. **A cell that stopped being checked**: one a
+  larger budget buys it nothing — `matrix.Matrix[int].copy_counitality`
+  quantifies over one object and `abc.Nat.strategy` samples the numbers up
+  to three, so it draws four terms under `pr`'s twenty examples and the
+  same four under `explore`'s thousand, and is green about copying zero to
+  three wires rather than about the law. **A cell that stopped being checked**: one a
   baseline run passed and this one skips, declares broken, or no longer
   collects, since a law nobody states is as green as one that held —
   learning that one merge had lost no cell cost two full matrix runs
@@ -595,8 +595,7 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `discopy.utils`, re-exported from `discopy.abc`, so `discopy.axioms`
   can use it — making a subscripted wrapper a class whose
   `strategy(cls, **params)` matches the contract `Testable.strategy` now
-  states, so a subspace annotation like `ComposablePair[C1]`
-  builds; an unbound axiom's `.strategy()` raises the same `TypeError`
+  states, so a subspace annotation builds; an unbound axiom's `.strategy()` raises the same `TypeError`
   as `.falsify` and calling it. The
   search itself is the canonical instantiation only — one atomic object or
   one free/generator box per parameter, no recursive or compound
@@ -811,6 +810,30 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Changed
 
+- A law of `discopy.axioms` is stated as a sequent, the sequent calculus
+  of [rel-int/discopy-next#1](https://github.com/rel-int/discopy-next/pull/1)
+  without its search: its type parameters are variables, objects `A:
+  Obj[C0]` or numbers `N: Count`, its parameters premises, a morphism `f:
+  Hom[C1, A, B]` from `A` to `B` or the value `x: Var[C0, X]` of an object
+  expression built with `Tensor`, `Unit`, `L`, `R`, `Delay`, `Over`,
+  `Under` and `Repeat`, and its return annotation the type of its output,
+  e.g. `Equation[Hom[C1, A, B]]`. `Declaration.sequents` draws the
+  variables, then each morphism premise from the strategy of the category
+  with its boundary, a `Var` premise being the value of its expression, and the property matrix checks every verdict against the type
+  its law states with `inhabits`, as well as that it holds. So the typing
+  laws `identity_typing`, `composition_dom_typing` and
+  `composition_cod_typing` go, every law typing its terms, and so do the
+  premise wrappers `ComposablePair`, `ComposableTriple`, `Grid` and `Loop`:
+  the laws of feedback quantify over a morphism `x @ Delay[C1, M] -> y @ M`
+  and the objects it is typed by. An axiom is called with keyword
+  arguments, `Axiom.weaken` passes parameters to the strategy of the
+  category where it named a subspace per argument, and
+  `Declaration.annotations` reads the annotations of a module under `from
+  __future__ import annotations` back as objects, the type parameters of
+  the class stating the law in scope.
+  `abc.Category.parameters` says what `C0` and `C1` stand for, a group's
+  objects being the one `None`.
+
 - Six more `then`s take `(self, *others)`, the signature that
   `abc.Category.then` declares and `cat.Arrow` implements: they had
   a plain binary `(self, other)` with no `utils.unbiased`, so that a third
@@ -914,8 +937,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `feedback` taking the keyword form `dom`, `cod`, `mem` first and a number
   `n` of objects as fallback, the two exclusive, read by `split_memory`;
   vanishing, joining, strength, tightening and sliding are stated once
-  there with `@axiom`, over the new `axioms.Loop` of a morphism
-  `x @ (m @ n).delay() -> y @ m @ n` and the morphisms it composes with.
+  there with `@axiom`, over a morphism `x @ (m @ n).delay() -> y @ m @ n`
+  and the morphisms it composes with.
   `abc.TracedCategory` extends it, `trace` its hook and its `feedback` the
   trace over the memory; the additive and multiplicative Python functions
   declare it, which they implemented without saying so, and the laws hold

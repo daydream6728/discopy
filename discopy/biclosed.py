@@ -94,7 +94,8 @@ from typing import (
 
 from discopy import cat, monoidal, cmap, messages
 from discopy.abc import BiclosedCategory
-from discopy.axioms import GENERATORS, Equivalence, Testable, axiom
+from discopy.axioms import (
+    GENERATORS, Equation as AbstractEquation, Equivalence, Testable, axiom)
 from discopy.drawing import Drawing
 from discopy.cat import factory
 from discopy.utils import (
@@ -933,12 +934,12 @@ class TermBase(Box, Equivalence):
             Canonical[cls].strategy(**params))
 
     @axiom
-    def alpha_renaming(cls, terms: Renamed[Self]) -> Equation:
+    def alpha_renaming(cls, terms: Renamed[Self]) -> AbstractEquation:
         """ A term is alpha-equivalent to its renamings, however many. """
         return AlphaEquation(*terms)
 
     @axiom
-    def alpha_application(cls, terms: Renamed[Self]) -> Equation:
+    def alpha_application(cls, terms: Renamed[Self]) -> AbstractEquation:
         """
         Alpha-equivalence is a congruence with respect to application: a
         function applied to alpha-equivalent arguments gives alpha-equivalent
@@ -950,7 +951,7 @@ class TermBase(Box, Equivalence):
         return AlphaEquation(*(f(term)(a) for term in terms))
 
     @axiom
-    def alpha_abstraction(cls, terms: Renamed[Self]) -> Equation:
+    def alpha_abstraction(cls, terms: Renamed[Self]) -> AbstractEquation:
         """
         Alpha-equivalence is a congruence with respect to abstraction:
         binding a variable in alpha-equivalent bodies gives alpha-equivalent
@@ -963,12 +964,12 @@ class TermBase(Box, Equivalence):
             for term in terms))
 
     @axiom
-    def alpha_soundness(cls, terms: Renamed[Self]) -> Equation:
+    def alpha_soundness(cls, terms: Renamed[Self]) -> AbstractEquation:
         """ Alpha-equivalent terms evaluate to the same diagram. """
         return Equation(*(term.eval() for term in terms))
 
     @axiom
-    def alpha_completeness(cls, terms: Canonical[Self]) -> Equation:
+    def alpha_completeness(cls, terms: Canonical[Self]) -> AbstractEquation:
         """
         Alpha-equivalence is decided by the canonical naming of the bound
         variables: two terms are alpha-equivalent exactly when their
@@ -1248,8 +1249,7 @@ type Term = Constant | Variable | Application | Abstraction
 
 
 for law in (
-        "unitality", "associativity", "identity_typing",
-        "composition_dom_typing", "composition_cod_typing",
+        "unitality", "associativity",
         "dagger_involution", "dagger_contravariance"):
     setattr(TermBase, law, getattr(Box, law).inapplicable(
         messages.TERM_IS_A_BOX))

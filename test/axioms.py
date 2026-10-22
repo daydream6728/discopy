@@ -1,68 +1,20 @@
 """ DisCoPy's property-testing module in action. """
 
-from __future__ import annotations
-
-from dataclasses import dataclass
-from typing import Self
+from typing import Self, TypeVar
 
 from hypothesis import find
 from hypothesis import strategies as st
 from hypothesis.errors import NoSuchExample
 from pytest import raises
 
-from discopy import cat
+from discopy import cat, feedback, rigid
+from discopy.abc import Category, Monoid
 from discopy.axioms import (
-    C1,
-    Axiom,
-    AxiomFailure,
-    ComposablePair,
-    ComposableTriple,
-    Equation,
-    Equivalence,
-    Grid,
-    Related,
-    Testable,
-    assert_axioms,
-    axiom,
-    resolve,
-    substitute,
-)
+    L, R, Axiom, AxiomFailure, Count, Delay, Equation, Equivalence,
+    Hom, Obj, Over, Related, Repeat, Tensor, Testable, Under, Unit, Var,
+    assert_axioms, axiom, inhabits, is_open, position, substitute)
 from discopy.cat import Arrow, Box, Functor, Ob
-from discopy.utils import AxiomError, NamedGeneric
-
-
-@dataclass(frozen=True)
-class Endo(Testable, NamedGeneric["factory"]):
-    """ An endomorphism of the factory, the subspace a law is weakened to. """
-
-    value: C1
-
-    def __post_init__(self):
-        if self.value.dom != self.value.cod:
-            raise ValueError("Expected an endomorphism.")
-
-    @classmethod
-    def strategy(cls, **params):
-        """Generate an arrow with equal domain and codomain."""
-        return resolve(cls.factory, **params).filter(
-            lambda arrow: arrow.dom == arrow.cod).map(cls)
-
-
-class Word(str, Testable["Word"]):
-    """ A word with tensor given by concatenation, a monoid to grid. """
-
-    __matmul__ = lambda self, other: Word(str(self) + str(other))
-
-    @classmethod
-    def strategy(cls, **params):
-        """Generate a word over two letters."""
-        return st.text("ab", max_size=3).map(cls)
-
-
-class Row(Grid):
-    """ Two horizontally composable cells. """
-
-    n_rows, n_columns = 1, 2
+from discopy.monoidal import Ty
 
 
 class ParityEquation(Equation):
@@ -120,12 +72,12 @@ def test_Equivalence():
 def test_failing_when_the_terms_do_not_build():
     class Refusing(Arrow):
         @axiom
-        def refusing(cls, f: C1) -> Equation:
+        def refusing(cls, f: Self) -> Equation:
             raise ValueError("No terms.")
         refusing = refusing.failing("Declared broken.")
 
     with raises(AxiomFailure) as error:
-        Refusing.refusing(Arrow.id(Ob('x')))
+        Refusing.refusing(f=Arrow.id(Ob('x')))
     assert isinstance(error.value.equation, ValueError)
     assert_axioms(Refusing)
 
@@ -140,24 +92,59 @@ def test_strategy():
     assert find(Box.strategy(dom=x), lambda _: True).dom == x
 
 
-def test_composable_shapes():
-    x, y = Ob('x'), Ob('y')
-    f, g = Box('f', x, y), Box('g', y, x)
-    assert ComposablePair(f, g) == (f, g)
-    assert ComposableTriple(f, g, f) == (f, g, f)
-    with raises(ValueError):
-        ComposablePair(f)
-    with raises(AxiomError):
-        ComposablePair(f, f)
-    pair = find(resolve(ComposablePair[Arrow]), lambda _: True)
-    assert isinstance(pair, ComposablePair) and pair[0].cod == pair[1].dom
-    assert Row(Word("a"), Word("b")) == ("a", "b")
-    with raises(TypeError):
-        resolve(int)
-    scope = {"C1": Arrow}
-    assert substitute(int, scope) is int
-    assert substitute(ComposablePair[Arrow], scope) is ComposablePair[Arrow]
-    assert substitute(ComposablePair[C1], scope) is ComposablePair[Arrow]
+def test_sequents():
+    @axiom
+    def law[X: Obj[Ob], Y: Obj[Ob], N: Count](
+            cls, x: Var[Ob, X], f: Hom[Self, X, Y], term: Self,
+            n: Var[int, N]
+    ) -> Equation[tuple[Var[Ob, X], bool, bool]]:
+        """ Quantify over an object, a morphism out of it, a term and a
+        number. """
+        return Equation(
+            (f.dom, isinstance(term, cls), n <= 3), (x, True, True))
+
+    bound = law.bind(Arrow)
+    scope, arguments = find(bound.sequents(), lambda _: True)
+    assert set(arguments) == {"x", "f", "term", "n"} and bound(**arguments)
+    assert inhabits(bound(**arguments), bound.output(scope))
+    _, given = find(bound.sequents(given={"Y": Ob('y')}), lambda _: True)
+    assert given["f"].cod == Ob('y')
+
+
+def test_constructors():
+    x, y = rigid.Ty('x'), rigid.Ty('y')
+    assert Tensor[x, y] == x @ y and Unit[rigid.Ty] == rigid.Ty()
+    assert (L[x], R[x]) == (x.l, x.r) and Repeat[x, 3] == x @ x @ x
+    assert (Over[x, y], Under[y, x]) == (x << y, y >> x)
+    z = feedback.Ty('z')
+    assert Delay[feedback.Diagram, z] == z.delay()
+    f = rigid.Box('f', x, y)
+    assert inhabits(f, Hom[rigid.Diagram, x, y])
+    assert not inhabits(f, Hom[rigid.Diagram, y, x])
+    assert inhabits(Equation(f), Equation[Hom[rigid.Diagram, x, y]])
+    assert not inhabits(Equation(f), Equation[Hom[rigid.Diagram, x, x]])
+    assert inhabits(Equation(f), Equation) and not inhabits(f, Equation)
+    assert inhabits((f, x), tuple[Hom[rigid.Diagram, x, y], Var[Ty, x]])
+    assert inhabits((x, x), tuple[Var[Ty, x], ...])
+    assert not inhabits(f, tuple[Hom[rigid.Diagram, x, y]])
+    assert inhabits(Arrow, type[Category]) and inhabits(1, int)
+
+
+def test_substitute():
+    A, B = TypeVar("A"), TypeVar("B")
+    x, y = Ty('x'), Ty('y')
+    assert is_open(Tensor[A, B]) and not is_open(Tensor[x, y])
+    assert substitute(Tensor[A, B], {A: x, B: y}) == x @ y
+    assert substitute(int, {A: x}) is int
+    assert substitute(Equation, {A: x}) is Equation
+    assert substitute(Equation[Hom[Arrow, A, B]], {A: x, B: y}).__args__ \
+        == (Hom[Arrow, x, y], )
+
+
+def test_position():
+    assert position(Monoid.__type_params__[0], Monoid) == 1
+    assert position(Category.__type_params__[0], Category) == 0
+    assert position(TypeVar("T"), Category) is None
 
 
 def test_axiom_binding():
@@ -169,25 +156,27 @@ def test_axiom_binding():
         Axiom(lambda cls: NotImplemented)()
     with raises(TypeError):
         Axiom(lambda cls: NotImplemented).falsify()
-    with raises(TypeError):
-        Axiom(lambda cls: NotImplemented).strategy()
     assert axiom(lambda cls: NotImplemented).bind(Arrow)() is NotImplemented
     box = Box('f', Ob('x'), Ob('y'))
-    assert Arrow.unitality(box)
-    broken = Arrow.unitality.weaken(f=Endo[C1]).failing("Never holds.")
-    assert broken.subspaces == {"f": Endo[C1]}
-    loop = Box('g', Ob('x'), Ob('x'))
+    assert Arrow.unitality(f=box)
+    broken = Arrow.unitality.weaken(max_leaves=1).failing("Never holds.")
+    assert broken.params == {"max_leaves": 1}
     with raises(AxiomFailure) as failure:
-        broken(Endo(loop))
+        broken(f=box)
     assert failure.value.equation
 
 
-def test_deferred_annotations():
-    """ A law compiled without deferred annotations is refused. """
-    namespace, source = {}, "def eager(cls, f: int): return NotImplemented"
-    exec(compile(source, "<eager>", "exec", dont_inherit=True), namespace)
-    with raises(TypeError, match="__future__"):
-        axiom(namespace["eager"])
+def test_string_annotations():
+    """ A law whose annotations are strings reads them as objects. """
+    namespace = {}
+    exec("from __future__ import annotations\n"
+         "from discopy.axioms import Equation, Hom, Obj\n"
+         "def deferred[A: Obj[int]](cls, f: Hom[int, A, A])"
+         " -> Equation[Hom[int, A, A]]: return NotImplemented", namespace)
+    law = axiom(namespace["deferred"]).bind(Arrow)
+    (A, ), annotations = law.function.__type_params__, law.annotations()
+    assert annotations["f"] == Hom[int, A, A]
+    assert annotations["return"] == Equation[Hom[int, A, A]]
 
 
 def test_inapplicable():
@@ -199,7 +188,7 @@ def test_inapplicable():
 
 def test_modulo():
     law = Arrow.unitality.modulo(lambda term: term.dom).bind(Arrow)
-    assert law(Box('f', Ob('x'), Ob('y')))
+    assert law(f=Box('f', Ob('x'), Ob('y')))
 
 
 def test_equation_symbols():
@@ -213,10 +202,20 @@ def test_equation_symbols():
 
 
 def test_weaken():
-    law = Arrow.unitality.weaken(f=Endo[C1]).bind(Arrow)
-    assert law.modulo(lambda term: term).subspaces == law.subspaces
-    args = find(law.strategy(), lambda _: True)
-    assert isinstance(args[0], Endo) and law(*args)
+    class Recording(Arrow):
+        """ Arrows recording the parameters their strategy is given. """
+        given = []
+
+        @classmethod
+        def strategy(cls, **params):
+            cls.given.append(params.pop("tag", None))
+            return Arrow.strategy.__func__(cls, **params)
+
+    law = Recording.unitality.weaken(tag="loop")
+    assert law.modulo(lambda term: term).params == law.params == {
+        "tag": "loop"}
+    assert law(**find(law.strategy(), lambda _: True))
+    assert Recording.given and set(Recording.given) == {"loop"}
 
 
 def test_self_annotation():
@@ -226,18 +225,18 @@ def test_self_annotation():
         return Equation(cls.id(f.dom) >> f, f)
 
     law = absorbing.bind(Arrow)
-    args = find(law.strategy(), lambda _: True)
-    assert isinstance(args[0], Arrow) and law(*args)
+    arguments = find(law.strategy(), lambda _: True)
+    assert isinstance(arguments["f"], Arrow) and law(**arguments)
 
 
 def test_falsify():
     @axiom
-    def trivial(cls, f: C1) -> Equation:
+    def trivial[A: Obj[Ob], B: Obj[Ob]](
+            cls, f: Hom[Self, A, B]) -> Equation[Self]:
         """ Every arrow is an identity, which a box refutes. """
         return Equation(f, cls.id(f.dom))
 
-    counterexample, = trivial.bind(Arrow).falsify()
-    assert isinstance(counterexample, Arrow) and counterexample.inside
+    assert trivial.bind(Arrow).falsify()["f"].inside
     assert Arrow.unitality.failing("Never holds.").falsify()
     with raises(NoSuchExample):
         Arrow.associativity.falsify()
@@ -260,5 +259,5 @@ def test_axioms_of_category():
 
 def test_copying():
     x, y = Ob('x'), Ob('y')
-    assert Arrow.copying(Box('f', x, y))
+    assert Arrow.copying(term=Box('f', x, y))
     assert "copying" in Arrow.axioms and "copying" in Ob.axioms

@@ -247,30 +247,20 @@ def test_types_without_wires_are_their_own_delay():
 def test_feedback_laws_on_a_traced_category():
     from discopy import compact
     from discopy.abc import FeedbackCategory
-    from discopy.axioms import Loop
     C = compact.CMap
     x, y, m, n, w, z = map(compact.Ty, "xymnwz")
     box = lambda name, dom, cod: compact.Box(name, dom, cod).to_map()
     f = box('f', x @ m @ n, y @ m @ n)
-    loop = Loop[C](
-        x, y, m, n, f, box('g', w, x), box('h', y, z),
-        box('k', m @ n, m @ n), box('e', w, z))
-    for law in ("vanishing", "joining", "strength", "tightening", "sliding"):
-        args = (f, ) if law == "vanishing" else (loop, )
+    g, h, k, e = box('g', w, x), box('h', y, z), box(
+        'k', m @ n, m @ n), box('e', w, z)
+    for law, arguments in (
+            ("vanishing", dict(f=f)),
+            ("joining", dict(f=f, x=x, y=y, m=m, n=n)),
+            ("strength", dict(e=e, f=f, x=x, y=y, m=m @ n)),
+            ("tightening", dict(f=f, g=g, h=h, x=x, y=y, m=m @ n)),
+            ("sliding", dict(f=f, k=k, x=x, y=y, m=m @ n))):
         axiom = getattr(FeedbackCategory, law).bind(C)
-        assert axiom.modulo(C.to_hypergraph)(*args)
-
-
-def test_Loop_strategy_takes_the_boundary_it_draws():
-    from hypothesis import find
-    from discopy.axioms import Loop
-    from discopy.matrix import Matrix
-    from unittest.mock import patch
-    M = Matrix[bool]
-    with patch.object(M, "delay", lambda self, n_steps=1: self, create=True):
-        loop = find(Loop[M].strategy(dom=M.ob(1)), lambda _: True)
-    x, y, m, n, f, *_ = loop
-    assert (f.dom, f.cod) == (x @ m @ n, y @ m @ n)
+        assert axiom.modulo(C.to_hypergraph)(**arguments)
 
 
 def test_split_memory_bounds():
