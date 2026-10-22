@@ -87,7 +87,7 @@ Bell state is a quarter contextual.
 from __future__ import annotations
 
 from collections.abc import Sequence
-from itertools import product
+from itertools import combinations, product
 
 import numpy as np
 
@@ -304,13 +304,59 @@ class Model(Table):
     0.0
     0.0
     0.5
+
+    The table is not checked until a linear program is solved: then every row
+    must be a distribution and the marginals of any two contexts must agree on
+    their shared measurements.
+
+    >>> signalling = Model(Scenario.bell(2), [[1, 0, 0, 0], [0, 0, 1, 0]]
+    ...     + [[1/4] * 4] * 2)
+    >>> signalling.is_compatible()
+    False
+    >>> signalling.contextual_fraction()
+    Traceback (most recent call last):
+    ...
+    ValueError: The table is not an empirical model.
     """
+    def marginal(self, i: int, measurements: Sequence) -> np.ndarray:
+        """
+        The marginal :math:`e_C|_U` of the distribution of the ``i``-th
+        context :math:`C` on some of its ``measurements`` :math:`U`, indexed
+        by :math:`O^U` in lexicographic order.
+        """
+        context, outcomes = self.scenario.contexts[i], self.scenario.outcomes
+        axes = [context.index(x) for x in measurements]
+        marginal = np.reshape(self.table[i], len(context) * (outcomes, )).sum(
+            axis=tuple(j for j in range(len(context)) if j not in axes))
+        return np.transpose(marginal, np.argsort(np.argsort(axes))).flatten()
+
+    def is_compatible(self, atol: float = 1e-9) -> bool:
+        """
+        Whether the table is an empirical model up to ``atol``: its rows are
+        probability distributions and the marginals of any two contexts agree
+        on their shared measurements.
+        """
+        contexts = self.scenario.contexts
+        return bool((self.vector >= -atol).all()) and all(
+            abs(sum(row) - 1) <= atol for row in self.table) and all(
+            np.allclose(
+                self.marginal(i, shared), self.marginal(j, shared),
+                rtol=0, atol=atol)
+            for i, j in combinations(range(len(contexts)), 2)
+            for shared in [[x for x in contexts[i] if x in contexts[j]]])
+
+    def assert_compatible(self):
+        """ Raise ``ValueError`` unless the table is an empirical model. """
+        if not self.is_compatible():
+            raise ValueError("The table is not an empirical model.")
+
     def global_subdistribution(self) -> np.ndarray:
         """
         A subdistribution :math:`b` on global assignments of maximal weight
         with :math:`M b \\leq v^e`, an optimal solution of the linear program
         (3) of :cite:`AbramskyEtAl17`.
         """
+        self.assert_compatible()
         incidence = self.scenario.incidence()
         return maximise(
             np.ones(incidence.shape[1]), incidence, self.vector, (0, None))
@@ -370,6 +416,7 @@ class Model(Table):
         >>> round(inequality.violation(CHSH), 6)
         0.25
         """
+        self.assert_compatible()
         incidence = self.scenario.incidence()
         coefficients = maximise(
             self.vector, incidence.T, np.zeros(incidence.shape[1]),

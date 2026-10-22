@@ -882,8 +882,10 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   distribution on the outcomes of each context, built from local measurement
   circuits on a state by `Model.from_circuits`. `contextual_fraction` solves
   the linear program for the largest non-contextual part with `scipy`, now in
-  the `quantum` extra; `decompose` splits a model into non-contextual and
-  strongly contextual models, and `bell_inequality` gives the `Inequality`
+  the `quantum` extra, once `is_compatible` has checked that the rows are
+  distributions whose marginals agree; `decompose` splits a model into
+  non-contextual and strongly contextual models, and `bell_inequality` gives
+  the `Inequality`
   whose normalised violation is the contextual fraction. Models combine by
   `mix`, controlled choice `&` and product `@`. The tests and the
   `contextual-fraction` notebook reproduce the examples of the paper,

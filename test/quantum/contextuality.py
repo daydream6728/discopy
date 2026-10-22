@@ -6,7 +6,7 @@ import numpy as np
 from pytest import approx, importorskip, mark, raises
 
 from discopy.quantum import CX, H, Ket, Measure, Rz, qubit
-from discopy.quantum.contextuality import Inequality, Model, Scenario
+from discopy.quantum.contextuality import Inequality, Model, Scenario, maximise
 
 importorskip("scipy")
 
@@ -72,6 +72,24 @@ def test_Scenario_errors():
                          [[measure(0)], [measure(0) @ measure(0)]]):
         with raises(ValueError):
             Model.from_circuits(GHZ(2), measurements)
+
+
+def test_Model_is_compatible():
+    model = Model(Scenario([('x', 'y')]), [[.1, .2, .3, .4]])
+    assert np.allclose(model.marginal(0, ('y', 'x')), [.1, .3, .2, .4])
+    assert np.allclose(model.marginal(0, ('x', )), [.3, .7])
+    assert np.allclose(model.marginal(0, ()), [1])
+    for model in [PR, CHSH, noise, equatorial(3, 1, 2)]:
+        assert model.is_compatible()
+    for table in [[[1, 0, 0, 0]] + [[1 / 2, 0, 0, 0]] * 3,
+                  [[1.1, -0.1, 0, 0]] + [[1 / 4] * 4] * 3,
+                  [[1, 0, 0, 0], [0, 0, 1, 0]] + [[1 / 4] * 4] * 2]:
+        model = Model(bell, table)
+        assert not model.is_compatible()
+        with raises(ValueError):
+            model.bell_inequality()
+    with raises(ValueError):
+        maximise(np.ones(1), np.ones((1, 1)), -np.ones(1), (0, None))
 
 
 def test_Table_repr():
