@@ -9,6 +9,16 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Added
 
+- The trainers of recursive message passing, the networks of *Tiny
+  Recursive Message Passing* ([arXiv:2610.18649](https://arxiv.org/abs/2610.18649)),
+  moved out of its experiments op for op, so that they keep only their
+  datasets and recipes: the same bits on CPU, end to end. `neural.lattice` is
+  lattice deduction, its `project`, `losses`, persistent `Pool` and chain
+  search `solve`; `neural.act` its halting counterpart, `terms`,
+  `nearest_terms` for puzzles with several solutions, the slot pool `ActPool`
+  and `rollout`; `neural.train` the AdamW on matrices, the cosine schedule,
+  the bias-corrected `EMA` and the per-sample gradient clip
+  `per_board_backward` ([rel-int/Recursive_GNNs#1](https://github.com/rel-int/Recursive_GNNs/issues/1)).
 - `discopy.op`, the opposite of a category: `op.Category`, `Monoidal`,
   `Symmetric`, `Markov` and `Comarkov` wrap an arrow `inside` of the
   underlying `category` with its domain and codomain swapped, composition
@@ -17,6 +27,22 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   and functions, `finset.Function` being now declared a Markov category, and
   the opposites of `matrix.Matrix[int]` join the property matrix
   ([discopy/discopy#646](https://github.com/discopy/discopy/issues/646)).
+
+- Frobenius plumbing
+  ([discopy/discopy#472](https://github.com/discopy/discopy/issues/472)):
+  `finset.Cospan` is the free hypergraph category on one object, cospans of
+  finite sets up to isomorphism composed by pushout, a `HypergraphCategory`
+  in the property matrix, and `frobenius.Cospan(apex, left, right)` holds
+  one with the type of each point of its apex. Permutations are cospans, as
+  are phase-free spiders and the cups and caps of a self-dual wire, which
+  carry `legs`; `Cospan(x, [0], [0, 0]) == Spider(1, 2, x)`.
+  `frobenius.Layer` alternates cospans and generators, plumbing tensors into
+  one cospan, `Diagram.spiders` of a type builds one, and foliation fuses
+  them by pushout, e.g. a snake into the identity. `Cospan.to_spiders` is
+  how one is drawn and sent by a functor, and
+  `abc.HypergraphCategory.cospan` builds one in any hypergraph category.
+  The categories below frobenius keep their spiders as generators until
+  they have a cospan factory of their own.
 
 - Markov and comarkov plumbing
   ([discopy/discopy#472](https://github.com/discopy/discopy/issues/472)):
@@ -1053,6 +1079,11 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   subscripted by its algebra, where `loads(dumps(Representation[D].anyon(1,
   1)))` raised for want of a class named `Double(4)`
   ([rel-int/discopy-next#145](https://github.com/rel-int/discopy-next/issues/145)).
+- A layer reads its plumbing through `Layer.is_plumbing_component`, so
+  that a box is plumbing by what it holds rather than by its class alone,
+  e.g. a spider without a phase. The diagrams of `tensor`, `quantum` and
+  `hopf` have `frobenius.Layer`s.
+
 - `symmetric.Layer.merge` fuses two layers of plumbing alone whatever
   plumbing they hold, through the `fuse` of its boxes, and
   `symmetric.Diagram.merge_layers` drops two that compose to the identity
