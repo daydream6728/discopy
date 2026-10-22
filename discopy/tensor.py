@@ -525,15 +525,20 @@ class Functor(frobenius.Functor):
         A cup or a cap on a self-dual object, as at frobenius, is the
         spider with two legs on its image, so that the functor factors
         through the hypergraph; any other is the nested
-        :meth:`Tensor.cups` or :meth:`Tensor.caps`.
+        :meth:`Tensor.cups` or :meth:`Tensor.caps`. Likewise, a rotated
+        box with a self-dual object on its boundary is its box bent by
+        those spiders, contracted as a map, and any other rotated box is
+        the transpose of the image of its box.
 
         Example
         -------
         >>> n = frobenius.Ty('n')
-        >>> F = Functor({n: Dim(2, 3)}, {}, dtype=int)
+        >>> g = frobenius.Box('g', n, n)
+        >>> F = Functor({n: Dim(2, 3)}, {g: list(range(36))}, dtype=int)
         >>> cup = frobenius.Cup(n, n)
         >>> assert F(cup) == F(frobenius.Spider(2, 0, n))\\
         ...     == F(frobenius.Id(n @ n) >> cup)
+        >>> assert F(g.r) == F(g.transpose()) != F(g).r
         """
         if isinstance(other, Bubble):
             return self(other.arg).map(other.func)
@@ -541,6 +546,9 @@ class Functor(frobenius.Functor):
                 and other.left == other.right:
             legs = (2, 0) if isinstance(other, rigid.Cup) else (0, 2)
             return self.cod.spiders(*legs, self(other.left))
+        if isinstance(other, rigid.Box) and other.z and any(
+                x.r == x for x in other.dom @ other.cod):
+            return self.contract(cmap.CMap.from_diagram(other))
         if isinstance(other, (
                 cat.Ob, cat.Box, monoidal.Colour, monoidal.Ty)):
             return super().__call__(other)

@@ -214,6 +214,24 @@ def test_Functor_bends_a_compound_image_as_a_diagram_does(module):
         >> F(cup) @ F(s) @ F(module.Cup(n.l, n))
 
 
+@pytest.mark.parametrize(
+    "module", [rigid, pivotal, compact, frobenius, pregroup],
+    ids=lambda module: module.__name__)
+@pytest.mark.parametrize("image", [Dim(2, 3), Dim(2, 2)], ids=repr)
+def test_Functor_rotates_a_compound_image_as_a_diagram_does(module, image):
+    n, m = module.Ty('n'), module.Ty('m')
+    g = module.Box('g', n, n @ m)
+    size = int(np.prod(image.inside))
+    F = Functor({n: image, m: Dim(2)}, {g: list(range(2 * size * size))},
+                dom=module.Diagram, dtype=int)
+    for left in (False, True):
+        rotation = g.l if left else g.r
+        assert (F(rotation).dom, F(rotation).cod)\
+            == (F(rotation.dom), F(rotation.cod))
+        assert F(rotation) == F(module.Id(rotation.dom) >> rotation)\
+            == F(g.transpose(left=left))
+
+
 def test_Functor_maps_Dim_with_its_ob_map():
     f = Box('f', Dim(2), Dim(2), [0, 1, 1, 0])
     F = Functor({Dim(2): Dim(3)}, {f: list(range(9))}, dom=Diagram)
