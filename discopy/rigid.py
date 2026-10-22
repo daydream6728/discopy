@@ -154,7 +154,7 @@ from collections.abc import Callable
 from typing import ClassVar, Iterator, Self
 
 from discopy import cat, monoidal, biclosed, messages
-from discopy.abc import Pregroup, RigidCategory
+from discopy.abc import Pregroup, RigidCategory, DaggerCategory
 from discopy.cat import factory
 from discopy.utils import (
     assert_isatomic,
@@ -656,6 +656,9 @@ class Diagram(biclosed.Diagram, RigidCategory):
         >>> assert double_snake == two_snakes_nf
         """
         return super().normal_form(**params)
+
+    dagger_monoidality = DaggerCategory.dagger_monoidality.failing(
+        messages.RIGID_HAS_NO_DAGGER)
 
 
 class Box(biclosed.Box, Diagram):

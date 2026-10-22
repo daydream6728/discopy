@@ -672,7 +672,15 @@ class Declaration[**P, T](classmethod):
             def value(name, kind):
                 if get_origin(kind) is Var:
                     return get_args(kind)[1]
-                if get_origin(kind) is Hom:
+                if get_origin(kind) is Perm:
+                    n, = get_args(kind)
+                    strategy = st.permutations(range(n)).map(tuple)
+                elif get_origin(kind) is Objs:
+                    n = get_args(kind)[1]
+                    strategy = st.lists(
+                        self.category.ob.generators(),
+                        min_size=n, max_size=n).map(tuple)
+                elif get_origin(kind) is Hom:
                     _, dom, cod = get_args(kind)
                     strategy = self.category.strategy(
                         dom=dom, cod=cod, **params)

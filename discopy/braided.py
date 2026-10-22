@@ -59,8 +59,9 @@ The hexagon equations hold on the nose.
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import ClassVar
 
-from discopy import monoidal
+from discopy import monoidal, messages
 from discopy.abc import BraidedCategory
 from discopy.cat import factory
 from discopy.monoidal import Ty, Match
@@ -90,6 +91,17 @@ class Diagram(monoidal.Diagram, BraidedCategory):
         dom (monoidal.Ty) : The domain of the diagram, i.e. its input.
         cod (monoidal.Ty) : The codomain of the diagram, i.e. its output.
     """
+    braid_naturality = BraidedCategory.braid_naturality.failing(
+        messages.NO_BRAID_GROUP)
+    braid_then_inverse = BraidedCategory.braid_then_inverse.failing(
+        messages.NO_BRAID_GROUP)
+    inverse_then_braid = BraidedCategory.inverse_then_braid.failing(
+        messages.NO_BRAID_GROUP)
+
+    box_factory: ClassVar[type["Box"]]
+    braid_factory: ClassVar[type["Braid"]]
+    functor_factory: ClassVar[type["Functor"]]
+    sum_factory: ClassVar[type["Sum"]]
 
     @classmethod
     def braid(cls, left: monoidal.Ty, right: monoidal.Ty) -> Diagram:

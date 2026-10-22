@@ -65,8 +65,8 @@ from __future__ import annotations
 from typing import ClassVar
 from copy import copy
 
-from discopy import cat, cmap, rigid, feedback
-from discopy.abc import PivotalCategory
+from discopy import cat, cmap, rigid, feedback, messages
+from discopy.abc import PivotalCategory, DaggerCategory
 from discopy.cat import factory
 from discopy.utils import deprecated_alias
 
@@ -222,6 +222,9 @@ class Diagram(rigid.Diagram, feedback.Diagram, PivotalCategory):
             else dom @ cls.cap_factory(traced_wire, traced_wire.r)\
             >> diagram @ traced_wire.r\
             >> cod @ cls.cup_factory(traced_wire, traced_wire.r)
+
+    dagger_monoidality = DaggerCategory.dagger_monoidality.failing(
+        messages.NO_PLANAR_NORMAL_FORM)
 
 
 class Box(rigid.Box, feedback.Box, Diagram):

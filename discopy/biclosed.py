@@ -93,7 +93,7 @@ from typing import (
     TYPE_CHECKING, Callable, ClassVar, Iterator, Self, Sequence)
 
 from discopy import cat, monoidal, cmap, messages
-from discopy.abc import BiclosedCategory
+from discopy.abc import BiclosedCategory, DaggerCategory, MonoidalCategory
 from discopy.axioms import (
     GENERATORS, Equation as AbstractEquation, Equivalence, Testable, axiom,
     Serialisable)
@@ -405,6 +405,11 @@ class Diagram(monoidal.Diagram, BiclosedCategory):
 
     def to_drawing(self):
         return monoidal.Diagram.to_drawing(self, functor_factory=Functor)
+
+    dagger_monoidality = DaggerCategory.dagger_monoidality.failing(
+        messages.CURRY_HAS_NO_DAGGER)
+    dagger_monoidality_monoidal = DaggerCategory.dagger_monoidality.weaken(
+        within=MonoidalCategory).failing(messages.NO_PLANAR_NORMAL_FORM)
 
 
 class Box(monoidal.Box, Diagram):

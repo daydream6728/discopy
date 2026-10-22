@@ -49,9 +49,22 @@ NO_PLANAR_NORMAL_FORM = (
     "A planar law is compared on the nose: a hypergraph is faithful only "
     "from symmetric categories on, and there is no normal form for this "
     "doctrine yet.")
+NO_TENSOR = "An arrow of a category has no tensor for its dagger to "\
+    "distribute over."
+GROUP_TENSOR = "The tensor of a group is its composition, which its dagger "\
+    "reverses rather than distributes over."
+SWAP_INVOLUTION = (
+    "The inverse of a swap is the swap the other way, see swap_inverse.")
+PARA_CURRY_COPAR = (
+    "A closed category cannot curry a map with coparameters {}, as its "
+    "exponential would swallow them.")
 NO_SWAP = "{} is not symmetric, it has no swaps."
 NO_BRAID = "{} is not braided, it has no braids."
 NO_TWIST = "{} is not balanced, it has no twists."
+NO_BRAID_GROUP = (
+    "A braid is a box of the hypergraph of a category that is not "
+    "symmetric: there is no braid group implementation to compare braid "
+    "words with yet.")
 NO_CUPS = "{} is not rigid, it has no cups or caps."
 COLOURED_QUOTIENT = (
     "{} is coloured: a hypergraph or a map is symmetric, and a swap is "
@@ -61,12 +74,16 @@ NOT_MARKOV = "{} has no copy or discard."
 NOT_A_DAGGER = "{} has no dagger: {} is not a dagger category."
 NO_SUCH_SPIDER = "The only spiders of {} are its {}."
 NOT_ACYCLIC = "{} has a directed cycle, its boxes cannot be ordered."
+
 FREE_FEEDBACK = (
     "A free feedback is a bubble, which a hypergraph keeps as a box: nothing "
     "slides into it.")
 RIGID_TYPE_HAS_NO_DAGGER = "Rigid types have no dagger, use pivotal instead."
 RIGID_HAS_NO_DAGGER = (
     "Rigid cups and caps have no dagger, use pivotal instead.")
+FEEDBACK_HAS_NO_DAGGER = (
+    "Feedback has no dagger and no rotation, "
+    "either would feed its memory back in time.")
 NO_TYPE_PARAMETER = (
     "{} has no type parameter to subscript, declare one as in class C[name].")
 NOT_LEFT_MONOGAMOUS = "{} is not left-monogamous."

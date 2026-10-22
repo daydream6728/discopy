@@ -6,7 +6,7 @@ from hypothesis import find
 from hypothesis.errors import NoSuchExample
 from pytest import raises
 
-from discopy import cat, monoidal, rigid
+from discopy import braided, cat, monoidal, rigid
 from discopy.abc import Category, Group
 from hypothesis import strategies as st
 
@@ -184,6 +184,7 @@ def test_rules():
     assert Arrow.cut.is_recursive and not Arrow.ax.is_recursive
     assert monoidal.Diagram.mix.conclusion == (None, None)
     assert Arrow.ax.given(x, y) == {"X": y}
+    assert braided.Diagram.braiding.given(braided.Ty('x', 'y')) == {}
 
 
 def test_equation_symbols():
