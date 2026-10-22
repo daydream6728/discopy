@@ -106,8 +106,9 @@ class Wire(frobenius.Wire):
     @classmethod
     def from_tree(cls, tree: dict) -> Wire:
         dim, z = tree['dim'], tree.get('z', 0)
-        return cls(dim=dim, z=z, time_step=tree.get('time_step', 0),
-                   is_constant=tree.get('is_constant', True))
+        return cls(  # ty: ignore[missing-argument]
+            dim=dim, z=z, time_step=tree.get('time_step', 0),
+            is_constant=tree.get('is_constant', True))
 
     def to_tree(self) -> dict:
         return dict(dim=self.dim, **super().to_tree())

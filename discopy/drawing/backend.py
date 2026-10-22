@@ -1392,7 +1392,7 @@ class TikZ(Backend):
             distance = min(dx, dy)
             looseness = round(distance / length * 2.1, 4)
         if looseness != 1:
-            style = ', '.join(
+            style = ', '.join(  # ty: ignore[no-matching-overload]
                 [style] * bool(style) + [f'looseness={looseness}'])
 
         cmd = (

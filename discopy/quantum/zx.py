@@ -181,7 +181,7 @@ class Diagram(tensor.Diagram[complex]):
                     segment[i] for i in box.perm]
             elif isinstance(box, Scalar):
                 graph.scalar.add_float(
-                    box.data)  # ty: ignore[invalid-argument-type]
+                    box.data)
             elif box == H:
                 node, hadamard = scan[offset]
                 scan[offset] = (node, not hadamard)

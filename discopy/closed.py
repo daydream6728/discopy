@@ -287,8 +287,10 @@ class Unitype(Exp):
                 other.base, other.exponent) == (self.base, self.exponent))
 
     def __hash__(self):
-        return hash(Exp(self.base, self.exponent, time_step=self.time_step,
-                        is_constant=self.is_constant))
+        return hash(Exp(
+            self.base,  # ty: ignore[invalid-argument-type]
+            self.exponent, time_step=self.time_step,
+            is_constant=self.is_constant))
 
     def __str__(self):
         return "U" + feedback.str_delayed(self.time_step)
@@ -322,7 +324,7 @@ class Diagram(markov.Diagram, biclosed.Diagram, ClosedCategory):
     curry_factory: ClassVar[type["Curry"]]
     eval_factory: ClassVar[type["Eval"]]
     coeval_factory: ClassVar[type["Coeval"]]
-    trace_factory: ClassVar[type["Trace"]]
+    trace_factory: ClassVar[type["Trace"]]  # ty: ignore[invalid-type-form]
     discard_factory: ClassVar[type["Discard"]]
     sum_factory: ClassVar[type["Sum"]]
     ob = Ty
@@ -417,7 +419,7 @@ class Diagram(markov.Diagram, biclosed.Diagram, ClosedCategory):
         if not graph.is_causal:
             raise ValueError(f"Expected a causal diagram, got {self}")
         variables = [self.ob.variable_factory(
-            f"x{i}", typ)  # ty: ignore[invalid-argument-type]
+            f"x{i}", typ)
                      for i, typ in enumerate(graph.spider_types)]
         outputs = [variables[i] for i in graph.cod_wires]
         result = outputs[0] if len(outputs) == 1 else Tuple(*outputs)
@@ -853,8 +855,10 @@ class TermBase(Box, biclosed.TermBase, biclosed.Normalising):
         functor = functor or self.functor
         result = self.eval(
             functor, context)  # ty: ignore[too-many-positional-arguments]
-        return result >> functor(Unpack(self.cod))\
-            if self.cod.is_product else result
+        if not self.cod.is_product:
+            return result
+        return result >> functor(
+            Unpack(self.cod))  # ty: ignore[invalid-argument-type]
 
     def occurrences(self, variable: Variable) -> int:
         "The number of free occurrences of a variable in the term."
@@ -1164,8 +1168,9 @@ class Tuple(Compound):
         self.freevars = list(dict.fromkeys(
             sum([term.freevars for term in terms], [])))
         dom = self.ob().tensor(*[x.cod for x in self.freevars])
-        cod = self.ob(self.ob.product_factory(*[t.cod for t in terms]))\
-            if terms else self.ob()
+        cod = self.ob(self.ob.product_factory(
+            *[t.cod for t in terms])) if terms\
+            else self.ob()  # ty: ignore[invalid-argument-type]
         super().__init__(dom, cod)
 
     @property
@@ -1188,8 +1193,10 @@ class Tuple(Compound):
             >> self.share(functor, *[term.freevars for term in self.terms])\
             >> functor.cod.id(functor(self.ob())).tensor(
                 *[term.eval(functor) for term in self.terms])
-        return result >> functor(Pack(self.cod))\
-            if pack and self.terms else result
+        if not (pack and self.terms):
+            return result
+        return result >> functor(
+            Pack(self.cod))  # ty: ignore[invalid-argument-type]
 
     def eval_unpacked(self, functor=None, context=None):
         return self.eval(functor, context, pack=False)

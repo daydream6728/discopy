@@ -380,10 +380,11 @@ class BinaryTerm(TermBase):
     right: Term
 
     def __post_init__(self):
-        if set(self.left.freevars).intersection(self.right.freevars):
+        left, right = self.left.freevars, self.right.freevars
+        if set(left).intersection(right):  # ty: ignore[invalid-argument-type]
             raise ValueError("Expected disjoint free variables.")
         object.__setattr__(
-            self, "freevars", self.left.freevars + self.right.freevars)
+            self, "freevars", left + right)  # ty: ignore[unsupported-operator]
         object.__setattr__(self, "dom", self.left.dom @ self.right.dom)
 
     def __str__(self):
@@ -608,8 +609,8 @@ Diagram.eval_factory, Diagram.coeval_factory = Eval, Coeval
 
 Ty.variable_factory = Variable
 Ty.constant_factory = Constant
-Ty.application_factory =\
-    lambda func, args, left=False: BA(args, func) if left else FA(func, args)
+Ty.application_factory = (  # ty: ignore[invalid-assignment]
+    lambda func, args, left=False: BA(args, func) if left else FA(func, args))
 Ty.abstraction_factory = Abstraction
 
 Ty.over_factory, Ty.under_factory = Over, Under

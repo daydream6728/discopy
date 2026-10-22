@@ -44,7 +44,7 @@ indices. Swaps, cups and caps become wiring while spiders stay as boxes.
 from __future__ import annotations
 
 from itertools import count
-from typing import TYPE_CHECKING, Callable, Sequence, ClassVar
+from typing import TYPE_CHECKING, Any, Callable, Sequence, ClassVar
 
 from discopy import (
     cat, monoidal, rigid, frobenius, cmap, config, messages)
@@ -646,7 +646,7 @@ class Diagram[dtype](TestableGeneric, frobenius.Diagram):
         """
         return Dim(*(getattr(obj, "dim", obj) for obj in typ.inside))
 
-    def eval(self, dtype: type = None, optimize="greedy",
+    def eval(self, dtype: type | None = None, optimize="greedy",
              **params) -> Tensor:
         """
         Evaluate a tensor network as a :class:`Tensor`: call the
@@ -754,7 +754,9 @@ class Diagram[dtype](TestableGeneric, frobenius.Diagram):
         if dtype is None:
             dtype = self.dtype
         nodes = [
-            tn.CopyNode(2, dim, f'input_{i}', dtype=dtype)
+            tn.CopyNode(
+                2, dim, f'input_{i}',
+                dtype=dtype)  # ty: ignore[invalid-argument-type]
             for i, dim in enumerate(self.dim(self.dom).inside)]
         inputs, outputs = [n[0] for n in nodes], [n[1] for n in nodes]
         for box, offset in zip(self.boxes, self.offsets):
@@ -774,15 +776,16 @@ class Diagram[dtype](TestableGeneric, frobenius.Diagram):
                     continue
                 else:
                     node = tn.CopyNode(
-                        sum(dims), box.typ.inside[0], dtype=dtype)
+                        sum(dims), box.typ.inside[0],
+                        dtype=dtype)  # ty: ignore[invalid-argument-type]
             else:
                 array = box.eval(dtype=dtype).array
                 node = tn.Node(array, str(box))
             for i, _ in enumerate(box.dom):
                 tn.connect(outputs[offset + i], node[i])
             outputs[offset:offset + len(box.dom)] = node[len(box.dom):]
-            nodes.append(node)
-        return nodes, inputs + outputs
+            nodes.append(node)  # ty: ignore[invalid-argument-type]
+        return nodes, inputs + outputs  # ty: ignore[invalid-return-type]
 
     def grad(self, var, **params):
         """ Gradient with respect to :code:`var`. """
@@ -973,7 +976,9 @@ class Spider[dtype](frobenius.Spider, Box[dtype]):
         if self.phase is not None:
             raise NotImplementedError(
                 f"{self} has a phase, which Tensor does not interpret.")
-        return Tensor.spiders(len(self.dom), len(self.cod), self.typ).array
+        return Tensor.spiders(
+            len(self.dom), len(self.cod),
+            self.typ).array  # ty: ignore[invalid-argument-type]
 
 
 class Sum[dtype](monoidal.Sum, Box[dtype]):
@@ -1034,16 +1039,16 @@ class Bubble(monoidal.Bubble, Box):
         self.func = func
         super().__init__(inside, **params)
 
-    def subs(self, *args) -> Bubble:
-        return type(self)(
-            self.arg.subs(*args), func=self.func, dom=self.dom, cod=self.cod,
-            drawing_name=self.drawing_name)
-
-    def lambdify(self, *symbols, **kwargs):
-        inside = self.arg.lambdify(*symbols, **kwargs)
-        return lambda *xs: type(self)(
-            inside(*xs), func=self.func, dom=self.dom, cod=self.cod,
-            drawing_name=self.drawing_name)
+    @property
+    def keywords(self) -> dict[str, Any]:
+        """
+        The keyword arguments of a bubble with its function, and without its
+        name, which a tensor box takes positionally and a tensor bubble
+        computes from its arguments.
+        """
+        keywords = dict(super().keywords, func=self.func)
+        del keywords["name"]
+        return keywords
 
     def grad(self, var, **params):
         """

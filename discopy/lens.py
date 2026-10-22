@@ -71,7 +71,7 @@ from dataclasses import dataclass
 from discopy import interaction, markov, messages, symmetric
 from discopy.abc import (
     MarkovCategory, SymmetricCategory, TracedCategory)
-from discopy.axioms import Equation, TestableGeneric
+from discopy.axioms import Equation, TestableGeneric, quotient
 from discopy.utils import (
     AxiomError, assert_iscomposable, assert_isinstance, classproperty,
     factory_name, get_origin, unbiased)
@@ -169,11 +169,12 @@ class Symmetric[category](SymmetricCategory, TestableGeneric):
     def equation_factory(cls, *terms: Symmetric) -> Equation:
         """
         The equation of a law, compared by the boundary of its terms and the
-        hypergraph of the inside of their :meth:`to_int`, so that two lenses
-        are equal when they wire the same legs, whatever their residual.
+        inside of their :meth:`to_int` up to the equation of the underlying
+        category, e.g. its hypergraph, so that two lenses are equal when they
+        wire the same legs, whatever their residual.
         """
         return Equation(*terms, up_to=lambda lens: (
-            lens.dom, lens.cod, lens.to_int().inside.to_hypergraph()))
+            lens.dom, lens.cod, quotient(cls.category, lens.to_int().inside)))
 
     @classmethod
     def strategy(cls, *, dom=None, cod=None, **params):

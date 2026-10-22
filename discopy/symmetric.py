@@ -297,8 +297,9 @@ class Diagram(balanced.Diagram, SymmetricCategory):
     functor_factory: ClassVar[type["Functor"]]
     swap_factory: ClassVar[type["Swap"]]
     permutation_factory: ClassVar[type["Permutation"]]
-    feedback_factory: ClassVar[type["Feedback"]]
-    trace_factory: ClassVar[type["Trace"]]
+    feedback_factory: ClassVar[
+        type["Feedback"]]  # ty: ignore[invalid-type-form]
+    trace_factory: ClassVar[type["Trace"]]  # ty: ignore[invalid-type-form]
     sum_factory: ClassVar[type["Sum"]]
     braid_factory = classproperty(lambda cls: cls.swap_factory)
     layer_factory = Layer

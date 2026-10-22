@@ -280,12 +280,14 @@ class Symmetric[n](Group, TestableGeneric):
 
     n: ClassVar[int]
 
-    def __init__(self, inside: tuple[int, ...] = None):
+    def __init__(self, inside: tuple[int, ...] | None = None):
         if self.n is None:
             raise TypeError(
                 f"Expected a subscript, e.g. {type(self).__name__}[2].")
-        inside = range(self.n) if inside is None else inside
-        self.inside = Permutation(inside, self.n)
+        inside = (  # ty: ignore[invalid-assignment]
+            range(self.n) if inside is None else inside)
+        self.inside = (  # ty: ignore[invalid-assignment]
+            Permutation(inside, self.n))
 
     def __repr__(self):
         return f"{type(self).__name__}({self.inside!r})"
@@ -299,7 +301,9 @@ class Symmetric[n](Group, TestableGeneric):
     @classmethod
     def generators(cls):
         return tuple(
-            cls(Permutation.from_transpositions([(i, i + 1)], cls.n))
+            cls(Permutation.from_transpositions(
+                [(i, i + 1)],
+                cls.n))  # ty: ignore[invalid-argument-type]
             for i in range(cls.n - 1))
 
     def word(self):
@@ -354,7 +358,7 @@ class Product[left, right](Group, TestableGeneric):
     @classmethod
     def checked_params(cls) -> tuple:
         """ The product of a cyclic and a symmetric group. """
-        return ((Cyclic[2], Symmetric[3]), )
+        return ((Cyclic[2], Symmetric[3]), )  # ty: ignore[invalid-type-form]
 
     left: ClassVar[type[Group]]
     right: ClassVar[type[Group]]
@@ -400,7 +404,8 @@ class Product[left, right](Group, TestableGeneric):
         return cls(cls.left.sample(rng), cls.right.sample(rng))
 
     @classmethod
-    def action(cls, left: Action = None, right: Action = None) -> Action:
+    def action(cls, left: Action | None = None,
+               right: Action | None = None) -> Action:
         """
         The action on the pairs of points of an action of each factor, the
         action of the factor on a set of its own by default.
@@ -454,12 +459,13 @@ class Wreath[base, top](Group, TestableGeneric):
     @classmethod
     def checked_params(cls) -> tuple:
         """ The wreath product of a symmetric by a cyclic group. """
-        return ((Symmetric[3], Cyclic[2]), )
+        return ((Symmetric[3], Cyclic[2]), )  # ty: ignore[invalid-type-form]
 
     base: ClassVar[type[Group]]
     top: ClassVar[type[Group]]
 
-    def __init__(self, base: tuple[Group, ...] = None, top: Group = None):
+    def __init__(self, base: tuple[Group, ...] | None = None,
+                 top: Group | None = None):
         if self.base is None:
             raise TypeError(
                 f"Expected subscripts, e.g. {type(self).__name__}[G, H].")
@@ -525,7 +531,7 @@ class Wreath[base, top](Group, TestableGeneric):
                    cls.top.sample(rng))
 
     @classmethod
-    def action(cls, base: Action = None, power: bool = False) -> Action:
+    def action(cls, base: Action | None = None, power: bool = False) -> Action:
         """
         An action of the wreath product given an action of ``base`` on
         ``range(n)``, the action of ``base`` on a set of its own by default.
@@ -557,14 +563,15 @@ class Wreath[base, top](Group, TestableGeneric):
 
         def on_blocks(element):
             (f, _), p = element.inside, element.permutation()
-            images = [base(x) for x in f]
+            images = [base(x) for x in f]  # ty: ignore[call-non-callable]
             return Permutation(
                 (p[j] * n + images[j][x] for j in range(k) for x in range(n)),
                 n * k)
 
         def on_tuples(element):
             (f, _), p = element.inside, element.permutation()
-            images, result = [base(x) for x in f], []
+            images = [base(x) for x in f]  # ty: ignore[call-non-callable]
+            result = []
             for point in itertools.product(range(n), repeat=k):
                 target = k * [0]
                 for j, x in enumerate(point):

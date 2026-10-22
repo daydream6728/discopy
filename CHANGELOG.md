@@ -1061,6 +1061,13 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Changed
 
+- A construction over a category compares its parts as that category
+  does, through `axioms.quotient`, the image of a term under the `up_to`
+  of its category's equation: a parametric map, a lens and an integer
+  diagram compare their insides by hypergraph over free diagrams and on the
+  nose over `Matrix`, where `para` and `lens` asked any inside for a
+  hypergraph. The homomorphisms of `monad.free` and `monad.algebra` are
+  `TestableGeneric`, as every testable class with type parameters is.
 - The lambda terms of `main` carry their laws in the sequent framework:
   `axioms.Equivalence` and `Related` are declared on it, `Related` with
   the PEP 695 parameter of every `NamedGeneric`, as are `biclosed.Renamed`,
@@ -1671,6 +1678,17 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
+- A bubble keeps what it is built with when substituted into, lambdified
+  or daggered: `cat.Bubble.keywords` names the keyword arguments it is
+  built again with, `monoidal.Bubble` adds its drawing options and
+  `tensor.Bubble` its function, where `subs` and `lambdify` drew a
+  substituted bubble with the default options and the dagger of a tensor
+  bubble raised `TypeError`. `feedback.Box.reset` resets a structural box,
+  e.g. a delayed swap, whose delay lives in its types, by the time step of
+  its earliest wire, where it gave the delayed box back. The yanking of a
+  balanced category traces the whole object it braids, `trace(mem=x)`,
+  where it traced one wire, so that it holds of an integer type of several
+  wires.
 - `interaction.Diagram.twist` twists the positive half of an integer type
   and untwists its negative half, where it borrowed the twist of
   `balanced.Diagram`, which counts the wires of its type and raised

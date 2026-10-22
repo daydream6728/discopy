@@ -76,7 +76,7 @@ from discopy import (
 from discopy.abc import (
     Pregroup, RibbonCategory, SymmetricCategory,
     TracedCategory)
-from discopy.axioms import Equation, TestableGeneric
+from discopy.axioms import Equation, TestableGeneric, quotient
 from discopy.cat import assert_iscomposable
 from discopy.python import finset
 from discopy.utils import (
@@ -310,11 +310,8 @@ class Diagram[natural](RibbonCategory, TestableGeneric):
         The equation of a law, compared by the boundaries of its terms and
         by the equation of the :attr:`natural` category on their insides.
         """
-        def up_to(diagram):
-            inside = cls.natural.equation_factory(diagram.inside)
-            return diagram.dom, diagram.cod, diagram.inside\
-                if inside.up_to is None else inside.up_to(diagram.inside)
-        return Equation(*terms, up_to=up_to)
+        return Equation(*terms, up_to=lambda diagram: (
+            diagram.dom, diagram.cod, quotient(cls.natural, diagram.inside)))
 
     @classmethod
     def strategy(cls, *, dom=None, cod=None, **params):
@@ -373,9 +370,11 @@ class Diagram[natural](RibbonCategory, TestableGeneric):
             inverse : Whether to take the inverse, from ``right @ left``.
         """
         if not inverse:
-            return cls.natural.braid(left, right)
+            return cls.natural.braid(
+                left, right)  # ty: ignore[invalid-return-type]
         if cls.is_symmetric():
-            return cls.natural.braid(right, left)
+            return cls.natural.braid(
+                right, left)  # ty: ignore[invalid-return-type]
         return cls.natural.braid(left, right).dagger()
 
     @classmethod
@@ -391,7 +390,9 @@ class Diagram[natural](RibbonCategory, TestableGeneric):
         if cls.is_symmetric():
             return cls.natural.id(dom)
         twist = cls.natural.twist(dom)
-        return twist.dagger() if inverse else twist
+        if inverse:
+            twist = twist.dagger()
+        return twist  # ty: ignore[invalid-return-type]
 
     @unbiased
     def then(self, other: Diagram):
@@ -699,8 +700,9 @@ class Diagram[natural](RibbonCategory, TestableGeneric):
         return type(self)(inside.trace(len(u @ u_)), dom, cod)
 
     def split_memory(
-            self, n: int | tuple[int, int] = None, left: bool = False, *,
-            dom: Ty = None, cod: Ty = None, mem: Ty = None
+            self, n: int | tuple[int, int] | None = None,
+            left: bool = False, *,
+            dom: Ty | None = None, cod: Ty | None = None, mem: Ty | None = None
             ) -> tuple[Ty, Ty, Ty]:
         """
         The domain, codomain and memory of a trace, read off either form of
@@ -724,7 +726,8 @@ class Diagram[natural](RibbonCategory, TestableGeneric):
         if mem is not None:
             n = self.memory_size(mem)
         elif cod is not None:
-            n = tuple(len(x) - len(y) for x, y in zip(self.cod, cod))
+            n = tuple(  # ty: ignore[invalid-assignment]
+                len(x) - len(y) for x, y in zip(self.cod, cod))
         (rest_dom, _), (rest_cod, traced) = (
             x.split(1 if n is None else n, left)[::-1] if left
             else x.split(1 if n is None else n, left)
@@ -741,7 +744,7 @@ class Diagram[natural](RibbonCategory, TestableGeneric):
         Parameters:
             mem : The memory.
         """
-        return tuple(map(len, mem))
+        return tuple(map(len, mem))  # ty: ignore[invalid-return-type]
 
     @classmethod
     def twist(cls, dom: Ty) -> Diagram:
@@ -763,7 +766,8 @@ class Diagram[natural](RibbonCategory, TestableGeneric):
         """
         if cls.is_symmetric():
             return cls.id(dom)
-        return cls.braid(dom, dom).trace(tuple(map(len, dom)))
+        return cls.braid(dom, dom).trace(
+            tuple(map(len, dom)))  # ty: ignore[invalid-argument-type]
 
     def curry(self, n: int | tuple[int, int] = 1, left: bool = True
               ) -> Diagram:

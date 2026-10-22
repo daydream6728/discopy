@@ -778,7 +778,7 @@ class Box(biclosed.Box, Diagram):
         """
         box = super().from_tree(tree)
         box.z = tree.get('z', 0)
-        return box
+        return box  # ty: ignore[invalid-return-type]
 
     @property
     def is_transpose(self):

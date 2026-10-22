@@ -207,7 +207,7 @@ class Diagram(closed.Diagram):
     curry_factory: ClassVar[type["Curry"]]
     eval_factory: ClassVar[type["Eval"]]
     coeval_factory: ClassVar[type["Coeval"]]
-    trace_factory: ClassVar[type["Trace"]]
+    trace_factory: ClassVar[type["Trace"]]  # ty: ignore[invalid-type-form]
     discard_factory: ClassVar[type["Discard"]]
     sum_factory: ClassVar[type["Sum"]]
     ob = Ty

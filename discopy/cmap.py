@@ -354,8 +354,9 @@ class CMap[category](
         """ The number of faces, including closed scalar components. """
         portless_boxes = sum(
             not len(box.dom) and not len(box.cod) for box in self.boxes)
-        return len(self.faces.cycles()) + portless_boxes\
-            + len(self.loops)
+        cycles = self.faces.cycles()
+        return len(cycles) + portless_boxes\
+            + len(self.loops)  # ty: ignore[invalid-argument-type]
 
     @property
     def euler_characteristic(self) -> int:

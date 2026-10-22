@@ -444,7 +444,8 @@ class Matrix[dtype](
         >>> Matrix.swap(2,1)
         Matrix[int64]([0, 1, 0, 0, 0, 1, 1, 0, 0], dom=3, cod=3)
         """
-        return cls.permutation([1, 0], [left, right])
+        return cls.permutation(
+            [1, 0], [left, right])  # ty: ignore[invalid-argument-type]
 
     braid = swap
 
@@ -525,12 +526,14 @@ class Matrix[dtype](
         >>> assert Matrix.copy(2) >> Matrix.id(2) @ Matrix.discard(2)\\
         ...     == Matrix.id(2)
         """
-        x = index(x)
+        x = index(x)  # ty: ignore[invalid-assignment]
         with backend() as np:
             array = np.array([
-                [j % x == i for j in range(n * x)] for i in range(x)],
+                [j % x == i  # ty: ignore[unsupported-operator]
+                 for j in range(n * x)]  # ty: ignore[unsupported-operator]
+                for i in range(x)],
                 dtype=cls.dtype or int)
-        return cls(array, x, n * x)
+        return cls(array, x, n * x)  # ty: ignore[unsupported-operator]
 
     @classmethod
     def merge(cls, x: Nat, n: int = 2) -> Matrix:
@@ -593,8 +596,12 @@ class Matrix[dtype](
         if left:
             return (self.swap(dom, n) >> self >> self.swap(n, cod)).trace(n)
         A, B, C, D = (row >> self >> column
-                      for row in [self.id(dom) @ self.ones(n),
-                                  self.ones(dom) @ self.id(n)]
+                      for row in [
+                          self.id(dom) @ self.ones(
+                              n),  # ty: ignore[invalid-argument-type]
+                          self.ones(
+                              dom)  # ty: ignore[invalid-argument-type]
+                          @ self.id(n)]
                       for column in [self.id(cod) @ self.discard(n),
                                      self.discard(cod) @ self.id(n)])
         return A + (B >> D.repeat() >> C)

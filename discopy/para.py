@@ -163,7 +163,7 @@ from typing import Self
 
 from discopy import (
     symmetric, markov, comarkov, closed, compact, frobenius, messages)
-from discopy.axioms import TestableGeneric, Equation
+from discopy.axioms import Equation, TestableGeneric, quotient
 from discopy.abc import (
     ClosedCategory, ComarkovCategory, CompactCategory, FeedbackCategory,
     HypergraphCategory, MarkovCategory, SymmetricCategory, TracedCategory)
@@ -222,12 +222,13 @@ class Symmetric[category](
     def equation_factory(cls, *terms: Symmetric) -> Equation:
         """
         The equation of a law, compared by the boundary and the hidden spaces
-        of its terms and the hypergraph of their inside, the parameters and
-        coparameters being plain wires of it.
+        of its terms and their inside up to the equation of the underlying
+        category, e.g. its hypergraph, the parameters and coparameters being
+        plain wires of it.
         """
         return Equation(*terms, up_to=lambda para: (
             para.dom, para.cod, para.param, para.copar,
-            para.inside.to_hypergraph()))
+            quotient(cls.category, para.inside)))
 
     @classmethod
     def strategy(cls, *, dom=None, cod=None, **params):
@@ -535,7 +536,7 @@ class Feedback(Markov, FeedbackCategory):
         return type(self)(*(x.delay(n_steps) for x in (
             self.dom, self.cod, self.inside, self.param, self.copar)))
 
-    def feedback(self, n: int = None, left: bool = False, *,
+    def feedback(self, n: int | None = None, left: bool = False, *,
                  dom: Symmetric.ob = None, cod: Symmetric.ob = None,
                  mem: Symmetric.ob = None) -> Feedback:
         """

@@ -241,7 +241,8 @@ class DaggerCategory[C0, C1: DaggerCategory](Category[C0, C1]):
     ) -> Equation[Hom[C1, Tensor[B, D], Tensor[A, C]]]:
         """ The dagger distributes over the tensor, when there is one. """
         return cls.equation_factory(
-            (f @ g).dagger(), f.dagger() @ g.dagger())
+            (f @ g).dagger(),  # ty: ignore[unsupported-operator]
+            f.dagger() @ g.dagger())
 
 
 class ColouredMonoid[C0, C1: ColouredMonoid](Category[C0, C1]):
@@ -353,7 +354,9 @@ class Groupoid[C0, C1: Groupoid](DaggerCategory[C0, C1]):
             (cls.id(f.dom), cls.id(f.cod)))
 
 
-class Group[C1: Group](Groupoid[type(None), C1], Monoid[C1]):
+class Group[C1: Group](
+        Groupoid[type(None), C1],  # ty: ignore[invalid-type-form]
+        Monoid[C1]):
     """
     A group is a monoid whose elements are invertible, i.e. a groupoid with
     a single object :obj:`None`, which every element goes from and to.
@@ -512,8 +515,8 @@ class MonoidalCategory[C0: ColouredMonoid, C1: MonoidalCategory](
         return f.tensor(g)
 
     def split_memory(
-            self, n: int = None, left: bool = False, *,
-            dom: C0 = None, cod: C0 = None, mem: C0 = None
+            self, n: int | None = None, left: bool = False, *,
+            dom: C0 | None = None, cod: C0 | None = None, mem: C0 | None = None
             ) -> tuple[C0, C0, C0]:
         """
         The domain, codomain and memory of a feedback or a trace, read off
@@ -591,12 +594,13 @@ class FeedbackCategory[
             n_steps : The number of time steps to delay.
         """
         del n_steps
-        return self
+        return self  # ty: ignore[invalid-return-type]
 
     @abstractmethod
     def feedback(
-            self, n: int = None, left: bool = False, *,
-            dom: C0 = None, cod: C0 = None, mem: C0 = None) -> C1:
+            self, n: int | None = None, left: bool = False, *,
+            dom: C0 | None = None, cod: C0 | None = None,
+            mem: C0 | None = None) -> C1:
         """
         The feedback operator on a morphism ``dom @ mem.delay() -> cod @ mem``
         giving a morphism ``dom -> cod``, to be instantiated.
@@ -725,7 +729,7 @@ def keyword_form(trace: Callable) -> Callable:
         return trace
 
     @wraps(trace)
-    def method(self, n: int = None, left: bool = False, *,
+    def method(self, n: int | None = None, left: bool = False, *,
                dom=None, cod=None, mem=None):
         if (dom, cod, mem) == (None, None, None):
             return trace(self, left=left) if n is None\
@@ -773,14 +777,20 @@ class TracedCategory[
         """
 
     def feedback(
-            self, n: int = None, left: bool = False, *,
-            dom: C0 = None, cod: C0 = None, mem: C0 = None) -> C1:
+            self, n: int | None = None, left: bool = False, *,
+            dom: C0 | None = None, cod: C0 | None = None,
+            mem: C0 | None = None) -> C1:
         """
         The feedback of a traced category is its :meth:`trace` over the
         memory, whose delay is itself, in either form.
         """
         # pylint: disable-next=unexpected-keyword-arg  # see keyword_form
-        return self.trace(n, left, dom=dom, cod=cod, mem=mem)
+        return self.trace(
+            n,  # ty: ignore[invalid-argument-type]
+            left,
+            dom=dom,  # ty: ignore[unknown-argument]
+            cod=cod,  # ty: ignore[unknown-argument]
+            mem=mem)  # ty: ignore[unknown-argument]
 
     @axiom
     def yanking[X: Atom[C0]](
@@ -1422,7 +1432,7 @@ class SymmetricCategory[
         writes it directly; a free category overrides it with a native box,
         see :meth:`discopy.symmetric.Diagram.from_permutation`.
         """
-        return cls.permutation(perm, dom)
+        return cls.permutation(perm, dom)  # ty: ignore[invalid-argument-type]
 
     @classmethod
     def braid(cls, left: C0, right: C0) -> C1:
@@ -1706,10 +1716,17 @@ class BalancedCategory[C0: ColouredMonoid, C1: BalancedCategory](
     @axiom
     def yanking[X: Atom[C0]](
             cls, x: Var[C0, X]) -> Equation[Hom[C1, X, X]]:
-        """ The twist is the trace of a braid, on either side. """
+        """
+        Tracing the braid of an object with itself gives its twist, on
+        either side, the yanking axiom of a balanced traced category, see
+        :cite:t:`JoyalEtAl96`: the twist is the identity when the braid is a
+        swap.
+        """
         braid = cls.braid(x, x)
         return cls.equation_factory(
-            braid.trace(left=True), cls.twist(x), braid.trace())
+            braid.trace(mem=x, left=True),  # ty: ignore[unknown-argument]
+            cls.twist(x),
+            braid.trace(mem=x))  # ty: ignore[unknown-argument]
 
     @rule
     def twisting[X: Atom[C0]](cls, x: Var[C0, X]) -> Hom[C1, X, X]:

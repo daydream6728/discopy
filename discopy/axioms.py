@@ -183,6 +183,26 @@ class Equation[T]:
         return all(term == terms[0] for term in terms)
 
 
+def quotient(category, term):
+    """
+    A term up to the equation of its category, i.e. its image under the
+    ``up_to`` of :meth:`discopy.abc.Category.equation_factory`, the term
+    itself when the category compares on the nose, so that a construction
+    over any category, e.g. a parametric map or a lens, compares its parts
+    as that category does.
+
+    >>> from discopy import symmetric
+    >>> from discopy.matrix import Matrix
+    >>> x = symmetric.Ty('x')
+    >>> f = symmetric.Box('f', x, x)
+    >>> assert quotient(symmetric.Diagram, f) == f.to_hypergraph()
+    >>> m = Matrix[int].id(2)
+    >>> assert quotient(Matrix[int], m) is m
+    """
+    up_to = category.equation_factory(term).up_to
+    return term if up_to is None else up_to(term)
+
+
 def values(typ: type) -> tuple:
     """
     A finite sample of the values of a Python type, the same every time, so

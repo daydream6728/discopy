@@ -194,7 +194,7 @@ class Diagram(symmetric.Diagram, MarkovCategory):
             "use discopy.comarkov.Diagram.merge instead.",
             DeprecationWarning, stacklevel=2)
         from discopy import comarkov
-        return comarkov.Diagram.merge(x, n)
+        return comarkov.Diagram.merge(x, n)  # ty: ignore[invalid-return-type]
 
 
 class Box(symmetric.Box, Diagram):

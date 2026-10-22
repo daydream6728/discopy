@@ -216,9 +216,10 @@ class NamedGeneric:
     it builds through ``cls.ar`` carry the parameter.
 
     >>> from discopy.abc import Category
+    >>> from discopy.axioms import TestableGeneric
     >>> @factory
-    ... class C[dtype](Category, NamedGeneric):
-    ...     pass
+    ... class C[dtype](Category, TestableGeneric):
+    ...     checked_params = classmethod(lambda cls: ())
     >>> assert C[int].factory is C[int] is C[int].ar
 
     A DisCoPy class is named by its module, since every level of the
@@ -453,7 +454,8 @@ def resolve_factory(name: str) -> type:
     """
     if name.endswith(']'):
         origin, parameter = name[:-1].split('[', 1)
-        return resolve_factory(origin)[resolve_factory(parameter)]
+        return resolve_factory(origin)[
+            resolve_factory(parameter)]  # ty: ignore[not-subscriptable]
     *modules, factory = name.removeprefix('discopy.').split('.')
     import discopy  # pylint: disable=import-outside-toplevel
     module = discopy
@@ -785,7 +787,7 @@ def text_width(text: str, fontsize=12, points_per_inch=72., grid=16):
     return ceil(width / points_per_inch * grid) / grid
 
 
-def tuplify(stuff: any, n: int | None = None) -> tuple:
+def tuplify(stuff: Any, n: int | None = None) -> tuple:
     """
     Turns anything into a tuple, do nothing if it is already.
 

@@ -1466,7 +1466,8 @@ class Hypergraph[category](
                 len(self.dom_wires), self.dom, len(xs)))
         values = dict(zip(self.dom_wires, xs))
         for box, (box_dom, box_cod) in zip(self.boxes, self.box_wires):
-            result = box(*(values[spider] for spider in box_dom))
+            inputs = (values[spider] for spider in box_dom)
+            result = box(*inputs)  # ty: ignore[call-non-callable]
             ys = tuplify(result, len(box_cod))
             if len(ys) != len(box_cod):
                 raise ValueError(messages.WRONG_NUMBER_OF_WIRES.format(
@@ -1534,7 +1535,7 @@ class Hypergraph[category](
         while spider not in exits:
             i, port = consumers[spider]
             box = self.boxes[i]
-            result = box(obj, port)
+            result = box(obj, port)  # ty: ignore[call-non-callable]
             obj, port = (result, 0) if len(box.cod) == 1 else result
             spider = self.box_wires[i][1][port]
         return obj if len(self.cod_wires) == 1 else (obj, exits[spider])

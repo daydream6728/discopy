@@ -437,7 +437,8 @@ class Stream[category](FeedbackCategory, TestableGeneric):
 
     @classmethod
     def sequence(
-            cls, name: str, dom: Ty, cod: Ty, mem: Ty = None, n_steps: int = 0,
+            cls, name: str, dom: Ty, cod: Ty, mem: Ty | None = None,
+            n_steps: int = 0,
             box_factory=None) -> Stream:
         """
         Produce a stream of boxes indexed by a time step.
@@ -452,7 +453,8 @@ class Stream[category](FeedbackCategory, TestableGeneric):
         f1 : x1 @ m0 -> y1 @ m1
         f2 : x2 @ m1 -> y2 @ m2
         """
-        mem = Ty[cls.category.ob]() if mem is None else mem
+        if mem is None:
+            mem = Ty[cls.category.ob]()  # ty: ignore[invalid-type-form]
         if box_factory is None:
             box_factory = cls.category.box_factory
         now = box_factory(
@@ -596,8 +598,8 @@ class Stream[category](FeedbackCategory, TestableGeneric):
                    _later=_later)
 
     def split_memory(
-            self, n: int = None, left: bool = False, *,
-            dom: Ty = None, cod: Ty = None, mem: Ty = None
+            self, n: int | None = None, left: bool = False, *,
+            dom: Ty | None = None, cod: Ty | None = None, mem: Ty | None = None
             ) -> tuple[Ty, Ty, Ty]:
         """
         The domain, codomain and memory of a feedback of a stream, at every
@@ -615,8 +617,9 @@ class Stream[category](FeedbackCategory, TestableGeneric):
         return dom, cod, mem
 
     def feedback(
-            self, n: int = None, left: bool = False, *,
-            dom: Ty = None, cod: Ty = None, mem: Ty = None) -> Stream:
+            self, n: int | None = None, left: bool = False, *,
+            dom: Ty | None = None, cod: Ty | None = None,
+            mem: Ty | None = None) -> Stream:
         """
         The delayed feedback of a monoidal stream, in either form of
         :meth:`discopy.abc.FeedbackCategory.feedback`, on the right only.

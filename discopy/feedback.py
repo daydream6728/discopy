@@ -729,8 +729,23 @@ class Box(monoidal.Box, Diagram):
             **self._params)
 
     def reset(self):
-        """ Reset a box to time step zero, used in :class:`Functor`. """
-        return self.delay(-self.time_step)
+        """
+        Reset a box to time step zero, used in :class:`Functor`: a box by its
+        time step, a structural box, whose delay lives in its types, see
+        :meth:`delay`, by that of the earliest of its wires.
+
+        >>> from discopy.markov import Swap
+        >>> x, y = Ty('x'), Ty('y')
+        >>> assert Swap(x, y).delay(2).reset() == Swap(x, y)
+        >>> assert Box('f', x, y).delay().reset() == Box('f', x, y)
+        """
+        if not issubclass(self.ob.generator_factory, monoidal.Wire):
+            return self
+        if getattr(self, "__getnewargs__", None) is None:
+            return self.delay(-self.time_step)
+        return self.delay(-min(
+            (wire.time_step for wire in (self.dom @ self.cod).inside),
+            default=0))
 
     def dagger(self):
         result = super().dagger()
@@ -764,7 +779,7 @@ class Box(monoidal.Box, Diagram):
         result = super().from_tree(tree)
         result._time_step = tree.get(  # pylint: disable=protected-access
             'time_step', 0)
-        return result
+        return result  # ty: ignore[invalid-return-type]
 
     def setoid(self):
         return super().setoid() + (self.time_step, )
@@ -850,7 +865,9 @@ class Feedback(Box, monoidal.Bubble):
         arg, dom, cod, mem = (
             from_tree(tree[key]) if key in tree else None
             for key in ('arg', 'dom', 'cod', 'mem'))
-        return cls(arg, dom=dom, cod=cod, mem=mem, left='left' in tree)
+        return cls(
+            arg,  # ty: ignore[invalid-argument-type]
+            dom=dom, cod=cod, mem=mem, left='left' in tree)
 
     def dagger(self):
         """
@@ -1107,7 +1124,7 @@ class Functor(monoidal.Functor):
         if isinstance(
                 other, FollowedBy) and hasattr(self.cod, "followed_by"):
             arg = other.dom if other.is_dagger else other.cod
-            return self.cod.followed_by(  # ty: ignore[call-non-callable]
+            return self.cod.followed_by(
                 self(arg))
         if isinstance(other, Feedback)\
                 and issubclass(self.cod, FeedbackCategory)\
@@ -1147,10 +1164,10 @@ def subclass(name: str, bases: list[type], module: str, doc: str) -> type:
     base subclasses, so that it prints, pickles and reads back from its tree
     as a class written in that module would.
     """
-    bases = tuple(dict.fromkeys(
+    bases = tuple(dict.fromkeys(  # ty: ignore[invalid-assignment]
         base for base in bases if not any(
             other is not base and issubclass(other, base) for other in bases)))
-    return type(name, bases, {
+    return type(name, bases, {  # ty: ignore[invalid-argument-type]
         "__module__": module, "__qualname__": name, "__doc__": doc})
 
 

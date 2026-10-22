@@ -56,7 +56,8 @@ We can check the Eckmann-Hilton argument, up to interchanger.
 import itertools
 from dataclasses import dataclass, field
 from functools import cached_property
-from typing import Iterable, Iterator, Callable, Self, TYPE_CHECKING, ClassVar
+from typing import (
+    Any, Iterable, Iterator, Callable, Self, TYPE_CHECKING, ClassVar)
 from warnings import warn
 
 from discopy import abc, axioms, cat, drawing, hypergraph, cmap, messages
@@ -664,7 +665,7 @@ class Nat(abc.Nat, Ty):  # ty: ignore[invalid-generic-class]
                  cod: Colour | None = None, _scan: bool = True):
         # pylint: disable=unused-argument  # a Nat has one colour
         self.n = inside if isinstance(inside, int) else len(inside)
-        self.dom = self.cod = transparent  # ty: ignore[invalid-assignment]
+        self.dom = self.cod = transparent
         cat.Ob.__init__(self, type(self).__name__)
 
     def __setstate__(self, state: dict):
@@ -1687,7 +1688,8 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
             if no_more_moves:
                 break
 
-    def normal_form(self, normalize: Callable = None, **params) -> "Diagram":
+    def normal_form(
+            self, normalize: Callable | None = None, **params) -> "Diagram":
         """
         Returns the normal form of a diagram.
 
@@ -1927,6 +1929,27 @@ class Bubble(cat.Bubble, Box):
         else:
             self.draw_as_frame = True
             self.draw_as_square = False
+
+    @property
+    def keywords(self) -> dict[str, Any]:
+        """
+        The keyword arguments of a :class:`discopy.cat.Bubble` with the
+        drawing options, so that substituting into a bubble draws it the
+        same way.
+
+        >>> from sympy.abc import phi  # doctest: +EXTRA
+        >>> x = Ty('x')
+        >>> f = Box('f', x, x, data=phi)
+        >>> bubble = f.bubble(drawing_name="g", draw_as_square=True)
+        >>> substituted = bubble.subs(phi, 1)
+        >>> assert substituted.keywords == bubble.keywords
+        >>> assert substituted.arg.data == 1
+        """
+        return dict(
+            super().keywords, drawing_name=self.drawing_name,
+            draw_as_frame=self.draw_as_frame,
+            draw_as_square=self.draw_as_square,
+            draw_vertically=self.draw_vertically)
 
     @property
     def size(self):
