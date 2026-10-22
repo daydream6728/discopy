@@ -327,7 +327,8 @@ class Circuit(tensor.Diagram[complex]):
             for bitstring, count in counts[i].items():
                 result.array[bitstring] = count
             if circuit.post_processing:
-                result = result >> circuit.post_processing.eval().cast(float)
+                post_processing = circuit.post_processing.eval(mixed=True)
+                result = result >> post_processing.to_tensor().cast(float)
             results.append(result)
         return results if len(results) > 1 else results[0]
 

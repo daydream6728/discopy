@@ -90,6 +90,17 @@ def test_mixed_permutation_to_tk():
         circuit.init_and_discard().eval().array.real)
 
 
+def test_Discard_bit_to_tk():
+    circuit = Ket(1, 0) >> Measure(2) >> Discard(bit) @ bit
+    assert circuit.to_tk().post_processing == Discard(bit) @ bit
+    backend = tk.mockBackend({(1, 0): 1024})
+    assert circuit.eval(backend=backend)\
+        == Tensor[float]([1, 0], Dim(1), Dim(2))
+    backend = tk.mockBackend({(1, 0): 1024})
+    assert (circuit >> Bits(0).dagger()).eval(backend=backend)\
+        == Tensor[float]([1], Dim(1), Dim(1))
+
+
 def test_ClassicalGate_to_tk():
     post = ClassicalGate('post', bit ** 2, bit ** 0, data=[0, 0, 0, 1])
     assert (post[::-1] >> Swap(bit, bit)).to_tk().post_processing\

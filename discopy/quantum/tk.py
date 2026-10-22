@@ -318,6 +318,11 @@ def to_tk(circuit):
             bits, qubits = measure_qubits(
                 qubits, bits, box, left.count(bit), left.count(qubit))
         elif isinstance(box, Discard):
+            if box.dom.count(bit):
+                off, n_bits = left.count(bit), box.dom.count(bit)
+                right = Id(tk_circ.post_processing.cod[off + n_bits:])
+                tk_circ.post_process(
+                    Id(bit ** off) @ Discard(bit ** n_bits) @ right)
             bits = bits[:left.count(bit)]\
                 + bits[left.count(bit) + box.dom.count(bit):]
             qubits = qubits[:left.count(qubit)]\
