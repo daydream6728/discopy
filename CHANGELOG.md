@@ -1502,6 +1502,18 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `grammar.pregroup` which re-exported it; trees serialised with an `Ob`
   factory string load the same way
   ([#566](https://github.com/discopy/discopy/pull/566)).
+- A `dtype` names the ring of entries: subscripting `matrix.Matrix` or
+  `tensor.Diagram`, hence `Tensor`, `tensor.Box`, `quantum.channel.Channel`
+  and their subclasses, by the scalar type numpy gives `bool`, `int`,
+  `float` or `complex` is subscripting by that Python type, e.g.
+  `Matrix[numpy.int64] is Matrix[int]`, and the bare class infers it, so
+  `Matrix([1, 2], 1, 2)` prints as `Matrix[int]` where it printed as a
+  `Matrix[int64]` that no namespace binds. `Matrix.id(2)` and
+  `Matrix[int].id(2)` were unequal with equal arrays, so unitality failed
+  for the bare class, which the property matrix now enrols. Other
+  precisions, e.g. `float32`, keep numpy's names, and a tree or a pickle
+  written with `Matrix[int64]` loads as a `Matrix[int]`
+  ([rel-int/discopy-next#88](https://github.com/rel-int/discopy-next/issues/88)).
 
 ### Removed
 

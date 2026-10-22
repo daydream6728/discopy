@@ -100,7 +100,7 @@ class Tensor(Matrix):
     >>> m = Tensor([0, 1, 1, 0], Dim(2), Dim(2))
     >>> v = Tensor([0, 1], Dim(1), Dim(2))
     >>> v >> m >> v.dagger()
-    Tensor[int64]([0], dom=Dim(1), cod=Dim(1))
+    Tensor[int]([0], dom=Dim(1), cod=Dim(1))
 
     Notes
     -----
@@ -603,6 +603,15 @@ class Diagram(NamedGeneric['dtype'], frobenius.Diagram):
     >>> diagram = vector[::-1] >> vector @ vector
     >>> print(diagram)
     vector[::-1] >> vector >> Dim(2) @ vector
+
+    A tensor diagram is subscripted by the ``dtype`` of the :class:`Tensor`
+    it evaluates to, so numpy's scalar types are named as in
+    :class:`Matrix`:
+
+    >>> import numpy as np
+    >>> assert Box[np.float64] is Box[float]
+    >>> Box('f', Dim(1), Dim(1), [0.5])
+    tensor.Box[float]('f', Dim(1), Dim(1), data=[0.5])
     """
     sum_factory: ClassVar[type["Sum"]]
     swap_factory: ClassVar[type["Swap"]]
@@ -611,6 +620,9 @@ class Diagram(NamedGeneric['dtype'], frobenius.Diagram):
     cap_factory: ClassVar[type["Cap"]]
     bubble_factory: ClassVar[type["Bubble"]]
     ob = Dim
+
+    def __class_getitem__(cls, dtype):
+        return super().__class_getitem__(Tensor[dtype].dtype)
 
     @classmethod
     def dim(cls, typ: monoidal.Ty) -> Dim:
@@ -828,7 +840,7 @@ class Box(frobenius.Box, Diagram):
     -------
     >>> b1 = Box('sauce_0', Dim(1), Dim(2), data=[0.84193562, 0.91343221])
     >>> b1.eval()
-    Tensor[float64]([0.84193562, 0.91343221], dom=Dim(1), cod=Dim(2))
+    Tensor[float]([0.84193562, 0.91343221], dom=Dim(1), cod=Dim(2))
     """
 
     def __setstate__(self, state):

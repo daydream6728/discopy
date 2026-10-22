@@ -53,7 +53,7 @@ def test_Tensor():
     assert Tensor([1], Dim(1), Dim(1))
     m = Tensor([0, 1, 1, 0], Dim(2), Dim(2))
     assert repr(m) == str(m)\
-        == "Tensor[int64]([0, 1, 1, 0], dom=Dim(2), cod=Dim(2))"
+        == "Tensor[int]([0, 1, 1, 0], dom=Dim(2), cod=Dim(2))"
     u = Tensor([1, 0, 0, 0], Dim(2), Dim(2))
     v = Tensor([0, 0, 0, 1], Dim(2), Dim(2))
     assert u + v == Tensor.id(Dim(2))
@@ -344,6 +344,8 @@ def test_Tensor_dtype_inference():
     assert Box("X", Dim(1), Dim(1), data=[0]) == Box[np.int64]("X", Dim(1), Dim(1), data=[0])
     assert Box("Y", Dim(1), Dim(1), data=[1.]) == Box[np.float64]("Y", Dim(1), Dim(1), data=[1.])
     assert Box("Y", Dim(1), Dim(1), data=[1]) != Box("Y", Dim(1), Dim(1), data=[1.])
+    assert type(Box("Y", Dim(1), Dim(1), data=[1.])) is Box[float]
+    assert Box[np.int64] is Box[int] and Spider[np.complex128] is Spider[complex]
 
 
 def test_non_numpy_eval():

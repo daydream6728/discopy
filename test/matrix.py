@@ -9,7 +9,7 @@ from discopy.abc import DaggerCategory, Nat
 from discopy.matrix import Matrix, backend
 from discopy.symmetric import Ty, Permutation, Swap, Functor
 from discopy.tensor import Tensor, Dim
-from discopy.utils import AxiomError, dumps, loads
+from discopy.utils import AxiomError, Subscript, dumps, loads
 
 
 def test_Matrix_trace_left():
@@ -53,8 +53,8 @@ def test_repeat():
 def test_autotyping():
     pytest.importorskip("jax")
     torch = pytest.importorskip("torch")
-    assert Matrix([0.5, 0.5], dom=1, cod=2).dtype == np.float64
-    assert Matrix([0.5j], dom=1, cod=1).dtype == np.complex128
+    assert Matrix([0.5, 0.5], dom=1, cod=2).dtype == float
+    assert Matrix([0.5j], dom=1, cod=1).dtype == complex
     with backend('jax'):
         assert Matrix([0.5, 0.5], dom=1, cod=2).dtype == np.float32
     with backend('pytorch'):
@@ -187,8 +187,25 @@ def test_Matrix_strategy():
 
 
 def test_Matrix_axioms():
-    """ A dry run of the property matrix on the carrier it enrols. """
-    axioms.assert_axioms(Matrix[int])
+    """ A dry run of the property matrix on the carriers it enrols. """
+    axioms.assert_axioms(Matrix, Matrix[int])
+
+
+def test_Matrix_dtype_is_the_ring_of_entries():
+    """ numpy's default precisions are the Python types they stand for, so
+    the class a matrix infers is the one a user names, see #88. """
+    for dtype in (bool, int, float, complex):
+        assert Matrix[np.dtype(dtype).type] is Matrix[dtype]
+        assert Tensor[np.dtype(dtype).type] is Tensor[dtype]
+    assert Matrix[np.float32] is not Matrix[float]
+    assert Matrix[int].id(2) == Matrix.id(2)
+    assert type(Matrix.id(2) >> Matrix[int].id(2)) is Matrix[int]
+    m = Matrix([1, 2], 1, 2)
+    assert eval(repr(m), {"Matrix": Matrix}) == m
+    assert loads('{"factory": "matrix.Matrix[int64]", "array": [1, 2], '
+                 '"dom": {"factory": "abc.Nat", "n": 1}, '
+                 '"cod": {"factory": "abc.Nat", "n": 2}}') == m
+    assert Subscript.decode(Subscript(Matrix, (np.int64, ))) is Matrix[int]
 
 
 def test_Matrix_copy():
