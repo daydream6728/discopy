@@ -3106,6 +3106,11 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Project
 
+- Coverage measures with `sys.monitoring` on every Python, `core = "sysmon"`,
+  the default from 3.14 on: on 3.12 and 3.13 the C tracer took twice as long
+  over `discopy.optyx`'s tests, 167 s against 111 s on 3.12, for the same
+  lines, and pushed the test jobs past their fifteen minutes
+  ([#276](https://github.com/rel-int/discopy-next/pull/276)).
 - A notebook that fails to execute in a docs build links its source in the
   repository and at the commit Read the Docs builds,
   `READTHEDOCS_GIT_CLONE_URL` at `READTHEDOCS_GIT_COMMIT_HASH`, where it
