@@ -607,7 +607,7 @@ def rollout(net, x, target, given, caps, sigma: float = 0.0,
         given : Which cells are given ``(rows, cells)``.
         caps : The segment counts to read the trajectory at.
         sigma : The scale of the noise on the answer trace.
-        generator : The generator of the noise.
+        generator : The generator of the noise, on the device of ``x``.
         threshold : The board halt logit that counts as halting.
 
     Example
