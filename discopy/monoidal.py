@@ -58,7 +58,8 @@ from __future__ import annotations
 import itertools
 from dataclasses import dataclass, field
 from functools import cached_property
-from typing import Iterable, Iterator, Callable, Self, TYPE_CHECKING, ClassVar
+from typing import (
+    Any, Iterable, Iterator, Callable, Self, TYPE_CHECKING, ClassVar)
 from warnings import warn
 
 from discopy import abc, cat, drawing, hypergraph, cmap, messages
@@ -1033,6 +1034,9 @@ class Layer(cat.Box, ColouredMonoid):
                 staircases, normalize=Diagram.normalize)
         except NotImplementedError as exception:  # Eckmann-Hilton argument.
             diagram = exception.last_step
+        if not diagram.inside:  # The layers compose to the identity,
+            raise AxiomError(  # which is not a layer, see #599.
+                messages.NOT_MERGEABLE.format(self, other))
         boxes_or_types, offset = [self.dom[:0]], 0
         for layer in diagram.inside:
             left, box, right = layer.boxes_and_types
@@ -1788,6 +1792,27 @@ class Bubble(cat.Bubble, Box):
         else:
             self.draw_as_frame = True
             self.draw_as_square = False
+
+    @property
+    def keywords(self) -> dict[str, Any]:
+        """
+        The keyword arguments of a :class:`discopy.cat.Bubble` with the
+        drawing options, so that substituting into a bubble draws it the
+        same way.
+
+        >>> from sympy.abc import phi  # doctest: +EXTRA
+        >>> x = Ty('x')
+        >>> f = Box('f', x, x, data=phi)
+        >>> bubble = f.bubble(drawing_name="g", draw_as_square=True)
+        >>> substituted = bubble.subs(phi, 1)
+        >>> assert substituted.keywords == bubble.keywords
+        >>> assert substituted.arg.data == 1
+        """
+        return dict(
+            super().keywords, drawing_name=self.drawing_name,
+            draw_as_frame=self.draw_as_frame,
+            draw_as_square=self.draw_as_square,
+            draw_vertically=self.draw_vertically)
 
     @property
     def size(self):

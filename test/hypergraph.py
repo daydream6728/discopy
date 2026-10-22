@@ -6,6 +6,7 @@ from discopy.hypergraph import *
 from discopy.frobenius import (
     Ty, Box, Cap, Cup, Diagram, Nat, Spider, Hypergraph as H)
 
+
 def test_pushout():
     with raises(ValueError):
         pushout(1, 1, [0], [0, 1])
@@ -28,10 +29,13 @@ def test_Hypergraph_str():
 
 def test_Hypergraph_repr():
     x, y = map(Ty, "xy")
-    assert repr(H.spiders(1, 0, x @ y))\
+    from discopy import frobenius, hypergraph
+    graph = H.spiders(1, 0, x @ y)
+    assert repr(graph)\
         == "hypergraph.Hypergraph[frobenius.Diagram]("\
            "dom=frobenius.Ty(frobenius.Wire('x'), frobenius.Wire('y')), "\
            "cod=frobenius.Ty(), boxes=(), wires=((0, 1), (), ()))"
+    assert eval(repr(graph)) == graph
 
 
 def test_Hypergraph_hash():

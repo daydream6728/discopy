@@ -979,6 +979,16 @@ class Hypergraph[category](
         return type(self)(self.dom, self.cod, boxes, wires, spider_types)
 
     def __repr__(self):
+        """
+        The representation of a hypergraph names the category it is
+        parameterised by, so that it evaluates back to it.
+
+        >>> from discopy.markov import Ty, Box, Diagram
+        >>> graph = Box('f', Ty('x'), Ty('y')).to_hypergraph()
+        >>> from discopy import hypergraph, markov, monoidal, feedback, cat
+        >>> assert eval(repr(graph)) == graph
+        >>> assert type(eval(repr(graph))) is Hypergraph[Diagram]
+        """
         spider_types = f", spider_types={self.spider_types!r}"\
             if self.scalar_spiders else ""
         return factory_name(type(self))\

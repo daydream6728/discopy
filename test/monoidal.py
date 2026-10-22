@@ -795,6 +795,14 @@ def test_List():
         Ty(Wire('x', red, red), Wire('y'))
 
 
+def test_coloured_diagram_has_no_hypergraph():
+    red = Colour("red")
+    x = Ty(Wire('x', red, red))
+    for convert in (Diagram.to_hypergraph, Diagram.to_map):
+        with raises(AxiomError):
+            convert(Box('f', x, x))
+
+
 def test_foliation_up_to_interchangers():
     from discopy import rigid, tensor
     interchangers = lambda d: d.to_staircases().normal_form(
@@ -838,6 +846,7 @@ def test_decode_without_boxes_and_offsets():
     with raises(ValueError):
         Diagram.decode(Ty('x'))
 
+
 def test_List_repr():
     from discopy import cat, monoidal
     from discopy.python import Ty as PyTy
@@ -849,6 +858,7 @@ def test_List_repr():
     assert PyTy is monoidal.List[type]
     for x in (List[int](2, 3), List[type](int, str), PyTy(int), PyTy()):
         assert eval(repr(x)) == x and eval(str(x)) == x
+
 
 def test_tensor_of_sum_with_diagram():
     x = Ty('x')

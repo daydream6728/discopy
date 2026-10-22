@@ -415,6 +415,14 @@ def test_Functor_then_left_unit():
     assert (Functor.id() >> F)(x) == F(x)
 
 
+@pytest.mark.xfail(strict=True, reason="#648: the identity functor is a "
+                   "callable, which compares unequal to a mapping.")
+def test_Functor_left_unitality():
+    x, y = Ob('x'), Ob('y')
+    F = Functor({x: y}, {})
+    assert Functor.id() >> F == F
+
+
 def test_Bubble_no_common_boundary():
     x, y = Ob('x'), Ob('y')
     f, g = Box('f', x, x), Box('g', y, x)

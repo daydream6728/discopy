@@ -1430,6 +1430,20 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
+- Bugs found by the property matrix of
+  [#1](https://github.com/rel-int/discopy-next/pull/1), each with its
+  regression test: a `feedback.Box` built with keywords can be delayed, and
+  `feedback.Box.reset` resets a structural box, e.g. a delayed swap, by its
+  earliest wire; `feedback.Feedback.dagger` and `rotate` raise `AxiomError`
+  where they crashed with `TypeError`, as feedback cannot be fed back in
+  time; `Layer.merge` raises `AxiomError` on layers that compose to the
+  identity, e.g. a snake, where it raised `UnboundLocalError`; a bubble
+  rebuilds itself from its `keywords`, so that `subs`, `lambdify` and
+  `dagger` keep the drawing options of a monoidal bubble and the `func` of a
+  tensor one; `para.Closed.curry` refuses a map with coparameters, which its
+  exponential would swallow, and a compact para map curries by cups and caps.
+  The left unitality of `cat.Functor` is a strict xfail until #648 is fixed.
+
 - A tree saying `"is_dagger": false` reads back as no dagger: `cat.Box`,
   and so every box, `monoidal.Wire`, `frobenius.Spider`,
   `feedback.FollowedBy` and `quantum.gates.Digits` took the presence of the
