@@ -280,3 +280,16 @@ def test_unbiased_keyword_operand():
     F, G = Functor({x: y}, {}), Functor({y: z}, {})
     assert F.then(other=G)(x) == F.then(G)(x) == z
     assert F.then() == F
+
+
+def test_is_dagger_false_in_tree():
+    """ A tree saying `"is_dagger": false` reads back as no dagger: the
+    readers took the presence of the key for its value. """
+    from discopy import feedback, frobenius, monoidal
+    from discopy.quantum.gates import Digits
+    x = frobenius.Ty('x')
+    for term in (cat.Box('f', Ob('x'), Ob('y')), monoidal.Wire('w'),
+                 frobenius.Spider(1, 2, x), feedback.FollowedBy(x),
+                 Digits(0, 1, dim=2)):
+        tree = dict(term.to_tree(), is_dagger=False)
+        assert from_tree(tree) == term and not from_tree(tree).is_dagger

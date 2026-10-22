@@ -677,7 +677,7 @@ class Box(Arrow):
     def from_tree(cls, tree: dict) -> Box:
         name = tree['name']
         dom, cod = map(from_tree, (tree['dom'], tree['cod']))
-        data, is_dagger = tree.get('data', None), 'is_dagger' in tree
+        data, is_dagger = tree.get('data', None), tree.get('is_dagger', False)
         return cls(name=name, dom=dom, cod=cod, data=data, is_dagger=is_dagger)
 
 
