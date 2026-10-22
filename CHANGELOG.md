@@ -2100,6 +2100,10 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   other, so `Functor({Nat(1): x @ y})` maps a swap of `Nat(1)`, where it
   raised `Expected a permutation of length 6, got 3`
   ([rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
+- `braided.Diagram.simplify` on a foliated diagram splits its layers of more
+  than one box into staircases first, as `tensor.Diagram.grad` does, where
+  it unpacked every layer as one box and raised `ValueError`
+  ([rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
 - `Matrix.then`, `tensor` and `__add__`, and `Tensor.then` and `tensor`,
   built their result as `type(self)(...)`, casting it to the dtype of the
   left operand: the unparametrised structural matrices -- `id`, `swap`,
