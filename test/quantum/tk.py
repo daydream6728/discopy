@@ -84,6 +84,19 @@ def test_controlled_gates_to_tk():
         CCZ.to_tk()
 
 
+def test_tk_round_trip_is_numerical():
+    circuits = [
+        Ket(0, 0) >> Ry(.2) @ Rx(.7) >> CRz(.3) >> CRx(.4) >> H @ U1(.1)
+        >> CU1(.6) >> H @ H >> Measure(2),
+        Ket(0, 0, 0) >> Ry(.2) @ Rx(.7) @ H >> Circuit.permutation([2, 0, 1])
+        >> Controlled(Ry(.4), distance=2) >> qubit @ CU1(.3, distance=-1)
+        >> H @ H @ H >> Measure(3)]
+    for circuit in circuits:
+        assert np.allclose(
+            Circuit.from_tk(circuit.to_tk()).eval().array,
+            circuit.eval().array)
+
+
 def test_mixed_permutation_to_tk():
     measure = Ket(1, 0, 0) >> Measure() @ qubit @ Measure()
     swap_bits = Circuit.permutation([2, 1, 0], bit @ qubit @ bit)
