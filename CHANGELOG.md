@@ -18,6 +18,22 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   the opposites of `matrix.Matrix[int]` join the property matrix
   ([discopy/discopy#646](https://github.com/discopy/discopy/issues/646)).
 
+- Frobenius plumbing
+  ([discopy/discopy#472](https://github.com/discopy/discopy/issues/472)):
+  `finset.Cospan` is the free hypergraph category on one object, cospans of
+  finite sets up to isomorphism composed by pushout, a `HypergraphCategory`
+  in the property matrix, and `frobenius.Cospan(apex, left, right)` holds
+  one with the type of each point of its apex. Permutations are cospans, as
+  are phase-free spiders and the cups and caps of a self-dual wire, which
+  carry `legs`; `Cospan(x, [0], [0, 0]) == Spider(1, 2, x)`.
+  `frobenius.Layer` alternates cospans and generators, plumbing tensors into
+  one cospan, `Diagram.spiders` of a type builds one, and foliation fuses
+  them by pushout, e.g. a snake into the identity. `Cospan.to_spiders` is
+  how one is drawn and sent by a functor, and
+  `abc.HypergraphCategory.cospan` builds one in any hypergraph category.
+  The categories below frobenius keep their spiders as generators until
+  they have a cospan factory of their own.
+
 - Markov and comarkov plumbing
   ([discopy/discopy#472](https://github.com/discopy/discopy/issues/472)):
   `markov.Function(dom, func)` copies, discards and permutes so that output
@@ -980,6 +996,11 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   ([#442](https://github.com/discopy/discopy/pull/442)).
 
 ### Changed
+
+- A layer reads its plumbing through `Layer.is_plumbing_component`, so
+  that a box is plumbing by what it holds rather than by its class alone,
+  e.g. a spider without a phase. The diagrams of `tensor`, `quantum` and
+  `hopf` have `frobenius.Layer`s.
 
 - The foliation of a symmetric diagram with plumbing fuses consecutive
   layers of plumbing alone, into the identity when they cancel, e.g. a

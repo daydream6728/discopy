@@ -835,13 +835,36 @@ class Layer(cat.Box, ColouredMonoid):
                     cod, cod_, cod.cod, cod_.dom))
 
     @classmethod
+    def is_plumbing_box(cls, value: Ty | Box) -> bool:
+        """
+        Whether a component of a layer is plumbing other than a type, e.g. a
+        :class:`discopy.symmetric.Permutation` in a symmetric layer, none in
+        a monoidal one.
+
+        Parameters:
+            value : The component of a layer.
+        """
+        return isinstance(value, cls.plumbing) and not isinstance(value, Ty)
+
+    @classmethod
+    def is_plumbing_component(cls, value: Ty | Box) -> bool:
+        """
+        Whether a component of a layer is plumbing, i.e. a type or a box of
+        plumbing, see :meth:`is_plumbing_box`.
+
+        Parameters:
+            value : The component of a layer.
+        """
+        return isinstance(value, Ty) or cls.is_plumbing_box(value)
+
+    @classmethod
     def normalise(cls, inside):
         """ The canonical word of boxes and non-empty plumbing: either we
         append or we tensor with the last element. """
         result = []
         for value in (x for x in inside if not isinstance(x, Ty) or x):
-            if not result or not isinstance(value, cls.plumbing)\
-                    or not isinstance(result[-1], cls.plumbing):
+            if not result or not cls.is_plumbing_component(value)\
+                    or not cls.is_plumbing_component(result[-1]):
                 result.append(value)
             else:
                 result[-1] = result[-1] @ value
@@ -937,7 +960,7 @@ class Layer(cat.Box, ColouredMonoid):
 
     def subs(self, *args) -> Layer:
         return type(self)(*(
-            x if isinstance(x, self.plumbing) else x.subs(*args)
+            x if self.is_plumbing_component(x) else x.subs(*args)
             for x in self),
             normalise=False)
 
@@ -1015,7 +1038,7 @@ class Layer(cat.Box, ColouredMonoid):
 
     def lambdify(self, *symbols, **kwargs):
         return lambda *xs: type(self)(*(
-            x if isinstance(x, self.plumbing)
+            x if self.is_plumbing_component(x)
             else x.lambdify(*symbols, **kwargs)(*xs) for x in self),
             normalise=False)
 

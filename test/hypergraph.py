@@ -22,8 +22,7 @@ def test_Hypergraph_init():
 def test_Hypergraph_str():
     x, y = map(Ty, "xy")
     assert str(H.swap(x, y)) == "Swap(x, y)"
-    assert str(H.spiders(1, 0, x @ y))\
-        == "Spider(1, 0, x) @ Spider(1, 0, y)"
+    assert str(H.spiders(1, 0, x @ y)) == "Cospan(x @ y, [0, 1], [])"
 
 
 def test_Hypergraph_repr():

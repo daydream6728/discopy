@@ -475,11 +475,21 @@ class Cospan(HypergraphCategory, Testable["Cospan"]):
             else int(self.apex)
         if any(not 0 <= i < apex for i in left + right):
             raise ValueError(f"Expected points in range({apex}).")
-        order = {k: n for n, k in enumerate(
-            dict.fromkeys(left + right + list(range(apex))))}
+        order = {k: n for n, k in enumerate(self.order(left, right, apex))}
         self.left, self.right = [order[i] for i in left], [
             order[j] for j in right]
         self.apex = apex
+
+    @staticmethod
+    def order(left: list[int], right: list[int], apex: int) -> list[int]:
+        """
+        The points of an apex in the order the legs first reach them, the
+        domain then the codomain, those no leg reaches last.
+
+        >>> Cospan.order([2, 2], [0], 4)
+        [2, 0, 1, 3]
+        """
+        return list(dict.fromkeys([*left, *right, *range(apex)]))
 
     @property
     def dom(self) -> Nat:
@@ -523,7 +533,8 @@ class Cospan(HypergraphCategory, Testable["Cospan"]):
         roots = list(map(find, range(len(parent))))
         left = [roots[i] for i in self.left]
         right = [roots[self.apex + j] for j in other.right]
-        order = {k: n for n, k in enumerate(dict.fromkeys(left + right + roots))}
+        order = {k: n for n, k in enumerate(
+            dict.fromkeys(left + right + roots))}
         return type(self)(
             [order[k] for k in left], [order[k] for k in right], len(order)
         ), [order[k] for k in roots]
@@ -567,10 +578,12 @@ class Cospan(HypergraphCategory, Testable["Cospan"]):
 
     @classmethod
     def copy(cls, x: int | Nat, n: int = 2) -> Cospan:
+        """ The spiders with one leg in and ``n`` out on ``x``. """
         return cls.spiders(1, n, x)
 
     @classmethod
     def merge(cls, x: int | Nat, n: int = 2) -> Cospan:
+        """ The spiders with ``n`` legs in and one out on ``x``. """
         return cls.spiders(n, 1, x)
 
     @classmethod

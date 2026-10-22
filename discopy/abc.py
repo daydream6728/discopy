@@ -1291,3 +1291,39 @@ class HypergraphCategory[C0, C1](
             n_legs_out : The number of legs out for each spider.
             typ : The type of the spiders.
         """
+
+    @classmethod
+    def cospan(cls, left: Sequence[int], right: Sequence[int],
+               apexes: Sequence[C0]) -> C1:
+        """
+        Merge the inputs into the ``apexes`` then copy them out, so that
+        input ``i`` goes to ``apexes[left[i]]`` and output ``j`` reads
+        ``apexes[right[j]]``, see :class:`discopy.python.finset.Cospan`: the
+        permutation that gathers the inputs of each object, one spider on
+        each object, then the permutation that scatters its outputs.
+
+        Parameters:
+            left : The object of ``apexes`` that each input goes to.
+            right : The object of ``apexes`` that each output reads.
+            apexes : The objects of the apex.
+        """
+        from discopy.python.finset import Function
+        apexes = list(apexes)
+        ins, gather = Function(left, len(apexes), len(left)).factorise()
+        outs, scatter = Function(right, len(apexes), len(right)).factorise()
+        spiders = list(map(cls.spiders, ins, outs, apexes))\
+            or [cls.id(cls.ob())]
+        return cls.permutation(gather.dagger(), [apexes[k] for k in left])\
+            >> spiders[0].tensor(*spiders[1:]) >> cls.permutation(
+                scatter, [x for x, n in zip(apexes, outs) for _ in range(n)])
+
+    @classmethod
+    def from_cospan(cls, apex: C0, left: Sequence[int], right: Sequence[int]
+                    ) -> C1:
+        """
+        The cospan on the atomic objects of ``apex`` by :meth:`cospan`; a
+        free category overrides it with a native box, see
+        :meth:`discopy.frobenius.Diagram.from_cospan`.
+        """
+        return cls.cospan(
+            left, right, [apex[i:i + 1] for i in range(len(apex))])
