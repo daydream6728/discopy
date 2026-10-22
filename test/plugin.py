@@ -16,6 +16,9 @@ UNIMPORTABLE = (
     "discopy/grammar/neural.py", "discopy/neural/torch.py",
     "discopy/drawing/widget.py")
 
+# A package whose own import needs an extra, e.g. ``discopy.optyx``.
+UNIMPORTABLE_PACKAGES = ("discopy/optyx/", "test/optyx/")
+
 
 def pytest_addoption(parser):
     parser.addoption("--skip-extra", action="store_true", help=(
@@ -26,7 +29,26 @@ def pytest_addoption(parser):
 def pytest_ignore_collect(collection_path, config):
     if not config.getoption("--skip-extra"):
         return None
-    return collection_path.as_posix().endswith(UNIMPORTABLE) or None
+    path = collection_path.as_posix()
+    return path.endswith(UNIMPORTABLE) or any(
+        package in path + "/" for package in UNIMPORTABLE_PACKAGES) or None
+
+
+class Unimportable(pytest.File):
+    """ A file of a package that needs an extra, given as an argument, so
+    that ``pytest_ignore_collect`` is not asked about it. """
+    def collect(self):
+        pytest.skip("needs an extra")
+
+
+@pytest.hookimpl(wrapper=True)
+def pytest_collect_file(file_path, parent):
+    collectors = yield
+    if collectors and parent.config.getoption("--skip-extra") and any(
+            package in file_path.as_posix()
+            for package in UNIMPORTABLE_PACKAGES):
+        return [Unimportable.from_parent(parent, path=file_path)]
+    return collectors
 
 
 def pytest_collection_modifyitems(config, items):

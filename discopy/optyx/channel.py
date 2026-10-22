@@ -234,8 +234,6 @@ from discopy import monoidal, symmetric, frobenius, hypergraph
 from discopy.cat import factory
 from discopy.python import finset
 from discopy.utils import AxiomError
-from pytket.extensions.pyzx import pyzx_to_tk
-from pyzx import extract_circuit
 from discopy.optyx.core import diagram
 
 
@@ -1315,6 +1313,10 @@ class Diagram(frobenius.Diagram):
         """
         Convert to tket circuit. The circuit must be a pure circuit.
         """
+
+        # pylint: disable=import-outside-toplevel
+        from pytket.extensions.pyzx import pyzx_to_tk
+        from pyzx import extract_circuit
 
         assert self.is_pure, "Diagram must be pure to convert to tket."
 

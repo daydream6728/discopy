@@ -127,10 +127,12 @@ We can define the number operator and compute its expectation.
 from __future__ import annotations
 
 from math import factorial
+from typing import TYPE_CHECKING
 from operator import index
 
 import numpy as np
-import perceval as pcvl
+if TYPE_CHECKING:
+    import perceval as pcvl
 
 from discopy.abc import Nat
 from discopy.cat import assert_iscomposable
@@ -440,6 +442,9 @@ class Matrix(underlying.Matrix):
         ...               (n_photons=1).round(1)== Probabilities[complex](
         ...         [0.9+0.j, 0.1+0.j, 0.1+0.j, 0.9+0.j], dom=2, cod=2)
         """
+        # pylint: disable=import-outside-toplevel
+        import perceval as pcvl
+
         if not self._umatrix_is_unitary():
             self = self.dilate()
 
@@ -476,9 +481,15 @@ class Matrix(underlying.Matrix):
     def _umatrix_to_perceval_circuit(self) -> pcvl.components.Unitary:
         """The unitary as a single perceval component, simulated as it is
         rather than synthesised into beam splitters and phase shifters."""
+        # pylint: disable=import-outside-toplevel
+        import perceval as pcvl
+
         return pcvl.components.Unitary(pcvl.Matrix(self.array.T.conj()))
 
     def _to_perceval_post_select(self) -> pcvl.PostSelect:
+        # pylint: disable=import-outside-toplevel
+        import perceval as pcvl
+
         post_str = [
             f"[{index(self.cod) + i}] == {p}"
             for i, p in enumerate(self.selections)

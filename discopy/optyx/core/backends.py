@@ -64,10 +64,12 @@ np.float64(0.5)
 np.float64(0.5)
 """
 
+from __future__ import annotations
+
 import warnings
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any, Literal, Sequence
+from typing import Any, Literal, Sequence, TYPE_CHECKING
 from collections import defaultdict
 from enum import Enum
 from cotengra import (
@@ -78,7 +80,8 @@ from cotengra import (
 )
 from discopy import tensor as discopy_tensor
 import numpy as np
-import perceval as pcvl
+if TYPE_CHECKING:
+    import perceval as pcvl
 from quimb.tensor import TensorNetwork
 from discopy.optyx.channel import Diagram, Ty, mode, bit
 from discopy.optyx.core.path import Matrix
@@ -398,6 +401,9 @@ class AbstractBackend(ABC):
         """
         Convert a unitary matrix to a Perceval circuit.
         """
+        # pylint: disable=import-outside-toplevel
+        import perceval as pcvl
+
         # pylint: disable=abstract-class-instantiated
         perceval_matrix = pcvl.Matrix(matrix.T)
         return pcvl.components.Unitary(U=perceval_matrix)
@@ -602,6 +608,9 @@ class PercevalBackend(AbstractBackend):
         Args:
             perceval_backend: An optional Perceval backend configuration.
         """
+        # pylint: disable=import-outside-toplevel
+        import perceval as pcvl
+
         if perceval_backend is None:
             self.perceval_backend = pcvl.BackendFactory.get_backend("SLOS")
         else:
@@ -663,6 +672,9 @@ class PercevalBackend(AbstractBackend):
         creations,
         external_perceval_state
     ):
+        # pylint: disable=import-outside-toplevel
+        import perceval as pcvl
+
         return (
             external_perceval_state *
             pcvl.BasicState(creations)
@@ -673,6 +685,9 @@ class PercevalBackend(AbstractBackend):
         selections,
         external_perceval_effect
     ):
+        # pylint: disable=import-outside-toplevel
+        import perceval as pcvl
+
         return (
             external_perceval_effect *
             pcvl.BasicState(selections)
@@ -698,6 +713,9 @@ class PercevalBackend(AbstractBackend):
         return dist
 
     def _process_state(self, perceval_state):
+        # pylint: disable=import-outside-toplevel
+        import perceval as pcvl
+
         if not isinstance(perceval_state, pcvl.BasicState):
             try:
                 perceval_state = pcvl.BasicState(list(perceval_state))
@@ -711,6 +729,9 @@ class PercevalBackend(AbstractBackend):
         return perceval_state
 
     def _process_effect(self, perceval_effect):
+        # pylint: disable=import-outside-toplevel
+        import perceval as pcvl
+
         if perceval_effect is None:
             return None
         if not isinstance(perceval_effect, pcvl.BasicState):
@@ -730,6 +751,9 @@ class PercevalBackend(AbstractBackend):
         matrix,
         perceval_state
     ):
+        # pylint: disable=import-outside-toplevel
+        import perceval as pcvl
+
         warnings.warn(
             "The provided matrix is not unitary. "
             "PercevalBackend expects a unitary matrix. "
@@ -767,6 +791,9 @@ class PercevalBackend(AbstractBackend):
             The processed output effect.
             task (str): The Perceval task to perform.
         """
+        # pylint: disable=import-outside-toplevel
+        import perceval as pcvl
+
         cfg: PercevalEvalConfig = extra.get("config", PercevalEvalConfig())
         task = cfg.task
         state_provided = cfg.state is not None
@@ -851,6 +878,9 @@ class PercevalBackend(AbstractBackend):
         """
         Prepare the Perceval simulator with the given matrix.
         """
+        # pylint: disable=import-outside-toplevel
+        import perceval as pcvl
+
         selections = matrix.selections
 
         sim = pcvl.Simulator(self.perceval_backend)
@@ -964,6 +994,9 @@ class PercevalBackend(AbstractBackend):
         Args:
             term (discopy.tensor.Diagram): The term to process.
         """
+        # pylint: disable=import-outside-toplevel
+        import perceval as pcvl
+
         matrix = self._get_matrix(term)
 
         perceval_state, perceval_effect, task = self._process_io(
