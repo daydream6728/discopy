@@ -772,7 +772,8 @@ class Diagram(NamedGeneric['dtype'], frobenius.Diagram):
             return self.sum_factory((), self.dom, self.cod)
         if len(self.inside[0].boxes) > 1:
             return (self[:1].to_staircases() >> self[1:]).grad(var, **params)
-        left, box, right = self.inside[0].boxes_and_types
+        box, offset, dom = self.boxes[0], self.offsets[0], self.dom
+        left, right = dom[:offset], dom[offset + len(box.dom):]
         tail = self[1:]
         t1 = self.id(left) @ box.grad(var, **params) @ self.id(right) >> tail
         t2 = self.id(left) @ box @ self.id(right) >> tail.grad(var, **params)
