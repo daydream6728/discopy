@@ -248,7 +248,8 @@ def routing(factors, n_nodes: int | None = None) -> Routing:
         for index in of + (of[-1], ) * (degree - len(of)))
     valid = None if min(degrees) == degree else tuple(
         (1.0, ) * real + (0.0, ) * (degree - real) for real in degrees)
-    return Routing(sum(table, ()), to_nodes, degree, arity, valid, degrees)
+    return Routing(tuple(node for factor in table for node in factor),
+                   to_nodes, degree, arity, valid, degrees)
 
 
 def from_map(cmap: CMap, node_name: str = NODE

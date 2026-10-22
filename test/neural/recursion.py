@@ -58,7 +58,7 @@ def test_same_draws_as_the_boxes():
     torch.nn.Linear(5, 1)
     expected = [p for box in boxes for p in box.parameters()]
     assert all(torch.equal(p, q) for p, q in zip(
-        list(net.parameters())[1:-2], expected))
+        list(net.parameters())[1:-2], expected, strict=True))
     assert torch.equal(torch.rand(3), (torch.manual_seed(0), FactorNet(
         WIDTHS, PATH, 3, 2, 3, 1, halt=True), torch.rand(3))[2])
 
@@ -212,7 +212,20 @@ def test_step_shape_and_compile_options(monkeypatch):
         net.act_step(net.initial(x), x)
     seen = []
     monkeypatch.setattr(torch, "compile", lambda f, **kw: seen.append(kw) or f)
-    net.compile_options = {"dynamic": False}
+    net.compile_options["dynamic"] = False
+    assert PeerNet.compile_options == {}
     net.compile()
     net.compile(unroll=False, dynamic=True)
     assert seen == [{"dynamic": False, "fullgraph": True}, {"dynamic": True}]
+
+
+def test_no_differentiated_cycle():
+    torch = importorskip("torch")
+    from discopy.neural.recursion import PeerNet
+    torch.manual_seed(0)
+    net = PeerNet(WIDTHS, ((1, 2), (0, 2), (0, 1)), 3, 2, 2, 2, halt=True)
+    x = lattice(torch)
+    _, heads, every = net.run(x)
+    assert every == () and heads.sm.shape == (2, 3, 3)
+    _, every, halt, final = net.act_step(net.initial(x), x)
+    assert len(every) == 1 and final is every[-1]

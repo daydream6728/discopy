@@ -213,6 +213,7 @@ class Recursion(nn.Module):
         if halt:
             self.halt = HaltHead(w.y_dim)
             self.cell.explicit_gru = self.refresh.explicit_gru = True
+        self.compile_options = dict(self.compile_options)
         self.cycler, self.unroller = self.cycle, self.unroll
 
     def shape(self) -> dict:
@@ -329,7 +330,7 @@ class Recursion(nn.Module):
                 state = self.cycler(state)
                 if self.deep:
                     every.append(self.heads(state.answer))
-            heads = every[-1] if self.deep else self.heads(state.answer)
+            heads = every[-1] if every else self.heads(state.answer)
         return state, heads, tuple(every)
 
     def prefix(self, s):
@@ -356,6 +357,9 @@ class Recursion(nn.Module):
             cycle : The cycle to run, by default :meth:`cycle` or its
                     compiled form; the eager one under ``vmap``.
         """
+        if not hasattr(self, "halt"):
+            raise AttributeError(f"{type(self).__name__} has no halting "
+                                 "head: build it with halt=True")
         s = s._replace(clue=self.encoder(x))
         cycle = cycle or self.cycler
         every = []
@@ -363,12 +367,9 @@ class Recursion(nn.Module):
             s = cycle(s)
             if self.deep:
                 every.append(self.sm(s.answer))
-        if not self.deep:
+        if not every:
             every.append(self.sm(s.answer))
         answer = s.answer.detach() if self.halt_detach else s.answer
-        if not hasattr(self, "halt"):
-            raise AttributeError(f"{type(self).__name__} has no halting "
-                                 "head: build it with halt=True")
         return s, tuple(every), self.halt.read(answer)
 
     def act_step(self, s, x, grad: bool = True) -> tuple:

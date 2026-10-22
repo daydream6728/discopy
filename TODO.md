@@ -5,5 +5,5 @@ The third of three pull requests moving the TRMP experiments onto discopy-next (
 - [x] `discopy.neural.wiring`: the blocks of a group action, `chains`, `Block`, `decompose`, `families`
 - [x] `discopy.neural.geometric`: block operators, `Peers`, `Factors`, `fold`, the `Geometric` mixin
 - [x] equal to the reference networks to rounding (float64 tests), gradients included
-- [x] measured against the specialised kernels (rel-int/Recursive_GNNs `bench.py`)
+- [x] measured on CPU against the reference, compiled and the maze's fused round (rel-int/TRMP `bench.py`, numbers in #305); the CUDA segment kernel and the Triton round need an H100, asked on rel-int/TRMP#3
 - [ ] CI green

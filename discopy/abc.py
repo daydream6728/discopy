@@ -1066,6 +1066,35 @@ class MarkovCategory[C0, C1](SymmetricCategory[C0, C1]):
         """
         return cls.copy(x, 0)
 
+    @classmethod
+    def function(cls, xs: Sequence[int], doms: Sequence[C0]) -> C1:
+        """
+        Copy, discard and permute the objects in ``doms`` so that output
+        ``i`` is a copy of ``doms[xs[i]]``: the copies of each object, as
+        many as the outputs that read it, then the permutation that puts
+        each copy in its place, see
+        :meth:`discopy.python.finset.Function.factorise`.
+
+        Parameters:
+            xs : The object of ``doms`` that each output reads.
+            doms : The objects to copy, discard and permute.
+        """
+        from discopy.python.finset import Function
+        doms = list(doms)
+        counts, perm = Function(xs, len(doms), len(xs)).factorise()
+        copies = list(map(cls.copy, doms, counts)) or [cls.id(cls.ob())]
+        return copies[0].tensor(*copies[1:]) >> cls.permutation(
+            perm, [dom for dom, n in zip(doms, counts) for _ in range(n)])
+
+    @classmethod
+    def from_function(cls, func: Sequence[int], dom: C0) -> C1:
+        """
+        The function on the atomic objects of ``dom`` by :meth:`function`;
+        a free category overrides it with a native box, see
+        :meth:`discopy.markov.Diagram.from_function`.
+        """
+        return cls.function(func, [dom[i:i + 1] for i in range(len(dom))])
+
     @axiom
     def copy_coassociativity[X: Obj[C0]](
             cls, x: Var[C0, X])\
@@ -1136,6 +1165,35 @@ class ComarkovCategory[C0, C1](SymmetricCategory[C0, C1]):
             x : The object of the noise.
         """
         return cls.merge(x, 0)
+
+    @classmethod
+    def cofunction(cls, xs: Sequence[int], cods: Sequence[C0]) -> C1:
+        """
+        Permute, merge and add noise to the objects in ``cods`` so that
+        input ``i`` goes to ``cods[xs[i]]``, the dual of
+        :meth:`MarkovCategory.function`: the permutation that puts the
+        inputs in place then the merges of each object, as many as the
+        inputs that go to it.
+
+        Parameters:
+            xs : The object of ``cods`` that each input goes to.
+            cods : The objects to merge into.
+        """
+        from discopy.python.finset import Function
+        cods = list(cods)
+        counts, perm = Function(xs, len(cods), len(xs)).factorise()
+        merges = list(map(cls.merge, cods, counts)) or [cls.id(cls.ob())]
+        return cls.permutation(perm.dagger(), [cods[i] for i in xs])\
+            >> merges[0].tensor(*merges[1:])
+
+    @classmethod
+    def from_cofunction(cls, cofunc: Sequence[int], cod: C0) -> C1:
+        """
+        The cofunction on the atomic objects of ``cod`` by
+        :meth:`cofunction`; a free category overrides it with a native box,
+        see :meth:`discopy.comarkov.Diagram.from_cofunction`.
+        """
+        return cls.cofunction(cofunc, [cod[i:i + 1] for i in range(len(cod))])
 
     @axiom
     def merge_associativity[X: Obj[C0]](
@@ -1259,3 +1317,39 @@ class HypergraphCategory[C0, C1](
             n_legs_out : The number of legs out for each spider.
             typ : The type of the spiders.
         """
+
+    @classmethod
+    def cospan(cls, left: Sequence[int], right: Sequence[int],
+               apexes: Sequence[C0]) -> C1:
+        """
+        Merge the inputs into the ``apexes`` then copy them out, so that
+        input ``i`` goes to ``apexes[left[i]]`` and output ``j`` reads
+        ``apexes[right[j]]``, see :class:`discopy.python.finset.Cospan`: the
+        permutation that gathers the inputs of each object, one spider on
+        each object, then the permutation that scatters its outputs.
+
+        Parameters:
+            left : The object of ``apexes`` that each input goes to.
+            right : The object of ``apexes`` that each output reads.
+            apexes : The objects of the apex.
+        """
+        from discopy.python.finset import Function
+        apexes = list(apexes)
+        ins, gather = Function(left, len(apexes), len(left)).factorise()
+        outs, scatter = Function(right, len(apexes), len(right)).factorise()
+        spiders = list(map(cls.spiders, ins, outs, apexes))\
+            or [cls.id(cls.ob())]
+        return cls.permutation(gather.dagger(), [apexes[k] for k in left])\
+            >> spiders[0].tensor(*spiders[1:]) >> cls.permutation(
+                scatter, [x for x, n in zip(apexes, outs) for _ in range(n)])
+
+    @classmethod
+    def from_cospan(cls, apex: C0, left: Sequence[int], right: Sequence[int]
+                    ) -> C1:
+        """
+        The cospan on the atomic objects of ``apex`` by :meth:`cospan`; a
+        free category overrides it with a native box, see
+        :meth:`discopy.frobenius.Diagram.from_cospan`.
+        """
+        return cls.cospan(
+            left, right, [apex[i:i + 1] for i in range(len(apex))])

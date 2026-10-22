@@ -564,7 +564,8 @@ def widths_for(budget: int, build,
     """
     best, best_size = None, None
     for dim in range(low, high + 1):
-        widths = Widths(dim, *(max(1, round(dim * r)) for r in ratios[1:]))
+        widths = Widths(dim, *(max(1, round(dim * r / ratios[0]))
+                               for r in ratios[1:]))
         size = count(build(widths))
         if best_size is None or abs(size - budget) < abs(best_size - budget):
             best, best_size = widths, size
