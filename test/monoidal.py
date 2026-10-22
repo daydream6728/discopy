@@ -501,6 +501,8 @@ def test_Diagram_substitute():
     index_of_the_box = 0
     result = outside.substitute(index_of_the_box, inside)
     assert result == inside @ x >> x @ h
+    assert (f @ h).foliation().substitute(0, inside)\
+        == inside @ x @ x >> x @ x @ h
 
 
 def test_Diagram_normalize():

@@ -997,7 +997,7 @@ class Layer(cat.Box, ColouredMonoid):
         >>> assert layer0.merge(layer1) == Layer(e, f, e, g, e)
         """
         assert_iscomposable(self, other)
-        staircases = self.boxes_and_types[1].ar(
+        staircases = self.boxes[0].ar(
             (self, other), self.dom, other.cod).to_staircases()
         try:
             diagram = Diagram.normal_form(
@@ -1005,15 +1005,15 @@ class Layer(cat.Box, ColouredMonoid):
         except NotImplementedError as exception:  # Eckmann-Hilton argument.
             diagram = exception.last_step
         boxes_or_types, offset = [self.dom[:0]], 0
-        for layer in diagram.inside:
-            left, box, right = layer.boxes_and_types
-            if len(left) < offset:
+        for layer, box, box_offset in zip(
+                diagram.inside, diagram.boxes, diagram.offsets):
+            if box_offset < offset:
                 raise AxiomError(
                     messages.NOT_MERGEABLE.format(self, other))
-            boxes_or_types[-1] @= left[offset:]
-            boxes_or_types += [box, right[:0]]
-            offset = len(left @ box.cod)
-        boxes_or_types[-1] @= layer.cod[offset:]
+            boxes_or_types[-1] @= layer.dom[offset:box_offset]
+            boxes_or_types += [box, box.cod[len(box.cod):]]
+            offset = box_offset + len(box.cod)
+        boxes_or_types[-1] @= diagram.cod[offset:]
         return type(self)(*boxes_or_types)
 
     def lambdify(self, *symbols, **kwargs):
@@ -1450,28 +1450,20 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
             return result
         if j < i:
             i, j = j, i
+        box0, box1 = self.boxes[i], self.boxes[j]
         off0, off1 = self.offsets[i], self.offsets[j]
-        left0, box0, right0 = self.inside[i].boxes_and_types
-        left1, box1, right1 = self.inside[j].boxes_and_types
+        box0_left_of_box1 = off1 >= off0 + len(box0.cod)
+        box0_right_of_box1 = off0 >= off1 + len(box1.dom)
         # By default, we check if box0 is to the right first, then to the left.
-        if left and off1 >= off0 + len(box0.cod):  # box0 left of box1
-            off1 = off1 - len(box0.cod) + len(box0.dom)
-            middle = left1[len(left0 @ box0.cod):]
-            layer0 = left0 @ box0 @ middle @ box1.cod @ right1
-            layer1 = left0 @ box0.dom @ middle @ box1 @ right1
-        elif off0 >= off1 + len(box1.dom):  # box0 right of box1
-            off0 = off0 - len(box1.dom) + len(box1.cod)
-            middle = left0[len(left1 @ box1.dom):]
-            layer0 = left1 @ box1.cod @ middle @ box0 @ right0
-            layer1 = left1 @ box1 @ middle @ box0.dom @ right0
-        elif off1 >= off0 + len(box0.cod):  # box0 left of box1
-            off1 = off1 - len(box0.cod) + len(box0.dom)
-            middle = left1[len(left0 @ box0.cod):]
-            layer0 = left0 @ box0 @ middle @ box1.cod @ right1
-            layer1 = left0 @ box0.dom @ middle @ box1 @ right1
+        if box0_left_of_box1 and (left or not box0_right_of_box1):
+            off1 += len(box0.dom) - len(box0.cod)
+        elif box0_right_of_box1:
+            off0 += len(box1.cod) - len(box1.dom)
         else:
             raise AxiomError(messages.INTERCHANGER_ERROR.format(box0, box1))
-        return self[:i] >> layer1 >> layer0 >> self[i + 2:]
+        interchanged = self.ar.decode(
+            self.inside[i].dom, [(box1, off1), (box0, off0)])
+        return self[:i] >> interchanged >> self[i + 2:]
 
     def substitute(self, i: int, other: Diagram) -> Diagram:
         """
@@ -1482,9 +1474,23 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
         Parameters:
             i : Index of the box to substitute.
             other : The diagram to substitute with.
+
+        A diagram with more than one box in a layer is split into staircases
+        first, see :meth:`to_staircases`, so that box ``i`` is layer ``i``.
+
+        Example
+        -------
+        >>> x = Ty('x')
+        >>> f, g = Box('f', x, x), Box('g', x, x)
+        >>> assert (f @ f).foliation().substitute(1, g >> g)\\
+        ...     == f @ x >> x @ g >> x @ g
         """
-        left, _, right = self.inside[i].boxes_and_types
-        outside = Match(self[:i], self[i + 1:], left, right)
+        if any(len(layer.boxes) > 1 for layer in self.inside):
+            return self.to_staircases().substitute(i, other)
+        box, offset = self.boxes[i], self.offsets[i]
+        dom = self.inside[i].dom
+        outside = Match(
+            self[:i], self[i + 1:], dom[:offset], dom[offset + len(box.dom):])
         return outside.substitute(other)
 
     def normalize(self, left=False) -> Iterator[Diagram]:
