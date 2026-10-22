@@ -1693,8 +1693,7 @@ cycles of this map.
         its domain wires at the position of the first one with a single
         permutation, see :meth:`discopy.python.finset.Permutation.gather`,
         apply the box, and replace the consumed domain labels by the box
-        codomain labels. A box with no domain is applied on the right of the
-        open wires.
+        codomain labels.
 
         >>> from discopy.compact import Ty, Box, CMap
         >>> x, y, z = map(Ty, "xyz")
@@ -1703,6 +1702,26 @@ cycles of this map.
         True
         >>> print(CMap.permutation([2, 0, 1], x @ y @ z).to_diagram())
         Permutation(x @ y @ z, [2, 0, 1])
+
+        A box with no domain has no wire to gather: it goes in the gap of the
+        scan that its face reaches, i.e. the cycle of :attr:`faces` through
+        the corner above it. Walking that face back to the wire on its left,
+        or on to the wire on its right, the turns add up to half a turn when
+        that wire is its neighbour in a planar drawing: a corner between two
+        wires turns by half a turn, a corner around a state or an effect by
+        minus half a turn and the side of a box not at all. The box waits
+        while the two walks disagree or neither reaches the scan; the first
+        box that reads it then puts it next to the wire it reads beside it,
+        and it goes on the right of the open wires when nothing says where,
+        e.g. when the map is not planar.
+
+        >>> from discopy.monoidal import Ty, Box
+        >>> x, y = Ty('x'), Ty('y')
+        >>> s, e = Box('s', Ty(), y), Box('e', y @ x, Ty())
+        >>> print((s @ x).to_map().to_diagram())
+        s @ x
+        >>> print((s @ x >> e).to_map().to_diagram())
+        s @ x >> e
         """
         if not self.is_causal:
             return self.make_causal().to_diagram()
@@ -1712,8 +1731,13 @@ cycles of this map.
             if i <= j:
                 edge_wire[i] = edge_wire[j] = len(edge_wire) // 2
 
+        ports, walk = self.ports, self.faces
+        back, first_output = walk.dagger(), self.n_ports - len(self.cod)
+        right_side = None if not self.cod\
+            else len(self.dom) - 1 if self.dom else first_output
         diagram = self.category.id(self.dom)
         scan = [edge_wire[i] for i in range(len(self.dom))]
+        placed, waiting = set(), []
 
         def permute(perm):
             if not issubclass(self.category, SymmetricCategory):
@@ -1721,22 +1745,116 @@ cycles of this map.
                     factory_name(self.category)))
             return self.category.from_permutation(perm, diagram.cod)
 
-        for depth, box in enumerate(self.boxes):
+        def turn(port):
+            """ The turn at the corner before a port, in half turns, or
+            ``None`` when that corner is above the scan. """
+            kind, i = ports[port].kind, ports[port].i
+            if kind.is_boundary:
+                return 1 if kind == PortKind.OUTPUT and i else None
+            depth = int(ports[port].depth + (-.5 if kind.is_input else .5))
+            box = self.boxes[depth]
+            this, that = (box.dom, box.cod) if kind.is_input\
+                else (box.cod, box.dom)
+            if depth in placed:
+                return None
+            if i > 0 if kind.is_input else i < len(this) - 1:
+                return 1
+            return 0 if that else -1
+
+        def from_the_left(corner):
+            total, port = 0, back[corner]
+            while port != corner:
+                if edge_wire[port] in scan:
+                    return scan.index(edge_wire[port]) + 1 if total == 1\
+                        and ports[port].kind.is_positive else None
+                if port == first_output:
+                    return 0 if total == 0 else None
+                if turn(port) is None:
+                    return None
+                total, port = total + turn(port), back[port]
+            return None
+
+        def from_the_right(corner):
+            total, port = 0, walk[corner]
+            while port != corner:
+                if port == right_side:
+                    return len(scan) if total == 0 else None
+                if turn(port) is None:
+                    return None
+                total += turn(port)
+                if edge_wire[port] in scan:
+                    return scan.index(edge_wire[port]) if total == 1\
+                        and ports[port].kind.is_negative else None
+                port = walk[port]
+            return None
+
+        def wires(depth):
+            box, box_ports = self.boxes[depth], self._box_port_indices[depth]
+            return [edge_wire[i] for i in box_ports[:len(box.dom)]], [
+                edge_wire[i] for i in reversed(box_ports[len(box.dom):])]
+
+        def gaps(depth):
             box_ports = self._box_port_indices[depth]
-            dom_ports = box_ports[:len(box.dom)]
-            cod_ports = tuple(reversed(box_ports[len(box.dom):]))
-            dom_wires = [edge_wire[i] for i in dom_ports]
-            cod_wires = [edge_wire[i] for i in cod_ports]
+            return {from_the_left(box_ports[0]), from_the_right(
+                box_ports[0])} - {None} if box_ports else {len(scan)}
+
+        def beside(depth, reads):
+            _, cod_wires = wires(depth)
+            if cod_wires[0] in reads[1:]:
+                before = reads[reads.index(cod_wires[0]) - 1]
+                if before in scan:
+                    return scan.index(before) + 1
+            if cod_wires[-1] in reads[:-1]:
+                after = reads[reads.index(cod_wires[-1]) + 1]
+                if after in scan:
+                    return scan.index(after)
+            return None
+
+        def force(depth, reads=()):
+            while beside(depth, reads) is None and not gaps(depth)\
+                    and waiting[0] != depth:
+                force(waiting[0])
+            offset = beside(depth, reads)
+            waiting.remove(depth)
+            place(depth, min(gaps(depth), default=len(scan))
+                  if offset is None else offset)
+
+        def place(depth, offset=None):
+            nonlocal diagram, scan
+            dom_wires, cod_wires = wires(depth)
             positions = [scan.index(wire_id) for wire_id in dom_wires]
-            offset = positions[0] if positions else len(scan)
-            offset -= sum(j < offset for j in positions)
+            if offset is None:
+                offset = positions[0] if positions else len(scan)
+                offset -= sum(j < offset for j in positions)
             perm = Permutation.gather(positions, len(scan), offset)
             if not perm.is_identity:
                 diagram >>= permute(perm)
                 scan = [scan[j] for j in perm]
-            scan = scan[:offset] + cod_wires + scan[offset + len(box.dom):]
-            diagram >>= diagram.cod[:offset] @ box @ diagram.cod[
-                offset + len(box.dom):]
+            scan = scan[:offset] + cod_wires + scan[offset + len(dom_wires):]
+            diagram >>= diagram.cod[:offset] @ self.boxes[depth]\
+                @ diagram.cod[offset + len(dom_wires):]
+            placed.add(depth)
+
+        def settle():
+            ready = [depth for depth in waiting if len(gaps(depth)) == 1]
+            while ready:
+                waiting.remove(ready[0])
+                place(ready[0], *gaps(ready[0]))
+                ready = [depth for depth in waiting if len(gaps(depth)) == 1]
+
+        for depth, box in enumerate(self.boxes):
+            reads, _ = wires(depth)
+            for other in [other for other in waiting
+                          if set(reads).intersection(wires(other)[1])]:
+                if other in waiting:
+                    force(other, reads)
+            if box.dom:
+                place(depth)
+            else:
+                waiting.append(depth)
+            settle()
+        while waiting:
+            force(waiting[0])
 
         cod_wires = [
             edge_wire[self.n_ports - len(self.cod) + i]

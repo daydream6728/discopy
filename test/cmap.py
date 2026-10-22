@@ -811,11 +811,30 @@ def test_draw_plain_path(tmp_path):
         assert path.exists()
 
 
-def test_boxes_with_no_domain_decode_at_the_right():
-    x, y = map(compact.Ty, "xy")
-    f = compact.Box("f", x, y)
-    snake = f.transpose(left=True)
+def test_boxes_with_no_domain_decode_in_their_face():
+    """ A state or a cap decodes in the gap of the scan that is its face,
+    rather than on the right, see B71 of #31. """
+    from discopy import monoidal, pivotal, rigid
+    from fixtures.diagrams import random_diagram
+
+    for module in (monoidal, rigid, pivotal, symmetric, compact):
+        x, y = map(module.Ty, "xy")
+        s, e = module.Box("s", module.Ty(), y), module.Box("e", y @ x, x)
+        for diagram in (s @ x, x @ s, s @ x >> e, x @ s @ x >> x @ e):
+            assert diagram.to_map().to_diagram() == diagram
+    x, y = map(rigid.Ty, "xy")
+    transpose = rigid.Box("f", x, y).transpose()
+    assert transpose.to_map().to_diagram() == transpose
+    x = pivotal.Ty("x")
+    for diagram in (pivotal.Cap(x, x.r) @ x, x @ pivotal.Cap(x, x.r)):
+        assert diagram.to_map().to_diagram() == diagram
+    snake = compact.Box("f", compact.Ty("x"), compact.Ty("y")).transpose(
+        left=True)
     assert snake.to_map().to_diagram() == snake
+    for module in (monoidal, rigid, pivotal):
+        for seed in range(20):
+            diagram, functor = random_diagram(module, seed, n_layers=6)
+            assert functor(diagram.to_map().to_diagram()) == functor(diagram)
 
 
 def test_curry_is_wiring_only_when_the_category_is_compact():
