@@ -285,7 +285,8 @@ def to_tk(circuit):
 
     circuit = Functor(ob_map=lambda x: x, ar_map=remove_ket1)(circuit)
     for layer in circuit.inside:
-        left, box, _ = layer.boxes_and_types
+        (box, offset), = layer.boxes_and_offsets
+        left = layer.dom[:offset]
         if isinstance(box, Ket):
             qubits = prepare_qubits(qubits, box, left.count(qubit))
         elif isinstance(box, Digits) and box._dim == 2 and not box.is_dagger:

@@ -730,6 +730,14 @@ def test_consistent_eval(c):
     assert is_close_smallno(doubled_result, mixed_result.to_tensor())
 
 
+def test_mixed_eval_foliated():
+    circuit = Ket(0, 0, 1) >> H @ X @ X >> Measure() @ Discard(qubit ** 2)
+    assert [len(layer.boxes) for layer in circuit.foliation().inside]\
+        == [1, 3, 2]
+    assert circuit.foliation().eval(mixed=True, contractor=contractor)\
+        .is_close(circuit.eval(mixed=True))
+
+
 @pytest.mark.parametrize('c', mixed_circuits)
 def test_pytorch_mixed_eval(c):
     pytest.importorskip("torch")
