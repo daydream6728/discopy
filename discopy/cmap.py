@@ -21,6 +21,13 @@ as a function :math:`f : P \\rightarrow P'` such that:
   :math:`e; f = f; e'`;
 * :math:`f` respects orientation: :math:`v; f = f; v'`.
 
+A map with every wire going down from a box output to a box input is the map
+of a diagram in a monoidal category exactly when a line can sweep it down,
+see :meth:`CMap.sweep`, and a connected one is that diagram up to
+interchange. Double-pushout rewriting of planar diagrams is then done on
+maps, see :meth:`CMap.rewrite`: a match is a homomorphism of maps whose image
+can be cut out of the plane without crossing a wire.
+
 Summary
 -------
 

@@ -9,6 +9,25 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Added
 
+- Double-pushout rewriting for planar diagrams, on `cmap.CMap`: the map of a
+  diagram in a monoidal category is the diagram up to interchange, faithfully
+  when it is connected (Delpeuch & Vicary, Section 8), so matching it needs
+  no interchange at all. `CMap.sweep` is a line sweeping a planar map down:
+  a box goes as soon as its inputs are side by side, a state in the gap of
+  its face that keeps every face turning by a full turn (Bertolazzi et al.),
+  so the sweep never gets stuck on a map that some layering has, checked
+  against all of them on random wirings. `encode` and `is_progressive` read
+  it off, and `to_diagram` sweeps when the category has no swaps, so that a
+  state left of a wire decodes again instead of asking for a swap.
+  `homomorphisms(pattern)` are injective on boxes and found along wires;
+  `match(pattern)` keeps those whose image, contracted into one box, still
+  sweeps, and yields the one pushout complement as a `monoidal.Match`, the
+  diagram with a hole; `rewrite`, `normalize` and `normal_form` take rules
+  as pairs of parallel maps. A host must be connected: a map does not say in
+  which face a component touching nothing else lies. The spiral unwinds to
+  the empty diagram in `2n + 1` steps under three rules, from its centre,
+  whether drawn as built or in normal form, where the counit is the last
+  box.
 - `discopy.ehypergraph`, e-graphs of diagrams with sharing: an
   `EHypergraph` over a copy-discard category is a left-monogamous acyclic
   `Hypergraph`, whose boxes are the e-nodes, with an equivalence relation on
