@@ -162,8 +162,8 @@ class Diagram(braided.Diagram, feedback.Diagram, BalancedCategory):
         """
         The dual rail encoding of a diagram, see :class:`DualRail`: it doubles
         every object and sends the twist to its two rails crossing twice. It
-        lands in balanced diagrams, so that a trace stays a trace, but with no
-        :class:`Twist` left, i.e. it is a :class:`discopy.braided.Diagram`.
+        lands in balanced :class:`Diagram`, so that a trace has somewhere to
+        go, as the dual rail of a ribbon diagram lands in ribbon diagrams.
 
         Parameters:
             width : The width of a ribbon, i.e. the gap between the two wires
@@ -349,8 +349,9 @@ class DualRail(Functor):
     doubling every object into the two rails of a ribbon, every generator into
     a box on the rails of its ribbons and every :class:`Twist` and
     :class:`Braid` into a single box crossing the two ribbons of a wire as a
-    whole. The image is a balanced :class:`Diagram` without any
-    :class:`Twist`, so that traces are kept as traces of the doubled wires.
+    whole. It lands in balanced :class:`Diagram`, so that a trace has
+    somewhere to go, as :class:`discopy.ribbon.DualRail` lands in ribbon
+    diagrams.
 
     Parameters:
         width : The gap between the two rails of each ribbon, defaults to the

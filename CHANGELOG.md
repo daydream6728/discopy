@@ -2134,13 +2134,13 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   which over `Double(taft(3))` is neither its inverse nor an intertwiner
   (B51 of
   [rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
-- `balanced.DualRail` lands in `balanced.Diagram`, as `ribbon.DualRail`
-  lands in `ribbon.Diagram`, its dual rail boxes are balanced boxes and it
-  sends a generator to a box on the rails of its ribbons, so that
-  `to_braided` sends a trace to the trace of the doubled wires: a balanced
-  diagram with no twist, i.e. still a braided diagram. It landed in
-  `braided.Diagram`, which has no trace, so that `to_braided` raised on
-  every trace and every generator, of a symmetric diagram too (B78 of
+- `balanced.DualRail` lands in `balanced.Diagram`, so that a trace has
+  somewhere to go, as `ribbon.DualRail` lands in `ribbon.Diagram`: its dual
+  rail boxes are balanced boxes and it sends a generator to a box on the
+  rails of its ribbons, so that `to_braided` sends a trace to the trace of
+  the doubled wires. It landed in `braided.Diagram`, which has no trace, so
+  that `to_braided` raised on every trace and every generator, of a
+  symmetric diagram too (B78 of
   [rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
 - `braided.Diagram` and `ribbon.Diagram` bind their own `functor_factory`,
   where they read those of `monoidal` and `pivotal`, so that their
