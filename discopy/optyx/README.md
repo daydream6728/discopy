@@ -41,7 +41,7 @@ Quantum teleportation transfers an unknown qubit state from sender (Alice) to re
 
 https://en.wikipedia.org/wiki/Quantum_teleportation#/media/File:Quantum_teleportation_circuit.svg :
 
-<img src="./docs/notebooks/teleport.svg" alt="Teleportation Protocol" width="800" style="max-width:100%;">
+<img src="../../docs/notebooks/optyx/teleport.svg" alt="Teleportation Protocol" width="800" style="max-width:100%;">
 
 ### Define the protocol
 
@@ -119,7 +119,7 @@ teleportation_monoidal_syntax.double().draw(figsize=(8, 8))
 
 
 
-![svg](./docs/notebooks/readme_example_files/readme_example_25_0.svg)
+![svg](../../docs/notebooks/optyx/readme_example_files/readme_example_25_0.svg)
 
 
 
@@ -134,7 +134,7 @@ pyzx_graph.normalize()
 pyzx.draw(pyzx_graph)
 ```
 
-![png](./docs/notebooks/readme_example_files/pyzx_identity.png)
+![png](../../docs/notebooks/optyx/readme_example_files/pyzx_identity.png)
 
 The diagram (a doubled identity) is the identity CPTP map as expected.
 
@@ -211,7 +211,7 @@ Distributed entanglement generation links two distant quantum nodes (A and B) by
 
 Main, D., Drmota, P., Nadlinger, D.P. et al. Distributed quantum computing across an optical network link. Nature 638, 383–388 (2025). https://doi.org/10.1038/s41586-024-08404-x~ :
 
-![Distributed entanglement](./docs/notebooks/distributed_entanglement.png "An example of distributed entanglement generation")
+![Distributed entanglement](../../docs/notebooks/optyx/distributed_entanglement.png "An example of distributed entanglement generation")
 
 
 ### Define the protocol
@@ -246,7 +246,7 @@ measure = Measure(2)
 Equation(protocol >> measure, bell_state >> measure).draw(figsize=(8, 8))
 ```
 
-![svg](./docs/notebooks/readme_example_files/readme_example_54_0.svg)
+![svg](../../docs/notebooks/optyx/readme_example_files/readme_example_54_0.svg)
 
 
 #### Test the protocol for different internal states
@@ -293,7 +293,7 @@ plt.grid(True)
 plt.show()
 ```
 
-![svg](./docs/notebooks/readme_example_files/readme_example_59_0.svg)
+![svg](../../docs/notebooks/optyx/readme_example_files/readme_example_59_0.svg)
 
 
 ## Interfaces with external libraries
@@ -371,7 +371,7 @@ pcvl.pdisplay(p, recursive=True)
 
 
 
-![svg](./docs/notebooks/readme_example_files/readme_example_68_0.svg)
+![svg](../../docs/notebooks/optyx/readme_example_files/readme_example_68_0.svg)
 
 
 

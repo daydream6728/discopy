@@ -45,7 +45,8 @@ graphviz_output_format = 'svg'
 
 autosummary_generate = True
 
-autodoc_mock_imports = ["pytket", "pennylane", "torch", "sympy"]
+autodoc_mock_imports = [
+    "pytket", "pennylane", "torch", "sympy", "cotengra", "quimb", "pyzx"]
 
 autodoc_typehints = "description"
 autodoc_typehints_format = "short"
@@ -62,7 +63,9 @@ templates_path = ['_templates']
 # The marimo notebooks under ``notebooks/`` are plain-text ``.md`` files; they
 # are rendered to HTML by ``export_notebooks.py`` and embedded from the
 # generated ``.rst`` pages, so they must not be parsed as Sphinx source pages.
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', 'notebooks/*.md']
+# Those of ``discopy.optyx`` are Jupyter notebooks yet to become marimo ones.
+exclude_patterns = [
+    '_build', 'Thumbs.db', '.DS_Store', 'notebooks/*.md', 'notebooks/optyx/**']
 
 
 # -- Options for HTML output -------------------------------------------------
