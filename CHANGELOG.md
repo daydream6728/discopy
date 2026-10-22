@@ -2186,6 +2186,40 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   arXiv:1904.11324, which is not their paper; the geometry of Bayesian
   programming is arXiv:1904.07425
   ([#639](https://github.com/discopy/discopy/pull/639)).
+- The dagger of a rigid box keeps its winding number `z`, where it reset
+  it to zero, so that `f.r[::-1]` was a box with no winding on the rotated
+  types, `f.r[::-1][::-1] != f.r` and `f.r[::-1] != f[::-1].r`: the dagger
+  of a rotation is the rotation of the dagger, as in a dagger pivotal
+  category, which `pivotal.Box` already did
+  ([rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
+- `Diagram.width` of an identity is the number of its wires, where
+  `Id(x).width` raised `ValueError` on the `max` of no layers
+  ([rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
+- `rigid.Diagram.cups` and `caps`, and `tensor.Tensor.cups`, raise
+  `AxiomError` on two types of different lengths, which are no adjoints,
+  where `cups(Ty(), n)` returned the identity on `Ty()` and
+  `cups(n, Ty())` raised `IndexError`: `rigid.nesting` never compared the
+  lengths
+  ([rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
+- `Diagram.from_callable` removes the `__call__` it sets on the diagram
+  class for its boxes to record their inputs even when the function it
+  reads raises, where it stayed there, so that every box of that level was
+  callable from then on
+  ([rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
+- An unpickled `monoidal.Layer` recomputes its `name`, `dom` and `cod`
+  from the boxes and types it normalises, where it restored the values
+  cached before normalisation, so that a layer pickled with empty plumbing
+  came back named `Ty() @ f @ Ty()`, and one from a 0.6 or 1.2 pickle
+  named `Layer`
+  ([rel-int/discopy-next#168](https://github.com/rel-int/discopy-next/issues/168)).
+- A trace over more objects than the boundary has, or a negative number of
+  them, raises `ValueError` in the positional form as it did in the keyword
+  form, where `ribbon`, `compact` and `frobenius` diagrams, drawings and
+  additive Python functions traced what their slicing made of it, e.g.
+  `trace(5)` of a box on two wires as `trace(2)` and `trace(-1)` as
+  `trace(1)`, and a matrix raised a NumPy error: `abc.keyword_form` splits
+  the boundary for both forms
+  ([rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
 - `interaction.Diagram.trace` traces an integer diagram, where it raised
   `TypeError` on every input: it was borrowed from `traced.Diagram` through
   a `trace_factory` slicing the type, and an integer type is a pair of
