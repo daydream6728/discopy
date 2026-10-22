@@ -2,7 +2,7 @@ from itertools import permutations
 
 import numpy as np
 
-from discopy import ribbon, tensor
+from discopy import rigid, ribbon, tensor
 from discopy.tensor import Dim, Box
 from discopy.hopf import (
     Algebra, Double, Representation, Intertwiner, Functor)
@@ -504,6 +504,24 @@ def test_pivotal_pairings_are_intertwiners():
                             comult, rho(first), rho(second), image)
             rhs = np.einsum('h,ow->how', counit, image)
         assert np.allclose(lhs, rhs, atol=1e-6)
+
+
+def test_left_dual_pairings_are_intertwiners():
+    """A rigid functor sends the cups and caps of both adjoints to pivotal
+    pairings, which commute with the actions over the Taft algebra."""
+    V = Representation[taft].regular()
+    x = rigid.Ty('x')
+    F = rigid.Functor(ob_map={x: V}, ar_map={}, cod=Intertwiner[taft])
+    for cup in [rigid.Cup(x.l, x), rigid.Cup(x, x.r)]:
+        lhs, rhs = F(cup.dom).action >> F(cup), taft.counit @ F(cup)
+        assert lhs.eval(dtype=complex).is_close(rhs.eval(dtype=complex))
+    for cap in [rigid.Cap(x, x.l), rigid.Cap(x.r, x)]:
+        lhs = taft.ty @ F(cap) >> F(cap.cod).action
+        rhs = taft.counit @ F(cap)
+        assert lhs.eval(dtype=complex).is_close(rhs.eval(dtype=complex))
+    snake = rigid.Cap(x, x.l) @ x >> x @ rigid.Cup(x.l, x)
+    assert F(snake).eval(dtype=complex).is_close(
+        F(rigid.Id(x)).eval(dtype=complex))
 
 
 def test_snake_equations_with_pivot():

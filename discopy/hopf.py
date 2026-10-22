@@ -997,18 +997,30 @@ class Intertwiner(NamedGeneric["algebra"], tensor.Diagram, RibbonCategory):
     def cups(cls, left, right):
         """
         The evaluation of a module against its dual. When ``right`` is the
-        right dual of ``left`` — read off the ``action`` of the two
-        modules, so that the standard :class:`.rigid.Functor` dispatch
-        applies unchanged — this is the *pivotal* evaluation, twisting the
-        dual leg by the inverse of the pivotal element; the pairing of a
-        dual against its module is the plain one. Both coincide whenever
-        the pivotal element is trivial.
+        right dual of ``left``, or ``left`` the left dual of ``right`` —
+        read off the ``action`` of the two modules, so that the standard
+        :class:`.rigid.Functor` dispatch applies unchanged — this is the
+        *pivotal* evaluation, twisting the right leg by the inverse of the
+        pivotal element; the pairing of a right dual against its module,
+        or of a module against its left dual, is the plain one. Both
+        coincide whenever the pivotal element is trivial, and each is an
+        intertwiner.
+
+        >>> H = Algebra.taft(3)
+        >>> V = Representation[H].regular()
+        >>> for left, right in [(V, V.r), (V.r, V), (V.l, V), (V, V.l)]:
+        ...     cup = Intertwiner[H].cups(left, right)
+        ...     lhs = (left @ right).action >> cup
+        ...     rhs = H.counit @ cup
+        ...     assert lhs.eval(dtype=complex).is_close(
+        ...         rhs.eval(dtype=complex))
         """
         body = Diagram.cups(Dim(*left.inside), Dim(*right.inside))
         if cls.algebra is not None \
                 and isinstance(left, Representation) \
                 and isinstance(right, Representation) \
-                and right.action == left.r.action \
+                and (right.action == left.r.action
+                     or left.action == right.l.action) \
                 and cls.algebra.pivotal_element != cls.algebra.unit:
             H = cls.algebra
             g_inv = H.pivotal_element >> H.antipode
@@ -1020,17 +1032,29 @@ class Intertwiner(NamedGeneric["algebra"], tensor.Diagram, RibbonCategory):
     def caps(cls, left, right):
         """
         The coevaluation of a module against its dual. When ``right`` is
-        the right dual of ``left`` this is the plain copairing; a dual
-        followed by its module — read off the ``action`` of the two
-        modules, as for :meth:`cups` — is the *pivotal* coevaluation,
-        twisting the module leg by the inverse of the pivotal element.
-        Both coincide whenever the pivotal element is trivial.
+        the right dual of ``left``, or ``left`` the left dual of ``right``,
+        this is the plain copairing; a right dual followed by its module,
+        or a module followed by its left dual — read off the ``action`` of
+        the two modules, as for :meth:`cups` — is the *pivotal*
+        coevaluation, twisting the right leg by the inverse of the pivotal
+        element. Both coincide whenever the pivotal element is trivial, and
+        each is an intertwiner.
+
+        >>> H = Algebra.taft(3)
+        >>> V = Representation[H].regular()
+        >>> for left, right in [(V, V.r), (V.r, V), (V.l, V), (V, V.l)]:
+        ...     cap = Intertwiner[H].caps(left, right)
+        ...     lhs = H.ty @ cap >> (left @ right).action
+        ...     rhs = H.counit @ cap
+        ...     assert lhs.eval(dtype=complex).is_close(
+        ...         rhs.eval(dtype=complex))
         """
         body = Diagram.caps(Dim(*left.inside), Dim(*right.inside))
         if cls.algebra is not None \
                 and isinstance(left, Representation) \
                 and isinstance(right, Representation) \
-                and left.action == right.r.action \
+                and (left.action == right.r.action
+                     or right.action == left.l.action) \
                 and cls.algebra.pivotal_element != cls.algebra.unit:
             H = cls.algebra
             g_inv = H.pivotal_element >> H.antipode

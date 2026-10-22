@@ -1771,6 +1771,15 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `feedback.Diagram.feedback` takes a memory of several wires. A delayed
   `feedback.Box` reads back from its tree, which dropped its time step
   ([rel-int/discopy-next#1](https://github.com/rel-int/discopy-next/pull/1)).
+- `hopf.Intertwiner.cups` and `caps` twist by the pivotal element the
+  pairings of a module with its left dual in the orientations of
+  `rigid.Cup(x.l, x)` and `rigid.Cap(x, x.l)`, as they did for its right
+  dual in those of `Cup(x, x.r)` and `Cap(x.r, x)`, so that every cup and
+  cap they build is an intertwiner. Over the Taft algebra, whose pivot is
+  not the unit, `cups(V.l, V)` and `caps(V, V.l)` were not, and a rigid
+  functor sends the cup and cap of a left adjoint to them; the ribbon
+  functor never met them, as `x.l == x.r` in `pivotal` (B53 of
+  [rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
 - `braided.Diagram` and `ribbon.Diagram` bind their own `functor_factory`,
   where they read those of `monoidal` and `pivotal`, so that their
   conversions map a braid to a braid and a twist to a twist, as `balanced`
