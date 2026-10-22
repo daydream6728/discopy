@@ -26,5 +26,24 @@ exactly one pushout complement per match: `monoidal.Match`, the diagram with a h
 - [x] docs, bibliography (Bertolazzi et al.), `CHANGELOG.md`
 - [x] `pflake8`, `pylint` (`fail-under` 8.85 → 9.02: main 9.01, this branch 9.028 raw),
   `coverage run -m pytest` (1,576 passed, 119 skipped without the extras; every new line covered)
-- [ ] USER's read of the scope: a host must be connected, since a map does not say in which face a
-  component touching nothing else lies; maps that record faces are a follow-up
+- [x] USER's read of the scope: a host must be connected, since a map does not say in which face a
+  component touching nothing else lies; answered below
+
+> create a discopy.spacial module (monoidal with scalar sliding) for which it is sound
+
+(USER, live, 2026-10-22, answering "Keep connected hosts only?". A monoidal category is spacial when
+a scalar `s : I -> I` slides past every morphism, `s @ f == f @ s` (Selinger's survey). A scalar can
+then cross any wire, so a floating component lies in no face in particular, the map of a diagram is
+the diagram up to the axioms, and matching on maps is sound for every host. Every braided category
+is spacial, by naturality of the braid with the unit.)
+
+- [WIP] @session_013PzWbScb5vkcym2x9JkEda-2026-10-22 20:00 `abc.SpacialCategory`, a monoidal category
+  with the axiom `scalar_sliding`; `BraidedCategory` is one, so the matrix checks it on
+  `matrix.Matrix[int]` and `EHypergraph`
+- [WIP] @session_013PzWbScb5vkcym2x9JkEda-2026-10-22 20:00 `discopy.spacial`, the free spacial
+  category: `Ty`, `Box`, `Diagram`, `Sum`, `Functor`, `CMap`, `Equation`
+- [ ] `CMap.match` over a spacial category takes any host, and a closed pattern any union of
+  floating components; over a planar one, connected hosts only as before
+- [ ] tests: a scalar inside a circle is a scalar beside it; `f @ s` matches `f`; the
+  `scalar_sliding` cells of the matrix pass
+- [ ] docs (`syntax.rst`, the abc summary), `CHANGELOG.md`, checks
