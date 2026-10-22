@@ -13,4 +13,4 @@ rule. This branch is that engine; the ZX rules are the next one, stacked on it.
 - [x] differential test against `Hypergraph.rewrite` on random frobenius and symmetric hosts
 - [x] `Hypergraph(..., _scan=False)` skips the checks, as `cat.Arrow` does
 - [x] relabel the nested wires directly in `Hypergraph.__init__`
-- [ ] `pflake8`, `pylint`, `coverage run -m pytest --skip-extra`
+- [x] `pflake8`, `pylint` (`fail-under` 9.05), `coverage run -m pytest --skip-extra`
