@@ -552,7 +552,7 @@ class Matrix(MarkovCategory, ComarkovCategory, DaggerCategory,
         Matrix[int64]([0, 0, 1, 0], dom=1, cod=4)
         >>> assert Matrix.basis(0, 0).dtype == Matrix.id(0).dtype
         """
-        with backend('numpy') as np:
+        with backend() as np:
             array = np.array([[int(i == j) for j in range(index(x))]],
                              dtype=cls.dtype or int)
         return cls(array, 1, x)
