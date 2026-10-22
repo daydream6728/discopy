@@ -111,12 +111,24 @@ class Diagram(frobenius.Diagram):
         Applies normal form to a pregroup diagram of the form
         ``word @ ... @ word >> wires`` by normalising words and wires
         seperately before combining them, so it can be drawn with :meth:`draw`.
+
+        A foliated diagram is split into staircases first.
+
+        Example
+        -------
+        >>> s, n = Ty('s'), Ty('n')
+        >>> Alice, Bob = Word('Alice', n), Word('Bob', n)
+        >>> loves = Word('loves', n.r @ s @ n.l)
+        >>> sentence = Alice @ loves @ Bob >> Cup(n, n.r) @ s @ Cup(n.l, n)
+        >>> assert sentence.foliation().normal_form() == sentence.normal_form()
         """
+        if any(len(layer.boxes) > 1 for layer in self.inside):
+            return self.to_staircases().normal_form(**params)
         words, is_pregroup = self.id(), True
         for layer in self.inside:
-            _, box, right = layer.boxes_and_types
+            left, box, right = layer.boxes_and_types
             if isinstance(box, Word):
-                if right:  # word boxes should be tensored left to right.
+                if left != words.cod or right:
                     is_pregroup = False
                     break
                 words = words @ box

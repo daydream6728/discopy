@@ -59,6 +59,8 @@ def test_normal_form():
     expected_result = w1 @ w2
     assert expected_result == diagram.normal_form()\
         == (w2 >> w1 @ Id(n)).normal_form()
+    assert diagram.foliation().normal_form() == diagram.normal_form()
+    assert (n @ w1).normal_form() == n @ w1
 
 
 def test_from_tree():
