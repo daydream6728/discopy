@@ -876,8 +876,8 @@ class Box(frobenius.Box, Diagram):
         """ Compare boxes by turning their internal `data` into tuples. """
         data = () if self.data is None else\
             tuple(self.data) if isinstance(self.data, list) else (self.data, )
-        return (self.name, self.dom, self.cod, self.dtype, self.is_dagger)\
-            + data
+        return (self.name, self.dom, self.cod, self.dtype, self.is_dagger,
+                self.deterministic, self.affine) + data
 
 
 class Cup(frobenius.Cup, Box):
