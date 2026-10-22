@@ -253,8 +253,7 @@ def test_permutation_factory():
     assert Diagram.permutation_factory is Permutation
     perm = Permutation(x @ y @ z, [2, 0, 1])
     functor = Functor(ob_map={x: y, y: z, z: x}, ar_map={})
-    assert Equation(
-        functor(perm), Permutation(y @ z @ x, [2, 0, 1]))
+    assert functor(perm) == Permutation(y @ z @ x, [2, 0, 1])
     assert Equation(perm, perm.to_swaps())
     assert Equation(functor(perm), functor(perm.to_swaps()))
 
@@ -277,8 +276,23 @@ def test_Functor_on_whiskered_Swap():
     assert Functor({Nat(1): 2}, {}, cod=Matrix)(Permutation(
         Nat(3), [1, 0, 2])) == Matrix.permutation([1, 0, 2], [2, 2, 2])
     perm = Permutation(Nat(3), [2, 0, 1])
-    assert Functor({Nat(1): Nat(1)}, {})(perm)\
-        == Diagram.permutation(perm.perm, perm.dom)
+    assert Functor({Nat(1): Nat(1)}, {})(perm) == perm
+
+
+def test_Functor_id_on_Permutation():
+    from discopy import symmetric, markov, compact, frobenius
+    from discopy.matrix import Matrix
+    for module in (symmetric, markov, compact, frobenius):
+        x, y, z, w = map(module.Ty, "xyzw")
+        perm = module.Permutation(x @ y @ z, [1, 2, 0])
+        assert module.Functor.id(module.Diagram)(perm) == perm
+        F = module.Functor({x: y @ z, y: w, z: x @ x}, {})
+        staircase = module.Diagram.permutation(perm.perm, [y @ z, w, x @ x])
+        assert F(perm) == module.Permutation(
+            y @ z @ w @ x @ x, [2, 3, 4, 0, 1])
+        assert module.Equation(F(perm), staircase)
+        G = module.Functor({x: 2, y: 3, z: 1, w: 2}, {}, cod=Matrix)
+        assert G(F(perm)) == G(staircase)
 
 
 def test_inherited_permutation_factory():
