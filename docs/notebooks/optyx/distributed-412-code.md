@@ -9,14 +9,14 @@ import marimo as mo
 
 ```python {.marimo}
 import numpy as np
-from optyx.channel import Ty
-from optyx import (
+from discopy.optyx.channel import Ty
+from discopy.optyx import (
     CQMap
 )
 ```
 
 ```python {.marimo}
-from optyx.qubits import BitFlipError, Bra, Channel, DephasingError, Diagram, Discard, DiscardChannel, H, Id, Ket, Measure, Scalar, X, Z, bit, diagram, qubit, zx
+from discopy.optyx.qubits import BitFlipError, Bra, Channel, DephasingError, Diagram, Discard, DiscardChannel, H, Id, Ket, Measure, Scalar, X, Z, bit, diagram, qubit, zx
 ```
 
 ```python {.marimo}
@@ -138,7 +138,7 @@ print("Calculated fidelity:", (Noisy_bell >> Perfect_Bell_Effect).double().to_te
 ### Defining the circuit for the distributed physical implementation
 
 ```python {.marimo}
-from optyx import classical
+from discopy.optyx import classical
 cnot = Id(1) @ X(1, 2) >> Z(2, 1) @ Id(1)
 left_module_ = Id(1) @ cnot >> Diagram.permutation([1, 0, 2], qubit ** 3) >> Id(1) @ cnot >> Diagram.permutation([1, 0, 2], qubit ** 3)
 notc = X(1, 2) @ Id(1) >> Id(1) @ Z(2, 1)

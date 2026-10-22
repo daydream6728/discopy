@@ -36,8 +36,8 @@ exp.draw()
 ```
 
 ```python {.marimo}
-from optyx.qubits import Circuit
-from optyx.core.backends import DiscopyBackend
+from discopy.optyx.qubits import Circuit
+from discopy.optyx.core.backends import DiscopyBackend
 ```
 
 ```python {.marimo}

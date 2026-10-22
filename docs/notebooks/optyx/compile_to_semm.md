@@ -23,7 +23,7 @@ nx.draw(g)
 Create the open graph on top by assigning measurements for
 
 ```python {.marimo}
-from optyx.compiler import OpenGraph, Measurement
+from discopy.optyx.compiler import OpenGraph, Measurement
 
 meas = {i: Measurement(0.5 * i, "XY") for i in range (3)}
 inputs = {0}
@@ -35,6 +35,6 @@ og = OpenGraph(g, meas, inputs, outputs)
 Now compile the open graph to instructions that can be executed on a machine with a single resource state emitter and unlimited measurement devices
 
 ```python {.marimo}
-from optyx.compiler.semm import compile_to_semm
+from discopy.optyx.compiler.semm import compile_to_semm
 compile_to_semm(og)
 ```

@@ -15,9 +15,9 @@ By representing the circuits in $\bf{ZW}_\infty$, we can treat them as a tensor 
 import sys
 sys.path.append('..')
 
-from optyx import circuit
-from optyx import qpath
-from optyx import zw
+from discopy.optyx import circuit
+from discopy.optyx import qpath
+from discopy.optyx import zw
 import numpy as np
 ```
 

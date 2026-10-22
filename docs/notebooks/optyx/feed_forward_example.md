@@ -42,9 +42,9 @@ We interpret this diagram as a CP-map which means that the sums represent classi
 In our analysis we will ignore the case when the fusion fails.
 
 ```python {.marimo}
-from optyx import qmode
-from optyx.channel import Diagram, bit, qubit
-from optyx.photonic import (
+from discopy.optyx import qmode
+from discopy.optyx.channel import Diagram, bit, qubit
+from discopy.optyx.photonic import (
     DualRail,
     HadamardBS
 )
@@ -60,8 +60,8 @@ def fusion(*a):
 ### Classical processing of fusion measurement results
 
 ```python {.marimo}
-from optyx.classical import ClassicalFunction
-from optyx import mode
+from discopy.optyx.classical import ClassicalFunction
+from discopy.optyx import mode
 
 def fusion_function(x):
     """
@@ -83,7 +83,7 @@ classical_function = ClassicalFunction(fusion_function, mode ** 4, bit ** 2)
 We would like to ignore the failure case (which is a simplification). We will simply postselect on the case of success.
 
 ```python {.marimo}
-from optyx.classical import PostselectBit
+from discopy.optyx.classical import PostselectBit
 
 fusion_failure_processing = PostselectBit(1)
 ```
@@ -95,8 +95,8 @@ To correct the Pauli error on the success case, we need to introduce a Phase shi
 The application of this gate is condition on the results of the classical processing of the measurement results. In particular, we want to apply the gate if $\underline{k}$ is 1.
 
 ```python {.marimo}
-from optyx.photonic import Phase
-from optyx.classical import BitControlledGate
+from discopy.optyx.photonic import Phase
+from discopy.optyx.classical import BitControlledGate
 
 # apply the box if the control bit is 1, otherwise apply an identity channel
 correction = BitControlledGate(
@@ -111,8 +111,8 @@ correction = BitControlledGate(
 We simplify the overall protocol by assuming we have an access to a dual-rail encoded Bell pair available to both parties partaking in the protocol:
 
 ```python {.marimo}
-from optyx.qubits import Z
-from optyx.photonic import Scalar
+from discopy.optyx.qubits import Z
+from discopy.optyx.photonic import Scalar
 
 channel_bell = (
     Z(0, 2) @ Scalar(0.5**0.5) >> DualRail(1) @ DualRail(1)
@@ -122,7 +122,7 @@ dual_rail_input = DualRail(1)
 ```
 
 ```python {.marimo}
-from optyx.photonic import NumberResolvingMeasurement
+from discopy.optyx.photonic import NumberResolvingMeasurement
 
 teleportation = (
     dual_rail_input @ channel_bell >>
@@ -145,7 +145,7 @@ array_teleportation = teleportation.eval().tensor.array
 The protocol should implement an identity channel with scalar of $\frac{1}{2}$:
 
 ```python {.marimo}
-from optyx.photonic import Id
+from discopy.optyx.photonic import Id
 
 array_id = (
     Id(1) @ Scalar(0.5**0.5)

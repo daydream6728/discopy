@@ -28,7 +28,7 @@ When creating a photon we can give an internal state of some dimension *d*, whic
 The amplitudes and probabilities for circuits with internal states are computing by *inflating* the diagram by *d*.
 
 ```python {.marimo}
-from optyx.core.zw import Create
+from discopy.optyx.core.zw import Create
 
 state1 = [1, 0]
 state2 = [0.5**0.5, 0.5**0.5]
@@ -39,7 +39,7 @@ Create(1, internal_states=(state2, )).inflate(2).foliation().draw(figsize=(6, 3)
 Similarly, every DualRail box with an internal state can be inflated.
 
 ```python {.marimo}
-from optyx.core.diagram import DualRail
+from discopy.optyx.core.diagram import DualRail
 
 DualRail(internal_state=state1).inflate(2).foliation().draw()
 ```
@@ -49,7 +49,7 @@ DualRail(internal_state=state1).inflate(2).foliation().draw()
 We will show that if the photons are non-distinguishable, we obtain a perfect Hong-Ou-Mandel effect.
 
 ```python {.marimo}
-from optyx.photonic import NumberResolvingMeasurement, BS
+from discopy.optyx.photonic import NumberResolvingMeasurement, BS
 ```
 
 The states of two particles are the same:
@@ -123,11 +123,11 @@ This can be confirmed using the formula: $\frac{1}{2} - \frac{1}{2} \left| \lang
 We now define a fusion measurement and consider the influence of distinguishability in a fusion induced Bell pair.
 
 ```python {.marimo}
-from optyx import qmode, mode, bit
-from optyx.photonic import Swap, HadamardBS
+from discopy.optyx import qmode, mode, bit
+from discopy.optyx.photonic import Swap, HadamardBS
 fusion = HadamardBS() @ HadamardBS() >> qmode @ Swap(1, 1) @ qmode >> qmode @ HadamardBS() @ qmode >> Swap(1, 1) @ qmode @ qmode >> qmode @ Swap(1, 1) @ qmode >> qmode @ qmode @ HadamardBS()
-from optyx.classical import ClassicalFunction
-from optyx.core.diagram import Mode, Bit
+from discopy.optyx.classical import ClassicalFunction
+from discopy.optyx.core.diagram import Mode, Bit
 
 def fusion_function(x):
     """
@@ -155,10 +155,10 @@ print(internal_state_1_2, internal_state_2_2)
 ```
 
 ```python {.marimo}
-from optyx.qubits import Z, Scalar, Id, Measure
-from optyx.classical import PostselectBit
+from discopy.optyx.qubits import Z, Scalar, Id, Measure
+from discopy.optyx.classical import PostselectBit
 from discopy.drawing import Equation
-from optyx.channel import Diagram, qubit
+from discopy.optyx.channel import Diagram, qubit
 bell_state = Z(0, 2) @ Scalar(0.5 ** 0.5)
 dual_rail_encoding = lambda state: DualRail(1, internal_states=[state])
 post_select = PostselectBit(1) @ PostselectBit(0)
@@ -182,7 +182,7 @@ Equation(fusion_1(internal_state_1_2, internal_state_2_2) >> Measure(2), bell >>
 ```
 
 ```python {.marimo}
-from optyx.qubits import Discard
+from discopy.optyx.qubits import Discard
 (fusion_1(internal_state_1_2, internal_state_2_2) >> Discard(2)).inflate(2).eval().tensor.array
 ```
 

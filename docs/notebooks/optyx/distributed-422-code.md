@@ -10,10 +10,10 @@ import marimo as mo
 ```python {.marimo}
 import numpy as np
 
-from optyx.channel import Ty
-from optyx.qubits import BitFlipError, Bra, DephasingError, Discard, H, Id, Ket, Measure, Scalar, X, Z, diagram, qubit
+from discopy.optyx.channel import Ty
+from discopy.optyx.qubits import BitFlipError, Bra, DephasingError, Discard, H, Id, Ket, Measure, Scalar, X, Z, diagram, qubit
 
-from optyx import (
+from discopy.optyx import (
     bit,
     Channel,
     Diagram,
@@ -195,7 +195,7 @@ Right_Z_module = Right_module
 Left_X_module = H_ ** 2 @ Diagram.id(qubit) >> Left_module >> H_ ** 2 @ Diagram.id(bit)
 Right_X_module = Diagram.id(qubit) @ H_ ** 2 >> Right_module >> Diagram.id(bit) @ H_ ** 2
 
-from optyx.classical import (
+from discopy.optyx.classical import (
     X as X_bit,
     Scalar as Scalar_bit
 )

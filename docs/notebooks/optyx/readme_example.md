@@ -24,7 +24,7 @@ Circuits in Optyx are diagrams made of typed wires (qubits, photonic modes, clas
 Let us build a diagram to study the HOM effect.
 
 ```python {.marimo}
-from optyx.photonic import BBS
+from discopy.optyx.photonic import BBS
 
 # diagram generators:
 # beam-splitter
@@ -33,7 +33,7 @@ beam_splitter.draw()
 ```
 
 ```python {.marimo}
-from optyx.photonic import Create
+from discopy.optyx.photonic import Create
 
 # diagram composition with monoidal syntax
 # create two single-photon states and send them to a beam-splitter
@@ -55,7 +55,7 @@ Call `diagram.eval()` to evaluate a diagram (Quimb backend by default). It retur
 
 ```python {.marimo}
 # an amplitude (raw result of tensor contraction)
-from optyx.photonic import Select
+from discopy.optyx.photonic import Select
 (
     hong_ou_mandel >> Select(1, 1)
 ).eval().tensor.array
@@ -74,13 +74,13 @@ https://en.wikipedia.org/wiki/Quantum_teleportation#/media/File:Quantum_teleport
 <img src="teleport.svg" alt="Teleportation Protocol" width="800" style="max-width:100%;">
 
 ```python {.marimo}
-from optyx import qubit, bit
-from optyx.qubits import Scalar
+from discopy.optyx import qubit, bit
+from discopy.optyx.qubits import Scalar
 
-from optyx import Channel
-from optyx.qubits import Z, X, H, Measure
-from optyx.classical import BitControlledGate
-from optyx.core import zx, diagram
+from discopy.optyx import Channel
+from discopy.optyx.qubits import Z, X, H, Measure
+from discopy.optyx.classical import BitControlledGate
+from discopy.optyx.core import zx, diagram
 ```
 
 ### Define the protocol
@@ -150,7 +150,7 @@ teleportation_monoidal_syntax = (
 
 ```python {.marimo}
 import numpy as np
-from optyx.qubits import Id
+from discopy.optyx.qubits import Id
 
 # both implementations are equivalent
 np.allclose(
@@ -165,7 +165,7 @@ Optyx evaluates diagrams via pluggable backends. By default it compiles a diagra
 ```python {.marimo}
 # backends (Perceval, Discopy, Quimb)
 
-from optyx.core.backends import (
+from discopy.optyx.core.backends import (
     DiscopyBackend,
     QuimbBackend
 )
@@ -220,7 +220,7 @@ $\underline{k} = \underline{s} (\underline{b} + \underline{d}) + \neg \underline
 ### Define the protocol
 
 ```python {.marimo}
-from optyx.photonic import DualRail
+from discopy.optyx.photonic import DualRail
 
 dual_rail_encoded_bell = (
     bell >>
@@ -229,9 +229,9 @@ dual_rail_encoded_bell = (
 ```
 
 ```python {.marimo}
-from optyx.classical import PostselectBit
-from optyx.photonic import Phase
-from optyx.photonic import HadamardBS, qmode
+from discopy.optyx.classical import PostselectBit
+from discopy.optyx.photonic import Phase
+from discopy.optyx.photonic import HadamardBS, qmode
 fusion_failure_processing = PostselectBit(1)
 # postselect on fusion success
 # apply the box if the control bit is 1, otherwise apply an identity channel
@@ -239,7 +239,7 @@ correction = BitControlledGate(HadamardBS() >> Phase(0.5) @ qmode >> HadamardBS(
 ```
 
 ```python {.marimo}
-from optyx.photonic import FusionTypeII
+from discopy.optyx.photonic import FusionTypeII
 
 @Channel.from_callable(
     dom=qubit, cod=qmode @ qmode
@@ -315,7 +315,7 @@ plt.title('Fusion-based Teleportation similarity vs Contraction Chi')
 Photon loss is when a photon that should arrive simply doesn’t. In Optyx, you model this by placing a dedicated loss generator exactly where the loss occurs; its single parameter is the photon survival probability. Photon loss is the primary failure mode for photonic qubits. In photonic computing it breaks multi-photon interference and reduces the success of fusion/measurement steps. That’s why if we want to study architectures, thresholds, and mitigation (repeaters, multiplexing, loss-tolerant encodings), we need to be able to model photon loss accurately.
 
 ```python {.marimo}
-from optyx.photonic import PhotonLoss
+from discopy.optyx.photonic import PhotonLoss
 
 # photo loss is one of the main error sources in photonic quantum computing
 def fusion_teleportation_with_photon_loss(p):
@@ -333,7 +333,7 @@ def fusion_teleportation_with_photon_loss(p):
 ```
 
 ```python {.marimo}
-from optyx.channel import Spider, Diagram
+from discopy.optyx.channel import Spider, Diagram
 
 def get_perm(n):
     return sorted(sorted(list(range(n))), key=lambda i: i % 2)
@@ -382,7 +382,7 @@ Main, D., Drmota, P., Nadlinger, D.P. et al. Distributed quantum computing acros
 #### Define the protocol
 
 ```python {.marimo}
-from discopy.drawing import Equation
+from discopy.symmetric import Equation
 bell_state = Z(0, 2) @ Scalar(0.5 ** 0.5)
 internal_state_1 = [1, 0]
 internal_state_2 = [0, 1]
@@ -413,7 +413,7 @@ unit_vectors = list(rotated_unit_vectors(15))
 #### Run the experiments
 
 ```python {.marimo}
-from optyx.qubits import Discard
+from discopy.optyx.qubits import Discard
 inner_product_states = []
 inner_product_bell_states = []
 result_bell = bell_state.eval().tensor.array.flatten()
@@ -460,7 +460,7 @@ graphix_result = simulator.run().psi.conj()
 ```
 
 ```python {.marimo}
-from optyx import qubits
+from discopy.optyx import qubits
 
 optyx_zx = qubits.Circuit(pattern)
 
@@ -497,7 +497,7 @@ pcvl.pdisplay(p_1, recursive=True)
 ```
 
 ```python {.marimo}
-from optyx.qubits import Ket
+from discopy.optyx.qubits import Ket
 
 state = Ket("+") >> Z(1, 1, 0.3)
 state_array = state.eval().tensor.array

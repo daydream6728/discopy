@@ -22,7 +22,7 @@ This notebook builds a **Bose–Hubbard** Hamiltonian over a graph and minimizes
 Define the variational ansatz:
 
 ```python {.marimo}
-from optyx import photonic
+from discopy.optyx import photonic
 
 circuit = photonic.Create(1, 1, 1) >> photonic.ansatz(3, 4) >> photonic.Id(2) @ photonic.Select(1)
 circuit.draw()
@@ -33,9 +33,9 @@ circuit.draw()
 Define the creation/annihilation channels for a single photonic mode; we’ll reuse these to place operators on specific lattice sites.
 
 ```python {.marimo}
-from optyx import Channel
-from optyx.core.diagram import mode
-from optyx.core.zw import W, Create, Select
+from discopy.optyx import Channel
+from discopy.optyx.core.diagram import mode
+from discopy.optyx.core.zw import W, Create, Select
 
 creation_op = Channel(
     "a†",
@@ -54,8 +54,8 @@ We’ll construct the Bose–Hubbard Hamiltonian $H(t,U,\mu)$ on an arbitrary gr
 
 ```python {.marimo}
 import networkx as nx
-from optyx import Diagram, qmode
-from optyx.photonic import NumOp, Scalar
+from discopy.optyx import Diagram, qmode
+from discopy.optyx.photonic import NumOp, Scalar
 
 def bose_hubbard_from_graph(
         graph: nx.Graph,
@@ -146,7 +146,7 @@ expectation = circuit >> hamiltonian >> circuit.dagger()
 ## Optimisation
 
 ```python {.marimo}
-from optyx.core.backends import PermanentBackend
+from discopy.optyx.core.backends import PermanentBackend
 
 
 def to_float(x):

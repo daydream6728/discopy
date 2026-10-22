@@ -29,7 +29,7 @@ nx.draw(g)
 ```
 
 ```python {.marimo}
-from optyx.compiler import OpenGraph, Measurement
+from discopy.optyx.compiler import OpenGraph, Measurement
 
 meas = {i: Measurement(i) for i in range (2)}
 inputs = [0]
@@ -39,6 +39,6 @@ og = OpenGraph(g, meas, inputs, outputs)
 ```
 
 ```python {.marimo}
-from optyx.compiler.semm import compile_to_semm
+from discopy.optyx.compiler.semm import compile_to_semm
 compile_to_semm(og)
 ```

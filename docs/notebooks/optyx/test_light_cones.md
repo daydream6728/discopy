@@ -7,8 +7,8 @@ marimo-version: 0.24.0
 from __future__ import annotations
 
 from typing import List, Tuple
-from optyx.core.diagram import Box, Diagram, Spider, Swap
-from optyx.core import zw
+from discopy.optyx.core.diagram import Box, Diagram, Spider, Swap
+from discopy.optyx.core import zw
 
 LO_ELEMENTS = (
     zw.Create,
@@ -149,9 +149,9 @@ def get_max_dim_for_box(
 ```
 
 ```python {.marimo}
-from optyx.photonic import ansatz, Create
+from discopy.optyx.photonic import ansatz, Create
 import numpy as np
-from optyx import qmode
+from discopy.optyx import qmode
 
 def chip_mzi(w, l):
     ansatz_ = ansatz(w, l)
@@ -161,7 +161,7 @@ def chip_mzi(w, l):
 ```
 
 ```python {.marimo}
-from optyx import Channel
+from discopy.optyx import Channel
 
 def _number_operator():
     return zw.W(2) >> zw.Select(1) @ zw.Id(1) >> zw.Create(1) @ zw.Id(1) >> zw.W(2).dagger()
@@ -181,14 +181,14 @@ def _get_monomial_layer(powers):
 
 ```python {.marimo}
 from discopy import tensor
-from optyx.core.diagram import Dim, modify_io_dims_against_max_dim
+from discopy.optyx.core.diagram import Dim, modify_io_dims_against_max_dim
 
 # pylint: disable=too-many-locals
 def to_tensor(
     self, input_dims: list = None
 ) -> tensor.Diagram:
     """Returns a :class:`tensor.Diagram` for evaluation"""
-    from optyx.core import zw
+    from discopy.optyx.core import zw
 
     prev_layers: List[Tuple[int, Box]] = []
 

@@ -4,14 +4,14 @@ marimo-version: 0.24.0
 ---
 
 ```python {.marimo}
-from optyx import photonic
+from discopy.optyx import photonic
 
 circuit = photonic.Create(1, 1, 1) >> photonic.ansatz(3, 4) >> photonic.Id(2) @ photonic.Select(1)
 circuit.draw()
 ```
 
 ```python {.marimo}
-from optyx import Diagram
+from discopy.optyx import Diagram
 
 matrix = [
     [0, 1],
@@ -42,7 +42,7 @@ expectation = circuit >> hamiltonian >> circuit.dagger()
 ```
 
 ```python {.marimo}
-from optyx.core.backends import PermanentBackend
+from discopy.optyx.core.backends import PermanentBackend
 
 def to_float(x):
     if isinstance(x, complex):
