@@ -423,6 +423,9 @@ def test_Sum():
     assert hash(Sum((), x, y)) == hash(Sum((), x, y))
     assert repr(Sum((), x, y))\
         == "cat.Sum(terms=(), dom=cat.Ob('x'), cod=cat.Ob('y'))"
+    lazy = Sum((f, f))
+    assert "name" not in vars(lazy) and lazy.name == repr(lazy)\
+        == f"cat.Sum(terms=({f!r}, {f!r}))"
     assert list(Sum((f, ), x, y)) == [f]
     assert len(Sum((), x, y)) == 0
     assert Sum((), x, x).then(f, g) == Sum((), x, z)

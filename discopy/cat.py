@@ -714,12 +714,19 @@ class Sum(Box):
             raise ValueError(messages.MISSING_TYPES_FOR_EMPTY_SUM)
         dom = terms[0].dom if dom is None else dom
         cod = terms[0].cod if cod is None else cod
+        unit = Sum((), dom, cod) if terms else None
         for arrow in terms:
-            assert_isparallel(Sum((), dom, cod), arrow)
-        str_args = f", dom={repr(dom)}, cod={repr(cod)}" if not terms else ""
-        name = f"{factory_name(type(self))}(terms={repr(terms)}{str_args})"
+            assert_isparallel(unit, arrow)
         self.terms = terms
-        super().__init__(name, dom, cod)
+        super().__init__("", dom, cod)
+        del self.name
+
+    @cached_property
+    def name(self):
+        """ The name of a sum is its :code:`repr`, computed when needed. """
+        str_args = "" if self.terms\
+            else f", dom={repr(self.dom)}, cod={repr(self.cod)}"
+        return f"{factory_name(type(self))}(terms={repr(self.terms)}{str_args})"
 
     @property
     def is_generator(self):
