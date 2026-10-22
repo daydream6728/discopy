@@ -267,6 +267,7 @@ def test_Functor_on_whiskered_Swap():
     assert braided(Swap(x, y) @ z) == balanced.Braid(x, y) @ z
     assert braided(Permutation(x @ y @ z, [2, 0, 1]))\
         == x @ balanced.Braid(y, z) >> balanced.Braid(x, z) @ y
+    assert braided(Permutation(x @ y, [0, 1])) == balanced.Diagram.id(x @ y)
     assert [type(box) for box in (Swap(x, y) @ z).to_braided().boxes]\
         == [balanced.DualRailBraid]
     widen = Functor({Nat(1): x @ y}, {})

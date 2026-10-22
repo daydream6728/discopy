@@ -716,10 +716,10 @@ class Functor(balanced.Functor):
                 self.cod.ar, "permutation"):
             return self.cod.ar.permutation(
                 other.perm, list(map(self, other.dom)))
-        if isinstance(other, Permutation) and len(other.to_swaps()) > 1:
-            return self(other.to_swaps())
         if isinstance(other, Permutation) and not isinstance(other, Swap):
-            dom = other.dom
+            swaps, dom = other.to_swaps(), other.dom
+            if len(swaps) != 1:
+                return self(swaps)
             i = next(i for i, j in enumerate(other.perm) if i != j)
             swap = other.swap_factory(dom[i:i + 1], dom[i + 1:i + 2])
             return self(monoidal.Layer(dom[:i], swap, dom[i + 2:]))
