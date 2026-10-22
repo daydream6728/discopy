@@ -1502,6 +1502,19 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `grammar.pregroup` which re-exported it; trees serialised with an `Ob`
   factory string load the same way
   ([#566](https://github.com/discopy/discopy/pull/566)).
+- `transparency` holds on a `Matrix` or a `Tensor` of at most
+  `config.NUMPY_THRESHOLD` entries, the law being weakened to those, where
+  it was stated on all of them and a bigger one printed NumPy's elision,
+  which does not evaluate: both keep their readable representation, their
+  strategies take `max_entries`, and STYLE.md says an array reads back up
+  to elision and rounding
+  ([rel-int/discopy-next#156](https://github.com/rel-int/discopy-next/issues/156)).
+- An uncoloured `monoidal.Wire` prints as `monoidal.Wire('x')`, as the
+  wires of every other level do, where it printed the `cat.Ob` its type
+  coerces, which the type-strict equality of a wire rejects, so that it did
+  not read back: `monoidal.Ty('x')` prints `monoidal.Ty(monoidal.Wire('x'))`
+  and the old text still evaluates
+  ([rel-int/discopy-next#140](https://github.com/rel-int/discopy-next/issues/140)).
 
 ### Removed
 
