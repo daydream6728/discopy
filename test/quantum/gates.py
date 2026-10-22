@@ -13,8 +13,8 @@ from pytest import importorskip, mark, raises
 from discopy.quantum import bit, qubit
 from discopy.quantum.gates import (
     CCX, CCZ, CRx, CRz, CU1, CX, CY, CZ, Bits, Bra, Controlled, Copy, Digits,
-    Discard, Encode, H, Ket, Match, Measure, MixedScalar, MixedState, Rx, Ry,
-    Rz, S, SWAP, Scalar, Sqrt, T, U1, X, Y, Z)
+    Discard, Encode, H, Ket, Match, Measure, MixedScalar, MixedState,
+    QuantumGate, Rx, Ry, Rz, S, SWAP, Scalar, Sqrt, T, U1, X, Y, Z)
 from discopy.utils import from_tree
 
 
@@ -167,3 +167,16 @@ def test_rotation_grad_is_the_finite_difference(rotation, mixed):
         rotation(.6 + 2 * step).eval(mixed=mixed).array
         - rotation(.6 - 2 * step).eval(mixed=mixed).array) / (2 * step),
         atol=1e-4)
+
+
+def test_QuantumGate_takes_what_a_circuit_box_takes():
+    phi = importorskip("sympy").Symbol("phi")
+    gate = QuantumGate('U', qubit, qubit, data=numpy.eye(2))
+    assert numpy.allclose(gate.eval().array, numpy.eye(2))
+    assert phi in QuantumGate('U', qubit, qubit, [phi, 0, 0, phi]).free_symbols
+
+
+def test_Ket_Bra_read_booleans_as_bits():
+    for bits in [(True, False), tuple(numpy.array([1, 0]) > 0)]:
+        assert Ket(*bits) == Ket(1, 0) and Bra(*bits) == Bra(1, 0)
+        assert numpy.allclose(Ket(*bits).eval().array, Ket(1, 0).eval().array)

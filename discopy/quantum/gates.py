@@ -259,13 +259,26 @@ class Encode(SelfConjugate):
 
 
 class QuantumGate(Box):
-    """ Quantum gates, i.e. unitaries on n qubits. """
+    """
+    Quantum gates, i.e. unitaries on n qubits.
+
+    Its data is flattened into a list of complex numbers, except for the
+    entries with free symbols.
+
+    >>> from sympy.abc import phi  # doctest: +EXTRA
+    >>> import numpy as np
+    >>> assert QuantumGate('U', qubit, qubit, np.eye(2)).data == [1, 0, 0, 1]
+    >>> assert QuantumGate('U', qubit, qubit, [phi, 0, 0, 1]).free_symbols\\
+    ...     == {phi}
+    """
     is_mixed = False
     is_classical = False
 
     def __init__(self, name: str, dom: Ty, cod: Ty, data=None, **params):
         if isinstance(data, Sized):
-            data = [complex(v) for v in data]
+            with backend('numpy') as np:
+                data = [value if getattr(value, "free_symbols", None)
+                        else complex(value) for value in np.ravel(data)]
         super().__init__(name, dom, cod, data, **params)
 
     def __setstate__(self, state):
@@ -413,7 +426,7 @@ class Ket(SelfConjugate, QuantumGate):
     def __init__(self, *bitstring):
         if not all([bit in [0, 1] for bit in bitstring]):
             raise Exception('Bitstring can only contain integers 0 or 1.')
-
+        bitstring = tuple(map(int, bitstring))
         dom, cod = qubit ** 0, qubit ** len(bitstring)
         name = f"Ket({', '.join(map(str, bitstring))})"
         super().__init__(name, dom, cod)
@@ -453,7 +466,7 @@ class Bra(SelfConjugate, QuantumGate):
     def __init__(self, *bitstring):
         if not all([bit in [0, 1] for bit in bitstring]):
             raise Exception('Bitstring can only contain integers 0 or 1.')
-
+        bitstring = tuple(map(int, bitstring))
         name = f"Bra({', '.join(map(str, bitstring))})"
         dom, cod = qubit ** len(bitstring), qubit ** 0
         super().__init__(name, dom, cod)
