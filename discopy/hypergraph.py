@@ -1935,6 +1935,8 @@ class Hypergraph(
         assert_transparent(old)
         category = type(old).ar
         factory = cls if cls.category is category else cls[category]
+        if any(isinstance(box, cat.Sum) for box in old.boxes):
+            raise AxiomError(messages.NO_SUMS.format(factory_name(factory)))
         functor = factory.functor(
             ob_map=lambda typ: typ, ar_map=factory.from_box,
             dom=category, cod=factory)

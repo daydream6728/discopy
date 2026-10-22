@@ -482,6 +482,16 @@ def test_coloured_diagram_has_no_hypergraph():
                 convert(diagram)
 
 
+def test_sum_has_no_hypergraph():
+    from discopy.symmetric import Box, Diagram, Ty
+    x = Ty('x')
+    f, g = Box('f', x, x), Box('g', x, x)
+    for convert in (Diagram.to_hypergraph, Diagram.to_map):
+        for diagram in (f + g, (f + g) @ x, Diagram.sum_factory((), x, x)):
+            with raises(AxiomError, match="has no sums"):
+                convert(diagram)
+
+
 def test_Hypergraph_to_tree():
     from discopy.utils import dumps, loads
     from discopy import markov, symmetric

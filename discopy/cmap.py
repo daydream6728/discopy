@@ -61,7 +61,7 @@ from discopy.abc import (
     SymmetricCategory,
     TracedCategory,
 )
-from discopy.cat import Ob
+from discopy.cat import Ob, Sum
 from discopy.python.finset import Permutation
 from discopy.utils import (
     AxiomError,
@@ -1023,6 +1023,8 @@ class CMap[C0: Pregroup, C1: CMap](
         hypergraph.assert_transparent(old)
         category = type(old).ar
         factory = cls if cls.category is category else cls[category]
+        if any(isinstance(box, Sum) for box in old.boxes):
+            raise AxiomError(messages.NO_SUMS.format(factory_name(factory)))
         functor = (factory.functor if cls.category is None else cls.functor)(
             ob_map=lambda typ: typ, ar_map=factory.from_box,
             dom=category, cod=factory)
