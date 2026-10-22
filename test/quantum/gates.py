@@ -30,6 +30,11 @@ def test_Encode_types():
         == qubit
 
 
+def test_controlled_Paulis_are_exported():
+    from discopy import quantum
+    assert (quantum.CX, quantum.CY, quantum.CZ) == (CX, CY, CZ)
+
+
 def test_Controlled_with_distance():
     assert Controlled(X, distance=-1).with_distance(1) == Controlled(X)
     assert CRz(0.25, distance=-1).with_distance(1) == CRz(0.25)
