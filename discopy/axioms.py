@@ -521,8 +521,8 @@ class Declaration[**P, T](classmethod):
         function = inspect.unwrap(self.function)
         owner = next((
             klass for klass in (self.category or object).__mro__
-            if f"{klass.__qualname__}.{function.__name__}"
-            == function.__qualname__), None)
+            if (klass.__module__, f"{klass.__qualname__}.{function.__name__}")
+            == (function.__module__, function.__qualname__)), None)
         names = {
             parameter.__name__: parameter for parameter in (
                 getattr(owner, "__type_params__", ())
