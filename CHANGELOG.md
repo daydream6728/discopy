@@ -36,6 +36,19 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   [#272](https://github.com/rel-int/discopy-next/issues/272)
   ([#225](https://github.com/rel-int/discopy-next/issues/225)).
 
+- `discopy.optyx.interaction`, combinatorial maps of recurrent channels,
+  from rel-int/optyx#16: a `Box` carries a local channel
+  `X @ Y @ M -> X @ Y @ M @ O` that reads and writes its ports at every
+  tick, with a private memory `M` fed back to itself and a prediction `O`
+  written to the environment, and a `CMap` pairs the ports of its boxes by
+  its edges. One tick is `step = read >> parallel >> write`, two
+  permutations around the boxes in parallel; `protocol` closes the paired
+  ports and the memories with delayed feedback, `unroll` gives its finite
+  semantics and `fix` its approximate stationary one, and `@` is the
+  disjoint union, the compact closed structure of the Int-construction on
+  the feedback category of channels
+  ([#225](https://github.com/rel-int/discopy-next/issues/225)).
+
 - `discopy.ehypergraph`, e-graphs of diagrams with sharing: an
   `EHypergraph` over a copy-discard category is a left-monogamous acyclic
   `Hypergraph`, whose boxes are the e-nodes, with an equivalence relation on
