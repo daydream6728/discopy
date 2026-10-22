@@ -847,8 +847,20 @@ class ControlledRotation(Controlled, Rotation):
     def with_distance(self, distance) -> "ControlledRotation":
         return type(self)(self.phase, distance, self.time_step)
 
-    lambdify = Rotation.lambdify
-    subs = Rotation.subs
+    def subs(self, *args):
+        """
+        Substitute in the phase, at the same distance and time step.
+
+        >>> from sympy.abc import phi  # doctest: +EXTRA
+        >>> assert CRz(phi, distance=2).subs(phi, .5) == CRz(.5, distance=2)
+        """
+        return type(self)(
+            self.controlled.subs(*args).phase, self.distance, self.time_step)
+
+    def lambdify(self, *symbols, **kwargs):
+        function = self.controlled.lambdify(*symbols, **kwargs)
+        return lambda *xs: type(self)(
+            function(*xs).phase, self.distance, self.time_step)
 
 
 class CU1(ControlledRotation):
@@ -895,6 +907,21 @@ class Scalar(Parametrized):
     def dagger(self):
         return Scalar(self.data.conjugate(), self.name, self.is_mixed)
 
+    def subs(self, *args):
+        """
+        Substitute in the data of a scalar, with the same name, mixed when it
+        is.
+
+        >>> from sympy.abc import phi  # doctest: +EXTRA
+        >>> assert scalar(2 * phi, is_mixed=True).subs(phi, .5).is_mixed
+        """
+        return type(self)(rsubs(self.data, *args), self.name, self.is_mixed)
+
+    def lambdify(self, *symbols, **kwargs):
+        function = super().lambdify(*symbols, **kwargs)
+        return lambda *xs: type(self)(
+            function(*xs).data, self.name, self.is_mixed)
+
     def to_tree(self) -> dict:
         return dict(is_mixed=self.is_mixed, **super().to_tree())
 
@@ -918,6 +945,8 @@ class MixedScalar(Scalar):
     @classmethod
     def from_tree(cls, tree: dict):
         return cls(tree['data'])
+
+    subs, lambdify = Parametrized.subs, Parametrized.lambdify
 
 
 class Sqrt(Scalar):
@@ -965,11 +994,11 @@ class Sqrt(Scalar):
             else Sqrt(self.data, is_dagger=not self.is_dagger)
 
     def subs(self, *args):
-        result = super().subs(*args)
+        result = Parametrized.subs(self, *args)
         return result.dagger() if self.is_dagger else result
 
     def lambdify(self, *symbols, **kwargs):
-        function = super().lambdify(*symbols, **kwargs)
+        function = Parametrized.lambdify(self, *symbols, **kwargs)
         return lambda *xs: function(*xs).dagger() if self.is_dagger\
             else function(*xs)
 

@@ -137,3 +137,21 @@ def test_Controlled_rotation_commutes_with_evaluation():
         assert gate.r.eval().is_close(gate.eval().r)
         assert gate.l.r == gate == gate.r.l
     assert isinstance(CRz(.5).rotate(), Controlled)
+
+
+def test_subs_and_lambdify_keep_distance_and_is_mixed():
+    phi = importorskip("sympy").Symbol("phi")
+    for gate, expected in [
+            (CRz(phi, distance=2), CRz(.5, distance=2)),
+            (CRx(phi, distance=-1).delay(), CRx(.5, distance=-1).delay()),
+            (Scalar(2 * phi, is_mixed=True), Scalar(1, is_mixed=True)),
+            (MixedScalar(2 * phi), MixedScalar(1)), (Sqrt(phi), Sqrt(.5))]:
+        for result in (gate.subs(phi, .5), gate.lambdify(phi)(.5)):
+            assert result == expected and result.is_mixed == gate.is_mixed
+            assert getattr(result, "distance", None)\
+                == getattr(gate, "distance", None)
+    gradient = Rz(phi).grad(phi).lambdify(phi)(.3).eval(mixed=True).array
+    step = 1e-6
+    assert numpy.allclose(gradient, (
+        Rz(.3 + step).eval(mixed=True).array
+        - Rz(.3 - step).eval(mixed=True).array) / (2 * step), atol=1e-4)
