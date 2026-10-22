@@ -131,6 +131,32 @@ def test_pyzx(seed):
     result = G.full_reduce(ours)
     assert zx.compare_tensors(G.to_pyzx(result), graph, False)
     zx.full_reduce(graph)
-    (spiders, _, tcount), (pyzx_spiders, _, pyzx_tcount) = (
-        G.size(result), G.size(graph))
-    assert tcount == pyzx_tcount and abs(spiders - pyzx_spiders) <= 1
+    assert G.size(result)[2] == G.size(graph)[2]
+    again = G.to_pyzx(result)
+    zx.full_reduce(again)
+    assert G.size(again) == G.size(result)
+
+
+def test_copy_and_supplement():
+    from discopy.rigid import Nat
+    legs = Z(1, 3) @ Z(1, 3) >> Diagram.permutation([0, 3, 1, 4, 2, 5], Nat(6))
+    examples = {
+        "copy": (Z(0, 1) >> H) @ H >> Z(2, 1, .125) >> H,
+        "supplement": legs >> Nat(2) @ H @ H @ H @ H
+        >> Nat(2) @ Z(2, 0, .125) @ Z(2, 0, .375)}
+    for name, diagram in examples.items():
+        graph, fired = G.from_diagram(diagram), []
+
+        def counted(rule):
+            def result(rewriter, spider):
+                found = rule(rewriter, spider)
+                fired.extend([rule.__name__] if found else [])
+                return found
+            return result
+        rewriter = G.Simplifier(graph)
+        G.reduce(rewriter, checked([
+            ([counted(rule) for rule in level], anchors)
+            for level, anchors in G.RULES]))
+        result = rewriter.to_hypergraph()
+        assert fired == [name] and G.size(result) == (2, 0, 0)
+        assert proportional(tensor(result), tensor(graph))

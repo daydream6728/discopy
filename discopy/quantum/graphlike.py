@@ -658,13 +658,79 @@ def fuse_gadgets(rewriter: Simplifier, spider: int) -> Step | None:
     return None
 
 
+def copy(rewriter: Simplifier, spider: int) -> Step | None:
+    """
+    Copy a Pauli state through its neighbour: a spider with no phase or a
+    half-turn and one Hadamard edge, to an interior spider, goes with that
+    neighbour, whose other neighbours each gain its phase.
+    """
+    here = rewriter.local(spider)
+    if here.ports or here.other or here.loops or len(here.edges) != 1\
+            or not is_pauli(here.phase):
+        return None
+    (target, hadamards), = here.edges.items()
+    there = rewriter.local(target)
+    if len(hadamards) != 1 or not is_interior(rewriter, target, there):
+        return None
+    near = [t for t in there.edges if t != spider]
+    locals_ = neighbourhood(rewriter, target, known={spider: here})
+    old_phases, new_phases = add_phases(
+        locals_, dict.fromkeys(near, here.phase))
+    deleted = here.phases + there.phases + [
+        j for js in there.edges.values() for j in js]
+    return step(rewriter, near, [spider, target], deleted + old_phases,
+                new_phases)
+
+
+def supplement(rewriter: Simplifier, spider: int) -> Step | None:
+    """
+    Supplementarity: remove two interior spiders whose phases are not
+    Clifford and add up to a half-turn or differ by one, with the same
+    neighbours, the one aside, adding a half-turn to the neighbours when the
+    phases are negated.
+    """
+    here = rewriter.local(spider)
+    if not is_interior(rewriter, spider, here) or is_clifford(here.phase)\
+            or not here.edges:
+        return None
+    near = set(here.edges)
+    nearest = min(near, key=lambda t: len(rewriter.incidence[t]))
+    for other in dict.fromkeys(list(rewriter.edges[nearest]) + list(near)):
+        there = rewriter.local(other)
+        if other == spider or is_clifford(there.phase)\
+                or not is_interior(rewriter, other, there):
+            continue
+        plus = (here.phase + there.phase) % 1
+        minus = (here.phase - there.phase) % 1
+        if other not in near and set(there.edges) == near\
+                and Fraction(1, 2) in (plus, minus):
+            negate = plus == Fraction(1, 2)
+        elif other in near and set(there.edges) - {spider} == near - {other}\
+                and (not plus or minus == Fraction(1, 2)):
+            negate = not plus
+        else:
+            continue
+        interface = sorted(near - {other})
+        if negate and any(is_boundary(rewriter, t) for t in interface):
+            continue
+        locals_ = neighbourhood(rewriter, *interface, known={
+            spider: here, other: there})
+        old_phases, new_phases = add_phases(locals_, dict.fromkeys(
+            interface, Fraction(1, 2) if negate else ZERO))
+        deleted = list(dict.fromkeys(
+            j for t in (spider, other) for j, *_ in rewriter.incidence[t]))
+        return step(rewriter, interface, [spider, other],
+                    deleted + old_phases, new_phases)
+    return None
+
+
 Rule = Callable[[Rewriter, int], Step | None]
 """ A rule tried at a spider, giving the step to take or ``None``. """
 
 RULES: list[tuple[list[Rule], Callable | None]] = [
     ([normalize], None), ([remove_identity, pivot, complement], None),
     ([pivot_boundary], near_boundary), ([fuse_gadgets], None),
-    ([pivot_gadget], None)]
+    ([copy, supplement], None), ([pivot_gadget], None)]
 """
 The rules of :func:`full_reduce` by priority, each level with the spiders
 to try them at: those a step touched, or those that a function of the
