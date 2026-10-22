@@ -699,6 +699,22 @@ class Box(biclosed.Box, Diagram):
         return type(self)(self.name, dom=dom, cod=cod,
                           data=self.data, is_dagger=self.is_dagger, z=z)
 
+    def dagger(self) -> Box:
+        """
+        The dagger of a rigid box keeps its winding number, i.e. the dagger
+        of a rotation is the rotation of the dagger, as in a dagger pivotal
+        category, see :meth:`discopy.pivotal.Diagram.conjugate`.
+
+        Example
+        -------
+        >>> f = Box('f', Ty('a'), Ty('b'))
+        >>> assert f.r[::-1] == f[::-1].r and f.r[::-1].z == 1
+        >>> assert f.r[::-1][::-1] == f.r and f.l.l[::-1][::-1] == f.l.l
+        """
+        return type(self)(self.name, dom=self.cod, cod=self.dom,
+                          data=self.data, is_dagger=not self.is_dagger,
+                          z=self.z)
+
     @classmethod
     def strategy(cls, **params):
         """

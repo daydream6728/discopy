@@ -46,6 +46,16 @@ def test_Box_hash_winding():
     assert f == Box('f', x, x) and hash(f) == hash(Box('f', x, x))
 
 
+def test_Box_dagger_keeps_winding():
+    from discopy import rigid
+    x, y = Ty('x'), Ty('y')
+    f = Box('f', x, y)
+    for box in [f.r, f.l, f.r.r, f.l.l]:
+        assert box[::-1].z == box.z and box[::-1][::-1] == box
+        assert eval(repr(box[::-1])) == box[::-1]
+    assert f.r[::-1] == f[::-1].r and f.l[::-1] == f[::-1].l
+
+
 def test_Ob_repr():
     assert repr(Wire('a', z=42)) == "rigid.Wire('a', z=42)"
 

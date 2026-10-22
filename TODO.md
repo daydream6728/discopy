@@ -2,7 +2,7 @@
 
 Agent `levels`: `monoidal.py`, `rigid.py`, `traced.py`, `feedback.py`, `markov.py` and their tests.
 
-- [WIP] @levels-2026-10-22 15:53 B18: rigid `Box.dagger()` silently resets `z`; the double dagger is not the box
+- [x] B18: rigid `Box.dagger()` silently resets `z`; the double dagger is not the box
 - [WIP] @levels-2026-10-22 15:53 B19: an oversized trace silently succeeds; a negative trace recurses
 - [WIP] @levels-2026-10-22 15:53 B25: heterogeneous-memory `feedback` is broken; `feedback.Diagram.discard` is uninitialised
 - [WIP] @levels-2026-10-22 15:53 B27: `Id(x).width` raises on an empty `max()`

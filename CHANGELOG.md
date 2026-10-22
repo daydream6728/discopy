@@ -1956,6 +1956,12 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   arXiv:1904.11324, which is not their paper; the geometry of Bayesian
   programming is arXiv:1904.07425
   ([#639](https://github.com/discopy/discopy/pull/639)).
+- The dagger of a rigid box keeps its winding number `z`, where it reset
+  it to zero, so that `f.r[::-1]` was a box with no winding on the rotated
+  types, `f.r[::-1][::-1] != f.r` and `f.r[::-1] != f[::-1].r`: the dagger
+  of a rotation is the rotation of the dagger, as in a dagger pivotal
+  category, which `pivotal.Box` already did
+  ([rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
 - `interaction.Diagram.trace` traces an integer diagram, where it raised
   `TypeError` on every input: it was borrowed from `traced.Diagram` through
   a `trace_factory` slicing the type, and an integer type is a pair of
