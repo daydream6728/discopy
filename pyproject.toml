@@ -199,7 +199,7 @@ ignore = [
 include = ["discopy"]
 
 [tool.ty.environment]
-python-version = "3.14"
+python-version = "3.12"
 
 # The factory-method pattern narrows the signatures of `then`, `tensor` and
 # their friends down the tower, and attributes are dynamic by design where a
