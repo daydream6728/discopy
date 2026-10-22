@@ -53,7 +53,6 @@ def test_named_generic_cache():
     assert box_int is dt.Box[int]
 
 
-
 def _rounded_repr(obj):
     # Gate matrices such as the Hadamard's 1 / sqrt(2) entries are stored as
     # floats whose last bit depends on the numpy version that generated the
@@ -102,11 +101,10 @@ def test_named_generic_pickle():
 def test_named_generic_pickle_subscript():
     """ A class subscripted by a subscripted class pickles too. """
     from discopy import tensor
-    from discopy.axioms import Equation
+    from discopy.group import Cyclic, Product, Symmetric
     from discopy.hypergraph import Hypergraph
-    from discopy.matrix import Matrix
-    m = Matrix[int].id(2)
-    for term in (Equation[Matrix[int]](m, m),
+    G = Product[Cyclic[2], Symmetric[3]]
+    for term in (G(Cyclic[2](1), Symmetric[3]((1, 2, 0))),
                  Hypergraph[tensor.Diagram[complex]].id(tensor.Dim(2))):
         loaded = pickle.loads(pickle.dumps(term))
         assert type(loaded) is type(term)
@@ -147,13 +145,13 @@ def test_NamedGeneric_factory():
     from discopy.utils import NamedGeneric, factory
 
     @factory
-    class F(Category, NamedGeneric["dtype"]):
+    class F[dtype](Category, NamedGeneric):
         """ The arrows of a category parameterised by a dtype. """
 
     class G(F):
         """ A box of F, which is not a factory. """
 
-    class H(Category, NamedGeneric["dtype"]):
+    class H[dtype](Category, NamedGeneric):
         """ A category that is not a factory, like Hypergraph. """
 
     assert F[int].factory is F[int] is F[int].ar
@@ -185,6 +183,7 @@ def test_NamedGeneric_without_type_parameter():
 
     with pytest.raises(TypeError):
         X[int]
+
 
 def test_encode_complex():
     assert encode_complex(1 + 2j) == {
@@ -222,6 +221,7 @@ def test_dumps_complex_gate():
     for gate in (H, X, Y, Z, S, T, H >> X, H @ X):
         assert loads(dumps(gate)) == gate
 
+
 def test_named_generic_pickle_roundtrip():
     from discopy.frobenius import Diagram, Ty
     from discopy.matrix import Matrix
@@ -249,6 +249,7 @@ def test_named_generic_setstate_reads_an_old_pickle():
     assert type(box) is Box[float] and box.dtype is float
     assert "__class_getitem__values__" not in box.__dict__
 
+
 def test_resolve_factory_dtype():
     import numpy as np
     from discopy import cat, tensor
@@ -273,6 +274,8 @@ def test_tensor_tree_roundtrip():
     subscripted = Box[complex]('f', Dim(1), Dim(1), [1.])
     assert loads(dumps(subscripted)) == subscripted\
         != Box('f', Dim(1), Dim(1), [1.])
+
+
 def test_unbiased_keyword_operand():
     """ An operand passed by keyword is composed, not dropped. """
     from discopy.cat import Functor

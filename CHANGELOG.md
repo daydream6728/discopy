@@ -810,6 +810,16 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Changed
 
+- `NamedGeneric` declares its parameters with the class syntax of PEP 695,
+  e.g. `class Matrix[dtype](..., NamedGeneric)` for what was
+  `class Matrix(..., NamedGeneric['dtype'])`, its subscripts pickling by
+  `utils.rebuild_named_generic`, and the abstract base classes bound their
+  parameters, e.g. `class BraidedCategory[C0: ColouredMonoid, C1:
+  BraidedCategory]`. The package typechecks with `ty`, pinned in the `dev`
+  group and configured in `pyproject.toml`: a parameter defaulting to `None`
+  says so, `| None`, the generator factories of a category are `ClassVar`s,
+  and what `ty` cannot read is ignored on its line with the rule it breaks.
+
 - A law of `discopy.axioms` is stated as a sequent, the sequent calculus
   of [rel-int/discopy-next#1](https://github.com/rel-int/discopy-next/pull/1)
   without its search: its type parameters are variables, objects `A:

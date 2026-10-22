@@ -47,7 +47,7 @@ from inspect import isclass
 from io import BytesIO
 from itertools import accumulate
 from math import inf, lcm
-from typing import TYPE_CHECKING, ClassVar, Literal
+from typing import TYPE_CHECKING, Literal, Self
 
 from discopy import hypergraph, messages
 from discopy.abc import (
@@ -55,7 +55,6 @@ from discopy.abc import (
     BraidedCategory,
     CompactCategory,
     DaggerCategory,
-    NamedGeneric,
     Pregroup,
     RigidCategory,
     SymmetricCategory,
@@ -64,17 +63,9 @@ from discopy.abc import (
 from discopy.cat import Ob
 from discopy.python.finset import Permutation
 from discopy.utils import (
-    AxiomError,
-    from_tree,
-    resolve_factory,
-    assert_isatomic,
-    assert_istraceable,
-    assert_isinstance,
-    classproperty,
-    factory_name,
-    get_origin,
-    unbiased,
-)
+    AxiomError, from_tree, resolve_factory, assert_isatomic,
+    assert_istraceable, assert_isinstance, classproperty, factory_name,
+    from_tree, resolve_factory, get_origin, unbiased, NamedGeneric)
 
 if TYPE_CHECKING:
     from discopy.monoidal import Box, Diagram, Ty
@@ -133,9 +124,8 @@ class Port:
     side: Literal["up", "down"]
 
 
-class CMap[C0: Pregroup, C1: CMap](
-    CompactCategory[C0, C1], DaggerCategory[C0, C1], NamedGeneric['category']
-):
+class CMap[category](
+        CompactCategory, DaggerCategory, NamedGeneric):
     r"""
     An open combinatorial map, i.e. a diagram represented as a bijection
     between its ports.
@@ -230,19 +220,18 @@ class CMap[C0: Pregroup, C1: CMap](
         :align: center
     """
 
-    category: ClassVar[Diagram] = None
     functor = classproperty(lambda cls: cls.category.functor_factory)
     ob = classproperty(lambda cls: cls.category.ob)
 
-    dom: C0
-    cod: C0
-    loops: tuple[C0, ...]
+    dom: "Ty"
+    cod: "Ty"
+    loops: "tuple[Ty, ...]"
     edges: Permutation
 
     def __init__(
-            self, dom: C0, cod: C0, boxes: tuple[Box, ...],
+            self, dom: "Ty", cod: "Ty", boxes: "tuple[Box, ...]",
             edges: Iterable[int],
-            loops: tuple[C0, ...] = (), *, check: bool = True):
+            loops: "tuple[Ty, ...]" = (), *, check: bool = True):
         assert_isinstance(dom, self.category.ob)
         assert_isinstance(cod, self.category.ob)
         for box in boxes:
@@ -338,8 +327,8 @@ class CMap[C0: Pregroup, C1: CMap](
         """ The number of faces, including closed scalar components. """
         portless_boxes = sum(
             not len(box.dom) and not len(box.cod) for box in self.boxes)
-        return len(self.faces.cycles()) + portless_boxes\
-            + len(self.loops)
+        cycles = tuple(self.faces.cycles())
+        return len(cycles) + portless_boxes + len(self.loops)
 
     @property
     def euler_characteristic(self) -> int:
@@ -477,7 +466,7 @@ class CMap[C0: Pregroup, C1: CMap](
                 factory_name(cls.category)))
 
     @property
-    def connected_components(self) -> list[CMap]:
+    def connected_components(self) -> list[Self]:
         """ The connected components, with the boundary component first. """
         if not self.n_ports:
             # Avoid recursively rebuilding the same portless component.
@@ -517,7 +506,7 @@ class CMap[C0: Pregroup, C1: CMap](
                 and not self.loops:
             return [self]
 
-        def make_component(component: int) -> CMap:
+        def make_component(component: int) -> Self:
             dom = self.dom if component == boundary_component else self.ob()
             cod = self.cod if component == boundary_component else self.ob()
             boxes = tuple(box for _, box in boxes_by_component.get(
@@ -716,7 +705,7 @@ class CMap[C0: Pregroup, C1: CMap](
             int(ports[i].depth + 0.5) < int(ports[j].depth - 0.5)
             for i, j in self.box_edges)
 
-    def reorder(self, order: Iterable[int]) -> CMap:
+    def reorder(self, order: Iterable[int]) -> "CMap":
         """ Relabel ports to put boxes in the given order. """
         order = tuple(order)
         boxes = tuple(self.boxes[i] for i in order)
@@ -733,7 +722,7 @@ class CMap[C0: Pregroup, C1: CMap](
             self.dom, self.cod, boxes, edges,
             loops=self.loops, check=False)
 
-    def topological_order(self) -> CMap:
+    def topological_order(self) -> "CMap":
         """
         Reorder the boxes so that every directed wire points forward.
 
@@ -820,7 +809,7 @@ class CMap[C0: Pregroup, C1: CMap](
             'loops': [loop.to_tree() for loop in self.loops]}
 
     @classmethod
-    def from_tree(cls, tree: dict) -> CMap:
+    def from_tree(cls, tree: dict) -> "CMap":
         """ Decode a serialised map, see :meth:`to_tree`. """
         factory = cls[resolve_factory(tree['category'])]
         return factory(
@@ -851,8 +840,8 @@ class CMap[C0: Pregroup, C1: CMap](
         return cls(box.dom, box.cod, (box, ), edge, check=False)
 
     @classmethod
-    def from_glued(cls, dom: Ty, cod: Ty,
-                   images: Iterable[tuple[CMap, int]]) -> CMap:
+    def from_glued(cls, dom: "Ty", cod: "Ty",
+                   images: "Iterable[tuple[CMap, int]]") -> "CMap":
         """
         Glue a sequence of maps onto a scan of open wires, in one pass.
 
@@ -934,7 +923,7 @@ class CMap[C0: Pregroup, C1: CMap](
         return cls(dom, cod, boxes, edges, loops=loops)
 
     @classmethod
-    def from_wiring(cls, boxes: tuple, wires, loops: tuple = ()) -> CMap:
+    def from_wiring(cls, boxes: tuple, wires, loops: tuple = ()) -> "CMap":
         """
         A closed map given by boxes and wires between pairs ``(box_index,
         port_position)``, where the position counts the domain ports of the
@@ -998,7 +987,7 @@ class CMap[C0: Pregroup, C1: CMap](
         return cls(cls.ob(), cls.ob(), boxes, edges, loops=loops)
 
     @classmethod
-    def from_diagram(cls, old: Diagram) -> CMap:
+    def from_diagram(cls, old: "Diagram") -> "CMap":
         """
         Turn a :class:`Diagram` into a :class:`CMap`.
 
@@ -1036,7 +1025,7 @@ class CMap[C0: Pregroup, C1: CMap](
             for box, offset in layer.boxes_and_offsets])
 
     @classmethod
-    def swap(cls, left: Ty, right: Ty) -> CMap:
+    def swap(cls, left: "Ty", right: "Ty") -> "CMap":
         """
         The swap of a symmetric category, absorbed into the edges.
 
@@ -1062,7 +1051,7 @@ class CMap[C0: Pregroup, C1: CMap](
         return cls(dom, cod, (), edge, check=False)
 
     @classmethod
-    def braid(cls, left: Ty, right: Ty) -> CMap:
+    def braid(cls, left: "Ty", right: "Ty") -> "CMap":
         """
         The braid of a braided category: the :meth:`swap` of a symmetric one,
         and boxes otherwise, a braid being no swap.
@@ -1082,7 +1071,7 @@ class CMap[C0: Pregroup, C1: CMap](
         return cls.from_diagram(cls.category.braid(left, right))
 
     @classmethod
-    def twist(cls, dom: Ty) -> CMap:
+    def twist(cls, dom: "Ty") -> "CMap":
         """
         The twist of a balanced category: the identity of a symmetric one,
         and boxes otherwise, a twist being no identity.
@@ -1102,7 +1091,7 @@ class CMap[C0: Pregroup, C1: CMap](
         return cls.from_diagram(cls.category.twist(dom))
 
     @classmethod
-    def permutation(cls, xs: Sequence[int], doms: Sequence[Ty]) -> CMap:
+    def permutation(cls, xs: Sequence[int], doms: "Sequence[Ty]") -> "CMap":
         """
         A permutation encoded as boundary wiring, i.e. with no boxes.
 
@@ -1135,7 +1124,8 @@ class CMap[C0: Pregroup, C1: CMap](
             starts[x] + offset for x in xs for offset in range(len(doms[x]))]
         edge = Permutation.from_transpositions(
             ((i, len(dom) + j) for j, i in enumerate(inputs)), 2 * len(dom))
-        return cls(dom, cod, (), edge, check=False)
+        return cls(
+            dom, cod, (), edge, check=False)
 
     cup_factory = classmethod(lambda cls, left, right: cls.from_box(
         cls.category.cup_factory(left, right)))
@@ -1143,7 +1133,7 @@ class CMap[C0: Pregroup, C1: CMap](
         cls.category.cap_factory(left, right)))
 
     @classmethod
-    def cups(cls, left: Ty, right: Ty) -> CMap:
+    def cups(cls, left: "Ty", right: "Ty") -> "CMap":
         """
         A cup between a type and its right adjoint: a box over a rigid host
         that is not compact, whose cups are planar and oriented, see
@@ -1169,7 +1159,7 @@ class CMap[C0: Pregroup, C1: CMap](
         return cls(left @ right, cls.ob(), (), edge, check=False)
 
     @classmethod
-    def caps(cls, left: Ty, right: Ty) -> CMap:
+    def caps(cls, left: "Ty", right: "Ty") -> "CMap":
         """ A cap between a type and its left adjoint, see :meth:`cups`. """
         if cls.is_planar_rigid():
             return cls.cap_factory(left, right) if len(left) == 1\
@@ -1191,27 +1181,27 @@ class CMap[C0: Pregroup, C1: CMap](
             and not issubclass(cls.category, CompactCategory)
 
     @classmethod
-    def copy(cls, typ: Ty, n: int = 2) -> CMap:
+    def copy(cls, typ: "Ty", n: int = 2) -> "CMap":
         """ Copy is kept as a box: one input cannot wire to many outputs. """
         return cls.from_box(cls.category.copy(typ, n))
 
     @classmethod
-    def merge(cls, typ: Ty, n: int = 2) -> CMap:
+    def merge(cls, typ: "Ty", n: int = 2) -> "CMap":
         """ Merge is kept as a box: many inputs cannot wire to one output. """
         return cls.from_box(cls.category.merge(typ, n))
 
     @classmethod
-    def discard(cls, typ: Ty) -> CMap:
+    def discard(cls, typ: "Ty") -> "CMap":
         """ Discard is kept as a box. """
         return cls.copy(typ, 0)
 
     @classmethod
-    def noise(cls, typ: Ty) -> CMap:
+    def noise(cls, typ: "Ty") -> "CMap":
         """ Noise is kept as a box. """
         return cls.merge(typ, 0)
 
     @classmethod
-    def ev(cls, base: Ty, exponent: Ty, left: bool = True) -> CMap:
+    def ev(cls, base: "Ty", exponent: "Ty", left: bool = True) -> "CMap":
         """
         Evaluation is kept as an explicit box by default, or comes from the
         wiring of cups when the host category is rigid.
@@ -1220,7 +1210,7 @@ class CMap[C0: Pregroup, C1: CMap](
             return super().ev(base, exponent, left)
         return cls.from_box(cls.category.ev(base, exponent, left))
 
-    def curry(self, n: int = 1, left: bool = True) -> CMap:
+    def curry(self, n: int = 1, left: bool = True) -> "CMap":
         """
         Currying is kept as an explicit curry box by default, the more
         rigorous representation, or comes from the wiring of caps when the
@@ -1249,7 +1239,7 @@ class CMap[C0: Pregroup, C1: CMap](
         return self.from_box(self.category.curry_factory(
             self.to_diagram(), n, left))
 
-    def base_and_exponent(self, n: int, left: bool) -> tuple[Ty, Ty]:
+    def base_and_exponent(self, n: int, left: bool) -> "tuple[Ty, Ty]":
         """
         The base and exponent that :meth:`uncurry` evaluates, read off the
         codomain as in the host category.
@@ -1263,7 +1253,7 @@ class CMap[C0: Pregroup, C1: CMap](
     l = property(lambda self: self.transpose(left=True))
     r = property(lambda self: self.transpose(left=False))
 
-    def dagger(self) -> CMap:
+    def dagger(self) -> "CMap":
         """
         Reverse a combinatorial map: swap the boundary, dagger each box in
         reverse order and conjugate the edges by the port relabeling.
@@ -1292,7 +1282,7 @@ class CMap[C0: Pregroup, C1: CMap](
     @classmethod
     def spiders(
             cls, n_legs_in: int, n_legs_out: int,
-            typ: Ty, phases=None) -> CMap:
+            typ: "Ty", phases=None) -> "CMap":
         """
         Spiders are kept as boxes, including their phase data.
 
@@ -1306,7 +1296,7 @@ class CMap[C0: Pregroup, C1: CMap](
             n_legs_in, n_legs_out, typ, phases))
 
     @unbiased
-    def then(self, other: CMap) -> CMap:
+    def then(self, other: "CMap") -> "CMap":
         """
         Compose maps by gluing output ports to input ports.
 
@@ -1335,7 +1325,7 @@ class CMap[C0: Pregroup, C1: CMap](
         return type(self)(
             dom, cod, boxes, edge, loops=loops, check=False)
 
-    def trace(self, n: int = 1, left: bool = False) -> CMap:
+    def trace(self, n: int = 1, left: bool = False) -> "CMap":
         """
         Trace boundary wires by splicing the selected inputs and outputs, a
         map being compact whatever hosts it, except over a planar traced
@@ -1382,7 +1372,7 @@ class CMap[C0: Pregroup, C1: CMap](
         return type(self)(
             dom, cod, self.boxes, edge, loops=loops, check=False)
 
-    def tensor(self, *others: CMap) -> CMap:
+    def tensor(self, *others: "CMap") -> "CMap":
         """
         Tensor product given by disjoint union of ``n`` maps.
 
@@ -1418,7 +1408,7 @@ class CMap[C0: Pregroup, C1: CMap](
             tuple(boxes), edges.conjugate(Permutation(mapping)),
             loops=tuple(loops), check=False)
 
-    def interchange(self, i: int, j: int) -> CMap:
+    def interchange(self, i: int, j: int) -> "CMap":
         """
         Interchange boxes at indices ``i`` and ``j``.
 
@@ -1442,8 +1432,8 @@ class CMap[C0: Pregroup, C1: CMap](
         return self.reorder(order)
 
     def plug_input(
-            self, input_index: int, box: Box,
-            cod: C0, root_index: int = 0) -> CMap:
+            self, input_index: int, box: "Box",
+            cod: "Ty", root_index: int = 0) -> "CMap":
         """
         Plug an input boundary and the output root into a new box.
 
@@ -1511,7 +1501,7 @@ class CMap[C0: Pregroup, C1: CMap](
             new_dom, cod, boxes, edge,
             loops=self.loops)
 
-    def explicit_trace(self, left: bool = False) -> CMap:
+    def explicit_trace(self, left: bool = False) -> "CMap":
         """
         The trace of a map with explicit boxes (trace, cup or cap).
 
@@ -1531,7 +1521,7 @@ class CMap[C0: Pregroup, C1: CMap](
             return self.from_box(factory(self.to_diagram(), left))
         return factory.__func__(type(self), self, left)
 
-    def make_monogamous(self) -> CMap:
+    def make_monogamous(self) -> "CMap":
         """
         Introduce cup and cap boxes to make self :attr:`is_monogamous`,
         i.e. so that every wire connects a positive and a negative port.
@@ -1576,7 +1566,7 @@ class CMap[C0: Pregroup, C1: CMap](
                 loops=self.loops, check=False).make_monogamous()
         return self
 
-    def make_causal(self) -> CMap:
+    def make_causal(self) -> "CMap":
         """
         Make self :attr:`is_causal`, i.e. so that every wire points forward
         and there are no loops. Boxes that are merely out of order are put
@@ -1626,7 +1616,7 @@ class CMap[C0: Pregroup, C1: CMap](
             result = result.explicit_trace()
         return result
 
-    def to_compact(self) -> CMap:
+    def to_compact(self) -> "CMap":
         """
         Open every curry bubble into its argument followed by the dagger of
         :meth:`ev`, traced over the curried wires: the map is decoded and
@@ -1669,7 +1659,7 @@ class CMap[C0: Pregroup, C1: CMap](
         """
         return self.category.eval(self, *args, **params)
 
-    def to_diagram(self) -> Diagram:
+    def to_diagram(self) -> "Diagram":
         """
         Downgrade to a diagram directly, preserving box orientation.
 

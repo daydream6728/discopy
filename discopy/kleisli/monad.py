@@ -88,7 +88,7 @@ class Monad(EndoFunctor):
     ...     frozenset({mx})))
     >>> assert lhs == rhs == frozenset({1, 2, 3})
     """
-    iterate: Callable = None
+    iterate: Callable | None = None
     """
     The iteration operator, i.e. the extra structure of an `Elgot monad
     <https://ncatlab.org/nlab/show/Elgot+monad>`_, or ``None`` when the
@@ -285,7 +285,7 @@ def dist(X: type) -> type:
     through it and the ``isinstance`` checks in :class:`~discopy.python
     .function.Function.__call__` break on every subdistribution channel.
     """
-    return frozenset[tuple[X, float]]
+    return frozenset[tuple[X, float]]  # ty: ignore[invalid-type-form]
 
 
 def iterate_subdistribution[T](

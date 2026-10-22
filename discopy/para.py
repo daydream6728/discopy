@@ -158,6 +158,7 @@ Parametric maps compose like layers of a neural network, e.g. over
 
 from __future__ import annotations
 
+from typing import Self
 from dataclasses import dataclass
 
 from discopy import (
@@ -171,7 +172,7 @@ from discopy.utils import (
 
 
 @dataclass
-class Symmetric(SymmetricCategory, NamedGeneric['category']):
+class Symmetric[category](SymmetricCategory, NamedGeneric):
     """
     A parametric map from `dom` to `cod` with parameter space `param` is a
     morphism `inside : dom @ param -> cod` in an underlying `category`,
@@ -220,7 +221,7 @@ class Symmetric(SymmetricCategory, NamedGeneric['category']):
             self.inside, self.category.id(self.cod @ self.copar))
 
     @classmethod
-    def lift(cls, inside: category) -> Symmetric:
+    def lift(cls, inside) -> Self:
         """
         A morphism of the underlying category as a parametric map with the
         empty parameter space, i.e. the injection functor from a category
@@ -232,7 +233,7 @@ class Symmetric(SymmetricCategory, NamedGeneric['category']):
         return cls(inside.dom, inside.cod, inside)
 
     @classmethod
-    def id(cls, dom: ob = None) -> Symmetric:
+    def id(cls, dom=None) -> Symmetric:
         """
         The identity parametric map on `dom`, with empty parameter space.
 
@@ -281,7 +282,7 @@ class Symmetric(SymmetricCategory, NamedGeneric['category']):
                           self.copar @ other.copar)
 
     @classmethod
-    def swap(cls, left: ob, right: ob) -> Symmetric:
+    def swap(cls, left, right) -> Symmetric:
         """
         The swap of the underlying category, with empty parameter space.
 
@@ -461,7 +462,7 @@ class Feedback(Markov, FeedbackCategory):
         return type(self)(*(x.delay(n_steps) for x in (
             self.dom, self.cod, self.inside, self.param, self.copar)))
 
-    def feedback(self, n: int = None, left: bool = False, *,
+    def feedback(self, n: int | None = None, left: bool = False, *,
                  dom: Symmetric.ob = None, cod: Symmetric.ob = None,
                  mem: Symmetric.ob = None) -> Feedback:
         """

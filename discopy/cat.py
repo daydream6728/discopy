@@ -79,7 +79,9 @@ from __future__ import annotations
 
 from functools import total_ordering, cached_property
 from typing import (
-    Callable, ClassVar, Mapping, Iterable, TYPE_CHECKING)
+    Any, Callable, ClassVar, Mapping, Iterable, Self, Sequence,
+    TYPE_CHECKING)
+
 
 from discopy import messages, utils
 from discopy.abc import Category, DaggerCategory, Nat
@@ -193,7 +195,7 @@ class FreeCategory(Category):
     signature without breaking the machinery below.
     """
 
-    generator_factory = None
+    generator_factory: type = None  # ty: ignore[invalid-assignment]
 
     def __init__(self, inside, dom, cod, _scan=True):
         ob = type(self).ob
@@ -628,7 +630,7 @@ class Box(Arrow):
             self.name, self.dom, self.cod, is_dagger=self.is_dagger,
             data=lambdify(symbols, self.data, **kwargs)(*xs))
 
-    def dagger(self) -> Box:
+    def dagger(self) -> Self:
         return type(self)(
             self.name, self.cod, self.dom,
             data=self.data, is_dagger=not self.is_dagger)
@@ -707,7 +709,8 @@ class Sum(Box):
     The sum is non-commutative, i.e. :code:`Sum([f, g]) != Sum([g, f])`.
     """
     def __init__(
-            self, terms: tuple[Arrow, ...], dom: Ob = None, cod: Ob = None):
+            self, terms: Sequence[Arrow],
+            dom: Ob | None = None, cod: Ob | None = None):
         if not terms and (dom is None or cod is None):
             raise ValueError(messages.MISSING_TYPES_FOR_EMPTY_SUM)
         dom = terms[0].dom if dom is None else dom
@@ -743,7 +746,8 @@ class Sum(Box):
         assert_isparallel(self, other)
         other = other if isinstance(other, Sum)\
             else self.sum_factory((other, ))
-        return self.sum_factory(self.terms + other.terms, self.dom, self.cod)
+        return self.sum_factory(
+            (*self.terms, *other.terms), self.dom, self.cod)
 
     def __iter__(self):
         for arrow in self.terms:
@@ -816,8 +820,9 @@ class Bubble(Box):
     ValueError: A bubble needs a dom given when its args do not all share \
 one, they have [cat.Ob('x'), cat.Ob('y')].
     """
-    def __init__(self, *args: Arrow, dom: Ob = None, cod: Ob = None,
-                 name="", method="bubble", **kwargs):
+    def __init__(
+            self, *args: Arrow, dom: Ob | None = None,
+            cod: Ob | None = None, name="", method="bubble", **kwargs):
         dom, cod = (
             given if given is not None else self.common(args, attr)
             for attr, given in [("dom", dom), ("cod", cod)])
@@ -927,7 +932,7 @@ one, they have [cat.Ob('x'), cat.Ob('y')].
 
 
 @factory
-class Functor(Category):
+class Functor(Category[type, "Functor"]):
     """
     A functor is a pair of maps :code:`ob_map` and :code:`ar_map` and an
     optional codomain category :code:`cod`.
@@ -969,10 +974,11 @@ class Functor(Category):
     >>> assert F(m) == m[::-1]
     """
     ob = type[Category]
-    dom = cod = Arrow
+    dom: type[Any] = Arrow
+    cod: type[Any] = Arrow
 
     @classmethod
-    def id(cls, dom: type = None) -> Functor:
+    def id(cls, dom: type | None = None) -> Functor:
         """
         The identity functor on a given category ``dom``.
 
@@ -1013,7 +1019,7 @@ class Functor(Category):
             self,
             ob_map: Mapping[Ob, Ob] | Callable[[Ob], Ob] | None = None,
             ar_map: Mapping[Box, Arrow] | Callable[[Box], Arrow] | None = None,
-            dom: type = None, cod: type = None):
+            dom: type | None = None, cod: type | None = None):
         self.dom, self.cod = dom or type(self).dom, cod or type(self).cod
         self.ob_map: MappingOrCallable[Ob, Ob] = MappingOrCallable(
             ob_map or {})
@@ -1065,7 +1071,7 @@ Arrow.generator_factory = Arrow.box_factory = Box
 
 
 @factory
-class Transformation(Category):
+class Transformation(Category[Functor, "Transformation"]):
     """
     A (not necessarily natural) transformation between two parallel functors.
 
@@ -1174,7 +1180,7 @@ class Transformation(Category):
             f"dom={self.dom!r}, cod={self.cod!r})")
 
 
-class Equation(AbstractEquation[Arrow]):
+class Equation(AbstractEquation):
     """
     An :class:`.axioms.Equation` between arrows, see its docstring for the
     parameters and :meth:`.axioms.Equation.modulo` for quotients.
@@ -1189,7 +1195,8 @@ class Equation(AbstractEquation[Arrow]):
     """
 
 
-Ob.equation_factory = Arrow.equation_factory = Equation
+Ob.equation_factory = Equation
+Arrow.equation_factory = Equation  # ty: ignore[invalid-assignment]
 Arrow.sum_factory = Sum
 Arrow.bubble_factory = Bubble
 Id = Arrow.id

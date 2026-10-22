@@ -103,7 +103,7 @@ MAX_COUNT = 3
 """ The largest number a declaration quantifying over ``int`` is given. """
 
 
-class Equation(NamedGeneric["ar"]):
+class Equation[ar](NamedGeneric):
     """
     An equation is a list of ``terms`` to be compared up to a function
     ``up_to``, the identity by default.  Casting it to ``bool`` checks
@@ -854,7 +854,7 @@ class Testable[T](ABC):
         return Equation(from_tree(term.to_tree()), loads(dumps(term)), term)
 
 
-class Related(Testable, NamedGeneric["factory"], tuple):
+class Related[factory](Testable, NamedGeneric, tuple):
     """
     Three instances of the ``factory``, an :class:`Equivalence`: two related
     by construction and a third that may be or not, see

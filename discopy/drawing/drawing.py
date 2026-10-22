@@ -244,7 +244,7 @@ class PlaneGraph(NamedTuple):
 
 @factory
 @dataclass
-class Drawing(TracedCategory, RichDisplay):
+class Drawing(TracedCategory["monoidal.Ty", "Drawing"], RichDisplay):
     """
     A drawing is a plane graph with designated input and output types.
 
@@ -758,7 +758,7 @@ class Drawing(TracedCategory, RichDisplay):
         return result
 
     @staticmethod
-    def id(dom: "monoidal.Ty" = None) -> Drawing:
+    def id(dom: "monoidal.Ty" | None = None) -> Drawing:
         """
         Draw the identity diagram.
 
@@ -797,7 +797,8 @@ class Drawing(TracedCategory, RichDisplay):
         return result
 
     @unbiased
-    def then(self, other: Drawing, draw_step_by_step=False) -> Drawing:
+    def then(self, other: Drawing,
+             draw_step_by_step=False) -> Drawing | list[Drawing]:
         """
         Draw one diagram composed with another.
 
@@ -1223,6 +1224,7 @@ class Drawing(TracedCategory, RichDisplay):
         result.reposition_box_cod()
         return result
 
+    @staticmethod
     def zero(dom, cod):
         from discopy.monoidal import Box
         result = Box("zero", dom, cod).to_drawing()

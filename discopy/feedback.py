@@ -522,6 +522,8 @@ class Diagram(monoidal.Diagram, TracedCategory):
     ob = Ty
     layer_factory = Layer
 
+    box_factory: ClassVar[type["Box"]]
+    functor_factory: ClassVar[type["Functor"]]
     feedback_factory: ClassVar[type["Feedback"]]
     trace_factory: ClassVar[type["Trace"]]
     head_factory: ClassVar[type["Head"]]
@@ -724,7 +726,7 @@ class Box(monoidal.Box, Diagram):
         result = super().from_tree(tree)
         result._time_step = tree.get(  # pylint: disable=protected-access
             'time_step', 0)
-        return result
+        return result  # ty: ignore[invalid-return-type]
 
     def setoid(self):
         return super().setoid() + (self.time_step, )
@@ -1050,8 +1052,11 @@ class Functor(monoidal.Functor):
         if isinstance(
                 other, FollowedBy) and hasattr(self.cod, "followed_by"):
             arg = other.dom if other.is_dagger else other.cod
-            return self.cod.followed_by(self(arg))
-        if isinstance(other, Feedback) and hasattr(self.cod, "feedback"):
+            return self.cod.followed_by(
+                self(arg))
+        if isinstance(other, Feedback)\
+                and issubclass(self.cod, FeedbackCategory)\
+                and self.cod.delay is not FeedbackCategory.delay:
             left = {"left": True} if other.left else {}
             return self(other.arg).feedback(
                 dom=self(other.dom), cod=self(other.cod),
@@ -1087,10 +1092,10 @@ def subclass(name: str, bases: list[type], module: str, doc: str) -> type:
     base subclasses, so that it prints, pickles and reads back from its tree
     as a class written in that module would.
     """
-    bases = tuple(dict.fromkeys(
+    bases = tuple(dict.fromkeys(  # ty: ignore[invalid-assignment]
         base for base in bases if not any(
             other is not base and issubclass(other, base) for other in bases)))
-    return type(name, bases, {
+    return type(name, bases, {  # ty: ignore[invalid-argument-type]
         "__module__": module, "__qualname__": name, "__doc__": doc})
 
 

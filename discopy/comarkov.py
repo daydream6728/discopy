@@ -106,7 +106,8 @@ class Diagram(symmetric.Diagram, ComarkovCategory):
             n : The number of copies.
         """
         from discopy import frobenius
-        return frobenius.Diagram.spiders.__func__(cls, n, 1, x)
+        return frobenius.Diagram.spiders.__func__(
+            cls, n, 1, x)  # ty: ignore[invalid-argument-type]
 
 
 class Box(symmetric.Box, Diagram):

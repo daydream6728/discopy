@@ -57,6 +57,9 @@ NOT_MARKOV = "{} has no copy or discard."
 NOT_A_DAGGER = "{} has no dagger: {} is not a dagger category."
 NO_SUCH_SPIDER = "The only spiders of {} are its {}."
 NOT_ACYCLIC = "{} has a directed cycle, its boxes cannot be ordered."
+RIGID_TYPE_HAS_NO_DAGGER = "Rigid types have no dagger, use pivotal instead."
+NO_TYPE_PARAMETER = (
+    "{} has no type parameter to subscript, declare one as in class C[name].")
 NOT_LEFT_MONOGAMOUS = "{} is not left-monogamous."
 NOT_RIGHT_MONOGAMOUS = "{} is not right-monogamous."
 NOT_CAUSAL = "{} is not causal."
@@ -67,9 +70,6 @@ TERM_IS_A_BOX = \
     "A term is a box: the laws of its category are the diagram's."
 MISSING_BOXES_AND_OFFSETS = (
     "Decoding needs either boxes and offsets, or the two of them zipped.")
-NO_TYPE_PARAMETER = (
-    "{} has no type parameter to subscript, declare one as in "
-    "class C(NamedGeneric['name']).")
 CURRY_HAS_NO_DAGGER = "A curry has no dagger."
 NOT_JSON_SERIALISABLE = "Object of type {} is not JSON serialisable."
 NO_SUCH_TYPE = "No type named {!r} in builtins or numpy, so the name of the "\

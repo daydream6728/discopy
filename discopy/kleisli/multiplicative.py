@@ -145,7 +145,7 @@ def unpack_value(value) -> tuple:
 
 
 @factory
-class Channel(Category, NamedGeneric['monad']):
+class Channel[monad](Category, NamedGeneric):
     """
     A channel is a morphism in the Kleisli category of a monad ``M`` with
     tuple as tensor, i.e. a Python function from a tuple of wires ``dom``
@@ -201,7 +201,8 @@ class Channel(Category, NamedGeneric['monad']):
             dom : The tuple of wire types on which to take the identity.
         """
         dom = cls.ob.cast(dom)
-        return cls(channel.Channel[cls.monad].id(pack(dom)), dom, dom)
+        packed = channel.Channel[cls.monad]  # ty: ignore[invalid-type-form]
+        return cls(packed.id(pack(dom)), dom, dom)
 
     def raw(self, *xs):
         """ Call ``self``, keeping the packed monadic type as is. """
@@ -224,7 +225,8 @@ class Channel(Category, NamedGeneric['monad']):
         assert_isinstance(other, type(self))
         assert_iscomposable(self, other)
         return type(self)(
-            self.inside >> other.inside, self.dom, other.cod)
+            self.inside >> other.inside,  # ty: ignore[unsupported-operator]
+            self.dom, other.cod)
 
     def right_whisker(self, Y: Ty) -> Channel:
         """
@@ -291,8 +293,11 @@ class Channel(Category, NamedGeneric['monad']):
             n : The number of copies.
         """
         x = cls.ob.cast(x)
-        unit = cls.monad.unit(pack(x ** n))
-        return cls(lambda *xs: unit(pack_value(n * xs)), x, x ** n)
+        unit = cls.monad.unit(
+            pack(x ** n))  # ty: ignore[invalid-argument-type]
+        return cls(
+            lambda *xs: unit(  # ty: ignore[call-non-callable]
+                pack_value(n * xs)), x, x ** n)
 
     @classmethod
     def discard(cls, dom: Ty) -> Channel:

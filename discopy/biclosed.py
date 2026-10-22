@@ -127,17 +127,17 @@ class Ty(monoidal.Ty):
     """
     variable_factory: ClassVar[type["Variable"]]
     constant_factory: ClassVar[type["Constant"]]
-    application_factory: ClassVar[type["Application"]]
+    application_factory: ClassVar[Callable[..., "Application"]]
     abstraction_factory: ClassVar[type["Abstraction"]]
     over_factory: ClassVar[Callable[..., "Exp"]]
     under_factory: ClassVar[Callable[..., "Exp"]]
     exp_factory: ClassVar[Callable[..., "Exp"]]
 
-    def __pow__(self, other: Ty) -> Ty:
+    def __pow__(self, other: "Ty | int") -> Self:
         return self.exp(other) if isinstance(other, Ty)\
             else monoidal.Ty.__pow__(self, other)
 
-    def exp(self, other: Ty) -> Ty:
+    def exp(self, other: "Ty") -> Self:
         """
         The exponential of a type, which is the type itself when the
         exponent is the unit, as is any exponential of the unit.
@@ -642,7 +642,8 @@ class Functor(monoidal.Functor):
             result = self.cod.ob.variable_factory(name, cod)
         return result
 
-    def map_term(self, term: TermBase, context: dict = None) -> TermBase:
+    def map_term(
+            self, term: "TermBase", context: dict | None = None) -> "TermBase":
         """
         The image of a term, a term in the internal language of the codomain,
         checked to have the image of its type and exactly the images of its
@@ -725,7 +726,7 @@ class TermBase(Box, Equivalence):
     functor: ClassVar[Functor] = Functor.id(Diagram)
 
     @abstractmethod
-    def eval(functor: Functor = None) -> BiclosedCategory:
+    def eval(self, functor: Functor | None = None) -> BiclosedCategory:
         """
         The evaluation of a :class:`Functor` on a term gives a morphism in its
         codomain. By default, this is the identity functor on the free biclosed
@@ -733,7 +734,7 @@ class TermBase(Box, Equivalence):
         """
 
     @abstractmethod
-    def map(functor: Functor, context: dict) -> Term:
+    def map(self, functor: Functor, context: dict) -> "Term":
         """
         The image of a term under a :class:`Functor` whose codomain objects
         are biclosed types, i.e. a term in the codomain's internal language
@@ -913,7 +914,8 @@ class TermBase(Box, Equivalence):
         from hypothesis import strategies as st
 
         return st.builds(
-            lambda shape, letters: cls.generate(*shape, letters),
+            lambda shape, letters: cls.generate(
+                shape[0], shape[1], shape[2], letters),
             cls.shapes(**params), cls.namings())
 
     @classmethod
@@ -1093,7 +1095,7 @@ class Application(TermBase):
         args (Term): The arguments to which the function is applied.
         left (bool): Whether the argument comes in from the left or right.
     """
-    def __init__(self, func: Term, args: Term, left: bool = False):
+    def __init__(self, func: TermBase, args: TermBase, left: bool = False):
         assert_isinstance(func, TermBase)
         assert_isinstance(args, TermBase)
         if not func.cod.is_exp:
@@ -1169,10 +1171,10 @@ class Application(TermBase):
 
 class Abstraction(TermBase):
     var: Variable
-    body: Term
+    body: TermBase
     left: bool = False
 
-    def __init__(self, var: Variable, body: Term, left: bool = False):
+    def __init__(self, var: Variable, body: TermBase, left: bool = False):
         self.var, self.body, self.left = var, body, left
         left_str = ", left=True" if left else ""
         name = f"{var.cod}(lambda {var.name}{left_str}: {body})"
@@ -1197,8 +1199,8 @@ class Abstraction(TermBase):
     def eval(self, functor=None):
         functor = functor or self.functor
         return functor.cod.curry(
-            self.body.eval(functor), len(functor(self.var.cod)),
-            not self.left)
+            self.body.eval(functor),  # ty: ignore[invalid-argument-type]
+            len(functor(self.var.cod)), not self.left)
 
     def map(self, functor, context):
         context = {key: value for key, value in context.items()
@@ -1418,7 +1420,7 @@ class Sampler:
             level=constraints.level + 1))
         return self.category.ob.abstraction_factory(var, body, left)
 
-    def term(self, cod: Ty, constraints: Constraints = None) -> Term:
+    def term(self, cod: Ty, constraints: "Constraints | None" = None) -> Term:
         """
         A term of a given type under the constraints, none by default: a
         leaf when the choices ran out, or the spine when none fits, else the
@@ -1462,7 +1464,7 @@ class Constraints:
         return self.prefix + self.suffix
 
 
-class Renamed(Testable, NamedGeneric["factory"], tuple):
+class Renamed[factory](Testable, NamedGeneric, tuple):
     """
     Alpha-equivalent terms of the ``factory``: one shape generated under two
     or more namings of its bound variables, see :meth:`TermBase.generate`.
@@ -1492,7 +1494,7 @@ class Renamed(Testable, NamedGeneric["factory"], tuple):
             st.lists(category.namings(), min_size=2, max_size=3))
 
 
-class Canonical(Testable, NamedGeneric["factory"], tuple):
+class Canonical[factory](Testable, NamedGeneric, tuple):
     """
     Two terms of the ``factory`` followed by their canonical forms: two
     shapes of one type, the second the first's or another, each generated

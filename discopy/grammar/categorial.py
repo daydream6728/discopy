@@ -380,10 +380,11 @@ class BinaryTerm(TermBase):
     right: Term
 
     def __post_init__(self):
-        if set(self.left.freevars).intersection(self.right.freevars):
+        left, right = self.left.freevars, self.right.freevars
+        if set(left).intersection(right):  # ty: ignore[invalid-argument-type]
             raise ValueError("Expected disjoint free variables.")
         object.__setattr__(
-            self, "freevars", self.left.freevars + self.right.freevars)
+            self, "freevars", left + right)  # ty: ignore[unsupported-operator]
         object.__setattr__(self, "dom", self.left.dom @ self.right.dom)
 
     def __str__(self):
