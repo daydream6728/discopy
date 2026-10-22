@@ -56,6 +56,19 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   axes of the wires it permutes
   ([#225](https://github.com/rel-int/discopy-next/issues/225)).
 
+- `discopy.optyx.sampling.Kernel`, copied from
+  [rel-int/optyx#82](https://github.com/rel-int/optyx/pull/82): one tick of
+  an `Interferometer` written with JAX, `Interferometer.kernel(cap,
+  private)`, with fixed shapes so that it compiles, maps over trajectories
+  and differentiates in the mode matrix, the transmissivity, the efficiency
+  and the indistinguishability. `Kernel.log_prob` replays recorded outcomes
+  for score-function gradients and `Kernel.distribution` is exact and
+  differentiable for small networks. JAX is optional and outside the
+  `optyx` extra. Ported onto this `main`: its tests run JAX in double
+  precision for their own module only, since the rest of the suite shares
+  the process and expects single precision
+  ([#225](https://github.com/rel-int/discopy-next/issues/225)).
+
 - `discopy.ehypergraph`, e-graphs of diagrams with sharing: an
   `EHypergraph` over a copy-discard category is a left-monogamous acyclic
   `Hypergraph`, whose boxes are the e-nodes, with an equivalence relation on

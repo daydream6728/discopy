@@ -13,11 +13,23 @@ from discopy.optyx.sampling import (
 
 try:
     import jax
-    jax.config.update("jax_enable_x64", True)
 except ImportError:  # pragma: no cover
     jax = None
 
 requires_jax = pytest.mark.skipif(jax is None, reason="JAX is not installed")
+
+
+@pytest.fixture(autouse=True, scope="module")
+def double_precision():
+    """ JAX in double precision for the tests of this module only: the rest
+    of the suite shares the process and expects JAX's single precision. """
+    if jax is None:  # pragma: no cover
+        yield
+        return
+    previous = jax.config.read("jax_enable_x64")
+    jax.config.update("jax_enable_x64", True)
+    yield
+    jax.config.update("jax_enable_x64", previous)
 
 
 def permanent(matrix):

@@ -6,6 +6,6 @@ toumix, 2026-10-22, interactive.
 
 Copy of rel-int/optyx#82 onto discopy.optyx (#225)
 
-- [ ] merge the parent copy branch `optyx-76` (the port of rel-int/optyx#76)
-- [ ] port to `discopy.optyx` on next `main`
+- [x] merge the parent copy branch `optyx-76` (the port of rel-int/optyx#76)
+- [x] port to `discopy.optyx` on next `main`
 - [ ] checks

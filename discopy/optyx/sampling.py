@@ -80,7 +80,7 @@ efficiency and the indistinguishability. Every outcome it samples is
 recorded, so that :meth:`Kernel.log_prob` replays a trajectory for the
 score-function estimator of a gradient, and :meth:`Kernel.distribution`
 replays every one of a small network for the exact gradient. JAX is an
-optional dependency: ``pip install optyx[jax]``.
+optional dependency, outside the ``optyx`` extra: ``pip install jax``.
 
 Classes
 -------
