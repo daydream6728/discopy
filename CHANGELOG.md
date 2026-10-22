@@ -794,7 +794,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   dimensionless units of Pasqal's [qoolqit](https://docs.pasqal.com/qoolqit/),
   the interaction coefficient being one, with its detuning map modulator:
   a modulated detuning `dmm`, at most zero, applied to each atom with one
-  of its `weights` in the unit interval
+  of its `weights` in the unit interval, tested against the Hamiltonian
+  qoolqit compiles to Pulser, `qoolqit` joining the `quantum` extra
   ([#586](https://github.com/discopy/discopy/pull/586)).
 - The pivotal structure of `Rep(H)`: `HopfAlgebra.drinfeld_element`,
   `pivotal_element` and `ribbon_element`, cached single tensors named after
