@@ -25,8 +25,8 @@ This pull request is the first of the two: markov and comarkov. The second, stac
 
 ## Points
 
-- [ ] `discopy.op`: `Category`, `Monoidal`, `Symmetric`, `Markov`, `Comarkov`, each wrapping an arrow `inside` of `category` with `dom == inside.cod`; testable from the underlying category's strategy
-- [ ] `finset.Function` is declared a `MarkovCategory`
+- [x] `discopy.op`: `Category`, `Monoidal`, `Symmetric`, `Markov`, `Comarkov`, each wrapping an arrow `inside` of `category` with `dom == inside.cod`; testable from the underlying category's strategy
+- [x] `finset.Function` is declared a `MarkovCategory`
 - [ ] `markov.Function`, with `Copy`, `Discard`, `Permutation` and `Swap` as functions, and `Function(x, [0, 0]) == Copy(x)`
 - [ ] `markov.Layer` alternates functions and generators; foliation fuses them
 - [ ] `comarkov.Cofunction` holding an `op.Comarkov[finset.Function]`, with `Merge`, `Noise`, `Permutation` and `Swap` as cofunctions

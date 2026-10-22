@@ -24,11 +24,11 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 
 from discopy import messages
-from discopy.abc import Groupoid, MonoidalCategory, PROP, Nat
+from discopy.abc import Groupoid, MarkovCategory, PROP, Nat
 
 
 @dataclass
-class Function(MonoidalCategory, Sequence):
+class Function(MarkovCategory, Sequence):
     """
     A function between finite sets encoded as a Python list.
 
