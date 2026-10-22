@@ -9,6 +9,15 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Added
 
+- The constructions enrol in the property matrix: `lens`, `para` and
+  `interaction` diagrams draw their parts from the strategy of the
+  category they are built on and compare them up to its equation, by
+  `axioms.quotient`, a lens by its `to_int`; each declares the laws its
+  construction breaks or does not have, e.g. a parametric map is equal only
+  up to the reparametrisations that permute its parameters, `PARA_REPARAM`,
+  and a Markov lens is unital and associative only up to the naturality of
+  copy and discard, `LENS_NATURALITY`.
+
 - Hypothesis strategies from the combinatorial representations:
   `Hypergraph.strategy` draws a wiring port by port under the spider
   constraint of its category, then a box for each box of the wiring, and

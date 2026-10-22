@@ -49,15 +49,30 @@ NO_PLANAR_NORMAL_FORM = (
     "A planar law is compared on the nose: a hypergraph is faithful only "
     "from symmetric categories on, and there is no normal form for this "
     "doctrine yet.")
+NO_DAGGER = "There is no dagger here, so the dagger laws do not apply."
 NO_TENSOR = "An arrow of a category has no tensor for its dagger to "\
     "distribute over."
 GROUP_TENSOR = "The tensor of a group is its composition, which its dagger "\
     "reverses rather than distributes over."
 SWAP_INVOLUTION = (
     "The inverse of a swap is the swap the other way, see swap_inverse.")
+LENS_TRACES_RIGHT = "A lens is traced on the right only."
+PAIR_LENGTH = (
+    "A pair of types has no single number of atoms for a trace or a curry "
+    "to count.")
+PAIR_TYPES = "A pair of types is checked as the boundary of its diagrams."
+PARA_REPARAM = (
+    "A parametric map is equal only up to the reparametrisations that "
+    "permute its parameters, which its hypergraph compares in order.")
+NO_ROTATION = (
+    "There is no rotation of a morphism here, so its laws do not apply.")
+PARA_CURRY = "A closed category curries no map with coparameters."
 PARA_CURRY_COPAR = (
     "A closed category cannot curry a map with coparameters {}, as its "
     "exponential would swallow them.")
+LENS_NATURALITY = (
+    "A Markov lens is a unit and associative only up to the naturality of "
+    "copy and discard, which a hypergraph does not decide.")
 NO_SWAP = "{} is not symmetric, it has no swaps."
 NO_BRAID = "{} is not braided, it has no braids."
 NO_TWIST = "{} is not balanced, it has no twists."
