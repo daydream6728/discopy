@@ -2495,6 +2495,29 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - `rigid.Diagram.functor_factory` is `rigid.Functor`: it inherited
   `biclosed.Functor`, which does not rotate, so a box mapped through
   it lost the rotation of its boundary.
+- Drawing a `Drawing` leaves it as it was: `draw` adds the box corners and
+  frames the dual rail folds on a copy, where it did both in place, so that
+  a drawing compared unequal to itself once drawn (B37 of
+  [discopy#606](https://github.com/discopy/discopy/issues/606)) and the
+  n-th draw of a dual rail drawing was framed n times, a margin taller each
+  time. `Drawing.then` and `Drawing.tensor` with an identity or empty side
+  return a new drawing, where they returned the other side itself, so that
+  changing the result changed that side; and a drawing neither saved nor
+  shown closes its figure, where every `draw(show=False)` without a path
+  left one open (B85 of
+  [rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
+- A spider, a ribbon and a twist draw in any colour a box draws in:
+  `TikZ.format_color` gives the RGB values of a named colour or of a
+  hexcode in any form matplotlib reads, and passes any other colour
+  through, as a TikZ box does, where it indexed `COLORS` and raised
+  `KeyError`, so that a ribbon in TikZ and a spider or a box with
+  `use_tikzstyles` could only take the seven named colours; a TikZ box or
+  spider in a hexcode writes its RGB values, where it wrote `fill={#336699}`,
+  which TikZ rejects; and the back of a twist is filled with
+  `config.darken` of its colour, which keeps its alpha, where it looked up
+  `f"dark_{color}"` and raised on any other colour in both backends, a
+  transparent twist keeping a transparent back (B83 of
+  [rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
 - Region painting computes the exact extents of each coloured region —
   polygons bounded by the wires on both sides, subdivided per height band —
   instead of overpainting everything to the right of each wire up to the
