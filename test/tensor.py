@@ -9,7 +9,8 @@ from pytest import raises
 
 from discopy.utils import AxiomError, dumps, loads
 from discopy.tensor import *
-from discopy import frobenius
+from discopy import compact, frobenius, pivotal, rigid
+from discopy.grammar import pregroup
 
 
 def test_backend():
@@ -191,6 +192,26 @@ def test_Functor_call():
     with raises(TypeError):
         F("Alice")
     assert Functor(ob_map={x: Dim(2, 3)}, ar_map=None)(x) == Dim(2, 3)
+
+
+@pytest.mark.parametrize(
+    "module", [rigid, pivotal, compact, frobenius, pregroup],
+    ids=lambda module: module.__name__)
+def test_Functor_bends_a_compound_image_as_a_diagram_does(module):
+    n, s = module.Ty('n'), module.Ty('s')
+    Alice, Bob = module.Box('Alice', s[:0], n), module.Box('Bob', s[:0], n)
+    loves = module.Box('loves', s[:0], n.r @ s @ n.l)
+    F = Functor({n: Dim(2, 3), s: Dim(1)}, {
+        Alice: list(range(6)), loves: list(range(36)),
+        Bob: list(range(6, 0, -1))}, dom=module.Diagram, dtype=int)
+    cup, cap = module.Cup(n, n.r), module.Cap(n, n.l)
+    pairing = Tensor[int].spiders(2, 0, F(n)) if n.r == n\
+        else Tensor[int].cups(F(n), F(n.r))
+    assert F(cup) == F(module.Id(n @ n.r) >> cup) == pairing
+    assert F(cap) == F(cap >> module.Id(n @ n.l))
+    sentence = Alice @ loves @ Bob >> cup @ s @ module.Cup(n.l, n)
+    assert F(sentence) == F(Alice) @ F(loves) @ F(Bob)\
+        >> F(cup) @ F(s) @ F(module.Cup(n.l, n))
 
 
 def test_Functor_maps_Dim_with_its_ob_map():
