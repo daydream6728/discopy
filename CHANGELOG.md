@@ -56,6 +56,16 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   axes of the wires it permutes
   ([#225](https://github.com/rel-int/discopy-next/issues/225)).
 
+- `discopy.optyx.sampling.twomode` is unitary at any number of photons,
+  copied from [rel-int/optyx#84](https://github.com/rel-int/optyx/pull/84):
+  the action of a two-mode unitary `u` on a photon-number sector is now
+  computed as `exp dΓ(H)`, for the skew-Hermitian logarithm `H` of `u` that
+  the new `sampling.generator` gives in closed form, `dΓ(H)` being
+  tridiagonal on the sector and exponentiated with `eigh`. Expanding the two
+  products and convolving them, as before, cancelled catastrophically: off
+  unitarity by up to 6e-9 at 60 photons and 5e-3 at 100, against 4e-15 now
+  ([#225](https://github.com/rel-int/discopy-next/issues/225)).
+
 - `discopy.ehypergraph`, e-graphs of diagrams with sharing: an
   `EHypergraph` over a copy-discard category is a left-monogamous acyclic
   `Hypergraph`, whose boxes are the e-nodes, with an equivalence relation on
