@@ -9,6 +9,18 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Added
 
+- Double-pushout rewriting of hypergraphs, after Bonchi et al.'s *String
+  diagram rewrite theory* I and II: a rule is a pair of parallel hypergraphs,
+  `Hypergraph.match` finds the homomorphisms with the gluing conditions,
+  `complements` their pushout complements, `plug` glues a hole into a
+  context, and `rewrite`, `normalize` and `normal_form` chain them. Over a
+  hypergraph category every pushout complement is a rewrite, sound and
+  complete modulo the Frobenius axioms; over any other symmetric category
+  the hypergraphs are monogamous and acyclic, matches are convex and the
+  context is the boundary complement, sound and complete modulo the symmetric
+  monoidal axioms. Lafont's interaction combinators are the test case: his
+  six rules reduce the net of his Fig. 11 to a wiring in five steps.
+
 - `hopf.Intertwiner.chart(dom, cod)`, the parametrised intertwiner
   `Dim(r) @ dom -> cod` whose slices are an orthonormal basis of
   `Hom_H(dom, cod)`, solved as one SVD nullspace of the commutant

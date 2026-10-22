@@ -20,5 +20,5 @@ monogamous one (II, Defs. 23, 25, 26).
   wiring, staying bijective at every step
 - [x] the examples of the papers: I, Ex. 3.21 with interface (17), and §4.5's five contexts; II,
   Ex. 4.1 (boundary complement) and Ex. 4.2 (non-convex match)
-- [WIP] @session_01M8CWacKqbJVKPcDMd2m3AD-2026-10-22 15:55 docs: module summary, bibliography (part II, Lafont), `CHANGELOG.md`
-- [ ] `pflake8`, `pylint` (raise `fail-under` if it rises), `coverage run -m pytest`
+- [x] docs: module summary, bibliography (part II, Lafont), `CHANGELOG.md`
+- [WIP] @session_01M8CWacKqbJVKPcDMd2m3AD-2026-10-22 16:10 `pflake8`, `pylint` (raise `fail-under` if it rises), `coverage run -m pytest`

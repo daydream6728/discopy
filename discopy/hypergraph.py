@@ -16,6 +16,8 @@ Summary
     Boundary
     Wiring
     SpiderTypes
+    Match
+    Rule
     Hypergraph
     Functor
 
@@ -1220,6 +1222,30 @@ class Hypergraph(
 
         Parameters:
             rules : The rules, each a pair of parallel hypergraphs.
+
+        Example
+        -------
+        The interaction combinators of :cite:t:`Lafont97` are boxes with a
+        principal port as domain, rewritten when two principal ports meet.
+        A net is a bijective hypergraph and its rules are left-linear, so
+        each match has one context. This net reduces to a wiring in five
+        steps, Lafont's Fig. 11.
+
+        >>> from discopy.frobenius import Ty, Box, Hypergraph as H
+        >>> x = Ty('x')
+        >>> gamma, delta = (
+        ...     Box(name, x, x @ x).to_hypergraph() for name in "γδ")
+        >>> rules = [
+        ...     (gamma.transpose() >> gamma, H.id(x @ x)),
+        ...     (delta.transpose() >> delta, H.swap(x, x)),
+        ...     (gamma.transpose() >> delta, delta @ delta
+        ...      >> x @ H.swap(x, x) @ x
+        ...      >> gamma.transpose() @ gamma.transpose())]
+        >>> net = H.caps(x, x) >> delta @ delta >> x @ H.cups(x, x) @ x\\
+        ...     >> gamma.transpose() >> delta >> gamma @ gamma
+        >>> steps = list(net.normalize(*rules))
+        >>> assert len(steps) == 5 and all(s.is_bijective for s in steps)
+        >>> assert steps[-1] == H.caps(x, x) @ H.caps(x, x)
         """
         graph = next(self.rewrite(*rules), None)
         while graph is not None:
