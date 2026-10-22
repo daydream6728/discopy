@@ -205,7 +205,9 @@ class FreeCategory(Category):
         ob = type(self).ob
         dom = dom if isinstance(dom, ob) else ob(dom)
         cod = cod if isinstance(cod, ob) else ob(cod)
-        setattrs(self, dom=dom, cod=cod, inside=tuple(inside))
+        object.__setattr__(self, "dom", dom)
+        object.__setattr__(self, "cod", cod)
+        object.__setattr__(self, "inside", tuple(inside))
         if _scan:
             for generator in inside:
                 assert_isinstance(generator, self.generator_factory)
@@ -692,7 +694,9 @@ class Box(Arrow):
     def __init__(
             self, name: str, dom: Ob, cod: Ob, data=None, is_dagger=False):
         assert_isinstance(name, str)
-        setattrs(self, name=name, data=data, is_dagger=is_dagger)
+        object.__setattr__(self, "name", name)
+        object.__setattr__(self, "data", data)
+        object.__setattr__(self, "is_dagger", is_dagger)
         Arrow.__init__(self, (self, ), dom, cod, _scan=False)
 
     @property
