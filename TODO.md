@@ -20,18 +20,18 @@ then unique up to the order of the inputs of a sum and of the outputs of a copy,
 hypergraph isomorphism that forgets those orders decides.
 
 - [WIP] @session_01M8CWacKqbJVKPcDMd2m3AD-2026-10-22 21:00 `docs/notebooks/boolean-circuits.md`, part I, in this pull request:
-  - [ ] the encoding: τ absorbed, sums and copies flattened, rules as DPO steps of #224 built for
+  - [x] the encoding: τ absorbed, sums and copies flattened, rules as DPO steps of #224 built for
     each match, equality up to commutativity
-  - [ ] §2.3 𝔉, maps of finite sets (Theorem 3), and its surjections and injections
-  - [ ] §3 𝐋(ℤ₂), ℤ₂-linear maps (Theorem 5): the relations of Fig. 13 that are not symmetric
+  - [x] §2.3 𝔉, maps of finite sets (Theorem 3), and its surjections and injections
+  - [x] §3 𝐋(ℤ₂), ℤ₂-linear maps (Theorem 5): the relations of Fig. 13 that are not symmetric
     monoidal axioms checked in the semantics, every diagram reduced to the canonical form of its
     matrix
-  - [ ] §3.3 𝐋(K) over GF(p), the relations of Fig. 36, with ℤ₂ as p = 2
-  - [ ] §2.1, §2.2 and §2.4 say why 𝔖, 𝔐 and 𝔄 are trivial or out of scope once τ is absorbed
+  - [x] §3.3 𝐋(K) over GF(p), the relations of Fig. 36, with ℤ₂ as p = 2
+  - [x] §2.1, §2.2 and §2.4 say why 𝔖, 𝔐 and 𝔄 are trivial or out of scope once τ is absorbed
 - [ ] the later parts, filed as issues when this one is done:
   - §3.1–§3.2 𝐆𝐋(ℤ₂) and the κ presentations of 𝐋(ℤ₂) and its surjections (Theorems 6–8), 𝐆𝐋(K)
   - §3.4 the isometries 𝐎 and Euler angles (Theorem 9)
   - §4 𝔉[2], ℤ(ℤ₂), 𝔄(ℤ₂) and 𝐆𝐀(ℤ₂) (Theorems 10–11)
   - §4.2 Toffoli gates, F₃ from T₂ and T₃, the commutations, a check of Theorem 12
   - Appendix A: termination orders and critical peaks for DPO rewriting
-- [ ] `pflake8`, `pylint`, `pytest`, `docs/export_notebooks.py --check`
+- [x] `pflake8`, `pylint`, `pytest`, `docs/export_notebooks.py --check`
