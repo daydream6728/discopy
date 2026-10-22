@@ -1723,6 +1723,41 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   inherited by `python.multiplicative.Function` and
   `python.additive.Function`; a chain built with `>>` still nests, since
   that operator is binary.
+- Controlled gates evaluate and rotate as the gate they control is: the
+  array of a controlled gate ignored the dagger and the rotation of its
+  gate, so that `Controlled(S).dagger()` was `Controlled(S)` numerically
+  (B10), and its `l` and `r` were its conjugate, so that rotating
+  `CRz(.3)` negated its phase and `CRz(.5).rotate()` raised (B54): a
+  controlled gate now rotates as its gate, with its qubits reversed, so
+  that rotation commutes with evaluation. A pure `circuit.Box` stays pure
+  through its dagger, rotation and delay, where it was rebuilt mixed, so
+  that the dagger of a quantum box could not be evaluated and the one of
+  a classical box was not transposed (B55). `subs` and `lambdify` keep the
+  distance of a controlled rotation and the mixedness of a scalar (B11),
+  which also makes the default, mixed derivative of a rotation evaluate
+  to its finite difference, and the pure derivative of `U1` is the
+  difference of its shifts by a quarter turn, where it was its shift by
+  half a turn, the derivative of `Rz` (B12). `QuantumGate` takes a 2-D
+  array or a list with free symbols as `data`, as `circuit.Box` does,
+  where it raised (B82), and `Ket`, `Bra` and `Digits` read a boolean as
+  an integer, where `Ket(True)` was `|0> + |1>` and a bitstring of numpy
+  booleans the zero vector, `Digits` raising on a digit that is no integer
+  below its dimension (B68)
+  ([rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
+- Every gate with a constructor of its own delays, where `Ket(0).delay()`,
+  `Measure().delay()`, `scalar(2).delay()` and the rest raised
+  `TypeError`: `Discard` and `MixedState` through the type they take, as
+  `Controlled` does, and `Ket`, `Bra`, `Measure`, `Encode`, `Copy`,
+  `Match`, `Digits`, `Bits`, `Scalar`, `MixedScalar` and `Sqrt` through a
+  `time_step`, as the rotations do, kept by their dagger, decomposition,
+  tree, `subs`, `lambdify` and `grad`; a delayed scalar is unequal to the
+  scalar. The decomposition of `Discard` and `MixedState` keeps their
+  types, where it discarded or prepared a qubit for every wire, bits
+  included. `Controlled`, `Digits` and `Bits` print their constructor call
+  with its module, where they printed `Controlled(...)` and their name, so
+  that `eval(repr(x)) == x` in the environment of a circuit
+  ([rel-int/discopy-next#176](https://github.com/rel-int/discopy-next/issues/176),
+  [rel-int/discopy-next#168](https://github.com/rel-int/discopy-next/issues/168)).
 - A delayed qubit or bit prints and serialises with its time step,
   `Qudit(2, time_step=1)`, where both dropped it, so that
   `eval(repr(x)) == x` and `loads(dumps(x)) == x` failed on it. A
@@ -1736,9 +1771,7 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   and a controlled rotation take a `time_step`, kept by their delay,
   dagger, rotation, `subs`, `lambdify`, `grad`, `repr` and tree, and a
   controlled gate at a distance decomposes on its own qubits, so that a
-  delayed one evaluates. The other gates with a constructor of their own
-  still do not delay
-  ([rel-int/discopy-next#176](https://github.com/rel-int/discopy-next/issues/176))
+  delayed one evaluates
   ([rel-int/discopy-next#130](https://github.com/rel-int/discopy-next/issues/130)).
 - Closed types carry a time step, as every wire below `feedback` does, so
   that a closed diagram delays box by box, where
