@@ -813,7 +813,8 @@ class Hypergraph(
                 tuple(sorted(repr(box) for box in self.boxes)),
                 tuple(sorted(map(repr, self.spider_types)))))
         return hash((self.dom, self.cod, weisfeiler_lehman_graph_hash(
-            self.to_graph(), node_attr="box")))
+            self.to_graph(), node_attr="box"),
+            tuple(sorted(map(repr, self.spider_types)))))
 
     def box_dependencies(self):
         """
@@ -2166,7 +2167,7 @@ class Hypergraph(
         """
         graph = Graph()
         graph.add_nodes_from(
-            (Node("spider", i=i, obj=obj), dict(box=None))
+            (Node("spider", i=i, obj=obj), dict(obj=obj, box=None))
             for i, obj in enumerate(self.spider_types))
         graph.add_nodes_from(
             (Node("input", i=i, obj=obj), dict(i=i, box=None))

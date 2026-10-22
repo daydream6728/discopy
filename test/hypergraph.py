@@ -39,6 +39,17 @@ def test_Hypergraph_hash():
     assert hash(H.id(x @ y)) == hash(H.id(x) @ H.id(y))
 
 
+def test_Hypergraph_eq_sees_the_type_of_a_scalar_spider():
+    from discopy.frobenius import Equation
+    x, y = map(Ty, "xy")
+    assert H.spiders(0, 0, x) != H.spiders(0, 0, y)
+    assert hash(H.spiders(0, 0, x)) != hash(H.spiders(0, 0, y))
+    assert H.spiders(0, 0, x @ y) == H.spiders(0, 0, y @ x)
+    assert hash(H.spiders(0, 0, x @ y)) == hash(H.spiders(0, 0, y @ x))
+    f = Box('f', x, x)
+    assert not Equation(Spider(0, 0, x) @ f, Spider(0, 0, y) @ f)
+
+
 def test_Hypergraph_then():
     x, y = map(Ty, "xy")
     with raises(AxiomError):
