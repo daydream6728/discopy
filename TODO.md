@@ -15,9 +15,9 @@ on a map that has a layering. A match of a left side is an injective map morphis
 contracted into a single box, leaves a map that still sweeps. Planar, unlike Frobenius, has
 exactly one pushout complement per match: `monoidal.Match`, the diagram with a hole.
 
-- [ ] `CMap.sweep` and `CMap.is_progressive`; `CMap.to_diagram` sweeps when the category has no
+- [WIP] @session_013PzWbScb5vkcym2x9JkEda-2026-10-22 17:30 `CMap.sweep` and `CMap.is_progressive`; `CMap.to_diagram` sweeps when the category has no
   swaps, so a state left of a wire decodes again
-- [ ] `CMap.homomorphisms`, `CMap.match` yielding `monoidal.Match`, `CMap.rewrite`, `normalize`,
+- [WIP] @session_013PzWbScb5vkcym2x9JkEda-2026-10-22 17:30 `CMap.homomorphisms`, `CMap.match` yielding `monoidal.Match`, `CMap.rewrite`, `normalize`,
   `normal_form`
 - [ ] the spiral: three rules unwind `spiral(n)` from its centre to the empty diagram in `2n + 1`
   steps, from the spiral as drawn and from its normal form, where the counit sits at the bottom
