@@ -1,7 +1,7 @@
 import pytest
-from optyx import photonic, qubits, classical, mode, qubit, qmode, bit
+from discopy.optyx import photonic, qubits, classical, mode, qubit, qmode, bit
 from cotengra import ReusableHyperCompressedOptimizer
-from optyx.core.backends import (
+from discopy.optyx.core.backends import (
     QuimbBackend,
     PercevalBackend,
     DiscopyBackend,

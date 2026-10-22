@@ -60,11 +60,11 @@ from collections import Counter
 
 import numpy as np
 from discopy.symmetric import Equation
-from optyx import classical, photonic, qubits
-from optyx.core import control
-from optyx.channel import (
+from discopy.optyx import classical, photonic, qubits
+from discopy.optyx.core import control
+from discopy.optyx.channel import (
     Channel, Diagram, Discard, Measure, Observable, Ty, bit, mode, qmode)
-from optyx.sampling import Coherent, Fock
+from discopy.optyx.sampling import Coherent, Fock
 
 import warnings
 
@@ -714,7 +714,7 @@ whatever photonic experiment you have in mind, it is an instance.
 To go further: see the
 [stateful channels notebook](fixpoints.md) for stream and fixed-point
 semantics in depth, and the module documentation of
-[`optyx.photonic`](../_api/optyx.photonic.html),
-[`optyx.classical`](../_api/optyx.classical.html) and
-[`optyx.qubits`](../_api/optyx.qubits.html) for the full library of
+[`discopy.optyx.photonic`](../_api/optyx.photonic.html),
+[`discopy.optyx.classical`](../_api/optyx.classical.html) and
+[`discopy.optyx.qubits`](../_api/optyx.qubits.html) for the full library of
 gates, states and measurements.
