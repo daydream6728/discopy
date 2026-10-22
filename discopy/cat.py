@@ -726,7 +726,8 @@ class Sum(Box):
         """ The name of a sum is its :code:`repr`, computed when needed. """
         str_args = "" if self.terms\
             else f", dom={repr(self.dom)}, cod={repr(self.cod)}"
-        return f"{factory_name(type(self))}(terms={repr(self.terms)}{str_args})"
+        return factory_name(type(self))\
+            + f"(terms={repr(self.terms)}{str_args})"
 
     @property
     def is_generator(self):
