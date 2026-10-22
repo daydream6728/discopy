@@ -229,10 +229,12 @@ class Matrix(MarkovCategory, ComarkovCategory, DaggerCategory,
         return type(self)[getattr(dtype, "type", dtype)]
 
     def __class_getitem__(cls, item):
-        with backend('numpy') as np:
-            python = {np.dtype(t).type: t for t in (bool, int, float, complex)}
         dtype, = item if isinstance(item, tuple) else (item, )
-        return super().__class_getitem__(python.get(dtype, dtype))
+        if getattr(dtype, "__module__", None) == "numpy":
+            with backend('numpy') as np:
+                dtype = next((python for python in (bool, int, float, complex)
+                              if np.dtype(python).type is dtype), dtype)
+        return super().__class_getitem__(dtype)
 
     def __new__(cls, array, *args, **kwargs):
         with backend() as np:
