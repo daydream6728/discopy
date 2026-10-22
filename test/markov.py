@@ -290,6 +290,8 @@ def test_Function():
     assert Equation(f, Swap(x, y) >> y @ Copy(x))
     with raises(ValueError):
         Function(x @ y, [2])
+    with raises(ValueError):
+        Function(x, [1])
     for box in (f, Copy(x), Swap(x, y)):
         assert eval(repr(box)) == box
 

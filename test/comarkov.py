@@ -147,6 +147,8 @@ def test_Cofunction():
     f = Cofunction(x @ y, [1, 0, 0])
     assert f.dom == y @ x @ x and f.size == 0
     assert Cofunction(x, [0, 0, 0]) == Merge(x, 3)
+    with raises(ValueError):
+        Cofunction(x, [1])
     assert isinstance(Swap(x, y), Cofunction)
     assert isinstance(Merge(x), Cofunction)
     assert Diagram.merge(x @ y, 0) == Noise(x) @ Noise(y)

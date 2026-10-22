@@ -30,6 +30,8 @@ Summary
     Dims
     Network
     Box
+    Function
+    Cofunction
     Swap
     Permutation
     Copy

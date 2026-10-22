@@ -193,7 +193,7 @@ class Diagram(symmetric.Diagram, MarkovCategory):
         return cls.copy(x, 0)
 
     @classmethod
-    def from_function(cls, func, dom: monoidal.Ty = None) -> Diagram:
+    def from_function(cls, func, dom: monoidal.Ty) -> Diagram:
         """
         A native :class:`Function` box when the category has a matching
         function factory, its decomposition by
@@ -447,7 +447,7 @@ class Function(Box):
         func = list(func)
         if sorted(func) == list(range(len(dom))):
             return cls.ar.permutation_factory(dom, func)
-        if len(dom) == 1:
+        if len(dom) == 1 and not any(func):
             return cls.ar.copy_factory(dom, len(func))
         return super().__new__(cls)
 
