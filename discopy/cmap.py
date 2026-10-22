@@ -65,6 +65,7 @@ from discopy.abc import (
     NamedGeneric,
     Pregroup,
     RigidCategory,
+    SpacialCategory,
     SymmetricCategory,
     TracedCategory,
 )
@@ -2127,15 +2128,19 @@ cycles of this map.
         crossing a wire. A connected map is a diagram up to interchange, see
         :cite:t:`DelpeuchVicary22`, Section 8, so that over a planar
         category, unlike a hypergraph category, there is at most one
-        pushout complement.
+        pushout complement. Over a :class:`SpacialCategory`, so is any map:
+        a component that touches nothing else, the hole included when the
+        pattern has no boundary, can go in any face.
 
         Parameters:
             pattern : The map matched.
             homomorphism : A homomorphism from it, see :meth:`homomorphisms`.
         """
         hole, (boxes, _) = self.hole(pattern, homomorphism), homomorphism
-        closed = not pattern.dom and not pattern.cod
-        if hole is None or closed and len(boxes) < len(self.boxes):
+        floating = not pattern.dom and not pattern.cod\
+            and len(boxes) < len(self.boxes)
+        if hole is None or floating and not issubclass(
+                self.category, SpacialCategory):
             return None
         dom, vertices, cod = self.wiring(
             port for port in hole[1] if not self.ports[port].kind.is_positive)
@@ -2179,16 +2184,18 @@ cycles of this map.
 
     def match(self, pattern: CMap) -> Iterator[Match]:
         """
-        The matches of a pattern in a connected map, each a diagram with a
-        hole, see :meth:`complement`.
+        The matches of a pattern, each a diagram with a hole, see
+        :meth:`complement`.
 
         Parameters:
             pattern : The map to match, e.g. the left side of a rule.
 
         Raises:
-            AxiomError : If the map is not connected: the map of a diagram
-                does not say in which face a component that touches nothing
-                else lies.
+            AxiomError : If the map is not connected and the category is not
+                a :class:`SpacialCategory`: the map of a diagram does not say
+                in which face a component that touches nothing else lies,
+                which only a spacial category does not mind, see
+                :mod:`discopy.spacial`.
 
         Example
         -------
@@ -2208,7 +2215,8 @@ cycles of this map.
         ...     match.substitute(cap @ cap).normal_form()
         ...     == diagram.normal_form() for match in matches)
         """
-        if len(self.connected_components) > 1:
+        if len(self.connected_components) > 1 and not issubclass(
+                self.category, SpacialCategory):
             raise AxiomError(messages.NOT_CONNECTED.format(self))
         for homomorphism in self.homomorphisms(pattern):
             context = self.complement(pattern, homomorphism)
@@ -2217,7 +2225,7 @@ cycles of this map.
 
     def rewrite(self, *rules: tuple[CMap, CMap]) -> Iterator[CMap]:
         """
-        The rewrites of a connected map in one step, i.e. for each rule
+        The rewrites of a map in one step, i.e. for each rule
         ``left, right`` and each :meth:`match` of ``left``, the map with
         ``right`` put in the hole.
 

@@ -40,6 +40,7 @@ Summary
     Group
     Nat
     MonoidalCategory
+    SpacialCategory
     PRO
     FeedbackCategory
     TracedCategory
@@ -83,7 +84,7 @@ from typing import ClassVar
 
 from discopy import messages
 from discopy.axioms import (
-    Delay, Equation, Hom, Obj, Tensor, Testable, Var, axiom)
+    Delay, Equation, Hom, Obj, Tensor, Testable, Unit, Var, axiom)
 from discopy.utils import (  # noqa: F401  pylint: disable=unused-import
     AxiomError, NamedGeneric, classproperty, factory_name)
 
@@ -488,6 +489,23 @@ class MonoidalCategory[C0: ColouredMonoid, C1: MonoidalCategory](
             mem : The memory.
         """
         return len(mem)
+
+
+class SpacialCategory[C0, C1](MonoidalCategory[C0, C1]):
+    """
+    A spacial category is a :class:`MonoidalCategory` where scalars slide:
+    a scalar ``s : I -> I`` on the left of any morphism is the same scalar on
+    its right, see :cite:t:`Selinger10`. Its diagrams are planar up to the
+    face each scalar lies in, i.e. a component that touches nothing else can
+    be lifted out of the plane and put down anywhere, see
+    :meth:`discopy.cmap.CMap.match`.
+    """
+    @axiom
+    def scalar_sliding[A: Obj[C0], B: Obj[C0]](
+            cls, scalar: Hom[C1, Unit[C0], Unit[C0]], f: Hom[C1, A, B])\
+            -> Equation[Hom[C1, A, B]]:
+        """ A scalar on the left of a morphism is a scalar on its right. """
+        return cls.equation_factory(scalar @ f, f @ scalar)
 
 
 class PRO[C1: PRO](MonoidalCategory[Nat, C1]):
@@ -932,10 +950,11 @@ class PivotalCategory[C0, C1](RigidCategory[C0, C1], TracedCategory[C0, C1]):
         messages.PLANAR_YANKING)
 
 
-class BraidedCategory[C0, C1](MonoidalCategory[C0, C1]):
+class BraidedCategory[C0, C1](SpacialCategory[C0, C1]):
     """
     A braided category is a :class:`MonoidalCategory` with a method
-    :code:`braid` for the natural isomorphism :code:`x @ y -> y @ x`.
+    :code:`braid` for the natural isomorphism :code:`x @ y -> y @ x`. It is
+    a :class:`SpacialCategory`: a scalar slides along the braid of the unit.
     """
     @classmethod
     @abstractmethod

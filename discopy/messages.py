@@ -61,6 +61,8 @@ NOT_ACYCLIC = "{} has a directed cycle, its boxes cannot be ordered."
 NOT_PROGRESSIVE = "No line sweeps the map down meeting each box with its "\
     "inputs side by side, past the cut {}."
 NOT_DOWNWARD = "{} has cups, caps or loops: its wires do not all go down."
+FREE_SCALAR = "A free scalar is a box: it slides on the map of a diagram, "\
+    "not on the nose."
 NOT_LEFT_MONOGAMOUS = "{} is not left-monogamous."
 NOT_RIGHT_MONOGAMOUS = "{} is not right-monogamous."
 NOT_CAUSAL = "{} is not causal."
