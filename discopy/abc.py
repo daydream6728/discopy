@@ -294,6 +294,7 @@ class ColouredMonoid[C0, C1: ColouredMonoid](Category[C0, C1]):
 
 class Monoid[C1: Monoid](ColouredMonoid[type(None), C1]):
     """ A monoid is a coloured monoid with a single, trivial colour. """
+    ob = NoneType
 
 
 class Groupoid[C0, C1: Groupoid](DaggerCategory[C0, C1]):
@@ -321,11 +322,6 @@ class Group[C1: Group](Groupoid[type(None), C1], Monoid[C1]):
     a single object :obj:`None`, which every element goes from and to.
     """
     dom = cod = None
-
-    @classmethod
-    def parameters(cls) -> tuple[type, type]:
-        """ The objects of a group are the one :obj:`None`. """
-        return NoneType, cls
 
 
 @dataclass
@@ -581,14 +577,17 @@ class FeedbackCategory[C0, C1](MonoidalCategory[C0, C1]):
             g >> f.feedback(dom=x, cod=y, mem=m) >> h)
 
     @axiom
-    def sliding[X: Obj[C0], Y: Obj[C0], M: Obj[C0]](
-            cls, f: Hom[C1, Tensor[X, Delay[C1, M]], Tensor[Y, M]],
-            k: Hom[C1, M, M], x: Var[C0, X], y: Var[C0, Y], m: Var[C0, M]
+    def sliding[X: Obj[C0], Y: Obj[C0], M: Obj[C0], N: Obj[C0]](
+            cls, f: Hom[C1, Tensor[X, Delay[C1, M]], Tensor[Y, N]],
+            k: Hom[C1, N, M], x: Var[C0, X], y: Var[C0, Y]
     ) -> Equation[Hom[C1, X, Y]]:
-        """ A morphism on the memory slides along the feedback, delayed. """
+        """
+        A morphism slides around the feedback, delayed on its way back in:
+        the memory is its codomain on one side and its domain on the other.
+        """
         return cls.equation_factory(
-            (f >> y @ k).feedback(dom=x, cod=y, mem=m),
-            (x @ k.delay() >> f).feedback(dom=x, cod=y, mem=m))
+            (f >> y @ k).feedback(dom=x, cod=y, mem=k.cod),
+            (x @ k.delay() >> f).feedback(dom=x, cod=y, mem=k.dom))
 
 
 def keyword_form(trace: Callable) -> Callable:

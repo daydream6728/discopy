@@ -253,12 +253,14 @@ def test_feedback_laws_on_a_traced_category():
     f = box('f', x @ m @ n, y @ m @ n)
     g, h, k, e = box('g', w, x), box('h', y, z), box(
         'k', m @ n, m @ n), box('e', w, z)
+    f_mn, k_nm = box('f', x @ m, y @ n), box('k', n, m)
     for law, arguments in (
             ("vanishing", dict(f=f)),
             ("joining", dict(f=f, x=x, y=y, m=m, n=n)),
             ("strength", dict(e=e, f=f, x=x, y=y, m=m @ n)),
             ("tightening", dict(f=f, g=g, h=h, x=x, y=y, m=m @ n)),
-            ("sliding", dict(f=f, k=k, x=x, y=y, m=m @ n))):
+            ("sliding", dict(f=f, k=k, x=x, y=y)),
+            ("sliding", dict(f=f_mn, k=k_nm, x=x, y=y))):
         axiom = getattr(FeedbackCategory, law).bind(C)
         assert axiom.modulo(C.to_hypergraph)(**arguments)
 
