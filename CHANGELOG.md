@@ -807,11 +807,11 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - A law of `discopy.axioms` is stated as a sequent, the sequent calculus
   of [rel-int/discopy-next#1](https://github.com/rel-int/discopy-next/pull/1)
   without its search: its type parameters are variables, objects `A:
-  Obj[C0]` or numbers `N: Count`, its parameters premises, a morphism `f:
-  Hom[C1, A, B]` from `A` to `B` or the value `x: Var[C0, X]` of an object
-  expression built with `Tensor`, `Unit`, `L`, `R`, `Delay`, `Over`,
-  `Under` and `Repeat`, and its return annotation the type of its output,
-  e.g. `Equation[Hom[C1, A, B]]`. `Declaration.sequents` draws the
+  Obj[C0]`, its parameters premises, a morphism `f: Hom[C1, A, B]` from `A`
+  to `B` or the value `x: Var[C0, X]` of an object expression built with
+  `Tensor`, `L`, `R` and `Delay`, and its return annotation the type of its
+  output, e.g. `Equation[Hom[C1, A, B]]`, `Equation` being a generic class
+  rather than a `NamedGeneric`. `Declaration.sequents` draws the
   variables, then each premise from the strategy of the category with its
   boundary, and the property matrix checks every verdict against the type
   its law states with `inhabits`, as well as that it holds. So the typing
@@ -819,13 +819,19 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `composition_cod_typing` go, every law typing its terms, and so do the
   premise wrappers `ComposablePair`, `ComposableTriple`, `Grid` and `Loop`:
   the laws of feedback quantify over a morphism `x @ Delay[C1, M] -> y @ M`
-  and the objects it is typed by. An axiom is called with keyword
+  and the objects it is typed by, and `sliding` over one `x @ Delay[C1, M]
+  -> y @ N` and a morphism `k: N -> M` slid around its loop, so that the
+  memory changes type, where its `Loop` slid an endomorphism of it. An
+  axiom is called with keyword
   arguments, `Axiom.weaken` passes parameters to the strategy of the
   category where it named a subspace per argument, and a module stating a
   law, `abc` and `biclosed`, does without `from __future__ import
   annotations`, which a declaration refuses, where an `Axiom` required it.
-  `abc.Category.parameters` says what `C0` and `C1` stand for, a group's
-  objects being the one `None`.
+  `abc.Category.parameters` says what `C0` and `C1` stand for, a monoid's
+  objects being the one `None`, its `ob`. `failing` and `inapplicable` are
+  methods of any `Declaration`, which says whether it is `broken` and
+  whether it is `applicable`, and the property matrix skips the laws that
+  are not rather than calling each law to find out.
 
 - Six more `then`s take `(self, *others)`, the signature that
   `abc.Category.then` declares and `cat.Arrow` implements: they had
