@@ -3,7 +3,7 @@
 Ruled live by USER (10-22) on B47 with B8, "spider pairing at frobenius":
 https://github.com/rel-int/discopy-next/issues/31#issuecomment-6350437415
 
-- [ ] B8: `Tensor.cup_factory` on compound dims returns `Tensor.cups`
+- [WIP] @session_01YCJQ3Xco3ydQ6AsdTtYJ5x-2026-10-22 21:00 B8: `Tensor.cup_factory` on compound dims returns `Tensor.cups`
 - [ ] B47, compact and below: the `CMap` contraction pairs a bent wire's factors nested, one index per atomic factor, reversed on the adjoint end
 - [ ] B47, frobenius: a cup or cap on a self-dual object is `Tensor.spiders`, flat, on both paths
 - [ ] Regression tests per level (rigid, pivotal, compact, frobenius) and for B8
