@@ -382,6 +382,7 @@ feedback.Ty(feedback.Wire('x')), is_deterministic=False)
         return result
 
 
+@frozen
 class Function(Box):
     """
     A function between finite sets read backwards as plumbing: output ``i``
@@ -433,8 +434,10 @@ class Function(Box):
             return cls.ar.copy_factory(dom, len(func))
         return super().__new__(cls)
 
+    func: finset.Function
+
     def __init__(self, dom: monoidal.Ty, func):
-        self.func = finset.Function(list(func), len(dom), len(func))
+        setattrs(self, func=finset.Function(list(func), len(dom), len(func)))
         cod = dom[:0].tensor(*(dom[i] for i in self.func))
         Box.__init__(self, f"Function({list(self.func)})", dom, cod)
 
@@ -610,6 +613,7 @@ class Swap(Permutation, symmetric.Swap, Box):
     """
 
 
+@frozen
 class Copy(Function):
     """
     The copy of an atomic type :code:`x` some :code:`n` number of times,
@@ -619,7 +623,17 @@ class Copy(Function):
         x : The type to copy.
         n : The number of copies, or the function ``[0] * n`` when a
             :class:`Function` constructs it.
+
+    Its fields ``x`` and ``n`` are read from its boundary.
+
+    >>> from discopy.utils import replace
+    >>> assert replace(Copy(Ty('x')), n=3) == Copy(Ty('x'), 3)
     """
+    __match_args__ = ("x", "n")
+
+    x: monoidal.Ty = property(lambda self: self.dom)
+    n: int = property(lambda self: len(self.cod))
+
     def __init__(self, x: monoidal.Ty, n: int = 2):
         assert_isatomic(x, monoidal.Ty)
         n = n if isinstance(n, int) else len(n)

@@ -75,7 +75,7 @@ from discopy.feedback import (  # noqa: F401  pylint: disable=unused-import
 from discopy.python import finset
 from discopy.utils import (
     AxiomError, assert_isatomic, assert_iscomposable, factory_name,
-    from_tree)
+    from_tree, frozen, setattrs)
 
 
 class Layer(symmetric.Layer):
@@ -183,6 +183,7 @@ class Box(symmetric.Box, Diagram):
     """
 
 
+@frozen
 class Cofunction(Box):
     """
     A function between finite sets as plumbing: input ``i`` goes to output
@@ -231,9 +232,12 @@ class Cofunction(Box):
             return cls.ar.merge_factory(cod, len(cofunc))
         return super().__new__(cls)
 
+    cofunc: op.Comarkov
+
     def __init__(self, cod: monoidal.Ty, cofunc):
-        self.cofunc = op.Comarkov(
-            finset.Function(list(cofunc), len(cod), len(cofunc)))
+        cofunc = cofunc.inside if isinstance(cofunc, op.Comarkov) else cofunc
+        setattrs(self, cofunc=op.Comarkov(
+            finset.Function(list(cofunc), len(cod), len(cofunc))))
         dom = cod[:0].tensor(*(cod[i] for i in cofunc))
         Box.__init__(self, f"Cofunction({list(cofunc)})", dom, cod)
 
@@ -406,6 +410,7 @@ class Swap(Permutation, symmetric.Swap, Box):
     """
 
 
+@frozen
 class Merge(Cofunction):
     """
     The merge of an atomic type :code:`x` some :code:`n` number of times,
@@ -415,7 +420,14 @@ class Merge(Cofunction):
         x : The type of wires to merge.
         n : The number of wires to merge, or the cofunction ``[0] * n``
             when a :class:`Cofunction` constructs it.
+
+    Its fields ``x`` and ``n`` are read from its boundary.
     """
+    __match_args__ = ("x", "n")
+
+    x: monoidal.Ty = property(lambda self: self.cod)
+    n: int = property(lambda self: len(self.dom))
+
     def __init__(self, x: monoidal.Ty, n: int = 2):
         assert_isatomic(x, monoidal.Ty)
         n = n if isinstance(n, int) else len(n)

@@ -415,6 +415,7 @@ class Box(monoidal.Box, Diagram):
     """
 
 
+@frozen
 class Eval(Box):
     """
     The evaluation of an exponential type.
@@ -427,11 +428,14 @@ class Eval(Box):
             An :class:`Over` is evaluated on the left only and an
             :class:`Under` on the right only.
     """
+    x: Exp
+    left: bool = None
+
     def __init__(self, x: Exp, left=None):
         assert x.is_exp
-        self.x = x
         exp = x.inside[0]
-        self.left = not isinstance(exp, Under) if left is None else left
+        setattrs(self, x=x, left=not isinstance(exp, Under)
+                 if left is None else left)
         if isinstance(exp, Under if self.left else Over):
             raise AxiomError(messages.WRONG_SIDE.format(
                 not self.left, x, self.left))
@@ -458,6 +462,7 @@ class Eval(Box):
         return "<<" if self.left else ">>"
 
 
+@frozen
 class Coeval(Box):
     """
     The coevaluation of an exponential type, i.e. the dagger of :class:`Eval`.
@@ -481,11 +486,14 @@ class Coeval(Box):
     to_tree = Eval.to_tree
     from_tree = classmethod(Eval.from_tree.__func__)
 
+    x: Exp
+    left: bool = None
+
     def __init__(self, x: Exp, left=None):
         assert x.is_exp
-        self.x = x
         exp = x.inside[0]
-        self.left = not isinstance(exp, Under) if left is None else left
+        setattrs(self, x=x, left=not isinstance(exp, Under)
+                 if left is None else left)
         if isinstance(exp, Under if self.left else Over):
             raise AxiomError(messages.WRONG_SIDE.format(
                 not self.left, x, self.left))

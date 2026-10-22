@@ -115,3 +115,5 @@ NOT_A_RULE = (
 NO_SYMBOLIC_FIELD = (
     "{} has free symbols only in fields its constructor does not take, "
     "declare the fields it is built from.")
+
+NOT_A_FIELD = "{} takes {}, which is not a field."

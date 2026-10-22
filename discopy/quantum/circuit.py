@@ -953,8 +953,8 @@ class Sum(tensor.Sum[complex], Box):
 class Permutation(tensor.Permutation[complex], Box):
     "A permutation in a quantum circuit."
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, dom: Ty, perm):
+        super().__init__(dom, perm)
         setattrs(self, is_mixed=any(
             type(left.inside[0]) is not type(right.inside[0])
             for left, right in zip(self.dom, self.cod)))
@@ -973,6 +973,9 @@ class Swap(Permutation, tensor.Swap, Box):
     a compiler is free to implement it by relabelling qubits rather than by
     applying a two-qubit unitary.
     """
+
+    def __init__(self, left: Ty, right: Ty):
+        super().__init__(left, right)
 
     @property
     def array(self):

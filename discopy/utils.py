@@ -708,41 +708,6 @@ def pushout(
     return left_pushout, right_pushout
 
 
-class BinaryBoxConstructor:
-    """
-    Box constructor with attributes ``left`` and ``right`` as input.
-
-    Parameters:
-        left : Some attribute on the left.
-        right : Some attribute on the right.
-    """
-    def __init__(self, left, right):
-        self.left, self.right = left, right
-
-    def __setstate__(self, state):
-        if "_name" in state:
-            state["_name"] = type(self).__name__ + (
-                              f"({state['right']}, {state['left']})"
-                              if state.get("_is_dagger", False) else
-                              f"({state['left']}, {state['right']})"
-            )
-        super().__setstate__(state)
-
-    def __repr__(self):
-        return factory_name(type(self))\
-            + f"({repr(self.left)}, {repr(self.right)})"
-
-    def to_tree(self) -> dict:
-        """ Serialise a binary box constructor. """
-        left, right = self.left.to_tree(), self.right.to_tree()
-        return dict(factory=factory_name(type(self)), left=left, right=right)
-
-    @classmethod
-    def from_tree(cls, tree: dict) -> BinaryBoxConstructor:
-        """ Decode a serialised binary box constructor. """
-        return cls(*map(from_tree, (tree['left'], tree['right'])))
-
-
 @lru_cache(maxsize=1024)
 def text_width(text: str, fontsize=12, points_per_inch=72., grid=16):
     """ The width of a text label in drawing units, i.e. inches.
@@ -844,15 +809,52 @@ def setattrs(obj: object, **attributes):
 def replace(obj: object, **changes):
     """
     The object with some of its fields changed, i.e. :func:`copy.replace`,
-    which Python 3.12 does not have.
+    which Python 3.12 does not have, unless its constructor takes something
+    that is not a field: rather than building it from a default, this fails.
 
     Parameters:
         obj : A dataclass instance, or any object with a ``__replace__``.
         changes : The new values of the fields.
+
+    Example
+    -------
+    >>> @frozen
+    ... class Range:
+    ...     stop: int
+    ...     def __init__(self, stop, start=0):
+    ...         setattrs(self, stop=stop - start)
+    >>> replace(Range(3, start=1))
+    Traceback (most recent call last):
+    ...
+    TypeError: Range takes start, which is not a field.
     """
     method = getattr(type(obj), "__replace__", None)
-    return dataclasses.replace(obj, **changes) if method is None\
-        else method(obj, **changes)
+    if method is not None and method.__module__ != "dataclasses":
+        return method(obj, **changes)
+    missing = fieldless_parameters(type(obj))
+    if missing:
+        raise TypeError(messages.NOT_A_FIELD.format(
+            type(obj).__name__, ", ".join(missing)))
+    return dataclasses.replace(obj, **changes)
+
+
+@lru_cache
+def fieldless_parameters(cls: type) -> tuple[str, ...]:
+    """
+    The parameters of a constructor that are not fields of its class, i.e.
+    that :func:`replace` cannot give back, unless it takes ``**kwargs``. A
+    parameter whose name starts with an underscore, e.g. ``_scan``, is an
+    instruction to the constructor rather than data.
+
+    Parameters:
+        cls : A dataclass.
+    """
+    parameters = list(signature(cls.__init__).parameters.values())[1:]
+    if any(p.kind is p.VAR_KEYWORD for p in parameters):
+        return ()
+    names = {f.name for f in dataclasses.fields(cls)}
+    return tuple(p.name for p in parameters
+                 if p.name not in names and not p.name.startswith("_"))
 
 
 def inherit_fields(cls: type):
@@ -923,6 +925,47 @@ def compared_fields(cls: type) -> tuple[str, ...]:
         cls : A dataclass.
     """
     return tuple(f.name for f in dataclasses.fields(cls) if f.compare)
+
+
+@frozen
+class BinaryBoxConstructor:
+    """
+    Box constructor with attributes ``left`` and ``right`` as input.
+
+    Parameters:
+        left : Some attribute on the left.
+        right : Some attribute on the right.
+    """
+    __match_args__ = ("left", "right")
+
+    left: Any
+    right: Any
+
+    def __init__(self, left, right):
+        setattrs(self, left=left, right=right)
+
+    def __setstate__(self, state):
+        if "_name" in state:
+            state["_name"] = type(self).__name__ + (
+                              f"({state['right']}, {state['left']})"
+                              if state.get("_is_dagger", False) else
+                              f"({state['left']}, {state['right']})"
+            )
+        super().__setstate__(state)
+
+    def __repr__(self):
+        return factory_name(type(self))\
+            + f"({repr(self.left)}, {repr(self.right)})"
+
+    def to_tree(self) -> dict:
+        """ Serialise a binary box constructor. """
+        left, right = self.left.to_tree(), self.right.to_tree()
+        return dict(factory=factory_name(type(self)), left=left, right=right)
+
+    @classmethod
+    def from_tree(cls, tree: dict) -> BinaryBoxConstructor:
+        """ Decode a serialised binary box constructor. """
+        return cls(*map(from_tree, (tree['left'], tree['right'])))
 
 
 def factory(cls):

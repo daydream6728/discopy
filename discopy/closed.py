@@ -498,6 +498,9 @@ class Eval(Timed, biclosed.Eval, Box):
     "The evaluation of an exponential type."
     drawing_name = "__call__"
 
+    def __init__(self, x: Exp, left=None, time_step: int = 0):
+        super().__init__(x, left, time_step=time_step)
+
     def __getnewargs__(self):
         """ The arguments of the constructor, which a delay reads. """
         return self.x, self.left
@@ -506,6 +509,9 @@ class Eval(Timed, biclosed.Eval, Box):
 class Coeval(Timed, biclosed.Coeval, Box):
     "The coevaluation of an exponential type, i.e. the dagger of an Eval."
     __getnewargs__ = Eval.__getnewargs__
+
+    def __init__(self, x: Exp, left=None, time_step: int = 0):
+        super().__init__(x, left, time_step=time_step)
 
 
 class Curry(Timed, biclosed.Curry, Box):

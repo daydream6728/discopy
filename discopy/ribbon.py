@@ -84,6 +84,7 @@ cap becomes a ribbon folding back.
 from discopy import rigid, pivotal, balanced, feedback
 from discopy.abc import RibbonCategory
 from discopy.cat import factory
+from discopy.utils import frozen, setattrs
 from discopy.pivotal import (  # noqa: F401  pylint: disable=unused-import
     Ty, Nat)
 
@@ -247,6 +248,7 @@ class DualRailTwist(balanced.DualRailTwist, Box):
         return self
 
 
+@frozen
 class DualRailCup(Box):
     """
     A cup joining two ribbons in the dual rail encoding, drawn as a single
@@ -258,8 +260,11 @@ class DualRailCup(Box):
     """
     z = 0
 
+    left: Ty
+    right: Ty
+
     def __init__(self, left, right, is_dagger=False):
-        self.left, self.right = left, right
+        setattrs(self, left=left, right=right)
         name = type(self).__name__ + f"({left}, {right})"
         Box.__init__(
             self, name, left @ right, type(left)(),
@@ -273,6 +278,7 @@ class DualRailCup(Box):
         return DualRailCap(self.left, self.right, not self.is_dagger)
 
 
+@frozen
 class DualRailCap(Box):
     """
     A cap joining two ribbons in the dual rail encoding, see
@@ -280,8 +286,11 @@ class DualRailCap(Box):
     """
     z = 0
 
+    left: Ty
+    right: Ty
+
     def __init__(self, left, right, is_dagger=False):
-        self.left, self.right = left, right
+        setattrs(self, left=left, right=right)
         name = type(self).__name__ + f"({left}, {right})"
         Box.__init__(
             self, name, type(left)(), left @ right,

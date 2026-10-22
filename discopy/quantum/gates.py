@@ -594,6 +594,7 @@ class Bra(SelfConjugate, QuantumGate):
             Bra(b, time_step=self.time_step) for b in self.bitstring])
 
 
+@frozen
 class Controlled(QuantumGate):
     """
     Abstract class for controled quantum gates.
@@ -617,11 +618,14 @@ class Controlled(QuantumGate):
     """
     draw_as_controlled = True
 
+    controlled: QuantumGate
+    distance: int = 1
+
     def __init__(self, controlled, distance=1):
         assert_isinstance(controlled, QuantumGate)
         if not distance:
             raise ValueError(messages.ZERO_DISTANCE_CONTROLLED)
-        self.controlled, self.distance = controlled, distance
+        setattrs(self, controlled=controlled, distance=distance)
         n_qubits = len(controlled.dom) + abs(distance)
         name = f'C{controlled.reset()}'
         time_step = controlled.time_step

@@ -855,6 +855,7 @@ class Trace(Feedback):
         return self.ar.to_drawing(self)
 
 
+@frozen
 class Head(monoidal.Bubble, Box):
     """
     The head of a feedback diagram, interpreted as the first element followed
@@ -865,6 +866,9 @@ class Head(monoidal.Bubble, Box):
         time_step : The number of times the head has been delayed.
     """
     part = "head"
+    __match_args__ = ("arg", "time_step")
+
+    arg: Diagram
 
     def __init__(self, arg: Diagram, time_step=0):
         dom, cod = (
@@ -878,6 +882,7 @@ class Head(monoidal.Bubble, Box):
     __str__ = Box.__str__
 
 
+@frozen
 class Tail(monoidal.Bubble, Box):
     """
     The tail of a feedback diagram, interpreted as the stream starting from the
@@ -888,6 +893,9 @@ class Tail(monoidal.Bubble, Box):
         time_step : The number of times the tail has been delayed.
     """
     part = "tail"
+    __match_args__ = Head.__match_args__
+
+    arg: Diagram
 
     __init__ = Head.__init__
     delay, reset, __repr__ = HeadOb.delay, HeadOb.reset, HeadOb.__repr__
@@ -895,6 +903,7 @@ class Tail(monoidal.Bubble, Box):
     __str__ = Box.__str__
 
 
+@frozen
 class FollowedBy(Box):
     """
     The isomorphism between `x.head @ x.tail.delay()` and `x`.
@@ -922,8 +931,12 @@ class FollowedBy(Box):
     >>> eq_up_to_F = lambda f, g: F(f).unroll(2).now == F(g).unroll(2).now
     >>> assert eq_up_to_F(FollowedBy(x), Id(x))
     """
+    __match_args__ = ("arg", "is_dagger", "time_step")
+
+    arg: Ty
+
     def __init__(self, arg: Ty, is_dagger=False, time_step=0):
-        self.arg = arg
+        setattrs(self, arg=arg)
         dagger_name = ", is_dagger=True" if is_dagger else ""
         name = f"FollowedBy({arg}{dagger_name})"
         dom, cod = arg.head @ arg.tail.delay(), arg
