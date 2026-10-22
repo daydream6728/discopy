@@ -24,4 +24,7 @@ exactly one pushout complement per match: `monoidal.Match`, the diagram with a h
 - [x] planar-only tests: genus zero but not progressive (`cap >> swap >> cup` read as a monoidal
   map); caps that look nested in the spiral but can be pulled side by side, and those that cannot
 - [x] docs, bibliography (Bertolazzi et al.), `CHANGELOG.md`
-- [WIP] @session_013PzWbScb5vkcym2x9JkEda-2026-10-22 18:40 `pflake8`, `pylint` (raise `fail-under` if it rises), `coverage run -m pytest`
+- [x] `pflake8`, `pylint` (`fail-under` 8.85 → 9.02: main 9.01, this branch 9.028 raw),
+  `coverage run -m pytest` (1,576 passed, 119 skipped without the extras; every new line covered)
+- [ ] USER's read of the scope: a host must be connected, since a map does not say in which face a
+  component touching nothing else lies; maps that record faces are a follow-up

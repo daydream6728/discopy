@@ -1152,6 +1152,7 @@ def test_spiral_unwinds():
                 assert steps[-1] == Id().to_map()
                 assert all(len(step.connected_components) <= 1
                            for step in steps)
+    assert spiral(3).to_map().normal_form(*spiral_rules()) == Id().to_map()
 
 
 def test_a_match_does_not_cross_wires():
@@ -1178,3 +1179,5 @@ def test_match_needs_a_connected_map():
         next((f @ s).to_map().match(f.to_map()))
     with raises(AxiomError):
         next(f.to_map().rewrite((f.to_map(), s.to_map())))
+    with raises(AxiomError):
+        compact.CMap.cups(compact.Ty('x'), compact.Ty('x').r).wiring()
