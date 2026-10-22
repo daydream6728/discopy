@@ -160,7 +160,10 @@ class Diagram(braided.Diagram, feedback.Diagram, BalancedCategory):
 
     def to_braided(self, width: float = None, colour="gray"):
         """
-        Doubles every object and sends the twist to the braid.
+        The dual rail encoding of a diagram, see :class:`DualRail`: it doubles
+        every object and sends the twist to its two rails crossing twice. It
+        lands in balanced diagrams, so that a trace stays a trace, but with no
+        :class:`Twist` left, i.e. it is a :class:`discopy.braided.Diagram`.
 
         Parameters:
             width : The width of a ribbon, i.e. the gap between the two wires
@@ -206,7 +209,7 @@ class Braid(braided.Braid, Box):
     """
 
 
-class DualRailBraid(braided.Box):
+class DualRailBraid(Box):
     """
     The crossing of two ribbons in the dual rail encoding of a swap.
 
@@ -222,7 +225,7 @@ class DualRailBraid(braided.Box):
     def __init__(self, left: monoidal.Ty, right: monoidal.Ty, is_dagger=False):
         self.left, self.right = left, right
         name = type(self).__name__ + f"({left}, {right})"
-        braided.Box.__init__(
+        Box.__init__(
             self, name, left @ right, right @ left,
             is_dagger=is_dagger, draw_as_dual_rail_braid=True)
 
@@ -235,7 +238,7 @@ class DualRailBraid(braided.Box):
         return type(self)(self.right, self.left, not self.is_dagger)
 
 
-class DualRailTwist(braided.Box):
+class DualRailTwist(Box):
     """
     The twist of a ribbon in the dual rail encoding, i.e. its two rails
     crossing each other twice. It is only used by :meth:`Diagram.to_braided`.
@@ -246,7 +249,7 @@ class DualRailTwist(braided.Box):
     """
     def __init__(self, dom: monoidal.Ty, is_dagger=False):
         name = type(self).__name__ + f"({dom})"
-        braided.Box.__init__(
+        Box.__init__(
             self, name, dom, dom,
             is_dagger=is_dagger, draw_as_dual_rail_twist=True)
 
@@ -342,10 +345,12 @@ class Functor(braided.Functor, feedback.Functor):
 
 class DualRail(Functor):
     """
-    The functor sending a balanced diagram to its dual rail encoding in
-    :class:`discopy.braided.Diagram`, i.e. doubling every object into the two
-    rails of a ribbon and sending every :class:`Twist` and :class:`Braid` to
-    a single box crossing the two ribbons of a wire as a whole.
+    The functor sending a balanced diagram to its dual rail encoding, i.e.
+    doubling every object into the two rails of a ribbon, every generator into
+    a box on the rails of its ribbons and every :class:`Twist` and
+    :class:`Braid` into a single box crossing the two ribbons of a wire as a
+    whole. The image is a balanced :class:`Diagram` without any
+    :class:`Twist`, so that traces are kept as traces of the doubled wires.
 
     Parameters:
         width : The gap between the two rails of each ribbon, defaults to the
@@ -357,7 +362,7 @@ class DualRail(Functor):
     --------
     :meth:`Diagram.to_braided`
     """
-    cod = braided.Diagram
+    cod = Diagram
     dual_rail_twist_factory = DualRailTwist
     dual_rail_braid_factory = DualRailBraid
 
@@ -367,7 +372,8 @@ class DualRail(Functor):
         self.colour = colour
         super().__init__(
             ob_map=lambda x: double_rail(x, self.width, self.colour),
-            ar_map=lambda f: f.name)
+            ar_map=lambda f: self.cod.box_factory(
+                f.name, self(f.dom), self(f.cod)))
 
     def __call__(self, other):
         if isinstance(other, Twist):
