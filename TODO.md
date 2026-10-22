@@ -7,7 +7,7 @@ Agent `levels`: `monoidal.py`, `rigid.py`, `traced.py`, `feedback.py`, `markov.p
 - [WIP] @levels-2026-10-22 15:53 B25: heterogeneous-memory `feedback` is broken; `feedback.Diagram.discard` is uninitialised
 - [x] B27: `Id(x).width` raises on an empty `max()`
 - [x] B34: `rigid.nesting` never checks the two types have equal length
-- [WIP] @levels-2026-10-22 15:53 B35: a failing `from_callable` leaks a monkey-patched `__call__`
+- [x] B35: a failing `from_callable` leaks a monkey-patched `__call__`
 - [WIP] @levels-2026-10-22 15:53 B39 (traced part) and #168: `traced.Trace` interpolates `str` instead of `repr` of its argument
 - [WIP] @levels-2026-10-22 15:53 B86: `FollowedBy.__repr__` lacks the module prefix
 - [WIP] @levels-2026-10-22 15:53 #168: `monoidal.Layer.__setstate__` restores the pre-normalisation cached `name`/`dom`/`cod`

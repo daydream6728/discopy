@@ -766,6 +766,11 @@ def test_Diagram_from_callable():
         @Diagram.from_callable(x, y)
         def diagram(wire):
             return f(x)
+    with raises(RuntimeError):
+        @Diagram.from_callable(x, y)
+        def diagram(wire):
+            raise RuntimeError
+    assert "__call__" not in vars(Diagram)
 
 
 def test_List():
