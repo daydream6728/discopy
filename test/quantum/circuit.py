@@ -526,7 +526,7 @@ def test_pennylane_circuit_draw(capsys):
 
 
 def test_pennylane_ops():
-    ops = [X, Y, Z, S, T, H, CX, CZ]
+    ops = [X, Y, Z, S, T, S.dagger(), T.dagger(), H, CX, CZ]
 
     for op in ops:
         disco = (Id().tensor(*([Ket(0)] * len(op.dom))) >> op).eval().array
@@ -544,6 +544,12 @@ def test_pennylane_parameterized_ops():
         plane = p_op.to_pennylane().eval().numpy()
 
         assert np.allclose(disco, plane, atol=10e-5)
+
+
+def test_pennylane_complex_scalar_probabilities():
+    circuit = scalar(1j) @ Ket(0) >> H
+    plane = circuit.to_pennylane(probabilities=True).eval().numpy()
+    assert np.allclose(plane, (circuit >> Measure()).eval().array)
 
 
 @pytest.fixture
