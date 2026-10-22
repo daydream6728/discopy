@@ -178,7 +178,8 @@ class Wire(cat.Ob):
     def from_tree(cls, tree):
         dom = from_tree(tree['dom']) if 'dom' in tree else transparent
         cod = from_tree(tree['cod']) if 'cod' in tree else transparent
-        return cls(tree['name'], dom, cod, is_dagger='is_dagger' in tree)
+        return cls(tree['name'], dom, cod,
+                   is_dagger=tree.get('is_dagger', False))
 
 
 class List(Monoid, NamedGeneric['generator_factory']):
