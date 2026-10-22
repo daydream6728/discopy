@@ -8,4 +8,4 @@ https://github.com/rel-int/discopy-next/issues/31#issuecomment-6350437415
 - [x] B47, frobenius: a cup or cap on a self-dual object is `Tensor.spiders`, flat, on both paths
 - [x] B47, rotated boxes: where `x.r == x`, `F(g.r)` is `F(g)` bent by the spider cups, so that `F(g.r) == F(g.transpose())`, same for `.l`
 - [x] Regression tests per level (rigid, pivotal, compact, frobenius) and for B8
-- [ ] `CHANGELOG.md`
+- [x] `CHANGELOG.md`

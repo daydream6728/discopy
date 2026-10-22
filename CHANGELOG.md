@@ -1678,6 +1678,22 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   diagram does not have. That depth comes after every such state, as for
   the spider boxes of `make_bijective`; no drawing moves
   ([rel-int/discopy-next#108](https://github.com/rel-int/discopy-next/issues/108)).
+- A tensor functor bends a wire the same way alone and in a diagram when
+  the image of its object has several factors. A cup or a cap between two
+  distinct adjoints, as in `compact` and `pregroup`, pairs the factors
+  nested in the `CMap` contraction, as `Tensor.cups` does and the cup
+  boxes of `rigid` and `pivotal` already did, where the contraction read
+  the whole wire as one flat index. A cup or a cap on a self-dual object,
+  as in `frobenius`, is the spider with two legs on its image alone too,
+  where it was `Tensor.cups`, so that `F(Cup(n, n)) == F(Spider(2, 0, n))`,
+  and a box rotated there is its box bent by those spiders, `F(g.r) ==
+  F(g.transpose())`, where it was the nested transpose `F(g).r`, ill-typed
+  on `Dim(2, 3)`. So `F(Cup(n, n.r)) == F(Id(n @ n.r) >> Cup(n, n.r))` and
+  `F(g.r) == F(Id(g.r.dom) >> g.r)` at every level, and the README's
+  pregroup sentence with `n` sent to `Dim(2, 2)` evaluates as a diagram to
+  what its boxes compose to. `Tensor.cup_factory` on a compound dimension
+  is `Tensor.cups`, where it reshaped the identity, the flat pairing
+  ([rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
 - `Tensor.trace` is the trace of the compact structure, the contraction of
   each of the last `n` factors of the domain with the matching factor of
   the codomain, or of the first `n` with `left=True`, in one `einsum`, and
