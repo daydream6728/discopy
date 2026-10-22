@@ -2354,6 +2354,29 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - Tensor networks are contracted with `opt_einsum` when the number of
   indices exceeds `numpy.einsum`'s 52-index limit
   ([#448](https://github.com/discopy/discopy/pull/448)).
+- `Circuit.to_tk` permutes the bits and the qubits of a permutation over
+  both, such as `Swap(bit, bit) @ qubit`, which it dropped, and a discarded
+  bit gets a `Discard` in the post-processing, so `eval(backend=...)` has
+  the codomain of the circuit. It also exports `CY`, `CCX`, `U1`, `CU1` and
+  a controlled `Ry`, reading every controlled gate from its controls and
+  their distances, and raises `NotImplementedError` on one tket does not
+  name; `Circuit.from_tk` reads back every parametrised gate
+  ([rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
+- `Circuit.to_tn` contracts a discarded bit and a measurement that keeps its
+  qubits or overrides its bits, and `Circuit.measure` measures a circuit
+  with bits as a channel; `Discard`, `MixedState`, `Measure` and `Encode`
+  decompose with the types and the order of their wires
+  ([rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
+- The PennyLane interface takes the adjoint of `S` and `T` with
+  `qml.adjoint`, as `Operation.inv()` was removed in PennyLane 0.32, and
+  scales probabilities by the squared modulus of the circuit's scalar
+  ([rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
+- `Channel.then` checks the classical and quantum types it composes, not
+  only their underlying `Dim`: `Channel.id(Q(Dim(2)))` no longer composes
+  with `Channel.id(C(Dim(2, 2)))`. `Measure`, `Encode`, `Discard`,
+  `MixedState`, `quantum.zx.Swap` and `CQ` have a `repr` that evaluates
+  back to them ([rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31),
+  [rel-int/discopy-next#168](https://github.com/rel-int/discopy-next/issues/168)).
 - Contracting a tensor network with more than `config.MAX_EINSUM_INDICES`
   indices imports `opt_einsum`, which is not a declared dependency; a plain
   install now raises a clear `ImportError` naming the package to install
