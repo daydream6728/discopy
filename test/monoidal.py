@@ -244,9 +244,11 @@ def test_Layer_legacy_serialisation():
 
     legacy = Layer(f)
     legacy.boxes_or_types = (Ty(), f, Ty())
+    assert legacy.name == "Ty() @ f @ Ty()"
     restored = pickle.loads(pickle.dumps(legacy))
     assert restored == Layer(f)
     assert restored.boxes_or_types == (f, )
+    assert restored.name == Layer(f).name == "f"
 
 
 def test_Layer_coloured_units():

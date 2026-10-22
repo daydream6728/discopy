@@ -10,6 +10,6 @@ Agent `levels`: `monoidal.py`, `rigid.py`, `traced.py`, `feedback.py`, `markov.p
 - [x] B35: a failing `from_callable` leaks a monkey-patched `__call__`
 - [WIP] @levels-2026-10-22 15:53 B39 (traced part) and #168: `traced.Trace` interpolates `str` instead of `repr` of its argument
 - [WIP] @levels-2026-10-22 15:53 B86: `FollowedBy.__repr__` lacks the module prefix
-- [WIP] @levels-2026-10-22 15:53 #168: `monoidal.Layer.__setstate__` restores the pre-normalisation cached `name`/`dom`/`cod`
+- [x] #168: `monoidal.Layer.__setstate__` restores the pre-normalisation cached `name`/`dom`/`cod`
 - [WIP] @levels-2026-10-22 15:53 B88: `feedback.Copy`/`Merge`/`Permutation.delay` leave `time_step` at 0
 - [WIP] @levels-2026-10-22 15:53 B88: `markov.Diagram.discard(x, n)` ignores `n`

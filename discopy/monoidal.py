@@ -741,6 +741,9 @@ class Layer(cat.Box, ColouredMonoid):
         state['boxes_or_types'] = type(self).normalise(
             state['boxes_or_types'])
         super().__setstate__(state)
+        for key in [key for key in vars(self) if isinstance(
+                getattr(type(self), key, None), cached_property)]:
+            delattr(self, key)
 
     def __init__(self, *inside: Ty | Box, normalise: bool = True):
         if normalise:

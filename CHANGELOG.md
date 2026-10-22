@@ -1971,11 +1971,17 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `cups(n, Ty())` raised `IndexError`: `rigid.nesting` never compared the
   lengths
   ([rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
-- `Diagram.from_callable` takes its boxes back from the diagram class when
-  the function it reads raises, where the `__call__` it set on the class
-  for the boxes to record their inputs stayed there, so that every box of
-  that level was callable from then on
+- `Diagram.from_callable` removes the `__call__` it sets on the diagram
+  class for its boxes to record their inputs even when the function it
+  reads raises, where it stayed there, so that every box of that level was
+  callable from then on
   ([rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
+- An unpickled `monoidal.Layer` recomputes its `name`, `dom` and `cod`
+  from the boxes and types it normalises, where it restored the values
+  cached before normalisation, so that a layer pickled with empty plumbing
+  came back named `Ty() @ f @ Ty()`, and one from a 0.6 or 1.2 pickle
+  named `Layer`
+  ([rel-int/discopy-next#168](https://github.com/rel-int/discopy-next/issues/168)).
 - `interaction.Diagram.trace` traces an integer diagram, where it raised
   `TypeError` on every input: it was borrowed from `traced.Diagram` through
   a `trace_factory` slicing the type, and an integer type is a pair of
