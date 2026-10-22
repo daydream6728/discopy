@@ -646,9 +646,11 @@ def test_Functor_maps_a_layer_of_permutations_as_the_fold():
     x, y, z = map(symmetric.Ty, "xyz")
     f, g = symmetric.Box('f', x, x), symmetric.Box('g', z, z)
     F = symmetric.Functor(
-        {x: y @ z, z: z @ y},
-        {f: symmetric.Swap(y, z), g: symmetric.Swap(z, y)})
-    swaps = symmetric.Permutation(y @ z @ y @ z @ z @ y, [0, 1, 3, 2, 5, 4])
+        {x: y @ y, z: z @ z},
+        {f: symmetric.Swap(y, y), g: symmetric.Swap(z, z)})
+    assert all(F(box).dom == F(box.dom) and F(box).cod == F(box.cod)
+               for box in (f, g))
+    swaps = symmetric.Permutation(y @ y @ y @ y @ z @ z, [0, 1, 3, 2, 5, 4])
     assert F(symmetric.Layer(x, f, g)) == swaps
     assert F((x @ f @ g).foliation()) == swaps
 

@@ -10,5 +10,5 @@ https://github.com/rel-int/discopy-next/pull/303#discussion_r4353227755
 
 https://github.com/rel-int/discopy-next/pull/303#discussion_r4353227769
 
-- [ ] P2: `test_Functor_maps_a_layer_of_permutations_as_the_fold` uses a well-typed functor (`f` was ill-typed too), still failing on the prototype
+- [x] P2: `test_Functor_maps_a_layer_of_permutations_as_the_fold` uses a well-typed functor (`f` was ill-typed too), still failing on the prototype
 - [ ] P3: no speed-up is claimed for `additive.Channel`, the decorator only stops the n-ary call raising: say so on the thread, make the CHANGELOG say it
