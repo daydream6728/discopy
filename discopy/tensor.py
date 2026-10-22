@@ -44,10 +44,10 @@ indices. Swaps, cups and caps become wiring while spiders stay as boxes.
 from __future__ import annotations
 
 from itertools import count
-from typing import TYPE_CHECKING, Callable, Self, Sequence, ClassVar
+from typing import TYPE_CHECKING, Callable, Sequence, ClassVar
 
 from discopy import (
-    cat, monoidal, rigid, frobenius, cmap, config)
+    cat, monoidal, rigid, frobenius, cmap, config, messages)
 from discopy.cat import factory, assert_iscomposable
 from discopy.frobenius import Dim, Cup
 from discopy.matrix import (  # noqa: F401  pylint: disable=unused-import
@@ -56,7 +56,8 @@ from discopy.matrix import (  # noqa: F401  pylint: disable=unused-import
 from discopy.axioms import TestableGeneric, no_strategy
 from discopy.python import finset
 from discopy.utils import (
-    factory_name, assert_isinstance, product, assert_isatomic)
+    factory_name, assert_isinstance, product, assert_isatomic,
+    assert_istraceable)
 
 if TYPE_CHECKING:
     import sympy
@@ -183,22 +184,36 @@ class Tensor(Matrix):
                 else self.array * other.array
         return self.promote(other)(array, self.dom, other.cod)
 
-    def tensor(self, other: Tensor | None = None, *others: Tensor) -> Self:
-        if other is None or others:
-            return Diagram.tensor(self, other, *others)
-        assert_isinstance(other, self.ar)
-        dom, cod = self.dom @ other.dom, self.cod @ other.cod
-        source = range(len(dom @ cod))
-        target = [
-            i if i < len(self.dom) or i >= len(self.dom @ other.dom @ self.cod)
-            else i - len(self.cod) if i >= len(self.dom @ self.cod)
-            else i + len(other.dom) for i in source]
+    def tensor(self, *others: Tensor) -> Tensor:
+        """
+        The tensor of ``n`` tensors, i.e. their outer product with the axes
+        of every domain moved in front of those of every codomain.
+
+        >>> v = Tensor([1, 0], Dim(1), Dim(2))
+        >>> assert v.tensor(v, v) == v @ v @ v
+        """
+        if not others:
+            return self
+        factors = (self, ) + others
+        for other in others:
+            assert_isinstance(other, self.ar)
+        dom = self.dom.tensor(*(other.dom for other in others))
+        cod = self.cod.tensor(*(other.cod for other in others))
+        target, i, j = [], 0, len(dom)
+        for factor in factors:
+            target += list(range(i, i + len(factor.dom)))
+            target += list(range(j, j + len(factor.cod)))
+            i, j = i + len(factor.dom), j + len(factor.cod)
+        source = list(range(len(target)))
         with backend() as np:
-            array = np.tensordot(self.array, other.array, 0)\
-                if self.array.shape and other.array.shape\
-                else self.array * other.array
-            array = np.moveaxis(array, source, target)
-        return self.promote(other)(array, dom, cod)
+            array = self.array
+            for other in others:
+                array = np.tensordot(array, other.array, 0)\
+                    if array.shape and other.array.shape\
+                    else array * other.array
+            if source:
+                array = np.moveaxis(array, source, target)
+        return self.promote(*others)(array, dom, cod)
 
     def dagger(self) -> Tensor:
         source = list(range(len(self.dom @ self.cod)))
@@ -207,6 +222,58 @@ class Tensor(Matrix):
         with backend() as np:
             array = np.conj(np.moveaxis(self.array, source, target))
         return type(self)(array, self.cod, self.dom)
+
+    def trace(self, n=1, left=False) -> Tensor:
+        """
+        The trace of a tensor over its last ``n`` factors, i.e. the
+        contraction of each of the last ``n`` axes of its domain with the
+        matching axis of its codomain.
+
+        Parameters:
+            n : The number of factors to trace.
+            left : Whether to trace the first ``n`` factors instead.
+
+        Example
+        -------
+        >>> assert Tensor.swap(Dim(2), Dim(2)).trace() == Tensor.id(Dim(2))
+        >>> f = Tensor[int](list(range(16)), Dim(2, 2), Dim(2, 2))
+        >>> assert f.trace() == Tensor[int]([5, 9, 21, 25], Dim(2), Dim(2))
+        >>> assert f.trace(left=True)\\
+        ...     == Tensor[int]([10, 12, 18, 20], Dim(2), Dim(2))
+        """
+        assert_istraceable(self, n, left)
+        a, b = len(self.dom), len(self.cod)
+        dom_rest, cod_rest = (
+            (slice(n, None), slice(n, None)) if left
+            else (slice(0, a - n), slice(0, b - n)))
+        dom_traced, cod_traced = (
+            (range(n), range(a, a + n)) if left
+            else (range(a - n, a), range(a + b - n, a + b)))
+        labels = list(range(a + b))
+        for i, j in zip(dom_traced, cod_traced):
+            labels[j] = labels[i]
+        output = labels[:a][dom_rest] + labels[a:][cod_rest]
+        with backend() as np:
+            array = np.einsum(self.array, labels, output)
+        dom, cod = self.dom[dom_rest], self.cod[cod_rest]
+        return type(self)(array, dom, cod)
+
+    def repeat(self) -> Tensor:
+        """
+        The reflexive transitive closure of a Boolean tensor, i.e. of the
+        square matrix it reshapes to, with :meth:`Matrix.repeat`.
+
+        Example
+        -------
+        >>> swap = Tensor[bool].swap(Dim(2), Dim(2))
+        >>> assert swap.repeat() == swap + Tensor[bool].id(Dim(2, 2))
+        """
+        if self.dtype != bool or self.dom != self.cod:
+            raise TypeError(messages.MATRIX_REPEAT_ERROR)
+        size = product(self.dom.inside)
+        array = Matrix[bool](self.array.reshape(size, size), size, size)\
+            .repeat().array
+        return type(self)(array, self.dom, self.cod)
 
     @classmethod
     def cup_factory(cls, left: Dim, right: Dim) -> Tensor:
@@ -262,7 +329,8 @@ class Tensor(Matrix):
         with backend('numpy'):
             result = cls.zero(dom, cod)
             for i in range(n):
-                result.array[len(dom @ cod) * (i, )] = 1
+                index = len(dom @ cod) * (i, )
+                result.array[index] = result.array[index] + 1
         if isinstance(get_backend(), NumPy):
             return result
         with backend() as np:
@@ -327,8 +395,7 @@ class Tensor(Matrix):
         """
         if not diagrammatic:
             with backend() as np:
-                return Tensor[self.dtype](
-                    np.conj(self.array), self.dom, self.cod)
+                return type(self)(np.conj(self.array), self.dom, self.cod)
         # reverse the wires for both inputs and outputs
         source = list(range(len(self.dom @ self.cod)))
         target = [
@@ -440,6 +507,7 @@ class Functor(frobenius.Functor):
         super().__init__(ob_map, ar_map, dom=dom or type(self).dom, cod=cod)
 
     def __repr__(self):
+        dtype = None if self.dtype is None else self.dtype.__name__
         optimize = "" if self.optimize == "greedy"\
             else f", optimize={self.optimize!r}"
         params = "".join(
@@ -447,7 +515,7 @@ class Functor(frobenius.Functor):
         return factory_name(type(self))\
             + f"(ob_map={self.ob_map}, ar_map={self.ar_map}, "\
             + f"dom={factory_name(self.dom)}, "\
-            + f"dtype={self.dtype.__name__}{optimize}{params})"
+            + f"dtype={dtype}{optimize}{params})"
 
     def __call__(self, other):
         if isinstance(other, Dim):
@@ -706,8 +774,7 @@ class Diagram[dtype](TestableGeneric, frobenius.Diagram):
                     continue
                 else:
                     node = tn.CopyNode(
-                        sum(dims), outputs[offset].dimension,  # ty: ignore
-                        dtype=dtype)  # ty: ignore[invalid-argument-type]
+                        sum(dims), box.typ.inside[0], dtype=dtype)
             else:
                 array = box.eval(dtype=dtype).array
                 node = tn.Node(array, str(box))
@@ -721,6 +788,8 @@ class Diagram[dtype](TestableGeneric, frobenius.Diagram):
         """ Gradient with respect to :code:`var`. """
         if var not in self.free_symbols:
             return self.sum_factory((), self.dom, self.cod)
+        if len(self.inside[0].boxes) > 1:
+            return (self[:1].to_staircases() >> self[1:]).grad(var, **params)
         left, box, right = self.inside[0].boxes_and_types
         tail = self[1:]
         t1 = self.id(left) @ box.grad(var, **params) @ self.id(right) >> tail
@@ -829,7 +898,8 @@ class Box[dtype](frobenius.Box, Diagram[dtype]):
         """ Compare boxes by turning their internal `data` into tuples. """
         data = () if self.data is None else\
             tuple(self.data) if isinstance(self.data, list) else (self.data, )
-        return (self.name, self.dom, self.cod, self.dtype) + data
+        return (self.name, self.dom, self.cod, self.dtype, self.is_dagger)\
+            + data
 
 
 class Cup(frobenius.Cup, Box):
@@ -963,6 +1033,17 @@ class Bubble(monoidal.Bubble, Box):
     def __init__(self, inside, func=lambda x: int(not x), **params):
         self.func = func
         super().__init__(inside, **params)
+
+    def subs(self, *args) -> Bubble:
+        return type(self)(
+            self.arg.subs(*args), func=self.func, dom=self.dom, cod=self.cod,
+            drawing_name=self.drawing_name)
+
+    def lambdify(self, *symbols, **kwargs):
+        inside = self.arg.lambdify(*symbols, **kwargs)
+        return lambda *xs: type(self)(
+            inside(*xs), func=self.func, dom=self.dom, cod=self.cod,
+            drawing_name=self.drawing_name)
 
     def grad(self, var, **params):
         """

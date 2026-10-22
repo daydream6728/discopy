@@ -154,7 +154,7 @@ from collections.abc import Callable
 from typing import Iterator, Self, ClassVar
 
 from discopy import cat, monoidal, biclosed, messages
-from discopy.abc import Pregroup, RigidCategory
+from discopy.abc import DaggerCategory, Pregroup, RigidCategory
 from discopy.axioms import GENERATORS
 from discopy.cat import factory
 from discopy.utils import (
@@ -280,11 +280,6 @@ class Ty(Pregroup, biclosed.Ty):
     """
     generator_factory = Wire
 
-    dagger_involution = Pregroup.dagger_involution.failing(
-        messages.RIGID_TYPE_HAS_NO_DAGGER)
-    dagger_contravariance = Pregroup.dagger_contravariance.failing(
-        messages.RIGID_TYPE_HAS_NO_DAGGER)
-
     def __setstate__(self, state):
         if '_z' in state:  # Backward compatibility
             del state['_z']
@@ -341,11 +336,12 @@ class Nat(monoidal.Nat, Ty):
     """
     l = r = property(lambda self: self)
 
-    dagger_involution = Pregroup.dagger_involution
-    dagger_contravariance = Pregroup.dagger_contravariance
-
     def unwind(self) -> "Nat":
-        """ The identity: a natural number has no winding. """
+        """
+        The identity: a natural number has no winding.
+
+        >>> assert Nat(1).unwind() == Nat(1)
+        """
         return self
 
 
@@ -663,11 +659,11 @@ class Diagram(biclosed.Diagram, RigidCategory):
 
     hypergraph_section = monoidal.Diagram.hypergraph_section.failing(
         messages.SECTION_NEEDS_SWAPS)
-    dagger_involution = RigidCategory.dagger_involution.failing(
+    dagger_involution = DaggerCategory.dagger_involution.failing(
         messages.RIGID_HAS_NO_DAGGER)
-    dagger_contravariance = RigidCategory.dagger_contravariance.failing(
+    dagger_contravariance = DaggerCategory.dagger_contravariance.failing(
         messages.RIGID_HAS_NO_DAGGER)
-    dagger_monoidality = RigidCategory.dagger_monoidality.failing(
+    dagger_monoidality = DaggerCategory.dagger_monoidality.failing(
         messages.RIGID_HAS_NO_DAGGER)
 
     # The curry of a rigid diagram is made of caps, which a map and a
@@ -745,6 +741,44 @@ class Box(biclosed.Box, Diagram):
         z = self.z + (-1 if left else 1)
         return type(self)(self.name, dom=dom, cod=cod,
                           data=self.data, is_dagger=self.is_dagger, z=z)
+
+    @classmethod
+    def strategy(cls, **params):
+        """
+        Generate free boxes as :meth:`cat.Box.strategy` does, rotated up to
+        twice either way when their boundaries are free, so that the laws
+        of a rigid category see boxes with a winding number.
+        """
+        from hypothesis import strategies as st
+
+        boxes = super().strategy(**params)
+        if params.get("dom") is not None or params.get("cod") is not None:
+            return boxes
+
+        def rotate(box, z):
+            for _ in range(abs(z)):
+                box = box.rotate(left=z < 0)
+            return box
+        return st.builds(rotate, boxes, st.integers(-2, 2))
+
+    def to_tree(self) -> dict:
+        tree = super().to_tree()
+        if self.z:
+            tree['z'] = self.z
+        return tree
+
+    @classmethod
+    def from_tree(cls, tree: dict) -> Box:
+        """
+        Decode a serialised rigid box, with its winding number.
+
+        >>> from discopy.utils import dumps, loads
+        >>> f = Box('f', Ty('x'), Ty('y'))
+        >>> assert loads(dumps(f.r)) == f.r and loads(dumps(f.l.l)) == f.l.l
+        """
+        box = super().from_tree(tree)
+        box.z = tree.get('z', 0)
+        return box
 
     @property
     def is_transpose(self):
@@ -938,7 +972,8 @@ def nesting[T](cls: type[T], factory: Callable) -> Callable[[Ty, Ty], T]:
 def to_rigid(self):
     return biclosed.Functor(
         ob_map=lambda x: Ty(x.inside[0].name),
-        ar_map=lambda f: Box(f.name, to_rigid(f.dom), to_rigid(f.cod)),
+        ar_map=lambda f: Box(
+            f.name, to_rigid(f.dom), to_rigid(f.cod), data=f.data),
         cod=Diagram)(self)
 
 

@@ -28,8 +28,9 @@ def cells():
         yield pytest.param(rule, marks=marks, id=repr(rule))
 
 
+@pytest.mark.cell
 @pytest.mark.parametrize("rule", cells())
-def test_rule(rule):
+def test_rule(rule, drawn):
     """
     Apply a rule to the premises it draws for a goal, a broken one up to
     its first counterexample, and check its conclusion against the type its
@@ -49,6 +50,7 @@ def test_rule(rule):
         scope, premises = data.draw(
             rule.sequents(rule.given(dom, cod), **rule.params),
             label=rule.name)
+        drawn.add(repr(premises))
         conclusion = rule(**premises)
         note(conclusion)
         assert inhabits(conclusion, rule.output(scope))

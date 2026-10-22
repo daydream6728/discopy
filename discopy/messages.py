@@ -11,6 +11,10 @@ NOT_GLOBULAR = "Expected a globular box, got boundaries {} -> {} and {} -> {}."
 NOT_ATOMIC = "Expected {} of length 1, got length {} instead."
 NOT_CONNECTED = "{} is not boundary-connected."
 NOT_TRACEABLE = "Cannot trace {} with {}."
+PLANAR_YANKING = "A planar traced category has no braid to yank."
+FREE_YANKING = (
+    "A free trace is a bubble and a free twist a box: the free balanced "
+    "diagrams are not quotiented by the yanking axiom.")
 NOT_FEEDBACK = "Cannot feed {} back into {}, expected {} as its input."
 STREAM_SLIDING = (
     "A morphism slides along the feedback of streams only up to extensional "
@@ -50,6 +54,10 @@ COLOURED_QUOTIENT = (
     "ill-typed across 0-cells, so it would lose its colours.")
 NO_VALUES = "{} has no sample of values, see axioms.values."
 NO_DAGGER = "There is no dagger here, so the dagger laws do not apply."
+NO_TENSOR = "An arrow of a category has no tensor for its dagger to "\
+    "distribute over."
+GROUP_TENSOR = "The tensor of a group is its composition, which its dagger "\
+    "reverses rather than distributes over."
 SWAP_INVOLUTION = (
     "The inverse of a swap is the swap the other way, see swap_inverse.")
 LENS_TRACES_RIGHT = "A lens is traced on the right only."
@@ -108,17 +116,23 @@ MAP_OF_A_CURRY = (
     "whisker a scalar on the other side, while a hypergraph compares the "
     "inside of a bubble syntactically.")
 MAP_HAS_NO_SPIDERS = (
-    "A map has no spiders: it keeps a copy as a box where a hypergraph merges "
-    "its wires.")
+    "A map has no spiders: it keeps a copy or a merge as a box where a "
+    "hypergraph merges its wires.")
 MISSING_BOXES_AND_OFFSETS = (
     "Decoding needs either boxes and offsets, or the two of them zipped.")
 NO_TYPE_PARAMETER = (
     "{} has no type parameter to subscript, declare one as in class C[name].")
 NOT_LEFT_MONOGAMOUS = "{} is not left-monogamous."
+NOT_RIGHT_MONOGAMOUS = "{} is not right-monogamous."
 NOT_CAUSAL = "{} is not causal."
 WRONG_NUMBER_OF_WIRES = "Expected {} wires for {}, got {} instead."
 WRONG_NUMBER_OF_BOUNDARIES = \
     "Expected one boundary of wires for each of {} boxes, got {} instead."
-NO_SYNTAX = "Arrays are semantics, not syntax: there is no tree to serialise."
 TERM_IS_A_BOX = \
     "A term is a box: the laws and rules of its category are the diagram's."
+NOT_JSON_SERIALISABLE = "Object of type {} is not JSON serialisable."
+NO_SUCH_TYPE = "No type named {!r} in builtins or numpy, so the name of the "\
+               "class it parameterises cannot be resolved."
+
+NO_COMMON_BOUNDARY = "A bubble needs a {} given when its args do not "\
+    "all share one, they have [{}]."

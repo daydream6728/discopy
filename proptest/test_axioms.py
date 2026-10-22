@@ -28,8 +28,9 @@ def cells():
         yield pytest.param(law, marks=marks, id=repr(law))
 
 
+@pytest.mark.cell
 @pytest.mark.parametrize("law", cells())
-def test_axiom(law):
+def test_axiom(law, drawn):
     """
     Check a law against generated arguments, a broken one up to its first
     counterexample, which :meth:`discopy.axioms.Axiom.falsify` shrinks on
@@ -44,6 +45,7 @@ def test_axiom(law):
     def check(data):
         scope, arguments = data.draw(
             law.sequents(**law.params), label=law.name)
+        drawn.add(repr(arguments))
         verdict = law(**arguments)
         note(verdict)
         assert inhabits(verdict, law.output(scope))

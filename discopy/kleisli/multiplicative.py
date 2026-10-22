@@ -71,7 +71,6 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from discopy import messages
 from discopy.abc import Category
 from discopy.axioms import Equation, TestableGeneric
 from discopy.kleisli import channel
@@ -189,11 +188,6 @@ class Channel[monad](Category, TestableGeneric):
 
     ob = Ty
     monad: Monad
-
-    dagger_involution = Category.dagger_involution.inapplicable(
-        messages.NO_DAGGER)
-    dagger_contravariance = Category.dagger_contravariance.inapplicable(
-        messages.NO_DAGGER)
 
     @classmethod
     def equation_factory(cls, *terms: Channel) -> Equation:

@@ -100,8 +100,8 @@ from typing import ClassVar
 
 from discopy import monoidal, feedback, balanced, hypergraph, cmap, messages
 from discopy.abc import (
-    BalancedCategory, BiclosedCategory, CompactCategory, PivotalCategory,
-    RigidCategory, SymmetricCategory, TracedCategory)
+    BalancedCategory, BiclosedCategory, CompactCategory, DaggerCategory,
+    PivotalCategory, RigidCategory, SymmetricCategory, TracedCategory)
 from discopy.axioms import FUEL, Axiom, Rule
 from discopy.cat import factory
 from discopy.feedback import (  # noqa: F401  pylint: disable=unused-import
@@ -276,9 +276,9 @@ class Diagram(balanced.Diagram, SymmetricCategory):
     """
     # A hypergraph is faithful from symmetric categories on.
     bifunctoriality = SymmetricCategory.bifunctoriality
-    dagger_monoidality = SymmetricCategory.dagger_monoidality.failing(
+    dagger_monoidality = DaggerCategory.dagger_monoidality.failing(
         messages.FEEDBACK_HAS_NO_DAGGER)
-    dagger_monoidality_symmetric = SymmetricCategory.dagger_monoidality\
+    dagger_monoidality_symmetric = DaggerCategory.dagger_monoidality\
         .weaken(within=SymmetricCategory)
     braid_naturality = SymmetricCategory.braid_naturality
     braid_then_inverse = SymmetricCategory.braid_then_inverse
@@ -656,20 +656,38 @@ class Permutation(Box):
     def dagger(self) -> Permutation:
         return type(self)(self.cod, self.perm.dagger())
 
-    def tensor(self, other=None, *others):
-        if other is None:
-            return self
-        if isinstance(other, Permutation):
-            result = self.permutation_factory(
-                self.dom @ other.dom, self.perm.tensor(other.perm))
-        elif isinstance(other, monoidal.Ty)\
-                or isinstance(other, Diagram) and not other.inside:
-            typ = other if isinstance(other, monoidal.Ty) else other.dom
-            result = self.permutation_factory(self.dom @ typ, self.perm.tensor(
-                finset.Permutation.id(len(typ))))
-        else:
-            result = super().tensor(other)
-        return result.tensor(*others)
+    def tensor(self, *others):
+        """
+        Tensoring plumbing with plumbing gives one wider permutation: a run
+        of permutations and types coalesces into the permutation on the
+        disjoint union of their underlying :class:`.finset.Permutation`.
+
+        A generator interrupts the run, from which point the layers are
+        those of an ordinary :meth:`.monoidal.Diagram.tensor`.
+
+        >>> x = Ty('x')
+        >>> perm = Permutation(x @ x, [1, 0])
+        >>> assert perm.tensor(x, perm) == Permutation(
+        ...     x ** 5, [1, 0, 2, 4, 3])
+        """
+        perms, dom, plumbing = [self.perm], self.dom, 0
+        while plumbing < len(others) and (
+                isinstance(others[plumbing], (Permutation, monoidal.Ty))
+                or isinstance(others[plumbing], Diagram)
+                and not others[plumbing].inside):
+            other, plumbing = others[plumbing], plumbing + 1
+            if isinstance(other, Permutation):
+                perms.append(other.perm)
+                dom = dom @ other.dom
+            else:
+                typ = other if isinstance(other, monoidal.Ty) else other.dom
+                perms.append(finset.Permutation.id(len(typ)))
+                dom = dom @ typ
+        result = self if len(perms) == 1 else self.permutation_factory(
+            dom, perms[0].tensor(*perms[1:]))
+        rest = others[plumbing:]
+        return result if not rest\
+            else super(Permutation, result).tensor(*rest)
 
     def __rmatmul__(self, other):
         if not isinstance(other, monoidal.Ty):
@@ -800,3 +818,6 @@ class Equation(monoidal.Equation):
     >>> assert Equation(Swap(x, y) >> Swap(y, x), Id(x @ y))
     """
     up_to = staticmethod(Diagram.to_hypergraph)
+
+
+Diagram.yanking = BalancedCategory.yanking.modulo(Diagram.to_hypergraph)

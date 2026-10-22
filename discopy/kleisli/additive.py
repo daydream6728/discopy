@@ -279,12 +279,6 @@ class Channel[monad](TracedCategory, ComarkovCategory, TestableGeneric):
     ob = Ty
     monad: Monad
 
-    dagger_involution = TracedCategory.dagger_involution.inapplicable(
-        messages.NO_DAGGER)
-    dagger_contravariance = TracedCategory.dagger_contravariance\
-        .inapplicable(messages.NO_DAGGER)
-    dagger_monoidality = TracedCategory.dagger_monoidality.inapplicable(
-        messages.NO_DAGGER)
     trace_dinaturality_left = TracedCategory.trace_dinaturality_left\
         .inapplicable(messages.CHANNEL_TRACES_RIGHT)
     trace_iteration_left = TracedCategory.trace_iteration_left.inapplicable(

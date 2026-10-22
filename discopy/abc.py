@@ -7,19 +7,20 @@ the characteristic generator of its categorical structure as an
 :class:`MonoidalCategory` with an abstract :meth:`BraidedCategory.braid`.
 
 .. raw:: html
-    :file: api/architecture.html
+    :file: ../docs/api/architecture.html
 
 Software dependencies between modules go top-to-bottom, left-to-right and
 forgetful functors between categories go the other way.
 
-Each class also declares the :func:`discopy.axioms.axiom` equations of its
-structure, which every category below inherits, e.g. :class:`Category`
-states the unitality and associativity of composition, the typing of its
-identities and composites, and the involution and contravariance of its
-dagger, and :class:`BraidedCategory` the hexagons and the naturality of the
-braid. A law quantifies over the type parameters of its signature, objects
-of the category, and over morphisms between them, see
-:class:`discopy.axioms.Axiom`.
+Each class also declares its :func:`discopy.axioms.axiom` equations, which
+every free category inherits along with the structure they axiomatise:
+:class:`Category` states the unitality and associativity of composition
+and the typing of its identities and composites; a :class:`DaggerCategory`
+adds the involution and contravariance of its dagger; a
+:class:`ColouredMonoid` inherits the first two as the unitality and
+associativity of its product, its composition; a :class:`Groupoid` is a
+dagger category that adds the invertibility of its arrows, which its dagger
+inverts.
 
 Summary
 -------
@@ -30,8 +31,11 @@ Summary
     :toctree:
 
     Category
+    DaggerCategory
     ColouredMonoid
     Monoid
+    Groupoid
+    Group
     Nat
     MonoidalCategory
     PRO
@@ -54,11 +58,22 @@ Summary
     CompactCategory
     HypergraphCategory
     NamedGeneric
+
+.. admonition:: Functions
+
+    .. autosummary::
+        :template: function.rst
+        :nosignatures:
+        :toctree:
+
+        keyword_form
 """
 
 from abc import ABC, abstractmethod
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
+from functools import wraps
+from inspect import signature
 from types import NoneType
 from typing import TYPE_CHECKING, ClassVar
 
@@ -176,6 +191,36 @@ class Category[C0, C1: Category](Testable[C1], ABC):
         """ Associativity of composition. """
         return cls.equation_factory(f.then(g).then(h), f.then(g.then(h)))
 
+    __rshift__ = __llshift__ = lambda self, other: self.then(other)
+    __lshift__ = __lrshift__ = lambda self, other: other.then(self)
+
+    @rule
+    def ax[X: Obj[C0]](cls, x: Var[C0, X]) -> Hom[C1, X, X]:
+        """ The axiom rule: the identity on an object. """
+        return cls.id(x)
+
+    @rule
+    def cut[A: Obj[C0], B: Obj[C0], C: Obj[C0]](
+            cls, f: Hom[C1, A, B], g: Hom[C1, B, C]) -> Hom[C1, A, C]:
+        """ The cut rule: the composition of two morphisms. """
+        return f.then(g)
+
+
+class DaggerCategory[C0, C1: DaggerCategory](Category[C0, C1]):
+    """
+    A `dagger category <https://ncatlab.org/nlab/show/dagger+category>`_ is a
+    :class:`Category` with a method :code:`dagger` for the identity-on-objects
+    contravariant involution, i.e. such that
+    ``(f >> g).dagger() == g.dagger() >> f.dagger()``
+    and ``f.dagger().dagger() == f``.
+
+    Its two laws are stated here rather than on :class:`Category`, so that a
+    category with no dagger does not have to declare them inapplicable.
+    """
+    @abstractmethod
+    def dagger(self) -> C1:
+        """ The dagger of a morphism, to be instantiated. """
+
     @axiom
     def dagger_involution[A: Obj[C0], B: Obj[C0]](
             cls, f: Hom[C1, A, B]) -> Equation[Hom[C1, A, B]]:
@@ -190,19 +235,13 @@ class Category[C0, C1: Category](Testable[C1], ABC):
         return cls.equation_factory(
             f.then(g).dagger(), g.dagger().then(f.dagger()))
 
-    __rshift__ = __llshift__ = lambda self, other: self.then(other)
-    __lshift__ = __lrshift__ = lambda self, other: other.then(self)
-
-    @rule
-    def ax[X: Obj[C0]](cls, x: Var[C0, X]) -> Hom[C1, X, X]:
-        """ The axiom rule: the identity on an object. """
-        return cls.id(x)
-
-    @rule
-    def cut[A: Obj[C0], B: Obj[C0], C: Obj[C0]](
-            cls, f: Hom[C1, A, B], g: Hom[C1, B, C]) -> Hom[C1, A, C]:
-        """ The cut rule: the composition of two morphisms. """
-        return f.then(g)
+    @axiom
+    def dagger_monoidality[A: Obj[C0], B: Obj[C0], C: Obj[C0], D: Obj[C0]](
+            cls, f: Hom[C1, A, B], g: Hom[C1, C, D]
+    ) -> Equation[Hom[C1, Tensor[B, D], Tensor[A, C]]]:
+        """ The dagger distributes over the tensor, when there is one. """
+        return cls.equation_factory(
+            (f @ g).dagger(), f.dagger() @ g.dagger())
 
 
 class ColouredMonoid[C0, C1: ColouredMonoid](Category[C0, C1]):
@@ -296,6 +335,33 @@ class Monoid[C1: Monoid](ColouredMonoid[NoneType, C1]):
     dom = cod = None
 
 
+class Groupoid[C0, C1: Groupoid](DaggerCategory[C0, C1]):
+    """
+    A groupoid is a category in which every arrow is invertible, its inverse
+    being its dagger: a dagger category whose dagger is the inverse.
+    """
+    @abstractmethod
+    def dagger(self) -> C1:
+        """ The inverse of an arrow. """
+
+    @axiom
+    def invertibility[A: Obj[C0], B: Obj[C0]](
+            cls, f: Hom[C1, A, B]) -> Equation[tuple]:
+        """ An arrow followed or preceded by its dagger is an identity. """
+        return cls.equation_factory(
+            (f.then(f.dagger()), f.dagger().then(f)),
+            (cls.id(f.dom), cls.id(f.cod)))
+
+
+class Group[C1: Group](Groupoid[type(None), C1], Monoid[C1]):
+    """
+    A group is a monoid whose elements are invertible, i.e. a groupoid with
+    a single object :obj:`None`, which every element goes from and to.
+    """
+    dagger_monoidality = DaggerCategory.dagger_monoidality.inapplicable(
+        messages.GROUP_TENSOR)
+
+
 @dataclass
 class Nat(Monoid["Nat"]):
     """
@@ -379,7 +445,18 @@ class MonoidalCategory[C0: ColouredMonoid, C1: MonoidalCategory](
     both its objects and its morphisms.
 
     This base class also implements syntactic sugar :code:`@` for whiskering.
+
+    A ``trace`` defined in a subclass, in the positional form
+    ``trace(n, left)``, takes the keyword form ``trace(dom=, cod=, mem=)``
+    of :meth:`FeedbackCategory.feedback` too, through :func:`keyword_form`,
+    whether the subclass declares :class:`TracedCategory` or only has a
+    trace, as :class:`discopy.matrix.Matrix` and
+    :class:`discopy.hypergraph.Hypergraph` do.
     """
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        if "trace" in vars(cls):
+            cls.trace = keyword_form(vars(cls)["trace"])
 
     @classmethod
     @abstractmethod
@@ -427,20 +504,64 @@ class MonoidalCategory[C0: ColouredMonoid, C1: MonoidalCategory](
         """ Preservation of identities by tensor. """
         return cls.equation_factory(cls.id(x) @ cls.id(y), cls.id(x @ y))
 
-    @axiom
-    def dagger_monoidality[A: Obj[C0], B: Obj[C0], C: Obj[C0], D: Obj[C0]](
-            cls, f: Hom[C1, A, B], g: Hom[C1, C, D]
-    ) -> Equation[Hom[C1, Tensor[B, D], Tensor[A, C]]]:
-        """ The dagger distributes over the tensor. """
-        return cls.equation_factory(
-            (f @ g).dagger(), f.dagger() @ g.dagger())
-
     @rule
     def mix[A: Obj[C0], B: Obj[C0], C: Obj[C0], D: Obj[C0]](
             cls, f: Hom[C1, A, B], g: Hom[C1, C, D]
     ) -> Hom[C1, Tensor[A, C], Tensor[B, D]]:
         """ The mix rule: the tensor of two morphisms. """
         return f.tensor(g)
+
+    def split_memory(
+            self, n: int = None, left: bool = False, *,
+            dom: C0 = None, cod: C0 = None, mem: C0 = None
+            ) -> tuple[C0, C0, C0]:
+        """
+        The domain, codomain and memory of a feedback or a trace, read off
+        either form of :meth:`FeedbackCategory.feedback`: the memory is
+        ``mem``, or the objects of the codomain beside ``cod``, or the last
+        ``n`` objects of the codomain, the first when ``left``, one by
+        default; the domain and codomain default to what the memory leaves.
+        Each of them is cast into the type of the codomain, e.g. an integer
+        into the :class:`Nat` of a :class:`discopy.matrix.Matrix`.
+
+        Example
+        -------
+        >>> from discopy.feedback import Ty, Box
+        >>> x, y, m = map(Ty, "xym")
+        >>> f = Box('f', x @ m.delay(), y @ m)
+        >>> assert f.split_memory() == f.split_memory(mem=m) == (x, y, m)
+        >>> assert f.split_memory(cod=y) == f.split_memory(1) == (x, y, m)
+        """
+        if n is not None and (dom, cod, mem) != (None, None, None):
+            raise TypeError(messages.FEEDBACK_FORMS)
+        dom, cod, mem = (x if x is None else type(self.cod).cast(x)
+                         for x in (dom, cod, mem))
+        if mem is None:
+            size = len(self.cod) - len(cod) if cod is not None\
+                else 1 if n is None else n
+            if not 0 <= size <= len(self.cod):
+                raise ValueError(
+                    messages.NOT_SPLITTABLE.format(size, self.cod))
+            mem = self.cod[:size] if left\
+                else self.cod[len(self.cod) - size:]
+        size = len(mem)
+        if size > min(len(self.dom), len(self.cod)):
+            raise ValueError(messages.NOT_SPLITTABLE.format(size, self))
+        if dom is None:
+            dom = self.dom[size:] if left else self.dom[:len(self.dom) - size]
+        if cod is None:
+            cod = self.cod[size:] if left else self.cod[:len(self.cod) - size]
+        return dom, cod, mem
+
+    def memory_size(self, mem: C0) -> int:
+        """
+        The number of objects in a memory, as the positional form of
+        :meth:`FeedbackCategory.feedback` counts them, i.e. its length.
+
+        Parameters:
+            mem : The memory.
+        """
+        return len(mem)
 
 
 class PRO[C1: PRO](MonoidalCategory[Nat, C1]):
@@ -492,44 +613,6 @@ class FeedbackCategory[
             cod : The codomain of the feedback.
             mem : The memory to feed back.
         """
-
-    def split_memory(
-            self, n: int = None, left: bool = False, *,
-            dom: C0 = None, cod: C0 = None, mem: C0 = None
-            ) -> tuple[C0, C0, C0]:
-        """
-        The domain, codomain and memory of a feedback, read off either form
-        of :meth:`feedback`: the memory is ``mem``, or the objects of the
-        codomain beside ``cod``, or the last ``n`` objects of the codomain,
-        the first when ``left``, one by default; the domain and codomain
-        default to what the memory leaves.
-
-        Example
-        -------
-        >>> from discopy.feedback import Ty, Box
-        >>> x, y, m = map(Ty, "xym")
-        >>> f = Box('f', x @ m.delay(), y @ m)
-        >>> assert f.split_memory() == f.split_memory(mem=m) == (x, y, m)
-        >>> assert f.split_memory(cod=y) == f.split_memory(1) == (x, y, m)
-        """
-        if n is not None and (dom, cod, mem) != (None, None, None):
-            raise TypeError(messages.FEEDBACK_FORMS)
-        if mem is None:
-            size = len(self.cod) - len(cod) if cod is not None\
-                else 1 if n is None else n
-            if not 0 <= size <= len(self.cod):
-                raise ValueError(
-                    messages.NOT_SPLITTABLE.format(size, self.cod))
-            mem = self.cod[:size] if left\
-                else self.cod[len(self.cod) - size:]
-        size = len(mem)
-        if size > min(len(self.dom), len(self.cod)):
-            raise ValueError(messages.NOT_SPLITTABLE.format(size, self))
-        if dom is None:
-            dom = self.dom[size:] if left else self.dom[:len(self.dom) - size]
-        if cod is None:
-            cod = self.cod[size:] if left else self.cod[:len(self.cod) - size]
-        return dom, cod, mem
 
     @axiom
     def delay_unit[A: Obj[C0], B: Obj[C0]](
@@ -613,20 +696,72 @@ class FeedbackCategory[
         return f.feedback(mem=mem)
 
 
+def keyword_form(trace: Callable) -> Callable:
+    """
+    A method in the positional form ``(n, left)``, e.g. a trace, that takes
+    the keyword form ``dom``, ``cod``, ``mem`` of
+    :meth:`FeedbackCategory.feedback` as well, the two forms exclusive: the
+    memory is read off the boundary with
+    :meth:`MonoidalCategory.split_memory`, checked to be what the codomain
+    feeds back and passed on as its :meth:`MonoidalCategory.memory_size`.
+    The domain is checked on the result, since the boundary takes in the
+    delay of the memory when the trace is the
+    :meth:`TracedCategory.feedback` of a category that labels the two apart,
+    e.g. a :class:`discopy.drawing.Drawing`. A method that takes ``mem``
+    already is returned as it is, so that a class wraps the trace it defines
+    once, whichever trace that one calls.
+
+    Parameters:
+        trace : The method in its positional form.
+
+    Example
+    -------
+    >>> from discopy.matrix import Matrix
+    >>> f = Matrix[bool]([[1, 1], [0, 0]], 2, 2)
+    >>> assert f.trace(mem=1) == f.trace() != f.trace(mem=1, left=True)
+    >>> assert keyword_form(Matrix.trace) is Matrix.trace
+    """
+    if "mem" in signature(trace).parameters:
+        return trace
+
+    @wraps(trace)
+    def method(self, n: int = None, left: bool = False, *,
+               dom=None, cod=None, mem=None):
+        if (dom, cod, mem) == (None, None, None):
+            return trace(self, left=left) if n is None\
+                else trace(self, n, left)
+        dom, cod, mem = self.split_memory(
+            n, left, dom=dom, cod=cod, mem=mem)
+        if self.cod != (mem @ cod if left else cod @ mem):
+            raise AxiomError(messages.NOT_TRACEABLE.format(self, mem))
+        result = trace(self, self.memory_size(mem), left)
+        if result.dom != dom:
+            raise AxiomError(messages.NOT_TRACEABLE.format(self, mem))
+        return result
+    method.__signature__ = signature(method, follow_wrapped=False)
+    return method
+
+
 class TracedCategory[
         C0: ColouredMonoid, C1: TracedCategory](FeedbackCategory[C0, C1]):
     """
-    A traced category is a :class:`FeedbackCategory` with a method
-    :code:`trace` for the partial trace of a morphism over some objects, i.e.
-    the feedback over a memory that is not delayed. When the delay is the
-    identity, the default, the two coincide: its :meth:`feedback` is its
-    trace. The free diagrams of :mod:`discopy.feedback` and the levels below
-    it have both, their wires carrying a time step.
+    A traced category is a feedback category with the identity as delay plus
+    the yanking axiom: its :meth:`feedback` is its :meth:`trace`, the partial
+    trace of a morphism over some objects, and the trace of the swap of an
+    object with itself is its identity, that of a braid its twist, see
+    :meth:`yanking`, :meth:`BalancedCategory.yanking` and
+    :cite:t:`JoyalEtAl96`. The free diagrams of :mod:`discopy.feedback` and the
+    levels below it, whose wires carry a time step, are traced on their
+    undelayed wires, the :class:`discopy.feedback.Trace` bubble being the
+    feedback over an undelayed memory.
     """
     @abstractmethod
     def trace(self, n: int = 1, left: bool = False) -> C1:
         """
-        The trace of a morphism, to be instantiated.
+        The trace of a morphism, to be instantiated in its positional form,
+        over the last ``n`` objects or the first when ``left``: it takes the
+        keyword form ``dom``, ``cod``, ``mem`` of :meth:`feedback` as well,
+        see :func:`keyword_form`.
 
         Tracing no object at all is the identity, i.e. the vanishing axiom
         ``f.trace(0) == f``, see `nLab
@@ -642,14 +777,22 @@ class TracedCategory[
             dom: C0 = None, cod: C0 = None, mem: C0 = None) -> C1:
         """
         The feedback of a traced category is its :meth:`trace` over the
-        memory, whose delay is itself.
+        memory, whose delay is itself, in either form.
         """
-        if n is None:
-            n = len(self.split_memory(
-                left=left, dom=dom, cod=cod, mem=mem)[2])
-        elif (dom, cod, mem) != (None, None, None):
-            raise TypeError(messages.FEEDBACK_FORMS)
-        return self.trace(n, left)
+        # pylint: disable-next=unexpected-keyword-arg  # see keyword_form
+        return self.trace(n, left, dom=dom, cod=cod, mem=mem)
+
+    @axiom
+    def yanking[X: Atom[C0]](
+            cls, x: Var[C0, X]) -> Equation[Hom[C1, X, X]]:
+        """
+        Tracing the swap of an object with itself gives its identity, the
+        yanking axiom of a symmetric traced category: a braided one states it
+        with its twist, see :meth:`BalancedCategory.yanking`, and a planar
+        one, which has no swap, declares it inapplicable.
+        """
+        # pylint: disable-next=no-member  # stated where there is a swap
+        return cls.equation_factory(cls.swap(x, x).trace(mem=x), cls.id(x))
 
     @axiom
     def trace_vanishing[A: Obj[C0], B: Obj[C0]](
@@ -1139,8 +1282,11 @@ class PivotalCategory[
             RigidCategory[C0, C1], TracedCategory[C0, C1]):
     """
     A pivotal category is a :class:`RigidCategory` where the left and right
-    adjoints coincide, hence it is also a :class:`TracedCategory`.
+    adjoints coincide, hence it is also a :class:`TracedCategory`, a planar
+    one with no swap to yank.
     """
+    yanking = TracedCategory.yanking.inapplicable(
+        messages.PLANAR_YANKING)
 
     @axiom
     def self_dual[X: Obj[C0]](
@@ -1581,8 +1727,11 @@ class RibbonCategory[C0: Pregroup, C1: RibbonCategory](
         PivotalCategory[C0, C1], BalancedCategory[C0, C1]):
     """
     A ribbon category is a :class:`PivotalCategory` which is also a
-    :class:`BalancedCategory`, i.e. where diagrams can draw knots and links.
+    :class:`BalancedCategory`, i.e. where diagrams can draw knots and links:
+    it yanks as a balanced category does, with the braid a planar pivotal
+    category lacks.
     """
+    yanking = BalancedCategory.yanking
 
 
 class CompactCategory[C0: Pregroup, C1: CompactCategory](

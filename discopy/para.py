@@ -213,12 +213,6 @@ class Symmetric[category](
     param: ob = None  # ty: ignore[invalid-type-form]
     copar: ob = None  # ty: ignore[invalid-type-form]
 
-    dagger_involution = SymmetricCategory.dagger_involution.inapplicable(
-        messages.NO_DAGGER)
-    dagger_contravariance = SymmetricCategory.dagger_contravariance\
-        .inapplicable(messages.NO_DAGGER)
-    dagger_monoidality = SymmetricCategory.dagger_monoidality.inapplicable(
-        messages.NO_DAGGER)
     bifunctoriality = SymmetricCategory.bifunctoriality.failing(
         messages.PARA_REPARAM)
     braid_naturality = SymmetricCategory.braid_naturality.failing(

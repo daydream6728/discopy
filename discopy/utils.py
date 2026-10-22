@@ -140,9 +140,48 @@ def rebuild_named_generic(func, origin, values, args):
     """
     Unpickle a member of a subscripted :class:`NamedGeneric` by calling the
     reconstructor ``func`` of its pickle on the subscripted class itself,
-    which is found by subscripting its ``origin`` again with its ``values``.
+    which is found by subscripting its ``origin`` again with its ``values``,
+    each decoded from its :class:`Subscript`.
     """
-    return func(origin[values], *args)
+    return func(origin[tuple(map(Subscript.decode, values))], *args)
+
+
+class Subscript:
+    """
+    A class subscripted by :class:`NamedGeneric`, as its origin and its
+    values. Such a class is created on the fly, so it cannot be pickled by
+    name: a value that is one, e.g. the ``Cyclic[2]`` of
+    ``Product[Cyclic[2], Symmetric[3]]``, is pickled as its subscript.
+
+    Parameters:
+        origin : The class subscripted.
+        values : The values it is subscripted by.
+
+    Example
+    -------
+    >>> from discopy.matrix import Matrix
+    >>> subscript = Subscript.encode(Matrix[int])
+    >>> subscript.origin is Matrix and subscript.values == (int, )
+    True
+    >>> assert Subscript.decode(subscript) is Matrix[int]
+    """
+    def __init__(self, origin: type, values: tuple):
+        self.origin, self.values = origin, values
+
+    @classmethod
+    def encode(cls, value):
+        """ The subscript of a subscripted class, else the value itself. """
+        if isinstance(value, type) and "__is_named_generic__" in vars(value):
+            return cls(value.__origin__,
+                       tuple(map(cls.encode, value.__values__)))
+        return value
+
+    @staticmethod
+    def decode(value):
+        """ The class of a subscript, else the value itself. """
+        if isinstance(value, Subscript):
+            return value.origin[tuple(map(Subscript.decode, value.values))]
+        return value
 
 
 class NamedGeneric:
@@ -252,11 +291,12 @@ class NamedGeneric:
                     >>> assert type(u) is Tensor[int] and u == t
                     """
                     func, args, *rest = super().__reduce__()
-                    if not args or args[0] is not type(self):
+                    if not args or args[0] is not C:
                         return (func, args, *rest)
                     return (
                         rebuild_named_generic,
-                        (func, origin, values, args[1:]), *rest)
+                        (func, origin, tuple(map(Subscript.encode, values)),
+                         args[1:]), *rest)
 
             C.__module__ = origin.__module__
             names = [
@@ -264,7 +304,7 @@ class NamedGeneric:
                 else getattr(v, "__name__", str(v)) for v in values]
             C.__name__ = C.__qualname__ = origin.__name__\
                 + f"[{', '.join(names)}]"
-            C.__origin__ = cls
+            C.__origin__, C.__values__ = cls, values
             for attr, value in zip(attributes, values):
                 setattr(C, attr, value)
             if getattr(origin, "factory", None) is origin:
@@ -401,12 +441,15 @@ def resolve_factory(name: str) -> type:
     """
     The DisCoPy class with a given :func:`factory_name`, the inverse of it:
     a subscripted class is resolved by its origin and its parameter, which
-    may be a builtin type.
+    may be a type of ``builtins`` or of ``numpy``, the two places a data type
+    parameterising a category comes from.
 
     >>> from discopy.markov import Diagram
     >>> assert resolve_factory(factory_name(Diagram)) is Diagram
+    >>> from numpy import float64
     >>> from discopy.tensor import Diagram
     >>> assert resolve_factory("tensor.Diagram[complex]") is Diagram[complex]
+    >>> assert resolve_factory("tensor.Diagram[float64]") is Diagram[float64]
     """
     if name.endswith(']'):
         origin, parameter = name[:-1].split('[', 1)
@@ -417,8 +460,62 @@ def resolve_factory(name: str) -> type:
     for attr in modules:
         module = getattr(module, attr)
     if not modules and factory not in vars(discopy):
-        return getattr(builtins, factory)
+        import numpy
+        for module in (builtins, numpy):
+            if isinstance(getattr(module, factory, None), type):
+                return getattr(module, factory)
+        raise AttributeError(messages.NO_SUCH_TYPE.format(factory))
     return getattr(module, factory)
+
+
+def encode_complex(number: complex) -> dict:
+    """
+    A complex number as a node of a tree, since JSON has only reals.
+
+    :math:`\\mathbb{C}` is :math:`\\mathbb{R}^2` as a real vector space, so a
+    complex number travels as the pair of its real and imaginary parts, tagged
+    with its factory like every other node. This is the ``default`` of
+    :func:`dumps`, i.e. it is called on whatever JSON cannot encode by itself
+    and raises on anything else, as :mod:`json` asks.
+
+    Example
+    -------
+    >>> encode_complex(1 + 2j)
+    {'factory': 'complex', 're': 1.0, 'im': 2.0}
+    >>> encode_complex({1, 2})
+    Traceback (most recent call last):
+    ...
+    TypeError: Object of type set is not JSON serialisable.
+    """
+    if not isinstance(number, complex):
+        raise TypeError(messages.NOT_JSON_SERIALISABLE.format(
+            type(number).__name__))
+    return {'factory': factory_name(complex),
+            're': number.real, 'im': number.imag}
+
+
+def decode_complex(tree: dict) -> Any:
+    """
+    Read back what :func:`encode_complex` wrote, leaving other nodes alone.
+
+    This is the ``object_hook`` of :func:`loads`, i.e. :mod:`json` calls it on
+    every object it decodes, so it answers a node that is not a complex number
+    with that node itself. A box whose ``data`` is a dictionary of its own is
+    left alone by the factory tag, which a tree reserves: the one dictionary
+    read as a complex number is ``{'factory': 'complex', 're': x, 'im': y}``,
+    with exactly those three keys, as :func:`encode_complex` writes it.
+
+    Example
+    -------
+    >>> assert decode_complex(encode_complex(1 + 2j)) == 1 + 2j
+    >>> tree = {'factory': 'cat.Ob', 'name': 'x'}
+    >>> assert decode_complex(tree) == tree
+    >>> assert decode_complex({'re': 1, 'im': 2}) == {'re': 1, 'im': 2}
+    """
+    if tree.keys() == {'factory', 're', 'im'} \
+            and tree['factory'] == factory_name(complex):
+        return complex(tree['re'], tree['im'])
+    return tree
 
 
 def dumps(obj, **kwargs):
@@ -426,7 +523,8 @@ def dumps(obj, **kwargs):
     Serialise a DisCoPy object as JSON.
 
     Parameters:
-        obj : The DisCoPy object to serialise.
+        obj : The DisCoPy object to serialise, or a list of them, which
+            :func:`loads` reads back as a list, e.g. a corpus.
         kwargs : Passed to ``json.dumps``.
 
     Example
@@ -462,7 +560,10 @@ def dumps(obj, **kwargs):
         }
     }
     """
-    return json.dumps(obj.to_tree(), **kwargs)
+    kwargs.setdefault('default', encode_complex)
+    tree = [x.to_tree() for x in obj] if isinstance(obj, list)\
+        else obj.to_tree()
+    return json.dumps(tree, **kwargs)
 
 
 def loads(raw):
@@ -476,8 +577,9 @@ def loads(raw):
     >>> assert loads(raw) == Ob('x')
     >>> assert dumps(loads(raw)) == raw
     >>> assert loads(dumps(Ob('x'))) == Ob('x')
+    >>> assert loads(dumps([Ob('x'), Ob('y')])) == [Ob('x'), Ob('y')]
     """
-    obj = json.loads(raw)
+    obj = json.loads(raw, object_hook=decode_complex)
     if isinstance(obj, list):
         return [from_tree(o) for o in obj]
     return from_tree(obj)
@@ -532,6 +634,24 @@ def assert_isinstance(object_, cls: type | tuple[type, ...]):
         cls_name, factory_name(type(object_))))
 
 
+def assert_ismember(object_, cls: type):
+    """
+    Raise ``TypeError`` unless ``object_`` is an instance of exactly ``cls``:
+    unlike :func:`assert_isinstance`, the parameters of a subscript count,
+    e.g. ``Cyclic[3](1)`` is not an element of ``Cyclic[2]`` and a channel of
+    the maybe monad is not a channel of the powerset monad.
+
+    >>> from discopy.group import Cyclic
+    >>> assert_ismember(Cyclic[3](1), Cyclic[2])
+    Traceback (most recent call last):
+        ...
+    TypeError: Expected group.Cyclic[2], got group.Cyclic[3] instead.
+    """
+    if type(object_) is not cls:  # pylint: disable=unidiomatic-typecheck
+        raise TypeError(messages.TYPE_ERROR.format(
+            factory_name(cls), factory_name(type(object_))))
+
+
 def unbiased(binary_method):
     """
     Turn a biased method with signature (self, other) to an unbiased one, i.e.
@@ -539,13 +659,15 @@ def unbiased(binary_method):
 
     One argument is the base case, more are folded by calling the method by
     its name on the running result, so that a subclass overriding the binary
-    case has its own folded rather than the one decorated.
+    case has its own folded rather than the one decorated. An operand passed
+    by keyword, e.g. ``f.then(other=g)``, goes to the binary method as it is,
+    rather than being dropped as if there were none.
 
     .. _nLab: https://ncatlab.org/nlab/show/biased+definition
     """
     @wraps(binary_method)
     def method(self, *others, **params):
-        if len(others) == 1:
+        if len(others) == 1 or not others and params:
             return binary_method(self, *others, **params)
         result = self
         for other in others:
@@ -663,14 +785,21 @@ def text_width(text: str, fontsize=12, points_per_inch=72., grid=16):
     return ceil(width / points_per_inch * grid) / grid
 
 
-def tuplify(stuff: Any) -> tuple:
+def tuplify(stuff: any, n: int | None = None) -> tuple:
     """
     Turns anything into a tuple, do nothing if it is already.
 
     Parameters:
         stuff : The stuff to turn into a tuple.
+        n : The number of values ``stuff`` stands for, if known, so that a
+            single value is wrapped whatever it is, a tuple included.
+
+    Example
+    -------
+    >>> assert tuplify(1) == (1, ) and tuplify((1, 2)) == (1, 2)
+    >>> assert tuplify((1, 2), n=1) == ((1, 2), )
     """
-    return stuff if isinstance(stuff, tuple) else (stuff, )
+    return stuff if n != 1 and isinstance(stuff, tuple) else (stuff, )
 
 
 def untuplify(stuff: tuple | list) -> Any:
@@ -846,6 +975,7 @@ class RichDisplay:
     or an :class:`discopy.drawing.Equation`, is displayed as an SVG image
     (with a PNG fallback in the mimebundle) when it is the output of a cell
     in Jupyter, marimo and other frontends that support the protocol.
+    :meth:`to_widget` shows it as a widget instead, on demand.
 
     Example
     -------
@@ -854,11 +984,9 @@ class RichDisplay:
     >>> svg, png = f._repr_svg_(), f.to_png()
     >>> assert svg.startswith('<?xml') and '</svg>\\n' in svg
     >>> assert png.startswith(b'\\x89PNG')
-    >>> assert f._repr_mimebundle_() == {
-    ...     'image/svg+xml': svg, 'image/png': png}
     >>> assert f._repr_mimebundle_(include=['image/svg+xml']) == {
     ...     'image/svg+xml': svg}
-    >>> assert f._repr_mimebundle_(exclude=['image/svg+xml']) == {
+    >>> assert f._repr_mimebundle_(include=['image/png']) == {
     ...     'image/png': png}
     >>> assert f._repr_mimebundle_(include=['text/html']) == {}
     """
@@ -880,6 +1008,17 @@ class RichDisplay:
 
     def _repr_svg_(self) -> str:
         return self.to_svg()
+
+    def to_widget(self, **params):
+        """
+        Draw as a :class:`discopy.drawing.widget.DiagramWidget`, which needs
+        `anywidget <https://anywidget.dev>`_.
+
+        Parameters:
+            params : Passed to :meth:`to_svg`.
+        """
+        from discopy.drawing.widget import DiagramWidget
+        return DiagramWidget(svg=self.to_svg(**params))
 
     def _repr_mimebundle_(self, include=None, exclude=None) -> dict:
         data = {"image/svg+xml": self.to_svg, "image/png": self.to_png}

@@ -177,6 +177,7 @@ def test_spider_producers_and_consumers():
 
 def test_cups():
     x = Ty('x')
+    assert issubclass(H, DaggerCategory)
     assert H.cups(x, x).make_monogamous().dagger()\
         == H.caps(x, x).make_monogamous()
     assert H.caps(x, x).make_monogamous().dagger()\
@@ -282,6 +283,16 @@ def test_Hypergraph_to_diagram_offset():
     g = Box('g', Ty(), x)
     graph = H(Ty(), x, (g, ), ((), (((), (0, )), ), (0, )), (x, ), (3, ))
     assert graph.to_diagram() == g
+
+
+def test_Hypergraph_cap_after_states():
+    x = Ty('x')
+    f = Box('f', Ty(), x)
+    diagram = x @ f >> Cap(x, x) @ x @ x
+    assert diagram.to_hypergraph().to_diagram() == diagram
+    for diagram in [f @ Cap(x, x), x @ f >> x @ Cap(x, x) @ x]:
+        decoded = diagram.to_hypergraph().to_diagram()
+        assert decoded.to_hypergraph() == diagram.to_hypergraph()
 
 
 def test_Hypergraph_from_glued():
@@ -499,3 +510,16 @@ def test_trace_keeps_the_offsets():
     graph = diagram.to_hypergraph()
     assert graph.trace().offsets == graph.offsets == (None, 1, 2)
     assert graph.trace().to_diagram() == symmetric.Trace(diagram.foliation())
+
+
+def test_trace_takes_the_keyword_form():
+    from discopy import symmetric
+    from discopy.utils import AxiomError
+    x, y = symmetric.Ty('x'), symmetric.Ty('y')
+    f = symmetric.Box('f', x @ y, x @ y).to_hypergraph()
+    assert f.trace() == f.trace(mem=y) == f.trace(dom=x, cod=x, mem=y)
+    assert f.trace(left=True) == f.trace(mem=x, left=True) != f.trace()
+    with raises(TypeError):
+        f.trace(1, mem=y)
+    with raises(AxiomError):
+        f.trace(mem=x)

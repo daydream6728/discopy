@@ -115,6 +115,8 @@ class Dims(monoidal.Ty):
 
     __str__ = __repr__
 
+    delay, head, tail = Dim.delay, Dim.head, Dim.tail
+
     def check(self, *tensors) -> None:
         """
         Raise ``AxiomError`` unless there is one tensor per leg with the

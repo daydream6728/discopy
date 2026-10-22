@@ -140,6 +140,9 @@ def test_Arrow_dagger():
     h = Arrow((f, g), x, z)
     assert h.dagger() == g.dagger() >> f.dagger()
     assert h.dagger().dagger() == h
+    assert isinstance(h, DaggerCategory)
+    assert not issubclass(FreeCategory, DaggerCategory)
+    assert not issubclass(Functor, DaggerCategory)
 
 
 def test_Id_init():
@@ -365,6 +368,18 @@ def test_sum_lambdify():
     assert empty_sum.subs(phi, 0) == empty_sum
 
 
+def test_Bubble_subs_lambdify():
+    pytest.importorskip("sympy")
+    from sympy.abc import phi, psi
+    f = Box('f', Ob('x'), Ob('x'), data=phi)
+    bubble = Bubble(f, f, name="b", method="m", data=phi)
+    expected = Bubble(f.subs(phi, 1), f.subs(phi, 1),
+                      name="b", method="m", data=1)
+    assert bubble.subs(phi, 1) == bubble.lambdify(phi)(1) == expected
+    assert bubble.subs(phi, 1).data == bubble.lambdify(phi)(1).data == 1
+    assert bubble.subs(psi, 1) == bubble.lambdify(psi)(1) == bubble
+
+
 def test_Sum():
     x, y, z = map(Ob, "xyz")
     f = Box('f', x, y)
@@ -406,3 +421,13 @@ def test_Functor_left_unitality():
     x, y = Ob('x'), Ob('y')
     F = Functor({x: y}, {})
     assert Functor.id() >> F == F
+def test_Bubble_no_common_boundary():
+    x, y = Ob('x'), Ob('y')
+    f, g = Box('f', x, x), Box('g', y, x)
+    with raises(ValueError, match="needs a dom given"):
+        Bubble(f, g)
+    with raises(ValueError, match="needs a cod given"):
+        Bubble(f, g[::-1], dom=x)
+    assert Bubble(f, g, dom=x).cod == x
+    with raises(ValueError, match=r"they have \[\]"):
+        Bubble()

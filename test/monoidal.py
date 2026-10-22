@@ -15,6 +15,8 @@ def test_Ty():
     assert Ty.ob is Colour and Ty.ar is Ty
     assert isinstance(transparent, cat.Ob)
     assert isinstance(x, cat.FreeCategory)
+    assert not isinstance(x, DaggerCategory) and issubclass(
+        Diagram, DaggerCategory)
     assert isinstance(x, cat.Ob) and not isinstance(x, Wire)
     assert x @ y != y @ x
     assert x.then(y) == x @ y  # >> is overridden by closed exponentials.
@@ -168,6 +170,13 @@ def test_Nat_hash():
 def test_Nat_to_tree():
     assert Nat(0).to_tree() == {'factory': 'monoidal.Nat', 'n': 0}
     assert Nat.from_tree(Nat(0).to_tree()) == Nat(0)
+
+
+def test_Dim_to_tree():
+    assert Dim(2, 3).to_tree() == {
+        'factory': 'monoidal.Dim', 'inside': [2, 3]}
+    for dim in (Dim(1), Dim(2), Dim(2, 3, 5)):
+        assert from_tree(dim.to_tree()) == dim
 
 
 def test_Nat_str():
@@ -645,6 +654,14 @@ def test_coloured_Functor_repr():
     assert "colour_map=" in repr(F)
 
 
+def test_coloured_Functor_unit():
+    red, green = Colour("red"), Colour("green")
+    x, s = Ty('x'), Box('s', Ty(), Ty())
+    F = Functor({x: x}, {s: s}, colour_map={red: green})
+    assert F(Ty()) == Ty() and F(Id(Ty())) == Id(Ty()) and F(s) == s
+    assert F(Ty.id(red)) == Ty.id(green)
+
+
 def test_coloured_Functor_empty_identity():
     green, lime = Colour("green"), Colour("lime")
     # Colour maps preserve the (mapped) colour of an empty identity.
@@ -828,3 +845,21 @@ def test_box_factory():
 def test_decode_without_boxes_and_offsets():
     with raises(ValueError):
         Diagram.decode(Ty('x'))
+
+def test_List_repr():
+    from discopy import cat, monoidal
+    from discopy.python import Ty as PyTy
+
+    assert repr(List[int](2, 3)) == "monoidal.List[int](2, 3)"
+    assert repr(List[type](int, str)) == "monoidal.List[type](int, str)"
+    assert repr(List[type](cat.Ob)) == "monoidal.List[type](cat.Ob)"
+
+    assert PyTy is monoidal.List[type]
+    for x in (List[int](2, 3), List[type](int, str), PyTy(int), PyTy()):
+        assert eval(repr(x)) == x and eval(str(x)) == x
+
+def test_tensor_of_sum_with_diagram():
+    x = Ty('x')
+    f, g = Box('f', x, x), Box('g', x, x)
+    assert f.tensor(g + g, f) == (f @ g @ f) + (f @ g @ f)
+    assert (f + f).tensor(g, f) == (f @ g @ f) + (f @ g @ f)

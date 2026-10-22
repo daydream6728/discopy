@@ -1116,9 +1116,10 @@ class Testable[T](ABC):
         category restating a law, broken, weakened or modulo a quotient,
         declares it anew and is the nearest to that.
 
-        >>> from discopy.cat import Arrow
-        >>> assert Arrow.unitality in Testable.matrix(once=True)
-        >>> assert Arrow.cut in Testable.matrix(once=True, kind=Rule)
+        >>> from discopy.abc import Category
+        >>> for law in (Category.unitality, Category.cut):
+        ...     assert len([cell for cell in Testable.matrix(True, type(law))
+        ...                 if cell.function is law.function]) == 1
         """
         cells = [
             law for testable in cls.enrolled()

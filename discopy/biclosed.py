@@ -91,7 +91,7 @@ from typing import (
     TYPE_CHECKING, Callable, ClassVar, Iterator, Self, Sequence)
 
 from discopy import cat, monoidal, cmap, messages
-from discopy.abc import BiclosedCategory, MonoidalCategory
+from discopy.abc import BiclosedCategory, DaggerCategory, MonoidalCategory
 from discopy.axioms import (
     GENERATORS, Equation as AbstractEquation, Equivalence, Serialisable,
     Testable, TestableGeneric, axiom)
@@ -405,17 +405,17 @@ class Diagram(monoidal.Diagram, BiclosedCategory):
 
     map_agreement = monoidal.Diagram.map_agreement.failing(
         messages.MAP_OF_A_CURRY)
-    dagger_involution = BiclosedCategory.dagger_involution.failing(
+    dagger_involution = DaggerCategory.dagger_involution.failing(
         messages.CURRY_HAS_NO_DAGGER)
-    dagger_involution_monoidal = BiclosedCategory.dagger_involution.weaken(
+    dagger_involution_monoidal = DaggerCategory.dagger_involution.weaken(
         within=MonoidalCategory)
-    dagger_contravariance = BiclosedCategory.dagger_contravariance.failing(
+    dagger_contravariance = DaggerCategory.dagger_contravariance.failing(
         messages.CURRY_HAS_NO_DAGGER)
-    dagger_contravariance_monoidal = BiclosedCategory.dagger_contravariance\
+    dagger_contravariance_monoidal = DaggerCategory.dagger_contravariance\
         .weaken(within=MonoidalCategory)
-    dagger_monoidality = BiclosedCategory.dagger_monoidality.failing(
+    dagger_monoidality = DaggerCategory.dagger_monoidality.failing(
         messages.CURRY_HAS_NO_DAGGER)
-    dagger_monoidality_monoidal = BiclosedCategory.dagger_monoidality.weaken(
+    dagger_monoidality_monoidal = DaggerCategory.dagger_monoidality.weaken(
         within=MonoidalCategory).failing(messages.NO_PLANAR_NORMAL_FORM)
     currying_left = BiclosedCategory.currying_left.failing(messages.FREE_CURRY)
     currying_right = BiclosedCategory.currying_right.failing(

@@ -66,7 +66,7 @@ from copy import copy
 from typing import ClassVar
 
 from discopy import cat, cmap, messages, rigid, feedback
-from discopy.abc import PivotalCategory, RigidCategory
+from discopy.abc import DaggerCategory, PivotalCategory, RigidCategory
 from discopy.cat import factory
 from discopy.utils import deprecated_alias
 
@@ -124,9 +124,6 @@ class Ty(rigid.Ty, feedback.Ty):
         inside (Wire) : The objects inside the type.
     """
     generator_factory = Wire
-
-    dagger_involution = PivotalCategory.dagger_involution
-    dagger_contravariance = PivotalCategory.dagger_contravariance
 
 
 @factory
@@ -231,15 +228,15 @@ class Diagram(rigid.Diagram, feedback.Diagram, PivotalCategory):
             >> diagram @ traced_wire.r\
             >> cod @ cls.cup_factory(traced_wire, traced_wire.r)
 
-    dagger_involution = PivotalCategory.dagger_involution.failing(
+    dagger_involution = DaggerCategory.dagger_involution.failing(
         messages.FEEDBACK_HAS_NO_DAGGER)
-    dagger_involution_rigid = PivotalCategory.dagger_involution.weaken(
+    dagger_involution_rigid = DaggerCategory.dagger_involution.weaken(
         within=RigidCategory)
-    dagger_contravariance = PivotalCategory.dagger_contravariance.failing(
+    dagger_contravariance = DaggerCategory.dagger_contravariance.failing(
         messages.FEEDBACK_HAS_NO_DAGGER)
-    dagger_contravariance_rigid = PivotalCategory.dagger_contravariance\
+    dagger_contravariance_rigid = DaggerCategory.dagger_contravariance\
         .weaken(within=RigidCategory)
-    dagger_monoidality = PivotalCategory.dagger_monoidality.failing(
+    dagger_monoidality = DaggerCategory.dagger_monoidality.failing(
         messages.NO_PLANAR_NORMAL_FORM)
     rotate_contravariance = PivotalCategory.rotate_contravariance.failing(
         messages.FEEDBACK_HAS_NO_DAGGER)

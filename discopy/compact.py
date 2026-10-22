@@ -104,7 +104,7 @@ class Diagram(symmetric.Diagram, ribbon.Diagram, CompactCategory):
     permutation_factory: ClassVar[type["Permutation"]]
     ob = Ty
     layer_factory = Layer
-    trace_factory = ribbon.Diagram.trace_factory
+    trace_factory = classmethod(pivotal.Diagram.trace_factory.__func__)
 
     foliation_idempotence = symmetric.Diagram.foliation_idempotence.modulo(
         monoidal.Diagram.to_map)
