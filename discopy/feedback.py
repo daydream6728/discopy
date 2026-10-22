@@ -654,7 +654,10 @@ class Box(monoidal.Box, Diagram):
     time_step = property(lambda self: self._time_step)
 
     def __init__(self, *args, time_step: int = 0, **params):
-        self._time_step, self._args, self._params = time_step, args[3:], params
+        self._time_step, self._args = time_step, args[3:]
+        self._params = {
+            key: value for key, value in params.items()
+            if key not in ("name", "dom", "cod")}
         super().__init__(*args, **params)
 
     def to_drawing(self):
@@ -689,8 +692,23 @@ class Box(monoidal.Box, Diagram):
             **self._params)
 
     def reset(self):
-        """ Reset a box to time step zero, used in :class:`Functor`. """
-        return self.delay(-self.time_step)
+        """
+        Reset a box to time step zero, used in :class:`Functor`: a box by its
+        time step, a structural box, whose delay lives in its types, see
+        :meth:`delay`, by that of the earliest of its wires.
+
+        >>> from discopy.markov import Swap
+        >>> x, y = Ty('x'), Ty('y')
+        >>> assert Swap(x, y).delay(2).reset() == Swap(x, y)
+        >>> assert Box('f', x, y).delay().reset() == Box('f', x, y)
+        """
+        if not issubclass(self.ob.generator_factory, monoidal.Wire):
+            return self
+        if getattr(self, "__getnewargs__", None) is None:
+            return self.delay(-self.time_step)
+        return self.delay(-min(
+            (wire.time_step for wire in (self.dom @ self.cod).inside),
+            default=0))
 
     def dagger(self):
         result = super().dagger()
@@ -810,7 +828,26 @@ class Feedback(Box, monoidal.Bubble):
         arg, dom, cod, mem = (
             from_tree(tree[key]) if key in tree else None
             for key in ('arg', 'dom', 'cod', 'mem'))
-        return cls(arg, dom=dom, cod=cod, mem=mem, left='left' in tree)
+        return cls(
+            arg,  # ty: ignore[invalid-argument-type]
+            dom=dom, cod=cod, mem=mem, left='left' in tree)
+
+    def dagger(self):
+        """
+        Feedback has no dagger: that of ``arg`` goes from ``cod @ mem`` to
+        ``dom @ mem.delay()``, so its memory would be fed back in time.
+
+        >>> x = Ty('x')
+        >>> Box('f', x @ x.delay(), x @ x).feedback().dagger()
+        Traceback (most recent call last):
+        ...
+        discopy.utils.AxiomError: Feedback has no dagger...
+        """
+        raise AxiomError(messages.FEEDBACK_HAS_NO_DAGGER)
+
+    def rotate(self, left=False):
+        """ Feedback has no rotation, for the same reason as its dagger. """
+        raise AxiomError(messages.FEEDBACK_HAS_NO_DAGGER)
 
     def to_drawing(self):
         return self.arg.to_drawing().trace(len(self.mem), left=self.left)

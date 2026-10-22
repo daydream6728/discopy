@@ -53,7 +53,6 @@ def test_named_generic_cache():
     assert box_int is dt.Box[int]
 
 
-
 def _rounded_repr(obj):
     # Gate matrices such as the Hadamard's 1 / sqrt(2) entries are stored as
     # floats whose last bit depends on the numpy version that generated the
@@ -138,6 +137,13 @@ def test_wire_tree_roundtrip():
             == frobenius.Wire('x')
 
 
+def test_MappingOrCallable():
+    from discopy.utils import MappingOrCallable
+    assert MappingOrCallable({0: 1})[0] == MappingOrCallable(lambda x: 1)[0]
+    with pytest.raises(TypeError):
+        MappingOrCallable([10, 20])
+
+
 def test_NamedGeneric_factory():
     """ A subscript of a factory is its own; the others keep ar as itself. """
     from discopy import symmetric
@@ -186,6 +192,7 @@ def test_NamedGeneric_without_type_parameter():
     with pytest.raises(TypeError):
         X[int]
 
+
 def test_encode_complex():
     assert encode_complex(1 + 2j) == {
         'factory': 'complex', 're': 1.0, 'im': 2.0}
@@ -222,6 +229,7 @@ def test_dumps_complex_gate():
     for gate in (H, X, Y, Z, S, T, H >> X, H @ X):
         assert loads(dumps(gate)) == gate
 
+
 def test_named_generic_pickle_roundtrip():
     from discopy.frobenius import Diagram, Ty
     from discopy.matrix import Matrix
@@ -249,6 +257,7 @@ def test_named_generic_setstate_reads_an_old_pickle():
     assert type(box) is Box[float] and box.dtype is float
     assert "__class_getitem__values__" not in box.__dict__
 
+
 def test_resolve_factory_dtype():
     import numpy as np
     from discopy import cat, tensor
@@ -273,6 +282,8 @@ def test_tensor_tree_roundtrip():
     subscripted = Box[complex]('f', Dim(1), Dim(1), [1.])
     assert loads(dumps(subscripted)) == subscripted\
         != Box('f', Dim(1), Dim(1), [1.])
+
+
 def test_unbiased_keyword_operand():
     """ An operand passed by keyword is composed, not dropped. """
     from discopy.cat import Functor

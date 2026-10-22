@@ -44,7 +44,7 @@ indices. Swaps, cups and caps become wiring while spiders stay as boxes.
 from __future__ import annotations
 
 from itertools import count
-from typing import TYPE_CHECKING, ClassVar, Sequence
+from typing import TYPE_CHECKING, Any, ClassVar, Sequence
 
 from discopy import (
     cat, monoidal, rigid, frobenius, cmap, config, messages)
@@ -1012,16 +1012,16 @@ class Bubble(monoidal.Bubble, Box):
         self.func = func
         super().__init__(inside, **params)
 
-    def subs(self, *args) -> Bubble:
-        return type(self)(
-            self.arg.subs(*args), func=self.func, dom=self.dom, cod=self.cod,
-            drawing_name=self.drawing_name)
-
-    def lambdify(self, *symbols, **kwargs):
-        inside = self.arg.lambdify(*symbols, **kwargs)
-        return lambda *xs: type(self)(
-            inside(*xs), func=self.func, dom=self.dom, cod=self.cod,
-            drawing_name=self.drawing_name)
+    @property
+    def keywords(self) -> dict[str, Any]:
+        """
+        The keyword arguments of a bubble with its function, and without its
+        name, which a tensor box takes positionally and a tensor bubble
+        computes from its arguments.
+        """
+        keywords = dict(super().keywords, func=self.func)
+        del keywords["name"]
+        return keywords
 
     def grad(self, var, **params):
         """

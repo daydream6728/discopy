@@ -53,7 +53,6 @@ def test_tk_err():
         Circuit.from_tk(tk.Circuit(3).CSWAP(0, 1, 2))
 
 
-
 def test_Circuit_from_tk():
     def back_n_forth(f):
         return Circuit.from_tk(f.to_tk())
@@ -99,7 +98,6 @@ def test_Circuit_get_counts_empty():
     assert not Id(qubit).get_counts(backend=tk.mockBackend({}))
 
 
-
 def test_Bra_and_Measure_to_tk():
     boxes = [
         Ket(0), Rx(0.552), Rz(0.512), Rx(0.917), Ket(0, 0, 0), H, H, H,
@@ -139,3 +137,16 @@ def test_ClassicalGate_eval():
         (0, 0): 256, (0, 1): 256, (1, 0): 256, (1, 1): 256})
     post = ClassicalGate('post', bit ** 2, bit ** 0, [1, 0, 0, 0])
     assert post.eval(backend=backend) == Tensor[float]([0.25], Dim(1), Dim(1))
+
+
+def test_pickle_keeps_post_selection():
+    import pickle
+    circuit = (Ket(0, 0) >> CX >> Bra(0) @ qubit).to_tk()
+    restored = pickle.loads(pickle.dumps(circuit))
+    assert restored.post_selection == circuit.post_selection == {0: 0}
+    assert restored.scalar == circuit.scalar
+
+
+def test_Ry_from_tk():
+    circuit = Ket(0) >> Ry(0.25)
+    assert Circuit.from_tk(circuit.to_tk()) == circuit.init_and_discard()

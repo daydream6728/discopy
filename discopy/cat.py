@@ -79,7 +79,7 @@ from __future__ import annotations
 
 from functools import total_ordering, cached_property
 from typing import (
-    Callable, ClassVar, Mapping, Iterable, TYPE_CHECKING)
+    Any, Callable, ClassVar, Mapping, Iterable, TYPE_CHECKING)
 
 from discopy import messages, utils
 from discopy.abc import Category, DaggerCategory, Nat
@@ -871,6 +871,18 @@ one, they have [cat.Ob('x'), cat.Ob('y')].
     def free_symbols(self):
         return super().free_symbols.union(*[f.free_symbols for f in self.args])
 
+    @property
+    def keywords(self) -> dict[str, Any]:
+        """
+        The keyword arguments the bubble is built with besides its
+        arguments, which :meth:`subs`, :meth:`lambdify` and :meth:`dagger`
+        build it again with, a subclass adding its own, e.g. the drawing
+        options of a :class:`discopy.monoidal.Bubble`.
+        """
+        return dict(
+            dom=self.dom, cod=self.cod, name=self.name, method=self.method,
+            data=self.data, is_dagger=self.is_dagger)
+
     def subs(self, *args) -> Bubble:
         variables = {var for var, _ in args[0]} if len(args) == 1 else {
             args[0]}
@@ -880,8 +892,7 @@ one, they have [cat.Ob('x'), cat.Ob('y')].
             else self.data
         return type(self)(
             *(arg.subs(*args) for arg in self.args),
-            dom=self.dom, cod=self.cod, name=self.name, method=self.method,
-            data=data, is_dagger=self.is_dagger)
+            **dict(self.keywords, data=data))
 
     def lambdify(self, *symbols: "sympy.Symbol", **kwargs) -> Callable:
         if not set(symbols) & self.free_symbols:
@@ -891,15 +902,13 @@ one, they have [cat.Ob('x'), cat.Ob('y')].
         data = lambdify(symbols, self.data, **kwargs)\
             if set(symbols) & super().free_symbols else lambda *_: self.data
         return lambda *xs: type(self)(
-            *(f(*xs) for f in args),
-            dom=self.dom, cod=self.cod, name=self.name, method=self.method,
-            data=data(*xs), is_dagger=self.is_dagger)
+            *(f(*xs) for f in args), **dict(self.keywords, data=data(*xs)))
 
     def dagger(self) -> Bubble:
-        return type(self)(
-            *(arg.dagger() for arg in self.args),
-            dom=self.cod, cod=self.dom, name=self.name, method=self.method,
-            data=self.data, is_dagger=not self.is_dagger)
+        keywords = self.keywords
+        keywords.update(
+            dom=self.cod, cod=self.dom, is_dagger=not self.is_dagger)
+        return type(self)(*(arg.dagger() for arg in self.args), **keywords)
 
     def to_tree(self):
         tree = {
