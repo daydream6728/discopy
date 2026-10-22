@@ -331,11 +331,11 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   things make that weaker than it reads while changing no pass count, so
   every run now ends with a section naming both. **A cell that cannot
   fail**: one that drew fewer distinct terms than its budget allowed, so a
-  larger budget buys it nothing — `cat.Arrow.identity_typing` quantifies
-  over one object and `Ob.strategy` samples `axioms.GENERATORS`, so it draws
-  five terms under `pr`'s twenty examples and the same five under
-  `explore`'s thousand, and is green about `Ob('a')` through `Ob('e')`
-  rather than about the law. **A cell that stopped being checked**: one a
+  larger budget buys it nothing — `matrix.Matrix[int].copy_counitality`
+  quantifies over one object and `abc.Nat.strategy` samples the numbers up
+  to three, so it draws four terms under `pr`'s twenty examples and the
+  same four under `explore`'s thousand, and is green about copying zero to
+  three wires rather than about the law. **A cell that stopped being checked**: one a
   baseline run passed and this one skips, declares broken, or no longer
   collects, since a law nobody states is as green as one that held —
   learning that one merge had lost no cell cost two full matrix runs
@@ -1108,8 +1108,9 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `Tensor`, `L`, `R` and `Delay`, and its return annotation the type of its
   output, e.g. `Equation[Hom[C1, A, B]]`, `Equation` being a generic class
   rather than a `NamedGeneric`. `Declaration.sequents` draws the
-  variables, then each premise from the strategy of the category with its
-  boundary, and the property matrix checks every verdict against the type
+  variables, then each morphism premise from the strategy of the category
+  with its boundary, a `Var` premise being the value of its expression,
+  and the property matrix checks every verdict against the type
   its law states with `inhabits`, as well as that it holds. So the typing
   laws `identity_typing`, `composition_dom_typing` and
   `composition_cod_typing` go, every law typing its terms, and so do the
@@ -1233,8 +1234,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `feedback` taking the keyword form `dom`, `cod`, `mem` first and a number
   `n` of objects as fallback, the two exclusive, read by `split_memory`;
   vanishing, joining, strength, tightening and sliding are stated once
-  there with `@axiom`, over the new `axioms.Loop` of a morphism
-  `x @ (m @ n).delay() -> y @ m @ n` and the morphisms it composes with.
+  there with `@axiom`, over a morphism `x @ (m @ n).delay() -> y @ m @ n`
+  and the morphisms it composes with.
   `abc.TracedCategory` extends it, `trace` its hook and its `feedback` the
   trace over the memory; the additive and multiplicative Python functions
   declare it, which they implemented without saying so, and the laws hold
