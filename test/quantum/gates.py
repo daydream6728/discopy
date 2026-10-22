@@ -180,3 +180,21 @@ def test_Ket_Bra_read_booleans_as_bits():
     for bits in [(True, False), tuple(numpy.array([1, 0]) > 0)]:
         assert Ket(*bits) == Ket(1, 0) and Bra(*bits) == Bra(1, 0)
         assert numpy.allclose(Ket(*bits).eval().array, Ket(1, 0).eval().array)
+
+
+@mark.parametrize("gate", [
+    Ket(1, 0), Bra(0), Ket(0).dagger(), Discard(), Discard(bit @ qubit),
+    MixedState(2), Measure(), Measure(2, destructive=False),
+    Encode(2, reset_bits=True), Bits(1, 0), Bits(1, 0).dagger(),
+    Digits(2, dim=4), Copy(), Match(), Scalar(.5), Scalar(.5, is_mixed=True),
+    MixedScalar(.5), Sqrt(2), Sqrt(-1).dagger()], ids=repr)
+def test_delay(gate):
+    delayed = gate.delay()
+    assert (delayed.dom, delayed.cod) == (gate.dom.delay(), gate.cod.delay())
+    assert delayed != gate and delayed.delay(-1) == gate
+    assert delayed.delay(2) == gate.delay(3)
+    assert from_tree(delayed.to_tree()) == delayed
+    assert delayed.dagger() == gate.dagger().delay()
+    assert numpy.allclose(delayed.eval().array, gate.eval().array)
+    if hasattr(gate, "_decompose"):
+        assert delayed._decompose() == gate._decompose().delay()

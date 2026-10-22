@@ -120,6 +120,15 @@ class Discard(SelfConjugate):
             f"Discard({dom})", dom, qubit ** 0, is_mixed=True)
         self.n_qubits = len(dom)
 
+    def __getnewargs__(self):
+        """
+        The argument of the constructor, which a delay reads: a discard is
+        delayed by delaying the type it discards.
+
+        >>> assert Discard(2).delay() == Discard(qubit.delay() ** 2)
+        """
+        return (self.dom, )
+
     @classmethod
     def from_tree(cls, tree: dict):
         return cls(from_tree(tree['dom']))
@@ -128,7 +137,7 @@ class Discard(SelfConjugate):
         return MixedState(self.dom)
 
     def _decompose(self):
-        return Id().tensor(*[Discard()] * self.n_qubits)
+        return Id().tensor(*map(Discard, self.dom))
 
 
 class MixedState(SelfConjugate):
@@ -148,6 +157,9 @@ class MixedState(SelfConjugate):
             self.drawing_name = ""
             self.draw_as_spider, self.color = True, "black"
 
+    def __getnewargs__(self):
+        return (self.cod, )
+
     @classmethod
     def from_tree(cls, tree: dict):
         return cls(from_tree(tree['cod']))
@@ -156,7 +168,7 @@ class MixedState(SelfConjugate):
         return Discard(self.cod)
 
     def _decompose(self):
-        return Id().tensor(*[MixedState()] * len(self.cod))
+        return Id().tensor(*map(MixedState, self.cod))
 
 
 class Measure(SelfConjugate):
@@ -171,10 +183,13 @@ class Measure(SelfConjugate):
         Whether to do a non-destructive measurement instead.
     override_bits : bool, optional
         Whether to override input bits, this is the standard behaviour of tket.
+    time_step : int, optional
+        The number of times the measurement has been delayed.
     """
     draw_as_measures = True
 
-    def __init__(self, n_qubits=1, destructive=True, override_bits=False):
+    def __init__(self, n_qubits=1, destructive=True, override_bits=False,
+                 time_step=0):
         dom, cod = qubit ** n_qubits, bit ** n_qubits
         name = f"Measure({'' if n_qubits == 1 else n_qubits})"
         if not destructive:
@@ -185,10 +200,20 @@ class Measure(SelfConjugate):
             dom = dom @ bit ** n_qubits
             name = name\
                 .replace("()", "(1)").replace(')', ", override_bits=True)")
-        super().__init__(name, dom, cod, is_mixed=True)
+        super().__init__(name, dom.delay(time_step), cod.delay(time_step),
+                         is_mixed=True, time_step=time_step)
         self.destructive, self.override_bits = destructive, override_bits
         self.n_qubits = n_qubits
         self.draw_as_measures = True
+
+    def delay(self, n_steps=1):
+        """
+        The same measurement, one more time step on.
+
+        >>> assert Measure(2).delay().dom == qubit.delay() ** 2
+        """
+        return Measure(self.n_qubits, self.destructive, self.override_bits,
+                       self.time_step + n_steps)
 
     def to_tree(self) -> dict:
         return dict(n_qubits=self.n_qubits, destructive=self.destructive,
@@ -197,17 +222,19 @@ class Measure(SelfConjugate):
     @classmethod
     def from_tree(cls, tree: dict):
         return cls(tree['n_qubits'], tree['destructive'],
-                   tree['override_bits'])
+                   tree['override_bits'], tree.get('time_step', 0))
 
     def dagger(self):
         return Encode(self.n_qubits,
                       constructive=self.destructive,
-                      reset_bits=self.override_bits)
+                      reset_bits=self.override_bits,
+                      time_step=self.time_step)
 
     def _decompose(self):
         return Id().tensor(*[
             Measure(destructive=self.destructive,
-                    override_bits=self.override_bits)] * self.n_qubits)
+                    override_bits=self.override_bits,
+                    time_step=self.time_step)] * self.n_qubits)
 
 
 class Encode(SelfConjugate):
@@ -222,10 +249,13 @@ class Encode(SelfConjugate):
         Whether to do a classically-controlled correction instead.
     reset_bits : bool, optional
         Whether to reset the bits to the uniform distribution.
+    time_step : int, optional
+        The number of times the encoding has been delayed.
     """
     draw_as_measures = True
 
-    def __init__(self, n_bits=1, constructive=True, reset_bits=False):
+    def __init__(self, n_bits=1, constructive=True, reset_bits=False,
+                 time_step=0):
         dom, cod = bit ** n_bits, qubit ** n_bits
         if not constructive:
             dom = qubit ** n_bits @ dom
@@ -235,9 +265,14 @@ class Encode(SelfConjugate):
             .replace("Measure", "Encode")\
             .replace("destructive", "constructive")\
             .replace("override_bits", "reset_bits")
-        super().__init__(name, dom, cod, is_mixed=True)
+        super().__init__(name, dom.delay(time_step), cod.delay(time_step),
+                         is_mixed=True, time_step=time_step)
         self.constructive, self.reset_bits = constructive, reset_bits
         self.n_bits = n_bits
+
+    def delay(self, n_steps=1):
+        return Encode(self.n_bits, self.constructive, self.reset_bits,
+                      self.time_step + n_steps)
 
     def to_tree(self) -> dict:
         return dict(n_bits=self.n_bits, constructive=self.constructive,
@@ -245,17 +280,20 @@ class Encode(SelfConjugate):
 
     @classmethod
     def from_tree(cls, tree: dict):
-        return cls(tree['n_bits'], tree['constructive'], tree['reset_bits'])
+        return cls(tree['n_bits'], tree['constructive'], tree['reset_bits'],
+                   tree.get('time_step', 0))
 
     def dagger(self):
         return Measure(self.n_bits,
                        destructive=self.constructive,
-                       override_bits=self.reset_bits)
+                       override_bits=self.reset_bits,
+                       time_step=self.time_step)
 
     def _decompose(self):
         return Id().tensor(*[
             Encode(constructive=self.constructive,
-                   reset_bits=self.reset_bits)] * self.n_bits)
+                   reset_bits=self.reset_bits,
+                   time_step=self.time_step)] * self.n_bits)
 
 
 class QuantumGate(Box):
@@ -314,31 +352,43 @@ class ClassicalGate(SelfConjugate):
 
 class Copy(ClassicalGate):
     """ Takes a bit, returns two copies of it. """
-    def __init__(self):
-        super().__init__("Copy", bit, bit ** 2, [1, 0, 0, 0, 0, 0, 0, 1])
+    def __init__(self, time_step=0):
+        dom = bit.delay(time_step)
+        super().__init__("Copy", dom, dom ** 2, [1, 0, 0, 0, 0, 0, 0, 1],
+                         time_step=time_step)
         self.draw_as_spider, self.color = True, "black"
         self.drawing_name = ""
 
+    def delay(self, n_steps=1):
+        """
+        The same copy, one more time step on.
+
+        >>> assert Copy().delay().dagger() == Match().delay()
+        """
+        return type(self)(self.time_step + n_steps)
+
     @classmethod
     def from_tree(cls, tree: dict):
-        del tree
-        return cls()
+        return cls(tree.get('time_step', 0))
 
     def dagger(self):
-        return Match()
+        return Match(self.time_step)
 
 
 class Match(ClassicalGate):
     """ Takes two bits in, returns them if they are equal. """
-    def __init__(self):
-        super().__init__("Match", bit ** 2, bit, [1, 0, 0, 0, 0, 0, 0, 1])
+    def __init__(self, time_step=0):
+        cod = bit.delay(time_step)
+        super().__init__("Match", cod ** 2, cod, [1, 0, 0, 0, 0, 0, 0, 1],
+                         time_step=time_step)
         self.draw_as_spider, self.color = True, "black"
         self.drawing_name = ""
 
+    delay = Copy.delay
     from_tree = classmethod(Copy.from_tree.__func__)
 
     def dagger(self):
-        return Copy()
+        return Copy(self.time_step)
 
 
 class Digits(ClassicalGate):
@@ -353,19 +403,39 @@ class Digits(ClassicalGate):
     """
     draw_as_brakets = True
 
-    def __init__(self, *digits, dim=None, is_dagger=False):
+    def __init__(self, *digits, dim=None, is_dagger=False, time_step=0):
         if not isinstance(dim, int):
             raise TypeError(int, dim)
         self._digits, self._dim = digits, dim
         str_digits = ', '.join(map(str, digits))
         name = f"Digits({str_digits}, dim={dim})" if dim != 2 \
             else f"Bits({str_digits})"
-        dom, cod = Ty(), Ty(Digit(dim)) ** len(digits)
+        dom, cod = Ty(), Ty(Digit(dim)).delay(time_step) ** len(digits)
         dom, cod = (cod, dom) if is_dagger else (dom, cod)
-        super().__init__(name, dom, cod, is_dagger=is_dagger)
+        super().__init__(
+            name, dom, cod, is_dagger=is_dagger, time_step=time_step)
 
     def __repr__(self):
-        return self.name + (".dagger()" if self.is_dagger else "")
+        """
+        The constructor call of a classical state, through :func:`Bits` for
+        bits, so that ``eval(repr(x)) == x``.
+
+        >>> from discopy.quantum.circuit import Circuit
+        >>> for state in (Bits(1, 0).dagger(), Digits(2, dim=4).delay()):
+        ...     assert eval(repr(state), Circuit.environment()) == state
+        """
+        if self.is_dagger:
+            return repr(self.dagger()) + ".dagger()"
+        digits = ', '.join(map(repr, self.digits))
+        factory, dim = ("Bits", "") if self.dim == 2\
+            else ("Digits", f", dim={self.dim}")
+        time_step = f", time_step={self.time_step}" if self.time_step else ""
+        module = type(self).__module__.removeprefix("discopy.")
+        return f"{module}.{factory}({digits}{dim}{time_step})"
+
+    def delay(self, n_steps=1):
+        return Digits(*self.digits, dim=self.dim, is_dagger=self.is_dagger,
+                      time_step=self.time_step + n_steps)
 
     def to_tree(self) -> dict:
         return dict(digits=self.digits, dim=self.dim, **super().to_tree())
@@ -373,7 +443,8 @@ class Digits(ClassicalGate):
     @classmethod
     def from_tree(cls, tree: dict):
         return cls(*tree['digits'], dim=tree['dim'],
-                   is_dagger=tree.get('is_dagger', False))
+                   is_dagger=tree.get('is_dagger', False),
+                   time_step=tree.get('time_step', 0))
 
     @property
     def dim(self):
@@ -399,7 +470,8 @@ class Digits(ClassicalGate):
             return array
 
     def dagger(self):
-        return Digits(*self.digits, dim=self.dim, is_dagger=not self.is_dagger)
+        return Digits(*self.digits, dim=self.dim, is_dagger=not self.is_dagger,
+                      time_step=self.time_step)
 
     def to_drawing(self):
         result = QuantumGate.to_drawing(self)
@@ -407,8 +479,9 @@ class Digits(ClassicalGate):
         return result
 
 
-def Bits(*bitstring, is_dagger=False):
-    return Digits(*bitstring, dim=2, is_dagger=is_dagger)
+def Bits(*bitstring, is_dagger=False, time_step=0):
+    """ Classical state for a given bitstring, i.e. digits of dimension 2. """
+    return Digits(*bitstring, dim=2, is_dagger=is_dagger, time_step=time_step)
 
 
 class Ket(SelfConjugate, QuantumGate):
@@ -423,21 +496,29 @@ class Ket(SelfConjugate, QuantumGate):
     to_drawing = Digits.to_drawing
     array = Digits.array
 
-    def __init__(self, *bitstring):
+    def __init__(self, *bitstring, time_step=0):
         if not all([bit in [0, 1] for bit in bitstring]):
             raise Exception('Bitstring can only contain integers 0 or 1.')
         bitstring = tuple(map(int, bitstring))
-        dom, cod = qubit ** 0, qubit ** len(bitstring)
+        dom, cod = qubit ** 0, qubit.delay(time_step) ** len(bitstring)
         name = f"Ket({', '.join(map(str, bitstring))})"
-        super().__init__(name, dom, cod)
+        super().__init__(name, dom, cod, time_step=time_step)
         self._digits, self._dim, self.draw_as_brakets = bitstring, 2, True
+
+    def delay(self, n_steps=1):
+        """
+        The preparation of the same bitstring, one more time step on.
+
+        >>> assert Ket(1, 0).delay().dagger() == Bra(1, 0).delay()
+        """
+        return type(self)(*self.bitstring, time_step=self.time_step + n_steps)
 
     def to_tree(self) -> dict:
         return dict(bitstring=self.bitstring, **SelfConjugate.to_tree(self))
 
     @classmethod
     def from_tree(cls, tree: dict):
-        return cls(*tree['bitstring'])
+        return cls(*tree['bitstring'], time_step=tree.get('time_step', 0))
 
     @property
     def bitstring(self):
@@ -445,10 +526,11 @@ class Ket(SelfConjugate, QuantumGate):
         return list(self._digits)
 
     def dagger(self):
-        return Bra(*self.bitstring)
+        return Bra(*self.bitstring, time_step=self.time_step)
 
     def _decompose(self):
-        return Id().tensor(*[Ket(b) for b in self.bitstring])
+        return Id().tensor(*[
+            Ket(b, time_step=self.time_step) for b in self.bitstring])
 
 
 class Bra(SelfConjugate, QuantumGate):
@@ -463,16 +545,16 @@ class Bra(SelfConjugate, QuantumGate):
     to_drawing = Digits.to_drawing
     array = Digits.array
 
-    def __init__(self, *bitstring):
+    def __init__(self, *bitstring, time_step=0):
         if not all([bit in [0, 1] for bit in bitstring]):
             raise Exception('Bitstring can only contain integers 0 or 1.')
         bitstring = tuple(map(int, bitstring))
         name = f"Bra({', '.join(map(str, bitstring))})"
-        dom, cod = qubit ** len(bitstring), qubit ** 0
-        super().__init__(name, dom, cod)
+        dom, cod = qubit.delay(time_step) ** len(bitstring), qubit ** 0
+        super().__init__(name, dom, cod, time_step=time_step)
         self._digits, self._dim, self.draw_as_brakets = bitstring, 2, True
 
-    to_tree = Ket.to_tree
+    delay, to_tree = Ket.delay, Ket.to_tree
     from_tree = classmethod(Ket.from_tree.__func__)
 
     @property
@@ -481,10 +563,11 @@ class Bra(SelfConjugate, QuantumGate):
         return list(self._digits)
 
     def dagger(self):
-        return Ket(*self.bitstring)
+        return Ket(*self.bitstring, time_step=self.time_step)
 
     def _decompose(self):
-        return Id().tensor(*[Bra(b) for b in self.bitstring])
+        return Id().tensor(*[
+            Bra(b, time_step=self.time_step) for b in self.bitstring])
 
 
 class Controlled(QuantumGate):
@@ -916,19 +999,34 @@ class CRx(ControlledRotation):
 
 class Scalar(Parametrized):
     """ Scalar, i.e. quantum gate with empty domain and codomain. """
-    def __init__(self, data, name=None, is_mixed=False):
+    def __init__(self, data, name=None, is_mixed=False, time_step=0):
         self.drawing_name = format_number(data)
         name = "scalar" if name is None else name
         dom, cod = qubit ** 0, qubit ** 0
-        super().__init__(name, dom, cod, is_mixed=is_mixed, data=data, z=None)
+        super().__init__(name, dom, cod, is_mixed=is_mixed, data=data, z=None,
+                         time_step=time_step)
 
     def __setstate__(self, state):
         state["_z"] = None
         super().__setstate__(state)
 
     def __repr__(self):
+        time_step = f", time_step={self.time_step}" if self.time_step else ""
         return super().__repr__()[:-1] + (
-            ', is_mixed=True)' if self.is_mixed else ')')
+            ', is_mixed=True' if self.is_mixed else '') + time_step + ')'
+
+    def setoid(self):
+        """
+        A scalar and its delay differ only by their time step, as the delay
+        of an empty boundary is itself.
+
+        >>> assert scalar(2).delay() != scalar(2) == scalar(2).d.delay(-1)
+        """
+        return super().setoid() + (self.time_step, )
+
+    def delay(self, n_steps=1):
+        return Scalar(
+            self.data, self.name, self.is_mixed, self.time_step + n_steps)
 
     @property
     def array(self):
@@ -938,10 +1036,12 @@ class Scalar(Parametrized):
     def grad(self, var, **params):
         if var not in self.free_symbols:
             return Sum([], self.dom, self.cod)
-        return Scalar(self.data.diff(var), is_mixed=self.is_mixed)
+        return Scalar(self.data.diff(var), is_mixed=self.is_mixed,
+                      time_step=self.time_step)
 
     def dagger(self):
-        return Scalar(self.data.conjugate(), self.name, self.is_mixed)
+        return Scalar(self.data.conjugate(), self.name, self.is_mixed,
+                      self.time_step)
 
     def subs(self, *args):
         """
@@ -951,12 +1051,13 @@ class Scalar(Parametrized):
         >>> from sympy.abc import phi  # doctest: +EXTRA
         >>> assert scalar(2 * phi, is_mixed=True).subs(phi, .5).is_mixed
         """
-        return type(self)(rsubs(self.data, *args), self.name, self.is_mixed)
+        return Scalar(rsubs(self.data, *args), self.name, self.is_mixed,
+                      self.time_step)
 
     def lambdify(self, *symbols, **kwargs):
         function = super().lambdify(*symbols, **kwargs)
-        return lambda *xs: type(self)(
-            function(*xs).data, self.name, self.is_mixed)
+        return lambda *xs: Scalar(
+            function(*xs).data, self.name, self.is_mixed, self.time_step)
 
     def to_tree(self) -> dict:
         return dict(is_mixed=self.is_mixed, **super().to_tree())
@@ -970,19 +1071,18 @@ class Scalar(Parametrized):
 
         >>> assert from_tree(Scalar(.5).to_tree()) == Scalar(.5)
         """
-        return cls(tree['data'], tree['name'], tree['is_mixed'])
+        return cls(tree['data'], tree['name'], tree['is_mixed'],
+                   tree.get('time_step', 0))
 
 
 class MixedScalar(Scalar):
     """ Mixed scalar, i.e. where the Born rule has already been applied. """
-    def __init__(self, data):
-        super().__init__(data, is_mixed=True)
+    def __init__(self, data, time_step=0):
+        super().__init__(data, is_mixed=True, time_step=time_step)
 
     @classmethod
     def from_tree(cls, tree: dict):
-        return cls(tree['data'])
-
-    subs, lambdify = Parametrized.subs, Parametrized.lambdify
+        return cls(tree['data'], tree.get('time_step', 0))
 
 
 class Sqrt(Scalar):
@@ -991,8 +1091,8 @@ class Sqrt(Scalar):
     self-adjoint when that root is real, and conjugated by its dagger
     otherwise, e.g. for the square root of a negative number.
     """
-    def __init__(self, data, is_dagger=False):
-        super().__init__(data, name="sqrt")
+    def __init__(self, data, is_dagger=False, time_step=0):
+        super().__init__(data, name="sqrt", time_step=time_step)
         if is_dagger and self.is_self_adjoint:
             raise ValueError(messages.REAL_SQRT_IS_SELF_ADJOINT)
         self.is_dagger = is_dagger
@@ -1007,7 +1107,8 @@ class Sqrt(Scalar):
         >>> root = Sqrt(-1).dagger()
         >>> assert from_tree(root.to_tree()) == root
         """
-        return cls(tree['data'], tree.get('is_dagger', False))
+        return cls(tree['data'], tree.get('is_dagger', False),
+                   tree.get('time_step', 0))
 
     def __setstate__(self, state):
         super().__setstate__(state)
@@ -1027,16 +1128,19 @@ class Sqrt(Scalar):
 
     def dagger(self):
         return self if self.is_self_adjoint\
-            else Sqrt(self.data, is_dagger=not self.is_dagger)
+            else Sqrt(self.data, not self.is_dagger, self.time_step)
+
+    def delay(self, n_steps=1):
+        return Sqrt(self.data, self.is_dagger, self.time_step + n_steps)
 
     def subs(self, *args):
-        result = Parametrized.subs(self, *args)
+        result = Parametrized.subs(self, *args).delay(self.time_step)
         return result.dagger() if self.is_dagger else result
 
     def lambdify(self, *symbols, **kwargs):
         function = Parametrized.lambdify(self, *symbols, **kwargs)
-        return lambda *xs: function(*xs).dagger() if self.is_dagger\
-            else function(*xs)
+        return lambda *xs: function(*xs).delay(self.time_step).dagger()\
+            if self.is_dagger else function(*xs).delay(self.time_step)
 
     def setoid(self):
         """ A square root and its dagger differ only by ``is_dagger``. """

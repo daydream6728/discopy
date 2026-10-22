@@ -164,7 +164,7 @@ def test_Digits():
 
 
 def test_Bits():
-    assert repr(Bits(0).dagger()) == "Bits(0).dagger()"
+    assert repr(Bits(0).dagger()) == "quantum.gates.Bits(0).dagger()"
     assert Bits(0).dagger().dagger() == Bits(0)
 
 
