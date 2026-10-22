@@ -7,6 +7,6 @@
 
 Copy of rel-int/optyx#29 onto discopy.optyx (#225)
 
-- [ ] merge the move branch origin/claude/magical-cannon-g1t6ms
-- [ ] port to discopy.optyx on next main
+- [x] merge the move branch origin/claude/magical-cannon-g1t6ms
+- [x] port to discopy.optyx on next main
 - [ ] checks

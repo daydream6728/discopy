@@ -982,6 +982,14 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Changed
 
+- `discopy.optyx` keeps no private members in `channel` and `core.diagram`:
+  the box hooks of `Diagram.decomp` and `Diagram.to_dual_rail` are
+  `decomp` and `dual_rail`, `channel.Ob.classical` and `channel.Ob.quantum`
+  map each object to its classical and its quantum counterpart, and
+  `core.diagram.Box.array` is a plain attribute, `None` unless the box is
+  given an array. `Measure.inflate` and `Encode.inflate` build their wires
+  inline, and the imports that make no cycle sit at the top of the module
+  ([rel-int/optyx#29](https://github.com/rel-int/optyx/pull/29)).
 - The `quantum` extra pins pyzx 0.10.7, where it pinned 0.7.3, so that it
   installs next to `pytket-pyzx`, which needs pyzx 0.9 or later. pyzx 0.10
   takes no `float` phase, so `zx.Diagram.to_pyzx` hands it the exact

@@ -688,7 +688,7 @@ class Box(frobenius.Box, Diagram):
                 "photon_number_transform method"
             )
 
-        from optyx.core.zw import Create, Select
+        from discopy.optyx.core.zw import Create, Select
 
         return_list = []
         if len(dims_in) > 0:
@@ -1051,12 +1051,10 @@ class Permutation(frobenius.Permutation, Box):
         return self
 
     def to_path(self, dtype: type = complex):
-        # pylint: disable=import-outside-toplevel
-        from discopy.optyx.core.path import Matrix
-
         size = len(self.dom)
-        return Matrix([int(self.perm[j] == i)
-                       for i in range(size) for j in range(size)], size, size)
+        return path.Matrix([int(self.perm[j] == i)
+                            for i in range(size) for j in range(size)],
+                           size, size)
 
     def determine_output_dimensions(self, input_dims: list[int]) -> list[int]:
         """Determine the output dimensions based on the input dimensions."""
