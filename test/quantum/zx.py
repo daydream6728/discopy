@@ -1,4 +1,6 @@
 import random
+import tomllib
+from pathlib import Path
 
 import pytest
 
@@ -10,7 +12,9 @@ from discopy.quantum.zx import *
 from discopy import frobenius, tensor
 from discopy.tensor import Dim, Tensor
 
-PYZX = "0.7.3"  # the version pyproject.toml pins
+with open(Path(__file__).parents[2] / "pyproject.toml", "rb") as file:
+    QUANTUM = tomllib.load(file)["project"]["optional-dependencies"]["quantum"]
+PYZX = next(req.split("==")[1].strip() for req in QUANTUM if "pyzx" in req)
 
 
 @fixture
