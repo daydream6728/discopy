@@ -392,7 +392,7 @@ class Hypergraph(
         Composition of two hypergraph diagrams, i.e. their :func:`pushout`.
         """
         if not self.cod == other.dom:
-            raise AxiomError
+            raise AxiomError(messages.TYPE_ERROR.format(other.dom, self.cod))
         dom, cod = self.dom, other.cod
         boxes, offsets = self.boxes + other.boxes, self.offsets + other.offsets
         left, right = pushout(
@@ -1052,7 +1052,8 @@ class Hypergraph(
         3 -> 2
         """
         if not self.is_bijective:
-            raise ValueError
+            raise ValueError(messages.NOT_BIJECTIVE.format(
+                factory_name(type(self))))
         result, flat_wires = {}, list(self.flat_wires)
         for i, spider in enumerate(flat_wires):
             if spider not in flat_wires[i + 1:]:

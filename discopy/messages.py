@@ -61,6 +61,12 @@ NOT_ACYCLIC = "{} has a directed cycle, its boxes cannot be ordered."
 NOT_LEFT_MONOGAMOUS = "{} is not left-monogamous."
 NOT_RIGHT_MONOGAMOUS = "{} is not right-monogamous."
 NOT_CAUSAL = "{} is not causal."
+NOT_BIJECTIVE = "{} is not bijective: a spider has neither zero nor two legs."
+NOT_AN_INVOLUTION = \
+    "Expected a fixpoint-free involution, got edges {} instead."
+NOT_PLUGGABLE = "Cannot plug {} into a map with codomain {}: expected a box "\
+                "with one input and two outputs, and a map with one output."
+NOT_AN_INDEX = "Expected an index in range({}), got {} instead."
 WRONG_NUMBER_OF_WIRES = "Expected {} wires for {}, got {} instead."
 WRONG_NUMBER_OF_BOUNDARIES = \
     "Expected one boundary of wires for each of {} boxes, got {} instead."

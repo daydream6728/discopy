@@ -52,7 +52,7 @@ def test_Hypergraph_eq_sees_the_type_of_a_scalar_spider():
 
 def test_Hypergraph_then():
     x, y = map(Ty, "xy")
-    with raises(AxiomError):
+    with raises(AxiomError, match="Expected y, got x"):
         H.id(x) >> H.id(y)
 
 
@@ -67,7 +67,7 @@ def test_Hypergraph_getitem():
 
 
 def test_Hypergraph_bijection():
-    with raises(ValueError):
+    with raises(ValueError, match="not bijective"):
         H.spiders(1, 2, Ty('x')).bijection
 
 

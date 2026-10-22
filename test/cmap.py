@@ -42,7 +42,7 @@ def test_M_init():
     x, y = map(Ty, "xy")
     with raises(ValueError):
         M(x, x, (), ())
-    with raises(ValueError):
+    with raises(ValueError, match="involution"):
         M(x, x, (), (0, 1))
     with raises(ValueError):
         M(x, x, (), (0,))
@@ -252,7 +252,7 @@ def test_diagram_to_map_structure_and_errors():
             Port(PortKind.COD, 0, x, 0, "down"))
     f = compact.CMap.from_box(compact.Box("f", x, y))
     assert f.trace(0) is f
-    with raises(ValueError):
+    with raises(ValueError, match="split"):
         f.trace(-1)
     with raises(ValueError):
         f.trace(2)
@@ -424,7 +424,7 @@ def test_curry_uncurry_roundtrip(module):
     cmap = f.to_map()
 
     assert cmap.curry(n=0).uncurry(n=0) == cmap
-    with raises(ValueError):
+    with raises(ValueError, match="split"):
         cmap.curry(n=3)
     with raises(ValueError):
         cmap.uncurry(n=2)
@@ -690,11 +690,11 @@ def test_plug_input():
         0, Box("lambda", x, x @ y), y, root_index=1)
     assert right_root.dom == Ty()
     assert right_root.cod == y
-    with raises(ValueError):
+    with raises(ValueError, match="range"):
         f.plug_input(-1, Box("lambda", x, y @ z), y)
-    with raises(ValueError):
+    with raises(ValueError, match="range"):
         f.plug_input(0, Box("lambda", x, y @ z), y, root_index=2)
-    with raises(ValueError):
+    with raises(ValueError, match="Cannot plug"):
         f.plug_input(0, Box("bad", Ty(), y @ z), y)
 
 

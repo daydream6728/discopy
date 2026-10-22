@@ -455,7 +455,7 @@ class CMap[C0: Pregroup, C1: CMap](
         """ Validate the edges involution and the types of each wire. """
         ports = self.ports
         if not self.edges.is_fixpoint_free_involution():
-            raise ValueError
+            raise ValueError(messages.NOT_AN_INVOLUTION.format(self.edges))
 
         for i, j in enumerate(self.edges):
             if i > j:
@@ -1244,7 +1244,7 @@ class CMap[C0: Pregroup, C1: CMap](
         if issubclass(self.category, RigidCategory):
             return super().curry(n, left)
         if n < 0 or n > len(self.dom):
-            raise ValueError
+            raise ValueError(messages.NOT_SPLITTABLE.format(n, self.dom))
         if not n:
             return self
         return self.from_box(self.category.curry_factory(
@@ -1353,7 +1353,7 @@ class CMap[C0: Pregroup, C1: CMap](
         >>> assert f.to_map().trace().boxes == (f.trace(), )
         """
         if n < 0:
-            raise ValueError
+            raise ValueError(messages.NOT_SPLITTABLE.format(n, self.dom))
         if not n:
             return self
         assert_istraceable(self, n, left)
@@ -1462,11 +1462,12 @@ class CMap[C0: Pregroup, C1: CMap](
         """
         assert_isinstance(box, self.category)
         if len(self.cod) != 1 or len(box.dom) != 1 or len(box.cod) != 2:
-            raise ValueError
+            raise ValueError(messages.NOT_PLUGGABLE.format(box, self.cod))
         if root_index not in [0, 1]:
-            raise ValueError
+            raise ValueError(messages.NOT_AN_INDEX.format(2, root_index))
         if input_index < 0 or input_index >= len(self.dom):
-            raise ValueError
+            raise ValueError(messages.NOT_AN_INDEX.format(
+                len(self.dom), input_index))
 
         old_input, old_output = input_index, self.n_ports - 1
         new_dom = self.ob()
