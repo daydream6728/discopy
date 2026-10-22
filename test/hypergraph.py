@@ -22,8 +22,7 @@ def test_Hypergraph_init():
 def test_Hypergraph_str():
     x, y = map(Ty, "xy")
     assert str(H.swap(x, y)) == "Swap(x, y)"
-    assert str(H.spiders(1, 0, x @ y))\
-        == "Spider(1, 0, x) @ Spider(1, 0, y)"
+    assert str(H.spiders(1, 0, x @ y)) == "Cospan(x @ y, [0, 1], [])"
 
 
 def test_Hypergraph_repr():
@@ -254,6 +253,16 @@ def test_Hypergraph_eq_fallback_scalars_and_empty_boundary():
     assert f.trace() == f.trace()
 
 
+def test_Hypergraph_simplify_two_wires():
+    x, y = Ty('x'), Ty('y')
+    f = Box('f', Ty(), x @ y).to_hypergraph()
+    g = Box('g', x @ y, Ty()).to_hypergraph()
+    interchanged = (f >> g).interchange(0, 1)
+
+    assert interchanged.to_diagram().size > (f >> g).to_diagram().size
+    assert interchanged.simplify().to_diagram() == (f >> g).to_diagram()
+
+
 def test_simplify():
     from discopy.markov import Box, Ty, Copy, Swap, Trace, Equation
     C, T, P = map(Ty, "CTP")
@@ -314,10 +323,15 @@ def test_Hypergraph_cap_after_states():
     x, y = Ty('x'), Ty('y')
     f, g = Box('f', Ty(), x), Box('g', y @ x, x)
     for diagram in [
-            x @ f >> Cap(x, x) @ x @ x, f @ Cap(x, x),
+            x @ f >> Cap(x, x) @ x @ x,
             x @ f >> x @ Cap(x, x) @ x, y @ Cap(x, x) >> g @ x]:
         decoded = diagram.to_hypergraph().to_diagram()
         assert decoded in (diagram, diagram.foliation())
+    # f @ Cap(x, x) whiskers the cap into a cospan after f, as h @ Swap(x, x)
+    # gives a permutation after h, and decodes to them side by side.
+    side_by_side = Diagram((Diagram.layer_factory(Ty(), f, Cap(x, x)), ),
+                           Ty(), x @ x @ x)
+    assert (f @ Cap(x, x)).to_hypergraph().to_diagram() == side_by_side
 
 
 def test_Hypergraph_make_causal_without_spiders():

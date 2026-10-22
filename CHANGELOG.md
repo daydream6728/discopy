@@ -18,6 +18,22 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   the opposites of `matrix.Matrix[int]` join the property matrix
   ([discopy/discopy#646](https://github.com/discopy/discopy/issues/646)).
 
+- Frobenius plumbing
+  ([discopy/discopy#472](https://github.com/discopy/discopy/issues/472)):
+  `finset.Cospan` is the free hypergraph category on one object, cospans of
+  finite sets up to isomorphism composed by pushout, a `HypergraphCategory`
+  in the property matrix, and `frobenius.Cospan(apex, left, right)` holds
+  one with the type of each point of its apex. Permutations are cospans, as
+  are phase-free spiders and the cups and caps of a self-dual wire, which
+  carry `legs`; `Cospan(x, [0], [0, 0]) == Spider(1, 2, x)`.
+  `frobenius.Layer` alternates cospans and generators, plumbing tensors into
+  one cospan, `Diagram.spiders` of a type builds one, and foliation fuses
+  them by pushout, e.g. a snake into the identity. `Cospan.to_spiders` is
+  how one is drawn and sent by a functor, and
+  `abc.HypergraphCategory.cospan` builds one in any hypergraph category.
+  The categories below frobenius keep their spiders as generators until
+  they have a cospan factory of their own.
+
 - Markov and comarkov plumbing
   ([discopy/discopy#472](https://github.com/discopy/discopy/issues/472)):
   `markov.Function(dom, func)` copies, discards and permutes so that output
@@ -623,6 +639,17 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   Moved from the trilingual parser of
   [rel-int/lambek#8](https://github.com/rel-int/lambek/pull/8), without its
   datasets or experiments.
+- The rest of the generic parser code of rel-int/lambek. From
+  [lambek#8](https://github.com/rel-int/lambek/pull/8): `proofnet.count`,
+  the count invariant of a type, and `Sequent.infer`, the sequent of some
+  words with the smallest goal of their count, which `Parser` takes when it
+  is given no goal; `Tagger.beam` and `Tagger.loss` within the atoms of a
+  sub-signature, e.g. one language of a multilingual signature, and label
+  smoothing over them with `Tagger.smoothing`. From
+  [lambek#2](https://github.com/rel-int/lambek/pull/2):
+  `categorial.parse`, the `k` best terms of a sentence from the scored
+  candidate types of its words by the CKY algorithm, over the application
+  and composition of `categorial.combine` in Eisner's normal form.
 - A notebook, *Parsing arithmetic*, showcasing `grammar.proofnet` and
   `grammar.neural`: the two readings of `a + b * c` are two linkings of
   one sequent, 24 of its 120 linkings are correct, and a parser trained on
@@ -1022,6 +1049,11 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   ([#442](https://github.com/discopy/discopy/pull/442)).
 
 ### Changed
+
+- A layer reads its plumbing through `Layer.is_plumbing_component`, so
+  that a box is plumbing by what it holds rather than by its class alone,
+  e.g. a spider without a phase. The diagrams of `tensor`, `quantum` and
+  `hopf` have `frobenius.Layer`s.
 
 - `symmetric.Layer.merge` fuses two layers of plumbing alone whatever
   plumbing they hold, through the `fuse` of its boxes, and
@@ -2099,6 +2131,32 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `feedback.Diagram.feedback` takes a memory of several wires. A delayed
   `feedback.Box` reads back from its tree, which dropped its time step
   ([rel-int/discopy-next#1](https://github.com/rel-int/discopy-next/pull/1)).
+- `hopf.Intertwiner.cups` and `caps` twist by the inverse of the pivotal
+  element the pairings of a module with its left dual in the orientations
+  of `rigid.Cup(x.l, x)` and `rigid.Cap(x, x.l)`, as they did for its
+  right dual in those of `Cup(x, x.r)` and `Cap(x.r, x)`, so that every
+  cup and cap they build is an intertwiner. Over the Taft algebra, whose pivot is
+  not the unit, `cups(V.l, V)` and `caps(V, V.l)` were not, and a rigid
+  functor sends the cup and cap of a left adjoint to them; the ribbon
+  functor never met them, as `x.l == x.r` in `pivotal` (B53 of
+  [rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
+- `hopf.Intertwiner.twist` is the action of the inverse of the ribbon
+  element, which is the trace of the braid as `ribbon` defines the twist,
+  on either side. It was the action of the ribbon element itself, so that
+  `hopf.Functor` sent `Twist(x)` to the inverse of the trace of
+  `Braid(x, x)` on the anyons of `D(Z/3)` and over
+  `Double(Algebra.taft(3))`, which no test saw: the twists of `D(Z/2)` are their own inverses, and
+  the twist tests of `test/hopf.py` compared a trivial twist with the
+  identity. They check the twists of `D(Z/3)` anyons and of their product
+  instead (B52 and B87 of
+  [rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
+- The rotation of the dagger of a `ribbon.Braid` goes from the adjoint of
+  its codomain to the adjoint of its domain and keeps the same strand
+  over, so that it is its transpose under a ribbon functor, as it already
+  was for a braid. It had the type of the rotation of the braid itself,
+  so that rotating a diagram with an inverse braid built one that did not
+  compose (B17 of
+  [discopy/discopy#606](https://github.com/discopy/discopy/issues/606)).
 - `braided.Diagram` and `ribbon.Diagram` bind their own `functor_factory`,
   where they read those of `monoidal` and `pivotal`, so that their
   conversions map a braid to a braid and a twist to a twist, as `balanced`
@@ -2820,6 +2878,29 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - Tensor networks are contracted with `opt_einsum` when the number of
   indices exceeds `numpy.einsum`'s 52-index limit
   ([#448](https://github.com/discopy/discopy/pull/448)).
+- `Circuit.to_tk` permutes the bits and the qubits of a permutation over
+  both, such as `Swap(bit, bit) @ qubit`, which it dropped, and a discarded
+  bit gets a `Discard` in the post-processing, so `eval(backend=...)` has
+  the codomain of the circuit. It also exports `CY`, `CCX`, `U1`, `CU1` and
+  a controlled `Ry`, reading every controlled gate from its controls and
+  their distances, and raises `NotImplementedError` for a gate tket has no
+  name for; `Circuit.from_tk` reads back every parametrised gate
+  ([rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
+- `Circuit.to_tn` contracts a discarded bit and a measurement that keeps its
+  qubits or overrides its bits, and `Circuit.measure` measures a circuit
+  with bits as a channel; `Discard`, `MixedState`, `Measure` and `Encode`
+  decompose with the types and the order of their wires
+  ([rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
+- The PennyLane interface takes the adjoint of `S` and `T` with
+  `qml.adjoint`, as `Operation.inv()` was removed in PennyLane 0.32, and
+  scales probabilities by the squared modulus of the circuit's scalar
+  ([rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
+- `Channel.then` checks the classical and quantum types it composes, not
+  only their underlying `Dim`: `Channel.id(Q(Dim(2)))` no longer composes
+  with `Channel.id(C(Dim(2, 2)))`. `Measure`, `Encode`, `Discard`,
+  `MixedState`, `quantum.zx.Swap` and `CQ` have a `repr` that evaluates
+  back to them ([rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31),
+  [rel-int/discopy-next#168](https://github.com/rel-int/discopy-next/issues/168)).
 - Contracting a tensor network with more than `config.MAX_EINSUM_INDICES`
   indices imports `opt_einsum`, which is not a declared dependency; a plain
   install now raises a clear `ImportError` naming the package to install
