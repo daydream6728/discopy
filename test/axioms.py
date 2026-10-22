@@ -111,7 +111,7 @@ def test_sequents():
     assert given["f"].cod == Ob('y')
 
 
-def test_formers():
+def test_constructors():
     x, y = rigid.Ty('x'), rigid.Ty('y')
     assert Tensor[x, y] == x @ y and Unit[rigid.Ty] == rigid.Ty()
     assert (L[x], R[x]) == (x.l, x.r) and Repeat[x, 3] == x @ x @ x
