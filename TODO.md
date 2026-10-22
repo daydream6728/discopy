@@ -10,9 +10,9 @@ recorded on the issue as https://github.com/rel-int/discopy-next/issues/161#issu
 
 #268 is merged.
 
-- [ ] #161: `monoidal.Functor` maps a `Layer` by one n-ary `tensor` of its whiskered images when `cod.ar` is an `abc.MonoidalCategory`, by the `@` fold otherwise
-- [ ] every `abc.MonoidalCategory` in the package takes `tensor(*others)`, so the n-ary path never hits a binary one
-- [ ] `symmetric.Permutation.__rmatmul__`: the n-ary image equals the fold's on layers with permutations next to boxes
-- [ ] every SVG baseline stays byte-identical
-- [ ] tests: the n-ary path is taken (one `tensor` call per layer), the kleisli fallback still folds
-- [ ] `CHANGELOG.md`: one bullet at the end of `### Performance`
+- [x] #161: `monoidal.Functor` maps a `Layer` by one n-ary `tensor` of its whiskered images when `cod.ar` is an `abc.MonoidalCategory`, by the `@` fold otherwise
+- [x] every `abc.MonoidalCategory` in the package takes `tensor(*others)`, so the n-ary path never hits a binary one
+- [x] `symmetric.Permutation.__rmatmul__`: the n-ary image equals the fold's on layers with permutations next to boxes
+- [x] every SVG baseline stays byte-identical
+- [x] tests: the n-ary path is taken (one `tensor` call per layer), the kleisli fallback still folds
+- [x] `CHANGELOG.md`: one bullet at the end of `### Performance`

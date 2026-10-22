@@ -2833,6 +2833,15 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   of boxes, 226 s at 3200 boxes. It is now linear, e.g. 65.6 ms at 800
   boxes and 294.9 ms at 3200, down from 5.4 s and 226 s
   ([#624](https://github.com/discopy/discopy/issues/624)).
+- `monoidal.Functor` maps a layer with one `n`-ary `tensor` of the images
+  of its boxes and types, rather than folding them two at a time with `@`,
+  which re-did the work of every previous step: the identity functor on a
+  layer of 200 boxes takes 36 ms rather than 1.0 s. The first two images
+  are still tensored with `@`, so that the image is the fold's, e.g. a type
+  next to a `Permutation` gives a wider permutation. A codomain that is not
+  a `MonoidalCategory`, e.g. `kleisli.multiplicative.Channel`, still folds,
+  and `kleisli.additive.Channel.tensor` is `n`-ary like every other one
+  ([#161](https://github.com/rel-int/discopy-next/issues/161)).
 
 ### Project
 
