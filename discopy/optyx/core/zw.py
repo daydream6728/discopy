@@ -40,7 +40,7 @@ or using :code:`quimb` (with :code:`tensor.to_quimb()`).
 **W commutativity**
 
 >>> from discopy.optyx.utils.misc import compare_arrays_of_different_sizes
->>> from discopy.drawing import Equation
+>>> from discopy.symmetric import Equation
 >>> bSym_l = W(2)
 >>> bSym_r = W(2) >> SWAP
 >>> assert compare_arrays_of_different_sizes(\\

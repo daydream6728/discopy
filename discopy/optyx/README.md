@@ -225,7 +225,7 @@ This is modeled in optyx by assigning internal states to the `DualRail` boxes th
 from discopy.optyx.qubits import Z, Scalar, Id, Measure
 from discopy.optyx.photonic import DualRail
 from discopy.optyx.classical import PostselectBit
-from discopy.drawing import Equation
+from discopy.symmetric import Equation
 
 bell_state = Z(0, 2) @ Scalar(0.5 ** 0.5)
 

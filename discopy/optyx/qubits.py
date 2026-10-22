@@ -257,7 +257,7 @@ Let us use the GHZ state from the example above.
 We can create a graph state as follows
 (where we omit the labels):
 
->>> from discopy.drawing import Equation
+>>> from discopy.symmetric import Equation
 >>> from discopy.optyx.photonic import DualRail
 >>> graph = (Z(0, 2) >> Id(1) @ H() >> Id(1) @ Z(1, 2) >> \\
 ... Id(2) @ H() >> Id(2) @ Z(1, 2))
@@ -272,7 +272,7 @@ We can create a graph state as follows
 We can map ZX diagrams to dual-rail encoding.
 For example, we can create a GHZ state:
 
->>> from discopy.drawing import Equation
+>>> from discopy.symmetric import Equation
 >>> from discopy.optyx.photonic import DualRail
 >>> from discopy.optyx.core.diagram import embedding_tensor
 >>> ghz = Z(0, 3)

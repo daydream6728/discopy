@@ -110,7 +110,7 @@ Some of the diagrams of the module can be converted to :class:`zw` diagrams.
 This includes the beam splitter. The :code:`zw` diagram is used to
 construct the tensor network for evaluation.
 
->>> from discopy.drawing import Equation
+>>> from discopy.symmetric import Equation
 >>> BS = BBS(0)
 >>> double_BS = BS.get_kraus()
 >>> Equation(BS, double_BS, symbol="$\\\\mapsto$").draw(\\

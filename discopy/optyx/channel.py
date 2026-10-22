@@ -203,7 +203,7 @@ supports creating :class:`path` diagrams:
 We can map ZX diagrams to :class:`path` diagrams using
 dual-rail encoding. For example, we can create a GHZ state:
 
->>> from discopy.drawing import Equation
+>>> from discopy.symmetric import Equation
 >>> from discopy.optyx.qubits import Z
 >>> from discopy.optyx.photonic import DualRail
 >>> ghz = Z(0, 3)
@@ -239,7 +239,7 @@ from pyzx import extract_circuit
 from discopy.optyx.core import diagram
 
 
-class Ob(frobenius.Ob):
+class Ob(frobenius.Wire):
     """Basic object: bit, mode, qubit or qmode"""
 
     _classical = {

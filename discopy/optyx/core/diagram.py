@@ -240,7 +240,7 @@ class PhotonNumberPreservation(Enum):
     QUBIT = "qubit"
 
 
-class Ob(frobenius.Ob):
+class Ob(frobenius.Wire):
     """Basic object in an optyx Diagram: bit or mode"""
 
 
@@ -1417,7 +1417,7 @@ class Feedback(monoidal.Bubble, Box):
     The feedback of `CNOT >> SWAP` unrolls to a ladder of CNOT gates,
     here with the plus state as initial state and an open output memory:
 
-    >>> from discopy.drawing import Equation
+    >>> from discopy.symmetric import Equation
     >>> from discopy.optyx.core.zx import Z, X
     >>> cnot = Z(1, 2) @ bit >> bit @ X(2, 1) @ Scalar(2 ** 0.5)
     >>> plus = Scalar(0.5 ** 0.5) @ Z(0, 1)
