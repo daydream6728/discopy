@@ -157,7 +157,7 @@ print(internal_state_1_2, internal_state_2_2)
 ```python {.marimo}
 from discopy.optyx.qubits import Z, Scalar, Id, Measure
 from discopy.optyx.classical import PostselectBit
-from discopy.drawing import Equation
+from discopy.symmetric import Equation
 from discopy.optyx.channel import Diagram, qubit
 bell_state = Z(0, 2) @ Scalar(0.5 ** 0.5)
 dual_rail_encoding = lambda state: DualRail(1, internal_states=[state])

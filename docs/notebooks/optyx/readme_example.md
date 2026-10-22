@@ -451,12 +451,14 @@ circuit.cnot(0, 1)
 
 pattern = circuit.transpile().pattern
 
-pattern.draw_graph()
+pattern.draw()
 ```
 
 ```python {.marimo}
 simulator = graphix.simulator.PatternSimulator(pattern, backend="statevector")
-graphix_result = simulator.run().psi.conj()
+simulator.run()
+_state = simulator.backend.state
+graphix_result = _state.psi.reshape((2, ) * _state.nqubit).conj()
 ```
 
 ```python {.marimo}
@@ -470,8 +472,14 @@ optyx_res = (
 ```
 
 ```python {.marimo}
+# an open graph defines its state up to a scalar, and graphix 0.4
+# absorbs Cliffords into measurements, so compare up to a phase
+_largest = max(optyx_res, key=lambda keys: abs(optyx_res[keys]))
+_phase = graphix_result[_largest] / optyx_res[_largest]
+assert np.isclose(abs(_phase), 1, atol=1e-6)
 for keys in optyx_res.keys():
-    assert np.isclose(optyx_res[keys], graphix_result[keys], atol=1e-6)
+    assert np.isclose(
+        _phase * optyx_res[keys], graphix_result[keys], atol=1e-6)
 ```
 
 ### Perceval circuits and processors
