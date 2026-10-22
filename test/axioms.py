@@ -114,12 +114,16 @@ def test_axiom_binding():
 
 
 def test_string_annotations():
-    """ A law whose annotations are strings is refused. """
+    """ A law whose annotations are strings reads them as objects. """
     namespace = {}
     exec("from __future__ import annotations\n"
-         "def deferred(cls, f: int): return NotImplemented", namespace)
-    with raises(TypeError, match="__future__"):
-        axiom(namespace["deferred"])
+         "from discopy.axioms import Equation, Hom, Obj\n"
+         "def deferred[A: Obj[int]](cls, f: Hom[int, A, A])"
+         " -> Equation[Hom[int, A, A]]: return NotImplemented", namespace)
+    law = axiom(namespace["deferred"]).bind(Arrow)
+    (A, ), annotations = law.function.__type_params__, law.annotations()
+    assert annotations["f"] == Hom[int, A, A]
+    assert annotations["return"] == Equation[Hom[int, A, A]]
 
 
 def test_sequents():

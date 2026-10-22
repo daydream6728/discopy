@@ -69,6 +69,8 @@ Summary
         keyword_form
 """
 
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
@@ -167,7 +169,7 @@ class Category[C0, C1: Category](Testable[C1], ABC):
         """
         return self.cod == other.dom
 
-    def is_parallel(self, other: "Category") -> bool:
+    def is_parallel(self, other: Category) -> bool:
         """
         Whether two morphisms are parallel, i.e. they have the same
         domain and codomain.
@@ -380,7 +382,7 @@ class Nat(Monoid["Nat"]):
     """
     n: int = 0
 
-    def tensor(self, *others: "Nat") -> "Nat":
+    def tensor(self, *others: Nat) -> Nat:
         if any(not isinstance(other, Nat) for other in others):
             return NotImplemented  # This allows whiskering on the left.
         return type(self)(self.n + sum(other.n for other in others))
@@ -401,7 +403,7 @@ class Nat(Monoid["Nat"]):
     def __str__(self) -> str:
         return str(self.n)
 
-    def __getitem__(self, key: int | slice) -> "Nat":
+    def __getitem__(self, key: int | slice) -> Nat:
         """
         Slicing a natural number reads it off as a sequence of ``1``'s.
 
@@ -419,7 +421,7 @@ class Nat(Monoid["Nat"]):
         return {'factory': factory_name(type(self)), 'n': self.n}
 
     @classmethod
-    def from_tree(cls, tree: dict) -> "Nat":
+    def from_tree(cls, tree: dict) -> Nat:
         """ The natural number of a tree, see :func:`discopy.utils.loads`. """
         return cls(tree['n'])
 

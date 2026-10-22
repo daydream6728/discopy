@@ -83,6 +83,8 @@ which lands in :class:`CMap` as a biclosed category has no trace.
 
 """
 
+from __future__ import annotations
+
 from abc import abstractmethod
 from dataclasses import dataclass, field, replace
 from inspect import signature
@@ -145,10 +147,10 @@ class Ty(monoidal.Ty):
         """
         return self.ar(self.exp_factory(self, other)) if other else self
 
-    def over(self, other: "Ty") -> "Ty":
+    def over(self, other: Ty) -> Ty:
         return self.ar(self.over_factory(self, other)) if other else self
 
-    def under(self, other: "Ty") -> "Ty":
+    def under(self, other: Ty) -> Ty:
         return self.ar(self.under_factory(self, other)) if other else self
 
     def __lshift__(self, other):
@@ -253,7 +255,7 @@ class Wire(monoidal.Wire):
     and right colours always match. Exponentials do not interact meaningfully
     with colours, so for now we assume everything is transparent.
     """
-    def dagger(self) -> "Wire":
+    def dagger(self) -> Wire:
         return self
 
 
@@ -350,7 +352,7 @@ class Diagram(monoidal.Diagram, BiclosedCategory):
 
     ob = Ty
 
-    def curry(self, n=1, left=True) -> "Diagram":
+    def curry(self, n=1, left=True) -> Diagram:
         """
         Wrapper around :class:`Curry` called by :class:`Functor`.
 
@@ -368,7 +370,7 @@ class Diagram(monoidal.Diagram, BiclosedCategory):
         return self.curry_factory(self, n, left) if n else self
 
     @classmethod
-    def ev(cls, base: Ty, exponent: Ty, left=True) -> "Eval":
+    def ev(cls, base: Ty, exponent: Ty, left=True) -> Eval:
         """
         Wrapper around :class:`Eval` called by :class:`Functor`.
 
@@ -385,7 +387,7 @@ class Diagram(monoidal.Diagram, BiclosedCategory):
         return cls.eval_factory(
             base << exponent if left else exponent >> base)
 
-    def to_compact(self) -> "CMap":
+    def to_compact(self) -> CMap:
         """
         Bend curry bubbles into coevaluation and feedback, which lands in
         :class:`CMap` as a biclosed category has no trace, see
@@ -468,7 +470,7 @@ class Eval(Box):
     def from_tree(cls, tree):
         return cls(from_tree(tree['x']), left=tree['left'])
 
-    def dagger(self) -> "Coeval":
+    def dagger(self) -> Coeval:
         return self.coeval_factory(self.x, self.left)
 
     @property
@@ -654,7 +656,7 @@ class Functor(monoidal.Functor):
                 return self.ob_map[other]
         return super().__call__(other)
 
-    def map_variable(self, variable: "Variable", context: dict) -> "Variable":
+    def map_variable(self, variable: Variable, context: dict) -> Variable:
         """
         The image of a variable, of the image of its type, renamed with
         underscores until it differs from the images already in the context.
@@ -829,8 +831,7 @@ class Normalising(Testable):
     """
     The laws of beta reduction, for terms with a ``normal_form`` reached by
     each of their :attr:`reduction_strategies`, e.g.
-    :class:`discopy.closed.TermBase`, whose module cannot state them as its
-    annotations are strings.
+    :class:`discopy.closed.TermBase`.
     """
     reduction_strategies: ClassVar[tuple] = ()
 
@@ -900,7 +901,7 @@ class TermBase(Box, Equivalence):
     """
     dom: Ty
     cod: Ty
-    freevars: list["Variable"]
+    freevars: list[Variable]
     functor: ClassVar[Functor] = Functor.id(Diagram)
 
     @abstractmethod
@@ -934,7 +935,7 @@ class TermBase(Box, Equivalence):
         args = (other, self, left) if left else (self, other, left)
         return self.cod.application_factory(*args)
 
-    def alpha_eq(self, *others: "Term") -> bool:
+    def alpha_eq(self, *others: Term) -> bool:
         """
         Whether the terms are all alpha-equivalent to this one, i.e. equal up
         to the names of their bound variables, in one pass over the terms.
@@ -960,7 +961,7 @@ class TermBase(Box, Equivalence):
         return self.alpha_eq_under(scopes, list(others))
 
     def alpha_eq_under(  # pylint: disable=unused-argument  # a constant
-            self, scopes: list[dict["Variable", int]], others: list["Term"],
+            self, scopes: list[dict[Variable, int]], others: list[Term],
             depth: int = 0) -> bool:
         """
         Whether the terms, this one and the ``others``, are alpha-equivalent
@@ -1056,14 +1057,14 @@ class TermBase(Box, Equivalence):
             cls, iter(choices), types, letters, constants=constants).term(cod)
 
     @classmethod
-    def choices(cls) -> "st.SearchStrategy[list[int]]":
+    def choices(cls) -> st.SearchStrategy[list[int]]:
         """ Generate the choices of :meth:`generate`, one per node. """
         from hypothesis import strategies as st
 
         return st.lists(st.integers(min_value=0, max_value=11), max_size=12)
 
     @classmethod
-    def shapes(cls, *, types=None, cod=None) -> "st.SearchStrategy[tuple]":
+    def shapes(cls, *, types=None, cod=None) -> st.SearchStrategy[tuple]:
         """
         Generate the arguments of :meth:`generate` but its letters: a type,
         the choices and the types the exponents are drawn from, so that one
@@ -1079,14 +1080,14 @@ class TermBase(Box, Equivalence):
             st.lists(types, min_size=1, max_size=3))
 
     @classmethod
-    def namings(cls) -> "st.SearchStrategy[list[str]]":
+    def namings(cls) -> st.SearchStrategy[list[str]]:
         """ Generate the letters naming the bound variables, one per level. """
         from hypothesis import strategies as st
 
         return st.lists(st.sampled_from("xyz"), min_size=1, max_size=3)
 
     @classmethod
-    def strategy(cls, **params) -> "st.SearchStrategy[Term]":
+    def strategy(cls, **params) -> st.SearchStrategy[Term]:
         """
         Generate terms, one :meth:`generate` call per shape and naming.
 
@@ -1101,7 +1102,7 @@ class TermBase(Box, Equivalence):
             cls.shapes(**params), cls.namings())
 
     @classmethod
-    def related(cls, **params) -> "st.SearchStrategy[tuple]":
+    def related(cls, **params) -> st.SearchStrategy[tuple]:
         """
         Generate a term, its canonical form and a second term of the same
         type, the first again under another naming or another shape, see
@@ -1543,8 +1544,8 @@ class Sampler:
                        for variable in bound if variable.cod == cod]
         return result
 
-    def splits(self, constraints: "Constraints"
-               ) -> list[tuple["Constraints", "Constraints"]]:
+    def splits(self, constraints: Constraints
+               ) -> list[tuple[Constraints, Constraints]]:
         """
         The ways of splitting the constraints between two subterms in
         sequence: at a bound variable of the prefix, among the extras or at
@@ -1567,7 +1568,7 @@ class Sampler:
             for j in range(len(suffix) + 1)]
         return result
 
-    def application(self, cod: Ty, first: "Constraints", second: "Constraints",
+    def application(self, cod: Ty, first: Constraints, second: Constraints,
                     left: bool) -> Application:
         """
         A function applied to an argument of an exponent drawn from the
@@ -1583,19 +1584,19 @@ class Sampler:
         args = self.term(exponent, second)
         return self.category.ob.application_factory(func, args, False)
 
-    def applications(self, cod: Ty, constraints: "Constraints"
+    def applications(self, cod: Ty, constraints: Constraints
                      ) -> list[Callable[[], Term]]:
         """ The applications allowed, one per split and side. """
         return [self.split(cod, first, second, left)
                 for first, second in self.splits(constraints)
                 for left in (False, True)]
 
-    def split(self, cod: Ty, first: "Constraints", second: "Constraints",
+    def split(self, cod: Ty, first: Constraints, second: Constraints,
               left: bool) -> Callable[[], Application]:
         """ The option of an application with its constraints split. """
         return lambda: self.application(cod, first, second, left)
 
-    def abstraction(self, cod: Ty, constraints: "Constraints") -> Abstraction:
+    def abstraction(self, cod: Ty, constraints: Constraints) -> Abstraction:
         """
         The abstraction of the variable bound at this level, first in the
         free variables of the body when the type is a left exponential and
