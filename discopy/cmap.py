@@ -601,12 +601,26 @@ class CMap[C0: Pregroup, C1: CMap](
 
     @classmethod
     def validate_adjoint_types(cls, source: Port, target: Port):
-        """ Validate a wire between adjoint types. """
-        adjoint_types = getattr(source.obj, "r", None) == target.obj\
-            or source.obj == getattr(target.obj, "r", None)
-        if not adjoint_types:
-            raise AxiomError(messages.NOT_ADJOINT.format(
-                source.obj, target.obj))
+        """
+        Validate a wire between adjoint types, i.e. a cup or a cap, its ends
+        in port order as :meth:`make_monogamous` reads them: the right end
+        of a cup is the right adjoint of its left end, the left end of a cap
+        is the right adjoint of its right end.
+
+        >>> from discopy.rigid import Ty, Diagram
+        >>> x = Ty('x')
+        >>> print(CMap[Diagram](Ty(), x @ x.l, (), (1, 0)).to_diagram())
+        Cap(x, x.l)
+        >>> CMap[Diagram](Ty(), x.l @ x, (), (1, 0))
+        Traceback (most recent call last):
+        ...
+        discopy.utils.AxiomError: x is not the left adjoint of x.l, ...
+        """
+        left, right = (source.obj, target.obj) if source.kind.is_positive\
+            else (target.obj, source.obj)
+        if not hasattr(left, "r"):
+            raise AxiomError(messages.NOT_ADJOINT.format(left, right))
+        hypergraph.Hypergraph.assert_isadjoint(left, right)
 
     @classmethod
     def validate_wire(cls, source: Port, target: Port):

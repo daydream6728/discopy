@@ -177,6 +177,22 @@ def test_non_adjoint_wire():
     assert Cap(Ty('x'), Ty('x')).to_hypergraph() == H.spiders(0, 2, Ty('x'))
 
 
+def test_cups_and_caps_are_checked_in_port_order():
+    """ The legs of a cup-shaped or cap-shaped spider are checked in port
+    order, the order :meth:`Hypergraph.make_monogamous` reads them in, so a
+    rigid cap on ``x.l @ x`` is refused when it is built. """
+    from discopy import rigid
+    from discopy.hypergraph import Hypergraph
+    x, K = rigid.Ty('x'), Hypergraph[rigid.Diagram]
+    assert K(rigid.Ty(), x @ x.l, (), ((), (), (0, 0))).to_diagram()\
+        == rigid.Cap(x, x.l)
+    assert K(x.l @ x, rigid.Ty(), (), ((0, 0), (), ())).to_diagram()\
+        == rigid.Cup(x.l, x)
+    for dom, cod in [(rigid.Ty(), x.l @ x), (x @ x.l, rigid.Ty())]:
+        with raises(AxiomError, match="x is not the left adjoint of x.l"):
+            K(dom, cod, (), ((0, 0) if dom else (), (), (0, 0) if cod else ()))
+
+
 def test_spider_producers_and_consumers():
     from discopy import compact
     K = compact.Hypergraph

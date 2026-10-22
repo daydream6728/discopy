@@ -296,11 +296,12 @@ class Hypergraph(
                         obj, ports[i].obj))
             legs = consumers if not producers and len(consumers) == 2 else\
                 producers if not consumers and len(producers) == 2 else None
-            if legs is not None:  # a cup or a cap between two adjoint types
+            if legs is not None:  # a cup or a cap, its legs in port order
                 left, right = (ports[i].obj for i in sorted(legs))
-                if getattr(left, "r", left) != right\
-                        and getattr(right, "r", right) != left:
-                    raise AxiomError(messages.NOT_ADJOINT.format(left, right))
+                if producers:
+                    self.assert_isadjoint(left, right)
+                else:
+                    self.assert_isadjoint(right, left)
 
         self.offsets = offsets or tuple(len(boxes) * [None])
 
