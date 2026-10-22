@@ -3018,17 +3018,20 @@ class Hypergraph(
                     outputs.append(spider)
                 return untuplify(outputs)
 
-            cls.category.__call__ = apply
             for i, obj in enumerate(dom):
                 input_node = Node("input", obj=obj, i=i)
                 input_spider = Node("spider", obj=obj, i=i)
                 spider_nodes.append(input_spider)
                 graph.add_edge(input_node, input_spider)
-            for i, spider in enumerate(tuplify(func(*spider_nodes))):
+            cls.category.__call__ = apply
+            try:
+                outputs = tuplify(func(*spider_nodes))
+            finally:
+                del cls.category.__call__
+            for i, spider in enumerate(outputs):
                 assert_isinstance(spider, Node)
                 node = Node("output", obj=spider.obj, i=i)
                 graph.add_edge(spider, node)
-            del cls.category.__call__
             result = cls.from_graph(graph)
             if result.cod != cod:
                 raise AxiomError(f"Expected diagram.cod == {cod}, "
