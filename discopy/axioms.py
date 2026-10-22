@@ -241,9 +241,11 @@ typechecker reads it as a tuple of them.
 class Count(int):
     """
     The sort of the numbers up to :data:`MAX_COUNT`, as the bound of a
-    variable ``N: Count`` of a declaration, e.g. the number of copies of an
-    object.
+    variable ``N: Count`` of a declaration, e.g. the legs of a spider, two
+    in the canonical instance of a law, the least that is neither the unit
+    nor a single wire.
     """
+    canonical = 2
 
 
 def is_open(annotation) -> bool:
@@ -672,7 +674,15 @@ class Declaration[**P, T](classmethod):
             def value(name, kind):
                 if get_origin(kind) is Var:
                     return get_args(kind)[1]
-                if get_origin(kind) is Hom:
+                if get_origin(kind) is Perm:
+                    n, = get_args(kind)
+                    strategy = st.permutations(range(n)).map(tuple)
+                elif get_origin(kind) is Objs:
+                    n = get_args(kind)[1]
+                    strategy = st.lists(
+                        self.category.ob.generators(),
+                        min_size=n, max_size=n).map(tuple)
+                elif get_origin(kind) is Hom:
                     _, dom, cod = get_args(kind)
                     strategy = self.category.strategy(
                         dom=dom, cod=cod, **params)
@@ -751,6 +761,68 @@ class Axiom[**P, T](Declaration[P, T]):
         :meth:`weaken` declared, see :meth:`Declaration.arguments`.
         """
         return self.arguments(**self.params)
+
+    def canonical(self) -> Equation:
+        """
+        The law as a schema: its equation with an object named after each
+        type parameter, a ``box_factory`` named after each morphism, cast
+        into the category when it is a generator rather than a term, e.g.
+        the wire of a type, and two for each number, the equation a law
+        declared broken raises included. A category whose objects take no
+        name, e.g. the shapes of a network, has none and raises
+        ``TypeError``.
+
+        >>> from discopy.cat import Arrow
+        >>> print(Arrow.associativity.canonical())
+        Equation(f >> g >> h, f >> g >> h)
+        """
+        try:
+            self.category.ob("A")
+        except TypeError as error:
+            raise TypeError(f"{self} has no canonical instance: the objects "
+                            f"of {self.category} take no name.") from error
+
+        def value(name, kind):
+            if get_origin(kind) is Var:
+                return get_args(kind)[1]
+            if get_origin(kind) is Perm:
+                return tuple(reversed(range(get_args(kind)[0])))
+            if get_origin(kind) is Objs:
+                return tuple(self.category.ob(f"{name}{i}")
+                             for i in range(get_args(kind)[1]))
+            dom, cod = get_args(kind)[1:] if get_origin(kind) is Hom\
+                else (self.category.ob(name), ) * 2
+            box = self.category.box_factory(name, dom=dom, cod=cod)
+            return box if isinstance(box, self.category)\
+                else self.category.cast(box)
+
+        scope = self.scope(lambda name, sort: Count.canonical if sort is Count
+                           else self.category.ob(name))
+        arguments = self.instantiate(scope, value)
+        try:
+            return self(**arguments)  # ty: ignore[invalid-return-type]
+        except AxiomFailure as failure:
+            return failure.equation
+
+    def draw(self, **params):
+        """
+        Draw the :meth:`canonical` equation of the law, the parameters those
+        of :meth:`discopy.monoidal.Equation.draw`.
+
+        >>> from discopy import rigid
+        >>> rigid.Diagram.snake_equations.draw(
+        ...     doctest="docs/_static/rigid/snake-equations-law.svg")
+
+        .. image:: /_static/rigid/snake-equations-law.svg
+            :align: center
+        """
+        equation = self.canonical()
+        if equation is NotImplemented:
+            raise TypeError(f"{self} does not apply, so has nothing to draw.")
+        draw = getattr(equation, "draw", None)
+        if draw is None:
+            raise TypeError(f"{self} is not an equation of diagrams.")
+        return draw(**params)
 
     def falsify(self, **params) -> dict:
         """
@@ -975,6 +1047,8 @@ class Testable[T](ABC):
         the generator of its category but defines a strategy of its own,
         e.g. a lambda term, is checked on the terms that strategy generates,
         and so is a testable that is no category at all, e.g. a proof net.
+        A :class:`TestableGeneric` is checked on the subscripts by the
+        parameters its ``checked_params`` names, and on no other.
 
         >>> from discopy.cat import Arrow, Box
         >>> from discopy.monoidal import Ty
@@ -994,9 +1068,15 @@ class Testable[T](ABC):
                 and "strategy" in vars(testable)\
                 and getattr(testable, "box_factory", None) is not testable
 
+        checked = {
+            generic[param] for generic in TestableGeneric.subclasses()[1:]
+            if "__is_named_generic__" not in vars(generic)
+            for param in generic.checked_params()}
         return tuple(sorted((
             testable for testable in cls.subclasses()
-            if own_terms(testable)
+            if (testable in checked
+                or not issubclass(testable, TestableGeneric))
+            and own_terms(testable)
             and testable.axioms and generates(testable)), key=factory_name))
 
     @classmethod
@@ -1126,7 +1206,24 @@ class Serialisable[T](Testable[T]):
         return Equation(from_tree(term.to_tree()), loads(dumps(term)), term)
 
 
-class Related[factory](Testable, NamedGeneric, tuple):
+class TestableGeneric(NamedGeneric, Testable):
+    """
+    A testable class with type parameters, e.g. ``Hypergraph[C]``, which
+    names the parameters of the subscripts the property matrix checks, see
+    :meth:`Testable.enrolled`: a subscript is a class of its own, built on
+    demand, so the matrix cannot find it by walking the subclasses, and not
+    every subscript generates terms whose laws hold up to its equation.
+    """
+    @classmethod
+    @abstractmethod
+    def checked_params(cls) -> tuple:
+        """
+        The parameters of the subscripts of the class the property matrix
+        checks, its default parameter for the class itself.
+        """
+
+
+class Related[factory](TestableGeneric, tuple):
     """
     Three instances of the ``factory``, an :class:`Equivalence`: two related
     by construction and a third that may be or not, see
@@ -1137,6 +1234,11 @@ class Related[factory](Testable, NamedGeneric, tuple):
         if len(terms) != 3:
             raise ValueError("Expected three terms.")
         return super().__new__(cls, terms)
+
+    @classmethod
+    def checked_params(cls) -> tuple:
+        """ None, a sort of premises being drawn over a category. """
+        return ()
 
     @classmethod
     def strategy(cls, **params) -> st.SearchStrategy[Related]:

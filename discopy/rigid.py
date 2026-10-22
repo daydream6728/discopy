@@ -151,10 +151,11 @@ import copy
 
 from collections.abc import Callable
 
-from typing import ClassVar, Iterator, Self
+from typing import Iterator, Self, ClassVar
 
 from discopy import cat, monoidal, biclosed, messages
-from discopy.abc import Pregroup, RigidCategory
+from discopy.abc import DaggerCategory, Pregroup, RigidCategory
+from discopy.axioms import GENERATORS
 from discopy.cat import factory
 from discopy.utils import (
     assert_isatomic,
@@ -164,7 +165,6 @@ from discopy.utils import (
     deprecated_alias,
     factory_name,
 )
-from discopy.axioms import GENERATORS
 
 
 class Wire(monoidal.Wire):
@@ -656,6 +656,35 @@ class Diagram(biclosed.Diagram, RigidCategory):
         >>> assert double_snake == two_snakes_nf
         """
         return super().normal_form(**params)
+
+    hypergraph_section = monoidal.Diagram.hypergraph_section.failing(
+        messages.SECTION_NEEDS_SWAPS)
+    dagger_involution = DaggerCategory.dagger_involution.failing(
+        messages.RIGID_HAS_NO_DAGGER)
+    dagger_contravariance = DaggerCategory.dagger_contravariance.failing(
+        messages.RIGID_HAS_NO_DAGGER)
+    dagger_monoidality = DaggerCategory.dagger_monoidality.failing(
+        messages.RIGID_HAS_NO_DAGGER)
+
+    # The curry of a rigid diagram is made of caps, which a map and a
+    # hypergraph both read as wiring, so the two agree.
+    map_agreement = monoidal.Diagram.map_agreement
+    currying_left = RigidCategory.currying_left.failing(
+        messages.NO_PLANAR_NORMAL_FORM)
+    currying_right = RigidCategory.currying_right.failing(
+        messages.NO_PLANAR_NORMAL_FORM)
+    currying_eta_left = RigidCategory.currying_eta_left.failing(
+        messages.NO_PLANAR_NORMAL_FORM)
+    currying_eta_right = RigidCategory.currying_eta_right.failing(
+        messages.NO_PLANAR_NORMAL_FORM)
+    currying_naturality_left = RigidCategory.currying_naturality_left\
+        .failing(messages.NO_PLANAR_NORMAL_FORM)
+    currying_naturality_right = RigidCategory.currying_naturality_right\
+        .failing(messages.NO_PLANAR_NORMAL_FORM)
+    snake_equations = RigidCategory.snake_equations.failing(
+        messages.NO_PLANAR_NORMAL_FORM)
+    transpose_contravariance = RigidCategory.transpose_contravariance.failing(
+        messages.NO_PLANAR_NORMAL_FORM)
 
 
 class Box(biclosed.Box, Diagram):

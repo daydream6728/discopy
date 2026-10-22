@@ -83,8 +83,8 @@ from typing import TYPE_CHECKING, ClassVar
 
 from discopy import messages
 from discopy.axioms import (
-    Atom, Count, Delay, Equation, Hom, L, Obj, Over, R, Repeat, Tensor,
-    Testable, Under, Unit, Var, axiom, rule)
+    Atom, Count, Delay, Equation, Hom, L, Obj, Objs, Over, Perm, R, Repeat,
+    Tensor, Testable, Under, Unit, Var, axiom, rule)
 from discopy.utils import (  # noqa: F401  pylint: disable=unused-import
     AxiomError, NamedGeneric, classproperty, factory_name)
 
@@ -240,6 +240,15 @@ class DaggerCategory[C0, C1: DaggerCategory](Category[C0, C1]):
         return cls.equation_factory(
             f.then(g).dagger(), g.dagger().then(f.dagger()))
 
+    @axiom
+    def dagger_monoidality[A: Obj[C0], B: Obj[C0], C: Obj[C0], D: Obj[C0]](
+            cls, f: Hom[C1, A, B], g: Hom[C1, C, D]
+    ) -> Equation[Hom[C1, Tensor[B, D], Tensor[A, C]]]:
+        """ The dagger distributes over the tensor, when there is one. """
+        return cls.equation_factory(
+            (f @ g).dagger(),  # ty: ignore[unsupported-operator]
+            f.dagger() @ g.dagger())
+
 
 class ColouredMonoid[C0, C1: ColouredMonoid](Category[C0, C1]):
     """
@@ -358,6 +367,8 @@ class Group[C1: Group](
     A group is a monoid whose elements are invertible, i.e. a groupoid with
     a single object :obj:`None`, which every element goes from and to.
     """
+    dagger_monoidality = DaggerCategory.dagger_monoidality.inapplicable(
+        messages.GROUP_TENSOR)
 
 
 @dataclass
@@ -483,6 +494,24 @@ class MonoidalCategory[C0: ColouredMonoid, C1: MonoidalCategory](
 
     def __rmatmul__(self: C1, other):
         return self.whisker(other).tensor(self)
+
+    @axiom
+    def bifunctoriality[
+            A: Obj[C0], B: Obj[C0], C: Obj[C0], D: Obj[C0], U: Obj[C0],
+            V: Obj[C0]](
+            cls, f: Hom[C1, A, B], g: Hom[C1, C, D], h: Hom[C1, B, U],
+            k: Hom[C1, D, V]
+    ) -> Equation[Hom[C1, Tensor[A, C], Tensor[U, V]]]:
+        """ Bifunctoriality of the tensor, i.e. the interchange law. """
+        return cls.equation_factory(
+            f @ g >> h @ k, (f >> h) @ (g >> k))
+
+    @axiom
+    def tensor_unitality[X: Obj[C0], Y: Obj[C0]](
+            cls, x: Var[C0, X], y: Var[C0, Y]
+    ) -> Equation[Hom[C1, Tensor[X, Y], Tensor[X, Y]]]:
+        """ Preservation of identities by tensor. """
+        return cls.equation_factory(cls.id(x) @ cls.id(y), cls.id(x @ y))
 
     @rule
     def mix[A: Obj[C0], B: Obj[C0], C: Obj[C0], D: Obj[C0]](
@@ -978,6 +1007,61 @@ class BiclosedCategory[
             else exponent @ self >> self.ev(base, exponent, False)
         return result.uncurry(n - len(exponent), left)
 
+    @axiom
+    def currying_left[Γ: Obj[C0], X: Atom[C0], E: Atom[C0]](
+            cls, f: Hom[C1, Tensor[Γ, E], X]
+    ) -> Equation[Hom[C1, Tensor[Γ, E], X]]:
+        """ Left currying followed by evaluation. """
+        return cls.equation_factory(f.curry().uncurry(), f)
+
+    @axiom
+    def currying_right[Γ: Obj[C0], X: Atom[C0], E: Atom[C0]](
+            cls, f: Hom[C1, Tensor[E, Γ], X]
+    ) -> Equation[Hom[C1, Tensor[E, Γ], X]]:
+        """ Right currying followed by evaluation. """
+        return cls.equation_factory(
+            f.curry(left=False).uncurry(left=False), f)
+
+    @axiom
+    def currying_eta_left[Y: Obj[C0], E: Obj[C0]](
+            cls, base: Var[C0, Y], exponent: Var[C0, E]
+    ) -> Equation[Hom[C1, Over[Y, E], Over[Y, E]]]:
+        """ The left currying of the left evaluation is the identity. """
+        return cls.equation_factory(
+            cls.ev(base, exponent).curry(len(exponent)),
+            cls.id(base << exponent))
+
+    @axiom
+    def currying_eta_right[Y: Obj[C0], E: Obj[C0]](
+            cls, base: Var[C0, Y], exponent: Var[C0, E]
+    ) -> Equation[Hom[C1, Under[E, Y], Under[E, Y]]]:
+        """ The right currying of the right evaluation is the identity. """
+        return cls.equation_factory(
+            cls.ev(base, exponent, left=False).curry(
+                len(exponent), left=False),
+            cls.id(exponent >> base))
+
+    @axiom
+    def currying_naturality_left[
+            Γ: Obj[C0], Δ: Obj[C0], E: Obj[C0], Z: Obj[C0]](
+            cls, f: Hom[C1, Tensor[Γ, E], Z], g: Hom[C1, Δ, Γ],
+            exponent: Var[C0, E]) -> Equation[Hom[C1, Δ, Over[Z, E]]]:
+        """ Left currying is natural in the context. """
+        n = len(exponent)
+        return cls.equation_factory(
+            (g @ exponent >> f).curry(n), g >> f.curry(n))
+
+    @axiom
+    def currying_naturality_right[
+            Γ: Obj[C0], Δ: Obj[C0], E: Obj[C0], Z: Obj[C0]](
+            cls, f: Hom[C1, Tensor[E, Γ], Z], g: Hom[C1, Δ, Γ],
+            exponent: Var[C0, E]) -> Equation[Hom[C1, Δ, Under[E, Z]]]:
+        """ Right currying is natural in the context. """
+        n = len(exponent)
+        return cls.equation_factory(
+            (exponent @ g >> f).curry(n, left=False),
+            g >> f.curry(n, left=False))
+
     @rule
     def curry_left[Γ: Obj[C0], E: Obj[C0], B: Obj[C0]](
             cls, f: Hom[C1, Tensor[Γ, E], B], exponent: Var[C0, E]
@@ -1149,6 +1233,55 @@ class RigidCategory[C0: Pregroup, C1: RigidCategory](BiclosedCategory[C0, C1]):
             >> self.dom.r @ self @ self.cod.r\
             >> self.dom.r @ self.cups(self.cod, self.cod.r)
 
+    @axiom
+    def snake_equations[X: Obj[C0]](
+            cls, x: Var[C0, X]) -> Equation[Hom[C1, X, X]]:
+        """ The two snake equations. """
+        snake_r = x @ cls.caps(x.r, x) >> cls.cups(x, x.r) @ x
+        snake_l = cls.caps(x, x.l) @ x >> x @ cls.cups(x.l, x)
+        return cls.equation_factory(snake_r, cls.id(x), snake_l)
+
+    @axiom
+    def caps_coherence[M: Atom[C0], N: Atom[C0], X: Obj[C0], Y: Obj[C0]](
+            cls, x: Var[C0, Tensor[M, X]], y: Var[C0, Tensor[N, Y]]
+    ) -> Equation[Hom[
+            C1, Unit[C0], Tensor[M, X, N, Y, L[Tensor[M, X, N, Y]]]]]:
+        """ Monoidal coherence of caps. """
+        return cls.equation_factory(
+            cls.caps(x @ y, (x @ y).l),
+            cls.caps(x, x.l) >> x @ cls.caps(y, y.l) @ x.l)
+
+    @axiom
+    def cups_coherence[M: Atom[C0], N: Atom[C0], X: Obj[C0], Y: Obj[C0]](
+            cls, x: Var[C0, Tensor[M, X]], y: Var[C0, Tensor[N, Y]]
+    ) -> Equation[Hom[
+            C1, Tensor[M, X, N, Y, R[Tensor[M, X, N, Y]]], Unit[C0]]]:
+        """ Monoidal coherence of cups. """
+        return cls.equation_factory(
+            cls.cups(x @ y, (x @ y).r),
+            x @ cls.cups(y, y.r) @ x.r >> cls.cups(x, x.r))
+
+    @axiom
+    def transpose_contravariance[A: Obj[C0], B: Obj[C0], C: Obj[C0]](
+            cls, f: Hom[C1, A, B], g: Hom[C1, B, C]
+    ) -> Equation[Hom[C1, R[C], R[A]]]:
+        """ Transposition reverses composition. """
+        return cls.equation_factory(
+            (f >> g).transpose(), g.transpose() >> f.transpose())
+
+    @axiom
+    def rotate_contravariance[A: Obj[C0], B: Obj[C0], C: Obj[C0]](
+            cls, f: Hom[C1, A, B], g: Hom[C1, B, C]
+    ) -> Equation[Hom[C1, R[C], R[A]]]:
+        """ Rotation, i.e. the right adjoint, reverses composition. """
+        return cls.equation_factory((f >> g).r, g.r >> f.r)
+
+    @axiom
+    def adjunction[A: Obj[C0], B: Obj[C0]](
+            cls, f: Hom[C1, A, B]) -> Equation[Hom[C1, A, B]]:
+        """ The left and right adjoints are mutually inverse. """
+        return cls.equation_factory(f.l.r, f, f.r.l)
+
     @rule
     def counit[X: Obj[C0]](
             cls, x: Var[C0, X]) -> Hom[C1, Tensor[X, R[X]], Unit[C0]]:
@@ -1173,6 +1306,18 @@ class PivotalCategory[
     yanking = TracedCategory.yanking.inapplicable(
         messages.PLANAR_YANKING)
 
+    @axiom
+    def self_dual[X: Obj[C0]](
+            cls, x: Var[C0, X]) -> Equation[Var[C0, R[X]]]:
+        """ The left and right adjoints of an object are equal. """
+        return Equation(x.r, x.l)
+
+    @axiom
+    def pivotality[A: Obj[C0], B: Obj[C0]](
+            cls, f: Hom[C1, A, B]) -> Equation[Hom[C1, L[B], L[A]]]:
+        """ The left and right transposes are equal. """
+        return cls.equation_factory(f.transpose(left=True), f.transpose())
+
 
 class BraidedCategory[
         C0: ColouredMonoid, C1: BraidedCategory](MonoidalCategory[C0, C1]):
@@ -1190,6 +1335,47 @@ class BraidedCategory[
             left : The object on the left of the braid.
             right : The object on the right of the braid.
         """
+
+    @axiom
+    def braid_then_inverse[X: Atom[C0], Y: Atom[C0]](
+            cls, x: Var[C0, X], y: Var[C0, Y]
+    ) -> Equation[Hom[C1, Tensor[X, Y], Tensor[X, Y]]]:
+        """ The braid followed by its inverse is the identity. """
+        braid = cls.braid(x, y)
+        return cls.equation_factory(braid >> braid.dagger(), cls.id(x @ y))
+
+    @axiom
+    def inverse_then_braid[X: Atom[C0], Y: Atom[C0]](
+            cls, x: Var[C0, X], y: Var[C0, Y]
+    ) -> Equation[Hom[C1, Tensor[Y, X], Tensor[Y, X]]]:
+        """ The inverse of the braid followed by it is the identity. """
+        braid = cls.braid(x, y)
+        return cls.equation_factory(braid.dagger() >> braid, cls.id(y @ x))
+
+    @axiom
+    def hexagon_left[X: Atom[C0], Y: Atom[C0], Z: Atom[C0]](
+            cls, x: Var[C0, X], y: Var[C0, Y], z: Var[C0, Z]
+    ) -> Equation[Hom[C1, Tensor[X, Y, Z], Tensor[Y, Z, X]]]:
+        """ The left hexagon equation. """
+        return cls.equation_factory(
+            cls.braid(x, y @ z), cls.braid(x, y) @ z >> y @ cls.braid(x, z))
+
+    @axiom
+    def hexagon_right[X: Atom[C0], Y: Atom[C0], Z: Atom[C0]](
+            cls, x: Var[C0, X], y: Var[C0, Y], z: Var[C0, Z]
+    ) -> Equation[Hom[C1, Tensor[X, Y, Z], Tensor[Z, X, Y]]]:
+        """ The right hexagon equation. """
+        return cls.equation_factory(
+            cls.braid(x @ y, z), x @ cls.braid(y, z) >> cls.braid(x, z) @ y)
+
+    @axiom
+    def braid_naturality[A: Obj[C0], B: Obj[C0], C: Obj[C0], D: Obj[C0]](
+            cls, f: Hom[C1, A, B], g: Hom[C1, C, D]
+    ) -> Equation[Hom[C1, Tensor[A, C], Tensor[D, B]]]:
+        """ Naturality of the braid. """
+        return cls.equation_factory(
+            f @ g >> cls.braid(f.cod, g.cod),
+            cls.braid(f.dom, g.dom) >> g @ f)
 
     @rule
     def braiding[X: Atom[C0], Y: Atom[C0]](
@@ -1260,12 +1446,62 @@ class SymmetricCategory[
     def braid(cls, left: C0, right: C0) -> C1:
         return cls.swap(left, right)
 
+    @axiom
+    def permutation_identity[N: Count](
+            cls, doms: Objs[C0, N]) -> Equation[C1]:
+        """ The permutation that leaves every object in place. """
+        return cls.equation_factory(
+            cls.permutation(range(len(doms)), doms),
+            cls.id(cls.ob().tensor(*doms)))
+
+    @axiom
+    def permutation_composition[N: Count](
+            cls, xs: Perm[N], ys: Perm[N], doms: Objs[C0, N]
+    ) -> Equation[C1]:
+        """ Permuting by ``xs`` then ``ys`` permutes by their composite. """
+        moved = [doms[x] for x in xs]
+        return cls.equation_factory(
+            cls.permutation(xs, doms) >> cls.permutation(ys, moved),
+            cls.permutation([xs[y] for y in ys], doms))
+
+    @axiom
+    def permutation_inverse[N: Count](
+            cls, xs: Perm[N], doms: Objs[C0, N]) -> Equation[C1]:
+        """ A permutation followed by its inverse is the identity. """
+        moved = [doms[x] for x in xs]
+        inverse = [xs.index(i) for i in range(len(xs))]
+        return cls.equation_factory(
+            cls.permutation(xs, doms) >> cls.permutation(inverse, moved),
+            cls.id(cls.ob().tensor(*doms)))
+
+    @axiom
+    def permutation_swaps[N: Count](
+            cls: type[C1], xs: Perm[N], doms: Objs[C0, N]
+    ) -> Equation[C1]:
+        """ A permutation is the composite of swaps, whatever overrides it. """
+        return cls.equation_factory(
+            cls.permutation(xs, doms),
+            SymmetricCategory.permutation.__func__(cls, xs, doms))
+
+    @axiom
+    def swap_inverse[X: Obj[C0], Y: Obj[C0]](
+            cls, x: Var[C0, X], y: Var[C0, Y]
+    ) -> Equation[Hom[C1, Tensor[X, Y], Tensor[X, Y]]]:
+        """ Involutivity of the swap. """
+        return cls.equation_factory(
+            cls.swap(x, y) >> cls.swap(y, x), cls.id(x @ y))
+
     @rule
     def inverse_braiding[X: Atom[C0], Y: Atom[C0]](
             cls, x: Var[C0, X], y: Var[C0, Y]
     ) -> Hom[C1, Tensor[Y, X], Tensor[X, Y]]:
         """ The inverse of the braid of two atoms, the swap the other way. """
         return cls.swap(y, x)
+
+    braid_then_inverse = BraidedCategory.braid_then_inverse.inapplicable(
+        messages.SWAP_INVOLUTION)
+    inverse_then_braid = BraidedCategory.inverse_then_braid.inapplicable(
+        messages.SWAP_INVOLUTION)
 
 
 class PROP[C1: PROP](PROB[C1], SymmetricCategory[Nat, C1]):
@@ -1307,6 +1543,14 @@ class MarkovCategory[
         return cls.copy(x, 0)
 
     @axiom
+    def copy_counitality[X: Obj[C0]](
+            cls, x: Var[C0, X]) -> Equation[Hom[C1, X, X]]:
+        """ Discarding either of two copies leaves the object itself. """
+        copy, discard, identity = cls.copy(x), cls.discard(x), cls.id(x)
+        return cls.equation_factory(
+            copy >> discard @ identity, identity, copy >> identity @ discard)
+
+    @axiom
     def copy_coassociativity[X: Obj[C0]](
             cls, x: Var[C0, X])\
             -> Equation[Hom[C1, X, Tensor[X, X, X]]]:
@@ -1324,12 +1568,12 @@ class MarkovCategory[
         return cls.equation_factory(copy >> cls.swap(x, x), copy)
 
     @axiom
-    def copy_counitality[X: Obj[C0]](
-            cls, x: Var[C0, X]) -> Equation[Hom[C1, X, X]]:
-        """ Discarding either of two copies leaves the object itself. """
-        copy, discard, identity = cls.copy(x), cls.discard(x), cls.id(x)
+    def discard_coherence[X: Obj[C0], Y: Obj[C0]](
+            cls, x: Var[C0, X], y: Var[C0, Y]
+    ) -> Equation[Hom[C1, Tensor[X, Y], Unit[C0]]]:
+        """ Monoidal coherence of discarding. """
         return cls.equation_factory(
-            copy >> discard @ identity, identity, copy >> identity @ discard)
+            cls.copy(x @ y, 0), cls.copy(x, 0) @ cls.copy(y, 0))
 
     @axiom
     def copy_coherence[X: Obj[C0], Y: Obj[C0]](
@@ -1440,6 +1684,16 @@ class ClosedCategory[
     it comes with copy and discard so it is also a :class:`MarkovCategory`.
     """
 
+    @axiom
+    def currying_symmetry[Γ: Obj[C0], E: Obj[C0], Z: Obj[C0]](
+            cls, f: Hom[C1, Tensor[Γ, E], Z], exponent: Var[C0, E]
+    ) -> Equation[Hom[C1, Γ, Over[Z, E]]]:
+        """ Currying on the left is currying on the right after a swap. """
+        n = len(exponent)
+        base = f.dom[:len(f.dom) - n]
+        return cls.equation_factory(
+            f.curry(n), (cls.swap(exponent, base) >> f).curry(n, left=False))
+
 
 class BalancedCategory[C0: ColouredMonoid, C1: BalancedCategory](
         BraidedCategory[C0, C1], TracedCategory[C0, C1]):
@@ -1459,16 +1713,42 @@ class BalancedCategory[C0: ColouredMonoid, C1: BalancedCategory](
         """
 
     @axiom
-    def yanking[X: Obj[C0]](
+    def balanced_twist[X: Atom[C0], Y: Atom[C0]](
+            cls, x: Var[C0, X], y: Var[C0, Y]
+    ) -> Equation[Hom[C1, Tensor[X, Y], Tensor[X, Y]]]:
+        """ Compatibility of the twist and braid. """
+        return cls.equation_factory(
+            cls.twist(x @ y),
+            cls.braid(x, y) >> cls.twist(y) @ cls.twist(x)
+            >> cls.braid(y, x))
+
+    @axiom
+    def twist_naturality[A: Obj[C0], B: Obj[C0]](
+            cls, f: Hom[C1, A, B]) -> Equation[Hom[C1, A, B]]:
+        """ Naturality of the twist. """
+        return cls.equation_factory(
+            f >> cls.twist(f.cod), cls.twist(f.dom) >> f)
+
+    @axiom
+    def twist_unit(cls) -> Equation[Hom[C1, Unit[C0], Unit[C0]]]:
+        """ The twist of the unit is the identity. """
+        unit = cls.ob()
+        return cls.equation_factory(cls.twist(unit), cls.id(unit))
+
+    @axiom
+    def yanking[X: Atom[C0]](
             cls, x: Var[C0, X]) -> Equation[Hom[C1, X, X]]:
         """
-        Tracing the braid of an object with itself gives its twist, the
-        yanking axiom of a balanced traced category, see
+        Tracing the braid of an object with itself gives its twist, on
+        either side, the yanking axiom of a balanced traced category, see
         :cite:t:`JoyalEtAl96`: the twist is the identity when the braid is a
         swap.
         """
+        braid = cls.braid(x, x)
         return cls.equation_factory(
-            cls.braid(x, x).trace(mem=x), cls.twist(x))
+            braid.trace(mem=x, left=True),  # ty: ignore[unknown-argument]
+            cls.twist(x),
+            braid.trace(mem=x))  # ty: ignore[unknown-argument]
 
     @rule
     def twisting[X: Atom[C0]](cls, x: Var[C0, X]) -> Hom[C1, X, X]:
@@ -1504,6 +1784,22 @@ class CompactCategory[C0: Pregroup, C1: CompactCategory](
     def twist(cls, dom: C0) -> C1:
         return cls.id(dom)
 
+    @axiom
+    def reidemeister_1_cap[X: Obj[C0]](
+            cls, x: Var[C0, X]
+    ) -> Equation[Hom[C1, Unit[C0], Tensor[R[X], X]]]:
+        """ Reidemeister move 1 for caps. """
+        return cls.equation_factory(
+            cls.caps(x, x.r) >> cls.swap(x, x.r), cls.caps(x.r, x))
+
+    @axiom
+    def reidemeister_1_cup[X: Obj[C0]](
+            cls, x: Var[C0, X]
+    ) -> Equation[Hom[C1, Tensor[X, R[X]], Unit[C0]]]:
+        """ Reidemeister move 1 for cups. """
+        return cls.equation_factory(
+            cls.swap(x, x.r) >> cls.cups(x.r, x), cls.cups(x, x.r))
+
 
 class HypergraphCategory[C0: Pregroup, C1: HypergraphCategory](
         CompactCategory[C0, C1], MarkovCategory[C0, C1],
@@ -1527,6 +1823,29 @@ class HypergraphCategory[C0: Pregroup, C1: HypergraphCategory](
             n_legs_out : The number of legs out for each spider.
             typ : The type of the spiders.
         """
+
+    @axiom
+    def spider_fusion[X: Atom[C0], M: Count, N: Count](
+            cls, x: Var[C0, X], m: Var[int, M], n: Var[int, N]
+    ) -> Equation[Hom[C1, Repeat[X, M], Repeat[X, N]]]:
+        """ Two spiders connected by a leg fuse into one. """
+        return cls.equation_factory(
+            cls.spiders(m, 1, x) >> cls.spiders(1, n, x),
+            cls.spiders(m, n, x))
+
+    @axiom
+    def spider_specialness[X: Atom[C0]](
+            cls, x: Var[C0, X]) -> Equation[Hom[C1, X, X]]:
+        """ Splitting a wire then merging it back is the identity. """
+        return cls.equation_factory(
+            cls.spiders(1, 2, x) >> cls.spiders(2, 1, x), cls.id(x))
+
+    @axiom
+    def spider_commutativity[X: Atom[C0]](
+            cls, x: Var[C0, X]) -> Equation[Hom[C1, Tensor[X, X], X]]:
+        """ Spiders do not see the order of their legs. """
+        merge = cls.spiders(2, 1, x)
+        return cls.equation_factory(cls.swap(x, x) >> merge, merge)
 
     @rule
     def spider[X: Atom[C0], M: Count, N: Count](

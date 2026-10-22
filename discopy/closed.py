@@ -87,7 +87,7 @@ from typing import Callable, ClassVar, Dict, Self
 
 from discopy import (
     monoidal, biclosed, markov, feedback, cmap, hypergraph, messages)
-from discopy.abc import ClosedCategory
+from discopy.abc import ClosedCategory, DaggerCategory, MonoidalCategory
 from discopy.cat import factory
 from discopy.drawing import Drawing
 from discopy.utils import (
@@ -373,6 +373,13 @@ class Diagram(markov.Diagram, biclosed.Diagram, ClosedCategory):
 
     def to_drawing(self):
         return monoidal.Diagram.to_drawing(self, functor_factory=Functor)
+
+    dagger_monoidality = DaggerCategory.dagger_monoidality.failing(
+        messages.CURRY_HAS_NO_DAGGER)
+    dagger_monoidality_monoidal = DaggerCategory.dagger_monoidality.weaken(
+        within=MonoidalCategory)
+    currying_symmetry = ClosedCategory.currying_symmetry.failing(
+        messages.FREE_CURRY)
 
     def to_term(self) -> Term:
         """

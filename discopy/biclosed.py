@@ -93,21 +93,15 @@ from typing import (
     TYPE_CHECKING, Callable, ClassVar, Iterator, Self, Sequence)
 
 from discopy import cat, monoidal, cmap, messages
-from discopy.abc import BiclosedCategory
+from discopy.abc import BiclosedCategory, DaggerCategory, MonoidalCategory
 from discopy.axioms import (
-    GENERATORS, Equation as AbstractEquation, Equivalence, Testable, axiom,
-    Serialisable)
+    GENERATORS, Equation as AbstractEquation, Equivalence, Serialisable,
+    Testable, axiom)
 from discopy.drawing import Drawing
 from discopy.cat import factory
 from discopy.utils import (
-    AxiomError,
-    NamedGeneric,
-    assert_isinstance,
-    deprecated_alias,
-    factory_name,
-    from_tree,
-    get_origin,
-)
+    AxiomError, assert_isinstance, deprecated_alias, factory_name, from_tree,
+    get_origin, NamedGeneric)
 
 if TYPE_CHECKING:
     from hypothesis import strategies as st
@@ -405,6 +399,32 @@ class Diagram(monoidal.Diagram, BiclosedCategory):
 
     def to_drawing(self):
         return monoidal.Diagram.to_drawing(self, functor_factory=Functor)
+
+    map_agreement = monoidal.Diagram.map_agreement.failing(
+        messages.MAP_OF_A_CURRY)
+    dagger_involution = DaggerCategory.dagger_involution.failing(
+        messages.CURRY_HAS_NO_DAGGER)
+    dagger_involution_monoidal = DaggerCategory.dagger_involution.weaken(
+        within=MonoidalCategory)
+    dagger_contravariance = DaggerCategory.dagger_contravariance.failing(
+        messages.CURRY_HAS_NO_DAGGER)
+    dagger_contravariance_monoidal = DaggerCategory.dagger_contravariance\
+        .weaken(within=MonoidalCategory)
+    dagger_monoidality = DaggerCategory.dagger_monoidality.failing(
+        messages.CURRY_HAS_NO_DAGGER)
+    dagger_monoidality_monoidal = DaggerCategory.dagger_monoidality.weaken(
+        within=MonoidalCategory).failing(messages.NO_PLANAR_NORMAL_FORM)
+    currying_left = BiclosedCategory.currying_left.failing(messages.FREE_CURRY)
+    currying_right = BiclosedCategory.currying_right.failing(
+        messages.FREE_CURRY)
+    currying_eta_left = BiclosedCategory.currying_eta_left.failing(
+        messages.FREE_CURRY)
+    currying_eta_right = BiclosedCategory.currying_eta_right.failing(
+        messages.FREE_CURRY)
+    currying_naturality_left = BiclosedCategory.currying_naturality_left\
+        .failing(messages.FREE_CURRY)
+    currying_naturality_right = BiclosedCategory.currying_naturality_right\
+        .failing(messages.FREE_CURRY)
 
 
 class Box(monoidal.Box, Diagram):
@@ -938,7 +958,7 @@ class TermBase(Box, Equivalence):
 
         return st.builds(
             lambda terms: (terms[0], terms[2], terms[1]),
-            Canonical[cls].strategy(**params))
+            Canonical[cls].strategy(**params))  # ty: ignore[invalid-type-form]
 
     serialisation = Serialisable.serialisation.failing(
         "A term does not read back from its tree, see #692.")

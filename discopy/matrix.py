@@ -40,11 +40,12 @@ from contextlib import contextmanager
 from operator import index
 from types import ModuleType
 from collections.abc import Sequence
-from typing import Callable, TYPE_CHECKING, Literal
+from typing import Literal, Callable, TYPE_CHECKING
 
 from discopy import config, messages
 from discopy.abc import (
-    ComarkovCategory, DaggerCategory, MarkovCategory, NamedGeneric, Nat)
+    ComarkovCategory, DaggerCategory, MarkovCategory, Nat)
+from discopy.axioms import Serialisable, TestableGeneric
 from discopy.cat import (
     factory,
     assert_iscomposable,
@@ -52,7 +53,6 @@ from discopy.cat import (
 )
 from discopy.utils import (
     assert_isinstance, factory_name, from_tree, unbiased)
-from discopy.axioms import Serialisable
 
 if TYPE_CHECKING:
     import sympy
@@ -60,8 +60,8 @@ if TYPE_CHECKING:
 
 @factory
 class Matrix[dtype](
-        MarkovCategory, ComarkovCategory, DaggerCategory,
-        Serialisable["Matrix"], NamedGeneric):
+        MarkovCategory, ComarkovCategory, DaggerCategory, TestableGeneric,
+        Serialisable):
     """
     A matrix is an ``array`` with natural numbers as ``dom`` and ``cod``.
 
@@ -143,6 +143,11 @@ class Matrix[dtype](
            [0, 2],
            [0, 4]])
     """
+    @classmethod
+    def checked_params(cls) -> tuple:
+        """ Integer matrices, whose entries every ``dtype`` reads exactly. """
+        return (int, )
+
     ob = Nat
 
     @classmethod

@@ -61,7 +61,8 @@ Coherence
 
 from typing import ClassVar
 
-from discopy import symmetric, ribbon, pivotal, feedback, cmap, hypergraph
+from discopy import (
+    symmetric, ribbon, pivotal, feedback, cmap, hypergraph, monoidal)
 from discopy.abc import CompactCategory
 from discopy.cat import factory
 from discopy.utils import deprecated_alias
@@ -83,6 +84,17 @@ class Diagram(symmetric.Diagram, ribbon.Diagram, CompactCategory):
         dom (pivotal.Ty) : The domain of the diagram, i.e. its input.
         cod (pivotal.Ty) : The codomain of the diagram, i.e. its output.
     """
+    # A hypergraph is faithful from symmetric categories on.
+    snake_equations = CompactCategory.snake_equations
+    transpose_contravariance = CompactCategory.transpose_contravariance
+    pivotality = CompactCategory.pivotality
+    currying_left = CompactCategory.currying_left
+    currying_right = CompactCategory.currying_right
+    currying_eta_left = CompactCategory.currying_eta_left
+    currying_eta_right = CompactCategory.currying_eta_right
+    currying_naturality_left = CompactCategory.currying_naturality_left
+    currying_naturality_right = CompactCategory.currying_naturality_right
+
     sum_factory: ClassVar[type["Sum"]]
     cup_factory: ClassVar[type["Cup"]]
     cap_factory: ClassVar[type["Cap"]]
@@ -93,6 +105,9 @@ class Diagram(symmetric.Diagram, ribbon.Diagram, CompactCategory):
     ob = Ty
     layer_factory = Layer
     trace_factory = classmethod(pivotal.Diagram.trace_factory.__func__)
+
+    foliation_idempotence = symmetric.Diagram.foliation_idempotence.modulo(
+        monoidal.Diagram.to_map)
 
 
 class Box(symmetric.Box, ribbon.Box, Diagram):

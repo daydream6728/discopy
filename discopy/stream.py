@@ -167,6 +167,7 @@ from dataclasses import dataclass
 
 from discopy import messages, symmetric
 from discopy.abc import FeedbackCategory, NamedGeneric
+from discopy.axioms import TestableGeneric
 from discopy.python import finset
 from discopy.utils import (
     AxiomError,
@@ -328,7 +329,7 @@ class Ty[base](NamedGeneric):
 
 
 @dataclass
-class Stream[category](FeedbackCategory, NamedGeneric):
+class Stream[category](FeedbackCategory, TestableGeneric):
     """
     Monoidal streams over an underlying `category`.
 
@@ -366,6 +367,11 @@ class Stream[category](FeedbackCategory, NamedGeneric):
     >>> assert cod.later.now == later.cod.now
     >>> assert mem.later.now == later.mem.now
     """
+    @classmethod
+    def checked_params(cls) -> tuple:
+        """ None, a stream drawing no terms yet. """
+        return ()
+
     category = symmetric.Diagram
     ob = classproperty(lambda cls: Ty[cls.category.ob])
 

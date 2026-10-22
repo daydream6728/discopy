@@ -9,6 +9,39 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Added
 
+- Hypothesis strategies from the combinatorial representations:
+  `Hypergraph.strategy` draws a wiring port by port under the spider
+  constraint of its category, then a box for each box of the wiring, and
+  `CMap.strategy` reads a map off one; symmetric and compact diagrams
+  `sample` a map, Markov, closed, feedback and hypergraph diagrams a
+  hypergraph, and `strategy` is one of the search and the sample.
+  `monoidal.Diagram` states the laws of the conversions the quotient relies
+  on, `hypergraph_identity`, `hypergraph_composition`, `hypergraph_tensor`,
+  `hypergraph_section` and `map_agreement`, and of the drawing,
+  `drawing_dagger_involution` and `foliation_idempotence`;
+  `Hypergraph.hypergraph_roundtrip` and `CMap.cmap_roundtrip` that each
+  reads back from the diagram it decodes to. A `TestableGeneric` is
+  checked on the subscripts its `checked_params` names.
+
+- The laws of rigid, pivotal, compact and (bi)closed categories on
+  `discopy.abc`: the snake equations and the coherence of cups and caps,
+  `transpose_contravariance`, `rotate_contravariance` and `adjunction`,
+  `self_dual` and `pivotality`, the Reidemeister moves, and the currying
+  laws with `currying_symmetry`. A planar diagram compares its laws on the
+  nose, and `Axiom.canonical` instantiates a law on boxes named after its
+  variables, which `Axiom.draw` draws, e.g.
+  `rigid.Diagram.snake_equations`.
+
+- The laws of monoidal, braided, symmetric, balanced, Markov and hypergraph
+  categories on `discopy.abc`: `bifunctoriality` and `tensor_unitality`,
+  the hexagons and the inverse and naturality of the braid, `swap_inverse`
+  and the `permutation_*` laws that a `permutation` override agrees with
+  its fold of swaps, the twist laws and `yanking` on either side, the
+  comonoid laws of copying with `discard_coherence`, and the spider laws.
+  A symmetric diagram compares its laws up to the isomorphism of its
+  hypergraph, the coherence theorem of symmetric categories, where the
+  hypergraph is faithful.
+
 - The laws of traced and feedback categories on `discopy.abc`: the
   vanishing, iteration, superposing, naturality and dinaturality of the
   trace on either side, `trace_*`, `delay_unit` and `delay_composition`,

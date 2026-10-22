@@ -63,15 +63,19 @@ the :mod:`frobenius` axioms.
 from __future__ import annotations
 
 import warnings
-from typing import ClassVar
+from typing import TYPE_CHECKING, ClassVar
 
 from discopy import symmetric, monoidal, feedback, cmap, hypergraph, messages
 from discopy.abc import ComarkovCategory, MarkovCategory
+from discopy.axioms import FUEL
 from discopy.cat import factory
 from discopy.feedback import (  # noqa: F401  pylint: disable=unused-import
     Wire, Ty)
 from discopy.utils import (
     AxiomError, assert_isatomic, deprecated_alias, factory_name, from_tree)
+
+if TYPE_CHECKING:
+    from discopy import comarkov
 
 
 Layer = symmetric.Layer
@@ -128,6 +132,21 @@ class Diagram(symmetric.Diagram, MarkovCategory):
     discard_factory: ClassVar[type["Discard"]]
 
     @classmethod
+    def sample(cls, *, dom=None, cod=None, fuel=FUEL):
+        """
+        Sample Markov diagrams through their quotient: a hypergraph drawn
+        by :meth:`discopy.hypergraph.Hypergraph.strategy` with at most
+        ``fuel + 1`` boxes, besides the one balancing box that may close its
+        boundary, and the spiders that the category supports, i.e.
+        copies and discards here and every spider in a hypergraph category,
+        downgraded with :meth:`discopy.hypergraph.Hypergraph.to_diagram`.
+        """
+        category = hypergraph.Hypergraph[cls]  # ty: ignore[invalid-type-form]
+        return category.strategy(
+            dom=dom, cod=cod, max_leaves=fuel + 1).map(
+                lambda graph: graph.to_diagram())
+
+    @classmethod
     def spider_factory(cls, n_legs_in, n_legs_out, typ, phase=None):
         if phase is not None or n_legs_in != 1:
             raise ValueError(messages.NO_SUCH_SPIDER.format(
@@ -157,8 +176,11 @@ class Diagram(symmetric.Diagram, MarkovCategory):
         """
         return cls.copy(x, 0)
 
+    map_agreement = monoidal.Diagram.map_agreement.failing(
+        messages.MAP_HAS_NO_SPIDERS)
+
     @classmethod
-    def merge(cls, x: monoidal.Ty, n=2) -> Diagram:
+    def merge(cls, x: monoidal.Ty, n=2) -> Diagram | comarkov.Diagram:
         """
         Deprecated: a Markov diagram has no merge, see
         :meth:`discopy.comarkov.Diagram.merge`, which a diagram that is

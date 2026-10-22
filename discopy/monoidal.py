@@ -62,9 +62,10 @@ from typing import (
     Any, Iterable, Iterator, Callable, Self, TYPE_CHECKING, ClassVar)
 from warnings import warn
 
-from discopy import abc, cat, drawing, hypergraph, cmap, messages
+from discopy import abc, axioms, cat, drawing, hypergraph, cmap, messages
 from discopy.abc import (
-    ColouredMonoid, Monoid, MonoidalCategory, NamedGeneric)
+    ColouredMonoid, Monoid, MonoidalCategory, NamedGeneric, DaggerCategory)
+from discopy.axioms import Hom, Obj, Var, axiom
 from discopy.drawing import Drawing
 from discopy.config import (
     BOX_DRAWING_ATTRIBUTES, WIRE_DRAWING_ATTRIBUTES,
@@ -76,6 +77,7 @@ from discopy.utils import (
     assert_isinstance,
     assert_iscomposable,
     AxiomError,
+    classproperty,
     deprecated_alias,
     MappingOrCallable,
     RichDisplay,
@@ -356,6 +358,11 @@ class Ty(cat.Ob, cat.FreeCategory, ColouredMonoid):
     """
     ob = Colour
     generator_factory = Wire
+    box_factory = classproperty(lambda cls: cls.generator_factory)
+    """
+    The generators of a type as a free category, i.e. its wires, a
+    :class:`cat.Ob` that :meth:`cast` embeds as a type of length one.
+    """
 
     @classmethod
     def strategy(cls, **params):
@@ -618,6 +625,9 @@ class Nat(abc.Nat, Ty):  # ty: ignore[invalid-generic-class]
     """
     ob = Colour
     generator_factory = int
+    box_factory = None
+    """ No generator of one colour is named, so there is no canonical
+    instance of a law, see :meth:`discopy.axioms.Axiom.canonical`. """
 
     @classmethod
     def generators(cls, *, dom=None, cod=None):
@@ -708,6 +718,9 @@ class Dim(Ty):
     >>> assert loads(dumps(Dim(2, 3))) == Dim(2, 3)
     """
     generator_factory = int
+    box_factory = None
+    """ No generator of one colour is named, so there is no canonical
+    instance of a law, see :meth:`discopy.axioms.Axiom.canonical`. """
 
     @classmethod
     def generators(cls, *, dom=None, cod=None):
@@ -1087,6 +1100,11 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
             normalize
             normal_form
     """
+    bifunctoriality = MonoidalCategory.bifunctoriality.failing(
+        messages.NO_PLANAR_NORMAL_FORM)
+    dagger_monoidality = DaggerCategory.dagger_monoidality.failing(
+        messages.NO_PLANAR_NORMAL_FORM)
+
     box_factory: ClassVar[type["Box"]]
     sum_factory: ClassVar[type["Sum"]]
     bubble_factory: ClassVar[type["Bubble"]]
@@ -1324,7 +1342,75 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
         """
         return self.ar.decode(*self.encode())
 
-    def to_hypergraph(self) -> Hypergraph:
+    @axiom
+    def hypergraph_identity[X: Obj[Ty]](
+            cls, x: Var[Ty, X]) -> axioms.Equation[hypergraph.Hypergraph]:
+        """ The hypergraph of an identity is the identity hypergraph. """
+        return cat.Equation(
+            cls.id(x).to_hypergraph(), hypergraph.Hypergraph[cls].id(x))
+
+    @axiom
+    def hypergraph_composition[A: Obj[Ty], B: Obj[Ty], C: Obj[Ty]](
+            cls, f: Hom[Self, A, B], g: Hom[Self, B, C]
+    ) -> axioms.Equation[hypergraph.Hypergraph]:
+        """ The hypergraph of a composite composes the hypergraphs. """
+        return cat.Equation(
+            (f >> g).to_hypergraph(), f.to_hypergraph() >> g.to_hypergraph())
+
+    @axiom
+    def hypergraph_tensor[A: Obj[Ty], B: Obj[Ty], C: Obj[Ty], D: Obj[Ty]](
+            cls, f: Hom[Self, A, B], g: Hom[Self, C, D]
+    ) -> axioms.Equation[hypergraph.Hypergraph]:
+        """ The hypergraph of a tensor tensors the hypergraphs. """
+        return cat.Equation(
+            (f @ g).to_hypergraph(), f.to_hypergraph() @ g.to_hypergraph())
+
+    @axiom
+    def hypergraph_section[A: Obj[Ty], B: Obj[Ty]](
+            cls, f: Hom[Self, A, B]) -> axioms.Equation[hypergraph.Hypergraph]:
+        """ Decoding a hypergraph gives a diagram that encodes back to it. """
+        graph = f.to_hypergraph()
+        return cat.Equation(graph.to_diagram().to_hypergraph(), graph)
+
+    @axiom
+    def map_agreement[A: Obj[Ty], B: Obj[Ty]](
+            cls, f: Hom[Self, A, B]) -> axioms.Equation[hypergraph.Hypergraph]:
+        """ Encoding through a map or directly gives the same hypergraph. """
+        return cat.Equation(f.to_map().to_hypergraph(), f.to_hypergraph())
+
+    @axiom
+    def drawing_dagger_involution[A: Obj[Ty], B: Obj[Ty]](
+            cls, f: Hom[Self, A, B]) -> axioms.Equation[Drawing]:
+        """ Reflecting the drawing of a diagram twice gives it back. """
+        drawing = f.to_drawing()
+        return cat.Equation(drawing.dagger().dagger(), drawing)
+
+    @axiom
+    def foliation_idempotence[A: Obj[Ty], B: Obj[Ty]](
+            cls, f: Hom[Self, A, B]) -> axioms.Equation[Hom[Self, A, B]]:
+        """ A foliation is its own foliation, on the nose. """
+        foliated = f.foliation()
+        return cat.Equation(foliated.foliation(), foliated)
+
+    @classmethod
+    def equation_factory(cls, *terms: "Diagram") -> "Equation":
+        """
+        The equation of a law, compared on the nose. A hypergraph is faithful
+        only from :class:`discopy.symmetric.Diagram` on, whose
+        ``equation_factory`` compares up to it: below, it is a quotient that
+        forgets the regions of a planar diagram and the side of its scalars,
+        identifies a braid with its inverse, a twist with the identity and
+        the adjoints of a type, so a planar law is compared syntactically
+        until each doctrine has a normal form of its own.
+
+        >>> x = Ty('x')
+        >>> f, g = Box('f', Ty(), x), Box('g', x, Ty())
+        >>> assert not Diagram.equation_factory(f @ g, g >> f)
+        >>> assert Diagram.equation_factory(f @ g, f @ g)
+        """
+        return Equation(*terms)
+
+    def to_hypergraph(self) -> "Hypergraph":
         """
         Translate a planar diagram into a hypergraph.
 

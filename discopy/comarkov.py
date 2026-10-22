@@ -89,6 +89,9 @@ class Diagram(symmetric.Diagram, ComarkovCategory):
     merge_factory: ClassVar[type["Merge"]]
     noise_factory: ClassVar[type["Noise"]]
 
+    map_agreement = monoidal.Diagram.map_agreement.failing(
+        messages.MAP_HAS_NO_SPIDERS)
+
     @classmethod
     def spider_factory(cls, n_legs_in, n_legs_out, typ, phase=None):
         if phase is not None or n_legs_out != 1:

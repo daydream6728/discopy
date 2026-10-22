@@ -175,6 +175,9 @@ class Ty(frobenius.Ty):
     bit @ bit @ qubit @ qubit @ qubit
     """
     generator_factory = Wire
+    box_factory = None
+    """ No generator of one colour is named, so there is no canonical
+    instance of a law, see :meth:`discopy.axioms.Axiom.canonical`. """
 
     @classmethod
     def generators(cls, *, dom=None, cod=None):

@@ -468,6 +468,9 @@ Wire.head_factory, Wire.tail_factory = HeadOb, TailOb
 class Ty(monoidal.Ty):
     """ A feedback type is a monoidal type with `delay`, `head` and `tail`. """
     generator_factory = Wire
+    box_factory = None
+    """ No generator of one colour is named, so there is no canonical
+    instance of a law, see :meth:`discopy.axioms.Axiom.canonical`. """
 
     def delay(self, n_steps=1):
         """ The delay of a feedback type by `n_steps`. """
@@ -653,6 +656,8 @@ class Diagram(monoidal.Diagram, TracedCategory):
         messages.NO_PLANAR_NORMAL_FORM)
     trace_superposing_right = TracedCategory.trace_superposing_right.failing(
         messages.NO_PLANAR_NORMAL_FORM)
+    hypergraph_section = monoidal.Diagram.hypergraph_section.failing(
+        messages.SECTION_NEEDS_SWAPS)
     dagger_involution = DaggerCategory.dagger_involution.failing(
         messages.FEEDBACK_HAS_NO_DAGGER)
     dagger_involution_traced = DaggerCategory.dagger_involution.weaken(
@@ -661,6 +666,8 @@ class Diagram(monoidal.Diagram, TracedCategory):
         messages.FEEDBACK_HAS_NO_DAGGER)
     dagger_contravariance_traced = DaggerCategory.dagger_contravariance\
         .weaken(within=MonoidalCategory)
+    dagger_monoidality = DaggerCategory.dagger_monoidality.failing(
+        messages.FEEDBACK_HAS_NO_DAGGER)
     tightening = FeedbackCategory.tightening.failing(
         messages.FREE_FEEDBACK)
     sliding = FeedbackCategory.sliding.failing(

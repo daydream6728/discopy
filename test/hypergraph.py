@@ -431,6 +431,29 @@ def test_trace_needs_traced_pivotal():
         assert graph.trace().cod == graph.trace(left=True).cod == x
 
 
+def test_planar_comparison():
+    """ Below symmetric categories, a hypergraph is not faithful, so the
+    laws of a planar level are compared on the nose: each pair here was
+    identified when they were compared by hypergraph. """
+    from discopy import balanced, braided, monoidal, rigid
+    x, y = braided.Ty('x'), braided.Ty('y')
+    braid, inverse = braided.Braid(x, y), braided.Braid(y, x)[::-1]
+    assert braid.to_hypergraph() != inverse.to_hypergraph()
+    assert not braided.Diagram.equation_factory(braid, inverse)
+    x = balanced.Ty('x')
+    twist, identity = balanced.Twist(x), balanced.Diagram.id(x)
+    assert twist.to_hypergraph() != identity.to_hypergraph()
+    assert not balanced.Diagram.equation_factory(twist, identity)
+    x = rigid.Ty('x')
+    left = rigid.Cap(x, x.l) @ x >> x @ rigid.Cup(x.l, x)
+    right = x @ rigid.Cap(x.r, x) >> rigid.Cup(x, x.r) @ x
+    assert left.to_hypergraph() != right.to_hypergraph()  # cups are boxes
+    assert not rigid.Diagram.equation_factory(left, right)
+    x, scalar = monoidal.Ty('x'), monoidal.Box('s', monoidal.Ty(), monoidal.Ty())
+    assert (scalar @ x).to_hypergraph() == (x @ scalar).to_hypergraph()
+    assert not monoidal.Diagram.equation_factory(scalar @ x, x @ scalar)
+
+
 def test_cups_and_caps_read_the_host_category():
     from discopy import symmetric, rigid, pivotal, ribbon, compact
     x = symmetric.Ty('x')
