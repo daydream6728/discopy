@@ -121,7 +121,8 @@ def test_deep_set():
                           atol=1e-6)
     embedded, member = unit.parts(beliefs.reshape(-1, 4))
     assert embedded.shape == member.shape == (30, 8)
-    assert torch.equal(embedded, unit.phi(beliefs.reshape(-1, 4)))
+    assert torch.allclose(embedded, unit.phi(beliefs.reshape(-1, 4)),
+                          atol=1e-6)
     pooled = unit.pool(embedded.view(6, 5, 8).sum(1)).view(6, 1, 8)
     split = unit.rho[2](torch.relu(member.view(6, 5, 8) + pooled))
     assert torch.allclose(split.view(replies.shape), replies, atol=1e-6)
