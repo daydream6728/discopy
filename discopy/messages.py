@@ -77,3 +77,22 @@ NO_SUCH_TYPE = "No type named {!r} in builtins or numpy, so the name of the "\
 
 NO_COMMON_BOUNDARY = "A bubble needs a {} given when its args do not "\
     "all share one, they have [{}]."
+NOT_SHARING = (
+    "{} is not a diagram with sharing, i.e. a left-monogamous acyclic "
+    "hypergraph: a spider has no producer or several, or a box depends on "
+    "itself.")
+NOT_CARTESIAN = (
+    "{} is not cartesian, i.e. deterministic and affine: an effect is "
+    "context, which a rewrite keeps, as a section that chooses a producer "
+    "for each class would decorrelate a stochastic one.")
+NOT_A_BOUNDARY = "{} does not have the types of the spiders {} -> {}."
+NOT_A_REGION = (
+    "The boxes {} do not compute the spiders {} -> {}: they cannot all fire "
+    "in some order from the classes of the domain, or do not reach those of "
+    "the codomain.")
+NOT_A_PATTERN = (
+    "{} is not a pattern, i.e. a cartesian diagram with sharing whose "
+    "codomain is produced by its boxes: a variable alone matches anything.")
+NOT_A_RULE = (
+    "{} = {} is not a rule: its sides are cartesian diagrams of one type, the "
+    "left a pattern and the right reading only the inputs the left reads.")
