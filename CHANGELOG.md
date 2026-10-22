@@ -29,6 +29,58 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   have. Lafont's interaction combinators are the test case: his six rules
   reduce the net of his Fig. 11 to a wiring in five steps.
 
+- The trainers of recursive message passing, the networks of *Tiny
+  Recursive Message Passing* ([arXiv:2610.18649](https://arxiv.org/abs/2610.18649)),
+  moved out of its experiments op for op, so that they keep only their
+  datasets and recipes: the same bits on CPU, end to end. `neural.lattice` is
+  lattice deduction, its `project`, `losses`, persistent `Pool` and chain
+  search `solve`; `neural.act` its halting counterpart, `terms`,
+  `nearest_terms` for puzzles with several solutions, the slot pool `ActPool`
+  and `rollout`; `neural.train` the AdamW on matrices, the cosine schedule,
+  the bias-corrected `EMA` and the per-sample gradient clip
+  `per_board_backward` ([rel-int/Recursive_GNNs#1](https://github.com/rel-int/Recursive_GNNs/issues/1)).
+- `discopy.op`, the opposite of a category: `op.Category`, `Monoidal`,
+  `Symmetric`, `Markov` and `Comarkov` wrap an arrow `inside` of the
+  underlying `category` with its domain and codomain swapped, composition
+  reversed and the tensor kept; the copies of `op.Markov` are the merges of
+  its category and vice versa. `op.Comarkov[finset.Function]` is finite sets
+  and functions, `finset.Function` being now declared a Markov category, and
+  the opposites of `matrix.Matrix[int]` join the property matrix
+  ([discopy/discopy#646](https://github.com/discopy/discopy/issues/646)).
+
+- Frobenius plumbing
+  ([discopy/discopy#472](https://github.com/discopy/discopy/issues/472)):
+  `finset.Cospan` is the free hypergraph category on one object, cospans of
+  finite sets up to isomorphism composed by pushout, a `HypergraphCategory`
+  in the property matrix, and `frobenius.Cospan(apex, left, right)` holds
+  one with the type of each point of its apex. Permutations are cospans, as
+  are phase-free spiders and the cups and caps of a self-dual wire, which
+  carry `legs`; `Cospan(x, [0], [0, 0]) == Spider(1, 2, x)`.
+  `frobenius.Layer` alternates cospans and generators, plumbing tensors into
+  one cospan, `Diagram.spiders` of a type builds one, and foliation fuses
+  them by pushout, e.g. a snake into the identity. `Cospan.to_spiders` is
+  how one is drawn and sent by a functor, and
+  `abc.HypergraphCategory.cospan` builds one in any hypergraph category.
+  The categories below frobenius keep their spiders as generators until
+  they have a cospan factory of their own.
+
+- Markov and comarkov plumbing
+  ([discopy/discopy#472](https://github.com/discopy/discopy/issues/472)):
+  `markov.Function(dom, func)` copies, discards and permutes so that output
+  `i` reads input `func[i]`, holding a `finset.Function`, and
+  `comarkov.Cofunction(cod, cofunc)` merges, adds noise and permutes so
+  that input `i` goes to output `cofunc[i]`, holding an
+  `op.Comarkov[finset.Function]`; each is the dagger of the other with the
+  same list. `Copy`, `Discard`, `Permutation` and `Swap` are functions,
+  `Merge`, `Noise`, `Permutation` and `Swap` cofunctions, and
+  `Function(x, [0, 0]) == Copy(x)`. `markov.Layer` and `comarkov.Layer`
+  alternate them with generators: plumbing tensors into one box,
+  `Diagram.copy` and `Diagram.merge` of a type build one, and foliation
+  fuses plumbing layers.
+  `abc.MarkovCategory.function` and `ComarkovCategory.cofunction` decompose
+  them in any category, `finset.Function.factorise` being the copies then
+  the permutation. `closed` and `neural.network` have their own.
+
 - Double-pushout rewriting for planar diagrams, on `cmap.CMap`: the map of a
   diagram in a monoidal category is the diagram up to interchange, faithfully
   when it is connected (Delpeuch & Vicary, Section 8), so matching it needs
@@ -617,6 +669,17 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   Moved from the trilingual parser of
   [rel-int/lambek#8](https://github.com/rel-int/lambek/pull/8), without its
   datasets or experiments.
+- The rest of the generic parser code of rel-int/lambek. From
+  [lambek#8](https://github.com/rel-int/lambek/pull/8): `proofnet.count`,
+  the count invariant of a type, and `Sequent.infer`, the sequent of some
+  words with the smallest goal of their count, which `Parser` takes when it
+  is given no goal; `Tagger.beam` and `Tagger.loss` within the atoms of a
+  sub-signature, e.g. one language of a multilingual signature, and label
+  smoothing over them with `Tagger.smoothing`. From
+  [lambek#2](https://github.com/rel-int/lambek/pull/2):
+  `categorial.parse`, the `k` best terms of a sentence from the scored
+  candidate types of its words by the CKY algorithm, over the application
+  and composition of `categorial.combine` in Eisner's normal form.
 - A notebook, *Parsing arithmetic*, showcasing `grammar.proofnet` and
   `grammar.neural`: the two readings of `a + b * c` are two linkings of
   one sequent, 24 of its 120 linkings are correct, and a parser trained on
@@ -923,6 +986,20 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   affine map from the features to the targets that `predict` applies, with
   an intercept by default, which the regularisation leaves out, as in
   Fujii and Nakajima's paper; `bias=False` fits without one.
+- The contextual fraction, `discopy.quantum.contextuality`, after Abramsky,
+  Barbosa and Mansfield ([arXiv:1705.07918](https://arxiv.org/abs/1705.07918),
+  [rel-int/discopy-next#283](https://github.com/rel-int/discopy-next/pull/283)):
+  a `Scenario` of measurement contexts and an empirical `Model`, a
+  distribution on the outcomes of each context, built from local measurement
+  circuits on a state by `Model.from_circuits`. `contextual_fraction` solves
+  the linear program for the largest non-contextual part with `scipy`, now in
+  the `quantum` extra, once `is_compatible` has checked that the rows are
+  distributions whose marginals agree; `decompose` splits a model into
+  non-contextual and strongly contextual models, and `bell_inequality` gives
+  the `Inequality` whose normalised violation is the contextual fraction.
+  Models combine by `mix`, controlled choice `&` and product `@`. The tests
+  and the `contextual-fraction` notebook reproduce the examples of the paper,
+  Figure 1 included.
 - `discopy.drawing.widget.DiagramWidget`, an
   [anywidget](https://anywidget.dev) showing the SVG of a drawing, built
   on demand by `RichDisplay.to_widget`, for Jupyter, marimo and VS Code.
@@ -1003,6 +1080,17 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Changed
 
+- A layer reads its plumbing through `Layer.is_plumbing_component`, so
+  that a box is plumbing by what it holds rather than by its class alone,
+  e.g. a spider without a phase. The diagrams of `tensor`, `quantum` and
+  `hopf` have `frobenius.Layer`s.
+
+- `symmetric.Layer.merge` fuses two layers of plumbing alone whatever
+  plumbing they hold, through the `fuse` of its boxes, and
+  `symmetric.Diagram.merge_layers` drops two that compose to the identity
+  likewise, e.g. a copy then a discard; `Hypergraph.to_diagram` fuses the
+  copies and merges it inserts with the permutations next to them.
+
 - The `quantum` extra pins pyzx 0.10.7, where it pinned 0.7.3, so that it
   installs next to `pytket-pyzx`, which needs pyzx 0.9 or later. pyzx 0.10
   takes no `float` phase, so `zx.Diagram.to_pyzx` hands it the exact
@@ -1011,6 +1099,7 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   its `input` or `output` flag, so `test/fixtures/zx-graph.json` gives one
   instead of `true` and `false`
   ([rel-int/discopy-next#225](https://github.com/rel-int/discopy-next/issues/225)).
+
 - A law of `discopy.axioms` is stated as a sequent, the sequent calculus
   of [rel-int/discopy-next#1](https://github.com/rel-int/discopy-next/pull/1)
   without its search: its type parameters are variables, objects `A:
@@ -1597,6 +1686,12 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
+- `python.multiplicative.Function.copy(x, 1)` returns its argument rather
+  than a tuple of one, which failed its own type check.
+
+- A law stated on `abc.Category` reads its type parameters when a class of
+  another module shares its name, e.g. `op.Category`.
+
 - The identity functor is the identity on a `Permutation`:
   `symmetric.Functor` sends one into a codomain with a
   `permutation_factory` to its `from_permutation`, each wire moving the
@@ -2057,6 +2152,32 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `feedback.Diagram.feedback` takes a memory of several wires. A delayed
   `feedback.Box` reads back from its tree, which dropped its time step
   ([rel-int/discopy-next#1](https://github.com/rel-int/discopy-next/pull/1)).
+- `hopf.Intertwiner.cups` and `caps` twist by the inverse of the pivotal
+  element the pairings of a module with its left dual in the orientations
+  of `rigid.Cup(x.l, x)` and `rigid.Cap(x, x.l)`, as they did for its
+  right dual in those of `Cup(x, x.r)` and `Cap(x.r, x)`, so that every
+  cup and cap they build is an intertwiner. Over the Taft algebra, whose pivot is
+  not the unit, `cups(V.l, V)` and `caps(V, V.l)` were not, and a rigid
+  functor sends the cup and cap of a left adjoint to them; the ribbon
+  functor never met them, as `x.l == x.r` in `pivotal` (B53 of
+  [rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
+- `hopf.Intertwiner.twist` is the action of the inverse of the ribbon
+  element, which is the trace of the braid as `ribbon` defines the twist,
+  on either side. It was the action of the ribbon element itself, so that
+  `hopf.Functor` sent `Twist(x)` to the inverse of the trace of
+  `Braid(x, x)` on the anyons of `D(Z/3)` and over
+  `Double(Algebra.taft(3))`, which no test saw: the twists of `D(Z/2)` are their own inverses, and
+  the twist tests of `test/hopf.py` compared a trivial twist with the
+  identity. They check the twists of `D(Z/3)` anyons and of their product
+  instead (B52 and B87 of
+  [rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
+- The rotation of the dagger of a `ribbon.Braid` goes from the adjoint of
+  its codomain to the adjoint of its domain and keeps the same strand
+  over, so that it is its transpose under a ribbon functor, as it already
+  was for a braid. It had the type of the rotation of the braid itself,
+  so that rotating a diagram with an inverse braid built one that did not
+  compose (B17 of
+  [discopy/discopy#606](https://github.com/discopy/discopy/issues/606)).
 - `braided.Diagram` and `ribbon.Diagram` bind their own `functor_factory`,
   where they read those of `monoidal` and `pivotal`, so that their
   conversions map a braid to a braid and a twist to a twist, as `balanced`
@@ -2762,6 +2883,29 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - Tensor networks are contracted with `opt_einsum` when the number of
   indices exceeds `numpy.einsum`'s 52-index limit
   ([#448](https://github.com/discopy/discopy/pull/448)).
+- `Circuit.to_tk` permutes the bits and the qubits of a permutation over
+  both, such as `Swap(bit, bit) @ qubit`, which it dropped, and a discarded
+  bit gets a `Discard` in the post-processing, so `eval(backend=...)` has
+  the codomain of the circuit. It also exports `CY`, `CCX`, `U1`, `CU1` and
+  a controlled `Ry`, reading every controlled gate from its controls and
+  their distances, and raises `NotImplementedError` for a gate tket has no
+  name for; `Circuit.from_tk` reads back every parametrised gate
+  ([rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
+- `Circuit.to_tn` contracts a discarded bit and a measurement that keeps its
+  qubits or overrides its bits, and `Circuit.measure` measures a circuit
+  with bits as a channel; `Discard`, `MixedState`, `Measure` and `Encode`
+  decompose with the types and the order of their wires
+  ([rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
+- The PennyLane interface takes the adjoint of `S` and `T` with
+  `qml.adjoint`, as `Operation.inv()` was removed in PennyLane 0.32, and
+  scales probabilities by the squared modulus of the circuit's scalar
+  ([rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
+- `Channel.then` checks the classical and quantum types it composes, not
+  only their underlying `Dim`: `Channel.id(Q(Dim(2)))` no longer composes
+  with `Channel.id(C(Dim(2, 2)))`. `Measure`, `Encode`, `Discard`,
+  `MixedState`, `quantum.zx.Swap` and `CQ` have a `repr` that evaluates
+  back to them ([rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31),
+  [rel-int/discopy-next#168](https://github.com/rel-int/discopy-next/issues/168)).
 - Contracting a tensor network with more than `config.MAX_EINSUM_INDICES`
   indices imports `opt_einsum`, which is not a declared dependency; a plain
   install now raises a clear `ImportError` naming the package to install
