@@ -1589,6 +1589,13 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
+- A `discopy.optyx` box given by its array reads the size of that array off
+  its `shape`, so that the array can be a PyTorch tensor that requires grad,
+  which numpy cannot convert. The size check of rel-int/optyx#34 converted
+  it and so raised `RuntimeError`, breaking the gradient through the memory
+  wire of a `discopy.optyx.interaction` map that rel-int/optyx#56 tests
+  ([#225](https://github.com/rel-int/discopy-next/issues/225)).
+
 - A tree saying `"is_dagger": false` reads back as no dagger: `cat.Box`,
   and so every box, `monoidal.Wire`, `frobenius.Spider`,
   `feedback.FollowedBy` and `quantum.gates.Digits` took the presence of the
