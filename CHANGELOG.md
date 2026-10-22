@@ -2297,6 +2297,13 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   run when the branch has already moved past the event it is handling,
   rather than drafting a head that no longer exists behind its back
   ([#640](https://github.com/discopy/discopy/issues/640)).
+- Two error messages say what went wrong: `python.finset.Permutation`
+  of a sequence of the right length that is not a permutation said
+  `Expected a permutation of length 2, got 2.` and now says `Expected a
+  permutation of range(2), got (0, 0).`, and `biclosed.Application` of a
+  term whose type is not an exponential names the term and its type
+  rather than two classes. `discopy.quantum` exports `CY` beside `CX` and
+  `CZ` ([rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
 - `no-todo-on-main.yml`'s guard says why it fails: each of its calls
   that can fail -- reading a tree, reading the pull request, either
   mutation -- raises an `::error::` annotation naming itself, and a
@@ -2647,6 +2654,29 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   [#471](https://github.com/discopy/discopy/pull/471),
   [#477](https://github.com/discopy/discopy/pull/477),
   [#481](https://github.com/discopy/discopy/pull/481)).
+- The suite keeps the `--skip-extra` contract of `test/plugin.py`: the
+  torch and jax tests of `test/tensor.py` and the pennylane, pytorch and
+  quimb tests of `test/quantum/circuit.py` skip without their extra,
+  rather than failing or, for `circuit.py`, skipping the whole file with
+  torch absent, and the pyzx tests skip below the version
+  `pyproject.toml` pins. Coverage measures `discopy/` alone, not the test
+  files, which counted towards the 98% gate while all but fully covered
+  by construction ([rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
+- Tests that could not fail now can: `test/cat.py` asserted `str(a == b)`,
+  `test/markov.py`'s equations asserted nothing and are checked in the
+  integers, `test/readme.py` skipped a README block that did not compile,
+  `test/quantum/circuit.py` compared the int `0` an empty sum evaluates
+  to with `0` and left numpy's print options changed. `config`,
+  `messages`, `python.function`, `grammar.cfg` and `grammar.thue` get the
+  test file `AGENTS.md` says each module has ([rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
+- `CONTRIBUTING.md` names `setuptools` as the build backend, which it is,
+  and `pyproject.toml` drops the `[tool.uv.build-backend]` table only
+  `uv_build` reads; the checkouts of `build.yml` set
+  `persist-credentials: false` as every other checkout does;
+  `docs/conf.py` mocks only `pennylane`, the one import the `docs` extra
+  does not install; and the stray `readme.py` at the root, which raised,
+  and the two gifs tracked inside `discopy/`, which nothing reads, are
+  deleted ([rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
 
 ## [1.2.2] - 2025-12-19
 
