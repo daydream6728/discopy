@@ -8,10 +8,10 @@ sequent: its type parameters are variables, e.g. objects ``A: Obj[C0]``, its
 parameters premises, e.g. a morphism ``f: Hom[C1, A, B]`` from ``A`` to
 ``B``, and its return annotation the type of its output, e.g. an equation
 ``Equation[Hom[C1, A, B]]``, which every value can be checked against, see
-:func:`inhabits`. A law a category breaks is declared :meth:`Axiom.failing`
-where it breaks, one that does not apply :meth:`Axiom.inapplicable`, and one
-that holds up to a quotient or on a subspace :meth:`Axiom.modulo` and
-:meth:`Axiom.weaken`.
+:func:`inhabits`. A law a category breaks is declared
+:meth:`Declaration.failing` where it breaks, one that does not apply
+:meth:`Declaration.inapplicable`, and one that holds up to a quotient or on
+a subspace :meth:`Axiom.modulo` and :meth:`Axiom.weaken`.
 
 A :class:`Testable` category generates its own objects and arrows, and
 states the laws every type that does so obeys: a term reads back from its
@@ -34,15 +34,10 @@ Summary
     Declaration
     Axiom
     AxiomFailure
-    Count
     Tensor
-    Unit
     L
     R
     Delay
-    Over
-    Under
-    Repeat
     Testable
     Equivalence
     Related
@@ -97,11 +92,8 @@ of them: composing two functors keeps only the keys of the left-hand map, so
 a functor that named just a few would compose to one defined nowhere else.
 """
 
-MAX_COUNT = 3
-""" The largest number a declaration quantifying over ``int`` is given. """
 
-
-class Equation(NamedGeneric["ar"]):
+class Equation[T]:
     """
     An equation is a list of ``terms`` to be compared up to a function
     ``up_to``, the identity by default.  Casting it to ``bool`` checks
@@ -141,7 +133,7 @@ class Equation(NamedGeneric["ar"]):
         if up_to is not None:
             self.up_to = up_to
 
-    def modulo(self, up_to: Callable) -> "Equation":
+    def modulo(self, up_to: Callable) -> "Equation[T]":
         """
         The same equation compared up to the given function, rebinding
         :attr:`up_to`, whose name the attribute already takes.
@@ -193,9 +185,8 @@ The sort of the objects of type ``Coarse``, as the bound of a variable
 type Var[Coarse, Value] = Annotated[Coarse, Value]
 """
 The premise standing for the value of an expression over the variables of a
-declaration, e.g. ``x: Var[C0, X]`` for ``X: Obj[C0]``, ``mem: Var[C0,
-Tensor[M, X]]`` or ``n: Var[int, N]`` for ``N: Count``. A typechecker reads
-it as ``Coarse``.
+declaration, e.g. ``x: Var[C0, X]`` for ``X: Obj[C0]`` or ``mem: Var[C0,
+Tensor[M, X]]``. A typechecker reads it as ``Coarse``.
 """
 
 type Hom[Coarse, Dom, Cod] = Annotated[Coarse, Dom, Cod]
@@ -203,14 +194,6 @@ type Hom[Coarse, Dom, Cod] = Annotated[Coarse, Dom, Cod]
 The morphisms of type ``Coarse`` from ``Dom`` to ``Cod``, as a premise to
 sample, e.g. ``f: Hom[C1, A, B]``. A typechecker reads it as ``Coarse``.
 """
-
-
-class Count(int):
-    """
-    The sort of the numbers up to :data:`MAX_COUNT`, as the bound of a
-    variable ``N: Count`` of a declaration, e.g. the number of copies of an
-    object.
-    """
 
 
 def is_open(annotation) -> bool:
@@ -236,17 +219,10 @@ def substitute(annotation, scope: dict):
     >>> A, B = TypeVar("A"), TypeVar("B")
     >>> x, y = Ty('x'), Ty('y')
     >>> assert substitute(Tensor[A, B], {A: x, B: y}) == x @ y
-    >>> assert get_args(substitute(Equation[Var[Ty, A]], {A: x})) == (
-    ...     Var[Ty, x], )
     """
-    try:
-        if annotation in scope:
-            return scope[annotation]
-    except TypeError:
-        return annotation
-    if isinstance(annotation, type) and issubclass(annotation, Equation)\
-            and annotation.ar is not None:
-        return GenericAlias(Equation, (substitute(annotation.ar, scope), ))
+    if isinstance(annotation, TypeVar | TypeVarTuple | ParamSpec)\
+            or annotation is Self:
+        return scope.get(annotation, annotation)
     origin, args = get_origin(annotation), get_args(annotation)
     if origin is None or not args:
         return annotation
@@ -259,7 +235,15 @@ class Former:
     A former of object expressions in a signature, e.g. ``Tensor[A, B]``: a
     type for a typechecker, an expression while a variable is left in it,
     see :func:`is_open`, and the object :meth:`form` builds once there is
-    none.
+    none. Subscripting a former is therefore not always a type: once every
+    variable is substituted, see :func:`substitute`, ``Tensor[x, y]`` *is*
+    the object ``x @ y``, which is how an annotation becomes the boundary a
+    premise is drawn with.
+
+    >>> from discopy.monoidal import Ty
+    >>> A = TypeVar("A")
+    >>> assert isinstance(Tensor[A, Ty('y')], GenericAlias)
+    >>> assert Tensor[Ty('x'), Ty('y')] == Ty('x', 'y')
     """
     def __class_getitem__(cls, args):
         args = args if isinstance(args, tuple) else (args, )
@@ -284,20 +268,6 @@ class Tensor[*Objects](Former):
     @staticmethod
     def form(*objects):
         return reduce(matmul, objects)
-
-
-class Unit[Coarse](Former):
-    """
-    The unit of a monoid of objects in a signature: ``Unit[C0]`` is the
-    object ``C0()``.
-
-    >>> from discopy.monoidal import Ty
-    >>> assert Unit[Ty] == Ty()
-    """
-    @staticmethod
-    def form(*args):
-        ob, = args
-        return ob()
 
 
 class L[Object](Former):
@@ -330,35 +300,6 @@ class Delay[Coarse, Object](Former):
     def form(*args):
         category, obj = args
         return category.id(obj).delay().dom
-
-
-class Over[Base, Exponent](Former):
-    """ The exponential on the left in a signature, ``base << exponent``. """
-    @staticmethod
-    def form(*args):
-        base, exponent = args
-        return base << exponent
-
-
-class Under[Exponent, Base](Former):
-    """ The exponential on the right in a signature, ``exponent >> base``. """
-    @staticmethod
-    def form(*args):
-        exponent, base = args
-        return exponent >> base
-
-
-class Repeat[Object, N](Former):
-    """
-    An object repeated a number of times in a signature, ``x ** n``.
-
-    >>> from discopy.monoidal import Ty
-    >>> assert Repeat[Ty('x'), 2] == Ty('x', 'x')
-    """
-    @staticmethod
-    def form(*args):
-        obj, n = args
-        return obj ** n
 
 
 def position(variable: TypeVar, category: type) -> int | None:
@@ -410,9 +351,6 @@ def inhabits(value, kind) -> bool:
             and (value.dom, value.cod) == args[1:]
     if origin is Var:
         return value == args[1]
-    if isinstance(kind, type) and issubclass(kind, Equation):
-        return isinstance(value, Equation) and (kind.ar is None or inhabits(
-            value, GenericAlias(Equation, (kind.ar, ))))
     if origin is Equation:
         return isinstance(value, Equation) and all(
             inhabits(term, args[0]) for term in value.terms)
@@ -438,14 +376,13 @@ class Declaration[**P, T](classmethod):
     Its function is a classmethod of it, implicitly: its first parameter is
     the category and the others are its arguments, sampled in order. Its
     signature is a sequent: each type parameter is a variable of the sort
-    its bound states, ``A: Obj[C0]`` an object and ``N: Count`` a number,
-    each parameter a premise, ``f: Hom[C1, A, B]`` a morphism from ``A`` to
-    ``B``, ``x: Var[C0, X]`` the value of an
-    object expression and :data:`typing.Self` a term, and the return
-    annotation the type of its output, see :meth:`output`. Object
-    expressions are built by :class:`Tensor`, :class:`Unit`, :class:`L`,
-    :class:`R`, :class:`Delay`, :class:`Over`, :class:`Under` and
-    :class:`Repeat`, which stay expressions until the variables are
+    its bound states, ``A: Obj[C0]`` an object, each parameter a premise,
+    ``f: Hom[C1, A, B]`` a morphism from ``A`` to ``B``, ``x: Var[C0, X]``
+    the value of an object expression and :data:`typing.Self` a term, and
+    the return annotation the type of its output, see :meth:`output`.
+    Object expressions are built by :class:`Tensor`, :class:`L`,
+    :class:`R` and :class:`Delay`, which stay expressions until the
+    variables are
     substituted, see :func:`substitute`. The annotations are read as
     objects, the type parameters of the classes above the category standing
     for what :meth:`discopy.abc.Category.parameters` says, see
@@ -461,6 +398,10 @@ class Declaration[**P, T](classmethod):
             function by default.
         params : The parameters passed to the strategy of every morphism the
             declaration quantifies over, see :meth:`Axiom.weaken`.
+        broken : Whether the declaration is declared broken by
+            :meth:`failing`.
+        applicable : Whether the structure applies at all, ``False`` once
+            declared :meth:`inapplicable`.
     """
 
     function: Callable[Concatenate[Any, P], T]
@@ -468,6 +409,8 @@ class Declaration[**P, T](classmethod):
     category: type = None
     name: str = None
     params: dict[str, Any] = None
+    broken: bool = False
+    applicable: bool = True
 
     def __post_init__(self):
         function = inspect.unwrap(self.function)
@@ -481,6 +424,37 @@ class Declaration[**P, T](classmethod):
         self.name = self.name or self.function.__name__
         self.params = dict(self.params or {})
         self.__doc__ = self.function.__doc__
+
+    def failing(self, reason: str) -> Self:
+        """
+        The same declaration declared broken: calling it raises an
+        :class:`AxiomFailure` with the reason as message and what it
+        evaluates to on the arguments, or the error raised when the
+        implementation refuses to build it, e.g. ``braid_naturality =
+        BraidedCategory.braid_naturality.failing("A free braid is a box.")``.
+        """
+        @wraps(self.function)
+        def equation(*args, **kwargs):
+            try:
+                evaluated = self.function(*args, **kwargs)
+            except Exception as error:
+                raise AxiomFailure(reason, error) from error
+            raise AxiomFailure(reason, evaluated)
+        equation.__doc__ = reason
+        return replace(self, function=equation, broken=True)
+
+    def inapplicable(self, reason: str) -> Self:
+        """
+        The same declaration declared not to apply to the category: it
+        takes no argument and returns :obj:`NotImplemented`, with the reason
+        as its documentation, e.g. ``trace_vanishing =
+        TracedCategory.trace_vanishing.inapplicable("No trace.")``.
+        """
+        def law(_category):
+            return NotImplemented
+        law.__doc__ = reason
+        return replace(
+            self, function=law, params={}, broken=False, applicable=False)
 
     def __repr__(self):
         """
@@ -562,8 +536,7 @@ class Declaration[**P, T](classmethod):
         Generate the scope and the arguments of the bound declaration: a
         variable of sort ``Obj`` from the strategy of the objects
         :meth:`discopy.abc.Category.parameters` names, :obj:`None` for those
-        of a group, and of sort
-        :class:`Count` a number up to :data:`MAX_COUNT`, then a premise
+        of a group, then a premise
         ``Hom[C1, A, B]`` from the strategy of the category with its boundary
         and ``params``, a premise ``Var[T, x]`` the value ``x`` and
         :data:`typing.Self` a term.
@@ -572,9 +545,7 @@ class Declaration[**P, T](classmethod):
 
         @st.composite
         def sequents(draw):
-            def variable(name, sort):
-                if sort is Count:
-                    return draw(st.integers(0, MAX_COUNT), label=name)
+            def variable(name, _sort):
                 ob = self.category.parameters()[0]
                 return draw(st.just(None) if ob is NoneType
                             else ob.strategy(), label=name)
@@ -627,13 +598,7 @@ class Axiom[**P, T](Declaration[P, T]):
     so :attr:`broken` is declared by :meth:`failing` before any argument is
     generated — the property matrix marks such an axiom as an expected
     failure and lets the search find the counterexample.
-
-    Parameters:
-        broken : Whether the law is declared broken by :meth:`failing`.
     """
-
-    _: KW_ONLY
-    broken: bool = False
 
     __hash__ = Declaration.__hash__
 
@@ -648,36 +613,6 @@ class Axiom[**P, T](Declaration[P, T]):
         def equation(*args, **kwargs):
             return self.function(*args, **kwargs).modulo(up_to)
         return replace(self, function=equation)
-
-    def failing(self, reason: str) -> "Axiom[P, T]":
-        """
-        The same law declared broken: calling it raises an
-        :class:`AxiomFailure` with the reason as message and the equation
-        evaluated on the arguments, or the error raised when the
-        implementation refuses to build its terms, e.g. ``braid_naturality =
-        BraidedCategory.braid_naturality.failing("A free braid is a box.")``.
-        """
-        @wraps(self.function)
-        def equation(*args, **kwargs):
-            try:
-                evaluated = self.function(*args, **kwargs)
-            except Exception as error:
-                raise AxiomFailure(reason, error) from error
-            raise AxiomFailure(reason, evaluated)
-        equation.__doc__ = reason
-        return replace(self, function=equation, broken=True)
-
-    def inapplicable(self, reason: str) -> "Axiom[P, T]":
-        """
-        The same law declared not to apply to the category: it takes no
-        argument and returns :obj:`NotImplemented`, with the reason as its
-        documentation, e.g. ``trace_vanishing =
-        TracedCategory.trace_vanishing.inapplicable("No trace.")``.
-        """
-        def law(_category):
-            return NotImplemented
-        law.__doc__ = reason
-        return replace(self, function=law, params={}, broken=False)
 
     def weaken(self, **params) -> "Axiom[P, T]":
         """

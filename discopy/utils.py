@@ -263,8 +263,9 @@ class Subscript:
     """
     A class subscripted by :class:`NamedGeneric`, as its origin and its
     values. Such a class is created on the fly, so it cannot be pickled by
-    name: a value that is one, e.g. the ``Matrix[int]`` of
-    ``Equation[Matrix[int]]``, is pickled as its subscript instead.
+    name: a value that is one, e.g. the ``Cyclic[2]`` of
+    ``Product[Cyclic[2], Symmetric[3]]``, is pickled as its subscript
+    instead.
 
     Parameters:
         origin : The class subscripted.

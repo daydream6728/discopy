@@ -8,11 +8,11 @@ from hypothesis.errors import NoSuchExample
 from pytest import raises
 
 from discopy import cat, feedback, rigid
-from discopy.abc import Category, Monoid
+from discopy.abc import Category, Group, Monoid
 from discopy.axioms import (
-    L, R, Axiom, AxiomFailure, Count, Delay, Equation, Equivalence,
-    Hom, Obj, Over, Related, Repeat, Tensor, Testable, Under, Unit, Var,
-    assert_axioms, axiom, inhabits, is_open, position, substitute)
+    L, R, Axiom, AxiomFailure, Delay, Equation, Equivalence, Hom, Obj,
+    Related, Tensor, Testable, Var, assert_axioms, axiom, inhabits, is_open,
+    position, substitute)
 from discopy.cat import Arrow, Box, Functor, Ob
 from discopy.monoidal import Ty
 
@@ -94,18 +94,15 @@ def test_strategy():
 
 def test_sequents():
     @axiom
-    def law[X: Obj[Ob], Y: Obj[Ob], N: Count](
-            cls, x: Var[Ob, X], f: Hom[Self, X, Y], term: Self,
-            n: Var[int, N]
-    ) -> Equation[tuple[Var[Ob, X], bool, bool]]:
-        """ Quantify over an object, a morphism out of it, a term and a
-        number. """
-        return Equation(
-            (f.dom, isinstance(term, cls), n <= 3), (x, True, True))
+    def law[X: Obj[Ob], Y: Obj[Ob]](
+            cls, x: Var[Ob, X], f: Hom[Self, X, Y], term: Self
+    ) -> Equation[tuple[Var[Ob, X], bool]]:
+        """ Quantify over an object, a morphism out of it and a term. """
+        return Equation((f.dom, isinstance(term, cls)), (x, True))
 
     bound = law.bind(Arrow)
     scope, arguments = find(bound.sequents(), lambda _: True)
-    assert set(arguments) == {"x", "f", "term", "n"} and bound(**arguments)
+    assert set(arguments) == {"x", "f", "term"} and bound(**arguments)
     assert inhabits(bound(**arguments), bound.output(scope))
     _, given = find(bound.sequents(given={"Y": Ob('y')}), lambda _: True)
     assert given["f"].cod == Ob('y')
@@ -113,9 +110,7 @@ def test_sequents():
 
 def test_formers():
     x, y = rigid.Ty('x'), rigid.Ty('y')
-    assert Tensor[x, y] == x @ y and Unit[rigid.Ty] == rigid.Ty()
-    assert (L[x], R[x]) == (x.l, x.r) and Repeat[x, 3] == x @ x @ x
-    assert (Over[x, y], Under[y, x]) == (x << y, y >> x)
+    assert Tensor[x, y] == x @ y and (L[x], R[x]) == (x.l, x.r)
     z = feedback.Ty('z')
     assert Delay[feedback.Diagram, z] == z.delay()
     f = rigid.Box('f', x, y)
@@ -139,12 +134,23 @@ def test_substitute():
     assert substitute(Equation, {A: x}) is Equation
     assert substitute(Equation[Hom[Arrow, A, B]], {A: x, B: y}).__args__ \
         == (Hom[Arrow, x, y], )
+    assert substitute(Hom[Self, A, B], {Self: Arrow, A: x}).__args__ == (
+        Arrow, x, B)
+
+
+def test_substitute_unhashable():
+    """ A value that does not hash is never looked up in the scope. """
+    A = TypeVar("A")
+    unhashable = [Ty('x')]
+    assert substitute(Var[list, A], {A: unhashable}).__args__ == (
+        list, unhashable)
 
 
 def test_position():
     assert position(Monoid.__type_params__[0], Monoid) == 1
     assert position(Category.__type_params__[0], Category) == 0
     assert position(TypeVar("T"), Category) is None
+    assert position(Group.__type_params__[0], Group) == 1
 
 
 def test_axiom_binding():
@@ -180,6 +186,7 @@ def test_inapplicable():
     assert law.name == "unitality"
     assert law.__doc__ == "No identities to cancel."
     assert law() is NotImplemented
+    assert not law.applicable and Arrow.unitality.applicable
 
 
 def test_modulo():
