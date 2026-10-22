@@ -115,3 +115,16 @@ def test_Scalar_grad_keeps_is_mixed():
     derivative = Scalar(2 * phi, is_mixed=True).grad(phi)
     assert derivative.is_mixed
     assert numpy.isclose(derivative.eval(mixed=True).array, 2)
+
+
+def test_Controlled_array_reads_the_dagger_of_its_gate():
+    for gate in (S, T, Y, Rx(.3), Controlled(T, distance=-1)):
+        controlled = Controlled(gate)
+        dim = 2 ** len(controlled.dom)
+        array = controlled.eval().array.reshape(dim, dim)
+        assert numpy.allclose(
+            controlled.dagger().eval().array.reshape(dim, dim),
+            array.conj().T)
+        assert numpy.allclose(
+            (controlled >> controlled.dagger()).eval().array.reshape(
+                dim, dim), numpy.eye(dim))

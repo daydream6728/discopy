@@ -631,17 +631,28 @@ class Controlled(QuantumGate):
 
     @property
     def array(self):
+        """
+        The array of a controlled gate, built from the array of the gate it
+        controls as that gate is, i.e. transposed when it is rotated and
+        conjugate transposed when it is a dagger.
+
+        >>> import numpy as np
+        >>> CS = Controlled(S)
+        >>> assert np.allclose(CS.dagger().array.reshape(4, 4),
+        ...                    CS.array.reshape(4, 4).T.conj())
+        """
         controlled, distance = self.controlled, self.distance
         n_qubits = len(self.dom)
+        if distance != 1:
+            return self._decompose().eval().array.reshape(*[2] * 2 * n_qubits)
+        d = 1 << n_qubits - 1
         with backend() as np:
-            if distance == 1:
-                d = 1 << n_qubits - 1
-                part1 = np.array([[1, 0], [0, 0]])
-                part2 = np.array([[0, 0], [0, 1]])
-                array = np.kron(part1, np.eye(d))\
-                    + np.kron(part2, np.array(controlled.array.reshape(d, d)))
-            else:
-                array = self._decompose().eval().array
+            target = np.array(controlled.array)
+            target = (target.transpose() if controlled.z else target)\
+                .reshape(d, d)
+            target = np.conj(target).T if controlled.is_dagger else target
+            array = np.kron(np.array([[1, 0], [0, 0]]), np.eye(d))\
+                + np.kron(np.array([[0, 0], [0, 1]]), target)
         return array.reshape(*[2] * 2 * n_qubits)
 
     def to_drawing(self):
