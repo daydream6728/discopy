@@ -254,8 +254,16 @@ class Cofunction(Box):
 
     @property
     def size(self) -> int:
-        """ Structural cofunctions are not generator boxes in a layer. """
-        return 0
+        """
+        The number of merges and noises the cofunction fuses, i.e. of its
+        outputs not reached exactly once, so that a permutation counts zero.
+
+        >>> x, y = Ty('x'), Ty('y')
+        >>> assert Merge(x).size == Noise(x).size == 1
+        >>> assert Cofunction(x @ y, [0, 0]).size == 2
+        """
+        counts, _ = self.cofunc.inside.factorise()
+        return sum(n != 1 for n in counts)
 
     def setoid(self):
         if self.is_identity:

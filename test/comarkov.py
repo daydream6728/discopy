@@ -145,7 +145,7 @@ def test_CMap():
 def test_Cofunction():
     x, y = Ty('x'), Ty('y')
     f = Cofunction(x @ y, [1, 0, 0])
-    assert f.dom == y @ x @ x and f.size == 0
+    assert f.dom == y @ x @ x and f.size == 1
     assert Cofunction(x, [0, 0, 0]) == Merge(x, 3)
     with raises(ValueError):
         Cofunction(x, [1])
