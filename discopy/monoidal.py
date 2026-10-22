@@ -76,6 +76,7 @@ from discopy.utils import (
     assert_isinstance,
     assert_iscomposable,
     AxiomError,
+    classproperty,
     deprecated_alias,
     MappingOrCallable,
     RichDisplay,
@@ -356,6 +357,11 @@ class Ty(cat.Ob, cat.FreeCategory, ColouredMonoid):
     """
     ob = Colour
     generator_factory = Wire
+    box_factory = classproperty(lambda cls: cls.generator_factory)
+    """
+    The generators of a type as a free category, i.e. its wires, a
+    :class:`cat.Ob` that :meth:`cast` embeds as a type of length one.
+    """
 
     @classmethod
     def strategy(cls, **params):
@@ -618,6 +624,9 @@ class Nat(abc.Nat, Ty):  # ty: ignore[invalid-generic-class]
     """
     ob = Colour
     generator_factory = int
+    box_factory = None
+    """ No generator of one colour is named, so there is no canonical
+    instance of a law, see :meth:`discopy.axioms.Axiom.canonical`. """
 
     @classmethod
     def generators(cls, *, dom=None, cod=None):
@@ -708,6 +717,9 @@ class Dim(Ty):
     >>> assert loads(dumps(Dim(2, 3))) == Dim(2, 3)
     """
     generator_factory = int
+    box_factory = None
+    """ No generator of one colour is named, so there is no canonical
+    instance of a law, see :meth:`discopy.axioms.Axiom.canonical`. """
 
     @classmethod
     def generators(cls, *, dom=None, cod=None):
@@ -1329,7 +1341,25 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
         """
         return self.ar.decode(*self.encode())
 
-    def to_hypergraph(self) -> Hypergraph:
+    @classmethod
+    def equation_factory(cls, *terms: "Diagram") -> "Equation":
+        """
+        The equation of a law, compared on the nose. A hypergraph is faithful
+        only from :class:`discopy.symmetric.Diagram` on, whose
+        ``equation_factory`` compares up to it: below, it is a quotient that
+        forgets the regions of a planar diagram and the side of its scalars,
+        identifies a braid with its inverse, a twist with the identity and
+        the adjoints of a type, so a planar law is compared syntactically
+        until each doctrine has a normal form of its own.
+
+        >>> x = Ty('x')
+        >>> f, g = Box('f', Ty(), x), Box('g', x, Ty())
+        >>> assert not Diagram.equation_factory(f @ g, g >> f)
+        >>> assert Diagram.equation_factory(f @ g, f @ g)
+        """
+        return Equation(*terms)
+
+    def to_hypergraph(self) -> "Hypergraph":
         """
         Translate a planar diagram into a hypergraph.
 

@@ -75,6 +75,9 @@ NOT_A_DAGGER = "{} has no dagger: {} is not a dagger category."
 NO_SUCH_SPIDER = "The only spiders of {} are its {}."
 NOT_ACYCLIC = "{} has a directed cycle, its boxes cannot be ordered."
 
+FREE_CURRY = (
+    "A free curry is a bubble, which a hypergraph keeps as a box: nothing "
+    "evaluates it.")
 FREE_FEEDBACK = (
     "A free feedback is a bubble, which a hypergraph keeps as a box: nothing "
     "slides into it.")
@@ -84,6 +87,9 @@ RIGID_HAS_NO_DAGGER = (
 FEEDBACK_HAS_NO_DAGGER = (
     "Feedback has no dagger and no rotation, "
     "either would feed its memory back in time.")
+MAP_HAS_NO_ADJOINTS = (
+    "A map is compact whatever category hosts it, but a host that is not "
+    "rigid has no adjoints or curries for the laws to quantify over.")
 NO_TYPE_PARAMETER = (
     "{} has no type parameter to subscript, declare one as in class C[name].")
 NOT_LEFT_MONOGAMOUS = "{} is not left-monogamous."

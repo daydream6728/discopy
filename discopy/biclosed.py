@@ -406,10 +406,29 @@ class Diagram(monoidal.Diagram, BiclosedCategory):
     def to_drawing(self):
         return monoidal.Diagram.to_drawing(self, functor_factory=Functor)
 
+    dagger_involution = DaggerCategory.dagger_involution.failing(
+        messages.CURRY_HAS_NO_DAGGER)
+    dagger_involution_monoidal = DaggerCategory.dagger_involution.weaken(
+        within=MonoidalCategory)
+    dagger_contravariance = DaggerCategory.dagger_contravariance.failing(
+        messages.CURRY_HAS_NO_DAGGER)
+    dagger_contravariance_monoidal = DaggerCategory.dagger_contravariance\
+        .weaken(within=MonoidalCategory)
     dagger_monoidality = DaggerCategory.dagger_monoidality.failing(
         messages.CURRY_HAS_NO_DAGGER)
     dagger_monoidality_monoidal = DaggerCategory.dagger_monoidality.weaken(
         within=MonoidalCategory).failing(messages.NO_PLANAR_NORMAL_FORM)
+    currying_left = BiclosedCategory.currying_left.failing(messages.FREE_CURRY)
+    currying_right = BiclosedCategory.currying_right.failing(
+        messages.FREE_CURRY)
+    currying_eta_left = BiclosedCategory.currying_eta_left.failing(
+        messages.FREE_CURRY)
+    currying_eta_right = BiclosedCategory.currying_eta_right.failing(
+        messages.FREE_CURRY)
+    currying_naturality_left = BiclosedCategory.currying_naturality_left\
+        .failing(messages.FREE_CURRY)
+    currying_naturality_right = BiclosedCategory.currying_naturality_right\
+        .failing(messages.FREE_CURRY)
 
 
 class Box(monoidal.Box, Diagram):

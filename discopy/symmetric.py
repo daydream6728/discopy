@@ -99,13 +99,16 @@ from collections.abc import Sequence
 from typing import ClassVar
 
 from discopy import monoidal, feedback, balanced, hypergraph, cmap, messages
-from discopy.abc import BalancedCategory, SymmetricCategory, DaggerCategory
+from discopy.abc import (
+    BalancedCategory, SymmetricCategory, DaggerCategory, BiclosedCategory,
+    RigidCategory, PivotalCategory, CompactCategory)
 from discopy.cat import factory
 from discopy.feedback import (  # noqa: F401  pylint: disable=unused-import
     Wire, Ty, Nat)
 from discopy.python import finset
 from discopy.utils import (
     AxiomError, assert_iscomposable, classproperty, factory_name, from_tree)
+from discopy.axioms import Axiom, Rule
 
 
 class Layer(feedback.Layer):
@@ -740,6 +743,12 @@ class Functor(balanced.Functor):
 
 
 CMap = cmap.CMap[Diagram]
+
+for level in (
+        BiclosedCategory, RigidCategory, PivotalCategory, CompactCategory):
+    for name, law in vars(level).items():
+        if isinstance(law, (Axiom, Rule)):
+            setattr(CMap, name, law.inapplicable(messages.MAP_HAS_NO_ADJOINTS))
 
 Feedback, Trace, FollowedBy, Head, Tail = feedback.generators(Diagram, Box)
 Diagram.box_factory = Box

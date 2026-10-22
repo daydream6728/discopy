@@ -897,6 +897,61 @@ class BiclosedCategory[
             else exponent @ self >> self.ev(base, exponent, False)
         return result.uncurry(n - len(exponent), left)
 
+    @axiom
+    def currying_left[Γ: Obj[C0], X: Atom[C0], E: Atom[C0]](
+            cls, f: Hom[C1, Tensor[Γ, E], X]
+    ) -> Equation[Hom[C1, Tensor[Γ, E], X]]:
+        """ Left currying followed by evaluation. """
+        return cls.equation_factory(f.curry().uncurry(), f)
+
+    @axiom
+    def currying_right[Γ: Obj[C0], X: Atom[C0], E: Atom[C0]](
+            cls, f: Hom[C1, Tensor[E, Γ], X]
+    ) -> Equation[Hom[C1, Tensor[E, Γ], X]]:
+        """ Right currying followed by evaluation. """
+        return cls.equation_factory(
+            f.curry(left=False).uncurry(left=False), f)
+
+    @axiom
+    def currying_eta_left[Y: Obj[C0], E: Obj[C0]](
+            cls, base: Var[C0, Y], exponent: Var[C0, E]
+    ) -> Equation[Hom[C1, Over[Y, E], Over[Y, E]]]:
+        """ The left currying of the left evaluation is the identity. """
+        return cls.equation_factory(
+            cls.ev(base, exponent).curry(len(exponent)),
+            cls.id(base << exponent))
+
+    @axiom
+    def currying_eta_right[Y: Obj[C0], E: Obj[C0]](
+            cls, base: Var[C0, Y], exponent: Var[C0, E]
+    ) -> Equation[Hom[C1, Under[E, Y], Under[E, Y]]]:
+        """ The right currying of the right evaluation is the identity. """
+        return cls.equation_factory(
+            cls.ev(base, exponent, left=False).curry(
+                len(exponent), left=False),
+            cls.id(exponent >> base))
+
+    @axiom
+    def currying_naturality_left[
+            Γ: Obj[C0], Δ: Obj[C0], E: Obj[C0], Z: Obj[C0]](
+            cls, f: Hom[C1, Tensor[Γ, E], Z], g: Hom[C1, Δ, Γ],
+            exponent: Var[C0, E]) -> Equation[Hom[C1, Δ, Over[Z, E]]]:
+        """ Left currying is natural in the context. """
+        n = len(exponent)
+        return cls.equation_factory(
+            (g @ exponent >> f).curry(n), g >> f.curry(n))
+
+    @axiom
+    def currying_naturality_right[
+            Γ: Obj[C0], Δ: Obj[C0], E: Obj[C0], Z: Obj[C0]](
+            cls, f: Hom[C1, Tensor[E, Γ], Z], g: Hom[C1, Δ, Γ],
+            exponent: Var[C0, E]) -> Equation[Hom[C1, Δ, Under[E, Z]]]:
+        """ Right currying is natural in the context. """
+        n = len(exponent)
+        return cls.equation_factory(
+            (exponent @ g >> f).curry(n, left=False),
+            g >> f.curry(n, left=False))
+
     @rule
     def curry_left[Γ: Obj[C0], E: Obj[C0], B: Obj[C0]](
             cls, f: Hom[C1, Tensor[Γ, E], B], exponent: Var[C0, E]
@@ -1068,6 +1123,55 @@ class RigidCategory[C0: Pregroup, C1: RigidCategory](BiclosedCategory[C0, C1]):
             >> self.dom.r @ self @ self.cod.r\
             >> self.dom.r @ self.cups(self.cod, self.cod.r)
 
+    @axiom
+    def snake_equations[X: Obj[C0]](
+            cls, x: Var[C0, X]) -> Equation[Hom[C1, X, X]]:
+        """ The two snake equations. """
+        snake_r = x @ cls.caps(x.r, x) >> cls.cups(x, x.r) @ x
+        snake_l = cls.caps(x, x.l) @ x >> x @ cls.cups(x.l, x)
+        return cls.equation_factory(snake_r, cls.id(x), snake_l)
+
+    @axiom
+    def caps_coherence[M: Atom[C0], N: Atom[C0], X: Obj[C0], Y: Obj[C0]](
+            cls, x: Var[C0, Tensor[M, X]], y: Var[C0, Tensor[N, Y]]
+    ) -> Equation[Hom[
+            C1, Unit[C0], Tensor[M, X, N, Y, L[Tensor[M, X, N, Y]]]]]:
+        """ Monoidal coherence of caps. """
+        return cls.equation_factory(
+            cls.caps(x @ y, (x @ y).l),
+            cls.caps(x, x.l) >> x @ cls.caps(y, y.l) @ x.l)
+
+    @axiom
+    def cups_coherence[M: Atom[C0], N: Atom[C0], X: Obj[C0], Y: Obj[C0]](
+            cls, x: Var[C0, Tensor[M, X]], y: Var[C0, Tensor[N, Y]]
+    ) -> Equation[Hom[
+            C1, Tensor[M, X, N, Y, R[Tensor[M, X, N, Y]]], Unit[C0]]]:
+        """ Monoidal coherence of cups. """
+        return cls.equation_factory(
+            cls.cups(x @ y, (x @ y).r),
+            x @ cls.cups(y, y.r) @ x.r >> cls.cups(x, x.r))
+
+    @axiom
+    def transpose_contravariance[A: Obj[C0], B: Obj[C0], C: Obj[C0]](
+            cls, f: Hom[C1, A, B], g: Hom[C1, B, C]
+    ) -> Equation[Hom[C1, R[C], R[A]]]:
+        """ Transposition reverses composition. """
+        return cls.equation_factory(
+            (f >> g).transpose(), g.transpose() >> f.transpose())
+
+    @axiom
+    def rotate_contravariance[A: Obj[C0], B: Obj[C0], C: Obj[C0]](
+            cls, f: Hom[C1, A, B], g: Hom[C1, B, C]
+    ) -> Equation[Hom[C1, R[C], R[A]]]:
+        """ Rotation, i.e. the right adjoint, reverses composition. """
+        return cls.equation_factory((f >> g).r, g.r >> f.r)
+
+    @axiom
+    def adjunction[A: Obj[C0], B: Obj[C0]](
+            cls, f: Hom[C1, A, B]) -> Equation[Hom[C1, A, B]]:
+        """ The left and right adjoints are mutually inverse. """
+        return cls.equation_factory(f.l.r, f, f.r.l)
+
     @rule
     def counit[X: Obj[C0]](
             cls, x: Var[C0, X]) -> Hom[C1, Tensor[X, R[X]], Unit[C0]]:
@@ -1091,6 +1195,18 @@ class PivotalCategory[
     """
     yanking = TracedCategory.yanking.inapplicable(
         messages.PLANAR_YANKING)
+
+    @axiom
+    def self_dual[X: Obj[C0]](
+            cls, x: Var[C0, X]) -> Equation[Var[C0, R[X]]]:
+        """ The left and right adjoints of an object are equal. """
+        return Equation(x.r, x.l)
+
+    @axiom
+    def pivotality[A: Obj[C0], B: Obj[C0]](
+            cls, f: Hom[C1, A, B]) -> Equation[Hom[C1, L[B], L[A]]]:
+        """ The left and right transposes are equal. """
+        return cls.equation_factory(f.transpose(left=True), f.transpose())
 
 
 class BraidedCategory[
@@ -1458,6 +1574,16 @@ class ClosedCategory[
     it comes with copy and discard so it is also a :class:`MarkovCategory`.
     """
 
+    @axiom
+    def currying_symmetry[Γ: Obj[C0], E: Obj[C0], Z: Obj[C0]](
+            cls, f: Hom[C1, Tensor[Γ, E], Z], exponent: Var[C0, E]
+    ) -> Equation[Hom[C1, Γ, Over[Z, E]]]:
+        """ Currying on the left is currying on the right after a swap. """
+        n = len(exponent)
+        base = f.dom[:len(f.dom) - n]
+        return cls.equation_factory(
+            f.curry(n), (cls.swap(exponent, base) >> f).curry(n, left=False))
+
 
 class BalancedCategory[C0: ColouredMonoid, C1: BalancedCategory](
         BraidedCategory[C0, C1], TracedCategory[C0, C1]):
@@ -1547,6 +1673,22 @@ class CompactCategory[C0: Pregroup, C1: CompactCategory](
     @classmethod
     def twist(cls, dom: C0) -> C1:
         return cls.id(dom)
+
+    @axiom
+    def reidemeister_1_cap[X: Obj[C0]](
+            cls, x: Var[C0, X]
+    ) -> Equation[Hom[C1, Unit[C0], Tensor[R[X], X]]]:
+        """ Reidemeister move 1 for caps. """
+        return cls.equation_factory(
+            cls.caps(x, x.r) >> cls.swap(x, x.r), cls.caps(x.r, x))
+
+    @axiom
+    def reidemeister_1_cup[X: Obj[C0]](
+            cls, x: Var[C0, X]
+    ) -> Equation[Hom[C1, Tensor[X, R[X]], Unit[C0]]]:
+        """ Reidemeister move 1 for cups. """
+        return cls.equation_factory(
+            cls.swap(x, x.r) >> cls.cups(x.r, x), cls.cups(x, x.r))
 
 
 class HypergraphCategory[C0: Pregroup, C1: HypergraphCategory](

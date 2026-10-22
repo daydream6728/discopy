@@ -378,6 +378,8 @@ class Diagram(markov.Diagram, biclosed.Diagram, ClosedCategory):
         messages.CURRY_HAS_NO_DAGGER)
     dagger_monoidality_monoidal = DaggerCategory.dagger_monoidality.weaken(
         within=MonoidalCategory)
+    currying_symmetry = ClosedCategory.currying_symmetry.failing(
+        messages.FREE_CURRY)
 
     def to_term(self) -> Term:
         """
