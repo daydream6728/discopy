@@ -249,7 +249,6 @@ class Hypergraph(
 
         flat_wires = dom_wires + tuple(
             chain.from_iterable(x + y for x, y in box_wires)) + cod_wires
-        connected_spiders = set(flat_wires)
 
         if spider_types is None:
             spider_types = {spider: port.obj for spider, port in zip(
@@ -257,16 +256,15 @@ class Hypergraph(
         if not isinstance(spider_types, Mapping):
             spider_types = dict(enumerate(spider_types))
 
-        first_occurrence = {}
-        for index, spider in enumerate(flat_wires):
-            first_occurrence.setdefault(spider, index)
-        relabeling = sorted(connected_spiders, key=first_occurrence.get)
-        relabeling += sorted(set(spider_types.keys()) - connected_spiders)
+        relabeling = list(dict.fromkeys(flat_wires))
+        relabeling += sorted(set(spider_types.keys()) - set(relabeling))
         self.spider_types = tuple(
             spider_types[s].unwind() for s in relabeling)
-        new_index = {s: i for i, s in enumerate(relabeling)}
-        self.flat_wires = tuple(new_index[s] for s in flat_wires)
-        self.wires = self.rebracket(self.flat_wires)
+        index = {s: i for i, s in enumerate(relabeling)}.__getitem__
+        self.flat_wires = tuple(map(index, flat_wires))
+        self.wires = (tuple(map(index, dom_wires)), tuple(
+            (tuple(map(index, x)), tuple(map(index, y))) for x, y in box_wires
+        ), tuple(map(index, cod_wires)))
         self.dom_wires, self.box_wires, self.cod_wires = self.wires
         if _scan:
             self.scan_types()
