@@ -346,7 +346,8 @@ class Diagram(balanced.Diagram, SymmetricCategory):
 
         doms = Nat(len(xs)) if doms is None else doms
         size = len(doms)
-        unit = type(doms)() if isinstance(doms, Nat) else cls.ob()
+        nat = doms if isinstance(doms, Nat) else next(iter(doms), None)
+        unit = type(nat)() if isinstance(nat, Nat) else cls.ob()
         tensor = lambda tys: unit.tensor(*tys)
         dom = tensor(doms)
 
@@ -421,35 +422,37 @@ class Diagram(balanced.Diagram, SymmetricCategory):
         Merge independent generators, keeping native plumbing compact.
 
         A hypergraph forgets that plumbing is native, so a diagram with a
-        :class:`Permutation` is foliated by fusing its plumbing, see
-        :meth:`fuse_plumbing`, then merging its layers instead.
+        :class:`Permutation` is foliated by merging its layers instead, see
+        :meth:`merge_layers`.
 
         >>> x, y = Ty('x'), Ty('y')
         >>> perm = Permutation(x @ y, [1, 0])
         >>> assert perm.foliation() == perm
         """
         if self.is_plumbing:
-            return self.fuse_plumbing().merge_layers()
+            return self.merge_layers()
         return super().foliation()
 
-    def fuse_plumbing(self) -> Diagram:
+    def merge_layers(self):
         """
-        Fuse each layer of plumbing alone into the one before it, see
-        :meth:`Permutation.fuse`, dropping both when they compose to the
-        identity.
+        Merge layers as :meth:`discopy.monoidal.Diagram.merge_layers` does,
+        dropping two layers of plumbing alone that compose to the identity,
+        which is the empty diagram rather than a layer, see
+        :meth:`Permutation.fuse`.
 
-        >>> x, y = Ty('x'), Ty('y')
-        >>> assert (Swap(x, y) >> Swap(y, x)).fuse_plumbing() == Id(x @ y)
+        >>> x, y, z = Ty('x'), Ty('y'), Ty('z')
+        >>> perm = Permutation(x @ y @ z, [1, 2, 0])
+        >>> assert (perm >> perm[::-1] >> perm).foliation() == perm
         """
-        inside = []
-        for layer in self.inside:
-            if inside and all(
-                    layer.is_generator and layer.is_plumbing
-                    for layer in (inside[-1], layer)):
-                inside += inside.pop().generator.fuse(layer.generator).inside
-            else:
-                inside.append(layer)
-        return self.ar(tuple(inside), self.dom, self.cod)
+        diagram = super().merge_layers()
+        for i, (first, second) in enumerate(
+                zip(diagram.inside, diagram.inside[1:])):
+            if all(layer.is_generator and layer.is_plumbing
+                   for layer in (first, second))\
+                    and not first.generator.fuse(second.generator).inside:
+                inside = diagram.inside[:i] + diagram.inside[i + 2:]
+                return self.ar(inside, self.dom, self.cod).merge_layers()
+        return diagram
 
     def depth(self):
         """
@@ -740,6 +743,18 @@ class Functor(balanced.Functor):
         ar_map (Mapping[Box, Diagram]) : Map from :class:`Box` to :code:`cod`.
         cod (Category) :
             The codomain, :code:`Diagram` by default.
+
+    Note
+    ----
+    A :class:`Permutation` is sent to the codomain's ``permutation`` of the
+    images of its wires, one block per wire. Into a codomain without one, it
+    is sent to the images of the swaps of :meth:`Permutation.to_swaps`, so
+    that a whiskered swap maps like a swap.
+
+    >>> x, y, z = map(Ty, "xyz")
+    >>> F = Functor({x: x, y: y, z: z}, {}, cod=balanced.Diagram)
+    >>> print(F(Swap(x, y) @ z))
+    Braid(x, y) @ z
     """
     dom = cod = Diagram
 
@@ -748,11 +763,31 @@ class Functor(balanced.Functor):
             return self.cod.ar.swap(self(other.dom[0]), self(other.dom[1]))
         if isinstance(other, Permutation) and hasattr(
                 self.cod.ar, "permutation"):
-            if isinstance(other.dom, Nat):
-                doms = self(other.dom)
-            else:
-                doms = list(map(self, other.dom))
-            return self.cod.ar.permutation(other.perm, doms)
+            return self.cod.ar.permutation(
+                other.perm, list(map(self, other.dom)))
+        if isinstance(other, Permutation) and not isinstance(other, Swap):
+            swaps, dom = other.to_swaps(), other.dom
+            if len(swaps) != 1:
+                return self(swaps)
+            i = next(i for i, j in enumerate(other.perm) if i != j)
+            swap = other.swap_factory(dom[i:i + 1], dom[i + 1:i + 2])
+            return self(monoidal.Layer(dom[:i], swap, dom[i + 2:]))
+        return super().__call__(other)
+
+
+class DualRail(balanced.DualRail, Functor):
+    """
+    The functor sending a symmetric diagram to its dual rail encoding, i.e.
+    :class:`discopy.balanced.DualRail` sending a :class:`Permutation` to the
+    dual rail braids of its swaps.
+
+    >>> x, y, z = map(Ty, "xyz")
+    >>> diagram = (Swap(x, y) @ z).to_braided()
+    >>> assert [type(box) for box in diagram.boxes] == [balanced.DualRailBraid]
+    """
+    def __call__(self, other):
+        if isinstance(other, Permutation) and not isinstance(other, Swap):
+            return Functor.__call__(self, other)
         return super().__call__(other)
 
 
@@ -761,6 +796,7 @@ CMap = cmap.CMap[Diagram]
 Feedback, Trace, FollowedBy, Head, Tail = feedback.generators(Diagram, Box)
 Diagram.box_factory = Box
 Diagram.functor_factory = Functor
+Diagram.dual_rail_factory = DualRail
 Hypergraph = hypergraph.Hypergraph[Diagram]
 Diagram.swap_factory = Swap
 Diagram.permutation_factory = Permutation
