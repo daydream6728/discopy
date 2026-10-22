@@ -55,6 +55,8 @@ Summary
         assert_axioms
 """
 
+from __future__ import annotations
+
 import inspect
 import pickle
 import sys
@@ -133,7 +135,7 @@ class Equation[T]:
         if up_to is not None:
             self.up_to = up_to
 
-    def modulo(self, up_to: Callable) -> "Equation[T]":
+    def modulo(self, up_to: Callable) -> Equation[T]:
         """
         The same equation compared up to the given function, rebinding
         :attr:`up_to`, whose name the attribute already takes.
@@ -213,7 +215,7 @@ def substitute(annotation, scope: dict):
     """
     The annotation with each variable of the scope replaced by its value,
     from the leaves up, so that an object expression is computed once its
-    variables are, see :class:`Former`.
+    variables are, see :class:`Constructor`.
 
     >>> from discopy.monoidal import Ty
     >>> A, B = TypeVar("A"), TypeVar("B")
@@ -230,15 +232,15 @@ def substitute(annotation, scope: dict):
     return origin[args if len(args) > 1 else args[0]]
 
 
-class Former:
+class Constructor:
     """
-    A former of object expressions in a signature, e.g. ``Tensor[A, B]``: a
-    type for a typechecker, an expression while a variable is left in it,
-    see :func:`is_open`, and the object :meth:`form` builds once there is
-    none. Subscripting a former is therefore not always a type: once every
-    variable is substituted, see :func:`substitute`, ``Tensor[x, y]`` *is*
-    the object ``x @ y``, which is how an annotation becomes the boundary a
-    premise is drawn with.
+    A constructor of object expressions in a signature, e.g.
+    ``Tensor[A, B]``: a type for a typechecker, an expression while a
+    variable is left in it, see :func:`is_open`, and the object
+    :meth:`form` builds once there is none. Subscripting a constructor is
+    therefore not always a type: once every variable is substituted, see
+    :func:`substitute`, ``Tensor[x, y]`` *is* the object ``x @ y``, which is
+    how an annotation becomes the boundary a premise is drawn with.
 
     >>> from discopy.monoidal import Ty
     >>> A = TypeVar("A")
@@ -253,11 +255,11 @@ class Former:
 
     @staticmethod
     def form(*args):
-        """ The object the former builds from objects, to be instantiated. """
+        """ The object the constructor builds from objects. """
         raise NotImplementedError
 
 
-class Tensor[*Objects](Former):
+class Tensor[*Objects](Constructor):
     """
     The tensor of objects in a signature: ``Tensor[A, B]`` is a type for a
     typechecker and the object ``A @ B`` once the variables are sampled.
@@ -270,7 +272,7 @@ class Tensor[*Objects](Former):
         return reduce(matmul, objects)
 
 
-class L[Object](Former):
+class L[Object](Constructor):
     """ The left adjoint of an object in a signature, ``x.l``. """
     @staticmethod
     def form(*args):
@@ -278,7 +280,7 @@ class L[Object](Former):
         return obj.l
 
 
-class R[Object](Former):
+class R[Object](Constructor):
     """ The right adjoint of an object in a signature, ``x.r``. """
     @staticmethod
     def form(*args):
@@ -286,7 +288,7 @@ class R[Object](Former):
         return obj.r
 
 
-class Delay[Coarse, Object](Former):
+class Delay[Coarse, Object](Constructor):
     """
     The delay of an object by one time step in a signature, read off the
     delay of its identity in a category ``Coarse``, i.e.
@@ -304,12 +306,15 @@ class Delay[Coarse, Object](Former):
 
 def position(variable: TypeVar, category: type) -> int | None:
     """
-    The position of a type parameter of a class above a category among
-    those of the class that says what they stand for, i.e. that defines
-    ``parameters``, following each generic base that passes the parameter
-    on, e.g. the ``C1`` of a ``Monoid`` is the second parameter of a
-    ``Category``, since a monoid is a ``ColouredMonoid[NoneType, C1]``.
-    :obj:`None` for a parameter that is not passed on to such a class.
+    Which parameter of :meth:`discopy.abc.Category.parameters` a type
+    parameter of a class above a category stands for.
+
+    The answer is read off the class that defines ``parameters``. A type
+    parameter of a subclass gets there through the generic bases: e.g. a
+    ``Monoid[C1]`` is a ``ColouredMonoid[NoneType, C1]``, which is a
+    ``Category[NoneType, C1]``, so the ``C1`` of a monoid is the second
+    parameter of a category. :obj:`None` when the bases lose the parameter
+    before they reach that class.
 
     >>> from discopy.abc import Category, Monoid
     >>> assert position(Monoid.__type_params__[0], Monoid) == 1
@@ -383,11 +388,11 @@ class Declaration[**P, T](classmethod):
     Object expressions are built by :class:`Tensor`, :class:`L`,
     :class:`R` and :class:`Delay`, which stay expressions until the
     variables are
-    substituted, see :func:`substitute`. The annotations are read as
-    objects, the type parameters of the classes above the category standing
-    for what :meth:`discopy.abc.Category.parameters` says, see
-    :func:`position`: a function compiled with ``from __future__ import
-    annotations`` has strings for annotations, and is refused.
+    substituted, see :func:`substitute`. The type parameters of the class
+    stating it stand for what :meth:`discopy.abc.Category.parameters` says,
+    see :func:`position`, and the annotations are read as objects, see
+    :meth:`annotations`, so that a module stating a law may use ``from
+    __future__ import annotations``.
 
     Parameters:
         function : The function the declaration states, from the category and
@@ -413,13 +418,6 @@ class Declaration[**P, T](classmethod):
     applicable: bool = True
 
     def __post_init__(self):
-        function = inspect.unwrap(self.function)
-        if any(isinstance(annotation, str)
-               for annotation in function.__annotations__.values()):
-            raise TypeError(
-                f"{function.__module__} states {function.__name__} with "
-                "string annotations, e.g. under `from __future__ import "
-                "annotations`.")
         classmethod.__init__(self, self.function)
         self.name = self.name or self.function.__name__
         self.params = dict(self.params or {})
@@ -487,6 +485,27 @@ class Declaration[**P, T](classmethod):
                 inspect.signature(self.function).parameters.values())[1:]
             if parameter.default is inspect.Parameter.empty)
 
+    def annotations(self) -> dict[str, Any]:
+        """
+        The annotations of the function read as objects, where ``from
+        __future__ import annotations`` leaves strings: each is evaluated in
+        the module of the function, with the type parameters of the class
+        stating it and then those of the function itself in scope.
+        """
+        function = inspect.unwrap(self.function)
+        owner = next((
+            klass for klass in (self.category or object).__mro__
+            if f"{klass.__qualname__}.{function.__name__}"
+            == function.__qualname__), None)
+        names = {
+            parameter.__name__: parameter for parameter in (
+                getattr(owner, "__type_params__", ())
+                + function.__type_params__)}
+        return {
+            name: eval(annotation, function.__globals__, names)
+            if isinstance(annotation, str) else annotation
+            for name, annotation in function.__annotations__.items()}
+
     def scope(self, variable: Callable, given: dict | None = None) -> dict:
         """
         The values of the variables of a signature: the category for
@@ -515,9 +534,10 @@ class Declaration[**P, T](classmethod):
         The arguments of the bound declaration: ``value(name, kind)`` for each
         of its :attr:`parameters`, their annotation substituted in the scope.
         """
+        annotations = self.annotations()
         return {
             parameter.name: value(
-                parameter.name, substitute(parameter.annotation, scope))
+                parameter.name, substitute(annotations[parameter.name], scope))
             for parameter in self.parameters}
 
     def output(self, scope: dict):
@@ -526,12 +546,11 @@ class Declaration[**P, T](classmethod):
         substituted in the scope its arguments were sampled in, which the
         output :func:`inhabits`.
         """
-        return substitute(
-            inspect.signature(self.function).return_annotation, scope)
+        return substitute(self.annotations()["return"], scope)
 
     def sequents(
             self, given: dict | None = None, **params
-    ) -> "st.SearchStrategy[tuple]":
+    ) -> st.SearchStrategy[tuple]:
         """
         Generate the scope and the arguments of the bound declaration: a
         variable of sort ``Obj`` from the strategy of the objects
@@ -571,7 +590,7 @@ class Declaration[**P, T](classmethod):
 
     def arguments(
             self, given: dict | None = None, **params
-    ) -> "st.SearchStrategy[dict]":
+    ) -> st.SearchStrategy[dict]:
         """ Generate the arguments of the bound declaration, see
         :meth:`sequents`. """
         return self.sequents(given, **params).map(lambda sequent: sequent[1])
@@ -602,7 +621,7 @@ class Axiom[**P, T](Declaration[P, T]):
 
     __hash__ = Declaration.__hash__
 
-    def modulo(self, up_to) -> "Axiom[P, T]":
+    def modulo(self, up_to) -> Axiom[P, T]:
         """
         The same law with its equation compared up to a function, so that a
         category weakens an inherited axiom in one statement, e.g.
@@ -614,7 +633,7 @@ class Axiom[**P, T](Declaration[P, T]):
             return self.function(*args, **kwargs).modulo(up_to)
         return replace(self, function=equation)
 
-    def weaken(self, **params) -> "Axiom[P, T]":
+    def weaken(self, **params) -> Axiom[P, T]:
         """
         The same law quantified over the terms the strategy of the category
         generates with the given parameters, e.g. ``unitality_of_boxes =
@@ -625,7 +644,7 @@ class Axiom[**P, T](Declaration[P, T]):
         """
         return replace(self, params=dict(self.params, **params))
 
-    def strategy(self) -> "st.SearchStrategy[dict]":
+    def strategy(self) -> st.SearchStrategy[dict]:
         """
         Generate the arguments of the bound axiom, with the parameters
         :meth:`weaken` declared, see :meth:`Declaration.arguments`.
@@ -680,7 +699,7 @@ class Testable[T](ABC):
 
     @classmethod
     @abstractmethod
-    def strategy(cls, **params) -> "st.SearchStrategy[T]":
+    def strategy(cls, **params) -> st.SearchStrategy[T]:
         """
         Build a strategy for instances of ``cls``.
 
@@ -783,7 +802,7 @@ class Related(Testable, NamedGeneric["factory"], tuple):
         return super().__new__(cls, terms)
 
     @classmethod
-    def strategy(cls, **params) -> "st.SearchStrategy[Related]":
+    def strategy(cls, **params) -> st.SearchStrategy[Related]:
         """ Generate the triples the factory relates. """
         from hypothesis import strategies as st
 
@@ -818,7 +837,7 @@ class Equivalence(Testable):
 
     @classmethod
     @abstractmethod
-    def related(cls, **params) -> "st.SearchStrategy[tuple]":
+    def related(cls, **params) -> st.SearchStrategy[tuple]:
         """
         Generate three instances: two related by construction and a third
         comparable to them, related or not.

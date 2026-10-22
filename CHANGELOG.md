@@ -726,9 +726,12 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   nothing with the memory fed back, and a time series the stream of state
   preparations `Reservoir.encoding` composed with it: the features are read
   between its slices, and unrolling the composite for as many steps gives
-  the state of the memory they are read from. The readout fits an intercept by default,
-  which the regularisation leaves out, as in Fujii and Nakajima's paper;
-  `bias=False` fits without one.
+  the state of the memory they are read from. A value `x` of the series
+  rotates its input qubit by `x / 2` half-turns, so that every value of the
+  unit interval prepares a state of its own. `fit` returns a `Readout`, the
+  affine map from the features to the targets that `predict` applies, with
+  an intercept by default, which the regularisation leaves out, as in
+  Fujii and Nakajima's paper; `bias=False` fits without one.
 - `discopy.drawing.widget.DiagramWidget`, an
   [anywidget](https://anywidget.dev) showing the SVG of a drawing, built
   on demand by `RichDisplay.to_widget`, for Jupyter, marimo and VS Code.
@@ -787,7 +790,11 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `recopar` post-composes them, covariantly where `reparam` is
   contravariant ([#572](https://github.com/discopy/discopy/issues/572)).
 - `Rydberg` in `discopy.quantum.ansatze`, the Trotterized time evolution
-  under the Rydberg Hamiltonian of Pasqal's neutral-atom QPU
+  under the Rydberg Hamiltonian of Pasqal's neutral-atom QPU, in the
+  dimensionless units of Pasqal's [qoolqit](https://docs.pasqal.com/qoolqit/),
+  the interaction coefficient being one, with its detuning map modulator:
+  a modulated detuning `dmm`, at most zero, applied to each atom with one
+  of its `weights` in the unit interval
   ([#586](https://github.com/discopy/discopy/pull/586)).
 - The pivotal structure of `Rep(H)`: `HopfAlgebra.drinfeld_element`,
   `pivotal_element` and `ribbon_element`, cached single tensors named after
@@ -824,9 +831,10 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   memory changes type, where its `Loop` slid an endomorphism of it. An
   axiom is called with keyword
   arguments, `Axiom.weaken` passes parameters to the strategy of the
-  category where it named a subspace per argument, and a module stating a
-  law, `abc` and `biclosed`, does without `from __future__ import
-  annotations`, which a declaration refuses, where an `Axiom` required it.
+  category where it named a subspace per argument, and
+  `Declaration.annotations` reads the annotations of a module under `from
+  __future__ import annotations` back as objects, the type parameters of
+  the class stating the law in scope.
   `abc.Category.parameters` says what `C0` and `C1` stand for, a monoid's
   objects being the one `None`, its `ob`. `failing` and `inapplicable` are
   methods of any `Declaration`, which says whether it is `broken` and
@@ -1395,6 +1403,26 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
+- A tree saying `"is_dagger": false` reads back as no dagger: `cat.Box`,
+  and so every box, `monoidal.Wire`, `frobenius.Spider`,
+  `feedback.FollowedBy` and `quantum.gates.Digits` took the presence of the
+  key for its value, where `braided.Braid` and `balanced.Twist` already read
+  it. No tree written by DisCoPy holds `false`, as it writes the key only
+  when it is true, but one written by hand or another tool does; the one
+  fix of [discopy#744](https://github.com/discopy/discopy/pull/744) that
+  next `main` still lacked.
+
+- Three bugs of `cat`, `monoidal` and `tensor` (B79 of
+  [rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)):
+  `Bubble.subs` and `Bubble.lambdify` substitute in the args and data of the
+  bubble, a `tensor.Bubble` keeping its `func`, and return it unchanged when
+  no substituted symbol occurs, where they rebuilt it from a name, a domain
+  and a codomain and always raised; a
+  monoidal functor with a `colour_map` that does not name the transparent
+  colour sends `Ty()` to `Ty()`, as a monoidal functor preserves the unit,
+  where it raised `KeyError` on `Ty()`, `Id(Ty())` and every scalar; and
+  `tensor.Diagram.grad` differentiates a foliated diagram, splitting a layer
+  of more than one box into staircases first, where it raised `ValueError`.
 - `CMap.trace` raises `AxiomError` when the wires it traces have different
   types, as `Hypergraph.trace` and the trace of a diagram do, checking them
   with `utils.assert_istraceable` before it splices them. It used to splice
