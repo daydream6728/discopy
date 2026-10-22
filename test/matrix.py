@@ -274,3 +274,10 @@ def test_repr_leaves_numpy_printoptions_alone():
         repr(Matrix(list(range(25)), 5, 5))
         assert np.get_printoptions()['threshold'] == 1000
     assert np.get_printoptions()['threshold'] == threshold
+
+
+def test_Matrix_basis_dtype():
+    for x in range(4):
+        assert Matrix.basis(x, 0).dtype == Matrix.id(x).dtype
+    for dtype in (bool, int, float, complex):
+        assert Matrix[dtype].basis(0, 0).dtype == dtype
