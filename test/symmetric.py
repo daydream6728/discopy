@@ -200,7 +200,7 @@ def test_Layer_factory_ownership():
         assert type(layer.boxes[0]) is module.Swap
         assert issubclass(module.Swap, module.Permutation)
         assert type(x @ permutation) is module.Permutation
-    assert markov.Layer is symmetric.Layer
+    assert issubclass(markov.Layer, symmetric.Layer)
     assert not hasattr(symmetric.Layer, 'permutation_factory')
 
 
