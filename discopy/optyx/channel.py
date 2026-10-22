@@ -232,6 +232,7 @@ import numpy as np
 from discopy import tensor
 from discopy import monoidal, symmetric, frobenius, hypergraph
 from discopy.cat import factory
+from discopy.python import finset
 from discopy.utils import AxiomError
 from pytket.extensions.pyzx import pyzx_to_tk
 from pyzx import extract_circuit
@@ -586,12 +587,9 @@ class Diagram(frobenius.Diagram):
         """
         kraus, env = diagram.Id(self.dom.single()), diagram.Ty()
         for layer in self:
-            left, box, right = layer.inside[0]
+            left, box, right = layer.inside[0].boxes_and_types
             left, right = left.single(), right.single()
-            if isinstance(box, Swap):
-                step, box_env = diagram.Swap(
-                    box.dom.single()[0], box.cod.single()[1]), diagram.Ty()
-            elif isinstance(box, Feedback):
+            if isinstance(box, Feedback):
                 raise NotImplementedError(
                     "dilate is defined for diagrams without feedback "
                     "loops; call one_step first.")
@@ -1211,7 +1209,7 @@ class Diagram(frobenius.Diagram):
         are_layers_pure = []
         are_layers_classical = []
         for layer in self:
-            generator = layer.inside[0][1]
+            generator = layer.inside[0].boxes_and_types[1]
 
             if isinstance(generator, Feedback) and not all(
                 part.is_pure for part in (
@@ -1258,18 +1256,11 @@ class Diagram(frobenius.Diagram):
         assert self.is_pure, "Cannot get a Kraus map of non-pure circuit"
         kraus_maps = [diagram.Id(self.dom.single())]
         for layer in self:
-            left = diagram.Ty().tensor(*[ty.single()
-                                       for ty in layer.inside[0][0]])
-            right = diagram.Ty().tensor(*[ty.single()
-                                        for ty in layer.inside[0][2]])
-            generator = layer.inside[0][1]
+            left, generator, right = layer.inside[0].boxes_and_types
+            left = diagram.Ty().tensor(*[ty.single() for ty in left])
+            right = diagram.Ty().tensor(*[ty.single() for ty in right])
 
-            if isinstance(generator, Swap):
-                kraus_maps.append(
-                    left @ diagram.Swap(generator.dom.single()[0],
-                                        generator.cod.single()[1]) @ right
-                )
-            elif isinstance(generator, Feedback):
+            if isinstance(generator, Feedback):
                 kraus_maps.append(
                     left @ generator.get_kraus() @ right
                 )
@@ -1328,9 +1319,7 @@ class Diagram(frobenius.Diagram):
 
         kraus_maps = []
         for layer in self:
-            left = layer.inside[0][0]
-            right = layer.inside[0][2]
-            generator = layer.inside[0][1]
+            left, generator, right = layer.inside[0].boxes_and_types
 
             kraus_maps.append(
                 diagram.Bit(len(left)) @
@@ -1695,7 +1684,35 @@ class CQMap(Diagram, frobenius.Box):
         return self @ self ** (n - 1)
 
 
-class Swap(frobenius.Swap, Channel):
+class Permutation(frobenius.Permutation, Channel):
+    """
+    Permutation of the wires of a channel diagram: plumbing, with no Kraus
+    map of its own, initialised as a box the way :class:`Swap` is.
+    """
+
+    env = diagram.Ty()
+
+    def __init__(self, dom, perm):
+        self.perm = finset.Permutation(perm, len(dom))
+        cod = dom[:0].tensor(*(dom[i] for i in self.perm))
+        name = f"Permutation({list(self.perm)})"
+        frobenius.Box.__init__(
+            self, name, dom, cod, drawing_name=name, draw_as_wires=True,
+            draw_as_permutation=True, permutation_indices=tuple(self.perm))
+
+    @property
+    def kraus(self):
+        """ The permutation of the single wires, a pure channel. """
+        return diagram.Permutation(self.dom.single(), self.perm)
+
+    def dagger(self):
+        return type(self)(self.cod, self.perm.dagger())
+
+
+class Swap(Permutation, frobenius.Swap, Channel):
+    def __init__(self, left, right):
+        frobenius.Swap.__init__(self, left, right)
+
     def dagger(self):
         return self
 
@@ -1946,7 +1963,8 @@ Scalar = lambda s: Channel(  # noqa: E731
 
 Diagram.spider_factory = Spider
 Diagram.hypergraph_factory = Hypergraph
-Diagram.braid_factory = Swap
+Diagram.swap_factory = Swap
+Diagram.permutation_factory = Permutation
 Diagram.sum_factory = Sum
 Diagram.feedback_factory = Feedback
 Diagram.functor_factory = Functor

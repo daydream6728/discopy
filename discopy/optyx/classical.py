@@ -211,10 +211,8 @@ class BitControlledGate(Channel):
         boxes = []
         for i in range(len(diag)):
             layer = diag[i]
-            box = layer.inside[0][1]
+            left, box, right = layer.inside[0].boxes_and_types
             if box.cod == box.dom:
-                left = layer.inside[0][0]
-                right = layer.inside[0][2]
                 copy = Z(1, 2)
 
                 layers = [
