@@ -144,7 +144,7 @@ It is an impossible event for an ideal beam splitter.
 We can also evaluate the same experiment using :code:`Perceval`:
 
 >>> diagram_qpath.to_path().prob_with_perceval().array[0, 0]
-0j
+np.complex128(0j)
 
 **Photon loss**
 

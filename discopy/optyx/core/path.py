@@ -95,7 +95,7 @@ this should be equal to:
 Let us now evaluate this using :code:`DisCoPy` tensor:
 
 >>> right_hs.to_tensor().eval().array
-array(0)
+array(0.+0.j)
 
 **Bell state**
 

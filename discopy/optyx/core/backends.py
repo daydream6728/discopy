@@ -44,7 +44,7 @@ Examples of usage
 >>> backend = QuimbBackend()
 >>> result = diag.eval(backend)
 >>> np.round(result.single_prob((2, 0)), 1)
-0.5
+np.float64(0.5)
 
 **Compressed contraction (hyper-optimiser reused across calls)**
 
@@ -53,7 +53,7 @@ Examples of usage
 >>> backend = QuimbBackend(hyperoptimiser=opt)
 >>> result = diag.eval(backend)
 >>> np.round(result.single_prob((2, 0)), 1)
-0.5
+np.float64(0.5)
 
 **Unitary circuit simulation with Perceval**
 
@@ -61,7 +61,7 @@ Examples of usage
 >>> backend = PercevalBackend()
 >>> result = (Create(1, 1) >> BS).eval(backend)
 >>> np.round(result.single_prob((2, 0)), 1)
-0.5
+np.float64(0.5)
 """
 
 import warnings
@@ -785,12 +785,12 @@ class PercevalBackend(AbstractBackend):
         if state_provided:
             external_perceval_state = self._process_state(cfg.state)
 
-            if external_perceval_state.m != matrix.dom:
+            if external_perceval_state.m != len(matrix.dom):
                 raise ValueError(
                     "The provided 'state' does not match the " +
                     "number of input modes of the diagram. " +
                     f"Provided state has {external_perceval_state.m} " +
-                    f"modes but diagram has {matrix.dom} input modes."
+                    f"modes but diagram has {len(matrix.dom)} input modes."
                 )
 
         perceval_state = self._process_state(
@@ -804,16 +804,16 @@ class PercevalBackend(AbstractBackend):
         if effect_provided:
             perceval_effect = self._process_effect(cfg.effect)
 
-            if perceval_effect.m != matrix.cod:
+            if perceval_effect.m != len(matrix.cod):
                 raise ValueError(
                     "The provided 'effect' does not match the number " +
                     "of output modes of the diagram. " +
                     f"Provided effect has {perceval_effect.m} " +
-                    f"modes but diagram has {matrix.cod} output modes."
+                    f"modes but diagram has {len(matrix.cod)} output modes."
                 )
 
         # convert post-selections to pcvl effects and post-selections
-        if matrix.cod == 0:
+        if len(matrix.cod) == 0:
             sel0 = matrix.selections[0]
             m = Matrix(
                 matrix.array.copy(),
@@ -855,7 +855,7 @@ class PercevalBackend(AbstractBackend):
 
         sim = pcvl.Simulator(self.perceval_backend)
         postselect_conditions = [
-            f"{str([i + matrix.cod])} == {s}"
+            f"{str([i + len(matrix.cod)])} == {s}"
             for i, s in enumerate(selections)
         ]
         sim.set_postselection(
@@ -997,6 +997,10 @@ class PercevalBackend(AbstractBackend):
             matrix
         )
 
+        if perceval_effect is not None:
+            perceval_effect = perceval_effect * pcvl.BasicState(
+                list(matrix.selections))
+
         result = self._simulate(
             sim,
             perceval_state,
@@ -1007,7 +1011,7 @@ class PercevalBackend(AbstractBackend):
         result = self._post_select_vacuum(
             result,
             len(term.dom),
-            matrix.dom - len(term.dom),
+            len(matrix.dom) - len(term.dom),
             task
         )
 

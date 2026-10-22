@@ -642,11 +642,12 @@ class Diagram(frobenius.Diagram):
         isometry = np.asarray(matrix.array, dtype=complex)
         memory = len(loop.mem.single())
         visible = len(loop.cod.single())
-        if matrix.dom != memory or matrix.cod < visible + memory \
-                or matrix.selections:
+        if len(matrix.dom) != memory \
+                or len(matrix.cod) < visible + memory or matrix.selections:
             return ("the loop's optical matrix does not split into "
                     "visible, memory and environment modes")
-        if isometry.shape != (memory + len(matrix.creations), matrix.cod) \
+        if isometry.shape != (
+                memory + len(matrix.creations), len(matrix.cod)) \
                 or not np.allclose(
                     isometry @ isometry.conjugate().T,
                     np.eye(len(isometry))):
@@ -1467,7 +1468,7 @@ class Diagram(frobenius.Diagram):
         circuit >>= perceval_conversion.heralds_diagram(
             heralds, n_modes, circuit, "out"
         )
-        if p.post_select_fn is not None:
+        if p.post_select_fn.has_condition:
             circuit >>= perceval_conversion.postselection(circuit, p)
         return circuit
 
