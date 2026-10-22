@@ -8,4 +8,4 @@ https://github.com/rel-int/discopy-next/issues/139#issuecomment-6350436673 (#139
 - [x] The two lenient adjoint checks (`Hypergraph.__init__`, `CMap.validate_adjoint_types`) call `assert_isadjoint` in port order
 - [x] The `pregroup.Ty` docstring says what its lenient check does raise
 - [x] #139 (a): a decoded cup's or cap's legs go in the order their readers sit in the scan
-- [WIP] @session_01YCJQ3Xco3ydQ6AsdTtYJ5x-2026-10-22 20:35 #139 (b): the `to_hypergraph` and `to_map` docstrings document the quotient below braided
+- [x] #139 (b): the `to_hypergraph` and `to_map` docstrings document the quotient below braided

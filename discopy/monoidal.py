@@ -1295,7 +1295,19 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
         return (functor_factory or Functor)(ob, ar, dom, cod)(self)
 
     def to_map(self) -> CMap:
-        """ Translate a diagram into a combinatorial map. """
+        """
+        Translate a diagram into a combinatorial map.
+
+        A map does not say in which face a closed component lies, so it
+        identifies diagrams up to moving a scalar across a wire, as
+        :meth:`to_hypergraph` does. From braided categories on, a scalar
+        slides past a wire anyway, by naturality of the braiding; below, the
+        map presents the free spacial category, see :mod:`discopy.spacial`
+        and :meth:`discopy.cmap.CMap.match`, rather than the free category.
+
+        >>> x, c = Ty('x'), Box('c', Ty(), Ty())
+        >>> assert c @ x != x @ c and (c @ x).to_map() == (x @ c).to_map()
+        """
         return cmap.CMap[self.ar].from_diagram(self)
 
     def to_staircases(self):
@@ -1332,12 +1344,24 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
         offset counts wires the hypergraph no longer has, so the states that
         follow are left to the decoder.
 
+        Like :meth:`to_map`, it identifies diagrams up to moving a closed
+        component, i.e. a scalar, across a wire, which below braided
+        categories presents the free spacial category, see
+        :mod:`discopy.spacial`. Decoding gives back a diagram with the same
+        hypergraph, i.e. ``d.to_hypergraph().to_diagram().to_hypergraph()``
+        is ``d.to_hypergraph()``, and that diagram is ``d`` up to the axioms
+        and, below braided, up to where its scalars lie.
+
         Example
         -------
         >>> x, y = Ty('x'), Ty('y')
         >>> f0, f1 = Box('f0', x, y), Box('f1', y, x)
         >>> diagram = f0 @ f1.dagger() >> f0.dagger() @ f1
         >>> assert diagram.to_hypergraph().to_diagram() == diagram.foliation()
+
+        >>> c = Box('c', Ty(), Ty())
+        >>> assert c @ x != x @ c
+        >>> assert (c @ x).to_hypergraph() == (x @ c).to_hypergraph()
         """
         graph = hypergraph.Hypergraph[type(self).ar].from_diagram(self)
         if all(box.dom for box in self.boxes):

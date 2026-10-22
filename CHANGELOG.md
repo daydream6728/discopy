@@ -2054,6 +2054,32 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   delayed it twice and `FollowedBy(x).delay().delay()` was an endomorphism
   of `x.d.d.d` rather than `FollowedBy(x).delay(2)`
   ([rel-int/discopy-next#105](https://github.com/rel-int/discopy-next/issues/105)).
+- `Hypergraph.rotate` is the transpose, and `Hypergraph.from_box` of a
+  box with a winding number is the rotation of the hypergraph of its
+  generator, as for a `CMap` and for any functor: `g.r.to_hypergraph()` was
+  the single box `g.r` where `g.r.to_map()` was the transpose, so the two
+  disagreed at every level from rigid up. They agree now, with cups and caps
+  that are wiring from compact on and boxes below, and a rotated box decodes
+  as its transpose, as its map already did; diagram equality stays on the
+  nose (decision 7 of
+  [rel-int/discopy-next#56](https://github.com/rel-int/discopy-next/issues/56#issuecomment-6350435762)).
+- `Hypergraph.__init__` and `CMap.validate_adjoint_types` check the legs of
+  a cup or cap with `assert_isadjoint` in port order, the order
+  `make_monogamous` builds it from, where they accepted adjoints on either
+  side: a hand-built rigid cap on `x.l @ x` raised only when it decoded. The
+  `pregroup.Ty` docstring says its lenient check still raises for types that
+  are not adjoints, e.g. `Cup(n, n)`
+  ([rel-int/discopy-next#56](https://github.com/rel-int/discopy-next/issues/56#issuecomment-6350435762)).
+- `Hypergraph.make_monogamous` and `CMap.make_monogamous` put the legs of a
+  cup or cap in the order their readers sit in the scan, or their writers
+  for a cup, see `Hypergraph.leg_order` and `CMap.leg_order`, where they
+  took port order: in compact, `Cap(x.r, x) >> x.r @ g` decoded as
+  `Cap(x, x.r) >> g @ x.r >> Swap(y, x.r)`. On 300 random compact diagrams,
+  the decodes with a permutation the diagram did not have go from 13 to 3
+  maps and from 51 to 47 hypergraphs. The docstrings of `Diagram.to_map` and
+  `Diagram.to_hypergraph` say that below braided they present the free
+  spacial category, i.e. identify diagrams up to moving a scalar across a
+  wire ([rel-int/discopy-next#139](https://github.com/rel-int/discopy-next/issues/139)).
 - `Hypergraph.make_bijective` inserts the box of a spider after every state
   with an offset, where it inserted it right after its last producer,
   before the states that came after that producer in the diagram: their
