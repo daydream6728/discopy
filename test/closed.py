@@ -58,6 +58,14 @@ def test_pack_to_hypergraph():
         assert hypergraph.to_diagram() == box
 
 
+def test_constant_to_hypergraph():
+    X, Y = Ty("X"), Ty("Y")
+    g, a = (X >> Y)("g"), X("a")
+    diagram = g(a).eval()
+    assert diagram == g @ a >> Eval(X >> Y)
+    assert Equation(diagram, diagram.to_hypergraph().to_diagram())
+
+
 def test_pack_to_tree():
     X, Y = Ty("X"), Ty("Y")
     for box in (Pack(X * Y), Unpack(X * Y)):

@@ -92,7 +92,7 @@ from itertools import count
 from typing import (
     TYPE_CHECKING, Callable, ClassVar, Iterator, Self, Sequence)
 
-from discopy import cat, monoidal, cmap, messages
+from discopy import cat, monoidal, cmap, hypergraph, messages
 from discopy.abc import BiclosedCategory
 from discopy.axioms import (
     GENERATORS, Equation as AbstractEquation, Equivalence, Testable, axiom)
@@ -597,7 +597,9 @@ class Functor(monoidal.Functor):
     Note
     ----
     When the codomain objects are biclosed types, the functor sends terms to
-    terms rather than evaluating them to morphisms:
+    terms rather than evaluating them to morphisms, unless the codomain is a
+    :class:`CMap` or a :class:`discopy.hypergraph.Hypergraph`, which have no
+    terms:
 
     >>> X, Y = Ty("X"), Ty("Y")
     >>> f, x = (Y << X)("f"), X("x")
@@ -616,8 +618,8 @@ class Functor(monoidal.Functor):
 
     def __call__(self, other):
         if isinstance(other, TermBase):
-            if issubclass(get_origin(self.cod.ob), Ty) \
-                    and not issubclass(get_origin(self.cod), cmap.CMap):
+            if issubclass(get_origin(self.cod.ob), Ty) and not issubclass(
+                    get_origin(self.cod), (cmap.CMap, hypergraph.Hypergraph)):
                 return self.map_term(other)
             return other.eval(self)
         for cls, attr in [(Over, "over"), (Under, "under"), (Exp, "exp")]:

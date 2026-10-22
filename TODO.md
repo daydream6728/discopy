@@ -6,5 +6,5 @@
 - [ ] B88 of #31, para part: `para.Closed.curry` defaults `left=True`
 - [ ] B86 of #31, closed part: `biclosed.Eval`/`Coeval` round-trip through `repr` and `dumps`
 - [ ] #168: the `biclosed`/`closed` bubbles `Curry`, `Eval`, `Coeval` read back their trees, nested in a diagram too
-- [ ] #177: `g(X('a')).eval().to_hypergraph()` does not send a constant to `map_term`
+- [x] #177: `g(X('a')).eval().to_hypergraph()` does not send a constant to `map_term`
 - [ ] CHANGELOG
