@@ -1012,6 +1012,17 @@ class Bubble(monoidal.Bubble, Box):
         self.func = func
         super().__init__(inside, **params)
 
+    def subs(self, *args) -> Bubble:
+        return type(self)(
+            self.arg.subs(*args), func=self.func, dom=self.dom, cod=self.cod,
+            drawing_name=self.drawing_name)
+
+    def lambdify(self, *symbols, **kwargs):
+        inside = self.arg.lambdify(*symbols, **kwargs)
+        return lambda *xs: type(self)(
+            inside(*xs), func=self.func, dom=self.dom, cod=self.cod,
+            drawing_name=self.drawing_name)
+
     def grad(self, var, **params):
         """
         The gradient of a bubble is given by the chain rule.
