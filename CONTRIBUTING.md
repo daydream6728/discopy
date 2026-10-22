@@ -113,8 +113,9 @@ A law's signature is a sequent, e.g.
 Equation[Hom[C1, A, B]]`: the cell draws the objects `A` and `B`, then a
 morphism `f` between them from the strategy of the category, and checks
 the equation it returns against its return annotation as well as checking
-that it holds. The module stating a law does without `from __future__
-import annotations`, since a sequent is read as objects, not strings.
+that it holds. Under `from __future__ import annotations` the sequent is
+read back from its strings, with the type parameters of the class stating
+it in scope.
 
 A cell is skipped when its axiom declares that the structure does not
 apply, and xfailed when the law is declared broken, each carrying its
