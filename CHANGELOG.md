@@ -2394,6 +2394,35 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   input of the controlled box rather than its first one, so gates with a
   classical wire or a distance other than one are drawn on the right wires
   ([#439](https://github.com/discopy/discopy/pull/439)).
+- The daggers of grammar rules and words: `thue.Word` and
+  `categorial.Word`, which take `(name, cod, dom)`, came back from the
+  positional rebuild of `cat.Box.dagger` with the same `dom` and `cod`, so
+  `Bob >> Bob[::-1]` raised `AxiomError`, and the daggers of `thue.Rule`,
+  `cfg.Rule` and `cfg.Word` raised `TypeError`. `thue.Rule.dagger` rebuilds
+  by keyword and its `repr` says when a rule is daggered or carries data;
+  the dagger of a context-free rule has an atomic domain instead,
+  `cfg.Id` is its own dagger, and `pregroup.Word` keeps the pivotal dagger,
+  which flips its winding too. `cfg.Tree.from_nltk` keeps every child of a
+  tree, a word typed by the label of the tree it sits in, where it returned
+  at the first word, so that `(NP the big dog)` was `the` (B67 of
+  [rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
+- `grammar.cfg` compares and hashes: a rule compares as the box it is, a
+  tree by its root and branches and a tree with no branches as its root,
+  where comparing a tree to anything else raised and neither was
+  hashable, so that an `Algebra` could not map a rule through a `dict`; a
+  `cfg.Word` takes the drawing parameters and data of a box; and
+  `dependency.doc2tree` makes a token with no children a `Word`, where it
+  read spaCy's `children` generator as always true (B30 of
+  [rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
+- `pregroup.Diagram.normal_form` of a foliated diagram, splitting a layer
+  of more than one box into staircases first, and of a word with a wire on
+  its left that is not a word, as in `n @ Alice`, which goes to the rigid
+  normal form, where both raised (B31 of
+  [rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
+- `eval(repr(x)) == x` for `cfg.Tree`, `cfg.Rule`, `cfg.Id` and
+  `pregroup.Word`, which printed the `str` of their root, `Id(x)` and a bare
+  `Word(` without its data (B86 of
+  [rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
 - Drawing a discard on more than one wire: `draw_discard` was shadowing the
   layer index with its inner loop counter
   ([#513](https://github.com/discopy/discopy/issues/513)).
