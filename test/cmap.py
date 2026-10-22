@@ -525,6 +525,23 @@ def test_make_causal_cuts_every_backward_wire_at_once():
     assert cmap.to_diagram().to_map() == cmap
 
 
+def test_make_causal_cuts_only_the_wires_on_a_cycle():
+    """ Beside a scalar loop, boxes merely out of order are reordered rather
+    than traced, see B71 of #31. """
+    x = symmetric.Ty("x")
+    f, g = symmetric.Box("f", x, x), symmetric.Box("g", x, x)
+    unordered = symmetric.CMap(x, x, (f, g), [3, 4, 5, 0, 1, 2])
+    loop = symmetric.CMap(symmetric.Ty(), symmetric.Ty(), (), (), loops=(x, ))
+    assert (unordered @ loop).make_causal().boxes\
+        == (symmetric.Trace(g @ x >> f @ x), )
+    h = symmetric.Box("h", x @ x, x @ x)
+    cycles = (h.to_map() >> g.to_map() @ x).trace(2) @ unordered
+    decoded = cycles.to_diagram()
+    assert str(decoded)\
+        == "Trace(Trace(x @ h >> g @ x @ x >> x @ g @ x >> f @ x @ x))"
+    assert decoded.to_hypergraph() == cycles.to_hypergraph()
+
+
 def test_scalar_box():
     from discopy.compact import Ty, Box, CMap as M
 

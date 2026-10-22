@@ -1596,10 +1596,27 @@ class CMap[C0: Pregroup, C1: CMap](
             return self.topological_order()
         type(self).assert_istraced()
 
-        ports = self.ports
+        ports, box_edges = self.ports, list(self.box_edges)
+
+        def depth(port):
+            return int(ports[port].depth + (
+                .5 if ports[port].kind.is_output else -.5))
+
+        successors = [[] for _ in self.boxes]
+        for source, target in box_edges:
+            successors[depth(source)].append(depth(target))
+
+        def closes_a_cycle(source, target):
+            seen, todo = set(), [depth(target)]
+            while todo:
+                seen.add(todo[-1])
+                todo = todo[:-1] + [
+                    box for box in successors[todo[-1]] if box not in seen]
+            return depth(source) in seen
+
         cuts = [
-            (i, j, ports[i].obj) for i, j in self.box_edges
-            if int(ports[i].depth + 0.5) >= int(ports[j].depth - 0.5)]
+            (i, j, ports[i].obj) for i, j in box_edges
+            if depth(i) >= depth(j) and closes_a_cycle(i, j)]
 
         n_traces = len(self.loops) + len(cuts)
         shift = lambda p: p if p < len(self.dom) else p + n_traces
