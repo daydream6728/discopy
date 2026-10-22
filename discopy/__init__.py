@@ -29,6 +29,7 @@ from discopy import (
     lens,
     neural,
     python,
+    kleisli,
     matrix,
     tensor,
     hopf,

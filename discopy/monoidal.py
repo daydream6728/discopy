@@ -64,8 +64,8 @@ from warnings import warn
 
 from discopy import abc, axioms, cat, drawing, hypergraph, cmap, messages
 from discopy.abc import (
-    ColouredMonoid, Monoid, MonoidalCategory, NamedGeneric, DaggerCategory)
-from discopy.axioms import Hom, Obj, Var, axiom
+    ColouredMonoid, DaggerCategory, Monoid, MonoidalCategory)
+from discopy.axioms import Hom, Obj, TestableGeneric, Var, axiom
 from discopy.drawing import Drawing
 from discopy.config import (
     BOX_DRAWING_ATTRIBUTES, WIRE_DRAWING_ATTRIBUTES,
@@ -192,7 +192,7 @@ class Wire(cat.Ob):
                    is_dagger=tree.get('is_dagger', False))
 
 
-class List[generator_factory](Monoid, NamedGeneric):
+class List[generator_factory](Monoid["List"], TestableGeneric):
     """
     The free monoid on a ``generator_factory``, i.e. lists of its instances
     with concatenation as :meth:`tensor` and the empty list as unit.
@@ -232,13 +232,17 @@ class List[generator_factory](Monoid, NamedGeneric):
     >>> assert repr(x) == "monoidal.List[type](int, str)"
     >>> assert eval(repr(x)) == x
     """
-    ob = type(None)
-    dom = cod = None
+    @classmethod
+    def checked_params(cls) -> tuple:
+        """
+        Python types, the only generators :meth:`generators` draws.
+        """
+        return (type, )
 
     def __init__(self, *inside):
         self.inside = inside
 
-    def tensor(self, *others: List) -> List:
+    def tensor(self, *others: "List") -> "List":
         for other in others:
             assert_isinstance(other, type(self))
         return type(self)(
@@ -306,6 +310,28 @@ class List[generator_factory](Monoid, NamedGeneric):
     def __repr__(self):
         return factory_name(type(self))\
             + f"({', '.join(map(self.generator_repr, self.inside))})"
+
+    @classmethod
+    def generators(cls, **_):
+        """
+        Generate the lists of one Python type, one of those
+        :func:`axioms.values` samples, the free monoid on any other
+        generator having no strategy yet.
+
+        >>> from discopy.python import Ty
+        >>> assert Ty.generators().example() in map(Ty, axioms.VALUES)
+        """
+        from hypothesis import strategies as st
+        if cls.generator_factory is not type:
+            raise NotImplementedError
+        return st.sampled_from(tuple(axioms.VALUES)).map(cls)
+
+    @classmethod
+    def strategy(cls, **_):
+        """ Generate lists of at most three generators. """
+        from hypothesis import strategies as st
+        return st.lists(cls.generators(), max_size=3).map(
+            lambda xs: cls().tensor(*xs))
 
 
 @factory

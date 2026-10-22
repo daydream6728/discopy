@@ -12,8 +12,8 @@ from hypothesis import strategies as st
 
 from discopy.axioms import (
     L, R, Atom, Axiom, AxiomFailure, Count, Equation, Equivalence, Hom, Obj,
-    Over, Related, Repeat, Tensor, Testable, Under, Unit, Var, axiom,
-    inhabits, position, substitute)
+    Over, Related, Repeat, Tensor, Testable, TestableGeneric, Under, Unit,
+    Var, axiom, inhabits, position, substitute)
 from discopy.monoidal import Ty
 from discopy.cat import Arrow, Box, Ob, Functor
 
@@ -277,6 +277,27 @@ def test_canonical_instances():
                 continue
             equation = law.canonical()
             assert equation is NotImplemented or equation, (category, law.name)
+
+
+def test_extensional():
+    from discopy.axioms import Extensional, values
+    from discopy.python import Function
+    f, g = (Function(lambda x, k=k: x + k, int, int) for k in (1, 1))
+    assert f != g and Extensional(f, g)
+    assert Function.equation_factory(f >> Function.id(int), f)
+    assert not Extensional(f, Function.id(int))
+    with raises(TypeError):
+        values(list)
+
+
+def test_testable_generic():
+    from discopy.kleisli import additive, Maybe, Powerset
+    from discopy.utils import NamedGeneric
+    for testable in Testable.subclasses():
+        assert not issubclass(testable, NamedGeneric)\
+            or issubclass(testable, TestableGeneric)
+    assert additive.Channel[Maybe] not in Testable.enrolled()
+    assert additive.Channel[Powerset] in Testable.enrolled()
 
 
 def test_copying():
