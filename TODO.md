@@ -10,4 +10,4 @@
 - [x] 2: forward a bubble's `data` and `is_dagger` through functors into free categories
 - [x] 3: `Feedback.subs`/`lambdify` rebuild through its own constructor, and `Head`/`Tail`
 - [x] 4: `rsubs(data, (var, expr))` takes one pair, as it did on main
-- [ ] 5: name which item of B88 each changelog bullet fixes
+- [x] 5: name which item of B88 each changelog bullet fixes
