@@ -250,7 +250,7 @@ class Sequent:
         >>> print(Sequent.infer((Alice, loves)).goal)
         (n >> s)
         """
-        total = Counter()
+        words, total = tuple(words), Counter()
         for word in words:
             total.update(count(word.cod))
         given, wanted = ([atom for atom, n in total.items()

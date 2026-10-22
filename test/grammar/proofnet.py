@@ -131,6 +131,7 @@ def test_count():
 def test_infer():
     assert Sequent.infer((Alice, loves, Bob)).goal == s
     assert Sequent.infer((loves, Bob)).goal == n >> s
+    assert Sequent.infer(iter((Alice, loves))).words == (Alice, loves)
     for words in [(Alice, Bob), (loves, ), ()]:
         with raises(AxiomError, match="No smallest goal"):
             Sequent.infer(words)
