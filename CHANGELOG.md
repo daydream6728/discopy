@@ -1466,6 +1466,29 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   docstrings of `cat.Bubble` and `monoidal.Bubble` say it the right way
   round: they said a bubble raised when its args did share one
   ([rel-int/discopy-next#133](https://github.com/rel-int/discopy-next/issues/133)).
+- `Hypergraph` equality and hash see the type of a spider with no legs,
+  where `H.spiders(0, 0, x) == H.spiders(0, 0, y)`, so that
+  `frobenius.Equation(Spider(0, 0, x) @ f, Spider(0, 0, y) @ f)` held
+  (B50 of
+  [rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
+- `Hypergraph.depth`, which `symmetric.Diagram.depth` delegates to, counts
+  the boxes on the longest path of its causal graph, the length of its
+  shortest foliation, where it divided the number of edges by four and
+  came out short at a state or an effect: `Box('f', Ty(), x).depth()` is
+  `1` and a state followed by an effect `2`, where they were `0` and `1`
+  (B66 of
+  [rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
+- `(f + g).to_hypergraph()` and `.to_map()` raise `AxiomError` saying a
+  hypergraph or a map has no sums, where they died with
+  `no attribute 'zero'` (B82 of
+  [rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31));
+  the bare `ValueError`s of `cmap` and the bare errors of
+  `Hypergraph.then` and `Hypergraph.bijection` say what they expected
+  (B88 of
+  [rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
+- A subclass of `CMap` reprs as its own class, named by `factory_name` as
+  a `Hypergraph` is, where the repr of every map began with `cmap.CMap[`
+  ([rel-int/discopy-next#168](https://github.com/rel-int/discopy-next/issues/168)).
 - The tensor spider with no legs is the circle, the dimension of its wire,
   as spider fusion says it is, `Tensor.spiders(0, 0, Dim(2))` being `2`
   like `Tensor.spiders(0, 1, Dim(2)) >> Tensor.spiders(1, 0, Dim(2))`,
