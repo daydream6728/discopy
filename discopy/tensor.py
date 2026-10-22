@@ -621,8 +621,8 @@ class Diagram(NamedGeneric['dtype'], frobenius.Diagram):
     bubble_factory: ClassVar[type["Bubble"]]
     ob = Dim
 
-    def __class_getitem__(cls, dtype):
-        return super().__class_getitem__(Tensor[dtype].dtype)
+    def __class_getitem__(cls, values):
+        return super().__class_getitem__(Tensor[values].dtype)
 
     @classmethod
     def dim(cls, typ: monoidal.Ty) -> Dim:
