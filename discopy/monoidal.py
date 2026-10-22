@@ -1898,6 +1898,7 @@ class Functor(cat.Functor):
             return self.cod.bubble(
                 *map(self, other.args), dom=self(other.dom),
                 cod=self(other.cod), name=other.name,
+                data=other.data, is_dagger=other.is_dagger,
                 drawing_name=other.drawing_name,
                 draw_as_frame=other.draw_as_frame,
                 draw_as_square=other.draw_as_square,

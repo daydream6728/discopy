@@ -488,10 +488,11 @@ def test_Bubble_data():
 
 def test_Bubble_identity_Functor():
     f = Box('f', Ty('x'), Ty('y'))
-    bubble = f.bubble(name="N", drawing_name="L", draw_as_frame=True)
+    bubble = f.bubble(name="N", drawing_name="L", draw_as_frame=True,
+                      data=42, is_dagger=True)
     image = Functor.id(Diagram)(bubble)
     assert image == bubble and (image.drawing_name, image.draw_as_frame)\
-        == ("L", True)
+        == ("L", True) and (image.data, image.is_dagger) == (42, True)
 
 
 def test_Box_globularity():

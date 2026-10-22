@@ -347,6 +347,8 @@ def test_Bubble():
         " name='N', method='m')"
     assert eval(repr(named), {"cat": __import__("discopy").cat}) == named
     assert Functor.id()(f.bubble(name="N")) == f.bubble(name="N")
+    image = Functor.id()(f.bubble(data=42, is_dagger=True))
+    assert (image.data, image.is_dagger) == (42, True)
 
 
 def test_Box_call():

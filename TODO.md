@@ -7,7 +7,7 @@
 
 - [x] merge `origin/main` (5e95a3f4)
 - [x] 1: check ndarray, sympy `Matrix` and `Array` data keep their shape through `subs` and `lambdify`, with a test
-- [ ] 2: forward a bubble's `data` and `is_dagger` through functors into free categories
+- [x] 2: forward a bubble's `data` and `is_dagger` through functors into free categories
 - [ ] 3: `Feedback.subs`/`lambdify` rebuild through its own constructor
 - [x] 4: `rsubs(data, (var, expr))` takes one pair, as it did on main
 - [ ] 5: name which item of B88 each changelog bullet fixes
