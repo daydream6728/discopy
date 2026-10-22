@@ -1962,6 +1962,9 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   of a rotation is the rotation of the dagger, as in a dagger pivotal
   category, which `pivotal.Box` already did
   ([rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
+- `Diagram.width` of an identity is the number of its wires, where
+  `Id(x).width` raised `ValueError` on the `max` of no layers
+  ([rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
 - `interaction.Diagram.trace` traces an integer diagram, where it raised
   `TypeError` on every input: it was borrowed from `traced.Diagram` through
   a `trace_factory` slicing the type, and an integer type is a pair of

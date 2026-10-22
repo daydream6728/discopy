@@ -5,7 +5,7 @@ Agent `levels`: `monoidal.py`, `rigid.py`, `traced.py`, `feedback.py`, `markov.p
 - [x] B18: rigid `Box.dagger()` silently resets `z`; the double dagger is not the box
 - [WIP] @levels-2026-10-22 15:53 B19: an oversized trace silently succeeds; a negative trace recurses
 - [WIP] @levels-2026-10-22 15:53 B25: heterogeneous-memory `feedback` is broken; `feedback.Diagram.discard` is uninitialised
-- [WIP] @levels-2026-10-22 15:53 B27: `Id(x).width` raises on an empty `max()`
+- [x] B27: `Id(x).width` raises on an empty `max()`
 - [WIP] @levels-2026-10-22 15:53 B34: `rigid.nesting` never checks the two types have equal length
 - [WIP] @levels-2026-10-22 15:53 B35: a failing `from_callable` leaks a monkey-patched `__call__`
 - [WIP] @levels-2026-10-22 15:53 B39 (traced part) and #168: `traced.Trace` interpolates `str` instead of `repr` of its argument

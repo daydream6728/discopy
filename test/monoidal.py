@@ -458,6 +458,13 @@ def test_Diagram_size():
     assert len(diagram) == 1 and diagram.size == 2
 
 
+def test_Diagram_width():
+    x = Ty('x')
+    f = Box('f', x, x @ x)
+    assert Id().width == 0 and Id(x @ x).width == 2
+    assert f.width == (f >> f.dagger()).width == 2
+
+
 def test_Bubble_dagger():
     x, y = Ty('x'), Ty('y')
     f = Box('f', x, y)
