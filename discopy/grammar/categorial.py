@@ -38,6 +38,8 @@ Summary
 
         cat2ty
         tree2diagram
+        combine
+        parse
 """
 
 from __future__ import annotations
@@ -599,6 +601,94 @@ def tree2diagram(tree: dict, dom=Ty()) -> Diagram:
     else:
         rule = Box(tree['type'], dom, cod)
     return Id().tensor(*children) >> rule
+
+
+def combine(left: Term, right: Term) -> list[Term]:
+    """
+    The terms of two adjacent terms by forward and backward application and
+    composition, in Eisner's normal form: a composition is not the functor
+    of the next rule in its direction (Eisner, `Efficient normal-form
+    parsing for combinatory categorial grammar (1996)
+    <https://aclanthology.org/P96-1011/>`_), so that the terms of one
+    meaning are combined once.
+
+    Parameters:
+        left : The term on the left.
+        right : The term on the right.
+
+    Example
+    -------
+    >>> x, y, z = map(Ty, "xyz")
+    >>> f, g, a = (x << y)("f"), (y << z)("g"), z("a")
+    >>> print(*combine(f, g))
+    FC((x << y)('f'), (y << z)('g'))
+    >>> assert combine(combine(f, g)[0], a) == []
+    """
+    x, y, result = left.cod, right.cod, []
+    if x.is_over and not isinstance(left, FC):
+        if x.exponent == y:
+            result.append(FA(left, right))
+        if y.is_over and x.exponent == y.base:
+            result.append(FC(left, right))
+    if y.is_under and not isinstance(right, BC):
+        if y.exponent == x:
+            result.append(BA(left, right))
+        if x.is_under and x.base == y.exponent:
+            result.append(BC(left, right))
+    return result
+
+
+def parse(sentence, k: int = 1, goal: Ty | None = None
+          ) -> list[tuple[Term, float]]:
+    """
+    The ``k`` best terms of a sentence with their score, the sum of the
+    scores of their words, by the CKY algorithm over the rules of
+    :func:`combine`: the chart keeps the ``k`` best terms of each type
+    for each span of words (Lewis and Steedman, `A* CCG parsing with a
+    supertag-factored model (2014) <https://aclanthology.org/D14-1107/>`_).
+
+    Parameters:
+        sentence : The candidate constants of each word with their score,
+            e.g. the log-probabilities of a supertagger.
+        k : The number of terms.
+        goal : The type of the terms, any type by default.
+
+    Example
+    -------
+    >>> n, s = Ty("n"), Ty("s")
+    >>> Alice, Bob = n("Alice"), n("Bob")
+    >>> loves, lovely = ((n >> s) << n)("loves"), (n << n)("loves")
+    >>> sentence = [[(Alice, 0.)], [(lovely, -.5), (loves, -1.)], [(Bob, 0.)]]
+    >>> for term, score in parse(sentence, k=2):
+    ...     print(term.cod, score)
+    s -1.0
+    >>> (term, _), = parse(sentence, goal=s)
+    >>> assert term == Alice(loves(Bob), left=True)
+    """
+    def best(items):
+        return sorted(items, key=lambda item: -item[1])[:k]
+
+    def cell(items):
+        result = {}
+        for term, score in items:
+            result.setdefault(term.cod, []).append((term, score))
+        return {cod: best(terms) for cod, terms in result.items()}
+
+    chart = {(i, i + 1): cell(candidates)
+             for i, candidates in enumerate(sentence)}
+    for width in range(2, len(sentence) + 1):
+        for i in range(len(sentence) - width + 1):
+            chart[i, i + width] = cell(
+                (term, a + b)
+                for middle in range(i + 1, i + width)
+                for lefts in chart[i, middle].values()
+                for left, a in lefts
+                for rights in chart[middle, i + width].values()
+                for right, b in rights
+                for term in combine(left, right))
+    return best(
+        item for cod, items in chart.get((0, len(sentence)), {}).items()
+        if goal is None or cod == goal for item in items)
 
 
 Id = Diagram.id

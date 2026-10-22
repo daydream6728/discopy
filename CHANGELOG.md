@@ -569,6 +569,17 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   Moved from the trilingual parser of
   [rel-int/lambek#8](https://github.com/rel-int/lambek/pull/8), without its
   datasets or experiments.
+- The rest of the generic parser code of rel-int/lambek. From
+  [lambek#8](https://github.com/rel-int/lambek/pull/8): `proofnet.count`,
+  the count invariant of a type, and `Sequent.infer`, the sequent of some
+  words with the smallest goal of their count, which `Parser` takes when it
+  is given no goal; `Tagger.beam` and `Tagger.loss` within the atoms of a
+  sub-signature, e.g. one language of a multilingual signature, and label
+  smoothing over them with `Tagger.smoothing`. From
+  [lambek#2](https://github.com/rel-int/lambek/pull/2):
+  `categorial.parse`, the `k` best terms of a sentence from the scored
+  candidate types of its words by the CKY algorithm, over the application
+  and composition of `categorial.combine` in Eisner's normal form.
 - A notebook, *Parsing arithmetic*, showcasing `grammar.proofnet` and
   `grammar.neural`: the two readings of `a + b * c` are two linkings of
   one sequent, 24 of its 120 linkings are correct, and a parser trained on

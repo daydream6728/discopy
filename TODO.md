@@ -20,7 +20,7 @@ in lambek.
 - [x] **Label smoothing over the symbols allowed** (lambek#8 `Tagger.forward`)
 - [x] **lambek#8's switching regressions as tests of `ProofNet.to_term`**
   (`test_proofnets.py`: the disconnected cycle, the stuck par, the crossed identity)
-- [WIP] @session_01KbBG77r4dz5RennpDkce2y-2026-10-22 19:10 **A chart parser for categorial grammars** (lambek#2 `CYK`, lambek#8 `chart.Chart`):
+- [x] **A chart parser for categorial grammars** (lambek#2 `CYK`, lambek#8 `chart.Chart`):
   the k best terms of a sentence from the scored types of its words, by CKY over the
   combinators, with Eisner's normal form against spurious ambiguity
-- [ ] CHANGELOG, docs, pflake8, pylint, the suite
+- [x] CHANGELOG, docs, pflake8, pylint, the suite
