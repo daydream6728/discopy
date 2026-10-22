@@ -215,7 +215,7 @@ def test_diagram_to_map_structure_and_errors():
 
     cx, cy = map(closed.Ty, "xy")
     ev = closed.Eval(cy << cx)
-    assert ev.to_map() == closed.CMap.ev(cy, cx, left=False)
+    assert ev.to_map() == closed.CMap.ev(cy, cx)
     assert ev.to_map().boxes == (ev, )
     assert closed.Box("f", cx, cx).to_map().trace()
 

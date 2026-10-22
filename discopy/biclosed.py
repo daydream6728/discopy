@@ -419,12 +419,15 @@ class Eval(Box):
 
     Parameters:
         x : The exponential type to evaluate.
+        left : Whether to evaluate ``x @ x.exponent`` on the left or
+            ``x.exponent @ x`` on the right, by default the right for an
+            :class:`Under` and the left otherwise, as :meth:`Diagram.ev`.
     """
     def __init__(self, x: Exp, left=None):
         assert x.is_exp
         self.x = x
         exp = x.inside[0]
-        self.left = isinstance(exp, Over) if left is None else left
+        self.left = not isinstance(exp, Under) if left is None else left
         dom, cod = (x @ x.exponent, x.base) if self.left\
             else (x.exponent @ x, x.base)
         super().__init__("Eval" + str(x), dom, cod)
@@ -454,6 +457,7 @@ class Coeval(Box):
 
     Parameters:
         x : The exponential type to coevaluate.
+        left : Whether to coevaluate on the left or right, as :class:`Eval`.
 
     Note
     ----
@@ -474,7 +478,7 @@ class Coeval(Box):
         assert x.is_exp
         self.x = x
         exp = x.inside[0]
-        self.left = isinstance(exp, Over) if left is None else left
+        self.left = not isinstance(exp, Under) if left is None else left
         cod, dom = (x @ x.exponent, x.base) if self.left\
             else (x.exponent @ x, x.base)
         super().__init__("Coeval" + str(x), dom, cod)

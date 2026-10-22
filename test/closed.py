@@ -831,6 +831,13 @@ def test_ev_at_the_unit():
     assert Diagram.ev(x, Ty()) == Id(x) and Ty() >> x == x ** Ty() == x
 
 
+def test_Eval_defaults_left():
+    X, Y = Ty('X'), Ty('Y')
+    assert Eval(X >> Y) == Diagram.ev(Y, X) == Eval(X >> Y, left=True)
+    assert Coeval(X >> Y) == Eval(X >> Y).dagger()
+    assert Eval(X >> Y).dom == (X >> Y) @ X
+
+
 def test_delay_types():
     x, y = Ty('x'), Ty('y')
     for typ in (x, x << y, y >> x, x ** y, x * y, x.product(y, x),
