@@ -1505,6 +1505,15 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Removed
 
+- `monoidal.Layer.boxes_and_types`, the alternating view of a layer that
+  [#438](https://github.com/discopy/discopy/pull/438) kept for the
+  algorithms written against the old one: `Layer.merge`, `interchange`,
+  `substitute`, `braided.Diagram.simplify` and `naturality`,
+  `rigid.Diagram.transpose_box`, `tensor.Diagram.grad`,
+  `pregroup.Diagram.normal_form`, `to_tk` and `Circuit.to_tn` read
+  `boxes_and_offsets` instead. It was never in a release, so it goes
+  without a deprecated alias
+  ([rel-int/discopy-next#9](https://github.com/rel-int/discopy-next/issues/9)).
 - Parameters nothing read: `grammar.cfg.Tree.to_diagram`'s
   `contravariant`, a placeholder since the module's first commit;
   `Tree.from_nltk`'s `lexicalised` and `word_types`, which the grammar
@@ -2336,6 +2345,22 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   its phase and lost a `sqrt(2)`
   ([#625](https://github.com/discopy/discopy/issues/625),
   [#587](https://github.com/discopy/discopy/issues/587)).
+- `interchange`, `normalize`, `snake_removal` and `normal_form` say that
+  they are planar rewrites: their scope is the planar levels, from
+  `monoidal` to `rigid`, and above them a braid, a swap or a trace is one
+  more box, e.g. in `symmetric` they do not rewrite
+  `Swap(x, y) >> y @ f >> Swap(y, x)` into `f @ y`, which has the same
+  hypergraph (decision 8 of
+  [rel-int/discopy-next#56](https://github.com/rel-int/discopy-next/issues/56)).
+  `normalize` and `snake_removal` read box `i` as layer `i`, so a diagram
+  with more than one box in a layer came back with its snakes and
+  interchangers left in, or raised `NotImplementedError`: they split it
+  into staircases first, which is the first step they yield, so that a
+  diagram and its foliation have one normal form. `Diagram.substitute`,
+  `braided.Diagram.naturality` and the mixed `Circuit.to_tn` split a
+  foliated diagram the same way, where they raised `ValueError` or took
+  the box of the wrong layer
+  ([rel-int/discopy-next#9](https://github.com/rel-int/discopy-next/issues/9)).
 - `Diagram.foliation` is an equality up to interchangers, at every level
   of the hierarchy. `Layer.merge` normalised the composite of two layers
   with `normal_form`, i.e. with the rewriting of the diagram's own level,
