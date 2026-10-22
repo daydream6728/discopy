@@ -485,7 +485,7 @@ class Cospan(HypergraphCategory, Testable["Cospan"]):
         left, right = list(self.left), list(self.right)
         apex = max(left + right, default=-1) + 1 if self.apex is None\
             else int(self.apex)
-        if any(not 0 <= i < apex for i in left + right):
+        if apex < 0 or any(not 0 <= i < apex for i in left + right):
             raise ValueError(f"Expected points in range({apex}).")
         order = {k: n for n, k in enumerate(self.order(left, right, apex))}
         self.left, self.right = [order[i] for i in left], [
@@ -645,7 +645,8 @@ class Cospan(HypergraphCategory, Testable["Cospan"]):
         @st.composite
         def cospans(draw):
             m, n = (int(draw(sizes) if x is None else x) for x in (dom, cod))
-            apex = draw(st.integers(1 if m or n else 0, max(max_size, 1)))
+            least = 1 if m or n else 0
+            apex = draw(st.integers(least, max(max_size, least)))
             points = st.integers(0, max(apex - 1, 0))
             return cls(draw(st.lists(points, min_size=m, max_size=m)),
                        draw(st.lists(points, min_size=n, max_size=n)), apex)

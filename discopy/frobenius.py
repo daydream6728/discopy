@@ -426,8 +426,18 @@ class Cospan(Box):
 
     @property
     def size(self) -> int:
-        """ Structural cospans are not generator boxes in a layer. """
-        return 0
+        """
+        The number of spiders the cospan fuses, i.e. of the points of its
+        apex without exactly one leg in and one out, so that a permutation
+        counts zero and a cup or a cap one, as their boxes do.
+
+        >>> x, y = Ty('x'), Ty('y')
+        >>> assert Diagram.spiders(2, 1, x @ y).size == 2
+        >>> assert Cospan(x @ y, [0, 1], [1, 0]).size == 0
+        """
+        left, right = self.legs.left, self.legs.right
+        return sum((left.count(k), right.count(k)) != (1, 1)
+                   for k in range(self.legs.apex))
 
     def setoid(self):
         if self.is_identity:

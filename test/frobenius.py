@@ -133,7 +133,7 @@ def test_Cospan():
     from discopy.utils import dumps, loads
     x, y = Ty('x'), Ty('y')
     f = Cospan(x @ y, [0, 1, 0], [1, 1])
-    assert f.dom == x @ y @ x and f.cod == y @ y and f.size == 0
+    assert f.dom == x @ y @ x and f.cod == y @ y and f.size == 2
     assert f.legs == finset.Cospan([0, 1, 0], [1, 1])
     assert Cospan(x, [0], [0, 0]) == Spider(1, 2, x)
     assert Cospan(x, [0, 0], []) == Cup(x, x)

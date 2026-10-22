@@ -253,6 +253,16 @@ def test_Hypergraph_eq_fallback_scalars_and_empty_boundary():
     assert f.trace() == f.trace()
 
 
+def test_Hypergraph_simplify_two_wires():
+    x, y = Ty('x'), Ty('y')
+    f = Box('f', Ty(), x @ y).to_hypergraph()
+    g = Box('g', x @ y, Ty()).to_hypergraph()
+    interchanged = (f >> g).interchange(0, 1)
+
+    assert interchanged.to_diagram().size > (f >> g).to_diagram().size
+    assert interchanged.simplify().to_diagram() == (f >> g).to_diagram()
+
+
 def test_simplify():
     from discopy.markov import Box, Ty, Copy, Swap, Trace, Equation
     C, T, P = map(Ty, "CTP")
