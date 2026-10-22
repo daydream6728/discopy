@@ -85,3 +85,4 @@ NOT_PLUGGABLE = "Cannot plug {} into {}: its boundary is not the hole's."
 NOT_LEFT_LINEAR = (
     "{} is not left-linear: rewriting in place needs a left side with "
     "boxes and with its boundary wires on distinct spiders.")
+NOT_GRAPHLIKE = "{} is not a green or red spider, a Hadamard or a scalar."
