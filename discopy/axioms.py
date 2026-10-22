@@ -869,7 +869,7 @@ def assert_axioms(*categories) -> None:
         max_examples=1, phases=(Phase.generate, ), database=None)
     for category in categories:
         for axiom in category.axioms.values():
-            if not axiom.parameters and axiom() is NotImplemented:
+            if not axiom.applicable:
                 continue
             scope, arguments = find(
                 axiom.sequents(**axiom.params), lambda _: True,
