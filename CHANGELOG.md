@@ -9,6 +9,33 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Added
 
+- `discopy.optyx`, optyx moved in from
+  [rel-int/optyx](https://github.com/rel-int/optyx) with its whole history,
+  358 commits whose authors are all kept (Will Cashman, Mateusz Kupper,
+  Boldizsár Poór, armandld, Richie Yeung, Mark Koch, mauriziocolosimo,
+  Giovanni de Felice, Alexis Toumi and their agents): diagrams of qubits,
+  photonic modes and bits in the ZX, ZW and linear-optical path calculi,
+  channels given by their Kraus maps, feedback loops with stream semantics
+  and a certified unroll depth, evaluation with quimb, perceval or
+  permanents, and a compiler of measurement patterns to single-emitter
+  photonic hardware. Unlike the rest of DisCoPy, `discopy.optyx` is under
+  the Apache License 2.0, with its `LICENSE` and a `NOTICE` in its
+  directory; nothing is relicensed. It needs the new `optyx` extra and
+  dependency group, which `test` and `all` take: perceval 1.3, graphix 0.4,
+  pytket with its pyzx and qiskit extensions, quimb and cotengra, onto
+  which it is ported, as optyx's own pins need numpy < 2 and Python < 3.13.
+  `import discopy.optyx` imports none of perceval, graphix, pytket or
+  qiskit, and `--skip-extra` skips the module, which needs its extra to
+  import. Ported onto this `main`: a swap and the wires around it are a
+  `Permutation`, a path matrix has `Nat` sizes, objects are `Wire`s, and
+  matrices with complex entries count their nonzero entries exactly under
+  numpy 2 (rel-int/optyx#80). The overlaps with `discopy.quantum.zx`,
+  `discopy.quantum.channel` and `discopy.tensor` are left as they are, in
+  [#270](https://github.com/rel-int/discopy-next/issues/270),
+  [#271](https://github.com/rel-int/discopy-next/issues/271) and
+  [#272](https://github.com/rel-int/discopy-next/issues/272)
+  ([#225](https://github.com/rel-int/discopy-next/issues/225)).
+
 - `discopy.ehypergraph`, e-graphs of diagrams with sharing: an
   `EHypergraph` over a copy-discard category is a left-monogamous acyclic
   `Hypergraph`, whose boxes are the e-nodes, with an equivalence relation on
