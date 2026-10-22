@@ -273,3 +273,13 @@ def test_copying():
     x, y = Ob('x'), Ob('y')
     assert Arrow.copying(term=Box('f', x, y))
     assert "copying" in Arrow.axioms and "copying" in Ob.axioms
+
+
+def test_environment_binds_numpy_scalar_types():
+    """ A dtype numpy names reads back, after the package names, see #162. """
+    import numpy as np
+    from discopy import matrix, tensor
+    box = tensor.Box[np.float32]('f', tensor.Dim(2), tensor.Dim(2), [1., 0, 0, 1])
+    environment = type(box).environment()
+    assert eval(repr(box), environment) == box
+    assert environment['matrix'] is matrix and 'bool' not in environment

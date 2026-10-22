@@ -1664,6 +1664,12 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   float; a bubble evaluated by a `tensor.Functor` lands in its codomain
   (B9 of
   [rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
+- `Testable.environment()` binds numpy's scalar types whose names
+  `builtins` lacks, under the package names, as `utils.resolve_factory`
+  looks a `dtype` up, so that the representation of a
+  `tensor.Box[float32]` reads back, where `float32` named nothing. No
+  `repr` and no tree changes
+  ([rel-int/discopy-next#162](https://github.com/rel-int/discopy-next/issues/162)).
 - The tensor spider with no legs is the circle, the dimension of its wire,
   as spider fusion says it is, `Tensor.spiders(0, 0, Dim(2))` being `2`
   like `Tensor.spiders(0, 1, Dim(2)) >> Tensor.spiders(1, 0, Dim(2))`,
