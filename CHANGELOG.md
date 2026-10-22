@@ -1780,6 +1780,16 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   functor sends the cup and cap of a left adjoint to them; the ribbon
   functor never met them, as `x.l == x.r` in `pivotal` (B53 of
   [rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
+- `hopf.Intertwiner.twist` is the action of the inverse of the ribbon
+  element, which is the trace of the braid as `ribbon` defines the twist,
+  on either side. It was the action of the ribbon element itself, so that
+  `hopf.Functor` sent `Twist(x)` to the inverse of the trace of
+  `Braid(x, x)` on the anyons of `D(Z/3)` and over `Double(taft(3))`,
+  which no test saw: the twists of `D(Z/2)` are their own inverses, and
+  the twist tests of `test/hopf.py` compared a trivial twist with the
+  identity. They check the twists of `D(Z/3)` anyons and of their product
+  instead (B52 and B87 of
+  [rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
 - `braided.Diagram` and `ribbon.Diagram` bind their own `functor_factory`,
   where they read those of `monoidal` and `pivotal`, so that their
   conversions map a braid to a braid and a twist to a twist, as `balanced`

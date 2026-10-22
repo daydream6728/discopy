@@ -292,13 +292,13 @@ class Algebra:
         :math:`1 \\to H`, for :math:`u` the Drinfeld element and :math:`g`
         the pivotal element: the invertible central element with
         :math:`v^2 = uS(u)`, :math:`S(v) = v` and :math:`\\epsilon(v) = 1`
-        whose action is the twist, :math:`\\theta_V = \\rho_V(v)` —
-        materialised as a single state box so that
-        :meth:`Intertwiner.twist` is one state and one application of the
-        action. The ribbon properties are checked by :meth:`is_ribbon` on
-        first access, raising :class:`ValueError` when the algebra is not
-        ribbon — e.g. the double of a Taft algebra of even dimension, by
-        Kauffman and Radford's criterion.
+        whose inverse acts as the twist, i.e. the trace of the braid,
+        :math:`\\theta_V = \\rho_V(v^{-1})` — materialised as a single state
+        box so that :meth:`Intertwiner.twist` is one state and one
+        application of the action. The ribbon properties are checked by
+        :meth:`is_ribbon` on first access, raising :class:`ValueError` when
+        the algebra is not ribbon — e.g. the double of a Taft algebra of
+        even dimension, by Kauffman and Radford's criterion.
         """
         if not self.is_ribbon():
             raise ValueError("this is not a ribbon Hopf algebra")
@@ -984,13 +984,28 @@ class Intertwiner(NamedGeneric["algebra"], tensor.Diagram, RibbonCategory):
     @classmethod
     def twist(cls, dom):
         """
-        The twist of ``dom``: the action of the ribbon element
+        The twist of ``dom``, i.e. the trace of the braid: the action of the
+        inverse :math:`v^{-1}` of the ribbon element
         :attr:`Algebra.ribbon_element`.
+
+        >>> D = Double(Algebra.cyclic(3))
+        >>> omega = np.exp(2j * np.pi / 3)
+        >>> V = Representation[D].anyon(1, omega)
+        >>> braid, cups, caps = (
+        ...     getattr(Intertwiner[D], f) for f in ("braid", "cups", "caps"))
+        >>> trace = V @ caps(V, V.r) >> braid(V, V) @ V.r >> V @ cups(V, V.r)
+        >>> twist = Intertwiner[D].twist(V)
+        >>> assert twist.eval(dtype=complex).is_close(trace.eval(dtype=complex))
+        >>> assert np.isclose(complex(twist.eval(dtype=complex)), omega)
         """
-        if cls.algebra is None:
+        H = cls.algebra
+        if H is None:
             raise ValueError("the twist needs a quasitriangular structure")
-        body = cls.algebra.ribbon_element @ Id(Dim(*dom.inside)) \
-            >> dom.action
+        unit, _, mult, *_ = H.arrays
+        v = H.ribbon_element.eval(dtype=complex).array.reshape(H.dim)
+        inverse = np.linalg.solve(np.einsum('i,ijk->kj', v, mult), unit)
+        body = Box[complex]('v⁻¹', Dim(1), H.ty, inverse.tolist()) \
+            @ Id(Dim(*dom.inside)) >> dom.action
         return cls(body.inside, body.dom, body.cod)
 
     @classmethod
@@ -1147,12 +1162,11 @@ class Functor(ribbon.Functor):
 
     Example
     -------
-    The left trace of the braid is the inverse twist in any ribbon
-    category, so the twist followed by it is the identity. The functor
-    sends this ribbon diagram to a tensor network made of the ribbon
-    element acting through the module and the R-matrix closed by the
-    trace, which contracts to the identity — drawn as the
-    :class:`.tensor.CMap`:
+    The left trace of the braid is the twist in any ribbon category. The
+    functor sends the twist to the inverse ribbon element acting through
+    the module, and the trace to a tensor network made of the R-matrix
+    acting through the module and closed by the pivotal cups and caps,
+    which contracts to the same matrix — drawn as the :class:`.tensor.CMap`:
 
     >>> import numpy as np
     >>> D = Double(Algebra.cyclic(2))
@@ -1161,10 +1175,9 @@ class Functor(ribbon.Functor):
     >>> V = Representation[D].direct_sum([e, m])
     >>> x = ribbon.Ty('x')
     >>> F = Functor(ob_map={x: V}, ar_map={}, cod=Intertwiner[D])
-    >>> d = ribbon.Twist(x) >> ribbon.Braid(x, x).trace(left=True)
-    >>> network = F(d)
+    >>> network = F(ribbon.Braid(x, x).trace(left=True))
     >>> assert network.eval(dtype=complex).is_close(
-    ...     F(ribbon.Id(x)).eval(dtype=complex))
+    ...     F(ribbon.Twist(x)).eval(dtype=complex))
     >>> network.to_map().draw(  # doctest: +EXTRA
     ...     doctest='docs/_static/hopf/ribbon-functor.dot')
 

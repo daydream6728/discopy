@@ -272,21 +272,20 @@ def test_functor_maps_winding_to_dual():
     assert F(x.r).action == V.r.action != V.action
 
 
-def test_twist_from_braid():
-    """The twist is the trace of the braid: the identity on e (+) m, minus
-    one on the fermion, one on the vacuum."""
-    D = Double(Algebra.cyclic(2))
-
-    def theta(rep):
-        return complex(
-            Intertwiner[D].twist(rep).eval(dtype=complex).array)
-
-    Vem = Representation[D].direct_sum(
-        [Representation[D].anyon(0, -1), Representation[D].anyon(1, 1)])
-    assert np.allclose(
-        Intertwiner[D].twist(Vem).eval(dtype=complex).array, np.eye(2))
-    assert np.isclose(theta(Representation[D].anyon(1, -1)), -1)
-    assert np.isclose(theta(Representation[D].anyon(0, 1)), 1)
+def test_twist_is_the_trace_of_the_braid():
+    """The twist of the D(Z/3) anyon of flux f and charge omega is
+    omega ** f, the trace of the braid on either side: neither is its own
+    inverse, as every twist of D(Z/2) is, e.g. minus one on the fermion."""
+    omega = np.exp(2j * np.pi / 3)
+    D2, D3 = Double(Algebra.cyclic(2)), Double(Algebra.cyclic(3))
+    x = ribbon.Ty('x')
+    for D, flux, charge, theta in [
+            (D3, 1, omega, omega), (D3, 2, omega, omega ** 2), (D2, 1, -1, -1)]:
+        V = Representation[D].anyon(flux, charge)
+        F = Functor(ob_map={x: V}, ar_map={}, cod=Intertwiner[D])
+        for diagram in [ribbon.Twist(x), ribbon.Braid(x, x).trace(),
+                        ribbon.Braid(x, x).trace(left=True)]:
+            assert np.isclose(complex(F(diagram).eval(dtype=complex)), theta)
 
 
 def test_is_module_rejects_non_module():
@@ -356,16 +355,17 @@ def test_functor_on_type():
 
 
 def test_twist_in_diagram():
-    """A group algebra has a trivial twist, mapped through the functor."""
-    Z2 = Algebra.cyclic(2)
-    V = Representation[Z2].regular()
-    x = ribbon.Ty('x')
-    F = Functor(ob_map={x: V}, ar_map={}, cod=Intertwiner[Z2])
-    twist = ribbon.Twist(x)
-    assert np.allclose(
-        F(twist).eval(dtype=complex).array, np.eye(2))
-    assert np.allclose(
-        F(twist.dagger()).eval(dtype=complex).array, np.eye(2))
+    """The functor reads the twist of a product of D(Z/3) anyons off the
+    twist of each and their double braiding, which is not an involution:
+    it is the twist of the product module."""
+    D = Double(Algebra.cyclic(3))
+    omega = np.exp(2j * np.pi / 3)
+    a, b = Representation[D].anyon(1, omega), Representation[D].anyon(0, omega)
+    x, y = ribbon.Ty('x'), ribbon.Ty('y')
+    F = Functor(ob_map={x: a, y: b}, ar_map={}, cod=Intertwiner[D])
+    twist = F(ribbon.Diagram.twist(x @ y)).eval(dtype=complex)
+    assert twist.is_close(Intertwiner[D].twist(a @ b).eval(dtype=complex))
+    assert np.isclose(complex(twist), omega ** 2)
 
 
 def test_taft_algebra():
