@@ -23,7 +23,7 @@ def test_dilate():
         unitary = matrix.dilate()
         assert np.allclose(
             (unitary.umatrix >> unitary.umatrix.dagger()).array,
-            np.eye(unitary.umatrix.dom))
+            np.eye(len(unitary.umatrix.dom)))
         assert np.allclose(unitary.eval(3).array, matrix.eval(3).array)
 
 

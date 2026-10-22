@@ -1037,10 +1037,51 @@ class Sum(symmetric.Sum, Box):
         return sum(term.grad(var, **params) for term in self.terms)
 
 
-class Swap(frobenius.Swap, Box):
+class Permutation(frobenius.Permutation, Box):
+    """
+    Permutation of the wires of an optyx diagram, the plumbing that a layer
+    makes of swaps and the identity wires around them.
+
+    Example
+    -------
+    >>> perm = mode @ Swap(mode, bit)
+    >>> assert isinstance(perm, Permutation) and list(perm.perm) == [0, 2, 1]
+    >>> assert perm.determine_output_dimensions([2, 3, 4]) == [2, 4, 3]
+    """
+
+    def __init__(self, dom, perm):
+        super().__init__(dom, perm)
+        self.photon_preservation_behaviour = PhotonNumberPreservation.LO
+
+    def conjugate(self):
+        return self
+
+    def to_path(self, dtype: type = complex):
+        # pylint: disable=import-outside-toplevel
+        from discopy.optyx.core.path import Matrix
+
+        size = len(self.dom)
+        return Matrix([int(self.perm[j] == i)
+                       for i in range(size) for j in range(size)], size, size)
+
+    def determine_output_dimensions(self, input_dims: list[int]) -> list[int]:
+        """Determine the output dimensions based on the input dimensions."""
+        return [input_dims[i] for i in self.perm]
+
+    def truncation(
+        self, input_dims: list[int] = None, output_dims: list[int] = None
+    ) -> tensor.Box:
+        return tensor.Permutation(
+            Dim(*[int(dim) for dim in input_dims]), self.perm)
+
+
+class Swap(Permutation, frobenius.Swap, Box):
     """Swap in optyx diagram"""
 
     photon_preservation_behaviour = PhotonNumberPreservation.LO
+
+    def __init__(self, left, right):
+        frobenius.Swap.__init__(self, left, right)
 
     def conjugate(self):
         return self
@@ -1502,7 +1543,8 @@ bit = Bit(1)
 mode = Mode(1)
 
 Diagram.hypergraph_factory = Hypergraph
-Diagram.braid_factory, Diagram.spider_factory = Swap, Spider
+Diagram.swap_factory, Diagram.spider_factory = Swap, Spider
+Diagram.permutation_factory = Permutation
 Diagram.ob = Ty
 Diagram.sum_factory = Sum
 Diagram.feedback_factory = Feedback

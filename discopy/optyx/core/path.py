@@ -77,7 +77,7 @@ using the rules of the :class:`path` calculus:
     :align: center
 
 >>> left_hs.to_path().prob_with_perceval().array[0, 0]
-0j
+np.complex128(0j)
 
 According to the rewrite rules of the :class:`path` calculus,
 this should be equal to:
@@ -127,12 +127,14 @@ We can define the number operator and compute its expectation.
 from __future__ import annotations
 
 from math import factorial
+from operator import index
 
 import numpy as np
 import perceval as pcvl
 
+from discopy.abc import Nat
 from discopy.cat import assert_iscomposable
-from discopy.utils import unbiased
+from discopy.utils import factory, unbiased
 import discopy.matrix as underlying
 from discopy.tensor import Tensor
 from discopy.optyx.utils.misc import occupation_numbers, amplitudes_2_tensor
@@ -163,6 +165,7 @@ def npperm(matrix):
     return p / 2 ** (n - 1)
 
 
+@factory
 class Matrix(underlying.Matrix):
     """
     Matrix with photon creations and post-selections,
@@ -170,8 +173,8 @@ class Matrix(underlying.Matrix):
 
     Parameters:
         array : underlying array
-        dom : int
-        cod : int
+        dom : number of modes in, an int or a :class:`Nat`
+        cod : number of modes out, an int or a :class:`Nat`
         creations : list of occupation numbers
         selections : list of occupation numbers
         normalisation : normalisation factor dependent on number of photons.
@@ -206,16 +209,17 @@ class Matrix(underlying.Matrix):
     def __init__(
         self,
         array,
-        dom: int,
-        cod: int,
+        dom: int | Nat,
+        cod: int | Nat,
         creations: tuple[int, ...] = (),
         selections: tuple[int, ...] = (),
         normalisation=1,
         scalar=1,
     ):
+        dom, cod = index(dom), index(cod)
         self.udom, self.ucod = dom + len(creations), cod + len(selections)
         super().__init__(array, self.udom, self.ucod)
-        self.dom, self.cod = dom, cod
+        self.dom, self.cod = Nat(dom), Nat(cod)
         self.creations, self.selections = creations, selections
         self.normalisation = normalisation
         self.scalar = scalar
@@ -264,7 +268,7 @@ class Matrix(underlying.Matrix):
             >> self.umatrix @ other.umatrix
             >> self.cod @ M.swap(c, other.cod) @ d
         )
-        dom, cod = self.dom + other.dom, self.cod + other.cod
+        dom, cod = self.dom @ other.dom, self.cod @ other.cod
         creations = self.creations + other.creations
         selections = self.selections + other.selections
         normalisation = self.normalisation * other.normalisation
@@ -320,18 +324,20 @@ class Matrix(underlying.Matrix):
         U, S, Vh = np.linalg.svd(A)
         s = max(S) if max(S) > 1 else 1
         defect0 = np.concatenate(
-            [np.sqrt(1 - (S / s) ** 2), [1 for _ in range(dom - len(S))]]
+            [np.sqrt(1 - (S / s) ** 2),
+             [1 for _ in range(index(dom) - len(S))]]
         )
         defect1 = np.concatenate(
-            [np.sqrt(1 - (S / s) ** 2), [1 for _ in range(cod - len(S))]]
+            [np.sqrt(1 - (S / s) ** 2),
+             [1 for _ in range(index(cod) - len(S))]]
         )
         defect_left = U.dot(np.diag(defect0)).dot(U.conj().T)
         defect_right = (Vh.conj().T).dot(np.diag(defect1)).dot(Vh)
         unitary = np.block(
             [[A / s, defect_left], [defect_right, -A.conj().T / s]]
         )
-        creations = self.creations + cod * (0,)
-        selections = self.selections + dom * (0,)
+        creations = self.creations + index(cod) * (0,)
+        selections = self.selections + index(dom) * (0,)
 
         return Matrix(
             unitary,
@@ -346,11 +352,11 @@ class Matrix(underlying.Matrix):
         self, n_photons=0, permanent=npperm, as_tensor=False
     ) -> Amplitudes:
         """Evaluates the :class:`Amplitudes` of a the QPath matrix"""
-        dom_basis = occupation_numbers(n_photons, self.dom)
+        dom_basis = occupation_numbers(n_photons, index(self.dom))
         n_photons_out = n_photons - sum(self.selections) + sum(self.creations)
         if n_photons_out < 0:
             raise ValueError("Expected a positive number of photons out.")
-        cod_basis = occupation_numbers(n_photons_out, self.cod)
+        cod_basis = occupation_numbers(n_photons_out, index(self.cod))
 
         result = Amplitudes[self.dtype].zero(len(dom_basis), len(cod_basis))
         normalisation = self.normalisation ** (n_photons + sum(self.creations))
@@ -444,10 +450,10 @@ class Matrix(underlying.Matrix):
         proc.set_circuit(circ)
         proc.set_postselection(post)
 
-        input_occ = occupation_numbers(n_photons, self.dom)
+        input_occ = occupation_numbers(n_photons, index(self.dom))
         output_occ = occupation_numbers(
             sum(self.creations) + n_photons,
-            len(self.creations) + self.dom,
+            len(self.creations) + index(self.dom),
         )
 
         states = [pcvl.BasicState(o + self.creations) for o in input_occ]
@@ -474,7 +480,8 @@ class Matrix(underlying.Matrix):
 
     def _to_perceval_post_select(self) -> pcvl.PostSelect:
         post_str = [
-            f"[{self.cod + i}] == {p}" for i, p in enumerate(self.selections)
+            f"[{index(self.cod) + i}] == {p}"
+            for i, p in enumerate(self.selections)
         ]
         return pcvl.PostSelect(" & ".join(post_str))
 
