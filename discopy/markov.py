@@ -473,8 +473,17 @@ class Function(Box):
 
     @property
     def size(self) -> int:
-        """ Structural functions are not generator boxes in a layer. """
-        return 0
+        """
+        The number of copies and discards the function fuses, i.e. of its
+        inputs not read exactly once, so that a permutation counts zero.
+
+        >>> x, y = Ty('x'), Ty('y')
+        >>> assert Copy(x).size == Discard(x).size == 1
+        >>> assert Function(x @ y, [0, 0]).size == 2
+        >>> assert Function(x @ y, [1, 0, 0]).size == 1
+        """
+        counts, _ = self.func.factorise()
+        return sum(n != 1 for n in counts)
 
     def setoid(self):
         if self.is_identity:

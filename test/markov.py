@@ -283,7 +283,7 @@ def test_delayed_Copy_pickle():
 def test_Function():
     x, y = Ty('x'), Ty('y')
     f = Function(x @ y, [1, 0, 0])
-    assert f.cod == y @ x @ x and f.size == 0 and isinstance(f, Box)
+    assert f.cod == y @ x @ x and f.size == 1 and isinstance(f, Box)
     assert Function(x, [0, 0, 0]) == Copy(x, 3)
     assert isinstance(Swap(x, y), Function) and isinstance(Copy(x), Function)
     assert Diagram.copy(x @ y, 0) == Discard(x) @ Discard(y)
