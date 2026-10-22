@@ -10,5 +10,5 @@ Agent `gates`: `quantum/gates.py`, box-level `quantum/circuit.py`, `test/quantum
 - [x] B82 (gates part): `QuantumGate` rejects a 2-D array or a symbolic list as `data`
 - [x] B68 (gates part): `Ket(True)` is `|0>+|1>`, a numpy-bool bitstring prepares the zero vector
 - [x] #176: gates with a constructor of their own raise on `delay()`
-- [ ] #168: `Controlled` hardcodes its name in its repr, `Bits` returns `self.name` as repr
+- [x] #168: `Controlled` hardcodes its name in its repr, `Bits` returns `self.name` as repr
 - [ ] CHANGELOG, full suite, pflake8, pylint, proptest cells

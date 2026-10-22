@@ -198,3 +198,12 @@ def test_delay(gate):
     assert numpy.allclose(delayed.eval().array, gate.eval().array)
     if hasattr(gate, "_decompose"):
         assert delayed._decompose() == gate._decompose().delay()
+
+
+@mark.parametrize("gate", [
+    CX, CCX, CRz(.5, distance=2), Controlled(H, distance=-2), CRx(.25).delay(),
+    Bits(1, 0), Bits(1, 0).dagger(), Bits(1).delay(), Digits(2, dim=4),
+    Scalar(.5).delay(), Sqrt(-1).dagger().delay()], ids=str)
+def test_eval_repr(gate):
+    from discopy.quantum.circuit import Circuit
+    assert eval(repr(gate), Circuit.environment()) == gate

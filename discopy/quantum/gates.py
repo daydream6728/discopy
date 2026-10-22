@@ -650,7 +650,17 @@ class Controlled(QuantumGate):
         return type(self)(controlled, distance=self.distance)
 
     def __repr__(self):
-        return f'Controlled({self.controlled!r}, distance={self.distance!r})'
+        """
+        The constructor call of a controlled gate with its module, the same
+        for a subclass such as :class:`CRz`, which is equal to the gate it
+        abbreviates and so hashes the same.
+
+        >>> from discopy.quantum.circuit import Circuit
+        >>> assert eval(repr(CX), Circuit.environment()) == CX
+        >>> assert repr(CRz(.5)) == repr(Controlled(Rz(.5)))
+        """
+        return factory_name(Controlled)\
+            + f'({self.controlled!r}, distance={self.distance!r})'
 
     def __str__(self):
         return self.name + str_delayed(self.time_step) if self.distance == 1\
