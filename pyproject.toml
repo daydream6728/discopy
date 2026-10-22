@@ -58,12 +58,14 @@ docs = ["discopy[docs]"]
 notebooks = ["discopy[notebooks]"]
 quantum = ["discopy[quantum]"]
 grammar = ["discopy[grammar]"]
+optyx = ["discopy[optyx]"]
 all = [
     { include-group = "dev" },
     { include-group = "docs" },
     { include-group = "notebooks" },
     { include-group = "quantum" },
     { include-group = "grammar" },
+    { include-group = "optyx" },
 ]
 
 [project.optional-dependencies]
@@ -85,8 +87,22 @@ grammar = [
     "nltk",
     "torch",
 ]
+# discopy.optyx, under Apache-2.0: see discopy/optyx/LICENSE
+optyx = [
+    "cotengra",
+    "graphix >= 0.4",
+    "opt_einsum",
+    "perceval-quandela >= 1.3",
+    "pylatexenc >= 2.10",
+    "pytket >= 2.6.0",
+    "pytket-pyzx >= 0.36",
+    "pytket-qiskit[aer] >= 0.68.3",
+    "pyzx == 0.10.7",
+    "quimb",
+    "sympy",
+]
 test = [
-    "discopy[grammar,quantum]",
+    "discopy[grammar,optyx,quantum]",
     "coverage",
     "hypothesis",
     "marimo",
@@ -165,6 +181,7 @@ testpaths = [
     "discopy",
     "test/*.py",
     "test/*/*.py",
+    "test/optyx/compiler/*.py",
 ]
 norecursedirs = [
     ".hypothesis",
