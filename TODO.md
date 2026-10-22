@@ -3,7 +3,7 @@
 - [x] B40 (fable README claim table): the `--skip-extra` contract is broken by unguarded torch/jax imports in `test/tensor.py`; the pyzx guards ignore the version pin
 - [x] B41: the coverage gate counts the test files themselves
 - [x] B42: tests that cannot fail in `test/cat.py`, `test/markov.py`, `test/readme.py`
-- [ ] B43: nine modules have no test file; `test/test_para.py` naming drift
+- [x] B43: nine modules have no test file; `test/test_para.py` naming drift. `test/para.py` is on `main`, `test/quantum/gates.py` too; new: `config`, `messages`, `python/function`, `grammar/cfg`, `grammar/thue`. Left out: `abc` and `quantum/pennylane`, whose mirrored names shadow the stdlib `abc` and the `pennylane` package under pytest's default `prepend` import mode (a decision), and `grammar/dependency`, whose one honest test is B30's, the grammar agent's
 - [x] B45: self-contradictory and type-only error messages, the stale `pytest_plugin` pointer, `quantum.CY` (only if it exists unexported)
 - [x] B84 of #31: `post.py` dying before `record()` leaves `clean` unset; the discopy/discopy#679 guard reads `steps.review.outcome` only: gone on `main`, `.github/style-review/` and its hand-over were retired by discopy/discopy#708 (`cd97339b`), and `benchmark_comment.mismatch` was fixed by #205
 - [x] B87 of #31, circuit part: `test/quantum/circuit.py` skipped whole without torch; `test_CCX_decompose` leaks `np.set_printoptions`; `test_grad_basic`/`test_Sum` compare the int `0` to `0`
