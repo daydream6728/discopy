@@ -9,6 +9,20 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Added
 
+- The networks of recursive message passing, moved out of the experiments of
+  *Tiny Recursive Message Passing* op for op, on top of their trainers: the
+  same checkpoints, the same initial weights from the same seed and the same
+  bits on CPU. `neural.wiring` reads the tables a network gathers along off
+  a factor table, `primal`, `routing` padded where the degrees differ, and
+  `from_map` off the maps `from_incidence` and `from_relation` draw;
+  `neural.cell` holds the boxes: `Site` on a node's ports, `PeerSite`
+  gathering its peers, the Deep Sets unit `DeepSet`, `Refresh`, `HaltHead`,
+  `gru_cell`, `gru`, `Widths` and `widths_for`; `neural.recursion` fires them
+  in rounds, cycles and supervision steps with a detached prefix,
+  `Recursion`, `PeerNet` and `FactorNet`, read by deep supervision
+  (`unroll`) or as a segment of adaptive computation time (`act_step`)
+  ([rel-int/Recursive_GNNs#1](https://github.com/rel-int/Recursive_GNNs/issues/1)).
+
 - The trainers of recursive message passing, the networks of *Tiny
   Recursive Message Passing* ([arXiv:2610.18649](https://arxiv.org/abs/2610.18649)),
   moved out of its experiments op for op, so that they keep only their

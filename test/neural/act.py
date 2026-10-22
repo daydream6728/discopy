@@ -166,6 +166,29 @@ def test_rollout():
     assert always[2]["depth"].tolist() == [1.] * 5
 
 
+def test_act_pool_peer_net():
+    torch = importorskip("torch")
+    from discopy.neural.act import ActConfig, ActPool, rollout
+    from discopy.neural.recursion import PeerNet, State
+    from discopy.neural.train import EMA, adamw, cosine_schedule
+    _, Stream = toy()
+    torch.manual_seed(3)
+    peers = ((1, 2), (0, 2), (0, 1))
+    net = PeerNet((4, 6, 8, 5), peers, 2, 2, 3, 1, halt=True)
+    cfg = ActConfig(batch_size=4, n_sup=2, slot_clip=.5)
+    pool = ActPool(net, Stream(3), cfg)
+    optimizer = adamw(net, cfg.lr, cfg.weight_decay)
+    scheduler = cosine_schedule(optimizer, 1, 3)
+    ema = EMA(net, cfg.ema_decay)
+    for _ in range(3):
+        stats = pool.iterate(optimizer, scheduler, ema)
+    assert type(pool.state) is State and stats["clip"]["clipped_frac"] > 0
+    assert net.bce.weight.grad is None and net.sm.weight.grad is not None
+    x, y = Stream(4).take(3)
+    out = rollout(net, x, y.argmax(-1), x.sum(-1) == 1, (2, ))
+    assert out[2]["cell"].shape == (3, )
+
+
 def test_act_pool_without_clip():
     torch = importorskip("torch")
     from discopy.neural.act import ActConfig, ActPool
