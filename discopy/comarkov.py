@@ -142,7 +142,7 @@ class Diagram(symmetric.Diagram, ComarkovCategory):
         return frobenius.Diagram.spiders.__func__(cls, n, 1, x)
 
     @classmethod
-    def from_cofunction(cls, cofunc, cod: monoidal.Ty = None) -> Diagram:
+    def from_cofunction(cls, cofunc, cod: monoidal.Ty) -> Diagram:
         """
         A native :class:`Cofunction` box when the category has a matching
         cofunction factory, its decomposition by
@@ -227,7 +227,7 @@ class Cofunction(Box):
         cofunc = list(cofunc)
         if sorted(cofunc) == list(range(len(cod))):
             return cls.ar.from_cofunction(cofunc, cod)
-        if len(cod) == 1:
+        if len(cod) == 1 and not any(cofunc):
             return cls.ar.merge_factory(cod, len(cofunc))
         return super().__new__(cls)
 
