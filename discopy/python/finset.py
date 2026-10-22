@@ -19,6 +19,7 @@ Summary
 from __future__ import annotations
 from discopy.utils import assert_isinstance
 from typing import Iterable, Self, Any
+from itertools import accumulate
 from collections.abc import Sequence
 
 from dataclasses import dataclass
@@ -147,9 +148,9 @@ class Function(MonoidalCategory, Sequence):
         """
         sizes = [int(d) for d in doms]
         xs = Permutation(xs, len(sizes))
-        offsets = [sum(sizes[:i]) for i in range(len(sizes))]
+        offsets = [0, *accumulate(sizes)]
         inside = [offsets[i] + j for i in xs for j in range(sizes[i])]
-        return Function(inside, sum(sizes), sum(sizes))
+        return Function(inside, offsets[-1], offsets[-1])
 
     @staticmethod
     def copy(x: int | Nat, n=2) -> Function:

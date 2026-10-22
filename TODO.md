@@ -10,7 +10,7 @@ cubic's review of d2673841:
 
 > P2 discopy/tensor.py:889: Flattening creates fresh NumPy scalars on each call, so a `Box` whose list-of-lists data contains `nan` no longer equals itself. Before this change identity made `f == f` hold. Compare the entries without re-creating them, or document that NaN entries are unsupported.
 
-- [WIP] @session_01YCJQ3Xco3ydQ6AsdTtYJ5x-2026-10-22 16:50 finset offsets in one pass
+- [x] finset offsets in one pass
 - [WIP] @session_01YCJQ3Xco3ydQ6AsdTtYJ5x-2026-10-22 16:50 `basis` under the current backend, as `copy`
 - [WIP] @session_01YCJQ3Xco3ydQ6AsdTtYJ5x-2026-10-22 16:50 `setoid` on any backend's array, no direct numpy import
 - [WIP] @session_01YCJQ3Xco3ydQ6AsdTtYJ5x-2026-10-22 16:50 nan: reply, no code
