@@ -1031,6 +1031,18 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   reduced lazily against a shared budget, with pluggable reduction
   strategies defaulting to leftmost-outermost
   ([#442](https://github.com/discopy/discopy/pull/442)).
+- `Testable.str_transparency`, the other half of STYLE.md's transparency:
+  `eval(str(x), env) == x` where `Testable.str_environment(x)` binds each
+  generator of `x` to itself by its name, the obvious naming convention,
+  on top of the namespace `transparency` reads back in. The generators
+  are `Testable.atoms`, walked per level: an object, the objects of a type,
+  the base and exponent of an exponential, the boxes of an arrow or a
+  layer, the terms of a sum, the arguments of a bubble, and the free
+  variables, constants and types a lambda term prints. A term with two
+  generators of one name lies outside the law and is assumed away, and
+  `cat.Box.strategy` names its boxes `f_<hex>`, where it named them by a
+  UUID no string can bind, so that every cell of the law checks something
+  ([rel-int/discopy-next#163](https://github.com/rel-int/discopy-next/issues/163)).
 
 ### Changed
 
