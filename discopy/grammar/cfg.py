@@ -41,6 +41,7 @@ from typing import TYPE_CHECKING
 
 from discopy import monoidal
 from discopy.cat import factory, Functor
+from discopy.config import BOX_DRAWING_ATTRIBUTES
 from discopy.grammar import thue
 from discopy.monoidal import Ty
 from discopy.utils import (
@@ -192,8 +193,10 @@ class Rule(Tree, thue.Rule):
     __repr__ = thue.Rule.__repr__
 
     def to_diagram(self) -> monoidal.Box:
-        return monoidal.Box(self.name, self.dom, self.cod,
-                            data=self.data, is_dagger=self.is_dagger)
+        drawing = {attr: getattr(self, attr)
+                   for attr in BOX_DRAWING_ATTRIBUTES if hasattr(self, attr)}
+        return monoidal.Box(self.name, self.dom, self.cod, data=self.data,
+                            is_dagger=self.is_dagger, **drawing)
 
 
 class Word(thue.Word, Rule):
