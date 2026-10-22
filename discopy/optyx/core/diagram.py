@@ -97,7 +97,8 @@ We can also compose boxes in parallel (tensor) using the :code:`@` operator :
 
 >>> from discopy.optyx.photonic import BS, Phase
 >>> beam_splitter_phase = (BS @ Phase(0.5)).get_kraus()
->>> beam_splitter_phase.draw(path="docs/_static/optyx/parallel_comp_example.svg")
+>>> beam_splitter_phase.draw(
+...     path="docs/_static/optyx/parallel_comp_example.svg")
 
 .. image:: /_static/optyx/parallel_comp_example.svg
     :align: center
@@ -335,7 +336,8 @@ class Diagram(frobenius.Diagram):
             effect : The boundary plugged in the output memory after the last
                 time step, a diagram with `dom == mem`. `None` gives
                 :meth:`Feedback.default_effect`, the identity on `mem` here
-                and :class:`discopy.optyx.channel.Discard` for a channel diagram.
+                and :class:`discopy.optyx.channel.Discard` for a channel
+                diagram.
 
         The boundaries are set here and read back by :meth:`boundary`:
         :meth:`unroll` plugs them by default and can override them per
@@ -1164,6 +1166,7 @@ class Scalar(Box):
 
     def grad(self, var, **params):
         """Gradient with respect to :code:`var`."""
+        # pylint: disable=unused-argument  # the signature of Diagram.grad
         if var not in self.free_symbols:
             return Sum((), self.dom, self.cod)
         return Scalar(self.scalar.diff(var))
@@ -1354,11 +1357,11 @@ def dual_rail(n, internal_states=None):
 
     if internal_states is None:
         d = DualRail()
-        for i in range(n - 1):
+        for _ in range(n - 1):
             d @= DualRail()
     else:
         d = DualRail(internal_state=internal_states[0])
-        for i, state in enumerate(internal_states[1:]):
+        for state in internal_states[1:]:
             d @= DualRail(internal_state=state)
     return d
 
@@ -1368,7 +1371,7 @@ def embedding_tensor(n, dim):
     Obtain 2->dim embedding tensors on n wires.
     """
     d = EmbeddingTensor(2, dim)
-    for i in range(n - 1):
+    for _ in range(n - 1):
         d @= EmbeddingTensor(2, dim)
     return d
 

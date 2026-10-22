@@ -187,7 +187,7 @@ class OpenGraph:
             {node: measurement.to_graphix()
              for node, measurement in self.measurements.items()})
 
-    def isclose(self, other: OpenGraph, rel_tol: float = 1e-09,
+    def isclose(self, other: "OpenGraph", rel_tol: float = 1e-09,
                 abs_tol: float = 0.0) -> bool:
         """Whether two open graphs have the same graph, inputs and outputs
         and close measurements, see graphix's ``OpenGraph.isclose``."""

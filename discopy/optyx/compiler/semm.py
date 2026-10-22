@@ -44,7 +44,8 @@ def compile_to_semm(
     -------
     >>> import networkx as nx
     >>> g = nx.Graph([(0, 1), (1, 2)])
-    >>> from discopy.optyx.compiler.mbqc import OpenGraph, Measurement, FusionNetwork
+    >>> from discopy.optyx.compiler.mbqc import (
+    ...     OpenGraph, Measurement, FusionNetwork)
     >>>
     >>> meas = {i: Measurement(i, "XY") for i in range(2)}
     >>> inputs = [0]
@@ -91,7 +92,8 @@ def decompile_from_semm(
 
     Example
     -------
-    >>> from discopy.optyx.compiler.mbqc import OpenGraph, Measurement, FusionNetwork
+    >>> from discopy.optyx.compiler.mbqc import (
+    ...     OpenGraph, Measurement, FusionNetwork)
     >>> from discopy.optyx.compiler.semm import decompile_from_semm
     >>> from discopy.optyx.compiler.patterns import (
     ...    FusionOp,

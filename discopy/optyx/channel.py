@@ -559,8 +559,9 @@ class Diagram(frobenius.Diagram):
     def dilate(self):
         """
         The pure Kraus map of this channel diagram with every environment
-        routed to the end of the codomain: a :class:`discopy.optyx.core.diagram`
-        diagram from `dom.single()` to `cod.single() @ env`.
+        routed to the end of the codomain: a
+        :class:`discopy.optyx.core.diagram` diagram from `dom.single()` to
+        `cod.single() @ env`.
 
         This is Stinespring dilation, layer by layer: a lossy channel is an
         isometry into system and environment followed by discarding the
@@ -1725,8 +1726,8 @@ class Feedback(monoidal.Bubble, Diagram, frobenius.Box):
     A feedback loop connecting the last `mem` outputs of a channel diagram
     back to its last `mem` inputs, one time step later.
 
-    See :class:`discopy.optyx.core.diagram.Feedback`; doubling the loop gives the
-    loop of the doubled diagram, so `double` and `unroll` commute.
+    See :class:`discopy.optyx.core.diagram.Feedback`; doubling the loop gives
+    the loop of the doubled diagram, so `double` and `unroll` commute.
 
     The one boundary with a natural default is the effect: discarding is the
     unique causal effect on a channel, so :meth:`default_effect` is

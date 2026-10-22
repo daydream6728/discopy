@@ -153,7 +153,8 @@ def decompile_to_fusion_network(
     -------
     >>> from discopy.optyx.compiler.mbqc import FusionNetwork, Measurement
     >>> from .semm import fn_to_semm
-    >>> from discopy.optyx.compiler.semm_decompiler import decompile_to_fusion_network
+    >>> from discopy.optyx.compiler.semm_decompiler import (
+    ...     decompile_to_fusion_network)
     >>> m = {i: Measurement(0.5 * i, "XY") for i in range(3)}
     >>> fn = FusionNetwork([0, 1, 2], m, [Fusion(0, 2, "X")])
     >>>

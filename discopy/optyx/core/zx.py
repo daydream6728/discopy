@@ -350,6 +350,7 @@ class Spider(diagram.Spider, ZXBox):
 
     def grad(self, var, **params):
         """Gradient with respect to a variable."""
+        # pylint: disable=unused-argument  # the signature of Diagram.grad
 
         if var not in self.free_symbols:
             return diagram.Sum((), self.dom, self.cod)
@@ -409,7 +410,7 @@ class X(Spider):
 
     def truncation(self, input_dims=None, output_dims=None) -> tensor.Box:
         in_hadamards = tensor.Id(1)
-        for i in range(self.n_legs_in):
+        for _ in range(self.n_legs_in):
             in_hadamards @= H.truncation()
 
         out_hadamards = tensor.Id(1)

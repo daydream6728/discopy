@@ -541,10 +541,6 @@ class QubitChannel(Channel):
         from discopy.quantum.gates import Scalar as GatesScalar
         # from discopy.optyx import classical
 
-        # pylint: disable=invalid-name
-        def get_perm(n):
-            return sorted(sorted(list(range(n))), key=lambda i: i % 2)
-
         root2 = Scalar(2**0.5)
         if isinstance(discopy_circuit, (Bra_, Ket_)):
             dom, cod = (1, 0) if isinstance(discopy_circuit, Bra_) else (0, 1)
