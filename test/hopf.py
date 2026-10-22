@@ -3,6 +3,7 @@ from itertools import permutations
 import numpy as np
 
 from discopy import rigid, ribbon, tensor
+from discopy.utils import dumps, loads
 from discopy.tensor import Dim, Box
 from discopy.hopf import (
     Algebra, Double, Representation, Intertwiner, Functor)
@@ -192,6 +193,30 @@ def test_repr_is_transparent():
     assert eval(repr(V)) == V and eval(repr(V)).action == V.action
 
 
+def test_intertwiner_is_a_network_between_modules():
+    """#145: an intertwiner is its own factory, holding the tensor network
+    between the spaces of its modules, and its trees carry the generators of
+    its algebra and the action of each module."""
+    from discopy import hopf, tensor, compact  # noqa: F401  (used by eval)
+    D, V = double_and_module()
+    braid = Intertwiner[D].braid(V, V)
+    for composite in [braid >> braid, braid @ braid, braid.dagger(),
+                      Intertwiner[D].id(V), braid.r]:
+        assert type(composite) is Intertwiner[D]
+        assert isinstance(composite.inside, tensor.Diagram)
+    assert (braid @ braid).eval(dtype=complex).is_close(
+        (braid.inside @ braid.inside).eval(dtype=complex))
+    anyon = Representation[D].anyon(1, 1)
+    for x in [anyon, braid, D, taft]:
+        assert loads(dumps(x)) == x
+    assert loads(dumps(anyon)).action == anyon.action
+    assert eval(repr(braid)) == braid
+    V = Representation[taft].regular()
+    cup = Intertwiner[taft].cups(V, V.r)
+    assert cup.inside.to_hypergraph().to_diagram().eval(
+        dtype=complex).is_close(cup.eval(dtype=complex))
+
+
 def test_representation_is_module():
     """The direct-sum module axiom is checked in the direct_sum doctest."""
     D, V = double_and_module()
@@ -302,7 +327,8 @@ def test_twist_dagger_is_its_inverse():
     for diagram in [twist >> twist.dagger(), twist.dagger() >> twist]:
         assert F(diagram).eval(dtype=complex).is_close(identity)
     untwist = F(twist.dagger())
-    lhs, rhs = V.action >> untwist, D.ty @ untwist >> V.action
+    lhs = V.action >> untwist.inside
+    rhs = D.ty @ untwist.inside >> V.action
     assert lhs.eval(dtype=complex).is_close(rhs.eval(dtype=complex))
 
 
@@ -332,7 +358,9 @@ def test_nontrivial_link_invariant():
     F = Functor(ob_map={x: V}, ar_map={}, cod=Intertwiner[D])
     unknot = ribbon.Braid(x, x).trace(n=2)
     networks = [F(d) for d in [circle(x), unlink(x), hopf_link(x), unknot]]
-    assert all(isinstance(network, tensor.Diagram) for network in networks)
+    assert all(isinstance(network, Intertwiner[D])
+               and isinstance(network.inside, tensor.Diagram)
+               for network in networks)
     values = [complex(network.eval(dtype=complex)) for network in networks]
     assert np.allclose(values, [2, 4, 0, 2])
 
@@ -442,9 +470,9 @@ def test_chart_fusion_dimensions():
 def test_chart_slices_intertwine_and_span():
     D, _, V = double_and_four_anyons()
     Q = Intertwiner[D].chart(V @ V, V)
-    lhs = tensor.Id(D.ty) @ Q >> V.action
+    lhs = tensor.Id(D.ty) @ Q.inside >> V.action
     rhs = tensor.Diagram.swap(D.ty, Dim(16)) @ tensor.Id(Dim(4, 4)) \
-        >> tensor.Id(Dim(16)) @ (V @ V).action >> Q
+        >> tensor.Id(Dim(16)) @ (V @ V).action >> Q.inside
     assert lhs.eval(dtype=complex).is_close(rhs.eval(dtype=complex))
     basis = Q.eval(dtype=complex).array.reshape(16, -1)
     assert np.allclose(basis @ basis.conj().T, np.eye(16))
@@ -544,11 +572,12 @@ def test_left_dual_pairings_are_intertwiners():
     x = rigid.Ty('x')
     F = rigid.Functor(ob_map={x: V}, ar_map={}, cod=Intertwiner[taft])
     for cup in [rigid.Cup(x.l, x), rigid.Cup(x, x.r)]:
-        lhs, rhs = F(cup.dom).action >> F(cup), taft.counit @ F(cup)
+        lhs = F(cup.dom).action >> F(cup).inside
+        rhs = taft.counit @ F(cup).inside
         assert lhs.eval(dtype=complex).is_close(rhs.eval(dtype=complex))
     for cap in [rigid.Cap(x, x.l), rigid.Cap(x.r, x)]:
-        lhs = taft.ty @ F(cap) >> F(cap.cod).action
-        rhs = taft.counit @ F(cap)
+        lhs = taft.ty @ F(cap).inside >> F(cap.cod).action
+        rhs = taft.counit @ F(cap).inside
         assert lhs.eval(dtype=complex).is_close(rhs.eval(dtype=complex))
     snake = rigid.Cap(x, x.l) @ x >> x @ rigid.Cup(x.l, x)
     assert F(snake).eval(dtype=complex).is_close(
@@ -576,9 +605,9 @@ def test_chart_needs_no_semisimplicity():
     W = Representation[H].regular()
     Q = Intertwiner[H].chart(W, W)
     assert Q.dom == Dim(4, 4)
-    lhs = tensor.Id(H.ty) @ Q >> W.action
+    lhs = tensor.Id(H.ty) @ Q.inside >> W.action
     rhs = tensor.Diagram.swap(H.ty, Dim(4)) @ tensor.Id(Dim(4)) \
-        >> tensor.Id(Dim(4)) @ W.action >> Q
+        >> tensor.Id(Dim(4)) @ W.action >> Q.inside
     assert lhs.eval(dtype=complex).is_close(rhs.eval(dtype=complex))
 
 

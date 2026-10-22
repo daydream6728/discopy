@@ -955,6 +955,22 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Changed
 
+- `hopf.Intertwiner[H]` is its own factory, a morphism of `Rep(H)` holding
+  the `tensor.Diagram` of a linear map between the underlying spaces as
+  `inside`, with `Representation` ends `dom` and `cod`, the way
+  `interaction.Diagram` holds a diagram of its underlying category. It was
+  a `tensor.Diagram` whose composites were plain tensor diagrams, so that
+  a module was sliced down to its space by every operation. `>>`, `@` and
+  `dagger` compose the networks and the modules, `eval`, `to_map` and
+  `draw` are those of the network, and a plain `Dim` end is the trivial
+  module. `isinstance(f, tensor.Diagram)` and `f.boxes` stop working on an
+  intertwiner: compose its `inside` with an action, as the doctests do.
+  `Algebra`, `Double`, `Representation` and `Intertwiner` have trees that
+  carry the generators of the algebra and the action of each module, so
+  that a module or an intertwiner loads as a member of the class
+  subscripted by its algebra, where `loads(dumps(Representation[D].anyon(1,
+  1)))` raised for want of a class named `Double(4)`
+  ([rel-int/discopy-next#145](https://github.com/rel-int/discopy-next/issues/145)).
 - The `quantum` extra pins pyzx 0.10.7, where it pinned 0.7.3, so that it
   installs next to `pytket-pyzx`, which needs pyzx 0.9 or later. pyzx 0.10
   takes no `float` phase, so `zx.Diagram.to_pyzx` hands it the exact
