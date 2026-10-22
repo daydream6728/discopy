@@ -1373,6 +1373,17 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
+- Three bugs of `cat`, `monoidal` and `tensor` (B79 of
+  [rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)):
+  `Bubble.subs` and `Bubble.lambdify` substitute in the args and data of the
+  bubble, a `tensor.Bubble` keeping its `func`, and return it unchanged when
+  no substituted symbol occurs, where they rebuilt it from a name, a domain
+  and a codomain and always raised; a
+  monoidal functor with a `colour_map` that does not name the transparent
+  colour sends `Ty()` to `Ty()`, as a monoidal functor preserves the unit,
+  where it raised `KeyError` on `Ty()`, `Id(Ty())` and every scalar; and
+  `tensor.Diagram.grad` differentiates a foliated diagram, splitting a layer
+  of more than one box into staircases first, where it raised `ValueError`.
 - `CMap.trace` raises `AxiomError` when the wires it traces have different
   types, as `Hypergraph.trace` and the trace of a diagram do, checking them
   with `utils.assert_istraceable` before it splices them. It used to splice

@@ -1848,7 +1848,10 @@ class Functor(cat.Functor):
 
     def __call__(self, other):
         if isinstance(other, Colour):
-            return self.colour_map[other] if self.colour_map else other
+            if not self.colour_map or (
+                    other == transparent and other not in self.colour_map):
+                return other
+            return self.colour_map[other]
         if isinstance(other, Dim) and isinstance(
                 other, self.dom.ob.generator_factory):
             return self.cod.ob.cast(self.ob_map[self.dom.ob(other)])
