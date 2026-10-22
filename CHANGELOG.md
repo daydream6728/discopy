@@ -1455,6 +1455,20 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   markdown, with docs (`nbsphinx` → embedded marimo HTML) and CI
   (`nbmake` → `marimo export`) updated to match
   ([#404](https://github.com/discopy/discopy/pull/404)).
+- The notebooks of `discopy.optyx` are migrated from Jupyter to marimo
+  markdown as DisCoPy's were, from rel-int/optyx#67:
+  `docs/export_notebooks.py` renders those of `docs/notebooks/optyx` after
+  the others, the docs list them under *Optyx notebooks*, and `--check`
+  executes them, except the seven of its `KNOWN_BROKEN`, which fail on the
+  bugs of
+  [#247](https://github.com/rel-int/discopy-next/issues/247),
+  [#248](https://github.com/rel-int/discopy-next/issues/248) and
+  [#249](https://github.com/rel-int/discopy-next/issues/249). `--jobs` runs
+  that many notebooks at a time, four on CI, where they would otherwise
+  outlast the test job. The `optyx` extra takes pandas, seaborn and tqdm,
+  which the notebooks import; a docs build without it, as Read the Docs',
+  links their source instead
+  ([#225](https://github.com/rel-int/discopy-next/issues/225)).
 - The `Functor` keyword arguments `ob`/`ar` are renamed to
   `ob_map`/`ar_map` throughout the codebase, docs and benchmarks
   ([#369](https://github.com/discopy/discopy/pull/369),
