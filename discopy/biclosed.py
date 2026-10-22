@@ -597,15 +597,19 @@ class Functor(monoidal.Functor):
     Note
     ----
     When the codomain objects are biclosed types, the functor sends terms to
-    terms rather than evaluating them to morphisms, unless the codomain is a
-    :class:`CMap` or a :class:`discopy.hypergraph.Hypergraph`, which have no
-    terms:
+    terms rather than evaluating them to morphisms:
 
     >>> X, Y = Ty("X"), Ty("Y")
     >>> f, x = (Y << X)("f"), X("x")
     >>> F = Functor(ob_map={X: Ty("A"), Y: Ty("B")},
     ...             ar_map={f: (Ty("B") << Ty("A"))("g"), x: Ty("A")("a")})
     >>> assert F(f(x)) == F(f)(F(x))
+
+    A :class:`CMap` has no terms, so a term is evaluated into it. Nor has a
+    :class:`discopy.hypergraph.Hypergraph`, nor even :meth:`Diagram.ev`, so a
+    term is sent there as the image of its diagram:
+
+    >>> assert f(x).to_hypergraph() == f(x).eval().to_hypergraph()
 
     The image of a term is checked to have the image of its type:
 
@@ -618,6 +622,9 @@ class Functor(monoidal.Functor):
 
     def __call__(self, other):
         if isinstance(other, TermBase):
+            if issubclass(get_origin(self.cod), hypergraph.Hypergraph)\
+                    and not isinstance(other, Constant):
+                return self(other.eval())
             if issubclass(get_origin(self.cod.ob), Ty) and not issubclass(
                     get_origin(self.cod), (cmap.CMap, hypergraph.Hypergraph)):
                 return self.map_term(other)

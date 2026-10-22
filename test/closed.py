@@ -64,6 +64,8 @@ def test_constant_to_hypergraph():
     diagram = g(a).eval()
     assert diagram == g @ a >> Eval(X >> Y)
     assert Equation(diagram, diagram.to_hypergraph().to_diagram())
+    for term in (g(a), X(lambda x: g(x)), a):
+        assert term.to_hypergraph() == term.eval().to_hypergraph()
 
 
 def test_pack_to_tree():
