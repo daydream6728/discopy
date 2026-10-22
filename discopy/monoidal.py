@@ -397,7 +397,7 @@ class Ty(cat.Ob, cat.FreeCategory, ColouredMonoid):
         if cod is None:
             cod = inside[-1].cod if inside else transparent
         cat.FreeCategory.__init__(self, inside, dom, cod, _scan)
-        self.name = type(self).__name__
+        cat.Ob.__init__(self, type(self).__name__)
 
     def tensor(self, *others: Ty) -> Ty:
         if any(not isinstance(other, self.factory) for other in others):

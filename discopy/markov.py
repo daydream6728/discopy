@@ -313,6 +313,14 @@ feedback.Ty(feedback.Wire('x')), is_deterministic=False)
     >>> f = Box('f', p, x)
     >>> assert f.is_cartesian and not f.dagger().is_cartesian
     >>> assert f.dagger().dagger() == f and f.dagger().deterministic
+
+    The flags are fields, so that substitution keeps them.
+
+    >>> from sympy.abc import phi  # doctest: +EXTRA
+    >>> sample = Box('sample', Ty('x'), Ty('x'), data=phi,
+    ...              is_deterministic=False)
+    >>> assert not sample.subs(phi, 1).is_deterministic
+    >>> assert not sample.lambdify(phi)(1).is_deterministic
     """
     deterministic: bool = True
     affine: bool = True
@@ -348,19 +356,6 @@ feedback.Ty(feedback.Wire('x')), is_deterministic=False)
         if self.is_dagger or not flags:
             return super().__repr__()
         return super().__repr__()[:-1] + flags + ")"
-
-    def subs(self, *args) -> Box:
-        """
-        Substitute a variable in the data of a box, keeping its flags, which
-        are fields.
-
-        >>> from sympy.abc import phi  # doctest: +EXTRA
-        >>> sample = Box('sample', Ty('x'), Ty('x'), data=phi,
-        ...              is_deterministic=False)
-        >>> assert not sample.subs(phi, 1).is_deterministic
-        >>> assert not sample.lambdify(phi)(1).is_deterministic
-        """
-        return super().subs(*args)
 
     def to_tree(self) -> dict:
         """

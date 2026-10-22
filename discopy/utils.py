@@ -767,6 +767,7 @@ def derived(**params) -> dataclasses.Field:
     Parameters:
         params : Passed to :func:`dataclasses.field`.
     """
+    # pylint: disable=invalid-field-call  # a field declared in a dataclass
     return dataclasses.field(init=False, **params)
 
 

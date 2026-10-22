@@ -890,7 +890,7 @@ class Tail(monoidal.Bubble, Box):
         time_step : The number of times the tail has been delayed.
     """
     part = "tail"
-    __match_args__ = Head.__match_args__
+    __match_args__ = ("arg", "time_step")
 
     arg: Diagram
 

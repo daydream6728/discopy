@@ -664,6 +664,13 @@ class Box(biclosed.Box, Diagram):
     >>> assert f.l.z == -1 and f.z == 0 and f.r.z == 1
     >>> assert f.r.l == f == f.l.r
     >>> assert f.l.l != f != f.r.r
+
+    The dagger of a rigid box keeps its winding number, a field, i.e. the
+    dagger of a rotation is the rotation of the dagger, as in a dagger
+    pivotal category, see :meth:`discopy.pivotal.Diagram.conjugate`.
+
+    >>> assert f.r[::-1] == f[::-1].r and f.r[::-1].z == 1
+    >>> assert f.r[::-1][::-1] == f.r and f.l.l[::-1][::-1] == f.l.l
     """
     z: int = 0
 
@@ -690,20 +697,6 @@ class Box(biclosed.Box, Diagram):
         dom, cod = (
             getattr(x, 'l' if left else 'r') for x in (self.cod, self.dom))
         return replace(self, dom=dom, cod=cod, z=self.z + (-1 if left else 1))
-
-    def dagger(self) -> Box:
-        """
-        The dagger of a rigid box keeps its winding number, i.e. the dagger
-        of a rotation is the rotation of the dagger, as in a dagger pivotal
-        category, see :meth:`discopy.pivotal.Diagram.conjugate`.
-
-        Example
-        -------
-        >>> f = Box('f', Ty('a'), Ty('b'))
-        >>> assert f.r[::-1] == f[::-1].r and f.r[::-1].z == 1
-        >>> assert f.r[::-1][::-1] == f.r and f.l.l[::-1][::-1] == f.l.l
-        """
-        return super().dagger()
 
     @classmethod
     def strategy(cls, **params):

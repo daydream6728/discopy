@@ -44,7 +44,7 @@ Summary
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import re
 from typing import ClassVar
 
@@ -53,7 +53,6 @@ from discopy.abc import ClosedCategory
 from discopy.cat import factory
 from discopy.grammar import thue
 from discopy.utils import (
-    derived,
     BinaryBoxConstructor,
     AxiomError,
     factory_name,
@@ -379,11 +378,11 @@ class BTR(TypeRaising):
 @dataclass(eq=False, repr=False)
 class BinaryTerm(TermBase):
     "Abstract superclass of :class:`FC`, :class:`BC`, :class:`FX`, :class:`BX`"
-    dom: Ty = derived(compare=False)
-    cod: Ty = derived(compare=False)
-    name: str = derived(compare=False)
-    data: object = derived(compare=False)
-    is_dagger: bool = derived(compare=False)
+    dom: Ty = field(init=False, compare=False)
+    cod: Ty = field(init=False, compare=False)
+    name: str = field(init=False, compare=False)
+    data: object = field(init=False, compare=False)
+    is_dagger: bool = field(init=False, compare=False)
     left: Term
     right: Term
 

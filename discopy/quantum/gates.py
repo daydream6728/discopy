@@ -1024,7 +1024,13 @@ class CRx(ControlledRotation):
 
 
 class Scalar(Parametrized):
-    """ Scalar, i.e. quantum gate with empty domain and codomain. """
+    """
+    Scalar, i.e. quantum gate with empty domain and codomain. Substitution
+    keeps its name and whether it is mixed, which are fields.
+
+    >>> from sympy.abc import phi  # doctest: +EXTRA
+    >>> assert scalar(2 * phi, is_mixed=True).subs(phi, .5).is_mixed
+    """
     def __init__(self, data, name=None, is_mixed=False, time_step=0):
         self.drawing_name = format_number(data)
         name = "scalar" if name is None else name
@@ -1064,16 +1070,6 @@ class Scalar(Parametrized):
     def dagger(self):
         return Scalar(self.data.conjugate(), self.name, self.is_mixed,
                       self.time_step)
-
-    def subs(self, *args):
-        """
-        Substitute in the data of a scalar, with the same name, mixed when it
-        is.
-
-        >>> from sympy.abc import phi  # doctest: +EXTRA
-        >>> assert scalar(2 * phi, is_mixed=True).subs(phi, .5).is_mixed
-        """
-        return super().subs(*args)
 
     def to_tree(self) -> dict:
         return dict(is_mixed=self.is_mixed, **super().to_tree())
