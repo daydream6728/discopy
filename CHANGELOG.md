@@ -1373,6 +1373,15 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
+- A tree saying `"is_dagger": false` reads back as no dagger: `cat.Box`,
+  and so every box, `monoidal.Wire`, `frobenius.Spider`,
+  `feedback.FollowedBy` and `quantum.gates.Digits` took the presence of the
+  key for its value, where `braided.Braid` and `balanced.Twist` already read
+  it. No tree written by DisCoPy holds `false`, as it writes the key only
+  when it is true, but one written by hand or another tool does; the one
+  fix of [discopy#744](https://github.com/discopy/discopy/pull/744) that
+  next `main` still lacked.
+
 - Three bugs of `cat`, `monoidal` and `tensor` (B79 of
   [rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)):
   `Bubble.subs` and `Bubble.lambdify` substitute in the args and data of the
