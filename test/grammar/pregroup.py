@@ -11,6 +11,8 @@ def test_Word():
         Word('Alice', 1)
     with raises(TypeError):
         Word('Alice', Ty('n'), dom=1)
+    Alice = Word('Alice', Ty('n'))
+    assert Alice.r[::-1].z == 1 and Alice.r[::-1][::-1] == Alice.r
 
 
 def test_eager_parse():

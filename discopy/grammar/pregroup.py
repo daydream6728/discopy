@@ -212,6 +212,8 @@ class Word(thue.Word, Box):
                  **params):
         Box.__init__(self, name, dom, cod, **params)
 
+    dagger = Box.dagger
+
     def __repr__(self):
         extra = f", dom={repr(self.dom)}" if self.dom else ""
         extra += ", is_dagger=True" if self.is_dagger else ""

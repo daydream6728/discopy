@@ -348,3 +348,10 @@ def test_Coeval():
     coeval = Eval(x << y).dagger()
     assert isinstance(coeval, Coeval) and coeval.dagger() == Eval(x << y)
     assert Diagram.box_factory is Box and Diagram.coeval_factory is Coeval
+
+
+def test_Word_dagger():
+    n = Ty('n')
+    Bob = Word('Bob', n)
+    assert (Bob[::-1].dom, Bob[::-1].cod) == (n, Ty())
+    assert (Bob >> Bob[::-1]).cod == Ty() and Bob[::-1][::-1] == Bob

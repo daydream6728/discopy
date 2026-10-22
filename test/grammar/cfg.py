@@ -1,3 +1,5 @@
+from pytest import importorskip
+
 from discopy.grammar.cfg import Tree, Rule, Word, Id, Ty
 
 x = Ty('x')
@@ -11,3 +13,20 @@ def test_eq_and_hash():
     assert Tree(w) == w == Tree(w) and hash(Tree(w)) == hash(w)
     assert Word('w', x, draw_as_spider=True).draw_as_spider
 
+
+def test_dagger():
+    assert (f[::-1].dom, f[::-1].cod) == (x, x @ x)
+    assert (w[::-1].dom, w[::-1].cod) == (x, Ty())
+    assert f[::-1][::-1] == f != f[::-1] and w[::-1][::-1] == w
+    assert Id(x)[::-1] == Id(x) and str(f[::-1]) == "f[::-1]"
+    assert f[::-1].to_diagram() == f.to_diagram()[::-1]
+
+
+def test_from_nltk():
+    nltk = importorskip("nltk")
+    tree = Tree.from_nltk(nltk.Tree.fromstring("(S (NP I) (VP saw (NP him)))"))
+    vp, np = Ty('VP'), Ty('NP')
+    assert tree.branches[1] == Rule(vp @ np, vp, name='VP')(
+        Word('saw', vp), Word('him', np))
+    assert str(Tree.from_nltk(nltk.Tree.fromstring("(NP the big dog)")))\
+        == "NP(the, big, dog)"
