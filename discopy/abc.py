@@ -759,10 +759,11 @@ class BiclosedCategory[
         """
         # pylint: disable=unused-argument  # the exponential says the side
         if not self.cod.is_exp:
-            raise ValueError
+            raise ValueError(messages.NOT_EXPONENTIAL.format(self, self.cod))
         base, exponent = self.cod.base, self.cod.exponent
         if n < len(exponent):
-            raise ValueError
+            raise ValueError(messages.NOT_UNCURRIABLE.format(
+                n, len(exponent), self.cod))
         return base, exponent
 
     def uncurry(self, n: int = 1, left: bool = True) -> C1:
@@ -776,7 +777,7 @@ class BiclosedCategory[
             left : Whether to uncurry on the left or right.
         """
         if n < 0:
-            raise ValueError
+            raise ValueError(messages.NOT_SPLITTABLE.format(n, self.cod))
         if not n:
             return self
         base, exponent = self.base_and_exponent(n, left)
@@ -876,7 +877,7 @@ class RigidCategory[C0: Pregroup, C1: RigidCategory](BiclosedCategory[C0, C1]):
             left : Whether to curry on the left or right.
         """
         if n < 0 or n > len(self.dom):
-            raise ValueError
+            raise ValueError(messages.NOT_SPLITTABLE.format(n, self.dom))
         if not n:
             return self
         if left:
@@ -896,7 +897,7 @@ class RigidCategory[C0: Pregroup, C1: RigidCategory](BiclosedCategory[C0, C1]):
             left : Whether to uncurry on the left or right.
         """
         if n > len(self.cod):
-            raise ValueError
+            raise ValueError(messages.NOT_SPLITTABLE.format(n, self.cod))
         return (self.cod[:-n], self.cod[-n:].r) if left\
             else (self.cod[n:], self.cod[:n].l)
 
@@ -983,7 +984,7 @@ class SymmetricCategory[C0, C1](BraidedCategory[C0, C1]):
         """ Compose swaps to permute the atomic objects in ``dom``. """
         xs, doms = list(xs), list(doms)
         if list(range(len(doms))) != sorted(xs):
-            raise ValueError
+            raise ValueError(messages.WRONG_PERMUTATION.format(len(doms), xs))
         tensor = lambda objects: cls.ob().tensor(*objects)
         result, done = cls.id(tensor(doms)), cls.ob()
         while xs != list(range(len(xs))):

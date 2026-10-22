@@ -689,7 +689,7 @@ def inductive(induction_step):
     def method(self, n_steps=1):
         assert_isinstance(n_steps, int)
         if n_steps < 0:
-            raise ValueError
+            raise ValueError(messages.NEGATIVE_STEPS.format(n_steps))
         if n_steps == 0:
             return self
         return method(induction_step(self), n_steps - 1)
@@ -717,7 +717,8 @@ def pushout(
     >>> assert pushout(2, 3, [1], [0]) == ({0: 0, 1: 1}, {0: 1, 1: 2, 2: 3})
     """
     if len(left_boundary) != len(right_boundary):
-        raise ValueError
+        raise ValueError(messages.UNEQUAL_BOUNDARIES.format(
+            left_boundary, right_boundary))
     components, left_pushout, right_pushout = set(), {}, {}
     left_proper = sorted(set(range(left)) - set(left_boundary))
     left_pushout.update({j: i for i, j in enumerate(left_proper)})
@@ -913,7 +914,7 @@ def assert_isatomic(typ: Ty, cls: type = None):
 def assert_istraceable(arg: Diagram, n=1, left=False):
     """ Raise :class:`AxiomError` if a diagram is not traceable. """
     if n < 0 or n > min(len(arg.dom), len(arg.cod)):
-        raise ValueError
+        raise ValueError(messages.NOT_SPLITTABLE.format(n, arg))
     traced_dom, traced_cod = (arg.dom[:n], arg.cod[:n]) if left\
         else (arg.dom[len(arg.dom) - n:], arg.cod[len(arg.cod) - n:])
     if traced_dom != traced_cod:

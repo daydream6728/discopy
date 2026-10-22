@@ -11,6 +11,9 @@ NOT_GLOBULAR = "Expected a globular box, got boundaries {} -> {} and {} -> {}."
 NOT_ATOMIC = "Expected {} of length 1, got length {} instead."
 NOT_CONNECTED = "{} is not boundary-connected."
 NOT_TRACEABLE = "Cannot trace {} with {}."
+NOT_UNCURRIABLE = "Cannot uncurry {} of the {} objects in the exponent of {}."
+NEGATIVE_STEPS = "Expected a non-negative number of steps, got {} instead."
+UNEQUAL_BOUNDARIES = "Expected boundaries of equal length, got {} and {}."
 PLANAR_YANKING = "A planar traced category has no braid to yank."
 FREE_YANKING = (
     "A free trace is a bubble and a free twist a box: the free balanced "
@@ -23,6 +26,7 @@ FEEDBACK_FORMS = (
     "Feed back either a number of objects n or a memory dom, cod, mem.")
 NOT_SPLITTABLE = "Cannot split {} atoms off {}."
 NOT_ADJOINT = "{} and {} are not adjoints."
+NOT_EXPONENTIAL = "Expected {} to have an exponential type, got {}."
 NOT_MAPPING_OR_CALLABLE = "Expected a Mapping or a Callable, got {!r}."
 NOT_RIGID_ADJOINT = "{} is not the left adjoint of {}, maybe you meant to use"\
                     " a pivotal type rather than a rigid one?"
