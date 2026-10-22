@@ -108,7 +108,12 @@ class Tree:
         return Id(dom)
 
     def __eq__(self, other):
-        return self.root == other.root and self.branches == other.branches
+        return isinstance(other, Tree)\
+            and (self.root, self.branches) == (other.root, other.branches)
+
+    def __hash__(self):
+        return hash((self.root, self.branches)) if self.branches\
+            else hash(self.root)
 
     def to_diagram(self) -> monoidal.Diagram:
         """
@@ -155,18 +160,20 @@ class Rule(Tree, thue.Rule):
     A rule is a generator of free operads, given by an atomic type ``dom``,
     a type ``cod`` of arbitrary length and an optional ``name``.
     """
-    def __init__(self, dom: monoidal.Ty, cod: monoidal.Ty, name: str = None):
+    def __init__(self, dom: monoidal.Ty, cod: monoidal.Ty, name: str = None,
+                 **params):
         assert_isinstance(dom, Ty)
         assert_isatomic(cod, Ty)
-        thue.Rule.__init__(self, dom=dom, cod=cod, name=name)
+        thue.Rule.__init__(self, dom=dom, cod=cod, name=name, **params)
         Tree.__init__(self, root=self)
 
     def __eq__(self, other):
         if isinstance(other, Rule):
-            return self.dom == other.dom and self.cod == other.cod \
-                and self.name == other.name
-        if isinstance(other, Tree):
-            return other.root == self and other.branches == []
+            return thue.Rule.__eq__(self, other)
+        return isinstance(other, Tree)\
+            and other.root == self and not other.branches
+
+    __hash__ = thue.Rule.__hash__
 
     def to_diagram(self) -> monoidal.Box:
         return monoidal.Box(self.name, self.dom, self.cod)
@@ -183,14 +190,12 @@ class Word(thue.Word, Rule):
     """
     def __init__(self, name: str, cod: monoidal.Ty, dom: monoidal.Ty = Ty(),
                  **params):
-        thue.Word.__init__(self, name=name, dom=dom, cod=cod, **params)
         Rule.__init__(self, dom=dom, cod=cod, name=name, **params)
 
 
 class Id(Rule):
     """ The identity is a rule that does nothing. """
     def __init__(self, dom):
-        self.dom, self.cod = dom, dom
         Rule.__init__(self, dom, dom, name=f"Id({dom})")
 
     def __repr__(self):
