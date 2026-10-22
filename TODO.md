@@ -10,7 +10,7 @@ algebraic normal form: copies of the inputs, then a conjunction for each monomia
 each output. Cancelling two equal monomials is not a convex match when a third monomial shares one
 of their variables, so the rules here take the convex hull of the boxes they are about.
 
-- [ ] §4 in `docs/notebooks/boolean-circuits.md`:
+- [WIP] @session_01M8CWacKqbJVKPcDMd2m3AD-2026-10-22 21:34 §4 in `docs/notebooks/boolean-circuits.md`:
   - [ ] the semantics, a functor into `Tensor[int]` with each generator as the graph of its
     function, and a rule as the convex hull of some boxes with its right side transformed
   - [ ] Theorem 10: the relations of Fig. 40 that are not on τ checked in the semantics, every
