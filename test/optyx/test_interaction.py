@@ -5,11 +5,11 @@ import pytest
 
 from discopy.utils import AxiomError
 
-from optyx.channel import Diagram, Ty, qubit, qmode
-from optyx.core.backends import DiscopyBackend
-from optyx.interaction import Box, CMap
-from optyx.photonic import BS, Create
-from optyx.qubits import Ket, Scalar, X, Z
+from discopy.optyx.channel import Diagram, Ty, qubit, qmode
+from discopy.optyx.core.backends import DiscopyBackend
+from discopy.optyx.interaction import Box, CMap
+from discopy.optyx.photonic import BS, Create
+from discopy.optyx.qubits import Ket, Scalar, X, Z
 
 
 def cnot():
