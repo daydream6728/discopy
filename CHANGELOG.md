@@ -3062,9 +3062,10 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   layer of 200 boxes takes 36 ms rather than 1.0 s. The first two images
   are still tensored with `@`, so that the image is the fold's, e.g. a type
   next to a `Permutation` gives a wider permutation. A codomain that is not
-  a `MonoidalCategory`, e.g. `kleisli.multiplicative.Channel`, still folds,
-  and `kleisli.additive.Channel.tensor` is `n`-ary like every other one
-  ([#161](https://github.com/rel-int/discopy-next/issues/161)).
+  a `MonoidalCategory`, e.g. `kleisli.multiplicative.Channel`, still folds.
+  `kleisli.additive.Channel.tensor` takes any number of others, folded two
+  at a time, so that a functor into it does not raise `TypeError`: it is no
+  faster ([#161](https://github.com/rel-int/discopy-next/issues/161)).
 
 ### Project
 
