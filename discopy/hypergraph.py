@@ -653,24 +653,23 @@ class Hypergraph(
 
     def rotate(self, left=False):
         """
-        The half-turn rotation of a hypergraph, called with ``.l`` and ``.r``.
+        The rotation of a hypergraph, called with ``.l`` and ``.r``: its
+        :meth:`transpose`, as for a :class:`discopy.cmap.CMap` and for any
+        functor, i.e. the boxes stay as they are and the wires bend around
+        them, with cups and caps that are wiring from compact categories on
+        and boxes below.
 
-        A half-turn exchanges the two boundaries of everything it turns: of
-        the hypergraph, so that its domain is the rotation of the codomain,
-        and of each box, so that the ports which read its domain come to
-        read its codomain. The spiders are rotated where they stand, being
-        the objects the ports are typed by.
+        >>> from discopy import rigid, compact
+        >>> x, y = compact.Ty('x'), compact.Ty('y')
+        >>> g = compact.Box('g', x, y @ x)
+        >>> assert g.to_hypergraph().r == g.transpose().to_hypergraph()
+        >>> assert g.to_hypergraph().r.boxes == (g, )
+        >>> x, y = rigid.Ty('x'), rigid.Ty('y')
+        >>> g = rigid.Box('g', x, y)
+        >>> assert g.to_hypergraph().l.boxes == (
+        ...     rigid.Cap(x, x.l), g, rigid.Cup(y.l, y))
         """
-        dom, cod = (x.l if left else x.r for x in (self.cod, self.dom))
-        boxes = tuple(box.l if left else box.r for box in self.boxes[::-1])
-        dom_wires = self.cod_wires[::-1]
-        box_wires = tuple((y[::-1], x[::-1]) for x, y in self.box_wires[::-1])
-        cod_wires = self.dom_wires[::-1]
-        wires = dom_wires, box_wires, cod_wires
-        spider_types = tuple(
-            x.l if left else x.r for x in self.spider_types)
-        return type(self)(
-            dom, cod, boxes, wires, spider_types, self.offsets[::-1])
+        return self.transpose(left)
 
     l = property(lambda self: self.rotate(left=True))
     r = property(lambda self: self.rotate(left=False))
@@ -2128,6 +2127,10 @@ class Hypergraph(
         """
         Turn a box into a hypergraph with binary spiders for each wire.
 
+        Over a rigid category, a box with a winding number ``z``, i.e. a
+        rotation of a generator, is the :meth:`rotate` of that generator, so
+        its transpose, as it is for a functor.
+
         Parameters:
             box : The box to turn into a hypergraph.
 
@@ -2142,7 +2145,19 @@ class Hypergraph(
         Node('cod', depth=0, i=1, obj=z)
         Node('output', i=0, obj=y)
         Node('output', i=1, obj=z)
+
+        >>> f = Box('f', x, y)
+        >>> assert H.from_box(f.r) == H.from_box(f).transpose()
         """
+        winding = getattr(box, "z", 0)\
+            if issubclass(cls.category, RigidCategory) else 0
+        if winding:
+            for _ in range(abs(winding)):
+                box = box.l if winding > 0 else box.r
+            result = cls.from_box(box)
+            for _ in range(abs(winding)):
+                result = result.l if winding < 0 else result.r
+            return result
         spider_types = tuple(box.dom @ box.cod)
         left = tuple(range(len(box.dom)))
         right = tuple(range(len(box.dom), len(box.dom @ box.cod)))

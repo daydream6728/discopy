@@ -193,6 +193,29 @@ def test_cups_and_caps_are_checked_in_port_order():
             K(dom, cod, (), ((0, 0) if dom else (), (), (0, 0) if cod else ()))
 
 
+def test_rotation_is_the_transpose():
+    """ Decision 7 of #56: a rotated box has the hypergraph of its
+    transpose, as it has the map of its transpose, at every level from
+    rigid up. """
+    from discopy import rigid, pivotal, ribbon, compact, frobenius
+    from discopy.hypergraph import Hypergraph
+    for module in (rigid, pivotal, ribbon, compact, frobenius):
+        x, y = module.Ty('x'), module.Ty('y')
+        g = module.Box('g', x, y @ x)
+        assert g.r.to_hypergraph() == g.transpose().to_hypergraph()\
+            == Hypergraph[module.Diagram].from_box(g.r)\
+            == g.to_hypergraph().r
+        for rotated in (g.r, g.l, g.r.r, g.l.l, g.r.l):
+            assert rotated.to_map().to_hypergraph() == rotated.to_hypergraph()
+    for module in (rigid, compact, frobenius):
+        x, y = module.Ty('x'), module.Ty('y')
+        g = module.Box('g', x, y @ x)
+        assert g.l.to_hypergraph()\
+            == g.transpose(left=True).to_hypergraph()
+        assert g.r.r.to_hypergraph()\
+            == g.transpose().transpose().to_hypergraph()
+
+
 def test_spider_producers_and_consumers():
     from discopy import compact
     K = compact.Hypergraph
