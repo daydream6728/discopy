@@ -39,9 +39,20 @@ def test_Hypergraph_hash():
     assert hash(H.id(x @ y)) == hash(H.id(x) @ H.id(y))
 
 
+def test_Hypergraph_eq_sees_the_type_of_a_scalar_spider():
+    from discopy.frobenius import Equation
+    x, y = map(Ty, "xy")
+    assert H.spiders(0, 0, x) != H.spiders(0, 0, y)
+    assert hash(H.spiders(0, 0, x)) != hash(H.spiders(0, 0, y))
+    assert H.spiders(0, 0, x @ y) == H.spiders(0, 0, y @ x)
+    assert hash(H.spiders(0, 0, x @ y)) == hash(H.spiders(0, 0, y @ x))
+    f = Box('f', x, x)
+    assert not Equation(Spider(0, 0, x) @ f, Spider(0, 0, y) @ f)
+
+
 def test_Hypergraph_then():
     x, y = map(Ty, "xy")
-    with raises(AxiomError):
+    with raises(AxiomError, match="Expected y, got x"):
         H.id(x) >> H.id(y)
 
 
@@ -56,7 +67,7 @@ def test_Hypergraph_getitem():
 
 
 def test_Hypergraph_bijection():
-    with raises(ValueError):
+    with raises(ValueError, match="not bijective"):
         H.spiders(1, 2, Ty('x')).bijection
 
 
@@ -73,6 +84,20 @@ def test_Hypergraph_make_causal_does_not_assume_topological_order():
     assert not h.is_causal
     assert h.make_causal().is_causal
     assert h.topological_order().is_causal
+
+
+def test_Hypergraph_depth_counts_states_and_effects():
+    from discopy import symmetric
+    x = Ty('x')
+    state, effect = Box('f', Ty(), x), Box('g', x, Ty())
+    scalar, f = Box('s', Ty(), Ty()), Box('f', x, x)
+    for diagram, depth in [
+            (state, 1), (effect, 1), (scalar, 1), (state >> effect, 2),
+            (f @ (state >> effect), 2), (f >> f, 2), (f.trace(), 3)]:
+        assert diagram.depth() == len(diagram.foliation()) == depth
+    sx = symmetric.Ty('x')
+    assert symmetric.Box('f', symmetric.Ty(), sx).depth() == 1
+    assert symmetric.Box('f', sx, sx).trace().depth() == 1
 
 
 def test_Hypergraph_draw_is_reproducible(tmp_path):
@@ -147,8 +172,9 @@ def test_non_adjoint_wire():
     with raises(AxiomError):
         K(compact.Ty(), x @ x, (), ((), (), (0, 0)))
     # Adjoint cups and caps, and self-dual frobenius caps, are fine.
-    assert K.cups(x, x.r) and K.caps(x.r, x)
-    assert Cap(Ty('x'), Ty('x')).to_hypergraph()
+    assert K.cups(x, x.r).wires == ((0, 0), (), ())
+    assert K.caps(x.r, x).wires == ((), (), (0, 0))
+    assert Cap(Ty('x'), Ty('x')).to_hypergraph() == H.spiders(0, 2, Ty('x'))
 
 
 def test_spider_producers_and_consumers():
@@ -467,6 +493,16 @@ def test_coloured_diagram_has_no_hypergraph():
     for convert in (Diagram.to_hypergraph, Diagram.to_map):
         for diagram in (Box('f', x, x), scalar):
             with raises(AxiomError, match="coloured"):
+                convert(diagram)
+
+
+def test_sum_has_no_hypergraph():
+    from discopy.symmetric import Box, Diagram, Ty
+    x = Ty('x')
+    f, g = Box('f', x, x), Box('g', x, x)
+    for convert in (Diagram.to_hypergraph, Diagram.to_map):
+        for diagram in (f + g, (f + g) @ x, Diagram.sum_factory((), x, x)):
+            with raises(AxiomError, match="has no sums"):
                 convert(diagram)
 
 
