@@ -8,4 +8,4 @@ Copy of rel-int/optyx#82 onto discopy.optyx (#225)
 
 - [x] merge the parent copy branch `optyx-76` (the port of rel-int/optyx#76)
 - [x] port to `discopy.optyx` on next `main`
-- [ ] checks
+- [x] checks
