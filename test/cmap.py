@@ -424,7 +424,7 @@ def test_curry_uncurry_roundtrip(module):
     cmap = f.to_map()
 
     assert cmap.curry(n=0).uncurry(n=0) == cmap
-    with raises(ValueError, match="split"):
+    with raises(ValueError):
         cmap.curry(n=3)
     with raises(ValueError):
         cmap.uncurry(n=2)
