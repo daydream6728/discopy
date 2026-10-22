@@ -46,7 +46,6 @@ from networkx import (
     spring_layout,
     draw_networkx,
     has_path,
-    dag_longest_path_length,
     topological_sort,
     weisfeiler_lehman_graph_hash,
 )
@@ -408,7 +407,7 @@ class Hypergraph(
         Composition of two hypergraph diagrams, i.e. their :func:`pushout`.
         """
         if not self.cod == other.dom:
-            raise AxiomError
+            raise AxiomError(messages.TYPE_ERROR.format(other.dom, self.cod))
         dom, cod = self.dom, other.cod
         boxes, offsets = self.boxes + other.boxes, self.offsets + other.offsets
         left, right = pushout(
@@ -828,7 +827,8 @@ class Hypergraph(
                 tuple(sorted(repr(box) for box in self.boxes)),
                 tuple(sorted(map(repr, self.spider_types)))))
         return hash((self.dom, self.cod, weisfeiler_lehman_graph_hash(
-            self.to_graph(), node_attr="box")))
+            self.to_graph(), node_attr="box"),
+            tuple(sorted(map(repr, self.spider_types)))))
 
     def box_dependencies(self):
         """
@@ -1067,7 +1067,8 @@ class Hypergraph(
         3 -> 2
         """
         if not self.is_bijective:
-            raise ValueError
+            raise ValueError(messages.NOT_BIJECTIVE.format(
+                factory_name(type(self))))
         result, flat_wires = {}, list(self.flat_wires)
         for i, spider in enumerate(flat_wires):
             if spider not in flat_wires[i + 1:]:
@@ -2245,6 +2246,8 @@ class Hypergraph(
         assert_transparent(old)
         category = type(old).ar
         factory = cls if cls.category is category else cls[category]
+        if any(isinstance(box, cat.Sum) for box in old.boxes):
+            raise AxiomError(messages.NO_SUMS.format(factory_name(factory)))
         functor = factory.functor(
             ob_map=lambda typ: typ, ar_map=factory.from_box,
             dom=category, cod=factory)
@@ -2476,7 +2479,7 @@ class Hypergraph(
         """
         graph = Graph()
         graph.add_nodes_from(
-            (Node("spider", i=i, obj=obj), dict(box=None))
+            (Node("spider", i=i, obj=obj), dict(obj=obj, box=None))
             for i, obj in enumerate(self.spider_types))
         graph.add_nodes_from(
             (Node("input", i=i, obj=obj), dict(i=i, box=None))
@@ -2510,8 +2513,24 @@ class Hypergraph(
         return graph
 
     def depth(self) -> int:
-        """ The depth of a causal hypergraph. """
-        return dag_longest_path_length(self.make_causal().to_graph()) // 4
+        """
+        The depth of a hypergraph, i.e. the largest number of boxes on a
+        directed path once it is made causal by :meth:`make_causal`: the
+        number of layers of its shortest foliation, swaps being wiring.
+
+        >>> from discopy.frobenius import Ty, Box, Hypergraph as H
+        >>> x = Ty('x')
+        >>> state, effect = Box('f', Ty(), x), Box('g', x, Ty())
+        >>> assert H.id(x).depth() == 0
+        >>> assert state.to_hypergraph().depth() == 1
+        >>> assert (state >> effect).to_hypergraph().depth() == 2
+        """
+        graph, depth = self.make_causal().to_graph(), {}
+        for node in topological_sort(graph):
+            depth[node] = (node.kind == "box") + max(
+                (depth[before] for before in graph.predecessors(node)),
+                default=0)
+        return max(depth.values(), default=0)
 
     def spring_layout(self, seed=None, k=None):
         """ Computes a layout using a force-directed algorithm. """
