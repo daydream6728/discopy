@@ -1595,9 +1595,63 @@ class Hypergraph(
         assert self.is_bijective
         return self
 
+    def leg_order(self, *legs: int) -> tuple[int, ...]:
+        """
+        The legs of a cup or a cap, i.e. ports of one spider that are all
+        written to or all read from, in the order in which their readers sit
+        in the scan of :meth:`to_diagram`, or their writers for a cup.
+
+        An output or an input sits at its index, and the port of a box at its
+        index in the box after where the box sits, i.e. where its leftmost
+        output is read for a reader, where its leftmost input is written for
+        a writer, following the wires that point forward. So legs compare as
+        the outputs they reach, or the inputs that reach them, and by their
+        order in the first box that reads or writes both. They stay in port
+        order when this does not tell them apart, e.g. when a reader is an
+        effect, and outside a symmetric category, which has no swap to save.
+
+        Parameters:
+            legs : The indices of the ports, in :attr:`ports`.
+
+        Example
+        -------
+        >>> from discopy.compact import Ty, Box, Cap
+        >>> x = Ty('x')
+        >>> graph = (Cap(x.r, x) >> x.r @ Box('g', x, x)).to_hypergraph()
+        >>> [graph.ports[i].kind for i in graph.leg_order(0, 2)]
+        ['output', 'dom']
+        >>> print(graph.to_diagram())
+        Cap(x.r, x) >> x.r @ g
+        """
+        if not issubclass(self.category, SymmetricCategory):
+            return legs
+        ports, ends = self.ports, {}
+        for producers, consumers in self.spider_wires:
+            for port in producers | consumers:
+                ends[port] = (producers | consumers) - {port}
+        reads = ports[legs[0]].kind in ("dom", "output")
+        keys = {port: (node.i, ) for port, node in enumerate(ports)
+                if node.kind == ("output" if reads else "input")}
+        box_ports, start = [], len(self.dom)
+        for box in self.boxes:
+            middle, stop = start + len(box.dom), start + len(box.dom @ box.cod)
+            box_ports.append((range(start, middle), range(middle, stop)))
+            start = stop
+        for dom, cod in reversed(box_ports) if reads else box_ports:
+            sides, legs_of_box = (cod, dom) if reads else (dom, cod)
+            found = [keys[end] for side in sides for end in ends[side]
+                     if end in keys]
+            keys.update({port: min(found) + (ports[port].i, )
+                         for port in legs_of_box if found})
+        found = [keys.get(leg) for leg in legs]
+        if None in found or len(set(found)) < len(found):
+            return legs
+        return tuple(leg for _, leg in sorted(zip(found, legs)))
+
     def make_monogamous(self) -> Hypergraph:
         """
-        Introduce :class:`Cup` and :class:`Cap` boxes to make self monogamous.
+        Introduce :class:`Cup` and :class:`Cap` boxes to make self monogamous,
+        their legs in the order of :meth:`leg_order`.
 
         Example
         -------
@@ -1625,11 +1679,12 @@ class Hypergraph(
                 if self.ports[target].kind in kinds:
                     spider_types = dict(enumerate(self.spider_types))
                     typ = spider_types[spider]
+                    first, second = self.leg_order(source, target)
                     source_obj, target_obj = (
-                        self.ports[source].obj, self.ports[target].obj)
+                        self.ports[first].obj, self.ports[second].obj)
                     left, right = len(spider_types), len(spider_types) + 1
                     fwires = list(self.flat_wires)
-                    fwires[source], fwires[target] = left, right
+                    fwires[first], fwires[second] = left, right
                     if cups_or_caps == "cups":
                         boxes = self.boxes + (self.category.cup_factory(
                             source_obj, target_obj), )
