@@ -1717,7 +1717,10 @@ class Hypergraph(
 
     def make_causal(self) -> Hypergraph:
         """
-        Introduce trace boxes to make self causal.
+        Introduce trace boxes to make self causal. A spider that is not left
+        monogamous is first given a merge, see :meth:`make_left_monogamous`,
+        when the category has merges, i.e. it is a :class:`ComarkovCategory`,
+        and is bent with cups and caps otherwise, see :meth:`make_monogamous`.
 
         Example
         -------
@@ -1730,10 +1733,20 @@ class Hypergraph(
         >>> from discopy.frobenius import Hypergraph as H, Spider
         >>> assert H.spiders(2, 1, x).make_causal().boxes\\
         ...     == (Spider(2, 1, x),)
+
+        >>> from discopy import compact
+        >>> y = compact.Ty('y')
+        >>> assert compact.Cup(y, y.r).to_hypergraph().make_causal().boxes\\
+        ...     == (compact.Cup(y, y.r), )
         """
-        if not self.is_left_monogamous:
+        if self.is_left_monogamous:
+            return self.trace_backward_wires()
+        if issubclass(self.category, ComarkovCategory):
             return self.make_left_monogamous().make_causal()
-        return self.trace_backward_wires()
+        if not issubclass(self.category, RigidCategory):
+            raise AxiomError(messages.NOT_RIGID.format(
+                factory_name(self.category)))
+        return self.make_monogamous().make_causal()
 
     def make_cocausal(self) -> Hypergraph:
         """

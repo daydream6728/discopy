@@ -294,6 +294,17 @@ def test_Hypergraph_cap_after_states():
         assert decoded in (diagram, diagram.foliation())
 
 
+def test_Hypergraph_make_causal_without_spiders():
+    """ A category with cups and caps but no merges bends its wires instead,
+    e.g. to compute the depth of a transpose. """
+    from discopy import compact
+    x = compact.Ty('x')
+    cup = compact.Cup(x, x.r)
+    assert cup.to_hypergraph().make_causal().boxes == (cup, )
+    transpose = compact.Box('f', x, x).transpose().to_hypergraph()
+    assert transpose.make_causal().is_causal
+
+
 def test_Hypergraph_from_glued():
     x = Ty('x')
     f, g = Box('f', x, x).to_hypergraph(), Box('g', x, x).to_hypergraph()
