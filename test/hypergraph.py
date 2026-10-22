@@ -697,3 +697,36 @@ def test_rewrite_errors():
         list(f.rewrite((f, H.id(x))))
     with raises(AxiomError):
         f.plug(f)
+
+
+def test_rewriting_edge_cases():
+    x = Ty('x')
+    f, g, h, k = (Box(name, x, x).to_hypergraph() for name in "fghk")
+    m = Box('m', x @ x, x).to_hypergraph()
+    assert list((f >> f).homomorphisms(f @ f, injective=True)) == []
+    assert list((f >> f).homomorphisms(f @ f))
+    assert list(m.homomorphisms(H.copy(x) >> m)) == []
+    assert not (f >> f).is_convex(((0, 0), (0, )))
+    diamond = f >> H.copy(x) >> g @ h >> H.merge(x) >> k
+    match, = diamond.homomorphisms(f)
+    assert diamond.is_convex(match)
+    glued = f >> H.copy(x) >> g @ x
+    match, = glued.homomorphisms(f >> g)
+    assert list(glued.complements(f >> g, match)) == []
+
+
+def test_rewrite_keeps_the_offsets():
+    from discopy import symmetric
+    x = symmetric.Ty('x')
+    f, g = symmetric.Box('f', x, x), symmetric.Box('g', x, x)
+    a, k = symmetric.Box('a', symmetric.Ty(), x), symmetric.Box('k', x @ x, x)
+    rewrite, = (f @ a >> k).to_hypergraph().rewrite(
+        (f.to_hypergraph(), g.to_hypergraph()))
+    assert str(rewrite) == "g @ a >> k"
+
+
+def test_complements_are_lazy():
+    x = Ty('x')
+    f, g = (Box(name, x, x).to_hypergraph() for name in "fg")
+    host = H.spiders(1, 40, x) >> f.tensor(*39 * [f])
+    assert next(host.rewrite((H.id(x), f >> g))) is not None
