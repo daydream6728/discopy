@@ -7,6 +7,6 @@
 - [x] B45: self-contradictory and type-only error messages, the stale `pytest_plugin` pointer, `quantum.CY` (only if it exists unexported)
 - [x] B84 of #31: `post.py` dying before `record()` leaves `clean` unset; the discopy/discopy#679 guard reads `steps.review.outcome` only: gone on `main`, `.github/style-review/` and its hand-over were retired by discopy/discopy#708 (`cd97339b`), and `benchmark_comment.mismatch` was fixed by #205
 - [x] B87 of #31, circuit part: `test/quantum/circuit.py` skipped whole without torch; `test_CCX_decompose` leaks `np.set_printoptions`; `test_grad_basic`/`test_Sum` compare the int `0` to `0`
-- [ ] B88 of #31, static part: `uv_build` in `CONTRIBUTING.md` and the dead `[tool.uv.build-backend]`; `persist-credentials: false` claim; `pytest .github/tests/*.py` needs `--import-mode=importlib`; stray root `readme.py`; CHANGELOG `Ty.name` line; `docs/conf.py` mocks `sympy` and `pytket`
+- [x] B88 of #31, static part: `uv_build` in `CONTRIBUTING.md` and the dead `[tool.uv.build-backend]`; `persist-credentials: false` claim; `pytest .github/tests/*.py` needs `--import-mode=importlib`; stray root `readme.py`; CHANGELOG `Ty.name` line; `docs/conf.py` mocks `sympy` and `pytket`. Already on `main`: `pytest .github/tests/*.py` passes without the flag since discopy/discopy#708 took the style-review tests, and the `Ty.name` line went in `418c6d02`
 - [ ] `discopy/autonomisation.gif` and `discopy/snake-removal.gif` tracked inside the package
 - [ ] CHANGELOG

@@ -45,7 +45,7 @@ graphviz_output_format = 'svg'
 
 autosummary_generate = True
 
-autodoc_mock_imports = ["pytket", "pennylane", "torch", "sympy"]
+autodoc_mock_imports = ["pennylane"]
 
 autodoc_typehints = "description"
 autodoc_typehints_format = "short"
