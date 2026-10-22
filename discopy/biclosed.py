@@ -255,9 +255,6 @@ class Wire(monoidal.Wire):
         return self
 
 
-Ty.generator_factory = Wire
-
-
 class Exp(Wire):
     """
     A :code:`base` type to an :code:`exponent` type, called with :code:`**`.

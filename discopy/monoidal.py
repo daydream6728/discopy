@@ -361,19 +361,16 @@ class Ty(cat.Ob, cat.FreeCategory, ColouredMonoid):
         """
         Turn a constructor argument into a ``self.generator_factory``.
 
-        Old dumps, pickles and printed types used a plain ``cat.Ob`` as the
-        generators, or an uncoloured ``Wire`` where a level has wires of
-        its own: upgrade it to the generator of its name.
+        Old dumps and pickles used a plain ``cat.Ob``, with no colour, as
+        the generators: upgrade it to ``Wire(x.name)`` for subclasses whose
+        generators are plain ``Wire``.
         """
         if isinstance(x, self.generator_factory):
             return x
         if isinstance(x, str):
             return self.generator_factory(x)
-        if issubclass(self.generator_factory, Wire) and (
-                type(x) is cat.Ob or type(x) is Wire and x == Wire(x.name)):
+        if self.generator_factory is Wire and type(x) is cat.Ob:
             return self.generator_factory(x.name)
-        assert_isinstance(x, (str, self.generator_factory) + (
-            (cat.Ob, ) if self.generator_factory is Wire else ()))
         raise AxiomError(
             messages.TYPE_ERROR.format(self.generator_factory, type(x)))
 
@@ -383,6 +380,9 @@ class Ty(cat.Ob, cat.FreeCategory, ColouredMonoid):
         inside = kwargs.pop('inside', inside)
         if kwargs:
             raise TypeError(f"Unexpected keyword arguments: {list(kwargs)}.")
+        for obj in inside:
+            assert_isinstance(obj, (str, self.generator_factory) + (
+                (cat.Ob, ) if self.generator_factory is Wire else ()))
         inside = tuple(map(self.cast_wire, inside))
         if dom is None:
             dom = inside[0].dom if inside else transparent

@@ -17,8 +17,8 @@ def test_Over():
     assert not isinstance((x << y).inside[0], Ty)
     assert (x << y).inside == (Over(x, y), )
     assert repr(Over(x, y))\
-        == "biclosed.Over(biclosed.Ty(biclosed.Wire('x')), "\
-           "biclosed.Ty(biclosed.Wire('y')))"
+        == "biclosed.Over(biclosed.Ty(monoidal.Wire('x')), "\
+           "biclosed.Ty(monoidal.Wire('y')))"
     assert {Over(x, y): 42}[Over(x, y)] == 42
     assert Over(x, y) != Under(x, y)
 
@@ -32,18 +32,10 @@ def test_Under():
     assert not isinstance((x >> y).inside[0], Ty)
     assert (x >> y).inside == (Under(y, x), )
     assert repr(Under(x, y))\
-        == "biclosed.Under(biclosed.Ty(biclosed.Wire('x')), "\
-           "biclosed.Ty(biclosed.Wire('y')))"
+        == "biclosed.Under(biclosed.Ty(monoidal.Wire('x')), "\
+           "biclosed.Ty(monoidal.Wire('y')))"
     assert {Under(x, y): 42}[Under(x, y)] == 42
     assert Under(x, y) != Over(x, y)
-
-
-def test_Ty_generator():
-    x, env = Ty('x'), {"biclosed": biclosed, "cat": cat, "monoidal": monoidal}
-    assert Ty(Wire('x')) == x and type(x.inside[0]) is Wire
-    for text in [repr(x), "biclosed.Ty(cat.Ob('x'))",
-                 "biclosed.Ty(monoidal.Wire('x'))"]:
-        assert eval(text, env) == x
 
 
 def test_Term():
