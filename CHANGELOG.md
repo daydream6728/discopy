@@ -9,6 +9,12 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Added
 
+- `kleisli` channels, monad homomorphisms and `python.Function` enrol in
+  the property matrix, compared extensionally by `axioms.Extensional`: an
+  equation of functions compares their graphs on a finite sample of their
+  domain, `axioms.values`, rather than their insides, callables compared by
+  identity. `monoidal.List` is a `TestableGeneric` of Python types.
+
 - Hypothesis strategies from the combinatorial representations:
   `Hypergraph.strategy` draws a wiring port by port under the spider
   constraint of its category, then a box for each box of the wiring, and

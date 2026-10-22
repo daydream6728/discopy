@@ -49,12 +49,14 @@ NO_PLANAR_NORMAL_FORM = (
     "A planar law is compared on the nose: a hypergraph is faithful only "
     "from symmetric categories on, and there is no normal form for this "
     "doctrine yet.")
+NO_VALUES = "{} has no sample of values, see axioms.values."
 NO_TENSOR = "An arrow of a category has no tensor for its dagger to "\
     "distribute over."
 GROUP_TENSOR = "The tensor of a group is its composition, which its dagger "\
     "reverses rather than distributes over."
 SWAP_INVOLUTION = (
     "The inverse of a swap is the swap the other way, see swap_inverse.")
+CHANNEL_TRACES_RIGHT = "A channel is traced on the right only."
 PARA_CURRY_COPAR = (
     "A closed category cannot curry a map with coparameters {}, as its "
     "exponential would swallow them.")
