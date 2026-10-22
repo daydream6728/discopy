@@ -19,6 +19,7 @@ Summary
     Match
     Rule
     Hypergraph
+    Rewriter
     Functor
 
 .. admonition:: Functions

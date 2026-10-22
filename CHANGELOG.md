@@ -9,6 +9,12 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Added
 
+- `hypergraph.Rewriter`, double-pushout rewriting in place with left-linear
+  rules, whose pushout complement is unique: each step costs the size of the
+  rule rather than of the host, and the match search is shared with
+  `Hypergraph`. `Hypergraph` takes `_scan=False` to skip its checks, as
+  `cat.Arrow` does, for rules built for each match.
+
 - Double-pushout rewriting of hypergraphs, after Bonchi et al.'s *String
   diagram rewrite theory* I and II: a rule is a pair of parallel hypergraphs,
   `Hypergraph.match` finds the homomorphisms with the gluing conditions,
