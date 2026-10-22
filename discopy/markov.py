@@ -319,7 +319,8 @@ feedback.Ty(feedback.Wire('x')), is_deterministic=False)
 
     def __init__(self, *args, is_deterministic=True, is_affine=True,
                  **params):
-        self.deterministic, self.affine = is_deterministic, is_affine
+        self.deterministic = params.pop("deterministic", is_deterministic)
+        self.affine = params.pop("affine", is_affine)
         super().__init__(*args, **params)
 
     @property
