@@ -170,3 +170,5 @@ def test_count_and_widths_for():
     assert built[1] == Widths(5, 13, 26, 7)
     assert widths_for(10 ** 9, lambda w: torch.nn.Linear(1, 1), low=3,
                       high=5) == Widths(3, 8, 16, 4)
+    assert widths_for(10 ** 9, lambda w: torch.nn.Linear(1, 1), (2, 4, 8, 2),
+                      low=3, high=3) == Widths(3, 6, 12, 3)
