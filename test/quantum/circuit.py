@@ -555,7 +555,7 @@ def test_pennylane_parameterized_ops():
 
 
 def test_pennylane_complex_scalar_probabilities():
-    circuit = scalar(1j) @ Ket(0) >> H
+    circuit = scalar(2j) @ Ket(0) >> H
     plane = circuit.to_pennylane(probabilities=True).eval().numpy()
     assert np.allclose(plane, (circuit >> Measure()).eval().array)
 
