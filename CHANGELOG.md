@@ -20,6 +20,34 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   the bias-corrected `EMA` and the per-sample gradient clip
   `per_board_backward` ([rel-int/Recursive_GNNs#1](https://github.com/rel-int/Recursive_GNNs/issues/1)).
 
+- Double-pushout rewriting for planar diagrams, on `cmap.CMap`: the map of a
+  diagram in a monoidal category is the diagram up to interchange, faithfully
+  when it is connected (Delpeuch & Vicary, Section 8), so matching it needs
+  no interchange at all. `CMap.sweep` is a line sweeping a planar map down:
+  a box goes as soon as its inputs are side by side, a state in the gap of
+  its face that keeps every face turning by a full turn (Bertolazzi et al.),
+  so the sweep never gets stuck on a map that some layering has, checked
+  against all of them on random wirings. `encode` and `is_progressive` read
+  it off, and `to_diagram` sweeps when the category has no swaps, so that a
+  state left of a wire decodes again instead of asking for a swap.
+  `homomorphisms(pattern)` are injective on boxes and found along wires;
+  `match(pattern)` keeps those whose image, contracted into one box, still
+  sweeps, and yields the one pushout complement as a `monoidal.Match`, the
+  diagram with a hole; `rewrite`, `normalize` and `normal_form` take rules
+  as pairs of parallel maps. Over a planar category a host must be
+  connected: a map does not say in which face a component touching nothing
+  else lies. The spiral unwinds to the empty diagram in `2n + 1` steps under
+  three rules, from its centre, whether drawn as built or in normal form,
+  where the counit is the last box.
+- `discopy.spacial`, the free spacial category, and `abc.SpacialCategory`: a
+  monoidal category whose scalars slide, `s @ f == f @ s`, the axiom
+  `scalar_sliding` (Selinger's survey). A floating component then lies in
+  no face in particular, so `CMap.match` takes any spacial host, connected
+  or not, and a closed pattern any union of floating components: a scalar
+  inside a circle is a scalar beside it. `BraidedCategory` is a
+  `SpacialCategory`, so the matrix checks the law on `matrix.Matrix[int]`;
+  `closed.TermBase` declares it inapplicable, like the other laws of its
+  diagrams.
 - `discopy.ehypergraph`, e-graphs of diagrams with sharing: an
   `EHypergraph` over a copy-discard category is a left-monogamous acyclic
   `Hypergraph`, whose boxes are the e-nodes, with an equivalence relation on
@@ -2765,6 +2793,35 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   input of the controlled box rather than its first one, so gates with a
   classical wire or a distance other than one are drawn on the right wires
   ([#439](https://github.com/discopy/discopy/pull/439)).
+- The daggers of grammar rules and words: `thue.Word` and
+  `categorial.Word`, which take `(name, cod, dom)`, came back from the
+  positional rebuild of `cat.Box.dagger` with the same `dom` and `cod`, so
+  `Bob >> Bob[::-1]` raised `AxiomError`, and the daggers of `thue.Rule`,
+  `cfg.Rule` and `cfg.Word` raised `TypeError`. `thue.Rule.dagger` rebuilds
+  by keyword and its `repr` says when a rule is daggered or carries data;
+  the dagger of a context-free rule has an atomic domain instead,
+  `cfg.Id` is its own dagger, and `pregroup.Word` keeps the pivotal dagger,
+  which flips its winding too. `cfg.Tree.from_nltk` keeps every child of a
+  tree, a word typed by the label of the tree it sits in, where it returned
+  at the first word, so that `(NP the big dog)` was `the` (B67 of
+  [rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
+- `grammar.cfg` compares and hashes: a rule compares as the box it is, a
+  tree by its root and branches and a tree with no branches as its root,
+  where comparing a tree to anything else raised and neither was
+  hashable, so that an `Algebra` could not map a rule through a `dict`; a
+  `cfg.Word` takes the drawing parameters and data of a box; and
+  `dependency.doc2tree` makes a token with no children a `Word`, where it
+  read spaCy's `children` generator as always true (B30 of
+  [rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
+- `pregroup.Diagram.normal_form` of a foliated diagram, splitting a layer
+  of more than one box into staircases first, and of a word with a wire on
+  its left that is not a word, as in `n @ Alice`, which goes to the rigid
+  normal form, where both raised an error (B31 of
+  [rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
+- `eval(repr(x)) == x` for `cfg.Tree`, `cfg.Rule`, `cfg.Id` and
+  `pregroup.Word`, which printed the `str` of their root, `Id(x)` and a bare
+  `Word(` without its data (B86 of
+  [rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
 - Drawing a discard on more than one wire: `draw_discard` was shadowing the
   layer index with its inner loop counter
   ([#513](https://github.com/discopy/discopy/issues/513)).
