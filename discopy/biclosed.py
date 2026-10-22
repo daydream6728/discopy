@@ -422,12 +422,17 @@ class Eval(Box):
         left : Whether to evaluate ``x @ x.exponent`` on the left or
             ``x.exponent @ x`` on the right, by default the right for an
             :class:`Under` and the left otherwise, as :meth:`Diagram.ev`.
+            An :class:`Over` is evaluated on the left only and an
+            :class:`Under` on the right only.
     """
     def __init__(self, x: Exp, left=None):
         assert x.is_exp
         self.x = x
         exp = x.inside[0]
         self.left = not isinstance(exp, Under) if left is None else left
+        if isinstance(exp, Under if self.left else Over):
+            raise AxiomError(messages.WRONG_SIDE.format(
+                not self.left, x, self.left))
         dom, cod = (x @ x.exponent, x.base) if self.left\
             else (x.exponent @ x, x.base)
         super().__init__("Eval" + str(x), dom, cod)
@@ -479,6 +484,9 @@ class Coeval(Box):
         self.x = x
         exp = x.inside[0]
         self.left = not isinstance(exp, Under) if left is None else left
+        if isinstance(exp, Under if self.left else Over):
+            raise AxiomError(messages.WRONG_SIDE.format(
+                not self.left, x, self.left))
         cod, dom = (x @ x.exponent, x.base) if self.left\
             else (x.exponent @ x, x.base)
         super().__init__("Coeval" + str(x), dom, cod)

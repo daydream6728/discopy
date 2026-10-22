@@ -337,6 +337,14 @@ def test_transparency():
         assert loads(dumps(box)) == box
 
 
+def test_Eval_on_the_wrong_side():
+    x, y = Ty('x'), Ty('y')
+    for box in (Eval, Coeval):
+        for exp, left in ((x << y, False), (y >> x, True)):
+            with raises(AxiomError):
+                box(exp, left=left)
+
+
 def test_unit_exponential():
     """ An exponential of the unit is its base, so that currying no wire and
     evaluating at the unit are the identity, which converts to a map. """
