@@ -96,12 +96,17 @@ from discopy import cat, monoidal, cmap, messages
 from discopy.abc import BiclosedCategory, DaggerCategory, MonoidalCategory
 from discopy.axioms import (
     GENERATORS, Equation as AbstractEquation, Equivalence, Serialisable,
-    Testable, axiom)
+    Testable, TestableGeneric, axiom)
 from discopy.drawing import Drawing
 from discopy.cat import factory
 from discopy.utils import (
-    AxiomError, assert_isinstance, deprecated_alias, factory_name, from_tree,
-    get_origin, NamedGeneric)
+    AxiomError,
+    assert_isinstance,
+    deprecated_alias,
+    factory_name,
+    from_tree,
+    get_origin,
+)
 
 if TYPE_CHECKING:
     from hypothesis import strategies as st
@@ -705,6 +710,155 @@ CMap = cmap.CMap[Diagram]
 Diagram.functor_factory = Functor
 
 
+class Renamed[factory](TestableGeneric, tuple):
+    """
+    Alpha-equivalent terms of the ``factory``: one shape generated under two
+    or more namings of its bound variables, see :meth:`TermBase.generate`.
+
+    Example
+    -------
+    >>> from hypothesis import find
+    >>> terms = find(
+    ...     Renamed[TermBase].strategy(), lambda terms: len(terms) == 3)
+    >>> assert terms[0].alpha_eq(*terms[1:])
+    """
+    @classmethod
+    def checked_params(cls) -> tuple:
+        """ None, a sort of premises being drawn over a category. """
+        return ()
+
+    @classmethod
+    def strategy(cls, **params) -> "st.SearchStrategy[Renamed]":
+        """
+        Generate a shape and at least two namings of it.
+
+        Parameters:
+            params : Passed to :meth:`TermBase.shapes`.
+        """
+        from hypothesis import strategies as st
+
+        category = cls.factory
+        return st.builds(
+            lambda shape, namings: cls(
+                category.generate(*shape, letters) for letters in namings),
+            category.shapes(**params),
+            st.lists(category.namings(), min_size=2, max_size=3))
+
+
+class Canonical[factory](TestableGeneric, tuple):
+    """
+    Two terms of the ``factory`` followed by their canonical forms: two
+    shapes of one type, the second the first's or another, each generated
+    under its own naming and then under the one naming ``"x"``, which names
+    every bound variable by its level, so that the two terms are
+    alpha-equivalent exactly when their canonical forms are equal. Where
+    :class:`Renamed` draws terms alpha-equivalent by construction, this
+    decides the alpha-equivalence of any pair, see
+    :meth:`TermBase.alpha_completeness`.
+
+    Example
+    -------
+    >>> from hypothesis import find
+    >>> first, second, *canonical = find(
+    ...     Canonical[TermBase].strategy(),
+    ...     lambda terms: terms[0] != terms[1] and terms[2] == terms[3])
+    >>> assert first.alpha_eq(second)
+    """
+    @classmethod
+    def checked_params(cls) -> tuple:
+        """ None, a sort of premises being drawn over a category. """
+        return ()
+
+    @classmethod
+    def build(cls, shape: tuple, others: list[int] | None,
+              namings: tuple[Sequence[str], Sequence[str]]) -> "Canonical":
+        """
+        The terms of a shape and of another, the same when ``others`` is
+        ``None``, under their namings and then under the canonical one.
+        """
+        cod, choices, types = shape
+        shapes = (choices, choices if others is None else others)
+        return cls(
+            cls.factory.generate(cod, each, types, letters)
+            for each, letters in zip(2 * shapes, (*namings, "x", "x")))
+
+    @classmethod
+    def strategy(cls, **params) -> "st.SearchStrategy[Canonical]":
+        """
+        Generate a shape, its choices again or others, and two namings.
+
+        Parameters:
+            params : Passed to :meth:`TermBase.shapes`.
+        """
+        from hypothesis import strategies as st
+
+        category = cls.factory
+        return st.builds(
+            cls.build, category.shapes(**params),
+            st.none() | category.choices(),
+            st.tuples(category.namings(), category.namings()))
+
+
+class Reducible[factory](TestableGeneric, tuple):
+    """
+    A term of the ``factory`` with free variables in place of constants, so
+    that beta reduction reads a variable at every head, see
+    :class:`Normalising`.
+    """
+    @classmethod
+    def checked_params(cls) -> tuple:
+        """ None, a sort of premises being drawn over a category. """
+        return ()
+
+    @classmethod
+    def strategy(cls, **params) -> "st.SearchStrategy[Reducible]":
+        """
+        Generate a shape and a naming, with no constants.
+
+        Parameters:
+            params : Passed to :meth:`TermBase.shapes`.
+        """
+        from hypothesis import strategies as st
+
+        category = cls.factory
+        return st.builds(
+            lambda shape, letters: cls((
+                category.generate(*shape, letters, constants=False), )),
+            category.shapes(**params), category.namings())
+
+
+class Normalising(Testable):
+    """
+    The laws of beta reduction, for terms with a ``normal_form`` reached by
+    each of their :attr:`reduction_strategies`, e.g.
+    :class:`discopy.closed.TermBase`.
+    """
+    reduction_strategies: ClassVar[tuple] = ()
+
+    @axiom
+    def normal_form_idempotence(
+            cls, terms: Reducible[Self]) -> AbstractEquation:
+        """ A normal form is its own normal form. """
+        normal_form = terms[0].normal_form()
+        return Equation(normal_form.normal_form(), normal_form)
+
+    @axiom
+    def normal_form_typing(cls, terms: Reducible[Self]) -> AbstractEquation:
+        """ Beta reduction preserves the type of a term. """
+        return Equation(terms[0].normal_form().cod, terms[0].cod)
+
+    @axiom
+    def normal_form_confluence(
+            cls, terms: Reducible[Self]) -> AbstractEquation:
+        """
+        Every reduction strategy reaches the same normal form, up to the
+        names of its bound variables.
+        """
+        return AlphaEquation(*(
+            terms[0].normal_form(strategy=strategy)
+            for strategy in cls.reduction_strategies))
+
+
 class TermBase(Box, Equivalence):
     """
     A term in the internal language of biclosed categories, an
@@ -875,15 +1029,18 @@ class TermBase(Box, Equivalence):
         return result
 
     @classmethod
-    def generate(cls, cod: Ty, choices: Sequence[int], types: Sequence[Ty],
-                 letters: Sequence[str]) -> Term:
+    # pylint: disable-next=too-many-arguments,too-many-positional-arguments
+    def generate(  # a shape, a naming and whether it takes constants
+            cls, cod: Ty, choices: Sequence[int], types: Sequence[Ty],
+            letters: Sequence[str], constants: bool = True) -> "Term":
         """
         Build a term of type ``cod`` from a sequence of ``choices``, one per
         node of the term, taking leaves once it runs out; the exponents of
         its applications are drawn from ``types`` and the variable bound at
         each level of binders is named by the letter at that level, so that
         the same choices under other letters give an alpha-equivalent term.
-        Free variables are named ``v0, v1, ...`` and constants ``c0, c1, ...``.
+        Free variables are named ``v0, v1, ...`` and constants ``c0, c1, ...``,
+        free variables taking the place of constants unless ``constants``.
         The term is planar and linear, as any term of a closed category is
         too, see :class:`Sampler` for the procedure.
 
@@ -896,7 +1053,8 @@ class TermBase(Box, Equivalence):
         >>> assert term.alpha_eq(
         ...     TermBase.generate(Y << X, [8, 0, 0], [X], "z"))
         """
-        return Sampler(cls, iter(choices), types, letters).term(cod)
+        return Sampler(
+            cls, iter(choices), types, letters, constants=constants).term(cod)
 
     @classmethod
     def choices(cls) -> st.SearchStrategy[list[int]]:
@@ -1311,6 +1469,9 @@ class Sampler:
         linear : Whether each bound variable occurs exactly once, in the
             order of the binders, as :mod:`biclosed` requires; a term of
             :mod:`discopy.closed` may use one any number of times.
+        constants : Whether a leaf or the head of a spine may be a
+            constant, else a free variable, so that beta reduction reads a
+            variable at every head, see :class:`Reducible`.
 
     Example
     -------
@@ -1327,13 +1488,16 @@ class Sampler:
     letters: Sequence[str]
     counter: Iterator[int] = field(default_factory=count)
     linear: bool = True
+    constants: bool = True
 
     def choose(self, options: Sequence):
         """ Pick an option by the next choice, the first when they ran out. """
         return options[next(self.choices, 0) % len(options)]
 
-    def constant(self, cod: Ty) -> Constant:
-        """ A fresh constant of a given type. """
+    def constant(self, cod: Ty) -> Constant | Variable:
+        """ A fresh constant of a given type, if the sampler takes any. """
+        if not self.constants:
+            return self.variable(cod)
         return self.category.ob.constant_factory(
             f"c{next(self.counter)}", cod)
 
@@ -1489,85 +1653,6 @@ class Constraints:
     def variables(self) -> tuple[Variable, ...]:
         """ The bound variables in scope, the prefix then the suffix. """
         return self.prefix + self.suffix
-
-
-class Renamed[factory](Testable, NamedGeneric, tuple):
-    """
-    Alpha-equivalent terms of the ``factory``: one shape generated under two
-    or more namings of its bound variables, see :meth:`TermBase.generate`.
-
-    Example
-    -------
-    >>> from hypothesis import find
-    >>> terms = find(
-    ...     Renamed[TermBase].strategy(), lambda terms: len(terms) == 3)
-    >>> assert terms[0].alpha_eq(*terms[1:])
-    """
-    @classmethod
-    def strategy(cls, **params) -> st.SearchStrategy[Renamed]:
-        """
-        Generate a shape and at least two namings of it.
-
-        Parameters:
-            params : Passed to :meth:`TermBase.shapes`.
-        """
-        from hypothesis import strategies as st
-
-        category = cls.factory
-        return st.builds(
-            lambda shape, namings: cls(
-                category.generate(*shape, letters) for letters in namings),
-            category.shapes(**params),
-            st.lists(category.namings(), min_size=2, max_size=3))
-
-
-class Canonical[factory](Testable, NamedGeneric, tuple):
-    """
-    Two terms of the ``factory`` followed by their canonical forms: two
-    shapes of one type, the second the first's or another, each generated
-    under its own naming and then under the one naming ``"x"``, which names
-    every bound variable by its level, so that the two terms are
-    alpha-equivalent exactly when their canonical forms are equal. Where
-    :class:`Renamed` draws terms alpha-equivalent by construction, this
-    decides the alpha-equivalence of any pair, see
-    :meth:`TermBase.alpha_completeness`.
-
-    Example
-    -------
-    >>> from hypothesis import find
-    >>> first, second, *canonical = find(
-    ...     Canonical[TermBase].strategy(),
-    ...     lambda terms: terms[0] != terms[1] and terms[2] == terms[3])
-    >>> assert first.alpha_eq(second)
-    """
-    @classmethod
-    def build(cls, shape: tuple, others: list[int] | None,
-              namings: tuple[Sequence[str], Sequence[str]]) -> Canonical:
-        """
-        The terms of a shape and of another, the same when ``others`` is
-        ``None``, under their namings and then under the canonical one.
-        """
-        cod, choices, types = shape
-        shapes = (choices, choices if others is None else others)
-        return cls(
-            cls.factory.generate(cod, each, types, letters)
-            for each, letters in zip(2 * shapes, (*namings, "x", "x")))
-
-    @classmethod
-    def strategy(cls, **params) -> st.SearchStrategy[Canonical]:
-        """
-        Generate a shape, its choices again or others, and two namings.
-
-        Parameters:
-            params : Passed to :meth:`TermBase.shapes`.
-        """
-        from hypothesis import strategies as st
-
-        category = cls.factory
-        return st.builds(
-            cls.build, category.shapes(**params),
-            st.none() | category.choices(),
-            st.tuples(category.namings(), category.namings()))
 
 
 Ty.variable_factory = Variable

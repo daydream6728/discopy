@@ -9,6 +9,13 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Added
 
+- The lambda terms enrol in the property matrix with the laws of beta
+  reduction: `biclosed.Normalising` states that a normal form is its own,
+  that reduction strategies agree and keep the type, over closed terms the
+  generator draws, `Reducible[Self]`, and `Renamed` and `Canonical` are
+  `TestableGeneric`s; `grammar.proofnet.ProofNet` states that a net reads
+  back from its term.
+
 - Hypothesis strategies from the combinatorial representations:
   `Hypergraph.strategy` draws a wiring port by port under the spider
   constraint of its category, then a box for each box of the wiring, and

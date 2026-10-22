@@ -1052,8 +1052,12 @@ class Testable[T](ABC):
 
         >>> from discopy.cat import Arrow, Box
         >>> from discopy.monoidal import Ty
+        >>> from discopy.biclosed import TermBase
         >>> assert Arrow in Testable.enrolled() and Ty in Testable.enrolled()
         >>> assert Box not in Testable.enrolled()
+        >>> from discopy.grammar.proofnet import ProofNet
+        >>> assert TermBase in Testable.enrolled()
+        >>> assert ProofNet in Testable.enrolled()
         """
         def generates(testable):
             try:
