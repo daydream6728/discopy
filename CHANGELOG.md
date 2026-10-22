@@ -9,6 +9,32 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Added
 
+- `discopy.op`, the opposite of a category: `op.Category`, `Monoidal`,
+  `Symmetric`, `Markov` and `Comarkov` wrap an arrow `inside` of the
+  underlying `category` with its domain and codomain swapped, composition
+  reversed and the tensor kept; the copies of `op.Markov` are the merges of
+  its category and vice versa. `op.Comarkov[finset.Function]` is finite sets
+  and functions, `finset.Function` being now declared a Markov category, and
+  the opposites of `matrix.Matrix[int]` join the property matrix
+  ([discopy/discopy#646](https://github.com/discopy/discopy/issues/646)).
+
+- Markov and comarkov plumbing
+  ([discopy/discopy#472](https://github.com/discopy/discopy/issues/472)):
+  `markov.Function(dom, func)` copies, discards and permutes so that output
+  `i` reads input `func[i]`, holding a `finset.Function`, and
+  `comarkov.Cofunction(cod, cofunc)` merges, adds noise and permutes so
+  that input `i` goes to output `cofunc[i]`, holding an
+  `op.Comarkov[finset.Function]`; each is the dagger of the other with the
+  same list. `Copy`, `Discard`, `Permutation` and `Swap` are functions,
+  `Merge`, `Noise`, `Permutation` and `Swap` cofunctions, and
+  `Function(x, [0, 0]) == Copy(x)`. `markov.Layer` and `comarkov.Layer`
+  alternate them with generators: plumbing tensors into one box,
+  `Diagram.copy` and `Diagram.merge` of a type build one, and foliation
+  fuses plumbing layers.
+  `abc.MarkovCategory.function` and `ComarkovCategory.cofunction` decompose
+  them in any category, `finset.Function.factorise` being the copies then
+  the permutation. `closed` and `neural.network` have their own.
+
 - Double-pushout rewriting for planar diagrams, on `cmap.CMap`: the map of a
   diagram in a monoidal category is the diagram up to interchange, faithfully
   when it is connected (Delpeuch & Vicary, Section 8), so matching it needs
@@ -597,6 +623,17 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   Moved from the trilingual parser of
   [rel-int/lambek#8](https://github.com/rel-int/lambek/pull/8), without its
   datasets or experiments.
+- The rest of the generic parser code of rel-int/lambek. From
+  [lambek#8](https://github.com/rel-int/lambek/pull/8): `proofnet.count`,
+  the count invariant of a type, and `Sequent.infer`, the sequent of some
+  words with the smallest goal of their count, which `Parser` takes when it
+  is given no goal; `Tagger.beam` and `Tagger.loss` within the atoms of a
+  sub-signature, e.g. one language of a multilingual signature, and label
+  smoothing over them with `Tagger.smoothing`. From
+  [lambek#2](https://github.com/rel-int/lambek/pull/2):
+  `categorial.parse`, the `k` best terms of a sentence from the scored
+  candidate types of its words by the CKY algorithm, over the application
+  and composition of `categorial.combine` in Eisner's normal form.
 - A notebook, *Parsing arithmetic*, showcasing `grammar.proofnet` and
   `grammar.neural`: the two readings of `a + b * c` are two linkings of
   one sequent, 24 of its 120 linkings are correct, and a parser trained on
@@ -903,6 +940,20 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   affine map from the features to the targets that `predict` applies, with
   an intercept by default, which the regularisation leaves out, as in
   Fujii and Nakajima's paper; `bias=False` fits without one.
+- The contextual fraction, `discopy.quantum.contextuality`, after Abramsky,
+  Barbosa and Mansfield ([arXiv:1705.07918](https://arxiv.org/abs/1705.07918),
+  [rel-int/discopy-next#283](https://github.com/rel-int/discopy-next/pull/283)):
+  a `Scenario` of measurement contexts and an empirical `Model`, a
+  distribution on the outcomes of each context, built from local measurement
+  circuits on a state by `Model.from_circuits`. `contextual_fraction` solves
+  the linear program for the largest non-contextual part with `scipy`, now in
+  the `quantum` extra, once `is_compatible` has checked that the rows are
+  distributions whose marginals agree; `decompose` splits a model into
+  non-contextual and strongly contextual models, and `bell_inequality` gives
+  the `Inequality` whose normalised violation is the contextual fraction.
+  Models combine by `mix`, controlled choice `&` and product `@`. The tests
+  and the `contextual-fraction` notebook reproduce the examples of the paper,
+  Figure 1 included.
 - `discopy.drawing.widget.DiagramWidget`, an
   [anywidget](https://anywidget.dev) showing the SVG of a drawing, built
   on demand by `RichDisplay.to_widget`, for Jupyter, marimo and VS Code.
@@ -983,6 +1034,12 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Changed
 
+- `symmetric.Layer.merge` fuses two layers of plumbing alone whatever
+  plumbing they hold, through the `fuse` of its boxes, and
+  `symmetric.Diagram.merge_layers` drops two that compose to the identity
+  likewise, e.g. a copy then a discard; `Hypergraph.to_diagram` fuses the
+  copies and merges it inserts with the permutations next to them.
+
 - The `quantum` extra pins pyzx 0.10.7, where it pinned 0.7.3, so that it
   installs next to `pytket-pyzx`, which needs pyzx 0.9 or later. pyzx 0.10
   takes no `float` phase, so `zx.Diagram.to_pyzx` hands it the exact
@@ -991,6 +1048,7 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   its `input` or `output` flag, so `test/fixtures/zx-graph.json` gives one
   instead of `true` and `false`
   ([rel-int/discopy-next#225](https://github.com/rel-int/discopy-next/issues/225)).
+
 - A law of `discopy.axioms` is stated as a sequent, the sequent calculus
   of [rel-int/discopy-next#1](https://github.com/rel-int/discopy-next/pull/1)
   without its search: its type parameters are variables, objects `A:
@@ -1597,6 +1655,12 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   reviewer first.
 
 ### Fixed
+
+- `python.multiplicative.Function.copy(x, 1)` returns its argument rather
+  than a tuple of one, which failed its own type check.
+
+- A law stated on `abc.Category` reads its type parameters when a class of
+  another module shares its name, e.g. `op.Category`.
 
 - The identity functor is the identity on a `Permutation`:
   `symmetric.Functor` sends one into a codomain with a
