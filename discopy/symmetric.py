@@ -420,6 +420,25 @@ class Diagram(balanced.Diagram, SymmetricCategory):
             return self.merge_layers()
         return super().foliation()
 
+    def merge_layers(self):
+        """
+        Merge layers as :meth:`discopy.monoidal.Diagram.merge_layers` does,
+        dropping two layers of plumbing that compose to the identity, which
+        is the empty diagram rather than a layer.
+
+        >>> x, y, z = Ty('x'), Ty('y'), Ty('z')
+        >>> perm = Permutation(x @ y @ z, [1, 2, 0])
+        >>> assert (perm >> perm[::-1] >> perm).foliation() == perm
+        """
+        diagram = super().merge_layers()
+        for i, (first, second) in enumerate(
+                zip(diagram.inside, diagram.inside[1:])):
+            if len(first.boxes_or_types) == 1 and first.is_plumbing\
+                    and second == first.dagger():
+                inside = diagram.inside[:i] + diagram.inside[i + 2:]
+                return self.ar(inside, self.dom, self.cod).merge_layers()
+        return diagram
+
     def depth(self):
         """
         The depth of a symmetric diagram.

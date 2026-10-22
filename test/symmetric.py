@@ -370,7 +370,9 @@ def test_Permutation_foliation():
     with raises(AxiomError):
         foliated.inside[0].merge(foliated.inside[1])
     inverse = reverse.dagger() >> reverse
-    assert inverse.foliation() == inverse
+    assert inverse.foliation() == Id(inverse.dom)
+    assert (inverse >> reverse.dagger()).foliation() == reverse.dagger()
+    assert (Swap(x, y) >> Swap(y, x)).foliation() == Id(x @ y)
     with raises(AxiomError):
         inverse.inside[0].merge(inverse.inside[1])
 
