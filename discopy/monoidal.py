@@ -1408,7 +1408,8 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
 
     def interchange(self, i: int, j: int, left=False) -> Diagram:
         """
-        Interchange a box from layer ``i`` to layer ``j``.
+        Interchange a box from layer ``i`` to layer ``j``, a planar rewrite:
+        see :meth:`normalize` for its scope.
 
         Parameters:
             i : Index of the box to interchange.
@@ -1503,8 +1504,33 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
         s1 >> s0
         s0 >> s1
         s1 >> s0
+
+        A diagram with more than one box in a layer is split into staircases
+        first, see :meth:`to_staircases`, and that is the first step.
+
+        >>> x = Ty('x')
+        >>> f, g = Box('f', x, x), Box('g', x, x)
+        >>> for step in (f @ g).foliation().normalize(left=True): print(step)
+        f @ x >> x @ g
+        x @ g >> f @ x
+
+        Note
+        ----
+        This is a planar rewrite, as are :meth:`interchange` and
+        :meth:`discopy.rigid.Diagram.snake_removal`, which yanks snakes
+        before it interchanges boxes: their scope is the planar levels, from
+        :mod:`discopy.monoidal` to :mod:`discopy.rigid`. Above them, a braid,
+        a swap or a trace is just one more box, so they do not compute a
+        normal form for the axioms of the level, e.g. in
+        :mod:`discopy.symmetric` the diagrams
+        ``Swap(x, y) >> y @ f >> Swap(y, x)`` and ``f @ y`` have the same
+        hypergraph and neither is rewritten into the other. The ``Equation``
+        of such a level compares diagrams up to its axioms instead.
         """
         diagram = self
+        if any(len(layer.boxes) > 1 for layer in self.inside):
+            diagram = self.to_staircases()
+            yield diagram
         while True:
             no_more_moves = True
             for i in range(len(diagram) - 1):
@@ -1520,7 +1546,8 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
 
     def normal_form(self, normalize: Callable = None, **params) -> Diagram:
         """
-        Returns the normal form of a diagram.
+        Returns the normal form of a diagram, up to the planar rewrites of
+        :meth:`normalize`, whose note says where they apply.
 
         Parameters:
             normalize : The rewriting to normalise with, the diagram's own

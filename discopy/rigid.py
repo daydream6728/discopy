@@ -500,7 +500,10 @@ class Diagram(biclosed.Diagram, RigidCategory):
 
     def snake_removal(self, left=False) -> Iterator[Diagram]:
         """
-        Return a generator which yields normalization steps.
+        Return a generator which yields normalization steps, yanking snakes
+        before it interchanges boxes with
+        :meth:`discopy.monoidal.Diagram.normalize`, whose note says where
+        these planar rewrites apply.
 
         Parameters:
             left : Passed to :meth:`discopy.monoidal.Diagram.normalize`.
@@ -516,6 +519,14 @@ class Diagram(biclosed.Diagram, RigidCategory):
         g >> f[::-1] >> n @ Cap(n.r, n) >> n @ n.r @ f >> Cup(n, n.r) @ n >> h
         g >> f[::-1] >> n @ Cap(n.r, n) >> Cup(n, n.r) @ n >> f >> h
         g >> f[::-1] >> f >> h
+
+        A diagram with more than one box in a layer is split into staircases
+        first, see :meth:`discopy.monoidal.Diagram.to_staircases`, and that
+        is the first step.
+
+        >>> snake = n @ cap >> cup @ n
+        >>> *_, normal_form = (f @ snake).foliation().normalize()
+        >>> assert normal_form == f @ n
         """
         from discopy import monoidal
         from discopy.rigid import Cup, Cap
@@ -604,6 +615,9 @@ class Diagram(biclosed.Diagram, RigidCategory):
                 inside, diagram.dom, diagram.cod, _scan=False)
 
         diagram = self
+        if any(len(layer.boxes) > 1 for layer in self.inside):
+            diagram = self.to_staircases()
+            yield diagram
         while True:
             yankable = find_snake(diagram)
             if yankable is None:

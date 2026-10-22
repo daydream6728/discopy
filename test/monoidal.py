@@ -524,6 +524,15 @@ def test_Diagram_normal_form():
     assert (f0 @ f1).normal_form(left=True) == Id(x) @ f1 >> f0 @ Id(x)
 
 
+def test_Diagram_normal_form_foliated():
+    x, y = Ty('x'), Ty('y')
+    f, g = Box('f', x, y), Box('g', y, x)
+    diagram = f @ g >> g @ f
+    assert diagram.foliation().normal_form() == diagram.normal_form()
+    assert diagram.foliation().normal_form(left=True)\
+        == diagram.normal_form(left=True)
+
+
 def test_AxiomError():
     inside = (Layer(Box('f', Ty('x'), Ty('y'))), )
     with raises(AxiomError) as err:

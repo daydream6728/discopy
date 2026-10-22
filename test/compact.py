@@ -63,7 +63,7 @@ def test_mixed_Layer_rotation_and_transpose():
     diagram = Diagram((layer,), layer.dom, layer.cod)
     assert diagram.transpose_box(0, 0).boxes[-1] == f
     assert f.r in diagram.transpose_box(0, 1).boxes
-    assert list(diagram.snake_removal()) == []
+    assert list(diagram.snake_removal()) == [diagram.to_staircases()]
 
 
 def test_Sum():
