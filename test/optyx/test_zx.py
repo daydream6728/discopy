@@ -32,7 +32,8 @@ def random_had_cnot_diagram():
 def test_Diagram():
     bialgebra = Z(1, 2) @ Z(1, 2) >> Bit(1) @ SWAP @ Bit(1) >> X(2, 1) @ X(2, 1)
     assert str(bialgebra) == "Z(1, 2) @ bit >> bit @ bit @ Z(1, 2) " \
-                             ">> bit @ Swap(bit, bit) @ bit " \
+                             ">> Permutation(bit @ bit @ bit @ bit, " \
+                             "[0, 2, 1, 3]) " \
                              ">> X(2, 1) @ bit @ bit >> bit @ X(2, 1)"
 
 

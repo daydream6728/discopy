@@ -262,11 +262,12 @@ class ZXDiagram(diagram.Diagram):
                     + len(box.cod) * [(node, False)]
                     + scan[offset + len(box.dom):]
                 )
-            elif isinstance(box, diagram.Swap):
+            elif isinstance(box, diagram.Permutation):
+                segment = scan[offset:offset + len(box.dom)]
                 scan = (
                     scan[:offset]
-                    + [scan[offset + 1], scan[offset]]
-                    + scan[offset + 2:]
+                    + [segment[i] for i in box.perm]
+                    + scan[offset + len(box.dom):]
                 )
             elif isinstance(box, diagram.Scalar):
                 graph.scalar.add_float(box.data)
