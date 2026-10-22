@@ -348,6 +348,14 @@ def test_Tensor_dtype_inference():
     assert Box[np.int64] is Box[int] and Spider[np.complex128] is Spider[complex]
 
 
+def test_Box_pickled_before_dtype_inference():
+    """ A box pickled with its data alone gets the dtype of its class. """
+    import pickle
+    with open("test/fixtures/pickles/0.6/tensor.Box.pickle", "rb") as f:
+        box = pickle.load(f).boxes[0]
+    assert type(box) is Box[int] and box.dtype is int
+
+
 def test_non_numpy_eval():
     reference = Swap(Dim(2), Dim(2)).eval()
     with backend('pytorch'):
