@@ -1982,6 +1982,14 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   came back named `Ty() @ f @ Ty()`, and one from a 0.6 or 1.2 pickle
   named `Layer`
   ([rel-int/discopy-next#168](https://github.com/rel-int/discopy-next/issues/168)).
+- A trace over more objects than the boundary has, or a negative number of
+  them, raises `ValueError` in the positional form as it did in the keyword
+  form, where `ribbon`, `compact` and `frobenius` diagrams, drawings and
+  additive Python functions traced what their slicing made of it, e.g.
+  `Box('g', x @ x, x @ x).trace(5)` over two wires and `trace(-1)` over the
+  first one, and a matrix raised a NumPy error: `abc.keyword_form` splits
+  the boundary for both forms
+  ([rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
 - `interaction.Diagram.trace` traces an integer diagram, where it raised
   `TypeError` on every input: it was borrowed from `traced.Diagram` through
   a `trace_factory` slicing the type, and an integer type is a pair of
