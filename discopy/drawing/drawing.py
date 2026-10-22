@@ -223,6 +223,7 @@ from discopy.config import BOX_DRAWING_ATTRIBUTES, TRANSPARENT
 from discopy.abc import TracedCategory
 from discopy.python import finset
 from discopy.utils import (
+    setattrs,
     assert_isinstance, assert_iscomposable, unbiased, factory, RichDisplay)
 
 if TYPE_CHECKING:
@@ -641,7 +642,8 @@ class Drawing(TracedCategory, RichDisplay):
         from discopy.symmetric import Permutation, Ty, Wire
         box = Permutation(
             Ty(*(Wire(x.name, x.dom, x.cod) for x in dom.inside)), perm)
-        box.dom, box.cod = dom, dom[:0].tensor(*(dom[i] for i in box.perm))
+        setattrs(
+            box, dom=dom, cod=dom[:0].tensor(*(dom[i] for i in box.perm)))
         return box
 
     @staticmethod
@@ -682,7 +684,7 @@ class Drawing(TracedCategory, RichDisplay):
                 old_box.name, box_dom, box_cod,
                 is_dagger=old_box.is_dagger)
         if isinstance(old_box, Permutation):
-            box.cod = box_cod
+            setattrs(box, cod=box_cod)
             for i, obj in enumerate(box.cod.inside):
                 if old_box.perm[i] == i:
                     obj.skip_label = True

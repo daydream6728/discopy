@@ -59,7 +59,8 @@ from discopy.matrix import get_backend
 from discopy.quantum.circuit import (
     Circuit, Digit, Ty, bit, qubit, Box, Sum, Id)
 from discopy.tensor import backend
-from discopy.utils import factory_name, assert_isinstance, from_tree
+from discopy.utils import (
+    factory_name, assert_isinstance, from_tree, setattrs)
 
 
 def format_number(data):
@@ -326,7 +327,6 @@ class QuantumGate(Box):
     >>> assert QuantumGate('U', qubit, qubit, [phi, 0, 0, 1]).free_symbols\\
     ...     == {phi}
     """
-    is_mixed = False
     is_classical = False
 
     def __init__(self, name: str, dom: Ty, cod: Ty, data=None, **params):
@@ -334,14 +334,14 @@ class QuantumGate(Box):
             with backend('numpy') as np:
                 data = [value if getattr(value, "free_symbols", None)
                         else complex(value) for value in np.ravel(data)]
+        params.setdefault("is_mixed", False)
         super().__init__(name, dom, cod, data, **params)
 
     def __setstate__(self, state):
         if "_array" in state and not state["_array"] is None:
             state["data"] = state['_array'].flatten().tolist()
         if "_name" in state:
-            if state["_name"] in GATES and hasattr(
-                    GATES[state["_name"]], "data"):
+            if isinstance(GATES.get(state["_name"]), Box):
                 state["data"] = copy.deepcopy(GATES[state["_name"]].data)
                 state["_z"] = GATES[state["_name"]].z
         super().__setstate__(state)
@@ -363,8 +363,11 @@ class ClassicalGate(SelfConjugate):
     >>> f.lambdify(*array)(1, 2, 3, 4).data
     (1, 2, 3, 4)
     """
-    is_mixed = False
     is_classical = True
+
+    def __init__(self, name: str, dom: Ty, cod: Ty, data=None, **params):
+        params.setdefault("is_mixed", False)
+        super().__init__(name, dom, cod, data, **params)
 
 
 class Copy(ClassicalGate):
@@ -1141,7 +1144,7 @@ class Sqrt(Scalar):
         super().__init__(data, name="sqrt", time_step=time_step)
         if is_dagger and self.is_self_adjoint:
             raise ValueError(messages.REAL_SQRT_IS_SELF_ADJOINT)
-        self.is_dagger = is_dagger
+        setattrs(self, is_dagger=is_dagger)
         self.drawing_name = f"sqrt({format_number(data)})"
 
     @classmethod
@@ -1157,9 +1160,9 @@ class Sqrt(Scalar):
                    tree.get('time_step', 0))
 
     def __setstate__(self, state):
+        if state.get('is_dagger', False) is None:
+            state['is_dagger'] = False
         super().__setstate__(state)
-        if self.is_dagger is None:
-            self.is_dagger = False
 
     @property
     def is_self_adjoint(self):

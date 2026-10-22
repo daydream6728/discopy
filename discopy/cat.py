@@ -77,9 +77,10 @@ Functors are bubble-preserving.
 
 from __future__ import annotations
 
+from dataclasses import dataclass, field, fields
 from functools import total_ordering, cached_property
 from typing import (
-    Callable, ClassVar, Mapping, Iterable, TYPE_CHECKING)
+    Any, Callable, ClassVar, Mapping, Iterable, TYPE_CHECKING)
 
 from discopy import messages, utils
 from discopy.abc import Category, DaggerCategory, Nat
@@ -88,7 +89,12 @@ from discopy.utils import (  # noqa: F401
     factory,
     factory_name,
     from_tree,
+    frozen,
+    derived,
+    replace,
     rsubs,
+    setattrs,
+    compared_fields,
     unbiased,
     MappingOrCallable,
     assert_isinstance,
@@ -104,6 +110,7 @@ dumps, loads = utils.dumps, utils.loads
 
 
 @total_ordering
+@dataclass(frozen=True, repr=False)
 class Ob(Testable["Ob"]):
     """
     An object with a string as :code:`name`.
@@ -118,27 +125,26 @@ class Ob(Testable["Ob"]):
     """
     equation_factory: ClassVar[type["Equation"]]
 
+    name: str = ""
+
     def __setstate__(self, state):
         if "name" not in state and "_name" in state:
             state["name"] = state["_name"]
             del state["_name"]
         self.__dict__.update(state)
 
-    def __init__(self, name: str = ""):
-        assert_isinstance(name, str)
-        self.name = name
+    def __post_init__(self):
+        assert_isinstance(self.name, str)
+
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        utils.inherit_fields(cls)
 
     def __repr__(self):
         return f"{factory_name(type(self))}({repr(self.name)})"
 
     def __str__(self):
         return str(self.name)
-
-    def __eq__(self, other):
-        return isinstance(other, type(self)) and self.name == other.name
-
-    def __hash__(self):
-        return hash(repr(self))
 
     def __lt__(self, other):
         return self.name < other.name
@@ -199,7 +205,7 @@ class FreeCategory(Category):
         ob = type(self).ob
         dom = dom if isinstance(dom, ob) else ob(dom)
         cod = cod if isinstance(cod, ob) else ob(cod)
-        self.dom, self.cod, self.inside = dom, cod, tuple(inside)
+        setattrs(self, dom=dom, cod=cod, inside=tuple(inside))
         if _scan:
             for generator in inside:
                 assert_isinstance(generator, self.generator_factory)
@@ -262,6 +268,7 @@ class FreeCategory(Category):
 
 
 @factory
+@frozen
 class Arrow(FreeCategory, DaggerCategory, Testable["Arrow"]):
     """
     An arrow is a tuple of composable boxes :code:`inside` with a pair of
@@ -313,6 +320,14 @@ class Arrow(FreeCategory, DaggerCategory, Testable["Arrow"]):
     bubble_factory: ClassVar[type["Bubble"]]
     ob = Ob
 
+    inside: tuple
+    dom: Ob
+    cod: Ob
+
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        utils.inherit_fields(cls)
+
     @classmethod
     def strategy(
             cls, *, types=None, dom=None, cod=None,
@@ -345,9 +360,9 @@ class Arrow(FreeCategory, DaggerCategory, Testable["Arrow"]):
 
     def __setstate__(self, state):
         if '_dom' in state:  # Backward compatibility
-            self.dom, self.cod, self.inside = (
-                state['_dom'], state['_cod'], tuple(state['_boxes']))
-            del state['_dom'], state['_cod'], state['_boxes']
+            state = {
+                'dom': state.pop('_dom'), 'cod': state.pop('_cod'),
+                'inside': tuple(state.pop('_boxes'))} | state
         self.__dict__.update(state)
 
     def __repr__(self):
@@ -555,7 +570,65 @@ class Arrow(FreeCategory, DaggerCategory, Testable["Arrow"]):
         return cls(inside, dom, cod, _scan=False)
 
 
+def field_free_symbols(value) -> "set[sympy.Symbol]":
+    """
+    The free symbols in the value of a field: an arrow has its own, an object
+    or a string has none, and a container has those of its values.
+
+    Parameters:
+        value : The value of a field.
+    """
+    if isinstance(value, Arrow):
+        return value.free_symbols
+    if isinstance(value, (Ob, str)):
+        return set()
+    if isinstance(value, Mapping):
+        value = value.values()
+    if isinstance(value, Iterable):
+        # Handles numpy 0-d arrays, which are actually not iterable.
+        if not hasattr(value, "shape") or value.shape != ():
+            return set().union(*map(field_free_symbols, value))
+    return getattr(value, "free_symbols", set())
+
+
+def field_subs(value, *args):
+    """
+    Substitute variables in the value of a field: an arrow by its own
+    :meth:`Arrow.subs`, a tuple pointwise and anything else by
+    :func:`utils.rsubs`.
+
+    Parameters:
+        value : The value of a field.
+        args : Passed to :meth:`Arrow.subs`.
+    """
+    if isinstance(value, Arrow):
+        return value.subs(*args)
+    if isinstance(value, tuple):
+        return tuple(field_subs(x, *args) for x in value)
+    return rsubs(value, *args)
+
+
+def field_lambdify(value, *symbols: "sympy.Symbol", **kwargs) -> Callable:
+    """
+    Turn the value of a field into a function of some symbols, the way
+    :func:`field_subs` substitutes them.
+
+    Parameters:
+        value : The value of a field.
+        symbols : The inputs of the function.
+        kwargs : Passed to :code:`sympy.lambdify`.
+    """
+    if isinstance(value, Arrow):
+        return value.lambdify(*symbols, **kwargs)
+    if isinstance(value, tuple):
+        funcs = [field_lambdify(x, *symbols, **kwargs) for x in value]
+        return lambda *xs: tuple(func(*xs) for func in funcs)
+    from sympy import lambdify
+    return lambdify(symbols, value, **kwargs)
+
+
 @total_ordering
+@frozen
 class Box(Arrow):
     """
     A box is an arrow with a :code:`name` and the tuple of just itself inside.
@@ -573,7 +646,25 @@ class Box(Arrow):
     >>> x, y = Ob('x'), Ob('y')
     >>> f = Box('f', x, y, data=[42])
     >>> assert f.inside == (f, )
+
+    Note
+    ----
+    A box is a frozen dataclass: its fields are what its constructor takes,
+    so that :meth:`subs`, :meth:`lambdify` and :meth:`dagger` rebuild it
+    with :func:`utils.replace`, keeping every field they do not change.
+
+    >>> from dataclasses import replace
+    >>> assert replace(f, name='g') == Box('g', x, y, data=[42])
+
+    Its ``inside`` is computed rather than given, i.e. it is not compared:
+    a box is a cyclic data structure.
     """
+    __match_args__ = ("name", "dom", "cod", "data", "is_dagger")
+
+    inside: tuple = derived(compare=False)
+    name: str
+    data: Any = None
+    is_dagger: bool = False
 
     @classmethod
     def strategy(
@@ -589,49 +680,62 @@ class Box(Arrow):
 
     def __setstate__(self, state):
         if '_name' in state:  # Backward compatibility
-            self.name, self.data, self.is_dagger = (
-                state['_name'], state['_data'], state['_dagger'])
-            del state['_name'], state['_data'], state['_dagger']
+            state = {
+                'name': state.pop('_name'), 'data': state.pop('_data'),
+                'is_dagger': state.pop('_dagger')} | state
         super().__setstate__(state)
 
     def __init__(
             self, name: str, dom: Ob, cod: Ob, data=None, is_dagger=False):
         assert_isinstance(name, str)
-        self.name, self.data, self.is_dagger = name, data, is_dagger
+        setattrs(self, name=name, data=data, is_dagger=is_dagger)
         Arrow.__init__(self, (self, ), dom, cod, _scan=False)
+
+    @property
+    def symbolic_fields(self) -> dict:
+        """
+        The fields the constructor takes and that have free symbols, i.e.
+        those :meth:`subs` and :meth:`lambdify` rebuild.
+
+        Example
+        -------
+        >>> from sympy.abc import phi  # doctest: +EXTRA
+        >>> f = Box('f', Ob('x'), Ob('y'), data=phi)
+        >>> assert f.symbolic_fields == {'data': phi}
+        """
+        return {
+            f.name: getattr(self, f.name) for f in fields(self)
+            if f.init and field_free_symbols(getattr(self, f.name))}
 
     @cached_property
     def free_symbols(self) -> "set[sympy.Symbol]":
-        def recursive_free_symbols(data):
-            if isinstance(data, Mapping):
-                data = data.values()
-            if isinstance(data, Iterable):
-                # Handles numpy 0-d arrays, which are actually not iterable.
-                if not hasattr(data, "shape") or data.shape != ():
-                    return set().union(*map(recursive_free_symbols, data))
-            return getattr(data, "free_symbols", set())
-        return recursive_free_symbols(self.data)
+        return set().union(*map(
+            field_free_symbols, self.symbolic_fields.values()))
 
     def subs(self, *args) -> Box:
-        if not any(var in self.free_symbols for var in (
-                {var for var, _ in args[0]} if len(args) == 1 else {args[0]})):
+        variables = {var for var, _ in args[0]} if len(args) == 1\
+            else {args[0]}
+        if not variables & self.free_symbols:
             return self
-        return type(self)(
-            self.name, self.dom, self.cod, is_dagger=self.is_dagger,
-            data=rsubs(self.data, *args))
+        changes = {
+            key: field_subs(value, *args)
+            for key, value in self.symbolic_fields.items()
+            if variables & field_free_symbols(value)}
+        return replace(self, **changes) if changes else self
 
     def lambdify(self, *symbols: "sympy.Symbol", **kwargs) -> Callable:
-        if not any(x in self.free_symbols for x in symbols):
+        if not set(symbols) & self.free_symbols:
             return lambda *xs: self
-        from sympy import lambdify
-        return lambda *xs: type(self)(
-            self.name, self.dom, self.cod, is_dagger=self.is_dagger,
-            data=lambdify(symbols, self.data, **kwargs)(*xs))
+        funcs = {
+            key: field_lambdify(value, *symbols, **kwargs)
+            for key, value in self.symbolic_fields.items()
+            if set(symbols) & field_free_symbols(value)}
+        return lambda *xs: replace(
+            self, **{key: func(*xs) for key, func in funcs.items()})
 
     def dagger(self) -> Box:
-        return type(self)(
-            self.name, self.cod, self.dom,
-            data=self.data, is_dagger=not self.is_dagger)
+        return replace(
+            self, dom=self.cod, cod=self.dom, is_dagger=not self.is_dagger)
 
     def __getitem__(self, key):
         if key == slice(None, None, -1):
@@ -652,11 +756,11 @@ class Box(Arrow):
     def setoid(self):
         """
         The equality and hash of a box is given by hashing its type as well as
-        its internal attributes `name, dom, cod, is_dagger` and `data`. In
-        particular if the `data` is not hashable then neither is the `Box`.
+        the fields it compares, e.g. `dom, cod, name, data` and `is_dagger`.
+        In particular if the `data` is not hashable then neither is the `Box`.
         """
-        attributes = self.name, self.dom, self.cod, self.is_dagger, self.data
-        return (type(self), ) + attributes
+        return (type(self), ) + tuple(
+            getattr(self, key) for key in compared_fields(type(self)))
 
     def __lt__(self, other):
         return self.name < other.name
@@ -681,6 +785,7 @@ class Box(Arrow):
         return cls(name=name, dom=dom, cod=cod, data=data, is_dagger=is_dagger)
 
 
+@frozen
 class Sum(Box):
     """
     A sum is a tuple of arrows :code:`terms` with the same domain and codomain.
@@ -706,6 +811,13 @@ class Sum(Box):
     ----
     The sum is non-commutative, i.e. :code:`Sum([f, g]) != Sum([g, f])`.
     """
+    __match_args__ = ("terms", "dom", "cod")
+
+    terms: tuple[Arrow, ...]
+    name: str = derived()
+    data: Any = derived()
+    is_dagger: bool = derived()
+
     def __init__(
             self, terms: tuple[Arrow, ...], dom: Ob = None, cod: Ob = None):
         if not terms and (dom is None or cod is None):
@@ -716,7 +828,7 @@ class Sum(Box):
             assert_isparallel(Sum((), dom, cod), arrow)
         str_args = f", dom={repr(dom)}, cod={repr(cod)}" if not terms else ""
         name = f"{factory_name(type(self))}(terms={repr(terms)}{str_args})"
-        self.terms = terms
+        setattrs(self, terms=terms)
         super().__init__(name, dom, cod)
 
     @property
@@ -761,20 +873,23 @@ class Sum(Box):
 
     def dagger(self):
         terms = tuple(f.dagger() for f in self.terms)
-        return self.sum_factory(terms, self.cod, self.dom)
+        return replace(self, terms=terms, dom=self.cod, cod=self.dom)
 
-    @property
-    def free_symbols(self):
-        return {x for box in self.terms for x in box.free_symbols}
+    def __replace__(self, **changes):
+        """
+        A sum is rebuilt from its terms, domain and codomain alone, whatever
+        fields the boxes of its level add.
 
-    def subs(self, *args):
-        terms = tuple(f.subs(*args) for f in self.terms)
-        return self.sum_factory(terms, self.dom, self.cod)
-
-    def lambdify(self, *symbols, **kwargs):
-        return lambda *xs: self.sum_factory(
-            tuple(box.lambdify(*symbols, **kwargs)(*xs) for box in self.terms),
-            dom=self.dom, cod=self.cod)
+        >>> x, y = Ob('x'), Ob('y')
+        >>> f, g = Box('f', x, y), Box('g', x, y)
+        >>> assert replace(f + g, terms=(g, f)) == g + f
+        """
+        terms, dom, cod = (
+            changes.pop(key, getattr(self, key))
+            for key in ("terms", "dom", "cod"))
+        if changes:
+            raise TypeError(f"Unexpected fields: {list(changes)}.")
+        return type(self)(terms, dom, cod)
 
     def to_tree(self):
         return {
@@ -790,6 +905,7 @@ class Sum(Box):
         return cls(terms=terms, dom=dom, cod=cod)
 
 
+@frozen
 class Bubble(Box):
     """
     A bubble is a box with arrow :code:`args` inside and an optional pair of
@@ -815,14 +931,30 @@ class Bubble(Box):
     ...
     ValueError: A bubble needs a dom given when its args do not all share \
 one, they have [cat.Ob('x'), cat.Ob('y')].
+
+    Note
+    ----
+    The ``args`` can be given by keyword too, as :func:`utils.replace` does.
+
+    >>> f = Box('f', x, x)
+    >>> assert Bubble(args=(f, )) == Bubble(f)
     """
+    __match_args__ = ("args", "dom", "cod", "name", "method")
+
+    args: tuple[Arrow, ...]
+    name: str = ""
+    data: Any = field(default=None, compare=False)
+    is_dagger: bool = field(default=False, compare=False)
+    method: str = "bubble"
+
     def __init__(self, *args: Arrow, dom: Ob = None, cod: Ob = None,
                  name="", method="bubble", **kwargs):
+        args = tuple(kwargs.pop("args", args))
         dom, cod = (
             given if given is not None else self.common(args, attr)
             for attr, given in [("dom", dom), ("cod", cod)])
-        self.args, self.method = args, method
-        Box.__init__(self, name, dom, cod, **kwargs)
+        setattrs(self, args=args, method=method)
+        super().__init__(name, dom, cod, **kwargs)
 
     @staticmethod
     def common(args: tuple[Arrow, ...], attr: str) -> Ob:
@@ -846,15 +978,6 @@ one, they have [cat.Ob('x'), cat.Ob('y')].
         return len(self.args) == 1 and (
             self.dom, self.cod) == (self.arg.dom, self.arg.cod)
 
-    def setoid(self):
-        """
-        Ensure that bubbles are equal if they have the same type, their `args`
-        are equal as well as their attributes `dom, cod, name, method`.
-        """
-        args_data = tuple(f.setoid() for f in self.args)
-        return (type(self), ) + args_data + tuple(getattr(self, x) for x in (
-            "dom", "cod", "name", "method"))
-
     def __str__(self):
         str_args = ",".join(map(str, self.args))
         str_dom_cod = '' if self.is_id_on_objects else (
@@ -867,39 +990,18 @@ one, they have [cat.Ob('x'), cat.Ob('y')].
             f", dom={repr(self.dom)}, cod={repr(self.cod)}")
         return factory_name(type(self)) + (f"({repr_args}{repr_dom_cod})")
 
-    @property
-    def free_symbols(self):
-        return super().free_symbols.union(*[f.free_symbols for f in self.args])
-
-    def subs(self, *args) -> Bubble:
-        variables = {var for var, _ in args[0]} if len(args) == 1 else {
-            args[0]}
-        if not variables & self.free_symbols:
-            return self
-        data = rsubs(self.data, *args) if variables & super().free_symbols\
-            else self.data
-        return type(self)(
-            *(arg.subs(*args) for arg in self.args),
-            dom=self.dom, cod=self.cod, name=self.name, method=self.method,
-            data=data, is_dagger=self.is_dagger)
-
-    def lambdify(self, *symbols: "sympy.Symbol", **kwargs) -> Callable:
-        if not set(symbols) & self.free_symbols:
-            return lambda *xs: self
-        from sympy import lambdify
-        args = [arg.lambdify(*symbols, **kwargs) for arg in self.args]
-        data = lambdify(symbols, self.data, **kwargs)\
-            if set(symbols) & super().free_symbols else lambda *_: self.data
-        return lambda *xs: type(self)(
-            *(f(*xs) for f in args),
-            dom=self.dom, cod=self.cod, name=self.name, method=self.method,
-            data=data(*xs), is_dagger=self.is_dagger)
-
     def dagger(self) -> Bubble:
-        return type(self)(
-            *(arg.dagger() for arg in self.args),
-            dom=self.cod, cod=self.dom, name=self.name, method=self.method,
-            data=self.data, is_dagger=not self.is_dagger)
+        """
+        The dagger of a bubble is the bubble of the daggers of its args, i.e.
+        a bubble does not compare its ``data`` nor whether it is a dagger.
+
+        >>> x, y = Ob('x'), Ob('y')
+        >>> f = Box('f', x, y)
+        >>> assert f.bubble().dagger() == f.dagger().bubble()
+        """
+        return replace(
+            self, args=tuple(arg.dagger() for arg in self.args),
+            dom=self.cod, cod=self.dom, is_dagger=not self.is_dagger)
 
     def to_tree(self):
         tree = {

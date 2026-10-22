@@ -57,7 +57,7 @@ from discopy.abc import NamedGeneric
 from discopy.python import finset
 from discopy.utils import (
     factory_name, assert_isinstance, product, assert_isatomic,
-    assert_istraceable)
+    assert_istraceable, setattrs)
 
 if TYPE_CHECKING:
     import sympy
@@ -835,10 +835,10 @@ class Box(frobenius.Box, Diagram):
         if "data" not in state and state.get("_array", None) is not None:
             state['data'] = state['_array']
             del state["_array"]
+        if self.dtype is None and state.get("data", None) is not None:
+            state["data"], dtype = self._get_data_dtype(state["data"])
+            setattrs(self, __class__=type(self)[dtype])
         super().__setstate__(state)
-        if self.dtype is None and self.data is not None:
-            self.data, self.dtype = self._get_data_dtype(self.data)
-            self.__class__ = self.__class__[self.dtype]
 
     def __new__(
             cls, name=None, dom=None, cod=None, data=None, *args, **kwargs):

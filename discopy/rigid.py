@@ -157,6 +157,7 @@ from discopy import cat, monoidal, biclosed, messages
 from discopy.abc import Pregroup, RigidCategory
 from discopy.cat import factory
 from discopy.utils import (
+    frozen, replace, setattrs,
     assert_isatomic,
     assert_isinstance,
     AxiomError,
@@ -644,6 +645,7 @@ class Diagram(biclosed.Diagram, RigidCategory):
         return super().normal_form(**params)
 
 
+@frozen
 class Box(biclosed.Box, Diagram):
     """
     A rigid box is a biclosed box in a rigid diagram.
@@ -663,16 +665,15 @@ class Box(biclosed.Box, Diagram):
     >>> assert f.r.l == f == f.l.r
     >>> assert f.l.l != f != f.r.r
     """
-    z = 0
+    z: int = 0
 
     def __setstate__(self, state):
         if '_z' in state:  # Backward compatibility
-            self.z = state['_z']
-            del state['_z']
+            state['z'] = state.pop('_z')
         super().__setstate__(state)
 
     def __init__(self, name: str, dom: Ty, cod: Ty, data=None, z=0, **params):
-        self.z = z
+        setattrs(self, z=z)
         biclosed.Box.__init__(self, name, dom, cod, data=data, **params)
 
     def __str__(self):
@@ -685,19 +686,10 @@ class Box(biclosed.Box, Diagram):
         return biclosed.Box.__repr__(self)[:-1] + (
             f', z={self.z})' if self.z else ')')
 
-    def setoid(self):
-        """
-        Rigid boxes are equal when they are equal as :class:`cat.Box` and their
-        winding numbers `z` are also equal.
-        """
-        return super().setoid() + (self.z, )
-
     def rotate(self, left=False):
         dom, cod = (
             getattr(x, 'l' if left else 'r') for x in (self.cod, self.dom))
-        z = self.z + (-1 if left else 1)
-        return type(self)(self.name, dom=dom, cod=cod,
-                          data=self.data, is_dagger=self.is_dagger, z=z)
+        return replace(self, dom=dom, cod=cod, z=self.z + (-1 if left else 1))
 
     def dagger(self) -> Box:
         """
@@ -711,9 +703,7 @@ class Box(biclosed.Box, Diagram):
         >>> assert f.r[::-1] == f[::-1].r and f.r[::-1].z == 1
         >>> assert f.r[::-1][::-1] == f.r and f.l.l[::-1][::-1] == f.l.l
         """
-        return type(self)(self.name, dom=self.cod, cod=self.dom,
-                          data=self.data, is_dagger=not self.is_dagger,
-                          z=self.z)
+        return super().dagger()
 
     @classmethod
     def strategy(cls, **params):
@@ -750,7 +740,7 @@ class Box(biclosed.Box, Diagram):
         >>> assert loads(dumps(f.r)) == f.r and loads(dumps(f.l.l)) == f.l.l
         """
         box = super().from_tree(tree)
-        box.z = tree.get('z', 0)
+        setattrs(box, z=tree.get('z', 0))
         return box
 
     @property

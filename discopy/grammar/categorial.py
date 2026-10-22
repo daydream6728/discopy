@@ -53,6 +53,7 @@ from discopy.abc import ClosedCategory
 from discopy.cat import factory
 from discopy.grammar import thue
 from discopy.utils import (
+    derived,
     BinaryBoxConstructor,
     AxiomError,
     factory_name,
@@ -378,6 +379,11 @@ class BTR(TypeRaising):
 @dataclass(frozen=True, repr=False)
 class BinaryTerm(TermBase):
     "Abstract superclass of :class:`FC`, :class:`BC`, :class:`FX`, :class:`BX`"
+    dom: Ty = derived(compare=False)
+    cod: Ty = derived(compare=False)
+    name: str = derived(compare=False)
+    data: object = derived(compare=False)
+    is_dagger: bool = derived(compare=False)
     left: Term
     right: Term
 

@@ -178,8 +178,7 @@ class Box(frobenius.Box, Diagram):
     """
     A pregroup box is a frobenius box in a pregroup diagram.
     """
-    def rotate(self, left=False):
-        return self.flagged(rigid.Box.rotate(self, left))
+    rotate = rigid.Box.rotate
 
 
 class Cup(frobenius.Cup, Box):

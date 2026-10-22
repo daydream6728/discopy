@@ -75,6 +75,7 @@ from discopy.feedback import (  # noqa: F401  pylint: disable=unused-import
     Wire, Ty)
 from discopy.python import finset
 from discopy.utils import (
+    frozen, replace, setattrs,
     AxiomError, assert_isatomic, assert_iscomposable, deprecated_alias,
     factory_name, from_tree)
 
@@ -274,6 +275,7 @@ class Diagram(symmetric.Diagram, MarkovCategory):
         return self.is_deterministic and self.is_affine
 
 
+@frozen
 class Box(symmetric.Box, Diagram):
     """
     A Markov box is a symmetric box in a Markov diagram, a total function
@@ -312,11 +314,14 @@ feedback.Ty(feedback.Wire('x')), is_deterministic=False)
     >>> assert f.is_cartesian and not f.dagger().is_cartesian
     >>> assert f.dagger().dagger() == f and f.dagger().deterministic
     """
-    deterministic = affine = True
+    deterministic: bool = True
+    affine: bool = True
 
     def __init__(self, *args, is_deterministic=True, is_affine=True,
                  **params):
-        self.deterministic, self.affine = is_deterministic, is_affine
+        setattrs(
+            self, deterministic=params.pop("deterministic", is_deterministic),
+            affine=params.pop("affine", is_affine))
         super().__init__(*args, **params)
 
     @property
@@ -345,29 +350,10 @@ feedback.Ty(feedback.Wire('x')), is_deterministic=False)
             return super().__repr__()
         return super().__repr__()[:-1] + flags + ")"
 
-    def setoid(self):
-        """
-        Markov boxes are equal when they are equal as :class:`cat.Box` and
-        their flags are equal too.
-        """
-        return super().setoid() + (self.deterministic, self.affine)
-
-    def flagged(self, other: Box) -> Box:
-        """
-        Give a box built from this one the flags declared of this one, as
-        :meth:`dagger`, :meth:`subs` and :meth:`lambdify` do on top of those
-        of the class they extend, e.g. one that keeps a winding number, and so
-        do the rotations of a :class:`discopy.frobenius.Box`.
-        """
-        other.deterministic, other.affine = self.deterministic, self.affine
-        return other
-
-    def dagger(self) -> Box:
-        return self.flagged(super().dagger())
-
     def subs(self, *args) -> Box:
         """
-        Substitute a variable in the data of a box, keeping its flags.
+        Substitute a variable in the data of a box, keeping its flags, which
+        are fields.
 
         >>> from sympy.abc import phi  # doctest: +EXTRA
         >>> sample = Box('sample', Ty('x'), Ty('x'), data=phi,
@@ -375,11 +361,7 @@ feedback.Ty(feedback.Wire('x')), is_deterministic=False)
         >>> assert not sample.subs(phi, 1).is_deterministic
         >>> assert not sample.lambdify(phi)(1).is_deterministic
         """
-        return self.flagged(super().subs(*args))
-
-    def lambdify(self, *symbols, **kwargs) -> Callable:
-        function = super().lambdify(*symbols, **kwargs)
-        return lambda *xs: self.flagged(function(*xs))
+        return super().subs(*args)
 
     def to_tree(self) -> dict:
         """
@@ -394,9 +376,9 @@ feedback.Ty(feedback.Wire('x')), is_deterministic=False)
     @classmethod
     def from_tree(cls, tree: dict):
         result = super().from_tree(tree)
-        for name in ("is_deterministic", "is_affine"):
-            if name in tree:
-                setattr(result, name.removeprefix("is_"), tree[name])
+        setattrs(result, **{
+            name.removeprefix("is_"): tree[name]
+            for name in ("is_deterministic", "is_affine") if name in tree})
         return result
 
 
@@ -717,9 +699,10 @@ class Sum(symmetric.Sum, Box):
     """
     def __init__(self, terms, dom=None, cod=None):
         super().__init__(terms, dom, cod)
-        self.deterministic = len(self.terms) < 2 and all(
-            term.is_deterministic for term in self.terms)
-        self.affine = len(self.terms) == 1 and self.terms[0].is_affine
+        setattrs(
+            self, deterministic=len(self.terms) < 2 and all(
+                term.is_deterministic for term in self.terms),
+            affine=len(self.terms) == 1 and self.terms[0].is_affine)
 
 
 class Functor(symmetric.Functor):

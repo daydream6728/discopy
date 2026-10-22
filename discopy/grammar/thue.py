@@ -35,7 +35,7 @@ from __future__ import annotations
 
 from discopy import monoidal
 from discopy.monoidal import Ty  # noqa: F401  pylint: disable=unused-import
-from discopy.utils import factory_name
+from discopy.utils import factory_name, replace
 
 
 class Rule(monoidal.Box):
@@ -69,9 +69,8 @@ class Rule(monoidal.Box):
             + f"({self.dom!r}, {self.cod!r}{name}{data})"
 
     def dagger(self) -> Rule:
-        return type(self)(
-            name=self.name, dom=self.cod, cod=self.dom,
-            data=self.data, is_dagger=not self.is_dagger)
+        return replace(
+            self, dom=self.cod, cod=self.dom, is_dagger=not self.is_dagger)
 
 
 class Word(Rule):

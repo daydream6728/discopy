@@ -80,6 +80,7 @@ from discopy.abc import HypergraphCategory
 from discopy.cat import factory
 from discopy.python import finset
 from discopy.utils import (
+    frozen, replace, setattrs,
     assert_isatomic, assert_iscomposable, deprecated_alias, factory_name,
     from_tree)
 
@@ -339,8 +340,6 @@ class Box(compact.Box, markov.Box, comarkov.Box, Diagram):
     def is_affine(self) -> bool:
         return super().is_affine and not self.z
 
-    def rotate(self, left=False):
-        return self.flagged(super().rotate(left))
 
 
 class Cospan(Box):
@@ -593,7 +592,7 @@ class Cup(compact.Cup, Box):
 
     def __init__(self, left, right):
         super().__init__(left, right)
-        self.affine = False
+        setattrs(self, affine=False)
 
 
 class Cap(compact.Cap, Box):
@@ -612,7 +611,7 @@ class Cap(compact.Cap, Box):
 
     def __init__(self, left, right):
         super().__init__(left, right)
-        self.deterministic = self.affine = False
+        setattrs(self, deterministic=False, affine=False)
 
 
 class Permutation(
@@ -699,8 +698,9 @@ class Spider(Box):
                 + f"({dom.n}, {cod.n}, {state['_typ']}{str_data})"
         super().__setstate__(state)
         if "affine" not in state:
-            self.deterministic = len(self.dom) > 0 and not self.phase
-            self.affine = len(self.dom) == 1 and not self.phase
+            setattrs(
+                self, deterministic=len(self.dom) > 0 and not self.phase,
+                affine=len(self.dom) == 1 and not self.phase)
 
     def __getnewargs__(self):
         """ The arguments of the constructor, which a pickle and a delay read.

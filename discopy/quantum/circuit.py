@@ -74,7 +74,9 @@ from discopy import messages, tensor, frobenius
 from discopy.cat import factory
 from discopy.matrix import backend
 from discopy.tensor import Dim, Tensor
-from discopy.utils import assert_isinstance, deprecated_alias, factory_name
+from discopy.utils import (
+    assert_isinstance, deprecated_alias, derived, factory_name, frozen,
+    setattrs)
 
 
 class Wire(frobenius.Wire):
@@ -854,6 +856,7 @@ class Circuit(tensor.Diagram[complex]):
             >> self.cod[:offset] @ gate @ self.cod[offset + len(gate.dom):]
 
 
+@frozen
 class Box(tensor.Box[complex], Circuit):
     """
     A circuit box is a tensor box in a circuit diagram.
@@ -866,24 +869,24 @@ class Box(tensor.Box[complex], Circuit):
         is_mixed : Whether the box is mixed.
     """
     eval = Circuit.eval
+    is_mixed: bool = True
 
     def __init__(self, name: str, dom: Ty, cod: Ty,
                  data=None, is_mixed=True, **params):
         if not is_mixed:
             if all(isinstance(x, Digit) for x in (dom @ cod).inside):
-                self.is_classical = True
+                setattrs(self, is_classical=True)
             elif all(isinstance(x, Qudit) for x in (dom @ cod).inside):
-                self.is_classical = False
+                setattrs(self, is_classical=False)
             else:
                 raise ValueError(messages.BOX_IS_MIXED)
-        self._is_mixed = is_mixed
+        setattrs(self, is_mixed=is_mixed)
         tensor.Box[complex].__init__(self, name, dom, cod, data, **params)
-        self._params = dict(self._params, is_mixed=is_mixed)
 
     def __setstate__(self, state):
-        if "_is_mixed" not in state:
-            state["_is_mixed"] = state["_mixed"]
-            del state["_mixed"]
+        if "is_mixed" not in state:
+            state["is_mixed"] = state.pop(
+                "_is_mixed" if "_is_mixed" in state else "_mixed")
         super().__setstate__(state)
 
     @property
@@ -899,10 +902,6 @@ class Box(tensor.Box[complex], Circuit):
             return Sum((), self.dom, self.cod)
         raise NotImplementedError
 
-    @property
-    def is_mixed(self):
-        return self._is_mixed
-
     def dagger(self):
         """
         The dagger of a box, pure when the box is, as its rotation and its
@@ -912,26 +911,17 @@ class Box(tensor.Box[complex], Circuit):
         >>> assert not f.dagger().is_mixed and not f.rotate().is_mixed
         >>> assert f.dagger().eval() == f.eval().dagger()
         """
-        if self.is_dagger is None:
-            return self
-        return type(self)(
-            self.name, self.cod, self.dom, self.data, is_mixed=self.is_mixed,
-            is_dagger=not self.is_dagger, z=self.z, time_step=self.time_step)
+        return self if self.is_dagger is None else super().dagger()
 
     def rotate(self, left=False):
-        if self.z is None:
-            return self
-        return type(self)(
-            self.name, self.cod.r, self.dom.r, self.data,
-            is_mixed=self.is_mixed, is_dagger=self.is_dagger,
-            z=(self.z + 1) % 2, time_step=self.time_step)
+        return self if self.z is None else super().rotate(left)
 
 
 class Sum(tensor.Sum[complex], Box):
     """ Sums of circuits. """
-    @property
-    def is_mixed(self):
-        return any(circuit.is_mixed for circuit in self.terms)
+    def __init__(self, terms, dom=None, cod=None):
+        super().__init__(terms, dom, cod)
+        setattrs(self, is_mixed=any(circuit.is_mixed for circuit in terms))
 
     def get_counts(self, backend=None, **params):
         if not self.terms:
@@ -964,10 +954,11 @@ class Sum(tensor.Sum[complex], Box):
 class Permutation(tensor.Permutation[complex], Box):
     "A permutation in a quantum circuit."
 
-    @property
-    def is_mixed(self):
-        return any(type(left.inside[0]) is not type(right.inside[0])
-                   for left, right in zip(self.dom, self.cod))
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        setattrs(self, is_mixed=any(
+            type(left.inside[0]) is not type(right.inside[0])
+            for left, right in zip(self.dom, self.cod)))
 
     @property
     def is_classical(self):

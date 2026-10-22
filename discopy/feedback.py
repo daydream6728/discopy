@@ -258,6 +258,9 @@ from discopy.abc import FeedbackCategory, TracedCategory
 from discopy.monoidal import (  # noqa: F401  pylint: disable=unused-import
     Equation)
 from discopy.utils import (
+    frozen,
+    replace,
+    setattrs,
     deprecated_alias,
     factory, factory_name, assert_isinstance, AxiomError, from_tree,
 )
@@ -639,6 +642,7 @@ class Diagram(monoidal.Diagram, TracedCategory):
     d = Wire.d
 
 
+@frozen
 class Box(monoidal.Box, Diagram):
     """
     A feedback box is a monoidal box in a feedback diagram.
@@ -649,12 +653,10 @@ class Box(monoidal.Box, Diagram):
         cod (monoidal.Ty) : The codomain of the box, i.e. its output.
         time_step (int) : The number of times the box has been delayed.
     """
-
-    _time_step, _args, _params = 0, (), {}
-    time_step = property(lambda self: self._time_step)
+    time_step: int = 0
 
     def __init__(self, *args, time_step: int = 0, **params):
-        self._time_step, self._args, self._params = time_step, args[3:], params
+        setattrs(self, time_step=time_step)
         super().__init__(*args, **params)
 
     def to_drawing(self):
@@ -682,20 +684,13 @@ class Box(monoidal.Box, Diagram):
             return type(self)(*(
                 x.delay(n_steps) if isinstance(x, (Ty, Diagram)) else x
                 for x in arguments()))
-        dom, cod = self.dom.delay(n_steps), self.cod.delay(n_steps)
-        time_step = self.time_step + n_steps
-        return type(self)(
-            self.name, dom, cod, *self._args, time_step=time_step,
-            **self._params)
+        return replace(
+            self, dom=self.dom.delay(n_steps), cod=self.cod.delay(n_steps),
+            time_step=self.time_step + n_steps)
 
     def reset(self):
         """ Reset a box to time step zero, used in :class:`Functor`. """
         return self.delay(-self.time_step)
-
-    def dagger(self):
-        result = super().dagger()
-        result._time_step = self.time_step  # pylint: disable=protected-access
-        return result
 
     def __str__(self):
         return super().__str__() + str_delayed(self.time_step)
@@ -722,12 +717,8 @@ class Box(monoidal.Box, Diagram):
     @classmethod
     def from_tree(cls, tree: dict) -> Box:
         result = super().from_tree(tree)
-        result._time_step = tree.get(  # pylint: disable=protected-access
-            'time_step', 0)
+        setattrs(result, time_step=tree.get('time_step', 0))
         return result
-
-    def setoid(self):
-        return super().setoid() + (self.time_step, )
 
 
 class Feedback(Box, monoidal.Bubble):

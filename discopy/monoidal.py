@@ -70,6 +70,10 @@ from discopy.config import (
     COLOUR_DRAWING_ATTRIBUTES, TRANSPARENT)
 from discopy.utils import (
     factory,
+    frozen,
+    derived,
+    replace,
+    setattrs,
     factory_name,
     from_tree,
     assert_isinstance,
@@ -743,7 +747,7 @@ class Layer(cat.Box, ColouredMonoid):
         super().__setstate__(state)
         for key in [key for key in vars(self) if isinstance(
                 getattr(type(self), key, None), cached_property)]:
-            delattr(self, key)
+            vars(self).pop(key)
 
     def __init__(self, *inside: Ty | Box, normalise: bool = True):
         if normalise:
@@ -1639,9 +1643,9 @@ class Box(cat.Box, Diagram):
         if (dom.dom, dom.cod) != (cod.dom, cod.cod):
             raise AxiomError(messages.NOT_GLOBULAR.format(
                 dom.dom, dom.cod, cod.dom, cod.cod))
-        for attr in BOX_DRAWING_ATTRIBUTES:
-            if attr in params:
-                setattr(self, attr, params.pop(attr))
+        setattrs(self, **{
+            attr: params.pop(attr)
+            for attr in BOX_DRAWING_ATTRIBUTES if attr in params})
         cat.Box.__init__(self, name, dom, cod, **params)
         inside = () if self.is_identity\
             else (self.layer_factory(self, normalise=False), )
@@ -1701,6 +1705,7 @@ class Sum(cat.Sum, Box):
     to_drawing = Diagram.to_drawing
 
 
+@frozen
 class Bubble(cat.Bubble, Box):
     """
     A bubble is a box with diagrams :code:`args` inside and an optional pair of
@@ -1756,6 +1761,11 @@ class Bubble(cat.Bubble, Box):
 
     """
 
+    drawing_name: str = field(default="", compare=False)
+    draw_as_frame: bool = field(default=None, compare=False)
+    draw_as_square: bool = field(default=None, compare=False)
+    draw_vertically: bool = field(default=False, compare=False)
+
     def __init__(
             self, *args: Diagram,
             drawing_name: str = None,
@@ -1763,24 +1773,21 @@ class Bubble(cat.Bubble, Box):
             draw_as_square: bool = None,
             draw_vertically=False, **kwargs):
         cat.Bubble.__init__(self, *args, **kwargs)
-        Box.__init__(self, self.name, self.dom, self.cod,
-                     data=self.data, is_dagger=self.is_dagger)
-        self.drawing_name = "" if drawing_name is None else drawing_name
-        self.draw_vertically = draw_vertically
-        self.frame_colour = BOX_DRAWING_ATTRIBUTES['frame_colour'](self)
-        can_draw_as_square = len(args) == 1
-        can_draw_as_bubble = (can_draw_as_square
-                              and len(self.dom) == len(self.arg.dom)
-                              and len(self.cod) == len(self.arg.cod))
+        args = self.args
+        setattrs(
+            self, drawing_name="" if drawing_name is None else drawing_name,
+            draw_vertically=draw_vertically,
+            frame_colour=BOX_DRAWING_ATTRIBUTES['frame_colour'](self))
         if len(args) == 1:
             can_draw_as_bubble = (len(self.dom), len(self.cod)) == (
                 len(self.arg.dom), len(self.arg.cod))
-            self.draw_as_square = draw_as_square or not can_draw_as_bubble
-            self.draw_as_frame = draw_as_frame or (
-                not can_draw_as_bubble and not self.draw_as_square)
+            draw_as_square = draw_as_square or not can_draw_as_bubble
+            setattrs(
+                self, draw_as_square=draw_as_square,
+                draw_as_frame=draw_as_frame or (
+                    not can_draw_as_bubble and not draw_as_square))
         else:
-            self.draw_as_frame = True
-            self.draw_as_square = False
+            setattrs(self, draw_as_frame=True, draw_as_square=False)
 
     @property
     def size(self):

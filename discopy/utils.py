@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import builtins
+import dataclasses
 import json
 from functools import lru_cache, wraps
 from math import ceil
@@ -788,6 +789,108 @@ def untuplify(stuff: tuple) -> any:
     This is the inverse of :func:`tuplify`, except on tuples of length 1.
     """
     return stuff[0] if len(stuff) == 1 else stuff
+
+
+def frozen(cls: type) -> type:
+    """
+    Decorate a class as a frozen dataclass whose ``__init__``, ``__eq__`` and
+    ``__repr__`` are written by hand, i.e. its fields declare what
+    :func:`replace` gives back to its constructor by keyword.
+
+    Parameters:
+        cls : The class to decorate.
+
+    Example
+    -------
+    >>> @frozen
+    ... class Point:
+    ...     x: int
+    ...     y: int = 0
+    ...     def __init__(self, x, y=0):
+    ...         setattrs(self, x=int(x), y=int(y))
+    >>> assert replace(Point("1"), y="2").y == 2
+    """
+    return dataclasses.dataclass(
+        frozen=True, init=False, eq=False, repr=False)(cls)
+
+
+def derived(**params) -> dataclasses.Field:
+    """
+    A field the constructor computes rather than takes, so that
+    :func:`replace` does not give it back.
+
+    Parameters:
+        params : Passed to :func:`dataclasses.field`.
+    """
+    return dataclasses.field(init=False, **params)
+
+
+def setattrs(obj: object, **attributes):
+    """
+    Set the fields of a :func:`frozen` object from its own constructor.
+
+    Parameters:
+        obj : The object under construction.
+        attributes : The values of its fields.
+    """
+    for key, value in attributes.items():
+        object.__setattr__(obj, key, value)
+
+
+def replace(obj: object, **changes):
+    """
+    The object with some of its fields changed, i.e. :func:`copy.replace`,
+    which Python 3.12 does not have.
+
+    Parameters:
+        obj : A dataclass instance, or any object with a ``__replace__``.
+        changes : The new values of the fields.
+    """
+    method = getattr(type(obj), "__replace__", None)
+    return dataclasses.replace(obj, **changes) if method is None\
+        else method(obj, **changes)
+
+
+def inherit_fields(cls: type):
+    """
+    Give a subclass that is not decorated the fields of all its bases, as
+    :func:`dataclasses.dataclass` would, rather than those of the first one
+    in its method resolution order: a diamond, e.g. a class with a frozen
+    base on either side, keeps the fields of both sides.
+
+    Parameters:
+        cls : A subclass of some dataclasses.
+
+    Example
+    -------
+    >>> @frozen
+    ... class A:
+    ...     a: int
+    >>> @frozen
+    ... class B:
+    ...     b: int
+    >>> class C(A, B):
+    ...     pass
+    >>> assert list(C.__dataclass_fields__) == ['a']
+    >>> inherit_fields(C)
+    >>> assert list(C.__dataclass_fields__) == ['b', 'a']
+    """
+    fields = {}
+    for base in reversed(cls.__mro__[1:]):
+        fields.update(vars(base).get("__dataclass_fields__", {}))
+    if fields:
+        cls.__dataclass_fields__ = fields
+
+
+@lru_cache
+def compared_fields(cls: type) -> tuple[str, ...]:
+    """
+    The names of the fields a dataclass compares, in order.
+
+    Parameters:
+        cls : A dataclass.
+    """
+    return tuple(f.name for f in dataclasses.fields(cls) if f.compare)
 
 
 def factory(cls):
