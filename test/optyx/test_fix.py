@@ -4,11 +4,11 @@ import numpy as np
 import pytest
 from cotengra import HyperCompressedOptimizer
 
-from optyx import channel, classical, photonic, qubits
-from optyx.channel import (
+from discopy.optyx import channel, classical, photonic, qubits
+from discopy.optyx.channel import (
     Diagram, Discard, Scalar, Ty, bit, qmode, qubit,
 )
-from optyx.core.backends import DiscopyBackend, QuimbBackend
+from discopy.optyx.core.backends import DiscopyBackend, QuimbBackend
 
 
 def source(photons=1, effect=None):
@@ -264,7 +264,7 @@ def test_both_solvers_return_the_same_kind_of_result():
     """`fix` and `eigen_fix` produce interchangeable `EvalResult`s: a
     density matrix over the codomain, real when the state is, read the
     same way whichever solver produced it."""
-    from optyx.core.backends import StateType
+    from discopy.optyx.core.backends import StateType
     eigen = source().eigen_fix()
     power = source().fix(tol=1e-2)
     for result in (eigen, power):
