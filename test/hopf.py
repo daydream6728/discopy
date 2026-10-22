@@ -198,7 +198,7 @@ def test_intertwiner_is_a_network_between_modules():
     """#145: an intertwiner is its own factory, holding the tensor network
     between the spaces of its modules, and its trees carry the generators of
     its algebra and the action of each module."""
-    from discopy import hopf, tensor, compact  # noqa: F401  (used by eval)
+    from discopy import hopf, tensor, frobenius  # noqa: F401  (used by eval)
     D, V = double_and_module()
     braid = Intertwiner[D].braid(V, V)
     for composite in [braid >> braid, braid @ braid, braid.dagger(),
