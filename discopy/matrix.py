@@ -59,8 +59,8 @@ if TYPE_CHECKING:
 
 
 @factory
-class Matrix(MarkovCategory, ComarkovCategory, DaggerCategory,
-             Testable["Matrix"], NamedGeneric['dtype']):
+class Matrix(NamedGeneric['dtype'], MarkovCategory, ComarkovCategory,
+             DaggerCategory, Testable["Matrix"]):
     """
     A matrix is an ``array`` with natural numbers as ``dom`` and ``cod``.
 
@@ -228,8 +228,8 @@ class Matrix(MarkovCategory, ComarkovCategory, DaggerCategory,
                 return type(self)[other.dtype]
         return type(self)[getattr(dtype, "type", dtype)]
 
-    def __class_getitem__(cls, item):
-        dtype, = item if isinstance(item, tuple) else (item, )
+    def __class_getitem__(cls, values):
+        dtype, = values if isinstance(values, tuple) else (values, )
         if getattr(dtype, "__module__", None) == "numpy":
             with backend('numpy') as np:
                 dtype = next((python for python in (bool, int, float, complex)
