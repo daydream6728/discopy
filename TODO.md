@@ -2,7 +2,7 @@
 
 - [x] B40 (fable README claim table): the `--skip-extra` contract is broken by unguarded torch/jax imports in `test/tensor.py`; the pyzx guards ignore the version pin
 - [x] B41: the coverage gate counts the test files themselves
-- [ ] B42: tests that cannot fail in `test/cat.py`, `test/markov.py`, `test/readme.py`
+- [x] B42: tests that cannot fail in `test/cat.py`, `test/markov.py`, `test/readme.py`
 - [ ] B43: nine modules have no test file; `test/test_para.py` naming drift
 - [ ] B45: self-contradictory and type-only error messages, the stale `pytest_plugin` pointer, `quantum.CY` (only if it exists unexported)
 - [ ] B84 of #31: `post.py` dying before `record()` leaves `clean` unset; the discopy/discopy#679 guard reads `steps.review.outcome` only
