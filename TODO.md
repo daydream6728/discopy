@@ -9,5 +9,5 @@
 - [x] `substitute` looks up variables only, rather than hashing every annotation and hiding the `TypeError`
 - [x] `position` is tested on every enrolled category: its scope reads `C0` and `C1` as `parameters` says
 - [x] `Former` says that its subscript is a type while open and an object once closed
-- [ ] merge this branch into #1, the DSL resolved as here
+- [x] merge this branch into #1, the DSL resolved as here
 - [ ] restore #214's `TODO.md` in place of this one, so that merging into #214 leaves its own
