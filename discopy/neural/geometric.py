@@ -712,7 +712,7 @@ class Geometric:
             state = self.update(maps, state, total / len(messages), const, gh)
             carried = None
         units = self.emit(maps, state)
-        return state, units, self.cells(units, replied)
+        return state, units, self.carry(units, replied)
 
     def messages(self, maps: Maps, per_cell, replied) -> list:
         """
@@ -728,7 +728,7 @@ class Geometric:
         return [next(encoded) if isinstance(port, Port) else port(per_cell)
                 for port in self.geometry.ports]
 
-    def cells(self, units, replied) -> torch.Tensor:
+    def carry(self, units, replied) -> torch.Tensor:
         """
         The messages a factor cycle hands the next, as beliefs.
 
