@@ -363,6 +363,8 @@ def test_loads_runs_no_code_from_a_file():
             {'factory': 'numpy.void', 'item': 10 ** 12},
             {'factory': 'numpy.int64', 'item': '42'},
             {'factory': 'sympy.Float', 'num': '0.1', 'precision': 10 ** 12},
+            {'factory': 'numpy.ndarray', 'dtype': 'int64',
+             'shape': [10 ** 12], 'flat': [1]},
             {'factory': 'numpy.ndarray', 'dtype': 'U500000000',
              'shape': [1], 'flat': ['a']},
             {'factory': 'numpy.ndarray', 'dtype': 'O',
