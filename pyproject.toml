@@ -168,7 +168,7 @@ norecursedirs = [
     ".hypothesis",
     "test/fixtures",
 ]
-addopts = "--doctest-modules --ignore=test/fixtures -p plugin"
+addopts = "--doctest-modules --ignore=test/fixtures -p plugin --import-mode=importlib"
 
 [tool.coverage.run]
 # The gate measures the package, not the tests that exercise it: a test file
