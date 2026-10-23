@@ -769,3 +769,15 @@ def test_rebuild_strict_init(module):
     assert fields(gate.subs(phi, 1)) == fields(gate.lambdify(phi)(1))\
         == (Gate, "g", x, y, 1, False, 2, False)
     assert gate.dagger().dagger() == gate
+
+
+def test_rebuild_other_constructor():
+    """ A constructor that does not take the fields of a box raises, as on
+    main, rather than rebuild from the wrong arguments. """
+    from discopy import rigid
+
+    class Digits(rigid.Box):
+        def __init__(self, *digits):
+            super().__init__(f"Digits{digits}", rigid.Ty(), rigid.Ty("x"))
+    with raises(TypeError):
+        Digits(1).r
