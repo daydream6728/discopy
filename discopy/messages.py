@@ -101,6 +101,9 @@ NOT_REWRITABLE = (
     "hypergraph category, and over a symmetric one for monogamous acyclic "
     "hypergraphs.")
 NOT_A_HOLE = "Cannot plug {} into {}: its boundary is not the hole's."
+NOT_LEFT_LINEAR = (
+    "{} is not left-linear: rewriting in place needs a left side with "
+    "boxes and with its boundary wires on distinct spiders.")
 NOT_SHARING = (
     "{} is not a diagram with sharing, i.e. a left-monogamous acyclic "
     "hypergraph: a spider has no producer or several, or a box depends on "

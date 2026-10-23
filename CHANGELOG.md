@@ -55,6 +55,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - Double-pushout rewriting of hypergraphs, `Hypergraph.match`, `rewrite` and
   `normal_form`, after Bonchi et al., and of planar diagrams on `CMap`, with
   `CMap.sweep` and `CMap.match`.
+- `hypergraph.Rewriter`, double-pushout rewriting in place with left-linear
+  rules, each step in the size of the rule rather than of the host.
 - `discopy.ehypergraph`, e-graphs of diagrams with sharing, with congruence
   closure, rewriting and e-matching.
 - `Hypergraph.pass_token`, evaluation over a disjoint-union tensor ([#363],
