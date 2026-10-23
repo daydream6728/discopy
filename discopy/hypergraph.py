@@ -3357,11 +3357,16 @@ class Decoder:
     def flush(self) -> None:
         """
         Compose with the :attr:`layer` of boxes placed side by side, each
-        with its offset in the scan: a box alone is whiskered, so that a
-        concrete category with no layers decodes too.
+        with its offset in the scan, as one layer of :attr:`category`. A box
+        alone that a layer cannot hold, i.e. a diagram rather than a box or
+        an arrow of a category with no layers, e.g. the
+        :class:`discopy.tensor.Tensor` of a :class:`discopy.cmap.CMap`, is
+        whiskered instead.
         """
         dom = self.diagram.cod
-        if len(self.layer) == 1:
+        if len(self.layer) == 1 and (
+                not isinstance(self.layer[0][0], cat.Box)
+                or not hasattr(self.diagram, "layer_factory")):
             box, offset = self.layer[0]
             self.then(dom[:offset] @ box @ dom[offset + len(box.dom):])
         elif self.layer:
@@ -3387,16 +3392,17 @@ class Decoder:
             dom_wires : The wires of its domain.
             cod_wires : The wires of its codomain.
             offset : Where in the scan, before the domain wires are gathered,
-                by default at the first of them. An offset past the end of
-                the scan is clamped to it.
+                by default at the first of them. For a box with no domain, an
+                offset past the end of the scan is clamped to it.
         """
         positions = [self.wires.index(wire) for wire in dom_wires]
         offset = positions[0] if offset is None else offset
         offset -= sum(j < offset for j in positions)
         if not dom_wires:
             offset = min(offset, len(self.wires))
-        perm = Permutation.gather(positions, len(self.wires), offset)
-        if not perm.is_identity:
+        if offset < 0 or positions != list(
+                range(offset, offset + len(positions))):
+            perm = Permutation.gather(positions, len(self.wires), offset)
             self.flush()
             self.then(self.permute(perm))
             self.wires = tuple(self.wires[j] for j in perm)

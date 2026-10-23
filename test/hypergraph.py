@@ -882,8 +882,8 @@ def test_complements_are_lazy():
 def test_decoder():
     """ The one decoder of hypergraphs and maps (decision 8b of #56): boxes
     side by side share a layer when it foliates, plumbing fuses when it fuses
-    and a concrete category, with no layers, decodes too. """
-    from discopy import markov
+    and a map over a concrete category, with no layers, decodes too. """
+    from discopy import markov, symmetric
     from discopy.cmap import CMap
     from discopy.hypergraph import Decoder
     from discopy.tensor import Dim, Tensor
@@ -903,6 +903,9 @@ def test_decoder():
     assert decoder.beside((1, 2), (0, 1), ()) == 1
     assert decoder.beside((1, 2), (), (2, 0)) == 0
     assert decoder.beside((1, 2), (1, 0), (2, )) is None
+    for box in (f, symmetric.Box('h', x, x) + symmetric.Box('k', x, x)):
+        decoded = Hypergraph[symmetric.Diagram].from_box(box).to_diagram()
+        assert type(decoded) is symmetric.Diagram and decoded.boxes == [box]
     t = Tensor([1, 2, 3, 4, 5, 6], Dim(2), Dim(3))
     assert (CMap[Tensor].id(Dim(3)) @ CMap[Tensor].from_box(t)
             >> CMap[Tensor].swap(Dim(3), Dim(3))).to_diagram()\
