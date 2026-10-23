@@ -250,10 +250,15 @@ class Bubble(frobenius.Bubble, Box):
     """
     A pregroup bubble is a frobenius bubble and a pregroup box.
 
+    It keeps its full winding number as it rotates, as a pregroup box does.
+
     >>> n = Ty('n')
     >>> word = Box('w', n, n)
     >>> assert (word >> word.bubble()).cod == n and word.bubble().r.l.z == 0
+    >>> assert word.bubble().l.l.z == -2
     """
+    def rotate(self, left=False):
+        return self.flagged(rigid.Bubble.rotate(self, left))
 
 
 class Functor(frobenius.Functor):

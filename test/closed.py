@@ -902,6 +902,6 @@ def test_delay_diagrams():
 def test_Bubble_is_linear_and_has_no_term():
     x = Ty('x')
     f, g = Box('f', x, x), Box('g', x, x)
-    assert f.bubble().is_linear and not Diagram.copy(x).bubble(cod=x).is_linear
+    assert f.bubble().is_linear and Diagram.copy(x).bubble(cod=x).is_linear
     with raises(AxiomError):
         (f.bubble() >> g).to_term()

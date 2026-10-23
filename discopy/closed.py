@@ -672,17 +672,13 @@ class Sum(markov.Sum, biclosed.Sum, Box):
 class Bubble(markov.Bubble, biclosed.Bubble, Box):
     """
     A closed bubble is a markov and biclosed bubble and a closed box, linear
-    when its args are, as a curry is. It has no term reading.
+    as a closed box is, whatever its args. It has no term reading.
 
     Example
     -------
     >>> x = Ty('x')
-    >>> assert Box('f', x, x).bubble().is_linear
-    >>> assert not Diagram.copy(x).bubble(cod=x).is_linear
+    >>> assert Diagram.copy(x).bubble(cod=x).is_linear
     """
-    @property
-    def is_linear(self):
-        return all(arg.is_linear for arg in self.args)
 
 
 class Functor(biclosed.Functor, markov.Functor):
