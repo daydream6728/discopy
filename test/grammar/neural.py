@@ -157,9 +157,10 @@ def test_Parser_search():
     torch.manual_seed(0)
     parser, states = Parser(signature, hidden=8, dim=8), torch.zeros(4, 8)
     comma = Ty(",")
-    parser.tagger.beam = lambda *args, **kwargs: [
-        [(n, -.1)], [(n >> s, -.1), (n >> (n >> s), -1.)],
-        [(n, -.1)], [(comma, -.1)]]
+    beams = [[(n, -.1)], [(n >> s, -.1), (n >> (n >> s), -1.)],
+             [(n, -.1)], [(comma, -.1)]]
+    parser.tagger.beam = lambda *args, k=1, **kwargs: [
+        beam[:k] for beam in beams]
     sentence = ["Alice", "loves", "Bob", "."]
     with pytest.raises(AxiomError):
         parser(sentence[:3], states[:3])
@@ -167,5 +168,6 @@ def test_Parser_search():
     assert net.sequent.words == (n("Alice"), (n >> (n >> s))("loves"),
                                  n("Bob"))
     assert net.to_term() in (loves(Bob)(Alice), loves(Alice)(Bob))
-    assert parser.search(sentence, states, k=1, width=1, skip=comma) is None
+    assert parser.search(sentence, states, k=1, width=4, skip=comma) is None
+    assert parser.search(sentence, states, k=2, width=1, skip=comma) is None
     assert parser.search(sentence, states, k=2, width=4) is None
