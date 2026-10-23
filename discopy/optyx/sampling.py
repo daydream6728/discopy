@@ -665,6 +665,9 @@ class Fock(Source):
     ((1, 0), (1.0, 0.0))
     """
     def __init__(self, photons):
+        photons = tuple(photons)
+        if any(number < 0 or number != int(number) for number in photons):
+            raise ValueError(f"Expected photon numbers, got {photons}.")
         self.photons = tuple(int(number) for number in photons)
         super().__init__(self.photons)
 
@@ -797,6 +800,9 @@ transmissivity=1.0, efficiency=1.0, visible=(0,), indistinguishability=1.0)
         self.visible = tuple(range(len(self.source))) if visible is None \
             else tuple(int(i) for i in visible)
         self.indistinguishability = float(indistinguishability)
+        for name in ("transmissivity", "efficiency", "indistinguishability"):
+            if not 0 <= getattr(self, name) <= 1:
+                raise ValueError(f"The {name} is a probability, in [0, 1].")
         if self.unitary.shape != (loop + len(self.source), ) * 2:
             raise ValueError(
                 f"Expected a {loop + len(self.source)}-mode matrix, "

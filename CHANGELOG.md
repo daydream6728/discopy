@@ -87,9 +87,10 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   a compiler to photonic hardware, under the Apache License 2.0 in its own
   `LICENSE` and `NOTICE`, behind the new `optyx` extra ([next#225],
   [next#276]).
-- `discopy.optyx.sampling`: `channel.Diagram.sample` runs any closed diagram
-  with feedback loops tick by tick, and `channel.Observable` is the effect of
-  a normal operator or of a function of the outcomes ([optyx#76]).
+- `discopy.optyx.sampling`: `channel.Diagram.sample` runs a diagram with
+  feedback loops tick by tick, closed or fed by a `source`, its burn-in
+  certified when it is passive, and `channel.Observable` is the effect of a
+  normal operator or of a function of the outcomes ([optyx#76]).
 - `hopf.Intertwiner.chart` and `hopf.Algebra.symmetric(n)` ([#408]).
 - `copying`, a law of `Testable` beside `pickling` ([next#1]), and the
   generators of each level as typed class variables ([next#1]).
