@@ -499,10 +499,9 @@ def encode(tree: Any) -> Any:
     if isinstance(tree, complex):
         return encode_complex(tree)
     package = (type(tree).__module__ or "").partition('.')[0]
-    if package not in ("numpy", "sympy"):
-        return tree
+    encoder = {"numpy": encode_numpy, "sympy": encode_sympy}.get(package)
     try:
-        return (encode_numpy if package == "numpy" else encode_sympy)(tree)
+        return tree if encoder is None else encoder(tree)
     except TypeError:
         return tree
 
