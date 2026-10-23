@@ -1869,20 +1869,14 @@ class Encode(Channel):
             ), "All internal states must have length d"
 
         amps = iter(self.internal_states or [])
-        wires = []
-        for ob in self.dom:
-            if ob == mode:
-                layer = diagram.Diagram.tensor(
-                    *[zw.Endo(a) for a in next(amps)])
-                wires.append(
-                    CQMap("Add†", zw.Add(d).dagger(), mode, mode ** d)
-                    >> Encode(mode ** d)
-                    >> Channel("Amplitudes", layer))
-            elif ob == qmode:
-                wires.append(Encode(qmode ** d))
-            else:
-                wires.append(Encode(ob))
-        return diagram.Diagram.tensor(*wires)
+        return diagram.Diagram.tensor(*[
+            CQMap("Add†", zw.Add(d).dagger(), mode, mode ** d)
+            >> Encode(mode ** d)
+            >> Channel("Amplitudes", diagram.Diagram.tensor(
+                *[zw.Endo(a) for a in next(amps)]))
+            if ob == mode else Encode(ob ** d) if ob == qmode
+            else Encode(ob) for ob in self.dom
+        ])
 
 
 class Discard(Channel):
