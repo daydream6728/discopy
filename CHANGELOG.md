@@ -118,6 +118,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `bool`, and `map` and `eval` infer it ([next#31], [next#88], [next#162]).
 - A law is a sequent ([next#1]), and `Equation` has one symbol between each
   pair of terms ([next#1]).
+- A law's number variable `N: Nat` is drawn from `abc.Nat.strategy`, and `**`,
+  `spiders` and `copy` take anything with `__index__` ([next#164]).
 - Properties are read with `isinstance` rather than `hasattr`, and a
   subscripted class is named by `factory_name` ([next#1]).
 - A box is plumbing by what it holds, `Layer.is_plumbing_component`, and
@@ -459,6 +461,7 @@ for the changelog of `1.2.1` and earlier.
 [next#156]: https://github.com/rel-int/discopy-next/issues/156
 [next#161]: https://github.com/rel-int/discopy-next/issues/161
 [next#162]: https://github.com/rel-int/discopy-next/issues/162
+[next#164]: https://github.com/rel-int/discopy-next/issues/164
 [next#168]: https://github.com/rel-int/discopy-next/issues/168
 [next#175]: https://github.com/rel-int/discopy-next/issues/175
 [next#176]: https://github.com/rel-int/discopy-next/issues/176
