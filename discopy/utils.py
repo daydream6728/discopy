@@ -31,6 +31,8 @@ from networkx import Graph, connected_components
 import discopy.messages as messages
 
 if TYPE_CHECKING:
+    import numpy
+    import sympy
     from discopy.monoidal import Ty, Diagram
     from discopy.abc import Category
 
@@ -443,15 +445,237 @@ def resolve_factory(name: str) -> type:
     return getattr(module, factory)
 
 
+SYMPY_CONSTANTS = (
+    "Zero", "One", "NegativeOne", "Half", "Pi", "Exp1", "ImaginaryUnit",
+    "Infinity", "NegativeInfinity", "ComplexInfinity", "NaN", "EulerGamma",
+    "GoldenRatio", "Catalan")
+""" The sympy singletons a tree names, read back from ``sympy.S``. """
+
+SYMPY_FUNCTIONS = (
+    "Add", "Mul", "Pow", "Mod", "Min", "Max", "Abs", "sign", "floor",
+    "ceiling", "re", "im", "arg", "conjugate", "exp", "log", "sin", "cos",
+    "tan", "cot", "sec", "csc", "asin", "acos", "atan", "acot", "atan2",
+    "sinh", "cosh", "tanh", "asinh", "acosh", "atanh")
+""" The sympy classes a tree applies to its ``args``, read from ``sympy``. """
+
+
+def encode(tree: Any) -> Any:
+    """
+    A tree as JSON can write it, with a node tagged by its factory for each
+    value that JSON has no notation for, or one it would read back as
+    something else: a tuple, which it writes as a list, a complex number, see
+    :func:`encode_complex`, a numpy array or scalar, see :func:`encode_numpy`,
+    and a sympy expression, see :func:`encode_sympy`. Every other value is
+    left as it is, so a tree without tuples keeps the bytes JSON gives it.
+    This is what :func:`dumps` writes and :func:`decode` reads back.
+
+    Example
+    -------
+    >>> encode({'name': 'f', 'data': (1, 2j)})
+    {'name': 'f', 'data': {'factory': 'tuple', 'inside': \
+[1, {'factory': 'complex', 're': 0.0, 'im': 2.0}]}}
+    >>> encode({1, 2})
+    Traceback (most recent call last):
+    ...
+    TypeError: Object of type set is not JSON serialisable.
+    """
+    if isinstance(tree, dict):
+        return {key: encode(value) for key, value in tree.items()}
+    if isinstance(tree, list | tuple):
+        inside = list(map(encode, tree))
+        return inside if isinstance(tree, list)\
+            else {'factory': factory_name(tuple), 'inside': inside}
+    if tree is None or isinstance(tree, bool | int | float | str):
+        return tree
+    if isinstance(tree, complex):
+        return encode_complex(tree)
+    package = (type(tree).__module__ or "").partition('.')[0]
+    if package in ("numpy", "sympy"):
+        return (encode_numpy if package == "numpy" else encode_sympy)(tree)
+    raise TypeError(messages.NOT_JSON_SERIALISABLE.format(
+        type(tree).__name__))
+
+
+def decode(tree: dict) -> Any:
+    """
+    Read back a node that :func:`encode` wrote, leaving any other alone.
+
+    This is the ``object_hook`` of :func:`loads`, i.e. :mod:`json` calls it on
+    every object it decodes, innermost first, so it answers a node that it did
+    not write with that node itself. A box whose ``data`` is a dictionary of
+    its own is left alone by the factory tag, which a tree reserves: a node is
+    read back only when it has exactly the keys that :func:`encode` writes,
+    holding values of the types it writes.
+
+    Example
+    -------
+    >>> assert decode({'factory': 'tuple', 'inside': [1, 2]}) == (1, 2)
+    >>> tree = {'factory': 'tuple', 'inside': [1, 2], 'name': 'x'}
+    >>> assert decode(tree) == tree
+    """
+    factory = tree.get('factory')
+    if factory == factory_name(tuple) and tree.keys() == {'factory', 'inside'}\
+            and isinstance(tree['inside'], list):
+        return tuple(tree['inside'])
+    if isinstance(factory, str) and factory.startswith("numpy."):
+        return decode_numpy(tree)
+    if isinstance(factory, str) and factory.startswith("sympy."):
+        return decode_sympy(tree)
+    return decode_complex(tree)
+
+
+def encode_numpy(value: "numpy.ndarray | numpy.generic") -> dict:
+    """
+    A numpy array as a node with its ``dtype``, its ``shape`` and its
+    entries in order, i.e. ``flat``, or a numpy scalar as a node with its
+    ``item``, i.e. its value as a Python scalar, see :func:`encode`.
+
+    Example
+    -------
+    >>> import numpy
+    >>> encode_numpy(numpy.array([[1, 0], [0, 1]]))
+    {'factory': 'numpy.ndarray', 'dtype': 'int64', 'shape': [2, 2], \
+'flat': [1, 0, 0, 1]}
+    >>> encode_numpy(numpy.float32(0.5))
+    {'factory': 'numpy.float32', 'item': 0.5}
+    """
+    import numpy
+    if isinstance(value, numpy.ndarray):
+        return {'factory': factory_name(numpy.ndarray),
+                'dtype': str(value.dtype), 'shape': list(value.shape),
+                'flat': encode(value.reshape(-1).tolist())}
+    if not isinstance(value, numpy.generic)\
+            or isinstance(value.item(), numpy.generic):
+        raise TypeError(messages.NOT_JSON_SERIALISABLE.format(
+            type(value).__name__))
+    return {'factory': factory_name(type(value)),
+            'item': encode(value.item())}
+
+
+def decode_numpy(tree: dict) -> Any:
+    """
+    Read back what :func:`encode_numpy` wrote, leaving any other node alone.
+
+    Example
+    -------
+    >>> import numpy
+    >>> array = numpy.arange(6).reshape(2, 3)
+    >>> assert (decode_numpy(encode_numpy(array)) == array).all()
+    >>> scalar = decode_numpy(encode_numpy(numpy.int8(-3)))
+    >>> assert scalar == -3 and isinstance(scalar, numpy.int8)
+    """
+    import numpy
+    name, fields = tree['factory'].removeprefix("numpy."), tree.keys()
+    scalar = getattr(numpy, name, None)
+    if name == "ndarray" and fields == {'factory', 'dtype', 'shape', 'flat'}\
+            and isinstance(tree['dtype'], str):
+        return numpy.array(tree['flat'], dtype=numpy.dtype(tree['dtype']))\
+            .reshape(tree['shape'])
+    if fields == {'factory', 'item'} and isinstance(scalar, type)\
+            and issubclass(scalar, numpy.generic):
+        return scalar(tree['item'])
+    return tree
+
+
+def encode_sympy(expr: "sympy.Basic") -> dict:
+    """
+    A sympy expression as a tree of sympy classes: a symbol by its ``name``
+    and the ``assumptions`` it was given, an integer by its numerator ``p``, a
+    rational by ``p`` and its denominator ``q``, a float by the decimal
+    ``num`` that reads back exactly at its ``precision``, a constant in
+    :data:`SYMPY_CONSTANTS` by its name alone and an expression whose head
+    is in :data:`SYMPY_FUNCTIONS` by its ``args``.
+
+    Any other sympy class raises, so that :func:`decode_sympy` can read back
+    what this writes without ``sympy.sympify``, which calls :func:`eval` on
+    strings, i.e. :func:`loads` runs no code from a file.
+
+    Example
+    -------
+    >>> from sympy import Dummy, Symbol, pi  # doctest: +EXTRA
+    >>> phi = Symbol('phi', real=True)
+    >>> encode_sympy(phi / 2 + pi)
+    {'factory': 'sympy.Add', 'args': [{'factory': 'sympy.Pi'}, \
+{'factory': 'sympy.Mul', 'args': [{'factory': 'sympy.Half'}, \
+{'factory': 'sympy.Symbol', 'name': 'phi', 'assumptions': {'real': True}}]}]}
+    >>> encode_sympy(Dummy())
+    Traceback (most recent call last):
+    ...
+    TypeError: Object of type Dummy is not JSON serialisable.
+    """
+    name = type(expr).__name__
+    tree = {'factory': f"sympy.{name}"}
+    if name == "Symbol":
+        _, assumptions = expr.__getnewargs_ex__()
+        tree['name'] = expr.name
+        tree.update({'assumptions': assumptions} if assumptions else {})
+    elif name in ("Integer", "Rational"):
+        tree.update({'p': expr.p} | ({'q': expr.q} if expr.q != 1 else {}))
+    elif name == "Float":
+        from mpmath.libmp import repr_dps
+        _, options = expr.__getnewargs_ex__()
+        tree['num'] = str(expr.evalf(repr_dps(options['precision'])))
+        tree['precision'] = options['precision']
+    elif name in SYMPY_FUNCTIONS:
+        tree['args'] = list(map(encode_sympy, expr.args))
+    elif name not in SYMPY_CONSTANTS:
+        raise TypeError(messages.NOT_JSON_SERIALISABLE.format(name))
+    return tree
+
+
+def decode_sympy(tree: dict) -> Any:
+    """
+    Read back what :func:`encode_sympy` wrote, leaving any other node alone.
+
+    Each class is called on fields of the types it is written with, e.g. a
+    function on sympy expressions only, never on a string, which sympy would
+    parse with :func:`eval`, and with ``evaluate=False``, so that it rebuilds
+    the expression as it was written, without computing e.g. a large power.
+    As the ``object_hook`` of :func:`loads` it reads the innermost nodes
+    first, i.e. the ``args`` of a node come decoded.
+
+    Example
+    -------
+    >>> from sympy import Symbol, sin  # doctest: +EXTRA
+    >>> theta = decode_sympy({'factory': 'sympy.Symbol', 'name': 'theta'})
+    >>> assert decode_sympy({'factory': 'sympy.sin', 'args': [theta]})\\
+    ...     == sin(Symbol('theta'))
+    >>> tree = {'factory': 'sympy.sin', 'args': ['__import__("os")']}
+    >>> assert decode_sympy(tree) == tree
+    """
+    import sympy
+    name, fields = tree['factory'].removeprefix("sympy."), tree.keys()
+    assumptions = tree.get('assumptions', {})
+    if name == "Symbol" and fields <= {'factory', 'name', 'assumptions'}\
+            and isinstance(tree.get('name'), str)\
+            and isinstance(assumptions, dict)\
+            and all(isinstance(value, bool) for value in assumptions.values()):
+        return sympy.Symbol(tree['name'], **assumptions)
+    if name in ("Integer", "Rational") and 'p' in fields\
+            and fields <= {'factory', 'p', 'q'} and all(
+                type(tree.get(key, 1)) is int for key in ('p', 'q')):
+        return sympy.Rational(tree['p'], tree.get('q', 1))
+    if name == "Float" and fields == {'factory', 'num', 'precision'}\
+            and isinstance(tree['num'], str)\
+            and type(tree['precision']) is int:
+        return sympy.Float(tree['num'], precision=tree['precision'])
+    if name in SYMPY_CONSTANTS and fields == {'factory'}:
+        return getattr(sympy.S, name)
+    if name in SYMPY_FUNCTIONS and fields == {'factory', 'args'}\
+            and isinstance(tree['args'], list)\
+            and all(isinstance(arg, sympy.Basic) for arg in tree['args']):
+        return getattr(sympy, name)(*tree['args'], evaluate=False)
+    return tree
+
+
 def encode_complex(number: complex) -> dict:
     """
     A complex number as a node of a tree, since JSON has only reals.
 
     :math:`\\mathbb{C}` is :math:`\\mathbb{R}^2` as a real vector space, so a
     complex number travels as the pair of its real and imaginary parts, tagged
-    with its factory like every other node. This is the ``default`` of
-    :func:`dumps`, i.e. it is called on whatever JSON cannot encode by itself
-    and raises on anything else, as :mod:`json` asks.
+    with its factory like every other node, see :func:`encode`. It raises on
+    anything else.
 
     Example
     -------
@@ -471,14 +695,10 @@ def encode_complex(number: complex) -> dict:
 
 def decode_complex(tree: dict) -> Any:
     """
-    Read back what :func:`encode_complex` wrote, leaving other nodes alone.
-
-    This is the ``object_hook`` of :func:`loads`, i.e. :mod:`json` calls it on
-    every object it decodes, so it answers a node that is not a complex number
-    with that node itself. A box whose ``data`` is a dictionary of its own is
-    left alone by the factory tag, which a tree reserves: the one dictionary
-    read as a complex number is ``{'factory': 'complex', 're': x, 'im': y}``,
-    with exactly those three keys, as :func:`encode_complex` writes it.
+    Read back what :func:`encode_complex` wrote, leaving other nodes alone,
+    see :func:`decode`: the one dictionary read as a complex number is
+    ``{'factory': 'complex', 're': x, 'im': y}``, with exactly those three
+    keys, as :func:`encode_complex` writes it.
 
     Example
     -------
@@ -501,6 +721,9 @@ def dumps(obj, **kwargs):
         obj : The DisCoPy object to serialise, or a list of them, which
             :func:`loads` reads back as a list, e.g. a corpus.
         kwargs : Passed to ``json.dumps``.
+
+    The tree of ``obj`` goes through :func:`encode`, so that its data may hold
+    tuples, complex numbers, numpy arrays and scalars and sympy expressions.
 
     Example
     -------
@@ -535,15 +758,15 @@ def dumps(obj, **kwargs):
         }
     }
     """
-    kwargs.setdefault('default', encode_complex)
     tree = [x.to_tree() for x in obj] if isinstance(obj, list)\
         else obj.to_tree()
-    return json.dumps(tree, **kwargs)
+    return json.dumps(encode(tree), **kwargs)
 
 
 def loads(raw):
     """
-    Loads a serialised DisCoPy object.
+    Loads a serialised DisCoPy object, decoding its nodes with
+    :func:`decode`, which runs no code from ``raw``.
 
     Example
     -------
@@ -554,7 +777,7 @@ def loads(raw):
     >>> assert loads(dumps(Ob('x'))) == Ob('x')
     >>> assert loads(dumps([Ob('x'), Ob('y')])) == [Ob('x'), Ob('y')]
     """
-    obj = json.loads(raw, object_hook=decode_complex)
+    obj = json.loads(raw, object_hook=decode)
     if isinstance(obj, list):
         return [from_tree(o) for o in obj]
     return from_tree(obj)
