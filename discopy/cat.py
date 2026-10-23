@@ -571,6 +571,14 @@ class Box(Arrow):
         data (any) : Extra data in the box, default is :code:`None`.
         is_dagger : Whether the box is dagger.
 
+    Note
+    ----
+    The :code:`serialised_attrs` of a box are the arguments of its
+    constructor, by name, each an attribute of the box, and a starred one
+    :code:`*args` passed positionally: :meth:`rebuild` reads them, and so
+    :meth:`dagger`, :meth:`subs` and :meth:`lambdify` keep them. A subclass
+    whose constructor takes other arguments declares its own.
+
     Example
     -------
 
@@ -578,6 +586,7 @@ class Box(Arrow):
     >>> f = Box('f', x, y, data=[42])
     >>> assert f.inside == (f, )
     """
+    serialised_attrs = ("name", "dom", "cod", "is_dagger", "data")
 
     @classmethod
     def strategy(
@@ -626,14 +635,32 @@ class Box(Arrow):
     def lambdify(self, *symbols: "sympy.Symbol", **kwargs) -> Callable:
         if not self.free_symbols & set(symbols):
             return lambda *xs: self
-        return lambda *xs: type(self)(
-            self.name, self.dom, self.cod, is_dagger=self.is_dagger,
+        return lambda *xs: self.rebuild(
             data=rsubs(self.data, dict(zip(symbols, xs)), **kwargs))
 
+    def rebuild(self, **changes) -> Box:
+        """
+        The box of the same type with the same :code:`serialised_attrs`, but
+        for some ``changes``.
+
+        Parameters:
+            changes : The arguments of the constructor that change, by name.
+
+        Example
+        -------
+        >>> f = Box('f', Ob('x'), Ob('y'), data=42)
+        >>> assert f.rebuild(data=43) == Box('f', Ob('x'), Ob('y'), data=43)
+        """
+        attrs = self.serialised_attrs
+        names = [attr.removeprefix("*") for attr in attrs]
+        fields = {name: getattr(self, name) for name in names} | changes
+        starred = [attr[1:] for attr in attrs if attr.startswith("*")]
+        args = fields.pop(starred[0]) if starred else ()
+        return type(self)(*args, **fields)
+
     def dagger(self) -> Box:
-        return type(self)(
-            self.name, self.cod, self.dom,
-            data=self.data, is_dagger=not self.is_dagger)
+        return self.rebuild(
+            dom=self.cod, cod=self.dom, is_dagger=not self.is_dagger)
 
     def __getitem__(self, key):
         if key == slice(None, None, -1):
@@ -708,6 +735,8 @@ class Sum(Box):
     ----
     The sum is non-commutative, i.e. :code:`Sum([f, g]) != Sum([g, f])`.
     """
+    serialised_attrs = ("terms", "dom", "cod")
+
     def __init__(
             self, terms: tuple[Arrow, ...], dom: Ob = None, cod: Ob = None):
         if not terms and (dom is None or cod is None):
@@ -826,6 +855,9 @@ class Bubble(Box):
     ValueError: A bubble needs a dom given when its args do not all share \
 one, they have [cat.Ob('x'), cat.Ob('y')].
     """
+    serialised_attrs = (
+        "*args", "dom", "cod", "name", "method", "is_dagger", "data")
+
     def __init__(self, *args: Arrow, dom: Ob = None, cod: Ob = None,
                  name="", method="bubble", **kwargs):
         dom, cod = (
@@ -888,17 +920,19 @@ one, they have [cat.Ob('x'), cat.Ob('y')].
         if not set(symbols) & self.free_symbols:
             return lambda *xs: self
         args = [arg.lambdify(*symbols, **kwargs) for arg in self.args]
-        return lambda *xs: type(self)(
-            *(f(*xs) for f in args),
-            dom=self.dom, cod=self.cod, name=self.name, method=self.method,
-            data=rsubs(self.data, dict(zip(symbols, xs)), **kwargs),
-            is_dagger=self.is_dagger)
+
+        def function(*xs):
+            changes = {"args": tuple(f(*xs) for f in args)}
+            if self.data is not None:
+                changes["data"] = rsubs(
+                    self.data, dict(zip(symbols, xs)), **kwargs)
+            return self.rebuild(**changes)
+        return function
 
     def dagger(self) -> Bubble:
-        return type(self)(
-            *(arg.dagger() for arg in self.args),
-            dom=self.cod, cod=self.dom, name=self.name, method=self.method,
-            data=self.data, is_dagger=not self.is_dagger)
+        return self.rebuild(
+            args=tuple(arg.dagger() for arg in self.args),
+            dom=self.cod, cod=self.dom, is_dagger=not self.is_dagger)
 
     def to_tree(self):
         tree = {

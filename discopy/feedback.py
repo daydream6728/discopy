@@ -646,12 +646,15 @@ class Box(monoidal.Box, Diagram):
         cod (monoidal.Ty) : The codomain of the box, i.e. its output.
         time_step (int) : The number of times the box has been delayed.
     """
+    serialised_attrs = monoidal.Box.serialised_attrs + ("time_step", )
 
     _time_step, _args, _params = 0, (), {}
     time_step = property(lambda self: self._time_step)
 
     def __init__(self, *args, time_step: int = 0, **params):
-        self._time_step, self._args, self._params = time_step, args[3:], params
+        self._time_step, self._args = time_step, args[3:]
+        self._params = {key: value for key, value in params.items()
+                        if key not in ("name", "dom", "cod")}
         super().__init__(*args, **params)
 
     def to_drawing(self):
@@ -688,27 +691,6 @@ class Box(monoidal.Box, Diagram):
     def reset(self):
         """ Reset a box to time step zero, used in :class:`Functor`. """
         return self.delay(-self.time_step)
-
-    def dagger(self):
-        result = super().dagger()
-        result._time_step = self.time_step  # pylint: disable=protected-access
-        return result
-
-    def lambdify(self, *symbols, **kwargs):
-        """
-        Lambdify a feedback box, keeping its time step.
-
-        >>> from sympy.abc import phi  # doctest: +EXTRA
-        >>> f = Box('f', Ty('x'), Ty('y'), data=phi)
-        >>> assert f.delay().subs(phi, 1) == f.subs(phi, 1).delay()
-        """
-        function = super().lambdify(*symbols, **kwargs)
-
-        def delayed(*xs):
-            box = function(*xs)
-            box._time_step = self.time_step  # pylint: disable=protected-access
-            return box
-        return delayed
 
     def __str__(self):
         return super().__str__() + str_delayed(self.time_step)
@@ -770,6 +752,8 @@ class Feedback(Box, monoidal.Bubble):
     >>> from discopy import feedback
     >>> assert str(fb) == "Feedback(f)" and eval(repr(fb)) == fb
     """
+    serialised_attrs = ("*args", "dom", "cod", "mem", "left")
+
     def __init__(self, arg: Diagram, dom=None, cod=None, mem=None, left=False):
         assert_isinstance(arg, self.ar)
         dom, cod, mem = arg.split_memory(
@@ -793,24 +777,6 @@ class Feedback(Box, monoidal.Bubble):
     def delay(self, n_steps=1):
         return type(self)(self.arg.delay(n_steps), mem=self.mem.delay(n_steps),
                           left=self.left)
-
-    def lambdify(self, *symbols, **kwargs):
-        """
-        Lambdify the argument of a feedback.
-
-        >>> from sympy.abc import phi  # doctest: +EXTRA
-        >>> x, y = Ty('x'), Ty('y')
-        >>> f = Box('f', x @ y.delay(), x @ y, data=phi)
-        >>> assert f.feedback().subs(phi, 1) == f.subs(phi, 1).feedback()
-        >>> g = Box('g', x @ y, x @ y, data=phi)
-        >>> assert g.trace().subs(phi, 1) == g.subs(phi, 1).trace()
-        """
-        if not set(symbols) & self.free_symbols:
-            return lambda *xs: self
-        function = self.arg.lambdify(*symbols, **kwargs)
-        return lambda *xs: type(self)(
-            function(*xs), dom=self.dom, cod=self.cod, mem=self.mem,
-            left=self.left)
 
     def __str__(self):
         return self.name
@@ -896,6 +862,7 @@ class Head(monoidal.Bubble, Box):
         arg : The diagram to take the head of.
         time_step : The number of times the head has been delayed.
     """
+    serialised_attrs = ("*args", "time_step")
     part = "head"
 
     def __init__(self, arg: Diagram, time_step=0):
@@ -904,20 +871,6 @@ class Head(monoidal.Bubble, Box):
         monoidal.Bubble.__init__(self, arg, dom=dom, cod=cod)
         Box.__init__(self, f"({arg}).{self.part}", self.dom, self.cod,
                      time_step=time_step)
-
-    def lambdify(self, *symbols, **kwargs):
-        """
-        Lambdify the argument of a head or a tail.
-
-        >>> from sympy.abc import phi  # doctest: +EXTRA
-        >>> f = Box('f', Ty('x'), Ty('y'), data=phi)
-        >>> assert Head(f).subs(phi, 1) == Head(f.subs(phi, 1))
-        >>> assert Tail(f).delay().subs(phi, 1) == Tail(f.subs(phi, 1)).delay()
-        """
-        if not set(symbols) & self.free_symbols:
-            return lambda *xs: self
-        function = self.arg.lambdify(*symbols, **kwargs)
-        return lambda *xs: type(self)(function(*xs), self.time_step)
 
     delay, reset, __repr__ = HeadOb.delay, HeadOb.reset, HeadOb.__repr__
     to_tree, from_tree = HeadOb.to_tree, classmethod(HeadOb.from_tree.__func__)
@@ -933,9 +886,10 @@ class Tail(monoidal.Bubble, Box):
         arg : The diagram to take the tail of.
         time_step : The number of times the tail has been delayed.
     """
+    serialised_attrs = ("*args", "time_step")
     part = "tail"
 
-    __init__, lambdify = Head.__init__, Head.lambdify
+    __init__ = Head.__init__
     delay, reset, __repr__ = HeadOb.delay, HeadOb.reset, HeadOb.__repr__
     to_tree, from_tree = HeadOb.to_tree, classmethod(HeadOb.from_tree.__func__)
     __str__ = Box.__str__
@@ -968,6 +922,8 @@ class FollowedBy(Box):
     >>> eq_up_to_F = lambda f, g: F(f).unroll(2).now == F(g).unroll(2).now
     >>> assert eq_up_to_F(FollowedBy(x), Id(x))
     """
+    serialised_attrs = ("arg", "is_dagger", "time_step")
+
     def __init__(self, arg: Ty, is_dagger=False, time_step=0):
         self.arg = arg
         dagger_name = ", is_dagger=True" if is_dagger else ""

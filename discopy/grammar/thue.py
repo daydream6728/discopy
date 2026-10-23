@@ -68,11 +68,6 @@ class Rule(monoidal.Box):
         return factory_name(type(self))\
             + f"({self.dom!r}, {self.cod!r}{name}{data})"
 
-    def dagger(self) -> Rule:
-        return type(self)(
-            name=self.name, dom=self.cod, cod=self.dom,
-            data=self.data, is_dagger=not self.is_dagger)
-
 
 class Word(Rule):
     """

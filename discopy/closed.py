@@ -495,6 +495,7 @@ class Timed(Box):
 
 class Eval(Timed, biclosed.Eval, Box):
     "The evaluation of an exponential type."
+    serialised_attrs = biclosed.Eval.serialised_attrs + ("time_step", )
     drawing_name = "__call__"
 
     def __getnewargs__(self):
@@ -504,11 +505,13 @@ class Eval(Timed, biclosed.Eval, Box):
 
 class Coeval(Timed, biclosed.Coeval, Box):
     "The coevaluation of an exponential type, i.e. the dagger of an Eval."
+    serialised_attrs = biclosed.Coeval.serialised_attrs + ("time_step", )
     __getnewargs__ = Eval.__getnewargs__
 
 
 class Curry(Timed, biclosed.Curry, Box):
     "The currying of a closed diagram, linear when its argument is."
+    serialised_attrs = biclosed.Curry.serialised_attrs + ("time_step", )
 
     @property
     def is_linear(self):
@@ -988,6 +991,8 @@ class Constant(TermBase, biclosed.Constant):
     calculus and ``eval(str(term)) == term`` under the obvious variable
     naming convention, e.g. ``query = (E >> E)("query")``.
     """
+    serialised_attrs = biclosed.Constant.serialised_attrs
+
     def __str__(self):
         return self.name
 
@@ -1012,6 +1017,8 @@ class Constant(TermBase, biclosed.Constant):
 
 class Variable(TermBase, biclosed.Variable):
     "A variable, evaluated in a context by discarding the other variables."
+    serialised_attrs = biclosed.Variable.serialised_attrs
+
     def eval(self, functor=None, context=None):
         return self.weaken(functor or self.functor, context)
 
@@ -1030,6 +1037,8 @@ class Application(TermBase, biclosed.Application):
         overlap : The variables free in both ``func`` and ``args``, which
             :meth:`eval` copies.
     """
+    serialised_attrs = biclosed.Application.serialised_attrs
+
     def __init__(self, func: Term, args: Term, left: bool = False):
         # pylint: disable=unused-argument  # a closed category is symmetric
         biclosed.Application.__init__(self, func, args)
@@ -1068,6 +1077,8 @@ class Abstraction(TermBase, biclosed.Abstraction):
     The abstraction ``var.cod(lambda var: body)`` of a variable in a term,
     which need not occur in it or may occur several times.
     """
+    serialised_attrs = biclosed.Abstraction.serialised_attrs
+
     def __init__(self, var: Variable, body: Term, left: bool = False):
         # pylint: disable=unused-argument  # a closed category is symmetric
         biclosed.Abstraction.__init__(self, var, body)
@@ -1141,6 +1152,8 @@ class Tuple(Compound):
     >>> assert Tuple(x, Tuple(y, x)).cod == X * (Y * X)
     >>> assert Tuple().cod == Ty()
     """
+    serialised_attrs = ("*terms", )
+
     def __init__(self, *terms: Term):
         for term in terms:
             assert_isinstance(term, TermBase)
@@ -1231,6 +1244,8 @@ class Projection(Compound):
     >>> x, y = Variable("x", X), Variable("y", Y)
     >>> assert Projection(Tuple(x, y), 1).cod == Y
     """
+    serialised_attrs = ("arg", "index")
+
     def __init__(self, arg: Term, index: int):
         assert_isinstance(arg, TermBase)
         assert_isinstance(index, int)
@@ -1324,6 +1339,8 @@ class Let(Compound):
     let(f(x), lambda y: Tuple(y, y))
     >>> assert term.cod == Y * Y and not term.is_linear
     """
+    serialised_attrs = ("expression", "variables", "body")
+
     def __init__(self, expression: Term, variables: tuple[Variable, ...],
                  body: Term):
         assert_isinstance(expression, TermBase)

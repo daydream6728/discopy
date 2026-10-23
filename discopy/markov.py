@@ -66,7 +66,7 @@ the :mod:`frobenius` axioms.
 from __future__ import annotations
 
 import warnings
-from typing import Callable, ClassVar
+from typing import ClassVar
 
 from discopy import symmetric, monoidal, feedback, cmap, hypergraph, messages
 from discopy.abc import ComarkovCategory, MarkovCategory
@@ -355,19 +355,15 @@ feedback.Ty(feedback.Wire('x')), is_deterministic=False)
     def flagged(self, other: Box) -> Box:
         """
         Give a box built from this one the flags declared of this one, as
-        :meth:`dagger`, :meth:`subs` and :meth:`lambdify` do on top of those
-        of the class they extend, e.g. one that keeps a winding number, and so
-        do the rotations of a :class:`discopy.frobenius.Box`.
+        :meth:`rebuild` does, and so :meth:`dagger`, :meth:`subs` and
+        :meth:`lambdify`, on top of the fields of the class they extend.
         """
         other.deterministic, other.affine = self.deterministic, self.affine
         return other
 
-    def dagger(self) -> Box:
-        return self.flagged(super().dagger())
-
-    def subs(self, *args) -> Box:
+    def rebuild(self, **changes) -> Box:
         """
-        Substitute a variable in the data of a box, keeping its flags.
+        Rebuild a box, keeping its flags.
 
         >>> from sympy.abc import phi  # doctest: +EXTRA
         >>> sample = Box('sample', Ty('x'), Ty('x'), data=phi,
@@ -375,11 +371,7 @@ feedback.Ty(feedback.Wire('x')), is_deterministic=False)
         >>> assert not sample.subs(phi, 1).is_deterministic
         >>> assert not sample.lambdify(phi)(1).is_deterministic
         """
-        return self.flagged(super().subs(*args))
-
-    def lambdify(self, *symbols, **kwargs) -> Callable:
-        function = super().lambdify(*symbols, **kwargs)
-        return lambda *xs: self.flagged(function(*xs))
+        return self.flagged(super().rebuild(**changes))
 
     def to_tree(self) -> dict:
         """
@@ -441,6 +433,8 @@ class Function(Box):
     .. image:: /_static/markov/function.svg
         :align: center
     """
+    serialised_attrs = ("dom", "func")
+
     def __new__(cls, dom: monoidal.Ty = None, func=None):
         if dom is None or cls is not cls.ar.function_factory:
             return super().__new__(cls)
