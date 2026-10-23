@@ -513,13 +513,13 @@ def decode(tree: dict) -> Any:
     >>> tree = {'factory': 'tuple', 'inside': [1, 2], 'name': 'x'}
     >>> assert decode(tree) == tree
     """
-    factory = tree.get('factory')
-    if factory == factory_name(tuple) and tree.keys() == {'factory', 'inside'}\
+    name = tree.get('factory')
+    if name == factory_name(tuple) and tree.keys() == {'factory', 'inside'}\
             and isinstance(tree['inside'], list):
         return tuple(tree['inside'])
-    if isinstance(factory, str) and factory.startswith("numpy."):
+    if isinstance(name, str) and name.startswith("numpy."):
         return decode_numpy(tree)
-    if isinstance(factory, str) and factory.startswith("sympy."):
+    if isinstance(name, str) and name.startswith("sympy."):
         return decode_sympy(tree)
     return decode_complex(tree)
 
