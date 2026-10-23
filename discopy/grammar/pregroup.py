@@ -49,14 +49,20 @@ class Ty(rigid.Ty):
 
     Note
     ----
-    In order to define more general DisCoCat diagrams, pregroup types do not
-    raise any AxiomError if you build cups and caps with the wrong adjoints.
+    In order to define more general DisCoCat diagrams, pregroup types accept
+    cups and caps with the adjoint on the wrong side, but still raise an
+    ``AxiomError`` for types that are not adjoints at all.
 
     Example
     -------
     >>> n = Ty('n')
     >>> n.assert_isadjoint(n.l)
     >>> n.assert_isadjoint(n.r)
+    >>> assert Cup(n, n.l).dom == n @ n.l
+    >>> Cup(n, n)
+    Traceback (most recent call last):
+    ...
+    discopy.utils.AxiomError: n and n are not adjoints.
     """
     def assert_isadjoint(self, other):
         """
