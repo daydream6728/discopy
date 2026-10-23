@@ -163,6 +163,7 @@ from discopy.utils import (
     BinaryBoxConstructor,
     deprecated_alias,
     factory_name,
+    rsubs,
 )
 
 
@@ -727,6 +728,20 @@ class Box(biclosed.Box, Diagram):
         return type(self)(self.name, dom=self.cod, cod=self.dom,
                           data=self.data, is_dagger=not self.is_dagger,
                           z=self.z)
+
+    def lambdify(self, *symbols, **kwargs) -> Callable:
+        """
+        Lambdify a rigid box, keeping its winding number.
+
+        >>> from sympy.abc import phi  # doctest: +EXTRA
+        >>> f = Box('f', Ty('x'), Ty('y'), data=phi)
+        >>> assert f.r.subs(phi, 1) == f.subs(phi, 1).r
+        """
+        if not self.free_symbols & set(symbols):
+            return lambda *xs: self
+        return lambda *xs: type(self)(
+            self.name, dom=self.dom, cod=self.cod, is_dagger=self.is_dagger,
+            data=rsubs(self.data, dict(zip(symbols, xs)), **kwargs), z=self.z)
 
     @classmethod
     def strategy(cls, **params):
