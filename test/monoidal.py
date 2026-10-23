@@ -528,6 +528,8 @@ def test_Bubble_data():
     for b in (from_tree(named.to_tree()), loads(dumps(named))):
         assert b == named and (b.name, b.method) == ("b", "frame")
     assert "method" not in bubble.to_tree() and "name" not in bubble.to_tree()
+    from discopy import monoidal
+    assert (eval(repr(bubble)).data, eval(repr(bubble)).is_dagger) == (42, True)
 
 
 def test_Bubble_identity_Functor():

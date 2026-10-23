@@ -423,6 +423,7 @@ def test_Bubble_flags():
     assert not noisy.lambdify(phi)(1).affine and noisy[::-1].affine is False
     plain = Box('sample', x, x, is_deterministic=False).bubble(is_affine=False)
     assert loads(dumps(plain)) == plain == eval(repr(plain))
+    assert eval(repr(plain[::-1])).is_dagger
     assert plain != plain.arg.bubble()
     minus, zero = Box('-', x @ x, x), Box('0', Ty(), x)
     program = Diagram.copy(x) >> noisy @ noisy >> minus

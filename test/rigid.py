@@ -254,6 +254,7 @@ def test_Bubble_rotate():
     for rotated in (bubble.r, bubble.l.l):
         assert eval(repr(rotated)) == rotated == loads(dumps(rotated))
         assert rotated[::-1][::-1] == rotated
+        assert eval(repr(rotated[::-1])).is_dagger
     assert str(bubble.l.l) == "(f).bubble().l.l"
     assert bubble.r[::-1] == bubble[::-1].r
     F = Functor({x: y, y: x}, {f: g})
