@@ -2,4 +2,4 @@
 
 - [x] T27: a `cfg.Tree` has a tree, `loads(dumps(tree)) == tree`, rules and words keep the trees `main` writes
 - [x] T44: `cfg.Tree(f, a)` with ill-typed branches raises `AxiomError` with a message
-- [ ] `CHANGELOG.md`: one bullet
+- [x] `CHANGELOG.md`: one bullet
