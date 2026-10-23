@@ -367,10 +367,10 @@ class Repeat[Object, N](Constructor):
 
 def position(variable: TypeVar, category: type) -> int | None:
     """
-    Which parameter of :meth:`discopy.abc.Category.parameters` a type
+    Which parameter of :meth:`discopy.abc.Category.typeparams` a type
     parameter of a class above a category stands for.
 
-    The answer is read off the class that defines ``parameters``. A type
+    The answer is read off the class that defines ``typeparams``. A type
     parameter of a subclass gets there through the generic bases: e.g. a
     ``Monoid[C1]`` is a ``ColouredMonoid[NoneType, C1]``, which is a
     ``Category[NoneType, C1]``, so the ``C1`` of a monoid is the second
@@ -384,7 +384,7 @@ def position(variable: TypeVar, category: type) -> int | None:
     owner = next((
         klass for klass in category.__mro__
         if variable in getattr(klass, "__type_params__", ())), None)
-    while owner is not None and "parameters" not in vars(owner):
+    while owner is not None and "typeparams" not in vars(owner):
         base = next((
             base for base in vars(owner).get("__orig_bases__", ())
             if variable in get_args(base)
@@ -454,7 +454,7 @@ class Declaration[**P, T](classmethod):
     :class:`R`, :class:`Delay`, :class:`Over`, :class:`Under` and
     :class:`Repeat`, which stay expressions until the variables are
     substituted, see :func:`substitute`. The type parameters of the class
-    stating it stand for what :meth:`discopy.abc.Category.parameters` says,
+    stating it stand for what :meth:`discopy.abc.Category.typeparams` says,
     see :func:`position`, and the annotations are read as objects, see
     :meth:`annotations`, so that a module stating a law may use ``from
     __future__ import annotations``.
@@ -550,7 +550,7 @@ class Declaration[**P, T](classmethod):
             for parameter in getattr(klass, "__type_params__", ()):
                 index = position(parameter, category)
                 if index is not None:
-                    scope[parameter] = category.parameters()[index]
+                    scope[parameter] = category.typeparams()[index]
         for parameter in inspect.unwrap(self.function).__type_params__:
             name = parameter.__name__
             scope[parameter] = given[name] if name in given\
@@ -582,7 +582,7 @@ class Declaration[**P, T](classmethod):
         """
         Generate the scope and the arguments of the bound declaration: a
         variable of sort ``Obj`` from the strategy of the objects
-        :meth:`discopy.abc.Category.parameters` names, :obj:`None` for those
+        :meth:`discopy.abc.Category.typeparams` names, :obj:`None` for those
         of a group, and of sort
         :class:`Count` a number up to :data:`MAX_COUNT`, then a premise
         ``Hom[C1, A, B]`` from the strategy of the category with its boundary
@@ -598,7 +598,7 @@ class Declaration[**P, T](classmethod):
             def variable(name, sort):
                 if sort is Count:
                     return draw(st.integers(0, MAX_COUNT), label=name)
-                ob = self.category.parameters()[0]
+                ob = self.category.typeparams()[0]
                 return draw(st.just(None) if ob is NoneType
                             else ob.strategy(), label=name)
 

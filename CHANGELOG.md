@@ -113,6 +113,7 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Changed
 
+- `Category.parameters` is renamed `Category.typeparams` ([next#214]).
 - DisCoPy requires Python 3.12 and is packaged with uv ([#311]).
 - `closed` is the closed *symmetric* monoidal category; the planar one, with
   `Over` and `Under`, is `biclosed` ([#322]).
@@ -190,8 +191,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
-- `Category.parameters` reads `ob` with no fallback: a monoid's objects are
-  `NoneType`, so `Nat.parameters()` no longer gives `(Nat, Nat)` ([next#214]).
+- `Category.typeparams` reads `ob` with no fallback: a monoid's objects are
+  `NoneType`, so `Nat.typeparams()` no longer gives `(Nat, Nat)` ([next#214]).
 - `Hypergraph`: its hash, `simplify`, `rotate`, and `to_diagram` on
   non-self-dual, `Nat` and `Dim` types ([#324], [#387], [#393], [#622],
   [#719]).
