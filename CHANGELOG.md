@@ -87,6 +87,10 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   a compiler to photonic hardware, under the Apache License 2.0 in its own
   `LICENSE` and `NOTICE`, behind the new `optyx` extra ([next#225],
   [next#276]).
+- `discopy.optyx.sampling`: `channel.Diagram.sample` runs a diagram with
+  feedback loops tick by tick, closed or fed by a `source`, its burn-in
+  certified when it is passive, and `channel.Observable` is the effect of a
+  normal operator or of a function of the outcomes ([optyx#76]).
 - `optyx.interaction`, combinatorial maps of recurrent channels, each box
   with a private memory and a prediction, unrolled or run to an approximate
   fixed point ([optyx#16]).
@@ -304,6 +308,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   as the C tracer on 3.12 and 3.13, and the docs job has 25 minutes, the
   API pages of `discopy.optyx` taking its build to about fifteen
   ([next#276]).
+- Coverage's 98% gate reads `discopy/` alone, new tests bring `ehypergraph` to
+  100%, and pytest imports by path, so `test/abc.py` is collected ([next#31]).
 
 ## [1.2.2] - 2025-12-19
 
@@ -514,6 +520,7 @@ for the changelog of `1.2.1` and earlier.
 [optyx#16]: https://github.com/rel-int/optyx/pull/16
 [optyx#29]: https://github.com/rel-int/optyx/pull/29
 [optyx#56]: https://github.com/rel-int/optyx/pull/56
+[optyx#76]: https://github.com/rel-int/optyx/pull/76
 [lambek#2]: https://github.com/rel-int/lambek/pull/2
 [lambek#8]: https://github.com/rel-int/lambek/pull/8
 [lambek#12]: https://github.com/rel-int/lambek/pull/12

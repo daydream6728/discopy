@@ -1,8 +1,7 @@
-import warnings
-
 import numpy as np
 import pytest
 
+from discopy import optyx
 from discopy.utils import AxiomError
 
 from discopy.optyx.channel import Diagram, Ty, qubit, qmode
@@ -56,6 +55,15 @@ def test_edge_axioms():
         CMap([box(), box()], [((0, 1), (1, 0)), ((0, 1), (1, 1))])
     with pytest.raises(AxiomError):
         CMap([box(), Box("g", qmode, qmode, BS)], [((0, 0), (1, 0))])
+    with pytest.raises(AxiomError, match="paired with itself"):
+        CMap([box()], [((0, 0), (0, 0))])
+
+
+def test_repr_is_transparent():
+    wait = Box("wait", Ty(), qmode, Diagram.swap(qmode, qmode), memory=qmode)
+    cmap = CMap([wait], []) @ delay()
+    assert eval(repr(cmap), {"optyx": optyx, "Box": Box, "CMap": CMap}) \
+        == cmap
 
 
 def test_memory_is_not_a_port():
@@ -126,15 +134,10 @@ def test_readout_predicts_its_memory():
 
 
 def without_certificate(call):
-    """`fix` falls back to `power_fix` silently when no certificate
-    applies, so the call warns about anything but the certificate."""
-    with warnings.catch_warnings(record=True) as caught:
-        warnings.simplefilter("always")
-        result = call()
-    assert not [
-        warning for warning in caught
-        if "certificate does not apply" in str(warning.message)]
-    return result
+    """`fix` warns that it falls back on `power_fix` when no certificate
+    applies."""
+    with pytest.warns(UserWarning, match="falling back on power_fix"):
+        return call()
 
 
 def fixed_wire():
