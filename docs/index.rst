@@ -39,6 +39,7 @@ DisCoPy documentation
     notebooks/neural-church
     notebooks/equivalence-hypergraphs
     notebooks/contextual-fraction
+    notebooks/boolean-circuits
 
 
 .. toctree::
