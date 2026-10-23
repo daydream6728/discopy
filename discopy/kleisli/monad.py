@@ -132,13 +132,15 @@ class Monad(EndoFunctor):
         The composition of the monad's underlying endofunctor with another,
         i.e. plain functor composition: the composite is not itself
         required to be a monad, so it is an :class:`EndoFunctor` rather
-        than a :class:`Monad`.
+        than a :class:`Monad`, except with the identity, which is dropped.
 
         Parameters:
             other : The other endofunctor to compose with.
         """
         assert_isinstance(other, EndoFunctor)
         assert_iscomposable(self, other)
+        if other == EndoFunctor.id(self.cod):
+            return self
         return EndoFunctor(
             self.ob_map.then(other), self.ar_map.then(other),
             dom=self.dom, cod=other.cod)

@@ -1897,14 +1897,15 @@ class Functor(cat.Functor):
         super().__init__(ob_map, ar_map, dom=dom, cod=cod)
         self.colour_map = MappingOrCallable(colour_map or {})
 
-    @classmethod
-    def id(cls, dom=None):
-        return cls(lambda x: x, lambda f: f, dom=dom, cod=dom)
-
     @unbiased
     def then(self, other):
         assert_isinstance(other, Functor)
         assert_iscomposable(self, other)
+        unit = self.id(self.cod)
+        if self == unit:
+            return other
+        if other == unit:
+            return self
         return type(self)(
             self.ob_map.then(other), self.ar_map.then(other),
             colour_map=self.colour_map.then(other) if self.colour_map

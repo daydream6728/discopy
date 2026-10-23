@@ -451,18 +451,16 @@ def test_Sum():
     assert Sum((), x, y).dagger() == Sum((), y, x)
 
 
-def test_Functor_then_left_unit():
-    """
-    Composition is unital only on the left up to equality of functors
-    (#648): the identity functor is a pair of functions, so composing it on
-    the left of a functor given by dictionaries yields a pair of functions
-    that acts the same but compares unequal.
-    """
+def test_Functor_then_unit():
+    """ An identity is dropped on either side of a composite (#142). """
     x, y = Ob('x'), Ob('y')
-    F = Functor({x: y, y: x}, {})
-    assert F >> Functor.id() == F
-    assert Functor.id() >> F != F
-    assert (Functor.id() >> F)(x) == F(x)
+    F, G = Functor({x: y, y: x}, {}), Functor(lambda x: x, lambda f: f[::-1])
+    for H in (F, G):
+        assert Functor.id() >> H == H == H >> Functor.id()
+    assert Functor.id() == Functor.id() >> Functor.id()
+    assert G >> G != G >> G
+    alpha = Transformation.id(Functor.id())
+    assert (alpha >> alpha)(x) == Arrow.id(x)
 
 
 def test_Bubble_no_common_boundary():

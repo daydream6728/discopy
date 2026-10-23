@@ -30,6 +30,7 @@ def test_EndoFunctor():
     assert listing(int) == Ty(list[int])
     assert listing(increment)([1, 2, 3]) == [2, 3, 4]
     assert listing.then(listing)(int) == listing(listing(int))
+    assert EndoFunctor.id() >> Maybe == Maybe == Maybe >> EndoFunctor.id()
 
 
 def test_Monad_repr():
