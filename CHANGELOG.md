@@ -176,8 +176,9 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   ([#699], [next#1]) and drops plumbing that composes to the identity;
   `braided.simplify` and `pregroup.normal_form` take foliated diagrams
   ([next#31]).
-- `normalize` and `snake_removal` say they are planar ([next#56] 8a) and take
-  foliated diagrams, as do `substitute`, `naturality` and `to_tn` ([next#9]).
+- `monoidal.normalize` and `rigid.snake_removal` say they are planar
+  ([next#56] 8a) and take foliated diagrams, as do `monoidal.substitute`,
+  `braided.naturality` and `Circuit.to_tn` ([next#9]).
 - Boxes read back from their tree: quantum gates ([#664], [#780]), lambda
   terms ([#692]), `Trace`, `Copy`, `Merge` and `tensor.Dim` ([#736]), heads,
   tails and `FollowedBy` ([next#96]), `Twist`, `Spider` and inverse `Braid`
