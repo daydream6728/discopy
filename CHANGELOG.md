@@ -127,6 +127,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - The `quantum` extra pins pyzx 0.10.7 ([next#225]).
 - Faster tensor of `n` morphisms ([#623]), of Python functions, and
   `finset.Permutation.then` ([#763]).
+- A functor maps a layer with one `n`-ary `tensor` rather than a fold of
+  `@`, with one `tensor` call per layer ([next#161]).
 
 ### Deprecated
 
@@ -168,6 +170,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   subclass reprs as itself, and maps and hypergraphs refuse sums ([next#31],
   [next#168]); `EHypergraph.rewrite` refuses what it does not have
   ([next#114]).
+- The hypergraph of a rotated box is its transpose, as its map is, and both
+  put the legs of a cup or cap in scan order ([next#56], [next#139]).
 - `Diagram.foliation` is idempotent and an equality up to interchangers
   ([#699], [next#1]) and drops plumbing that composes to the identity;
   `braided.simplify` and `pregroup.normal_form` take foliated diagrams
@@ -202,6 +206,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - `Tensor`: the spider with no legs is the circle ([next#116]), a box is not
   its dagger ([next#119]), `trace` and `repeat` ([next#89]), n-ary `then`
   ([next#60]), `to_tn` and `cups` ([next#31]).
+- Tensor functors bend a compound wire the same alone and in a diagram, and a
+  cup on a self-dual object is the spider with two legs ([next#31]).
 - `Matrix`: `copy` is the diagonal of the direct sum ([#652], [#795],
   [next#80]), composites keep their dtype ([#538], [#733]), `swap` on JAX
   ([next#49]), `basis` and `repr` ([next#88]).
@@ -401,6 +407,7 @@ for the changelog of `1.2.1` and earlier.
 [next#31]: https://github.com/rel-int/discopy-next/issues/31
 [next#49]: https://github.com/rel-int/discopy-next/issues/49
 [next#52]: https://github.com/rel-int/discopy-next/issues/52
+[next#56]: https://github.com/rel-int/discopy-next/issues/56
 [next#60]: https://github.com/rel-int/discopy-next/issues/60
 [next#73]: https://github.com/rel-int/discopy-next/issues/73
 [next#74]: https://github.com/rel-int/discopy-next/issues/74
@@ -434,10 +441,12 @@ for the changelog of `1.2.1` and earlier.
 [next#130]: https://github.com/rel-int/discopy-next/issues/130
 [next#133]: https://github.com/rel-int/discopy-next/issues/133
 [next#134]: https://github.com/rel-int/discopy-next/issues/134
+[next#139]: https://github.com/rel-int/discopy-next/issues/139
 [next#140]: https://github.com/rel-int/discopy-next/issues/140
 [next#147]: https://github.com/rel-int/discopy-next/issues/147
 [next#149]: https://github.com/rel-int/discopy-next/issues/149
 [next#156]: https://github.com/rel-int/discopy-next/issues/156
+[next#161]: https://github.com/rel-int/discopy-next/issues/161
 [next#168]: https://github.com/rel-int/discopy-next/issues/168
 [next#175]: https://github.com/rel-int/discopy-next/issues/175
 [next#176]: https://github.com/rel-int/discopy-next/issues/176
