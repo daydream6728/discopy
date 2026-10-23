@@ -155,6 +155,9 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   term inside a diagram is drawn as one box ([next#31]).
 - `Functor.id` is built from `utils.identity`, and `then` drops an identity
   on either side, so that composing functors is unital ([next#142]).
+- `discopy.optyx` keeps no private members in `channel` and `core.diagram`:
+  `decomp`, `dual_rail`, `Ob.classical`, `Ob.quantum` and `Box.array` are
+  public, and the imports that make no cycle are at the top ([optyx#29]).
 
 ### Deprecated
 
@@ -506,6 +509,7 @@ for the changelog of `1.2.1` and earlier.
 [next#310]: https://github.com/rel-int/discopy-next/pull/310
 [next#316]: https://github.com/rel-int/discopy-next/pull/316
 [next#320]: https://github.com/rel-int/discopy-next/pull/320
+[optyx#29]: https://github.com/rel-int/optyx/pull/29
 [lambek#2]: https://github.com/rel-int/lambek/pull/2
 [lambek#8]: https://github.com/rel-int/lambek/pull/8
 [lambek#12]: https://github.com/rel-int/lambek/pull/12
