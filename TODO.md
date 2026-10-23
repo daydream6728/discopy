@@ -6,4 +6,4 @@ Four drawing bugs found while fixing #31, each reproduced on `main` and needing 
 - [x] T19: a twist in an xcolor-only colour (e.g. `RoyalPurple`) raises `ValueError` in TikZ, where a box in that colour draws
 - [x] T20: `Drawing.then(draw_step_by_step=True)` returns a drawing, not a list of steps, when a side is a short identity
 - [x] T21: `use_tikzstyles=True` with a hexcode names the style `#336699_box`, and `#` is TeX's parameter character
-- [ ] `CHANGELOG.md`: one bullet for the PR
+- [x] `CHANGELOG.md`: one bullet for the PR

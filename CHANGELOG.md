@@ -254,6 +254,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - Drawing: `Drawing.dagger` ([next#1]), regions through crossings ([#614]),
   `draw` leaves a drawing as it was ([#606]), TikZ colours ([next#31]) and a
   test restyling `H` ([next#99]).
+- `Drawing.permutation` of blocks, `then` step by step past an identity, a
+  TikZ twist in an xcolor name and a TikZ style of a hexcode ([next#31]).
 - A law reads its type parameters when another class shares its name.
 - `discopy.grammar.neural` installs with the `grammar` extra ([next#52]).
 - Docstrings of `para` and two others ([#494], [#683], [#693]), a citation
