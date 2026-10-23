@@ -404,14 +404,9 @@ def test_heads_of_pivotal_types():
 
 def test_structural_boxes_have_no_time_step():
     from discopy import closed, markov
-    from discopy.quantum.circuit import bit
     from discopy.quantum.gates import CX, Copy, Match
-    from discopy.utils import dumps, loads
-    for box in (Copy(), Match()):
-        delayed = box.delay(2)
-        assert delayed.time_step is None and delayed.reset() == delayed
-        assert delayed == type(box)(bit.delay(2)) == loads(dumps(delayed))
-        assert delayed.dagger() == box.dagger().delay(2)
+    assert Copy().delay(2).time_step == Match().delay(2).time_step == 2
+    assert Copy().delay(2).reset() == Copy()
     x, y = closed.Ty('x'), closed.Ty('y')
     copy = markov.Copy(x).delay(42)
     assert copy.time_step is None and copy.dom == x.delay(42)

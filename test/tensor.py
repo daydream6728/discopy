@@ -364,6 +364,9 @@ def test_Box_with_nan_equals_itself():
                  (np.complex64(complex(nan, 1)), complex(nan, 1))]:
         assert B([x, 0]) == B([y, 0]) and hash(B([x, 0])) == hash(B([y, 0]))
     assert B((nan, 0)) == B((float('nan'), 0)) != B([complex(nan, 1), 0])
+    eps = np.finfo(np.longdouble).eps
+    assert B(np.array([np.clongdouble(complex(1, nan)), 0]))\
+        != B(np.array([np.clongdouble(complex(1, nan)) + eps, 0]))
 
 
 @pytest.mark.parametrize("module", ["torch", "jax.numpy"])

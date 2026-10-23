@@ -804,11 +804,11 @@ class Layer(cat.Box, ColouredMonoid):
         discopy.utils.AxiomError: Compose diagrams, not layers: f >> f.
         >>> assert (Layer(f) >> cat.Arrow.id(x)).inside == (Layer(f), )
         """
-        inside = sum((arrow.inside for arrow in (self, ) + others), ())
-        if sum(isinstance(box, Layer) for box in inside) > 1:
+        result = cat.Arrow.then(self, *others)
+        if sum(isinstance(box, Layer) for box in result.inside) > 1:
             raise AxiomError(messages.LAYERS_DO_NOT_COMPOSE.format(
-                " >> ".join(map(str, inside))))
-        return cat.Arrow.then(self, *others)
+                " >> ".join(map(str, result.inside))))
+        return result
 
     def __rrshift__(self, other: cat.Arrow) -> cat.Arrow:
         """

@@ -992,7 +992,7 @@ class Box(frobenius.Box, Diagram):
                 return x
             if isinstance(x, numbers.Real) or x.imag == 0:
                 return math.nan
-            return canonical(float(x.real)), canonical(float(x.imag))
+            return canonical(x.real), canonical(x.imag)
 
         data = getattr(self.data, "tolist", lambda: self.data)()
         if isinstance(data, list) and any(isinstance(x, list) for x in data):
