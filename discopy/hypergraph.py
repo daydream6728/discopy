@@ -3357,19 +3357,18 @@ class Decoder:
     def flush(self) -> None:
         """
         Compose with the :attr:`layer` of boxes placed side by side, each
-        with its offset in the scan, as one layer of :attr:`category`. A box
-        alone that no layer can hold is whiskered instead: a diagram rather
-        than a box, or any arrow of a category with no layers, e.g. a
-        :class:`discopy.tensor.Tensor` in a ``CMap[Tensor]``.
+        with its offset in the scan, as one layer of :attr:`category`. It is
+        whiskered box by box instead when a layer cannot hold it: when one of
+        them is a diagram rather than a box, or in a category with no layers,
+        e.g. a :class:`discopy.tensor.Tensor` in a ``CMap[Tensor]``.
         """
-        dom = self.diagram.cod
-        if len(self.layer) == 1 and (
-                not isinstance(self.layer[0][0], cat.Box)
-                or not hasattr(self.diagram, "layer_factory")):
-            box, offset = self.layer[0]
-            self.then(dom[:offset] @ box @ dom[offset + len(box.dom):])
+        if not hasattr(self.diagram, "layer_factory") or not all(
+                isinstance(box, cat.Box) for box, _ in self.layer):
+            for box, offset in self.layer:
+                dom = self.diagram.cod
+                self.then(dom[:offset] @ box @ dom[offset + len(box.dom):])
         elif self.layer:
-            parts, cursor, shift = [], 0, 0
+            dom, parts, cursor, shift = self.diagram.cod, [], 0, 0
             for box, offset in self.layer:
                 parts += [dom[cursor:offset - shift], box]
                 cursor = offset - shift + len(box.dom)
@@ -3391,11 +3390,12 @@ class Decoder:
             dom_wires : The wires of its domain.
             cod_wires : The wires of its codomain.
             offset : Where in the scan, before the domain wires are gathered,
-                by default at the first of them. For a box with no domain, an
-                offset past the end of the scan is clamped to it.
+                by default at the first of them, or at the end of the scan for
+                a box with no domain, where an offset past it is clamped to it.
         """
         positions = [self.wires.index(wire) for wire in dom_wires]
-        offset = positions[0] if offset is None else offset
+        if offset is None:
+            offset = positions[0] if positions else len(self.wires)
         offset -= sum(j < offset for j in positions)
         if not dom_wires:
             offset = min(offset, len(self.wires))

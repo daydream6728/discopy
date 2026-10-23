@@ -882,8 +882,10 @@ def test_complements_are_lazy():
 def test_decoder():
     """ The one decoder of hypergraphs and maps (decision 8b of #56): boxes
     side by side share a layer when it foliates, plumbing fuses when it fuses,
-    a box of a subcategory or a sum stays one box of the category and a map
-    over a concrete category, with no layers, decodes too. """
+    a state goes at the end of the scan by default, a layer with a diagram in
+    it is whiskered box by box, a box of a subcategory or a sum stays one box
+    of the category and a map over a concrete category, with no layers,
+    decodes too. """
     from discopy import markov, symmetric
     from discopy.cmap import CMap
     from discopy.hypergraph import Decoder
@@ -900,6 +902,11 @@ def test_decoder():
         decoder = Decoder(markov.Diagram, x, (0, ), fuse=fuse)
         decoder.place(markov.Copy(x), (0, ), (1, 2))
         assert len(decoder.close((2, 1)).inside) == (1 if fuse else 2)
+    state, drop = markov.Box('s', markov.Ty(), x), markov.Function(x @ x, [0])
+    decoder = Decoder(markov.Diagram, x, (0, ))
+    decoder.place(state, (), (1, ))
+    assert decoder.close((0, 1)) == x @ state
+    assert drop.to_map().to_hypergraph().to_diagram() == drop
     decoder = Decoder(markov.Diagram, x, (0, ))
     assert decoder.beside((1, 2), (0, 1), ()) == 1
     assert decoder.beside((1, 2), (), (2, 0)) == 0
