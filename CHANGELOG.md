@@ -243,6 +243,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   and `finset.Function.swap` and `permutation` ([next#147], [next#31]).
 - `discopy.quantum`: controlled gates under dagger and rotation, `to_tk`,
   `to_tn`, PennyLane adjoints and `Channel.then` types ([next#31]).
+- `quantum.tk`: `to_tk` puts a measured bit and a `Bits(0)` on their wire, and
+  `from_tk` reads a gate on qubits in any order ([next#31]).
 - `zx`: `eval` is the standard interpretation ([#587], [#625]),
   `spider_factory` ([next#149]), `grad` ([next#75]), and the pyzx round trip
   keeps scalars and parallel wires ([next#74], [next#82]).
