@@ -121,6 +121,7 @@ from dataclasses import dataclass, field
 from functools import cached_property, reduce
 import heapq
 import itertools
+import operator
 
 import numpy as np
 
@@ -269,11 +270,15 @@ def assignments(scores, m: int) -> Iterator[tuple[list[int], float]]:
 class Lazy:
     """
     A list read from an iterator only as far as it is indexed, e.g. a ranking
-    computed on demand for :func:`products`.
+    computed on demand for :func:`products`. It is indexed from its start
+    only, since the iterator may have no end to index from.
 
     Parameters:
         iterator : The items, in order.
         items : The items read so far, none by default.
+
+    Raises:
+        IndexError : When the index is negative or past the last item.
 
     Example
     -------
@@ -288,6 +293,8 @@ class Lazy:
         self.iterator = iter(self.iterator)
 
     def __getitem__(self, index: int):
+        if operator.index(index) < 0:
+            raise IndexError(f"{index}: a lazy list is read from its start.")
         self.items += itertools.islice(
             self.iterator, max(index + 1 - len(self.items), 0))
         return self.items[index]

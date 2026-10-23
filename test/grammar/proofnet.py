@@ -180,6 +180,12 @@ def test_Lazy():
         squares[4]
     assert squares.items == [0, 1, 4, 9]
     assert Lazy([1, 2])[1] == 2
+    with raises(IndexError, match="from its start"):
+        Lazy([1, 2])[-1]
+    with raises(IndexError, match="from its start"):
+        squares[-1]
+    with raises(TypeError):
+        squares[0:2]
 
 
 def test_assignments():
