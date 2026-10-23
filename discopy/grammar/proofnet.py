@@ -223,8 +223,13 @@ def assignments(scores, m: int) -> Iterator[tuple[list[int], float]]:
     (1968) <https://doi.org/10.1287/opre.16.3.682>`_). Each assignment is
     computed when it is read, and none after the ``m``-th.
 
+    A score can be ``-inf``, e.g. the log-probability of an impossible
+    link: :func:`hungarian` is given a finite score instead, low enough that
+    the assignments through it come after all the others, and the masked
+    scores lower still.
+
     Parameters:
-        scores : A square matrix.
+        scores : A square matrix of reals or ``-inf``.
         m : The number of assignments.
 
     Example
@@ -233,11 +238,21 @@ def assignments(scores, m: int) -> Iterator[tuple[list[int], float]]:
     ...     print(columns, total)
     [0, 1] 4.0
     [1, 0] 3.0
+    >>> for columns, total in assignments([[0, -np.inf], [-np.inf, 0]], 2):
+    ...     print(columns, total)
+    [0, 1] 0.0
+    [1, 0] -inf
     """
     n = len(scores)
     scores = np.asarray(scores, dtype=float).reshape(n, n)
-    least, heap, ties = scores.min(initial=0), [], itertools.count()
-    low = least - n * (scores.max(initial=0) - least) - 1
+
+    def below(matrix):
+        real = np.isfinite(matrix)
+        least = matrix.min(initial=0, where=real)
+        return least - n * (matrix.max(initial=0, where=real) - least) - 1
+
+    finite = np.where(np.isneginf(scores), below(scores), scores)
+    low, heap, ties = below(finite), [], itertools.count()
 
     def solve(forced, forbidden):
         allowed = np.ones((n, n), dtype=bool)
@@ -246,7 +261,7 @@ def assignments(scores, m: int) -> Iterator[tuple[list[int], float]]:
             allowed[i, j] = True
         for i, j in forbidden:
             allowed[i, j] = False
-        columns = hungarian(np.where(allowed, scores, low))
+        columns = hungarian(np.where(allowed, finite, low))
         if allowed[range(n), columns].all():
             total = float(scores[range(n), columns].sum())
             heapq.heappush(
@@ -260,10 +275,9 @@ def assignments(scores, m: int) -> Iterator[tuple[list[int], float]]:
         m -= 1
         if not m:
             return
-        free = sorted(set(range(n)).difference(dict(forced)))
-        for t, i in enumerate(free):
-            solve(forced + tuple((r, columns[r]) for r in free[:t]),
-                  forbidden + ((i, columns[i]), ))
+        for i in sorted(set(range(n)).difference(dict(forced))):
+            solve(forced, forbidden + ((i, columns[i]), ))
+            forced += ((i, columns[i]), )
 
 
 @dataclass

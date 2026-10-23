@@ -2,7 +2,7 @@ import subprocess
 from collections import Counter
 import sys
 from itertools import count as naturals, permutations, product
-from math import factorial, prod
+from math import factorial, inf, prod
 from random import Random
 
 from pytest import raises
@@ -214,6 +214,27 @@ def test_assignments():
     assert len(list(assignments([[1, 2], [3, 4]], -1))) == 2
 
 
+def test_assignments_impossible():
+    random = Random(0)
+    for size in range(5):
+        for _ in range(40):
+            scores = [[random.choice([-2, -1, 0, 1, 2, -inf])
+                       for _ in range(size)] for _ in range(size)]
+
+            def total(columns):
+                return sum(scores[i][j] for i, j in enumerate(columns))
+            everything = list(permutations(range(size)))
+            m = random.randint(0, len(everything) + 2)
+            ranked = list(assignments(scores, m))
+            assert [score for _, score in ranked] == sorted(
+                map(total, everything), reverse=True)[:m]
+            assert all(score == total(columns) for columns, score in ranked)
+            assert len({tuple(columns) for columns, _ in ranked})\
+                == len(ranked)
+    assert list(assignments([[0, -inf], [-inf, 0]], 2))\
+        == [([0, 1], 0.), ([1, 0], -inf)]
+
+
 def test_assignments_lazy(monkeypatch):
     calls = []
 
@@ -272,6 +293,10 @@ def test_linkings():
     assert tried > 50
     with raises(AxiomError, match="wanted 2 times and given 1 times"):
         next(Sequent((Alice, loves), s).linkings([[0] * 5] * 5, 2))
+    f, x = (a >> a)("f"), a("x")
+    scores = [[0, 2, -inf, 0], [0] * 4, [0] * 4, [0, -inf, 2, 0]]
+    assert [net.links for net in Sequent((f, x), a).linkings(scores, 2)]\
+        == [((0, 1), (3, 2)), ((0, 2), (3, 1))]
 
 
 def test_is_balanced_and_is_correct():
