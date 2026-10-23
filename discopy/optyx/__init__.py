@@ -20,6 +20,7 @@ single-emitter photonic hardware.
     discopy.optyx.qubits
     discopy.optyx.photonic
     discopy.optyx.classical
+    discopy.optyx.interaction
     discopy.optyx.core
     discopy.optyx.sampling
     discopy.optyx.compiler
