@@ -57,6 +57,10 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `CMap.sweep` and `CMap.match`.
 - `hypergraph.Rewriter`, double-pushout rewriting in place with left-linear
   rules, each step in the size of the rule rather than of the host.
+- `quantum.graphlike`, graph-like ZX diagrams as hypergraphs with one box for
+  Hadamard, simplified up to a scalar by the rules of PyZX's `full_reduce` on
+  a `hypergraph.Rewriter`, raced against PyZX in `benchmark/test_zx.py`
+  ([next#302]).
 - `discopy.ehypergraph`, e-graphs of diagrams with sharing, with congruence
   closure, rewriting and e-matching.
 - `Hypergraph.pass_token`, evaluation over a disjoint-union tensor ([#363],
@@ -494,6 +498,7 @@ for the changelog of `1.2.1` and earlier.
 [next#225]: https://github.com/rel-int/discopy-next/issues/225
 [next#276]: https://github.com/rel-int/discopy-next/pull/276
 [next#283]: https://github.com/rel-int/discopy-next/pull/283
+[next#302]: https://github.com/rel-int/discopy-next/pull/302
 [next#310]: https://github.com/rel-int/discopy-next/pull/310
 [next#316]: https://github.com/rel-int/discopy-next/pull/316
 [next#320]: https://github.com/rel-int/discopy-next/pull/320
