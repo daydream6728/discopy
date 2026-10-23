@@ -3,5 +3,5 @@
 B81 of #31, parts (a) and (d), which need no ruling:
 
 - [x] (a) `FC`, `BC`, `FX`, `BX` are boxes: `BinaryTerm` is built the way `TypeRaising` is, each subclass passing its `cod` up, with no new public names, so that a binary term composes, tensors and draws
-- [ ] (d) a nested `cfg.Tree` has a `dom`, the tensor of its branches' doms, so that it can be applied
+- [WIP] @session_01YCJQ3Xco3ydQ6AsdTtYJ5x-2026-10-23 08:45 (d) a nested `cfg.Tree` has a `dom`, the tensor of its branches' doms, so that it can be applied
 - [ ] `CHANGELOG.md`, one bullet
