@@ -725,3 +725,9 @@ def test_Bubble_subs_lambdify():
     for result in (bubble.subs(phi, 3), bubble.lambdify(phi)(3)):
         assert result.func is bubble.func
         assert np.allclose(result.eval().array, expected)
+
+
+def test_Bubble_name():
+    bubble = Box('f', Dim(2), Dim(2), [1, 0, 0, 1]).bubble(name="g")
+    assert bubble.dagger().dagger() == bubble
+    assert frobenius.Functor.id(Diagram)(bubble) == bubble

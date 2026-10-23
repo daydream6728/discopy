@@ -476,6 +476,17 @@ def test_Bubble_data():
     assert "method" not in bubble.to_tree() and "name" not in bubble.to_tree()
 
 
+def test_Bubble_identity_Functor():
+    f = Box('f', Ty('x'), Ty('y'))
+    bubble = f.bubble(name="N", drawing_name="L", draw_as_frame=True,
+                      data=42, is_dagger=True)
+    image = Functor.id(Diagram)(bubble)
+    assert image == bubble and (image.drawing_name, image.draw_as_frame)\
+        == ("L", True) and (image.data, image.is_dagger) == (42, True)
+    empty = Bubble(dom=Ty('x'), cod=Ty('y'))
+    assert Functor.id(Diagram)(empty) == empty
+
+
 def test_Box_globularity():
     red, green, blue = map(Colour, ("red", "green", "blue"))
     x, y = Ty(Wire("x", red, green)), Ty(Wire("y", red, green))

@@ -1108,6 +1108,9 @@ class Bubble(monoidal.Bubble, Box):
         :align: center
     """
 
+    def __new__(cls, *args, data=None, **kwargs):
+        return super().__new__(cls, data=data)
+
     def __init__(self, inside, func=lambda x: int(not x), **params):
         self.func = func
         super().__init__(inside, **params)

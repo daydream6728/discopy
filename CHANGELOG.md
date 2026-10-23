@@ -195,6 +195,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   an unpickled `Layer` recomputes its name ([next#168]).
 - Bubbles keep their `data` and `is_dagger` ([#637]), substitute in their
   args ([next#31]) and say when their args share no boundary ([next#133]).
+- `subs` accepts pairs, lists and dicts like `sympy.subs`; `lambdify` keeps a
+  box's winding and delay, and functors keep bubbles ([next#31], [next#118]).
 - Delays: every gate ([next#130], [next#176]), closed types ([next#129]),
   `Nat` and `Dim` ([next#112]) and `FollowedBy` ([next#105]).
 - Traces and feedback of compact, Frobenius, tensor, ZX and circuit diagrams
@@ -438,6 +440,7 @@ for the changelog of `1.2.1` and earlier.
 [next#113]: https://github.com/rel-int/discopy-next/issues/113
 [next#114]: https://github.com/rel-int/discopy-next/issues/114
 [next#116]: https://github.com/rel-int/discopy-next/issues/116
+[next#118]: https://github.com/rel-int/discopy-next/issues/118
 [next#119]: https://github.com/rel-int/discopy-next/issues/119
 [next#121]: https://github.com/rel-int/discopy-next/issues/121
 [next#124]: https://github.com/rel-int/discopy-next/issues/124
