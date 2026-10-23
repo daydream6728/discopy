@@ -265,6 +265,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - `optyx.sampling.twomode` is unitary at any number of photons, as the
   exponential of the lift of `sampling.generator`, a logarithm of the
   two-mode unitary, where expanding the products cancelled ([optyx#84]).
+- An array-backed `discopy.optyx` box reads its size off the array's shape,
+  so the array can be a PyTorch tensor that requires grad ([optyx#56]).
 - `hopf.Intertwiner`: `cups`, `caps` and `twist` ([next#31]).
 - `hopf.Functor` sends the dagger of a twist to its inverse, `to_braided`
   takes traces and generators, and commutes with `delay` ([next#31]).
@@ -524,6 +526,7 @@ for the changelog of `1.2.1` and earlier.
 [next#320]: https://github.com/rel-int/discopy-next/pull/320
 [optyx#16]: https://github.com/rel-int/optyx/pull/16
 [optyx#29]: https://github.com/rel-int/optyx/pull/29
+[optyx#56]: https://github.com/rel-int/optyx/pull/56
 [optyx#67]: https://github.com/rel-int/optyx/pull/67
 [optyx#76]: https://github.com/rel-int/optyx/pull/76
 [optyx#84]: https://github.com/rel-int/optyx/pull/84
