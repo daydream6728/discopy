@@ -66,12 +66,15 @@ Parsing as search
 Taking the most likely type of each word, then the best linking of the
 sequent they make, fails whenever that sequent has no goal or that linking
 no term. :meth:`Parser.search` searches the space of proof nets instead: it
-enumerates the sequents of the ``k`` most likely types of each word best
-first, with :func:`discopy.grammar.proofnet.products`, keeps those the count
-invariant gives a goal, links each with the Hungarian algorithm, keeps the
-nets that sequentialise, and returns the one of highest joint score, the
-log-probability of its types plus a weight times that of its linking,
-:meth:`Linker.log_likelihood`.
+enumerates the ``depth`` best sequents of the ``k`` most likely types of each
+word best first, with :func:`discopy.grammar.proofnet.products`, tries the
+``width`` first that the count invariant gives a goal, i.e. those in its
+fibre over the goals, links each by the first of its ``links`` best linkings
+that is correct, :meth:`discopy.grammar.proofnet.Sequent.linkings`, and
+returns the net of highest joint score, the log-probability of its types
+plus a weight times that of its linking, :meth:`Linker.log_likelihood`.
+Sinkhorn normalisation only shifts the rows and the columns of each block,
+so that it ranks the linkings of a sequent as the scores do.
 
 Example
 -------
@@ -101,6 +104,7 @@ loves(Alice)(Bob)
 
 from __future__ import annotations
 
+import itertools
 from dataclasses import dataclass
 
 import torch  # pylint: disable=import-error  # torch is an extra
@@ -509,11 +513,13 @@ class Parser(nn.Module):
     def search(  # pylint: disable=too-many-arguments,too-many-locals
             self, sentence: list[str], states, *, goal: Ty | None = None,
             atoms=None, k: int = 1, width: int = 1, weight: float = 1.,
-            skip: Ty | None = None) -> ProofNet | None:
+            skip: Ty | None = None, depth: int | None = None,
+            links: int = 1) -> ProofNet | None:
         """
         The correct proof net of highest joint score among the ``width``
-        best sequents of the ``k`` most likely types of each word, or
-        ``None`` if none of them has one.
+        best sequents with a goal, out of the ``depth`` best sequents of the
+        ``k`` most likely types of each word, each linked by the first of its
+        ``links`` best linkings that is correct, or ``None`` if there is none.
 
         Parameters:
             sentence : The words.
@@ -523,10 +529,16 @@ class Parser(nn.Module):
                 :meth:`discopy.grammar.proofnet.Sequent.infer`.
             atoms : The atoms of the types, all of them by default.
             k : The number of types of each word.
-            width : The number of sequents tried.
+            width : The number of sequents with a goal tried, i.e. those
+                :meth:`discopy.grammar.proofnet.Sequent.infer` accepts or,
+                with a goal given, those balanced with it, see
+                :attr:`discopy.grammar.proofnet.Sequent.is_balanced`.
             weight : The weight of the linking in the joint score.
             skip : A type whose words are left out of the sequent, e.g.
                 the punctuation a treebank does not use.
+            depth : The number of sequents enumerated, ``width`` by default.
+            links : The number of linkings tried for each sequent, see
+                :meth:`discopy.grammar.proofnet.Sequent.linkings`.
 
         Example
         -------
@@ -542,22 +554,31 @@ class Parser(nn.Module):
         """
         mask = states.new_ones(1, len(states), dtype=torch.bool)
         beams = self.tagger.beam(states[None], mask, k=k, atoms=atoms)
+
+        def fibre():
+            for choice, tagging in products(
+                    beams, width if depth is None else depth):
+                types = [beams[i][j][0] for i, j in enumerate(choice)]
+                kept = [ty != skip for ty in types]
+                constants = tuple(
+                    ty(word) for word, ty, keep in zip(sentence, types, kept)
+                    if keep)
+                try:
+                    sequent = Sequent.infer(constants) if goal is None\
+                        else Sequent(constants, goal)
+                except AxiomError:
+                    continue
+                if sequent.is_balanced:
+                    yield tagging, sequent, kept
+
         best, result = -float("inf"), None
-        for choice, tagging in products(beams, width):
-            types = [beams[i][j][0] for i, j in enumerate(choice)]
-            kept = [ty != skip for ty in types]
-            constants = tuple(
-                ty(word) for word, ty, keep in zip(sentence, types, kept)
-                if keep)
-            try:
-                sequent = Sequent.infer(constants) if goal is None\
-                    else Sequent(constants, goal)
-                scores = self.linker(
-                    states[torch.tensor(kept, device=states.device)],
-                    sequent).cpu().float()
-                net = sequent.decode(scores)
-                net.to_term()
-            except AxiomError:
+        for tagging, sequent, kept in itertools.islice(fibre(), width):
+            scores = self.linker(
+                states[torch.tensor(kept, device=states.device)],
+                sequent).cpu().float()
+            net = next((net for net in sequent.linkings(scores, links)
+                        if net.is_correct), None)
+            if net is None:
                 continue
             score = tagging + weight * self.linker.log_likelihood(scores, net)
             if score > best:

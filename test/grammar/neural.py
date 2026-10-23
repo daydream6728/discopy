@@ -1,3 +1,5 @@
+from random import Random
+
 import pytest
 
 torch = pytest.importorskip("torch")
@@ -5,7 +7,7 @@ torch = pytest.importorskip("torch")
 from discopy.grammar import proofnet
 from discopy.grammar.abstract import Ty
 from discopy.grammar.neural import *
-from discopy.grammar.proofnet import ProofNet, Sequent
+from discopy.grammar.proofnet import ProofNet, Sequent, hungarian
 from discopy.utils import AxiomError
 
 n, s = Ty("n"), Ty("s")
@@ -154,3 +156,93 @@ def test_Parser_search():
     assert parser.search(sentence, states, k=1, width=4, skip=comma) is None
     assert parser.search(sentence, states, k=2, width=1, skip=comma) is None
     assert parser.search(sentence, states, k=2, width=4) is None
+
+
+def test_Parser_search_depth():
+    parser, states = Parser(signature, hidden=8, dim=8), torch.zeros(3, 8)
+    beams = [[(n, -.1)], [(n >> s, -.1), (n >> (n >> s), -1.)], [(n, -.1)]]
+    parser.tagger.beam = lambda *args, k=1, **kwargs: [
+        beam[:k] for beam in beams]
+    sentence = ["Alice", "loves", "Bob"]
+    assert parser.search(sentence, states, k=2) is None
+    assert parser.search(sentence, states, k=2, depth=1) is None
+    net = parser.search(sentence, states, k=2, depth=2)
+    assert net.sequent == Sequent((Alice, loves, Bob), s)
+    assert parser.search(sentence, states, k=2, width=2) == net
+    assert parser.search(sentence, states, k=2, goal=s) is None
+    assert parser.search(sentence, states, k=2, goal=s, depth=2) == net
+
+
+def test_Parser_search_links():
+    a = Ty("a")
+    parser = Parser(Signature((a, )), hidden=8, dim=8)
+    parser.tagger.beam = lambda *args, **kwargs: [[(a >> a, 0.)], [(a, 0.)]]
+    parser.linker.forward = lambda states, sequent: torch.tensor(
+        [[0., 2, 1, 0], [0] * 4, [0] * 4, [0, 1, 2, 0]])
+    sentence, states = ["f", "x"], torch.zeros(2, 8)
+    assert parser.search(sentence, states) is None
+    f, x = (a >> a)("f"), a("x")
+    assert parser.search(sentence, states, links=2).to_term() == f(x)
+
+
+@torch.no_grad()
+def search_before(parser, sentence, states, goal, k, width, weight, skip):
+    """
+    :meth:`Parser.search` before ``depth`` and ``links``, with
+    :meth:`Sequent.decode` as it was, the hungarian assignment of each block.
+    """
+    beams = parser.tagger.beam(states[None], None, k=k)
+    best, result = -float("inf"), None
+    for choice, tagging in products(beams, width):
+        types = [beams[i][j][0] for i, j in enumerate(choice)]
+        kept = [ty != skip for ty in types]
+        constants = tuple(
+            ty(word) for word, ty, keep in zip(sentence, types, kept)
+            if keep)
+        try:
+            sequent = Sequent.infer(constants) if goal is None\
+                else Sequent(constants, goal)
+            scores = parser.linker(
+                states[torch.tensor(kept)], sequent).cpu().float()
+            if any(len(negatives) != len(positives)
+                   for negatives, positives in sequent.blocks.values()):
+                raise AxiomError
+            net = ProofNet(sequent, [
+                (negatives[i], positives[j])
+                for negatives, positives in sequent.blocks.values()
+                for i, j in enumerate(hungarian(
+                    scores[negatives][:, positives]))])
+            net.to_term()
+        except AxiomError:
+            continue
+        score = tagging + weight * parser.linker.log_likelihood(scores, net)
+        if score > best:
+            best, result = score, net
+    return result
+
+
+def test_Parser_search_defaults():
+    torch.manual_seed(0)
+    random, comma = Random(0), Ty(",")
+    parser = Parser(Signature.from_types([n >> (n >> s), comma]), 8, 8)
+    pool = [n, s, n >> s, n >> (n >> s), (n >> s) >> s, s >> s, comma]
+    found = 0
+    for _ in range(200):
+        beams = [sorted([(ty, round(random.uniform(-2, 0), 1))
+                         for ty in random.sample(pool, random.randint(1, 3))],
+                        key=lambda item: -item[1])
+                 for _ in range(random.randint(1, 4))]
+        parser.tagger.beam = lambda *args, k=1, beams=beams, **kwargs: [
+            beam[:k] for beam in beams]
+        sentence = [f"w{i}" for i in range(len(beams))]
+        states = torch.randn(len(beams), 8)
+        goal = random.choice([None, None, s, n >> s])
+        k, width = random.randint(1, 3), random.randint(1, 6)
+        weight = random.choice([0., 1., 2.])
+        skip = random.choice([None, comma])
+        net = parser.search(sentence, states, goal=goal, k=k, width=width,
+                            weight=weight, skip=skip)
+        assert net == search_before(
+            parser, sentence, states, goal, k, width, weight, skip)
+        found += net is not None
+    assert 20 < found < 180
