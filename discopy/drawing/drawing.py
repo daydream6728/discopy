@@ -830,7 +830,8 @@ class Drawing(TracedCategory, RichDisplay):
             other : The drawing to compose with.
             draw_step_by_step : Whether to return the list of drawings that
                 connect one wire at a time, e.g. for
-                :func:`discopy.drawing.to_gif`, rather than the composite.
+                :func:`discopy.drawing.to_gif`, rather than the composite,
+                for one ``other`` only.
 
         Example
         -------

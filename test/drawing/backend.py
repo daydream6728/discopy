@@ -22,11 +22,12 @@ def test_tikz_wire_separates_its_style_keys():
 def test_tikz_twist_in_an_xcolor_name(tmp_path):
     from discopy import ribbon
     path = tmp_path / "twist.tikz"
-    ribbon.Diagram.twist(ribbon.Ty('x')).to_ribbons(colour='RoyalPurple')\
-        .draw(path=str(path), to_tikz=True)
-    tikz = path.read_text()
-    assert "fill=RoyalPurple," in tikz
-    assert "fill=RoyalPurple!60!black," in tikz
+    for colour, back in [("RoyalPurple", "RoyalPurple!60!black"),
+                         ("red!50", "red!50!white!60!black")]:
+        ribbon.Diagram.twist(ribbon.Ty('x')).to_ribbons(colour=colour)\
+            .draw(path=str(path), to_tikz=True)
+        tikz = path.read_text()
+        assert f"fill={colour}," in tikz and f"fill={back}," in tikz
 
 
 def test_tikzstyle_of_a_hexcode_has_no_hash(tmp_path):

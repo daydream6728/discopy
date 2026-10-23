@@ -1148,12 +1148,15 @@ class Backend(ABC):
             # Each rail crosses the other at the midpoint (t=0.5) of `top`
             # and of `bottom`. The two crossings pinch off a lens where the
             # ribbon has turned over: fill it with a darker shade of the
-            # front colour, for a nicer visual of the twist: config.darken
-            # of a colour matplotlib reads, xcolor's spelling of the same
-            # shade for an xcolor name, which only TikZ reads.
+            # front colour, for a nicer visual of the twist. A colour
+            # matplotlib reads is darkened from matplotlib's RGB, in TikZ
+            # too, where the front of a name like purple is xcolor's RGB.
+            # Any other is an xcolor expression, mixed 60% with black, a
+            # trailing `!<pct>` being a mix with white.
             value = COLORS.get(color, color)
+            mix = f"{color}!white" if str(color).count("!") % 2 else color
             back = color if color == TRANSPARENT\
-                else f"{color}!60!black" if not is_color_like(value)\
+                else f"{mix}!60!black" if not is_color_like(value)\
                 else config.darken(to_hex(value, keep_alpha=True))
             front_top0, back_top0 = (
                 bezier_subcurve(top0, 0, .5), bezier_subcurve(top0, .5, 1))
