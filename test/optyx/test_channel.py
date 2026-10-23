@@ -120,6 +120,41 @@ def test_from_bosonic_op():
     assert np.allclose(sum_2, sum_1)
 
 
+def test_observables_agree_with_their_samples():
+    from discopy.optyx.channel import Observable, Discard, Diagram, qmode, qubit
+    from discopy.optyx import photonic, qubits
+    hom = photonic.Create(1, 1) >> photonic.BS
+    number = Observable(Diagram.from_bosonic_operator(
+        2, ((0, False), (0, True))))
+    counted = Observable(function=lambda n: n[0], dom=qmode @ qmode)
+    assert np.isclose(number.expectation(hom), counted.expectation(hom))
+    assert np.isclose(number.expectation(hom), 1)
+    samples = (hom >> photonic.NumberResolvingMeasurement(2)).sample(
+        burn_in=0, shots=500, seed=0)
+    assert abs(np.mean([counted.function(list(sample[0]))
+                        for sample in samples]) - 1) < .15
+    trace = Observable(function=lambda n: 1, dom=qmode @ qmode)
+    assert np.isclose(trace.expectation(hom), (hom >> Discard(
+        qmode @ qmode)).double().to_tensor().eval().array)
+    rotated = qubits.Ket("+") >> qubits.Z(1, 1, .1)
+    pauli_x = Observable(qubits.X(1, 1, .5))
+    assert np.isclose(pauli_x.expectation(rotated), np.cos(.2 * np.pi))
+
+
+def test_observable_errors():
+    from discopy.optyx.channel import Observable, Diagram, qmode, bit
+    from discopy.optyx import photonic
+    with pytest.raises(ValueError):
+        Observable()
+    with pytest.raises(ValueError):
+        Observable(photonic.Create(1))
+    with pytest.raises(ValueError):
+        Observable(Diagram.id(bit))
+    with pytest.raises(ValueError):
+        Observable(function=lambda n: n[0], dom=qmode).expectation(
+            photonic.Create(1, 1))
+
+
 def test_bosonic_operator_indices_are_modes():
     for index in (-1, 2):
         with pytest.raises(ValueError, match="out of bounds"):
@@ -161,3 +196,19 @@ def test_inflation_only_touches_optical_wires():
     assert Measure(qubit).inflate(2) == Measure(qubit)
     assert Encode(bit).inflate(2) == Encode(bit)
     assert Encode(mode, internal_states=[1, 0]).internal_states == ([1, 0], )
+
+
+def test_measure_inflate_mixed_types():
+    dom = qubit @ bit @ qmode @ mode
+    assert Measure(dom).inflate(2).dom == dom.inflate(2)
+
+
+def test_encode_inflate_mixed_types():
+    dom = qubit @ bit @ qmode @ mode
+    encode = Encode(dom, internal_states=([1, 0],))
+    assert encode.inflate(2).dom == dom.inflate(2)
+
+
+def test_dual_rail_only_for_zx_channels():
+    with pytest.raises(TypeError, match="Only ZX channels"):
+        Channel("id", diagram.Id(diagram.mode)).dual_rail()

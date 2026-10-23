@@ -402,6 +402,21 @@ def test_heads_of_pivotal_types():
             assert loads(dumps(term)) == term
 
 
+def test_structural_boxes_have_no_time_step():
+    from discopy import closed, markov
+    from discopy.quantum.gates import CX, Copy, Match
+    assert Copy().delay(2).time_step == Match().delay(2).time_step == 2
+    assert Copy().delay(2).reset() == Copy()
+    x, y = closed.Ty('x'), closed.Ty('y')
+    copy = markov.Copy(x).delay(42)
+    assert copy.time_step is None and copy.dom == x.delay(42)
+    assert copy.reset() == copy and str(copy) == "Copy(x.delay(42))"
+    assert Box('f', x, x).delay(42).time_step == 42
+    assert closed.Eval(x << y).delay(2).time_step == 2
+    assert closed.Eval(x << y).delay(2).reset() == closed.Eval(x << y)
+    assert CX.delay(2).time_step == 2 and CX.delay(2).reset() == CX
+
+
 def test_structural_boxes_delay_through_their_arguments():
     import pickle
     from discopy import (
@@ -417,8 +432,9 @@ def test_structural_boxes_delay_through_their_arguments():
             (balanced.Braid(x, y, is_dagger=True),
              balanced.Braid(x.d, y.d, is_dagger=True)),
             (balanced.Twist(x).dagger(), balanced.Twist(x.d).dagger())):
-        assert box.delay() == delayed and box.delay().time_step == 0
+        assert box.delay() == delayed and box.delay().time_step is None
         assert box.delay(2) == box.delay().delay()
+        assert box.delay(2).reset() == box.delay(2)
         assert pickle.loads(pickle.dumps(box)) == box
     z = pivotal.Ty('z')
     for box in (pivotal.Cup(z, z.r), pivotal.Cap(z.r, z)):
