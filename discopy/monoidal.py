@@ -878,26 +878,6 @@ class Layer(cat.Box, ColouredMonoid):
             yield box_or_typ
 
     @property
-    def boxes_and_types(self):
-        """
-        The layer expanded to alternating types and boxes.
-
-        Empty types are inserted around consecutive boxes for compatibility
-        with algorithms defined on the old layer representation.
-        """
-        result = []
-        for value in self.boxes_or_types:
-            if isinstance(value, Ty):
-                result.append(value)
-            else:
-                if not result or not isinstance(result[-1], Ty):
-                    result.append(value.dom[:0])
-                result.append(value)
-        if not isinstance(result[-1], Ty):
-            result.append(result[-1].cod[len(result[-1].cod):])
-        return tuple(result)
-
-    @property
     def boxes(self):
         return [
             box_or_typ for box_or_typ in self.boxes_or_types
@@ -1020,7 +1000,7 @@ class Layer(cat.Box, ColouredMonoid):
         >>> assert layer0.merge(layer1) == Layer(e, f, e, g, e)
         """
         assert_iscomposable(self, other)
-        staircases = self.boxes_and_types[1].ar(
+        staircases = self.boxes[0].ar(
             (self, other), self.dom, other.cod).to_staircases()
         try:
             diagram = Diagram.normal_form(
@@ -1028,15 +1008,15 @@ class Layer(cat.Box, ColouredMonoid):
         except NotImplementedError as exception:  # Eckmann-Hilton argument.
             diagram = exception.last_step
         boxes_or_types, offset = [self.dom[:0]], 0
-        for layer in diagram.inside:
-            left, box, right = layer.boxes_and_types
-            if len(left) < offset:
+        for layer, box, box_offset in zip(
+                diagram.inside, diagram.boxes, diagram.offsets):
+            if box_offset < offset:
                 raise AxiomError(
                     messages.NOT_MERGEABLE.format(self, other))
-            boxes_or_types[-1] @= left[offset:]
-            boxes_or_types += [box, right[:0]]
-            offset = len(left @ box.cod)
-        boxes_or_types[-1] @= layer.cod[offset:]
+            boxes_or_types[-1] @= layer.dom[offset:box_offset]
+            boxes_or_types += [box, box.cod[len(box.cod):]]
+            offset = box_offset + len(box.cod)
+        boxes_or_types[-1] @= diagram.cod[offset:]
         return type(self)(*boxes_or_types)
 
     def lambdify(self, *symbols, **kwargs):
@@ -1455,7 +1435,8 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
 
     def interchange(self, i: int, j: int, left=False) -> Diagram:
         """
-        Interchange a box from layer ``i`` to layer ``j``.
+        Interchange a box from layer ``i`` to layer ``j``, a planar rewrite:
+        see :meth:`normalize` for its scope.
 
         Parameters:
             i : Index of the box to interchange.
@@ -1496,28 +1477,20 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
             return result
         if j < i:
             i, j = j, i
+        box0, box1 = self.boxes[i], self.boxes[j]
         off0, off1 = self.offsets[i], self.offsets[j]
-        left0, box0, right0 = self.inside[i].boxes_and_types
-        left1, box1, right1 = self.inside[j].boxes_and_types
+        box0_left_of_box1 = off1 >= off0 + len(box0.cod)
+        box0_right_of_box1 = off0 >= off1 + len(box1.dom)
         # By default, we check if box0 is to the right first, then to the left.
-        if left and off1 >= off0 + len(box0.cod):  # box0 left of box1
-            off1 = off1 - len(box0.cod) + len(box0.dom)
-            middle = left1[len(left0 @ box0.cod):]
-            layer0 = left0 @ box0 @ middle @ box1.cod @ right1
-            layer1 = left0 @ box0.dom @ middle @ box1 @ right1
-        elif off0 >= off1 + len(box1.dom):  # box0 right of box1
-            off0 = off0 - len(box1.dom) + len(box1.cod)
-            middle = left0[len(left1 @ box1.dom):]
-            layer0 = left1 @ box1.cod @ middle @ box0 @ right0
-            layer1 = left1 @ box1 @ middle @ box0.dom @ right0
-        elif off1 >= off0 + len(box0.cod):  # box0 left of box1
-            off1 = off1 - len(box0.cod) + len(box0.dom)
-            middle = left1[len(left0 @ box0.cod):]
-            layer0 = left0 @ box0 @ middle @ box1.cod @ right1
-            layer1 = left0 @ box0.dom @ middle @ box1 @ right1
+        if box0_left_of_box1 and (left or not box0_right_of_box1):
+            off1 += len(box0.dom) - len(box0.cod)
+        elif box0_right_of_box1:
+            off0 += len(box1.cod) - len(box1.dom)
         else:
             raise AxiomError(messages.INTERCHANGER_ERROR.format(box0, box1))
-        return self[:i] >> layer1 >> layer0 >> self[i + 2:]
+        interchanged = self.ar.decode(
+            self.inside[i].dom, [(box1, off1), (box0, off0)])
+        return self[:i] >> interchanged >> self[i + 2:]
 
     def substitute(self, i: int, other: Diagram) -> Diagram:
         """
@@ -1528,9 +1501,23 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
         Parameters:
             i : Index of the box to substitute.
             other : The diagram to substitute with.
+
+        A diagram with more than one box in a layer is split into staircases
+        first, see :meth:`to_staircases`, so that box ``i`` is layer ``i``.
+
+        Example
+        -------
+        >>> x = Ty('x')
+        >>> f, g = Box('f', x, x), Box('g', x, x)
+        >>> assert (f @ f).foliation().substitute(1, g >> g)\\
+        ...     == f @ x >> x @ g >> x @ g
         """
-        left, _, right = self.inside[i].boxes_and_types
-        outside = Match(self[:i], self[i + 1:], left, right)
+        if any(len(layer.boxes) > 1 for layer in self.inside):
+            return self.to_staircases().substitute(i, other)
+        box, offset = self.boxes[i], self.offsets[i]
+        dom = self.inside[i].dom
+        outside = Match(
+            self[:i], self[i + 1:], dom[:offset], dom[offset + len(box.dom):])
         return outside.substitute(other)
 
     def normalize(self, left=False) -> Iterator[Diagram]:
@@ -1550,8 +1537,34 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
         s1 >> s0
         s0 >> s1
         s1 >> s0
+
+        A diagram with more than one box in a layer is split into staircases
+        first, see :meth:`to_staircases`, and that is the first step.
+
+        >>> x = Ty('x')
+        >>> f, g = Box('f', x, x), Box('g', x, x)
+        >>> for step in (f @ g).foliation().normalize(left=True): print(step)
+        f @ x >> x @ g
+        x @ g >> f @ x
+
+        Note
+        ----
+        This is a planar rewrite, as are :meth:`interchange` and
+        :meth:`discopy.rigid.Diagram.snake_removal`, which yanks snakes
+        before it interchanges boxes: their scope is the planar levels, from
+        :mod:`discopy.monoidal` to :mod:`discopy.rigid`. Above them, a braid,
+        a swap or a trace is just one more box, so they do not compute a
+        normal form for the axioms of the level, e.g. in
+        :mod:`discopy.symmetric` the diagrams
+        ``Swap(x, y) >> y @ f >> Swap(y, x)`` and ``f @ y`` have the same
+        hypergraph and neither is rewritten into the other. From
+        :mod:`discopy.symmetric` up, the ``Equation`` of the level compares
+        diagrams up to their hypergraph instead.
         """
         diagram = self
+        if any(len(layer.boxes) > 1 for layer in self.inside):
+            diagram = self.to_staircases()
+            yield diagram
         while True:
             no_more_moves = True
             for i in range(len(diagram) - 1):
@@ -1567,7 +1580,8 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
 
     def normal_form(self, normalize: Callable = None, **params) -> Diagram:
         """
-        Returns the normal form of a diagram.
+        Returns the normal form of a diagram, up to the planar rewrites of
+        :meth:`normalize`, whose note says where they apply.
 
         Parameters:
             normalize : The rewriting to normalise with, the diagram's own
