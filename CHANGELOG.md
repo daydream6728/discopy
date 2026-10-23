@@ -181,6 +181,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
+- `Category.parameters` reads `ob` with no fallback: a monoid's objects are
+  `NoneType`, so `Nat.parameters()` no longer gives `(Nat, Nat)` ([next#214]).
 - `Hypergraph`: its hash, `simplify`, `rotate`, and `to_diagram` on
   non-self-dual, `Nat` and `Dim` types ([#324], [#387], [#393], [#622],
   [#719]).
@@ -515,6 +517,7 @@ for the changelog of `1.2.1` and earlier.
 [next#177]: https://github.com/rel-int/discopy-next/issues/177
 [next#187]: https://github.com/rel-int/discopy-next/issues/187
 [next#201]: https://github.com/rel-int/discopy-next/issues/201
+[next#214]: https://github.com/rel-int/discopy-next/pull/214
 [next#225]: https://github.com/rel-int/discopy-next/issues/225
 [next#276]: https://github.com/rel-int/discopy-next/pull/276
 [next#283]: https://github.com/rel-int/discopy-next/pull/283
