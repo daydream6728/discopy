@@ -1,6 +1,6 @@
 from pytest import importorskip, raises
 
-from discopy import cat, grammar, monoidal
+from discopy import cat, grammar, monoidal, rigid
 from discopy.grammar.cfg import Tree, Rule, Word, Id, Ty
 from discopy.utils import AxiomError, dumps, loads
 
@@ -53,6 +53,8 @@ def test_Tree():
         Tree(f, a)
     with raises(AxiomError, match=r"with \(a, b\): x @ x != x @ y"):
         f(a, b)
+    with raises(AxiomError, match=r"rigid.Ty\(.*\) != monoidal.Ty\("):
+        Rule(rigid.Ty('x') @ rigid.Ty('x'), x, name='r')(a, a)
 
 
 def test_Tree_dom():
@@ -77,7 +79,8 @@ def test_to_tree():
     x, y = Ty('x'), Ty('y')
     f, g = Rule(x @ x, x, name='f'), Rule(x @ y, x, name='g')
     a, b = Word('a', x), Word('b', y, data=3)
-    for tree in (f(g(a, b), a), Tree(a), Tree(g[::-1], a), f, g[::-1], b):
+    for tree in (f(g(a, b), a), Tree(a), Tree(g[::-1], a), f, g[::-1], b,
+                 Id(x), f(g, Id(x)), Tree(Id(x), a)):
         assert loads(dumps(tree)) == tree
         assert type(loads(dumps(tree))) is type(tree)
     raw = '{"factory": "grammar.cfg.Word", "name": "a", '\

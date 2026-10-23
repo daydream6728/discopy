@@ -76,13 +76,16 @@ class Tree:
         assert_isinstance(root, Rule)
         for branch in branches:
             assert_isinstance(branch, Tree)
-        cods = Ty().tensor(*[branch.cod for branch in branches])
-        if not isinstance(self, Rule) and root.dom != cods:
-            raise AxiomError(messages.NOT_COMPOSABLE.format(
-                root, f"({', '.join(map(str, branches))})", root.dom, cods))
         self.cod, self.root, self.branches = root.cod, root, branches
-        if not isinstance(self, Rule):
-            self.dom = Ty().tensor(*[branch.dom for branch in branches])
+        if isinstance(self, Rule):
+            return
+        cods = Ty().tensor(*[branch.cod for branch in branches])
+        if root.dom != cods:
+            show = str if str(root.dom) != str(cods) else repr
+            raise AxiomError(messages.NOT_COMPOSABLE.format(
+                root, f"({', '.join(map(str, branches))})",
+                show(root.dom), show(cods)))
+        self.dom = Ty().tensor(*[branch.dom for branch in branches])
 
     def __repr__(self):
         return factory_name(type(self))\
@@ -248,6 +251,10 @@ class Id(Rule):
 
     def __repr__(self):
         return factory_name(type(self)) + f"({self.dom!r})"
+
+    @classmethod
+    def from_tree(cls, tree: dict) -> Id:
+        return cls(from_tree(tree['dom']))
 
     def dagger(self) -> Id:
         return self
