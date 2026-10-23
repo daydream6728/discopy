@@ -1056,9 +1056,10 @@ def test_permutation_is_one_involution():
         M.permutation([0, 0], [x, y])
 
 
-def test_from_diagram_reads_the_perm_of_a_permutation():
+def test_from_diagram_reads_the_perm_of_a_permutation(monkeypatch):
     """ The image of a permutation box is read from its ``perm`` rather than
-    by mapping it wire by wire, and is still the image of the functor. """
+    by mapping it wire by wire with :meth:`CMap.swap` or
+    :meth:`CMap.permutation`, and is still the image of the functor. """
     from discopy.compact import Ty, Box, Diagram, Permutation, Swap, CMap as M
     x, y, z = map(Ty, "xyz")
     functor = M.functor(
@@ -1067,8 +1068,13 @@ def test_from_diagram_reads_the_perm_of_a_permutation():
     diagrams = [
         perm, x @ perm @ y, perm >> Box('f', z @ x.r, y) @ y,
         perm.to_swaps(), Swap(x, y.r), perm >> perm.dagger()]
-    for diagram in diagrams:
-        assert diagram.to_map() == functor(diagram)
+    images = list(map(functor, diagrams))
+
+    def wire_by_wire(*_):
+        raise AssertionError
+    monkeypatch.setattr(M, "swap", wire_by_wire)
+    monkeypatch.setattr(M, "permutation", wire_by_wire)
+    assert [diagram.to_map() for diagram in diagrams] == images
     nat = symmetric.Diagram.from_permutation([2, 0, 1])
     assert nat.to_map() == symmetric.CMap.functor(
         ob_map=lambda typ: typ, ar_map=symmetric.CMap.from_box,
