@@ -238,7 +238,7 @@ def to_tk(circuit):
             return bits, qubits
         for j, _ in enumerate(box.dom):
             i_bit, i_qubit = len(tk_circ.bits), qubits[qubit_offset + j]
-            offset = len(bits) if isinstance(box, Measure) else None
+            offset = bit_offset + j if isinstance(box, Measure) else None
             tk_circ.add_bit(Bit(i_bit), offset=offset)
             tk_circ.Measure(i_qubit, i_bit)
             if isinstance(box, Bra):

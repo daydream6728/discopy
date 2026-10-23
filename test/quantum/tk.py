@@ -90,7 +90,8 @@ def test_tk_round_trip_is_numerical():
         >> CU1(.6) >> H @ H >> Measure(2),
         Ket(0, 0, 0) >> Ry(.2) @ Rx(.7) @ H >> Circuit.permutation([2, 0, 1])
         >> Controlled(Ry(.4), distance=2) >> qubit @ CU1(.3, distance=-1)
-        >> H @ H @ H >> Measure(3)]
+        >> H @ H @ H >> Measure(3),
+        Ket(1) @ Ket(0) >> qubit @ Measure() >> Measure() @ bit]
     for circuit in circuits:
         assert np.allclose(
             Circuit.from_tk(circuit.to_tk()).eval().array,
