@@ -28,7 +28,7 @@ Construct $E = \bra{\psi(-\theta)}H\ket{\psi(\theta)}$
 
 $H = \frac{1}{2}[(Z + X)\otimes(Z + X)]$ is an Hermitian matrix.
 
-The ground state is the state which minimises the expression $\bra{\psi(-\theta)}H\ket{\psi(\theta)}\$, known as the expectation of the observable.
+The ground state is the state which minimises the expression $\bra{\psi(-\theta)}H\ket{\psi(\theta)}$, known as the expectation of the observable.
 
 ```python {.marimo}
 exp = circ >> Id().tensor(*[H] * len(circ.cod)) >> circ.dagger()
@@ -47,7 +47,7 @@ _path_exp = Circuit(exp).to_dual_rail()
 ```python {.marimo}
 def to_float(x):
     if isinstance(x, complex):
-        assert x.imag < 1e-10
+        assert abs(x.imag) < 1e-10
         return x.real
     return x
 free_syms = exp.free_symbols
@@ -64,12 +64,9 @@ We use gradient descent to minimise the expectation.
 ```python {.marimo}
 from tqdm import tqdm
 
-xs = []
-fxs = []
-dfxs = []
-
 def optimize(x0):
     x = x0
+    xs, fxs, dfxs = [], [], []
 
     for _ in tqdm(range(20)):
         orig_fx = orig_f_exp(x)
@@ -86,10 +83,11 @@ def optimize(x0):
     xs.append(x[::])
     fxs.append(f_exp(x))
     dfxs.append(d_f_exp(x))
+    return xs, fxs, dfxs
 ```
 
 ```python {.marimo}
-optimize([0.1, 0.2])
+xs, fxs, dfxs = optimize([0.1, 0.2])
 ```
 
 ```python {.marimo}

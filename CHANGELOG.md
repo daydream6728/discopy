@@ -152,8 +152,9 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - A functor maps a layer with one `n`-ary `tensor` rather than a fold of
   `@`, with one `tensor` call per layer ([next#161]).
 - The notebooks of `discopy.optyx` are marimo, rendered and checked by
-  `docs/export_notebooks.py` with DisCoPy's, four at a time on CI with
-  `--jobs`, and the `optyx` extra takes pandas, seaborn and tqdm ([optyx#67]).
+  `docs/export_notebooks.py` along with DisCoPy's notebooks, four at a time
+  on CI with `--jobs 4`, and the `notebooks` extra takes the pandas, seaborn
+  and tqdm they import ([optyx#67]).
 
 ### Deprecated
 

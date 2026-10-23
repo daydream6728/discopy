@@ -251,12 +251,12 @@ Physical_FT_Logical_00.draw()
 nominator = (Physical_FT_Logical_00 >> logical_00_measurement).double().to_tensor().eval().array
 denominator = (Physical_FT_Logical_00 >> Discard(4)).double().to_tensor().eval().array
 fidelity = nominator / denominator
-print(fidelity)
+print("Fidelity of the fault-tolerant preparation:", fidelity)
 
 nominator = (Physical_Logical_00 >> logical_00_measurement).double().to_tensor().eval().array
 denominator = (Physical_Logical_00 >> Discard(4)).double().to_tensor().eval().array
 fidelity = nominator / denominator
-print(fidelity)
+print("Fidelity without the extra parity check:", fidelity)
 ```
 
 ### Calculating fidelity for Z error detection

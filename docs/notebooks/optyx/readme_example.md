@@ -324,12 +324,13 @@ def fusion_teleportation_with_photon_loss(p):
     def fusion_teleportation(a):
         dr_input_1, dr_input_2 = DualRail(1)(a)
         b, c, d, e = dual_rail_encoded_bell()
+        # apply photon loss to all modes here:
         dr_input_1_loss, dr_input_2_loss, b_loss, c_loss, d_loss, e_loss = (PhotonLoss(p)(dr_input_1), PhotonLoss(p)(dr_input_2), PhotonLoss(p)(b), PhotonLoss(p)(c), PhotonLoss(p)(d), PhotonLoss(p)(e))
-        s, k = FusionTypeII()(dr_input_1_loss, dr_input_2_loss, b_loss, c_loss)  # apply photon loss to all modes here:
-        fusion_failure_processing(s)  #-----------------------------------
+        s, k = FusionTypeII()(dr_input_1_loss, dr_input_2_loss, b_loss, c_loss)
+        fusion_failure_processing(s)
         output_rail_1, output_rail = correction(k, d_loss, e_loss)
         return (output_rail_1, output_rail)
-    return fusion_teleportation  #-----------------------------------
+    return fusion_teleportation
 ```
 
 ```python {.marimo}

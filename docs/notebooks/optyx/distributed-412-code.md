@@ -77,7 +77,7 @@ _p_s_eq_0 = _P_s_eq_0.double().to_tensor().eval().array
 _P_00_and_s_eq_0 = Imperfect_circuit >> logical_plus_measurement @ Bit_0 @ Bit_0
 _p_00_and_s_eq_0 = _P_00_and_s_eq_0.double().to_tensor().eval().array
 fidelity = _p_00_and_s_eq_0 / _p_s_eq_0
-print('Calculated fidelity:', np.sqrt(fidelity).real)
+print('Fidelity after X error detection:', fidelity.real)
 ```
 
 ## Calculating the fidelity for the distributed [4,2,2] code with an imperfect Bell state on the network
@@ -132,7 +132,7 @@ Noisy_bell = CQMap('Physical Bell', bell, dom=Ty(), cod=qubit ** 2)
 Perfect_Bell = Channel("Perfect Bell", diagram.Spider(0,2,typ=diagram.bit) @ diagram.Scalar(1 / np.sqrt(2)))
 Perfect_Bell_Effect = Channel("Perfect Bell Effect", diagram.Id(diagram.bit) @ zx.X(1,1,0.5) >> diagram.Spider(2,0,typ=diagram.bit) @ diagram.Scalar(1 / np.sqrt(2)))
 
-print("Calculated fidelity:", (Noisy_bell >> Perfect_Bell_Effect).double().to_tensor().eval().array.real)
+print("Fidelity of the noisy Bell state:", (Noisy_bell >> Perfect_Bell_Effect).double().to_tensor().eval().array.real)
 ```
 
 ### Defining the circuit for the distributed physical implementation
@@ -175,7 +175,7 @@ _p_s_eq_0 = _P_s_eq_0.double().to_tensor().eval().array
 _P_00_and_s_eq_0 = Imperfect_circuit_1 >> logical_bell_measurement @ Bit_0
 _p_00_and_s_eq_0 = _P_00_and_s_eq_0.double().to_tensor().eval().array
 fidelity_1 = _p_00_and_s_eq_0 / _p_s_eq_0
-print('Calculated fidelity for Z error detection:', np.sqrt(fidelity_1.real))
+print('Fidelity after Z error detection:', fidelity_1.real)
 ```
 
 ### Calculating fidelity for a whole round of Z and X error detection
@@ -187,7 +187,7 @@ _p_s_eq_0 = _P_s_eq_0.double().to_tensor().eval().array
 _P_00_and_s_eq_0 = Imperfect_circuit_2 >> logical_bell_measurement @ Bit_0 @ Bit_0
 _p_00_and_s_eq_0 = _P_00_and_s_eq_0.double().to_tensor().eval().array
 fidelity_2 = _p_00_and_s_eq_0 / _p_s_eq_0
-print('Calculated fidelity a whole round of error detection:', np.sqrt(fidelity_2.real))
+print('Fidelity after a round of Z and X error detection:', fidelity_2.real)
 ```
 
 ```python {.marimo}
@@ -211,7 +211,7 @@ _p_s_eq_0 = _P_s_eq_0.double().to_tensor().eval().array
 _P_00_and_s_eq_0 = Imperfect_circuit_4 >> Logical_bra_0 @ Bit_0
 _p_00_and_s_eq_0 = _P_00_and_s_eq_0.double().to_tensor().eval().array
 fidelity_3 = _p_00_and_s_eq_0 / _p_s_eq_0
-print('Calculated fidelity a whole round of error detection:', fidelity_3.real)
+print('Fidelity of the repetition code after Z error detection:', fidelity_3.real)
 ```
 
 ```python {.marimo}
@@ -227,7 +227,7 @@ _p_s_eq_0 = _P_s_eq_0.double().to_tensor().eval().array
 _P_00_and_s_eq_0 = Imperfect_circuit_5 >> Logical_bra_0 @ Logical_bra_0 @ Bit_0 @ Bit_0
 _p_00_and_s_eq_0 = _P_00_and_s_eq_0.double().to_tensor().eval().array
 fidelity_4 = _p_00_and_s_eq_0 / _p_s_eq_0
-print('Calculated fidelity a whole round of error detection:', fidelity_4.real)
+print('Fidelity of two repetition codes after Z error detection:', fidelity_4.real)
 ```
 
 ```python {.marimo}
@@ -239,12 +239,14 @@ _p_s_eq_0 = _P_s_eq_0.double().to_tensor().eval().array
 _P_00_and_s_eq_0 = Imperfect_circuit_6 >> logical_bra_00 @ Bit_0 @ Bit_0 @ Bit_0
 _p_00_and_s_eq_0 = _P_00_and_s_eq_0.double().to_tensor().eval().array
 fidelity_5 = _p_00_and_s_eq_0 / _p_s_eq_0
-print('Calculated fidelity a whole round of error detection:', fidelity_5.real)
+print('Fidelity of two repetition codes after a round of Z and X error detection:', fidelity_5.real)
 Imperfect_circuit_6.draw()
 ```
 
+The fidelity after one round of Z and X error detection, as a function of the physical fidelity:
+
 ```python {.marimo}
-def fidelity_6(input_state, p_error=0.95, n_rounds=1):
+def fidelity_6(input_state, p_error=0.95):
     Imperfect_circuit = input_state >> DephasingError(p_error) ** 4 >> Z_repetition_detector >> BitFlipError(p_error) ** 4 @ Diagram.id(bit ** 2) >> Physical_X_detector @ Diagram.id(bit ** 2)
     _P_s_eq_0 = Imperfect_circuit >> Discard(4) @ Bit_0 @ Bit_0 @ Bit_0
     _p_s_eq_0 = _P_s_eq_0.double().to_tensor().eval().array
@@ -252,7 +254,7 @@ def fidelity_6(input_state, p_error=0.95, n_rounds=1):
     _p_00_and_s_eq_0 = _P_00_and_s_eq_0.double().to_tensor().eval().array
     fidelity = _p_00_and_s_eq_0 / _p_s_eq_0
     return fidelity.real
-fidelity_6(logical_ket_00, 0.95, 2)
+fidelity_6(logical_ket_00, 0.95)
 ```
 
 ```python {.marimo}

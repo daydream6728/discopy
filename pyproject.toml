@@ -102,10 +102,6 @@ optyx = [
     "pyzx == 0.10.7",
     "quimb",
     "sympy",
-    # imported by the notebooks in docs/notebooks/optyx
-    "pandas",
-    "seaborn",
-    "tqdm",
 ]
 test = [
     "discopy[grammar,optyx,quantum]",
@@ -122,6 +118,10 @@ notebooks = [
     "anywidget",
     "ipykernel == 6.23.*",
     "marimo",
+    # imported by the notebooks in docs/notebooks/optyx
+    "pandas",
+    "seaborn",
+    "tqdm",
 ]
 docs  = [
     "discopy[notebooks]",

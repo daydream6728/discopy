@@ -46,7 +46,7 @@ from discopy.optyx.core.backends import PermanentBackend
 
 def to_float(x):
     if isinstance(x, complex):
-        assert x.imag < 1e-10, x
+        assert abs(x.imag) < 1e-10, x
         return x.real
     return x
 
@@ -72,12 +72,9 @@ def d_f_exp(xs):
 ```python {.marimo}
 from tqdm import tqdm
 
-xs = []
-fxs = []
-dfxs = []
-
 def optimize(x0):
     x = x0
+    xs, fxs, dfxs = [], [], []
 
     for _ in tqdm(range(10)):
         fx = f_exp(x)
@@ -92,10 +89,11 @@ def optimize(x0):
     xs.append(x[::])
     fxs.append(f_exp(x))
     dfxs.append(d_f_exp(x))
+    return xs, fxs, dfxs
 ```
 
 ```python {.marimo}
-optimize([0.1] * len(free_syms))
+xs, fxs, dfxs = optimize([0.1] * len(free_syms))
 ```
 
 ```python {.marimo}

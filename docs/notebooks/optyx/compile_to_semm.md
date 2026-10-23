@@ -16,16 +16,16 @@ import networkx as nx
 ```
 
 ```python {.marimo}
-g = nx.Graph([(0, 1), (0, 2), (2, 1)])
+g = nx.Graph([(0, 1), (1, 2)])
 nx.draw(g)
 ```
 
-Create the open graph on top by assigning measurements for
+Create the open graph on top by assigning measurements for every node but the output
 
 ```python {.marimo}
 from discopy.optyx.compiler import OpenGraph, Measurement
 
-meas = {i: Measurement(0.5 * i, "XY") for i in range (3)}
+meas = {i: Measurement(0.5 * i, "XY") for i in range(2)}
 inputs = {0}
 outputs = {2}
 

@@ -151,7 +151,7 @@ from discopy.optyx.core.backends import PermanentBackend
 
 def to_float(x):
     if isinstance(x, complex):
-        assert x.imag < 1e-8, x
+        assert abs(x.imag) < 1e-8, x
         return x.real
     return x
 
@@ -179,12 +179,9 @@ Run a short gradient-descent loop with a decaying learning rate to drive the ene
 ```python {.marimo}
 from tqdm import tqdm
 
-xs = []
-fxs = []
-dfxs = []
-
 def optimize(x0):
     x = x0
+    xs, fxs, dfxs = [], [], []
     lr = 5
     steps = 10
     for _ in tqdm(range(steps)):
@@ -202,10 +199,11 @@ def optimize(x0):
     xs.append(x[::])
     fxs.append(f_exp(x))
     dfxs.append(d_f_exp(x))
+    return xs, fxs, dfxs
 ```
 
 ```python {.marimo}
-optimize([2]*len(free_syms))
+xs, fxs, dfxs = optimize([2]*len(free_syms))
 ```
 
 ```python {.marimo}

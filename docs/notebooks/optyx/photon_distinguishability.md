@@ -25,7 +25,7 @@ In optyx, we treat each bosonic wire as encoding a probability amplitude of an i
 
 When creating a photon we can give an internal state of some dimension *d*, which will be used to compare the degree of distinguishability between photons. Different photon creations within a diagram can have different internal states.
 
-The amplitudes and probabilities for circuits with internal states are computing by *inflating* the diagram by *d*.
+The amplitudes and probabilities for circuits with internal states are computed by *inflating* the diagram by *d*.
 
 ```python {.marimo}
 from discopy.optyx.core.zw import Create
@@ -132,7 +132,7 @@ from discopy.optyx.core.diagram import Mode, Bit
 def fusion_function(x):
     """
     A classical function that returns two bits based on an input x,
-    based on the classical logical for the Fusion type II circuit.
+    based on the classical logic for the Fusion type II circuit.
     """
     a = x[0]
     b = x[1]

@@ -55,8 +55,6 @@ ISSUES = "https://github.com/rel-int/discopy-next/issues/"
 # issue, so that ``--check`` does not block on them; ``generate`` already falls
 # back to a link page for any notebook that fails to execute.
 KNOWN_BROKEN = {
-    "optyx/Compiler": ISSUES + "248",
-    "optyx/compile_to_semm": ISSUES + "248",
     "optyx/feed_forward_example": ISSUES + "247",
     "optyx/photon_distinguishability": ISSUES + "247",
     "optyx/readme_example": ISSUES + "247",
@@ -197,6 +195,8 @@ def main() -> int:
     parser.add_argument("--jobs", type=int, default=1,
                         help="how many notebooks to run at a time")
     args = parser.parse_args()
+    if args.jobs < 1:
+        parser.error("--jobs must be at least 1")
 
     names = set(args.notebooks)
     selected = [nb for nb in notebooks()

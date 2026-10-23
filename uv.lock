@@ -855,8 +855,10 @@ docs = [
     { name = "jinja2" },
     { name = "marimo" },
     { name = "myst-parser" },
+    { name = "pandas" },
     { name = "pytket" },
     { name = "scipy" },
+    { name = "seaborn" },
     { name = "sphinx" },
     { name = "sphinx-book-theme" },
     { name = "sphinxcontrib-bibtex" },
@@ -865,6 +867,7 @@ docs = [
     { name = "sympy" },
     { name = "torch", version = "2.13.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'linux'" },
     { name = "torch", version = "2.13.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform == 'linux'" },
+    { name = "tqdm" },
 ]
 grammar = [
     { name = "nltk" },
@@ -876,13 +879,15 @@ notebooks = [
     { name = "ipykernel" },
     { name = "ipython" },
     { name = "marimo" },
+    { name = "pandas" },
+    { name = "seaborn" },
+    { name = "tqdm" },
 ]
 optyx = [
     { name = "cotengra" },
     { name = "graphix", version = "0.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.15'" },
     { name = "graphix", version = "0.4.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.15'" },
     { name = "opt-einsum" },
-    { name = "pandas" },
     { name = "perceval-quandela" },
     { name = "pylatexenc" },
     { name = "pytket" },
@@ -890,9 +895,7 @@ optyx = [
     { name = "pytket-qiskit", extra = ["aer"] },
     { name = "pyzx" },
     { name = "quimb" },
-    { name = "seaborn" },
     { name = "sympy" },
-    { name = "tqdm" },
 ]
 quantum = [
     { name = "jax" },
@@ -922,7 +925,6 @@ test = [
     { name = "marimo" },
     { name = "nltk" },
     { name = "opt-einsum" },
-    { name = "pandas" },
     { name = "pennylane" },
     { name = "pennylane-qiskit" },
     { name = "perceval-quandela" },
@@ -940,12 +942,10 @@ test = [
     { name = "qoolqit" },
     { name = "quimb" },
     { name = "scipy" },
-    { name = "seaborn" },
     { name = "sympy" },
     { name = "tensornetwork" },
     { name = "torch", version = "2.13.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'linux'" },
     { name = "torch", version = "2.13.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform == 'linux'" },
-    { name = "tqdm" },
 ]
 
 [package.dev-dependencies]
@@ -1011,7 +1011,7 @@ requires-dist = [
     { name = "nltk", marker = "extra == 'grammar'" },
     { name = "numpy" },
     { name = "opt-einsum", marker = "extra == 'optyx'" },
-    { name = "pandas", marker = "extra == 'optyx'" },
+    { name = "pandas", marker = "extra == 'notebooks'" },
     { name = "pennylane", marker = "extra == 'quantum'", specifier = ">=0.45.0" },
     { name = "pennylane-qiskit", marker = "extra == 'quantum'", specifier = ">=0.45.0" },
     { name = "perceval-quandela", marker = "extra == 'optyx'", specifier = ">=1.3" },
@@ -1035,7 +1035,7 @@ requires-dist = [
     { name = "quimb", marker = "extra == 'quantum'" },
     { name = "scipy", marker = "extra == 'docs'" },
     { name = "scipy", marker = "extra == 'quantum'" },
-    { name = "seaborn", marker = "extra == 'optyx'" },
+    { name = "seaborn", marker = "extra == 'notebooks'" },
     { name = "sphinx", marker = "extra == 'docs'", specifier = "==7.4.*" },
     { name = "sphinx-book-theme", marker = "extra == 'docs'", specifier = "==1.1.*" },
     { name = "sphinxcontrib-bibtex", marker = "extra == 'docs'", specifier = "==2.5.*" },
@@ -1051,7 +1051,7 @@ requires-dist = [
     { name = "torch", marker = "sys_platform != 'linux' and extra == 'docs'" },
     { name = "torch", marker = "sys_platform != 'linux' and extra == 'grammar'" },
     { name = "torch", marker = "sys_platform != 'linux' and extra == 'quantum'" },
-    { name = "tqdm", marker = "extra == 'optyx'" },
+    { name = "tqdm", marker = "extra == 'notebooks'" },
 ]
 provides-extras = ["quantum", "grammar", "optyx", "test", "notebooks", "docs"]
 
