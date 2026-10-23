@@ -416,6 +416,9 @@ def test_subs_forms_and_data():
             assert np.array_equal(np.array(result.data), [[3, 1], [4, 2]])
     empty = Box('e', x, y, data=np.zeros((0, 3))).subs(phi, 1).data
     assert empty.shape == (0, 3)
+    lam = sympy.Symbol("lambda")
+    for data in (sympy.sin(phi) + sympy.sin(psi), phi + lam):
+        assert Box('p', x, y, data=data).subs(phi, 1).data == data.subs(phi, 1)
 
 
 def test_Sum():

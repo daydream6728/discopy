@@ -610,18 +610,30 @@ def rsubs(data, *args, **kwargs):
     >>> assert rsubs(data, [(phi, 1), (psi, 2)])\\
     ...     == rsubs(data, {phi: 1, psi: 2}) == rsubs(data, (phi, 1), (psi, 2))
     >>> assert rsubs(data, (phi, 1)) == rsubs(data, phi, 1)
+
+    A leaf that keeps a free symbol is substituted symbolically:
+
+    >>> from sympy import sin
+    >>> rsubs(sin(phi) + sin(psi), phi, 1)
+    sin(psi) + sin(1)
     """
-    from sympy import lambdify
+    from sympy import Basic, lambdify
     pairs = args[0] if len(args) == 1 else args
     if not isinstance(pairs, Mapping):
         pairs = tuple(pairs)
         if pairs and not isinstance(pairs[0], Iterable):
             pairs = (pairs, )
     substitution = dict(pairs)
-    variables, values = tuple(substitution), tuple(substitution.values())
-    return rmap(lambda x: lambdify(variables, x, **kwargs)(*values)
-                if set(variables) & getattr(x, "free_symbols", set()) else x,
-                data)
+
+    def substitute(leaf):
+        symbols = tuple(getattr(leaf, "free_symbols", ()))
+        if not substitution.keys() & set(symbols):
+            return leaf
+        values = tuple(substitution.get(x, x) for x in symbols)
+        if any(isinstance(value, Basic) for value in values):
+            return leaf.subs(dict(zip(symbols, values)), simultaneous=True)
+        return lambdify(symbols, leaf, **kwargs)(*values)
+    return rmap(substitute, data)
 
 
 def load_corpus(url):
