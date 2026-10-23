@@ -88,6 +88,7 @@ NO_TYPE_PARAMETER = (
     "{} has no type parameter to subscript, declare one as in "
     "class C(NamedGeneric['name']).")
 CURRY_HAS_NO_DAGGER = "A curry has no dagger."
+NAME_CLASH = "{!r} names two things in the string of {}."
 WRONG_SIDE = "Expected left={} for {}, got left={} instead."
 NOT_JSON_SERIALISABLE = "Object of type {} is not JSON serialisable."
 NO_SUCH_TYPE = "No type named {!r} in builtins or numpy, so the name of the "\
@@ -100,6 +101,9 @@ NOT_REWRITABLE = (
     "hypergraph category, and over a symmetric one for monogamous acyclic "
     "hypergraphs.")
 NOT_A_HOLE = "Cannot plug {} into {}: its boundary is not the hole's."
+NOT_LEFT_LINEAR = (
+    "{} is not left-linear: rewriting in place needs a left side with "
+    "boxes and with its boundary wires on distinct spiders.")
 NOT_SHARING = (
     "{} is not a diagram with sharing, i.e. a left-monogamous acyclic "
     "hypergraph: a spider has no producer or several, or a box depends on "
