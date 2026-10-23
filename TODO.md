@@ -7,4 +7,4 @@ Decision 8b, ruled on #56 (https://github.com/rel-int/discopy-next/issues/56#iss
 - [x] one scan-and-swap decoder that `Hypergraph.to_diagram` and `CMap.to_diagram` both call, with no change of output
 - [x] check `CMap.sweep`/`encode` (#273) against it, and cover them if they decode
 - [x] compare every decoded diagram before and after, layer for layer, on `test/fixtures/diagrams.py` and random diagrams from monoidal to frobenius
-- [ ] a test, the changelog line
+- [x] a test, the changelog line
