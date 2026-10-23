@@ -1113,7 +1113,7 @@ class Hypergraph(
             return
         if not issubclass(self.category, SymmetricCategory)\
                 or not self.is_monogamous or not self.is_acyclic:
-            raise AxiomError(messages.NOT_REWRITABLE.format(self))
+            raise AxiomError(messages.NOT_REWRITABLE.format(repr(self)))
 
     def match(self, pattern: Hypergraph) -> Iterator[Match]:
         """
@@ -3481,6 +3481,8 @@ class Rewriter:
                 raise AxiomError(messages.NOT_LEFT_LINEAR.format(left))
             if not left.is_parallel(right):
                 raise AxiomError(messages.NOT_PARALLEL.format(left, right))
+            left.assert_isrewritable()
+            right.assert_isrewritable()
         todo, steps = dict.fromkeys(range(len(self.boxes))), 0
         while todo:
             j = next(iter(todo))
