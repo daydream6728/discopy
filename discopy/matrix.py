@@ -183,7 +183,8 @@ class Matrix(MarkovCategory, ComarkovCategory, DaggerCategory,
             return typed(draw(entries), *shape)
 
         return matrices() if max_entries is None else matrices().filter(
-            lambda matrix: matrix.array.size <= max_entries)
+            lambda matrix: index(matrix.dom) * index(matrix.cod)
+            <= max_entries)
 
     def cast(self, dtype: type) -> Matrix:
         """

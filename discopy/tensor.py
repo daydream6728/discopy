@@ -164,7 +164,8 @@ class Tensor(Matrix):
             return typed(draw(entries), *shape)
 
         return tensors() if max_entries is None else tensors().filter(
-            lambda tensor: tensor.array.size <= max_entries)
+            lambda tensor: product(tensor.dom.inside + tensor.cod.inside)
+            <= max_entries)
 
     def then(self, *others: Tensor) -> Tensor:
         if len(others) != 1:
