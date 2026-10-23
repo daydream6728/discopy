@@ -65,6 +65,7 @@ def test_repr_eq_and_hash():
     back = eval(repr(with_metadata), namespace)
     assert back == with_metadata
     assert back.loops == with_metadata.loops
+    assert repr(cm).endswith("edges=(1, 0, 3, 2), loops=())")
     assert cm == M.from_box(Box("f", x, y))
     assert cm != object()
     assert hash(cm) == hash(M.from_box(Box("f", x, y)))

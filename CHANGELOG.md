@@ -169,6 +169,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `docs/export_notebooks.py` along with DisCoPy's notebooks, four at a time
   on CI with `--jobs 4`, and the `notebooks` extra takes the pandas, seaborn
   and tqdm they import ([optyx#67]).
+- `Layer >> Layer` raises, plumbing has `time_step` `None`, a permutation
+  reprs with its class, nan data equals itself ([next#31], [next#168]).
 
 ### Deprecated
 

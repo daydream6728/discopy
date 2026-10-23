@@ -476,6 +476,8 @@ class Timed(Box):
             monoidal.Box.__init__(self, self.name, self.dom.delay(time_step),
                                   self.cod.delay(time_step))
 
+    time_step = property(lambda self: self._time_step)
+
     def delay(self, n_steps=1):
         return type(self)(
             *self.__getnewargs__(), time_step=self.time_step + n_steps)

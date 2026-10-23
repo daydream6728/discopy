@@ -808,7 +808,7 @@ class CMap[C0: Pregroup, C1: CMap](
     def __repr__(self):
         return factory_name(type(self))\
             + f"(dom={self.dom!r}, cod={self.cod!r}, " \
-              f"boxes={self.boxes!r}, edges={self.edges!r}, " \
+              f"boxes={self.boxes!r}, edges={tuple(self.edges)!r}, " \
               f"loops={self.loops!r})"
 
     def __eq__(self, other: object):
