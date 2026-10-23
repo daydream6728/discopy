@@ -162,8 +162,8 @@ class Simplifier(Rewriter):
             index.append(empty)
         return super().add_spider(typ)
 
-    def add_box(self, box, dom, cod) -> int:
-        j = super().add_box(box, dom, cod)
+    def add_box(self, box, dom, cod, offset=None) -> int:
+        j = super().add_box(box, dom, cod, offset)
         self.index(j)
         return j
 
