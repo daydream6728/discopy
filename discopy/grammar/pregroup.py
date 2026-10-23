@@ -132,7 +132,8 @@ class Diagram(frobenius.Diagram):
             return self.to_staircases().normal_form(**params)
         words, is_pregroup = self.id(), True
         for layer in self.inside:
-            left, box, right = layer.boxes_and_types
+            (box, offset), = layer.boxes_and_offsets
+            left, right = layer.dom[:offset], layer.dom[offset + len(box.dom):]
             if isinstance(box, Word):
                 if left != words.cod or right:
                     is_pregroup = False

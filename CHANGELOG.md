@@ -116,6 +116,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `trace(dom=, cod=, mem=)`, and yanking is a law ([next#95]).
 - `markov` is Markov only, its merges are in `comarkov` ([next#94]).
 - `Matrix` is a `MarkovCategory` ([#535]).
+- `dtype` is `int` where it was `numpy.int64`, as for `float`, `complex` and
+  `bool`, and `map` and `eval` infer it ([next#31], [next#88], [next#162]).
 - A law is a sequent ([next#1]), and `Equation` has one symbol between each
   pair of terms ([next#1]).
 - Properties are read with `isinstance` rather than `hasattr`, and a
@@ -178,6 +180,9 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   ([#699], [next#1]) and drops plumbing that composes to the identity;
   `braided.simplify` and `pregroup.normal_form` take foliated diagrams
   ([next#31]).
+- `monoidal.normalize` and `rigid.snake_removal` say they are planar
+  ([next#56] 8a) and take foliated diagrams, as do `monoidal.substitute`,
+  `braided.naturality` and `Circuit.to_tn` ([next#9]).
 - Boxes read back from their tree: quantum gates ([#664], [#780]), lambda
   terms ([#692]), `Trace`, `Copy`, `Merge` and `tensor.Dim` ([#736]), heads,
   tails and `FollowedBy` ([next#96]), `Twist`, `Spider` and inverse `Braid`
@@ -220,6 +225,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `spider_factory` ([next#149]), `grad` ([next#75]), and the pyzx round trip
   keeps scalars and parallel wires ([next#74], [next#82]).
 - `hopf.Intertwiner`: `cups`, `caps` and `twist` ([next#31]).
+- `hopf.Functor` sends the dagger of a twist to its inverse, `to_braided`
+  takes traces and generators, and commutes with `delay` ([next#31]).
 - The dagger of a rigid box keeps its winding, `Id(x).width` and five
   one-liners ([next#31]), the rotation of a daggered braid ([#606]), and the
   adjoints of a `frobenius.Wire` ([next#1]).
@@ -403,6 +410,7 @@ for the changelog of `1.2.1` and earlier.
 [#812]: https://github.com/discopy/discopy/pull/812
 [#824]: https://github.com/discopy/discopy/pull/824
 [next#1]: https://github.com/rel-int/discopy-next/pull/1
+[next#9]: https://github.com/rel-int/discopy-next/issues/9
 [next#21]: https://github.com/rel-int/discopy-next/issues/21
 [next#31]: https://github.com/rel-int/discopy-next/issues/31
 [next#49]: https://github.com/rel-int/discopy-next/issues/49
@@ -445,6 +453,7 @@ for the changelog of `1.2.1` and earlier.
 [next#147]: https://github.com/rel-int/discopy-next/issues/147
 [next#149]: https://github.com/rel-int/discopy-next/issues/149
 [next#161]: https://github.com/rel-int/discopy-next/issues/161
+[next#162]: https://github.com/rel-int/discopy-next/issues/162
 [next#168]: https://github.com/rel-int/discopy-next/issues/168
 [next#175]: https://github.com/rel-int/discopy-next/issues/175
 [next#176]: https://github.com/rel-int/discopy-next/issues/176
