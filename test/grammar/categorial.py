@@ -218,6 +218,20 @@ def test_FC_BC_FX_BX():
         >> BackwardCrossedComposition(Y << X, Y >> Z)
 
 
+def test_binary_term_is_a_box():
+    X, Y, Z, W = map(Ty, "XYZW")
+    for term in (FC((Z << Y)("g"), (Y << X)("f")),
+                 BC((X >> Y)("f"), (Y >> Z)("g")),
+                 FX((Z << Y)("g"), (X >> Y)("f")),
+                 BX((Y << X)("f"), (Y >> Z)("g"))):
+        assert term >> Id(term.cod) == term == Id(term.dom) >> term
+        assert (term @ X).cod == term.cod @ X
+        assert term.to_drawing().boxes
+        assert eval(repr(term)) == term
+        assert hash(eval(repr(term))) == hash(term)
+    assert FC((Z << Y)("g"), (Y << X)("f")) != FC((Z << W)("g"), (W << X)("f"))
+
+
 def test_Functor():
     x, y, z = Ty('x'), Ty('y'), Ty('z')
     f = Box('f', x, y)

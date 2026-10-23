@@ -15,7 +15,7 @@ that holds up to a quotient or on a subspace :meth:`Axiom.modulo` and
 
 A :class:`Testable` category generates its own objects and arrows, and
 states the laws every type that does so obeys: a term reads back from its
-representation, its pickle, its deep copy and its tree. An
+representation, its string, its pickle, its deep copy and its tree. An
 :class:`Equivalence` is a testable type with an equivalence relation besides
 equality, and states the laws of one once: reflexivity, symmetry and
 transitivity. The matrix in ``proptest/`` checks every axiom of every
@@ -76,6 +76,7 @@ from typing import (
     TYPE_CHECKING, Annotated, Any, ClassVar, Concatenate, ParamSpec, Self,
     TypeVar, TypeVarTuple, get_args, get_origin)
 
+from discopy import messages
 from discopy.utils import (
     AxiomError,
     NamedGeneric,
@@ -751,7 +752,8 @@ class Testable[T](ABC):
     A type that comes with a `search strategy
     <https://hypothesis.readthedocs.io/en/latest/data.html>`_ generating
     its instances, and the laws every such type obeys: a term reads back
-    from its representation, its pickle, its deep copy and its tree.
+    from its representation, its string, its pickle, its deep copy and its
+    tree.
     """
 
     @classmethod
@@ -821,6 +823,30 @@ class Testable[T](ABC):
         return {name: value.bind(cls) for name, value in visible.items()
                 if isinstance(value, Axiom)}
 
+    def atoms(self) -> list:
+        """
+        The generators the string of a term names, see :meth:`str_environment`:
+        none by default, e.g. for a matrix, whose string is its representation.
+        """
+        return []
+
+    @classmethod
+    def str_environment(cls, term: Self) -> dict:
+        """
+        The namespace the string of a term reads back in, under the naming
+        convention of STYLE.md: the :meth:`environment` with each of its
+        :meth:`atoms` named by an identifier bound to itself by that name,
+        raising :class:`NameError` when two of them, or one and the
+        environment, take the same name.
+        """
+        environment = cls.environment()
+        for atom in term.atoms():
+            name = str(atom)
+            if name.isidentifier()\
+                    and environment.setdefault(name, atom) != atom:
+                raise NameError(messages.NAME_CLASH.format(name, term))
+        return environment
+
     @axiom
     def transparency(cls, term: Self) -> Equation:
         """
@@ -828,6 +854,25 @@ class Testable[T](ABC):
         :meth:`environment` of its type.
         """
         return Equation(eval(repr(term), cls.environment()), term)
+
+    @axiom
+    def str_transparency(cls, term: Self) -> Equation:
+        """
+        The string of a term evaluates back to it, in its
+        :meth:`str_environment`, if its generators are named apart by
+        identifiers, as those the strategies draw: a term with two of one
+        name is assumed away, one named e.g. ``"a box"`` or ``"class"`` does
+        not read back. Nor do the colours of a wire, which no string prints,
+        a bubble of other than one argument, a rotated box, e.g. ``f.r``, or
+        a gate with parameters, e.g. ``Rz(0.5)``.
+        """
+        try:
+            environment = cls.str_environment(term)
+        except NameError:
+            # pylint: disable-next=import-outside-toplevel  # off the domain
+            from hypothesis import reject
+            return reject()
+        return Equation(eval(str(term), environment), term)
 
     @axiom
     def pickling(cls, term: Self) -> Equation:
