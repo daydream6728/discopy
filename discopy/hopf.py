@@ -23,8 +23,9 @@ braiding is the universal R-matrix, cups and caps come from the antipode, and
 the twist is the trace of the braid. Both :class:`Representation` and
 :class:`Intertwiner` are class generic over the choice of Hopf algebra:
 ``Representation[H]`` and ``Intertwiner[H]`` are the objects and morphisms of
-:math:`\\mathrm{Rep}(H)` — a category of :class:`.tensor.Diagram`\\ s whose
-ribbon structure lives in the classmethods :meth:`Intertwiner.braid`,
+:math:`\\mathrm{Rep}(H)` — an intertwiner holds the :class:`.tensor.Diagram`
+of a linear map between the underlying spaces of two modules, and the ribbon
+structure lives in the classmethods :meth:`Intertwiner.braid`,
 :meth:`Intertwiner.twist`, ``cups`` and ``caps``. A quantum topological
 invariant of tangles is then a ribbon :class:`Functor` from the free
 :mod:`.ribbon` category into ``Intertwiner[H]``, evaluated as concrete
@@ -127,11 +128,12 @@ from itertools import permutations
 
 import numpy as np
 
-from discopy import monoidal, ribbon, tensor, frobenius
+from discopy import monoidal, ribbon, tensor, frobenius, messages
 from discopy.tensor import Dim, Box, Id
 from discopy.abc import RibbonCategory, NamedGeneric
 from discopy.utils import (
-    assert_isinstance, classproperty, factory_name, get_origin, product)
+    assert_isinstance, assert_iscomposable, classproperty, factory,
+    factory_name, from_tree, get_origin, product, unbiased)
 
 Diagram = tensor.Diagram
 
@@ -325,6 +327,26 @@ class Algebra:
 
     def __hash__(self):
         return hash(repr(self.generators))
+
+    def to_tree(self) -> dict:
+        """
+        Serialise an algebra by the trees of its generators.
+
+        >>> from discopy.utils import dumps, loads
+        >>> H = Algebra.sweedler()
+        >>> assert loads(dumps(H)) == H
+        """
+        names = ('unit', 'counit', 'mult', 'comult', 'antipode', 'R')
+        return dict({'factory': factory_name(type(self))}, **{
+            name: generator.to_tree()
+            for name, generator in zip(names, self.generators)
+            if generator is not None})
+
+    @classmethod
+    def from_tree(cls, tree: dict) -> Algebra:
+        return cls(**{name: from_tree(generator)
+                      for name, generator in tree.items()
+                      if name != 'factory'})
 
     @classmethod
     def from_arrays(cls, unit, counit, mult, comult, antipode, R=None):
@@ -653,6 +675,15 @@ class Double(Algebra):
     def __repr__(self):
         return factory_name(type(self)) + f"({self.base!r})"
 
+    def to_tree(self) -> dict:
+        """ Serialise a double by the tree of its base. """
+        return {'factory': factory_name(type(self)),
+                'base': self.base.to_tree()}
+
+    @classmethod
+    def from_tree(cls, tree: dict) -> Double:
+        return cls(from_tree(tree['base']))
+
 
 class Representation(NamedGeneric["algebra"], frobenius.Dim):
     """
@@ -726,6 +757,26 @@ class Representation(NamedGeneric["algebra"], frobenius.Dim):
 
     def __hash__(self):
         return hash(frobenius.Dim(*self.inside))
+
+    def to_tree(self) -> dict:
+        """
+        Serialise a module with the tree of its algebra and of its action, so
+        that it loads as a member of the class subscripted by its algebra.
+
+        >>> from discopy.utils import dumps, loads
+        >>> D = Double(Algebra.cyclic(2))
+        >>> V = Representation[D].anyon(1, 1)
+        >>> assert loads(dumps(V)) == V and loads(dumps(V)).action == V.action
+        """
+        return {'factory': factory_name(get_origin(type(self))),
+                'algebra': self.algebra.to_tree(),
+                'dim': Dim(*self.inside).to_tree(),
+                'action': self.action.to_tree()}
+
+    @classmethod
+    def from_tree(cls, tree: dict) -> Representation:
+        return cls[from_tree(tree['algebra'])](
+            from_tree(tree['dim']), from_tree(tree['action']))
 
     def tensor(self, *others):
         """
@@ -893,23 +944,36 @@ class Representation(NamedGeneric["algebra"], frobenius.Dim):
         return cls(Dim(d), action)
 
 
-class Intertwiner(NamedGeneric["algebra"], tensor.Diagram, RibbonCategory):
+@factory
+class Intertwiner(NamedGeneric["algebra"], RibbonCategory):
     """
     The ribbon category :math:`\\mathrm{Rep}(H)` of representations of the
-    class parameter ``algebra``: given a :class:`Algebra` ``H``, the
-    class ``Intertwiner[H]`` is a category of :class:`.tensor.Diagram`\\ s
-    whose objects are ``Representation[H]``, and ``algebra`` is accessible on
-    both the class and its instances. Its ribbon structure is given by its
-    classmethods — the braiding is :meth:`braid` (the R-matrix acting on the
-    two strands, then a swap), the :meth:`twist` is the trace of the
-    self-braiding, and the (co)evaluations :meth:`cups`/:meth:`caps` pair a
-    module with its dual :attr:`Representation.r`, twisting by the pivotal
-    element of the algebra when it is non-trivial.
+    class parameter ``algebra``: given a :class:`Algebra` ``H``, an
+    ``Intertwiner[H]`` is a linear map between the underlying spaces of two
+    modules that commutes with their actions. Its network ``inside`` is a
+    :class:`.tensor.Diagram`, in :math:`\\mathbf{Vect}`, and only its ends
+    ``dom`` and ``cod`` are ``Representation[H]``, the way an
+    :class:`.interaction.Diagram` holds a diagram of its underlying category:
+    composition, tensor and :meth:`dagger` compose both the networks and the
+    modules, while :meth:`eval`, :meth:`to_map` and :meth:`draw` are those of
+    the network. It is a ribbon category, neither symmetric nor compact nor
+    a hypergraph category, and no dagger category: the inverses of the braid
+    and the twist are their ``is_dagger`` forms. Its ribbon structure is
+    given by its classmethods — the
+    braiding is :meth:`braid` (the R-matrix acting on the two strands, then a
+    swap), the :meth:`twist` is the trace of the self-braiding, and the
+    (co)evaluations :meth:`cups`/:meth:`caps` pair a module with its dual
+    :attr:`Representation.r`, twisting by the pivotal element of the
+    algebra when it is non-trivial.
 
-    An intertwiner can also be built from concrete data:
-    ``Intertwiner[H](array, dom, cod)`` wraps the array in a single box, as
-    for a :class:`.tensor.Tensor` — this is how a ribbon :class:`Functor`
-    maps its generating boxes.
+    Parameters:
+        inside : The network from the space of ``dom`` to that of ``cod``,
+            or an array that it wraps in a single box, as for a
+            :class:`.tensor.Tensor` — this is how a ribbon :class:`Functor`
+            maps its generating boxes.
+        dom : The domain, a plain :class:`.tensor.Dim` being taken as the
+            trivial representation, as in :meth:`Representation.tensor`.
+        cod : The codomain, likewise.
 
     Example
     -------
@@ -927,7 +991,8 @@ class Intertwiner(NamedGeneric["algebra"], tensor.Diagram, RibbonCategory):
     >>> V = Representation[D].direct_sum([e, m])
     >>> action = (V @ V).action
     >>> braid = Intertwiner[D].braid(V, V)
-    >>> lhs, rhs = action >> braid, Id(D.ty) @ braid >> action
+    >>> assert (braid >> braid).dom == V @ V
+    >>> lhs, rhs = action >> braid.inside, Id(D.ty) @ braid.inside >> action
     >>> assert lhs.eval(dtype=complex).is_close(rhs.eval(dtype=complex))
     >>> lhs.to_map().draw(  # doctest: +EXTRA
     ...   doctest='docs/_static/hopf/intertwiner.dot')
@@ -945,10 +1010,131 @@ class Intertwiner(NamedGeneric["algebra"], tensor.Diagram, RibbonCategory):
         lambda cls: frobenius.Dim if cls.algebra is None
         else Representation[cls.algebra])
 
-    def __init__(self, inside, dom, cod, _scan=True):
-        if not isinstance(inside, tuple):
-            inside = Box('', dom, cod, inside).inside
-        super().__init__(inside, dom, cod, _scan=_scan)
+    def __init__(self, inside, dom, cod):
+        for x in (dom, cod):
+            if isinstance(x, Representation) and not isinstance(x, self.ob):
+                raise ValueError(f"expected a module over {self.algebra}, "
+                                 f"got one over {x.algebra}")
+        dom, cod = (x if isinstance(x, self.ob) else self.ob(Dim(*x.inside))
+                    for x in (dom, cod))
+        spaces = Dim(*dom.inside), Dim(*cod.inside)
+        if not isinstance(inside, Diagram):
+            inside = Box('', *spaces, inside)
+        if inside.dom != spaces[0]:
+            raise ValueError(messages.WRONG_DOM.format(spaces[0], inside.dom))
+        if inside.cod != spaces[1]:
+            raise ValueError(messages.WRONG_COD.format(spaces[1], inside.cod))
+        self.inside, self.dom, self.cod = inside, dom, cod
+
+    def __eq__(self, other):
+        return isinstance(other, Intertwiner) \
+            and (self.algebra, self.inside, self.dom, self.cod) \
+            == (other.algebra, other.inside, other.dom, other.cod)
+
+    def __hash__(self):
+        return hash(self.inside)
+
+    def __repr__(self):
+        prefix = factory_name(get_origin(type(self)))
+        return prefix + f"[{self.algebra!r}]" \
+            + f"({self.inside!r}, dom={self.dom!r}, cod={self.cod!r})"
+
+    def __str__(self):
+        return str(self.inside)
+
+    def to_tree(self) -> dict:
+        """
+        Serialise an intertwiner with its algebra, its network and the
+        trees of its modules, see :meth:`Representation.to_tree`. An
+        unsubscripted intertwiner has no algebra in its tree.
+
+        >>> from discopy.utils import dumps, loads
+        >>> D = Double(Algebra.cyclic(2))
+        >>> V = Representation[D].anyon(1, -1)
+        >>> braid = Intertwiner[D].braid(V, V)
+        >>> assert loads(dumps(braid)) == braid
+        """
+        tree = {'factory': factory_name(get_origin(type(self))),
+                'inside': self.inside.to_tree(),
+                'dom': self.dom.to_tree(), 'cod': self.cod.to_tree()}
+        if self.algebra is not None:
+            tree['algebra'] = self.algebra.to_tree()
+        return tree
+
+    @classmethod
+    def from_tree(cls, tree: dict) -> Intertwiner:
+        """ Load an intertwiner as a member of ``cls[algebra]``. """
+        algebra = from_tree(tree['algebra']) if 'algebra' in tree else None
+        return cls[algebra](*map(
+            from_tree, (tree['inside'], tree['dom'], tree['cod'])))
+
+    @classmethod
+    def id(cls, dom=None):
+        """ The identity network on the space of a module. """
+        dom = cls.ob() if dom is None else dom
+        return cls(Diagram.id(Dim(*dom.inside)), dom, dom)
+
+    @unbiased
+    def then(self, other):
+        """ The composition of the networks, from the domain of ``self`` to
+        the codomain of ``other``. """
+        assert_isinstance(other, Intertwiner)
+        if other.algebra not in (None, self.algebra):
+            raise ValueError(f"expected an intertwiner over {self.algebra}, "
+                             f"got one over {other.algebra}")
+        assert_iscomposable(self, other)
+        return type(self)(self.inside >> other.inside, self.dom, other.cod)
+
+    @unbiased
+    def tensor(self, other):
+        """ The tensor of the networks, between the products of modules. """
+        assert_isinstance(other, Intertwiner)
+        if other.algebra not in (None, self.algebra):
+            raise ValueError(f"expected an intertwiner over {self.algebra}, "
+                             f"got one over {other.algebra}")
+        return type(self)(self.inside @ other.inside,
+                          self.dom @ other.dom, self.cod @ other.cod)
+
+    def dagger(self):
+        """
+        The adjoint in :math:`\\mathbf{Vect}` of the network, from the
+        codomain to the domain: between modules that are not unitary it is no
+        morphism of :math:`\\mathrm{Rep}(H)`, e.g. the dagger of a twist over
+        ``Double(Algebra.taft(3))`` is not its inverse
+        ``twist(dom, is_dagger=True)``.
+        """
+        return type(self)(self.inside.dagger(), self.cod, self.dom)
+
+    def trace(self, n=1, left=False):
+        """
+        The trace of the network over the last ``n`` factors of its space,
+        or the first when ``left``: a module does not remember its factors,
+        so that the ends of the trace are spaces, i.e. trivial modules, unless
+        ``n == 0`` where the trace is the identity.
+        """
+        if n == 0:
+            return self
+        traced = self.inside.trace(n, left)
+        return type(self)(traced, traced.dom, traced.cod)
+
+    l = property(lambda self: type(self)(
+        self.inside.l, self.cod.l, self.dom.l), doc="The left rotation.")
+    r = property(lambda self: type(self)(
+        self.inside.r, self.cod.r, self.dom.r), doc="The right rotation.")
+
+    def eval(self, *args, **kwargs) -> tensor.Tensor:
+        """ The contraction of the network, see :meth:`.tensor.Diagram.eval`.
+        """
+        return self.inside.eval(*args, **kwargs)
+
+    def to_map(self) -> tensor.CMap:
+        """ The network as a combinatorial map, see :class:`.tensor.CMap`.
+        """
+        return self.inside.to_map()
+
+    def draw(self, **params):
+        """ The drawing of the network, see :meth:`.tensor.Diagram.draw`. """
+        return self.inside.draw(**params)
 
     @classmethod
     def braid(cls, left, right, is_dagger=False):
@@ -979,7 +1165,7 @@ class Intertwiner(NamedGeneric["algebra"], tensor.Diagram, RibbonCategory):
             body = swap >> r_action(right, left, H.R >> H.antipode @ Id(H.ty))
         else:
             body = r_action(left, right, H.R) >> swap
-        return cls(body.inside, body.dom, body.cod)
+        return cls(body, left @ right, right @ left)
 
     @classmethod
     def twist(cls, dom, is_dagger=False):
@@ -1013,7 +1199,7 @@ class Intertwiner(NamedGeneric["algebra"], tensor.Diagram, RibbonCategory):
             inverse = np.linalg.solve(np.einsum('i,ijk->kj', v, mult), unit)
             state = Box[complex]('v⁻¹', Dim(1), H.ty, inverse.tolist())
         body = state @ Id(Dim(*dom.inside)) >> dom.action
-        return cls(body.inside, body.dom, body.cod)
+        return cls(body, dom, dom)
 
     @classmethod
     def cups(cls, left, right):
@@ -1031,7 +1217,7 @@ class Intertwiner(NamedGeneric["algebra"], tensor.Diagram, RibbonCategory):
         >>> H = Algebra.taft(3)
         >>> V = Representation[H].regular()
         >>> for left, right in [(V, V.r), (V.r, V), (V.l, V), (V, V.l)]:
-        ...     cup = Intertwiner[H].cups(left, right)
+        ...     cup = Intertwiner[H].cups(left, right).inside
         ...     lhs = (left @ right).action >> cup
         ...     rhs = H.counit @ cup
         ...     assert lhs.eval(dtype=complex).is_close(
@@ -1047,7 +1233,7 @@ class Intertwiner(NamedGeneric["algebra"], tensor.Diagram, RibbonCategory):
             g_inv = H.pivotal_element >> H.antipode
             body = Id(Dim(*left.inside)) \
                 @ (g_inv @ Id(Dim(*right.inside)) >> right.action) >> body
-        return cls(body.inside, body.dom, body.cod)
+        return cls(body, left @ right, cls.ob())
 
     @classmethod
     def caps(cls, left, right):
@@ -1064,7 +1250,7 @@ class Intertwiner(NamedGeneric["algebra"], tensor.Diagram, RibbonCategory):
         >>> H = Algebra.taft(3)
         >>> V = Representation[H].regular()
         >>> for left, right in [(V, V.r), (V.r, V), (V.l, V), (V, V.l)]:
-        ...     cap = Intertwiner[H].caps(left, right)
+        ...     cap = Intertwiner[H].caps(left, right).inside
         ...     lhs = H.ty @ cap >> (left @ right).action
         ...     rhs = H.counit @ cap
         ...     assert lhs.eval(dtype=complex).is_close(
@@ -1080,7 +1266,7 @@ class Intertwiner(NamedGeneric["algebra"], tensor.Diagram, RibbonCategory):
             g_inv = H.pivotal_element >> H.antipode
             body = body >> Id(Dim(*left.inside)) \
                 @ (g_inv @ Id(Dim(*right.inside)) >> right.action)
-        return cls(body.inside, body.dom, body.cod)
+        return cls(body, cls.ob(), left @ right)
 
     @classmethod
     def chart(cls, dom, cod):
@@ -1117,9 +1303,9 @@ class Intertwiner(NamedGeneric["algebra"], tensor.Diagram, RibbonCategory):
         every value at once, :math:`\\rho_W \\circ (1_H \\otimes Q)
         = Q \\circ (1_r \\otimes \\rho_{V \\otimes V})`:
 
-        >>> lhs = Id(D.ty) @ Q >> V.action
+        >>> lhs = Id(D.ty) @ Q.inside >> V.action
         >>> rhs = Diagram.swap(D.ty, Dim(16)) @ Id(Dim(4, 4)) \\
-        ...     >> Id(Dim(16)) @ (V @ V).action >> Q
+        ...     >> Id(Dim(16)) @ (V @ V).action >> Q.inside
         >>> assert lhs.eval(dtype=complex).is_close(rhs.eval(dtype=complex))
         >>> lhs.to_map().draw(  # doctest: +EXTRA
         ...   doctest='docs/_static/hopf/chart.dot')
@@ -1141,15 +1327,14 @@ class Intertwiner(NamedGeneric["algebra"], tensor.Diagram, RibbonCategory):
         if not basis.size:
             raise ValueError("the space of intertwiners is zero")
         return cls(basis.reshape((len(basis), ) + dom.inside + cod.inside),
-                   Dim(len(basis)) @ dom, cod)
+                   cls.ob(Dim(len(basis))) @ dom, cod)
 
 
 class Functor(ribbon.Functor):
     """
     A ribbon functor from :mod:`.ribbon` diagrams to :class:`Intertwiner`, i.e.
-    it sends a knot to the **tensor network** of :math:`\\mathrm{Rep}(H)` that
-    computes its invariant. Contract it yourself with
-    :meth:`.tensor.Diagram.eval`.
+    it sends a knot to the intertwiner whose **tensor network** computes its
+    invariant. Contract it yourself with :meth:`Intertwiner.eval`.
 
     Parameters:
         ob_map : A mapping from atomic :class:`.ribbon.Ty` to
@@ -1184,7 +1369,7 @@ class Functor(ribbon.Functor):
     >>> network = F(ribbon.Braid(x, x).trace(left=True))
     >>> assert network.eval(dtype=complex).is_close(
     ...     F(ribbon.Twist(x)).eval(dtype=complex))
-    >>> network.to_map().draw(  # doctest: +EXTRA
+    >>> network.inside.to_map().draw(  # doctest: +EXTRA
     ...     doctest='docs/_static/hopf/ribbon-functor.dot')
 
     .. graphviz:: /_static/hopf/ribbon-functor.dot
