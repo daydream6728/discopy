@@ -23,6 +23,7 @@ FEEDBACK_FORMS = (
     "Feed back either a number of objects n or a memory dom, cod, mem.")
 NOT_SPLITTABLE = "Cannot split {} atoms off {}."
 NOT_ADJOINT = "{} and {} are not adjoints."
+NOT_EXPONENTIAL = "Expected {} to have an exponential type, got {}."
 NOT_MAPPING_OR_CALLABLE = "Expected a Mapping or a Callable, got {!r}."
 NOT_RIGID_ADJOINT = "{} is not the left adjoint of {}, maybe you meant to use"\
                     " a pivotal type rather than a rigid one?"
@@ -35,6 +36,7 @@ LAYERS_MUST_HAVE_A_BOX = "Layers must have at least one box."
 NOT_MERGEABLE = "Layers {} and {} cannot be merged."
 INTERCHANGER_ERROR = "Boxes {} and {} do not commute."
 WRONG_PERMUTATION = "Expected a permutation of length {}, got {}."
+NOT_A_PERMUTATION = "Expected a permutation of range({}), got {}."
 ZERO_DISTANCE_CONTROLLED = "Zero-distance controlled gates are ill-defined."
 REAL_SQRT_IS_SELF_ADJOINT = "The dagger of a real square root is itself."
 HAS_NO_ATTRIBUTE = "{!r} object has no attribute {!r}"
@@ -86,6 +88,7 @@ NO_BRAID_GROUP = (
     "symmetric: there is no braid group implementation to compare braid "
     "words with yet.")
 NO_CUPS = "{} is not rigid, it has no cups or caps."
+NO_SUMS = "{} has no sums, it encodes a single diagram."
 NOT_SYMMETRIC = "{} has no swaps to downgrade this map."
 NOT_MARKOV = "{} has no copy or discard."
 NOT_A_DAGGER = "{} has no dagger: {} is not a dagger category."
@@ -122,17 +125,56 @@ MISSING_BOXES_AND_OFFSETS = (
     "Decoding needs either boxes and offsets, or the two of them zipped.")
 NO_TYPE_PARAMETER = (
     "{} has no type parameter to subscript, declare one as in class C[name].")
+NOT_PROGRESSIVE = "No line sweeps the map down meeting each box with its "\
+    "inputs side by side, past the cut {}."
+NOT_DOWNWARD = "{} has cups, caps or loops: its wires do not all go down."
+NAT_HAS_NO_ADJOINTS = (
+    "The objects of a cospan of finite sets are numbers, with no adjoints "
+    "for the laws and rules of rigid and closed categories to quantify over.")
+FREE_SCALAR = "A free scalar is a box: it slides on the map of a diagram, "\
+    "not on the nose."
 NOT_LEFT_MONOGAMOUS = "{} is not left-monogamous."
 NOT_RIGHT_MONOGAMOUS = "{} is not right-monogamous."
 NOT_CAUSAL = "{} is not causal."
+NOT_BIJECTIVE = "{} is not bijective: a spider has neither zero nor two legs."
+NOT_AN_INVOLUTION = \
+    "Expected a fixpoint-free involution, got edges {} instead."
+NOT_PLUGGABLE = "Cannot plug {} into a map with codomain {}: expected a box "\
+                "with one input and two outputs, and a map with one output."
+NOT_AN_INDEX = "Expected an index in range({}), got {} instead."
 WRONG_NUMBER_OF_WIRES = "Expected {} wires for {}, got {} instead."
 WRONG_NUMBER_OF_BOUNDARIES = \
     "Expected one boundary of wires for each of {} boxes, got {} instead."
 TERM_IS_A_BOX = \
     "A term is a box: the laws and rules of its category are the diagram's."
+WRONG_SIDE = "Expected left={} for {}, got left={} instead."
 NOT_JSON_SERIALISABLE = "Object of type {} is not JSON serialisable."
 NO_SUCH_TYPE = "No type named {!r} in builtins or numpy, so the name of the "\
                "class it parameterises cannot be resolved."
 
 NO_COMMON_BOUNDARY = "A bubble needs a {} given when its args do not "\
     "all share one, they have [{}]."
+NOT_REWRITABLE = (
+    "{} is not rewritable: double-pushout rewriting is sound over a "
+    "hypergraph category, and over a symmetric one for monogamous acyclic "
+    "hypergraphs.")
+NOT_A_HOLE = "Cannot plug {} into {}: its boundary is not the hole's."
+NOT_SHARING = (
+    "{} is not a diagram with sharing, i.e. a left-monogamous acyclic "
+    "hypergraph: a spider has no producer or several, or a box depends on "
+    "itself.")
+NOT_CARTESIAN = (
+    "{} is not cartesian, i.e. deterministic and affine: an effect is "
+    "context, which a rewrite keeps, as a section that chooses a producer "
+    "for each class would decorrelate a stochastic one.")
+NOT_A_BOUNDARY = "{} does not have the types of the spiders {} -> {}."
+NOT_A_REGION = (
+    "The boxes {} do not compute the spiders {} -> {}: they cannot all fire "
+    "in some order from the classes of the domain, or do not reach those of "
+    "the codomain.")
+NOT_A_PATTERN = (
+    "{} is not a pattern, i.e. a cartesian diagram with sharing whose "
+    "codomain is produced by its boxes: a variable alone matches anything.")
+NOT_A_RULE = (
+    "{} = {} is not a rule: its sides are cartesian diagrams of one type, the "
+    "left a pattern and the right reading only the inputs the left reads.")

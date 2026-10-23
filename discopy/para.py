@@ -215,6 +215,8 @@ class Symmetric[category](
 
     bifunctoriality = SymmetricCategory.bifunctoriality.failing(
         messages.PARA_REPARAM)
+    scalar_sliding = SymmetricCategory.scalar_sliding.failing(
+        messages.PARA_REPARAM)
     braid_naturality = SymmetricCategory.braid_naturality.failing(
         messages.PARA_REPARAM)
 

@@ -22,6 +22,7 @@ Summary
 """
 
 import cmath
+from fractions import Fraction
 from functools import reduce
 from math import pi
 from typing import ClassVar
@@ -165,7 +166,7 @@ class Diagram(tensor.Diagram[complex]):
             if isinstance(box, Spider):
                 node = graph.add_vertex(
                     VertexType.Z if isinstance(box, Z) else VertexType.X,
-                    phase=box.phase * 2 if box.phase else None)
+                    phase=Fraction(box.phase * 2) if box.phase else None)
                 graph.set_position(node, offset, row + 1)
                 edge_table = {}
                 for i, _ in enumerate(box.dom):
@@ -323,11 +324,14 @@ class Permutation(tensor.Permutation[complex], Box):
 
 
 class Swap(Permutation, tensor.Swap[complex], Box):
-    """ Swap in a ZX diagram. """
-    def __repr__(self):
-        return "SWAP"
+    """
+    Swap in a ZX diagram.
 
-    __str__ = __repr__
+    >>> assert repr(SWAP) == "quantum.zx.Swap(rigid.Nat(1), rigid.Nat(1))"
+    >>> assert str(SWAP) == "SWAP"
+    """
+    def __str__(self):
+        return "SWAP"
 
 
 class Spider(tensor.Spider[complex], Box):
@@ -339,7 +343,9 @@ class Spider(tensor.Spider[complex], Box):
     are the eigenvectors of the Pauli: the identity for :class:`Z`, the
     Hadamard for :class:`X` and ``[[1, 1], [1j, -1j]] / sqrt(2)`` for
     :class:`Y`, so that the spider of phase ``.5`` on one leg in and out is
-    the Pauli itself.
+    the Pauli itself. Only the :class:`Z` spiders, those of the
+    computational basis that a tensor copies, have the flags of a total
+    function.
 
     Parameters:
         n_legs_in (int) : The number of legs in.
@@ -351,6 +357,7 @@ class Spider(tensor.Spider[complex], Box):
     >>> assert Z(0, 0).eval().array == 2
     >>> for spider, pauli in [(Z, quantum.Z), (X, quantum.X), (Y, quantum.Y)]:
     ...     assert spider(1, 1, .5).eval().is_close(pauli.eval())
+    >>> assert Z(1, 2).is_cartesian and not X(1, 2).is_deterministic
     """
     basis = ((1, 0), (0, 1))
 
@@ -361,6 +368,8 @@ class Spider(tensor.Spider[complex], Box):
         factory_str = type(self).__name__
         phase_str = f", {self.phase}" if self.phase else ""
         self.name = f"{factory_str}({n_legs_in}, {n_legs_out}{phase_str})"
+        if not isinstance(self, Z):
+            self.deterministic = self.affine = False
 
     def __getnewargs__(self):
         return len(self.dom), len(self.cod), self.phase
@@ -374,6 +383,8 @@ class Spider(tensor.Spider[complex], Box):
                 f"({state['_dom'].n}, {state['_cod'].n}{phase_str})"
             )
         super().__setstate__(state)
+        if not isinstance(self, Z):
+            self.deterministic = self.affine = False
 
     def __repr__(self):
         return str(self).replace(type(self).__name__, factory_name(type(self)))

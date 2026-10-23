@@ -113,7 +113,8 @@ def cell_name(nodeid):
     """
     The name of the cell a node id belongs to, i.e. the parameter pytest
     prints in brackets, which ``test_axioms.cells`` and ``test_rules.cells``
-    build out of the category and the law. A node with no parameter is not a cell and has no name.
+    build out of the category and the law. A node with no parameter is not
+    a cell and has no name.
 
     >>> cell_name("proptest/test_axioms.py::test_axiom[cat.Arrow.unitality]")
     'cat.Arrow.unitality'

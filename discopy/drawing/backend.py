@@ -32,6 +32,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 
+from matplotlib.colors import to_hex, to_rgb
 from matplotlib.testing.compare import compare_images
 from matplotlib.patches import PathPatch, Patch
 from matplotlib.path import Path
@@ -1150,6 +1151,8 @@ class Backend(ABC):
             # and of `bottom`. The two crossings pinch off a lens where the
             # ribbon has turned over: fill it with a darker shade of the
             # front colour, for a nicer visual of the twist.
+            back = color if color == TRANSPARENT else config.darken(
+                to_hex(COLORS.get(color, color), keep_alpha=True))
             front_top0, back_top0 = (
                 bezier_subcurve(top0, 0, .5), bezier_subcurve(top0, .5, 1))
             back_bottom0, front_bottom0 = (
@@ -1168,8 +1171,7 @@ class Backend(ABC):
                 ("curve", *back_top0[1:]), ("curve", *back_bottom0[1:]),
                 ("line", back_bottom1[3]),
                 ("curve", back_bottom1[2], back_bottom1[1], back_bottom1[0]),
-                ("curve", back_top1[2], back_top1[1], back_top1[0])],
-                f"dark_{color}")
+                ("curve", back_top1[2], back_top1[1], back_top1[0])], back)
             self.draw_filled_shape(front_bottom0[0], [
                 ("curve", *front_bottom0[1:]), ("line", front_bottom1[3]),
                 ("curve", front_bottom1[2], front_bottom1[1],
@@ -1308,13 +1310,24 @@ class TikZ(Backend):
 
     @staticmethod
     def format_color(color):
-        """ Formats a color, TikZ spelling transparency like matplotlib. """
-        if color == TRANSPARENT:
+        """
+        Formats a color: a name in :data:`COLORS` or a hexcode, in any form
+        matplotlib reads, as its RGB values, any other color as it is, e.g.
+        transparency, which TikZ spells like matplotlib, or an xcolor name.
+        A TikZ color has no alpha channel, so that of a hexcode is dropped.
+
+        >>> TikZ.format_color("red")
+        '{rgb,255: red,232; green,165; blue,165}'
+        >>> assert TikZ.format_color("#e8a5a5") == TikZ.format_color("red")
+        >>> assert TikZ.format_color("#abc") == TikZ.format_color("#aabbcc80")
+        >>> TikZ.format_color("lightgray")
+        'lightgray'
+        """
+        hexcode = COLORS.get(color, color)
+        if not str(hexcode).startswith("#"):
             return color
-        hexcode = COLORS[color]
-        rgb = [
-            int(hex, 16) for hex in [hexcode[1:3], hexcode[3:5], hexcode[5:]]]
-        return f"{{rgb,255: red,{rgb[0]}; green,{rgb[1]}; blue,{rgb[2]}}}"
+        red, green, blue = (round(255 * x) for x in to_rgb(hexcode))
+        return f"{{rgb,255: red,{red}; green,{green}; blue,{blue}}}"
 
     def add_node(self, i, j, text=None, options=None, rounded=4):
         """ Add a node to the tikz picture, return its unique id. """
@@ -1362,7 +1375,9 @@ class TikZ(Backend):
                 self.edge_styles.append(style)
             options = f"style={style_name}"
         else:
-            options = f"-, fill={{{facecolor}}}"
+            options = "-, fill=" + (
+                self.format_color(facecolor) if str(facecolor).startswith("#")
+                else f"{{{facecolor}}}")
         str_connections = " to ".join(f"({node}.center)" for node in nodes)
         self.edgelayer.append(f"\\draw [{options}] {str_connections};\n")
         super().draw_polygon(*points)
@@ -1448,7 +1463,9 @@ class TikZ(Backend):
                     self.node_styles.append(style)
                 options = f"style={node.box.tikzstyle_name}"
             else:
-                options = f"{shape}, fill={color}"
+                options = f"{shape}, fill=" + (
+                    self.format_color(color) if str(color).startswith("#")
+                    else color)
             if params.get("nodesize", 1) != 1:
                 options +=\
                     f", scale={params.get('nodesize')}"  # pragma: no cover
@@ -1512,9 +1529,10 @@ class Matplotlib(Backend):
         super().draw_text(text, i, j, **params)
 
     def draw_node(self, i, j, **params):
+        color = params.get("color", "black")
         self.axis.scatter(
             [i], [j],
-            c=COLORS[params.get("color", "black")],
+            c=COLORS.get(color, color),
             marker=SHAPES[params.get("shape", "circle")],
             s=300 * params.get("nodesize", 1),
             edgecolors=params.get("edgecolor", None),
@@ -1671,5 +1689,7 @@ class Matplotlib(Backend):
                     tol=params.get("tol", DEFAULT['plt_tol']))
             finally:
                 plt.close()
+        elif not show:
+            plt.close(self.axis.figure)  # ty: ignore[invalid-argument-type]
         if show:
             plt.show()

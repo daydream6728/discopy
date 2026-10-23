@@ -70,7 +70,7 @@ all = [
 [project.optional-dependencies]
 quantum = [
     "pytket",
-    "pyzx == 0.7.3",
+    "pyzx == 0.10.7",
     "sympy",
     "tensornetwork",
     "jax",
@@ -81,6 +81,8 @@ quantum = [
     "pennylane>=0.45.0",
     "pennylane-qiskit>=0.45.0",
     "quimb",
+    "qoolqit",
+    "scipy",
 ]
 grammar = [
     "nltk",
@@ -109,6 +111,7 @@ docs  = [
     # executed by marimo when rendering the notebooks at docs build time
     "jax",
     "pytket",
+    "scipy",
     "sympy",
     "torch",
     "sphinx == 7.4.*",
@@ -133,11 +136,6 @@ torch = [
 name = "pytorch-cpu"
 url = "https://download.pytorch.org/whl/cpu"
 explicit = true
-
-[tool.uv.build-backend]
-module-root = ""
-source-exclude = ["discopy/version.py"]
-wheel-exclude = ["discopy/version.py"]
 
 [project.urls]
 Homepage = "https://discopy.org"
@@ -188,9 +186,13 @@ addopts = "--doctest-modules --ignore=test/fixtures -p plugin"
 
 [tool.coverage.run]
 # The skip paths are unreachable unless --skip-extra is passed, and coverage
-# runs the full suite with every extra installed. torch.compile writes Python
-# under torchinductor_* directories, which is not ours to cover.
-omit = ["test/plugin.py", "*/torchinductor_*/*"]
+# runs the full suite with every extra installed. The egglog reference of
+# test/ehypergraph.py runs only where egglog is installed, which the lock does
+# not have. torch.compile writes Python under torchinductor_* directories,
+# which is not ours to cover.
+omit = [
+    "test/plugin.py", "test/fixtures/egglog_reference.py",
+    "*/torchinductor_*/*"]
 
 [tool.coverage.report]
 fail_under = 98

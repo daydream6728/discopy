@@ -22,8 +22,7 @@ def test_Hypergraph_init():
 def test_Hypergraph_str():
     x, y = map(Ty, "xy")
     assert str(H.swap(x, y)) == "Swap(x, y)"
-    assert str(H.spiders(1, 0, x @ y))\
-        == "Spider(1, 0, x) @ Spider(1, 0, y)"
+    assert str(H.spiders(1, 0, x @ y)) == "Cospan(x @ y, [0, 1], [])"
 
 
 def test_Hypergraph_repr():
@@ -42,9 +41,20 @@ def test_Hypergraph_hash():
     assert hash(H.id(x @ y)) == hash(H.id(x) @ H.id(y))
 
 
+def test_Hypergraph_eq_sees_the_type_of_a_scalar_spider():
+    from discopy.frobenius import Equation
+    x, y = map(Ty, "xy")
+    assert H.spiders(0, 0, x) != H.spiders(0, 0, y)
+    assert hash(H.spiders(0, 0, x)) != hash(H.spiders(0, 0, y))
+    assert H.spiders(0, 0, x @ y) == H.spiders(0, 0, y @ x)
+    assert hash(H.spiders(0, 0, x @ y)) == hash(H.spiders(0, 0, y @ x))
+    f = Box('f', x, x)
+    assert not Equation(Spider(0, 0, x) @ f, Spider(0, 0, y) @ f)
+
+
 def test_Hypergraph_then():
     x, y = map(Ty, "xy")
-    with raises(AxiomError):
+    with raises(AxiomError, match="Expected y, got x"):
         H.id(x) >> H.id(y)
 
 
@@ -59,7 +69,7 @@ def test_Hypergraph_getitem():
 
 
 def test_Hypergraph_bijection():
-    with raises(ValueError):
+    with raises(ValueError, match="not bijective"):
         H.spiders(1, 2, Ty('x')).bijection
 
 
@@ -76,6 +86,20 @@ def test_Hypergraph_make_causal_does_not_assume_topological_order():
     assert not h.is_causal
     assert h.make_causal().is_causal
     assert h.topological_order().is_causal
+
+
+def test_Hypergraph_depth_counts_states_and_effects():
+    from discopy import symmetric
+    x = Ty('x')
+    state, effect = Box('f', Ty(), x), Box('g', x, Ty())
+    scalar, f = Box('s', Ty(), Ty()), Box('f', x, x)
+    for diagram, depth in [
+            (state, 1), (effect, 1), (scalar, 1), (state >> effect, 2),
+            (f @ (state >> effect), 2), (f >> f, 2), (f.trace(), 3)]:
+        assert diagram.depth() == len(diagram.foliation()) == depth
+    sx = symmetric.Ty('x')
+    assert symmetric.Box('f', symmetric.Ty(), sx).depth() == 1
+    assert symmetric.Box('f', sx, sx).trace().depth() == 1
 
 
 def test_Hypergraph_draw_is_reproducible(tmp_path):
@@ -150,8 +174,9 @@ def test_non_adjoint_wire():
     with raises(AxiomError):
         K(compact.Ty(), x @ x, (), ((), (), (0, 0)))
     # Adjoint cups and caps, and self-dual frobenius caps, are fine.
-    assert K.cups(x, x.r) and K.caps(x.r, x)
-    assert Cap(Ty('x'), Ty('x')).to_hypergraph()
+    assert K.cups(x, x.r).wires == ((0, 0), (), ())
+    assert K.caps(x.r, x).wires == ((), (), (0, 0))
+    assert Cap(Ty('x'), Ty('x')).to_hypergraph() == H.spiders(0, 2, Ty('x'))
 
 
 def test_spider_producers_and_consumers():
@@ -231,6 +256,16 @@ def test_Hypergraph_eq_fallback_scalars_and_empty_boundary():
     assert f.trace() == f.trace()
 
 
+def test_Hypergraph_simplify_two_wires():
+    x, y = Ty('x'), Ty('y')
+    f = Box('f', Ty(), x @ y).to_hypergraph()
+    g = Box('g', x @ y, Ty()).to_hypergraph()
+    interchanged = (f >> g).interchange(0, 1)
+
+    assert interchanged.to_diagram().size > (f >> g).to_diagram().size
+    assert interchanged.simplify().to_diagram() == (f >> g).to_diagram()
+
+
 def test_simplify():
     from discopy.markov import Box, Ty, Copy, Swap, Trace, Equation
     C, T, P = map(Ty, "CTP")
@@ -286,13 +321,31 @@ def test_Hypergraph_to_diagram_offset():
 
 
 def test_Hypergraph_cap_after_states():
-    x = Ty('x')
-    f = Box('f', Ty(), x)
-    diagram = x @ f >> Cap(x, x) @ x @ x
-    assert diagram.to_hypergraph().to_diagram() == diagram
-    for diagram in [f @ Cap(x, x), x @ f >> x @ Cap(x, x) @ x]:
+    """ A cap goes beside the wire its first reader reads next to it, see
+    #108 and #187. """
+    x, y = Ty('x'), Ty('y')
+    f, g = Box('f', Ty(), x), Box('g', y @ x, x)
+    for diagram in [
+            x @ f >> Cap(x, x) @ x @ x,
+            x @ f >> x @ Cap(x, x) @ x, y @ Cap(x, x) >> g @ x]:
         decoded = diagram.to_hypergraph().to_diagram()
-        assert decoded.to_hypergraph() == diagram.to_hypergraph()
+        assert decoded in (diagram, diagram.foliation())
+    # f @ Cap(x, x) whiskers the cap into a cospan after f, as h @ Swap(x, x)
+    # gives a permutation after h, and decodes to them side by side.
+    side_by_side = Diagram((Diagram.layer_factory(Ty(), f, Cap(x, x)), ),
+                           Ty(), x @ x @ x)
+    assert (f @ Cap(x, x)).to_hypergraph().to_diagram() == side_by_side
+
+
+def test_Hypergraph_make_causal_without_spiders():
+    """ A category with cups and caps but no merges bends its wires instead,
+    e.g. to compute the depth of a transpose. """
+    from discopy import compact
+    x = compact.Ty('x')
+    cup = compact.Cup(x, x.r)
+    assert cup.to_hypergraph().make_causal().boxes == (cup, )
+    transpose = compact.Box('f', x, x).transpose().to_hypergraph()
+    assert transpose.make_causal().is_causal
 
 
 def test_Hypergraph_from_glued():
@@ -483,6 +536,16 @@ def test_coloured_diagram_has_no_hypergraph():
                 convert(diagram)
 
 
+def test_sum_has_no_hypergraph():
+    from discopy.symmetric import Box, Diagram, Ty
+    x = Ty('x')
+    f, g = Box('f', x, x), Box('g', x, x)
+    for convert in (Diagram.to_hypergraph, Diagram.to_map):
+        for diagram in (f + g, (f + g) @ x, Diagram.sum_factory((), x, x)):
+            with raises(AxiomError, match="has no sums"):
+                convert(diagram)
+
+
 def test_Hypergraph_to_tree():
     from discopy.utils import dumps, loads
     from discopy import markov, symmetric
@@ -523,3 +586,200 @@ def test_trace_takes_the_keyword_form():
         f.trace(1, mem=y)
     with raises(AxiomError):
         f.trace(mem=x)
+
+
+def interaction_combinators():
+    x = Ty('x')
+    gamma, delta = (Box(name, x, x @ x).to_hypergraph() for name in "γδ")
+    epsilon = Box("ε", x, Ty()).to_hypergraph()
+    rules = [
+        (gamma.transpose() >> gamma, H.id(x @ x)),
+        (delta.transpose() >> delta, H.swap(x, x)),
+        (gamma.transpose() >> delta, delta @ delta >> x @ H.swap(x, x) @ x
+         >> gamma.transpose() @ gamma.transpose()),
+        (gamma.transpose() >> epsilon, epsilon @ epsilon),
+        (delta.transpose() >> epsilon, epsilon @ epsilon),
+        (epsilon.transpose() >> epsilon, H.id())]
+    return x, gamma, delta, epsilon, rules
+
+
+def test_interaction_combinators_rules():
+    *_, rules = interaction_combinators()
+    for left, right in rules:
+        rewrites = list(left.rewrite(*rules))
+        assert rewrites and all(rewrite == right for rewrite in rewrites)
+        assert list(right.rewrite(*rules)) == []
+    automorphic = [len(list(left.rewrite(*rules))) for left, _ in rules]
+    assert automorphic == [2, 2, 1, 1, 1, 2]
+
+
+def test_interaction_combinators_net_reducing_to_a_wiring():
+    x, gamma, delta, _, rules = interaction_combinators()
+    net = H.caps(x, x) >> delta @ delta >> x @ H.cups(x, x) @ x\
+        >> gamma.transpose() >> delta >> gamma @ gamma
+    for order in (rules, rules[::-1]):
+        steps = list(net.normalize(*order))
+        assert len(steps) == 5 and all(step.is_bijective for step in steps)
+        assert steps[-1] == H.caps(x, x) @ H.caps(x, x)
+    assert [len(step.boxes) for step in net.normalize(*rules)]\
+        == [4, 6, 4, 2, 0]
+
+
+def test_interaction_combinators_vicious_circle():
+    x, gamma, _, _, rules = interaction_combinators()
+    circle = (gamma.transpose() >> gamma).trace(2)
+    loops = circle.normal_form(*rules)
+    assert loops == H.spiders(0, 0, x @ x)
+
+
+def test_rewrite_needs_an_interface():
+    x = Ty('x')
+    f, g = (Box(name, x, x).to_hypergraph() for name in "fg")
+    rule = (f >> g, g >> f)
+    assert list((f >> g >> f).rewrite(rule)) == [g >> f >> f]
+    graph = f >> H.copy(x) >> (g >> f) @ x
+    assert list(graph.rewrite(rule)) == []
+
+
+def test_rewrite_modulo_frobenius_has_many_contexts():
+    x = Ty('x')
+    f, g = (Box(name, x, x).to_hypergraph() for name in "fg")
+    graph = H.copy(x) >> (f >> g) @ (f >> g)
+    rule = (H.id(x), f >> g)
+    match = ((3, ), ())
+    contexts = list(graph.complements(H.id(x), match))
+    assert len(contexts) == 5
+    assert all(context.plug(H.id(x)) == graph for context in contexts)
+    rewrites = [context.plug(f >> g) for context in contexts]
+    assert H.copy(x) >> (f >> g) @ (f >> f >> g >> g) in rewrites
+    assert len(list(graph.rewrite(rule))) == 9 + 4 * 5
+
+
+def test_rewrite_symmetric_boundary_complement():
+    from discopy import symmetric
+    x = symmetric.Ty('x')
+    a1, a2, a3 = (symmetric.Box(name, dom, cod) for name, dom, cod in [
+        ('a1', symmetric.Ty(), x), ('a2', x, symmetric.Ty()), ('a3', x, x)])
+    graph, rule = (a1 >> a2).to_hypergraph(), (
+        symmetric.Hypergraph.id(x), a3.to_hypergraph())
+    assert list(graph.rewrite(rule)) == [(a1 >> a3 >> a2).to_hypergraph()]
+    x = Ty('x')
+    a1, a2, a3 = (Box(name, dom, cod).to_hypergraph() for name, dom, cod in [
+        ('a1', Ty(), x), ('a2', x, Ty()), ('a3', x, x)])
+    assert len(list((a1 >> a2).rewrite((H.id(x), a3)))) == 5
+
+
+def test_rewrite_symmetric_is_convex():
+    # Bonchi et al. II, Example 4.2: the rewrite needs a trace, so convex
+    # rewriting misses it, even though DisCoPy's symmetric diagrams are traced.
+    from discopy import frobenius, symmetric
+    results = []
+    for module in (frobenius, symmetric):
+        x = module.Ty('x')
+        e1, e2 = module.Box('e1', x, x @ x), module.Box('e2', x @ x, x)
+        e3, e4 = module.Box('e3', x, x), module.Box('e4', x, x)
+        left = x @ e1 >> module.Diagram.swap(x, x) @ x >> x @ e2
+        right = module.Diagram.swap(x, x) >> e4 @ e4
+        graph = e1 >> e3 @ x >> e2
+        rule = (left.to_hypergraph(), right.to_hypergraph())
+        results.append(list(graph.to_hypergraph().rewrite(rule)))
+    frobenius_rewrites, symmetric_rewrites = results
+    x = frobenius.Ty('x')
+    e3, e4 = (frobenius.Box(name, x, x) for name in ("e3", "e4"))
+    assert frobenius_rewrites == [(e4 >> e3 >> e4).to_hypergraph()]
+    assert symmetric_rewrites == []
+
+
+def test_rewrite_is_not_rewritable():
+    from discopy import monoidal, markov
+    x = monoidal.Ty('x')
+    f = monoidal.Box('f', x, x).to_hypergraph()
+    with raises(AxiomError):
+        list(f.rewrite((f, f)))
+    copy = markov.Hypergraph.copy(markov.Ty('x'))
+    with raises(AxiomError):
+        list(copy.match(copy))
+
+
+def test_homomorphisms_check_the_partial_maps():
+    x, y = map(Ty, "xy")
+    f, g = (Box(name, x, x).to_hypergraph() for name in "fg")
+    assert list((f >> g).homomorphisms(f, boxes={0: 0})) == [((0, 1), (0, ))]
+    assert list((f >> g).homomorphisms(f, boxes={0: 1})) == []
+    assert list(H.id(x @ y).homomorphisms(H.id(x), spiders={0: 1})) == []
+    assert list((f >> f).homomorphisms(f >> f, injective=True)) == [
+        ((0, 1, 2), (0, 1))]
+
+
+def test_is_convex_walks_every_consumer():
+    x = Ty('x')
+    f, g, k = (Box(name, x, x).to_hypergraph() for name in "fgk")
+    host = f >> H.spiders(1, 2, x) >> g @ x >> H.spiders(2, 1, x) >> k
+    reordered = type(host)(
+        host.dom, host.cod, (host.boxes[0], host.boxes[2], host.boxes[1]), (
+            host.dom_wires, (host.box_wires[0], host.box_wires[2],
+                             host.box_wires[1]), host.cod_wires))
+    for graph in (host, reordered):
+        assert [graph.is_convex(match)
+                for match in graph.homomorphisms(f >> k)] == [False]
+
+
+def test_rewrite_symmetric_reads_back_without_trace():
+    from discopy import symmetric
+    x = symmetric.Ty('x')
+    f, g, h = (symmetric.Box(name, x, x) for name in "fgh")
+    rewrite, = (f >> g).to_hypergraph().rewrite(
+        (f.to_hypergraph(), h.to_hypergraph()))
+    assert str(rewrite) == "h >> g"
+
+
+def test_boundary_complement_is_linear_in_identity_wires():
+    from discopy import symmetric
+    x = symmetric.Ty('x')
+    f = symmetric.Box('f', x, x).to_hypergraph()
+    host = symmetric.Hypergraph.id(x).tensor(*8 * [f])
+    pattern = symmetric.Hypergraph.id(x ** 8)
+    match = next(host.match(pattern))
+    assert len(list(host.complements(pattern, match))) == 1
+
+
+def test_rewrite_errors():
+    x, y = map(Ty, "xy")
+    f = Box('f', x, y).to_hypergraph()
+    with raises(AxiomError):
+        list(f.rewrite((f, H.id(x))))
+    with raises(AxiomError, match="not the hole"):
+        f.plug(f)
+
+
+def test_rewriting_edge_cases():
+    x = Ty('x')
+    f, g, h, k = (Box(name, x, x).to_hypergraph() for name in "fghk")
+    m = Box('m', x @ x, x).to_hypergraph()
+    assert list((f >> f).homomorphisms(f @ f, injective=True)) == []
+    assert list((f >> f).homomorphisms(f @ f))
+    assert list(m.homomorphisms(H.copy(x) >> m)) == []
+    assert not (f >> f).is_convex(((0, 0), (0, )))
+    diamond = f >> H.copy(x) >> g @ h >> H.merge(x) >> k
+    match, = diamond.homomorphisms(f)
+    assert diamond.is_convex(match)
+    glued = f >> H.copy(x) >> g @ x
+    match, = glued.homomorphisms(f >> g)
+    assert list(glued.complements(f >> g, match)) == []
+
+
+def test_rewrite_keeps_the_offsets():
+    from discopy import symmetric
+    x = symmetric.Ty('x')
+    f, g = symmetric.Box('f', x, x), symmetric.Box('g', x, x)
+    a, k = symmetric.Box('a', symmetric.Ty(), x), symmetric.Box('k', x @ x, x)
+    rewrite, = (f @ a >> k).to_hypergraph().rewrite(
+        (f.to_hypergraph(), g.to_hypergraph()))
+    assert str(rewrite) == "g @ a >> k"
+
+
+def test_complements_are_lazy():
+    x = Ty('x')
+    f, g = (Box(name, x, x).to_hypergraph() for name in "fg")
+    host = H.spiders(1, 40, x) >> f.tensor(*39 * [f])
+    assert next(host.rewrite((H.id(x), f >> g))) is not None

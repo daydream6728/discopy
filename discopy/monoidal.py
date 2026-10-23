@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 
 """
+
+from __future__ import annotations
+
 The free (pre)monoidal category, i.e. planar diagrams.
 
 Summary
@@ -811,6 +814,9 @@ class Layer(cat.Box, ColouredMonoid):
         state['boxes_or_types'] = type(self).normalise(
             state['boxes_or_types'])
         super().__setstate__(state)
+        for key in [key for key in vars(self) if isinstance(
+                getattr(type(self), key, None), cached_property)]:
+            delattr(self, key)
 
     def __init__(self, *inside: "Ty | Box", normalise: bool = True):
         if normalise:
@@ -905,16 +911,49 @@ class Layer(cat.Box, ColouredMonoid):
                     cod, cod_, cod.cod, cod_.dom))
 
     @classmethod
+    def is_plumbing_box(cls, value: "Ty | Box") -> bool:
+        """
+        Whether a component of a layer is plumbing other than a type, e.g. a
+        :class:`discopy.symmetric.Permutation` in a symmetric layer, none in
+        a monoidal one.
+
+        Parameters:
+            value : The component of a layer.
+        """
+        return isinstance(value, cls.plumbing) and not isinstance(value, Ty)
+
+    @classmethod
+    def is_plumbing_component(cls, value: "Ty | Box") -> bool:
+        """
+        Whether a component of a layer is plumbing, i.e. a type or a box of
+        plumbing, see :meth:`is_plumbing_box`.
+
+        Parameters:
+            value : The component of a layer.
+        """
+        return isinstance(value, Ty) or cls.is_plumbing_box(value)
+
+    @classmethod
     def normalise(cls, inside):
-        """ The canonical word of boxes and non-empty plumbing: either we
-        append or we tensor with the last element. """
+        """
+        The canonical word of boxes and non-empty plumbing: either we
+        append or we tensor with the last element. Plumbing that tensors
+        into an identity, e.g. a spider with one leg on each side, leaves
+        its type behind, and any other diagram leaves the two apart.
+        """
         result = []
         for value in (x for x in inside if not isinstance(x, Ty) or x):
-            if not result or not isinstance(value, cls.plumbing)\
-                    or not isinstance(result[-1], cls.plumbing):
+            if not result or not cls.is_plumbing_component(value)\
+                    or not cls.is_plumbing_component(result[-1]):
                 result.append(value)
+                continue
+            merged = result[-1] @ value
+            if isinstance(merged, (Ty, Box)):
+                result[-1] = merged
+            elif not merged.inside:
+                result[-1] = merged.dom
             else:
-                result[-1] = result[-1] @ value
+                result.append(value)
         return tuple(result)
 
     def __iter__(self):
@@ -1007,7 +1046,7 @@ class Layer(cat.Box, ColouredMonoid):
 
     def subs(self, *args) -> "Layer":
         return type(self)(*(
-            x if isinstance(x, self.plumbing) else x.subs(*args)
+            x if self.is_plumbing_component(x) else x.subs(*args)
             for x in self),
             normalise=False)
 
@@ -1088,7 +1127,7 @@ class Layer(cat.Box, ColouredMonoid):
 
     def lambdify(self, *symbols, **kwargs):
         return lambda *xs: type(self)(*(
-            x if isinstance(x, self.plumbing)
+            x if self.is_plumbing_component(x)
             else x.lambdify(*symbols, **kwargs)(*xs) for x in self),
             normalise=False)
 
@@ -1271,9 +1310,11 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
         >>> x = Ty('x')
         >>> f = Box('f', x, x ** 4)
         >>> diagram = f @ x ** 2 >> x ** 2 @ f.dagger()
-        >>> assert diagram.width == 6
+        >>> assert diagram.width == 6 and Diagram.id(x ** 2).width == 2
         """
-        return max(len(self.dom), max(len(layer.cod) for layer in self))
+        return max(
+            len(self.dom),
+            max((len(layer.cod) for layer in self), default=0))
 
     def encode(self) -> "tuple[Ty, list[tuple[Box, int]]]":
         """

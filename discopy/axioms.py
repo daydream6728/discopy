@@ -662,8 +662,8 @@ class Declaration[**P, T](classmethod):
         function = inspect.unwrap(self.function)
         owner = next((
             klass for klass in (self.category or object).__mro__
-            if f"{klass.__qualname__}.{function.__name__}"
-            == function.__qualname__), None)
+            if (klass.__module__, f"{klass.__qualname__}.{function.__name__}")
+            == (function.__module__, function.__qualname__)), None)
         names = {
             parameter.__name__: parameter for parameter in (
                 getattr(owner, "__type_params__", ())
@@ -727,8 +727,10 @@ class Declaration[**P, T](classmethod):
         :data:`MAX_COUNT`, then a premise
         ``Hom[C1, A, B]`` from the strategy of the category with its boundary
         and ``params``, a premise ``Var[T, x]`` the value ``x``, a premise
-        ``Perm[N]`` a permutation, ``Objs[C0, N]`` that many atomic objects
-        and :data:`typing.Self` a term.
+        ``Perm[N]`` a permutation, ``Objs[C0, N]`` that many atomic objects,
+        a testable shape of ``Self``, e.g. ``Related[Self]``, from its own
+        strategy over the category with ``params``, and :data:`typing.Self`
+        a term, from the strategy of the category with ``params`` too.
         """
         from hypothesis import strategies as st
 
@@ -760,9 +762,10 @@ class Declaration[**P, T](classmethod):
                         dom=dom, cod=cod, **params)
                 elif isinstance(kind, type) and issubclass(kind, Testable)\
                         and getattr(kind, "factory", None) is Self:
-                    strategy = kind.__origin__[self.category].strategy()
+                    strategy = kind.__origin__[self.category].strategy(
+                        **params)
                 else:
-                    strategy = self.category.strategy()
+                    strategy = self.category.strategy(**params)
                 return draw(strategy, label=name)
 
             scope = self.scope(variable, given)

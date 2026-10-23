@@ -258,6 +258,243 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - `grammar.abstract`, abstract categorial grammars after de Groote's
   *Towards abstract categorial grammars* (2001)
   ([#398](https://github.com/discopy/discopy/issues/398)).
+- Double-pushout rewriting of hypergraphs, after Bonchi et al.'s *String
+  diagram rewrite theory* I and II: a rule is a pair of parallel hypergraphs,
+  `Hypergraph.match` finds the homomorphisms with the gluing conditions,
+  `complements` their pushout complements, `plug` glues a hole into a
+  context, and `rewrite`, `normalize` and `normal_form` chain them. Over a
+  hypergraph category every pushout complement is a rewrite, sound and
+  complete modulo the Frobenius axioms; over any other symmetric category
+  the hypergraphs are monogamous and acyclic, matches are convex and the
+  context is the boundary complement, sound modulo the symmetric monoidal
+  axioms and complete without a trace, which DisCoPy's symmetric diagrams
+  have. Lafont's interaction combinators are the test case: his six rules
+  reduce the net of his Fig. 11 to a wiring in five steps.
+
+- The trainers of recursive message passing, the networks of *Tiny
+  Recursive Message Passing* ([arXiv:2610.18649](https://arxiv.org/abs/2610.18649)),
+  moved out of its experiments op for op, so that they keep only their
+  datasets and recipes: the same bits on CPU, end to end. `neural.lattice` is
+  lattice deduction, its `project`, `losses`, persistent `Pool` and chain
+  search `solve`; `neural.act` its halting counterpart, `terms`,
+  `nearest_terms` for puzzles with several solutions, the slot pool `ActPool`
+  and `rollout`; `neural.train` the AdamW on matrices, the cosine schedule,
+  the bias-corrected `EMA` and the per-sample gradient clip
+  `per_board_backward` ([rel-int/Recursive_GNNs#1](https://github.com/rel-int/Recursive_GNNs/issues/1)).
+- `discopy.op`, the opposite of a category: `op.Category`, `Monoidal`,
+  `Symmetric`, `Markov` and `Comarkov` wrap an arrow `inside` of the
+  underlying `category` with its domain and codomain swapped, composition
+  reversed and the tensor kept; the copies of `op.Markov` are the merges of
+  its category and vice versa. `op.Comarkov[finset.Function]` is finite sets
+  and functions, `finset.Function` being now declared a Markov category, and
+  the opposites of `matrix.Matrix[int]` join the property matrix
+  ([discopy/discopy#646](https://github.com/discopy/discopy/issues/646)).
+
+- Frobenius plumbing
+  ([discopy/discopy#472](https://github.com/discopy/discopy/issues/472)):
+  `finset.Cospan` is the free hypergraph category on one object, cospans of
+  finite sets up to isomorphism composed by pushout, a `HypergraphCategory`
+  in the property matrix, and `frobenius.Cospan(apex, left, right)` holds
+  one with the type of each point of its apex. Permutations are cospans, as
+  are phase-free spiders and the cups and caps of a self-dual wire, which
+  carry `legs`; `Cospan(x, [0], [0, 0]) == Spider(1, 2, x)`.
+  `frobenius.Layer` alternates cospans and generators, plumbing tensors into
+  one cospan, `Diagram.spiders` of a type builds one, and foliation fuses
+  them by pushout, e.g. a snake into the identity. `Cospan.to_spiders` is
+  how one is drawn and sent by a functor, and
+  `abc.HypergraphCategory.cospan` builds one in any hypergraph category.
+  The categories below frobenius keep their spiders as generators until
+  they have a cospan factory of their own.
+
+- Markov and comarkov plumbing
+  ([discopy/discopy#472](https://github.com/discopy/discopy/issues/472)):
+  `markov.Function(dom, func)` copies, discards and permutes so that output
+  `i` reads input `func[i]`, holding a `finset.Function`, and
+  `comarkov.Cofunction(cod, cofunc)` merges, adds noise and permutes so
+  that input `i` goes to output `cofunc[i]`, holding an
+  `op.Comarkov[finset.Function]`; each is the dagger of the other with the
+  same list. `Copy`, `Discard`, `Permutation` and `Swap` are functions,
+  `Merge`, `Noise`, `Permutation` and `Swap` cofunctions, and
+  `Function(x, [0, 0]) == Copy(x)`. `markov.Layer` and `comarkov.Layer`
+  alternate them with generators: plumbing tensors into one box,
+  `Diagram.copy` and `Diagram.merge` of a type build one, and foliation
+  fuses plumbing layers.
+  `abc.MarkovCategory.function` and `ComarkovCategory.cofunction` decompose
+  them in any category, `finset.Function.factorise` being the copies then
+  the permutation. `closed` and `neural.network` have their own.
+
+- Double-pushout rewriting for planar diagrams, on `cmap.CMap`: the map of a
+  diagram in a monoidal category is the diagram up to interchange, faithfully
+  when it is connected (Delpeuch & Vicary, Section 8), so matching it needs
+  no interchange at all. `CMap.sweep` is a line sweeping a planar map down:
+  a box goes as soon as its inputs are side by side, a state in the gap of
+  its face that keeps every face turning by a full turn (Bertolazzi et al.),
+  so the sweep never gets stuck on a map that some layering has, checked
+  against all of them on random wirings. `encode` and `is_progressive` read
+  it off, and `to_diagram` sweeps when the category has no swaps, so that a
+  state left of a wire decodes again instead of asking for a swap.
+  `homomorphisms(pattern)` are injective on boxes and found along wires;
+  `match(pattern)` keeps those whose image, contracted into one box, still
+  sweeps, and yields the one pushout complement as a `monoidal.Match`, the
+  diagram with a hole; `rewrite`, `normalize` and `normal_form` take rules
+  as pairs of parallel maps. Over a planar category a host must be
+  connected: a map does not say in which face a component touching nothing
+  else lies. The spiral unwinds to the empty diagram in `2n + 1` steps under
+  three rules, from its centre, whether drawn as built or in normal form,
+  where the counit is the last box.
+- `discopy.spacial`, the free spacial category, and `abc.SpacialCategory`: a
+  monoidal category whose scalars slide, `s @ f == f @ s`, the axiom
+  `scalar_sliding` (Selinger's survey). A floating component then lies in
+  no face in particular, so `CMap.match` takes any spacial host, connected
+  or not, and a closed pattern any union of floating components: a scalar
+  inside a circle is a scalar beside it. `BraidedCategory` is a
+  `SpacialCategory`, so the matrix checks the law on `matrix.Matrix[int]`;
+  `closed.TermBase` declares it inapplicable, like the other laws of its
+  diagrams.
+- `discopy.ehypergraph`, e-graphs of diagrams with sharing: an
+  `EHypergraph` over a copy-discard category is a left-monogamous acyclic
+  `Hypergraph`, whose boxes are the e-nodes, with an equivalence relation on
+  its spiders, whose classes are the e-classes. Over cartesian diagrams,
+  which are terms with sharing, it is an e-graph: `from_diagram` hash-conses
+  a diagram as egg does a term, `rebuild` is the congruence closure of the
+  relation, `add` hash-conses a deterministic box, and `rewrite(region,
+  dom, cod, rhs)` glues the right-hand side of an equation onto the inputs
+  of a region, hash-consing its boxes, then relates the outputs of the
+  region to its own, refusing a region whose boxes cannot fire in some
+  order from the classes of its domain and reach those of its codomain.
+  `matches(lhs)` is egg's e-matching modulo the classes: a pattern,
+  `is_pattern`, is a cartesian diagram with sharing whose boxes produce its
+  codomain, bound top-down by `bind`, from the codomain up, each box to the
+  equal boxes, flags included, producing the class its output is bound to,
+  so that each of its spiders is bound to one class, and a match is
+  `(region, dom, cod)`, `None` for an input the pattern does not read, so
+  that `rewrite(*match, rhs)` applies a rule. `step` is a round of egg's
+  schedule, every match of every rule searched as the round begins, all
+  rewritten, then rebuilt, and `saturate(*rules)` iterates it, yielding
+  each round that adds a box or relates two classes and stopping at the
+  first that does neither; a rule is a pair of cartesian diagrams of one
+  type, the left a pattern and the right reading only the inputs the left
+  reads, which `saturate` checks as it is called, `AxiomError` otherwise.
+  Egg's own example, `(a * 2) / 2` under its four rules, saturates in three
+  rounds and extracts `a`, and a differential test against egglog-python,
+  skipped without it, compares the classes of every subterm, whether each
+  round changed anything and the cost extracted, round by round, on egg's
+  example, on a term that needs congruence after a rewrite and on random
+  terms and rule sets, through the reference in
+  `test/fixtures/egglog_reference.py`, where multiplication costs two,
+  thirty random terms in the suite, and a stress run outside it found no
+  disagreement on a thousand random terms nor on five hundred full trees.
+  The same with a `sample`, not deterministic, and a `condition`,
+  not affine: under `x - x = 0`, two samples of `p` stay apart while one
+  sample used twice cancels, then is discarded with `p` unless a condition
+  reads it. A test evaluates the sections of two rounds of random
+  programs, those small enough to contract, their samples shared or not
+  and up to two conditions, under eight rules that hold in the integers
+  modulo three, there, samples random stochastic matrices and conditions
+  random weights of zero or one,
+  and contrasts egglog: its naive encoding, a sample a function and a
+  program its value, cancels two samples and drops a condition registered
+  beside the value, `egglog_trace(extra=...)`, both of which the model
+  tells apart from the program, while the faithful one, an id for each
+  sample and the conditions in the term, extracts at the cost we do except
+  where a condition repeats on related inputs: a hard constraint is
+  idempotent, kept and paid once here where egglog's term pays for each
+  occurrence.
+  `pattern` drops the wires that go straight from the domain to the
+  codomain of a hypergraph and `rewire` reads one input of a box from
+  another spider before it.
+  A section chooses a producer for each class it needs, those of the
+  codomain and those read by the boxes it keeps, i.e. the boxes it chooses
+  and every box that is not affine, and an acyclic choice decodes to a
+  diagram; `sections` enumerates them, `extract` is one of least tree cost,
+  egg's extraction, by Bellman-Ford relaxation, the cost of a box and of a
+  domain position being parameters, as egg's cost functions, one by default
+  as its `AstSize`. Equal boxes on related inputs have related outputs only
+  when they are deterministic, two samples being independent, an equation
+  is between cartesian diagrams, an effect being context, and the
+  e-hypergraphs over a category form a monoidal category, the relation
+  carried along the pushout, over a category whose boxes carry the flags
+  of `markov.Box`, `AxiomError` otherwise. Their laws are checked by the
+  property matrix over `markov.Diagram`, drawn with some boxes that are
+  not deterministic or not affine but where a law is weakened to cartesian
+  ones: the hypergraph is a strict monoidal functor, merging states an
+  equivalence, `rebuild` is a closure operator relating the outputs of two
+  copies of a diagram on related inputs exactly when they depend on
+  deterministic boxes only, and the closure of the identity relates
+  nothing but the outputs at one position of equal boxes, what is
+  extracted is a section, valid, of least cost and idempotent, every
+  section keeps every effect, once per class of equal deterministic ones
+  on related inputs, rewriting a rebuilt e-hypergraph into its own
+  hypergraph changes nothing and rewriting never raises the cost of what is
+  extracted; matching is complete modulo the classes, binding a pattern to
+  two copies of a diagram on related inputs in turn, and sound, flags
+  included, rewriting a match into its own pattern changing nothing, the
+  pattern of a diagram made cartesian, beside the diagram, and that
+  pattern rewired, which a matcher missing a constraint finds where the
+  original is; and saturation stops on a rebuilt e-hypergraph that no
+  match changes, under rules equating the boxes of a type and each box
+  with a fresh one. A semantic test evaluates every
+  section in random tensors, sampling and conditioning included, as the
+  diagram it comes from, two boxes interpreted alike only when one was
+  rewritten into the other. `hypergraph.relabeling` is how a
+  hypergraph numbers its spiders, factored out of its constructor so that
+  the relation follows them, and decoding a hypergraph that needs spiders
+  over a category with none raises `AxiomError`, where it raised
+  `AttributeError` for want of a `spider_factory`; over a Markov category,
+  `make_bijective` merges the inputs of a spider with neither one input nor
+  one output before copying its outputs, as `to_diagram` already did, where
+  it raised a bare `ValueError`. A premise of a law annotated `Self`, or
+  with a testable shape of it such as `Related[Self]`, is drawn with the
+  parameters `Axiom.weaken` declares, as a morphism already was.
+  Read against Tiurin, Barrett, Ghica and Hu's *Equivalence Hypergraphs*
+  ([arXiv:2406.15882](https://arxiv.org/abs/2406.15882)), whose semantics
+  of an e-graph is a string diagram of the free semilattice-enriched
+  Cartesian category: `Join` is the join of parallel diagrams, an e-box
+  drawn as a frame with a slot for each term, `distribute` expands the
+  joins of a diagram into a formal sum as the equations of their Fig. 4
+  say, and `EHypergraph.to_diagram` is their translation of an e-graph
+  (Fig. 3, Algorithm 1): a class of several e-nodes is their join, each
+  reading the inputs of the class it needs and discarding the others, a
+  box that is not cartesian with one output stays outside as context, and
+  a class that depends on itself is refused, as the paper only translates
+  acyclic e-graphs. The law `translation` checks that distributing its
+  joins gives the sections modulo the naturality of copy and discard, i.e.
+  that a section chooses an e-node once per class, as the copy after an
+  e-box says, where the terms an e-graph represents choose per occurrence.
+  `nodes` are the e-nodes of each class, equal deterministic boxes on
+  related inputs being one, egg's hashcons invariant, and `sections`
+  chooses among them, so that it lists each section once. A notebook, *Equivalence
+  hypergraphs*, reproduces the paper's Figs. 1, 4, 17, 25, 26 and 27,
+  which tests pin, and says what is left: their e-hypergraphs are
+  hierarchical, nested e-boxes of any arity representing any symmetric
+  monoidal theory, where these are the flat image of e-graphs.
+- `markov.Box` takes the keyword arguments `is_deterministic` and
+  `is_affine`, both `True` by default: a box is deterministic when copying
+  commutes with it and affine when discarding does, e.g. a sample is not
+  deterministic and a condition not affine, and a deterministic box that is
+  not affine is a hard constraint, a soft score not being deterministic.
+  The flags are attributes of each box rather than of its class, as an
+  identity or a swap is a total function whatever its class, take part in
+  equality and hashing, `tensor.Box`'s included, and are written by `repr`
+  and `to_tree` when they are `False`, so that existing representations are
+  unchanged, `pregroup.Word`'s included. A box stores the flags it is
+  declared with as `deterministic` and `affine`, which hold of it but not of
+  its dagger nor of its rotations, as the converse or the transpose of a
+  total function need not be one. `dagger`, `subs`, `lambdify`, `from_tree`
+  and the rotations of a `frobenius.Box` or a `pregroup.Box` keep them on
+  top of what the class they extend builds, so that the dagger of a dagger
+  is the box again, the dagger of a rotated box keeps its winding and that
+  of a word its boundary. The flags of a spider are those of its legs and
+  phase, by spider fusion: it is deterministic when it has a leg in and no
+  phase, affine when it has exactly one leg in and no phase, so that a cup
+  is deterministic but not affine and a cap neither, and of the ZX spiders
+  only `Z`, that of the
+  basis a tensor copies, has them. `markov.Diagram.is_deterministic`,
+  `is_affine` and `is_cartesian`, both, hold when they hold of every box:
+  a copy, a discard, printed `Discard(x)` rather than `Copy(x, 0)`, a
+  swap and a permutation are cartesian, and a formal sum is deterministic
+  when it has at most one term, which is, and affine when it has exactly
+  one, which is.
 - `hopf.Intertwiner.chart(dom, cod)`, the parametrised intertwiner
   `Dim(r) @ dom -> cod` whose slices are an orthonormal basis of
   `Hom_H(dom, cod)`, solved as one SVD nullspace of the commutant
@@ -674,6 +911,17 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   Moved from the trilingual parser of
   [rel-int/lambek#8](https://github.com/rel-int/lambek/pull/8), without its
   datasets or experiments.
+- The rest of the generic parser code of rel-int/lambek. From
+  [lambek#8](https://github.com/rel-int/lambek/pull/8): `proofnet.count`,
+  the count invariant of a type, and `Sequent.infer`, the sequent of some
+  words with the smallest goal of their count, which `Parser` takes when it
+  is given no goal; `Tagger.beam` and `Tagger.loss` within the atoms of a
+  sub-signature, e.g. one language of a multilingual signature, and label
+  smoothing over them with `Tagger.smoothing`. From
+  [lambek#2](https://github.com/rel-int/lambek/pull/2):
+  `categorial.parse`, the `k` best terms of a sentence from the scored
+  candidate types of its words by the CKY algorithm, over the application
+  and composition of `categorial.combine` in Eisner's normal form.
 - A notebook, *Parsing arithmetic*, showcasing `grammar.proofnet` and
   `grammar.neural`: the two readings of `a + b * c` are two linkings of
   one sequent, 24 of its 120 linkings are correct, and a parser trained on
@@ -967,6 +1215,20 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   affine map from the features to the targets that `predict` applies, with
   an intercept by default, which the regularisation leaves out, as in
   Fujii and Nakajima's paper; `bias=False` fits without one.
+- The contextual fraction, `discopy.quantum.contextuality`, after Abramsky,
+  Barbosa and Mansfield ([arXiv:1705.07918](https://arxiv.org/abs/1705.07918),
+  [rel-int/discopy-next#283](https://github.com/rel-int/discopy-next/pull/283)):
+  a `Scenario` of measurement contexts and an empirical `Model`, a
+  distribution on the outcomes of each context, built from local measurement
+  circuits on a state by `Model.from_circuits`. `contextual_fraction` solves
+  the linear program for the largest non-contextual part with `scipy`, now in
+  the `quantum` extra, once `is_compatible` has checked that the rows are
+  distributions whose marginals agree; `decompose` splits a model into
+  non-contextual and strongly contextual models, and `bell_inequality` gives
+  the `Inequality` whose normalised violation is the contextual fraction.
+  Models combine by `mix`, controlled choice `&` and product `@`. The tests
+  and the `contextual-fraction` notebook reproduce the examples of the paper,
+  Figure 1 included.
 - `discopy.drawing.widget.DiagramWidget`, an
   [anywidget](https://anywidget.dev) showing the SVG of a drawing, built
   on demand by `RichDisplay.to_widget`, for Jupyter, marimo and VS Code.
@@ -1029,7 +1291,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   dimensionless units of Pasqal's [qoolqit](https://docs.pasqal.com/qoolqit/),
   the interaction coefficient being one, with its detuning map modulator:
   a modulated detuning `dmm`, at most zero, applied to each atom with one
-  of its `weights` in the unit interval
+  of its `weights` in the unit interval, tested against the Hamiltonian
+  qoolqit compiles to Pulser, `qoolqit` joining the `quantum` extra
   ([#586](https://github.com/discopy/discopy/pull/586)).
 - The pivotal structure of `Rep(H)`: `HopfAlgebra.drinfeld_element`,
   `pivotal_element` and `ribbon_element`, cached single tensors named after
@@ -1100,6 +1363,26 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   abstract class it subclasses states.
 - `Equation` has one symbol fewer than terms, a symbol between each pair of
   consecutive terms; `symbols` of any other length raise `ValueError`.
+- A layer reads its plumbing through `Layer.is_plumbing_component`, so
+  that a box is plumbing by what it holds rather than by its class alone,
+  e.g. a spider without a phase. The diagrams of `tensor`, `quantum` and
+  `hopf` have `frobenius.Layer`s.
+
+- `symmetric.Layer.merge` fuses two layers of plumbing alone whatever
+  plumbing they hold, through the `fuse` of its boxes, and
+  `symmetric.Diagram.merge_layers` drops two that compose to the identity
+  likewise, e.g. a copy then a discard; `Hypergraph.to_diagram` fuses the
+  copies and merges it inserts with the permutations next to them.
+
+- The `quantum` extra pins pyzx 0.10.7, where it pinned 0.7.3, so that it
+  installs next to `pytket-pyzx`, which needs pyzx 0.9 or later. pyzx 0.10
+  takes no `float` phase, so `zx.Diagram.to_pyzx` hands it the exact
+  `Fraction` of the float, which pyzx 0.7 stored as it was, and it reads
+  the boundaries of a graph in the legacy JSON format from the index of
+  its `input` or `output` flag, so `test/fixtures/zx-graph.json` gives one
+  instead of `true` and `false`
+  ([rel-int/discopy-next#225](https://github.com/rel-int/discopy-next/issues/225)).
+
 - A law of `discopy.axioms` is stated as a sequent, the sequent calculus
   of [rel-int/discopy-next#1](https://github.com/rel-int/discopy-next/pull/1)
   without its search: its type parameters are variables, objects `A:
@@ -1693,6 +1976,15 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
+- Two bugs of `main` that the property matrix of #1 found once merged with
+  it: an abstract diagram tensors its copies and discards, where
+  `grammar.abstract.Diagram` had no `Function` box of its own, so that its
+  plumbing tensored into a closed one and `Diagram.discard(x) @ Id(x)`
+  recursed until it overflowed; and a layer keeps a spider with one leg on
+  each side as the identity it tensors into, where `Layer.normalise` kept
+  the identity diagram itself as a component of the layer, so that e.g.
+  `x @ (f >> Spider(1, 1, x)) @ f` raised `TypeError`.
+
 - A bubble keeps what it is built with when substituted into, lambdified
   or daggered: `cat.Bubble.keywords` names the keyword arguments it is
   built again with, `monoidal.Bubble` adds its drawing options and
@@ -1723,6 +2015,22 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   can leave in place. `Diagram.to_staircases` maps a diagram with the
   functor of its own level, where `monoidal.Functor` sent a trace to a
   monoidal bubble.
+- `python.multiplicative.Function.copy(x, 1)` returns its argument rather
+  than a tuple of one, which failed its own type check.
+
+- A law stated on `abc.Category` reads its type parameters when a class of
+  another module shares its name, e.g. `op.Category`.
+
+- The identity functor is the identity on a `Permutation`:
+  `symmetric.Functor` sends one into a codomain with a
+  `permutation_factory` to its `from_permutation`, each wire moving the
+  block of its image, where it built the staircase of swaps of
+  `permutation`, so `Functor.id(Diagram)(p) != p` in `symmetric`, `markov`,
+  `compact` and `frobenius` alike. A functor with non-atomic images gives
+  one permutation box instead of a staircase, equal to it up to `Equation`;
+  concrete codomains such as `Matrix` and `Tensor` keep their `permutation`
+  (B60 of
+  [rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
 - A tree saying `"is_dagger": false` reads back as no dagger: `cat.Box`,
   and so every box, `monoidal.Wire`, `frobenius.Spider`,
   `feedback.FollowedBy` and `quantum.gates.Digits` took the presence of the
@@ -1793,6 +2101,29 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   docstrings of `cat.Bubble` and `monoidal.Bubble` say it the right way
   round: they said a bubble raised when its args did share one
   ([rel-int/discopy-next#133](https://github.com/rel-int/discopy-next/issues/133)).
+- `Hypergraph` equality and hash see the type of a spider with no legs,
+  where `H.spiders(0, 0, x) == H.spiders(0, 0, y)`, so that
+  `frobenius.Equation(Spider(0, 0, x) @ f, Spider(0, 0, y) @ f)` held
+  (B50 of
+  [rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
+- `Hypergraph.depth`, which `symmetric.Diagram.depth` delegates to, counts
+  the boxes on the longest path of its causal graph, the length of its
+  shortest foliation, where it divided the number of edges by four and
+  came out short at a state or an effect: `Box('f', Ty(), x).depth()` is
+  `1` and a state followed by an effect `2`, where they were `0` and `1`
+  (B66 of
+  [rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
+- `(f + g).to_hypergraph()` and `.to_map()` raise `AxiomError` saying a
+  hypergraph or a map has no sums, where they died with
+  `no attribute 'zero'` (B82 of
+  [rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31));
+  the bare `ValueError`s of `cmap` and the bare errors of
+  `Hypergraph.then` and `Hypergraph.bijection` say what they expected
+  (B88 of
+  [rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
+- A subclass of `CMap` reprs as its own class, named by `factory_name` as
+  a `Hypergraph` is, where the repr of every map began with `cmap.CMap[`
+  ([rel-int/discopy-next#168](https://github.com/rel-int/discopy-next/issues/168)).
 - The tensor spider with no legs is the circle, the dimension of its wire,
   as spider fusion says it is, `Tensor.spiders(0, 0, Dim(2))` being `2`
   like `Tensor.spiders(0, 1, Dim(2)) >> Tensor.spiders(1, 0, Dim(2))`,
@@ -1874,6 +2205,41 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   inherited by `python.multiplicative.Function` and
   `python.additive.Function`; a chain built with `>>` still nests, since
   that operator is binary.
+- Controlled gates evaluate and rotate as the gate they control is: the
+  array of a controlled gate ignored the dagger and the rotation of its
+  gate, so that `Controlled(S).dagger()` was `Controlled(S)` numerically
+  (B10), and its `l` and `r` were its conjugate, so that rotating
+  `CRz(.3)` negated its phase and `CRz(.5).rotate()` raised (B54): a
+  controlled gate now rotates as its gate, with its qubits reversed, so
+  that rotation commutes with evaluation. A pure `circuit.Box` stays pure
+  through its dagger, rotation and delay, where it was rebuilt mixed, so
+  that the dagger of a quantum box could not be evaluated and the one of
+  a classical box was not transposed (B55). `subs` and `lambdify` keep the
+  distance of a controlled rotation and the mixedness of a scalar (B11),
+  which also makes the default, mixed derivative of a rotation evaluate
+  to its finite difference, and the pure derivative of `U1` is the
+  difference of its shifts by a quarter turn, where it was its shift by
+  half a turn, the derivative of `Rz` (B12). `QuantumGate` takes a 2-D
+  array or a list with free symbols as `data`, as `circuit.Box` does,
+  where it raised (B82), and `Ket`, `Bra` and `Digits` read a boolean as
+  an integer, where `Ket(True)` was `|0> + |1>` and a bitstring of numpy
+  booleans the zero vector, `Digits` raising on a digit that is no integer
+  below its dimension (B68)
+  ([rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
+- Every gate with a constructor of its own delays, where `Ket(0).delay()`,
+  `Measure().delay()`, `scalar(2).delay()` and the rest raised
+  `TypeError`: `Discard` and `MixedState` through the type they take, as
+  `Controlled` does, and `Ket`, `Bra`, `Measure`, `Encode`, `Copy`,
+  `Match`, `Digits`, `Bits`, `Scalar`, `MixedScalar` and `Sqrt` through a
+  `time_step`, as the rotations do, kept by their dagger, decomposition,
+  tree, `subs`, `lambdify` and `grad`; a delayed scalar is unequal to the
+  scalar. The decomposition of `Discard` and `MixedState` keeps their
+  types, where it discarded or prepared a qubit for every wire, bits
+  included. `Controlled`, `Digits` and `Bits` print their constructor call
+  with its module, where they printed `Controlled(...)` and their name, so
+  that `eval(repr(x)) == x` in the environment of a circuit
+  ([rel-int/discopy-next#176](https://github.com/rel-int/discopy-next/issues/176),
+  [rel-int/discopy-next#168](https://github.com/rel-int/discopy-next/issues/168)).
 - A delayed qubit or bit prints and serialises with its time step,
   `Qudit(2, time_step=1)`, where both dropped it, so that
   `eval(repr(x)) == x` and `loads(dumps(x)) == x` failed on it. A
@@ -1887,9 +2253,7 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   and a controlled rotation take a `time_step`, kept by their delay,
   dagger, rotation, `subs`, `lambdify`, `grad`, `repr` and tree, and a
   controlled gate at a distance decomposes on its own qubits, so that a
-  delayed one evaluates. The other gates with a constructor of their own
-  still do not delay
-  ([rel-int/discopy-next#176](https://github.com/rel-int/discopy-next/issues/176))
+  delayed one evaluates
   ([rel-int/discopy-next#130](https://github.com/rel-int/discopy-next/issues/130)).
 - Closed types carry a time step, as every wire below `feedback` does, so
   that a closed diagram delays box by box, where
@@ -2016,6 +2380,25 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   name. A value that is a subscripted class is pickled as its
   `utils.Subscript`, its origin and its values, recursively
   ([rel-int/discopy-next#121](https://github.com/rel-int/discopy-next/issues/121)).
+- `CMap.to_diagram` applies a box with no domain, a state or a cap, in the
+  gap of the scan its face reaches rather than on the right of the open
+  wires: `(s @ x).to_map().to_diagram()` raised `NOT_SYMMETRIC` in
+  `monoidal`, `rigid` and `pivotal` and was `x @ s >> Swap` in `symmetric`,
+  and most random planar diagrams could not be decoded. Walking its face
+  back to the wire on its left, or on to the wire on its right, turns by
+  half a turn when that wire is its neighbour, and when the two walks
+  disagree it goes beside the wire its first reader reads next to it.
+  `CMap.make_causal` cuts only the wires that close a cycle, as it says,
+  where a scalar loop beside merely unordered boxes cut those too
+  ([rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
+- `Hypergraph.to_diagram` puts a cap with no offset, e.g. one of
+  `make_monogamous`, beside the wire that its first reader reads next to
+  it rather than on the left: `(f @ Cap(x, x)).to_hypergraph().to_diagram()`
+  had a permutation that `f @ Cap(x, x)` does not have
+  ([rel-int/discopy-next#187](https://github.com/rel-int/discopy-next/issues/187)).
+  `Hypergraph.make_causal` bends a wire with cups and caps in a category
+  with no merges, where it asked for a `spider_factory`:
+  `compact.Box('g', x, x).transpose().depth()` raised `AttributeError`.
 - `frobenius.Dim.unwind`, and so `tensor.Dim.unwind`, is the identity, like
   its `l` and `r` and like `rigid.Nat.unwind`: it inherited
   `rigid.Ty.unwind`, which asks the atom of a type for its winding, and the
@@ -2098,6 +2481,32 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `feedback.Diagram.feedback` takes a memory of several wires. A delayed
   `feedback.Box` reads back from its tree, which dropped its time step
   ([rel-int/discopy-next#1](https://github.com/rel-int/discopy-next/pull/1)).
+- `hopf.Intertwiner.cups` and `caps` twist by the inverse of the pivotal
+  element the pairings of a module with its left dual in the orientations
+  of `rigid.Cup(x.l, x)` and `rigid.Cap(x, x.l)`, as they did for its
+  right dual in those of `Cup(x, x.r)` and `Cap(x.r, x)`, so that every
+  cup and cap they build is an intertwiner. Over the Taft algebra, whose pivot is
+  not the unit, `cups(V.l, V)` and `caps(V, V.l)` were not, and a rigid
+  functor sends the cup and cap of a left adjoint to them; the ribbon
+  functor never met them, as `x.l == x.r` in `pivotal` (B53 of
+  [rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
+- `hopf.Intertwiner.twist` is the action of the inverse of the ribbon
+  element, which is the trace of the braid as `ribbon` defines the twist,
+  on either side. It was the action of the ribbon element itself, so that
+  `hopf.Functor` sent `Twist(x)` to the inverse of the trace of
+  `Braid(x, x)` on the anyons of `D(Z/3)` and over
+  `Double(Algebra.taft(3))`, which no test saw: the twists of `D(Z/2)` are their own inverses, and
+  the twist tests of `test/hopf.py` compared a trivial twist with the
+  identity. They check the twists of `D(Z/3)` anyons and of their product
+  instead (B52 and B87 of
+  [rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
+- The rotation of the dagger of a `ribbon.Braid` goes from the adjoint of
+  its codomain to the adjoint of its domain and keeps the same strand
+  over, so that it is its transpose under a ribbon functor, as it already
+  was for a braid. It had the type of the rotation of the braid itself,
+  so that rotating a diagram with an inverse braid built one that did not
+  compose (B17 of
+  [discopy/discopy#606](https://github.com/discopy/discopy/issues/606)).
 - `braided.Diagram` and `ribbon.Diagram` bind their own `functor_factory`,
   where they read those of `monoidal` and `pivotal`, so that their
   conversions map a braid to a braid and a twist to a twist, as `balanced`
@@ -2261,6 +2670,27 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   loses a guard on an attribute no layer has, which raised a message that
   did not exist
   ([rel-int/discopy-next#1](https://github.com/rel-int/discopy-next/pull/1)).
+- `finset.Function.permutation(xs, doms)` permutes blocks of the sizes
+  `doms`, the `i`-th block of its codomain being the `xs[i]`-th of its
+  domain as in `Matrix.permutation`, where it raised unless every block had
+  size one; `tensor.Box` compares and hashes an array of any backend or a
+  list of lists as data by its flattened entries, where `==` raised `The
+  truth value of an array is ambiguous` and nested lists were unhashable;
+  and
+  `multiplicative.Function.curry(n)` raises `ValueError` when `n` is
+  negative or more than the domain has, where it silently curried all of it
+  ([rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
+- `Matrix.__repr__` leaves numpy's global print options alone: it passes
+  `config.NUMPY_THRESHOLD` to `numpy.array2string`, where it set it for
+  every array printed afterwards. `Matrix.basis` builds its array in the
+  `dtype` of its carrier like `copy`, so that `basis(0, i)` is `int64` like
+  `id(0)` rather than `float64`
+  ([rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31),
+  [rel-int/discopy-next#88](https://github.com/rel-int/discopy-next/issues/88)).
+- `tensor.Functor` maps a `Dim` with its `ob_map`, atom by atom like any
+  other type, where it returned it untouched, so that on tensor diagrams,
+  whose objects are dimensions, the object mapping was never read
+  ([rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
 - `Matrix.copy(x, n)` is the diagonal of the direct sum, `n` identities
   side by side, i.e. `array[i, j]` iff `j % x == i`, where it was the
   Kronecker diagonal, the copy of the tensor product: under the direct sum
@@ -2367,6 +2797,40 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   arXiv:1904.11324, which is not their paper; the geometry of Bayesian
   programming is arXiv:1904.07425
   ([#639](https://github.com/discopy/discopy/pull/639)).
+- The dagger of a rigid box keeps its winding number `z`, where it reset
+  it to zero, so that `f.r[::-1]` was a box with no winding on the rotated
+  types, `f.r[::-1][::-1] != f.r` and `f.r[::-1] != f[::-1].r`: the dagger
+  of a rotation is the rotation of the dagger, as in a dagger pivotal
+  category, which `pivotal.Box` already did
+  ([rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
+- `Diagram.width` of an identity is the number of its wires, where
+  `Id(x).width` raised `ValueError` on the `max` of no layers
+  ([rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
+- `rigid.Diagram.cups` and `caps`, and `tensor.Tensor.cups`, raise
+  `AxiomError` on two types of different lengths, which are no adjoints,
+  where `cups(Ty(), n)` returned the identity on `Ty()` and
+  `cups(n, Ty())` raised `IndexError`: `rigid.nesting` never compared the
+  lengths
+  ([rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
+- `Diagram.from_callable` removes the `__call__` it sets on the diagram
+  class for its boxes to record their inputs even when the function it
+  reads raises, where it stayed there, so that every box of that level was
+  callable from then on
+  ([rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
+- An unpickled `monoidal.Layer` recomputes its `name`, `dom` and `cod`
+  from the boxes and types it normalises, where it restored the values
+  cached before normalisation, so that a layer pickled with empty plumbing
+  came back named `Ty() @ f @ Ty()`, and one from a 0.6 or 1.2 pickle
+  named `Layer`
+  ([rel-int/discopy-next#168](https://github.com/rel-int/discopy-next/issues/168)).
+- A trace over more objects than the boundary has, or a negative number of
+  them, raises `ValueError` in the positional form as it did in the keyword
+  form, where `ribbon`, `compact` and `frobenius` diagrams, drawings and
+  additive Python functions traced what their slicing made of it, e.g.
+  `trace(5)` of a box on two wires as `trace(2)` and `trace(-1)` as
+  `trace(1)`, and a matrix raised a NumPy error: `abc.keyword_form` splits
+  the boundary for both forms
+  ([rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
 - `interaction.Diagram.trace` traces an integer diagram, where it raised
   `TypeError` on every input: it was borrowed from `traced.Diagram` through
   a `trace_factory` slicing the type, and an integer type is a pair of
@@ -2501,6 +2965,26 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   extra. `import discopy.grammar` still imports no framework, which a test
   pins the way `test/neural/network.py` does for `discopy.neural`
   ([rel-int/discopy-next#52](https://github.com/rel-int/discopy-next/issues/52)).
+- A symmetric functor maps a whiskered swap, which is a `Permutation`, into
+  a codomain with no `permutation`: it is sent to the images of the swaps of
+  `Permutation.to_swaps`, where it used to fall through to the `ar_map` and
+  raise `KeyError`. So `(Swap(x, y) @ z).to_braided()` is one dual rail
+  braid, through a new `symmetric.DualRail` and `compact.DualRail`, where it
+  raised `TypeError` (and drew an opaque box in `compact`). A permutation of
+  a `Nat` is sent to the `permutation` of one block per wire, like any
+  other, so `Functor({Nat(1): x @ y})` maps a swap of `Nat(1)`, where it
+  raised `Expected a permutation of length 6, got 3`
+  ([rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
+- `braided.Diagram.simplify` on a foliated diagram splits its layers of more
+  than one box into staircases first, as `tensor.Diagram.grad` does, where
+  it unpacked every layer as one box and raised `ValueError`
+  ([rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
+- `symmetric.Diagram.foliation` drops two layers of plumbing that compose
+  to the identity, as it did for `Swap(x, y) >> Swap(y, x)` before a swap
+  became a `Permutation`: `Layer.merge` refuses such a pair, since the
+  identity is no layer, so `p >> p[::-1] >> p` stayed three layers instead
+  of one. `merge_layers` drops the pair
+  ([rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
 - `Matrix.then`, `tensor` and `__add__`, and `Tensor.then` and `tensor`,
   built their result as `type(self)(...)`, casting it to the dtype of the
   left operand: the unparametrised structural matrices -- `id`, `swap`,
@@ -2583,6 +3067,23 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   bare `Curry(box)` curried the opposite side of `box.curry()`, and
   `grammar.categorial.Diagram.bc` passed `n` without `left`, so backward
   composition curried on the wrong side by the same drift.
+- `biclosed.Eval` and `Coeval` evaluate an exponential that is neither
+  `Over` nor `Under` on the left by default, so that `closed.Eval(X >> Y)`
+  is `closed.Diagram.ev(Y, X)`, left since discopy/discopy#560, rather than
+  its mirror image. They raise `AxiomError` on the side an `Over` or an
+  `Under` does not have, e.g. `Eval(x << y, left=False)`, which the identity
+  functor rebuilt as `Eval(y >> x)`. `biclosed.Curry(f, n)` raises unless
+  `0 <= n <= len(f.dom)`: `Curry(f, 5)` of a box with one input curried it
+  whole and named itself `Curry(f, 5, True)`
+  ([rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
+- `to_hypergraph` and `foliation` of a closed diagram with a constant, e.g.
+  `g(X('a')).eval()`, raised `AxiomError: Expected a term for g, got g.`:
+  `biclosed.Functor` sent its constants to `map_term`, since the objects of
+  a hypergraph of closed diagrams are biclosed types, and a hypergraph,
+  which has no terms, is now exempt from that as a `CMap` already was. A
+  term itself, e.g. `g(X('a'))`, goes to a hypergraph as its diagram does,
+  since a hypergraph has no `ev` to evaluate it with
+  ([rel-int/discopy-next#177](https://github.com/rel-int/discopy-next/issues/177)).
 - A variable of a composite type, e.g. `Variable("v", x @ y)`, is bound
   whole. The abstraction machinery indexed contexts and free variables by
   variable, counting on that index to coincide with a wire index, so such
@@ -2656,6 +3157,29 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - `rigid.Diagram.functor_factory` is `rigid.Functor`: it inherited
   `biclosed.Functor`, which does not rotate, so a box mapped through
   it lost the rotation of its boundary.
+- Drawing a `Drawing` leaves it as it was: `draw` adds the box corners and
+  frames the dual rail folds on a copy, where it did both in place, so that
+  a drawing compared unequal to itself once drawn (B37 of
+  [discopy#606](https://github.com/discopy/discopy/issues/606)) and the
+  n-th draw of a dual rail drawing was framed n times, a margin taller each
+  time. `Drawing.then` and `Drawing.tensor` with an identity or empty side
+  return a new drawing, where they returned the other side itself, so that
+  changing the result changed that side; and a drawing neither saved nor
+  shown closes its figure, where every `draw(show=False)` without a path
+  left one open (B85 of
+  [rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
+- A spider, a ribbon and a twist draw in any colour a box draws in:
+  `TikZ.format_color` gives the RGB values of a named colour or of a
+  hexcode in any form matplotlib reads, and passes any other colour
+  through, as a TikZ box does, where it indexed `COLORS` and raised
+  `KeyError`, so that a ribbon in TikZ and a spider or a box with
+  `use_tikzstyles` could only take the seven named colours; a TikZ box or
+  spider in a hexcode writes its RGB values, where it wrote `fill={#336699}`,
+  which TikZ rejects; and the back of a twist is filled with
+  `config.darken` of its colour, which keeps its alpha, where it looked up
+  `f"dark_{color}"` and raised on any other colour in both backends, a
+  transparent twist keeping a transparent back (B83 of
+  [rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
 - Region painting computes the exact extents of each coloured region —
   polygons bounded by the wires on both sides, subdivided per height band —
   instead of overpainting everything to the right of each wire up to the
@@ -2708,6 +3232,13 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   run when the branch has already moved past the event it is handling,
   rather than drafting a head that no longer exists behind its back
   ([#640](https://github.com/discopy/discopy/issues/640)).
+- Two error messages say what went wrong: `python.finset.Permutation`
+  of a sequence of the right length that is not a permutation said
+  `Expected a permutation of length 2, got 2.` and now says `Expected a
+  permutation of range(2), got (0, 0).`, and `biclosed.Application` of a
+  term whose type is not an exponential names the term and its type
+  rather than two classes. `discopy.quantum` exports `CY` beside `CX` and
+  `CZ` ([rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
 - `no-todo-on-main.yml`'s guard says why it fails: each of its calls
   that can fail -- reading a tree, reading the pull request, either
   mutation -- raises an `::error::` annotation naming itself, and a
@@ -2765,6 +3296,29 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - Tensor networks are contracted with `opt_einsum` when the number of
   indices exceeds `numpy.einsum`'s 52-index limit
   ([#448](https://github.com/discopy/discopy/pull/448)).
+- `Circuit.to_tk` permutes the bits and the qubits of a permutation over
+  both, such as `Swap(bit, bit) @ qubit`, which it dropped, and a discarded
+  bit gets a `Discard` in the post-processing, so `eval(backend=...)` has
+  the codomain of the circuit. It also exports `CY`, `CCX`, `U1`, `CU1` and
+  a controlled `Ry`, reading every controlled gate from its controls and
+  their distances, and raises `NotImplementedError` for a gate tket has no
+  name for; `Circuit.from_tk` reads back every parametrised gate
+  ([rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
+- `Circuit.to_tn` contracts a discarded bit and a measurement that keeps its
+  qubits or overrides its bits, and `Circuit.measure` measures a circuit
+  with bits as a channel; `Discard`, `MixedState`, `Measure` and `Encode`
+  decompose with the types and the order of their wires
+  ([rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
+- The PennyLane interface takes the adjoint of `S` and `T` with
+  `qml.adjoint`, as `Operation.inv()` was removed in PennyLane 0.32, and
+  scales probabilities by the squared modulus of the circuit's scalar
+  ([rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
+- `Channel.then` checks the classical and quantum types it composes, not
+  only their underlying `Dim`: `Channel.id(Q(Dim(2)))` no longer composes
+  with `Channel.id(C(Dim(2, 2)))`. `Measure`, `Encode`, `Discard`,
+  `MixedState`, `quantum.zx.Swap` and `CQ` have a `repr` that evaluates
+  back to them ([rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31),
+  [rel-int/discopy-next#168](https://github.com/rel-int/discopy-next/issues/168)).
 - Contracting a tensor network with more than `config.MAX_EINSUM_INDICES`
   indices imports `opt_einsum`, which is not a declared dependency; a plain
   install now raises a clear `ImportError` naming the package to install
@@ -2805,6 +3359,35 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   input of the controlled box rather than its first one, so gates with a
   classical wire or a distance other than one are drawn on the right wires
   ([#439](https://github.com/discopy/discopy/pull/439)).
+- The daggers of grammar rules and words: `thue.Word` and
+  `categorial.Word`, which take `(name, cod, dom)`, came back from the
+  positional rebuild of `cat.Box.dagger` with the same `dom` and `cod`, so
+  `Bob >> Bob[::-1]` raised `AxiomError`, and the daggers of `thue.Rule`,
+  `cfg.Rule` and `cfg.Word` raised `TypeError`. `thue.Rule.dagger` rebuilds
+  by keyword and its `repr` says when a rule is daggered or carries data;
+  the dagger of a context-free rule has an atomic domain instead,
+  `cfg.Id` is its own dagger, and `pregroup.Word` keeps the pivotal dagger,
+  which flips its winding too. `cfg.Tree.from_nltk` keeps every child of a
+  tree, a word typed by the label of the tree it sits in, where it returned
+  at the first word, so that `(NP the big dog)` was `the` (B67 of
+  [rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
+- `grammar.cfg` compares and hashes: a rule compares as the box it is, a
+  tree by its root and branches and a tree with no branches as its root,
+  where comparing a tree to anything else raised and neither was
+  hashable, so that an `Algebra` could not map a rule through a `dict`; a
+  `cfg.Word` takes the drawing parameters and data of a box; and
+  `dependency.doc2tree` makes a token with no children a `Word`, where it
+  read spaCy's `children` generator as always true (B30 of
+  [rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
+- `pregroup.Diagram.normal_form` of a foliated diagram, splitting a layer
+  of more than one box into staircases first, and of a word with a wire on
+  its left that is not a word, as in `n @ Alice`, which goes to the rigid
+  normal form, where both raised an error (B31 of
+  [rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
+- `eval(repr(x)) == x` for `cfg.Tree`, `cfg.Rule`, `cfg.Id` and
+  `pregroup.Word`, which printed the `str` of their root, `Id(x)` and a bare
+  `Word(` without its data (B86 of
+  [rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
 - Drawing a discard on more than one wire: `draw_discard` was shadowing the
   layer index with its inner loop counter
   ([#513](https://github.com/discopy/discopy/issues/513)).
@@ -3081,6 +3664,28 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   [#471](https://github.com/discopy/discopy/pull/471),
   [#477](https://github.com/discopy/discopy/pull/477),
   [#481](https://github.com/discopy/discopy/pull/481)).
+- The suite keeps the `--skip-extra` contract of `test/plugin.py`: the
+  torch and jax tests of `test/tensor.py` and the pennylane, pytorch and
+  quimb tests of `test/quantum/circuit.py` skip without their extra,
+  rather than failing or, for `circuit.py`, skipping the whole file with
+  torch absent, and the pyzx tests skip below the version
+  `pyproject.toml` pins ([rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
+- Tests that could not fail now can: `test/cat.py` asserted `str(a == b)`,
+  `test/markov.py`'s equations asserted nothing and are checked in the
+  integers, `test/readme.py` skipped a README block that did not compile,
+  `test/quantum/circuit.py` compared the int `0` an empty sum evaluates
+  to with `0`, or only checked that it was falsy, and left numpy's print
+  options changed. `config`,
+  `messages`, `python.function`, `grammar.cfg` and `grammar.thue` get the
+  test file `AGENTS.md` says each module has ([rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
+- `CONTRIBUTING.md` names `setuptools` as the build backend, which it is,
+  and `pyproject.toml` drops the `[tool.uv.build-backend]` table only
+  `uv_build` reads; the checkouts of `build.yml` set
+  `persist-credentials: false` as every other checkout does;
+  `docs/conf.py` mocks only `pennylane`, the one import the `docs` extra
+  does not install; and the stray `readme.py` at the root, which raised,
+  and the two gifs tracked inside `discopy/`, which nothing reads, are
+  deleted ([rel-int/discopy-next#31](https://github.com/rel-int/discopy-next/issues/31)).
 
 ## [1.2.2] - 2025-12-19
 

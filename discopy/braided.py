@@ -62,7 +62,7 @@ from collections.abc import Callable
 from typing import ClassVar
 
 from discopy import monoidal, messages
-from discopy.abc import BraidedCategory
+from discopy.abc import BraidedCategory, SpacialCategory
 from discopy.cat import factory
 from discopy.monoidal import Ty, Match
 from discopy.utils import (
@@ -102,6 +102,8 @@ class Diagram(monoidal.Diagram, BraidedCategory):
     braid_factory: ClassVar[type["Braid"]]
     functor_factory: ClassVar[type["Functor"]]
     sum_factory: ClassVar[type["Sum"]]
+    scalar_sliding = SpacialCategory.scalar_sliding.failing(
+        messages.FREE_SCALAR)
 
     @classmethod
     def braid(cls, left: monoidal.Ty, right: monoidal.Ty) -> Diagram:
@@ -119,7 +121,19 @@ class Diagram(monoidal.Diagram, BraidedCategory):
         return hexagon(cls, cls.braid_factory)(left, right)
 
     def simplify(self) -> Diagram:
-        """ Remove braids followed by their dagger. """
+        """
+        Remove braids followed by their dagger, splitting the layers of more
+        than one box into staircases first, see :meth:`to_staircases`.
+
+        Example
+        -------
+        >>> x, y = map(Ty, "xy")
+        >>> f, g = Box('f', x, x), Box('g', y, y)
+        >>> diagram = (f @ g >> Braid(x, y) >> Braid(x, y)[::-1]).foliation()
+        >>> assert diagram.simplify() == f @ y >> x @ g
+        """
+        if any(len(layer.boxes) > 1 for layer in self.inside):
+            return self.to_staircases().simplify()
         layers = [layer.boxes_and_types for layer in self.inside]
         for i, ((x, f, _), (y, g, _)) in enumerate(
                 zip(layers, layers[1:])):

@@ -36,6 +36,8 @@ DisCoPy documentation
     notebooks/parsing-arithmetic
     notebooks/categorical-deep-learning
     notebooks/neural-church
+    notebooks/equivalence-hypergraphs
+    notebooks/contextual-fraction
 
 
 .. toctree::

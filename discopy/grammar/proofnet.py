@@ -20,6 +20,7 @@ Summary
     :toctree:
 
     ports
+    count
     hungarian
 
 Ports and links
@@ -96,10 +97,12 @@ for the assignment problem (1955) <https://doi.org/10.1002/nav.3800020109>`_).
 loves(Bob)(Alice)
 """
 
-from collections import defaultdict
+from __future__ import annotations
+
+from collections import Counter, defaultdict
 from dataclasses import dataclass
 from functools import cached_property, reduce
-from itertools import accumulate, count
+import itertools
 from typing import Self
 
 import numpy as np
@@ -133,6 +136,29 @@ def ports(ty: Ty, polarity: bool = True) -> list[Port]:
     if ty.is_exp:
         return ports(ty.exponent, not polarity) + ports(ty.base, polarity)
     return [(ty, polarity)]
+
+
+def count(ty: Ty, polarity: bool = True) -> Counter:
+    """
+    How many more times each atom of a type is given than wanted, the count
+    invariant of van Benthem, `The semantics of variety in categorial
+    grammar (1988) <https://doi.org/10.1075/lis.25.04ben>`_: the words of a
+    sequent can only be linked into a proof of its goal when they have its
+    count.
+
+    Parameters:
+        ty : An implicative type.
+        polarity : Whether the type is given rather than wanted.
+
+    Example
+    -------
+    >>> np, s = Ty("np"), Ty("s")
+    >>> assert count(np >> (np >> s)) == {s: 1, np: -2}
+    """
+    result = Counter()
+    for atom, given in ports(ty, polarity):
+        result[atom] += 1 if given else -1
+    return result
 
 
 def hungarian(scores) -> list[int]:
@@ -198,7 +224,7 @@ class Sequent:
     @cached_property
     def offsets(self) -> list[int]:
         "The index of the first port of each word, then of the goal."
-        return list(accumulate(
+        return list(itertools.accumulate(
             [len(ports(word.cod))  # ty: ignore[invalid-argument-type]
              for word in self.words], initial=0))
 
@@ -210,7 +236,38 @@ class Sequent:
             result[atom][polarity].append(i)
         return dict(result)
 
-    def decode(self, scores) -> "ProofNet":
+    @classmethod
+    def infer(cls, words) -> Sequent:
+        """
+        The sequent of some words with the smallest goal of their
+        :func:`count`: the atom they give once more than they want, or
+        ``x >> y`` when they also want an ``x`` once more than they give it.
+
+        Parameters:
+            words : The constants of the sentence, in order.
+
+        Raises:
+            AxiomError : When the count of the words is that of no such goal.
+
+        Example
+        -------
+        >>> n, s = Ty("n"), Ty("s")
+        >>> Alice, loves = n("Alice"), (n >> (n >> s))("loves")
+        >>> print(Sequent.infer((Alice, loves)).goal)
+        (n >> s)
+        """
+        words, total = tuple(words), Counter()
+        for word in words:
+            total.update(count(word.cod))
+        given, wanted = ([atom for atom, n in total.items()
+                          for _ in range(max(sign * n, 0))]
+                         for sign in (1, -1))
+        if len(given) != 1 or len(wanted) > 1:
+            raise AxiomError(
+                f"No smallest goal gives {given} and wants {wanted}.")
+        return cls(words, given[0] if not wanted else wanted[0] >> given[0])
+
+    def decode(self, scores) -> ProofNet:
         """
         The linking of maximum total score, the :func:`hungarian` assignment
         of each block.
@@ -289,7 +346,7 @@ class ProofNet(Testable):
         """
         if term.freevars or not term.is_linear:
             raise AxiomError(f"{term} is not a closed linear term.")
-        constants, edges, wires = [], [], count()
+        constants, edges, wires = [], [], itertools.count()
 
         def visit(term, scope):
             if isinstance(term, Abstraction):
@@ -305,7 +362,8 @@ class ProofNet(Testable):
             return [("port", len(constants) - 1, i)
                     for i in range(len(ports(term.cod)))]
 
-        edges.extend(zip(visit(term, {}), (("goal", i) for i in count())))
+        edges.extend(zip(
+            visit(term, {}), (("goal", i) for i in itertools.count())))
         given = constants if words is None else words
         sequent = Sequent(
             given,  # ty: ignore[invalid-argument-type]
@@ -364,7 +422,7 @@ class ProofNet(Testable):
         ...
         discopy.utils.AxiomError: f is not connected to the goal.
         """
-        partner, heads, names = dict(self.links), {}, count(1)
+        partner, heads, names = dict(self.links), {}, itertools.count(1)
         read = set()
 
         def spine(ty, offset):
