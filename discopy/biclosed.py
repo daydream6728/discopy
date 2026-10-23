@@ -199,14 +199,13 @@ class Ty(monoidal.Ty):
 
     def cast_wire(self, x: str | cat.Ob) -> cat.Ob:
         """
-        Turn a constructor argument into an atom of the type.
+        Turn a constructor argument into an atom of the type: any monoidal
+        wire, as a rigid type is a biclosed type.
 
-        The atoms of a biclosed type are monoidal wires, as a rigid type is a
-        biclosed type, but a name gives a :class:`Wire`. So does a plain
-        ``cat.Ob`` or a :class:`monoidal.Wire` of one colour on both sides,
-        its colour kept, as dumps, pickles and printed text from before hold
-        them, and a pickled :class:`Exp` of no side is the ``over`` of its
-        base.
+        A name gives a :class:`Wire`, and so do a plain ``cat.Ob`` and a
+        :class:`monoidal.Wire` with one colour on both sides, colour kept, as
+        dumps, pickles and printed text from before hold them. A pickled
+        :class:`Exp` of no side becomes the ``over`` of its base.
 
         >>> assert Ty(cat.Ob('x')) == Ty(monoidal.Wire('x')) == Ty(Wire('x'))
         """
@@ -297,8 +296,9 @@ class Exp(Wire):
 
     ob = Ty
 
-    # pylint: disable-next=unused-argument,keyword-arg-before-vararg
-    def __new__(cls, base: Ty = None, *args, **kwargs):
+    # pylint: disable-next=unused-argument  # passed to __init__
+    def __new__(cls, *args, **kwargs):
+        base = args[0] if args else kwargs.get("base")
         return super().__new__(
             getattr(base, "over_factory", cls) if cls is Exp else cls)
 
@@ -661,7 +661,7 @@ class Functor(monoidal.Functor):
     >>> assert f(x).to_hypergraph() == f(x).eval().to_hypergraph()
 
     A :class:`Drawing` has neither, but a term is drawn as the box it is,
-    labelled with the term, inside a diagram as well as on its own: only
+    labelled with its name, inside a diagram as well as on its own: only
     :meth:`TermBase.draw` draws its evaluation.
 
     >>> assert [str(box) for box in (f(x) @ X).to_drawing().boxes] == [

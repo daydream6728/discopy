@@ -414,7 +414,9 @@ def test_pow_reads_back_main_at_its_level():
     """ An exponential of no side is the ``over`` of the level of its base,
     built by hand or read back from a pickle of main, as is the name of its
     evaluation. """
-    import base64, pickle, zlib
+    import base64
+    import pickle
+    import zlib
     from discopy.grammar import categorial
     x, y = categorial.Ty('x'), categorial.Ty('y')
     assert categorial.Ty(Exp(x, y)) == x ** y == x << y
