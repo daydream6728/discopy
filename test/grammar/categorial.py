@@ -1,6 +1,6 @@
 from pytest import raises
 
-from discopy import cat, grammar, biclosed
+from discopy import cat, grammar, biclosed, monoidal
 from discopy.utils import dumps, from_tree, loads
 from discopy.grammar.categorial import *
 

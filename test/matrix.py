@@ -186,6 +186,18 @@ def test_Matrix_strategy():
     assert type(find(Matrix[bool].strategy(), lambda _: True)) is Matrix[bool]
 
 
+@pytest.mark.parametrize('cls', [Matrix, Tensor])
+def test_strategy_max_entries_on_pytorch(cls):
+    """ Entries are counted from the dimensions: a torch ``size`` is a
+    method. """
+    torch = pytest.importorskip("torch")
+    from hypothesis import find
+    strategy = cls.strategy(max_entries=4)
+    with backend('pytorch'):
+        drawn = find(strategy, lambda x: x.array.numel() > 3)
+    assert type(drawn.array) is torch.Tensor and drawn.array.numel() == 4
+
+
 def test_Matrix_axioms():
     """ A dry run of the property matrix on the carriers it enrols. """
     axioms.assert_axioms(Matrix, Matrix[int])
