@@ -475,6 +475,23 @@ def test_Bubble_dagger():
     assert f.bubble().dagger().dagger() == f.bubble()
 
 
+def test_Bubble_every_level():
+    from discopy import (
+        spacial, feedback, braided, balanced, symmetric, markov, comarkov,
+        biclosed, closed, rigid, pivotal, ribbon, compact, frobenius)
+    for module in (
+            spacial, feedback, braided, balanced, symmetric, markov,
+            comarkov, biclosed, closed, rigid, pivotal, ribbon, compact,
+            frobenius):
+        assert module.Diagram.bubble_factory is module.Bubble, module
+        x, y = module.Ty('x'), module.Ty('y')
+        bubble = module.Box('f', x, y).bubble(name="N")
+        diagram = bubble >> module.Box('h', y, y)
+        assert isinstance(diagram, module.Diagram) and diagram.cod == y
+        assert module.Functor.id(module.Diagram)(diagram) == diagram
+        assert loads(dumps(diagram)) == diagram
+
+
 def test_Bubble_data():
     f = Box('f', Ty('x'), Ty('y'))
     bubble = f.bubble(data=42, is_dagger=True)

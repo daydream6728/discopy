@@ -758,9 +758,10 @@ class Spider(Box):
             len(self.dom), len(self.cod), self.typ, self.phase)
 
 
-class Bubble(monoidal.Bubble, Box):
+class Bubble(compact.Bubble, markov.Bubble, comarkov.Bubble, Box):
     """
-    A Frobenius bubble is a monoidal bubble in a frobenius diagram.
+    A Frobenius bubble is a compact, Markov and comarkov bubble and a
+    frobenius box.
     """
 
 

@@ -46,6 +46,7 @@ Summary
     Head
     Tail
     Sum
+    Bubble
     Functor
     CMap
 
@@ -653,6 +654,12 @@ class Sum(markov.Sum, biclosed.Sum, Box):
         return all(term.is_linear for term in self.terms)
 
 
+class Bubble(markov.Bubble, biclosed.Bubble, Box):
+    """
+    A closed bubble is a markov and biclosed bubble and a closed box.
+    """
+
+
 class Functor(biclosed.Functor, markov.Functor):
     """
     A closed functor is a markov functor that preserves evaluation, currying
@@ -711,6 +718,7 @@ Diagram.eval_factory = Eval
 Diagram.coeval_factory = Coeval
 Diagram.discard_factory = Discard
 Diagram.sum_factory = Sum
+Diagram.bubble_factory = Bubble
 Ty.exp_factory = Ty.under_factory = Ty.over_factory = staticmethod(Exp)
 
 Id = Diagram.id
