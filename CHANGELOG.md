@@ -245,6 +245,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - `Stream.sequence`, `para.Closed.curry` and the evaluation of categorial
   terms ([next#1]); daggers of grammar rules and words, and `cfg` compares
   and hashes ([next#31]).
+- Categorial `FC`, `BC`, `FX` and `BX` are boxes, so they compose and draw,
+  and a nested `cfg.Tree` has a `dom`, so it applies ([next#31]).
 - Drawing: `Drawing.dagger` ([next#1]), regions through crossings ([#614]),
   `draw` leaves a drawing as it was ([#606]), TikZ colours ([next#31]) and a
   test restyling `H` ([next#99]).
