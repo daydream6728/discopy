@@ -503,146 +503,97 @@ def box_classes():
     return list(classes)
 
 
-@cache
-def examples():
-    """
-    A builder of boxes for each constructor of the package, from a class, two
-    types of its category and a value for the data.
-    """
-    from discopy import (
-        balanced, biclosed, braided, closed, comarkov, ehypergraph, feedback,
-        frobenius, markov, monoidal, pivotal, ribbon, rigid, symmetric,
-        tensor)
-    from discopy.grammar import categorial as cg, cfg, pregroup, thue
-    from discopy.neural import network
-    from discopy.quantum import circuit, gates, zx
-
-    def box(c, x, y, v):
-        return c.ar.box_factory("f", x, y, data=v)
-
-    def term(c, x, y):
-        constant, variable = c.ob.constant_factory, c.ob.variable_factory
-        return constant("f", x << y), constant("a", y), variable("v", y)
-
-    def abstraction(c, x, y, _):
-        f, _, v = term(c, x, y)
-        return c(v, f(v))
-
-    builders = {
-        (Box, ): lambda c, x, y, v: c("f", x, y, data=v, is_dagger=True),
-        (Sum, markov.Sum): lambda c, x, y, v: c((box(c, x, y, v), )),
-        (Bubble, ): lambda c, x, y, v: c(box(c, x, y, v), dom=y, data=v),
-        (monoidal.Box, network.Box): lambda c, x, y, v: c("f", x, y, data=v),
-        (monoidal.Bubble, ): lambda c, x, y, v: c(
-            box(c, x, y, v), name="b", drawing_name="B"),
-        (monoidal.Layer, ): lambda c, x, y, v: c(
-            x, sys.modules[c.__module__].Box("f", x, y, data=v), y),
-        (braided.Braid, balanced.DualRailBraid, ribbon.DualRailCup,
-         ribbon.DualRailCap): lambda c, x, y, v: c(x, y, is_dagger=True),
-        (balanced.Twist, balanced.DualRailTwist):
-            lambda c, x, y, v: c(x, is_dagger=True),
-        (symmetric.Swap, ): lambda c, x, y, v: c(x, y),
-        (symmetric.Permutation, ): lambda c, x, y, v: c(x @ y @ x, [2, 0, 1]),
-        (feedback.Box, ): lambda c, x, y, v: c("f", x, y, data=v).delay(),
-        (feedback.Feedback, ): lambda c, x, y, v: c(
-            box(c, x @ y.delay(), x @ y, v)),
-        (feedback.Trace, ): lambda c, x, y, v: c(
-            box(c, y @ x, y @ x, v), left=True),
-        (feedback.Head, feedback.Tail):
-            lambda c, x, y, v: c(box(c, x, y, v), 1),
-        (feedback.FollowedBy, ): lambda c, x, y, v: c(x, True, 1),
-        (markov.Box, ): lambda c, x, y, v: c(
-            "f", x, y, data=v, is_deterministic=False).delay(),
-        (markov.Copy, comarkov.Merge): lambda c, x, y, v: c(x, 3),
-        (markov.Discard, comarkov.Noise, gates.Discard, gates.MixedState,
-         cfg.Id): lambda c, x, y, v: c(x),
-        (markov.Function, comarkov.Cofunction):
-            lambda c, x, y, v: c(x @ y, [1, 0, 0]),
-        (rigid.Box, ): lambda c, x, y, v: c("f", x, y, data=v).r,
-        (rigid.Cup, frobenius.Cup): lambda c, x, y, v: c(x, x.r),
-        (rigid.Cap, frobenius.Cap): lambda c, x, y, v: c(x, x.l),
-        (pivotal.Box, ): lambda c, x, y, v: c("f", x, y, data=v).delay().r,
-        (pregroup.Box, ): lambda c, x, y, v: c(
-            "f", x, y, data=v, is_deterministic=False).r,
-        (tensor.Box, ): lambda c, x, y, v: c("f", x, y, [v] + [0] * 5),
-        (frobenius.Spider, ): lambda c, x, y, v: c(1, 2, x, data=v),
-        (frobenius.Cospan, ): lambda c, x, y, v: c(x @ y, [0, 0, 1], [1]),
-        (biclosed.Eval, biclosed.Coeval): lambda c, x, y, v: c(x << y),
-        (closed.Eval, closed.Coeval):
-            lambda c, x, y, v: c(x << y, time_step=1),
-        (biclosed.Curry, closed.Curry):
-            lambda c, x, y, v: c(box(c, x @ y, x, v), 1, False),
-        (biclosed.Constant, ): lambda c, x, y, v: c("c", x, data=v),
-        (closed.Constant, cg.Constant, biclosed.Variable, closed.Variable):
-            lambda c, x, y, v: c("c", x),
-        (biclosed.Application, closed.Application, cg.FA):
-            lambda c, x, y, v: c(*term(c, x, y)[:2]),
-        (biclosed.Abstraction, closed.Abstraction, cg.Abstraction):
-            abstraction,
-        (closed.Pack, closed.Unpack): lambda c, x, y, v: c(x * y, 1),
-        (closed.Tuple, ): lambda c, x, y, v: c(*term(c, x, y)[1:]),
-        (closed.Projection, ): lambda c, x, y, v: c(
-            closed.Tuple(*term(closed.Box, x, y)[1:]), 1),
-        (closed.Let, ): lambda c, x, y, v: c(
-            closed.Tuple(*term(closed.Box, x, y)[1:2]),
-            [closed.Variable("u", y)], closed.Variable("u", y)),
-        (cg.BA, ): lambda c, x, y, v: c(cg.Constant("a", y), cg.Constant(
-            "f", y >> x)),
-        (cg.FTR, cg.BTR): lambda c, x, y, v: c(y, term(c, x, y)[1]),
-        (cg.TypeRaising, ): lambda c, x, y, v: c(
-            y, term(c, x, y)[1], y << (x >> y)),
-        (cg.FC, ): lambda c, x, y, v: c(
-            cg.Constant("f", x << y), cg.Constant("g", y << x)),
-        (cg.BC, ): lambda c, x, y, v: c(
-            cg.Constant("f", x >> y), cg.Constant("g", y >> x)),
-        (cg.FX, cg.BX): lambda c, x, y, v: c(
-            cg.Constant("f", x << y), cg.Constant("g", x >> y)),
-        (cg.ForwardCrossedComposition, ):
-            lambda c, x, y, v: c(x << y, x >> y),
-        (cg.BackwardCrossedComposition, ):
-            lambda c, x, y, v: c(y << x, y >> x),
-        (thue.Rule, ): lambda c, x, y, v: c(x @ y, x, "r", data=v),
-        (thue.Word, ): lambda c, x, y, v: c("w", x @ y, y, data=v),
-        (cfg.Rule, ): lambda c, x, y, v: c(x @ y, x, "r"),
-        (cfg.Word, ): lambda c, x, y, v: c("w", x, y),
-        (pregroup.Word, ): lambda c, x, y, v: c("w", x @ y, data=v),
-        (tensor.Bubble, ): lambda c, x, y, v: c(
-            box(c, x, x, [v, 0, 0, 1]), func=abs, drawing_name="B"),
-        (ehypergraph.Join, ):
-            lambda c, x, y, v: c(box(c, x, y, v), box(c, x, y, v)),
-        (circuit.Box, ): lambda c, x, y, v: c(
-            "f", x, y, data=[v, 0, 0, 1], is_mixed=False),
-        (gates.QuantumGate, ): lambda c, x, y, v: c("g", x, x, [v, 0, 0, 1]),
-        (gates.Ket, gates.Bra): lambda c, x, y, v: c(1, 0, time_step=1),
-        (gates.Digits, ): lambda c, x, y, v: c(
-            1, 2, dim=3, is_dagger=True, time_step=1),
-        (gates.Measure, gates.Encode):
-            lambda c, x, y, v: c(2, False, True, 1),
-        (gates.Copy, gates.Match): lambda c, x, y, v: c(1),
-        (gates.Controlled, ): lambda c, x, y, v: c(gates.Rz(v), -2),
-        (gates.ControlledRotation, ): lambda c, x, y, v: c(v, -2, 1),
-        (gates.Rotation, ): lambda c, x, y, v: c(v, 1, 1),
-        (gates.Scalar, ): lambda c, x, y, v: c(v, "s", True, 1),
-        (gates.MixedScalar, ): lambda c, x, y, v: c(v, 1),
-        (gates.Sqrt, ): lambda c, x, y, v: c(v, False, 1),
-        (zx.Spider, ): lambda c, x, y, v: c(1, 2, v),
-        (zx.Scalar, ): lambda c, x, y, v: c(v),
-    }
-    return {cls: build for classes, build in builders.items()
-            for cls in classes}
+EXAMPLES = {  # a box of each constructor, from a class c, types x, y, data v
+    "cat.Box": 'c("f", x, y, data=v, is_dagger=True)',
+    "{cat,markov}.Sum": "c((box(c, x, y, v), ))",
+    "cat.Bubble": "c(box(c, x, y, v), dom=y, data=v)",
+    "{monoidal,neural.network}.Box": 'c("f", x, y, data=v)',
+    "monoidal.Bubble": 'c(box(c, x, y, v), name="b", drawing_name="B")',
+    "monoidal.Layer":
+    'c(x, sys.modules[c.__module__].Box("f", x, y, data=v), y)',
+    "braided.Braid {balanced,ribbon}.DualRailBraid ribbon.DualRailC{u,a}p":
+    "c(x, y, is_dagger=True)",
+    "balanced.{Twist,DualRailTwist}": "c(x, is_dagger=True)",
+    "symmetric.Swap": "c(x, y)",
+    "symmetric.Permutation": "c(x @ y @ x, [2, 0, 1])",
+    "feedback.Box": 'c("f", x, y, data=v).delay()',
+    "feedback.Feedback": "c(box(c, x @ y.delay(), x @ y, v))",
+    "feedback.Trace": "c(box(c, y @ x, y @ x, v), left=True)",
+    "feedback.{Head,Tail}": "c(box(c, x, y, v), 1)",
+    "feedback.FollowedBy": "c(x, True, 1)",
+    "markov.Box": 'c("f", x, y, data=v, is_deterministic=False).delay()',
+    "markov.Copy comarkov.Merge": "c(x, 3)",
+    "markov.Discard comarkov.Noise quantum.gates.{Discard,MixedState} "
+    "grammar.cfg.Id": "c(x)",
+    "markov.Function comarkov.Cofunction": "c(x @ y, [1, 0, 0])",
+    "rigid.Box": 'c("f", x, y, data=v).r',
+    "{rigid,frobenius}.Cup": "c(x, x.r)",
+    "{rigid,frobenius}.Cap": "c(x, x.l)",
+    "pivotal.Box": 'c("f", x, y, data=v).delay().r',
+    "grammar.pregroup.Box": 'c("f", x, y, data=v, is_deterministic=False).r',
+    "tensor.Box": 'c("f", x, y, [v] + [0] * 5)',
+    "frobenius.Spider": "c(1, 2, x, data=v)",
+    "frobenius.Cospan": "c(x @ y, [0, 0, 1], [1])",
+    "biclosed.{Eval,Coeval}": "c(x << y)",
+    "closed.{Eval,Coeval}": "c(x << y, time_step=1)",
+    "{biclosed,closed}.Curry": "c(box(c, x @ y, x, v), 1, False)",
+    "biclosed.Constant": 'c("c", x, data=v)',
+    "{closed,grammar.categorial}.Constant {biclosed,closed}.Variable":
+    'c("c", x)',
+    "{biclosed,closed}.Application grammar.categorial.FA": "c(f, a)",
+    "{biclosed,closed,grammar.categorial}.Abstraction": "c(u, f(u))",
+    "closed.{Pack,Unpack}": "c(x * y, 1)",
+    "closed.Tuple": "c(a, u)",
+    "closed.Projection": "c(closed.Tuple(a, u), 1)",
+    "closed.Let": "c(closed.Tuple(a), [u], u)",
+    "grammar.categorial.BA": 'c(a, cg.Constant("f", y >> x))',
+    "grammar.categorial.{FTR,BTR}": "c(y, a)",
+    "grammar.categorial.TypeRaising": "c(y, a, y << (x >> y))",
+    "grammar.categorial.FC": 'c(f, cg.Constant("g", y << x))',
+    "grammar.categorial.BC":
+    'c(cg.Constant("f", x >> y), cg.Constant("g", y >> x))',
+    "grammar.categorial.{FX,BX}": 'c(f, cg.Constant("g", x >> y))',
+    "grammar.categorial.ForwardCrossedComposition": "c(x << y, x >> y)",
+    "grammar.categorial.BackwardCrossedComposition": "c(y << x, y >> x)",
+    "grammar.thue.Rule": 'c(x @ y, x, "r", data=v)',
+    "grammar.thue.Word": 'c("w", x @ y, y, data=v)',
+    "grammar.cfg.Rule": 'c(x @ y, x, "r")',
+    "grammar.cfg.Word": 'c("w", x, y)',
+    "grammar.pregroup.Word": 'c("w", x @ y, data=v)',
+    "tensor.Bubble":
+    'c(box(c, x, x, [v, 0, 0, 1]), func=abs, drawing_name="B")',
+    "ehypergraph.Join": "c(box(c, x, y, v), box(c, x, y, v))",
+    "quantum.circuit.Box": 'c("f", x, y, data=[v, 0, 0, 1], is_mixed=False)',
+    "quantum.gates.QuantumGate": 'c("g", x, x, [v, 0, 0, 1])',
+    "quantum.gates.{Ket,Bra}": "c(1, 0, time_step=1)",
+    "quantum.gates.Digits": "c(1, 2, dim=3, is_dagger=True, time_step=1)",
+    "quantum.gates.{Measure,Encode}": "c(2, False, True, 1)",
+    "quantum.gates.{Copy,Match}": "c(1)",
+    "quantum.gates.Controlled": "c(gates.Rz(v), -2)",
+    "quantum.gates.ControlledRotation": "c(v, -2, 1)",
+    "quantum.gates.Rotation": "c(v, 1, 1)",
+    "quantum.gates.Scalar": 'c(v, "s", True, 1)',
+    "quantum.gates.MixedScalar": "c(v, 1)",
+    "quantum.gates.Sqrt": "c(v, False, 1)",
+    "quantum.zx.Spider": "c(1, 2, v)",
+    "quantum.zx.Scalar": "c(v)",
+}
 
 
 def example(cls, value):
-    """ The box :func:`examples` builds of a class, from its constructor. """
-    from discopy import monoidal, tensor
+    """ The box of a class that :data:`EXAMPLES` builds, with some data. """
+    from discopy import closed, monoidal, tensor
+    from discopy.grammar import categorial as cg
     from discopy.neural.network import Dims
-    from discopy.quantum import circuit
+    from discopy.quantum import circuit, gates
     from discopy.rigid import Nat
+    from discopy.utils import factory_name
     if inspect.isabstract(cls) or cls.__name__ in ABSTRACT:
         return None
+    templates = {name: template for key, template in EXAMPLES.items()
+                 for name in globs(key)}
     owner = next(c for c in cls.__mro__ if "__init__" in vars(c))
-    builders = examples()
-    base = next(c for c in cls.__mro__ if c in builders)
+    base = next(c for c in cls.__mro__ if factory_name(c) in templates)
     assert issubclass(base, owner), f"{owner} needs an example"
     ob = sys.modules[cls.__module__].Ty\
         if issubclass(cls, monoidal.Layer) else cls.ob
@@ -651,7 +602,14 @@ def example(cls, value):
         else (Nat(1), Nat(1)) if ob is Nat else (ob('x'), ob('y'))
     if issubclass(cls, circuit.Box):
         x, y = circuit.qubit, circuit.qubit
-    return builders[base](cls, x, y, value)
+    terms = getattr(ob, "constant_factory", None) and (
+        ob.constant_factory("f", x << y), ob.constant_factory("a", y),
+        ob.variable_factory("u", y))
+    f, a, u = terms or (None, None, None)
+    return eval(templates[factory_name(base)], dict(
+        c=cls, x=x, y=y, v=value, f=f, a=a, u=u, sys=sys, closed=closed,
+        cg=cg, gates=gates, box=lambda c, x, y, v: c.ar.box_factory(
+            "f", x, y, data=v)))
 
 
 def holds(law, cls):
@@ -680,61 +638,51 @@ def holds(law, cls):
     return type(result) is type(expected) and result == expected
 
 
-def expand(patterns: str) -> set[str]:
-    """ The factory names a pattern means, e.g. ``{rigid,pivotal}.Cup``. """
+def globs(patterns: str) -> list[str]:
+    """ The globs a pattern stands for, e.g. ``*.{Cup,Cap}``. """
     import itertools
     import re
-    names = set()
+    result = []
     for pattern in patterns.split():
         parts = re.split(r"\{([^}]*)\}", pattern)
-        options = [part.split(",") if i % 2 else [part]
-                   for i, part in enumerate(parts)]
-        names |= set(map("".join, itertools.product(*options)))
-    return names
+        result += map("".join, itertools.product(*(
+            part.split(",") if i % 2 else [part]
+            for i, part in enumerate(parts))))
+    return result
 
 
-LEVELS = "{monoidal,feedback,symmetric,markov,comarkov,rigid,pivotal,compact,"\
-    "frobenius}"
-FEEDBACKS = "{feedback,balanced,symmetric,markov,comarkov,closed,pivotal,"\
-    "ribbon,compact,frobenius,grammar.abstract,neural.network}"
 PIVOTALS = "{pivotal,ribbon,compact,frobenius}"
-SPIDERS = "{frobenius,tensor,grammar.pregroup}.Spider "\
-    "quantum.zx.{Spider,X,Y,Z}"
-TERMS = "{biclosed,closed,grammar.abstract,grammar.categorial}.{Constant,"\
-    "Variable,Abstraction} {biclosed,closed,grammar.abstract}.Application "\
-    "closed.{Tuple,Projection,Let} grammar.categorial.{FA,BA,TypeRaising,FTR,"\
-    "BTR,FC,BC,FX,BX,ForwardCrossedComposition,BackwardCrossedComposition}"
 BROKEN = {
     "rebuild": {
-        LEVELS + ".Layer": "a layer keeps its *inside as boxes_or_types",
+        "*.Layer": "a layer keeps its *inside as boxes_or_types",
         "{markov,closed,grammar.abstract,neural.network}.{Copy,Discard} "
-        "{comarkov,neural.network}.{Merge,Noise}": "it keeps neither x nor n",
-        "{comarkov,neural.network}.Cofunction": "it keeps cofunc in an op",
-        "frobenius.Cospan": "it keeps left and right as legs",
-        SPIDERS: "it keeps neither n_legs_in nor n_legs_out",
+        "*.Merge *.Noise": "it keeps neither x nor n",
+        "*.Cofunction": "it keeps its cofunc in an op",
+        "*.Cospan": "it keeps left and right as legs",
+        "*.Spider quantum.zx.[XYZ]": "it keeps no n_legs_in or n_legs_out",
         "closed.{Pack,Unpack}": "it keeps its type delayed",
     },
     "dagger": {
-        TERMS: "a term has no stated dagger",
-        FEEDBACKS + ".{Feedback,Head,Tail}": "it has no stated dagger",
+        "*.{Constant,Variable,Abstraction,Application} "
+        "closed.{Tuple,Projection,Let} grammar.categorial.{FA,BA,*TR,"
+        "TypeRaising,[FB][CX],*Composition}": "a term has no stated dagger",
+        "*.{Feedback,Head,Tail}": "it has no stated dagger",
         PIVOTALS + ".Trace": "its dagger is drawn with cups and caps",
     },
     "rotation": {
         PIVOTALS + ".{Feedback,Trace,Head,Tail,FollowedBy} "
         "{frobenius,tensor}.Bubble": "it has no stated rotation",
         "{tensor,quantum.circuit,quantum.zx}.Sum": "it rotates as a box",
-        "ribbon.{DualRailCup,DualRailCap}": "its rotation drops is_dagger",
+        "ribbon.DualRailC[ua]p": "its rotation drops is_dagger",
         "quantum.zx.Scalar": "it takes no dom, cod or z",
     },
     "subs": {
-        SPIDERS: "it keeps neither n_legs_in nor n_legs_out",
-        "grammar.categorial.{FC,BC,FX,BX}": "it has no data, see #321",
+        "*.Spider quantum.zx.[XYZ]": "it keeps no n_legs_in or n_legs_out",
     },
     "tree": {
-        "{balanced,ribbon}.{DualRailBraid,DualRailTwist} "
-        "ribbon.{DualRailCup,DualRailCap} grammar.cfg.Id quantum.zx.Scalar":
+        "*.DualRail* grammar.cfg.Id quantum.zx.Scalar":
         "it has no from_tree of its own",
-        "quantum.gates.{CRx,CRz,CU1}": "its tree is that of a controlled gate",
+        "quantum.gates.C[RU]*": "its tree is that of a controlled gate",
         "grammar.categorial.TypeRaising": "its tree drops its cod",
         "neural.network.{Box,Feedback,Trace,Head,Tail}": "a module has none",
         "tensor.Bubble": "a function has no tree",
@@ -751,19 +699,20 @@ def test_every_box(law):
     """
     if law == "subs":
         pytest.importorskip("sympy")
+    from fnmatch import fnmatch
     from discopy.utils import factory_name
-    broken = set().union(*map(expand, BROKEN[law]))
-    failures, checked = {}, set()
+    patterns = [glob for key in BROKEN[law] for glob in globs(key)]
+    unexpected, fixed = {}, []
     for cls in box_classes():
         if example(cls, 1) is None:
             continue
         name = factory_name(cls)
-        checked.add(name)
         try:
-            if not holds(law, cls):
-                failures[name] = "not equal"
+            failure = None if holds(law, cls) else "not equal"
         except Exception as error:  # pylint: disable=broad-except
-            failures[name] = repr(error)
-    unexpected = {k: v for k, v in failures.items() if k not in broken}
-    fixed = (broken & checked) - set(failures)
+            failure = repr(error)
+        if any(fnmatch(name, glob) for glob in patterns):
+            fixed += [] if failure else [name]
+        elif failure:
+            unexpected[name] = failure
     assert not unexpected and not fixed, (unexpected, fixed)

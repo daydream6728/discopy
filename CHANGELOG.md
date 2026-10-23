@@ -137,6 +137,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `finset.Permutation.then` ([#763]).
 - A functor maps a layer with one `n`-ary `tensor` rather than a fold of
   `@`, with one `tensor` call per layer ([next#161]).
+- A box names its constructor's arguments once, `serialised_attrs`, which
+  `rebuild` reads for `dagger`, `rotate`, `subs` and `lambdify` ([next#169]).
 
 ### Deprecated
 
@@ -469,6 +471,7 @@ for the changelog of `1.2.1` and earlier.
 [next#161]: https://github.com/rel-int/discopy-next/issues/161
 [next#162]: https://github.com/rel-int/discopy-next/issues/162
 [next#168]: https://github.com/rel-int/discopy-next/issues/168
+[next#169]: https://github.com/rel-int/discopy-next/issues/169
 [next#175]: https://github.com/rel-int/discopy-next/issues/175
 [next#176]: https://github.com/rel-int/discopy-next/issues/176
 [next#177]: https://github.com/rel-int/discopy-next/issues/177

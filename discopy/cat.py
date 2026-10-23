@@ -576,8 +576,9 @@ class Box(Arrow):
     The :code:`serialised_attrs` of a box are the arguments of its
     constructor, by name, each an attribute of the box, and a starred one
     :code:`*args` passed positionally: :meth:`rebuild` reads them, and so
-    :meth:`dagger`, :meth:`subs` and :meth:`lambdify` keep them. A subclass
-    whose constructor takes other arguments declares its own.
+    :meth:`dagger`, :meth:`subs`, :meth:`lambdify` and the rotations of a
+    rigid box keep them. A subclass whose constructor takes other arguments
+    declares its own.
 
     Example
     -------
