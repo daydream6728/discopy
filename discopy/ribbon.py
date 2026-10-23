@@ -376,7 +376,7 @@ class DualRail(balanced.DualRail, Functor):
             return DualRailCap(self(other.cod[:1]), self(other.cod[1:]))
         if isinstance(other, (Braid, Twist)):
             return super().__call__(other)  # A single dual rail box crossing.
-        if isinstance(other, Box) and not isinstance(other, Sum):
+        if isinstance(other, Box) and not isinstance(other, (Sum, Bubble)):
             # A generator is doubled into a box on the rails of its ribbons;
             # self doubles its domain and codomain per object.
             return Box(other.name, self(other.dom), self(other.cod),
