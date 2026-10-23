@@ -17,3 +17,13 @@ def test_tikz_wire_separates_its_style_keys():
     tikz = TikZ()
     tikz.draw_wire((0, 0), (1, 2), style="->")
     assert "->, looseness=" in tikz.edgelayer[-1]
+
+
+def test_tikz_twist_in_an_xcolor_name(tmp_path):
+    from discopy import ribbon
+    path = tmp_path / "twist.tikz"
+    ribbon.Diagram.twist(ribbon.Ty('x')).to_ribbons(colour='RoyalPurple')\
+        .draw(path=str(path), to_tikz=True)
+    tikz = path.read_text()
+    assert "fill=RoyalPurple," in tikz
+    assert "fill=RoyalPurple!60!black," in tikz

@@ -32,7 +32,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 
-from matplotlib.colors import to_hex, to_rgb
+from matplotlib.colors import is_color_like, to_hex, to_rgb
 from matplotlib.testing.compare import compare_images
 from matplotlib.patches import PathPatch, Patch
 from matplotlib.path import Path
@@ -1148,9 +1148,13 @@ class Backend(ABC):
             # Each rail crosses the other at the midpoint (t=0.5) of `top`
             # and of `bottom`. The two crossings pinch off a lens where the
             # ribbon has turned over: fill it with a darker shade of the
-            # front colour, for a nicer visual of the twist.
-            back = color if color == TRANSPARENT else config.darken(
-                to_hex(COLORS.get(color, color), keep_alpha=True))
+            # front colour, for a nicer visual of the twist: config.darken
+            # of a colour matplotlib reads, xcolor's spelling of the same
+            # shade for an xcolor name, which only TikZ reads.
+            value = COLORS.get(color, color)
+            back = color if color == TRANSPARENT\
+                else f"{color}!60!black" if not is_color_like(value)\
+                else config.darken(to_hex(value, keep_alpha=True))
             front_top0, back_top0 = (
                 bezier_subcurve(top0, 0, .5), bezier_subcurve(top0, .5, 1))
             back_bottom0, front_bottom0 = (
