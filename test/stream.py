@@ -118,3 +118,12 @@ def test_no_tree():
     with raises(TypeError, match="A stream has no tree"):
         dumps(Stream.sequence('f', x, x))
     assert Stream.serialisation() is NotImplemented
+
+
+def test_no_hash():
+    """ The equality of streams is the identity of their thunks, which a
+    hash would make look like a real equality. """
+    x = Ty(symmetric.Ty('x'))
+    for unhashable in (Stream.sequence('f', x, x), x):
+        with raises(TypeError, match="unhashable"):
+            hash(unhashable)

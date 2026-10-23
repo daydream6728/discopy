@@ -186,3 +186,9 @@ def test_tree():
     for term in terms():
         loaded = loads(dumps(term))
         assert type(loaded) is type(term) and loaded == term
+
+
+def test_hash():
+    for term in terms():
+        assert hash(term) == hash(type(term)(*vars(term).values()))
+    assert len({f, Symmetric(x, y, Box('f', x @ p, y), p), g}) == 2

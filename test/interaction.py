@@ -275,3 +275,10 @@ def test_tree():
     for term in compact_terms()[-1] + (two, Diagram[Matrix[bool]].id(two)):
         loaded = loads(dumps(term))
         assert type(loaded) is type(term) and loaded == term
+
+
+def test_hash():
+    x, y, f, g, terms = compact_terms()
+    for term in terms:
+        assert hash(term) == hash(type(term)(*vars(term).values()))
+    assert len({f, type(f)(f.inside, x, y), g}) == 2

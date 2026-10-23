@@ -171,7 +171,7 @@ from discopy.utils import (
     from_tree, get_origin, resolve_factory, unbiased)
 
 
-@dataclass
+@dataclass(unsafe_hash=True)
 class Symmetric(SymmetricCategory, NamedGeneric['category']):
     """
     A parametric map from `dom` to `cod` with parameter space `param` is a

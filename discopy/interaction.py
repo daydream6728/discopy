@@ -83,7 +83,7 @@ from discopy.utils import (
     factory_name, from_tree, get_origin, resolve_factory)
 
 
-@dataclass
+@dataclass(unsafe_hash=True)
 class Ty(Pregroup, NamedGeneric['natural']):
     """
     An integer type is a pair of :attr:`natural` types.
@@ -233,7 +233,7 @@ class Ty(Pregroup, NamedGeneric['natural']):
 
 
 @factory
-@dataclass
+@dataclass(unsafe_hash=True)
 class Diagram(RibbonCategory, NamedGeneric['natural']):
     """
     An integer diagram from ``x`` to ``y`` is a :attr:`natural` diagram

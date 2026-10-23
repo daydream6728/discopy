@@ -131,6 +131,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `finset.Permutation.then` ([#763]).
 - A functor maps a layer with one `n`-ary `tensor` rather than a fold of
   `@`, with one `tensor` call per layer ([next#161]).
+- `dumps` writes tuples, numpy, sympy, `interaction`, `para`, `CQ`, `Equation`
+  and dict functors ([next#168]); `para` and `interaction` hash ([next#31]).
 
 ### Deprecated
 
