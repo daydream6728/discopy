@@ -79,6 +79,11 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - `categorial.parse`, the `k` best terms of a sentence by CKY ([lambek#2]).
 - `grammar.neural.Parser.search`, parsing as search over the correct proof
   nets of the `k` best types of each word ([lambek#12]).
+- `grammar.proofnet.Sequent.linkings`, the `m` best linkings by Murty's
+  ranking of the `assignments` of each block, and `grammar.neural.Parser.search`'s
+  `depth` and `links`, its `width` counting only the sequents with a goal, so
+  that it searches past those with none and the linkings with no term
+  ([lambek#12]).
 - `quantum.reservoir`, quantum reservoir computing ([#519]), the `Rydberg`
   ansatz ([#586]), and `quantum.contextuality`, the contextual fraction
   ([next#283]).
