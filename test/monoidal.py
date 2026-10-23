@@ -294,6 +294,17 @@ def test_Layer_has_no_identity():
                 if isinstance(t, Ty) and not t]
 
 
+def test_Layer_does_not_compose():
+    x, y, z = map(Ty, "xyz")
+    f, g = Box('f', x, y), Box('g', y, z)
+
+    with raises(AxiomError, match="Compose diagrams, not layers: f >> g."):
+        Layer(f) >> Layer(g)
+    with raises(AxiomError, match="Compose diagrams, not layers"):
+        Layer(g) << Layer(f)
+    assert Diagram((Layer(f), Layer(g)), x, z) == f >> g
+
+
 def test_Layer_unit():
     x = Ty('x')
     f = Box('f', x, x)

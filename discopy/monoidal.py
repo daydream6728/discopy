@@ -767,6 +767,30 @@ class Layer(cat.Box, ColouredMonoid):
         """
         raise ValueError(messages.LAYERS_MUST_HAVE_A_BOX)
 
+    def then(self, *others: Layer):
+        """
+        Layers do not compose: a diagram is the sequence of its layers, so
+        it is diagrams that compose, e.g. ``f >> g`` and not
+        ``Layer(f) >> Layer(g)``.
+
+        Parameters:
+            others : The layers that would be composed.
+
+        Raises:
+            AxiomError : Always, saying to compose diagrams instead.
+
+        Example
+        -------
+        >>> x = Ty('x')
+        >>> f = Box('f', x, x)
+        >>> Layer(f) >> Layer(f)
+        Traceback (most recent call last):
+        ...
+        discopy.utils.AxiomError: Compose diagrams, not layers: f >> f.
+        """
+        raise AxiomError(messages.LAYERS_DO_NOT_COMPOSE.format(
+            " >> ".join(map(str, (self, ) + others))))
+
     @classmethod
     def whisker(cls, other: Ty | Box | Layer) -> Ty | Layer:
         """
