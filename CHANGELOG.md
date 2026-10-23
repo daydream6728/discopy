@@ -160,6 +160,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `finset.Permutation.then` ([#763]).
 - A functor maps a layer with one `n`-ary `tensor` rather than a fold of
   `@`, with one `tensor` call per layer ([next#161]).
+- Biclosed types hold `biclosed.Wire` ([next#16]), their `**` is `<<`, and a
+  term inside a diagram is drawn as one box ([next#31]).
 - `Functor.id` is built from `utils.identity`, and `then` drops an identity
   on either side, so that composing functors is unital ([next#142]).
 - `discopy.optyx` keeps no private members in `channel` and `core.diagram`:
@@ -470,6 +472,7 @@ for the changelog of `1.2.1` and earlier.
 [#824]: https://github.com/discopy/discopy/pull/824
 [next#1]: https://github.com/rel-int/discopy-next/pull/1
 [next#9]: https://github.com/rel-int/discopy-next/issues/9
+[next#16]: https://github.com/rel-int/discopy-next/issues/16
 [next#21]: https://github.com/rel-int/discopy-next/issues/21
 [next#31]: https://github.com/rel-int/discopy-next/issues/31
 [next#49]: https://github.com/rel-int/discopy-next/issues/49
