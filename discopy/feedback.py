@@ -349,10 +349,7 @@ class Wire(monoidal.Wire):
         return time_step + is_constant
 
     def __repr__(self):
-        colours = "" if self.dom == self.cod == monoidal.transparent\
-            else f", dom={self.dom!r}, cod={self.cod!r}"
-        return factory_name(type(self))\
-            + f"({self.name!r}{colours}{self.repr_time_step()})"
+        return monoidal.Wire.__repr__(self)[:-1] + self.repr_time_step() + ")"
 
     def __str__(self):
         return super().__str__() + str_delayed(self.time_step)

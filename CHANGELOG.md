@@ -188,8 +188,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - `eval(repr(x)) == x` for `monoidal.List` ([#773]), phased spiders
   ([next#97]), delayed qudits ([next#130]), `Measure`, `Encode`, `CQ` and the
   rest ([next#168]), and `cfg` and `pregroup` terms ([next#31]).
-- An uncoloured `monoidal.Wire` reads back from its `repr` ([next#140]), and a
-  `Matrix` or a `Tensor` does up to NumPy's elision ([next#156]).
+- A `Wire` reads back from its `repr`, uncoloured or daggered ([next#140]),
+  and a `Matrix` or a `Tensor` does up to NumPy's elision ([next#156]).
 - Subscripted classes pickle with their parameter ([#749], [next#121]), and
   an unpickled `Layer` recomputes its name ([next#168]).
 - Bubbles keep their `data` and `is_dagger` ([#637]), substitute in their

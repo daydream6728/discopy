@@ -160,7 +160,8 @@ class Wire(cat.Ob):
     def __repr__(self):
         colours = "" if self.dom == self.cod == transparent\
             else f", dom={self.dom!r}, cod={self.cod!r}"
-        return f"{factory_name(type(self))}({self.name!r}{colours})"
+        dagger = ", is_dagger=True" if self.is_dagger else ""
+        return f"{factory_name(type(self))}({self.name!r}{colours}{dagger})"
 
     def to_tree(self):
         tree = super().to_tree()

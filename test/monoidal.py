@@ -127,8 +127,9 @@ def test_Ty_repr():
 def test_Wire_repr():
     from discopy import cat, monoidal
     env = {"cat": cat, "monoidal": monoidal}
-    for wire in [Wire('x'), Wire('x', Colour('red'), Colour('blue'))]:
-        assert eval(repr(wire), env) == wire
+    wires = [Wire('x'), Wire('x', Colour('red'), Colour('blue'))]
+    for wire in wires + [wire.dagger() for wire in wires]:
+        assert eval(repr(wire), env).to_tree() == wire.to_tree()
     assert repr(Wire('x')) == "monoidal.Wire('x')"
     assert eval("monoidal.Ty(cat.Ob('x'))", env) == Ty('x')
 
