@@ -84,7 +84,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - `drawing.widget.DiagramWidget`, an opt-in anywidget ([#466]).
 - Notebooks: *Minimality of the pure qubit ZX calculus* ([#626], [#688]),
   *Categorical deep learning* ([next#124], [next#125]), *Neural Church
-  arithmetic* ([#677]) and *Parsing arithmetic*.
+  arithmetic* ([#677]), *Parsing arithmetic* and *Boolean circuits*,
+  Lafont's maps and linear maps as double-pushout rewriting ([next#310]).
 
 ### Changed
 
@@ -473,6 +474,7 @@ for the changelog of `1.2.1` and earlier.
 [next#201]: https://github.com/rel-int/discopy-next/issues/201
 [next#225]: https://github.com/rel-int/discopy-next/issues/225
 [next#283]: https://github.com/rel-int/discopy-next/pull/283
+[next#310]: https://github.com/rel-int/discopy-next/pull/310
 [lambek#2]: https://github.com/rel-int/lambek/pull/2
 [lambek#8]: https://github.com/rel-int/lambek/pull/8
 [lambek#12]: https://github.com/rel-int/lambek/pull/12
