@@ -1166,8 +1166,8 @@ class CMap[C0: Pregroup, C1: CMap](
         if sorted(xs) != list(range(len(doms))):
             raise ValueError(
                 f"{xs} is not a permutation of {len(doms)} objects")
-        dom = cls.ob().tensor(*doms)
-        cod = cls.ob().tensor(*(doms[x] for x in xs))
+        dom = cls.ob.tensor(*doms) if doms else cls.ob()
+        cod = cls.ob.tensor(*(doms[x] for x in xs)) if doms else cls.ob()
         starts = [0, *accumulate(len(objects) for objects in doms)]
         inputs = [
             starts[x] + offset for x in xs for offset in range(len(doms[x]))]

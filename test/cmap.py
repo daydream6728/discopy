@@ -1069,6 +1069,10 @@ def test_from_diagram_reads_the_perm_of_a_permutation():
         perm.to_swaps(), Swap(x, y.r), perm >> perm.dagger()]
     for diagram in diagrams:
         assert diagram.to_map() == functor(diagram)
+    nat = symmetric.Diagram.from_permutation([2, 0, 1])
+    assert nat.to_map() == symmetric.CMap.functor(
+        ob_map=lambda typ: typ, ar_map=symmetric.CMap.from_box,
+        dom=symmetric.Diagram, cod=symmetric.CMap)(nat)
 
 
 def test_CMap_to_tree():
