@@ -525,6 +525,17 @@ def test_draw_permutation_in_diagram(tmp_path):
     assert (tmp_path / "permutation.svg").exists()
 
 
+def test_Drawing_permutation_of_blocks():
+    from discopy import symmetric
+    x, y, z = map(monoidal.Ty, "xyz")
+    assert Drawing.permutation([1, 0], [x @ y, z])\
+        == symmetric.Permutation(
+            symmetric.Ty(*"xyz"), [2, 0, 1]).to_drawing()
+    assert Drawing.permutation([1, 0], [monoidal.Ty(), z]) == Drawing.id(z)
+    with raises(ValueError):
+        Drawing.permutation([1, 0], [x, y, z])
+
+
 def test_readable_foreground():
     # White and light colours get black text, dark colours get white text.
     assert Backend.readable_foreground("white") == "black"
