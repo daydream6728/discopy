@@ -175,5 +175,5 @@ def test_encode_inflate_mixed_types():
 
 
 def test_dual_rail_only_for_zx_channels():
-    with pytest.raises(TypeError):
+    with pytest.raises(TypeError, match="Only ZX channels"):
         Channel("id", diagram.Id(diagram.mode)).dual_rail()
