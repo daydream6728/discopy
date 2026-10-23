@@ -299,6 +299,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   as the C tracer on 3.12 and 3.13, and the docs job has 25 minutes, the
   API pages of `discopy.optyx` taking its build to about fifteen
   ([next#276]).
+- Coverage's 98% gate reads `discopy/` alone, new tests bring `ehypergraph` to
+  100%, and pytest imports by path, so `test/abc.py` is collected ([next#31]).
 
 ## [1.2.2] - 2025-12-19
 
