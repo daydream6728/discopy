@@ -254,11 +254,8 @@ def to_tk(circuit):
         return bits, qubits
 
     def swap(i, j, unit_factory=Qubit):
-        old, tmp, new =\
-            unit_factory(i), unit_factory('tmp', 0), unit_factory(j)
-        tk_circ.rename_units({old: tmp})
-        tk_circ.rename_units({new: old})
-        tk_circ.rename_units({tmp: new})
+        old, new = unit_factory(i), unit_factory(j)
+        tk_circ.rename_units({old: new, new: old})
 
     def permute(box, left, typ):
         positions = [i for i, x in enumerate(box.dom) if x == typ]
@@ -395,6 +392,7 @@ def from_tk(tk_circuit):
             if bit_index in tk_circuit.post_selection:
                 bras[offset] = tk_circuit.post_selection[bit_index]
                 continue  # post selection happens at the end
+            bit_index -= sum(i < bit_index for i in tk_circuit.post_selection)
             box = Measure(destructive=False, override_bits=True)
             swaps = Id(circuit.cod[:offset + 1])
             swaps = swaps @ Diagram.swap(

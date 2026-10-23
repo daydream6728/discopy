@@ -99,7 +99,11 @@ def test_tk_round_trip_is_numerical():
         >> H @ H @ H >> Measure(3),
         Ket(1) @ Ket(0) >> qubit @ Measure() >> Measure() @ bit,
         Ket(1) >> Measure() >> Bits(0) @ bit,
-        Ket(1, 0) >> Measure(2) >> Discard(bit) @ bit >> Bits(0) @ bit]
+        Ket(1, 0) >> Measure(2) >> Discard(bit) @ bit >> Bits(0) @ bit,
+        Ket(1) >> Bra(1) >> Bits(0) >> Bits(0) @ bit >> Swap(bit, bit),
+        Ket(0) >> H >> Bra(0) >> Ket(0) @ Ket(1) >> Measure(2)
+        >> Swap(bit, bit),
+        Ket(0) @ Ket(1) >> Bra(0) @ Measure() >> bit @ Bits(0)]
     for circuit in circuits:
         assert np.allclose(
             Circuit.from_tk(circuit.to_tk()).eval().array,
