@@ -25,6 +25,14 @@ def test_Merge_dagger():
     assert frobenius.Diagram.merge(x).dagger() == frobenius.Spider(1, 2, x)
 
 
+def test_Merge_takes_index():
+    from numpy import int64
+    from discopy.abc import Nat
+    x = Ty('x')
+    assert Merge(x, int64(3)) == Merge(x, Nat(3)) == Merge(x, 3)
+    assert Cofunction(x, [0, 0, 0]) == Merge(x, 3)
+
+
 def test_Noise():
     x = Ty('x')
     assert Merge(x, 0) == Noise(x) == Noise(x, 0)

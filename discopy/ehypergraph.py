@@ -96,7 +96,7 @@ from functools import cached_property, reduce
 from itertools import accumulate, pairwise, repeat, takewhile
 from math import inf
 from operator import add, index
-from typing import TYPE_CHECKING, Self
+from typing import TYPE_CHECKING, Self, SupportsIndex
 
 from networkx import DiGraph
 from networkx.algorithms.isomorphism import is_isomorphic
@@ -162,7 +162,8 @@ def pattern(graph: Hypergraph) -> Hypergraph:
         graph.boxes, (dom_wires, box_wires, tuple(cod_wires[k] for k in kept)))
 
 
-def rewire(graph: Hypergraph, i: int, j: int) -> Hypergraph:
+def rewire(
+        graph: Hypergraph, i: SupportsIndex, j: SupportsIndex) -> Hypergraph:
     """
     A hypergraph in a topological order with the ``i``-th input of its boxes
     read from the ``j``-th other spider of its type before it, which a matcher
@@ -326,7 +327,7 @@ class EHypergraph(
         pairs = list(enumerate(self.classes)) + list(zip(spiders, spiders[1:]))
         return type(self)(self.graph, partition(self.graph.n_spiders, pairs))
 
-    def pair(self, i: int, j: int) -> tuple[int, ...]:
+    def pair(self, i: SupportsIndex, j: SupportsIndex) -> tuple[int, ...]:
         """ The ``i``-th spider and the ``j``-th of its type, for the laws. """
         types, i = self.graph.spider_types, index(i)
         if not types:

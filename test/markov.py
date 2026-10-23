@@ -145,6 +145,14 @@ def test_copy_factory():
         RecipeCopy(x).dagger()
 
 
+def test_Copy_takes_index():
+    from numpy import int64
+    from discopy.abc import Nat
+    x = Ty('x')
+    assert Copy(x, int64(3)) == Copy(x, Nat(3)) == Copy(x, 3)
+    assert Function(x, [0, 0, 0]) == Copy(x, 3)
+
+
 def test_Copy_pickle():
     from pickle import dumps, loads
     x = Ty('x')

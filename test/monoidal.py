@@ -169,6 +169,11 @@ def test_pow_takes_index():
             Ty('x') ** power
 
 
+def test_abc_Nat_hash():
+    from discopy import abc
+    assert {abc.Nat(2), abc.Nat(2), abc.Nat(3)} == {abc.Nat(2), abc.Nat(3)}
+
+
 def test_Nat_init():
     assert list(Nat(0)) == []
     assert all(len(Nat(n)) == n for n in range(5))

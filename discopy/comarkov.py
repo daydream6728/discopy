@@ -64,7 +64,8 @@ diagram as the copy boxes of :mod:`markov` they automatically satisfy the
 
 from __future__ import annotations
 
-from typing import ClassVar
+from operator import index
+from typing import ClassVar, SupportsIndex
 
 from discopy import (
     symmetric, monoidal, feedback, cmap, hypergraph, messages, op)
@@ -418,7 +419,7 @@ class Merge(Cofunction):
     """
     def __init__(self, x: monoidal.Ty, n: int = 2):
         assert_isatomic(x, monoidal.Ty)
-        n = n if isinstance(n, int) else len(n)
+        n = index(n) if isinstance(n, SupportsIndex) else len(n)
         name = f"Merge({x}" + ("" if n == 2 else f", {n}") + ")"
         Box.__init__(self, name, dom=x ** n, cod=x,
                      draw_as_spider=True, color="black", drawing_name="")

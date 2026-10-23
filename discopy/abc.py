@@ -360,6 +360,9 @@ class Nat(Testable["Nat"], Monoid["Nat"]):
     def __index__(self) -> int:
         return self.n
 
+    def __hash__(self) -> int:
+        return hash(self.n)
+
     def __str__(self) -> str:
         return str(self.n)
 

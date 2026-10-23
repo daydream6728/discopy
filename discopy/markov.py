@@ -66,7 +66,8 @@ the :mod:`frobenius` axioms.
 from __future__ import annotations
 
 import warnings
-from typing import Callable, ClassVar
+from operator import index
+from typing import Callable, ClassVar, SupportsIndex
 
 from discopy import symmetric, monoidal, feedback, cmap, hypergraph, messages
 from discopy.abc import ComarkovCategory, MarkovCategory
@@ -640,7 +641,7 @@ class Copy(Function):
     """
     def __init__(self, x: monoidal.Ty, n: int = 2):
         assert_isatomic(x, monoidal.Ty)
-        n = n if isinstance(n, int) else len(n)
+        n = index(n) if isinstance(n, SupportsIndex) else len(n)
         name = f"Copy({x}" + ("" if n == 2 else f", {n}") + ")" if n\
             else f"Discard({x})"
         Box.__init__(self, name, dom=x, cod=x ** n,
