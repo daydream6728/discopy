@@ -3,19 +3,18 @@
 from typing import Self, TypeVar
 
 from hypothesis import find, settings
+from hypothesis import strategies as st
 from hypothesis.errors import NoSuchExample
 from pytest import raises
 
 from discopy import braided, cat, monoidal, rigid
 from discopy.abc import Category, ColouredMonoid, Group, MonoidalCategory
-from hypothesis import strategies as st
-
 from discopy.axioms import (
     L, R, Atom, Axiom, AxiomFailure, Count, Equation, Equivalence, Hom, Obj,
     Over, Related, Repeat, Tensor, Testable, TestableGeneric, Under, Unit,
     Var, axiom, inhabits, position, substitute)
+from discopy.cat import Arrow, Box, Functor, Ob
 from discopy.monoidal import Ty
-from discopy.cat import Arrow, Box, Ob, Functor
 
 
 class ParityEquation(Equation):
