@@ -153,6 +153,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `finset.Permutation.then` ([#763]).
 - A functor maps a layer with one `n`-ary `tensor` rather than a fold of
   `@`, with one `tensor` call per layer ([next#161]).
+- `Functor.id` is built from `utils.identity`, and `then` drops an identity
+  on either side, so that composing functors is unital ([next#142]).
 
 ### Deprecated
 
@@ -482,6 +484,7 @@ for the changelog of `1.2.1` and earlier.
 [next#134]: https://github.com/rel-int/discopy-next/issues/134
 [next#139]: https://github.com/rel-int/discopy-next/issues/139
 [next#140]: https://github.com/rel-int/discopy-next/issues/140
+[next#142]: https://github.com/rel-int/discopy-next/issues/142
 [next#145]: https://github.com/rel-int/discopy-next/issues/145
 [next#147]: https://github.com/rel-int/discopy-next/issues/147
 [next#149]: https://github.com/rel-int/discopy-next/issues/149
