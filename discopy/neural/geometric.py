@@ -724,7 +724,8 @@ class Geometric:
             per_cell : The port map of the beliefs.
             replied : The replies of the round before, as beliefs.
         """
-        encoded = iter(linear(torch.stack(replied, 2), maps.port).unbind(2))
+        encoded = iter(linear(torch.stack(replied, 2), maps.port).unbind(2)
+                       if replied else ())
         return [next(encoded) if isinstance(port, Port) else port(per_cell)
                 for port in self.geometry.ports]
 

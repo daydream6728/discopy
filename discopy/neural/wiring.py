@@ -530,8 +530,8 @@ def decompose(relation, layout) -> tuple[tuple[int, Block], ...]:
         layout : The chains of a group the relation is invariant under.
 
     Raises:
-        ValueError : If the relation is not on the points of the layout, or
-                     splits an orbital.
+        ValueError : If the relation is not on the points of the layout,
+                     relates a point to one twice, or splits an orbital.
 
     Example
     -------
@@ -559,6 +559,10 @@ def decompose(relation, layout) -> tuple[tuple[int, Block], ...]:
             f"{len(relation)} points for a layout of {size} points")
     inside: dict = {}
     for v, related in enumerate(relation):
+        if len(set(related)) != len(related) \
+                or not all(0 <= w < size for w in related):
+            raise ValueError(f"point {v} is related to {tuple(related)}, "
+                             f"not to distinct points of {size}")
         related = set(related)
         for w in range(len(relation)):
             orbital = depths(v, w, layout)

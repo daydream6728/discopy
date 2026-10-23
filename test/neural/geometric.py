@@ -22,7 +22,8 @@ def sudoku():
 def same(torch, s, t):
     assert type(s) is type(t)
     for a, b in zip(s, t):
-        assert a.shape == b.shape and torch.allclose(a, b, atol=1e-12)
+        assert a.shape == b.shape
+        assert torch.allclose(a, b, rtol=0, atol=1e-12)
 
 
 def test_operators():
@@ -48,6 +49,7 @@ def test_operators():
     assert not down(x).view(2, 2, 3, 4, 3)[:, 1].any()
     assert torch.equal(right(x).view(2, 2, 3, 4, 3)[..., 2:, :],
                        grid[..., :2, :])
+    assert not right(x).view(2, 2, 3, 4, 3)[..., :2, :].any()
 
 
 def test_peer_and_factor():
@@ -82,7 +84,8 @@ def test_peer_and_factor():
             sum(h.sm.sum() + h.bce.sum() for h in mine[2]).backward()
             for p, q in zip(ref.parameters(), geo.parameters()):
                 assert (p.grad is None) == (q.grad is None)
-                assert p.grad is None or torch.allclose(p.grad, q.grad)
+                assert p.grad is None or torch.allclose(
+                    p.grad, q.grad, rtol=0, atol=1e-12)
     geo = GeometricFactorNet(WIDTHS, units, 4, 2, 4, 2).double()
     s = geo.initial(x)
     assert torch.equal(FactorNet.round(geo, s).units, geo.round(s).units)
@@ -90,6 +93,9 @@ def test_peer_and_factor():
         == Peers.of(primal(units), group)
     with raises(ValueError, match="as many peers"):
         Peers.of(((1, ), (0, 2), (1, )), Symmetric[3])
+    for wrong in (((1, 1), (0, 2), (1, 0)), ((1, 3), (0, 2), (1, 0))):
+        with raises(ValueError, match="distinct points"):
+            Peers.of(wrong, Symmetric[3])
 
     class Padded(Geometric, FactorNet):
         group = Symmetric[3]
@@ -161,4 +167,31 @@ def test_grid():
         s, t = ref.cycle(s), geo.cycle(t)
     same(torch, s, t)
     a, b = ref.act_step(ref.initial(x), x), geo.act_step(geo.initial(x), x)
-    assert all(torch.allclose(e, f) for e, f in zip(a[1], b[1]))
+    assert all(torch.allclose(e, f, rtol=0, atol=1e-12)
+               for e, f in zip(a[1], b[1]))
+
+    class Neighbours(Grid):
+        """ The grid with its neighbours only, no factor. """
+        def __init__(self, *args):
+            Recursion.__init__(self, *args, halt=True)
+
+        @torch.no_grad()
+        def initial(self, x):
+            s = super().initial(x)
+            return s._replace(cells=s.cells[:, :, :len(shifts)])
+
+        def round(self, s):
+            belief, state = self.cell(s.cells, s.state, s.clue, s.answer)
+            cells = torch.stack([f(belief) for f in shifts], 2)
+            return PortState(cells, belief, state, s.clue, s.answer)
+
+    class GeometricNeighbours(Geometric, Neighbours):
+        geometry = Factors(shifts)
+
+    ref = Neighbours(WIDTHS, 5, 3, 4, 2).double()
+    geo = GeometricNeighbours(WIDTHS, 5, 3, 4, 2).double()
+    geo.load_state_dict(ref.state_dict())
+    s, t = ref.initial(x), geo.initial(x)
+    for _ in range(3):
+        s, t = ref.cycle(s), geo.cycle(t)
+    same(torch, s, t)
