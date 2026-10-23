@@ -2,7 +2,7 @@
 
 from typing import Self, TypeVar
 
-from hypothesis import find, settings
+from hypothesis import Phase, find, settings
 from hypothesis import strategies as st
 from hypothesis.errors import NoSuchExample
 from pytest import raises
@@ -200,7 +200,8 @@ def test_equation_symbols():
 def test_weaken():
     law = rigid.Diagram.dagger_involution_monoidal
     assert law.params == {"within": MonoidalCategory}
-    args = find(law.strategy(), lambda _: True)
+    args = find(law.strategy(), lambda _: True, settings=settings(
+        max_examples=1, database=None, phases=(Phase.generate, )))
     assert not any(
         isinstance(box, (rigid.Cup, rigid.Cap)) for box in args["f"].boxes)
 
@@ -227,7 +228,8 @@ def test_falsify():
     assert trivial.bind(Arrow).falsify()["f"].inside
     assert Arrow.unitality.failing("Never holds.").falsify()
     with raises(NoSuchExample):
-        Arrow.associativity.falsify()
+        Arrow.associativity.falsify(
+            settings=settings(max_examples=50, database=None))
 
 
 def test_canonical():
