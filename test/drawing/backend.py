@@ -27,3 +27,14 @@ def test_tikz_twist_in_an_xcolor_name(tmp_path):
     tikz = path.read_text()
     assert "fill=RoyalPurple," in tikz
     assert "fill=RoyalPurple!60!black," in tikz
+
+
+def test_tikzstyle_of_a_hexcode_has_no_hash(tmp_path):
+    path = tmp_path / "box.tikz"
+    Box('f', Ty('x'), Ty('x'), color='#336699').draw(
+        path=str(path), to_tikz=True, use_tikzstyles=True)
+    tikz, styles = path.read_text(), path.with_suffix(".tikzstyles")\
+        .read_text()
+    assert "style=336699_box" in tikz
+    assert "\\tikzstyle{336699_box}" in styles
+    assert "#" not in tikz + styles

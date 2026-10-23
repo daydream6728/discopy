@@ -1370,7 +1370,7 @@ class TikZ(Backend):
         nodes.append(nodes[0])
         if self.use_tikzstyles:
             style_name = "box" if facecolor == DEFAULT["facecolor"]\
-                else f"{facecolor}_box"
+                else f"{str(facecolor).removeprefix('#')}_box"
             style = f"\\tikzstyle{{{style_name}}}=" \
                     f"[-, fill={self.format_color(facecolor)}]\n"
             if style not in self.edge_styles:
