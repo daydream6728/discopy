@@ -323,13 +323,27 @@ feedback.Ty(feedback.Wire('x')), is_deterministic=False)
 
     @property
     def is_deterministic(self) -> bool:
-        """ Whether the box is declared deterministic and is no dagger. """
+        """
+        Whether the box is declared deterministic and is no dagger, set as
+        the constructor sets it, by declaring it.
+        """
         return self.deterministic and not self.is_dagger
+
+    @is_deterministic.setter
+    def is_deterministic(self, value: bool):
+        self.deterministic = value
 
     @property
     def is_affine(self) -> bool:
-        """ Whether the box is declared affine and is no dagger. """
+        """
+        Whether the box is declared affine and is no dagger, set as the
+        constructor sets it, by declaring it.
+        """
         return self.affine and not self.is_dagger
+
+    @is_affine.setter
+    def is_affine(self, value: bool):
+        self.affine = value
 
     def flags(self) -> dict[str, bool]:
         """

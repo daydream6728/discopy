@@ -742,3 +742,30 @@ def test_every_box(law):
         elif failure:
             unexpected[name] = failure
     assert not unexpected and not fixed, (unexpected, fixed)
+
+
+@pytest.mark.parametrize(
+    "module", ["symmetric", "feedback", "markov", "frobenius"])
+def test_rebuild_strict_init(module):
+    """ A box whose constructor takes only some fields gets the others set,
+    as main did, see #169. """
+    pytest.importorskip("sympy")
+    import importlib
+    from sympy.abc import phi
+    m = importlib.import_module(f"discopy.{module}")
+
+    class Gate(m.Box):
+        def __init__(self, name, dom, cod, data=None, is_dagger=False):
+            super().__init__(name, dom, cod, data=data, is_dagger=is_dagger)
+
+    x, y = m.Ty('x'), m.Ty('y')
+    gate = Gate("g", x, y, data=phi)
+    gate.time_step, gate.is_deterministic = 2, False
+
+    def fields(box):
+        return (type(box), box.name, box.dom, box.cod, box.data, box.is_dagger,
+                box.time_step, getattr(box, "deterministic", False))
+    assert fields(gate.dagger()) == (Gate, "g", y, x, phi, True, 2, False)
+    assert fields(gate.subs(phi, 1)) == fields(gate.lambdify(phi)(1))\
+        == (Gate, "g", x, y, 1, False, 2, False)
+    assert gate.dagger().dagger() == gate

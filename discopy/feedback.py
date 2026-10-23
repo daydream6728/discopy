@@ -657,6 +657,10 @@ class Box(monoidal.Box, Diagram):
                         if key not in ("name", "dom", "cod")}
         super().__init__(*args, **params)
 
+    @time_step.setter
+    def time_step(self, value: int):
+        self._time_step = value
+
     def to_drawing(self):
         result = super().to_drawing()
         if result.box.drawing_name:

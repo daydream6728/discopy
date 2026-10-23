@@ -592,7 +592,8 @@ class Box(Arrow):
     :meth:`rebuild` reads them, and so :meth:`dagger`, :meth:`subs`,
     :meth:`lambdify` and the rotations of a rigid box keep them. A subclass
     whose constructor takes other arguments, or in another order, declares
-    its own.
+    its own. One whose constructor does not take a field by name, nor
+    :code:`**params`, gets it set on the new box once built.
 
     Example
     -------
@@ -668,13 +669,27 @@ class Box(Arrow):
         -------
         >>> f = Box('f', Ob('x'), Ob('y'), data=42)
         >>> assert f.rebuild(data=43) == Box('f', Ob('x'), Ob('y'), data=43)
+
+        >>> class Gate(Box):
+        ...     def __init__(self, name, dom, cod):
+        ...         super().__init__(name, dom, cod)
+        >>> g = Gate('g', Ob('x'), Ob('y'))
+        >>> assert g[::-1].is_dagger and g[::-1][::-1] == g
         """
         attrs = (*self.serialised_attrs, "*")
         star = next(i for i, attr in enumerate(attrs) if attr[0] == "*")
         fields = {name: getattr(self, name) for name in (
             attr.removeprefix("*") for attr in attrs) if name} | changes
         args = [fields.pop(name) for name in attrs[:star]]
-        return type(self)(*args, *fields.pop(attrs[star][1:], ()), **fields)
+        args += fields.pop(attrs[star][1:], ())
+        names = utils.keywords(type(self).__init__)
+        later = {} if names is None else {
+            name: fields.pop(name) for name in attrs[star + 1:]
+            if name != "*" and name not in names}
+        box = type(self)(*args, **fields)
+        for name, value in later.items():
+            setattr(box, name, value)
+        return box
 
     def dagger(self) -> Box:
         return self.rebuild(

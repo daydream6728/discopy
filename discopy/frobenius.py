@@ -342,6 +342,14 @@ class Box(compact.Box, markov.Box, comarkov.Box, Diagram):
     def is_affine(self) -> bool:
         return super().is_affine and not self.z
 
+    @is_deterministic.setter
+    def is_deterministic(self, value: bool):
+        self.deterministic = value
+
+    @is_affine.setter
+    def is_affine(self, value: bool):
+        self.affine = value
+
     def rotate(self, left=False):
         return self.flagged(super().rotate(left))
 
