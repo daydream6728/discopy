@@ -1762,12 +1762,10 @@ class CMap[C0: Pregroup, C1: CMap](
         discopy.utils.AxiomError: monoidal.Diagram has no traces for the \
 cycles of this map.
 
-        What remains is decoded like in :meth:`Hypergraph.to_diagram`: we scan
-        the currently open wires from left to right, for each box we gather
-        its domain wires at the position of the first one with a single
-        permutation, see :meth:`discopy.python.finset.Permutation.gather`,
-        apply the box, and replace the consumed domain labels by the box
-        codomain labels.
+        What remains is decoded by the :class:`discopy.hypergraph.Decoder` of
+        :meth:`Hypergraph.to_diagram`: we scan the open wires from left to
+        right, and each box gathers its domain wires at the position of the
+        first one with a single permutation.
 
         >>> from discopy.compact import Ty, Box, CMap
         >>> x, y, z = map(Ty, "xyz")
@@ -1798,13 +1796,17 @@ cycles of this map.
         >>> print((s @ x >> e).to_map().to_diagram())
         s @ x >> e
 
-        Without swaps, a monogamous acyclic map is swept with :meth:`encode`
+        Without swaps, a monogamous acyclic map is placed by :meth:`sweep`
         instead: each state goes in the gap that keeps every face turning by
         a full turn, so that a map which some layering has always decodes.
         """
         if not issubclass(self.category, SymmetricCategory)\
                 and self.is_monogamous and self.is_acyclic:
-            return self.category.decode(*self.encode())
+            dom, vertices, cod = self.wiring()
+            decoder = hypergraph.Decoder(self.category, self.dom, dom)
+            for i, offset in self.sweep(dom, vertices, cod):
+                decoder.place(self.boxes[i], *vertices[i], offset)
+            return decoder.close(cod)
         if not self.is_causal:
             return self.make_causal().to_diagram()
 
@@ -1817,19 +1819,13 @@ cycles of this map.
         back, first_output = walk.dagger(), self.n_ports - len(self.cod)
         right_side = None if not self.cod\
             else len(self.dom) - 1 if self.dom else first_output
-        diagram = self.category.id(self.dom)
-        scan = [edge_wire[i] for i in range(len(self.dom))]
+        decoder = hypergraph.Decoder(self.category, self.dom, [
+            edge_wire[i] for i in range(len(self.dom))])
         outputs = [edge_wire[i] for i in range(first_output, self.n_ports)]
         placed, waiting = set(), []
         symmetric = issubclass(self.category, SymmetricCategory)
         caps = getattr(self.category, "cap_factory", None)
         caps = caps if isclass(caps) else ()
-
-        def permute(perm):
-            if not symmetric:
-                raise AxiomError(messages.NOT_SYMMETRIC.format(
-                    factory_name(self.category)))
-            return self.category.from_permutation(perm, diagram.cod)
 
         def turn(port):
             """ The turn at the corner before a port, in half turns, or
@@ -1850,9 +1846,10 @@ cycles of this map.
         def from_the_left(corner):
             total, port = 0, back[corner]
             while port != corner:
-                if edge_wire[port] in scan:
-                    return scan.index(edge_wire[port]) + 1 if total == 1\
-                        and ports[port].kind.is_positive else None
+                if edge_wire[port] in decoder.wires:
+                    return decoder.wires.index(edge_wire[port]) + 1\
+                        if total == 1 and ports[port].kind.is_positive\
+                        else None
                 if port == first_output:
                     return 0 if total == 0 else None
                 if turn(port) is None:
@@ -1864,13 +1861,14 @@ cycles of this map.
             total, port = 0, walk[corner]
             while port != corner:
                 if port == right_side:
-                    return len(scan) if total == 0 else None
+                    return len(decoder.wires) if total == 0 else None
                 if turn(port) is None:
                     return None
                 total += turn(port)
-                if edge_wire[port] in scan:
-                    return scan.index(edge_wire[port]) if total == 1\
-                        and ports[port].kind.is_negative else None
+                if edge_wire[port] in decoder.wires:
+                    return decoder.wires.index(edge_wire[port])\
+                        if total == 1 and ports[port].kind.is_negative\
+                        else None
                 port = walk[port]
             return None
 
@@ -1882,19 +1880,11 @@ cycles of this map.
         def gaps(depth):
             box_ports = self._box_port_indices[depth]
             return {from_the_left(box_ports[0]), from_the_right(
-                box_ports[0])} - {None} if box_ports else {len(scan)}
+                box_ports[0])} - {None} if box_ports\
+                else {len(decoder.wires)}
 
         def beside(depth, reads):
-            _, cod_wires = wires(depth)
-            if cod_wires[0] in reads[1:]:
-                before = reads[reads.index(cod_wires[0]) - 1]
-                if before in scan:
-                    return scan.index(before) + 1
-            if cod_wires[-1] in reads[:-1]:
-                after = reads[reads.index(cod_wires[-1]) + 1]
-                if after in scan:
-                    return scan.index(after)
-            return None
+            return decoder.beside(wires(depth)[1], reads, reads)
 
         def reader(depth):
             _, cod_wires = wires(depth)
@@ -1905,7 +1895,8 @@ cycles of this map.
         def where(depth):
             found = gaps(depth)
             near = None if len(found) == 1 else beside(depth, reader(depth))
-            return min(found, default=len(scan)) if near is None else near
+            return min(found, default=len(decoder.wires))\
+                if near is None else near
 
         def force(depth):
             while not gaps(depth) and beside(depth, reader(depth)) is None\
@@ -1915,19 +1906,7 @@ cycles of this map.
             place(depth, where(depth))
 
         def place(depth, offset=None):
-            nonlocal diagram, scan
-            dom_wires, cod_wires = wires(depth)
-            positions = [scan.index(wire_id) for wire_id in dom_wires]
-            if offset is None:
-                offset = positions[0] if positions else len(scan)
-                offset -= sum(j < offset for j in positions)
-            perm = Permutation.gather(positions, len(scan), offset)
-            if not perm.is_identity:
-                diagram >>= permute(perm)
-                scan = [scan[j] for j in perm]
-            scan = scan[:offset] + cod_wires + scan[offset + len(dom_wires):]
-            diagram >>= diagram.cod[:offset] @ self.boxes[depth]\
-                @ diagram.cod[offset + len(dom_wires):]
+            decoder.place(self.boxes[depth], *wires(depth), offset)
             placed.add(depth)
 
         def settle():
@@ -1950,12 +1929,7 @@ cycles of this map.
             settle()
         while waiting:
             force(waiting[0])
-
-        perm = Permutation(
-            [scan.index(wire_id) for wire_id in outputs], len(scan))
-        if not perm.is_identity:
-            diagram >>= permute(perm)
-        return diagram
+        return decoder.close(outputs)
 
     def wiring(self, ends: Iterable[int] = ()) -> tuple[
             tuple[int, ...], list[tuple[tuple[int, ...], tuple[int, ...]]],
