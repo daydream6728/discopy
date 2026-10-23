@@ -1758,7 +1758,7 @@ def expansion(photons: int) -> tuple:
     The terms of :func:`twomode` for every number of photons up to
     `photons`: the flat index of the entry :math:`(s, m, k)` each adds to,
     its coefficient and the powers of :math:`u_{00}, u_{10}, u_{01},
-    u_{11}` it multiplies.
+    u_{11}` it multiplies, the indices and powers as 32-bit integers.
     """
     terms = [
         ((total * (photons + 1) + m) * (photons + 1) + k,
@@ -1771,7 +1771,8 @@ def expansion(photons: int) -> tuple:
         for m in range(total + 1)
         for a in range(max(0, m - total + k), min(k, m) + 1)]
     index, coefficients, exponents = zip(*terms)
-    return np.array(index), np.array(coefficients), np.array(exponents)
+    return np.array(index, np.int32), np.array(coefficients), \
+        np.array(exponents, np.int32)
 
 
 def powers(values, photons: int):
@@ -1799,7 +1800,7 @@ def twomodes(matrix, photons: int):
     matrix = jnp.asarray(matrix)
     table = powers(jnp.stack([matrix[0, 0], matrix[1, 0], matrix[0, 1],
                               matrix[1, 1]]), photons)
-    terms = coefficients * jnp.prod(
+    terms = jnp.asarray(coefficients, float) * jnp.prod(
         table[jnp.arange(4), exponents], axis=-1)
     return jnp.zeros((photons + 1) ** 3, terms.dtype).at[index].add(
         terms).reshape((photons + 1, ) * 3)
@@ -2159,7 +2160,7 @@ class Kernel:
         kept = jnp.maximum(number[:, None] - lost[None, :], 0)
         amplitudes = jnp.where(
             lost[None, :] <= number[:, None],
-            jnp.sqrt(jnp.asarray(choices(photons))[number])
+            jnp.sqrt(jnp.asarray(choices(photons), float)[number])
             * powers(jnp.sqrt(transmissivity), photons)[kept]
             * powers(jnp.sqrt(1 - transmissivity), photons)[lost][None, :],
             0)
