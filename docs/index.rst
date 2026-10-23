@@ -16,6 +16,7 @@ DisCoPy documentation
     api/syntax
     api/semantics
     api/quantum
+    api/optyx
     api/grammar
     api/drawing
     api/axioms
@@ -38,6 +39,7 @@ DisCoPy documentation
     notebooks/neural-church
     notebooks/equivalence-hypergraphs
     notebooks/contextual-fraction
+    notebooks/boolean-circuits
 
 
 .. toctree::

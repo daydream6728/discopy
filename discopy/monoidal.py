@@ -470,6 +470,19 @@ class Ty(cat.Ob, cat.FreeCategory, ColouredMonoid):
             parts.append(f'{name}("")' if s == '' else s)
         return ' @ '.join(parts)
 
+    def atoms(self) -> list[Ty]:
+        """
+        The atoms of a type: those of its objects, each one with no adjoint
+        nor delay as a type of its own, i.e. the generators its string names.
+
+        >>> x, y = Ty('x'), Ty('y')
+        >>> assert (x @ y @ x).atoms() == [x, y, x]
+        """
+        return [
+            atom if isinstance(atom, Ty) else self.factory(atom.name)
+            for ob in self.inside if isinstance(ob, cat.Ob)
+            for atom in ob.atoms()]
+
     def __lt__(self, other):
         """
         Types are totally ordered by length first, then lexicographically on
@@ -877,6 +890,11 @@ class Layer(cat.Box, ColouredMonoid):
         return [
             box_or_typ for box_or_typ in self.boxes_or_types
             if isinstance(box_or_typ, Box)]
+
+    def atoms(self) -> list:
+        """ The atoms of a layer: those of its boxes and types. """
+        return [atom for box_or_typ in self.boxes_or_types
+                for atom in box_or_typ.atoms()]
 
     @property
     def size(self):
