@@ -433,9 +433,14 @@ class Circuit(tensor.Diagram[complex]):
 
         output_edge_order : list of :class:`tensornetwork.Edge`
             Output edges of the network.
+
+        A mixed circuit with more than one box in a layer is split into
+        staircases first, see :meth:`to_staircases`.
         """
         if not mixed and not self.is_mixed:
             return super().to_tn(dtype=complex)
+        if any(len(layer.boxes) > 1 for layer in self.inside):
+            return self.to_staircases().to_tn(mixed=mixed)
 
         import tensornetwork as tn
         from discopy.quantum.gates import (
@@ -448,11 +453,12 @@ class Circuit(tensor.Diagram[complex]):
         # try to decompose some gates
         diag = Id(self.dom)
         last_i = 0
-        for i, box in enumerate(self.boxes):
+        for i, (box, offset) in enumerate(zip(self.boxes, self.offsets)):
             if hasattr(box, '_decompose'):
                 decomp = box._decompose()
                 diag >>= self[last_i:i]
-                left, _, right = self.inside[i].boxes_and_types
+                dom = self.inside[i].dom
+                left, right = dom[:offset], dom[offset + len(box.dom):]
                 diag >>= Id(left) @ decomp @ Id(right)
                 last_i = i + 1
         diag >>= self[last_i:]
@@ -471,7 +477,8 @@ class Circuit(tensor.Diagram[complex]):
         q_scan2 = [n[1] for n in q_nodes2]
         nodes = c_nodes + q_nodes1 + q_nodes2
         for layer in self.inside:
-            left, box, right = layer.boxes_and_types
+            (box, offset), = layer.boxes_and_offsets
+            left, right = layer.dom[:offset], layer.dom[offset + len(box.dom):]
             c_offset = left.count(bit)
             q_offset = left.count(qubit)
             if box == Circuit.swap(bit, bit):
