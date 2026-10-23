@@ -324,8 +324,8 @@ feedback.Ty(feedback.Wire('x')), is_deterministic=False)
     @property
     def is_deterministic(self) -> bool:
         """
-        Whether the box is declared deterministic and is no dagger, set as
-        the constructor sets it, by declaring it.
+        Whether the box is declared deterministic and is no dagger: setting it
+        declares it, as the constructor does.
         """
         return self.deterministic and not self.is_dagger
 
@@ -336,8 +336,8 @@ feedback.Ty(feedback.Wire('x')), is_deterministic=False)
     @property
     def is_affine(self) -> bool:
         """
-        Whether the box is declared affine and is no dagger, set as the
-        constructor sets it, by declaring it.
+        Whether the box is declared affine and is no dagger: setting it
+        declares it, as the constructor does.
         """
         return self.affine and not self.is_dagger
 
