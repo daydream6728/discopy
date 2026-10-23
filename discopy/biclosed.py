@@ -199,25 +199,27 @@ class Ty(monoidal.Ty):
 
     def cast_wire(self, x: str | cat.Ob) -> cat.Ob:
         """
-        Turn a constructor argument into a ``self.generator_factory``.
+        Turn a constructor argument into an atom of the type.
 
-        The objects inside a biclosed type are :class:`Wire`, those of dumps,
-        pickles and printed text from before were a plain ``cat.Ob`` or a
-        transparent :class:`monoidal.Wire`: either is upgraded to a
-        :class:`Wire`, as a biclosed object is a self-dagger monoidal wire.
+        The atoms of a biclosed type are monoidal wires, as a rigid type is a
+        biclosed type, but a name gives a :class:`Wire`. So does a plain
+        ``cat.Ob`` or a :class:`monoidal.Wire` of one colour on both sides,
+        its colour kept, as dumps, pickles and printed text from before hold
+        them, and a pickled :class:`Exp` of no side is the ``over`` of its
+        base.
 
         >>> assert Ty(cat.Ob('x')) == Ty(monoidal.Wire('x')) == Ty(Wire('x'))
         """
+        x = super().cast_wire(x)
         # pylint: disable-next=unidiomatic-typecheck  # not their subclasses
-        old = type(x) is cat.Ob or type(x) is monoidal.Wire\
-            and x.dom == x.cod == monoidal.transparent
-        if old and issubclass(self.generator_factory, Wire):
-            return self.generator_factory(x.name)
-        return super().cast_wire(x)
+        if type(x) is monoidal.Wire and x.dom == x.cod:
+            return Wire(x.name, x.dom, x.cod)
+        # pylint: disable-next=unidiomatic-typecheck  # not its subclasses
+        return Exp(x.base, x.exponent) if type(x) is Exp else x
 
     def __setstate__(self, state):
         super().__setstate__(state)
-        if issubclass(self.generator_factory, Wire):
+        if self.generator_factory is monoidal.Wire:
             self.inside = tuple(map(self.cast_wire, self.inside))
 
     @property
@@ -282,8 +284,8 @@ class Wire(monoidal.Wire):
 class Exp(Wire):
     """
     A :code:`base` type to an :code:`exponent` type, either :class:`Over` or
-    :class:`Under`: a biclosed exponential with no side is an :class:`Over`,
-    the default one, as :meth:`Ty.exp` is.
+    :class:`Under`: a biclosed exponential with no side is the ``over`` of
+    its base, the default one, as :meth:`Ty.exp` is.
 
     Parameters:
         base : The base type.
@@ -295,9 +297,10 @@ class Exp(Wire):
 
     ob = Ty
 
-    # pylint: disable-next=unused-argument  # passed to __init__
-    def __new__(cls, *args, **kwargs):
-        return super().__new__(Over if cls is Exp else cls)
+    # pylint: disable-next=unused-argument,keyword-arg-before-vararg
+    def __new__(cls, base: Ty = None, *args, **kwargs):
+        return super().__new__(
+            getattr(base, "over_factory", cls) if cls is Exp else cls)
 
     def __init__(self, base: Ty, exponent: Ty):
         assert_isinstance(base, self.ob)
@@ -474,6 +477,11 @@ class Eval(Box):
             else (x.exponent @ x, x.base)
         super().__init__("Eval" + str(x), dom, cod)
 
+    def __setstate__(self, state):
+        """ A pickle from before is named after ``x ** y``, renamed here. """
+        super().__setstate__(state)
+        self.name = "Eval" + str(self.x)
+
     def __repr__(self):
         return f"{factory_name(type(self))}({self.x!r}, left={self.left!r})"
 
@@ -527,6 +535,10 @@ class Coeval(Box):
         cod, dom = (x @ x.exponent, x.base) if self.left\
             else (x.exponent @ x, x.base)
         super().__init__("Coeval" + str(x), dom, cod)
+
+    def __setstate__(self, state):
+        super().__setstate__(state)
+        self.name = "Coeval" + str(self.x)
 
     def dagger(self) -> Eval:
         return self.eval_factory(self.x, self.left)
@@ -1631,7 +1643,6 @@ class Canonical(Testable, NamedGeneric["factory"], tuple):
             st.tuples(category.namings(), category.namings()))
 
 
-Ty.generator_factory = Wire
 Ty.variable_factory = Variable
 Ty.constant_factory = Constant
 Ty.application_factory = Application

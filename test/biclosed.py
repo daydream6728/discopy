@@ -367,9 +367,22 @@ def test_Wire_reads_back_main():
         b'\x94h\t\x8c\x06inside\x94h\x06\x8c\x04Wire\x94\x93\x94)\x81\x94}'
         b'\x94(\x8c\tis_dagger\x94\x89h\x05h\th\x0eh\th\x0b\x8c\x01x\x94ub'
         b'\x85\x94h\x0bh\x01ub.') == x
-    red = monoidal.Colour('red')
+    from discopy import closed, rigid
+    red, blue = monoidal.Colour('red'), monoidal.Colour('blue')
+    assert Ty(monoidal.Wire('x', red, red)) == Ty(Wire('x', red, red))
+    for atom in (monoidal.Wire('x', red, blue), rigid.Wire('x', z=1)):
+        assert Ty(atom).inside == (atom, )
     with raises(TypeError):
-        Ty(monoidal.Wire('x', red, red))
+        closed.Ty(monoidal.Wire('x'))
+
+
+def test_rigid_type_is_biclosed():
+    """ A rigid type is a biclosed type, its atoms are rigid wires. """
+    from discopy import closed, rigid
+    x, y = rigid.Ty('x'), rigid.Ty('y')
+    f = rigid.Box('f', x, y)
+    assert f.to_rigid() == f and closed.Ty.from_biclosed(x) == closed.Ty('x')
+    assert Functor.id(Diagram)(x) == Ty(rigid.Wire('x'))
 
 
 def test_pow_is_over():
@@ -395,6 +408,28 @@ def test_pow_is_over():
     F, g = Functor.id(Diagram), Box('g', x, x ** y)
     for diagram in (g @ y >> Eval(x ** y), g @ y >> old):
         assert F(diagram) == diagram == g @ y >> Eval(x << y)
+
+
+def test_pow_reads_back_main_at_its_level():
+    """ An exponential of no side is the ``over`` of the level of its base,
+    built by hand or read back from a pickle of main, as is the name of its
+    evaluation. """
+    import base64, pickle, zlib
+    from discopy.grammar import categorial
+    x, y = categorial.Ty('x'), categorial.Ty('y')
+    assert categorial.Ty(Exp(x, y)) == x ** y == x << y
+    old = pickle.loads(zlib.decompress(base64.b64decode(
+        "eNqNUk1PwjAYBlZgKCB+oaIHjsCBP6HcDCcTj6Tb6tpkW5d9mO1AIgeIJr1Rf6T/"
+        "wpatSyZoXNIsed/nc90b+PyqVXYPG1gkNKmfTu0Aui4MpiaMkE0DAh3Omg8Eyvl2"
+        "vFqOmGZRl+MKqz2lfMvHK74c4SrrKQGXepRYkta4pw6Ng+0OwoAHXcTFi3qI1R1o"
+        "IGceG0wzqcVxgzWIFxJLAAohg5gODZHFtFni50YMGDBEHGu5LW5gXZwWrjPwTAKk"
+        "YC0SLixo2yjgHwWqyaoJj401buKacNZR4ossXnRArpsNeiVyWnDLC32UDCeTYToW"
+        "i4tNjtD3RY+yQRt38Bk+/4eGrFV/hCkKVK+uQRMULmiwiFIfhfIawOwVOrubwafS"
+        "s2R5rMoCB71E/F04tSVeuTFgwQjyeRYGCFZHsK7Xsml1X+1HvdLyJLcSy6us6I1I"
+        "J/4B9Ee+vvqgAxmtm4FVOHyb5+oI9KVA3/2SS1kfSNUvIsfGJjam3+Qw7yQ=")))
+    new = categorial.Eval(x ** y) >> categorial.Coeval(x ** y)
+    F = categorial.Functor.id(categorial.Diagram)
+    assert old == new == F(old)
 
 
 def test_Eval_on_the_wrong_side():
