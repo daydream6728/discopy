@@ -372,6 +372,31 @@ def test_Wire_reads_back_main():
         Ty(monoidal.Wire('x', red, red))
 
 
+def test_pow_is_over():
+    """ The exponential ``**`` is the default one, ``<<``, at every level with
+    exponentials, so that the identity functor is the identity on a diagram
+    written with it, built by hand or read back from a dump of main. """
+    import json
+    from discopy import rigid
+    from discopy.grammar import categorial, pregroup
+    for module in (biclosed, rigid, pregroup, categorial):
+        x, y = module.Ty('x'), module.Ty('y')
+        assert x ** y == x << y
+    x, y = Ty('x'), Ty('y')
+    assert str(x ** y) == "(x << y)" and Ty(Exp(x, y)) == x ** y
+
+    def atom(name):
+        return {"factory": "biclosed.Ty",
+                "inside": [{"factory": "monoidal.Wire", "name": name}]}
+    old = loads(json.dumps({"factory": "biclosed.Eval", "left": True, "x": {
+        "factory": "biclosed.Ty", "inside": [{
+            "factory": "biclosed.Exp", "base": atom("x"),
+            "exponent": atom("y")}]}}))
+    F, g = Functor.id(Diagram), Box('g', x, x ** y)
+    for diagram in (g @ y >> Eval(x ** y), g @ y >> old):
+        assert F(diagram) == diagram == g @ y >> Eval(x << y)
+
+
 def test_Eval_on_the_wrong_side():
     x, y = Ty('x'), Ty('y')
     for box in (Eval, Coeval):

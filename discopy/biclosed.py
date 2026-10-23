@@ -131,7 +131,6 @@ class Ty(monoidal.Ty):
     abstraction_factory: ClassVar[type["Abstraction"]]
     over_factory: ClassVar[Callable[..., "Exp"]]
     under_factory: ClassVar[Callable[..., "Exp"]]
-    exp_factory: ClassVar[Callable[..., "Exp"]]
 
     def __pow__(self, other: Ty) -> Ty:
         return self.exp(other) if isinstance(other, Ty)\
@@ -139,13 +138,15 @@ class Ty(monoidal.Ty):
 
     def exp(self, other: Ty) -> Ty:
         """
-        The exponential of a type, which is the type itself when the
-        exponent is the unit, as is any exponential of the unit.
+        The exponential of a type, called with ``**``, is its :meth:`over`,
+        the default one of the two: the type itself when the exponent is the
+        unit, as is any exponential of the unit.
 
-        >>> x = Ty('x')
+        >>> x, y = Ty('x'), Ty('y')
+        >>> assert x ** y == x << y and str(x ** y) == "(x << y)"
         >>> assert x ** Ty() == x << Ty() == Ty() >> x == x
         """
-        return self.ar(self.exp_factory(self, other)) if other else self
+        return self.over(other)
 
     def over(self, other: Ty) -> Ty:
         return self.ar(self.over_factory(self, other)) if other else self
@@ -278,14 +279,23 @@ class Wire(monoidal.Wire):
 
 class Exp(Wire):
     """
-    A :code:`base` type to an :code:`exponent` type, called with :code:`**`.
+    A :code:`base` type to an :code:`exponent` type, either :class:`Over` or
+    :class:`Under`: a biclosed exponential with no side is an :class:`Over`,
+    the default one, as :meth:`Ty.exp` is.
 
     Parameters:
         base : The base type.
         exponent : The exponent type.
+
+    >>> x, y = Ty('x'), Ty('y')
+    >>> assert Exp(x, y) == Over(x, y) and Ty(Exp(x, y)) == x ** y
     """
 
     ob = Ty
+
+    # pylint: disable-next=unused-argument  # passed to __init__
+    def __new__(cls, *args, **kwargs):
+        return super().__new__(Over if cls is Exp else cls)
 
     def __init__(self, base: Ty, exponent: Ty):
         assert_isinstance(base, self.ob)
@@ -1590,7 +1600,7 @@ Ty.variable_factory = Variable
 Ty.constant_factory = Constant
 Ty.application_factory = Application
 Ty.abstraction_factory = Abstraction
-Ty.over_factory, Ty.under_factory, Ty.exp_factory = Over, Under, Exp
+Ty.over_factory, Ty.under_factory = Over, Under
 
 
 class Equation(monoidal.Equation):

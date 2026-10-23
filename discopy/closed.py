@@ -181,7 +181,10 @@ class Ty(biclosed.Ty, feedback.Ty):
 
 
 class Exp(Wire, biclosed.Exp):
-    "An exponential object in a markov category, with a time step."
+    """
+    An exponential object in a markov category, with a time step, called with
+    ``**``, ``<<`` or ``>>`` alike.
+    """
 
     ob = Ty
 
@@ -711,7 +714,7 @@ Diagram.eval_factory = Eval
 Diagram.coeval_factory = Coeval
 Diagram.discard_factory = Discard
 Diagram.sum_factory = Sum
-Ty.exp_factory = Ty.under_factory = Ty.over_factory = staticmethod(Exp)
+Ty.under_factory = Ty.over_factory = staticmethod(Exp)
 
 Id = Diagram.id
 
