@@ -100,7 +100,7 @@ class Tensor(Matrix):
     >>> m = Tensor([0, 1, 1, 0], Dim(2), Dim(2))
     >>> v = Tensor([0, 1], Dim(1), Dim(2))
     >>> v >> m >> v.dagger()
-    Tensor[int64]([0], dom=Dim(1), cod=Dim(1))
+    Tensor[int]([0], dom=Dim(1), cod=Dim(1))
 
     Notes
     -----
@@ -545,7 +545,7 @@ class Functor(frobenius.Functor):
         >>> assert F(g.r) == F(g.transpose()) != F(g).r
         """
         if isinstance(other, Bubble):
-            return self(other.arg).map(other.func)
+            return self(other.arg).map(other.func, self.dtype)
         if isinstance(other, (rigid.Cup, rigid.Cap))\
                 and other.left == other.right:
             legs = (2, 0) if isinstance(other, rigid.Cup) else (0, 2)
@@ -666,6 +666,15 @@ class Diagram(NamedGeneric['dtype'], frobenius.Diagram):
     >>> diagram = vector[::-1] >> vector @ vector
     >>> print(diagram)
     vector[::-1] >> vector >> Dim(2) @ vector
+
+    A tensor diagram is subscripted by the ``dtype`` of the :class:`Tensor`
+    it evaluates to, so numpy's scalar types are named as in
+    :class:`Matrix`:
+
+    >>> import numpy as np
+    >>> assert Box[np.float64] is Box[float]
+    >>> Box('f', Dim(1), Dim(1), [0.5])
+    tensor.Box[float]('f', Dim(1), Dim(1), data=[0.5])
     """
     sum_factory: ClassVar[type["Sum"]]
     swap_factory: ClassVar[type["Swap"]]
@@ -674,6 +683,9 @@ class Diagram(NamedGeneric['dtype'], frobenius.Diagram):
     cap_factory: ClassVar[type["Cap"]]
     bubble_factory: ClassVar[type["Bubble"]]
     ob = Dim
+
+    def __class_getitem__(cls, values):
+        return super().__class_getitem__(Tensor[values].dtype)
 
     @classmethod
     def dim(cls, typ: monoidal.Ty) -> Dim:
@@ -701,7 +713,9 @@ class Diagram(NamedGeneric['dtype'], frobenius.Diagram):
 
         Parameters:
             dtype : The datatype for spiders and the result,
-                inferred from the boxes by default.
+                inferred from the boxes by default, those inside sums
+                and bubbles included, i.e. the one
+                :meth:`Matrix.promote` gives for their ``dtype``.
             optimize : The contraction path, passed verbatim to the
                 backend ``einsum``.
             params : Any other optional parameter of the backend
@@ -713,12 +727,25 @@ class Diagram(NamedGeneric['dtype'], frobenius.Diagram):
         >>> assert (vector >> vector[::-1]).eval().array == 1
         >>> assert (vector >> vector[::-1]).eval(
         ...     optimize="optimal").array == 1
+        >>> (vector >> vector[::-1]).eval()
+        Tensor[int]([1], dom=Dim(1), cod=Dim(1))
+        >>> (vector @ Box('half', Dim(1), Dim(1), [0.5])).eval()
+        Tensor[float]([0. , 0.5], dom=Dim(1), cod=Dim(2))
         """
         category = self.category if isinstance(self, cmap.CMap) else self.ar
+        dtype = dtype or getattr(self, "dtype", None)
+        boxes = list(self.boxes) if dtype is None else []
+        for box in boxes:
+            inside = box.terms if isinstance(box, Sum)\
+                else (box.arg, ) if isinstance(box, Bubble) else ()
+            boxes += [b for diagram in inside for b in diagram.boxes]
+        typed = [Matrix[box.dtype].zero(0, 0)
+                 for box in boxes if box.dtype is not None]
+        if typed:
+            dtype = typed[0].promote(*typed[1:]).dtype
         return Functor(
             ob_map=category.dim, ar_map=lambda box: box.array,
-            dtype=dtype or getattr(self, "dtype", None),
-            optimize=optimize, **params)(self)
+            dtype=dtype, optimize=optimize, **params)(self)
 
     def to_quimb(self, dtype: type = None) -> "quimb.tensor.Tensor":
         """
@@ -891,7 +918,7 @@ class Box(frobenius.Box, Diagram):
     -------
     >>> b1 = Box('sauce_0', Dim(1), Dim(2), data=[0.84193562, 0.91343221])
     >>> b1.eval()
-    Tensor[float64]([0.84193562, 0.91343221], dom=Dim(1), cod=Dim(2))
+    Tensor[float]([0.84193562, 0.91343221], dom=Dim(1), cod=Dim(2))
     """
 
     def __setstate__(self, state):
@@ -900,8 +927,8 @@ class Box(frobenius.Box, Diagram):
             del state["_array"]
         super().__setstate__(state)
         if self.dtype is None and self.data is not None:
-            self.data, self.dtype = self._get_data_dtype(self.data)
-            self.__class__ = self.__class__[self.dtype]
+            self.data, dtype = self._get_data_dtype(self.data)
+            self.__class__ = self.__class__[dtype]
 
     def __new__(
             cls, name=None, dom=None, cod=None, data=None, *args, **kwargs):
