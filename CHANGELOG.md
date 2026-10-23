@@ -114,6 +114,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `trace(dom=, cod=, mem=)`, and yanking is a law ([next#95]).
 - `markov` is Markov only, its merges are in `comarkov` ([next#94]).
 - `Matrix` is a `MarkovCategory` ([#535]).
+- `dtype` is `int` where it was `numpy.int64`, as for `float`, `complex` and
+  `bool`, and `map` and `eval` infer it ([next#31], [next#88], [next#162]).
 - `hopf.Intertwiner[H]` holds a tensor network `inside` between
   `Representation` ends, rather than being one, and modules have trees
   ([next#145]).
@@ -221,8 +223,6 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `spider_factory` ([next#149]), `grad` ([next#75]), and the pyzx round trip
   keeps scalars and parallel wires ([next#74], [next#82]).
 - `hopf.Intertwiner`: `cups`, `caps` and `twist` ([next#31]).
-- `hopf.Functor` sends the dagger of a twist to its inverse, `to_braided`
-  takes traces and generators, and dual rails delay ([next#31]).
 - The dagger of a rigid box keeps its winding, `Id(x).width` and five
   one-liners ([next#31]), the rotation of a daggered braid ([#606]), and the
   adjoints of a `frobenius.Wire` ([next#1]).
@@ -449,6 +449,7 @@ for the changelog of `1.2.1` and earlier.
 [next#147]: https://github.com/rel-int/discopy-next/issues/147
 [next#149]: https://github.com/rel-int/discopy-next/issues/149
 [next#161]: https://github.com/rel-int/discopy-next/issues/161
+[next#162]: https://github.com/rel-int/discopy-next/issues/162
 [next#168]: https://github.com/rel-int/discopy-next/issues/168
 [next#175]: https://github.com/rel-int/discopy-next/issues/175
 [next#176]: https://github.com/rel-int/discopy-next/issues/176
