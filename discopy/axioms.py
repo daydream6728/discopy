@@ -370,7 +370,7 @@ def position(variable: TypeVar, category: type) -> int | None:
     Which parameter of :meth:`discopy.abc.Category.typeparams` a type
     parameter of a class above a category stands for.
 
-    The answer is read off the class that defines ``parameters``. A type
+    The answer is read off the class that defines ``typeparams``. A type
     parameter of a subclass gets there through the generic bases: e.g. a
     ``Monoid[C1]`` is a ``ColouredMonoid[NoneType, C1]``, which is a
     ``Category[NoneType, C1]``, so the ``C1`` of a monoid is the second
