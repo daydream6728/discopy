@@ -826,6 +826,12 @@ class Drawing(TracedCategory, RichDisplay):
         This is done by calling :meth:`make_space` to align the output wires of
         `self` and the input wires of `other` while keeping them straight.
 
+        Parameters:
+            other : The drawing to compose with.
+            draw_step_by_step : Whether to return the list of drawings that
+                connect one wire at a time, e.g. for
+                :func:`discopy.drawing.to_gif`, rather than the composite.
+
         Example
         -------
         >>> from discopy.monoidal import Ty, Box, Diagram
@@ -846,10 +852,10 @@ class Drawing(TracedCategory, RichDisplay):
             :align: center
         """
         assert_iscomposable(self, other)
-        if self.is_identity and self.height <= 1:
-            return other.relabel_nodes()
-        if other.is_identity and other.height <= 1:
-            return self.relabel_nodes()
+        for side, rest in [(self, other), (other, self)]:
+            if side.is_identity and side.height <= 1:
+                result = rest.relabel_nodes()
+                return [result] if draw_step_by_step else result
         dom, cod = self.dom, other.cod
 
         tmp_cod = [Node("tmp_cod", i=i) for i, n in enumerate(self.cod_nodes)]

@@ -907,6 +907,14 @@ def test_Drawing_then_and_tensor_return_new_drawings():
         assert result == f and result is not f
 
 
+def test_Drawing_then_step_by_step_is_a_list():
+    x = monoidal.Ty('x')
+    f, g = (monoidal.Box(name, x, x).to_drawing() for name in "fg")
+    assert len(f.then(g, draw_step_by_step=True)) == 2
+    for top, bottom in [(Drawing.id(x), f), (f, Drawing.id(x))]:
+        assert top.then(bottom, draw_step_by_step=True) == [f]
+
+
 def test_draw_any_colour_a_box_draws_in(tmp_path):
     from matplotlib.colors import to_hex
     from discopy import ribbon
