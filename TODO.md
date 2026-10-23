@@ -2,5 +2,5 @@
 
 Rulings: https://github.com/rel-int/discopy-next/issues/31#issuecomment-6351134408
 
-- [WIP] @session_01YCJQ3Xco3ydQ6AsdTtYJ5x-2026-10-23 08:28 B41: tests for `ehypergraph` in `test/ehypergraph.py` that state what its docstrings promise, until `source = discopy` is back over the 98% `fail_under`; then the gate is on in CI
+- [x] B41: tests for `ehypergraph` in `test/ehypergraph.py` that state what its docstrings promise, until `source = discopy` is back over the 98% `fail_under`; then the gate is on in CI
 - [WIP] @session_01YCJQ3Xco3ydQ6AsdTtYJ5x-2026-10-23 08:28 Tests mirror `discopy/` under `--import-mode=importlib`: set it in the pytest config, move today's tests of `discopy/abc.py` and `discopy/quantum/pennylane.py` to `test/abc.py` and `test/quantum/pennylane.py`, shared test code from `test/fixtures`; CI collects exactly the same tests
