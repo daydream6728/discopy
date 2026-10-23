@@ -10,7 +10,7 @@ form. So the section makes the proof a construction, checked in the semantics, a
 where the paper has equations: the involutions Tᵢ ∘ Tᵢ = id, the four commutations it draws, and
 F₃ = T₂ T₃ T₂.
 
-- [ ] §4.2 in `docs/notebooks/boolean-circuits.md`:
+- [WIP] @session_01M8CWacKqbJVKPcDMd2m3AD-2026-10-23 07:30 §4.2 in `docs/notebooks/boolean-circuits.md`:
   - [ ] the gates T₁, T₂, T₃, Tₙ as boxes with their permutations, τ as wiring, and Lemma 14
   - [ ] Theorem 12 as a construction: an even permutation as 3-cycles, each 3-cycle an affine
     conjugate of one standard 3-cycle, the standard one a commutator of Cᵏ NOT gates, each of those
