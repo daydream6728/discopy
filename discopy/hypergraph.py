@@ -19,6 +19,7 @@ Summary
     Match
     Rule
     Hypergraph
+    Decoder
     Functor
 
 .. admonition:: Functions
@@ -2942,13 +2943,9 @@ class Hypergraph(
         in one pass; this is what :meth:`discopy.symmetric.Diagram.foliation`
         relies on.
 
-        The open wires are scanned from left to right: the domain wires of
-        each box are gathered at its offset with one permutation, see
-        :meth:`discopy.python.finset.Permutation.gather`, emitted with
-        :meth:`discopy.abc.SymmetricCategory.from_permutation`, i.e. a
-        :class:`discopy.symmetric.Permutation` box when the category has a
-        native one and its ``permutation`` otherwise. An offset recorded on
-        a state by :meth:`discopy.monoidal.Diagram.to_hypergraph` is a hint
+        The open wires are scanned from left to right by a :class:`Decoder`,
+        placing the boxes in the order of :attr:`boxes`. An offset recorded
+        on a state by :meth:`discopy.monoidal.Diagram.to_hypergraph` is a hint
         read in the scan of this pass, which :meth:`make_bijective` keeps as
         it was recorded, its spider boxes coming after every such state; a
         hint past the end of the scan, e.g. one given by hand, is clamped to
@@ -3004,34 +3001,9 @@ class Hypergraph(
                 raise AxiomError(messages.NOT_RIGID.format(
                     factory_name(self.category)))
             return self.make_monogamous().make_causal().to_diagram()
-        foliate = self.is_boundary_connected
-        diagram, scan = self.category.id(self.dom), self.dom_wires
-        pending, layer_dom, layer_right, shift = [], self.dom, 0, 0
-
-        def permute(perm):
-            if not issubclass(self.category, SymmetricCategory):
-                raise AxiomError(messages.NOT_SYMMETRIC.format(
-                    factory_name(self.category)))
-            return self.category.from_permutation(perm, diagram.cod)
-
-        def then(other):
-            """
-            Compose with ``other``, fusing a layer of plumbing alone into the
-            one before it, e.g. the copies of a Markov category into the
-            permutation that follows them.
-            """
-            nonlocal diagram
-            last, first = diagram.inside[-1:], other.inside[:1]
-            if last and first and all(
-                    getattr(layer, "is_plumbing", False)
-                    and layer.is_generator for layer in last + first):
-                fused = last[0].generator.fuse(first[0].generator)
-                diagram = diagram.ar(
-                    diagram.inside[:-1] + fused.inside + other.inside[1:],
-                    diagram.dom, other.cod)
-            else:
-                diagram >>= other
-
+        decoder = Decoder(
+            self.category, self.dom, self.dom_wires,
+            foliate=self.is_boundary_connected, fuse=True)
         caps = getattr(self.category, "cap_factory", None)
         caps = caps if isclass(caps) else ()
 
@@ -3040,58 +3012,15 @@ class Hypergraph(
             first, last = (next((
                 dom for dom, _ in self.box_wires[depth + 1:] if wire in dom),
                 self.cod_wires) for wire in (cod_wires[0], cod_wires[-1]))
-            if cod_wires[0] in first[1:]:
-                before = first[first.index(cod_wires[0]) - 1]
-                if before in scan:
-                    return scan.index(before) + 1
-            if cod_wires[-1] in last[:-1]:
-                after = last[last.index(cod_wires[-1]) + 1]
-                if after in scan:
-                    return scan.index(after)
-            return 0
-
-        def flush():
-            nonlocal pending, layer_right, shift
-            if pending:
-                parts, cursor = [], 0
-                for placed, placed_offset in pending:
-                    parts += [layer_dom[cursor:placed_offset], placed]
-                    cursor = placed_offset + len(placed.dom)
-                parts.append(layer_dom[cursor:])
-                layer = diagram.layer_factory(*parts)
-                then(diagram.ar((layer,), layer.dom, layer.cod))
-            pending, layer_right, shift = [], 0, 0
+            offset = decoder.beside(cod_wires, first, last)
+            return 0 if offset is None else offset
 
         for depth, (box, offset) in enumerate(zip(self.boxes, self.offsets)):
             dom_wires, cod_wires = self.box_wires[depth]
-            positions = [scan.index(spider) for spider in dom_wires]
-            if offset is None:
-                offset = positions[0] if positions\
-                    else beside(depth) if isinstance(box, caps) else 0
-            offset -= sum(j < offset for j in positions)
-            if not box.dom:
-                offset = min(offset, len(scan))
-            perm = Permutation.gather(positions, len(scan), offset)
-            if not perm.is_identity:
-                flush()
-                then(permute(perm))
-                scan = tuple(scan[j] for j in perm)
-            if pending and offset < layer_right:
-                flush()
-            if not pending:
-                layer_dom = diagram.cod
-            pending.append((box, offset - shift))
-            shift += len(box.cod) - len(box.dom)
-            layer_right = offset + len(box.cod)
-            scan = scan[:offset] + cod_wires + scan[offset + len(box.dom):]
-            if not foliate:
-                flush()
-        flush()
-        perm = Permutation(
-            [scan.index(spider) for spider in self.cod_wires], len(scan))
-        if not perm.is_identity:
-            then(permute(perm))
-        return diagram
+            if offset is None and not dom_wires:
+                offset = beside(depth) if isinstance(box, caps) else 0
+            decoder.place(box, dom_wires, cod_wires, offset)
+        return decoder.close(self.cod_wires)
 
     @classmethod
     def from_callable(cls, dom: Ty, cod: Ty) -> Callable[Callable, Hypergraph]:
@@ -3327,6 +3256,173 @@ class Hypergraph(
             finally:
                 plt.close()
         plt.show()
+
+
+class Decoder:
+    """
+    A diagram being decoded from a :class:`Wiring`, with the wires open below
+    it from left to right, i.e. the scan. It is the one decoder of
+    :meth:`Hypergraph.to_diagram` and :meth:`discopy.cmap.CMap.to_diagram`,
+    which differ in the order they place the boxes in, in where a box with
+    no domain goes and in whether boxes side by side share a layer.
+
+    Each box gathers its domain wires at its offset with one permutation, see
+    :meth:`discopy.python.finset.Permutation.gather`, emitted with
+    :meth:`discopy.abc.SymmetricCategory.from_permutation`, i.e. a
+    :class:`discopy.symmetric.Permutation` box when the category has a native
+    one and its ``permutation`` otherwise, then its codomain wires replace
+    them in the scan.
+
+    Parameters:
+        category : The category of the diagram.
+        dom : The domain of the diagram.
+        wires : The wires of the domain.
+        foliate : Whether boxes side by side share a layer.
+        fuse : Whether a layer of plumbing alone is fused into the one
+            before it, e.g. the copies of a Markov category into the
+            permutation that follows them.
+
+    Example
+    -------
+    >>> from discopy.symmetric import Ty, Box, Diagram
+    >>> x, y = Ty('x'), Ty('y')
+    >>> f, g = Box('f', y @ x, x), Box('g', x, y)
+    >>> decoder = Decoder(Diagram, x @ y, (0, 1))
+    >>> decoder.place(f, (1, 0), (2, ))
+    >>> decoder.place(g, (2, ), (3, ))
+    >>> print(decoder.close((3, )))
+    Swap(x, y) >> f >> g
+    """
+    def __init__(  # pylint: disable=too-many-arguments  # a flag per encoding
+            self, category: type, dom: Ty, wires: Wires, *,
+            foliate: bool = False, fuse: bool = False):
+        self.category, self.foliate, self.fuse = category, foliate, fuse
+        self.diagram, self.wires = category.id(dom), tuple(wires)
+        self.layer = []
+
+    def permute(self, perm: Permutation) -> Diagram:
+        """
+        The permutation of the scan, which needs a symmetric category.
+
+        Parameters:
+            perm : The permutation of the open wires.
+        """
+        if not issubclass(self.category, SymmetricCategory):
+            raise AxiomError(messages.NOT_SYMMETRIC.format(
+                factory_name(self.category)))
+        return self.category.from_permutation(perm, self.diagram.cod)
+
+    def then(self, other: Diagram) -> None:
+        """
+        Compose with ``other``, fusing a layer of plumbing alone into the one
+        before it when :attr:`fuse`.
+
+        Parameters:
+            other : The diagram to compose with.
+        """
+        layers = self.diagram.inside[-1:] + other.inside[:1]\
+            if self.fuse else ()
+        if len(layers) == 2 and all(
+                getattr(layer, "is_plumbing", False) and layer.is_generator
+                for layer in layers):
+            fused = layers[0].generator.fuse(layers[1].generator)
+            self.diagram = self.diagram.ar(
+                self.diagram.inside[:-1] + fused.inside + other.inside[1:],
+                self.diagram.dom, other.cod)
+        else:
+            self.diagram >>= other
+
+    def flush(self) -> None:
+        """
+        Compose with the :attr:`layer` of boxes placed side by side, each
+        with its offset in the scan: a box alone is whiskered, so that a
+        concrete category with no layers decodes too.
+        """
+        dom = self.diagram.cod
+        if len(self.layer) == 1:
+            box, offset = self.layer[0]
+            self.then(dom[:offset] @ box @ dom[offset + len(box.dom):])
+        elif self.layer:
+            parts, cursor, shift = [], 0, 0
+            for box, offset in self.layer:
+                parts += [dom[cursor:offset - shift], box]
+                cursor = offset - shift + len(box.dom)
+                shift += len(box.cod) - len(box.dom)
+            parts.append(dom[cursor:])
+            layer = self.diagram.layer_factory(*parts)
+            self.then(self.diagram.ar((layer, ), layer.dom, layer.cod))
+        self.layer = []
+
+    def place(self, box: Box, dom_wires: Wires, cod_wires: Wires,
+              offset: int = None) -> None:
+        """
+        Place a box, gathering its domain wires at an offset in the scan.
+        The box shares the layer of the box before it if :attr:`foliate`,
+        no permutation comes between them and it lies on its right.
+
+        Parameters:
+            box : The box to place.
+            dom_wires : The wires of its domain.
+            cod_wires : The wires of its codomain.
+            offset : Where in the scan, before the domain wires are gathered,
+                by default at the first of them. An offset past the end of
+                the scan is clamped to it.
+        """
+        positions = [self.wires.index(wire) for wire in dom_wires]
+        offset = positions[0] if offset is None else offset
+        offset -= sum(j < offset for j in positions)
+        if not dom_wires:
+            offset = min(offset, len(self.wires))
+        perm = Permutation.gather(positions, len(self.wires), offset)
+        if not perm.is_identity:
+            self.flush()
+            self.then(self.permute(perm))
+            self.wires = tuple(self.wires[j] for j in perm)
+        if self.layer:
+            last, last_offset = self.layer[-1]
+            if offset < last_offset + len(last.cod):
+                self.flush()
+        self.layer.append((box, offset))
+        self.wires = self.wires[:offset] + tuple(cod_wires)\
+            + self.wires[offset + len(dom_wires):]
+        if not self.foliate:
+            self.flush()
+
+    def beside(self, wires: Wires, first: Wires, last: Wires) -> int | None:
+        """
+        Where a box with no domain goes next to the wire that the reader of
+        its first wire reads on the left of it, or else the one that the
+        reader of its last wire reads on the right of it, when that wire is
+        in the scan, e.g. a cap of :meth:`Hypergraph.make_monogamous`.
+
+        Parameters:
+            wires : The wires of the codomain of the box.
+            first : The wires the reader of its first wire reads.
+            last : The wires the reader of its last wire reads.
+        """
+        if wires[0] in first[1:]:
+            before = first[first.index(wires[0]) - 1]
+            if before in self.wires:
+                return self.wires.index(before) + 1
+        if wires[-1] in last[:-1]:
+            after = last[last.index(wires[-1]) + 1]
+            if after in self.wires:
+                return self.wires.index(after)
+        return None
+
+    def close(self, wires: Wires) -> Diagram:
+        """
+        The decoded diagram, with the scan permuted into the codomain.
+
+        Parameters:
+            wires : The wires of the codomain.
+        """
+        self.flush()
+        perm = Permutation(
+            [self.wires.index(wire) for wire in wires], len(self.wires))
+        if not perm.is_identity:
+            self.then(self.permute(perm))
+        return self.diagram
 
 
 class Functor(cat.Functor):
