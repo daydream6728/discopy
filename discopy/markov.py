@@ -726,7 +726,7 @@ class Bubble(symmetric.Bubble, Box):
     """
     A markov bubble is a symmetric bubble and a markov box: a total function
     unless it says otherwise, whatever its args, and it keeps what it says
-    through dagger, substitution, rotation and functors.
+    through dagger, substitution, rotation and markov functors.
 
     Parameters:
         args (Diagram) : The diagrams inside the bubble.
