@@ -268,6 +268,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - The tests keep the `--skip-extra` contract, those that could not fail can,
   `CONTRIBUTING.md` names `setuptools`, and `build.yml` drops credentials
   ([next#31]).
+- Coverage's 98% gate reads `discopy/` alone, `ehypergraph` covered first,
+  and pytest imports tests by path, so `test/abc.py` mirrors `abc` ([next#31]).
 
 ## [1.2.2] - 2025-12-19
 
