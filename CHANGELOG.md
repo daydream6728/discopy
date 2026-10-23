@@ -127,7 +127,7 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - Faster tensor of `n` morphisms ([#623]), of Python functions, and
   `finset.Permutation.then` ([#763]).
 - A functor maps a layer with one `n`-ary `tensor` rather than a fold of
-  `@`, e.g. 36 ms rather than 1.0 s on 200 boxes ([next#161]).
+  `@`, with one `tensor` call per layer ([next#161]).
 
 ### Deprecated
 
