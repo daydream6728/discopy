@@ -298,10 +298,9 @@ class Scalar(Channel):
     Scalar with a complex value.
     """
     def __init__(self, value):
-        if getattr(value, "free_symbols", None):
-            self.scalar = value
-        else:
-            self.scalar = complex(value)
+        if not getattr(value, "free_symbols", None):
+            value = complex(value)
+        self.scalar = value
         super().__init__(
             f"{value}",
             diagram.Scalar(value)
