@@ -1040,10 +1040,11 @@ class Functor(Category):
         """
         assert_isinstance(other, Functor)
         assert_iscomposable(self, other)
-        unit = self.id(self.cod)
-        if self == unit:
+        if self.ob_map.mapping is self.ar_map.mapping is identity\
+                and self == self.id(self.dom):
             return other
-        if other == unit:
+        if other.ob_map.mapping is other.ar_map.mapping is identity\
+                and other == other.id(other.dom):
             return self
         ob_map, ar_map = self.ob_map.then(other), self.ar_map.then(other)
         return type(self)(ob_map, ar_map, dom=self.dom, cod=other.cod)

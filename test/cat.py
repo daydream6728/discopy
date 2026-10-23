@@ -459,8 +459,21 @@ def test_Functor_then_unit():
         assert Functor.id() >> H == H == H >> Functor.id()
     assert Functor.id() == Functor.id() >> Functor.id()
     assert G >> G != G >> G
-    alpha = Transformation.id(Functor.id())
-    assert (alpha >> alpha)(x) == Arrow.id(x)
+    alpha, beta = (Transformation.id(Functor.id()) for _ in range(2))
+    assert (alpha >> beta)(x) == Arrow.id(x)
+
+    class Strict:
+        """ A map whose equality assumes its own type. """
+        key = 0
+
+        def __call__(self, x):
+            return x
+
+        def __eq__(self, other):
+            return self.key == other.key
+
+    H = Functor(Strict(), Strict())
+    assert (H >> F)(x) == F(x) == (F >> H)(x)
 
 
 def test_Bubble_no_common_boundary():
