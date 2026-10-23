@@ -747,3 +747,31 @@ def test_kernel_of_a_diagram_and_its_errors():
     with pytest.raises(NotImplementedError):
         Interferometer([[0, 1], [1, 0]], 1, (1, ), indistinguishability=.5
                        ).kernel().distribution(1)
+
+
+@requires_jax
+def test_kernel_at_the_endpoints_of_its_parameters():
+    from jax import numpy as jnp
+    beam = np.array([[1, 1], [1, -1]]) / np.sqrt(2)
+    kernel = Interferometer(beam, 1, (1, ), efficiency=.5).kernel(cap=1)
+    for efficiency in (0., 1.):
+        assert_close({history: float(probability) for history, probability
+                      in kernel.distribution(1, params=dict(
+                          kernel.parameters(), efficiency=efficiency)
+                      ).items()}, Interferometer(
+                          beam, 1, (1, ), efficiency=efficiency
+                      ).distribution(1))
+    swap = Interferometer([[0, 1], [1, 0]], 1, (1, ), .5,
+                          indistinguishability=0.)
+    kernel = swap.kernel(cap=1, private=1)
+    outcomes = kernel.trajectories(4, shots=20, seed=3)["outcomes"]
+    for name, impossible in [
+            ("indistinguishability", outcomes["private"][:, :, 0]),
+            ("transmissivity", ~outcomes["survive"][:, :, -1])]:
+        _, possible = kernel.log_prob(
+            outcomes, dict(kernel.parameters(), **{name: jnp.asarray(1.)}))
+        assert np.array_equal(possible, ~np.any(impossible, axis=1))
+    kernel.trajectories(4, shots=2, batch_size=1)
+    assert set(kernel.compiled) == {(4, None), (4, 1)}
+    vacuum = Interferometer(beam, 1, (0, )).kernel(cap=1)
+    assert vacuum.sample(2).tolist() == [[[0], [0]]]

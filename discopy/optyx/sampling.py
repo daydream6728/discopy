@@ -2185,6 +2185,8 @@ class Kernel:
             logp = logp + jnp.where(alive & stays, jnp.where(
                 survive, jnp.log(transmissivity),
                 safe_log(1 - transmissivity)), 0)
+            possible = possible & jnp.all(~(alive & stays) | jnp.where(
+                survive, transmissivity > 0, transmissivity < 1))
         detections = jnp.sum(jax.nn.one_hot(steps, external + 1)[:, :external]
                              * alive[:, None], axis=0).astype(jnp.int32)
         left = alive & stays & survive
@@ -2215,15 +2217,16 @@ class Kernel:
         """
         Which injected photons are in an internal state of their own, each
         with probability :math:`1 - p`, or the `forced` ones; with their log
-        probability.
+        probability and whether they were possible.
         """
         injected = len(self.injected())
         if self.interferometer.indistinguishability == 1:
-            return jnp.zeros(injected, bool), 0.
+            return jnp.zeros(injected, bool), 0., True
         private = jax.random.bernoulli(key, 1 - probability, (injected, )) \
             if forced is None else forced
         return private, jnp.sum(jnp.where(
-            private, safe_log(1 - probability), safe_log(probability)))
+            private, safe_log(1 - probability), safe_log(probability))), \
+            jnp.all(jnp.where(private, probability < 1, probability > 0))
 
     def shared(self, params: dict, schedule: tuple, loop, photons, private,
                subkeys, forced):
@@ -2236,7 +2239,7 @@ class Kernel:
         """
         chains, phases, final = schedule
         loop_modes = self.interferometer.loop
-        columns = np.array(self.sweep.columns[loop_modes:]) - loop_modes
+        columns = np.array(self.sweep.columns[loop_modes:], int) - loop_modes
         injected = jnp.asarray(self.interferometer.inputs)[columns] \
             - jax.ops.segment_sum(private.astype(jnp.int32), jnp.asarray(
                 np.searchsorted(columns, self.injected())), len(columns))
@@ -2273,7 +2276,9 @@ class Kernel:
         recorded = jax.random.binomial(key, detected, efficiency).astype(
             jnp.int32) if forced is None else forced
         gammaln = jax.scipy.special.gammaln
-        possible = recorded <= detected
+        possible = (recorded <= detected) \
+            & ((recorded == 0) | (efficiency > 0)) \
+            & ((recorded == detected) | (efficiency < 1))
         return recorded, jnp.sum(jnp.where(
             possible, gammaln(detected + 1.) - gammaln(recorded + 1.)
             - gammaln(detected - recorded + 1.)
@@ -2293,15 +2298,15 @@ class Kernel:
         loop, photons, walkers, active = state
         subkeys = jax.random.split(key, 6) if forced is None else [None] * 6
         forced = {} if forced is None else forced
-        private, logp = self.colour(
+        private, logp, possible = self.colour(
             params["indistinguishability"], subkeys[0], forced.get("private"))
-        loop, photons, pattern, lost, step_logp, possible, overflow = \
+        loop, photons, pattern, lost, step_logp, step_possible, overflow = \
             self.shared(params, schedule, loop, photons, private,
                         subkeys[1:3], forced or None)
         outcomes = {"private": private, "shared": pattern, "lost": lost,
                     "walk": jnp.zeros(len(private) + self.private, jnp.int32),
                     "survive": jnp.zeros(len(private) + self.private, bool)}
-        logp = logp + step_logp
+        logp, possible = logp + step_logp, possible & step_possible
         if self.interferometer.indistinguishability < 1:
             detections, walkers, active, walked, step_logp, step_possible, \
                 crowded = self.walk(
@@ -2342,12 +2347,12 @@ class Kernel:
         `batch_size` at a time in parallel.
         """
         params = self.parameters() if params is None else params
-        if ticks not in self.compiled:
-            self.compiled[ticks] = jax.jit(
+        if (ticks, batch_size) not in self.compiled:
+            self.compiled[ticks, batch_size] = jax.jit(
                 lambda keys, params: jax.lax.map(
                     lambda key: self.run(key, ticks, params), keys,
                     batch_size=batch_size))
-        return self.compiled[ticks](
+        return self.compiled[ticks, batch_size](
             jax.random.split(jax.random.PRNGKey(seed), shots), params)
 
     def sample(self, ticks: int, burn_in: int = 0, shots: int = 1,
