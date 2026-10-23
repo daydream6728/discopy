@@ -898,12 +898,12 @@ class CMap[C0: Pregroup, C1: CMap](
         ...     (CMap.caps(x.r, x), 0), (CMap.cups(x.r, x), 0)]).loops == (x, )
         True
         """
-        wires, ends, objects = [], [], []
+        wires, ends, origins = [], [], []
 
-        def fresh(obj):
+        def fresh(origin=None):
             wires.append(len(wires))
             ends.append([])
-            objects.append(obj)
+            origins.append(origin)
             return len(wires) - 1
 
         def find(wire):
@@ -919,17 +919,16 @@ class CMap[C0: Pregroup, C1: CMap](
                 wires[target] = source
 
         scan = []
-        for i, obj in enumerate(dom):
-            scan.append(fresh(obj))
+        for i in range(len(dom)):
+            scan.append(fresh())
             ends[scan[i]].append(i)
         boxes, loops, start = (), (), len(dom)
         for image, offset in images:
             arity, coarity = len(image.dom), len(image.cod)
-            local, image_ports = {}, image.ports
+            local = {}
             for source, target in enumerate(image.edges):
                 if source <= target:
-                    local[source] = local[target] = fresh(
-                        image_ports[source].obj)
+                    local[source] = local[target] = fresh((image, source))
             for port in range(arity, image.n_ports - coarity):
                 ends[find(local[port])].append(start + port - arity)
             for i in range(arity):
@@ -944,7 +943,8 @@ class CMap[C0: Pregroup, C1: CMap](
         edges = list(range(start + len(cod)))
         for wire in {find(wire) for wire in range(len(wires))}:
             if not ends[wire]:
-                loop = objects[wire]
+                image, source = origins[wire]
+                loop = image.ports[source].obj
                 loop = loop if isinstance(loop, cls.category.ob)\
                     else cls.ob(loop)
                 loops = loops + (
