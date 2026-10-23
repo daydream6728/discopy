@@ -168,7 +168,7 @@ Four schemas, each derived from Lafont's relations:
 * `flatten`: associativity and unit of the sums and copies, their commutativity being absorbed. A sum with a sum on one of its inputs is one sum, dually for copies, and a sum or a copy of arity one is the identity.
 * `scale`: the scalars of Fig. 36. The scalar $1$ is the identity, $0$ is $\eta \circ \varepsilon$, and two scalars in a row are their product.
 * `push`: the bialgebra relations of Fig. 13 and the scalars of Fig. 36, which move a copy above a sum or a scalar, and a scalar above a sum.
-* `parallel`: $a + b = \mu \circ (a \mid b) \circ \delta$ of Fig. 36, which is $x + x = 0$ over $\mathbb{Z}_2$. All the edges from one copy to one sum become one, scaled by their sum. Taking them all at once is what keeps the match convex.
+* `parallel`: $a + b = \mu \circ (a \mid b) \circ \delta$ of Fig. 36, which is $x + x = 0$ over $\mathbb{Z}_2$. All the edges from one copy to one sum become one, scaled by their sum. Taking them all at once is what keeps the match convex once the other rules are done, and a match that is not convex, the copy reaching the sum through some other box too, waits for them.
 
 ```python {.marimo}
 def flatten(graph, p):
@@ -277,10 +277,12 @@ def parallel(graph, p):
                         (Scalar(total), ["e"], ["f"]),
                         (Sum(b + 1), ["f"] + names(b, "r"), ["t"])]
             scalars = [s for _, s in these if s is not None]
-            return instance(
+            result = instance(
                 graph, [i] + scalars + [j],
                 list(graph.box_wires[i][0]) + rest, others + list(outs),
                 hypergraph(["c"] + names(b, "r"), edge, names(a, "o") + ["t"]))
+            if graph.is_convex(result[2]):
+                return result
     return None
 
 
