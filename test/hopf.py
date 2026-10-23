@@ -208,7 +208,7 @@ def test_intertwiner_is_a_network_between_modules():
     assert (braid @ braid).eval(dtype=complex).is_close(
         (braid.inside @ braid.inside).eval(dtype=complex))
     anyon = Representation[D].anyon(1, 1)
-    for x in [anyon, braid, D, taft]:
+    for x in [anyon, braid, D, taft, Intertwiner.caps(V, V.r)]:
         assert loads(dumps(x)) == x
     assert loads(dumps(anyon)).action == anyon.action
     assert eval(repr(braid)) == braid
@@ -216,6 +216,16 @@ def test_intertwiner_is_a_network_between_modules():
     cup = Intertwiner[taft].cups(V, V.r)
     assert cup.inside.to_hypergraph().to_diagram().eval(
         dtype=complex).is_close(cup.eval(dtype=complex))
+
+
+def test_intertwiner_refuses_a_module_over_another_algebra():
+    D, _ = double_and_module()
+    V = Representation[taft].regular()
+    try:
+        Intertwiner[D](tensor.Id(Dim(*V.inside)), V, V)
+        assert False
+    except ValueError:
+        pass
 
 
 def test_representation_is_module():

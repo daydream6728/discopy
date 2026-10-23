@@ -1011,6 +1011,10 @@ class Intertwiner(NamedGeneric["algebra"], RibbonCategory):
         else Representation[cls.algebra])
 
     def __init__(self, inside, dom, cod):
+        for x in (dom, cod):
+            if isinstance(x, Representation) and not isinstance(x, self.ob):
+                raise ValueError(f"expected a module over {self.algebra}, "
+                                 f"got one over {x.algebra}")
         dom, cod = (x if isinstance(x, self.ob) else self.ob(Dim(*x.inside))
                     for x in (dom, cod))
         spaces = Dim(*dom.inside), Dim(*cod.inside)
@@ -1041,7 +1045,8 @@ class Intertwiner(NamedGeneric["algebra"], RibbonCategory):
     def to_tree(self) -> dict:
         """
         Serialise an intertwiner with its algebra, its network and the
-        trees of its modules, see :meth:`Representation.to_tree`.
+        trees of its modules, see :meth:`Representation.to_tree`. An
+        unsubscripted intertwiner has no algebra in its tree.
 
         >>> from discopy.utils import dumps, loads
         >>> D = Double(Algebra.cyclic(2))
@@ -1049,15 +1054,18 @@ class Intertwiner(NamedGeneric["algebra"], RibbonCategory):
         >>> braid = Intertwiner[D].braid(V, V)
         >>> assert loads(dumps(braid)) == braid
         """
-        return {'factory': factory_name(get_origin(type(self))),
-                'algebra': self.algebra.to_tree(),
+        tree = {'factory': factory_name(get_origin(type(self))),
                 'inside': self.inside.to_tree(),
                 'dom': self.dom.to_tree(), 'cod': self.cod.to_tree()}
+        if self.algebra is not None:
+            tree['algebra'] = self.algebra.to_tree()
+        return tree
 
     @classmethod
     def from_tree(cls, tree: dict) -> Intertwiner:
         """ Load an intertwiner as a member of ``cls[algebra]``. """
-        return cls[from_tree(tree['algebra'])](*map(
+        algebra = from_tree(tree['algebra']) if 'algebra' in tree else None
+        return cls[algebra](*map(
             from_tree, (tree['inside'], tree['dom'], tree['cod'])))
 
     @classmethod
