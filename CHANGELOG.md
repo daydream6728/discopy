@@ -91,6 +91,9 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   feedback loops tick by tick, closed or fed by a `source`, its burn-in
   certified when it is passive, and `channel.Observable` is the effect of a
   normal operator or of a function of the outcomes ([optyx#76]).
+- `optyx.interaction`, combinatorial maps of recurrent channels, each box
+  with a private memory and a prediction, unrolled or run to an approximate
+  fixed point ([optyx#16]).
 - `hopf.Intertwiner.chart` and `hopf.Algebra.symmetric(n)` ([#408]).
 - `copying`, a law of `Testable` beside `pickling` ([next#1]), and the
   generators of each level as typed class variables ([next#1]).
@@ -162,6 +165,10 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - `discopy.optyx` keeps no private members in `channel` and `core.diagram`:
   `decomp`, `dual_rail`, `Ob.classical`, `Ob.quantum` and `Box.array` are
   public, and the imports that make no cycle are at the top ([optyx#29]).
+- The notebooks of `discopy.optyx` are marimo, rendered and checked by
+  `docs/export_notebooks.py` along with DisCoPy's notebooks, four at a time
+  on CI with `--jobs 4`, and the `notebooks` extra takes the pandas, seaborn
+  and tqdm they import ([optyx#67]).
 
 ### Deprecated
 
@@ -257,6 +264,9 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - `zx`: `eval` is the standard interpretation ([#587], [#625]),
   `spider_factory` ([next#149]), `grad` ([next#75]), and the pyzx round trip
   keeps scalars and parallel wires ([next#74], [next#82]).
+- `optyx.sampling.twomode` is unitary at any number of photons, as the
+  exponential of the lift of `sampling.generator`, a logarithm of the
+  two-mode unitary, where expanding the products cancelled ([optyx#84]).
 - `hopf.Intertwiner`: `cups`, `caps` and `twist` ([next#31]).
 - `hopf.Functor` sends the dagger of a twist to its inverse, `to_braided`
   takes traces and generators, and commutes with `delay` ([next#31]).
@@ -515,8 +525,11 @@ for the changelog of `1.2.1` and earlier.
 [next#310]: https://github.com/rel-int/discopy-next/pull/310
 [next#316]: https://github.com/rel-int/discopy-next/pull/316
 [next#320]: https://github.com/rel-int/discopy-next/pull/320
+[optyx#16]: https://github.com/rel-int/optyx/pull/16
 [optyx#29]: https://github.com/rel-int/optyx/pull/29
+[optyx#67]: https://github.com/rel-int/optyx/pull/67
 [optyx#76]: https://github.com/rel-int/optyx/pull/76
+[optyx#84]: https://github.com/rel-int/optyx/pull/84
 [lambek#2]: https://github.com/rel-int/lambek/pull/2
 [lambek#8]: https://github.com/rel-int/lambek/pull/8
 [lambek#12]: https://github.com/rel-int/lambek/pull/12
