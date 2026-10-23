@@ -713,7 +713,7 @@ def test_plug_input():
         f.plug_input(-1, Box("lambda", x, y @ z), y)
     with raises(ValueError, match="range"):
         f.plug_input(0, Box("lambda", x, y @ z), y, root_index=2)
-    with raises(ValueError, match="Cannot plug"):
+    with raises(ValueError, match="expected a box"):
         f.plug_input(0, Box("bad", Ty(), y @ z), y)
 
 
@@ -978,6 +978,14 @@ def test_from_wiring():
     assert closed.n_ports == 4 and closed.is_monogamous
     assert closed.dom == closed.cod == Ty() and closed.boxes == (f, f)
     assert closed == (M.from_box(f) >> M.from_box(f)).trace()
+
+
+def test_cups_and_caps_decode_with_their_legs_in_scan_order():
+    """ A cup's or cap's legs go in the order their readers sit in the scan,
+    so decoding adds no swap the diagram did not have, see #139. """
+    from fixtures.diagrams import bent_wires
+    for diagram in bent_wires():
+        assert diagram.to_map().to_diagram() == diagram
 
 
 def test_to_diagram_routes_with_one_permutation():

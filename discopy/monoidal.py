@@ -851,13 +851,36 @@ class Layer(cat.Box, ColouredMonoid):
                     cod, cod_, cod.cod, cod_.dom))
 
     @classmethod
+    def is_plumbing_box(cls, value: Ty | Box) -> bool:
+        """
+        Whether a component of a layer is plumbing other than a type, e.g. a
+        :class:`discopy.symmetric.Permutation` in a symmetric layer, none in
+        a monoidal one.
+
+        Parameters:
+            value : The component of a layer.
+        """
+        return isinstance(value, cls.plumbing) and not isinstance(value, Ty)
+
+    @classmethod
+    def is_plumbing_component(cls, value: Ty | Box) -> bool:
+        """
+        Whether a component of a layer is plumbing, i.e. a type or a box of
+        plumbing, see :meth:`is_plumbing_box`.
+
+        Parameters:
+            value : The component of a layer.
+        """
+        return isinstance(value, Ty) or cls.is_plumbing_box(value)
+
+    @classmethod
     def normalise(cls, inside):
         """ The canonical word of boxes and non-empty plumbing: either we
         append or we tensor with the last element. """
         result = []
         for value in (x for x in inside if not isinstance(x, Ty) or x):
-            if not result or not isinstance(value, cls.plumbing)\
-                    or not isinstance(result[-1], cls.plumbing):
+            if not result or not cls.is_plumbing_component(value)\
+                    or not cls.is_plumbing_component(result[-1]):
                 result.append(value)
             else:
                 result[-1] = result[-1] @ value
@@ -958,7 +981,7 @@ class Layer(cat.Box, ColouredMonoid):
 
     def subs(self, *args) -> Layer:
         return type(self)(*(
-            x if isinstance(x, self.plumbing) else x.subs(*args)
+            x if self.is_plumbing_component(x) else x.subs(*args)
             for x in self),
             normalise=False)
 
@@ -1036,7 +1059,7 @@ class Layer(cat.Box, ColouredMonoid):
 
     def lambdify(self, *symbols, **kwargs):
         return lambda *xs: type(self)(*(
-            x if isinstance(x, self.plumbing)
+            x if self.is_plumbing_component(x)
             else x.lambdify(*symbols, **kwargs)(*xs) for x in self),
             normalise=False)
 
@@ -1290,7 +1313,19 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
         return (functor_factory or Functor)(ob, ar, dom, cod)(self)
 
     def to_map(self) -> CMap:
-        """ Translate a diagram into a combinatorial map. """
+        """
+        Translate a diagram into a combinatorial map.
+
+        A map does not say in which face a closed component lies, so it
+        identifies diagrams up to moving a scalar across a wire, as
+        :meth:`to_hypergraph` does. From braided categories on, a scalar
+        slides past a wire anyway, by naturality of the braiding; below, the
+        map presents the free spacial category, see :mod:`discopy.spacial`
+        and :meth:`discopy.cmap.CMap.match`, rather than the free category.
+
+        >>> x, c = Ty('x'), Box('c', Ty(), Ty())
+        >>> assert c @ x != x @ c and (c @ x).to_map() == (x @ c).to_map()
+        """
         return cmap.CMap[self.ar].from_diagram(self)
 
     def to_staircases(self):
@@ -1327,12 +1362,24 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
         offset counts wires the hypergraph no longer has, so the states that
         follow are left to the decoder.
 
+        Like :meth:`to_map`, it identifies diagrams up to moving a closed
+        component, i.e. a scalar, across a wire, which below braided
+        categories presents the free spacial category, see
+        :mod:`discopy.spacial`. Decoding gives back a diagram with the same
+        hypergraph, i.e. ``d.to_hypergraph().to_diagram().to_hypergraph()``
+        is ``d.to_hypergraph()``, and that diagram is ``d`` up to the axioms
+        and, below braided, up to where its scalars lie.
+
         Example
         -------
         >>> x, y = Ty('x'), Ty('y')
         >>> f0, f1 = Box('f0', x, y), Box('f1', y, x)
         >>> diagram = f0 @ f1.dagger() >> f0.dagger() @ f1
         >>> assert diagram.to_hypergraph().to_diagram() == diagram.foliation()
+
+        >>> c = Box('c', Ty(), Ty())
+        >>> assert c @ x != x @ c
+        >>> assert (c @ x).to_hypergraph() == (x @ c).to_hypergraph()
         """
         graph = hypergraph.Hypergraph[type(self).ar].from_diagram(self)
         if all(box.dom for box in self.boxes):
@@ -1819,6 +1866,15 @@ class Functor(cat.Functor):
     empty coloured identity ``Ty.id(c)`` keeps its (mapped) colour whenever
     ``cod.ob`` has an ``id`` method, e.g. ``F(Ty.id(c)) == Ty.id(F(c))``.
 
+    Note
+    ----
+    A :class:`Layer` maps to the tensor of its images. When ``cod`` is a
+    :class:`discopy.abc.MonoidalCategory`, the first two are tensored with
+    ``@`` as in a fold, e.g. so that a type next to a
+    :class:`discopy.symmetric.Permutation` gives a wider permutation, and the
+    others are whiskered and tensored in one ``n``-ary call. Any other
+    ``cod`` folds ``@``, e.g. :class:`discopy.kleisli.multiplicative.Channel`.
+
     Example
     -------
     >>> x, y, z, w = Ty('x'), Ty('y'), Ty('z'), Ty('w')
@@ -1903,6 +1959,11 @@ class Functor(cat.Functor):
                     raise AxiomError(messages.NOT_GLOBULAR.format(
                         result.dom, result.cod, *expected))
             return result
+        if isinstance(other, Layer) and issubclass(
+                self.cod.ar, abc.MonoidalCategory):
+            images = list(map(self, other))
+            head = images[0] if len(images) == 1 else images[0] @ images[1]
+            return head.tensor(*map(self.cod.ar.whisker, images[2:]))
         if isinstance(other, Layer):
             head, *tail = other
             result = self(head)
