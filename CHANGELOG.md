@@ -55,6 +55,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - Double-pushout rewriting of hypergraphs, `Hypergraph.match`, `rewrite` and
   `normal_form`, after Bonchi et al., and of planar diagrams on `CMap`, with
   `CMap.sweep` and `CMap.match`.
+- `hypergraph.Rewriter`, double-pushout rewriting in place with left-linear
+  rules, each step in the size of the rule rather than of the host.
 - `discopy.ehypergraph`, e-graphs of diagrams with sharing, with congruence
   closure, rewriting and e-matching.
 - `Hypergraph.pass_token`, evaluation over a disjoint-union tensor ([#363],
@@ -79,13 +81,16 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - `hopf.Intertwiner.chart` and `hopf.Algebra.symmetric(n)` ([#408]).
 - `copying`, a law of `Testable` beside `pickling` ([next#1]), and the
   generators of each level as typed class variables ([next#1]).
+- `str_transparency`, a law of `Testable` beside `transparency`: `str(x)`
+  evaluates back to `x`, each generator bound by its name ([next#163]).
 - The property matrix reports the cells that cannot fail and those a
   baseline checked and this run did not ([#773], [#775]).
 - `drawing.widget.DiagramWidget`, an opt-in anywidget ([#466]).
 - Notebooks: *Minimality of the pure qubit ZX calculus* ([#626], [#688]),
   *Categorical deep learning* ([next#124], [next#125]), *Neural Church
   arithmetic* ([#677]), *Parsing arithmetic* and *Boolean circuits*,
-  Lafont's maps and linear maps as double-pushout rewriting ([next#310]).
+  Lafont's maps, linear maps, Boolean functions and reversible circuits as
+  double-pushout rewriting ([next#310], [next#316], [next#320]).
 
 ### Changed
 
@@ -470,6 +475,7 @@ for the changelog of `1.2.1` and earlier.
 [next#156]: https://github.com/rel-int/discopy-next/issues/156
 [next#161]: https://github.com/rel-int/discopy-next/issues/161
 [next#162]: https://github.com/rel-int/discopy-next/issues/162
+[next#163]: https://github.com/rel-int/discopy-next/issues/163
 [next#168]: https://github.com/rel-int/discopy-next/issues/168
 [next#175]: https://github.com/rel-int/discopy-next/issues/175
 [next#176]: https://github.com/rel-int/discopy-next/issues/176
@@ -479,6 +485,8 @@ for the changelog of `1.2.1` and earlier.
 [next#225]: https://github.com/rel-int/discopy-next/issues/225
 [next#283]: https://github.com/rel-int/discopy-next/pull/283
 [next#310]: https://github.com/rel-int/discopy-next/pull/310
+[next#316]: https://github.com/rel-int/discopy-next/pull/316
+[next#320]: https://github.com/rel-int/discopy-next/pull/320
 [lambek#2]: https://github.com/rel-int/lambek/pull/2
 [lambek#8]: https://github.com/rel-int/lambek/pull/8
 [lambek#12]: https://github.com/rel-int/lambek/pull/12
