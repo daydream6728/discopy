@@ -1,0 +1,4 @@
+optyx
+=====
+
+.. automodule:: discopy.optyx
