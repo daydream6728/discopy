@@ -366,24 +366,25 @@ def from_tk(tk_circuit):
         raise NotImplementedError
 
     def make_units_adjacent(tk_gate):
+        indices = list(range(n_qubits))
         offset = tk_gate.qubits[0].index[0]
         swaps = Id(qubit ** n_qubits @ bit ** n_bits)
         for i, tk_qubit in enumerate(tk_gate.qubits[1:]):
-            source, target = tk_qubit.index[0], offset + i + 1
+            source = indices.index(tk_qubit.index[0])
+            target = offset + i + 1
             if source < target:
                 left, right = swaps.cod[:source], swaps.cod[target:]
                 swap = Diagram.swap(
                     swaps.cod[source:source + 1], swaps.cod[source + 1:target])
-                if source <= offset:
-                    offset -= 1
+                offset, target = offset - 1, target - 1
             elif source > target:
                 left, right = swaps.cod[:target], swaps.cod[source + 1:]
                 swap = Diagram.swap(
-                    swaps.cod[target: target + 1],
-                    swaps.cod[target + 1: source + 1])
+                    swaps.cod[target:source], swaps.cod[source:source + 1])
             else:  # pragma: no cover
                 continue  # units are adjacent already
             swaps = swaps >> Id(left) @ swap @ Id(right)
+            indices.insert(target, indices.pop(source))
         return offset, swaps
     circuit = Id().tensor(*(n_qubits * [Ket(0)] + n_bits * [Bits(0)]))
     bras = {}
