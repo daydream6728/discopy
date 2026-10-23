@@ -632,6 +632,51 @@ def test_Functor_sum():
     assert F(f + g) == F(f) + F(g)
 
 
+def test_Functor_maps_a_layer_with_one_tensor(monkeypatch):
+    x = Ty('x')
+    boxes = [Box(f"f{i}", x, x) for i in range(9)]
+    fold = x
+    for box in boxes:
+        fold = fold @ box
+    calls, tensor = [], Diagram.tensor
+
+    def counted(self, *others):
+        calls.append(len(others))
+        return tensor(self, *others)
+
+    monkeypatch.setattr(Diagram, "tensor", counted)
+    assert Functor.id(Diagram)(Layer(x, *boxes)) == fold
+    assert calls == [1, 8]
+
+
+def test_Functor_maps_a_layer_of_permutations_as_the_fold():
+    from discopy import symmetric
+
+    x, y, z = map(symmetric.Ty, "xyz")
+    f, g = symmetric.Box('f', x, x), symmetric.Box('g', z, z)
+    F = symmetric.Functor(
+        {x: y @ y, z: z @ z},
+        {f: symmetric.Swap(y, y), g: symmetric.Swap(z, z)})
+    assert all(F(box).dom == F(box.dom) and F(box).cod == F(box.cod)
+               for box in (f, g))
+    swaps = symmetric.Permutation(y @ y @ y @ y @ z @ z, [0, 1, 3, 2, 5, 4])
+    assert F(symmetric.Layer(x, f, g)) == swaps
+    assert F((x @ f @ g).foliation()) == swaps
+
+
+def test_Functor_folds_a_layer_into_a_Category():
+    from discopy.kleisli import multiplicative
+    from discopy.kleisli.monad import Maybe
+
+    Safe = multiplicative.Channel[Maybe]
+    x = Ty('x')
+    f, g = Box('f', x, x), Box('g', x, x)
+    F = Functor({x: int}, {
+        f: Safe(lambda n: n + 1, int, int),
+        g: Safe(lambda n: 2 * n, int, int)}, cod=Safe)
+    assert F(Layer(x, f, x, g))(1, 2, 3, 4) == (1, 3, 3, 8)
+
+
 def test_coloured_Functor():
     red, green, blue = map(Colour, ("red", "green", "blue"))
     pink, lime, cyan = map(Colour, ("pink", "lime", "cyan"))

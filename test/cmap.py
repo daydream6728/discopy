@@ -980,6 +980,14 @@ def test_from_wiring():
     assert closed == (M.from_box(f) >> M.from_box(f)).trace()
 
 
+def test_cups_and_caps_decode_with_their_legs_in_scan_order():
+    """ A cup's or cap's legs go in the order their readers sit in the scan,
+    so decoding adds no swap the diagram did not have, see #139. """
+    from fixtures.diagrams import bent_wires
+    for diagram in bent_wires():
+        assert diagram.to_map().to_diagram() == diagram
+
+
 def test_to_diagram_routes_with_one_permutation():
     """ Each routing step of the decoder is one :class:`Permutation` layer
     rather than a staircase of swaps, so a permutation round-trips to itself
