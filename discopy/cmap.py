@@ -1,8 +1,5 @@
 
 """
-
-from __future__ import annotations
-
 An implementation of open `combinatorial maps
 <https://en.wikipedia.org/wiki/Combinatorial_map>`_.
 See :cite:`DelpeuchVicary22` for a comprehensive overview of combinatorial
@@ -44,6 +41,7 @@ Summary
     CMap
 """
 
+from __future__ import annotations
 
 import operator
 import shutil
@@ -2233,12 +2231,12 @@ cycles of this map.
             for box, ports in enumerate(self._box_port_indices)
             for i, port in enumerate(ports)}
 
-    def image(self, pattern: "CMap", port: int, boxes: dict) -> int:
+    def image(self, pattern: CMap, port: int, boxes: dict) -> int:
         """ The image of a box port of a pattern, given its boxes' images. """
         box, i = pattern.owners[port]
         return self._box_port_indices[boxes[box]][i]
 
-    def preserves(self, pattern: "CMap", box: int, boxes: dict) -> bool:
+    def preserves(self, pattern: CMap, box: int, boxes: dict) -> bool:
         """ Whether a box of a pattern keeps its wires to boxes mapped. """
         return all(
             self.edges[self.image(pattern, port, boxes)]
@@ -2247,7 +2245,7 @@ cycles of this map.
             and pattern.owners.get(pattern.edges[port], (None, ))[0] in boxes)
 
     def candidates(
-            self, pattern: "CMap", todo: list[int], boxes: dict
+            self, pattern: CMap, todo: list[int], boxes: dict
             ) -> tuple[int, list[int]]:
         """
         The next box of a pattern to map and its candidate images: a box
@@ -2315,7 +2313,7 @@ cycles of this map.
                 yield from self.homomorphisms(pattern, boxes | {box: image})
 
     def hole(
-            self, pattern: "CMap", homomorphism: tuple
+            self, pattern: CMap, homomorphism: tuple
             ) -> tuple[tuple[int, ...], tuple[int, ...]] | None:
         """
         The wires into and out of the image of a pattern, named as in
@@ -2354,7 +2352,7 @@ cycles of this map.
             return None
         return tuple(inputs), tuple(outputs)  # ty: ignore[invalid-return-type]
 
-    def complement(self, pattern: "CMap", homomorphism: tuple) -> Match:
+    def complement(self, pattern: CMap, homomorphism: tuple) -> Match:
         """
         The pushout complement of a homomorphism, i.e. the diagram with a
         hole that gives back the diagram of ``self`` up to interchange once
@@ -2420,7 +2418,7 @@ cycles of this map.
                 self.ports[wire].obj for wire in cut)), below),
             left=left, right=right)
 
-    def match(self, pattern: "CMap") -> Iterator[Match]:
+    def match(self, pattern: CMap) -> Iterator[Match]:
         """
         The matches of a pattern, each a diagram with a hole, see
         :meth:`complement`.
@@ -2464,7 +2462,7 @@ cycles of this map.
             if context is not None:
                 yield context
 
-    def rewrite(self, *rules: "tuple[CMap, CMap]") -> "Iterator[CMap]":
+    def rewrite(self, *rules: tuple[CMap, CMap]) -> Iterator[CMap]:
         """
         The rewrites of a map in one step, i.e. for each rule
         ``left, right`` and each :meth:`match` of ``left``, the map with
@@ -2490,7 +2488,7 @@ cycles of this map.
             for context in self.match(left):
                 yield context.substitute(target).to_map()
 
-    def normalize(self, *rules: "tuple[CMap, CMap]") -> "Iterator[CMap]":
+    def normalize(self, *rules: tuple[CMap, CMap]) -> Iterator[CMap]:
         """
         Rewrite with the first of the :meth:`rewrite` steps until there are
         none, yielding each step: it terminates if the rules do.
@@ -2523,7 +2521,7 @@ cycles of this map.
             yield graph
             graph = next(graph.rewrite(*rules), None)
 
-    def normal_form(self, *rules: "tuple[CMap, CMap]") -> "CMap":
+    def normal_form(self, *rules: tuple[CMap, CMap]) -> CMap:
         """
         The last step of :meth:`normalize`, i.e. a map to which no rule
         applies.

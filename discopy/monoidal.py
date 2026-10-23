@@ -1,9 +1,6 @@
 # -*- coding: utf-8 -*-
 
 """
-
-from __future__ import annotations
-
 The free (pre)monoidal category, i.e. planar diagrams.
 
 Summary
@@ -55,6 +52,8 @@ We can check the Eckmann-Hilton argument, up to interchanger.
 .. image:: /_static/monoidal/EckmannHilton.gif
     :align: center
 """
+
+from __future__ import annotations
 
 import itertools
 from dataclasses import dataclass, field
@@ -911,7 +910,7 @@ class Layer(cat.Box, ColouredMonoid):
                     cod, cod_, cod.cod, cod_.dom))
 
     @classmethod
-    def is_plumbing_box(cls, value: "Ty | Box") -> bool:
+    def is_plumbing_box(cls, value: Ty | Box) -> bool:
         """
         Whether a component of a layer is plumbing other than a type, e.g. a
         :class:`discopy.symmetric.Permutation` in a symmetric layer, none in
@@ -923,7 +922,7 @@ class Layer(cat.Box, ColouredMonoid):
         return isinstance(value, cls.plumbing) and not isinstance(value, Ty)
 
     @classmethod
-    def is_plumbing_component(cls, value: "Ty | Box") -> bool:
+    def is_plumbing_component(cls, value: Ty | Box) -> bool:
         """
         Whether a component of a layer is plumbing, i.e. a type or a box of
         plumbing, see :meth:`is_plumbing_box`.

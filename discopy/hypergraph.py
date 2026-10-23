@@ -1,9 +1,6 @@
 # -*- coding: utf-8 -*-
 
 """
-
-from __future__ import annotations
-
 The free hypergraph category with cospans of labeled hypergraphs as arrows.
 
 Summary
@@ -34,6 +31,7 @@ Summary
         pushout
 """
 
+from __future__ import annotations
 
 from collections import Counter
 from collections.abc import Callable, Mapping
@@ -902,7 +900,7 @@ class Hypergraph[category](
         yield from self.extend_boxes(pattern, spiders, boxes, injective)
 
     def extend_box(
-            self, pattern: "Hypergraph", i: int, j: int,
+            self, pattern: Hypergraph, i: int, j: int,
             spiders: dict[int, int], injective: bool = False
             ) -> dict[int, int] | None:
         """
@@ -938,7 +936,7 @@ class Hypergraph[category](
         return extended
 
     def extend_boxes(
-            self, pattern: "Hypergraph", spiders: dict[int, int],
+            self, pattern: Hypergraph, spiders: dict[int, int],
             boxes: dict[int, int], injective: bool = False
             ) -> Iterator[Match]:
         """
@@ -963,7 +961,7 @@ class Hypergraph[category](
                     pattern, extended, boxes | {i: j}, injective)
 
     def candidates(
-            self, pattern: "Hypergraph", todo: list[int],
+            self, pattern: Hypergraph, todo: list[int],
             spiders: dict[int, int], boxes: dict[int, int]
             ) -> tuple[int, list[int]]:
         """
@@ -990,7 +988,7 @@ class Hypergraph[category](
         return i, [j for j in candidates if j not in used]
 
     def extend_spiders(
-            self, pattern: "Hypergraph", spiders: dict[int, int],
+            self, pattern: Hypergraph, spiders: dict[int, int],
             boxes: dict[int, int], injective: bool = False
             ) -> Iterator[Match]:
         """
@@ -1022,7 +1020,7 @@ class Hypergraph[category](
                 yield from self.extend_spiders(
                     pattern, spiders | {rest[0]: image}, boxes, injective)
 
-    def glues(self, pattern: "Hypergraph", match: Match) -> bool:
+    def glues(self, pattern: Hypergraph, match: Match) -> bool:
         """
         Whether a homomorphism satisfies the gluing conditions of
         double-pushout rewriting with interfaces, i.e. whether it has a
@@ -1118,7 +1116,7 @@ class Hypergraph[category](
                 or not self.is_monogamous or not self.is_acyclic:
             raise AxiomError(messages.NOT_REWRITABLE.format(self))
 
-    def match(self, pattern: "Hypergraph") -> Iterator[Match]:
+    def match(self, pattern: Hypergraph) -> Iterator[Match]:
         """
         The matches of a pattern, i.e. the :meth:`homomorphisms` that have a
         pushout complement, see :meth:`glues`, and that are convex over a
@@ -1210,7 +1208,7 @@ class Hypergraph[category](
                            for label in labels.values()},
                 tuple(self.offsets[j] for j in kept))
 
-    def context_ports(self, pattern: "Hypergraph", match: Match
+    def context_ports(self, pattern: Hypergraph, match: Match
                       ) -> tuple[list[tuple], list[tuple]]:
         """
         The ports of the contexts of a match, see :meth:`complements`: those
@@ -1308,7 +1306,7 @@ class Hypergraph[category](
                         for label in split.values()):
                     yield split
 
-    def plug(self, hole: "Hypergraph") -> "Hypergraph":
+    def plug(self, hole: Hypergraph) -> Hypergraph:
         """
         Plug a hole into a context, i.e. the pushout that glues the boundary
         of the hole ``dom -> cod`` to the start of the boundary of the
@@ -1336,7 +1334,7 @@ class Hypergraph[category](
         result = (hole @ self.dom[n_cod:] >> self).trace(n_dom, left=True)
         return result.topological_order() if result.is_acyclic else result
 
-    def rewrite(self, *rules: Rule) -> Iterator["Hypergraph"]:
+    def rewrite(self, *rules: Rule) -> Iterator[Hypergraph]:
         """
         The rewrites of a hypergraph in one step, i.e. for each rule
         ``left, right``, each :meth:`match` of ``left`` and each of its
@@ -1366,7 +1364,7 @@ class Hypergraph[category](
                 for context in self.complements(left, match):
                     yield context.plug(right)
 
-    def normalize(self, *rules: Rule) -> Iterator["Hypergraph"]:
+    def normalize(self, *rules: Rule) -> Iterator[Hypergraph]:
         """
         Rewrite with the first of the :meth:`rewrite` steps until there are
         none, yielding each step: it terminates if the rules do.
@@ -1403,7 +1401,7 @@ class Hypergraph[category](
             yield graph
             graph = next(graph.rewrite(*rules), None)
 
-    def normal_form(self, *rules: Rule) -> "Hypergraph":
+    def normal_form(self, *rules: Rule) -> Hypergraph:
         """
         The last step of :meth:`normalize`, i.e. a hypergraph to which no
         rule applies.
@@ -2761,7 +2759,7 @@ class Hypergraph[category](
         return dom, cod, box_types, wires, opened
 
     @classmethod
-    def from_box(cls, box: Box) -> "Hypergraph":
+    def from_box(cls, box: Box) -> Hypergraph:
         """
         Turn a box into a hypergraph with binary spiders for each wire.
 
