@@ -216,18 +216,20 @@ def to_tk(circuit):
             + [i + len(box.cod) for i in qubits[offset:]]
 
     def prepare_bits(bits, box, offset):
-        renaming = dict()
-        start = tk_circ.n_bits if not bits else 0\
-            if not offset else bits[offset - 1] + 1
-        for i in range(start, tk_circ.n_bits):
-            old = Bit(i)
-            new = Bit(i + len(box.cod))
-            renaming.update({old: new})
-        tk_circ.rename_units(renaming)
-        for i in range(start, start + len(box.cod)):
-            tk_circ.add_bit(Bit(i), offset=offset + i - start)
+        if tk_circ.post_processing or offset == len(bits):
+            start = tk_circ.n_bits
+            for i in range(len(box.cod)):
+                tk_circ.add_bit(Bit(start + i), offset=offset + i)
+        else:
+            start = bits[offset]
+            tk_circ.rename_units({
+                Bit(i): Bit(i + len(box.cod))
+                for i in range(start, tk_circ.n_bits)})
+            tk_circ.post_processing @= Id(box.cod)
+            for i in range(start, start + len(box.cod)):
+                tk_circ.add_bit(Bit(i))
         return bits[:offset] + list(range(start, start + len(box.cod)))\
-            + [i + len(box.cod) for i in bits[offset:]]
+            + [i + len(box.cod) if i >= start else i for i in bits[offset:]]
 
     def measure_qubits(qubits, bits, box, bit_offset, qubit_offset):
         if isinstance(box, Measure) and box.override_bits:

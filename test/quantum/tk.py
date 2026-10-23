@@ -34,7 +34,8 @@ def test_Circuit_to_tk():
         == "tk.Circuit(2, 2).CX(0, 1).Measure(1, 0).Measure(0, 1)"
     assert repr((Bits(0) >> Id(bit) @ Bits(0)).to_tk())\
         == "tk.Circuit(0, 2)"
-    assert "Swap" in repr((Bra(0) @ Bits(0) >> Bits(0) @ Id(bit)).to_tk())
+    assert repr((Bra(0) @ Bits(0) >> Bits(0) @ Id(bit)).to_tk())\
+        == "tk.Circuit(1, 3).Measure(0, 0).post_select({0: 0})"
 
 
 def test_Sum_from_tk():
@@ -91,7 +92,9 @@ def test_tk_round_trip_is_numerical():
         Ket(0, 0, 0) >> Ry(.2) @ Rx(.7) @ H >> Circuit.permutation([2, 0, 1])
         >> Controlled(Ry(.4), distance=2) >> qubit @ CU1(.3, distance=-1)
         >> H @ H @ H >> Measure(3),
-        Ket(1) @ Ket(0) >> qubit @ Measure() >> Measure() @ bit]
+        Ket(1) @ Ket(0) >> qubit @ Measure() >> Measure() @ bit,
+        Ket(1) >> Measure() >> Bits(0) @ bit,
+        Ket(1, 0) >> Measure(2) >> Discard(bit) @ bit >> Bits(0) @ bit]
     for circuit in circuits:
         assert np.allclose(
             Circuit.from_tk(circuit.to_tk()).eval().array,
