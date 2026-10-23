@@ -9,7 +9,7 @@
 > P3: `Agenda.update` keeps a stale heap priority when a queued spider's incidence changes, so the advertised min-degree agenda is not maintained after rewrites. Refresh queued priorities when their degree changes.
 
 - [x] requeue level 0 with the region a step touched, with a test that random graph-like hypergraphs reduce to where no rule applies
-- [ ] the changelog says up to a scalar
+- [x] the changelog says up to a scalar
 - [x] the benchmark leaves the global random state as it was
 - [x] the agenda moves a queued spider to its current degree, measured against pyzx 0.10.7
-- [ ] merge #288's head
+- [x] merge #288's head

@@ -770,6 +770,18 @@ def test_Rewriter_errors():
         Rewriter(left).substitute(left, left, ((0, 1), (0, )))
 
 
+def test_Rewriter_rules_are_rewritable():
+    from discopy import symmetric
+    x, f = symmetric.Ty('x'), symmetric.Box('f', symmetric.Ty('x'),
+                                            symmetric.Ty('x'))
+    host = (f >> f).to_hypergraph()
+    for cod, wires in [(x @ x, (1, 1)), (symmetric.Ty(), ())]:
+        rule = symmetric.Hypergraph(
+            x, cod, (f, ), ((0, ), (((0, ), (1, )), ), wires))
+        with raises(AxiomError, match="not rewritable"):
+            Rewriter(host).normalize((rule, rule))
+
+
 def test_rewriting_edge_cases():
     x = Ty('x')
     f, g, h, k = (Box(name, x, x).to_hypergraph() for name in "fghk")
