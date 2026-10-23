@@ -54,7 +54,8 @@ if TYPE_CHECKING:
 @factory
 class Tree:
     """
-    A tree is a rule for the ``root`` and a list of trees called ``branches``.
+    A tree is a rule for the ``root`` and a list of trees called ``branches``,
+    its ``dom`` is the tensor of theirs, as composition in the free operad.
 
     Example
     -------
@@ -79,6 +80,8 @@ class Tree:
                 *[branch.cod for branch in branches]):
             raise AxiomError
         self.cod, self.root, self.branches = root.cod, root, branches
+        if not isinstance(self, Rule):
+            self.dom = Ty().tensor(*[branch.dom for branch in branches])
 
     def __repr__(self):
         return factory_name(type(self))\
