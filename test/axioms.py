@@ -296,3 +296,13 @@ def test_str_transparency():
             monoidal.Diagram.str_environment(clash)
         with raises(Unsatisfiable):
             find(st.just(clash), monoidal.Diagram.str_transparency)
+
+
+def test_environment_binds_numpy_scalar_types():
+    """ A dtype numpy names reads back, after the package names, see #162. """
+    import numpy as np
+    from discopy import matrix, tensor
+    box = tensor.Box[np.float32]('f', tensor.Dim(2), tensor.Dim(2), [1., 0, 0, 1])
+    environment = type(box).environment()
+    assert eval(repr(box), environment) == box
+    assert environment['matrix'] is matrix and 'bool' not in environment

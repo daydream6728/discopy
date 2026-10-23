@@ -116,6 +116,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `trace(dom=, cod=, mem=)`, and yanking is a law ([next#95]).
 - `markov` is Markov only, its merges are in `comarkov` ([next#94]).
 - `Matrix` is a `MarkovCategory` ([#535]).
+- `dtype` is `int` where it was `numpy.int64`, as for `float`, `complex` and
+  `bool`, and `map` and `eval` infer it ([next#31], [next#88], [next#162]).
 - A law is a sequent ([next#1]), and `Equation` has one symbol between each
   pair of terms ([next#1]).
 - Properties are read with `isinstance` rather than `hasattr`, and a
@@ -445,6 +447,7 @@ for the changelog of `1.2.1` and earlier.
 [next#147]: https://github.com/rel-int/discopy-next/issues/147
 [next#149]: https://github.com/rel-int/discopy-next/issues/149
 [next#161]: https://github.com/rel-int/discopy-next/issues/161
+[next#162]: https://github.com/rel-int/discopy-next/issues/162
 [next#163]: https://github.com/rel-int/discopy-next/issues/163
 [next#168]: https://github.com/rel-int/discopy-next/issues/168
 [next#175]: https://github.com/rel-int/discopy-next/issues/175
