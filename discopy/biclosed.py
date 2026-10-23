@@ -208,15 +208,17 @@ class Ty(monoidal.Ty):
 
         >>> assert Ty(cat.Ob('x')) == Ty(monoidal.Wire('x')) == Ty(Wire('x'))
         """
-        if issubclass(self.generator_factory, Wire) and (
-                type(x) is cat.Ob or type(x) is monoidal.Wire
-                and x.dom == x.cod == monoidal.transparent):
+        # pylint: disable-next=unidiomatic-typecheck  # not their subclasses
+        old = type(x) is cat.Ob or type(x) is monoidal.Wire\
+            and x.dom == x.cod == monoidal.transparent
+        if old and issubclass(self.generator_factory, Wire):
             return self.generator_factory(x.name)
         return super().cast_wire(x)
 
     def __setstate__(self, state):
         super().__setstate__(state)
-        self.inside = tuple(map(self.cast_wire, self.inside))
+        if issubclass(self.generator_factory, Wire):
+            self.inside = tuple(map(self.cast_wire, self.inside))
 
     @property
     def is_exp(self):
