@@ -91,6 +91,9 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   feedback loops tick by tick, closed or fed by a `source`, its burn-in
   certified when it is passive, and `channel.Observable` is the effect of a
   normal operator or of a function of the outcomes ([optyx#76]).
+- `optyx.interaction`, combinatorial maps of recurrent channels, each box
+  with a private memory and a prediction, unrolled or run to an approximate
+  fixed point ([optyx#16]).
 - `hopf.Intertwiner.chart` and `hopf.Algebra.symmetric(n)` ([#408]).
 - `copying`, a law of `Testable` beside `pickling` ([next#1]), and the
   generators of each level as typed class variables ([next#1]).
@@ -521,6 +524,7 @@ for the changelog of `1.2.1` and earlier.
 [next#310]: https://github.com/rel-int/discopy-next/pull/310
 [next#316]: https://github.com/rel-int/discopy-next/pull/316
 [next#320]: https://github.com/rel-int/discopy-next/pull/320
+[optyx#16]: https://github.com/rel-int/optyx/pull/16
 [optyx#29]: https://github.com/rel-int/optyx/pull/29
 [optyx#67]: https://github.com/rel-int/optyx/pull/67
 [optyx#76]: https://github.com/rel-int/optyx/pull/76
