@@ -3358,10 +3358,9 @@ class Decoder:
         """
         Compose with the :attr:`layer` of boxes placed side by side, each
         with its offset in the scan, as one layer of :attr:`category`. A box
-        alone that a layer cannot hold, i.e. a diagram rather than a box or
-        an arrow of a category with no layers, e.g. the
-        :class:`discopy.tensor.Tensor` of a :class:`discopy.cmap.CMap`, is
-        whiskered instead.
+        alone that no layer can hold is whiskered instead: a diagram rather
+        than a box, or any arrow of a category with no layers, e.g. a
+        :class:`discopy.tensor.Tensor` in a ``CMap[Tensor]``.
         """
         dom = self.diagram.cod
         if len(self.layer) == 1 and (

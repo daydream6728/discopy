@@ -144,8 +144,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `Layer.merge` fuses any plumbing.
 - `to_diagram` routes the wires of each box with one permutation,
   `finset.Permutation.gather` ([#539], [#546]).
-- `Hypergraph.to_diagram` and `CMap.to_diagram` decode through one
-  `hypergraph.Decoder`, giving the same diagrams ([next#56]).
+- `Hypergraph.to_diagram` and `CMap.to_diagram` share `hypergraph.Decoder`,
+  output unchanged except that a box may now be a diagram ([next#56]).
 - Every `then` and `tensor` takes `(self, *others)` ([#760], [#761], [#763],
   [next#60]).
 - The `quantum` extra pins pyzx 0.10.7 ([next#225]).
