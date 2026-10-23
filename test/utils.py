@@ -314,7 +314,8 @@ def test_dumps_sympy_data():
     for data in (
             phi, theta, phi / 2 + sympy.pi, sympy.Rational(1, 3),
             sympy.Integer(-5), sympy.Float(0.1) + sympy.Float(0.2) * phi,
-            sympy.Float('1.5', precision=100),
+            sympy.Float('1.5', precision=100), sympy.Float(0),
+            sympy.Float(0, precision=200) * phi,
             sympy.exp(sympy.I * sympy.pi * phi) * sympy.sqrt(2),
             sympy.sin(theta) ** 2 + sympy.atan2(phi, theta),
             sympy.Max(phi, 1) + sympy.Abs(sympy.conjugate(phi)),
@@ -330,8 +331,11 @@ def test_dumps_sympy_data():
 
 def test_dumps_sympy_outside_the_whitelist():
     sympy = pytest.importorskip("sympy")
+    x, y = sympy.symbols('x y')
     for data in (sympy.Dummy('x'), sympy.Matrix([[1]]),
-                 sympy.Function('f')(sympy.Symbol('x')), sympy.Symbol('x[0]')):
+                 sympy.Function('f')(x), sympy.Symbol('x[0]'),
+                 x + sympy.Function('sin')(x),
+                 x * sympy.Function('Add')(x, y)):
         with pytest.raises(TypeError, match="not JSON serialisable"):
             dumps(cat.Box('f', Ob('x'), Ob('y'), data=data))
 
@@ -363,6 +367,14 @@ def test_loads_runs_no_code_from_a_file():
             {'factory': 'numpy.void', 'item': 10 ** 12},
             {'factory': 'numpy.int64', 'item': '42'},
             {'factory': 'sympy.Float', 'num': '0.1', 'precision': 10 ** 12},
+            {'factory': 'sympy.Float', 'num': '0', 'precision': 10 ** 7},
+            {'factory': 'sympy.Symbol', 'name': 'x',
+             'assumptions': {'name': True}},
+            {'factory': 'sympy.Symbol', 'name': 'x',
+             'assumptions': {'positive': True, 'negative': True}},
+            {'factory': 'numpy.int8', 'item': 1000},
+            {'factory': 'numpy.ndarray', 'dtype': 'uint8',
+             'shape': [1], 'flat': [-1]},
             {'factory': 'numpy.ndarray', 'dtype': 'int64',
              'shape': [10 ** 12], 'flat': [1]},
             {'factory': 'numpy.ndarray', 'dtype': 'U500000000',

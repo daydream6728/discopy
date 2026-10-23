@@ -1077,8 +1077,8 @@ class Functor(Category):
     def to_tree(self) -> dict:
         """
         Serialise a functor whose maps are dictionaries, each as the list of
-        its pairs, with the names of its domain and codomain. A map that is a
-        Python callable has no tree.
+        its pairs, with the names of its domain and codomain, which are
+        classes of DisCoPy. A map that is a Python callable has no tree.
 
         Example
         -------
@@ -1094,7 +1094,7 @@ class Functor(Category):
 which JSON cannot hold.
         """
         for category in (self.dom, self.cod):
-            if not isinstance(category, type):
+            if not utils.is_discopy_class(category):
                 raise TypeError(messages.NOT_JSON_SERIALISABLE.format(
                     type(category).__name__))
         tree = {'factory': factory_name(type(self))}
@@ -1103,6 +1103,10 @@ which JSON cannot hold.
             if not isinstance(mapping, Mapping):
                 raise TypeError(messages.NO_TREE_CALLABLE.format(
                     "A functor", attr))
+            for key in mapping:
+                if not hasattr(key, 'to_tree'):
+                    raise TypeError(messages.NOT_JSON_SERIALISABLE.format(
+                        type(key).__name__))
             tree[attr] = [[key.to_tree(), value.to_tree()
                            if hasattr(value, 'to_tree') else value]
                           for key, value in mapping.items()]
@@ -1121,8 +1125,12 @@ which JSON cannot hold.
             if isinstance(value, dict) and 'factory' in value
             else value for key, value in tree[attr]}
             for attr in ("ob_map", "ar_map"))
-        return cls(ob_map, ar_map, dom=resolve_factory(tree['dom']),
-                   cod=resolve_factory(tree['cod']))
+        dom, cod = map(resolve_factory, (tree['dom'], tree['cod']))
+        for category in (dom, cod):
+            if not utils.is_discopy_class(category):
+                raise AttributeError(messages.NO_SUCH_CLASS.format(
+                    factory_name(category)))
+        return cls(ob_map, ar_map, dom=dom, cod=cod)
 
     def __call__(self, other):
         if isinstance(other, Ob):
@@ -1311,6 +1319,8 @@ which JSON cannot hold.
     @classmethod
     def from_tree(cls, tree: dict) -> Equation:
         """ Decode a serialised equation, see :meth:`to_tree`. """
+        for symbol in tree['symbols']:
+            assert_isinstance(symbol, str)
         return cls(*map(from_tree, tree['terms']), symbols=tree['symbols'])
 
 

@@ -987,3 +987,5 @@ def test_Functor_and_Equation_tree():
     loaded = loads(dumps(equation))
     assert type(loaded) is Equation and loaded.terms == equation.terms
     assert loaded.space == 3 and loads(dumps(Equation(f))).space == 1
+    with raises(TypeError, match=r"Expected int \| float"):
+        Equation.from_tree(equation.to_tree() | {'space': 'x'})

@@ -788,3 +788,6 @@ def test_Functor_tree():
     assert G.optimize == "optimal" and G.dtype is complex
     with raises(TypeError, match="with params has no tree"):
         dumps(Functor({n: 2}, {}, backend="os"))
+    for optimize in ({'not': 'a path'}, 5):
+        with raises(TypeError, match=r"Expected str \| bool \| list"):
+            Functor.from_tree(G.to_tree() | {'optimize': optimize})

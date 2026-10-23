@@ -584,8 +584,8 @@ def decode_numpy(tree: dict) -> Any:
     Read back what :func:`encode_numpy` wrote, leaving any other node alone:
     its scalar type is one that numpy names for booleans, integers, floats or
     complex numbers, and its entries are the Python scalars that type reads
-    back as, so that an array allocates in proportion to the file and no
-    string is parsed as a number.
+    back as, in its range for an integer, so that an array allocates in
+    proportion to the file and no string is parsed as a number.
 
     Example
     -------
@@ -594,8 +594,9 @@ def decode_numpy(tree: dict) -> Any:
     >>> assert (decode_numpy(encode_numpy(array)) == array).all()
     >>> scalar = decode_numpy(encode_numpy(numpy.int8(-3)))
     >>> assert scalar == -3 and isinstance(scalar, numpy.int8)
-    >>> tree = {'factory': 'numpy.int8', 'item': '-3'}
-    >>> assert decode_numpy(tree) == tree
+    >>> for item in ('-3', 1000):
+    ...     tree = {'factory': 'numpy.int8', 'item': item}
+    ...     assert decode_numpy(tree) == tree
     """
     import numpy
     name, fields = tree['factory'].removeprefix("numpy."), tree.keys()
@@ -610,8 +611,11 @@ def decode_numpy(tree: dict) -> Any:
             or not isinstance(entries, list):
         return tree
     python = type(scalar(0).item())
+    bounds = numpy.iinfo(scalar) if python is int else None
     if python not in (bool, int, float, complex)\
-            or any(type(entry) is not python for entry in entries):
+            or any(type(entry) is not python for entry in entries)\
+            or bounds is not None and not all(
+                bounds.min <= entry <= bounds.max for entry in entries):
         return tree
     if shape is None:
         return scalar(tree['item'])
@@ -631,9 +635,10 @@ def encode_sympy(expr: "sympy.Basic") -> dict:
     :data:`SYMPY_CONSTANTS` by its name alone and an expression whose head
     is in :data:`SYMPY_FUNCTIONS` by its ``args``.
 
-    Any other sympy class raises, so that :func:`decode_sympy` can read back
-    what this writes without ``sympy.sympify``, which calls :func:`eval` on
-    strings, i.e. :func:`loads` runs no code from a file.
+    Any other class raises, e.g. an undefined function named ``sin``, so
+    that :func:`decode_sympy` can read back what this writes without
+    ``sympy.sympify``, which calls :func:`eval` on strings, i.e.
+    :func:`loads` runs no code from a file.
 
     Example
     -------
@@ -647,10 +652,19 @@ def encode_sympy(expr: "sympy.Basic") -> dict:
     Traceback (most recent call last):
     ...
     TypeError: Object of type Dummy is not JSON serialisable.
+    >>> from sympy import Function
+    >>> encode_sympy(phi + Function('sin')(phi))
+    Traceback (most recent call last):
+    ...
+    TypeError: Object of type sin is not JSON serialisable.
     """
+    import sympy
     name = type(expr).__name__
     tree = {'factory': f"sympy.{name}"}
-    if name == "Symbol" and not expr.name.isidentifier():
+    if name in SYMPY_CONSTANTS and expr is getattr(sympy.S, name):
+        return tree
+    if type(expr) is not getattr(sympy, name, None)\
+            or name == "Symbol" and not expr.name.isidentifier():
         raise TypeError(messages.NOT_JSON_SERIALISABLE.format(name))
     if name == "Symbol":
         _, assumptions = expr.__getnewargs_ex__()
@@ -661,11 +675,12 @@ def encode_sympy(expr: "sympy.Basic") -> dict:
     elif name == "Float":
         from mpmath.libmp import repr_dps
         _, options = expr.__getnewargs_ex__()
-        tree['num'] = str(expr.evalf(repr_dps(options['precision'])))
+        digits = repr_dps(options['precision'])
+        tree['num'] = str(expr.evalf(digits)) if expr else "0." + "0" * digits
         tree['precision'] = options['precision']
     elif name in SYMPY_FUNCTIONS:
         tree['args'] = list(map(encode_sympy, expr.args))
-    elif name not in SYMPY_CONSTANTS:
+    else:
         raise TypeError(messages.NOT_JSON_SERIALISABLE.format(name))
     return tree
 
@@ -678,8 +693,9 @@ def decode_sympy(tree: dict) -> Any:
     function on sympy expressions only, never on a string, which sympy would
     parse with :func:`eval`, and with ``evaluate=False``, so that it rebuilds
     the expression as it was written, without computing e.g. a large power.
-    A float other than zero is read at a precision of at most four bits a
-    digit, so that it allocates in proportion to the file.
+    A float is read at a precision of at most four bits a digit, so that it
+    allocates in proportion to the file, and a symbol with assumptions that
+    sympy refuses, e.g. inconsistent ones, is left alone.
     As the ``object_hook`` of :func:`loads` it reads the innermost nodes
     first, i.e. the ``args`` of a node come decoded.
 
@@ -700,7 +716,10 @@ def decode_sympy(tree: dict) -> Any:
             and tree['name'].isidentifier()\
             and isinstance(assumptions, dict)\
             and all(isinstance(value, bool) for value in assumptions.values()):
-        return sympy.Symbol(tree['name'], **assumptions)
+        try:
+            return sympy.Symbol(tree['name'], **assumptions)
+        except (TypeError, ValueError):
+            return tree
     if name in ("Integer", "Rational") and 'p' in fields\
             and fields <= {'factory', 'p', 'q'} and all(
                 type(tree.get(key, 1)) is int for key in ('p', 'q')):
@@ -708,8 +727,7 @@ def decode_sympy(tree: dict) -> Any:
     if name == "Float" and fields == {'factory', 'num', 'precision'}\
             and isinstance(tree['num'], str)\
             and type(tree['precision']) is int\
-            and (tree['num'] == "0"
-                 or tree['precision'] <= 4 * len(tree['num'])):
+            and tree['precision'] <= 4 * len(tree['num']):
         return sympy.Float(tree['num'], precision=tree['precision'])
     if name in SYMPY_CONSTANTS and fields == {'factory'}:
         return getattr(sympy.S, name)

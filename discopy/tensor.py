@@ -547,11 +547,16 @@ einsum of a backend verbatim, which a file should not reach.
 
     @classmethod
     def from_tree(cls, tree: dict) -> Functor:
-        """ Decode a tensor functor, which takes its codomain's dtype. """
+        """
+        Decode a tensor functor, which takes its codomain's dtype, and an
+        ``optimize`` of the types its backend reads, a string, a boolean or
+        an explicit path.
+        """
         functor = cat.Functor.from_tree(tree)
+        optimize = tree.get('optimize', "greedy")
+        assert_isinstance(optimize, (str, bool, list))
         return cls(functor.ob_map, functor.ar_map, dom=functor.dom,
-                   dtype=functor.cod.dtype,
-                   optimize=tree.get('optimize', "greedy"))
+                   dtype=functor.cod.dtype, optimize=optimize)
 
     def __call__(self, other):
         """

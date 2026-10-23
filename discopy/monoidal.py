@@ -2150,6 +2150,7 @@ class Equation(cat.Equation, RichDisplay):
     def from_tree(cls, tree: dict) -> Equation:
         equation = super().from_tree(tree)
         equation.space = tree.get('space', 1)
+        assert_isinstance(equation.space, (int, float))
         return equation
 
     def to_drawing(self):

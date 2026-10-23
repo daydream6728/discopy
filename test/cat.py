@@ -502,6 +502,13 @@ def test_Functor_tree():
             dumps(Functor(ob_map, ar_map))
     with raises(TypeError, match="A functor has no tree"):
         dumps(Functor.id())
+    for F in (Functor({}, {}, cod=int), Functor({int: x}, {})):
+        with raises(TypeError, match="not JSON serialisable"):
+            dumps(F)
+    tree = Functor().to_tree()
+    for name in ("int", "ndarray"):
+        with raises(AttributeError, match="No class of DisCoPy"):
+            Functor.from_tree(tree | {'cod': name})
 
 
 def test_Equation_tree():
@@ -514,3 +521,5 @@ def test_Equation_tree():
     assert (loaded.terms, loaded.symbols) == (equation.terms, ("=", "->"))
     with raises(TypeError, match="its up_to is a Python callable"):
         dumps(Equation(f, f >> f, up_to=len))
+    with raises(TypeError, match="Expected str"):
+        Equation.from_tree(Equation(f, f).to_tree() | {'symbols': [[1]]})

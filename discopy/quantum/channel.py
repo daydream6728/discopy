@@ -112,7 +112,11 @@ class CQ:
     @classmethod
     def from_tree(cls, tree: dict) -> CQ:
         """ Decode a serialised classical-quantum dimension. """
-        return cls(*map(from_tree, (tree['classical'], tree['quantum'])))
+        classical, quantum = map(from_tree, (
+            tree['classical'], tree['quantum']))
+        assert_isinstance(classical, Dim)
+        assert_isinstance(quantum, Dim)
+        return cls(classical, quantum)
 
     def __str__(self):
         return "CQ()" if not self.classical and not self.quantum\

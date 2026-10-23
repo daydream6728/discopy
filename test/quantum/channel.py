@@ -107,3 +107,6 @@ def test_tree():
                  (Ket(0) >> H >> Measure()).eval(mixed=True),
                  Channel.id(Q(Dim(2)))):
         assert loads(dumps(term)) == term
+    tree = CQ().to_tree() | {'quantum': {'factory': 'cat.Ob', 'name': 'x'}}
+    with raises(TypeError, match="Expected frobenius.Dim"):
+        CQ.from_tree(tree)
