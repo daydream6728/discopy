@@ -1029,8 +1029,9 @@ class CMap[C0: Pregroup, C1: CMap](
         The image of each box is computed by the functor into ``cls``, then
         the images are glued in a single pass with :meth:`from_glued`. The
         image of a permutation is its :meth:`permutation`, read from its
-        ``perm`` rather than by mapping it wire by wire. The trace of a
-        planar traced category is a box, as for
+        ``perm`` rather than by mapping it wire by wire, when the functor is
+        symmetric: a map pinned below symmetric keeps it as a box. The trace
+        of a planar traced category is a box, as for
         :meth:`Hypergraph.from_diagram`.
 
         >>> from discopy.braided import Ty, Braid
@@ -1055,6 +1056,8 @@ class CMap[C0: Pregroup, C1: CMap](
         if not isclass(trace) or issubclass(category, SymmetricCategory):
             trace = ()
         permutation = getattr(category, "permutation_factory", ())
+        if not issubclass(cls.category or category, SymmetricCategory):
+            permutation = ()
 
         def image(box):
             if isinstance(box, trace):

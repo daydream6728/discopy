@@ -193,6 +193,9 @@ def test_diagram_to_map_structure_and_errors():
 
     sx, sy = map(symmetric.Ty, "xy")
     assert symmetric.Swap(sx, sy).to_map() == symmetric.CMap.swap(sx, sy)
+    for perm in (symmetric.Swap(sx, sy), symmetric.Permutation(
+            sx @ sy @ sx, [2, 0, 1])):
+        assert monoidal.CMap.from_diagram(perm).boxes == (perm, )
 
     cx = compact.Ty("x")
     cup = compact.Cup(cx, cx.r)
