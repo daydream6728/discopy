@@ -302,7 +302,17 @@ def test_Layer_does_not_compose():
         Layer(f) >> Layer(g)
     with raises(AxiomError, match="Compose diagrams, not layers"):
         Layer(g) << Layer(f)
+    with raises(AxiomError, match="Compose diagrams, not layers"):
+        Layer(f) >> (cat.Arrow.id(y) >> Layer(g))
+    with raises(AxiomError, match="Compose diagrams, not layers"):
+        cat.Arrow.id(x) >> Layer(f) >> Layer(g)
+    with raises(AxiomError, match="Compose diagrams, not layers"):
+        Layer(g) << (cat.Arrow.id(x) >> Layer(f))
+    assert cat.Box('h', x, x) >> Layer(f) == cat.Arrow(
+        (cat.Box('h', x, x), Layer(f)), x, y)
     assert Diagram((Layer(f), Layer(g)), x, z) == f >> g
+    assert (Layer(f) >> cat.Arrow.id(y)) == cat.Arrow.id(x) >> Layer(f)
+    assert Layer(f).then().inside == (Layer(f), )
 
 
 def test_Layer_unit():

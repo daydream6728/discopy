@@ -43,8 +43,8 @@ indices. Swaps, cups and caps become wiring while spiders stay as boxes.
 
 from __future__ import annotations
 
-import cmath
 import math
+import numbers
 from itertools import count
 from typing import TYPE_CHECKING, ClassVar, Sequence
 
@@ -969,10 +969,11 @@ class Box(frobenius.Box, Diagram):
         entries: a list as it is, an array of any backend through its
         ``tolist`` and a list of lists flattened.
 
-        Every nan entry becomes the one :data:`math.nan`, and a complex one
-        the pair of its real and imaginary parts, so that a box holding nan
-        equals itself and its hash is stable: the data labels a generator,
-        it is not a number being compared.
+        Every nan entry becomes the one :data:`math.nan`, of any number type
+        and inside tuples too, and a complex one with a non-zero imaginary
+        part the pair of its parts, so that a box holding nan equals itself
+        and its hash is stable: the data labels a generator, it is not a
+        number being compared.
 
         >>> import numpy as np
         >>> f = Box('f', Dim(2), Dim(2), np.array([[0, 1], [1, 0]]))
@@ -984,9 +985,13 @@ class Box(frobenius.Box, Diagram):
         >>> assert g == g and len({g, g.dagger().dagger()}) == 1
         """
         def canonical(x):
-            if isinstance(x, complex) and cmath.isnan(x):
-                return canonical(x.real), canonical(x.imag)
-            return math.nan if isinstance(x, float) and math.isnan(x) else x
+            if isinstance(x, (list, tuple)):
+                return tuple(map(canonical, x))
+            if not isinstance(x, numbers.Complex) or x == x:
+                return x
+            if isinstance(x, numbers.Real) or x.imag == 0:
+                return math.nan
+            return canonical(float(x.real)), canonical(float(x.imag))
 
         data = getattr(self.data, "tolist", lambda: self.data)()
         if isinstance(data, list) and any(isinstance(x, list) for x in data):

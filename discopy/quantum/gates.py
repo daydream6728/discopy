@@ -369,43 +369,49 @@ class ClassicalGate(SelfConjugate):
 
 class Copy(ClassicalGate):
     """ Takes a bit, returns two copies of it. """
-    def __init__(self, time_step=0):
-        dom = bit.delay(time_step)
-        super().__init__("Copy", dom, dom ** 2, [1, 0, 0, 0, 0, 0, 0, 1],
-                         time_step=time_step)
+    def __init__(self, dom=bit):
+        name = "Copy" if dom == bit else f"Copy({dom})"
+        super().__init__(name, dom, dom ** 2, [1, 0, 0, 0, 0, 0, 0, 1])
         self.draw_as_spider, self.color = True, "black"
         self.drawing_name = ""
 
-    def delay(self, n_steps=1):
+    def __getnewargs__(self):
         """
-        The same copy, one more time step on.
+        The bit it copies, which a delay reads: a copy has no time step of
+        its own, its bit carries it.
 
-        >>> assert Copy().delay().dagger() == Match().delay()
+        >>> assert Copy().delay().dagger() == Match(bit.delay())
+        >>> assert Copy().delay().time_step is None
+        >>> print(Copy().delay())
+        Copy(bit.d)
         """
-        return type(self)(self.time_step + n_steps)
+        return (self.dom, )
 
     @classmethod
     def from_tree(cls, tree: dict):
-        return cls(tree.get('time_step', 0))
+        return cls(from_tree(tree['dom']))
 
     def dagger(self):
-        return Match(self.time_step)
+        return Match(self.dom)
 
 
 class Match(ClassicalGate):
     """ Takes two bits in, returns them if they are equal. """
-    def __init__(self, time_step=0):
-        cod = bit.delay(time_step)
-        super().__init__("Match", cod ** 2, cod, [1, 0, 0, 0, 0, 0, 0, 1],
-                         time_step=time_step)
+    def __init__(self, cod=bit):
+        name = "Match" if cod == bit else f"Match({cod})"
+        super().__init__(name, cod ** 2, cod, [1, 0, 0, 0, 0, 0, 0, 1])
         self.draw_as_spider, self.color = True, "black"
         self.drawing_name = ""
 
-    delay = Copy.delay
-    from_tree = classmethod(Copy.from_tree.__func__)
+    def __getnewargs__(self):
+        return (self.cod, )
+
+    @classmethod
+    def from_tree(cls, tree: dict):
+        return cls(from_tree(tree['cod']))
 
     def dagger(self):
-        return Copy(self.time_step)
+        return Copy(self.cod)
 
 
 class Digits(ClassicalGate):
