@@ -39,7 +39,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from discopy import monoidal
+from discopy import messages, monoidal
 from discopy.cat import factory, Functor
 from discopy.config import BOX_DRAWING_ATTRIBUTES
 from discopy.grammar import thue
@@ -76,9 +76,10 @@ class Tree:
         assert_isinstance(root, Rule)
         for branch in branches:
             assert_isinstance(branch, Tree)
-        if not isinstance(self, Rule) and not root.dom == Ty().tensor(
-                *[branch.cod for branch in branches]):
-            raise AxiomError
+        cods = Ty().tensor(*[branch.cod for branch in branches])
+        if not isinstance(self, Rule) and root.dom != cods:
+            raise AxiomError(messages.NOT_COMPOSABLE.format(
+                root, f"({', '.join(map(str, branches))})", root.dom, cods))
         self.cod, self.root, self.branches = root.cod, root, branches
         if not isinstance(self, Rule):
             self.dom = Ty().tensor(*[branch.dom for branch in branches])

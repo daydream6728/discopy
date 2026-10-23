@@ -49,8 +49,10 @@ def test_Tree():
     tree = f(g(a, b), a)
     assert str(tree) == "f(g(a, b), a)" and tree.cod == x
     assert (tree.root, tree.branches) == (f, (g(a, b), a))
-    with raises(AxiomError):
+    with raises(AxiomError, match=r"f does not compose with \(a\): x @ x"):
         Tree(f, a)
+    with raises(AxiomError, match=r"with \(a, b\): x @ x != x @ y"):
+        f(a, b)
 
 
 def test_Tree_dom():
