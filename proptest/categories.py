@@ -13,7 +13,8 @@ from discopy.python import finset
 from discopy.utils import factory_name
 
 CATEGORIES = (
-    cat.Arrow, biclosed.TermBase, closed.TermBase, matrix.Matrix[int],
+    cat.Arrow, biclosed.TermBase, closed.TermBase, matrix.Matrix,
+    matrix.Matrix[int],
     op.Markov[matrix.Matrix[int]], op.Comarkov[matrix.Matrix[int]],
     finset.Cospan,
     group.Cyclic[4], group.Symmetric[4],

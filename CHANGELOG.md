@@ -116,6 +116,11 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `trace(dom=, cod=, mem=)`, and yanking is a law ([next#95]).
 - `markov` is Markov only, its merges are in `comarkov` ([next#94]).
 - `Matrix` is a `MarkovCategory` ([#535]).
+- `dtype` is `int` where it was `numpy.int64`, as for `float`, `complex` and
+  `bool`, and `map` and `eval` infer it ([next#31], [next#88], [next#162]).
+- `hopf.Intertwiner[H]` holds a tensor network `inside` between
+  `Representation` ends, rather than being one, and modules have trees
+  ([next#145]).
 - A law is a sequent ([next#1]), and `Equation` has one symbol between each
   pair of terms ([next#1]).
 - Properties are read with `isinstance` rather than `hasattr`, and a
@@ -178,6 +183,9 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   ([#699], [next#1]) and drops plumbing that composes to the identity;
   `braided.simplify` and `pregroup.normal_form` take foliated diagrams
   ([next#31]).
+- `monoidal.normalize` and `rigid.snake_removal` say they are planar
+  ([next#56] 8a) and take foliated diagrams, as do `monoidal.substitute`,
+  `braided.naturality` and `Circuit.to_tn` ([next#9]).
 - Boxes read back from their tree: quantum gates ([#664], [#780]), lambda
   terms ([#692]), `Trace`, `Copy`, `Merge` and `tensor.Dim` ([#736]), heads,
   tails and `FollowedBy` ([next#96]), `Twist`, `Spider` and inverse `Braid`
@@ -188,10 +196,14 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - `eval(repr(x)) == x` for `monoidal.List` ([#773]), phased spiders
   ([next#97]), delayed qudits ([next#130]), `Measure`, `Encode`, `CQ` and the
   rest ([next#168]), and `cfg` and `pregroup` terms ([next#31]).
+- A `Wire` reads back from its `repr`, uncoloured or daggered ([next#140]),
+  and a `Matrix` or a `Tensor` does up to NumPy's elision ([next#156]).
 - Subscripted classes pickle with their parameter ([#749], [next#121]), and
   an unpickled `Layer` recomputes its name ([next#168]).
 - Bubbles keep their `data` and `is_dagger` ([#637]), substitute in their
   args ([next#31]) and say when their args share no boundary ([next#133]).
+- `subs` accepts pairs, lists and dicts like `sympy.subs`; `lambdify` keeps a
+  box's winding and delay, and functors keep bubbles ([next#31], [next#118]).
 - Delays: every gate ([next#130], [next#176]), closed types ([next#129]),
   `Nat` and `Dim` ([next#112]) and `FollowedBy` ([next#105]).
 - Traces and feedback of compact, Frobenius, tensor, ZX and circuit diagrams
@@ -220,6 +232,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `spider_factory` ([next#149]), `grad` ([next#75]), and the pyzx round trip
   keeps scalars and parallel wires ([next#74], [next#82]).
 - `hopf.Intertwiner`: `cups`, `caps` and `twist` ([next#31]).
+- `hopf.Functor` sends the dagger of a twist to its inverse, `to_braided`
+  takes traces and generators, and commutes with `delay` ([next#31]).
 - The dagger of a rigid box keeps its winding, `Id(x).width` and five
   one-liners ([next#31]), the rotation of a daggered braid ([#606]), and the
   adjoints of a `frobenius.Wire` ([next#1]).
@@ -403,6 +417,7 @@ for the changelog of `1.2.1` and earlier.
 [#812]: https://github.com/discopy/discopy/pull/812
 [#824]: https://github.com/discopy/discopy/pull/824
 [next#1]: https://github.com/rel-int/discopy-next/pull/1
+[next#9]: https://github.com/rel-int/discopy-next/issues/9
 [next#21]: https://github.com/rel-int/discopy-next/issues/21
 [next#31]: https://github.com/rel-int/discopy-next/issues/31
 [next#49]: https://github.com/rel-int/discopy-next/issues/49
@@ -432,6 +447,7 @@ for the changelog of `1.2.1` and earlier.
 [next#113]: https://github.com/rel-int/discopy-next/issues/113
 [next#114]: https://github.com/rel-int/discopy-next/issues/114
 [next#116]: https://github.com/rel-int/discopy-next/issues/116
+[next#118]: https://github.com/rel-int/discopy-next/issues/118
 [next#119]: https://github.com/rel-int/discopy-next/issues/119
 [next#121]: https://github.com/rel-int/discopy-next/issues/121
 [next#124]: https://github.com/rel-int/discopy-next/issues/124
@@ -442,9 +458,13 @@ for the changelog of `1.2.1` and earlier.
 [next#133]: https://github.com/rel-int/discopy-next/issues/133
 [next#134]: https://github.com/rel-int/discopy-next/issues/134
 [next#139]: https://github.com/rel-int/discopy-next/issues/139
+[next#140]: https://github.com/rel-int/discopy-next/issues/140
+[next#145]: https://github.com/rel-int/discopy-next/issues/145
 [next#147]: https://github.com/rel-int/discopy-next/issues/147
 [next#149]: https://github.com/rel-int/discopy-next/issues/149
+[next#156]: https://github.com/rel-int/discopy-next/issues/156
 [next#161]: https://github.com/rel-int/discopy-next/issues/161
+[next#162]: https://github.com/rel-int/discopy-next/issues/162
 [next#168]: https://github.com/rel-int/discopy-next/issues/168
 [next#175]: https://github.com/rel-int/discopy-next/issues/175
 [next#176]: https://github.com/rel-int/discopy-next/issues/176

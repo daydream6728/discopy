@@ -56,7 +56,7 @@ def test_Tensor():
     assert Tensor([1], Dim(1), Dim(1))
     m = Tensor([0, 1, 1, 0], Dim(2), Dim(2))
     assert repr(m) == str(m)\
-        == "Tensor[int64]([0, 1, 1, 0], dom=Dim(2), cod=Dim(2))"
+        == "Tensor[int]([0, 1, 1, 0], dom=Dim(2), cod=Dim(2))"
     u = Tensor([1, 0, 0, 0], Dim(2), Dim(2))
     v = Tensor([0, 0, 0, 1], Dim(2), Dim(2))
     assert u + v == Tensor.id(Dim(2))
@@ -394,6 +394,31 @@ def test_Tensor_dtype_inference():
     assert Box("X", Dim(1), Dim(1), data=[0]) == Box[np.int64]("X", Dim(1), Dim(1), data=[0])
     assert Box("Y", Dim(1), Dim(1), data=[1.]) == Box[np.float64]("Y", Dim(1), Dim(1), data=[1.])
     assert Box("Y", Dim(1), Dim(1), data=[1]) != Box("Y", Dim(1), Dim(1), data=[1.])
+    assert type(Box("Y", Dim(1), Dim(1), data=[1.])) is Box[float]
+    assert Box[np.int64] is Box[int] and Spider[np.complex128] is Spider[complex]
+
+
+def test_eval_infers_dtype_from_boxes():
+    """ The dtype of an evaluation is promoted across the boxes, see B9 of
+    #31, and a structural box takes the dtype of the others. """
+    f = Box('f', Dim(2), Dim(2), [1, 0, 0, 1])
+    g = Box('g', Dim(2), Dim(2), [.5, 0, 0, 1])
+    h = Box('h', Dim(2), Dim(2), [True, False, False, True])
+    assert (f >> f).eval().dtype == f.eval().dtype == int
+    assert (f >> g).eval() == (g >> f).to_map().eval() == g.eval()
+    assert (h @ h >> Swap(Dim(2), Dim(2))).eval().dtype == bool
+    assert (f >> f).eval(dtype=float).dtype == float
+    assert h.bubble().eval(dtype=bool) == Tensor[bool]([0, 1, 1, 0], Dim(2), Dim(2))
+    assert (f >> g.bubble(func=lambda x: x)).eval() == g.eval()
+    assert ((f >> f) + (f >> f)).eval() == Tensor([2, 0, 0, 2], Dim(2), Dim(2))
+
+
+def test_Box_pickled_before_dtype_inference():
+    """ A box pickled with its data alone gets the dtype of its class. """
+    import pickle
+    with open("test/fixtures/pickles/0.6/tensor.Box.pickle", "rb") as f:
+        box = pickle.load(f).boxes[0]
+    assert type(box) is Box[int] and box.dtype is int
 
 
 def test_non_numpy_eval():
@@ -601,6 +626,18 @@ def test_Tensor_strategy():
     assert tensor.array.shape == tensor.dom.inside + tensor.cod.inside
 
 
+def test_Tensor_transparency_up_to_elision():
+    from hypothesis import settings
+    from hypothesis.errors import NoSuchExample
+    from discopy import config
+    law = Tensor[int].transparency
+    assert law.params == {"max_entries": config.NUMPY_THRESHOLD}
+    assert law(Tensor[int]([0] * 16, Dim(2, 2), Dim(2, 2)))
+    assert "..." in repr(Tensor[int]([0] * 24, Dim(2, 2), Dim(2, 3)))
+    with raises(NoSuchExample):
+        law.falsify(settings=settings(max_examples=50, database=None))
+
+
 def test_delay_is_the_identity():
     f = Box('f', Dim(2), Dim(2), [1, 0, 0, 1])
     diagram = f @ Dim(3) >> Spider(1, 2, Dim(2)) @ Dim(3)\
@@ -700,3 +737,9 @@ def test_Bubble_subs_lambdify():
     for result in (bubble.subs(phi, 3), bubble.lambdify(phi)(3)):
         assert result.func is bubble.func
         assert np.allclose(result.eval().array, expected)
+
+
+def test_Bubble_name():
+    bubble = Box('f', Dim(2), Dim(2), [1, 0, 0, 1]).bubble(name="g")
+    assert bubble.dagger().dagger() == bubble
+    assert frobenius.Functor.id(Diagram)(bubble) == bubble
