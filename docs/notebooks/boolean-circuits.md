@@ -7,15 +7,16 @@ marimo-version: 0.23.14
 import marimo as mo
 ```
 
-# Boolean circuits, reproduced: maps and linear maps
+# Boolean circuits, reproduced
 
 Y. Lafont, *Towards an algebraic theory of Boolean circuits*, Journal of Pure and Applied Algebra 184 (2003), presents monoidal categories of maps by generators and relations: maps of finite sets, linear maps, Boolean functions and reversible circuits.
 Each presentation is proved complete the same way: a rewrite system takes every diagram to a canonical form, and there is one canonical form for each map.
 This notebook replays those proofs with the double-pushout rewriting of [`discopy.hypergraph`](https://docs.discopy.org/en/main/_api/discopy.hypergraph.html), after Bonchi et al., *String diagram rewrite theory* I and II.
 A rule is a pair of hypergraphs, and a step plugs its right side into the pushout complement of a match of its left.
-Each theorem is checked the way Lafont proves it: every diagram must reduce to the canonical form of the map it denotes.
+Each completeness theorem is checked the way Lafont proves it: every diagram must reduce to the canonical form of the map it denotes.
+Theorem 12, which Musset proves by 3-cycles with no canonical form, is a construction checked in the semantics.
 
-This first part covers the maps of finite sets (§2) and the linear maps over a finite field (§3 and §3.3).
+This notebook covers the maps of finite sets (§2), the linear maps over a finite field (§3 and §3.3), the Boolean functions (§4, Theorem 10) and the classical permutations (§4.2, Theorem 12).
 
 ## Two departures from the paper
 
@@ -468,11 +469,12 @@ mo.md("\n".join(["| field | most steps | mean steps |", "|---|---|---|"] + [
 
 $\mathfrak{F}[2]$ has the functions $\mathbb{Z}_2^p \to \mathbb{Z}_2^q$, with the cartesian product as tensor.
 It adds two generators to those of $\mathbf{L}(\mathbb{Z}_2)$: the conjunction $\mu' : 2 \to 1$ and the truth $\eta' : 0 \to 1$, flattened as $\wedge_n : n \to 1$ with $\mu' = \wedge_2$ and $\eta' = \wedge_0$.
-The semantics is now a functor into `python.Function`, which sends $x$ to `int` and each generator to its function on bits, with the cartesian product as tensor: Lafont's classical case.
+The semantics is now a hypergraph functor into `python.Function`, which sends $x$ to `int` and each generator to its function on bits, with the cartesian product as tensor: Lafont's classical case.
 
 ```python {.marimo}
 from itertools import product
 
+import discopy.hypergraph
 from discopy import python
 from discopy.utils import tuplify, untuplify
 
@@ -486,20 +488,24 @@ conjunction, truth = Prod(2), Prod(0)
 
 
 def function(box: Box):
-    """ The function of a sum, a copy or a conjunction, on bits. """
+    """ The function on bits of a sum, a copy, a conjunction or a gate. """
     if kind(box) == "copy":
         return lambda bit: untuplify((bit, ) * len(box.cod))
     if kind(box) == "sum":
         return lambda *bits: sum(bits) % 2
-    return lambda *bits: int(all(bits))
+    if kind(box) == "prod":
+        return lambda *bits: int(all(bits))
+    a, b = box.data
+    return lambda *bits: untuplify({a: b, b: a}.get(bits, bits))
 
 
-boolean = Functor(ob_map={x: int}, ar_map=function, cod=python.Function)
+boolean = discopy.hypergraph.Functor(
+    ob_map={x: int}, ar_map=function, cod=python.Function)
 
 
 def truth_table(graph: Hypergraph, p: int = 2) -> dict:
     """ The outputs of a Boolean circuit on each input. """
-    circuit = boolean(graph.to_diagram())
+    circuit = boolean(graph)
     return {bits: tuplify(circuit(*bits))
             for bits in product((0, 1), repeat=len(graph.dom))}
 ```
@@ -713,6 +719,255 @@ assert equal(_result, normal_polynomial(truth_table(_result), 2, 3, 2))
 Equation(_adder, _result.to_diagram(), symbol="$\\mapsto$")
 ```
 
+## Classical permutations: Theorem 12
+
+The permutations of $\mathbb{Z}_2^n$ form the monoidal subcategory $\mathfrak{S}[2]$ of $\mathfrak{F}[2]$.
+For $n \le 2$ they are all affine, but not for $n = 3$, so Lafont introduces the $n$-bit Toffoli gate $\mathrm{T}_n : n \to n$, the transposition of $(1, \dots, 1, 0)$ and $(1, \dots, 1, 1)$: it flips the last bit when the others are all 1.
+$\mathrm{T}_1$ is the negation $\nu$, $\mathrm{T}_2$ is $x, y \mapsto x, x + y$ and $\mathrm{T}_3$ is $x, y, z \mapsto x, y, z + xy$.
+A gate is a box with the two points it exchanges as data, and $\tau$ is still wiring.
+The semantics of §4 sends a gate to the transposition of its two points, and a circuit is read as a permutation of the points of $\mathbb{Z}_2^n$, numbered in binary.
+
+**Lemma 14**: for a permutation $f$, $f \times \mathrm{id}_{\mathbb{Z}_2}$ and $\mathrm{id}_{\mathbb{Z}_2} \times f$ are even, each transposition of $f$ becoming two.
+So a gate on $k$ of $n > k$ wires is even, and so is every circuit of gates on at most $m$ of $n > m \ge 2$ wires, a crossing of two wires being even once there are three.
+The odd $\mathrm{T}_{m + 1}$ is none of them: $\mathfrak{S}[2]$ is not finitely generated.
+
+```python {.marimo}
+import random
+
+
+def Toffoli(n: int) -> Box:
+    """ T_n, exchanging (1, ..., 1, 0) and (1, ..., 1, 1) in Z_2^n. """
+    return Box(f"T{n}", x ** n, x ** n, data=(
+        (1, ) * (n - 1) + (0, ), (1, ) * n))
+
+
+def permutation(graph: Hypergraph, p: int = 2) -> tuple[int, ...]:
+    """ The permutation of a circuit, with the points of Z_2^n in binary. """
+    images = truth_table(graph)
+    index = {bits: i for i, bits in enumerate(images)}
+    return tuple(index[bits] for bits in images.values())
+
+
+def parity(perm) -> int:
+    """ 0 for an even permutation, 1 for an odd one: its inversions mod 2. """
+    return sum(a > b for i, a in enumerate(perm) for b in perm[i + 1:]) % 2
+
+
+def gate(n: int, *on: int) -> Hypergraph:
+    """ T_k on k of n wires, its target last. """
+    cod = names(n, "i")
+    for k, w in enumerate(on):
+        cod[w] = f"o{k}"
+    return hypergraph(names(n, "i"), [(
+        Toffoli(len(on)), [f"i{w}" for w in on], names(len(on), "o"))], cod)
+
+
+_rng = random.Random(0)
+for _n in (1, 2, 3):
+    _m = 2 ** _n
+    for _f in (_rng.sample(range(_m), _m) for _ in range(10)):
+        assert not parity([2 * _f[a] + b for a in range(_m) for b in (0, 1)])
+        assert not parity([_m * b + _f[a] for b in (0, 1) for a in range(_m)])
+for _n in range(1, 6):
+    assert [parity(permutation(gate(_n, *range(_k))))
+            for _k in range(1, _n + 1)] == [0] * (_n - 1) + [1]
+assert [parity(permutation(Hypergraph.swap(x, x) @ Hypergraph.id(x ** _k)))
+        for _k in range(3)] == [1, 0, 0]
+```
+
+On two wires, $\tau$, $\nu$ and $\mathrm{T}_2$ give all $4!$ permutations, and on three wires only the $8 \cdot 168$ affine ones of $\mathbf{GA}(\mathbb{Z}_2)$.
+With $\mathrm{T}_3$ they give all $8!$ permutations of $\mathbb{Z}_2^3$, odd ones too, closing the gates under composition:
+
+```python {.marimo}
+def closure(circuits: list[Hypergraph], n: int) -> set:
+    """ The permutations of Z_2^n that some circuits generate. """
+    generators = [permutation(graph) for graph in circuits]
+    reached = todo = {tuple(range(2 ** n))}
+    while todo:
+        todo = {tuple(g[a] for a in f)
+                for f in todo for g in generators} - reached
+        reached = reached | todo
+    return reached
+
+
+_affine = [gate(3, 0), gate(3, 0, 1)] + [
+    Hypergraph.permutation(_p, x ** 3) for _p in ([1, 0, 2], [0, 2, 1])]
+assert len(closure([gate(2, 0), gate(2, 0, 1), Hypergraph.swap(x, x)],
+                   2)) == 24
+assert len(closure(_affine, 3)) == 8 * 168
+assert len(closure(_affine + [gate(3, 0, 1, 2)], 3)) == 40320
+```
+
+Lafont draws the equations that the gates obviously satisfy.
+Each $\mathrm{T}_i$ is an involution.
+$\mathrm{T}_3$ commutes with $\nu$ on its first control, at the price of a $\mathrm{T}_2$, with $\nu$ on its target, with $\tau$ on its controls and with $\mathrm{T}_2$ from its second control to its target.
+And the Fredkin gate $\mathrm{F}_3$ of Musset's proof, the transposition of $(1, 0, 1)$ and $(1, 1, 0)$, is $\mathrm{T}_3$ conjugated by $\tau$ and $\mathrm{T}_2$.
+They hold in the semantics, and they are Theorem 10 at work: send each gate to its algebraic normal form in $\mathfrak{F}[2]$, e.g. $\mathrm{T}_3$ to $x, y, z + xy$, and both sides reduce by the rules of §4 to the same polynomial.
+
+```python {.marimo}
+T1, T2, T3 = map(Toffoli, (1, 2, 3))
+fredkin = Box("F3", x ** 3, x ** 3, data=((1, 0, 1), (1, 1, 0)))
+swap = Diagram.swap(x, x)
+relations_S2 = {
+    "involution 1": (T1 >> T1, Diagram.id(x)),
+    "involution 2": (T2 >> T2, Diagram.id(x ** 2)),
+    "involution 3": (T3 >> T3, Diagram.id(x ** 3)),
+    "negated control": (T1 @ x @ x >> T3, T3 >> T1 @ T2),
+    "negated target": (x @ x @ T1 >> T3, T3 >> x @ x @ T1),
+    "swapped controls": (swap @ x >> T3, T3 >> swap @ x),
+    "control to target": (x @ T2 >> T3, T3 >> x @ T2),
+    "Fredkin": (fredkin, x @ T2 >> x @ swap >> T3 >> x @ swap >> x @ T2)}
+anf = Functor(ob_map={x: x}, ar_map=lambda box: normal_polynomial(
+    truth_table(box.to_hypergraph()), 2, len(box.dom),
+    len(box.cod)).to_diagram())
+for _left, _right in relations_S2.values():
+    assert truth_table(_left.to_hypergraph()) == truth_table(
+        _right.to_hypergraph())
+    _left, _right = anf(_left).to_hypergraph(), anf(_right).to_hypergraph()
+    assert equal(normal_form(_left, rules_F2, 2, truth_table)[0],
+                 normal_form(_right, rules_F2, 2, truth_table)[0])
+Equation(*relations_S2["Fredkin"])
+```
+
+**Theorem 12**: every even permutation of $\mathbb{Z}_2^n$, i.e. every morphism of $\mathfrak{A}[2]$, is a circuit of $\tau$, $\mathrm{T}_1$, $\mathrm{T}_2$ and $\mathrm{T}_3$.
+Lafont cites Musset's proof by 3-cycles, which uses no canonical form.
+Here it is a construction, which works for every $n$, though for $n \le 3$ the closure above says more:
+
+* An even permutation is a product of 3-cycles. `three_cycles` takes a point $a$ that moves, to $b$, and divides by the 3-cycle $(a\ b\ c)$, with $c$ the image of $b$, or any other point that moves if $b$ goes back to $a$. Then $a$ is fixed, and nothing fixed moves.
+* A 3-cycle $(a\ b\ c)$ is $P^{-1} \circ C \circ P$, for the standard 3-cycle $C$ of $(1, \dots, 1, 0, 1)$, $(1, \dots, 1, 1, 0)$ and $(1, \dots, 1, 1, 1)$. Three distinct points are affinely independent, so there is an affine $P$ sending $a$, $b$ and $c$ to these: a translation, which is $\mathrm{T}_1$s, then a linear bijection taking $b - a$ and $c - a$ where they go, which is $\mathrm{T}_2$s and wiring by Gaussian elimination.
+* $C$ is the commutator $W \circ V \circ W \circ V$, where $u$ and $v$ are the last two wires, $X_1$ and $X_2$ split the others in two, $V$ flips $v$ when $X_1$ and $u$ are 1, and $W$ flips $u$ when $X_2$ and $v$ are 1.
+* $V$ and $W$ are Toffoli gates, and those beyond $\mathrm{T}_3$ are on fewer than $n$ wires. A gate $\mathrm{T}_{k + 1}$ with $k > 2$ is $U \circ L \circ U \circ L$, borrowing a wire $a$ that it gives back as it found it: $U$ flips $a$ when the first half of the controls is 1, and $L$ flips the target when the second half and $a$ are 1. Both are smaller gates, down to $\mathrm{T}_3$.
+
+```python {.marimo}
+def expand(n: int, *on: int) -> Hypergraph:
+    """ T_k as T_1, T_2 and T_3, borrowing another wire when k > 3. """
+    if len(on) <= 3:
+        return gate(n, *on)
+    *controls, target = on
+    a, k = min(set(range(n)) - set(on)), (len(controls) + 1) // 2
+    upper = expand(n, *controls[:k], a)
+    lower = expand(n, *controls[k:], a, target)
+    return lower >> upper >> lower >> upper
+
+
+def cycle(n: int) -> Hypergraph:
+    """ The 3-cycle (1..1, 0, 1) -> (1..1, 1, 0) -> (1..1, 1, 1). """
+    half, u, v = (n - 2) // 2, n - 2, n - 1
+    first = expand(n, *range(half), u, v)
+    second = expand(n, *range(half, n - 2), v, u)
+    return first >> second >> first >> second
+
+
+def add(a: tuple, b: tuple) -> tuple:
+    return tuple((i + j) % 2 for i, j in zip(a, b))
+
+
+def inverse(graph: Hypergraph) -> Hypergraph:
+    """ A circuit of involutions, backwards. """
+    return hypergraph(graph.cod_wires, [
+        (box, outs, ins) for box, (ins, outs)
+        in zip(graph.boxes[::-1], graph.box_wires[::-1])], graph.dom_wires)
+
+
+def linear(n: int, *vectors: tuple) -> Hypergraph:
+    """ T_2s and wiring sending independent vectors to the last unit ones. """
+    result = Hypergraph.id(x ** n)
+    for w, v in zip(range(n - 1, -1, -1), vectors):
+        v = truth_table(result)[v]
+        i = max(j for j in range(w + 1) if v[j])
+        wiring = [{i: w, w: i}.get(j, j) for j in range(n)]
+        result = (result >> Hypergraph.permutation(wiring, x ** n)).then(*(
+            gate(n, w, j) for j in range(n) if j != w and v[wiring[j]]))
+    return result
+
+
+def affine(n: int, a: tuple, b: tuple, c: tuple) -> Hypergraph:
+    """ T_1s, then T_2s and wiring, sending a, b, c to the cycle. """
+    result = linear(n, add(a, b), add(a, c)) >> gate(n, n - 1, n - 2)
+    shift = add(a, truth_table(inverse(result))[(1, ) * (n - 2) + (0, 1)])
+    return Hypergraph.id(x ** n).then(*(
+        gate(n, w) for w in range(n) if shift[w])) >> result
+
+
+def three_cycles(perm) -> list[tuple[int, int, int]]:
+    """ An even permutation as a product of 3-cycles a -> b -> c -> a. """
+    perm, result = list(perm), []
+    while moved := [a for a, b in enumerate(perm) if a != b]:
+        a, b = moved[0], perm[moved[0]]
+        c = perm[b] if perm[b] != a else next(
+            c for c in moved if c not in (a, b))
+        back = {b: a, c: b, a: c}
+        perm = [back.get(y, y) for y in perm]
+        result.append((a, b, c))
+    return result
+
+
+def circuit(perm) -> Hypergraph:
+    """ An even permutation of Z_2^n as a circuit of tau, T_1, T_2, T_3. """
+    if parity(perm):
+        raise ValueError("an odd permutation is no product of 3-cycles")
+    n = len(perm).bit_length() - 1
+    points, result = list(product((0, 1), repeat=n)), Hypergraph.id(x ** n)
+    for a, b, c in reversed(three_cycles(perm)):
+        P = affine(n, points[a], points[b], points[c])
+        result = result >> P >> cycle(n) >> inverse(P)
+    return result
+```
+
+**Corollary 1**: $\mathfrak{A}[2]$ is finitely generated, by its finitely many morphisms on at most three wires and by $\tau$ and the $\mathrm{T}_i$ each next to one more wire, which Lemma 14 makes even.
+**Corollary 2**: $\mathfrak{S}[2]$ is generated by $\tau$ and all the $\mathrm{T}_n$, an odd $f$ on $n$ wires being $\mathrm{T}_n \circ g$ for the even $g = \mathrm{T}_n \circ f$.
+
+Lafont stops at the equations above: other relations are needed, and a presentation of $\mathfrak{S}[2]$ or $\mathfrak{A}[2]$ is left open.
+The commutations are not oriented here.
+Swapping the controls is a symmetry of $\mathrm{T}_3$, which no orientation picks, like the commutativity of $\mu$.
+The other three, oriented to push $\nu$ and $\mathrm{T}_2$ below $\mathrm{T}_3$, terminate, each step leaving fewer $\mathrm{T}_3$s below the gates it moves, but the first adds a gate and, the relations being incomplete, they reach no canonical form.
+The involutions, oriented $\mathrm{T}_i \circ \mathrm{T}_i \to 1$, do shorten the circuits of Theorem 12: two equal gates in a row, on the same wires in the same order, are wires.
+The gates that cancel are mostly the $\mathrm{T}_1$s of the translations, where one conjugate ends with its $P^{-1}$ and the next starts with its $P$, then $\mathrm{T}_2$s of their linear parts.
+The circuits of random permutations of $\mathbb{Z}_2^3$, $\mathbb{Z}_2^4$ and $\mathbb{Z}_2^5$, two even and one odd by Corollary 2 for each $n$, have the permutations they are built from, with no gate beyond $\mathrm{T}_3$ but the last $\mathrm{T}_n$ of the odd ones, and Theorem 12 refuses the odd $\mathrm{T}_4$:
+
+```python {.marimo}
+def involution(graph, p):
+    made = producers(graph)
+    for j, box in enumerate(graph.boxes):
+        ins, outs = graph.box_wires[j]
+        i = made[ins[0]]
+        if i is not None and graph.boxes[i] == box\
+                and graph.box_wires[i][1] == ins:
+            return instance(graph, [i, j], graph.box_wires[i][0], outs,
+                            Hypergraph.id(x ** len(ins)))
+    return None
+
+
+_rng, _rows = random.Random(0), []
+for _on in (_rng.sample(range(7), _k) for _k in range(4, 7)):
+    assert permutation(expand(7, *_on)) == permutation(gate(7, *_on))
+for _n in (3, 4, 5):
+    _top = permutation(gate(_n, *range(_n)))
+    for _odd in (0, 0, 1):
+        _perm = _rng.sample(range(2 ** _n), 2 ** _n)
+        if parity(_perm) != _odd:
+            _perm[:2] = _perm[1], _perm[0]
+        _even = [_top[b] for b in _perm] if _odd else _perm
+        _circuit = circuit(_even)
+        assert all(len(box.dom) <= 3 for box in _circuit.boxes)
+        if _odd:
+            _circuit = _circuit >> gate(_n, *range(_n))
+        assert permutation(_circuit) == tuple(_perm)
+        _result, _steps = normal_form(_circuit, [involution], 2, permutation)
+        _rows.append(f"| {_n} | {['even', 'odd'][_odd]} "
+                     f"| {len(three_cycles(_even))} | {len(_circuit.boxes)} "
+                     f"| {len(_result.boxes)} | {_steps} |")
+try:
+    circuit(permutation(gate(4, 0, 1, 2, 3)))
+    raise AssertionError("T_4 is odd")
+except ValueError as _error:
+    _refused = _error
+mo.md("\n".join([
+    "| $n$ | $f$ | 3-cycles | gates | after $\\mathrm{T}_i \\circ "
+    "\\mathrm{T}_i \\to 1$ | steps |", "|---|---|---|---|---|---|"] + _rows + [
+    "", f"$\\mathrm{{T}}_4$ is refused: {_refused}."]))
+```
+
 ## What is left
 
 The other parts of the paper are left to follow-ups, see [rel-int/discopy-next#311](https://github.com/rel-int/discopy-next/issues/311):
@@ -720,5 +975,4 @@ The other parts of the paper are left to follow-ups, see [rel-int/discopy-next#3
 * $\mathbf{GL}(\mathbb{Z}_2)$ and the presentations by the linear permutation $\kappa$ (§3.1–§3.2, Theorems 6 to 8). Lafont's rewrite system there does not terminate, and its rules are used in both directions, one for stairs and one for antistairs.
 * The isometries $\mathbf{O}$ and their Euler angles (§3.4, Theorem 9).
 * The affine permutations $\mathbf{GA}(\mathbb{Z}_2)$, with the negation $\nu$ (§4.1, Theorem 11).
-* The Toffoli gates and Theorem 12 (§4.2).
 * The termination orders and critical peaks of Appendix A.
