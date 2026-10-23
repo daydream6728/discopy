@@ -1079,6 +1079,9 @@ class Intertwiner(NamedGeneric["algebra"], RibbonCategory):
         """ The composition of the networks, from the domain of ``self`` to
         the codomain of ``other``. """
         assert_isinstance(other, Intertwiner)
+        if other.algebra not in (None, self.algebra):
+            raise ValueError(f"expected an intertwiner over {self.algebra}, "
+                             f"got one over {other.algebra}")
         assert_iscomposable(self, other)
         return type(self)(self.inside >> other.inside, self.dom, other.cod)
 
@@ -1086,6 +1089,9 @@ class Intertwiner(NamedGeneric["algebra"], RibbonCategory):
     def tensor(self, other):
         """ The tensor of the networks, between the products of modules. """
         assert_isinstance(other, Intertwiner)
+        if other.algebra not in (None, self.algebra):
+            raise ValueError(f"expected an intertwiner over {self.algebra}, "
+                             f"got one over {other.algebra}")
         return type(self)(self.inside @ other.inside,
                           self.dom @ other.dom, self.cod @ other.cod)
 
@@ -1103,8 +1109,11 @@ class Intertwiner(NamedGeneric["algebra"], RibbonCategory):
         """
         The trace of the network over the last ``n`` factors of its space,
         or the first when ``left``: a module does not remember its factors,
-        so that the ends of the trace are spaces, i.e. trivial modules.
+        so that the ends of the trace are spaces, i.e. trivial modules, unless
+        ``n == 0`` where the trace is the identity.
         """
+        if n == 0:
+            return self
         traced = self.inside.trace(n, left)
         return type(self)(traced, traced.dom, traced.cod)
 

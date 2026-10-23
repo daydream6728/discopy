@@ -1,6 +1,7 @@
 from itertools import permutations
 
 import numpy as np
+from pytest import raises
 
 from discopy import rigid, ribbon, tensor
 from discopy.utils import dumps, loads
@@ -219,13 +220,24 @@ def test_intertwiner_is_a_network_between_modules():
 
 
 def test_intertwiner_refuses_a_module_over_another_algebra():
-    D, _ = double_and_module()
+    D, W = double_and_module()
     V = Representation[taft].regular()
-    try:
+    f, g = Intertwiner[D].id(W), Intertwiner[taft].id(V)
+    with raises(ValueError):
         Intertwiner[D](tensor.Id(Dim(*V.inside)), V, V)
-        assert False
-    except ValueError:
-        pass
+    for composite in [lambda: f @ g, lambda: g @ f, lambda: f >> g,
+                      lambda: Intertwiner.id(W) >> f]:
+        with raises(ValueError):
+            composite()
+    plain = Intertwiner.id(Dim(*W.inside))
+    assert (f >> plain).algebra == (f @ plain).algebra == D
+
+
+def test_intertwiner_trace_zero_is_identity():
+    D, V = double_and_module()
+    braid = Intertwiner[D].braid(V, V)
+    assert braid.trace(0) == braid
+    assert braid.trace(0).dom.action == braid.dom.action
 
 
 def test_representation_is_module():
