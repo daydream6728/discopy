@@ -16,6 +16,7 @@ DisCoPy documentation
     api/syntax
     api/semantics
     api/quantum
+    api/optyx
     api/grammar
     api/drawing
     api/axioms
