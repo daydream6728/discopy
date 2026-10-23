@@ -253,6 +253,12 @@ def test_errors():
     with pytest.raises(ValueError):
         Interferometer(np.eye(2), loop=1, inputs=(1, )).burn_in(
             1e-3, max_depth=5)
+    for probability in ("transmissivity", "efficiency",
+                        "indistinguishability"):
+        for value in (-.1, 1.5):
+            with pytest.raises(ValueError):
+                Interferometer(np.eye(2), loop=1, inputs=(1, ),
+                               **{probability: value})
 
 
 def test_twomode_is_unitary_beyond_twenty_photons():
@@ -334,6 +340,9 @@ def test_sources():
         Source((1., )).draw(None)
     with pytest.raises(NotImplementedError):
         Kernel(thermal, cap=2)
+    for photons in ((-1, ), (1.5, )):
+        with pytest.raises(ValueError):
+            Fock(photons)
 
 
 def test_sources_on_diagrams():

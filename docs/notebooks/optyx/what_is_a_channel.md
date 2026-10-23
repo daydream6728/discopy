@@ -26,8 +26,8 @@ classical counterpart `mode` carrying photon counts, plus `qubit` and
 in sequence with `>>` and in parallel with `@`, and the resulting diagram
 is simulated in two ways: exactly, by contracting a tensor network with
 `.eval()`, and the way the hardware runs it, one detection event at a time,
-with `.sample()`. The two must agree, and every circuit in this notebook is
-run both ways.
+with `.sample()`. The two must agree, and the notebook compares them as it
+goes.
 
 The tensor network holds every outcome at once, so its cost grows with the
 whole state space. A sampler instead follows a single run: it carries the

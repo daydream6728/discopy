@@ -87,9 +87,10 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   a compiler to photonic hardware, under the Apache License 2.0 in its own
   `LICENSE` and `NOTICE`, behind the new `optyx` extra ([next#225],
   [next#276]).
-- `discopy.optyx.sampling`: `channel.Diagram.sample` runs any closed diagram
-  with feedback loops tick by tick, and `channel.Observable` is the effect of
-  a normal operator or of a function of the outcomes ([optyx#76]).
+- `discopy.optyx.sampling`: `channel.Diagram.sample` runs a diagram with
+  feedback loops tick by tick, closed or fed by a `source`, its burn-in
+  certified when it is passive, and `channel.Observable` is the effect of a
+  normal operator or of a function of the outcomes ([optyx#76]).
 - `discopy.optyx.sampling.Kernel`, one tick of an `Interferometer` in JAX
   that compiles, maps over trajectories and differentiates in its
   parameters, with `log_prob` and an exact `distribution` ([optyx#82]).
@@ -159,6 +160,9 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `@`, with one `tensor` call per layer ([next#161]).
 - `Functor.id` is built from `utils.identity`, and `then` drops an identity
   on either side, so that composing functors is unital ([next#142]).
+- `discopy.optyx` keeps no private members in `channel` and `core.diagram`:
+  `decomp`, `dual_rail`, `Ob.classical`, `Ob.quantum` and `Box.array` are
+  public, and the imports that make no cycle are at the top ([optyx#29]).
 
 ### Deprecated
 
@@ -509,6 +513,7 @@ for the changelog of `1.2.1` and earlier.
 [next#310]: https://github.com/rel-int/discopy-next/pull/310
 [next#316]: https://github.com/rel-int/discopy-next/pull/316
 [next#320]: https://github.com/rel-int/discopy-next/pull/320
+[optyx#29]: https://github.com/rel-int/optyx/pull/29
 [optyx#76]: https://github.com/rel-int/optyx/pull/76
 [optyx#82]: https://github.com/rel-int/optyx/pull/82
 [lambek#2]: https://github.com/rel-int/lambek/pull/2
