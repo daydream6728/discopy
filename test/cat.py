@@ -737,6 +737,7 @@ BROKEN = {
         "quantum.gates.{CRx,CRz,CU1}": "its tree is that of a controlled gate",
         "grammar.categorial.TypeRaising": "its tree drops its cod",
         "neural.network.{Box,Feedback,Trace,Head,Tail}": "a module has none",
+        "tensor.Bubble": "a function has no tree",
     },
 }
 

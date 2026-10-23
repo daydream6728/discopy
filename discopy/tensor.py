@@ -1111,24 +1111,26 @@ class Bubble(monoidal.Bubble, Box):
     .. image:: /_static/tensor/product-rule.svg
         :align: center
     """
+    serialised_attrs = monoidal.Bubble.serialised_attrs + ("func", )
+    func = staticmethod(lambda x: int(not x))
 
     def __new__(cls, *args, data=None, **kwargs):
         return super().__new__(cls, data=data)
 
-    def __init__(self, inside, func=lambda x: int(not x), **params):
-        self.func = func
+    def __init__(self, inside, func=None, **params):
+        if func is not None:
+            self.func = func
         super().__init__(inside, **params)
 
-    def subs(self, *args) -> Bubble:
-        return type(self)(
-            self.arg.subs(*args), func=self.func, dom=self.dom, cod=self.cod,
-            drawing_name=self.drawing_name)
+    def setoid(self):
+        """ Tensor bubbles are equal when their funcs and daggers are too. """
+        return super().setoid() + (self.func, self.is_dagger)
 
-    def lambdify(self, *symbols, **kwargs):
-        inside = self.arg.lambdify(*symbols, **kwargs)
-        return lambda *xs: type(self)(
-            inside(*xs), func=self.func, dom=self.dom, cod=self.cod,
-            drawing_name=self.drawing_name)
+    def __repr__(self):
+        if self.is_dagger:
+            return repr(self.dagger()) + ".dagger()"
+        func = "" if self.func is type(self).func else f", func={self.func!r}"
+        return super().__repr__()[:-1] + func + ")"
 
     def grad(self, var, **params):
         """
