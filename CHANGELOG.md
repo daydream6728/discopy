@@ -71,8 +71,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - `grammar.proofnet`, parses as proof nets read back to normal terms, and
   `grammar.neural`, a PyTorch parser into them ([lambek#8]).
 - `categorial.parse`, the `k` best terms of a sentence by CKY ([lambek#2]).
-- `neural.Parser.search`, parsing as search over the correct proof nets of
-  the `k` best types of each word ([lambek#12]).
+- `grammar.neural.Parser.search`, parsing as search over the correct proof
+  nets of the `k` best types of each word ([lambek#12]).
 - `quantum.reservoir`, quantum reservoir computing ([#519]), the `Rydberg`
   ansatz ([#586]), and `quantum.contextuality`, the contextual fraction
   ([next#283]).

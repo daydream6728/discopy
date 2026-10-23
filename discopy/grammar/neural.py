@@ -388,6 +388,8 @@ def products(beams, width: int):
     (0, 1) -0.5
     (1, 0) -1.0
     """
+    if not all(beams):
+        return
     start = (0, ) * len(beams)
     heap, seen = [(-sum(beam[0][1] for beam in beams), start)], {start}
     while heap and width:

@@ -136,7 +136,10 @@ def test_products():
             reverse=True)[:width]
         choices = list(products(beams, width))
         assert [score for _, score in choices] == expected
+        assert all(score == sum(beam[j][1] for beam, j in zip(beams, choice))
+                   for choice, score in choices)
         assert len({choice for choice, _ in choices}) == len(choices)
+    assert not list(products([[("a", 0.)], []], 1))
 
 
 def test_Linker_log_likelihood():
