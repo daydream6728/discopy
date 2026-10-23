@@ -362,6 +362,7 @@ def test_loads_runs_no_code_from_a_file():
             {'factory': 'numpy.sum', 'item': [payload]},
             {'factory': 'numpy.void', 'item': 10 ** 12},
             {'factory': 'numpy.int64', 'item': '42'},
+            {'factory': 'sympy.Float', 'num': '0.1', 'precision': 10 ** 12},
             {'factory': 'numpy.ndarray', 'dtype': 'U500000000',
              'shape': [1], 'flat': ['a']},
             {'factory': 'numpy.ndarray', 'dtype': 'O',
@@ -380,6 +381,7 @@ def test_resolve_factory_reads_classes_of_discopy_only():
                  "cat.Box.from_tree", "f2py", "tensor.Tensor[utils.Path]"):
         with pytest.raises(AttributeError):
             resolve_factory(name)
+
 
 def test_named_generic_pickle_roundtrip():
     from discopy.frobenius import Diagram, Ty

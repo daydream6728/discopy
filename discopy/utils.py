@@ -678,6 +678,8 @@ def decode_sympy(tree: dict) -> Any:
     function on sympy expressions only, never on a string, which sympy would
     parse with :func:`eval`, and with ``evaluate=False``, so that it rebuilds
     the expression as it was written, without computing e.g. a large power.
+    A float other than zero is read at a precision of at most four bits a
+    digit, so that it allocates in proportion to the file.
     As the ``object_hook`` of :func:`loads` it reads the innermost nodes
     first, i.e. the ``args`` of a node come decoded.
 
@@ -705,7 +707,9 @@ def decode_sympy(tree: dict) -> Any:
         return sympy.Rational(tree['p'], tree.get('q', 1))
     if name == "Float" and fields == {'factory', 'num', 'precision'}\
             and isinstance(tree['num'], str)\
-            and type(tree['precision']) is int:
+            and type(tree['precision']) is int\
+            and (tree['num'] == "0"
+                 or tree['precision'] <= 4 * len(tree['num'])):
         return sympy.Float(tree['num'], precision=tree['precision'])
     if name in SYMPY_CONSTANTS and fields == {'factory'}:
         return getattr(sympy.S, name)

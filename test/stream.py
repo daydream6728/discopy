@@ -123,9 +123,9 @@ def test_no_tree():
 
 
 def test_no_hash():
-    """ Streams and their types keep the dataclass ``__hash__ = None``:
-    equality compares their thunks by identity, which a hash would make
-    look like the equality of streams. """
+    """ Streams and their types stay unhashable, with the ``__hash__ = None``
+    of a dataclass: their equality compares every field, the thunk
+    ``_later`` by identity. """
     x = Ty(symmetric.Ty('x'))
     for unhashable in (Stream.sequence('f', x, x), x):
         with raises(TypeError, match="unhashable"):
