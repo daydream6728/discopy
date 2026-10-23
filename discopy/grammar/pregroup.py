@@ -220,7 +220,8 @@ class Spider(frobenius.Spider, Box):
     """
     def rotate(self, left=False):
         typ = self.typ.l if left else self.typ.r
-        return type(self)(len(self.cod), len(self.dom), typ, self.phase)
+        return type(self)(len(self.cod), len(self.dom), typ, self.phase,
+                          is_dagger=self.is_dagger)
 
 
 class Word(thue.Word, Box):

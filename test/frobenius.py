@@ -32,6 +32,23 @@ def test_Functor_phased_spider():
     assert spider.to_hypergraph().boxes == (spider, )
 
 
+def test_Spider_dagger():
+    from discopy.grammar import pregroup
+    x = Ty('x')
+    phased, box = Spider(1, 1, x, .5), Box('box', x, x)
+    F = Functor({x: x}, {phased: box})
+    assert F(phased.dagger()) == F(phased).dagger() == box.dagger()
+    for spider in (phased, Spider(2, 3, x, "$\\phi$")):
+        dagger = spider.dagger()
+        assert dagger.is_dagger and dagger.phase == spider.phase
+        assert dagger.dagger() == spider and dagger.r == spider.r.dagger()
+        assert dagger.unfuse() == spider.unfuse().dagger()
+    assert eval(str(phased.dagger())) == phased.dagger()
+    n = pregroup.Ty('n')
+    word = pregroup.Spider(1, 2, n, "a")
+    assert word.dagger().r == word.r.dagger()
+
+
 def test_Box_hash():
     x, y = Ty('x'), Ty('y')
     f = Box('f', x, y)
