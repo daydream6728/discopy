@@ -49,8 +49,10 @@ def test_Spider_dagger():
     assert word.dagger().r == word.r.dagger()
     for spider in (Spider(1, 1, x, 0), Spider(1, 2, x, is_dagger=True)):
         assert not spider.is_dagger and spider.dagger().dagger() == spider
-        assert spider.is_cartesian and spider.unfuse() == spider.unfuse()
     assert Spider(1, 1, x, 0).dagger().is_cartesian
+    assert Spider(1, 3, x, is_dagger=True).unfuse() == Spider(1, 3, x).unfuse()
+    assert Spider(3, 1, x, 0).dagger().unfuse()\
+        == Spider(1, 1, x, 0) >> Spider(1, 3, x).unfuse()
 
 
 def test_Bubble_flags_rotate():
