@@ -1,4 +1,4 @@
-from discopy import balanced, braided, symmetric
+from discopy import balanced, symmetric
 from discopy.balanced import *
 
 
@@ -131,7 +131,7 @@ def test_trace_to_braided():
         g = module.Box('g', z @ z, z @ z)
         rails = double_rail(z @ z)
         image = g.trace().to_braided()
-        assert isinstance(image, braided.Diagram)
+        assert isinstance(image, balanced.Diagram)
         assert image == Box('g', rails, rails).trace(n=2)
 
 
