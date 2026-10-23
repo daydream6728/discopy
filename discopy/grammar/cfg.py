@@ -45,7 +45,7 @@ from discopy.config import BOX_DRAWING_ATTRIBUTES
 from discopy.grammar import thue
 from discopy.monoidal import Ty
 from discopy.utils import (
-    assert_isinstance, factory_name, assert_isatomic, AxiomError)
+    assert_isinstance, factory_name, assert_isatomic, AxiomError, from_tree)
 
 if TYPE_CHECKING:
     import nltk
@@ -117,6 +117,26 @@ class Tree:
     def __hash__(self):
         return hash((self.root, self.branches)) if self.branches\
             else hash(self.root)
+
+    def to_tree(self) -> dict:
+        """
+        Serialise a tree as its ``root`` and its ``branches``, see
+        :func:`discopy.utils.dumps`, while a rule is serialised as a box.
+
+        Example
+        -------
+        >>> from discopy.utils import dumps, loads
+        >>> x = Ty('x')
+        >>> f, a = Rule(x @ x, x, name='f'), Word('a', x)
+        >>> assert loads(dumps(f(f(a, a), a))) == f(f(a, a), a)
+        """
+        return dict(factory=factory_name(type(self)), root=self.root.to_tree(),
+                    branches=[branch.to_tree() for branch in self.branches])
+
+    @classmethod
+    def from_tree(cls, tree: dict) -> Tree:
+        """ Decode a serialised tree, see :meth:`to_tree`. """
+        return cls(*map(from_tree, [tree['root']] + tree['branches']))
 
     def to_diagram(self) -> monoidal.Diagram:
         """
@@ -195,6 +215,8 @@ class Rule(Tree, thue.Rule):
 
     __hash__, __str__ = thue.Rule.__hash__, thue.Rule.__str__
     __repr__ = thue.Rule.__repr__
+    to_tree = thue.Rule.to_tree
+    from_tree = classmethod(thue.Rule.from_tree.__func__)
 
     def to_diagram(self) -> monoidal.Box:
         drawing = {attr: getattr(self, attr)

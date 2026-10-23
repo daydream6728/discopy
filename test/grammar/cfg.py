@@ -2,7 +2,7 @@ from pytest import importorskip, raises
 
 from discopy import cat, grammar, monoidal
 from discopy.grammar.cfg import Tree, Rule, Word, Id, Ty
-from discopy.utils import AxiomError
+from discopy.utils import AxiomError, dumps, loads
 
 x = Ty('x')
 f, w = Rule(x @ x, x, name='f'), Word('w', x)
@@ -71,3 +71,17 @@ def test_Tree_to_diagram():
     assert f(g(a, b), a).to_diagram()\
         == (leaf_a @ leaf_b >> box('g', x @ y, x)) @ leaf_a\
         >> box('f', x @ x, x)
+
+
+def test_to_tree():
+    x, y = Ty('x'), Ty('y')
+    f, g = Rule(x @ x, x, name='f'), Rule(x @ y, x, name='g')
+    a, b = Word('a', x), Word('b', y, data=3)
+    for tree in (f(g(a, b), a), Tree(a), Tree(g[::-1], a), f, g[::-1], b):
+        assert loads(dumps(tree)) == tree
+        assert type(loads(dumps(tree))) is type(tree)
+    raw = '{"factory": "grammar.cfg.Word", "name": "a", '\
+        '"dom": {"factory": "monoidal.Ty", "inside": []}, '\
+        '"cod": {"factory": "monoidal.Ty", "inside": '\
+        '[{"factory": "monoidal.Wire", "name": "x"}]}}'
+    assert loads(raw) == a and dumps(a) == raw
