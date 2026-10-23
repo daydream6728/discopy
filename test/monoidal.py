@@ -479,10 +479,11 @@ def test_Bubble_every_level():
     from discopy import (
         spacial, feedback, braided, balanced, symmetric, markov, comarkov,
         biclosed, closed, rigid, pivotal, ribbon, compact, frobenius)
+    from discopy.grammar import pregroup, categorial, abstract
     for module in (
             spacial, feedback, braided, balanced, symmetric, markov,
             comarkov, biclosed, closed, rigid, pivotal, ribbon, compact,
-            frobenius):
+            frobenius, pregroup, categorial, abstract):
         assert module.Diagram.bubble_factory is module.Bubble, module
         x, y = module.Ty('x'), module.Ty('y')
         bubble = module.Box('f', x, y).bubble(name="N")

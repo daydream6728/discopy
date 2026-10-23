@@ -17,6 +17,7 @@ Summary
     Cap
     Swap
     Word
+    Bubble
     Functor
 
 .. admonition:: Functions
@@ -245,6 +246,16 @@ class Word(thue.Word, Box):
             + f"({self.name!r}, {self.cod!r}{extra})"
 
 
+class Bubble(frobenius.Bubble, Box):
+    """
+    A pregroup bubble is a frobenius bubble and a pregroup box.
+
+    >>> n = Ty('n')
+    >>> word = Box('w', n, n)
+    >>> assert (word >> word.bubble()).cod == n and word.bubble().r.l.z == 0
+    """
+
+
 class Functor(frobenius.Functor):
     """ A pregroup functor is a frobenius functor with a pregroup domain. """
     dom = cod = Diagram
@@ -289,6 +300,7 @@ Diagram.box_factory = Box
 Diagram.swap_factory, Diagram.spider_factory = Swap, Spider
 Diagram.permutation_factory = Permutation
 Diagram.cup_factory, Diagram.cap_factory = Cup, Cap
+Diagram.bubble_factory = Bubble
 
 Id = Diagram.id
 

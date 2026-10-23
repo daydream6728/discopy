@@ -47,6 +47,18 @@ def test_Spider_dagger():
     n = pregroup.Ty('n')
     word = pregroup.Spider(1, 2, n, "a")
     assert word.dagger().r == word.r.dagger()
+    for spider in (Spider(1, 1, x, 0), Spider(1, 2, x, is_dagger=True)):
+        assert not spider.is_dagger and spider.dagger().dagger() == spider
+        assert spider.is_cartesian and spider.unfuse() == spider.unfuse()
+    assert Spider(1, 1, x, 0).dagger().is_cartesian
+
+
+def test_Bubble_flags_rotate():
+    x = Ty('x')
+    f, g = Box('f', x, x), Box('g', x, x)
+    noisy = f.bubble(is_affine=False).r
+    assert not noisy.l.affine and Functor({x: x}, {f: g})(noisy) == (
+        g.bubble(is_affine=False).r)
 
 
 def test_Box_hash():

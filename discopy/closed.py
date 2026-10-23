@@ -436,6 +436,8 @@ class Diagram(markov.Diagram, biclosed.Diagram, ClosedCategory):
     @classmethod
     def box_to_term(cls, box, args):
         "The application of a box as a constant to variables for its inputs."
+        if isinstance(box, Bubble):
+            raise AxiomError(f"{box} is a bubble, it has no term reading.")
         if not box.dom:
             return box.cod(box.name)
         factors = [box.dom[i:i + 1] for i in range(len(box.dom))]
@@ -664,8 +666,18 @@ class Sum(markov.Sum, biclosed.Sum, Box):
 
 class Bubble(markov.Bubble, biclosed.Bubble, Box):
     """
-    A closed bubble is a markov and biclosed bubble and a closed box.
+    A closed bubble is a markov and biclosed bubble and a closed box, linear
+    when its args are, as a curry is. It has no term reading.
+
+    Example
+    -------
+    >>> x = Ty('x')
+    >>> assert Box('f', x, x).bubble().is_linear
+    >>> assert not Diagram.copy(x).bubble(cod=x).is_linear
     """
+    @property
+    def is_linear(self):
+        return all(arg.is_linear for arg in self.args)
 
 
 class Functor(biclosed.Functor, markov.Functor):

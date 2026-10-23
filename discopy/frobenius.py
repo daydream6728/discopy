@@ -659,7 +659,8 @@ class Spider(Box):
         n_legs_out : The number of legs out.
         typ : The type of the spider.
         data : The phase of the spider.
-        is_dagger : Whether the spider is marked as a dagger.
+        is_dagger : Whether the spider is marked as a dagger, which only
+            a phased one is.
 
     Examples
     --------
@@ -680,6 +681,7 @@ class Spider(Box):
                  is_dagger=False, **params):
         assert_isatomic(typ)
         self.typ = typ
+        is_dagger = is_dagger and bool(data)
         str_data = "" if data is None else f", {data}"
         n_in, n_out = (n_legs_out, n_legs_in) if is_dagger\
             else (n_legs_in, n_legs_out)
@@ -725,11 +727,12 @@ class Spider(Box):
 
     def dagger(self):
         """
-        The dagger of a spider with no phase is the spider with its legs
-        swapped. A phased spider is a generator: its dagger keeps its phase
-        and is marked as a dagger, so that any phase has one, a functor maps
-        it to the dagger of its image, and negating a phase is left to
-        :mod:`discopy.quantum.zx`, where phases form a group.
+        The dagger of a spider with no phase, i.e. ``None`` or zero as for its
+        flags, is the spider with its legs swapped. A phased spider is a
+        generator: its dagger keeps its phase and is marked as a dagger, so
+        that any phase has one, a functor maps it to the dagger of its image,
+        and negating a phase is left to :mod:`discopy.quantum.zx`, where
+        phases form a group.
 
         >>> x = Ty('x')
         >>> spider = Spider(1, 2, x, "$\\\\phi$")
@@ -737,9 +740,9 @@ class Spider(Box):
         Spider(1, 2, x, $\\phi$)[::-1]
         >>> assert spider.dagger().dagger() == spider
         >>> assert Spider(1, 2, x).dagger() == Spider(2, 1, x)
+        >>> assert Spider(1, 2, x, 0).dagger() == Spider(2, 1, x, 0)
+        >>> assert Spider(1, 2, x, is_dagger=True) == Spider(1, 2, x)
         """
-        if self.phase is None:
-            return type(self)(len(self.cod), len(self.dom), self.typ)
         return type(self)(len(self.cod), len(self.dom), self.typ, self.phase,
                           is_dagger=not self.is_dagger)
 
@@ -781,8 +784,14 @@ class Spider(Box):
 class Bubble(compact.Bubble, markov.Bubble, comarkov.Bubble, Box):
     """
     A Frobenius bubble is a compact, Markov and comarkov bubble and a
-    frobenius box.
+    frobenius box, which keeps its flags as it rotates.
+
+    >>> x = Ty('x')
+    >>> noisy = Box('f', x, x).bubble(is_deterministic=False)
+    >>> assert noisy.r.l == noisy and not noisy.r.l.is_deterministic
     """
+    def rotate(self, left=False) -> Bubble:
+        return self.flagged(super().rotate(left))
 
 
 class Sum(compact.Sum, markov.Sum, comarkov.Sum, Box):
@@ -821,7 +830,7 @@ class Functor(compact.Functor, markov.Functor, comarkov.Functor):
         if isinstance(other, Cospan)\
                 and not isinstance(other, symmetric.Permutation):
             return self(other.to_spiders())
-        if isinstance(other, markov.Copy):
+        if isinstance(other, (markov.Copy, Bubble)):
             return markov.Functor.__call__(self, other)
         if isinstance(other, comarkov.Merge):
             return comarkov.Functor.__call__(self, other)
