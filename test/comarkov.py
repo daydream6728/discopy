@@ -30,7 +30,7 @@ def test_Merge_takes_index():
     from discopy.abc import Nat
     x = Ty('x')
     assert Merge(x, int64(3)) == Merge(x, Nat(3)) == Merge(x, 3)
-    assert Cofunction(x, [0, 0, 0]) == Merge(x, 3)
+    assert Cofunction(x, int64([0, 0, 0])) == Merge(x, 3)
 
 
 def test_Noise():

@@ -150,7 +150,7 @@ def test_Copy_takes_index():
     from discopy.abc import Nat
     x = Ty('x')
     assert Copy(x, int64(3)) == Copy(x, Nat(3)) == Copy(x, 3)
-    assert Function(x, [0, 0, 0]) == Copy(x, 3)
+    assert Function(x, int64([0, 0, 0])) == Copy(x, 3)
 
 
 def test_Copy_pickle():
