@@ -65,8 +65,9 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - `biclosed.TermBase.alpha_eq` ([#692], [#767]), and beta reduction on
   `closed.Term` to a `closed.BohmTree` ([#442]).
 - `discopy.neural`, neural networks as diagrams ([#702], [#736], [#743]),
-  `neural.signature` ([#739]), and `neural.lattice`, `act` and `train`, the
-  trainers of Tiny Recursive Message Passing ([Recursive_GNNs#1]).
+  `neural.signature` ([#739]), and `neural.wiring`, `cell`, `recursion`,
+  `lattice`, `act` and `train`, the networks and trainers of Tiny Recursive
+  Message Passing ([Recursive_GNNs#1]).
 - `grammar.proofnet`, parses as proof nets read back to normal terms, and
   `grammar.neural`, a PyTorch parser into them ([lambek#8]).
 - `categorial.parse`, the `k` best terms of a sentence by CKY ([lambek#2]).
