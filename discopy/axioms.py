@@ -62,6 +62,7 @@ Summary
 
 from __future__ import annotations
 
+import builtins
 import inspect
 import pickle
 import sys
@@ -791,17 +792,30 @@ class Testable[T](ABC):
         printing bare names such as ``Tensor[int]([0], dom=Dim(1),
         cod=Dim(1))`` evaluates too. The module comes second because a
         term prints the names its own module binds: ``Dim`` in
-        ``discopy.tensor`` is the one a tensor is built from.
+        ``discopy.tensor`` is the one a tensor is built from. Under both
+        come numpy's scalar types whose names ``builtins`` lacks, where
+        :func:`discopy.utils.resolve_factory` reads a ``dtype``, so that
+        ``Tensor[float32]([1.], dom=Dim(1), cod=Dim(1))`` evaluates.
 
         The import is local because the package imports this module.
+
+        >>> import numpy as np
+        >>> from discopy.tensor import Box, Dim
+        >>> b = Box[np.float32]('f', Dim(1), Dim(1), [0.5])
+        >>> assert eval(repr(b), type(b).environment()) == b
         """
+        import numpy
         import discopy
 
         public = lambda namespace: {
             name: value for name, value in namespace.items()
             if not name.startswith("_")}
+        scalars = {
+            name: value for name, value in vars(numpy).items()
+            if isinstance(value, type) and issubclass(value, numpy.generic)
+            and name not in vars(builtins)}
         module = sys.modules[cls.__module__]
-        return dict(public(vars(discopy)), **public(vars(module)))
+        return {**scalars, **public(vars(discopy)), **public(vars(module))}
 
     @classproperty
     def axioms(cls) -> dict[str, Axiom]:

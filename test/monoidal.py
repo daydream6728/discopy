@@ -120,7 +120,18 @@ def test_Ty_eq():
 
 
 def test_Ty_repr():
-    assert repr(Ty('x', 'y')) == "monoidal.Ty(cat.Ob('x'), cat.Ob('y'))"
+    assert repr(Ty('x', 'y'))\
+        == "monoidal.Ty(monoidal.Wire('x'), monoidal.Wire('y'))"
+
+
+def test_Wire_repr():
+    from discopy import cat, monoidal
+    env = {"cat": cat, "monoidal": monoidal}
+    wires = [Wire('x'), Wire('x', Colour('red'), Colour('blue'))]
+    for wire in wires + [wire.dagger() for wire in wires]:
+        assert eval(repr(wire), env).to_tree() == wire.to_tree()
+    assert repr(Wire('x')) == "monoidal.Wire('x')"
+    assert eval("monoidal.Ty(cat.Ob('x'))", env) == Ty('x')
 
 
 def test_Ty_str():
@@ -231,7 +242,7 @@ def test_Layer_init():
 def test_Layer_getitem():
     f = Box('f', 'x', 'x')
     layer = Layer(Ty(), f, Ty())
-    assert layer[0] == f and layer.boxes_and_types == (Ty(), f, Ty())
+    assert layer[0] == f and layer.boxes_or_types == (f, )
 
 
 def test_Layer_legacy_serialisation():
@@ -335,17 +346,20 @@ def test_Diagram_eq():
     assert Diagram((), Ty('x'), Ty('x')) == Id(Ty('x'))
 
 
+def whiskered(layers):
+    """ Each layer of one box, as the whiskered box. """
+    for layer in layers:
+        (box, offset), = layer.boxes_and_offsets
+        yield layer.dom[:offset] @ box @ layer.dom[offset + len(box.dom):]
+
+
 def test_Diagram_iter():
     x, y = Ty('x'), Ty('y')
     f0, f1 = Box('f0', x, y), Box('f1', y, y)
     g0 = Box('g', y @ y, x)
     g1 = g0.dagger()
     d = (f0 >> f1) @ Id(y @ x) >> g0 @ g1 >> f0 @ g0
-    assert Id(x @ y @ x).then(*(
-        left @ box @ right
-        for left, box, right in (
-            layer.boxes_and_types for layer in d)))\
-        == d
+    assert Id(x @ y @ x).then(*whiskered(d)) == d
 
 
 def test_Diagram_getitem():
@@ -361,28 +375,15 @@ def test_Diagram_getitem():
     assert diagram[::-1] == diagram.dagger()
     with raises(TypeError):
         diagram["Alice"]
-    for depth, layer_ in enumerate(diagram.inside):
-        left, box, right = layer_.boxes_and_types
-        layer = Id(left) @ box @ Id(right)
+    layers = list(whiskered(diagram.inside))
+    for depth, layer in enumerate(layers):
         assert diagram[depth] == layer
-        assert (diagram[-depth], ) == tuple(
-            Id(left) @ box @ Id(right)
-            for left, box, right in (
-                diagram.inside[-depth].boxes_and_types, ))
+        assert diagram[-depth] == layers[-depth]
         assert diagram[depth:depth] == Id(layer.dom)
-        assert diagram[depth:] == Id(layer.dom).then(*(
-            Id(left) @ box @ Id(right)
-            for left, box, right in (
-                layer.boxes_and_types for layer in diagram.inside[depth:])))
-        assert diagram[:depth] == Id(diagram.dom).then(*(
-            Id(left) @ box @ Id(right)
-            for left, box, right in (
-                layer.boxes_and_types for layer in diagram.inside[:depth])))
-        assert diagram[depth: depth + 2] == Id(layer.dom).then(*(
-            Id(left) @ box @ Id(right)
-            for left, box, right in (
-                layer.boxes_and_types
-                for layer in diagram.inside[depth: depth + 2])))
+        assert diagram[depth:] == Id(layer.dom).then(*layers[depth:])
+        assert diagram[:depth] == Id(diagram.dom).then(*layers[:depth])
+        assert diagram[depth: depth + 2]\
+            == Id(layer.dom).then(*layers[depth: depth + 2])
 
 
 def test_Diagram_offsets():
@@ -486,6 +487,17 @@ def test_Bubble_data():
     assert "method" not in bubble.to_tree() and "name" not in bubble.to_tree()
 
 
+def test_Bubble_identity_Functor():
+    f = Box('f', Ty('x'), Ty('y'))
+    bubble = f.bubble(name="N", drawing_name="L", draw_as_frame=True,
+                      data=42, is_dagger=True)
+    image = Functor.id(Diagram)(bubble)
+    assert image == bubble and (image.drawing_name, image.draw_as_frame)\
+        == ("L", True) and (image.data, image.is_dagger) == (42, True)
+    empty = Bubble(dom=Ty('x'), cod=Ty('y'))
+    assert Functor.id(Diagram)(empty) == empty
+
+
 def test_Box_globularity():
     red, green, blue = map(Colour, ("red", "green", "blue"))
     x, y = Ty(Wire("x", red, green)), Ty(Wire("y", red, green))
@@ -501,6 +513,8 @@ def test_Diagram_substitute():
     index_of_the_box = 0
     result = outside.substitute(index_of_the_box, inside)
     assert result == inside @ x >> x @ h
+    assert (f @ h).foliation().substitute(0, inside)\
+        == inside @ x @ x >> x @ x @ h
 
 
 def test_Diagram_normalize():
@@ -522,6 +536,15 @@ def test_Diagram_normal_form():
     assert (f0 >> f1).normal_form() == f0 >> f1
     assert (Id(x) @ f1 >> f0 @ Id(x)).normal_form() == f0 @ f1
     assert (f0 @ f1).normal_form(left=True) == Id(x) @ f1 >> f0 @ Id(x)
+
+
+def test_Diagram_normal_form_foliated():
+    x, y = Ty('x'), Ty('y')
+    f, g = Box('f', x, y), Box('g', y, x)
+    diagram = f @ g >> g @ f
+    assert diagram.foliation().normal_form() == diagram.normal_form()
+    assert diagram.foliation().normal_form(left=True)\
+        == diagram.normal_form(left=True)
 
 
 def test_AxiomError():
@@ -553,7 +576,7 @@ def test_Id_init():
 
 def test_Id_repr():
     assert repr(Id(Ty('x')))\
-        == "monoidal.Diagram.id(monoidal.Ty(cat.Ob('x')))"
+        == "monoidal.Diagram.id(monoidal.Ty(monoidal.Wire('x')))"
 
 
 def test_Id_str():
@@ -583,7 +606,8 @@ def test_Functor_init():
 def test_Functor_repr():
     assert repr(Functor({Ty('x'): Ty('y')}, {})) ==\
         "monoidal.Functor("\
-        "ob_map={monoidal.Ty(cat.Ob('x')): monoidal.Ty(cat.Ob('y'))}, ar_map={})"
+        "ob_map={monoidal.Ty(monoidal.Wire('x')): "\
+        "monoidal.Ty(monoidal.Wire('y'))}, ar_map={})"
 
 
 def test_Functor_call():
