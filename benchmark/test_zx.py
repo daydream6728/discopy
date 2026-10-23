@@ -25,9 +25,16 @@ case = partial(case, suite="zx")
 
 
 def circuit(qubits, depth):
-    """ PyZX's random circuit of CNOTs, Hadamards and phases, as a graph. """
+    """
+    PyZX's random circuit of CNOTs, Hadamards and phases, as a graph, from
+    seed zero, with the global random state as it was before.
+    """
+    state = random.getstate()
     random.seed(0)
-    return zx.generate.CNOT_HAD_PHASE_circuit(qubits, depth).to_graph()
+    try:
+        return zx.generate.CNOT_HAD_PHASE_circuit(qubits, depth).to_graph()
+    finally:
+        random.setstate(state)
 
 
 @case("graphlike", "10 qubits", sizes(100, 500, full=(1000, 5000)))

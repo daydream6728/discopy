@@ -1,10 +1,12 @@
 import random
+from fractions import Fraction
 
 import numpy as np
 import pytest
 
 from discopy.quantum import graphlike as G
 from discopy.quantum.zx import Z, X, H, Diagram
+from discopy.rigid import Nat
 
 
 def circuit(qubits: int, depth: int, seed: int) -> list[Diagram]:
@@ -46,7 +48,7 @@ def tensor(graph) -> np.ndarray:
     port an identity to a fresh index.
     """
     spiders = graph.n_spiders
-    operands = []
+    operands = [np.ones(()), []]
     for box, (dom, cod) in zip(graph.boxes, graph.box_wires):
         if box is H:
             operands += [np.array([[1, 1], [1, -1]]), list(dom + cod)]
@@ -93,20 +95,52 @@ def checked(rules):
             for level, anchors in rules]
 
 
-@pytest.mark.parametrize("seed", range(24))
-def test_full_reduce_is_sound(seed):
-    layers = circuit(2 + seed % 3, 8 + seed, seed)
-    graph = G.from_diagram(Diagram.id(len(layers[0].dom)).then(*layers))
-    assert proportional(tensor(graph), matrix(layers))
+def random_graph(seed: int) -> G.Hypergraph:
+    """ A random graph-like hypergraph: Hadamard edges, phases and ports. """
+    rng = random.Random(seed)
+    n = rng.randint(2, 7)
+    edges = [(a, b) for a in range(n) for b in range(a + 1, n)
+             if rng.random() < .35]
+    phases = [(s, Fraction(rng.choice([0, 0, 4, 2, 1, 3]), 8))
+              for s in range(n)]
+    phases = [(s, phase) for s, phase in phases if phase]
+    ports = rng.sample(range(n), rng.randint(0, min(3, n)))
+    dom, cod = ports[:len(ports) // 2], ports[len(ports) // 2:]
+    boxes = [H for _ in edges] + [G.phase_box(phase) for _, phase in phases]
+    wires = [((a, ), (b, )) for a, b in edges] + [
+        ((s, ), ()) for s, _ in phases]
+    return G.Hypergraph(
+        Nat(len(dom)), Nat(len(cod)), tuple(boxes),
+        (tuple(dom), tuple(wires), tuple(cod)),
+        dict.fromkeys(range(n), G.qubit))
+
+
+def reduced(graph: G.Hypergraph) -> G.Hypergraph:
+    """ The checked reduction of a graph, where no rule applies anymore. """
     rewriter = G.Simplifier(graph)
     G.reduce(rewriter, checked(G.RULES))
     result = rewriter.to_hypergraph()
-    assert proportional(tensor(result), matrix(layers))
     rewriter = G.Simplifier(result)
     for level, _ in G.RULES:
         for rule in level:
             for spider in range(result.n_spiders):
                 assert rule(rewriter, spider) is None
+    return result
+
+
+@pytest.mark.parametrize("seed", range(24))
+def test_full_reduce_is_sound(seed):
+    layers = circuit(2 + seed % 3, 8 + seed, seed)
+    graph = G.from_diagram(Diagram.id(len(layers[0].dom)).then(*layers))
+    assert proportional(tensor(graph), matrix(layers))
+    assert proportional(tensor(reduced(graph)), matrix(layers))
+
+
+@pytest.mark.parametrize("seed", range(24))
+def test_full_reduce_reaches_fixpoint(seed):
+    graph = random_graph(seed)
+    result, expected = tensor(reduced(graph)), tensor(graph)
+    assert np.allclose(expected, 0) or proportional(result, expected)
 
 
 def test_full_reduce_example():
@@ -138,7 +172,6 @@ def test_pyzx(seed):
 
 
 def test_copy_and_supplement():
-    from discopy.rigid import Nat
     legs = Z(1, 3) @ Z(1, 3) >> Diagram.permutation([0, 3, 1, 4, 2, 5], Nat(6))
     examples = {
         "copy": (Z(0, 1) >> H) @ H >> Z(2, 1, .125) >> H,

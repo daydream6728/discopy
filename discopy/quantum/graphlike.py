@@ -744,30 +744,31 @@ class Agenda:
     The spiders to try the rules of a level at, the one with fewest ports
     first: pivots and local complementations eliminate spiders the way
     Gaussian elimination does variables, and taking the sparsest first is
-    what keeps the edges they add, the fill-in, low.
+    what keeps the edges they add, the fill-in, low. A spider queued again
+    moves to its current degree.
 
     Parameters:
         rewriter : The rewriter whose spiders these are.
         spiders : The spiders to try first.
     """
     def __init__(self, rewriter: Rewriter, spiders=()):
-        self.rewriter, self.spiders, self.heap = rewriter, set(), []
+        self.rewriter, self.spiders, self.heap = rewriter, {}, []
         self.update(spiders)
 
     def update(self, spiders) -> None:
-        """ Add spiders to try, or try them again. """
+        """ Add spiders to try, or try them again, at their current degree. """
         for spider in spiders:
-            if spider not in self.spiders:
-                self.spiders.add(spider)
-                heappush(self.heap, (
-                    len(self.rewriter.incidence[spider]), spider))
+            degree = len(self.rewriter.incidence[spider])
+            if self.spiders.get(spider) != degree:
+                self.spiders[spider] = degree
+                heappush(self.heap, (degree, spider))
 
     def pop(self) -> int | None:
         """ The next spider to try, ``None`` if there is none. """
         while self.heap:
-            _, spider = heappop(self.heap)
-            if spider in self.spiders:
-                self.spiders.discard(spider)
+            degree, spider = heappop(self.heap)
+            if self.spiders.get(spider) == degree:
+                del self.spiders[spider]
                 return spider
         return None
 
@@ -813,8 +814,10 @@ def reduce(rewriter: Simplifier, rules=None) -> int:
             region.update(dict.fromkeys(
                 s for j in new for wires in rewriter.box_wires[j]
                 for s in wires))
-            todo[0].update(rewriter.find(s) for s in rewriter.merged)
+            region.update(dict.fromkeys(
+                rewriter.find(s) for s in rewriter.merged))
             rewriter.merged.clear()
+            todo[0].update(region)
             region.update(dict.fromkeys(
                 t for s in list(region) for t in rewriter.edges[s]))
             for i, (_, anchors) in enumerate(rules[1:], 1):
