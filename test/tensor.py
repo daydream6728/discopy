@@ -754,3 +754,14 @@ def test_Bubble_func_dagger():
     assert repr(f.bubble().dagger()) == repr(f.bubble()) + ".dagger()"
     from discopy import tensor
     assert repr(bubble).endswith(", func=abs)") and eval(repr(bubble)) == bubble
+
+
+def test_grad_equal():
+    pytest.importorskip("sympy")
+    from sympy.abc import x, y
+    f = Box('f', Dim(2), Dim(2), [x, 0, 0, y])
+    square = f.bubble(func=lambda z: z ** 2)
+    for diagram in (f, square, f >> square):
+        assert diagram.grad(x) == diagram.grad(x) != diagram.grad(y)
+        assert len({diagram.grad(x), diagram.grad(x)}) == 1
+    assert square.grad(x) != f.bubble(func=lambda z: z ** 3).grad(x)

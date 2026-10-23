@@ -23,6 +23,7 @@ Summary
     Spider
     Sum
     Bubble
+    Diff
 
 Tensor combinatorial maps
 -------------------------
@@ -958,8 +959,7 @@ class Box(frobenius.Box, Diagram):
 
     def grad(self, var, **params):
         return self.bubble(
-            func=lambda x: getattr(x, "diff", lambda _: 0)(var),
-            drawing_name=f"$\\partial {var}$")
+            func=Diff(var), drawing_name=f"$\\partial {var}$")
 
     def setoid(self):
         """
@@ -1155,13 +1155,58 @@ class Bubble(monoidal.Bubble, Box):
             :align: center
         """
         from sympy import Symbol
-        tmp = Symbol("tmp")
         name = "$\\frac{{\\partial {}}}{{\\partial {}}}$"
         return Spider(1, 2, self.dom)\
             >> self.arg.bubble(
-                func=lambda x: self.func(tmp).diff(tmp).subs(tmp, x),
+                func=Diff(Symbol("tmp"), self.func),
                 drawing_name=name.format(self.drawing_name, var))\
             @ self.arg.grad(var) >> Spider(2, 1, self.cod)
+
+
+class Diff:
+    """
+    The derivative with respect to a variable, applied to each entry of a
+    tensor by the bubble of :meth:`Box.grad`, an entry with no ``diff``, e.g.
+    a number, being a constant. Given a ``func``, it is the derivative of that
+    function instead, bound by the variable, as the chain rule of
+    :meth:`Bubble.grad` applies it.
+
+    Parameters:
+        var : The variable.
+        func : The function to differentiate, if any.
+
+    Example
+    -------
+    >>> from sympy.abc import x, y  # doctest: +EXTRA
+    >>> assert Diff(x)(x * y) == y and Diff(x)(42) == 0
+    >>> assert Diff(y, lambda z: z ** 3)(x) == 3 * x ** 2
+
+    Diffs are equal when their variables and functions are, so that gradients
+    are too, and they read back from their repr.
+
+    >>> from discopy import tensor
+    >>> assert Diff(x) == eval(repr(Diff(x))) != Diff(y)
+    >>> f = Box('f', Dim(2), Dim(2), [x, 0, 0, y])
+    >>> assert f.grad(x) == f.grad(x) != f.grad(y)
+    """
+    def __init__(self, var, func=None):
+        self.var, self.func = var, func
+
+    def __call__(self, entry):
+        if self.func is None:
+            return getattr(entry, "diff", lambda _: 0)(self.var)
+        return self.func(self.var).diff(self.var).subs(self.var, entry)
+
+    def __eq__(self, other):
+        return isinstance(other, Diff)\
+            and (self.var, self.func) == (other.var, other.func)
+
+    def __hash__(self):
+        return hash((self.var, self.func))
+
+    def __repr__(self):
+        func = "" if self.func is None else f", {self.func!r}"
+        return f"{factory_name(type(self))}({self.var!r}{func})"
 
 
 Diagram.box_factory = Box
