@@ -782,6 +782,54 @@ class Layer(cat.Box, ColouredMonoid):
         """
         raise ValueError(messages.LAYERS_MUST_HAVE_A_BOX)
 
+    def then(self, *others: cat.Arrow) -> cat.Arrow:
+        """
+        Layers do not compose with layers: a diagram is the sequence of its
+        layers, so it is diagrams that compose, e.g. ``f >> g`` and not
+        ``Layer(f) >> Layer(g)``. Identities compose as in :mod:`cat`.
+
+        Parameters:
+            others : The arrows to compose.
+
+        Raises:
+            AxiomError : When the composite would hold two layers, saying to
+                compose diagrams instead.
+
+        Example
+        -------
+        >>> x = Ty('x')
+        >>> f = Box('f', x, x)
+        >>> Layer(f) >> Layer(f)
+        Traceback (most recent call last):
+        ...
+        discopy.utils.AxiomError: Compose diagrams, not layers: f >> f.
+        >>> assert (Layer(f) >> cat.Arrow.id(x)).inside == (Layer(f), )
+        """
+        result = cat.Arrow.then(self, *others)
+        if sum(isinstance(box, Layer) for box in result.inside) > 1:
+            raise AxiomError(messages.LAYERS_DO_NOT_COMPOSE.format(
+                " >> ".join(map(str, result.inside))))
+        return result
+
+    def __rrshift__(self, other: cat.Arrow) -> cat.Arrow:
+        """
+        The composite ``other >> self``, called before ``other``'s own for an
+        arrow of :mod:`cat`, so that it cannot hold another layer either.
+
+        Example
+        -------
+        >>> x = Ty('x')
+        >>> f = Box('f', x, x)
+        >>> cat.Arrow.id(x) >> Layer(f) >> Layer(f)
+        Traceback (most recent call last):
+        ...
+        discopy.utils.AxiomError: Compose diagrams, not layers: f >> f.
+        """
+        return Layer.then(other, self) if isinstance(other, cat.Arrow)\
+            else NotImplemented
+
+    __lshift__ = __rrshift__
+
     @classmethod
     def whisker(cls, other: Ty | Box | Layer) -> Ty | Layer:
         """

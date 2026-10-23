@@ -387,7 +387,7 @@ Diagram.eval_factory = Eval
 Diagram.coeval_factory = Coeval
 Diagram.discard_factory = Discard
 Diagram.sum_factory = Sum
-Ty.exp_factory = Ty.under_factory = Ty.over_factory = staticmethod(Exp)
+Ty.under_factory = Ty.over_factory = staticmethod(Exp)
 Ty.variable_factory = Variable
 Ty.constant_factory = Constant
 Ty.application_factory = Application

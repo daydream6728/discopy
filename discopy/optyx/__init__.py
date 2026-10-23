@@ -7,7 +7,8 @@ tensor networks or with permanents.
 :mod:`discopy.optyx.channel` is the category of channels these diagrams live
 in, with qubits in :mod:`discopy.optyx.qubits`, photons in
 :mod:`discopy.optyx.photonic` and bits in :mod:`discopy.optyx.classical`, on
-top of the calculi of :mod:`discopy.optyx.core`, and
+top of the calculi of :mod:`discopy.optyx.core`.
+:mod:`discopy.optyx.sampling` samples their outputs tick after tick, and
 :mod:`discopy.optyx.compiler` compiles measurement-based patterns to
 single-emitter photonic hardware.
 
@@ -19,7 +20,9 @@ single-emitter photonic hardware.
     discopy.optyx.qubits
     discopy.optyx.photonic
     discopy.optyx.classical
+    discopy.optyx.interaction
     discopy.optyx.core
+    discopy.optyx.sampling
     discopy.optyx.compiler
 
 Note

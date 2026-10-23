@@ -37,6 +37,7 @@ MATRIX_REPEAT_ERROR = "The reflexive transitive closure is only defined for "\
 BOX_IS_MIXED = "Pure boxes can have only digits or only qudits as dom and cod."
 LAYERS_MUST_HAVE_A_BOX = "Layers must have at least one box."
 NOT_MERGEABLE = "Layers {} and {} cannot be merged."
+LAYERS_DO_NOT_COMPOSE = "Compose diagrams, not layers: {}."
 INTERCHANGER_ERROR = "Boxes {} and {} do not commute."
 WRONG_PERMUTATION = "Expected a permutation of length {}, got {}."
 NOT_A_PERMUTATION = "Expected a permutation of range({}), got {}."
