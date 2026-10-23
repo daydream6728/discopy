@@ -127,6 +127,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - The `quantum` extra pins pyzx 0.10.7 ([next#225]).
 - Faster tensor of `n` morphisms ([#623]), of Python functions, and
   `finset.Permutation.then` ([#763]).
+- A functor maps a layer with one `n`-ary `tensor` rather than a fold of
+  `@`, with one `tensor` call per layer ([next#161]).
 
 ### Deprecated
 
@@ -436,6 +438,7 @@ for the changelog of `1.2.1` and earlier.
 [next#134]: https://github.com/rel-int/discopy-next/issues/134
 [next#147]: https://github.com/rel-int/discopy-next/issues/147
 [next#149]: https://github.com/rel-int/discopy-next/issues/149
+[next#161]: https://github.com/rel-int/discopy-next/issues/161
 [next#168]: https://github.com/rel-int/discopy-next/issues/168
 [next#175]: https://github.com/rel-int/discopy-next/issues/175
 [next#176]: https://github.com/rel-int/discopy-next/issues/176
