@@ -200,6 +200,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - `Tensor`: the spider with no legs is the circle ([next#116]), a box is not
   its dagger ([next#119]), `trace` and `repeat` ([next#89]), n-ary `then`
   ([next#60]), `to_tn` and `cups` ([next#31]).
+- Tensor functors bend a compound wire the same alone and in a diagram, and a
+  cup on a self-dual object is the spider with two legs ([next#31]).
 - `Matrix`: `copy` is the diagonal of the direct sum ([#652], [#795],
   [next#80]), composites keep their dtype ([#538], [#733]), `swap` on JAX
   ([next#49]), `basis` and `repr` ([next#88]).
