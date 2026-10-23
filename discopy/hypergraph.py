@@ -3387,6 +3387,7 @@ class Rewriter:
     def __init__(self, graph: Hypergraph):
         self.factory, self.dom, self.cod = type(graph), graph.dom, graph.cod
         self.boxes, self.box_wires = list(graph.boxes), list(graph.box_wires)
+        self.offsets = list(graph.offsets)
         self.spider_types = list(graph.spider_types)
         self.incidence = [dict.fromkeys(ports) for ports in graph.incidence]
         self.dom_wires = list(graph.dom_wires)
@@ -3418,11 +3419,17 @@ class Rewriter:
         self.parent.append(len(self.parent))
         return len(self.spider_types) - 1
 
-    def add_box(self, box: Box, dom: Wires, cod: Wires) -> int:
-        """ Add a box with its domain and codomain wires, returning its id. """
+    def add_box(
+            self, box: Box, dom: Wires, cod: Wires, offset: int | None = None
+            ) -> int:
+        """
+        Add a box with its domain and codomain wires, and its offset for
+        :meth:`Hypergraph.to_diagram` if any, returning its id.
+        """
         j = len(self.boxes)
         self.boxes.append(box)
         self.box_wires.append((tuple(dom), tuple(cod)))
+        self.offsets.append(offset)
         for side, wires in enumerate((dom, cod)):
             for position, spider in enumerate(wires):
                 self.incidence[spider][j, side, position] = None
@@ -3513,7 +3520,7 @@ class Rewriter:
                 image[spider] = self.add_spider(typ)
         return [self.add_box(box, *(
             [self.find(image[spider]) for spider in wires]
-            for wires in right.box_wires[i]))
+            for wires in right.box_wires[i]), right.offsets[i])
             for i, box in enumerate(right.boxes)]
 
     def matches(self, left: Hypergraph, j: int) -> Iterator[Match]:
@@ -3579,7 +3586,8 @@ class Rewriter:
             tuple(index[s] for s in self.cod_wires))
         return self.factory(
             self.dom, self.cod, tuple(self.boxes[j] for j in kept), wires,
-            tuple(self.spider_types[s] for s in spiders))
+            tuple(self.spider_types[s] for s in spiders),
+            tuple(self.offsets[j] for j in kept))
 
 
 class Functor(cat.Functor):

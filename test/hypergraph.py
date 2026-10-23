@@ -797,6 +797,23 @@ def test_Rewriter_substitute_is_the_pushout():
             assert rewriter.to_hypergraph() == context.plug(right)
 
 
+def test_Rewriter_keeps_offsets():
+    from discopy import symmetric
+    x = symmetric.Ty('x')
+    f, g = symmetric.Box('f', x, x), symmetric.Box('g', x, x)
+    state = symmetric.Box('s', symmetric.Ty(), x)
+    host = (x @ state >> f @ x >> x @ g >> f @ x).to_hypergraph()
+    left, right = g.to_hypergraph(), (g >> g).to_hypergraph()
+    match, = host.match(left)
+    context, = host.complements(left, match)
+    rewriter = Rewriter(host)
+    rewriter.substitute(left, right, match)
+    result = rewriter.to_hypergraph()
+    assert result.offsets == context.plug(right).offsets
+    assert not any(isinstance(box, symmetric.Permutation)
+                   for box in result.to_diagram().boxes)
+
+
 def test_Rewriter_merges_spiders():
     x = Ty('x')
     f, g = (Box(name, x, x).to_hypergraph() for name in "fg")
