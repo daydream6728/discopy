@@ -120,7 +120,18 @@ def test_Ty_eq():
 
 
 def test_Ty_repr():
-    assert repr(Ty('x', 'y')) == "monoidal.Ty(cat.Ob('x'), cat.Ob('y'))"
+    assert repr(Ty('x', 'y'))\
+        == "monoidal.Ty(monoidal.Wire('x'), monoidal.Wire('y'))"
+
+
+def test_Wire_repr():
+    from discopy import cat, monoidal
+    env = {"cat": cat, "monoidal": monoidal}
+    wires = [Wire('x'), Wire('x', Colour('red'), Colour('blue'))]
+    for wire in wires + [wire.dagger() for wire in wires]:
+        assert eval(repr(wire), env).to_tree() == wire.to_tree()
+    assert repr(Wire('x')) == "monoidal.Wire('x')"
+    assert eval("monoidal.Ty(cat.Ob('x'))", env) == Ty('x')
 
 
 def test_Ty_str():
@@ -476,6 +487,17 @@ def test_Bubble_data():
     assert "method" not in bubble.to_tree() and "name" not in bubble.to_tree()
 
 
+def test_Bubble_identity_Functor():
+    f = Box('f', Ty('x'), Ty('y'))
+    bubble = f.bubble(name="N", drawing_name="L", draw_as_frame=True,
+                      data=42, is_dagger=True)
+    image = Functor.id(Diagram)(bubble)
+    assert image == bubble and (image.drawing_name, image.draw_as_frame)\
+        == ("L", True) and (image.data, image.is_dagger) == (42, True)
+    empty = Bubble(dom=Ty('x'), cod=Ty('y'))
+    assert Functor.id(Diagram)(empty) == empty
+
+
 def test_Box_globularity():
     red, green, blue = map(Colour, ("red", "green", "blue"))
     x, y = Ty(Wire("x", red, green)), Ty(Wire("y", red, green))
@@ -554,7 +576,7 @@ def test_Id_init():
 
 def test_Id_repr():
     assert repr(Id(Ty('x')))\
-        == "monoidal.Diagram.id(monoidal.Ty(cat.Ob('x')))"
+        == "monoidal.Diagram.id(monoidal.Ty(monoidal.Wire('x')))"
 
 
 def test_Id_str():
@@ -584,7 +606,8 @@ def test_Functor_init():
 def test_Functor_repr():
     assert repr(Functor({Ty('x'): Ty('y')}, {})) ==\
         "monoidal.Functor("\
-        "ob_map={monoidal.Ty(cat.Ob('x')): monoidal.Ty(cat.Ob('y'))}, ar_map={})"
+        "ob_map={monoidal.Ty(monoidal.Wire('x')): "\
+        "monoidal.Ty(monoidal.Wire('y'))}, ar_map={})"
 
 
 def test_Functor_call():

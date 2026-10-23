@@ -71,6 +71,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - `grammar.proofnet`, parses as proof nets read back to normal terms, and
   `grammar.neural`, a PyTorch parser into them ([lambek#8]).
 - `categorial.parse`, the `k` best terms of a sentence by CKY ([lambek#2]).
+- `grammar.neural.Parser.search`, parsing as search over the correct proof
+  nets of the `k` best types of each word ([lambek#12]).
 - `quantum.reservoir`, quantum reservoir computing ([#519]), the `Rydberg`
   ansatz ([#586]), and `quantum.contextuality`, the contextual fraction
   ([next#283]).
@@ -121,6 +123,9 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - `Matrix` is a `MarkovCategory` ([#535]).
 - `dtype` is `int` where it was `numpy.int64`, as for `float`, `complex` and
   `bool`, and `map` and `eval` infer it ([next#31], [next#88], [next#162]).
+- `hopf.Intertwiner[H]` holds a tensor network `inside` between
+  `Representation` ends, rather than being one, and modules have trees
+  ([next#145]).
 - A law is a sequent ([next#1]), and `Equation` has one symbol between each
   pair of terms ([next#1]).
 - Properties are read with `isinstance` rather than `hasattr`, and a
@@ -196,10 +201,14 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - `eval(repr(x)) == x` for `monoidal.List` ([#773]), phased spiders
   ([next#97]), delayed qudits ([next#130]), `Measure`, `Encode`, `CQ` and the
   rest ([next#168]), and `cfg` and `pregroup` terms ([next#31]).
+- A `Wire` reads back from its `repr`, uncoloured or daggered ([next#140]),
+  and a `Matrix` or a `Tensor` does up to NumPy's elision ([next#156]).
 - Subscripted classes pickle with their parameter ([#749], [next#121]), and
   an unpickled `Layer` recomputes its name ([next#168]).
 - Bubbles keep their `data` and `is_dagger` ([#637]), substitute in their
   args ([next#31]) and say when their args share no boundary ([next#133]).
+- `subs` accepts pairs, lists and dicts like `sympy.subs`; `lambdify` keeps a
+  box's winding and delay, and functors keep bubbles ([next#31], [next#118]).
 - Delays: every gate ([next#130], [next#176]), closed types ([next#129]),
   `Nat` and `Dim` ([next#112]) and `FollowedBy` ([next#105]).
 - Traces and feedback of compact, Frobenius, tensor, ZX and circuit diagrams
@@ -447,6 +456,7 @@ for the changelog of `1.2.1` and earlier.
 [next#113]: https://github.com/rel-int/discopy-next/issues/113
 [next#114]: https://github.com/rel-int/discopy-next/issues/114
 [next#116]: https://github.com/rel-int/discopy-next/issues/116
+[next#118]: https://github.com/rel-int/discopy-next/issues/118
 [next#119]: https://github.com/rel-int/discopy-next/issues/119
 [next#121]: https://github.com/rel-int/discopy-next/issues/121
 [next#124]: https://github.com/rel-int/discopy-next/issues/124
@@ -457,8 +467,11 @@ for the changelog of `1.2.1` and earlier.
 [next#133]: https://github.com/rel-int/discopy-next/issues/133
 [next#134]: https://github.com/rel-int/discopy-next/issues/134
 [next#139]: https://github.com/rel-int/discopy-next/issues/139
+[next#140]: https://github.com/rel-int/discopy-next/issues/140
+[next#145]: https://github.com/rel-int/discopy-next/issues/145
 [next#147]: https://github.com/rel-int/discopy-next/issues/147
 [next#149]: https://github.com/rel-int/discopy-next/issues/149
+[next#156]: https://github.com/rel-int/discopy-next/issues/156
 [next#161]: https://github.com/rel-int/discopy-next/issues/161
 [next#162]: https://github.com/rel-int/discopy-next/issues/162
 [next#168]: https://github.com/rel-int/discopy-next/issues/168
@@ -472,4 +485,5 @@ for the changelog of `1.2.1` and earlier.
 [next#283]: https://github.com/rel-int/discopy-next/pull/283
 [lambek#2]: https://github.com/rel-int/lambek/pull/2
 [lambek#8]: https://github.com/rel-int/lambek/pull/8
+[lambek#12]: https://github.com/rel-int/lambek/pull/12
 [Recursive_GNNs#1]: https://github.com/rel-int/Recursive_GNNs/issues/1
