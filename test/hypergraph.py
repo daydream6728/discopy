@@ -881,8 +881,9 @@ def test_complements_are_lazy():
 
 def test_decoder():
     """ The one decoder of hypergraphs and maps (decision 8b of #56): boxes
-    side by side share a layer when it foliates, plumbing fuses when it fuses
-    and a map over a concrete category, with no layers, decodes too. """
+    side by side share a layer when it foliates, plumbing fuses when it fuses,
+    a box of a subcategory or a sum stays one box of the category and a map
+    over a concrete category, with no layers, decodes too. """
     from discopy import markov, symmetric
     from discopy.cmap import CMap
     from discopy.hypergraph import Decoder
