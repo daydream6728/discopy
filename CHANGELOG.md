@@ -219,7 +219,7 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   keeps scalars and parallel wires ([next#74], [next#82]).
 - `hopf.Intertwiner`: `cups`, `caps` and `twist` ([next#31]).
 - `hopf.Functor` sends the dagger of a twist to its inverse, `to_braided`
-  takes traces and generators, and dual rails delay ([next#31]).
+  takes traces and generators, and commutes with `delay` ([next#31]).
 - The dagger of a rigid box keeps its winding, `Id(x).width` and five
   one-liners ([next#31]), the rotation of a daggered braid ([#606]), and the
   adjoints of a `frobenius.Wire` ([next#1]).
