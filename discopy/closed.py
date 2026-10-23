@@ -296,6 +296,10 @@ class Unitype(Exp):
     def __str__(self):
         return "U" + feedback.str_delayed(self.time_step)
 
+    def atoms(self) -> list[Ty]:
+        """ The unitype names itself undelayed, i.e. its base. """
+        return [self.base]
+
     def __repr__(self):
         return f"Unitype({self.repr_time_step().removeprefix(', ')})"
 
