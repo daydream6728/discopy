@@ -133,3 +133,11 @@ def test_trace_to_braided():
         image = g.trace().to_braided()
         assert isinstance(image, braided.Diagram)
         assert image == Box('g', rails, rails).trace(n=2)
+
+
+def test_dual_rail_delay():
+    """The dual rail of a delay is the delay of the dual rail, its boxes
+    being built from their arguments, as for twists and braids."""
+    x, y = Ty('x'), Ty('y')
+    for diagram in [Twist(x).dagger(), Braid(x, y) >> Twist(y) @ x]:
+        assert diagram.delay().to_braided() == diagram.to_braided().delay()
