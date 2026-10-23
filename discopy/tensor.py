@@ -1079,6 +1079,9 @@ class Bubble(monoidal.Bubble, Box):
         The diagram inside the bubble.
     func : callable
         The function to apply, default is :code:`lambda x: int(not x)`.
+        A named function prints as its import path, e.g. :code:`abs` or
+        :code:`numpy.sqrt`, so the bubble reads back from its repr, a
+        lambda does not.
 
     Examples
     --------
@@ -1129,8 +1132,12 @@ class Bubble(monoidal.Bubble, Box):
     def __repr__(self):
         if self.is_dagger:
             return repr(self.dagger()) + ".dagger()"
-        func = "" if self.func is type(self).func else f", func={self.func!r}"
-        return super().__repr__()[:-1] + func + ")"
+        if self.func is type(self).func:
+            return super().__repr__()
+        name = getattr(self.func, "__qualname__", "<")
+        func = repr(self.func) if "<" in name\
+            else f"{self.func.__module__}.{name}".removeprefix("builtins.")
+        return super().__repr__()[:-1] + f", func={func})"
 
     def grad(self, var, **params):
         """

@@ -312,6 +312,8 @@ feedback.Ty(feedback.Wire('x')), is_deterministic=False)
     >>> assert f.is_cartesian and not f.dagger().is_cartesian
     >>> assert f.dagger().dagger() == f and f.dagger().deterministic
     """
+    serialised_attrs = symmetric.Box.serialised_attrs + (
+        "is_deterministic", "is_affine")
     deterministic = affine = True
 
     def __init__(self, *args, is_deterministic=True, is_affine=True,
@@ -354,24 +356,31 @@ feedback.Ty(feedback.Wire('x')), is_deterministic=False)
 
     def flagged(self, other: Box) -> Box:
         """
-        Give a box built from this one the flags declared of this one, as
-        :meth:`rebuild` does, and so :meth:`dagger`, :meth:`subs` and
-        :meth:`lambdify`, on top of the fields of the class they extend.
+        Give a box built from this one the flags declared of this one, as the
+        rotations of a :class:`discopy.frobenius.Box` do.
         """
         other.deterministic, other.affine = self.deterministic, self.affine
         return other
 
     def rebuild(self, **changes) -> Box:
         """
-        Rebuild a box, keeping its flags.
+        Rebuild a box with the flags declared of it, when its constructor
+        takes them, else with those it computes, e.g. from its terms.
 
         >>> from sympy.abc import phi  # doctest: +EXTRA
-        >>> sample = Box('sample', Ty('x'), Ty('x'), data=phi,
-        ...              is_deterministic=False)
+        >>> x = Ty('x')
+        >>> sample = Box('sample', x, x, data=phi, is_deterministic=False)
         >>> assert not sample.subs(phi, 1).is_deterministic
         >>> assert not sample.lambdify(phi)(1).is_deterministic
+        >>> assert sample.rebuild(is_deterministic=True).is_deterministic
+        >>> f = Box('f', x, x)
+        >>> assert not Sum((f, )).rebuild(terms=(f, f)).is_deterministic
         """
-        return self.flagged(super().rebuild(**changes))
+        declared = {"is_deterministic": self.deterministic,
+                    "is_affine": self.affine}
+        return super().rebuild(**{
+            name: value for name, value in declared.items()
+            if name in self.serialised_attrs} | changes)
 
     def to_tree(self) -> dict:
         """

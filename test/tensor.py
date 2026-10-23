@@ -752,4 +752,5 @@ def test_Bubble_func_dagger():
     assert bubble.dagger().drawing_name == "B"
     assert bubble != f.bubble() != f.bubble().dagger()
     assert repr(f.bubble().dagger()) == repr(f.bubble()) + ".dagger()"
-    assert repr(bubble).endswith(", func=<built-in function abs>)")
+    from discopy import tensor
+    assert repr(bubble).endswith(", func=abs)") and eval(repr(bubble)) == bubble

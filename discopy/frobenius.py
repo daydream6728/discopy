@@ -331,6 +331,9 @@ class Box(compact.Box, markov.Box, comarkov.Box, Diagram):
     >>> assert f.r[::-1][::-1] == f.r and f.r.l == f
     >>> assert Box('g', x, x).is_cartesian and not Box('g', x, x).r.is_affine
     """
+    serialised_attrs = pivotal.Box.serialised_attrs + (
+        "is_deterministic", "is_affine")
+
     @property
     def is_deterministic(self) -> bool:
         return super().is_deterministic and not self.z

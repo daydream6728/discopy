@@ -186,6 +186,14 @@ def test_Box_dagger():
     assert f == f.dagger().dagger()
 
 
+def test_Box_subclass_rebuild():
+    class Gate(Box):
+        def __init__(self, label, source, target, **params):
+            super().__init__(label, source, target, **params)
+    gate = Gate('g', Ob('x'), Ob('y'), data=42)
+    assert gate.dagger().dagger() == gate and gate.rebuild(data=1).data == 1
+
+
 def test_Bubble_dagger():
     f = Box('f', Ob('x'), Ob('y'))
     b = f.bubble(data=42)
@@ -486,12 +494,17 @@ ABSTRACT = ("Timed", "ControlledRotation", "BinaryTerm", "Parametrized")
 
 @cache
 def box_classes():
-    """ Every class of box that the package defines, see #169. """
+    """
+    Every class of box that the package defines, see #169, but for those of
+    :mod:`discopy.optyx`, vendored with constructors of its own.
+    """
     import importlib
     import pkgutil
     import discopy
     classes = {}
     for info in pkgutil.walk_packages(discopy.__path__, "discopy."):
+        if info.name.startswith("discopy.optyx"):
+            continue
         try:
             module = importlib.import_module(info.name)
         except ImportError:  # it needs an extra, see test/plugin.py
@@ -634,6 +647,8 @@ def holds(law, cls):
             assert type(result) is type(expected) and result == expected
         return True
     else:
+        tree = type(box).from_tree(box.to_tree())
+        assert type(tree) is type(box) and tree == box
         result, expected = loads(dumps(box)), box
     return type(result) is type(expected) and result == expected
 
@@ -655,7 +670,6 @@ PIVOTALS = "{pivotal,ribbon,compact,frobenius}"
 BROKEN = {
     "rebuild": {
         "*.Layer": "a layer keeps its *inside as boxes_or_types",
-        "{markov,closed,grammar.abstract,neural.network}.{Copy,Discard} "
         "*.Merge *.Noise": "it keeps neither x nor n",
         "*.Cofunction": "it keeps its cofunc in an op",
         "*.Cospan": "it keeps left and right as legs",
@@ -665,7 +679,8 @@ BROKEN = {
     "dagger": {
         "*.{Constant,Variable,Abstraction,Application} "
         "closed.{Tuple,Projection,Let} grammar.categorial.{FA,BA,*TR,"
-        "TypeRaising,[FB][CX],*Composition}": "a term has no stated dagger",
+        "TypeRaising,[FB][CX]}": "a term has no stated dagger",
+        "grammar.categorial.*Composition": "a crossed composition has none",
         "*.{Feedback,Head,Tail}": "it has no stated dagger",
         PIVOTALS + ".Trace": "its dagger is drawn with cups and caps",
     },
@@ -685,7 +700,7 @@ BROKEN = {
         "quantum.gates.C[RU]*": "its tree is that of a controlled gate",
         "grammar.categorial.TypeRaising": "its tree drops its cod",
         "neural.network.{Box,Feedback,Trace,Head,Tail}": "a module has none",
-        "tensor.Bubble": "a function has no tree",
+        "tensor.Bubble": "its tree drops its func, which == compares",
     },
 }
 

@@ -514,8 +514,7 @@ class Permutation(Box):
     serialised_attrs = ("dom", "perm")
 
     def __new__(cls, dom: monoidal.Ty = None,
-                perm: Sequence[int] = None, **params):
-        del params  # those of a swap, e.g. its rebuild by keyword
+                perm: Sequence[int] = None):
         if dom is None or cls is cls.ar.swap_factory:
             return super().__new__(cls)
         factory = cls.ar.swap_factory\

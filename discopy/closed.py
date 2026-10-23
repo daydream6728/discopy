@@ -503,7 +503,7 @@ class Timed(Box):
 
 class Eval(Timed, biclosed.Eval, Box):
     "The evaluation of an exponential type."
-    serialised_attrs = biclosed.Eval.serialised_attrs + ("time_step", )
+    serialised_attrs = biclosed.Eval.serialised_attrs + ("*", "time_step")
     drawing_name = "__call__"
 
     def __getnewargs__(self):
@@ -513,7 +513,7 @@ class Eval(Timed, biclosed.Eval, Box):
 
 class Coeval(Timed, biclosed.Coeval, Box):
     "The coevaluation of an exponential type, i.e. the dagger of an Eval."
-    serialised_attrs = biclosed.Coeval.serialised_attrs + ("time_step", )
+    serialised_attrs = biclosed.Coeval.serialised_attrs + ("*", "time_step")
     __getnewargs__ = Eval.__getnewargs__
 
 

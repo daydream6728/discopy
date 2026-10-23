@@ -586,11 +586,12 @@ class Box(Arrow):
     Note
     ----
     The :code:`serialised_attrs` of a box are the arguments of its
-    constructor, by name, each an attribute of the box, and a starred one
-    :code:`*args` passed positionally: :meth:`rebuild` reads them, and so
-    :meth:`dagger`, :meth:`subs`, :meth:`lambdify` and the rotations of a
-    rigid box keep them. A subclass whose constructor takes other arguments
-    declares its own.
+    constructor, each an attribute of the box, as its signature lists them:
+    by position up to a star, :code:`*args` unpacked, by name after it.
+    :meth:`rebuild` reads them, and so :meth:`dagger`, :meth:`subs`,
+    :meth:`lambdify` and the rotations of a rigid box keep them. A subclass
+    whose constructor takes other arguments, or in another order, declares
+    its own.
 
     Example
     -------
@@ -599,7 +600,7 @@ class Box(Arrow):
     >>> f = Box('f', x, y, data=[42])
     >>> assert f.inside == (f, )
     """
-    serialised_attrs = ("name", "dom", "cod", "is_dagger", "data")
+    serialised_attrs = ("name", "dom", "cod", "*", "is_dagger", "data")
 
     @classmethod
     def strategy(
@@ -667,12 +668,12 @@ class Box(Arrow):
         >>> f = Box('f', Ob('x'), Ob('y'), data=42)
         >>> assert f.rebuild(data=43) == Box('f', Ob('x'), Ob('y'), data=43)
         """
-        attrs = self.serialised_attrs
-        names = [attr.removeprefix("*") for attr in attrs]
-        fields = {name: getattr(self, name) for name in names} | changes
-        starred = [attr[1:] for attr in attrs if attr.startswith("*")]
-        args = fields.pop(starred[0]) if starred else ()
-        return type(self)(*args, **fields)
+        attrs = (*self.serialised_attrs, "*")
+        star = next(i for i, attr in enumerate(attrs) if attr[0] == "*")
+        fields = {name: getattr(self, name) for name in (
+            attr.removeprefix("*") for attr in attrs) if name} | changes
+        args = [fields.pop(name) for name in attrs[:star]]
+        return type(self)(*args, *fields.pop(attrs[star][1:], ()), **fields)
 
     def dagger(self) -> Box:
         return self.rebuild(

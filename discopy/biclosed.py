@@ -1026,7 +1026,7 @@ class Constant(TermBase):
         name (str): The name of the constant.
         cod (Ty): The type of the constant.
     """
-    serialised_attrs = ("name", "cod", "is_dagger", "data")
+    serialised_attrs = ("name", "cod", "*", "is_dagger", "data")
 
     def __init__(self, name: str, cod: Ty, **kwargs):
         super().__init__(name, dom=self.ob(), cod=cod, **kwargs)

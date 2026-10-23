@@ -147,8 +147,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `finset.Permutation.then` ([#763]).
 - A functor maps a layer with one `n`-ary `tensor` rather than a fold of
   `@`, with one `tensor` call per layer ([next#161]).
-- A box names its constructor's arguments once, `serialised_attrs`, which
-  `rebuild` reads for `dagger`, `rotate`, `subs` and `lambdify` ([next#169]).
+- `dagger` and `subs` keep a box's `serialised_attrs`, e.g. `is_mixed`, and
+  `tensor.Bubble.func`, which `==` compares ([next#118], [next#169]).
 
 ### Deprecated
 
