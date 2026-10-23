@@ -93,6 +93,10 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `CMap.sweep` and `CMap.match`.
 - `hypergraph.Rewriter`, double-pushout rewriting in place with left-linear
   rules, each step in the size of the rule rather than of the host.
+- `quantum.graphlike`, graph-like ZX diagrams as hypergraphs with one box for
+  Hadamard, simplified up to a scalar by the rules of PyZX's `full_reduce` on
+  a `hypergraph.Rewriter`, raced against PyZX in `benchmark/test_zx.py`
+  ([next#302]).
 - `discopy.ehypergraph`, e-graphs of diagrams with sharing, with congruence
   closure, rewriting and e-matching.
 - `Hypergraph.pass_token`, evaluation over a disjoint-union tensor ([#363],
@@ -114,6 +118,11 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - `quantum.reservoir`, quantum reservoir computing ([#519]), the `Rydberg`
   ansatz ([#586]), and `quantum.contextuality`, the contextual fraction
   ([next#283]).
+- `discopy.optyx`, moved in from rel-int/optyx with its 358 commits and
+  their authors: ZX, ZW and linear-optical diagrams, channels, feedback and
+  a compiler to photonic hardware, under the Apache License 2.0 in its own
+  `LICENSE` and `NOTICE`, behind the new `optyx` extra ([next#225],
+  [next#276]).
 - `hopf.Intertwiner.chart` and `hopf.Algebra.symmetric(n)` ([#408]).
 - `copying`, a law of `Testable` beside `pickling` ([next#1]), and the
   generators of each level as typed class variables ([next#1]).
@@ -330,6 +339,10 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - The tests keep the `--skip-extra` contract, those that could not fail can,
   `CONTRIBUTING.md` names `setuptools`, and `build.yml` drops credentials
   ([next#31]).
+- Coverage measures with `sys.monitoring` on every Python, twice as fast
+  as the C tracer on 3.12 and 3.13, and the docs job has 25 minutes, the
+  API pages of `discopy.optyx` taking its build to about fifteen
+  ([next#276]).
 
 ## [1.2.2] - 2025-12-19
 
@@ -530,7 +543,9 @@ for the changelog of `1.2.1` and earlier.
 [next#187]: https://github.com/rel-int/discopy-next/issues/187
 [next#201]: https://github.com/rel-int/discopy-next/issues/201
 [next#225]: https://github.com/rel-int/discopy-next/issues/225
+[next#276]: https://github.com/rel-int/discopy-next/pull/276
 [next#283]: https://github.com/rel-int/discopy-next/pull/283
+[next#302]: https://github.com/rel-int/discopy-next/pull/302
 [next#310]: https://github.com/rel-int/discopy-next/pull/310
 [next#316]: https://github.com/rel-int/discopy-next/pull/316
 [next#320]: https://github.com/rel-int/discopy-next/pull/320
