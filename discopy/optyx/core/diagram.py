@@ -206,7 +206,7 @@ from typing import List, Tuple, Iterable
 
 import numpy as np
 from sympy import lambdify
-from sympy.core import Symbol, Mul
+from sympy.core import Symbol
 from discopy import (
     monoidal, symmetric, frobenius, tensor, hypergraph
 )
@@ -1110,10 +1110,10 @@ class Scalar(Box):
     """
 
     def __init__(self, scalar: complex | Symbol):
-        if not isinstance(scalar, (Symbol, Mul)):
-            self.scalar = complex(scalar)
-        else:
+        if getattr(scalar, "free_symbols", None):
             self.scalar = scalar
+        else:
+            self.scalar = complex(scalar)
         super().__init__(
             name="scalar", dom=Mode(0), cod=Mode(0), data=self.scalar
         )
