@@ -1570,8 +1570,8 @@ class Unravelling:
         does not end with weight one is a postselection.
         """
         for layer in diagram:
-            left, box, _ = layer.inside[0].boxes_and_types
-            state = self.apply(state, len(left), box, rng)
+            (box, offset), = layer.inside[0].boxes_and_offsets
+            state = self.apply(state, offset, box, rng)
         if not np.isclose(state.weight, 1, atol=1e-6):
             raise NotImplementedError(
                 f"The diagram is not trace preserving (weight "
