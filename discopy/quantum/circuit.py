@@ -975,15 +975,22 @@ class Sum(tensor.Sum[complex], Box):
 
 class Bubble(tensor.Bubble[complex], Box):
     """
-    A circuit bubble is a tensor bubble in a circuit, mixed when its args are.
+    A circuit bubble is a tensor bubble in a circuit, mixed when its boundary
+    has both bits and qubits or its args are mixed. It differentiates as a
+    circuit box does.
 
     >>> from discopy.quantum.gates import X, H, Measure
     >>> assert (X.bubble() >> X).eval() == X.bubble().eval() >> X.eval()
     >>> assert not X.bubble().is_mixed and (H >> Measure()).bubble().is_mixed
+    >>> assert X.bubble(cod=bit).is_mixed
     """
+    grad = Box.grad
+
     @property
     def is_mixed(self):
-        return any(arg.is_mixed for arg in self.args)
+        boundary = self.dom @ self.cod
+        return bool(boundary.count(bit) and boundary.count(qubit))\
+            or any(arg.is_mixed for arg in self.args)
 
 
 class Permutation(tensor.Permutation[complex], Box):

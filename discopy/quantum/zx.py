@@ -317,11 +317,13 @@ class Sum(tensor.Sum[complex], Box):
 
 class Bubble(tensor.Bubble[complex], Box):
     """
-    A ZX bubble is a tensor bubble in a ZX diagram.
+    A ZX bubble is a tensor bubble in a ZX diagram, which differentiates as
+    a ZX box does.
 
     >>> bubble = Z(1, 1).bubble()
     >>> assert (bubble >> Z(1, 1)).eval() == bubble.eval()
     """
+    grad = Box.grad
 
 
 class Permutation(tensor.Permutation[complex], Box):
