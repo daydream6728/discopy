@@ -744,7 +744,8 @@ def Toffoli(n: int) -> Box:
 def permutation(graph: Hypergraph, p: int = 2) -> tuple[int, ...]:
     """ The permutation of a circuit, with the points of Z_2^n in binary. """
     images = truth_table(graph)
-    return tuple(map(list(images).index, images.values()))
+    index = {bits: i for i, bits in enumerate(images)}
+    return tuple(index[bits] for bits in images.values())
 
 
 def parity(perm) -> int:
