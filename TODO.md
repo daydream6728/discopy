@@ -4,7 +4,7 @@ T39b (found by triage, no issue of its own): `to_map`/`to_hypergraph` of `n` sta
 a reversal built as swaps is superlinear, since each whiskered swap, a `Permutation` of the whole
 width, goes through the functor wire by wire.
 
-- [ ] `CMap.from_diagram` and `Hypergraph.from_diagram` read a `Permutation`'s `perm` directly
+- [WIP] @session_01YCJQ3Xco3ydQ6AsdTtYJ5x-2026-10-23 14:40 `CMap.from_diagram` and `Hypergraph.from_diagram` read a `Permutation`'s `perm` directly
 - [ ] a test of each in `test/cmap.py` and `test/hypergraph.py`
 - [ ] a benchmark case in `benchmark/test_conversion.py`
 - [ ] one `CHANGELOG.md` bullet
