@@ -344,7 +344,8 @@ def test_loads_runs_no_code_from_a_file():
             {'factory': 'sympy.Function', 'args': [payload]},
             {'factory': 'numpy.ndarray', 'dtype': [payload],
              'shape': [1], 'flat': [payload]},
-            {'factory': 'numpy.sum', 'item': [payload]}):
+            {'factory': 'numpy.sum', 'item': [payload]},
+            {'factory': 'numpy.void', 'item': 10 ** 12}):
         box = cat.Box('f', Ob('x'), Ob('y'), data=node)
         raw = json.dumps(box.to_tree())
         assert loads(raw).data == node

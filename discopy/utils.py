@@ -572,7 +572,7 @@ def decode_numpy(tree: dict) -> Any:
         return numpy.array(tree['flat'], dtype=numpy.dtype(tree['dtype']))\
             .reshape(tree['shape'])
     if fields == {'factory', 'item'} and isinstance(scalar, type)\
-            and issubclass(scalar, numpy.generic):
+            and issubclass(scalar, numpy.number | numpy.bool_):
         return scalar(tree['item'])
     return tree
 
