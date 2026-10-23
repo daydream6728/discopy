@@ -153,6 +153,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `@`, with one `tensor` call per layer ([next#161]).
 - Biclosed types hold `biclosed.Wire` ([next#16]), their `**` is `<<`, and a
   term inside a diagram is drawn as one box ([next#31]).
+- `Functor.id` is built from `utils.identity`, and `then` drops an identity
+  on either side, so that composing functors is unital ([next#142]).
 
 ### Deprecated
 
@@ -483,6 +485,7 @@ for the changelog of `1.2.1` and earlier.
 [next#134]: https://github.com/rel-int/discopy-next/issues/134
 [next#139]: https://github.com/rel-int/discopy-next/issues/139
 [next#140]: https://github.com/rel-int/discopy-next/issues/140
+[next#142]: https://github.com/rel-int/discopy-next/issues/142
 [next#145]: https://github.com/rel-int/discopy-next/issues/145
 [next#147]: https://github.com/rel-int/discopy-next/issues/147
 [next#149]: https://github.com/rel-int/discopy-next/issues/149
