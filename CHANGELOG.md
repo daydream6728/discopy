@@ -71,6 +71,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - `grammar.proofnet`, parses as proof nets read back to normal terms, and
   `grammar.neural`, a PyTorch parser into them ([lambek#8]).
 - `categorial.parse`, the `k` best terms of a sentence by CKY ([lambek#2]).
+- `grammar.neural.Parser.search`, parsing as search over the correct proof
+  nets of the `k` best types of each word ([lambek#12]).
 - `quantum.reservoir`, quantum reservoir computing ([#519]), the `Rydberg`
   ansatz ([#586]), and `quantum.contextuality`, the contextual fraction
   ([next#283]).
@@ -82,7 +84,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - `drawing.widget.DiagramWidget`, an opt-in anywidget ([#466]).
 - Notebooks: *Minimality of the pure qubit ZX calculus* ([#626], [#688]),
   *Categorical deep learning* ([next#124], [next#125]), *Neural Church
-  arithmetic* ([#677]) and *Parsing arithmetic*.
+  arithmetic* ([#677]), *Parsing arithmetic* and *Boolean circuits*,
+  Lafont's maps and linear maps as double-pushout rewriting ([next#310]).
 
 ### Changed
 
@@ -116,6 +119,9 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - `Matrix` is a `MarkovCategory` ([#535]).
 - `dtype` is `int` where it was `numpy.int64`, as for `float`, `complex` and
   `bool`, and `map` and `eval` infer it ([next#31], [next#88], [next#162]).
+- `hopf.Intertwiner[H]` holds a tensor network `inside` between
+  `Representation` ends, rather than being one, and modules have trees
+  ([next#145]).
 - A law is a sequent ([next#1]), and `Equation` has one symbol between each
   pair of terms ([next#1]).
 - Properties are read with `isinstance` rather than `hasattr`, and a
@@ -240,6 +246,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - `Stream.sequence`, `para.Closed.curry` and the evaluation of categorial
   terms ([next#1]); daggers of grammar rules and words, and `cfg` compares
   and hashes ([next#31]).
+- Categorial `FC`, `BC`, `FX` and `BX` are boxes, so they compose and draw,
+  and a nested `cfg.Tree` has a `dom`, so it applies ([next#31]).
 - Drawing: `Drawing.dagger` ([next#1]), regions through crossings ([#614]),
   `draw` leaves a drawing as it was ([#606]), TikZ colours ([next#31]) and a
   test restyling `H` ([next#99]).
@@ -456,6 +464,7 @@ for the changelog of `1.2.1` and earlier.
 [next#134]: https://github.com/rel-int/discopy-next/issues/134
 [next#139]: https://github.com/rel-int/discopy-next/issues/139
 [next#140]: https://github.com/rel-int/discopy-next/issues/140
+[next#145]: https://github.com/rel-int/discopy-next/issues/145
 [next#147]: https://github.com/rel-int/discopy-next/issues/147
 [next#149]: https://github.com/rel-int/discopy-next/issues/149
 [next#156]: https://github.com/rel-int/discopy-next/issues/156
@@ -469,6 +478,8 @@ for the changelog of `1.2.1` and earlier.
 [next#201]: https://github.com/rel-int/discopy-next/issues/201
 [next#225]: https://github.com/rel-int/discopy-next/issues/225
 [next#283]: https://github.com/rel-int/discopy-next/pull/283
+[next#310]: https://github.com/rel-int/discopy-next/pull/310
 [lambek#2]: https://github.com/rel-int/lambek/pull/2
 [lambek#8]: https://github.com/rel-int/lambek/pull/8
+[lambek#12]: https://github.com/rel-int/lambek/pull/12
 [Recursive_GNNs#1]: https://github.com/rel-int/Recursive_GNNs/issues/1
