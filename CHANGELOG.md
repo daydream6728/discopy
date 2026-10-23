@@ -134,8 +134,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   ([next#145]).
 - A law is a sequent ([next#1]), and `Equation` has one symbol between each
   pair of terms ([next#1]).
-- A law's number variable `N: Nat` is drawn from `abc.Nat.strategy`, and `**`,
-  `spiders` and `copy` take anything with `__index__` ([next#164]).
+- `abc.Nat` hashes and is the sort of a law's number variable `N: Nat`, and
+  powers, spiders and copies take any `__index__` ([next#164]).
 - Properties are read with `isinstance` rather than `hasattr`, and a
   subscripted class is named by `factory_name` ([next#1]).
 - A box is plumbing by what it holds, `Layer.is_plumbing_component`, and
