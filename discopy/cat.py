@@ -592,8 +592,9 @@ class Box(Arrow):
     :meth:`rebuild` reads them, and so :meth:`dagger`, :meth:`subs`,
     :meth:`lambdify` and the rotations of a rigid box keep them. A subclass
     whose constructor takes other arguments, or in another order, declares
-    its own. One whose constructor does not take a field by name, nor
-    :code:`**params`, gets it set on the new box once built.
+    its own. A subclass whose constructor takes those of this box but not
+    one that a level adds, e.g. :code:`time_step`, nor :code:`**params`, gets
+    it set on the new box once built.
 
     Example
     -------
@@ -669,12 +670,6 @@ class Box(Arrow):
         -------
         >>> f = Box('f', Ob('x'), Ob('y'), data=42)
         >>> assert f.rebuild(data=43) == Box('f', Ob('x'), Ob('y'), data=43)
-
-        >>> class Gate(Box):
-        ...     def __init__(self, name, dom, cod):
-        ...         super().__init__(name, dom, cod)
-        >>> g = Gate('g', Ob('x'), Ob('y'))
-        >>> assert g[::-1].is_dagger and g[::-1][::-1] == g
         """
         attrs = (*self.serialised_attrs, "*")
         star = next(i for i, attr in enumerate(attrs) if attr[0] == "*")
@@ -685,7 +680,7 @@ class Box(Arrow):
         names = utils.keywords(type(self).__init__)
         later = {} if names is None else {
             name: fields.pop(name) for name in attrs[star + 1:]
-            if name != "*" and name not in names}
+            if name not in names and name not in Box.serialised_attrs}
         box = type(self)(*args, **fields)
         for name, value in later.items():
             setattr(box, name, value)
