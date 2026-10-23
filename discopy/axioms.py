@@ -859,7 +859,10 @@ class Testable[T](ABC):
         The string of a term evaluates back to it, in its
         :meth:`str_environment`, if its generators are named apart by
         identifiers, as those the strategies draw: a term with two of one
-        name is assumed away, one named e.g. ``"a box"`` does not read back.
+        name is assumed away, one named e.g. ``"a box"`` or ``"class"`` does
+        not read back. Nor do the colours of a wire, which no string prints,
+        a bubble of other than one argument, a rotated box, e.g. ``f.r``, or
+        a gate with parameters, e.g. ``Rz(0.5)``.
         """
         try:
             environment = cls.str_environment(term)

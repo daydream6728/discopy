@@ -241,6 +241,10 @@ class Product(Wire):
         first = str(first) if len(first) == 1 else f"({first})"
         return f"{first}.product({', '.join(map(str, others))}){delayed}"
 
+    def atoms(self) -> list[Ty]:
+        """ The atoms of a product: those of its factors. """
+        return [atom for typ in self.factors for atom in typ.atoms()]
+
     def __repr__(self):
         args = ', '.join(map(repr, self.factors)) + self.repr_time_step()
         return factory_name(type(self)) + f"({args.removeprefix(', ')})"
