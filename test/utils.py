@@ -260,6 +260,7 @@ def test_dumps_tuple_and_numpy_scalar_data(data):
     box = cat.Box('f', Ob('x'), Ob('y'), data=data)
     loaded = loads(dumps(box))
     assert loaded == box and repr(loaded.data) == repr(data)
+    assert type(loaded.data) is type(data)
 
 
 def test_dumps_numpy_float64_as_a_float():
@@ -271,7 +272,7 @@ def test_dumps_numpy_float64_as_a_float():
 
 @pytest.mark.parametrize('array', [
     np.eye(2), np.array([[1, 2j], [3, 4]]), np.arange(6).reshape(1, 2, 3),
-    np.zeros((0, 2), dtype=bool), np.array(7), np.array(['a', 'bc'])])
+    np.zeros((0, 2), dtype=bool), np.array(7), np.array([1, 2], np.uint8)])
 def test_dumps_ndarray_data(array):
     loaded = loads(dumps(cat.Box('f', Ob('x'), Ob('y'), data=array))).data
     assert isinstance(loaded, np.ndarray) and loaded.dtype == array.dtype
@@ -286,9 +287,23 @@ def test_dumps_tensor_box():
 
 
 def test_dumps_unknown_data():
-    for data in ({1, 2}, np.longdouble(1), np.array([1], dtype=np.longdouble)):
+    """ What `loads` would not read back, `dumps` refuses, unless it is
+    given a `default` or a `cls` of its own for it. """
+    import json
+    ragged = np.empty(2, dtype=object)
+    ragged[:] = [[1], [2, 3]]
+    for data in ({1, 2}, np.longdouble(1), np.array([1], dtype=np.longdouble),
+                 np.array(['a', 'bc']), np.array([(1, 2.)], 'i4, f8'),
+                 np.ma.array([1, 2], mask=[0, 1]), ragged,
+                 np.array([1], '>i4')):
+        box = cat.Box('f', Ob('x'), Ob('y'), data=data)
         with pytest.raises(TypeError, match="not JSON serialisable"):
-            dumps(cat.Box('f', Ob('x'), Ob('y'), data=data))
+            dumps(box)
+    box = cat.Box('f', Ob('x'), Ob('y'), data={'set': {2, 1}})
+    encoder = type("Encoder", (json.JSONEncoder, ), {
+        'default': lambda self, obj: sorted(obj)})
+    for kwargs in [{'default': sorted}, {'cls': encoder}]:
+        assert loads(dumps(box, **kwargs)).data == {'set': [1, 2]}
 
 
 def test_dumps_sympy_data():
@@ -316,7 +331,7 @@ def test_dumps_sympy_data():
 def test_dumps_sympy_outside_the_whitelist():
     sympy = pytest.importorskip("sympy")
     for data in (sympy.Dummy('x'), sympy.Matrix([[1]]),
-                 sympy.Function('f')(sympy.Symbol('x'))):
+                 sympy.Function('f')(sympy.Symbol('x')), sympy.Symbol('x[0]')):
         with pytest.raises(TypeError, match="not JSON serialisable"):
             dumps(cat.Box('f', Ob('x'), Ob('y'), data=data))
 
@@ -345,11 +360,26 @@ def test_loads_runs_no_code_from_a_file():
             {'factory': 'numpy.ndarray', 'dtype': [payload],
              'shape': [1], 'flat': [payload]},
             {'factory': 'numpy.sum', 'item': [payload]},
-            {'factory': 'numpy.void', 'item': 10 ** 12}):
+            {'factory': 'numpy.void', 'item': 10 ** 12},
+            {'factory': 'numpy.int64', 'item': '42'},
+            {'factory': 'numpy.ndarray', 'dtype': 'U500000000',
+             'shape': [1], 'flat': ['a']},
+            {'factory': 'numpy.ndarray', 'dtype': 'O',
+             'shape': [1], 'flat': [payload]},
+            {'factory': 'sympy.Symbol', 'name': payload}):
         box = cat.Box('f', Ob('x'), Ob('y'), data=node)
         raw = json.dumps(box.to_tree())
         assert loads(raw).data == node
     assert flag not in os.environ
+
+
+def test_resolve_factory_reads_classes_of_discopy_only():
+    """ A file names classes of DisCoPy, and types of builtins and numpy as
+    their parameters, never what a module of DisCoPy imports. """
+    for name in ("utils.json.loads", "utils.builtins.eval", "cat",
+                 "cat.Box.from_tree", "f2py", "tensor.Tensor[utils.Path]"):
+        with pytest.raises(AttributeError):
+            resolve_factory(name)
 
 def test_named_generic_pickle_roundtrip():
     from discopy.frobenius import Diagram, Ty

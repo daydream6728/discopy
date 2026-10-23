@@ -272,7 +272,9 @@ def test_tree():
     from discopy.matrix import Matrix
     from discopy.utils import dumps, loads
     two = Ty[Nat](Nat(2), Nat(2))
-    for term in compact_terms()[-1] + (two, Diagram[Matrix[bool]].id(two)):
+    for term in compact_terms()[-1] + (
+            two, Diagram[Matrix[bool]].id(two), Ty[int](1, 2),
+            Ty[tuple]((1, ), ())):
         loaded = loads(dumps(term))
         assert type(loaded) is type(term) and loaded == term
 

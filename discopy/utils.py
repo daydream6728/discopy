@@ -6,8 +6,9 @@ from __future__ import annotations
 
 import builtins
 import json
+import sys
 from functools import lru_cache, wraps
-from math import ceil
+from math import ceil, prod
 from pathlib import Path
 from typing import (
     Callable,
@@ -427,22 +428,31 @@ def resolve_factory(name: str) -> type:
     >>> from discopy.tensor import Diagram
     >>> assert resolve_factory("tensor.Diagram[complex]") is Diagram[complex]
     >>> assert resolve_factory("tensor.Diagram[float64]") is Diagram[float64]
+
+    Any other name raises, e.g. that of an object a module of DisCoPy
+    imports, so that a file names no function for :func:`loads` to reach.
+
+    >>> resolve_factory("utils.json.loads")
+    Traceback (most recent call last):
+    ...
+    AttributeError: No class of DisCoPy is named 'utils.json.loads'.
     """
     if name.endswith(']'):
         origin, parameter = name[:-1].split('[', 1)
         return resolve_factory(origin)[resolve_factory(parameter)]
     *modules, factory = name.removeprefix('discopy.').split('.')
     import discopy
-    module = discopy
-    for attr in modules:
-        module = getattr(module, attr)
     if not modules and factory not in vars(discopy):
         import numpy
         for module in (builtins, numpy):
-            if isinstance(getattr(module, factory, None), type):
-                return getattr(module, factory)
+            if isinstance(vars(module).get(factory), type):
+                return vars(module)[factory]
         raise AttributeError(messages.NO_SUCH_TYPE.format(factory))
-    return getattr(module, factory)
+    module = sys.modules.get(".".join(["discopy", *modules]))
+    cls = getattr(module, factory, None)
+    if not is_discopy_class(cls):
+        raise AttributeError(messages.NO_SUCH_CLASS.format(name))
+    return cls
 
 
 SYMPY_CONSTANTS = (
@@ -466,7 +476,8 @@ def encode(tree: Any) -> Any:
     something else: a tuple, which it writes as a list, a complex number, see
     :func:`encode_complex`, a numpy array or scalar, see :func:`encode_numpy`,
     and a sympy expression, see :func:`encode_sympy`. Every other value is
-    left as it is, so a tree without tuples keeps the bytes JSON gives it.
+    left as it is, so a tree without tuples keeps the bytes JSON gives it, as
+    is one that these refuse, for the ``default`` of ``json.dumps``.
     This is what :func:`dumps` writes and :func:`decode` reads back.
 
     Example
@@ -474,10 +485,8 @@ def encode(tree: Any) -> Any:
     >>> encode({'name': 'f', 'data': (1, 2j)})
     {'name': 'f', 'data': {'factory': 'tuple', 'inside': \
 [1, {'factory': 'complex', 're': 0.0, 'im': 2.0}]}}
-    >>> encode({1, 2})
-    Traceback (most recent call last):
-    ...
-    TypeError: Object of type set is not JSON serialisable.
+    >>> encode({'data': {1, 2}})
+    {'data': {1, 2}}
     """
     if isinstance(tree, dict):
         return {key: encode(value) for key, value in tree.items()}
@@ -490,10 +499,12 @@ def encode(tree: Any) -> Any:
     if isinstance(tree, complex):
         return encode_complex(tree)
     package = (type(tree).__module__ or "").partition('.')[0]
-    if package in ("numpy", "sympy"):
+    if package not in ("numpy", "sympy"):
+        return tree
+    try:
         return (encode_numpy if package == "numpy" else encode_sympy)(tree)
-    raise TypeError(messages.NOT_JSON_SERIALISABLE.format(
-        type(tree).__name__))
+    except TypeError:
+        return tree
 
 
 def decode(tree: dict) -> Any:
@@ -528,7 +539,8 @@ def encode_numpy(value: "numpy.ndarray | numpy.generic") -> dict:
     """
     A numpy array as a node with its ``dtype``, its ``shape`` and its
     entries in order, i.e. ``flat``, or a numpy scalar as a node with its
-    ``item``, i.e. its value as a Python scalar, see :func:`encode`.
+    ``item``, i.e. its value as a Python scalar, see :func:`encode`. It
+    raises on any value that :func:`decode_numpy` does not read back.
 
     Example
     -------
@@ -538,23 +550,31 @@ def encode_numpy(value: "numpy.ndarray | numpy.generic") -> dict:
 'flat': [1, 0, 0, 1]}
     >>> encode_numpy(numpy.float32(0.5))
     {'factory': 'numpy.float32', 'item': 0.5}
+    >>> encode_numpy(numpy.str_('a'))
+    Traceback (most recent call last):
+    ...
+    TypeError: Object of type str_ is not JSON serialisable.
     """
     import numpy
-    if isinstance(value, numpy.ndarray):
-        return {'factory': factory_name(numpy.ndarray),
-                'dtype': str(value.dtype), 'shape': list(value.shape),
-                'flat': encode(value.reshape(-1).tolist())}
-    if not isinstance(value, numpy.generic)\
-            or isinstance(value.item(), numpy.generic):
+    tree = {'factory': factory_name(type(value))}
+    if type(value) is numpy.ndarray:
+        tree |= {'dtype': str(value.dtype), 'shape': list(value.shape),
+                 'flat': value.reshape(-1).tolist()}
+    elif isinstance(value, numpy.generic):
+        tree['item'] = value.item()
+    if decode_numpy(tree) is tree:
         raise TypeError(messages.NOT_JSON_SERIALISABLE.format(
             type(value).__name__))
-    return {'factory': factory_name(type(value)),
-            'item': encode(value.item())}
+    return encode(tree)
 
 
 def decode_numpy(tree: dict) -> Any:
     """
-    Read back what :func:`encode_numpy` wrote, leaving any other node alone.
+    Read back what :func:`encode_numpy` wrote, leaving any other node alone:
+    its scalar type is one that numpy names for booleans, integers, floats or
+    complex numbers, and its entries are the Python scalars that type reads
+    back as, so that an array allocates in proportion to the file and no
+    string is parsed as a number.
 
     Example
     -------
@@ -563,17 +583,31 @@ def decode_numpy(tree: dict) -> Any:
     >>> assert (decode_numpy(encode_numpy(array)) == array).all()
     >>> scalar = decode_numpy(encode_numpy(numpy.int8(-3)))
     >>> assert scalar == -3 and isinstance(scalar, numpy.int8)
+    >>> tree = {'factory': 'numpy.int8', 'item': '-3'}
+    >>> assert decode_numpy(tree) == tree
     """
     import numpy
     name, fields = tree['factory'].removeprefix("numpy."), tree.keys()
-    scalar = getattr(numpy, name, None)
-    if name == "ndarray" and fields == {'factory', 'dtype', 'shape', 'flat'}\
-            and isinstance(tree['dtype'], str):
-        return numpy.array(tree['flat'], dtype=numpy.dtype(tree['dtype']))\
-            .reshape(tree['shape'])
-    if fields == {'factory', 'item'} and isinstance(scalar, type)\
-            and issubclass(scalar, numpy.number | numpy.bool_):
+    if name == "ndarray" and fields == {'factory', 'dtype', 'shape', 'flat'}:
+        dtype, entries, shape = tree['dtype'], tree['flat'], tree['shape']
+    elif fields == {'factory', 'item'}:
+        dtype, entries, shape = name, [tree['item']], None
+    else:
+        return tree
+    scalar = numpy.sctypeDict.get(dtype) if isinstance(dtype, str) else None
+    if scalar is None or numpy.dtype(scalar).kind not in "biufc"\
+            or not isinstance(entries, list):
+        return tree
+    python = type(scalar(0).item())
+    if python not in (bool, int, float, complex)\
+            or any(type(entry) is not python for entry in entries):
+        return tree
+    if shape is None:
         return scalar(tree['item'])
+    if isinstance(shape, list)\
+            and all(type(n) is int and n >= 0 for n in shape)\
+            and prod(shape) == len(entries):
+        return numpy.array(entries, dtype=scalar).reshape(shape)
     return tree
 
 
@@ -605,6 +639,8 @@ def encode_sympy(expr: "sympy.Basic") -> dict:
     """
     name = type(expr).__name__
     tree = {'factory': f"sympy.{name}"}
+    if name == "Symbol" and not expr.name.isidentifier():
+        raise TypeError(messages.NOT_JSON_SERIALISABLE.format(name))
     if name == "Symbol":
         _, assumptions = expr.__getnewargs_ex__()
         tree['name'] = expr.name
@@ -648,6 +684,7 @@ def decode_sympy(tree: dict) -> Any:
     assumptions = tree.get('assumptions', {})
     if name == "Symbol" and fields <= {'factory', 'name', 'assumptions'}\
             and isinstance(tree.get('name'), str)\
+            and tree['name'].isidentifier()\
             and isinstance(assumptions, dict)\
             and all(isinstance(value, bool) for value in assumptions.values()):
         return sympy.Symbol(tree['name'], **assumptions)
@@ -720,7 +757,9 @@ def dumps(obj, **kwargs):
     Parameters:
         obj : The DisCoPy object to serialise, or a list of them, which
             :func:`loads` reads back as a list, e.g. a corpus.
-        kwargs : Passed to ``json.dumps``.
+        kwargs : Passed to ``json.dumps``, e.g. a ``default`` or a ``cls``
+            for the values that :func:`encode` leaves alone, on which it
+            raises otherwise.
 
     The tree of ``obj`` goes through :func:`encode`, so that its data may hold
     tuples, complex numbers, numpy arrays and scalars and sympy expressions.
@@ -758,6 +797,8 @@ def dumps(obj, **kwargs):
         }
     }
     """
+    if 'cls' not in kwargs:
+        kwargs.setdefault('default', encode_complex)
     tree = [x.to_tree() for x in obj] if isinstance(obj, list)\
         else obj.to_tree()
     return json.dumps(encode(tree), **kwargs)

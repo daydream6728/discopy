@@ -482,7 +482,8 @@ def test_Functor_tree():
     x, y = Ob('x'), Ob('y')
     f = Box('f', x, y, data=(1, 2))
     for F in (Functor(), Functor({x: y, y: x}, {f: f[::-1] >> f}),
-              Functor({x: x}, {f: f}, dom=Arrow, cod=Arrow)):
+              Functor({x: x}, {f: f}, dom=Arrow, cod=Arrow),
+              Functor({x: y}, {f: {'array': (1, 2)}})):
         assert loads(dumps(F)) == F
     for ob_map, ar_map, attr in [
             (lambda x: x, {}, "ob_map"), ({}, lambda f: f, "ar_map")]:

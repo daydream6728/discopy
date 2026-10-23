@@ -115,14 +115,17 @@ def test_feedback_laws():
 def test_no_tree():
     from discopy.utils import dumps
     x = Ty(symmetric.Ty('x'))
-    with raises(TypeError, match="A stream has no tree"):
-        dumps(Stream.sequence('f', x, x))
+    for stream in (Stream.sequence('f', x, x),
+                   Stream(symmetric.Box('f', x.now, x.now))):
+        with raises(TypeError, match="A stream has no tree"):
+            dumps(stream)
     assert Stream.serialisation() is NotImplemented
 
 
 def test_no_hash():
-    """ The equality of streams is the identity of their thunks, which a
-    hash would make look like a real equality. """
+    """ Streams and their types keep the dataclass ``__hash__ = None``:
+    equality compares their thunks by identity, which a hash would make
+    look like the equality of streams. """
     x = Ty(symmetric.Ty('x'))
     for unhashable in (Stream.sequence('f', x, x), x):
         with raises(TypeError, match="unhashable"):

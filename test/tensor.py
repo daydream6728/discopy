@@ -760,3 +760,5 @@ def test_Functor_tree():
         assert type(G) is type(F) and G.cod == F.cod
         assert G(sentence) == F(sentence)
     assert G.optimize == "optimal" and G.dtype is complex
+    with raises(TypeError, match="with params has no tree"):
+        dumps(Functor({n: 2}, {}, backend="os"))

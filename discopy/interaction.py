@@ -137,24 +137,29 @@ class Ty(Pregroup, NamedGeneric['natural']):
 
     def to_tree(self) -> dict:
         """
-        Serialise an integer type, with the name of its natural types.
+        Serialise an integer type, with the name of its natural types, each
+        half as its tree or, when it has none, e.g. an integer, as itself.
 
         >>> from discopy.utils import dumps, loads
         >>> from discopy.ribbon import Ty as T
-        >>> x = Ty[T](T('x'), T('y'))
-        >>> assert loads(dumps(x)) == x
+        >>> for x in (Ty[T](T('x'), T('y')), Ty[int](1, 2)):
+        ...     assert loads(dumps(x)) == x
         """
+        positive, negative = (
+            half.to_tree() if hasattr(half, 'to_tree') else half
+            for half in (self.positive, self.negative))
         return {
             'factory': factory_name(get_origin(type(self))),
             'natural': factory_name(self.natural),
-            'positive': self.positive.to_tree(),
-            'negative': self.negative.to_tree()}
+            'positive': positive, 'negative': negative}
 
     @classmethod
     def from_tree(cls, tree: dict) -> Ty:
         """ Decode a serialised integer type, see :meth:`to_tree`. """
         factory = cls[resolve_factory(tree['natural'])]
-        return factory(*map(from_tree, (tree['positive'], tree['negative'])))
+        return factory(*(
+            from_tree(half) if isinstance(half, dict) else half
+            for half in (tree['positive'], tree['negative'])))
 
     def __repr__(self):
         factory, natural = map(

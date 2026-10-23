@@ -327,7 +327,7 @@ class Ty(NamedGeneric['base']):
     __pow__ = symmetric.Ty.__pow__
 
 
-NO_TREE = messages.NO_TREE_CALLABLE.format("A stream", "_later")
+NO_TREE = messages.NO_TREE_STREAM
 
 
 @dataclass
@@ -420,8 +420,8 @@ class Stream(FeedbackCategory, NamedGeneric['category']):
         >>> dumps(Stream.sequence("f", Ty('x'), Ty('x')))
         Traceback (most recent call last):
         ...
-        TypeError: A stream has no tree: its _later is a Python callable, \
-which JSON cannot hold.
+        TypeError: A stream has no tree: its later is what a Python \
+callable returns or, for a constant stream, itself, which JSON cannot hold.
         """
         raise TypeError(NO_TREE)
 

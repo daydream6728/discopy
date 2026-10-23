@@ -1082,6 +1082,10 @@ class Functor(Category):
         TypeError: A functor has no tree: its ob_map is a Python callable, \
 which JSON cannot hold.
         """
+        for category in (self.dom, self.cod):
+            if not isinstance(category, type):
+                raise TypeError(messages.NOT_JSON_SERIALISABLE.format(
+                    type(category).__name__))
         tree = {'factory': factory_name(type(self))}
         for attr in ("ob_map", "ar_map"):
             mapping = getattr(self, attr).mapping
@@ -1098,10 +1102,12 @@ which JSON cannot hold.
     def from_tree(cls, tree: dict) -> Functor:
         """
         Decode a serialised functor, see :meth:`to_tree`, where a value that
-        is not a tree is the value itself, e.g. the array of a box.
+        is not a tree, i.e. has no factory, is the value itself, e.g. the
+        array of a box.
         """
         ob_map, ar_map = ({
-            from_tree(key): from_tree(value) if isinstance(value, dict)
+            from_tree(key): from_tree(value)
+            if isinstance(value, dict) and 'factory' in value
             else value for key, value in tree[attr]}
             for attr in ("ob_map", "ar_map"))
         return cls(ob_map, ar_map, dom=resolve_factory(tree['dom']),
