@@ -171,6 +171,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   subclass reprs as itself, and maps and hypergraphs refuse sums ([next#31],
   [next#168]); `EHypergraph.rewrite` refuses what it does not have
   ([next#114]).
+- The hypergraph of a rotated box is its transpose, as its map is, and both
+  put the legs of a cup or cap in scan order ([next#56], [next#139]).
 - `Diagram.foliation` is idempotent and an equality up to interchangers
   ([#699], [next#1]) and drops plumbing that composes to the identity;
   `braided.simplify` and `pregroup.normal_form` take foliated diagrams
@@ -404,6 +406,7 @@ for the changelog of `1.2.1` and earlier.
 [next#31]: https://github.com/rel-int/discopy-next/issues/31
 [next#49]: https://github.com/rel-int/discopy-next/issues/49
 [next#52]: https://github.com/rel-int/discopy-next/issues/52
+[next#56]: https://github.com/rel-int/discopy-next/issues/56
 [next#60]: https://github.com/rel-int/discopy-next/issues/60
 [next#73]: https://github.com/rel-int/discopy-next/issues/73
 [next#74]: https://github.com/rel-int/discopy-next/issues/74
@@ -437,6 +440,7 @@ for the changelog of `1.2.1` and earlier.
 [next#130]: https://github.com/rel-int/discopy-next/issues/130
 [next#133]: https://github.com/rel-int/discopy-next/issues/133
 [next#134]: https://github.com/rel-int/discopy-next/issues/134
+[next#139]: https://github.com/rel-int/discopy-next/issues/139
 [next#147]: https://github.com/rel-int/discopy-next/issues/147
 [next#149]: https://github.com/rel-int/discopy-next/issues/149
 [next#161]: https://github.com/rel-int/discopy-next/issues/161
