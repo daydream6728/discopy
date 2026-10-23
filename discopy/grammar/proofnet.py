@@ -13,6 +13,7 @@ Summary
 
     Sequent
     ProofNet
+    Lazy
 
 .. autosummary::
     :template: function.rst
@@ -22,6 +23,8 @@ Summary
     ports
     count
     hungarian
+    assignments
+    products
 
 Ports and links
 ---------------
@@ -95,13 +98,28 @@ for the assignment problem (1955) <https://doi.org/10.1002/nav.3800020109>`_).
 ((1, 4), (2, 0), (5, 3))
 >>> print(net.to_term())
 loves(Bob)(Alice)
+
+Ranking
+-------
+
+The best linking need not be correct. :meth:`Sequent.linkings` ranks the
+linkings best first, the :func:`products` of the rankings of each block by
+:func:`assignments`, Murty's ranking of the assignments of a matrix, each
+block ranked only as far as the product reads it.
+
+>>> for net in sequent.linkings(scores, 2):
+...     print(net.to_term())
+loves(Bob)(Alice)
+loves(Alice)(Bob)
 """
 
 from __future__ import annotations
 
 from collections import Counter, defaultdict
-from dataclasses import dataclass
+from collections.abc import Iterator
+from dataclasses import dataclass, field
 from functools import cached_property, reduce
+import heapq
 import itertools
 
 import numpy as np
@@ -194,6 +212,135 @@ def hungarian(scores) -> list[int]:
     return [int(j) for j in np.argsort(row[1:])]
 
 
+def assignments(scores, m: int) -> Iterator[tuple[list[int], float]]:
+    """
+    The ``m`` best assignments of a square matrix with their total score,
+    best first: Murty's ranking, which splits the assignments left after
+    each best one by the first row where they differ from it, and solves
+    each part with :func:`hungarian` on the scores masked to it (Murty, `An
+    algorithm for ranking all the assignments in order of increasing cost
+    (1968) <https://doi.org/10.1287/opre.16.3.682>`_). Each assignment is
+    computed when it is read, and none after the ``m``-th.
+
+    Parameters:
+        scores : A square matrix.
+        m : The number of assignments.
+
+    Example
+    -------
+    >>> for columns, total in assignments([[3, 1], [2, 1]], 3):
+    ...     print(columns, total)
+    [0, 1] 4.0
+    [1, 0] 3.0
+    """
+    n = len(scores)
+    scores = np.asarray(scores, dtype=float).reshape(n, n)
+    least, heap, ties = scores.min(initial=0), [], itertools.count()
+    low = least - n * (scores.max(initial=0) - least) - 1
+
+    def solve(forced, forbidden):
+        allowed = np.ones((n, n), dtype=bool)
+        for i, j in forced:
+            allowed[i], allowed[:, j] = False, False
+            allowed[i, j] = True
+        for i, j in forbidden:
+            allowed[i, j] = False
+        columns = hungarian(np.where(allowed, scores, low))
+        if allowed[range(n), columns].all():
+            total = float(scores[range(n), columns].sum())
+            heapq.heappush(
+                heap, (-total, next(ties), forced, forbidden, columns))
+
+    if m > 0:
+        solve((), ())
+    while heap:
+        total, _, forced, forbidden, columns = heapq.heappop(heap)
+        yield columns, -total
+        m -= 1
+        if not m:
+            return
+        free = sorted(set(range(n)).difference(dict(forced)))
+        for t, i in enumerate(free):
+            solve(forced + tuple((r, columns[r]) for r in free[:t]),
+                  forbidden + ((i, columns[i]), ))
+
+
+@dataclass
+class Lazy:
+    """
+    A list read from an iterator only as far as it is indexed, e.g. a ranking
+    computed on demand for :func:`products`.
+
+    Parameters:
+        iterator : The items, in order.
+        items : The items read so far, none by default.
+
+    Example
+    -------
+    >>> squares = Lazy(i * i for i in itertools.count())
+    >>> squares[3], squares.items
+    (9, [0, 1, 4, 9])
+    """
+    iterator: Iterator
+    items: list = field(default_factory=list)
+
+    def __post_init__(self):
+        self.iterator = iter(self.iterator)
+
+    def __getitem__(self, index: int):
+        self.items += itertools.islice(
+            self.iterator, max(index + 1 - len(self.items), 0))
+        return self.items[index]
+
+
+def products(beams, width: int) -> Iterator[tuple[tuple[int, ...], float]]:
+    """
+    The ``width`` best choices of one item in each of some lists, best first
+    by the sum of their scores: the lazy enumeration of the product of lists
+    sorted by score, each choice followed by the choices one step down in
+    one list (Huang and Chiang, `Better k-best parsing (2005)
+    <https://aclanthology.org/W05-1506/>`_). The lists are read only as far
+    as the choices so far need, and no further after the last one, so that
+    each can be a :class:`Lazy` ranking.
+
+    Parameters:
+        beams : Lists of pairs of an item and its score, by decreasing score.
+        width : The number of choices.
+
+    Example
+    -------
+    >>> beams = [[("a", 0.), ("b", -1.)], [("x", 0.), ("y", -.5)]]
+    >>> for choice, score in products(beams, 3):
+    ...     print(choice, score)
+    (0, 0) 0.0
+    (0, 1) -0.5
+    (1, 0) -1.0
+    """
+    if width < 1:
+        return
+    start = (0, ) * len(beams)
+    try:
+        heap, seen = [(-sum(beam[0][1] for beam in beams), start)], {start}
+    except IndexError:
+        return
+    while heap:
+        score, choice = heapq.heappop(heap)
+        yield choice, -score
+        width -= 1
+        if not width:
+            return
+        for i, j in enumerate(choice):
+            successor = choice[:i] + (j + 1, ) + choice[i + 1:]
+            try:
+                following = beams[i][j + 1][1]
+            except IndexError:
+                continue
+            if successor not in seen:
+                seen.add(successor)
+                heapq.heappush(heap, (
+                    score + beams[i][j][1] - following, successor))
+
+
 @dataclass(frozen=True)
 class Sequent:
     """
@@ -230,6 +377,22 @@ class Sequent:
             result[atom][polarity].append(i)
         return dict(result)
 
+    @property
+    def is_balanced(self) -> bool:
+        """
+        Whether every atom is given as often as it is wanted, i.e. the words
+        have the :func:`count` of the goal, without which there is no linking.
+
+        Example
+        -------
+        >>> n, s = Ty("n"), Ty("s")
+        >>> Alice, loves = n("Alice"), (n >> (n >> s))("loves")
+        >>> assert Sequent((Alice, loves), n >> s).is_balanced
+        >>> assert not Sequent((Alice, loves), s).is_balanced
+        """
+        return all(len(negatives) == len(positives)
+                   for negatives, positives in self.blocks.values())
+
     @classmethod
     def infer(cls, words) -> Sequent:
         """
@@ -264,7 +427,7 @@ class Sequent:
     def decode(self, scores) -> ProofNet:
         """
         The linking of maximum total score, the :func:`hungarian` assignment
-        of each block.
+        of each block, i.e. the first of the :meth:`linkings`.
 
         Parameters:
             scores : A square matrix over the ports, with a row for each
@@ -273,16 +436,46 @@ class Sequent:
         Raises:
             AxiomError : When an atom is not given as often as it is wanted.
         """
-        scores, links = np.asarray(scores, dtype=float), []
+        return next(self.linkings(scores, 1))
+
+    def linkings(self, scores, m: int) -> Iterator[ProofNet]:
+        """
+        The ``m`` best linkings, best first by their total score: the
+        :func:`products` of the :func:`assignments` of each block, each block
+        ranked only as far as the product reads it, so that the best linking
+        comes before any block is ranked further than its best assignment.
+
+        Parameters:
+            scores : A square matrix over the ports, with a row for each
+                negative port and a column for each positive port.
+            m : The number of linkings.
+
+        Raises:
+            AxiomError : When an atom is not given as often as it is wanted.
+
+        Example
+        -------
+        >>> a = Ty("a")
+        >>> f, x = (a >> a)("f"), a("x")
+        >>> scores = [[0, 2, 1, 0], [0] * 4, [0] * 4, [0, 1, 2, 0]]
+        >>> for net in Sequent((f, x), a).linkings(scores, 3):
+        ...     print(net.links, net.is_correct)
+        ((0, 1), (3, 2)) False
+        ((0, 2), (3, 1)) True
+        """
+        scores, blocks = np.asarray(scores, dtype=float), []
         for atom, (negatives, positives) in self.blocks.items():
             if len(negatives) != len(positives):
                 raise AxiomError(
                     f"{atom} is wanted {len(negatives)} times "
                     f"and given {len(positives)} times.")
             block = scores[np.ix_(negatives, positives)]
-            links += [(negatives[i], positives[j])
-                      for i, j in enumerate(hungarian(block))]
-        return ProofNet(self, links)
+            blocks.append((negatives, positives, Lazy(assignments(block, m))))
+        for choice, _ in products([ranking for *_, ranking in blocks], m):
+            yield ProofNet(self, [
+                (negatives[i], positives[j])
+                for (negatives, positives, ranking), c in zip(blocks, choice)
+                for i, j in enumerate(ranking[c][0])])
 
 
 @dataclass(frozen=True)
@@ -388,6 +581,25 @@ class ProofNet:
         links = [(index(end), follow(end, neighbours[end][0]))
                  for end in neighbours if end[0] != "wire"]
         return cls(sequent, [(i, j) for i, j in links if sequent.ports[j][1]])
+
+    @property
+    def is_correct(self) -> bool:
+        """
+        Whether the net is that of a proof, i.e. :meth:`to_term` reads it.
+
+        Example
+        -------
+        >>> a = Ty("a")
+        >>> f, x = (a >> a)("f"), a("x")
+        >>> sequent = Sequent((f, x), a)
+        >>> assert ProofNet(sequent, [(0, 2), (3, 1)]).is_correct
+        >>> assert not ProofNet(sequent, [(0, 1), (3, 2)]).is_correct
+        """
+        try:
+            self.to_term()
+        except AxiomError:
+            return False
+        return True
 
     def to_term(self) -> Term:
         """

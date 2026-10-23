@@ -2,6 +2,7 @@ import pytest
 
 torch = pytest.importorskip("torch")
 
+from discopy.grammar import proofnet
 from discopy.grammar.abstract import Ty
 from discopy.grammar.neural import *
 from discopy.grammar.proofnet import ProofNet, Sequent
@@ -121,25 +122,7 @@ def test_Parser_infers_the_goal():
 
 
 def test_products():
-    from itertools import product
-    from random import Random
-    random = Random(0)
-    for _ in range(20):
-        beams = [sorted([(i, float(random.randint(-9, 0)))
-                         for i in range(random.randint(1, 3))],
-                        key=lambda item: -item[1])
-                 for _ in range(random.randint(1, 4))]
-        width = random.randint(1, 30)
-        expected = sorted(
-            (sum(beam[j][1] for beam, j in zip(beams, choice))
-             for choice in product(*(range(len(beam)) for beam in beams))),
-            reverse=True)[:width]
-        choices = list(products(beams, width))
-        assert [score for _, score in choices] == expected
-        assert all(score == sum(beam[j][1] for beam, j in zip(beams, choice))
-                   for choice, score in choices)
-        assert len({choice for choice, _ in choices}) == len(choices)
-    assert not list(products([[("a", 0.)], []], 1))
+    assert products is proofnet.products
 
 
 def test_Linker_log_likelihood():

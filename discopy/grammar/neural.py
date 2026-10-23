@@ -22,7 +22,6 @@ Summary
     :toctree:
 
     sinkhorn
-    products
 
 Parsing in two steps
 --------------------
@@ -68,10 +67,11 @@ Taking the most likely type of each word, then the best linking of the
 sequent they make, fails whenever that sequent has no goal or that linking
 no term. :meth:`Parser.search` searches the space of proof nets instead: it
 enumerates the sequents of the ``k`` most likely types of each word best
-first, with :func:`products`, keeps those the count invariant gives a goal,
-links each with the Hungarian algorithm, keeps the nets that sequentialise,
-and returns the one of highest joint score, the log-probability of its
-types plus a weight times that of its linking, :meth:`Linker.log_likelihood`.
+first, with :func:`discopy.grammar.proofnet.products`, keeps those the count
+invariant gives a goal, links each with the Hungarian algorithm, keeps the
+nets that sequentialise, and returns the one of highest joint score, the
+log-probability of its types plus a weight times that of its linking,
+:meth:`Linker.log_likelihood`.
 
 Example
 -------
@@ -101,14 +101,13 @@ loves(Alice)(Bob)
 
 from __future__ import annotations
 
-import heapq
 from dataclasses import dataclass
 
 import torch  # pylint: disable=import-error  # torch is an extra
 from torch import nn  # pylint: disable=import-error  # torch is an extra
 
 from discopy.grammar.abstract import Ty
-from discopy.grammar.proofnet import Sequent, ProofNet, ports
+from discopy.grammar.proofnet import Sequent, ProofNet, ports, products
 from discopy.utils import AxiomError
 
 
@@ -365,43 +364,6 @@ def sinkhorn(blocks, iterations: int = 10) -> torch.Tensor:
         scores = scores - scores.logsumexp(2, keepdim=True)
         scores = scores - scores.logsumexp(1, keepdim=True)
     return scores
-
-
-def products(beams, width: int):
-    """
-    The ``width`` best choices of one item in each of some lists, best first
-    by the sum of their scores: the lazy enumeration of the product of lists
-    sorted by score, each choice followed by the choices one step down in
-    one list (Huang and Chiang, `Better k-best parsing (2005)
-    <https://aclanthology.org/W05-1506/>`_).
-
-    Parameters:
-        beams : Lists of pairs of an item and its score, by decreasing score.
-        width : The number of choices.
-
-    Example
-    -------
-    >>> beams = [[("a", 0.), ("b", -1.)], [("x", 0.), ("y", -.5)]]
-    >>> for choice, score in products(beams, 3):
-    ...     print(choice, score)
-    (0, 0) 0.0
-    (0, 1) -0.5
-    (1, 0) -1.0
-    """
-    if not all(beams):
-        return
-    start = (0, ) * len(beams)
-    heap, seen = [(-sum(beam[0][1] for beam in beams), start)], {start}
-    while heap and width:
-        score, choice = heapq.heappop(heap)
-        yield choice, -score
-        width -= 1
-        for i, j in enumerate(choice):
-            successor = choice[:i] + (j + 1, ) + choice[i + 1:]
-            if j + 1 < len(beams[i]) and successor not in seen:
-                seen.add(successor)
-                heapq.heappush(heap, (
-                    score + beams[i][j][1] - beams[i][j + 1][1], successor))
 
 
 class Linker(nn.Module):

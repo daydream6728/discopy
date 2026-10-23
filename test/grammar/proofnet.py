@@ -1,11 +1,13 @@
 import subprocess
 from collections import Counter
 import sys
-from itertools import permutations
+from itertools import count as naturals, permutations, product
+from math import factorial, prod
 from random import Random
 
 from pytest import raises
 
+from discopy.grammar import proofnet
 from discopy.grammar.abstract import Ty, Variable, Abstraction
 from discopy.grammar.proofnet import *
 from discopy.utils import AxiomError
@@ -135,3 +137,137 @@ def test_infer():
     for words in [(Alice, Bob), (loves, ), ()]:
         with raises(AxiomError, match="No smallest goal"):
             Sequent.infer(words)
+
+
+def test_products():
+    random = Random(0)
+    for _ in range(20):
+        beams = [sorted([(i, float(random.randint(-9, 0)))
+                         for i in range(random.randint(1, 3))],
+                        key=lambda item: -item[1])
+                 for _ in range(random.randint(1, 4))]
+        width = random.randint(1, 30)
+        expected = sorted(
+            (sum(beam[j][1] for beam, j in zip(beams, choice))
+             for choice in product(*(range(len(beam)) for beam in beams))),
+            reverse=True)[:width]
+        choices = list(products(beams, width))
+        assert [score for _, score in choices] == expected
+        assert all(score == sum(beam[j][1] for beam, j in zip(beams, choice))
+                   for choice, score in choices)
+        assert len({choice for choice, _ in choices}) == len(choices)
+    assert not list(products([[("a", 0.)], []], 1))
+    assert not list(products([[("a", 0.)]], 0))
+
+
+def test_products_lazy():
+    beams = [Lazy((i, -i) for i in naturals()) for _ in range(2)]
+    assert [choice for choice, _ in products(beams, 3)]\
+        == [(0, 0), (0, 1), (1, 0)]
+    assert [len(beam.items) for beam in beams] == [2, 3]
+    unread = Lazy((i, -i) for i in naturals())
+    assert not list(products([unread], 0)) and not unread.items
+
+
+def test_Lazy():
+    squares = Lazy(i * i for i in range(4))
+    assert squares[1] == 1 and squares.items == [0, 1]
+    assert squares[0] == 0 and squares.items == [0, 1]
+    with raises(IndexError):
+        squares[4]
+    assert squares.items == [0, 1, 4, 9]
+    assert Lazy([1, 2])[1] == 2
+
+
+def test_assignments():
+    random = Random(0)
+    for size in range(5):
+        for _ in range(20):
+            scores = [[random.randint(-2, 2) for _ in range(size)]
+                      for _ in range(size)]
+
+            def total(columns):
+                return sum(scores[i][j] for i, j in enumerate(columns))
+            everything = list(permutations(range(size)))
+            m = random.randint(0, len(everything) + 2)
+            ranked = list(assignments(scores, m))
+            assert [score for _, score in ranked] == sorted(
+                map(total, everything), reverse=True)[:m]
+            assert all(score == total(columns) for columns, score in ranked)
+            assert {tuple(columns) for columns, _ in ranked}\
+                <= set(everything)
+            assert len({tuple(columns) for columns, _ in ranked})\
+                == len(ranked)
+            if ranked:
+                assert ranked[0][0] == hungarian(scores)
+    assert list(assignments([], 2)) == [([], 0.)]
+    assert list(assignments([[1, 2], [3, 4]], 0)) == []
+
+
+def test_assignments_lazy(monkeypatch):
+    calls = []
+
+    def counted(scores):
+        calls.append(scores)
+        return hungarian(scores)
+    monkeypatch.setattr(proofnet, "hungarian", counted)
+    scores = [[3, 1, 0], [2, 1, 0], [0, 0, 1]]
+    assert len(list(assignments(scores, 1))) == 1 and len(calls) == 1
+    ranking = assignments(scores, 6)
+    next(ranking)
+    assert len(calls) == 2
+    assert len(list(ranking)) == 5
+    sequent = Sequent((Alice, loves, Bob), s)
+    calls.clear()
+    next(sequent.linkings([[0] * 6] * 6, 4))
+    assert len(calls) == len(sequent.blocks) == 2
+
+
+def test_linkings():
+    random, tried = Random(0), 0
+    pool = [a, b, a >> b, b >> a, a >> (a >> b), (a >> b) >> b,
+            b >> (b >> a), (b >> a) >> a]
+    for _ in range(200):
+        words = [random.choice(pool)(f"w{i}")
+                 for i in range(random.randint(1, 4))]
+        try:
+            sequent = Sequent.infer(words)
+        except AxiomError:
+            continue
+        blocks = list(sequent.blocks.values())
+        if prod(factorial(len(negatives)) for negatives, _ in blocks) > 500:
+            continue
+        size, tried = len(sequent.ports), tried + 1
+        scores = [[random.randint(-2, 2) for _ in range(size)]
+                  for _ in range(size)]
+
+        def total(net):
+            return sum(scores[i][j] for i, j in net.links)
+        everything = [
+            ProofNet(sequent, [
+                (i, j) for (negatives, _), chosen in zip(blocks, choice)
+                for i, j in zip(negatives, chosen)])
+            for choice in product(*(
+                permutations(positives) for _, positives in blocks))]
+        m = random.randint(1, len(everything) + 2)
+        ranked = list(sequent.linkings(scores, m))
+        assert [total(net) for net in ranked] == sorted(
+            map(total, everything), reverse=True)[:m]
+        assert len({net.links for net in ranked}) == len(ranked)
+        best = ProofNet(sequent, [
+            (negatives[i], positives[j]) for negatives, positives in blocks
+            for i, j in enumerate(hungarian(
+                [[scores[x][y] for y in positives] for x in negatives]))])
+        assert ranked[0] == best == sequent.decode(scores)
+    assert tried > 50
+    with raises(AxiomError, match="wanted 2 times and given 1 times"):
+        next(Sequent((Alice, loves), s).linkings([[0] * 5] * 5, 2))
+
+
+def test_is_balanced_and_is_correct():
+    assert Sequent((Alice, loves, Bob), s).is_balanced
+    assert not Sequent((Alice, Bob), s).is_balanced
+    f, x = (a >> a)("f"), a("x")
+    nets = list(Sequent((f, x), a).linkings([[0] * 4] * 4, 2))
+    assert sorted(net.is_correct for net in nets) == [False, True]
+    assert [net.to_term() for net in nets if net.is_correct] == [f(x)]
