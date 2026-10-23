@@ -349,6 +349,8 @@ def test_Bubble():
     assert Functor.id()(f.bubble(name="N")) == f.bubble(name="N")
     image = Functor.id()(f.bubble(data=42, is_dagger=True))
     assert (image.data, image.is_dagger) == (42, True)
+    empty = Bubble(dom=Ob('x'), cod=Ob('y'))
+    assert Functor.id()(empty) == empty
 
 
 def test_Box_call():
@@ -419,6 +421,10 @@ def test_subs_forms_and_data():
     lam = sympy.Symbol("lambda")
     for data in (sympy.sin(phi) + sympy.sin(psi), phi + lam):
         assert Box('p', x, y, data=data).subs(phi, 1).data == data.subs(phi, 1)
+    from discopy.utils import rsubs
+    data = [sympy.sin(phi) + psi, phi, sympy.Matrix([[sympy.sin(phi)]])]
+    assert rsubs(data, sympy.sin(phi), 0) == rsubs(data, {sympy.sin(phi): 0})\
+        == [psi, phi, sympy.Matrix([[0]])]
 
 
 def test_Sum():

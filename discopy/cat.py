@@ -1046,12 +1046,12 @@ class Functor(Category):
                        self.cod.zero(self(other.dom), self(other.cod)))
         if isinstance(other, Bubble) and hasattr(self.cod, other.method):
             dom, cod = map(self, (other.dom, other.cod))
-            params = dict(
-                name=other.name, data=other.data, is_dagger=other.is_dagger)\
-                if other.method == "bubble" and issubclass(self.cod, Arrow)\
-                else {}
+            if other.method == "bubble" and issubclass(self.cod, Arrow):
+                return self.cod.bubble_factory(
+                    *map(self, other.args), dom=dom, cod=cod, name=other.name,
+                    data=other.data, is_dagger=other.is_dagger)
             return getattr(self.cod, other.method)(
-                *map(self, other.args), dom=dom, cod=cod, **params)
+                *map(self, other.args), dom=dom, cod=cod)
         if isinstance(other, Box) and other.is_dagger:
             return self(other.dagger()).dagger()
         if isinstance(other, Box):

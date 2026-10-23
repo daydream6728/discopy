@@ -616,16 +616,24 @@ def rsubs(data, *args, **kwargs):
     >>> from sympy import sin
     >>> rsubs(sin(phi) + sin(psi), phi, 1)
     sin(psi) + sin(1)
+
+    A key that is not a symbol is substituted as in :code:`sympy.subs`:
+
+    >>> rsubs(data, phi + psi, 0)
+    {'name': 'phi', 'phases': [phi, 0]}
     """
-    from sympy import Basic, lambdify
+    from sympy import Basic, MatrixBase, Symbol, lambdify
     pairs = args[0] if len(args) == 1 else args
     if not isinstance(pairs, Mapping):
         pairs = tuple(pairs)
         if pairs and not isinstance(pairs[0], Iterable):
             pairs = (pairs, )
     substitution = dict(pairs)
+    compound = not all(isinstance(key, Symbol) for key in substitution)
 
     def substitute(leaf):
+        if compound and isinstance(leaf, (Basic, MatrixBase)):
+            return leaf.subs(substitution, simultaneous=True)
         symbols = tuple(getattr(leaf, "free_symbols", ()))
         if not substitution.keys() & set(symbols):
             return leaf

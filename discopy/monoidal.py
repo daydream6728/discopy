@@ -1956,7 +1956,7 @@ class Functor(cat.Functor):
             return other.to_drawing()
         if isinstance(other, Bubble) and other.method == "bubble"\
                 and issubclass(self.cod, Diagram):
-            return self.cod.bubble(
+            return self.cod.bubble_factory(
                 *map(self, other.args), dom=self(other.dom),
                 cod=self(other.cod), name=other.name,
                 data=other.data, is_dagger=other.is_dagger,

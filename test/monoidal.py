@@ -493,6 +493,8 @@ def test_Bubble_identity_Functor():
     image = Functor.id(Diagram)(bubble)
     assert image == bubble and (image.drawing_name, image.draw_as_frame)\
         == ("L", True) and (image.data, image.is_dagger) == (42, True)
+    empty = Bubble(dom=Ty('x'), cod=Ty('y'))
+    assert Functor.id(Diagram)(empty) == empty
 
 
 def test_Box_globularity():
