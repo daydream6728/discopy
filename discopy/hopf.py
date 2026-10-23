@@ -292,13 +292,13 @@ class Algebra:
         :math:`1 \\to H`, for :math:`u` the Drinfeld element and :math:`g`
         the pivotal element: the invertible central element with
         :math:`v^2 = uS(u)`, :math:`S(v) = v` and :math:`\\epsilon(v) = 1`
-        whose action is the twist, :math:`\\theta_V = \\rho_V(v)` —
-        materialised as a single state box so that
-        :meth:`Intertwiner.twist` is one state and one application of the
-        action. The ribbon properties are checked by :meth:`is_ribbon` on
-        first access, raising :class:`ValueError` when the algebra is not
-        ribbon — e.g. the double of a Taft algebra of even dimension, by
-        Kauffman and Radford's criterion.
+        whose inverse acts as the twist, i.e. the trace of the braid,
+        :math:`\\theta_V = \\rho_V(v^{-1})` — materialised as a single state
+        box so that :meth:`Intertwiner.twist` is one state and one
+        application of the action. The ribbon properties are checked by
+        :meth:`is_ribbon` on first access, raising :class:`ValueError` when
+        the algebra is not ribbon — e.g. the double of a Taft algebra of
+        even dimension, by Kauffman and Radford's criterion.
         """
         if not self.is_ribbon():
             raise ValueError("this is not a ribbon Hopf algebra")
@@ -984,31 +984,58 @@ class Intertwiner(NamedGeneric["algebra"], tensor.Diagram, RibbonCategory):
     @classmethod
     def twist(cls, dom):
         """
-        The twist of ``dom``: the action of the ribbon element
+        The twist of ``dom``, i.e. the trace of the braid: the action of the
+        inverse :math:`v^{-1}` of the ribbon element
         :attr:`Algebra.ribbon_element`.
+
+        >>> D = Double(Algebra.cyclic(3))
+        >>> omega = np.exp(2j * np.pi / 3)
+        >>> V = Representation[D].anyon(1, omega)
+        >>> braid, cups, caps = (
+        ...     getattr(Intertwiner[D], f) for f in ("braid", "cups", "caps"))
+        >>> trace = V @ caps(V, V.r) >> braid(V, V) @ V.r >> V @ cups(V, V.r)
+        >>> twist = Intertwiner[D].twist(V)
+        >>> assert twist.eval(dtype=complex).is_close(
+        ...     trace.eval(dtype=complex))
+        >>> assert np.isclose(complex(twist.eval(dtype=complex)), omega)
         """
-        if cls.algebra is None:
+        H = cls.algebra
+        if H is None:
             raise ValueError("the twist needs a quasitriangular structure")
-        body = cls.algebra.ribbon_element @ Id(Dim(*dom.inside)) \
-            >> dom.action
+        unit, _, mult, *_ = H.arrays
+        v = H.ribbon_element.eval(dtype=complex).array.reshape(H.dim)
+        inverse = np.linalg.solve(np.einsum('i,ijk->kj', v, mult), unit)
+        body = Box[complex]('v⁻¹', Dim(1), H.ty, inverse.tolist()) \
+            @ Id(Dim(*dom.inside)) >> dom.action
         return cls(body.inside, body.dom, body.cod)
 
     @classmethod
     def cups(cls, left, right):
         """
         The evaluation of a module against its dual. When ``right`` is the
-        right dual of ``left`` — read off the ``action`` of the two
-        modules, so that the standard :class:`.rigid.Functor` dispatch
-        applies unchanged — this is the *pivotal* evaluation, twisting the
-        dual leg by the inverse of the pivotal element; the pairing of a
-        dual against its module is the plain one. Both coincide whenever
-        the pivotal element is trivial.
+        right dual of ``left``, or ``left`` the left dual of ``right`` —
+        read off the ``action`` of the two modules, so that the standard
+        :class:`.rigid.Functor` dispatch applies unchanged — this is the
+        *pivotal* evaluation, twisting the right leg by the inverse of the
+        pivotal element; the pairing of a right dual against its module,
+        or of a module against its left dual, is the plain one. Both
+        coincide whenever the pivotal element is trivial, and each is an
+        intertwiner.
+
+        >>> H = Algebra.taft(3)
+        >>> V = Representation[H].regular()
+        >>> for left, right in [(V, V.r), (V.r, V), (V.l, V), (V, V.l)]:
+        ...     cup = Intertwiner[H].cups(left, right)
+        ...     lhs = (left @ right).action >> cup
+        ...     rhs = H.counit @ cup
+        ...     assert lhs.eval(dtype=complex).is_close(
+        ...         rhs.eval(dtype=complex))
         """
         body = Diagram.cups(Dim(*left.inside), Dim(*right.inside))
         if cls.algebra is not None \
-                and isinstance(left, Representation) \
-                and isinstance(right, Representation) \
-                and right.action == left.r.action \
+                and all(isinstance(x, Representation) for x in (left, right)) \
+                and (right.action == left.r.action
+                     or left.action == right.l.action) \
                 and cls.algebra.pivotal_element != cls.algebra.unit:
             H = cls.algebra
             g_inv = H.pivotal_element >> H.antipode
@@ -1020,17 +1047,28 @@ class Intertwiner(NamedGeneric["algebra"], tensor.Diagram, RibbonCategory):
     def caps(cls, left, right):
         """
         The coevaluation of a module against its dual. When ``right`` is
-        the right dual of ``left`` this is the plain copairing; a dual
-        followed by its module — read off the ``action`` of the two
-        modules, as for :meth:`cups` — is the *pivotal* coevaluation,
-        twisting the module leg by the inverse of the pivotal element.
-        Both coincide whenever the pivotal element is trivial.
+        the right dual of ``left``, or ``left`` the left dual of ``right``,
+        this is the plain copairing; a right dual followed by its module,
+        or a module followed by its left dual — read off the ``action`` of
+        the two modules, as for :meth:`cups` — is the *pivotal*
+        coevaluation, twisting the right leg by the inverse of the pivotal
+        element. Both coincide whenever the pivotal element is trivial, and
+        each is an intertwiner.
+
+        >>> H = Algebra.taft(3)
+        >>> V = Representation[H].regular()
+        >>> for left, right in [(V, V.r), (V.r, V), (V.l, V), (V, V.l)]:
+        ...     cap = Intertwiner[H].caps(left, right)
+        ...     lhs = H.ty @ cap >> (left @ right).action
+        ...     rhs = H.counit @ cap
+        ...     assert lhs.eval(dtype=complex).is_close(
+        ...         rhs.eval(dtype=complex))
         """
         body = Diagram.caps(Dim(*left.inside), Dim(*right.inside))
         if cls.algebra is not None \
-                and isinstance(left, Representation) \
-                and isinstance(right, Representation) \
-                and left.action == right.r.action \
+                and all(isinstance(x, Representation) for x in (left, right)) \
+                and (left.action == right.r.action
+                     or right.action == left.l.action) \
                 and cls.algebra.pivotal_element != cls.algebra.unit:
             H = cls.algebra
             g_inv = H.pivotal_element >> H.antipode
@@ -1123,12 +1161,11 @@ class Functor(ribbon.Functor):
 
     Example
     -------
-    The left trace of the braid is the inverse twist in any ribbon
-    category, so the twist followed by it is the identity. The functor
-    sends this ribbon diagram to a tensor network made of the ribbon
-    element acting through the module and the R-matrix closed by the
-    trace, which contracts to the identity — drawn as the
-    :class:`.tensor.CMap`:
+    The left trace of the braid is the twist in any ribbon category. The
+    functor sends the twist to the inverse ribbon element acting through
+    the module, and the trace to a tensor network made of the R-matrix
+    acting through the module and closed by the pivotal cups and caps,
+    which contracts to the same matrix — drawn as the :class:`.tensor.CMap`:
 
     >>> import numpy as np
     >>> D = Double(Algebra.cyclic(2))
@@ -1137,10 +1174,9 @@ class Functor(ribbon.Functor):
     >>> V = Representation[D].direct_sum([e, m])
     >>> x = ribbon.Ty('x')
     >>> F = Functor(ob_map={x: V}, ar_map={}, cod=Intertwiner[D])
-    >>> d = ribbon.Twist(x) >> ribbon.Braid(x, x).trace(left=True)
-    >>> network = F(d)
+    >>> network = F(ribbon.Braid(x, x).trace(left=True))
     >>> assert network.eval(dtype=complex).is_close(
-    ...     F(ribbon.Id(x)).eval(dtype=complex))
+    ...     F(ribbon.Twist(x)).eval(dtype=complex))
     >>> network.to_map().draw(  # doctest: +EXTRA
     ...     doctest='docs/_static/hopf/ribbon-functor.dot')
 

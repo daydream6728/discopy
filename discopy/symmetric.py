@@ -158,19 +158,6 @@ class Layer(feedback.Layer):
             and getattr(value, 'is_identity', False) else value
             for value in inside)
 
-    @classmethod
-    def is_plumbing_box(cls, value: monoidal.Ty | Box) -> bool:
-        """
-        Whether a component of a layer is plumbing other than a type, e.g. a
-        :class:`Permutation` here and a :class:`discopy.markov.Function` in a
-        Markov layer.
-
-        Parameters:
-            value : The component of a layer.
-        """
-        return isinstance(value, cls.plumbing)\
-            and not isinstance(value, monoidal.Ty)
-
     @property
     def is_plumbing(self) -> bool:
         """
