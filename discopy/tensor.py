@@ -43,6 +43,8 @@ indices. Swaps, cups and caps become wiring while spiders stay as boxes.
 
 from __future__ import annotations
 
+import cmath
+import math
 from itertools import count
 from typing import TYPE_CHECKING, ClassVar, Sequence
 
@@ -967,13 +969,25 @@ class Box(frobenius.Box, Diagram):
         entries: a list as it is, an array of any backend through its
         ``tolist`` and a list of lists flattened.
 
+        Every nan entry becomes the one :data:`math.nan`, and a complex one
+        the pair of its real and imaginary parts, so that a box holding nan
+        equals itself and its hash is stable: the data labels a generator,
+        it is not a number being compared.
+
         >>> import numpy as np
         >>> f = Box('f', Dim(2), Dim(2), np.array([[0, 1], [1, 0]]))
         >>> assert f == Box('f', Dim(2), Dim(2), [[0, 1], [1, 0]])\\
         ...     == Box('f', Dim(2), Dim(2), [0, 1, 1, 0])
         >>> assert f != Box('f', Dim(2), Dim(2), [0, 1, 1, 1])
         >>> assert len({f, f.dagger().dagger()}) == 1
+        >>> g = Box('g', Dim(2), Dim(2), np.array([[np.nan, 1], [0, 1]]))
+        >>> assert g == g and len({g, g.dagger().dagger()}) == 1
         """
+        def canonical(x):
+            if isinstance(x, complex) and cmath.isnan(x):
+                return canonical(x.real), canonical(x.imag)
+            return math.nan if isinstance(x, float) and math.isnan(x) else x
+
         data = getattr(self.data, "tolist", lambda: self.data)()
         if isinstance(data, list) and any(isinstance(x, list) for x in data):
             with backend('numpy') as np:
@@ -981,7 +995,8 @@ class Box(frobenius.Box, Diagram):
         entries = () if data is None\
             else tuple(data) if isinstance(data, list) else (data, )
         return (self.name, self.dom, self.cod, self.dtype, self.is_dagger,
-                self.deterministic, self.affine) + entries
+                self.deterministic, self.affine)\
+            + tuple(map(canonical, entries))
 
 
 class Cup(frobenius.Cup, Box):

@@ -343,6 +343,23 @@ def test_Box_with_array_data_compares_and_hashes():
     assert len({a, b, c, a @ b}) == 3
 
 
+def test_Box_with_nan_equals_itself():
+    import pickle
+    nan = float('nan')
+    for data in ([[nan, 1], [0, 1]], np.array([[nan, 1], [0, 1]])):
+        f = Box('f', Dim(2), Dim(2), data)
+        assert f == f == f.dagger().dagger() == pickle.loads(pickle.dumps(f))
+        assert len({hash(f) for _ in range(5)}) == 1 and f in {f}
+        assert f != Box('f', Dim(2), Dim(2), [[1., 1], [0, 1]])
+        image = Tensor[float]([[1, 0], [0, 1]], Dim(2), Dim(2))
+        F = Functor({Dim(2): Dim(2)}, {f: image}, dom=Diagram, dtype=float)
+        assert F(f) == image
+    g, h = (Box('g', Dim(2), Dim(1), [x, 0])
+            for x in (complex(nan, 1), complex(1, nan)))
+    assert g == Box('g', Dim(2), Dim(1), np.array([complex(nan, 1), 0]))
+    assert g != h and len({g, h}) == 2
+
+
 @pytest.mark.parametrize("module", ["torch", "jax.numpy"])
 def test_Box_with_backend_array_data_compares_and_hashes(module):
     array = pytest.importorskip(module).asarray
