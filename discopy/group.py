@@ -99,7 +99,7 @@ def kronecker(left: Permutation, right: Permutation) -> Permutation:
     Example
     -------
     >>> kronecker(Permutation((1, 0)), Permutation((1, 2, 0)))
-    (4, 5, 3, 1, 2, 0)
+    python.finset.Permutation((4, 5, 3, 1, 2, 0))
     """
     m = len(right)
     return Permutation(
@@ -274,7 +274,7 @@ class Symmetric(NamedGeneric["n"], Group):
         self.inside = Permutation(inside, self.n)
 
     def __repr__(self):
-        return f"{type(self).__name__}({self.inside!r})"
+        return f"{type(self).__name__}({tuple(self.inside)!r})"
 
     def multiply(self, other):
         return type(self)(self.inside.then(other.inside))
@@ -574,7 +574,7 @@ class Action:
     >>> action
     Action(group.Cyclic[4], 4, ((1, 2, 3, 0),))
     >>> action(Cyclic[4](3))
-    (3, 0, 1, 2)
+    python.finset.Permutation((3, 0, 1, 2))
     >>> action.orbits(), action.tensor(action).orbits()[0]
     (((0, 1, 2, 3),), (0, 5, 10, 15))
     """
@@ -590,7 +590,7 @@ class Action:
 
     def __repr__(self):
         return f"Action({factory_name(self.group)}, {self.size}, "\
-            f"{self.images!r})"
+            f"{tuple(map(tuple, self.images))!r})"
 
     def __call__(self, element: Group) -> Permutation:
         assert_ismember(element, self.group)
