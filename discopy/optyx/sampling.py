@@ -1162,15 +1162,18 @@ transmissivity=1.0, efficiency=1.0, visible=(0,), indistinguishability=1.0)
         and the cap `private` on photons of their own in the loop. Both
         default to far in the tail of the stationary loop photon number of
         :meth:`occupation`, :math:`\\bar n + 6 \\sqrt{\\bar n} + 2`, and a
-        trajectory past them is an error.
+        trajectory past them is an error. :meth:`occupation` is called only
+        for a default, so a loop with no stationary state still has a kernel
+        once its caps are given.
         """
-        mean = self.occupation()
-        cap = int(np.ceil(mean + 6 * np.sqrt(mean) + 2)) if cap is None \
-            else cap
-        mean *= 1 - self.indistinguishability
-        private = int(np.ceil(mean + 6 * np.sqrt(mean) + 2)) \
-            if private is None else private
-        return Kernel(self, cap, private)
+        if cap is None or (private is None and self.indistinguishability < 1):
+            mean = self.occupation()
+            cap = int(np.ceil(mean + 6 * np.sqrt(mean) + 2)) if cap is None \
+                else cap
+            mean *= 1 - self.indistinguishability
+            private = int(np.ceil(mean + 6 * np.sqrt(mean) + 2)) \
+                if private is None else private
+        return Kernel(self, cap, private or 0)
 
     def lost(self, state: FockState):
         """

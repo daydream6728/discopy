@@ -775,3 +775,16 @@ def test_kernel_at_the_endpoints_of_its_parameters():
     assert set(kernel.compiled) == {(4, None), (4, 1)}
     vacuum = Interferometer(beam, 1, (0, )).kernel(cap=1)
     assert vacuum.sample(2).tolist() == [[[0], [0]]]
+
+
+@requires_jax
+def test_kernel_with_given_caps_of_a_loop_with_no_stationary_state():
+    stuck = Interferometer(np.eye(2), 1, (1, ))
+    with pytest.raises(np.linalg.LinAlgError):
+        stuck.occupation()
+    assert stuck.kernel(cap=1) == Kernel(stuck, 1)
+    assert stuck.kernel(cap=1).sample(2).tolist() == [[[1], [1]]]
+    mixed = Interferometer(np.eye(2), 1, (1, ), indistinguishability=.5)
+    assert mixed.kernel(cap=1, private=1) == Kernel(mixed, 1, 1)
+    with pytest.raises(np.linalg.LinAlgError):
+        mixed.kernel(cap=1)
