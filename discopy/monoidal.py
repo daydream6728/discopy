@@ -1824,6 +1824,15 @@ class Functor(cat.Functor):
     empty coloured identity ``Ty.id(c)`` keeps its (mapped) colour whenever
     ``cod.ob`` has an ``id`` method, e.g. ``F(Ty.id(c)) == Ty.id(F(c))``.
 
+    Note
+    ----
+    A :class:`Layer` maps to the tensor of its images. When ``cod`` is a
+    :class:`discopy.abc.MonoidalCategory`, the first two are tensored with
+    ``@`` as in a fold, e.g. so that a type next to a
+    :class:`discopy.symmetric.Permutation` gives a wider permutation, and the
+    others are whiskered and tensored in one ``n``-ary call. Any other
+    ``cod`` folds ``@``, e.g. :class:`discopy.kleisli.multiplicative.Channel`.
+
     Example
     -------
     >>> x, y, z, w = Ty('x'), Ty('y'), Ty('z'), Ty('w')
@@ -1908,6 +1917,11 @@ class Functor(cat.Functor):
                     raise AxiomError(messages.NOT_GLOBULAR.format(
                         result.dom, result.cod, *expected))
             return result
+        if isinstance(other, Layer) and issubclass(
+                self.cod.ar, abc.MonoidalCategory):
+            images = list(map(self, other))
+            head = images[0] if len(images) == 1 else images[0] @ images[1]
+            return head.tensor(*map(self.cod.ar.whisker, images[2:]))
         if isinstance(other, Layer):
             head, *tail = other
             result = self(head)
