@@ -10,13 +10,13 @@ form. So the section makes the proof a construction, checked in the semantics, a
 where the paper has equations: the involutions Tᵢ ∘ Tᵢ = id, the four commutations it draws, and
 F₃ = T₂ T₃ T₂.
 
-- [WIP] @session_01M8CWacKqbJVKPcDMd2m3AD-2026-10-23 07:30 §4.2 in `docs/notebooks/boolean-circuits.md`:
-  - [ ] the gates T₁, T₂, T₃, Tₙ as boxes with their permutations, τ as wiring, and Lemma 14
-  - [ ] Theorem 12 as a construction: an even permutation as 3-cycles, each 3-cycle an affine
+- [x] §4.2 in `docs/notebooks/boolean-circuits.md`:
+  - [x] the gates T₁, T₂, T₃, Tₙ as boxes with their permutations, τ as wiring, and Lemma 14
+  - [x] Theorem 12 as a construction: an even permutation as 3-cycles, each 3-cycle an affine
     conjugate of one standard 3-cycle, the standard one a commutator of Cᵏ NOT gates, each of those
     T₃s with one borrowed wire; checked on random even permutations for n = 4, 5
-  - [ ] n ≤ 3: every permutation of ℤ₂³ is a circuit of the four, odd ones too
-  - [ ] the equations of §4.2 as rules: involutions and the commutations, checked in the
+  - [x] n ≤ 3: every permutation of ℤ₂³ is a circuit of the four, odd ones too
+  - [x] the equations of §4.2 as rules: involutions and the commutations, checked in the
     semantics, applied by double-pushout rewriting to shorten the constructed circuits
-  - [ ] the Fredkin gate F₃ = T₂ T₃ T₂
-- [ ] `docs/export_notebooks.py --check`
+  - [x] the Fredkin gate F₃ = T₂ T₃ T₂
+- [x] `docs/export_notebooks.py --check`
