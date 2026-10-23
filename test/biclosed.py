@@ -441,3 +441,14 @@ def test_Curry_to_drawing():
                 == (len(curry.dom), len(curry.cod))
     for left in (True, False):  # A curry of no wire, built explicitly.
         assert Curry(f, 0, left=left).to_drawing() == f.to_drawing()
+
+
+def test_term_inside_a_diagram_is_drawn_as_one_box():
+    from discopy import closed
+    for module in (biclosed, closed):
+        X, Y = module.Ty('X'), module.Ty('Y')
+        g = (Y << X)('g')
+        for term in (g(X('a')), X(lambda x: g(x))):
+            for diagram in (term @ X, term >> module.Id(term.cod)):
+                assert [box.name for box in diagram.to_drawing().boxes]\
+                    == [str(term)]

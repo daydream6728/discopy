@@ -642,6 +642,13 @@ class Functor(monoidal.Functor):
 
     >>> assert f(x).to_hypergraph() == f(x).eval().to_hypergraph()
 
+    A :class:`Drawing` has neither, but a term is drawn as the box it is,
+    labelled with the term, inside a diagram as well as on its own: only
+    :meth:`TermBase.draw` draws its evaluation.
+
+    >>> assert [str(box) for box in (f(x) @ X).to_drawing().boxes] == [
+    ...     str(f(x))]
+
     The image of a term is checked to have the image of its type:
 
     >>> Functor(ob_map={X: Ty("A"), Y: Ty("B")}, ar_map={f: Ty("A")("a")})(f)
@@ -652,7 +659,7 @@ class Functor(monoidal.Functor):
     dom = cod = Diagram
 
     def __call__(self, other):
-        if isinstance(other, TermBase):
+        if isinstance(other, TermBase) and self.cod is not Drawing:
             if issubclass(get_origin(self.cod), hypergraph.Hypergraph)\
                     and not isinstance(other, Constant):
                 return self(other.eval())
@@ -795,7 +802,10 @@ class TermBase(Box, Equivalence):
         """
 
     def draw(self, **kwargs):
-        "Drawing a term by evaluating it in the free biclosed category."
+        """
+        Drawing a term by evaluating it in the free biclosed category, whereas
+        inside a diagram a term is drawn as one box, see :class:`Functor`.
+        """
         return self.eval().draw(**kwargs)
 
     def to_closed(self):
