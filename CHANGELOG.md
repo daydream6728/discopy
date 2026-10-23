@@ -79,6 +79,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - `hopf.Intertwiner.chart` and `hopf.Algebra.symmetric(n)` ([#408]).
 - `copying`, a law of `Testable` beside `pickling` ([next#1]), and the
   generators of each level as typed class variables ([next#1]).
+- `str_transparency`, a law of `Testable` beside `transparency`: `str(x)`
+  evaluates back to `x`, each generator bound by its name ([next#163]).
 - The property matrix reports the cells that cannot fail and those a
   baseline checked and this run did not ([#773], [#775]).
 - `drawing.widget.DiagramWidget`, an opt-in anywidget ([#466]).
@@ -469,6 +471,7 @@ for the changelog of `1.2.1` and earlier.
 [next#156]: https://github.com/rel-int/discopy-next/issues/156
 [next#161]: https://github.com/rel-int/discopy-next/issues/161
 [next#162]: https://github.com/rel-int/discopy-next/issues/162
+[next#163]: https://github.com/rel-int/discopy-next/issues/163
 [next#168]: https://github.com/rel-int/discopy-next/issues/168
 [next#175]: https://github.com/rel-int/discopy-next/issues/175
 [next#176]: https://github.com/rel-int/discopy-next/issues/176
