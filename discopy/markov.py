@@ -649,6 +649,7 @@ class Copy(Function):
                      draw_as_spider=True, color="black", drawing_name="")
 
     def __new__(cls, x: monoidal.Ty, n: int = 2):
+        n = len(n) if isinstance(n, Sized) else index(n)
         return super().__new__(cls) if n else\
             cls.discard_factory.__new__(cls.discard_factory, x)
 
@@ -691,9 +692,10 @@ class Discard(Copy):
         x : The type to discard.
     """
     def __init__(self, x: monoidal.Ty, n: int = 0):
-        if n:
-            raise ValueError(f"A discard has no copies, got n={n}.")
-        super().__init__(x, 0)
+        super().__init__(x, n)
+        if self.cod:
+            raise ValueError(
+                f"A discard has no copies, got n={len(self.cod)}.")
 
 
 class Sum(symmetric.Sum, Box):

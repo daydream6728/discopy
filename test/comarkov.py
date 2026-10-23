@@ -31,6 +31,9 @@ def test_Merge_takes_index():
     x = Ty('x')
     assert Merge(x, int64(3)) == Merge(x, Nat(3)) == Merge(x, 3)
     assert Cofunction(x, int64([0, 0, 0])) == Merge(x, 3)
+    zero = type("Zero", (), {"__index__": lambda _: 0})()
+    for box in (Merge(x, zero), Cofunction(x, int64([]))):
+        assert isinstance(box, Noise) and box == Noise(x)
 
 
 def test_Noise():
