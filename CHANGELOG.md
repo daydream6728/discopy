@@ -91,6 +91,9 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   feedback loops tick by tick, closed or fed by a `source`, its burn-in
   certified when it is passive, and `channel.Observable` is the effect of a
   normal operator or of a function of the outcomes ([optyx#76]).
+- `discopy.optyx.sampling.Kernel`, one tick of an `Interferometer` in JAX
+  that compiles, maps over trajectories and differentiates in its
+  parameters, with `log_prob` and an exact `distribution` ([optyx#82]).
 - `optyx.interaction`, combinatorial maps of recurrent channels, each box
   with a private memory and a prediction, unrolled or run to an approximate
   fixed point ([optyx#16]).
@@ -541,6 +544,7 @@ for the changelog of `1.2.1` and earlier.
 [optyx#56]: https://github.com/rel-int/optyx/pull/56
 [optyx#67]: https://github.com/rel-int/optyx/pull/67
 [optyx#76]: https://github.com/rel-int/optyx/pull/76
+[optyx#82]: https://github.com/rel-int/optyx/pull/82
 [optyx#84]: https://github.com/rel-int/optyx/pull/84
 [lambek#2]: https://github.com/rel-int/lambek/pull/2
 [lambek#8]: https://github.com/rel-int/lambek/pull/8
