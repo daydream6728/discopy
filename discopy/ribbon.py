@@ -268,6 +268,11 @@ class DualRailCup(Box):
             self, name, left @ right, type(left)(),
             is_dagger=is_dagger, draw_as_dual_rail_cup=True)
 
+    def __getnewargs__(self):
+        """ The arguments of the constructor, which a pickle and a delay read.
+        """
+        return self.left, self.right, self.is_dagger
+
     def rotate(self, left=False):
         del left
         return DualRailCap(self.left.r, self.right.r)
@@ -287,6 +292,8 @@ class DualRailCap(Box):
         Box.__init__(
             self, name, type(left)(), left @ right,
             is_dagger=is_dagger, draw_as_dual_rail_cap=True)
+
+    __getnewargs__ = DualRailCup.__getnewargs__
 
     def rotate(self, left=False):
         del left

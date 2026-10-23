@@ -626,12 +626,26 @@ class CMap[category](
 
     @classmethod
     def validate_adjoint_types(cls, source: Port, target: Port):
-        """ Validate a wire between adjoint types. """
-        adjoint_types = getattr(source.obj, "r", None) == target.obj\
-            or source.obj == getattr(target.obj, "r", None)
-        if not adjoint_types:
-            raise AxiomError(messages.NOT_ADJOINT.format(
-                source.obj, target.obj))
+        """
+        Validate a wire between adjoint types, i.e. a cup or a cap, its ends
+        in port order as :meth:`make_monogamous` reads them: the right end
+        of a cup is the right adjoint of its left end, the left end of a cap
+        is the right adjoint of its right end.
+
+        >>> from discopy.rigid import Ty, Diagram
+        >>> x = Ty('x')
+        >>> print(CMap[Diagram](Ty(), x @ x.l, (), (1, 0)).to_diagram())
+        Cap(x, x.l)
+        >>> CMap[Diagram](Ty(), x.l @ x, (), (1, 0))
+        Traceback (most recent call last):
+        ...
+        discopy.utils.AxiomError: x is not the left adjoint of x.l, ...
+        """
+        left, right = (source.obj, target.obj) if source.kind.is_positive\
+            else (target.obj, source.obj)
+        if not hasattr(left, "r"):
+            raise AxiomError(messages.NOT_ADJOINT.format(left, right))
+        hypergraph.Hypergraph.assert_isadjoint(left, right)
 
     @classmethod
     def validate_wire(cls, source: Port, target: Port):
@@ -1621,10 +1635,42 @@ class CMap[category](
             return self.from_box(factory(self.to_diagram(), left))
         return factory.__func__(type(self), self, left)
 
+    def leg_order(self, *legs: int) -> tuple[int, ...]:
+        """
+        The ends of a wire between two ports of the same polarity, i.e. the
+        legs of a cup or a cap, in the order of
+        :meth:`Hypergraph.leg_order`: where their writers or readers sit in
+        the scan of :meth:`to_diagram`.
+
+        Parameters:
+            legs : The indices of the ports, in :attr:`ports`.
+
+        >>> from discopy.compact import Ty, Box, Cap
+        >>> x = Ty('x')
+        >>> cmap = (Cap(x.r, x) >> x.r @ Box('g', x, x)).to_map()
+        >>> [cmap.ports[i].kind for i in cmap.leg_order(0, 2)]
+        [<PortKind.OUTPUT: 'output'>, <PortKind.DOM: 'dom'>]
+        >>> print(cmap.to_diagram())
+        Cap(x.r, x) >> x.r @ g
+        """
+        if not issubclass(self.category, SymmetricCategory):
+            return legs
+
+        def logical(port):
+            for box, ports in zip(self.boxes, self._box_port_indices):
+                if port in ports:
+                    return ports[0] + self.logical_order(
+                        len(box.dom), len(box.cod))[port - ports[0]]
+            return port
+        logicals = [logical(leg) for leg in legs]
+        return tuple(legs[logicals.index(port)] for port in (
+            self.to_hypergraph().leg_order(*logicals)))
+
     def make_monogamous(self) -> "CMap":
         """
         Introduce cup and cap boxes to make self :attr:`is_monogamous`,
-        i.e. so that every wire connects a positive and a negative port.
+        i.e. so that every wire connects a positive and a negative port,
+        their legs in the order of :meth:`leg_order`.
 
         The boxes come from ``category.cup_factory`` and
         ``category.cap_factory``, so this needs a rigid category.
@@ -1644,6 +1690,7 @@ class CMap[category](
             if i > j or ports[i].kind.is_positive\
                     != ports[j].kind.is_positive:
                 continue
+            i, j = self.leg_order(i, j)
             source, target = ports[i].obj, ports[j].obj
             if ports[i].kind.is_positive:
                 box = self.category.cup_factory(source, target)
@@ -1659,7 +1706,7 @@ class CMap[category](
             edges = Permutation.from_transpositions(
                 [(a, shift(b)) for a, b in box_wires]
                 + [(shift(a), shift(b)) for a, b in enumerate(self.edges)
-                   if a < b and (a, b) != (i, j)],
+                   if a < b and a not in (i, j)],
                 self.n_ports + 2)
             return type(self)(
                 self.dom, self.cod, boxes, edges,

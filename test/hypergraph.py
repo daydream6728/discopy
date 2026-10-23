@@ -179,6 +179,59 @@ def test_non_adjoint_wire():
     assert Cap(Ty('x'), Ty('x')).to_hypergraph() == H.spiders(0, 2, Ty('x'))
 
 
+def test_cups_and_caps_are_checked_in_port_order():
+    """ The legs of a cup-shaped or cap-shaped spider are checked in port
+    order, the order :meth:`Hypergraph.make_monogamous` reads them in, so a
+    rigid cap on ``x.l @ x`` is refused when it is built. """
+    from discopy import rigid
+    from discopy.hypergraph import Hypergraph
+    x, K = rigid.Ty('x'), Hypergraph[rigid.Diagram]
+    assert K(rigid.Ty(), x @ x.l, (), ((), (), (0, 0))).to_diagram()\
+        == rigid.Cap(x, x.l)
+    assert K(x.l @ x, rigid.Ty(), (), ((0, 0), (), ())).to_diagram()\
+        == rigid.Cup(x.l, x)
+    for dom, cod in [(rigid.Ty(), x.l @ x), (x @ x.l, rigid.Ty())]:
+        with raises(AxiomError, match="x is not the left adjoint of x.l"):
+            K(dom, cod, (), ((0, 0) if dom else (), (), (0, 0) if cod else ()))
+
+
+def test_traced_copy_of_a_wire_with_a_dagger():
+    """ A traced copy reads a spider twice and writes it nowhere, a cap of a
+    wire and itself, which a category with no adjoints accepts whatever the
+    dagger of the wire: a shape reversed by ``Dim.dagger`` was refused. """
+    from discopy.neural.network import Network, Box, Dims
+    from discopy.tensor import Dim
+    x, y = Dims(Dim(2, 3)), Dims(2)
+    f = Box('f', x @ x, y)
+    loop = (Network.copy(x, 3) >> f @ x >> Network.discard(y) @ x).trace(
+        left=True)
+    assert loop.to_hypergraph().to_diagram().to_hypergraph()\
+        == loop.to_hypergraph()
+
+
+def test_rotation_is_the_transpose():
+    """ Decision 7 of #56: a rotated box has the hypergraph of its
+    transpose, as it has the map of its transpose, at every level from
+    rigid up. """
+    from discopy import rigid, pivotal, ribbon, compact, frobenius
+    from discopy.hypergraph import Hypergraph
+    for module in (rigid, pivotal, ribbon, compact, frobenius):
+        x, y = module.Ty('x'), module.Ty('y')
+        g = module.Box('g', x, y @ x)
+        assert g.r.to_hypergraph() == g.transpose().to_hypergraph()\
+            == Hypergraph[module.Diagram].from_box(g.r)\
+            == g.to_hypergraph().r
+        for rotated in (g.r, g.l, g.r.r, g.l.l, g.r.l):
+            assert rotated.to_map().to_hypergraph() == rotated.to_hypergraph()
+    for module in (rigid, compact, frobenius):
+        x, y = module.Ty('x'), module.Ty('y')
+        g = module.Box('g', x, y @ x)
+        assert g.l.to_hypergraph()\
+            == g.transpose(left=True).to_hypergraph()
+        assert g.r.r.to_hypergraph()\
+            == g.transpose().transpose().to_hypergraph()
+
+
 def test_spider_producers_and_consumers():
     from discopy import compact
     K = compact.Hypergraph
@@ -438,6 +491,14 @@ def test_Hypergraph_cups_and_caps_adjoints():
             cups_or_caps(left, right)
     with raises(AxiomError, match="x and y are not adjoints"):
         H.cups(Ty('x'), Ty('y'))
+
+
+def test_cups_and_caps_decode_with_their_legs_in_scan_order():
+    """ A cup's or cap's legs go in the order their readers sit in the scan,
+    so decoding adds no swap the diagram did not have, see #139. """
+    from fixtures.diagrams import bent_wires
+    for diagram in bent_wires():
+        assert diagram.to_hypergraph().to_diagram() == diagram
 
 
 def test_to_diagram_routes_with_one_permutation():

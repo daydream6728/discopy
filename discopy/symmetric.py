@@ -140,13 +140,11 @@ class Layer(feedback.Layer):
     >>> assert Layer(x, perm, y) == Layer(Permutation(x @ x @ y @ y,
     ...     [0, 2, 1, 3]))
 
-    Forgetting the distinction between plumbing and generators gives the
-    ordinary alternating view of a :class:`discopy.monoidal.Layer`, which is
-    what :attr:`boxes`, :attr:`boxes_and_offsets` and the rewrites indexed by
-    them are computed from.
+    Forgetting the distinction between plumbing and generators, a
+    permutation is one more box of the layer: :attr:`boxes`,
+    :attr:`boxes_and_offsets` and the rewrites indexed by them count it as
+    one.
 
-    >>> assert Layer(x, f, perm).boxes_and_types == (
-    ...     x, f, Ty(), perm, Ty())
     >>> assert Layer(x, f, perm).boxes_and_offsets == [(f, 1), (perm, 2)]
     """
     @classmethod

@@ -520,12 +520,13 @@ class Arrow(FreeCategory, DaggerCategory, Serialisable["Arrow"]):
         Substitute a variable by an expression.
 
         Parameters:
-            var (sympy.Symbol) : The subtituted variable.
+            var (sympy.Symbol) : The substituted variable.
             expr (sympy.Expr) : The substituting expression.
 
         Tip
         ---
-        You can give a list of :code:`(var, expr)` for multiple substitution.
+        As with :code:`sympy.subs`, you can give a list of :code:`(var, expr)`
+        or a dict :code:`{var: expr}` for multiple substitution.
 
         Example
         -------
@@ -536,6 +537,9 @@ class Arrow(FreeCategory, DaggerCategory, Serialisable["Arrow"]):
         >>> assert (f >> g).subs(phi, phi + 1) == f.subs(phi, phi + 1) >> g
         >>> assert (f >> g).subs(phi, 1) == f.subs(phi, 1) >> g
         >>> assert (f >> g).subs(psi, 1) == f >> g.subs(psi, 1)
+        >>> assert (f >> g).subs([(phi, 1), (psi, 2)])\\
+        ...     == (f >> g).subs({phi: 1, psi: 2})\\
+        ...     == f.subs(phi, 1) >> g.subs(psi, 2)
         """
         inside = tuple(box.subs(*args) for box in self.inside)
         return self.ar(inside, self.dom, self.cod, _scan=False)
@@ -659,7 +663,7 @@ class Box(Arrow):
         def recursive_free_symbols(data):
             if isinstance(data, Mapping):
                 data = data.values()
-            if isinstance(data, Iterable):
+            if isinstance(data, Iterable) and not isinstance(data, str):
                 # Handles numpy 0-d arrays, which are actually not iterable.
                 if not hasattr(data, "shape") or data.shape != ():
                     return set().union(*map(recursive_free_symbols, data))
@@ -667,20 +671,18 @@ class Box(Arrow):
         return recursive_free_symbols(self.data)
 
     def subs(self, *args) -> Box:
-        if not any(var in self.free_symbols for var in (
-                {var for var, _ in args[0]} if len(args) == 1 else {args[0]})):
+        variables = tuple(self.free_symbols)
+        values = rsubs(variables, *args)
+        if all(x is y for x, y in zip(values, variables)):
             return self
-        return type(self)(
-            self.name, self.dom, self.cod, is_dagger=self.is_dagger,
-            data=rsubs(self.data, *args))
+        return self.lambdify(*variables)(*values)
 
     def lambdify(self, *symbols: "sympy.Symbol", **kwargs) -> Callable:
-        if not any(x in self.free_symbols for x in symbols):
+        if not self.free_symbols & set(symbols):
             return lambda *xs: self
-        from sympy import lambdify
         return lambda *xs: type(self)(
             self.name, self.dom, self.cod, is_dagger=self.is_dagger,
-            data=lambdify(symbols, self.data, **kwargs)(*xs))
+            data=rsubs(self.data, dict(zip(symbols, xs)), **kwargs))
 
     def dagger(self) -> Self:
         return type(self)(
@@ -767,12 +769,20 @@ class Sum(Box):
             raise ValueError(messages.MISSING_TYPES_FOR_EMPTY_SUM)
         dom = terms[0].dom if dom is None else dom
         cod = terms[0].cod if cod is None else cod
+        unit = Sum((), dom, cod) if terms else None
         for arrow in terms:
-            assert_isparallel(Sum((), dom, cod), arrow)
-        str_args = f", dom={repr(dom)}, cod={repr(cod)}" if not terms else ""
-        name = f"{factory_name(type(self))}(terms={repr(terms)}{str_args})"
+            assert_isparallel(unit, arrow)  # ty: ignore[invalid-argument-type]
         self.terms = terms
-        super().__init__(name, dom, cod)
+        super().__init__("", dom, cod)
+        del self.name
+
+    @cached_property
+    def name(self):  # pylint: disable=method-hidden  # deleted by __init__
+        """ The name of a sum is its :code:`repr`, computed when needed. """
+        str_args = "" if self.terms\
+            else f", dom={repr(self.dom)}, cod={repr(self.cod)}"
+        return factory_name(type(self))\
+            + f"(terms={repr(self.terms)}{str_args})"
 
     @property
     def is_generator(self):
@@ -920,9 +930,12 @@ one, they have [cat.Ob('x'), cat.Ob('y')].
 
     def __repr__(self):
         repr_args = ", ".join(map(repr, self.args))
-        repr_dom_cod = "" if self.is_id_on_objects else (
+        repr_kwargs = "" if self.is_id_on_objects else (
             f", dom={repr(self.dom)}, cod={repr(self.cod)}")
-        return factory_name(type(self)) + (f"({repr_args}{repr_dom_cod})")
+        repr_kwargs += f", name={repr(self.name)}" if self.name else ""
+        repr_kwargs += "" if self.method == "bubble"\
+            else f", method={repr(self.method)}"
+        return factory_name(type(self)) + (f"({repr_args}{repr_kwargs})")
 
     @property
     def free_symbols(self):
@@ -932,34 +945,22 @@ one, they have [cat.Ob('x'), cat.Ob('y')].
     def keywords(self) -> dict[str, Any]:
         """
         The keyword arguments the bubble is built with besides its
-        arguments, which :meth:`subs`, :meth:`lambdify` and :meth:`dagger`
-        build it again with, a subclass adding its own, e.g. the drawing
-        options of a :class:`discopy.monoidal.Bubble`.
+        arguments, which :meth:`lambdify`, and so :meth:`subs`, and
+        :meth:`dagger` build it again with, a subclass adding its own, e.g.
+        the drawing options of a :class:`discopy.monoidal.Bubble`.
         """
         return dict(
             dom=self.dom, cod=self.cod, name=self.name, method=self.method,
             data=self.data, is_dagger=self.is_dagger)
 
-    def subs(self, *args) -> Bubble:
-        variables = {var for var, _ in args[0]} if len(args) == 1 else {
-            args[0]}
-        if not variables & self.free_symbols:
-            return self
-        data = rsubs(self.data, *args) if variables & super().free_symbols\
-            else self.data
-        return type(self)(
-            *(arg.subs(*args) for arg in self.args),
-            **dict(self.keywords, data=data))
-
     def lambdify(self, *symbols: "sympy.Symbol", **kwargs) -> Callable:
         if not set(symbols) & self.free_symbols:
             return lambda *xs: self
-        from sympy import lambdify
         args = [arg.lambdify(*symbols, **kwargs) for arg in self.args]
-        data = lambdify(symbols, self.data, **kwargs)\
-            if set(symbols) & super().free_symbols else lambda *_: self.data
         return lambda *xs: type(self)(
-            *(f(*xs) for f in args), **dict(self.keywords, data=data(*xs)))
+            *(f(*xs) for f in args), **dict(
+                self.keywords,
+                data=rsubs(self.data, dict(zip(symbols, xs)), **kwargs)))
 
     def dagger(self) -> Bubble:
         keywords = self.keywords
@@ -1089,14 +1090,16 @@ class Functor(Category[type, "Functor"]):
 
     def __eq__(self, other):
         return type(self) is type(other)\
-            and (self.ob_map, self.ar_map, self.cod)\
-            == (other.ob_map, other.ar_map, other.cod)
+            and (self.ob_map, self.ar_map, self.dom, self.cod)\
+            == (other.ob_map, other.ar_map, other.dom, other.cod)
 
     def __repr__(self):
-        cod_repr = "" if self.cod == type(self).cod\
-            else f", cod={factory_name(self.cod)}"
+        dom_cod_repr = "".join(
+            "" if value == getattr(type(self), attr)
+            else f", {attr}={factory_name(value)}"
+            for attr, value in [("dom", self.dom), ("cod", self.cod)])
         return factory_name(type(self))\
-            + f"(ob_map={self.ob_map}, ar_map={self.ar_map}{cod_repr})"
+            + f"(ob_map={self.ob_map}, ar_map={self.ar_map}{dom_cod_repr})"
 
     def __call__(self, other):
         if isinstance(other, Ob):
@@ -1112,6 +1115,10 @@ class Functor(Category[type, "Functor"]):
                        self.cod.zero(self(other.dom), self(other.cod)))
         if isinstance(other, Bubble) and hasattr(self.cod, other.method):
             dom, cod = map(self, (other.dom, other.cod))
+            if other.method == "bubble" and issubclass(self.cod, Arrow):
+                return self.cod.bubble_factory(
+                    *map(self, other.args), dom=dom, cod=cod, name=other.name,
+                    data=other.data, is_dagger=other.is_dagger)
             return getattr(self.cod, other.method)(
                 *map(self, other.args), dom=dom, cod=cod)
         if isinstance(other, Box) and other.is_dagger:

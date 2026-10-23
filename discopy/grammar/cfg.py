@@ -140,7 +140,7 @@ class Tree:
         >>> print(Tree.from_nltk(t))
         S(I, VP(saw, him))
         >>> Tree.from_nltk(t).branches[0]
-        grammar.cfg.Word('I', monoidal.Ty(cat.Ob('NP')))
+        grammar.cfg.Word('I', monoidal.Ty(monoidal.Wire('NP')))
 
         A word is typed by the label of the tree it sits in.
 

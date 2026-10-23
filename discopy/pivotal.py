@@ -68,7 +68,7 @@ from typing import ClassVar
 from discopy import cat, cmap, messages, rigid, feedback
 from discopy.abc import DaggerCategory, PivotalCategory, RigidCategory
 from discopy.cat import factory
-from discopy.utils import deprecated_alias
+from discopy.utils import deprecated_alias, rsubs
 
 
 class Wire(feedback.Wire, rigid.Wire):
@@ -284,6 +284,14 @@ class Box(rigid.Box, feedback.Box, Diagram):
         return type(self)(
             name=self.name, dom=self.cod, cod=self.dom, data=self.data,
             is_dagger=not self.is_dagger, z=self.z, time_step=self.time_step)
+
+    def lambdify(self, *symbols, **kwargs):
+        if not self.free_symbols & set(symbols):
+            return lambda *xs: self
+        return lambda *xs: type(self)(
+            name=self.name, dom=self.dom, cod=self.cod,
+            data=rsubs(self.data, dict(zip(symbols, xs)), **kwargs),
+            is_dagger=self.is_dagger, z=self.z, time_step=self.time_step)
 
     @property
     def is_conjugate(self):

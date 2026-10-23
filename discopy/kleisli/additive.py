@@ -119,7 +119,7 @@ from discopy.kleisli.monad import Monad, Powerset, Subdistribution
 from discopy.python import function
 from discopy.python.additive import Function, Ty
 from discopy.utils import (
-    assert_isinstance, assert_iscomposable, factory, factory_name)
+    assert_isinstance, assert_iscomposable, factory, factory_name, unbiased)
 
 
 class Tagged:
@@ -369,6 +369,7 @@ class Channel[monad](TracedCategory, ComarkovCategory, TestableGeneric):
             self.inside >> other.inside,  # ty: ignore[unsupported-operator]
             self.dom, other.cod)
 
+    @unbiased
     def tensor(self, other: Channel) -> Channel:
         """
         The disjoint union of two channels, called with :code:`@`: the
