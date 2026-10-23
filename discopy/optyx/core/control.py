@@ -388,6 +388,9 @@ class Weight(ClassicalBox):
     >>> [complex((Create(n) >> parity).to_tensor().eval().array)
     ...  for n in (1, 2)]
     [(-1+0j), (1+0j)]
+
+    It has no dagger: on a mode, the state :math:`\\sum_n f(n) |n\\rangle`
+    it would be has an infinite norm for a function such as the parity.
     """
     def __init__(self, function: Callable[[List[int]], complex],
                  dom: diagram.Ty):
