@@ -1679,6 +1679,14 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
+- `EHypergraph.rewrite` refuses a box index or a spider it does not have with
+  an `AxiomError`, `NOT_A_REGION` for a box of `region` and `NOT_A_BOUNDARY`
+  for a spider of `dom` or `cod`, where it raised a bare `IndexError: tuple
+  index out of range` and where every other refusal already carries a
+  message. A negative index is out of range too, so that a rewrite never
+  reports a region other than the one it was given
+  ([#114](https://github.com/rel-int/discopy-next/issues/114)).
+
 - `python.multiplicative.Function.copy(x, 1)` returns its argument rather
   than a tuple of one, which failed its own type check.
 

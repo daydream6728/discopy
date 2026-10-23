@@ -387,6 +387,11 @@ class EHypergraph(
                         rhs: Hypergraph):
         """ Raise unless :meth:`rewrite` can enter an equation, see there. """
         graph, classes = self.graph, self.classes
+        if any(j not in range(len(graph.boxes)) for j in region):
+            raise AxiomError(messages.NOT_A_REGION.format(region, dom, cod))
+        if any(s not in range(graph.n_spiders)
+               for s in tuple(dom) + tuple(cod) if s is not None):
+            raise AxiomError(messages.NOT_A_BOUNDARY.format(rhs, dom, cod))
         for box in tuple(graph.boxes[j] for j in region) + rhs.boxes:
             if not box.is_cartesian:
                 raise AxiomError(messages.NOT_CARTESIAN.format(box))
@@ -411,8 +416,9 @@ class EHypergraph(
         State that the boxes of a region from ``dom`` to ``cod``, :obj:`None`
         where ``rhs`` does not read, equal ``rhs``: glue it onto ``dom`` with
         :meth:`add` and relate ``cod`` to its outputs, keeping the region, or
-        raise :class:`AxiomError` on a box that is not cartesian, on other
-        types, on ``rhs`` without sharing or on a region that cannot fire.
+        raise :class:`AxiomError` on a box or a spider that the graph does not
+        have, on a box that is not cartesian, on other types, on ``rhs``
+        without sharing or on a region that cannot fire.
         """
         dom, cod = tuple(dom), tuple(cod)
         self.assert_equation(region, dom, cod, rhs)
