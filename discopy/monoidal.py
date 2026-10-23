@@ -366,14 +366,12 @@ class Ty(cat.Ob, cat.FreeCategory, ColouredMonoid):
         the generators: upgrade it to ``Wire(x.name)`` for subclasses whose
         generators are plain ``Wire``.
         """
-        if isinstance(x, self.generator_factory):
-            return x
         if isinstance(x, str):
             return self.generator_factory(x)
         if self.generator_factory is Wire and type(x) is cat.Ob:
             return self.generator_factory(x.name)
-        raise AxiomError(
-            messages.TYPE_ERROR.format(self.generator_factory, type(x)))
+        assert_isinstance(x, self.generator_factory)
+        return x
 
     def __init__(self, *inside: str | cat.Ob,
                  dom: Colour = None, cod: Colour = None,
@@ -381,9 +379,6 @@ class Ty(cat.Ob, cat.FreeCategory, ColouredMonoid):
         inside = kwargs.pop('inside', inside)
         if kwargs:
             raise TypeError(f"Unexpected keyword arguments: {list(kwargs)}.")
-        for obj in inside:
-            assert_isinstance(obj, (str, self.generator_factory) + (
-                (cat.Ob, ) if self.generator_factory is Wire else ()))
         inside = tuple(map(self.cast_wire, inside))
         if dom is None:
             dom = inside[0].dom if inside else transparent

@@ -196,6 +196,27 @@ class Ty(monoidal.Ty):
         return factory_name(type(self))\
             + f"({', '.join(map(repr, self.inside))})"
 
+    def cast_wire(self, x: str | cat.Ob) -> cat.Ob:
+        """
+        Turn a constructor argument into a ``self.generator_factory``.
+
+        The objects inside a biclosed type are :class:`Wire`, those of dumps,
+        pickles and printed text from before were a plain ``cat.Ob`` or a
+        transparent :class:`monoidal.Wire`: either is upgraded to a
+        :class:`Wire`, as a biclosed object is a self-dagger monoidal wire.
+
+        >>> assert Ty(cat.Ob('x')) == Ty(monoidal.Wire('x')) == Ty(Wire('x'))
+        """
+        if issubclass(self.generator_factory, Wire) and (
+                type(x) is cat.Ob or type(x) is monoidal.Wire
+                and x.dom == x.cod == monoidal.transparent):
+            return self.generator_factory(x.name)
+        return super().cast_wire(x)
+
+    def __setstate__(self, state):
+        super().__setstate__(state)
+        self.inside = tuple(map(self.cast_wire, self.inside))
+
     @property
     def is_exp(self):
         """
@@ -1564,6 +1585,7 @@ class Canonical(Testable, NamedGeneric["factory"], tuple):
             st.tuples(category.namings(), category.namings()))
 
 
+Ty.generator_factory = Wire
 Ty.variable_factory = Variable
 Ty.constant_factory = Constant
 Ty.application_factory = Application

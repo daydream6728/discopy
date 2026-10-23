@@ -17,8 +17,8 @@ def test_Over():
     assert not isinstance((x << y).inside[0], Ty)
     assert (x << y).inside == (Over(x, y), )
     assert repr(Over(x, y))\
-        == "biclosed.Over(biclosed.Ty(monoidal.Wire('x')), "\
-           "biclosed.Ty(monoidal.Wire('y')))"
+        == "biclosed.Over(biclosed.Ty(biclosed.Wire('x')), "\
+           "biclosed.Ty(biclosed.Wire('y')))"
     assert {Over(x, y): 42}[Over(x, y)] == 42
     assert Over(x, y) != Under(x, y)
 
@@ -32,8 +32,8 @@ def test_Under():
     assert not isinstance((x >> y).inside[0], Ty)
     assert (x >> y).inside == (Under(y, x), )
     assert repr(Under(x, y))\
-        == "biclosed.Under(biclosed.Ty(monoidal.Wire('x')), "\
-           "biclosed.Ty(monoidal.Wire('y')))"
+        == "biclosed.Under(biclosed.Ty(biclosed.Wire('x')), "\
+           "biclosed.Ty(biclosed.Wire('y')))"
     assert {Under(x, y): 42}[Under(x, y)] == 42
     assert Under(x, y) != Over(x, y)
 
@@ -344,6 +344,32 @@ def test_transparency():
         assert eval(repr(box), {"biclosed": biclosed, "monoidal": monoidal})\
             == box
         assert loads(dumps(box)) == box
+
+
+def test_Wire_reads_back_main():
+    """ The objects of a biclosed type are biclosed wires, and the plain
+    monoidal ones of dumps, pickles and printed text from before read back as
+    such, in categorial types too. """
+    import pickle
+    from discopy.grammar import categorial
+    x = Ty('x')
+    assert Ty(Wire('x')) == x == Ty(cat.Ob('x')) and type(x.inside[0]) is Wire
+    assert eval("biclosed.Ty(monoidal.Wire('x'))") == x
+    wire = '{"factory": "monoidal.Wire", "name": "x"}'
+    assert loads('{"factory": "biclosed.Ty", "inside": [' + wire + ']}') == x
+    assert loads('{"factory": "grammar.categorial.Ty", "inside": ['
+                 + wire + ']}') == categorial.Ty('x')
+    assert pickle.loads(
+        b'\x80\x04\x95\xab\x00\x00\x00\x00\x00\x00\x00\x8c\x10discopy.bicl'
+        b'osed\x94\x8c\x02Ty\x94\x93\x94)\x81\x94}\x94(\x8c\x03dom\x94\x8c'
+        b'\x10discopy.monoidal\x94\x8c\x06Colour\x94\x93\x94)\x81\x94}\x94'
+        b'(\x8c\x04name\x94\x8c\x04none\x94\x8c\x05label\x94Nub\x8c\x03cod'
+        b'\x94h\t\x8c\x06inside\x94h\x06\x8c\x04Wire\x94\x93\x94)\x81\x94}'
+        b'\x94(\x8c\tis_dagger\x94\x89h\x05h\th\x0eh\th\x0b\x8c\x01x\x94ub'
+        b'\x85\x94h\x0bh\x01ub.') == x
+    red = monoidal.Colour('red')
+    with raises(TypeError):
+        Ty(monoidal.Wire('x', red, red))
 
 
 def test_Eval_on_the_wrong_side():
