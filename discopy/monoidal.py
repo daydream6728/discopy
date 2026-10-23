@@ -158,10 +158,10 @@ class Wire(cat.Ob):
         return hash((type(self), self.name, self.dom, self.cod))
 
     def __repr__(self):
-        if self.dom == self.cod == transparent:
-            return repr(cat.Ob(self.name))
-        return (f"{factory_name(type(self))}({self.name!r}, "
-                f"dom={self.dom!r}, cod={self.cod!r})")
+        colours = "" if self.dom == self.cod == transparent\
+            else f", dom={self.dom!r}, cod={self.cod!r}"
+        dagger = ", is_dagger=True" if self.is_dagger else ""
+        return f"{factory_name(type(self))}({self.name!r}{colours}{dagger})"
 
     def to_tree(self):
         tree = super().to_tree()
@@ -1968,6 +1968,16 @@ class Functor(cat.Functor):
             return result
         if isinstance(other, Bubble) and self.cod is Drawing:
             return other.to_drawing()
+        if isinstance(other, Bubble) and other.method == "bubble"\
+                and issubclass(self.cod, Diagram):
+            return self.cod.bubble_factory(
+                *map(self, other.args), dom=self(other.dom),
+                cod=self(other.cod), name=other.name,
+                data=other.data, is_dagger=other.is_dagger,
+                drawing_name=other.drawing_name,
+                draw_as_frame=other.draw_as_frame,
+                draw_as_square=other.draw_as_square,
+                draw_vertically=other.draw_vertically)
         return super().__call__(other)
 
 
