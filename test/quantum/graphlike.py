@@ -149,6 +149,22 @@ def test_full_reduce_example():
         == "Z(1, 2) >> Z(1, 0, 1/4) @ Nat(1)"
 
 
+def test_from_diagram_scalar_spiders():
+    for spider in (Z(0, 0, .125), X(0, 0, .125)):
+        graph = G.from_diagram(spider)
+        assert G.size(graph) == (1, 0, 1)
+        assert proportional(tensor(graph), spider.eval().array)
+
+
+def test_size_counts_hadamard_edges():
+    zx = pytest.importorskip("pyzx")
+    graph = zx.Graph()
+    a, b, c = (graph.add_vertex(zx.VertexType.Z) for _ in range(3))
+    graph.add_edge(graph.edge(a, b), zx.EdgeType.SIMPLE)
+    graph.add_edge(graph.edge(b, c), zx.EdgeType.HADAMARD)
+    assert G.size(graph) == (3, 1, 0)
+
+
 def test_from_diagram_errors():
     from discopy.quantum.zx import Y
     with pytest.raises(ValueError):

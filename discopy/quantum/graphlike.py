@@ -875,9 +875,12 @@ def from_diagram(diagram: zx.Diagram) -> Hypergraph:
     for box, (dom, cod) in zip(graph.boxes, graph.box_wires):
         legs = [index[find(s)] for s in dom + cod]
         if isinstance(box, (zx.Z, zx.X)):
-            centre = legs[0] if isinstance(box, zx.Z) else len(spiders)
-            if isinstance(box, zx.X):
+            if isinstance(box, zx.X) or not legs:
+                centre = len(spiders)
                 spiders.append(None)
+            else:
+                centre = legs[0]
+            if isinstance(box, zx.X):
                 boxes += len(legs) * [zx.H]
                 wires += [((centre, ), (leg, )) for leg in legs]
             if box.phase:
@@ -989,11 +992,12 @@ def size(graph) -> tuple[int, int, int]:
         graph : A graph-like hypergraph, or a PyZX graph.
     """
     if not isinstance(graph, Hypergraph):
-        from pyzx import tcount
+        from pyzx import tcount, EdgeType
         boundary = set(graph.inputs()) | set(graph.outputs())
         return (graph.num_vertices() - len(boundary), sum(
-            1 for edge in graph.edges() if not boundary & set(
-                graph.edge_st(edge))), tcount(graph))
+            1 for edge in graph.edges()
+            if graph.edge_type(edge) == EdgeType.HADAMARD
+            and not boundary & set(graph.edge_st(edge))), tcount(graph))
     rewriter = Simplifier(graph)
     spiders = [s for s in range(graph.n_spiders)
                if not is_boundary(rewriter, s) and (

@@ -6,6 +6,6 @@
 >
 > P2: `size` overcounts internal plain PyZX edges as Hadamard edges. Filter the edge count by `EdgeType.HADAMARD` in addition to excluding boundary edges.
 
-- [ ] the benchmark job runs `benchmark/test_zx.py` with pyzx 0.10.7, its full tail capped at 1000 gates so that every push to `main` stays cheap; CONTRIBUTING says it needs pyzx
-- [ ] `from_diagram` makes a zero-legged spider an isolated one, with a test
-- [ ] `size` counts only Hadamard edges of a PyZX graph, with a test
+- [x] the benchmark job runs `benchmark/test_zx.py` with pyzx 0.10.7, its full tail capped at 1000 gates so that every push to `main` stays cheap; CONTRIBUTING says it needs pyzx
+- [x] `from_diagram` makes a zero-legged spider an isolated one, with a test
+- [x] `size` counts only Hadamard edges of a PyZX graph, with a test

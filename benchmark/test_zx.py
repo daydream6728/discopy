@@ -37,23 +37,23 @@ def circuit(qubits, depth):
         random.setstate(state)
 
 
-@case("graphlike", "10 qubits", sizes(100, 500, full=(1000, 5000)))
+@case("graphlike", "10 qubits", sizes(100, 500, full=(1000, )))
 def test_graphlike_10(n):
     return partial(graphlike.full_reduce, graphlike.from_pyzx(circuit(10, n)))
 
 
-@case("pyzx", "10 qubits", sizes(100, 500, full=(1000, 5000)))
+@case("pyzx", "10 qubits", sizes(100, 500, full=(1000, )))
 def test_pyzx_10(n):
     graph = circuit(10, n)
     return lambda: zx.full_reduce(graph.copy())
 
 
-@case("graphlike", "20 qubits", sizes(500, full=(1000, 5000)))
+@case("graphlike", "20 qubits", sizes(500, full=(1000, )))
 def test_graphlike_20(n):
     return partial(graphlike.full_reduce, graphlike.from_pyzx(circuit(20, n)))
 
 
-@case("pyzx", "20 qubits", sizes(500, full=(1000, 5000)))
+@case("pyzx", "20 qubits", sizes(500, full=(1000, )))
 def test_pyzx_20(n):
     graph = circuit(20, n)
     return lambda: zx.full_reduce(graph.copy())
