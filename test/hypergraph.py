@@ -427,6 +427,19 @@ def test_Hypergraph_from_diagram_matches_naive_composition():
         assert diagram.to_hypergraph() == _naive_from_diagram(diagram)
 
 
+def test_Hypergraph_from_diagram_reads_the_perm_of_a_permutation():
+    """ The image of a permutation box is read from its ``perm`` rather than
+    by mapping it wire by wire, and is still the image of the functor. """
+    from discopy.frobenius import Permutation, Swap
+    x, y, z = map(Ty, "xyz")
+    perm = Permutation(x @ y @ z, [2, 0, 1])
+    diagrams = [
+        perm, x @ perm @ y, perm >> Box('f', z @ x, y) @ y, perm.to_swaps(),
+        Swap(x, y), Spider(1, 2, x) @ y >> Permutation(x @ x @ y, [2, 0, 1])]
+    for diagram in diagrams:
+        assert diagram.to_hypergraph() == _naive_from_diagram(diagram)
+
+
 def test_Hypergraph_from_diagram_pinned_category():
     """ Calling :meth:`from_diagram` on a :class:`Hypergraph` pinned to a
     category other than the diagram's own must still pick the functor of

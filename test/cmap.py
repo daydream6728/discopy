@@ -1053,6 +1053,21 @@ def test_permutation_is_one_involution():
         M.permutation([0, 0], [x, y])
 
 
+def test_from_diagram_reads_the_perm_of_a_permutation():
+    """ The image of a permutation box is read from its ``perm`` rather than
+    by mapping it wire by wire, and is still the image of the functor. """
+    from discopy.compact import Ty, Box, Diagram, Permutation, Swap, CMap as M
+    x, y, z = map(Ty, "xyz")
+    functor = M.functor(
+        ob_map=lambda typ: typ, ar_map=M.from_box, dom=Diagram, cod=M)
+    perm = Permutation(x.r @ y @ z, [2, 0, 1])
+    diagrams = [
+        perm, x @ perm @ y, perm >> Box('f', z @ x.r, y) @ y,
+        perm.to_swaps(), Swap(x, y.r), perm >> perm.dagger()]
+    for diagram in diagrams:
+        assert diagram.to_map() == functor(diagram)
+
+
 def test_CMap_to_tree():
     from discopy.utils import dumps, loads
     x = compact.Ty('x')
