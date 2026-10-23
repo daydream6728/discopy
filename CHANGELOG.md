@@ -141,7 +141,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 - `NamedGeneric` takes the parameters of PEP 695, `class Matrix[dtype](...,
   NamedGeneric)`, the abstract base classes bound theirs, and the package
-  typechecks with `ty`, pinned in the `dev` group ([next#1]).
+  typechecks with `ty`, pinned in the `dev` group and run by the `lint` job
+  ([next#1]).
 - DisCoPy requires Python 3.12 and is packaged with uv ([#311]).
 - `closed` is the closed *symmetric* monoidal category; the planar one, with
   `Over` and `Under`, is `biclosed` ([#322]).
@@ -318,7 +319,6 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Project
 
-- `ty check` runs in the `lint` job ([next#1]).
 - `AGENTS.md`, `RULES.md` and `STYLE.md` for agents, and an LLM contribution
   needs its own handle and a human approval other than its prompter's
   ([#378], [#720]).
