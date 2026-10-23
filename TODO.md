@@ -8,7 +8,7 @@ Ruling on #164 (USER, 10-22, https://github.com/rel-int/discopy-next/issues/164#
 
 ---
 
-- [ ] #164: a law's number variable is an `abc.Nat` drawn from `Nat.strategy`; `axioms.Count` and `MAX_COUNT` go, `ehypergraph` and `test/axioms.py` follow
+- [WIP] @session_01YCJQ3Xco3ydQ6AsdTtYJ5x-2026-10-23 08:29 #164: a law's number variable is an `abc.Nat` drawn from `Nat.strategy`; `axioms.Count` and `MAX_COUNT` go, `ehypergraph` and `test/axioms.py` follow
 - [ ] #164: `Ty.__pow__`, `spiders` and the other `int` asserts of `monoidal` and `frobenius` accept anything with `__index__`
 - [ ] the property matrix collects and passes the same cells as before
 - [ ] `CHANGELOG.md`
