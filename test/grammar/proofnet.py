@@ -158,6 +158,9 @@ def test_products():
         assert len({choice for choice, _ in choices}) == len(choices)
     assert not list(products([[("a", 0.)], []], 1))
     assert not list(products([[("a", 0.)]], 0))
+    beams = [[("a", 0.), ("b", -1.)], [("x", 0.), ("y", -.5)]]
+    assert len(list(products(beams, -1))) == 4
+    assert list(products(beams, 2.)) == list(products(beams, 2))
 
 
 def test_products_lazy():
@@ -202,6 +205,7 @@ def test_assignments():
                 assert ranked[0][0] == hungarian(scores)
     assert list(assignments([], 2)) == [([], 0.)]
     assert list(assignments([[1, 2], [3, 4]], 0)) == []
+    assert len(list(assignments([[1, 2], [3, 4]], -1))) == 2
 
 
 def test_assignments_lazy(monkeypatch):

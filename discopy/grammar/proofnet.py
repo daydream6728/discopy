@@ -251,7 +251,7 @@ def assignments(scores, m: int) -> Iterator[tuple[list[int], float]]:
             heapq.heappush(
                 heap, (-total, next(ties), forced, forbidden, columns))
 
-    if m > 0:
+    if m:
         solve((), ())
     while heap:
         total, _, forced, forbidden, columns = heapq.heappop(heap)
@@ -316,7 +316,7 @@ def products(beams, width: int) -> Iterator[tuple[tuple[int, ...], float]]:
     (0, 1) -0.5
     (1, 0) -1.0
     """
-    if width < 1:
+    if not width:
         return
     start = (0, ) * len(beams)
     try:

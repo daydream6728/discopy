@@ -171,6 +171,10 @@ def test_Parser_search_depth():
     assert parser.search(sentence, states, k=2, width=2) == net
     assert parser.search(sentence, states, k=2, goal=s) is None
     assert parser.search(sentence, states, k=2, goal=s, depth=2) == net
+    assert parser.search(sentence, states, k=2, width=-1) == net
+    assert parser.search(sentence, states, k=2, width=2.) == net
+    assert parser.search(sentence, states, k=2, width=1., depth=2) == net
+    assert parser.search(sentence, states, k=2, width=0, depth=2) is None
 
 
 def test_Parser_search_links():
@@ -237,7 +241,7 @@ def test_Parser_search_defaults():
         sentence = [f"w{i}" for i in range(len(beams))]
         states = torch.randn(len(beams), 8)
         goal = random.choice([None, None, s, n >> s])
-        k, width = random.randint(1, 3), random.randint(1, 6)
+        k, width = random.randint(1, 3), random.randint(-1, 6)
         weight = random.choice([0., 1., 2.])
         skip = random.choice([None, comma])
         net = parser.search(sentence, states, goal=goal, k=k, width=width,

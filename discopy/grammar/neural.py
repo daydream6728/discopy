@@ -104,7 +104,6 @@ loves(Alice)(Bob)
 
 from __future__ import annotations
 
-import itertools
 from dataclasses import dataclass
 
 import torch  # pylint: disable=import-error  # torch is an extra
@@ -571,8 +570,9 @@ class Parser(nn.Module):
                 if sequent.is_balanced:
                     yield tagging, sequent, kept
 
-        best, result = -float("inf"), None
-        for tagging, sequent, kept in itertools.islice(fibre(), width):
+        best, result, sequents = -float("inf"), None, fibre()
+        while width and (found := next(sequents, None)) is not None:
+            (tagging, sequent, kept), width = found, width - 1
             scores = self.linker(
                 states[torch.tensor(kept, device=states.device)],
                 sequent).cpu().float()
