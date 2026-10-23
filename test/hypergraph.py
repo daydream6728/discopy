@@ -209,6 +209,18 @@ def test_traced_copy_of_a_wire_with_a_dagger():
         == loop.to_hypergraph()
 
 
+def test_str_transparency():
+    """ A hypergraph prints as the diagram it decodes to, which reads back in
+    the environment of its category, and to the hypergraph. """
+    from discopy import symmetric
+    from discopy.hypergraph import Hypergraph
+    x = symmetric.Ty('x')
+    graph = (symmetric.Box('f', x, x) @ x >> symmetric.Swap(x, x)
+             ).to_hypergraph()
+    assert str(graph) == "f @ x >> Swap(x, x)"
+    assert Hypergraph[symmetric.Diagram].str_transparency(term=graph)
+
+
 def test_rotation_is_the_transpose():
     """ Decision 7 of #56: a rotated box has the hypergraph of its
     transpose, as it has the map of its transpose, at every level from
@@ -811,6 +823,79 @@ def test_rewrite_errors():
         list(f.rewrite((f, H.id(x))))
     with raises(AxiomError, match="not the hole"):
         f.plug(f)
+
+
+def test_Rewriter_interaction_combinators():
+    x, gamma, delta, _, rules = interaction_combinators()
+    net = H.caps(x, x) >> delta @ delta >> x @ H.cups(x, x) @ x\
+        >> gamma.transpose() >> delta >> gamma @ gamma
+    rewriter = Rewriter(net)
+    assert rewriter.normalize(*rules) == 5
+    assert rewriter.to_hypergraph() == net.normal_form(*rules)
+
+
+def test_Rewriter_substitute_is_the_pushout():
+    from discopy import symmetric
+    for module in (symmetric, None):
+        x = Ty('x') if module is None else module.Ty('x')
+        box = Box if module is None else module.Box
+        f, g, m = box('f', x, x), box('g', x, x), box('m', x @ x, x)
+        host = (f @ g >> m >> f >> g).to_hypergraph()
+        left, right = (f >> g).to_hypergraph(), (g >> f).to_hypergraph()
+        for match in host.match(left):
+            context, = host.complements(left, match)
+            rewriter = Rewriter(host)
+            rewriter.substitute(left, right, match)
+            assert rewriter.to_hypergraph() == context.plug(right)
+
+
+def test_Rewriter_keeps_offsets():
+    from discopy import symmetric
+    x = symmetric.Ty('x')
+    f, g = symmetric.Box('f', x, x), symmetric.Box('g', x, x)
+    state = symmetric.Box('s', symmetric.Ty(), x)
+    host = (x @ state >> f @ x >> x @ g >> f @ x).to_hypergraph()
+    left, right = g.to_hypergraph(), (g >> g).to_hypergraph()
+    match, = host.match(left)
+    context, = host.complements(left, match)
+    rewriter = Rewriter(host)
+    rewriter.substitute(left, right, match)
+    result = rewriter.to_hypergraph()
+    assert result.offsets == context.plug(right).offsets
+    assert not any(isinstance(box, symmetric.Permutation)
+                   for box in result.to_diagram().boxes)
+
+
+def test_Rewriter_merges_spiders():
+    x = Ty('x')
+    f, g = (Box(name, x, x).to_hypergraph() for name in "fg")
+    rewriter = Rewriter(H.copy(x) >> (f >> g) @ (f >> g))
+    assert rewriter.normalize((f >> g, H.id(x))) == 2
+    assert rewriter.to_hypergraph() == H.copy(x)
+
+
+def test_Rewriter_errors():
+    x = Ty('x')
+    f = Box('f', x, x).to_hypergraph()
+    with raises(AxiomError):
+        Rewriter(f).normalize((H.id(x), f))
+    with raises(AxiomError):
+        Rewriter(f).normalize((f, H.id(Ty())))
+    left = H.copy(x) >> f @ x
+    with raises(AxiomError):
+        Rewriter(left).substitute(left, left, ((0, 1), (0, )))
+
+
+def test_Rewriter_rules_are_rewritable():
+    from discopy import symmetric
+    x, f = symmetric.Ty('x'), symmetric.Box('f', symmetric.Ty('x'),
+                                            symmetric.Ty('x'))
+    host = (f >> f).to_hypergraph()
+    for cod, wires in [(x @ x, (1, 1)), (symmetric.Ty(), ())]:
+        rule = symmetric.Hypergraph(
+            x, cod, (f, ), ((0, ), (((0, ), (1, )), ), wires))
+        with raises(AxiomError, match="not rewritable"):
+            Rewriter(host).normalize((rule, rule))
 
 
 def test_rewriting_edge_cases():

@@ -33,7 +33,9 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   levels and above, and the laws of the conversions they rely on:
   `to_hypergraph` is a strict monoidal functor, decoding is its section,
   maps agree with hypergraphs, foliation is idempotent, and maps and
-  hypergraphs read back from their diagrams ([next#1]).
+  hypergraphs read back from their diagrams and their strings; a sampled
+  Markov diagram reads back from its string only up to interchange
+  ([next#1]).
 - Lenses, parametric maps and integer diagrams in the property matrix,
   compared up to the equation of their category by `axioms.quotient`
   ([next#1]).
@@ -89,6 +91,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - Double-pushout rewriting of hypergraphs, `Hypergraph.match`, `rewrite` and
   `normal_form`, after Bonchi et al., and of planar diagrams on `CMap`, with
   `CMap.sweep` and `CMap.match`.
+- `hypergraph.Rewriter`, double-pushout rewriting in place with left-linear
+  rules, each step in the size of the rule rather than of the host.
 - `discopy.ehypergraph`, e-graphs of diagrams with sharing, with congruence
   closure, rewriting and e-matching.
 - `Hypergraph.pass_token`, evaluation over a disjoint-union tensor ([#363],
@@ -113,12 +117,16 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - `hopf.Intertwiner.chart` and `hopf.Algebra.symmetric(n)` ([#408]).
 - `copying`, a law of `Testable` beside `pickling` ([next#1]), and the
   generators of each level as typed class variables ([next#1]).
+- `str_transparency`, a law of `Testable` beside `transparency`: `str(x)`
+  evaluates back to `x`, each generator bound by its name ([next#163]).
 - The property matrix reports the cells that cannot fail and those a
   baseline checked and this run did not ([#773], [#775]).
 - `drawing.widget.DiagramWidget`, an opt-in anywidget ([#466]).
 - Notebooks: *Minimality of the pure qubit ZX calculus* ([#626], [#688]),
   *Categorical deep learning* ([next#124], [next#125]), *Neural Church
-  arithmetic* ([#677]) and *Parsing arithmetic*.
+  arithmetic* ([#677]), *Parsing arithmetic* and *Boolean circuits*,
+  Lafont's maps, linear maps, Boolean functions and reversible circuits as
+  double-pushout rewriting ([next#310], [next#316], [next#320]).
 
 ### Changed
 
@@ -191,9 +199,11 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `feedback.Box` built with keywords and resetting a structural one,
   `Feedback.dagger` and `rotate`, `Layer.merge` on a snake, a bubble rebuilt
   from its `keywords`, `para.Compact.curry`, the copies and discards of
-  abstract diagrams, a layer holding `Spider(1, 1, x)`, and the hypergraph
-  of a traced copy of a wire whose dagger is not itself, e.g. a
-  `Dims(Dim(2, 3))`; the left unitality of `cat.Functor` is a strict xfail.
+  abstract diagrams, a layer holding `Spider(1, 1, x)`, the hypergraph of a
+  traced copy of a wire whose dagger is not itself, e.g. a `Dims(Dim(2, 3))`,
+  and the strings of delayed boxes, structural boxes and adjoint wires,
+  which read back once their `atoms` are the generators they name; the left
+  unitality of `cat.Functor` is a strict xfail.
 - `Hypergraph`: its hash, `simplify`, `rotate`, and `to_diagram` on
   non-self-dual, `Nat` and `Dim` types ([#324], [#387], [#393], [#622],
   [#719]).
@@ -287,6 +297,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - `Stream.sequence`, `para.Closed.curry` and the evaluation of categorial
   terms ([next#1]); daggers of grammar rules and words, and `cfg` compares
   and hashes ([next#31]).
+- Categorial `FC`, `BC`, `FX` and `BX` are boxes, so they compose and draw,
+  and a nested `cfg.Tree` has a `dom`, so it applies ([next#31]).
 - Drawing: `Drawing.dagger` ([next#1]), regions through crossings ([#614]),
   `draw` leaves a drawing as it was ([#606]), TikZ colours ([next#31]) and a
   test restyling `H` ([next#99]).
@@ -510,6 +522,7 @@ for the changelog of `1.2.1` and earlier.
 [next#156]: https://github.com/rel-int/discopy-next/issues/156
 [next#161]: https://github.com/rel-int/discopy-next/issues/161
 [next#162]: https://github.com/rel-int/discopy-next/issues/162
+[next#163]: https://github.com/rel-int/discopy-next/issues/163
 [next#168]: https://github.com/rel-int/discopy-next/issues/168
 [next#175]: https://github.com/rel-int/discopy-next/issues/175
 [next#176]: https://github.com/rel-int/discopy-next/issues/176
@@ -518,6 +531,9 @@ for the changelog of `1.2.1` and earlier.
 [next#201]: https://github.com/rel-int/discopy-next/issues/201
 [next#225]: https://github.com/rel-int/discopy-next/issues/225
 [next#283]: https://github.com/rel-int/discopy-next/pull/283
+[next#310]: https://github.com/rel-int/discopy-next/pull/310
+[next#316]: https://github.com/rel-int/discopy-next/pull/316
+[next#320]: https://github.com/rel-int/discopy-next/pull/320
 [lambek#2]: https://github.com/rel-int/lambek/pull/2
 [lambek#8]: https://github.com/rel-int/lambek/pull/8
 [lambek#12]: https://github.com/rel-int/lambek/pull/12

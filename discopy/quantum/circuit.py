@@ -103,6 +103,10 @@ class Wire(frobenius.Wire):
     def __repr__(self):
         return f"{factory_name(type(self))}({self.dim}{self.repr_time_step()})"
 
+    def atoms(self) -> list:
+        """ A circuit object names no atom, its module binds it: qubit. """
+        return []
+
     @classmethod
     def from_tree(cls, tree: dict) -> Wire:
         dim, z = tree['dim'], tree.get('z', 0)

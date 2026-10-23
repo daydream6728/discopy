@@ -749,6 +749,17 @@ class Box(monoidal.Box, Diagram):
         result._time_step = self.time_step  # pylint: disable=protected-access
         return result
 
+    def atoms(self) -> list:
+        """
+        The atoms of a box, each at time step zero, which the string of a
+        delayed box delays, e.g. ``f.d``.
+
+        >>> x = Ty('x')
+        >>> assert Box('f', x, x).delay().atoms() == [Box('f', x, x), x, x]
+        """
+        return [atom.reset() if isinstance(atom, Box) and atom.time_step
+                else atom for atom in super().atoms()]
+
     def lambdify(self, *symbols, **kwargs):
         """
         Lambdify a feedback box, keeping its time step.

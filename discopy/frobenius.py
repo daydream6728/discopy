@@ -219,6 +219,7 @@ class Diagram(
 
     ob = Ty
     layer_factory = Layer
+    str_transparency = compact.Diagram.str_transparency
 
     @classmethod
     def from_cospan(cls, apex: Ty, left, right) -> Diagram:

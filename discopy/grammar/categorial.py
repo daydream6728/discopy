@@ -44,7 +44,6 @@ Summary
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import re
 from typing import ClassVar
 
@@ -375,25 +374,22 @@ class BTR(TypeRaising):
         return Abstraction(f, f(child), left=True)
 
 
-@dataclass(frozen=True, repr=False)
 class BinaryTerm(TermBase):
     "Abstract superclass of :class:`FC`, :class:`BC`, :class:`FX`, :class:`BX`"
     left: Term
     right: Term
 
-    def __post_init__(self):
-        left, right = self.left.freevars, self.right.freevars
-        if set(left).intersection(right):  # ty: ignore[invalid-argument-type]
+    def __init__(self, left, right, cod):
+        if set(left.freevars).intersection(right.freevars):
             raise ValueError("Expected disjoint free variables.")
-        object.__setattr__(
-            self, "freevars", left + right)  # ty: ignore[unsupported-operator]
-        object.__setattr__(self, "dom", self.left.dom @ self.right.dom)
-
-    def __str__(self):
-        return f"{type(self).__name__}({self.left}, {self.right})"
+        name = f"{type(self).__name__}({left}, {right})"
+        self.left, self.right = left, right
+        self.freevars = left.freevars + right.freevars
+        super().__init__(name, left.dom @ right.dom, cod)
 
     def simplify(self):
-        return type(self)(self.left.simplify(), self.right.simplify())
+        return type(self)(  # ty: ignore[missing-argument]
+            self.left.simplify(), self.right.simplify())
 
     def eval(self, functor=None):
         return self.simplify().eval(functor)
@@ -409,6 +405,13 @@ class BinaryTerm(TermBase):
 
     def map(self, functor, context):
         return functor.map_term(self.simplify(), context)
+
+    def setoid(self):
+        """
+        Binary terms are equal when their kinds and sides are, see
+        :meth:`discopy.biclosed.Application.setoid`.
+        """
+        return type(self), self.left, self.right
 
     def __repr__(self):
         return factory_name(type(self)) + f"({self.left!r}, {self.right!r})"
@@ -426,21 +429,15 @@ class BinaryTerm(TermBase):
         return self.left.constants + self.right.constants
 
 
-@dataclass(frozen=True, repr=False)
 class FC(BinaryTerm):
     "Forward composition ``A << C`` with subterms ``A << B`` and ``B << C``. "
-    def __post_init__(self):
-        super().__post_init__()
-        assert self.left.cod.is_over
-        assert self.right.cod.is_over
-        if self.right.cod.base != self.left.cod.exponent:
+    def __init__(self, left, right):
+        assert left.cod.is_over
+        assert right.cod.is_over
+        if right.cod.base != left.cod.exponent:
             raise AxiomError(messages.NOT_COMPOSABLE.format(
-                self.left.cod, self.right.cod,
-                self.left.cod.exponent, self.right.cod.base))
-
-    @property
-    def cod(self):
-        return self.left.cod.base << self.right.cod.exponent
+                left.cod, right.cod, left.cod.exponent, right.cod.base))
+        super().__init__(left, right, left.cod.base << right.cod.exponent)
 
     def simplify(self):
         f, g = self.left.simplify(), self.right.simplify()
@@ -449,21 +446,15 @@ class FC(BinaryTerm):
         return Abstraction(x, f(g(x)))
 
 
-@dataclass(frozen=True, repr=False)
 class BC(BinaryTerm):
     "Backward composition ``A >> C`` with subterms ``A >> B`` and ``B >> C``."
-    def __post_init__(self):
-        super().__post_init__()
-        assert self.left.cod.is_under
-        assert self.right.cod.is_under
-        if self.left.cod.base != self.right.cod.exponent:
+    def __init__(self, left, right):
+        assert left.cod.is_under
+        assert right.cod.is_under
+        if left.cod.base != right.cod.exponent:
             raise AxiomError(messages.NOT_COMPOSABLE.format(
-                self.left.cod, self.right.cod,
-                self.left.cod.base, self.right.cod.exponent))
-
-    @property
-    def cod(self):
-        return self.left.cod.exponent >> self.right.cod.base
+                left.cod, right.cod, left.cod.base, right.cod.exponent))
+        super().__init__(left, right, left.cod.exponent >> right.cod.base)
 
     def simplify(self):
         f, g = self.left.simplify(), self.right.simplify()
@@ -472,16 +463,11 @@ class BC(BinaryTerm):
         return Abstraction(x, x(f, left=True)(g, left=True), left=True)
 
 
-@dataclass(frozen=True, repr=False)
 class FX(BinaryTerm):
     "Forward crossing ``A >> C`` with subterms ``B << A`` and ``B >> C``."
-    def __post_init__(self):
-        super().__post_init__()
-        ForwardCrossedComposition(self.left.cod, self.right.cod)
-
-    @property
-    def cod(self):
-        return self.right.cod.exponent >> self.left.cod.base
+    def __init__(self, left, right):
+        rule = ForwardCrossedComposition(left.cod, right.cod)
+        super().__init__(left, right, rule.cod)
 
     def eval(self, functor=None):
         functor, X = functor or self.functor, self.left.cod.base
@@ -501,16 +487,11 @@ class FX(BinaryTerm):
         return ob.abstraction_factory(var, f(g(var)))
 
 
-@dataclass(frozen=True, repr=False)
 class BX(BinaryTerm):
     "Backward crossing ``A << C`` with subterms ``A << B`` and ``C >> B``."
-    def __post_init__(self):
-        super().__post_init__()
-        BackwardCrossedComposition(self.left.cod, self.right.cod)
-
-    @property
-    def cod(self):
-        return self.right.cod.base << self.left.cod.exponent
+    def __init__(self, left, right):
+        rule = BackwardCrossedComposition(left.cod, right.cod)
+        super().__init__(left, right, rule.cod)
 
     def eval(self, functor=None):
         functor, Z = functor or self.functor, self.right.cod.base

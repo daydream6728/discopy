@@ -201,3 +201,12 @@ def test_identity_spider_in_a_layer():
     assert diagram.dom == diagram.cod == x @ x @ x
     assert all(isinstance(component, (Ty, Box))
                for layer in diagram.inside for component in layer)
+
+
+def test_str_transparency_of_a_spider():
+    """ A spider names no generator of its own, its string is a call on its
+    type, so a spider reads back from its string. """
+    x = Ty('x')
+    spider = Spider(0, 0, x)
+    assert spider.atoms() == [x]
+    assert eval(str(spider), Diagram.str_environment(spider)) == spider

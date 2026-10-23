@@ -844,9 +844,11 @@ class Axiom[**P, T](Declaration[P, T]):
         type parameter, a ``box_factory`` named after each morphism, cast
         into the category when it is a generator rather than a term, e.g.
         the wire of a type, and two for each number, the equation a law
-        declared broken raises included. A category whose objects take no
-        name, e.g. the shapes of a network, has none and raises
-        ``TypeError``.
+        declared broken raises included, and ``NotImplemented`` for a law
+        that assumes its instance away, e.g. :meth:`str_transparency`, whose
+        box and objects share the name of their variable. A category whose
+        objects take no name, e.g. the shapes of a network, has none and
+        raises ``TypeError``.
 
         >>> from discopy.cat import Arrow
         >>> print(Arrow.associativity.canonical())
@@ -875,10 +877,14 @@ class Axiom[**P, T](Declaration[P, T]):
         scope = self.scope(lambda name, sort: Count.canonical if sort is Count
                            else self.category.ob(name))
         arguments = self.instantiate(scope, value)
+        # pylint: disable-next=import-outside-toplevel  # off the package
+        from hypothesis.errors import UnsatisfiedAssumption
         try:
             return self(**arguments)  # ty: ignore[invalid-return-type]
         except AxiomFailure as failure:
             return failure.equation
+        except UnsatisfiedAssumption:
+            return NotImplemented
 
     def draw(self, **params):
         """
@@ -1205,8 +1211,8 @@ matrix until it implements its own.
 class Serialisable[T](Testable[T]):
     """
     A type whose terms are written down and read back: by their
-    representation, their pickle, their deep copy and their tree, each
-    with the law that it is a roundtrip.
+    representation, their string, their pickle, their deep copy and their
+    tree, each with the law that it is a roundtrip.
     """
 
     @classmethod
@@ -1261,6 +1267,30 @@ class Serialisable[T](Testable[T]):
         return {name: value.bind(cls) for name, value in visible.items()
                 if isinstance(value, Axiom)}
 
+    def atoms(self) -> list:
+        """
+        The generators the string of a term names, see :meth:`str_environment`:
+        none by default, e.g. for a matrix, whose string is its representation.
+        """
+        return []
+
+    @classmethod
+    def str_environment(cls, term: Self) -> dict:
+        """
+        The namespace the string of a term reads back in, under the naming
+        convention of STYLE.md: the :meth:`environment` with each of its
+        :meth:`atoms` named by an identifier bound to itself by that name,
+        raising :class:`NameError` when two of them, or one and the
+        environment, take the same name.
+        """
+        environment = cls.environment()
+        for atom in term.atoms():
+            name = str(atom)
+            if name.isidentifier()\
+                    and environment.setdefault(name, atom) != atom:
+                raise NameError(messages.NAME_CLASH.format(name, term))
+        return environment
+
     @axiom
     def repr_transparency(cls, term: Self) -> Equation[Self]:
         """
@@ -1268,6 +1298,25 @@ class Serialisable[T](Testable[T]):
         :meth:`environment` of its type.
         """
         return Equation(eval(repr(term), cls.environment()), term)
+
+    @axiom
+    def str_transparency(cls, term: Self) -> Equation[Self]:
+        """
+        The string of a term evaluates back to it, in its
+        :meth:`str_environment`, if its generators are named apart by
+        identifiers, as those the strategies draw: a term with two of one
+        name is assumed away, one named e.g. ``"a box"`` or ``"class"`` does
+        not read back. Nor do the colours of a wire, which no string prints,
+        a bubble of other than one argument, a rotated box, e.g. ``f.r``, or
+        a gate with parameters, e.g. ``Rz(0.5)``.
+        """
+        try:
+            environment = cls.str_environment(term)
+        except NameError:
+            # pylint: disable-next=import-outside-toplevel  # off the domain
+            from hypothesis import reject
+            return reject()
+        return Equation(eval(str(term), environment), term)
 
     @axiom
     def pickling(cls, term: Self) -> Equation[tuple[type[Self], Self]]:

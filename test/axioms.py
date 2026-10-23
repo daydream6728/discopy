@@ -286,8 +286,9 @@ def test_canonical_instances():
         except TypeError:
             continue  # objects that take no name, e.g. the shapes of networks
         for law in category.axioms.values():
-            if law.broken:
-                continue
+            if law.broken or law.name == "str_transparency" and issubclass(
+                    category, ColouredMonoid):
+                continue  # a canonical type is coloured, which no str prints
             equation = law.canonical()
             assert equation is NotImplemented or equation, (category, law.name)
 
@@ -317,6 +318,33 @@ def test_copying():
     x, y = Ob('x'), Ob('y')
     assert Arrow.copying(term=Box('f', x, y))
     assert "copying" in Arrow.axioms and "copying" in Ob.axioms
+
+
+def test_str_transparency():
+    from hypothesis.errors import Unsatisfiable
+    from discopy import biclosed, closed, monoidal
+    x, y = monoidal.Ty('x'), monoidal.Ty('y')
+    f = monoidal.Box('f', x, y)
+    diagram = f @ x >> f[::-1] @ x
+    assert monoidal.Diagram.str_environment(diagram)['f'] == f
+    assert monoidal.Diagram.str_transparency(term=diagram)
+    X, Y = biclosed.Ty('X'), biclosed.Ty('Y')
+    assert biclosed.TermBase.str_transparency(
+        term=X(lambda v: (Y << X)('g')(v)))
+    E = closed.Ty('E')
+    query = (E >> E)('query')
+    assert closed.TermBase.str_transparency(term=query(query(E('e'))))
+    F = closed.Ty('F')
+    assert closed.Ty.str_transparency(term=(E * F) >> E.product(F, E))
+    U = closed.Ty(closed.Unitype())
+    assert closed.Ty.str_transparency(term=E.product(U) >> U.delay())
+    assert find(Box.strategy(), lambda _: True).name.isidentifier()
+    for clash in [monoidal.Box('x', x, x), monoidal.Box('Id', x, x)]:
+        with raises(NameError):
+            monoidal.Diagram.str_environment(clash)
+        with raises(Unsatisfiable):
+            find(st.just(clash), lambda term: monoidal.Diagram
+                 .str_transparency(term=term))
 
 
 def test_environment_binds_numpy_scalar_types():

@@ -53,6 +53,13 @@ def test_Tree():
         Tree(f, a)
 
 
+def test_Tree_dom():
+    a = Word('a', x)
+    assert f(f, w).dom == x @ x and f(w, w).dom == Ty()
+    assert f(f(f, f), f).dom == x ** 6
+    assert f(f(f, f), f)(*6 * [a]) == f(f(f(a, a), f(a, a)), f(a, a))
+
+
 def test_Tree_to_diagram():
     x, y = Ty('x'), Ty('y')
     f, g = Rule(x @ x, x, name='f'), Rule(x @ y, x, name='g')

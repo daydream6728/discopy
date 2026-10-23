@@ -242,6 +242,10 @@ class Product(Wire):
         first = str(first) if len(first) == 1 else f"({first})"
         return f"{first}.product({', '.join(map(str, others))}){delayed}"
 
+    def atoms(self) -> list:
+        """ The atoms of a product: those of its factors. """
+        return [atom for typ in self.factors for atom in typ.atoms()]
+
     def __repr__(self):
         args = ', '.join(map(repr, self.factors)) + self.repr_time_step()
         return factory_name(type(self)) + f"({args.removeprefix(', ')})"
@@ -294,6 +298,10 @@ class Unitype(Exp):
 
     def __str__(self):
         return "U" + feedback.str_delayed(self.time_step)
+
+    def atoms(self) -> list:
+        """ The unitype names itself undelayed, i.e. its base. """
+        return [self.base]
 
     def __repr__(self):
         return f"Unitype({self.repr_time_step().removeprefix(', ')})"
@@ -751,6 +759,7 @@ class TermBase(Box, biclosed.TermBase, biclosed.Normalising):
     >>> assert x(f, left=True) == f(x)
     """
     functor = Functor.id(Diagram)
+    str_transparency = Serialisable.str_transparency
 
     def __call__(self, other, left=False):
         args = (other, self) if left else (self, other)
@@ -1012,6 +1021,10 @@ class Constant(TermBase, biclosed.Constant):
     """
     def __str__(self):
         return self.name
+
+    def atoms(self) -> list[Constant]:
+        """ A closed constant prints as its bare name, it is its own atom. """
+        return [self]
 
     def delay(self, n_steps=1):
         """

@@ -211,6 +211,8 @@ class Diagram(symmetric.Diagram, MarkovCategory):
 
     map_agreement = monoidal.Diagram.map_agreement.failing(
         messages.MAP_HAS_NO_SPIDERS)
+    str_transparency = monoidal.Diagram.str_transparency.failing(
+        messages.STR_SPLITS_LAYERS)
 
     @classmethod
     def from_function(cls, func, dom: monoidal.Ty) -> Diagram:
