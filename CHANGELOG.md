@@ -1683,8 +1683,10 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   an `AxiomError`, `NOT_A_REGION` for a box of `region` and `NOT_A_BOUNDARY`
   for a spider of `dom` or `cod`, where it raised a bare `IndexError: tuple
   index out of range` and where every other refusal already carries a
-  message. A negative index is out of range too, so that a rewrite never
-  reports a region other than the one it was given
+  message. The index goes through `operator.index`, so a negative index is out
+  of range too — a rewrite never reports a region other than the one it was
+  given — and a non-integer is a `TypeError` at the guard rather than one from
+  tuple indexing further down
   ([#114](https://github.com/rel-int/discopy-next/issues/114)).
 
 - `python.multiplicative.Function.copy(x, 1)` returns its argument rather

@@ -95,7 +95,7 @@ from collections.abc import Callable, Iterator
 from functools import cached_property, reduce
 from itertools import accumulate, pairwise, repeat, takewhile
 from math import inf
-from operator import add
+from operator import add, index
 from typing import TYPE_CHECKING, Self
 
 from networkx import DiGraph
@@ -387,9 +387,9 @@ class EHypergraph(
                         rhs: Hypergraph):
         """ Raise unless :meth:`rewrite` can enter an equation, see there. """
         graph, classes = self.graph, self.classes
-        if any(j not in range(len(graph.boxes)) for j in region):
+        if any(index(j) not in range(len(graph.boxes)) for j in region):
             raise AxiomError(messages.NOT_A_REGION.format(region, dom, cod))
-        if any(s not in range(graph.n_spiders)
+        if any(index(s) not in range(graph.n_spiders)
                for s in tuple(dom) + tuple(cod) if s is not None):
             raise AxiomError(messages.NOT_A_BOUNDARY.format(rhs, dom, cod))
         for box in tuple(graph.boxes[j] for j in region) + rhs.boxes:
