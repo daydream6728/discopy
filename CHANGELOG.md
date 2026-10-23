@@ -131,6 +131,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `finset.Permutation.then` ([#763]).
 - A functor maps a layer with one `n`-ary `tensor` rather than a fold of
   `@`, with one `tensor` call per layer ([next#161]).
+- `Layer >> Layer` raises, plumbing has `time_step` `None`, a permutation
+  reprs with its class, nan data equals itself ([next#31], [next#168]).
 
 ### Deprecated
 

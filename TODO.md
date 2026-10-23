@@ -6,4 +6,4 @@ Four rulings of USER's, one commit each:
 - [x] B88: a structural box has `time_step` `None`, not 0 ([ruling](https://github.com/rel-int/discopy-next/issues/31#issuecomment-6351077357))
 - [x] #168: a `finset.Permutation` reprs with its class, its `str` stays the tuple ([ruling](https://github.com/rel-int/discopy-next/issues/168#issuecomment-6351077988))
 - [x] #262's nan: a `tensor.Box` holding nan equals itself ([ruling](https://github.com/rel-int/discopy-next/issues/31#issuecomment-6351077357))
-- [ ] `CHANGELOG.md`: one bullet for the PR
+- [x] `CHANGELOG.md`: one bullet for the PR
