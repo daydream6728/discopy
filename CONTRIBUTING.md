@@ -142,7 +142,7 @@ raising `NoSuchExample` when it finds none, which is how a failing cell
 becomes a concrete term to debug in a REPL: call
 `<Category>.<law>.falsify()` on the category that breaks the law, then
 inspect the sides of the `Equation` the axiom returns on the arguments it
-hands back, e.g. `law(**law.falsify())`.
+hands back.
 
 ### What the matrix checked
 

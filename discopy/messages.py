@@ -104,7 +104,6 @@ FREE_FEEDBACK = (
 RIGID_TYPE_HAS_NO_DAGGER = "Rigid types have no dagger, use pivotal instead."
 RIGID_HAS_NO_DAGGER = (
     "Rigid cups and caps have no dagger, use pivotal instead.")
-CURRY_HAS_NO_DAGGER = "A curry has no dagger."
 FEEDBACK_HAS_NO_DAGGER = (
     "Feedback has no dagger and no rotation, "
     "either would feed its memory back in time.")
@@ -121,8 +120,6 @@ MAP_OF_A_CURRY = (
 MAP_HAS_NO_SPIDERS = (
     "A map has no spiders: it keeps a copy or a merge as a box where a "
     "hypergraph merges its wires.")
-MISSING_BOXES_AND_OFFSETS = (
-    "Decoding needs either boxes and offsets, or the two of them zipped.")
 NO_TYPE_PARAMETER = (
     "{} has no type parameter to subscript, declare one as in class C[name].")
 NOT_PROGRESSIVE = "No line sweeps the map down meeting each box with its "\
@@ -147,6 +144,9 @@ WRONG_NUMBER_OF_BOUNDARIES = \
     "Expected one boundary of wires for each of {} boxes, got {} instead."
 TERM_IS_A_BOX = \
     "A term is a box: the laws and rules of its category are the diagram's."
+MISSING_BOXES_AND_OFFSETS = (
+    "Decoding needs either boxes and offsets, or the two of them zipped.")
+CURRY_HAS_NO_DAGGER = "A curry has no dagger."
 WRONG_SIDE = "Expected left={} for {}, got left={} instead."
 NOT_JSON_SERIALISABLE = "Object of type {} is not JSON serialisable."
 NO_SUCH_TYPE = "No type named {!r} in builtins or numpy, so the name of the "\

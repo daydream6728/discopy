@@ -14,8 +14,10 @@ forgetful functors between categories go the other way.
 
 Each class also declares its :func:`discopy.axioms.axiom` equations, which
 every free category inherits along with the structure they axiomatise:
-:class:`Category` states the unitality and associativity of composition
-and the typing of its identities and composites; a :class:`DaggerCategory`
+:class:`Category` states the unitality and associativity of composition; a
+law quantifies over the type parameters of its signature, objects of the
+category, and over morphisms between them, see
+:class:`discopy.axioms.Declaration`; a :class:`DaggerCategory`
 adds the involution and contravariance of its dagger; a
 :class:`ColouredMonoid` inherits the first two as the unitality and
 associativity of its product, its composition; a :class:`Groupoid` is a

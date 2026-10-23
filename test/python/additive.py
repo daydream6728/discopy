@@ -64,6 +64,8 @@ def test_permutation():
         Function(lambda obj: obj, X, X).dagger()  # Only swaps have one.
     f = Function(lambda obj, tag=0: (obj, 1 - tag), X @ X, X @ X)
     assert f.trace(0) is f
+
+
 def test_trace_takes_the_keyword_form():
     from pytest import raises
     from discopy.python.additive import Function

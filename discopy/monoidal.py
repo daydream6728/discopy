@@ -1386,32 +1386,8 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
         return (functor_factory or Functor)(ob, ar, dom, cod)(self)
 
     def to_map(self) -> "CMap":
-        """ Translate a diagram into a combinatorial map, see
-        :meth:`assert_transparent`. """
-        self.assert_transparent()
+        """ Translate a diagram into a combinatorial map. """
         return cmap.CMap[self.ar].from_diagram(self)
-
-    def assert_transparent(self):
-        """
-        Raise ``AxiomError`` unless every wire of the diagram is transparent:
-        a hypergraph and a map are symmetric, and a swap is ill-typed across
-        0-cells, so a coloured diagram has neither rather than losing its
-        colours.
-
-        >>> red = Colour('red')
-        >>> x = Ty(Wire('x', dom=red, cod=red))
-        >>> Box('f', x, x).to_hypergraph()
-        Traceback (most recent call last):
-        ...
-        discopy.utils.AxiomError: ...
-        """
-        for typ in (self.dom, self.cod, *(
-                obj for box in self.boxes for obj in (box.dom, box.cod))):
-            if typ.dom != transparent or typ.cod != transparent or any(
-                    isinstance(wire, Wire) and (
-                        wire.dom != transparent or wire.cod != transparent)
-                    for wire in typ.inside):
-                raise AxiomError(messages.COLOURED_QUOTIENT.format(typ))
 
     def to_staircases(self):
         """
@@ -1521,10 +1497,7 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
         >>> f0, f1 = Box('f0', x, y), Box('f1', y, x)
         >>> diagram = f0 @ f1.dagger() >> f0.dagger() @ f1
         >>> assert diagram.to_hypergraph().to_diagram() == diagram.foliation()
-
-        A coloured diagram has no hypergraph, see :meth:`assert_transparent`.
         """
-        self.assert_transparent()
         graph = hypergraph.Hypergraph[
             type(self).ar].from_diagram(self)  # ty: ignore[invalid-type-form]
         if all(box.dom for box in self.boxes):

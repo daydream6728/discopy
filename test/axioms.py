@@ -15,7 +15,7 @@ from discopy.axioms import (
     Over, Related, Repeat, Tensor, Testable, TestableGeneric, Under, Unit,
     Var, axiom, inhabits, position, substitute)
 from discopy.monoidal import Ty
-from discopy.cat import Arrow, Box, Ob
+from discopy.cat import Arrow, Box, Ob, Functor
 
 
 class ParityEquation(Equation):
@@ -106,11 +106,19 @@ def test_axiom_binding():
     assert repr(Axiom(lambda cls: NotImplemented)) == "Axiom(<lambda>)"
     assert eval(repr(Arrow.unitality)) == cat.Arrow.unitality
     assert hash(Arrow.unitality) == hash(eval(repr(Arrow.unitality)))
-    for method in ("__call__", "falsify"):
-        with raises(TypeError):
-            getattr(Axiom(lambda cls: NotImplemented), method)()
+    assert Arrow.unitality != Functor.unitality
+    with raises(TypeError):
+        Axiom(lambda cls: NotImplemented)()
+    with raises(TypeError):
+        Axiom(lambda cls: NotImplemented).falsify()
     assert axiom(lambda cls: NotImplemented).bind(Arrow)() is NotImplemented
-    assert Arrow.unitality(f=Box('f', Ob('x'), Ob('y')))
+    box = Box('f', Ob('x'), Ob('y'))
+    assert Arrow.unitality(f=box)
+    broken = Arrow.unitality.weaken(max_leaves=1).failing("Never holds.")
+    assert broken.params == {"max_leaves": 1}
+    with raises(AxiomFailure) as failure:
+        broken(f=box)
+    assert failure.value.equation
 
 
 def test_string_annotations():

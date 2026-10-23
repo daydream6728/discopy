@@ -43,6 +43,9 @@ def test_sequence_box_of_its_category():
         x = Ty.sequence(category.ob('x'))
         box = Stream[category].sequence("f", x, x).now
         assert type(box) is category.box_factory
+    dim = Ty[tensor.Dim](tensor.Dim(2))  # A constant stream of dimensions.
+    box = Stream[tensor.Diagram].sequence("f", dim, dim).now
+    assert type(box) is tensor.Box is tensor.Diagram.box_factory
 
 
 def test_feedback_errors():
@@ -51,11 +54,6 @@ def test_feedback_errors():
         Stream(symmetric.Box('g', x.now, x.now), dom=x, cod=x)
     assert Stream.permutation([0, 1], [x, x]).now\
         == symmetric.Id(x.now @ x.now)
-
-
-    dim = Ty[tensor.Dim](tensor.Dim(2))  # A constant stream of dimensions.
-    box = Stream[tensor.Diagram].sequence("f", dim, dim).now
-    assert type(box) is tensor.Box is tensor.Diagram.box_factory
 
 
 def test_feedback_forms():
