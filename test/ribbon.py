@@ -114,3 +114,9 @@ def test_sum_factory():
     x = Ty('x')
     f = Box('f', x, x)
     assert Diagram.sum_factory is Sum and type(f + f) is Sum
+
+
+def test_dual_rail_delay():
+    x = Ty('x')
+    for diagram in [Cup(x, x.r), Cap(x, x.l), Twist(x), Braid(x, x)]:
+        assert diagram.delay().to_ribbons() == diagram.to_ribbons().delay()

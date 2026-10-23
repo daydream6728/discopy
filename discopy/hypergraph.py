@@ -313,11 +313,10 @@ class Hypergraph(
                         obj, ports[i].obj))
             legs = consumers if not producers and len(consumers) == 2 else\
                 producers if not consumers and len(producers) == 2 else None
-            if legs is not None:  # a cup or a cap between two adjoint types
+            if legs is not None:  # a cup or a cap, its legs in port order
                 left, right = (ports[i].obj for i in sorted(legs))
-                if getattr(left, "r", left) != right\
-                        and getattr(right, "r", right) != left:
-                    raise AxiomError(messages.NOT_ADJOINT.format(left, right))
+                self.assert_isadjoint(
+                    *((left, right) if producers else (right, left)))
 
         self.offsets = offsets or tuple(len(boxes) * [None])
 
@@ -669,24 +668,23 @@ class Hypergraph(
 
     def rotate(self, left=False):
         """
-        The half-turn rotation of a hypergraph, called with ``.l`` and ``.r``.
+        The rotation of a hypergraph, called with ``.l`` and ``.r``: its
+        :meth:`transpose`, as for a :class:`discopy.cmap.CMap` and for any
+        functor, i.e. the boxes stay as they are and the wires bend around
+        them, with cups and caps that are wiring from compact categories on
+        and boxes below.
 
-        A half-turn exchanges the two boundaries of everything it turns: of
-        the hypergraph, so that its domain is the rotation of the codomain,
-        and of each box, so that the ports which read its domain come to
-        read its codomain. The spiders are rotated where they stand, being
-        the objects the ports are typed by.
+        >>> from discopy import rigid, compact
+        >>> x, y = compact.Ty('x'), compact.Ty('y')
+        >>> g = compact.Box('g', x, y @ x)
+        >>> assert g.to_hypergraph().r == g.transpose().to_hypergraph()
+        >>> assert g.to_hypergraph().r.boxes == (g, )
+        >>> x, y = rigid.Ty('x'), rigid.Ty('y')
+        >>> g = rigid.Box('g', x, y)
+        >>> assert g.to_hypergraph().l.boxes == (
+        ...     rigid.Cap(x, x.l), g, rigid.Cup(y.l, y))
         """
-        dom, cod = (x.l if left else x.r for x in (self.cod, self.dom))
-        boxes = tuple(box.l if left else box.r for box in self.boxes[::-1])
-        dom_wires = self.cod_wires[::-1]
-        box_wires = tuple((y[::-1], x[::-1]) for x, y in self.box_wires[::-1])
-        cod_wires = self.dom_wires[::-1]
-        wires = dom_wires, box_wires, cod_wires
-        spider_types = tuple(
-            x.l if left else x.r for x in self.spider_types)
-        return type(self)(
-            dom, cod, boxes, wires, spider_types, self.offsets[::-1])
+        return self.transpose(left)
 
     l = property(lambda self: self.rotate(left=True))
     r = property(lambda self: self.rotate(left=False))
@@ -2194,9 +2192,63 @@ class Hypergraph(
         assert self.is_bijective
         return self
 
+    def leg_order(self, *legs: int) -> tuple[int, ...]:
+        """
+        The legs of a cup or a cap, i.e. ports of one spider that are all
+        written to or all read from, in the order in which their readers sit
+        in the scan of :meth:`to_diagram`, or their writers for a cup.
+
+        An output or an input sits at its index, and the port of a box at its
+        index in the box after where the box sits, i.e. where its leftmost
+        output is read for a reader, where its leftmost input is written for
+        a writer, following the wires that point forward. So legs compare as
+        the outputs they reach, or the inputs that reach them, and by their
+        order in the first box that reads or writes both. They stay in port
+        order when this does not tell them apart, e.g. when a reader is an
+        effect, and outside a symmetric category, where they were checked in
+        port order and there is no swap to save.
+
+        Parameters:
+            legs : The indices of the ports, in :attr:`ports`.
+
+        Example
+        -------
+        >>> from discopy.compact import Ty, Box, Cap
+        >>> x = Ty('x')
+        >>> graph = (Cap(x.r, x) >> x.r @ Box('g', x, x)).to_hypergraph()
+        >>> [graph.ports[i].kind for i in graph.leg_order(0, 2)]
+        ['output', 'dom']
+        >>> print(graph.to_diagram())
+        Cap(x.r, x) >> x.r @ g
+        """
+        if not issubclass(self.category, SymmetricCategory):
+            return legs
+        ports, wires = self.ports, self.spider_wires
+        reads = ports[legs[0]].kind in ("dom", "output")
+        keys, box_ports = {}, {}
+        for port, node in enumerate(ports):
+            if node.kind == ("output" if reads else "input"):
+                keys[port] = (node.i, )
+            elif node.kind in ("dom", "cod"):
+                box_ports.setdefault(node.depth, ([], []))[
+                    node.kind == "cod"].append(port)
+        for depth in sorted(box_ports, reverse=reads):
+            sides, legs_of_box = box_ports[depth][::-1] if reads\
+                else box_ports[depth]
+            found = [keys[end] for side in sides
+                     for end in set.union(*wires[self.flat_wires[side]])
+                     if end in keys]
+            keys.update({port: min(found) + (ports[port].i, )
+                         for port in legs_of_box if found})
+        found = [keys.get(leg) for leg in legs]
+        if None in found or len(set(found)) < len(found):
+            return legs
+        return tuple(leg for _, leg in sorted(zip(found, legs)))
+
     def make_monogamous(self) -> Hypergraph:
         """
-        Introduce :class:`Cup` and :class:`Cap` boxes to make self monogamous.
+        Introduce :class:`Cup` and :class:`Cap` boxes to make self monogamous,
+        their legs in the order of :meth:`leg_order`.
 
         Example
         -------
@@ -2224,6 +2276,9 @@ class Hypergraph(
                 if self.ports[target].kind in kinds:
                     spider_types = dict(enumerate(self.spider_types))
                     typ = spider_types[spider]
+                    depth = getattr(
+                        self.ports[source], "depth", len(self.boxes))
+                    source, target = self.leg_order(source, target)
                     source_obj, target_obj = (
                         self.ports[source].obj, self.ports[target].obj)
                     left, right = len(spider_types), len(spider_types) + 1
@@ -2236,8 +2291,6 @@ class Hypergraph(
                         fwires = fwires[:len(fwires) - len(self.cod)] + [
                             left, right] + fwires[len(fwires) - len(self.cod):]
                     else:
-                        depth = getattr(
-                            self.ports[source], "depth", len(self.boxes))
                         boxes = self.boxes[:depth] + (
                             self.category.cap_factory(
                                 source_obj, target_obj), ) + self.boxes[depth:]
@@ -2726,6 +2779,11 @@ class Hypergraph(
         """
         Turn a box into a hypergraph with binary spiders for each wire.
 
+        Over a rigid category, a box with a winding number ``z``, i.e. a
+        rotation of a generator, is the image of the functor of
+        :meth:`from_diagram`: the :meth:`rotate` of the hypergraph of that
+        generator, i.e. its transpose.
+
         Parameters:
             box : The box to turn into a hypergraph.
 
@@ -2740,7 +2798,12 @@ class Hypergraph(
         Node('cod', depth=0, i=1, obj=z)
         Node('output', i=0, obj=y)
         Node('output', i=1, obj=z)
+
+        >>> f = Box('f', x, y)
+        >>> assert H.from_box(f.r) == H.from_box(f).transpose()
         """
+        if issubclass(cls.category, RigidCategory) and getattr(box, "z", 0):
+            return cls.from_diagram(box)
         spider_types = tuple(box.dom @ box.cod)
         left = tuple(range(len(box.dom)))
         right = tuple(range(len(box.dom), len(box.dom @ box.cod)))
