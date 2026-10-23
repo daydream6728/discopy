@@ -130,8 +130,9 @@ class Tree:
         >>> f, a = Rule(x @ x, x, name='f'), Word('a', x)
         >>> assert loads(dumps(f(f(a, a), a))) == f(f(a, a), a)
         """
-        return dict(factory=factory_name(type(self)), root=self.root.to_tree(),
-                    branches=[branch.to_tree() for branch in self.branches])
+        return {'factory': factory_name(type(self)),
+                'root': self.root.to_tree(),
+                'branches': [branch.to_tree() for branch in self.branches]}
 
     @classmethod
     def from_tree(cls, tree: dict) -> Tree:
