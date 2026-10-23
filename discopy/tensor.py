@@ -987,6 +987,7 @@ class Box(frobenius.Box, Diagram):
         def canonical(x):
             if isinstance(x, (list, tuple)):
                 return tuple(map(canonical, x))
+            # pylint: disable-next=comparison-with-itself  # false only for nan
             if not isinstance(x, numbers.Complex) or x == x:
                 return x
             if isinstance(x, numbers.Real) or x.imag == 0:
