@@ -99,3 +99,11 @@ def test_CQ_repr():
     import discopy
     for cq in [CQ(), C(Dim(2)), C(Dim(2)) @ Q(Dim(3, 4))]:
         assert eval(repr(cq), {'quantum': discopy.quantum, 'Dim': Dim}) == cq
+
+
+def test_tree():
+    from discopy.utils import dumps, loads
+    for term in (CQ(), C(Dim(2)) @ Q(Dim(2, 3)),
+                 (Ket(0) >> H >> Measure()).eval(mixed=True),
+                 Channel.id(Q(Dim(2)))):
+        assert loads(dumps(term)) == term

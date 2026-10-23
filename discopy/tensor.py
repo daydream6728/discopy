@@ -522,6 +522,30 @@ class Functor(frobenius.Functor):
             + f"dom={factory_name(self.dom)}, "\
             + f"dtype={dtype}{optimize}{params})"
 
+    def to_tree(self) -> dict:
+        """
+        Serialise a tensor functor, its dtype in the name of its codomain,
+        see :meth:`discopy.cat.Functor.to_tree`.
+
+        >>> from discopy.utils import dumps, loads
+        >>> x = frobenius.Ty('x')
+        >>> f = frobenius.Box('f', x, x)
+        >>> F = Functor({x: 2}, {f: [[0, 1], [1, 0]]}, dtype=int)
+        >>> assert loads(dumps(F)) == F and loads(dumps(F)).dtype is int
+        """
+        return super().to_tree() | (
+            {} if self.optimize == "greedy" else {'optimize': self.optimize}
+        ) | ({'params': self.params} if self.params else {})
+
+    @classmethod
+    def from_tree(cls, tree: dict) -> Functor:
+        """ Decode a tensor functor, which takes its codomain's dtype. """
+        functor = cat.Functor.from_tree(tree)
+        return cls(functor.ob_map, functor.ar_map, dom=functor.dom,
+                   dtype=functor.cod.dtype,
+                   optimize=tree.get('optimize', "greedy"),
+                   **tree.get('params', {}))
+
     def __call__(self, other):
         """
         The image of an object, a box or a diagram, see :meth:`contract`.

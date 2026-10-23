@@ -90,6 +90,10 @@ NO_TYPE_PARAMETER = (
 CURRY_HAS_NO_DAGGER = "A curry has no dagger."
 WRONG_SIDE = "Expected left={} for {}, got left={} instead."
 NOT_JSON_SERIALISABLE = "Object of type {} is not JSON serialisable."
+NO_TREE_CALLABLE = "{} has no tree: its {} is a Python callable, which "\
+    "JSON cannot hold."
+NO_TREE_DRAWING = "A drawing has no tree: it is the layout of a diagram, "\
+    "which to_drawing recomputes."
 NO_SUCH_TYPE = "No type named {!r} in builtins or numpy, so the name of the "\
                "class it parameterises cannot be resolved."
 

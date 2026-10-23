@@ -110,3 +110,11 @@ def test_feedback_laws():
     assert not FeedbackCategory.sliding.bind(Stream).modulo(up_to)(**sliding)
     with raises(AxiomFailure):
         Stream.sliding(**sliding)
+
+
+def test_no_tree():
+    from discopy.utils import dumps
+    x = Ty(symmetric.Ty('x'))
+    with raises(TypeError, match="A stream has no tree"):
+        dumps(Stream.sequence('f', x, x))
+    assert Stream.serialisation() is NotImplemented
