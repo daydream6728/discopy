@@ -153,6 +153,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - The `quantum` extra pins pyzx 0.10.7 ([next#225]).
 - Faster tensor of `n` morphisms ([#623]), of Python functions, and
   `finset.Permutation.then` ([#763]).
+- Faster `to_map` and `to_hypergraph` of permutations, read from their `perm`
+  rather than mapped wire by wire ([next#31]).
 - A functor maps a layer with one `n`-ary `tensor` rather than a fold of
   `@`, with one `tensor` call per layer ([next#161]).
 - `Functor.id` is built from `utils.identity`, and `then` drops an identity
