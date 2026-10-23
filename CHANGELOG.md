@@ -187,8 +187,10 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
-- `Category.parameters` reads `ob` with no fallback: a monoid's objects are
-  `NoneType`, so `Nat.parameters()` no longer gives `(Nat, Nat)` ([next#214]).
+- `Category.typeparams`, renamed from `parameters` apart from
+  `Declaration.parameters`, reads `ob` with no fallback: a monoid's objects
+  are `NoneType`, so `Nat.typeparams()` no longer gives `(Nat, Nat)`
+  ([next#214]).
 - `Hypergraph`: its hash, `simplify`, `rotate`, and `to_diagram` on
   non-self-dual, `Nat` and `Dim` types ([#324], [#387], [#393], [#622],
   [#719]).
