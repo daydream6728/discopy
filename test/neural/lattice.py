@@ -141,3 +141,26 @@ def test_solve():
         max_rounds=2, n_chains=2, batch_size=2, theta_cls=0.))
     assert never["timeout"] == 2 and never["rounds_p50"] == -1.
     assert never["model_calls"] == 4 == 2 * never["calls_p50"]
+
+
+def test_pool_and_solve_peer_net():
+    torch = importorskip("torch")
+    from discopy.neural.lattice import Config, Pool, SolveConfig, solve
+    from discopy.neural.recursion import PeerNet
+    from discopy.neural.train import EMA, adamw, cosine_schedule
+    _, Stream = toy()
+    torch.manual_seed(4)
+    peers = tuple(tuple(j for j in range(4) if j != i) for i in range(4))
+    net = PeerNet((4, 6, 8, 5), peers, 3, 2, 3, 1)
+    cfg = Config(batch_size=5, max_age=2, compile=False)
+    pool = Pool(net, Stream(4), cfg)
+    optimizer = adamw(net, cfg.lr, cfg.weight_decay)
+    scheduler = cosine_schedule(optimizer, 1, 3)
+    ema, generator = EMA(net, cfg.ema_decay), torch.Generator().manual_seed(4)
+    stats = [pool.iterate(optimizer, scheduler, ema, generator)
+             for _ in range(3)]
+    assert sum(step["discarded"] for step in stats) >= 5
+    x, y = Stream(5).take(3)
+    out = solve(net, x, y, SolveConfig(max_rounds=3, n_chains=2,
+                                       batch_size=4))
+    assert len(out["bucket"]) == 3 and out["model_calls"] >= 3

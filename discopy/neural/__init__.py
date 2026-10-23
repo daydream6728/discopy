@@ -11,6 +11,13 @@ promises: its legs grouped into orbits, the symmetry each orbit carries, and
 the wirings drawn out of a family's combinatorics.
 
 
+The networks themselves: :mod:`discopy.neural.wiring` reads the tables a
+network gathers along off a factor graph; :mod:`discopy.neural.cell` holds
+the boxes, a site on every node and a Deep Sets unit on every factor;
+:mod:`discopy.neural.recursion` fires them in rounds, cycles and
+supervision steps with a detached prefix.
+
+
 Recursive message passing, the networks of *Tiny Recursive Message Passing*
 (arXiv:2610.18649), is read out and trained by three modules:
 :mod:`discopy.neural.lattice` by lattice deduction and
@@ -28,6 +35,9 @@ schedule, the weight average and the per-sample clip.
     discopy.neural.lattice
     discopy.neural.act
     discopy.neural.train
+    discopy.neural.wiring
+    discopy.neural.cell
+    discopy.neural.recursion
 
 Note
 ----

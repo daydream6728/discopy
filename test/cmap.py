@@ -713,7 +713,7 @@ def test_plug_input():
         f.plug_input(-1, Box("lambda", x, y @ z), y)
     with raises(ValueError, match="range"):
         f.plug_input(0, Box("lambda", x, y @ z), y, root_index=2)
-    with raises(ValueError, match="Cannot plug"):
+    with raises(ValueError, match="expected a box"):
         f.plug_input(0, Box("bad", Ty(), y @ z), y)
 
 
