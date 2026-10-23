@@ -62,7 +62,7 @@ jobs:
         uv run pylint discopy
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25   # backstop: ~12 min on 3.14, ~18 on 3.12 and 3.13 since the optyx notebooks (#338)
     strategy:
       matrix:
         python-version: [ "3.12", "3.13", "3.14" ]
