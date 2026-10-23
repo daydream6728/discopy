@@ -82,8 +82,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - Notebooks: *Minimality of the pure qubit ZX calculus* ([#626], [#688]),
   *Categorical deep learning* ([next#124], [next#125]), *Neural Church
   arithmetic* ([#677]), *Parsing arithmetic* and *Boolean circuits*,
-  Lafont's maps, linear maps and Boolean functions as double-pushout
-  rewriting ([next#310], [next#316]).
+  Lafont's maps, linear maps, Boolean functions and reversible circuits as
+  double-pushout rewriting ([next#310], [next#316], [next#320]).
 
 ### Changed
 
@@ -445,6 +445,7 @@ for the changelog of `1.2.1` and earlier.
 [next#283]: https://github.com/rel-int/discopy-next/pull/283
 [next#310]: https://github.com/rel-int/discopy-next/pull/310
 [next#316]: https://github.com/rel-int/discopy-next/pull/316
+[next#320]: https://github.com/rel-int/discopy-next/pull/320
 [lambek#2]: https://github.com/rel-int/lambek/pull/2
 [lambek#8]: https://github.com/rel-int/lambek/pull/8
 [Recursive_GNNs#1]: https://github.com/rel-int/Recursive_GNNs/issues/1
