@@ -336,6 +336,9 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - The `docs` extra installs torch and jax for the notebooks ([next#201]);
   a fork's docs link their own source and canonical URL.
 - `no-todo-on-main.yml`'s guard says why it fails ([next#21]).
+- `CONTRIBUTING.md`'s benchmark command runs the `zx` suite, which needs PyZX,
+  and `test/pivotal.py` skips its sympy test instead of failing on it, so
+  `--skip-extra` holds there too ([next#323], [next#350]).
 - The tests keep the `--skip-extra` contract, those that could not fail can,
   `CONTRIBUTING.md` names `setuptools`, and `build.yml` drops credentials
   ([next#31]).
@@ -555,7 +558,9 @@ for the changelog of `1.2.1` and earlier.
 [next#313]: https://github.com/rel-int/discopy-next/issues/313
 [next#316]: https://github.com/rel-int/discopy-next/pull/316
 [next#320]: https://github.com/rel-int/discopy-next/pull/320
+[next#323]: https://github.com/rel-int/discopy-next/issues/323
 [next#349]: https://github.com/rel-int/discopy-next/issues/349
+[next#350]: https://github.com/rel-int/discopy-next/issues/350
 [optyx#16]: https://github.com/rel-int/optyx/pull/16
 [optyx#29]: https://github.com/rel-int/optyx/pull/29
 [optyx#56]: https://github.com/rel-int/optyx/pull/56

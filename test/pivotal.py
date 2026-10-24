@@ -1,4 +1,4 @@
-from pytest import raises
+from pytest import importorskip, raises
 
 from discopy.utils import AxiomError
 from discopy.pivotal import *
@@ -24,7 +24,7 @@ def test_Box_is_traced():
 
 
 def test_subs_keeps_winding_number_and_time_step():
-    from sympy.abc import phi
+    phi = importorskip("sympy").Symbol("phi")
     from discopy.grammar.pregroup import Ty as P, Word
     x = Ty('x')
     f = Box('f', x, x @ x, data=phi)
