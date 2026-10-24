@@ -84,7 +84,7 @@ def test_to_pyzx_errors():
 
 
 def test_to_pyzx():
-    assert ZXDiagram.from_pyzx(Z(0, 2).to_pyzx()) == Z(0, 2) >> SWAP
+    assert ZXDiagram.from_pyzx(Z(0, 2).to_pyzx()) == Z(0, 2) >> Id(Bit(2))
 
 
 def test_to_pyzx_scalar():

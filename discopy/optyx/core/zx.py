@@ -196,7 +196,7 @@ class ZXDiagram(diagram.Diagram):
             (node,) = graph.neighbors(output)
             etype = graph.edge_type((node, output))
             hadamard = H if etype == EdgeType.HADAMARD else Id(diagram.Bit(1))
-            scan, swaps = move(scan, scan.index(node), target)
+            scan, swaps = move(scan, scan.index(node, target), target)
             dgrm = (
                 dgrm
                 >> swaps

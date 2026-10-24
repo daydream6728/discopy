@@ -198,6 +198,13 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 - `Category.typeparams` reads `ob` with no fallback: a monoid's objects are
   `NoneType`, so `Nat.typeparams()` no longer gives `(Nat, Nat)` ([next#214]).
+- `quantum.zx.Diagram.from_pyzx`, and its copy in `optyx.core.zx`, wires a
+  spider with several outputs to the outputs it is joined to: it used to move
+  the leg already placed at an earlier output, so the tensor differed from
+  PyZX's ([next#313]).
+- `quantum.graphlike.size` counts two spiders as joined when an odd number of
+  Hadamards lie between them, as `to_pyzx` does: a Hadamard self-loop is a
+  phase and two parallel Hadamards cancel ([next#349]).
 - `Hypergraph`: its hash, `simplify`, `rotate`, and `to_diagram` on
   non-self-dual, `Nat` and `Dim` types ([#324], [#387], [#393], [#622],
   [#719]).
@@ -545,8 +552,10 @@ for the changelog of `1.2.1` and earlier.
 [next#283]: https://github.com/rel-int/discopy-next/pull/283
 [next#302]: https://github.com/rel-int/discopy-next/pull/302
 [next#310]: https://github.com/rel-int/discopy-next/pull/310
+[next#313]: https://github.com/rel-int/discopy-next/issues/313
 [next#316]: https://github.com/rel-int/discopy-next/pull/316
 [next#320]: https://github.com/rel-int/discopy-next/pull/320
+[next#349]: https://github.com/rel-int/discopy-next/issues/349
 [optyx#16]: https://github.com/rel-int/optyx/pull/16
 [optyx#29]: https://github.com/rel-int/optyx/pull/29
 [optyx#56]: https://github.com/rel-int/optyx/pull/56
