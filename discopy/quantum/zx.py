@@ -285,7 +285,7 @@ class Diagram(tensor.Diagram[complex]):
             node, = graph.neighbors(output)
             etype = graph.edge_type((node, output))
             hadamard = H if etype == EdgeType.HADAMARD else Id(1)
-            scan, swaps = move(scan, scan.index(node), target)
+            scan, swaps = move(scan, scan.index(node, target), target)
             diagram = diagram >> swaps\
                 >> Id(target) @ hadamard @ Id(len(scan) - target - 1)
         number = graph.scalar.to_number()
