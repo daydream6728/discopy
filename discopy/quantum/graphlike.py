@@ -48,6 +48,7 @@ Z(1, 2) >> Z(1, 0, 1/4) @ Nat(1)
 
 from __future__ import annotations
 
+from collections import Counter
 from fractions import Fraction
 from functools import cache
 from heapq import heappop, heappush
@@ -988,6 +989,10 @@ def size(graph) -> tuple[int, int, int]:
     whose phase is not Clifford, the T-count, counting a boundary behind a
     Hadamard edge as no spider, as PyZX does.
 
+    Two spiders are joined by an edge when an odd number of Hadamards lie
+    between them, again as PyZX has it: a Hadamard self-loop is a half-turn
+    phase rather than an edge, and two parallel Hadamards cancel.
+
     Parameters:
         graph : A graph-like hypergraph, or a PyZX graph.
     """
@@ -1003,8 +1008,12 @@ def size(graph) -> tuple[int, int, int]:
                if not is_boundary(rewriter, s) and (
                    rewriter.ports[s] < 2 or rewriter.incidence[s])]
     inside = set(spiders)
-    edges = sum(1 for box, (dom, cod) in zip(graph.boxes, graph.box_wires)
-                if box == zx.H and {dom[0], cod[0]} <= inside)
+    hadamards = Counter(
+        frozenset({dom[0], cod[0]})
+        for box, (dom, cod) in zip(graph.boxes, graph.box_wires)
+        if box == zx.H and {dom[0], cod[0]} <= inside)
+    edges = sum(1 for pair, number in hadamards.items()
+                if len(pair) == 2 and number % 2)
     tcount = sum(1 for s in spiders if not is_clifford(
         rewriter.local(s).phase))
     return len(spiders), edges, tcount
