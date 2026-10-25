@@ -205,6 +205,11 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - `quantum.graphlike.size` counts two spiders as joined when an odd number of
   Hadamards lie between them, as `to_pyzx` does: a Hadamard self-loop is a
   phase and two parallel Hadamards cancel ([next#349]).
+- `optyx.core.zx.And` and `Or`: the dagger keeps the number of bits instead of
+  passing the flag as it, and a daggered gate has the types it is evaluated
+  with, `bit -> bit ** n` ([next#292]); `optyx.core.zx.SWAP` evaluates, its
+  `truncation` no longer an unbound function set on the instance
+  ([next#293]).
 - `symmetric.Functor` sends a `Swap` to a native permutation like any other
   permutation, so that it commutes with whiskering on the nose when it widens
   an atomic type ([next#301]).
@@ -559,6 +564,8 @@ for the changelog of `1.2.1` and earlier.
 [next#225]: https://github.com/rel-int/discopy-next/issues/225
 [next#276]: https://github.com/rel-int/discopy-next/pull/276
 [next#283]: https://github.com/rel-int/discopy-next/pull/283
+[next#292]: https://github.com/rel-int/discopy-next/issues/292
+[next#293]: https://github.com/rel-int/discopy-next/issues/293
 [next#301]: https://github.com/rel-int/discopy-next/issues/301
 [next#302]: https://github.com/rel-int/discopy-next/pull/302
 [next#310]: https://github.com/rel-int/discopy-next/pull/310
