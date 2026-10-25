@@ -78,13 +78,22 @@ def test_grad():
            + (Z(1, 1, phi / 2) >> scalar(pi) @ Bit(1) >> Z(1, 1, phi + 1.5))
 
 
+def test_ZXBox_equals_its_diagram():
+    for box in [Z(0, 2), X(2, 1), Z(1, 1, 0.25), And(2), Or(2), H]:
+        diagram = box >> Diagram.id(box.cod)
+        assert box == diagram and diagram == box
+        assert hash(box) == hash(diagram)
+    assert Z(1, 1, 0.25) != Z(1, 1, 0.5) and Z(1, 1) != X(1, 1)
+
+
 def test_to_pyzx_errors():
     with raises(NotImplementedError):
         Diagram.to_pyzx(quantum.H)
 
 
 def test_to_pyzx():
-    assert ZXDiagram.from_pyzx(Z(0, 2).to_pyzx()) == Z(0, 2) >> Id(Bit(2))
+    assert ZXDiagram.from_pyzx(Z(0, 2).to_pyzx()) == Z(0, 2)
+    assert hash(ZXDiagram.from_pyzx(Z(0, 2).to_pyzx())) == hash(Z(0, 2))
 
 
 def test_to_pyzx_scalar():
