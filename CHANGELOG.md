@@ -210,6 +210,12 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   with, `bit -> bit ** n` ([next#292]); `optyx.core.zx.SWAP` evaluates, its
   `truncation` no longer an unbound function set on the instance
   ([next#293]).
+- `symmetric.Functor` sends a `Swap` to a native permutation like any other
+  permutation, so that it commutes with whiskering on the nose when it widens
+  an atomic type ([next#301]).
+- `optyx.core.zx.ZXBox` reads its equality and its hash off `cat.Box` like
+  every other box, so a spider equals the one-layer diagram holding it and
+  can go in a set ([next#359]).
 - `Hypergraph`: its hash, `simplify`, `rotate`, and `to_diagram` on
   non-self-dual, `Nat` and `Dim` types ([#324], [#387], [#393], [#622],
   [#719]).
@@ -560,6 +566,7 @@ for the changelog of `1.2.1` and earlier.
 [next#283]: https://github.com/rel-int/discopy-next/pull/283
 [next#292]: https://github.com/rel-int/discopy-next/issues/292
 [next#293]: https://github.com/rel-int/discopy-next/issues/293
+[next#301]: https://github.com/rel-int/discopy-next/issues/301
 [next#302]: https://github.com/rel-int/discopy-next/pull/302
 [next#310]: https://github.com/rel-int/discopy-next/pull/310
 [next#313]: https://github.com/rel-int/discopy-next/issues/313
@@ -568,6 +575,7 @@ for the changelog of `1.2.1` and earlier.
 [next#323]: https://github.com/rel-int/discopy-next/issues/323
 [next#349]: https://github.com/rel-int/discopy-next/issues/349
 [next#350]: https://github.com/rel-int/discopy-next/issues/350
+[next#359]: https://github.com/rel-int/discopy-next/issues/359
 [optyx#16]: https://github.com/rel-int/optyx/pull/16
 [optyx#29]: https://github.com/rel-int/optyx/pull/29
 [optyx#56]: https://github.com/rel-int/optyx/pull/56
