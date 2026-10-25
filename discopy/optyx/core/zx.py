@@ -312,14 +312,6 @@ class ZXBox(diagram.Box, ZXDiagram):
 
         return tensor.Box(self.name, in_dims, out_dims, self.array)
 
-    def __eq__(self, other):
-        return (
-            isinstance(other, type(self))
-            and self.name == other.name
-            and self.dom == other.dom
-            and np.all(self.data == other.data)
-        )
-
     def inflate(self, d):
         return self
 
