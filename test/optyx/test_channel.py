@@ -218,3 +218,12 @@ def test_swap_dagger_swaps_back():
     swap = Swap(qmode, qubit)
     assert swap.dagger() == Swap(qubit, qmode)
     assert swap.dagger().kraus == swap.kraus.dagger()
+
+
+def test_empty_sum_keeps_its_types():
+    zero = photonic.Phase(x).grad(y)
+    assert zero == Diagram.sum_factory((), qmode, qmode)
+    kraus, double = zero.get_kraus(), zero.double()
+    assert (kraus.dom, kraus.cod) == (diagram.mode, diagram.mode)
+    assert (double.dom, double.cod) == (diagram.mode @ diagram.mode, ) * 2
+    assert not double.terms

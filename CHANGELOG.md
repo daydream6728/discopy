@@ -217,6 +217,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   every other box, so a spider equals the one-layer diagram holding it and
   can go in a set ([next#359]).
 - `optyx.channel.Swap.dagger` is the swap the other way round ([next#290]).
+- `optyx.channel.Sum` without terms keeps its types in `get_kraus` and
+  `double`, so the gradient by an absent variable doubles ([next#291]).
 - `Hypergraph`: its hash, `simplify`, `rotate`, and `to_diagram` on
   non-self-dual, `Nat` and `Dim` types ([#324], [#387], [#393], [#622],
   [#719]).
@@ -566,6 +568,7 @@ for the changelog of `1.2.1` and earlier.
 [next#276]: https://github.com/rel-int/discopy-next/pull/276
 [next#283]: https://github.com/rel-int/discopy-next/pull/283
 [next#290]: https://github.com/rel-int/discopy-next/issues/290
+[next#291]: https://github.com/rel-int/discopy-next/issues/291
 [next#292]: https://github.com/rel-int/discopy-next/issues/292
 [next#293]: https://github.com/rel-int/discopy-next/issues/293
 [next#301]: https://github.com/rel-int/discopy-next/issues/301

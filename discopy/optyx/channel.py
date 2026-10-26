@@ -1756,7 +1756,9 @@ class Sum(symmetric.Sum, Diagram):
     __ambiguous_inheritance__ = (symmetric.Sum,)
 
     def double(self):
-        return diagram.Diagram.sum_factory([t.double() for t in self])
+        return diagram.Diagram.sum_factory(
+            [term.double() for term in self.terms],
+            self.dom.double(), self.cod.double())
 
     def grad(self, var, **params):
         """Gradient with respect to :code:`var`."""
@@ -1765,12 +1767,9 @@ class Sum(symmetric.Sum, Diagram):
         return sum(term.grad(var, **params) for term in self.terms)
 
     def get_kraus(self):
-        if len(self.terms) == 0:
-            return diagram.Scalar(0)
-
         return diagram.Diagram.sum_factory(
-            [term.get_kraus() for term in self.terms]
-        )
+            [term.get_kraus() for term in self.terms],
+            self.dom.single(), self.cod.single())
 
 
 class CQMap(Diagram, frobenius.Box):
