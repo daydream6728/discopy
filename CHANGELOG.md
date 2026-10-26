@@ -214,6 +214,11 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   with, `bit -> bit ** n` ([next#292]); `optyx.core.zx.SWAP` evaluates, its
   `truncation` no longer an unbound function set on the instance
   ([next#293]).
+- `cat.Functor` reads the image of a daggered box off `ar_map` when the
+  codomain has no dagger to take, instead of daggering the image: a functor
+  into `stream.Stream` or `python.Function` used to raise an `AttributeError`,
+  so `double` and `unroll` stopped commuting on a loop whose doubling makes a
+  daggered box ([next#236]).
 - `symmetric.Functor` sends a `Swap` to a native permutation like any other
   permutation, so that it commutes with whiskering on the nose when it widens
   an atomic type ([next#301]).
@@ -568,6 +573,7 @@ for the changelog of `1.2.1` and earlier.
 [next#201]: https://github.com/rel-int/discopy-next/issues/201
 [next#214]: https://github.com/rel-int/discopy-next/pull/214
 [next#225]: https://github.com/rel-int/discopy-next/issues/225
+[next#236]: https://github.com/rel-int/discopy-next/issues/236
 [next#276]: https://github.com/rel-int/discopy-next/pull/276
 [next#283]: https://github.com/rel-int/discopy-next/pull/283
 [next#292]: https://github.com/rel-int/discopy-next/issues/292
