@@ -43,6 +43,8 @@ def test_Scenario():
     assert (scenario.incidence().sum(axis=0) == 2).all()
     assert eval(repr(scenario)) == scenario
     assert bell.measurements == ('a1', 'b1', 'b2', 'a2')
+    assert Scenario.bell(2, settings=(3, 1)).measurements == (
+        'a1', 'b1', 'a2', 'a3')
     assert Scenario.bell(3, settings=3).contexts[:2] == (
         ('a1', 'b1', 'c1'), ('a1', 'b1', 'c2'))
 
@@ -59,7 +61,7 @@ def test_Scenario_errors():
     with raises(ValueError):
         PR.mix(Model(Scenario([('x', 'y')]), [[1, 0, 0, 0]]), 1 / 2)
     with raises(ValueError):
-        Inequality(bell, [[0] * 4] * 4).violation(PR)
+        Scenario.bell(2, settings=(2, 2, 2))
     with raises(ValueError):
         Inequality(bell, [[1, 0, 0, 0]] * 4)(Model(
             Scenario([('x', 'y')] * 4), [[1, 0, 0, 0]] * 4))
@@ -191,3 +193,65 @@ def test_theorem_2():
     assert CF(e & f) == approx(max(CF(e), CF(f)))
     assert CF(e @ f) == approx(CF(e) + CF(f) - CF(e) * CF(f))
     assert CF(CHSH @ CHSH.relabel(cd)) == approx(7 / 16)
+
+
+triangle = Scenario([('x', 'y'), ('y', 'z'), ('z', 'x')])
+specker = Model(triangle, [[0, 1 / 2, 1 / 2, 0]] * 3)
+
+
+def test_deterministic():
+    for scenario in (bell, triangle):
+        for assignment in scenario.assignments:
+            model = Model.deterministic(scenario, assignment)
+            assert model.is_compatible()
+            assert model.contextual_fraction() == approx(0, abs=1e-9)
+            assert model.bell_inequality().violation(model) == 0
+    assert Inequality(bell, [[0] * 4] * 4).violation(PR) == 0
+
+
+@mark.parametrize("weight", np.linspace(0, 1, 11))
+def test_isotropic(weight):
+    model = PR.mix(noise, weight)
+    fraction = model.contextual_fraction()
+    assert fraction == approx(max(0, 2 * weight - 1), abs=1e-9)
+    assert model.bell_inequality().violation(model) == approx(
+        fraction, abs=1e-9)
+
+
+def test_specker():
+    assert specker.is_compatible()
+    assert specker.contextual_fraction() == approx(1)
+    inequality = specker.bell_inequality()
+    assert inequality.non_contextual_bound == approx(0, abs=1e-9)
+    assert inequality.violation(specker) == approx(1)
+
+
+def test_from_diagram():
+    importorskip("discopy.optyx")
+    from discopy.optyx import Diagram, Encode, bit, mode, qubit
+    from discopy.optyx.classical import BitControlledGate
+    from discopy.optyx.photonic import NumberResolvingMeasurement
+    from discopy.optyx.qubits import H as H_, Measure as M, Scalar, Z
+    alice = BitControlledGate(Z(1, 1, .25)) >> H_() >> M(1)
+    bob = Diagram.swap(qubit, bit) >> bit @ Z(1, 1, -.125)\
+        >> BitControlledGate(Z(1, 1, .25)) >> H_() >> M(1)
+    bell_test = bit @ Scalar(.5 ** .5) @ Z(0, 2) @ bit >> alice @ bob
+    tsirelson = Model.from_diagram(bell_test)
+    p = (sqrt(2) + 2) / 8
+    assert tsirelson.is_close(Model(bell, 3 * [[p, 1 / 2 - p, 1 / 2 - p, p]]
+                                    + [[1 / 2 - p, p, p, 1 / 2 - p]]))
+    assert tsirelson.contextual_fraction() == approx(
+        equatorial(2, pi / 8, 5 * pi / 8).contextual_fraction())
+    assert Model.from_diagram(bell_test, outcomes=3).contextual_fraction(
+        ) == approx(sqrt(2) - 1)
+    detector = Encode(mode) >> NumberResolvingMeasurement(1)
+    counter = Model.from_diagram(detector @ detector, settings=(3, 1))
+    assert counter.scenario == Scenario.bell(2, (3, 1), outcomes=3)
+    assert counter.table[2] == (0, 0, 0, 0, 0, 0, 1, 0, 0)
+    assert counter.contextual_fraction() == approx(0, abs=1e-9)
+    with raises(ValueError):
+        Model.from_diagram(M(1))
+    with raises(ValueError):
+        Model.from_diagram(detector @ Encode(mode))
+    with raises(ValueError):
+        Model.from_diagram(detector @ detector, settings=(3, 1), outcomes=2)
