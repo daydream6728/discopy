@@ -81,7 +81,7 @@ from functools import wraps
 from inspect import signature
 from operator import index
 from types import NoneType
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, ClassVar, SupportsIndex
 
 from discopy import messages
 from discopy.axioms import (
@@ -400,7 +400,7 @@ class Nat(Monoid["Nat"]):
     def __len__(self) -> int:
         return self.n
 
-    def __pow__(self, n_times: int) -> "Nat":
+    def __pow__(self, n_times: SupportsIndex) -> "Nat":
         return type(self)(index(n_times) * self.n)
 
     def dagger(self) -> "Nat":
