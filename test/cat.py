@@ -523,3 +523,5 @@ def test_Equation_tree():
         dumps(Equation(f, f >> f, up_to=len))
     with raises(TypeError, match="Expected str"):
         Equation.from_tree(Equation(f, f).to_tree() | {'symbols': [[1]]})
+    with raises(TypeError, match="Expected str"):
+        dumps(Equation(f, f, symbols=[1]))

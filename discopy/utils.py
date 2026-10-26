@@ -694,8 +694,10 @@ def decode_sympy(tree: dict) -> Any:
     parse with :func:`eval`, and with ``evaluate=False``, so that it rebuilds
     the expression as it was written, without computing e.g. a large power.
     A float is read at a precision of at most four bits a digit, so that it
-    allocates in proportion to the file, and a symbol with assumptions that
-    sympy refuses, e.g. inconsistent ones, is left alone.
+    allocates in proportion to the file. A node with exactly the fields
+    :func:`encode_sympy` writes for its class is still left alone when sympy
+    refuses them, e.g. a symbol with inconsistent assumptions or a function
+    with the wrong number of ``args``.
     As the ``object_hook`` of :func:`loads` it reads the innermost nodes
     first, i.e. the ``args`` of a node come decoded.
 
@@ -706,6 +708,8 @@ def decode_sympy(tree: dict) -> Any:
     >>> assert decode_sympy({'factory': 'sympy.sin', 'args': [theta]})\\
     ...     == sin(Symbol('theta'))
     >>> tree = {'factory': 'sympy.sin', 'args': ['__import__("os")']}
+    >>> assert decode_sympy(tree) == tree
+    >>> tree = {'factory': 'sympy.sin', 'args': [theta, theta]}
     >>> assert decode_sympy(tree) == tree
     """
     import sympy
@@ -720,10 +724,13 @@ def decode_sympy(tree: dict) -> Any:
             return sympy.Symbol(tree['name'], **assumptions)
         except (TypeError, ValueError):
             return tree
-    if name in ("Integer", "Rational") and 'p' in fields\
-            and fields <= {'factory', 'p', 'q'} and all(
-                type(tree.get(key, 1)) is int for key in ('p', 'q')):
-        return sympy.Rational(tree['p'], tree.get('q', 1))
+    if name == "Integer" and fields == {'factory', 'p'}\
+            and type(tree['p']) is int:
+        return sympy.Integer(tree['p'])
+    if name == "Rational" and fields == {'factory', 'p', 'q'}\
+            and type(tree['p']) is int and type(tree['q']) is int\
+            and tree['q'] > 1:
+        return sympy.Rational(tree['p'], tree['q'])
     if name == "Float" and fields == {'factory', 'num', 'precision'}\
             and isinstance(tree['num'], str)\
             and type(tree['precision']) is int\
@@ -734,7 +741,10 @@ def decode_sympy(tree: dict) -> Any:
     if name in SYMPY_FUNCTIONS and fields == {'factory', 'args'}\
             and isinstance(tree['args'], list)\
             and all(isinstance(arg, sympy.Basic) for arg in tree['args']):
-        return getattr(sympy, name)(*tree['args'], evaluate=False)
+        try:
+            return getattr(sympy, name)(*tree['args'], evaluate=False)
+        except (TypeError, ValueError):
+            return tree
     return tree
 
 

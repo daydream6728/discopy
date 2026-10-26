@@ -1294,8 +1294,9 @@ class Equation(AbstractEquation[Arrow]):
     """
     def to_tree(self) -> dict:
         """
-        Serialise an equation by its terms and symbols, unless it compares
-        them up to a function given to it, which has no tree.
+        Serialise an equation by its terms and symbols, which are strings,
+        unless it compares them up to a function given to it, which has no
+        tree.
 
         Example
         -------
@@ -1308,10 +1309,16 @@ class Equation(AbstractEquation[Arrow]):
         ...
         TypeError: An equation has no tree: its up_to is a Python callable, \
 which JSON cannot hold.
+        >>> dumps(Equation(Id(x), Id(x), symbols=[1]))
+        Traceback (most recent call last):
+        ...
+        TypeError: Expected str, got int instead.
         """
         if 'up_to' in vars(self):
             raise TypeError(messages.NO_TREE_CALLABLE.format(
                 "An equation", "up_to"))
+        for symbol in self.symbols:
+            assert_isinstance(symbol, str)
         return {'factory': factory_name(type(self)),
                 'terms': [term.to_tree() for term in self.terms],
                 'symbols': list(self.symbols)}

@@ -388,6 +388,27 @@ def test_loads_runs_no_code_from_a_file():
     assert flag not in os.environ
 
 
+def test_loads_leaves_malformed_sympy_alone():
+    """ A node of the right types but a shape `encode_sympy` never writes
+    is left as it is, rather than read as another class or raising. """
+    pytest.importorskip("sympy")
+    import json
+    x = {'factory': 'sympy.Symbol', 'name': 'x'}
+    for node in (
+            {'factory': 'sympy.sin', 'args': []},
+            {'factory': 'sympy.sin', 'args': [x, x]},
+            {'factory': 'sympy.Pow', 'args': [x]},
+            {'factory': 'sympy.atan2', 'args': [x, x, x]},
+            {'factory': 'sympy.Integer', 'p': 1, 'q': 2},
+            {'factory': 'sympy.Rational', 'p': 1},
+            {'factory': 'sympy.Rational', 'p': 1, 'q': 1},
+            {'factory': 'sympy.Rational', 'p': 1, 'q': 0}):
+        box = cat.Box('f', Ob('x'), Ob('y'), data=node)
+        data = loads(json.dumps(box.to_tree())).data
+        assert isinstance(data, dict) and data.keys() == node.keys()
+        assert data['factory'] == node['factory']
+
+
 def test_resolve_factory_reads_classes_of_discopy_only():
     """ A file names classes of DisCoPy, and types of builtins and numpy as
     their parameters, never what a module of DisCoPy imports. """
