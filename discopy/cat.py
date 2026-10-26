@@ -1005,9 +1005,11 @@ class Functor(Category):
     :class:`discopy.stream.Stream` or :class:`discopy.python.Function`, the
     image of a daggered box is read off :code:`ar_map` like that of any
     other box. The dagger is the one the codomain has rather than the one it
-    declares: :class:`discopy.drawing.Drawing` has a dagger and declares no
-    :class:`~discopy.abc.DaggerCategory`, and
-    :class:`discopy.python.additive.Function` the other way round.
+    declares, neither being read off the other:
+    :class:`discopy.drawing.Drawing` has a total dagger and declares no
+    :class:`~discopy.abc.DaggerCategory`, while
+    :class:`discopy.python.additive.Function` declares none either and has
+    only a partial one, defined on swaps.
 
     >>> from discopy import python
     >>> F = Functor(
