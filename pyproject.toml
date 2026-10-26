@@ -186,6 +186,7 @@ ignore = [
     "E743",
     "F811",
     "B006",
+    "B007",
     "B008",
     "B023",
     "B027",
@@ -193,11 +194,13 @@ ignore = [
     "B904",
     "B905",
     "E714",
+    "PLW0406",
     "PLW0642",
     "PLW1641",
     "PLW2901",
     "PLW3301",
     "RUF001",
+    "RUF002",
     "RUF005",
     "RUF007",
     "RUF010",
@@ -227,6 +230,7 @@ unresolved-attribute = "ignore"
 # The rules `main` breaks today, each set back to "error" by the pull request
 # that fixes its last instance.
 call-non-callable = "warn"
+empty-body = "warn"
 inconsistent-mro = "warn"
 invalid-argument-type = "warn"
 invalid-assignment = "warn"

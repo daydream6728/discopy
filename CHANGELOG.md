@@ -118,10 +118,6 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   Lafont's maps, linear maps, Boolean functions and reversible circuits as
   double-pushout rewriting ([next#310], [next#316], [next#320]).
 
-- `ruff check` and `ty check` in the lint job beside `pylint`, each gating on
-  every rule `main` passes, with the rules it still breaks listed in
-  `pyproject.toml` to be removed one by one.
-
 ### Changed
 
 - `Category.parameters` is renamed `Category.typeparams` ([next#214]).
@@ -369,6 +365,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   ([next#276]).
 - Coverage's 98% gate reads `discopy/` alone, new tests bring `ehypergraph` to
   100%, and pytest imports by path, so `test/abc.py` is collected ([next#31]).
+- `ruff check` and `ty check` lint beside `pylint`, each failing on every rule
+  `main` passes, the rules it breaks listed in `pyproject.toml` ([next#263]).
 
 ## [1.2.2] - 2025-12-19
 
@@ -572,6 +570,7 @@ for the changelog of `1.2.1` and earlier.
 [next#201]: https://github.com/rel-int/discopy-next/issues/201
 [next#214]: https://github.com/rel-int/discopy-next/pull/214
 [next#225]: https://github.com/rel-int/discopy-next/issues/225
+[next#263]: https://github.com/rel-int/discopy-next/pull/263
 [next#276]: https://github.com/rel-int/discopy-next/pull/276
 [next#283]: https://github.com/rel-int/discopy-next/pull/283
 [next#292]: https://github.com/rel-int/discopy-next/issues/292
