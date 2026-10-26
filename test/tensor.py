@@ -791,3 +791,17 @@ def test_grad_equal():
         assert diagram.grad(x) == diagram.grad(x) != diagram.grad(y)
         assert len({diagram.grad(x), diagram.grad(x)}) == 1
     assert square.grad(x) != f.bubble(func=lambda z: z ** 3).grad(x)
+
+
+def test_grad_of_named_bubble_reads_back():
+    pytest.importorskip("sympy")
+    from sympy import Symbol
+    from sympy.abc import x
+    from discopy import tensor
+    tmp = Symbol("tmp")
+    bubble = Box('f', Dim(2), Dim(2), [x, 0, 0, 1]).bubble(func=abs)
+    for diff in (tensor.Diff(x), tensor.Diff(tmp, abs)):
+        assert eval(repr(diff)) == diff
+    chain = next(box for box in bubble.grad(x).boxes
+                 if isinstance(box, Bubble) and box.func != Bubble.func)
+    assert repr(chain.func) == "tensor.Diff(tmp, abs)"

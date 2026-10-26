@@ -706,7 +706,7 @@ BROKEN = {
         "*.Spider quantum.zx.[XYZ]": "it keeps no n_legs_in or n_legs_out",
     },
     "tree": {
-        "*.DualRail* grammar.cfg.Id quantum.zx.Scalar":
+        "*.DualRail* quantum.zx.Scalar":
         "it has no from_tree of its own",
         "quantum.gates.C[RU]*": "its tree is that of a controlled gate",
         "grammar.categorial.TypeRaising": "its tree drops its cod",

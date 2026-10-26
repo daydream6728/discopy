@@ -47,7 +47,7 @@ from __future__ import annotations
 import math
 import numbers
 from itertools import count
-from typing import TYPE_CHECKING, ClassVar, Sequence
+from typing import TYPE_CHECKING, Callable, ClassVar, Sequence
 
 from discopy import (
     cat, monoidal, rigid, frobenius, cmap, config, messages)
@@ -1090,6 +1090,24 @@ class Sum(monoidal.Sum, Box):
     """
 
 
+def func_repr(func: Callable) -> str:
+    """
+    The repr of a function in a tensor bubble or a derivative: a named
+    function prints as its import path, so that it reads back with
+    :func:`eval`, anything else, e.g. a lambda, as its own repr.
+
+    Example
+    -------
+    >>> import numpy
+    >>> assert func_repr(abs) == "abs"
+    >>> assert func_repr(numpy.sqrt) == "numpy.sqrt"
+    >>> assert func_repr(lambda x: x).startswith("<function")
+    """
+    name = getattr(func, "__qualname__", "<")
+    return repr(func) if "<" in name\
+        else f"{func.__module__}.{name}".removeprefix("builtins.")
+
+
 class Bubble(monoidal.Bubble, Box):
     """
     Bubble in a tensor diagram, applies a function elementwise.
@@ -1155,10 +1173,7 @@ class Bubble(monoidal.Bubble, Box):
             return repr(self.dagger()) + ".dagger()"
         if self.func is type(self).func:
             return super().__repr__()
-        name = getattr(self.func, "__qualname__", "<")
-        func = repr(self.func) if "<" in name\
-            else f"{self.func.__module__}.{name}".removeprefix("builtins.")
-        return super().__repr__()[:-1] + f", func={func})"
+        return super().__repr__()[:-1] + f", func={func_repr(self.func)})"
 
     def grad(self, var, **params):
         """
@@ -1203,10 +1218,12 @@ class Diff:
     >>> assert Diff(y, lambda z: z ** 3)(x) == 3 * x ** 2
 
     Diffs are equal when their variables and functions are, so that gradients
-    are too, and they read back from their repr.
+    are too, and they read back from their repr when their function is named,
+    see :func:`func_repr`.
 
     >>> from discopy import tensor
     >>> assert Diff(x) == eval(repr(Diff(x))) != Diff(y)
+    >>> assert eval(repr(Diff(x, abs))) == Diff(x, abs)
     >>> f = Box('f', Dim(2), Dim(2), [x, 0, 0, y])
     >>> assert f.grad(x) == f.grad(x) != f.grad(y)
     """
@@ -1226,7 +1243,7 @@ class Diff:
         return hash((self.var, self.func))
 
     def __repr__(self):
-        func = "" if self.func is None else f", {self.func!r}"
+        func = "" if self.func is None else f", {func_repr(self.func)}"
         return f"{factory_name(type(self))}({self.var!r}{func})"
 
 
