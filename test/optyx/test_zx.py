@@ -117,6 +117,13 @@ def test_from_pyzx_errors():
         ZXDiagram.from_pyzx(graph)
 
 
+def test_from_pyzx_boundaries_in_odd_orders():
+    from pyzx import compare_tensors
+    from fixtures.zx_graphs import boundaries_in_odd_orders
+    graph = boundaries_in_odd_orders()
+    assert compare_tensors(ZXDiagram.from_pyzx(graph).to_pyzx(), graph)
+
+
 def _std_basis_v(*c):
     v = np.zeros(2**len(c), dtype=complex)
     v[np.sum((np.array(c) != 0) * 2**np.arange(len(c)))] = 1
