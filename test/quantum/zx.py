@@ -430,6 +430,7 @@ def test_functor_into_zx_rebuilds_spiders():
 
 
 def test_Bubble_grad():
+    pytest.importorskip("sympy")
     from sympy.abc import phi
     bubble = Z(1, 1, phi).bubble()
     assert bubble.grad(phi).arg == bubble

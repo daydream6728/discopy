@@ -6,6 +6,6 @@
 
 (cubic-dev-ai)
 
-- [ ] guard sympy in `test/quantum/zx.py::test_Bubble_grad`
-- [ ] split the sympy assertions of `test/markov.py::test_Bubble_flags` into their own test
-- [ ] circuit and zx bubbles: keep `func` through dagger, `is_dagger` through subs and lambdify, or answer it is #330's
+- [x] guard sympy in `test/quantum/zx.py::test_Bubble_grad`
+- [x] split the sympy assertions of `test/markov.py::test_Bubble_flags` into their own test
+- [x] circuit and zx bubbles: answered, #330's (it makes `tensor.Bubble` keep `func` and `is_dagger`, which both inherit)
