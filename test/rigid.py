@@ -1,4 +1,4 @@
-from pytest import raises
+from pytest import importorskip, raises
 
 from discopy import messages
 from discopy.monoidal import Colour
@@ -242,7 +242,6 @@ def test_rotated_box_serialisation():
 
 
 def test_Bubble_rotate():
-    from sympy.abc import phi
     from discopy import rigid
     from discopy.utils import dumps, loads
     x, y = Ty('x'), Ty('y')
@@ -259,5 +258,11 @@ def test_Bubble_rotate():
     assert bubble.r[::-1] == bubble[::-1].r
     F = Functor({x: y, y: x}, {f: g})
     assert F(bubble.r) == F(bubble).r == g.bubble(name="N").r
+
+
+def test_Bubble_rotate_subs():
+    importorskip("sympy")
+    from sympy.abc import phi
+    x, y = Ty('x'), Ty('y')
     symbolic = Box('f', x, y, data=phi).bubble()
     assert symbolic.r.subs(phi, 1) == symbolic.subs(phi, 1).r
