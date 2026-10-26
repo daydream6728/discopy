@@ -79,6 +79,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from functools import wraps
 from inspect import signature
+from operator import index
 from types import NoneType
 from typing import TYPE_CHECKING, ClassVar
 
@@ -400,7 +401,7 @@ class Nat(Monoid["Nat"]):
         return self.n
 
     def __pow__(self, n_times: int) -> "Nat":
-        return type(self)(n_times * self.n)
+        return type(self)(index(n_times) * self.n)
 
     def dagger(self) -> "Nat":
         """ The dagger of a commutative monoid, i.e. the identity. """
