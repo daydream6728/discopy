@@ -983,6 +983,12 @@ class Sum(symmetric.Sum, Box):
         )
 
     def to_tensor(self, input_dims=None):
+        if not self.terms:
+            dom = Dim(*input_dims or [2] * len(self.dom))
+            cod = Dim(*[2] * len(self.cod))
+            return tensor.Box(
+                "0", dom, cod,
+                np.zeros((*dom.inside, *cod.inside), dtype=complex))
 
         terms = [t.to_tensor(input_dims) for t in self]
         cods = [list(t.cod.inside) for t in terms]

@@ -218,7 +218,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   can go in a set ([next#359]).
 - `optyx.channel.Swap.dagger` is the swap the other way round ([next#290]).
 - `optyx.channel.Sum` without terms keeps its types in `get_kraus` and
-  `double`, so the gradient by an absent variable doubles ([next#291]).
+  `double`, and evaluates to the zero tensor, so the gradient by an absent
+  variable doubles and evaluates ([next#291]).
 - `Hypergraph`: its hash, `simplify`, `rotate`, and `to_diagram` on
   non-self-dual, `Nat` and `Dim` types ([#324], [#387], [#393], [#622],
   [#719]).

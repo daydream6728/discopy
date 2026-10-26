@@ -227,6 +227,8 @@ def test_empty_sum_keeps_its_types():
     assert (kraus.dom, kraus.cod) == (diagram.mode, diagram.mode)
     assert (double.dom, double.cod) == (diagram.mode @ diagram.mode, ) * 2
     assert not double.terms
+    assert not np.any(zero.eval().tensor.array)
+    assert not np.any(double.to_tensor().eval().array)
 
 
 def test_inflate_keeps_the_environment():
