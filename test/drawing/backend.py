@@ -13,6 +13,21 @@ def test_draw_raises_on_relabeled_box(tmp_path):
         Box('g', x, y).draw(doctest=path, show=False)
 
 
+def test_draw_discard_grounds_every_wire(tmp_path):
+    """ A `Discard` on several objects draws one ground per wire, as the
+    tensor of single-wire discards does, see rel-int/discopy-next#239. """
+    from discopy.quantum.circuit import Discard, bit, qubit
+
+    def strokes(diagram, name):
+        path = tmp_path / f"{name}.tikz"
+        diagram.draw(path=str(path), to_tikz=True)
+        return sum(line.startswith("\\draw")
+                   for line in path.read_text().splitlines())
+
+    assert strokes(Discard(bit @ qubit), "multi") \
+        == strokes(Discard(bit) @ Discard(qubit), "tensored")
+
+
 def test_tikz_wire_separates_its_style_keys():
     tikz = TikZ()
     tikz.draw_wire((0, 0), (1, 2), style="->")

@@ -1000,6 +1000,27 @@ class Functor(Category):
     >>> assert F(m) == m
     >>> m.data.append(False)
     >>> assert F(m) == m[::-1]
+
+    Note
+    ----
+    A daggered box is mapped as the dagger of the image of the box, when the
+    codomain has a dagger to take. When it has none, e.g. a functor into
+    :class:`discopy.stream.Stream` or :class:`discopy.python.Function`, the
+    image of a daggered box is read off :code:`ar_map` like that of any
+    other box. The dagger is the one the codomain has rather than the one it
+    declares, neither being read off the other:
+    :class:`discopy.drawing.Drawing` has a total dagger and declares no
+    :class:`~discopy.abc.DaggerCategory`, while
+    :class:`discopy.python.additive.Function` declares none either and has
+    only a partial one, defined on swaps.
+
+    >>> from discopy import python
+    >>> F = Functor(
+    ...     ob_map={x: int, y: int},
+    ...     ar_map=lambda f: (lambda n: n - 1) if f.is_dagger
+    ...                      else (lambda n: n + 1),
+    ...     cod=python.Function)
+    >>> assert F(f)(1) == 2 and F(f[::-1])(1) == 0
     """
     ob = type[Category]
     dom = cod = Arrow
@@ -1154,7 +1175,8 @@ which JSON cannot hold.
                     data=other.data, is_dagger=other.is_dagger)
             return getattr(self.cod, other.method)(
                 *map(self, other.args), dom=dom, cod=cod)
-        if isinstance(other, Box) and other.is_dagger:
+        if isinstance(other, Box) and other.is_dagger\
+                and hasattr(self.cod, "dagger"):
             return self(other.dagger()).dagger()
         if isinstance(other, Box):
             result = self.ar_map[other]
