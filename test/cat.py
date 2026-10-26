@@ -641,10 +641,7 @@ def holds(law, cls):
     from discopy.utils import dumps, loads
     box = example(cls, 1)
     if law == "dagger":
-        try:
-            return box.dagger().dagger() == box
-        except AxiomError:  # the box has no dagger
-            return True
+        return box.dagger().dagger() == box
     if law == "rotation":
         return not hasattr(box, "rotate") or box.r.l == box == box.l.r
     if law == "rebuild":
@@ -694,6 +691,10 @@ BROKEN = {
         "grammar.categorial.*Composition": "a crossed composition has none",
         "*.{Feedback,Head,Tail}": "it has no stated dagger",
         PIVOTALS + ".Trace": "its dagger is drawn with cups and caps",
+        "*.Curry": "a curry has no dagger",
+        "{closed,markov,grammar.abstract}.{Copy,Discard,Function} "
+        "comarkov.{Cofunction,Merge,Noise}": "its category has no dagger",
+        "rigid.C[ua]p": "a rigid cup or cap has none, a pivotal one has",
     },
     "rotation": {
         PIVOTALS + ".{Feedback,Trace,Head,Tail,FollowedBy} "

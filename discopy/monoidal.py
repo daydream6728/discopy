@@ -2041,14 +2041,13 @@ class Functor(cat.Functor):
             return other.to_drawing()
         if isinstance(other, Bubble) and other.method == "bubble"\
                 and issubclass(self.cod, Diagram):
-            return self.cod.bubble_factory(
-                *map(self, other.args), dom=self(other.dom),
-                cod=self(other.cod), name=other.name,
-                data=other.data, is_dagger=other.is_dagger,
-                drawing_name=other.drawing_name,
-                draw_as_frame=other.draw_as_frame,
-                draw_as_square=other.draw_as_square,
-                draw_vertically=other.draw_vertically)
+            factory = self.cod.bubble_factory
+            kept = {
+                attr: getattr(other, attr) for attr in other.serialised_attrs
+                if attr in factory.serialised_attrs
+                and attr not in ("*args", "dom", "cod", "method")}
+            return factory(*map(self, other.args), dom=self(other.dom),
+                           cod=self(other.cod), **kept)
         return super().__call__(other)
 
 

@@ -780,6 +780,9 @@ def test_Bubble_func_dagger():
     assert repr(f.bubble().dagger()) == repr(f.bubble()) + ".dagger()"
     from discopy import tensor
     assert repr(bubble).endswith(", func=abs)") and eval(repr(bubble)) == bubble
+    F = frobenius.Functor.id(Diagram)
+    assert F(bubble) == bubble and F(bubble).func is abs
+    assert F(bubble.dagger()) == bubble.dagger()
 
 
 def test_grad_equal():
