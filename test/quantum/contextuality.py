@@ -43,6 +43,8 @@ def test_Scenario():
     assert (scenario.incidence().sum(axis=0) == 2).all()
     assert eval(repr(scenario)) == scenario
     assert bell.measurements == ('a1', 'b1', 'b2', 'a2')
+    assert Scenario.bell(2, settings=(3, 1)).measurements == (
+        'a1', 'b1', 'a2', 'a3')
     assert Scenario.bell(3, settings=3).contexts[:2] == (
         ('a1', 'b1', 'c1'), ('a1', 'b1', 'c2'))
 
@@ -59,7 +61,7 @@ def test_Scenario_errors():
     with raises(ValueError):
         PR.mix(Model(Scenario([('x', 'y')]), [[1, 0, 0, 0]]), 1 / 2)
     with raises(ValueError):
-        Inequality(bell, [[0] * 4] * 4).violation(PR)
+        Scenario.bell(2, settings=(2, 2, 2))
     with raises(ValueError):
         Inequality(bell, [[1, 0, 0, 0]] * 4)(Model(
             Scenario([('x', 'y')] * 4), [[1, 0, 0, 0]] * 4))
@@ -191,3 +193,42 @@ def test_theorem_2():
     assert CF(e & f) == approx(max(CF(e), CF(f)))
     assert CF(e @ f) == approx(CF(e) + CF(f) - CF(e) * CF(f))
     assert CF(CHSH @ CHSH.relabel(cd)) == approx(7 / 16)
+
+
+triangle = Scenario([('x', 'y'), ('y', 'z'), ('z', 'x')])
+specker = Model(triangle, [[0, 1 / 2, 1 / 2, 0]] * 3)
+
+
+def test_deterministic():
+    for scenario in (bell, triangle):
+        for assignment in scenario.assignments:
+            model = Model.deterministic(scenario, assignment)
+            assert model.is_compatible()
+            assert model.contextual_fraction() == approx(0, abs=1e-9)
+            assert model.bell_inequality().violation(model) == 0
+    assert Inequality(bell, [[0] * 4] * 4).violation(PR) == 0
+    scaled = CHSH.bell_inequality()
+    scaled = Inequality(bell, 1e9 * scaled.vector.reshape(4, 4), bound=0)
+    assert scaled.violation(CHSH) == approx(1 / 4)
+    assert Inequality(bell, [[1e-12] * 4] * 4).violation(PR) == 0
+    with raises(ValueError):
+        Inequality(bell, [[1, 0, 0, 0]] * 4, bound=4).violation(
+            Model(bell, [[2, 0, 0, 0]] * 4))
+
+
+@mark.parametrize("weight", np.linspace(0, 1, 11))
+def test_isotropic(weight):
+    model = PR.mix(noise, weight)
+    fraction = model.contextual_fraction()
+    assert fraction == approx(max(0, 2 * weight - 1), abs=1e-9)
+    assert model.bell_inequality().violation(model) == approx(
+        fraction, abs=1e-9)
+
+
+def test_specker():
+    assert specker.is_compatible()
+    assert specker.contextual_fraction() == approx(1)
+    inequality = specker.bell_inequality()
+    assert inequality.non_contextual_bound == approx(0, abs=1e-9)
+    assert inequality.violation(specker) == approx(1)
+
