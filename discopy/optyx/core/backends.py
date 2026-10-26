@@ -197,10 +197,16 @@ class EvalResult:
 
     def prob_dist(
         self,
-        round_digits: int = None
+        round_digits: int = None,
+        normalise: bool = True
     ) -> ProbDist:
         """
         Get the probability distribution from the result tensor.
+
+        Args:
+            round_digits: The number of digits to round to, if any.
+            normalise: Whether to divide by the total, e.g. to condition a
+              postselected diagram on its success.
 
         Returns:
             dict: A dictionary mapping occupation
@@ -226,7 +232,7 @@ class EvalResult:
                 "or StateType.PROB."
             )
 
-        if not np.allclose(
+        if normalise and not np.allclose(
             np.sum(list(values.values())), 1, atol=1e-12
         ):
             total = float(np.sum(list(values.values())))

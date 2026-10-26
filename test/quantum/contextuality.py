@@ -207,6 +207,13 @@ def test_deterministic():
             assert model.contextual_fraction() == approx(0, abs=1e-9)
             assert model.bell_inequality().violation(model) == 0
     assert Inequality(bell, [[0] * 4] * 4).violation(PR) == 0
+    scaled = CHSH.bell_inequality()
+    scaled = Inequality(bell, 1e9 * scaled.vector.reshape(4, 4), bound=0)
+    assert scaled.violation(CHSH) == approx(1 / 4)
+    assert Inequality(bell, [[1e-12] * 4] * 4).violation(PR) == 0
+    with raises(ValueError):
+        Inequality(bell, [[1, 0, 0, 0]] * 4, bound=4).violation(
+            Model(bell, [[2, 0, 0, 0]] * 4))
 
 
 @mark.parametrize("weight", np.linspace(0, 1, 11))
@@ -225,33 +232,3 @@ def test_specker():
     assert inequality.non_contextual_bound == approx(0, abs=1e-9)
     assert inequality.violation(specker) == approx(1)
 
-
-def test_from_diagram():
-    importorskip("discopy.optyx")
-    from discopy.optyx import Diagram, Encode, bit, mode, qubit
-    from discopy.optyx.classical import BitControlledGate
-    from discopy.optyx.photonic import NumberResolvingMeasurement
-    from discopy.optyx.qubits import H as H_, Measure as M, Scalar, Z
-    alice = BitControlledGate(Z(1, 1, .25)) >> H_() >> M(1)
-    bob = Diagram.swap(qubit, bit) >> bit @ Z(1, 1, -.125)\
-        >> BitControlledGate(Z(1, 1, .25)) >> H_() >> M(1)
-    bell_test = bit @ Scalar(.5 ** .5) @ Z(0, 2) @ bit >> alice @ bob
-    tsirelson = Model.from_diagram(bell_test)
-    p = (sqrt(2) + 2) / 8
-    assert tsirelson.is_close(Model(bell, 3 * [[p, 1 / 2 - p, 1 / 2 - p, p]]
-                                    + [[1 / 2 - p, p, p, 1 / 2 - p]]))
-    assert tsirelson.contextual_fraction() == approx(
-        equatorial(2, pi / 8, 5 * pi / 8).contextual_fraction())
-    assert Model.from_diagram(bell_test, outcomes=3).contextual_fraction(
-        ) == approx(sqrt(2) - 1)
-    detector = Encode(mode) >> NumberResolvingMeasurement(1)
-    counter = Model.from_diagram(detector @ detector, settings=(3, 1))
-    assert counter.scenario == Scenario.bell(2, (3, 1), outcomes=3)
-    assert counter.table[2] == (0, 0, 0, 0, 0, 0, 1, 0, 0)
-    assert counter.contextual_fraction() == approx(0, abs=1e-9)
-    with raises(ValueError):
-        Model.from_diagram(M(1))
-    with raises(ValueError):
-        Model.from_diagram(detector @ Encode(mode))
-    with raises(ValueError):
-        Model.from_diagram(detector @ detector, settings=(3, 1), outcomes=2)

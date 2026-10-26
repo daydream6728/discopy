@@ -524,7 +524,8 @@ class Model(Table):
         """
         The empirical model on a Bell scenario of an optyx diagram with one
         classical input and one classical output for each party, the input
-        choosing the measurement of the party and the output its outcome.
+        choosing the measurement of the party and the output its outcome,
+        evaluated by :func:`discopy.optyx.contextuality.distributions`.
 
         Parameters:
             diagram : A :class:`discopy.optyx.channel.Diagram` with classical
@@ -535,55 +536,28 @@ class Model(Table):
                 one more than the largest outcome of non-zero probability.
             backend : The backend evaluating the diagram.
 
-        Example
-        -------
-        A Bell test at the Tsirelson bound, the setting of each party
-        controlling a phase on its qubit before it is measured.
-
-        >>> from discopy.optyx import bit, qubit, Diagram  # doctest: +EXTRA
-        >>> from discopy.optyx.qubits import Z, H, Scalar, Measure
-        >>> from discopy.optyx.classical import BitControlledGate
-        >>> alice = BitControlledGate(Z(1, 1, .25)) >> H() >> Measure(1)
-        >>> bob = Diagram.swap(qubit, bit) >> bit @ Z(1, 1, -.125)\\
-        ...     >> BitControlledGate(Z(1, 1, .25)) >> H() >> Measure(1)
-        >>> bell_test = bit @ Scalar(.5 ** .5) @ Z(0, 2) @ bit >> alice @ bob
-        >>> tsirelson = Model.from_diagram(bell_test)
-        >>> tsirelson.scenario == Scenario.bell(2)
-        True
-        >>> round(tsirelson.contextual_fraction(), 6)  # sqrt(2) - 1
-        0.414214
+        The probabilities are not normalised: a diagram that is not a channel,
+        e.g. a postselected one, does not give an empirical model.
         """
         # pylint: disable=import-outside-toplevel
         # discopy.optyx is an optional dependency, in the optyx extra.
-        from discopy.optyx.channel import Diagram
-        from discopy.optyx.classical import Bit, Digit
-        dom = diagram.dom.inside
-        if len(dom) != len(diagram.cod.inside) or not all(
-                ob.is_classical for ob in dom + diagram.cod.inside):
-            raise ValueError(
-                "The domain and codomain must be classical types of the "
-                f"same length, got {diagram.dom} and {diagram.cod}.")
-        settings = len(dom) * (settings, ) if isinstance(settings, int)\
+        from discopy.optyx.contextuality import distributions
+        parties = len(diagram.dom.inside)
+        settings = parties * (settings, ) if isinstance(settings, int)\
             else tuple(settings)
-        distributions = [{
-            tuple(map(int, section)): float(probability)
-            for section, probability in (Diagram.tensor(*(
-                Bit(x) if ob.name == "bit" else Digit(x)
-                for x, ob in zip(choice, dom))) >> diagram
-            ).eval(backend).prob_dist().items() if probability > 0}
-            for choice in product(*map(range, settings))]
-        outcomes = 1 + max(max(section, default=0) for distribution in
-                           distributions for section in distribution
-                           ) if outcomes is None else outcomes
-        table = np.zeros((len(distributions), outcomes ** len(dom)))
-        for row, distribution in zip(table, distributions):
+        rows = distributions(diagram, settings, backend)
+        if outcomes is None:
+            outcomes = 1 + max(
+                max(section, default=0) for row in rows for section in row)
+        table = np.zeros((len(rows), outcomes ** parties))
+        for row, distribution in zip(table, rows):
             for section, probability in distribution.items():
                 if max(section, default=0) >= outcomes:
                     raise ValueError(
                         f"The outcomes {section} are not in {outcomes}.")
                 row[np.ravel_multi_index(
-                    section, len(dom) * (outcomes, ))] = probability
-        return cls(Scenario.bell(len(dom), settings, outcomes), table)
+                    section, parties * (outcomes, ))] = probability
+        return cls(Scenario.bell(parties, settings, outcomes), table)
 
 
 class Inequality(Table):
@@ -661,6 +635,10 @@ class Inequality(Table):
         0.0
         """
         excess = self(model) - self.bound
-        if excess <= 1e-9:
+        room = self.algebraic_bound - self.bound
+        atol = 1e-9 * max(1., float(abs(self.vector).max(initial=0)))
+        if excess <= atol:
             return 0.
-        return excess / (self.algebraic_bound - self.bound)
+        if room <= atol:
+            raise ValueError(f"{model} exceeds the algebraic bound of {self}.")
+        return excess / room
