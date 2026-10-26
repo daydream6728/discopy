@@ -229,6 +229,8 @@ def test_empty_sum_keeps_its_types():
     assert not double.terms
     assert not np.any(zero.eval().tensor.array)
     assert not np.any(double.to_tensor().eval().array)
+    with pytest.raises(AssertionError):
+        zero.get_kraus().to_tensor([2, 3])
 
 
 def test_inflate_keeps_the_environment():

@@ -984,7 +984,12 @@ class Sum(symmetric.Sum, Box):
 
     def to_tensor(self, input_dims=None):
         if not self.terms:
-            dom = Dim(*input_dims or [2] * len(self.dom))
+            input_dims = [2] * len(self.dom) if input_dims is None \
+                else input_dims
+            assert len(self.dom) == len(input_dims), (
+                "Input dims length does not match number of input wires"
+            )
+            dom = Dim(*input_dims)
             cod = Dim(*[2] * len(self.cod))
             return tensor.Box(
                 "0", dom, cod,
