@@ -74,6 +74,20 @@ def test_trace_error():
         Box('f', 'x', 'y').trace()
 
 
+def test_trace_out_of_range():
+    from discopy import compact
+    from discopy.matrix import Matrix
+    from discopy.python import additive
+    x = compact.Ty('x')
+    f = compact.Box('f', x @ x, x @ x)
+    g = additive.Function(lambda i, tag=0: (i, tag), (int, int), (int, int))
+    for traced in (Box('f', 'x', 'x'), f, f.to_hypergraph(), f.to_drawing(),
+                   Matrix[bool].swap(1, 1), g):
+        for n in (3, -1):
+            with raises(ValueError):
+                traced.trace(n)
+
+
 def test_trace_dagger():
     f = Box('f', 'x', 'x')
     assert f.trace().dagger() == f.dagger().trace()
@@ -247,30 +261,20 @@ def test_types_without_wires_are_their_own_delay():
 def test_feedback_laws_on_a_traced_category():
     from discopy import compact
     from discopy.abc import FeedbackCategory
-    from discopy.axioms import Loop
     C = compact.CMap
     x, y, m, n, w, z = map(compact.Ty, "xymnwz")
     box = lambda name, dom, cod: compact.Box(name, dom, cod).to_map()
     f = box('f', x @ m @ n, y @ m @ n)
-    loop = Loop[C](
-        x, y, m, n, f, box('g', w, x), box('h', y, z),
-        box('k', m @ n, m @ n), box('e', w, z))
-    for law in ("vanishing", "joining", "strength", "tightening", "sliding"):
-        args = (f, ) if law == "vanishing" else (loop, )
+    g, h, k, e = box('g', w, x), box('h', y, z), box(
+        'k', m @ n, m @ n), box('e', w, z)
+    for law, arguments in (
+            ("vanishing", dict(f=f)),
+            ("joining", dict(f=f, x=x, y=y, m=m, n=n)),
+            ("strength", dict(e=e, f=f, x=x, y=y, m=m @ n)),
+            ("tightening", dict(f=f, g=g, h=h, x=x, y=y, m=m @ n)),
+            ("sliding", dict(f=f, k=k, x=x, y=y, m=m @ n))):
         axiom = getattr(FeedbackCategory, law).bind(C)
-        assert axiom.modulo(C.to_hypergraph)(*args)
-
-
-def test_Loop_strategy_takes_the_boundary_it_draws():
-    from hypothesis import find
-    from discopy.axioms import Loop
-    from discopy.matrix import Matrix
-    from unittest.mock import patch
-    M = Matrix[bool]
-    with patch.object(M, "delay", lambda self, n_steps=1: self, create=True):
-        loop = find(Loop[M].strategy(dom=M.ob(1)), lambda _: True)
-    x, y, m, n, f, *_ = loop
-    assert (f.dom, f.cod) == (x @ m @ n, y @ m @ n)
+        assert axiom.modulo(C.to_hypergraph)(**arguments)
 
 
 def test_split_memory_bounds():
@@ -291,6 +295,8 @@ def test_delayed_dagger():
     assert f.delay().dagger().dagger() == f.delay()
     for box in (f.delay().dagger(), f.dagger().delay(2)):
         assert eval(repr(box)) == box
+    wire = Wire('x').delay().dagger()
+    assert eval(repr(wire), {'feedback': feedback}).to_tree() == wire.to_tree()
 
 
 def test_traced_wildcard_import():
@@ -396,6 +402,21 @@ def test_heads_of_pivotal_types():
             assert loads(dumps(term)) == term
 
 
+def test_structural_boxes_have_no_time_step():
+    from discopy import closed, markov
+    from discopy.quantum.gates import CX, Copy, Match
+    assert Copy().delay(2).time_step == Match().delay(2).time_step == 2
+    assert Copy().delay(2).reset() == Copy()
+    x, y = closed.Ty('x'), closed.Ty('y')
+    copy = markov.Copy(x).delay(42)
+    assert copy.time_step is None and copy.dom == x.delay(42)
+    assert copy.reset() == copy and str(copy) == "Copy(x.delay(42))"
+    assert Box('f', x, x).delay(42).time_step == 42
+    assert closed.Eval(x << y).delay(2).time_step == 2
+    assert closed.Eval(x << y).delay(2).reset() == closed.Eval(x << y)
+    assert CX.delay(2).time_step == 2 and CX.delay(2).reset() == CX
+
+
 def test_structural_boxes_delay_through_their_arguments():
     import pickle
     from discopy import (
@@ -411,8 +432,9 @@ def test_structural_boxes_delay_through_their_arguments():
             (balanced.Braid(x, y, is_dagger=True),
              balanced.Braid(x.d, y.d, is_dagger=True)),
             (balanced.Twist(x).dagger(), balanced.Twist(x.d).dagger())):
-        assert box.delay() == delayed and box.delay().time_step == 0
+        assert box.delay() == delayed and box.delay().time_step is None
         assert box.delay(2) == box.delay().delay()
+        assert box.delay(2).reset() == box.delay(2)
         assert pickle.loads(pickle.dumps(box)) == box
     z = pivotal.Ty('z')
     for box in (pivotal.Cup(z, z.r), pivotal.Cap(z.r, z)):

@@ -64,6 +64,9 @@ uv run coverage report -m
 
 Without the extras installed, run `uv run pytest --skip-extra` to skip what needs them.
 
+`coverage report` fails below the `fail_under` of `pyproject.toml`, measured on `discopy/`
+alone: without the extras the local number is lower, and CI's `Coverage` step is the gate.
+
 A sandboxed environment can block some of the extras outright (e.g. no network access to fetch
 the `torch`/`pytket` wheels, no `graphviz` binary), so `--skip-extra` may still leave a fixed set
 of environment-only failures that look identical to a real regression. Diff the failure set
@@ -105,8 +108,17 @@ shorter, targeted tests.
 
 ```shell
 uv run pytest proptest/ -k unitality -v
-uv run pytest proptest/ -k 'Arrow and not typing'
+uv run pytest proptest/ -k 'Arrow and not dagger'
 ```
+
+A law's signature is a sequent, e.g.
+`def unitality[A: Obj[C0], B: Obj[C0]](cls, f: Hom[C1, A, B]) ->
+Equation[Hom[C1, A, B]]`: the cell draws the objects `A` and `B`, then a
+morphism `f` between them from the strategy of the category, and checks
+the equation it returns against its return annotation as well as checking
+that it holds. Under `from __future__ import annotations` the sequent is
+read back from its strings, with the type parameters of the class stating
+it in scope.
 
 A cell is skipped when its axiom declares that the structure does not
 apply, and xfailed when the law is declared broken, each carrying its
@@ -141,12 +153,13 @@ what it actually checked, and every line of it is a report rather than a
 gate:
 
 - **the cells that cannot fail**, i.e. those that drew fewer distinct terms
-  than the budget allowed. `cat.Arrow.identity_typing` quantifies over one
-  object and `Ob.strategy` samples `axioms.GENERATORS`, so it draws five
-  terms under `pr`'s twenty examples and the same five under `explore`'s
-  thousand: it is green about `Ob('a')` through `Ob('e')` and says nothing
-  about the law. A finite support is not a bug — knowing which cells have
-  one is what stops a passing cell being read as evidence a fix is right.
+  than the budget allowed. `matrix.Matrix[int].copy_counitality`
+  quantifies over one object and `abc.Nat.strategy` samples the numbers up
+  to three, so it draws four terms under `pr`'s twenty examples and the
+  same four under `explore`'s thousand: it is green about copying zero to
+  three wires and says nothing about the law at four. A finite support is
+  not a bug — knowing which cells have one is what stops a passing cell
+  being read as evidence a fix is right.
 - **the cells a baseline checked and this run did not**, named with
   `--proptest-baseline`. A law skipped as inapplicable or declared broken is
   as green as one that held, so a change that stops checking a law reads
@@ -185,10 +198,13 @@ compared against.
 
 `benchmark/test_composition.py` reproduces the scaling experiments of
 arXiv:2105.09257 for `Diagram` and `Hypergraph`, with analogous `CMap` cases;
-`benchmark/test_conversion.py` covers conversions between all three. They live
-outside `testpaths`, so run them explicitly. Results are keyed by suite
-(`composition` or `conversion`), family (representation or conversion), case
-(workload) and size `n`. Each data point is a declarative
+`benchmark/test_conversion.py` covers conversions between all three, and
+`benchmark/test_zx.py` races `quantum.graphlike.full_reduce` against PyZX's,
+skipped without PyZX: run it with `uv run --with "pyzx==0.10.7"`, as the
+workflow does. They live outside `testpaths`, so run them explicitly. Results
+are keyed by suite (`composition`, `conversion` or `zx`), family
+(representation, conversion or implementation), case (workload) and size
+`n`. Each data point is a declarative
 [`pytest-benchmark`](https://pytest-benchmark.readthedocs.io) test; the fixture
 owns timing (CPU clock and GC disabled) and automatically calibrates rounds
 and iterations for each workload.
@@ -196,7 +212,8 @@ and iterations for each workload.
 ```shell
 uv sync --group dev
 # small/medium sizes (the default); add BENCH_FLAGS=bench:full for the heavy tail
-uv run pytest benchmark/ -v --benchmark-json=benchmark-results/bench.json
+uv run --with "pyzx==0.10.7" pytest benchmark/ -v \
+    --benchmark-json=benchmark-results/bench.json
 # render the scaling tables + log-log plots (polars + matplotlib)
 uv run python benchmark/report.py benchmark-results/bench.json
 ```
@@ -239,9 +256,17 @@ uv sync --group docs
 uv run sphinx-build docs docs/_build/html
 ```
 
+You do not need to build them to see what a pull request changes: Read the Docs
+builds every pull request, the marimo notebooks included, and its check on the
+pull request links to the preview, at
+`https://discopy--<number>.org.readthedocs.build/en/<number>/`.
+The `docs` artifact of the `build` workflow is the same build, to download, but
+its notebooks do not show when opened from disk
+([#526](https://github.com/discopy/discopy/issues/526)).
+
 ## Build without uv
 
-The project uses the `uv_build` PEP 517 build backend, so package builds still work from standard Python tooling.
+The project uses the `setuptools` PEP 517 build backend, with its version read from git by `setuptools-scm`, so package builds work from standard Python tooling.
 If you do not use `uv`, create a virtual environment and install the relevant extras manually:
 
 ```shell

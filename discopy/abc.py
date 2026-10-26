@@ -14,8 +14,10 @@ forgetful functors between categories go the other way.
 
 Each class also declares its :func:`discopy.axioms.axiom` equations, which
 every free category inherits along with the structure they axiomatise:
-:class:`Category` states the unitality and associativity of composition
-and the typing of its identities and composites; a :class:`DaggerCategory`
+:class:`Category` states the unitality and associativity of composition; a
+law quantifies over the type parameters of its signature, objects of the
+category, and over morphisms between them, see
+:class:`discopy.axioms.Declaration`; a :class:`DaggerCategory`
 adds the involution and contravariance of its dagger; a
 :class:`ColouredMonoid` inherits the first two as the unitality and
 associativity of its product, its composition; a :class:`Groupoid` is a
@@ -38,6 +40,7 @@ Summary
     Group
     Nat
     MonoidalCategory
+    SpacialCategory
     PRO
     FeedbackCategory
     TracedCategory
@@ -76,11 +79,12 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from functools import wraps
 from inspect import signature
-from typing import ClassVar, Self
+from types import NoneType
+from typing import ClassVar
 
 from discopy import messages
 from discopy.axioms import (
-    ComposablePair, ComposableTriple, Equation, Loop, Testable, axiom)
+    Delay, Equation, Hom, Obj, Tensor, Testable, Unit, Var, axiom)
 from discopy.utils import (  # noqa: F401  pylint: disable=unused-import
     AxiomError, NamedGeneric, classproperty, factory_name)
 
@@ -110,6 +114,20 @@ class Category[C0, C1: Category](ABC):
     #: Backward-compatible alias for :attr:`factory`, since types are
     #: themselves the objects of diagrams.
     ar = classproperty(lambda cls: getattr(cls, "factory", cls))
+
+    @classmethod
+    def typeparams(cls) -> tuple[type, type]:
+        """
+        What the type parameters of the category stand for, in order: its
+        objects ``C0`` and its arrows ``C1``, so that a sequent stated with
+        them reads as one of the category it is bound to, see
+        :func:`discopy.axioms.position`.
+
+        >>> from discopy.monoidal import Ty, Diagram
+        >>> assert Diagram.typeparams() == (Ty, Diagram)
+        >>> assert Nat.typeparams() == (NoneType, Nat)
+        """
+        return cls.ob, cls.ar
 
     @classmethod
     def equation_factory(cls, *terms) -> Equation:
@@ -164,40 +182,19 @@ class Category[C0, C1: Category](ABC):
         return (self.dom, self.cod) == (other.dom, other.cod)
 
     @axiom
-    def unitality(
-            cls, f: C1) -> Equation[C1]:
+    def unitality[A: Obj[C0], B: Obj[C0]](
+            cls, f: Hom[C1, A, B]) -> Equation[Hom[C1, A, B]]:
         """ Left and right unitality of composition. """
         return cls.equation_factory(
             cls.id(f.dom).then(f), f, f.then(cls.id(f.cod)))
 
     @axiom
-    def associativity(
-            cls, triple: ComposableTriple[C1]) -> Equation[C1]:
+    def associativity[A: Obj[C0], B: Obj[C0], C: Obj[C0], D: Obj[C0]](
+            cls, f: Hom[C1, A, B], g: Hom[C1, B, C], h: Hom[C1, C, D]
+    ) -> Equation[Hom[C1, A, D]]:
         """ Associativity of composition. """
-        f, g, h = triple
         return cls.equation_factory(
             f.then(g).then(h), f.then(g.then(h)))
-
-    @axiom
-    def identity_typing(
-            cls, x: C0) -> Equation[C0]:
-        """ Typing of identity morphisms. """
-        identity = cls.id(x)
-        return cls.ob.equation_factory(identity.dom, x, identity.cod)
-
-    @axiom
-    def composition_dom_typing(
-            cls, pair: ComposablePair[C1]) -> Equation[C0]:
-        """ Domain typing of composition. """
-        f, g = pair
-        return cls.ob.equation_factory(f.then(g).dom, f.dom)
-
-    @axiom
-    def composition_cod_typing(
-            cls, pair: ComposablePair[C1]) -> Equation[C0]:
-        """ Codomain typing of composition. """
-        f, g = pair
-        return cls.ob.equation_factory(f.then(g).cod, g.cod)
 
     __rshift__ = __llshift__ = lambda self, other: self.then(other)
     __lshift__ = __lrshift__ = lambda self, other: other.then(self)
@@ -219,16 +216,16 @@ class DaggerCategory[C0, C1: DaggerCategory](Category[C0, C1]):
         """ The dagger of a morphism, to be instantiated. """
 
     @axiom
-    def dagger_involution(
-            cls, f: C1) -> Equation[C1]:
+    def dagger_involution[A: Obj[C0], B: Obj[C0]](
+            cls, f: Hom[C1, A, B]) -> Equation[Hom[C1, A, B]]:
         """ The dagger is involutive. """
         return cls.equation_factory(f.dagger().dagger(), f)
 
     @axiom
-    def dagger_contravariance(
-            cls, pair: ComposablePair[C1]) -> Equation[C1]:
+    def dagger_contravariance[A: Obj[C0], B: Obj[C0], C: Obj[C0]](
+            cls, f: Hom[C1, A, B], g: Hom[C1, B, C]
+    ) -> Equation[Hom[C1, C, A]]:
         """ The dagger reverses composition. """
-        f, g = pair
         return cls.equation_factory(
             f.then(g).dagger(), g.dagger().then(f.dagger()))
 
@@ -301,6 +298,7 @@ class ColouredMonoid[C0, C1: ColouredMonoid](Category[C0, C1]):
 
 class Monoid[C1: Monoid](ColouredMonoid[type(None), C1]):
     """ A monoid is a coloured monoid with a single, trivial colour. """
+    ob = NoneType
 
 
 class Groupoid[C0, C1: Groupoid](DaggerCategory[C0, C1]):
@@ -313,8 +311,9 @@ class Groupoid[C0, C1: Groupoid](DaggerCategory[C0, C1]):
         """ The inverse of an arrow. """
 
     @axiom
-    def invertibility(
-            cls, f: C1) -> Equation[C1]:
+    def invertibility[A: Obj[C0], B: Obj[C0]](
+            cls, f: Hom[C1, A, B]
+    ) -> Equation[tuple[Hom[C1, A, A], Hom[C1, B, B]]]:
         """ An arrow followed or preceded by its dagger is an identity. """
         return cls.equation_factory(
             (f.then(f.dagger()), f.dagger().then(f)),
@@ -327,13 +326,6 @@ class Group[C1: Group](Groupoid[type(None), C1], Monoid[C1]):
     a single object :obj:`None`, which every element goes from and to.
     """
     dom = cod = None
-
-    identity_typing = Category.identity_typing.inapplicable(
-        "A group has a single object.")
-    composition_dom_typing = Category.composition_dom_typing.inapplicable(
-        "A group has a single object.")
-    composition_cod_typing = Category.composition_cod_typing.inapplicable(
-        "A group has a single object.")
 
 
 @dataclass
@@ -417,14 +409,20 @@ class MonoidalCategory[C0: ColouredMonoid, C1: MonoidalCategory](
         if "trace" in vars(cls):
             cls.trace = keyword_form(vars(cls)["trace"])
 
-    @classmethod
     @abstractmethod
-    def tensor(cls, *morphisms: C1) -> C1:
+    def tensor(self, *others: C1) -> C1:
         """
-        Parallel composition of ``n >= 0`` morphisms, to be instantiated.
+        Parallel composition with ``n >= 0`` other morphisms, to be
+        instantiated.
 
         Parameters:
-            other : The other morphism to compose in parallel.
+            others : The other morphisms to compose in parallel.
+
+        Example
+        -------
+        >>> from discopy.monoidal import Ty, Box
+        >>> f, g = Box('f', Ty('x'), Ty('y')), Box('g', Ty('y'), Ty('z'))
+        >>> assert f.tensor() == f and f.tensor(g, f) == f @ g @ f
         """
 
     @classmethod
@@ -496,6 +494,23 @@ class MonoidalCategory[C0: ColouredMonoid, C1: MonoidalCategory](
         return len(mem)
 
 
+class SpacialCategory[C0, C1](MonoidalCategory[C0, C1]):
+    """
+    A spacial category is a :class:`MonoidalCategory` where scalars slide:
+    a scalar ``s : I -> I`` on the left of any morphism is the same scalar on
+    its right, see :cite:t:`Selinger10`. Its diagrams are planar up to the
+    face each scalar lies in, i.e. a component that touches nothing else can
+    be lifted out of the plane and put down anywhere, see
+    :meth:`discopy.cmap.CMap.match`.
+    """
+    @axiom
+    def scalar_sliding[A: Obj[C0], B: Obj[C0]](
+            cls, scalar: Hom[C1, Unit[C0], Unit[C0]], f: Hom[C1, A, B])\
+            -> Equation[Hom[C1, A, B]]:
+        """ A scalar on the left of a morphism is a scalar on its right. """
+        return cls.equation_factory(scalar @ f, f @ scalar)
+
+
 class PRO[C1: PRO](MonoidalCategory[Nat, C1]):
     """
     A PRO is a :class:`MonoidalCategory` whose objects are the natural
@@ -546,44 +561,57 @@ class FeedbackCategory[C0, C1](MonoidalCategory[C0, C1]):
         """
 
     @axiom
-    def vanishing(cls, f: C1) -> Equation[C1]:
+    def vanishing[A: Obj[C0], B: Obj[C0]](
+            cls, f: Hom[C1, A, B]) -> Equation[Hom[C1, A, B]]:
         """ Feeding back the unit does nothing. """
         return cls.equation_factory(f.feedback(0), f)
 
     @axiom
-    def joining(cls, loop: Loop[Self]) -> Equation[C1]:
+    def joining[X: Obj[C0], Y: Obj[C0], M: Obj[C0], N: Obj[C0]](
+            cls, f: Hom[C1, Tensor[X, Delay[C1, Tensor[M, N]]],
+                        Tensor[Y, M, N]],
+            x: Var[C0, X], y: Var[C0, Y], m: Var[C0, M], n: Var[C0, N]
+    ) -> Equation[Hom[C1, X, Y]]:
         """ Feeding back a tensor is feeding back its factors in turn. """
-        x, y, m, n, f, *_ = loop
         return cls.equation_factory(
             f.feedback(dom=x, cod=y, mem=m @ n),
             f.feedback(dom=x @ cls.id(m).delay().dom, cod=y @ m, mem=n
                        ).feedback(dom=x, cod=y, mem=m))
 
     @axiom
-    def strength(cls, loop: Loop[Self]) -> Equation[C1]:
+    def strength[
+            U: Obj[C0], V: Obj[C0], X: Obj[C0], Y: Obj[C0], M: Obj[C0]](
+            cls, e: Hom[C1, U, V],
+            f: Hom[C1, Tensor[X, Delay[C1, M]], Tensor[Y, M]],
+            x: Var[C0, X], y: Var[C0, Y], m: Var[C0, M]
+    ) -> Equation[Hom[C1, Tensor[U, X], Tensor[V, Y]]]:
         """ Feedback commutes with tensoring a morphism on the left. """
-        x, y, m, n, f, *_, e = loop
         return cls.equation_factory(
-            e @ f.feedback(dom=x, cod=y, mem=m @ n),
-            (e @ f).feedback(dom=e.dom @ x, cod=e.cod @ y, mem=m @ n))
+            e @ f.feedback(dom=x, cod=y, mem=m),
+            (e @ f).feedback(dom=e.dom @ x, cod=e.cod @ y, mem=m))
 
     @axiom
-    def tightening(cls, loop: Loop[Self]) -> Equation[C1]:
+    def tightening[
+            W: Obj[C0], X: Obj[C0], Y: Obj[C0], Z: Obj[C0], M: Obj[C0]](
+            cls, f: Hom[C1, Tensor[X, Delay[C1, M]], Tensor[Y, M]],
+            g: Hom[C1, W, X], h: Hom[C1, Y, Z],
+            x: Var[C0, X], y: Var[C0, Y], m: Var[C0, M]
+    ) -> Equation[Hom[C1, W, Z]]:
         """ Feedback is natural in its domain and its codomain. """
-        x, y, m, n, f, g, h, *_ = loop
-        delayed = cls.id(m @ n).delay()
         return cls.equation_factory(
-            (g @ delayed >> f >> h @ (m @ n)).feedback(
-                dom=g.dom, cod=h.cod, mem=m @ n),
-            g >> f.feedback(dom=x, cod=y, mem=m @ n) >> h)
+            (g @ cls.id(m).delay() >> f >> h @ m).feedback(
+                dom=g.dom, cod=h.cod, mem=m),
+            g >> f.feedback(dom=x, cod=y, mem=m) >> h)
 
     @axiom
-    def sliding(cls, loop: Loop[Self]) -> Equation[C1]:
+    def sliding[X: Obj[C0], Y: Obj[C0], M: Obj[C0]](
+            cls, f: Hom[C1, Tensor[X, Delay[C1, M]], Tensor[Y, M]],
+            k: Hom[C1, M, M], x: Var[C0, X], y: Var[C0, Y], m: Var[C0, M]
+    ) -> Equation[Hom[C1, X, Y]]:
         """ A morphism on the memory slides along the feedback, delayed. """
-        x, y, m, n, f, *_, k, _ = loop
         return cls.equation_factory(
-            (f >> y @ k).feedback(dom=x, cod=y, mem=m @ n),
-            (x @ k.delay() >> f).feedback(dom=x, cod=y, mem=m @ n))
+            (f >> y @ k).feedback(dom=x, cod=y, mem=m),
+            (x @ k.delay() >> f).feedback(dom=x, cod=y, mem=m))
 
 
 def keyword_form(trace: Callable) -> Callable:
@@ -597,9 +625,11 @@ def keyword_form(trace: Callable) -> Callable:
     The domain is checked on the result, since the boundary takes in the
     delay of the memory when the trace is the
     :meth:`TracedCategory.feedback` of a category that labels the two apart,
-    e.g. a :class:`discopy.drawing.Drawing`. A method that takes ``mem``
-    already is returned as it is, so that a class wraps the trace it defines
-    once, whichever trace that one calls.
+    e.g. a :class:`discopy.drawing.Drawing`. The positional form is split
+    too, so that an ``n`` the boundary cannot spare raises ``ValueError`` in
+    either form. A method that takes ``mem`` already is returned as it is,
+    so that a class wraps the trace it defines once, whichever trace that
+    one calls.
 
     Parameters:
         trace : The method in its positional form.
@@ -610,6 +640,10 @@ def keyword_form(trace: Callable) -> Callable:
     >>> f = Matrix[bool]([[1, 1], [0, 0]], 2, 2)
     >>> assert f.trace(mem=1) == f.trace() != f.trace(mem=1, left=True)
     >>> assert keyword_form(Matrix.trace) is Matrix.trace
+    >>> f.trace(3)
+    Traceback (most recent call last):
+        ...
+    ValueError: Cannot split 3 atoms off 2.
     """
     if "mem" in signature(trace).parameters:
         return trace
@@ -618,6 +652,7 @@ def keyword_form(trace: Callable) -> Callable:
     def method(self, n: int = None, left: bool = False, *,
                dom=None, cod=None, mem=None):
         if (dom, cod, mem) == (None, None, None):
+            self.split_memory(n, left)
             return trace(self, left=left) if n is None\
                 else trace(self, n, left)
         dom, cod, mem = self.split_memory(
@@ -672,7 +707,8 @@ class TracedCategory[C0, C1](FeedbackCategory[C0, C1]):
         return self.trace(n, left, dom=dom, cod=cod, mem=mem)
 
     @axiom
-    def yanking(cls, x: C0) -> Equation[C1]:
+    def yanking[X: Obj[C0]](
+            cls, x: Var[C0, X]) -> Equation[Hom[C1, X, X]]:
         """
         Tracing the swap of an object with itself gives its identity, the
         yanking axiom of a symmetric traced category: a braided one states it
@@ -745,10 +781,11 @@ class BiclosedCategory[
         """
         # pylint: disable=unused-argument  # the exponential says the side
         if not self.cod.is_exp:
-            raise ValueError
+            raise ValueError(messages.NOT_EXPONENTIAL.format(self, self.cod))
         base, exponent = self.cod.base, self.cod.exponent
         if n < len(exponent):
-            raise ValueError
+            raise ValueError(messages.NOT_UNCURRIABLE.format(
+                n, len(exponent), self.cod))
         return base, exponent
 
     def uncurry(self, n: int = 1, left: bool = True) -> C1:
@@ -762,7 +799,7 @@ class BiclosedCategory[
             left : Whether to uncurry on the left or right.
         """
         if n < 0:
-            raise ValueError
+            raise ValueError(messages.NOT_SPLITTABLE.format(n, self.cod))
         if not n:
             return self
         base, exponent = self.base_and_exponent(n, left)
@@ -862,7 +899,7 @@ class RigidCategory[C0: Pregroup, C1: RigidCategory](BiclosedCategory[C0, C1]):
             left : Whether to curry on the left or right.
         """
         if n < 0 or n > len(self.dom):
-            raise ValueError
+            raise ValueError(messages.NOT_SPLITTABLE.format(n, self.dom))
         if not n:
             return self
         if left:
@@ -882,7 +919,7 @@ class RigidCategory[C0: Pregroup, C1: RigidCategory](BiclosedCategory[C0, C1]):
             left : Whether to uncurry on the left or right.
         """
         if n > len(self.cod):
-            raise ValueError
+            raise ValueError(messages.NOT_SPLITTABLE.format(n, self.cod))
         return (self.cod[:-n], self.cod[-n:].r) if left\
             else (self.cod[n:], self.cod[:n].l)
 
@@ -924,10 +961,11 @@ class PivotalCategory[C0, C1](RigidCategory[C0, C1], TracedCategory[C0, C1]):
         messages.PLANAR_YANKING)
 
 
-class BraidedCategory[C0, C1](MonoidalCategory[C0, C1]):
+class BraidedCategory[C0, C1](SpacialCategory[C0, C1]):
     """
     A braided category is a :class:`MonoidalCategory` with a method
-    :code:`braid` for the natural isomorphism :code:`x @ y -> y @ x`.
+    :code:`braid` for the natural isomorphism :code:`x @ y -> y @ x`. It is
+    a :class:`SpacialCategory`: a scalar slides along the braid of the unit.
     """
     @classmethod
     @abstractmethod
@@ -969,7 +1007,7 @@ class SymmetricCategory[C0, C1](BraidedCategory[C0, C1]):
         """ Compose swaps to permute the atomic objects in ``dom``. """
         xs, doms = list(xs), list(doms)
         if list(range(len(doms))) != sorted(xs):
-            raise ValueError
+            raise ValueError(messages.WRONG_PERMUTATION.format(len(doms), xs))
         tensor = lambda objects: cls.ob().tensor(*objects)
         result, done = cls.id(tensor(doms)), cls.ob()
         while xs != list(range(len(xs))):
@@ -1032,28 +1070,64 @@ class MarkovCategory[C0, C1](SymmetricCategory[C0, C1]):
         """
         return cls.copy(x, 0)
 
+    @classmethod
+    def function(cls, xs: Sequence[int], doms: Sequence[C0]) -> C1:
+        """
+        Copy, discard and permute the objects in ``doms`` so that output
+        ``i`` is a copy of ``doms[xs[i]]``: the copies of each object, as
+        many as the outputs that read it, then the permutation that puts
+        each copy in its place, see
+        :meth:`discopy.python.finset.Function.factorise`.
+
+        Parameters:
+            xs : The object of ``doms`` that each output reads.
+            doms : The objects to copy, discard and permute.
+        """
+        from discopy.python.finset import Function
+        doms = list(doms)
+        counts, perm = Function(xs, len(doms), len(xs)).factorise()
+        copies = list(map(cls.copy, doms, counts)) or [cls.id(cls.ob())]
+        return copies[0].tensor(*copies[1:]) >> cls.permutation(
+            perm, [dom for dom, n in zip(doms, counts) for _ in range(n)])
+
+    @classmethod
+    def from_function(cls, func: Sequence[int], dom: C0) -> C1:
+        """
+        The function on the atomic objects of ``dom`` by :meth:`function`;
+        a free category overrides it with a native box, see
+        :meth:`discopy.markov.Diagram.from_function`.
+        """
+        return cls.function(func, [dom[i:i + 1] for i in range(len(dom))])
+
     @axiom
-    def copy_coassociativity(cls, x: C0) -> Equation[C1]:
+    def copy_coassociativity[X: Obj[C0]](
+            cls, x: Var[C0, X])\
+            -> Equation[Hom[C1, X, Tensor[X, X, X]]]:
         """ Copying either of two copies gives the three copies. """
         copy, identity = cls.copy(x), cls.id(x)
         return cls.equation_factory(
             copy >> copy @ identity, cls.copy(x, 3), copy >> identity @ copy)
 
     @axiom
-    def copy_cocommutativity(cls, x: C0) -> Equation[C1]:
+    def copy_cocommutativity[X: Obj[C0]](
+            cls, x: Var[C0, X])\
+            -> Equation[Hom[C1, X, Tensor[X, X]]]:
         """ The two copies of an object are interchangeable. """
         copy = cls.copy(x)
         return cls.equation_factory(copy >> cls.swap(x, x), copy)
 
     @axiom
-    def copy_counitality(cls, x: C0) -> Equation[C1]:
+    def copy_counitality[X: Obj[C0]](
+            cls, x: Var[C0, X]) -> Equation[Hom[C1, X, X]]:
         """ Discarding either of two copies leaves the object itself. """
         copy, discard, identity = cls.copy(x), cls.discard(x), cls.id(x)
         return cls.equation_factory(
             copy >> discard @ identity, identity, copy >> identity @ discard)
 
     @axiom
-    def copy_coherence(cls, x: C0, y: C0) -> Equation[C1]:
+    def copy_coherence[X: Obj[C0], Y: Obj[C0]](
+            cls, x: Var[C0, X], y: Var[C0, Y])\
+            -> Equation[Hom[C1, Tensor[X, Y], Tensor[X, Y, X, Y]]]:
         """
         Copying a tensor is copying its factors, with the inner copies
         swapped so that each copy of the tensor comes together.
@@ -1096,8 +1170,39 @@ class ComarkovCategory[C0, C1](SymmetricCategory[C0, C1]):
         """
         return cls.merge(x, 0)
 
+    @classmethod
+    def cofunction(cls, xs: Sequence[int], cods: Sequence[C0]) -> C1:
+        """
+        Permute, merge and add noise to the objects in ``cods`` so that
+        input ``i`` goes to ``cods[xs[i]]``, the dual of
+        :meth:`MarkovCategory.function`: the permutation that puts the
+        inputs in place then the merges of each object, as many as the
+        inputs that go to it.
+
+        Parameters:
+            xs : The object of ``cods`` that each input goes to.
+            cods : The objects to merge into.
+        """
+        from discopy.python.finset import Function
+        cods = list(cods)
+        counts, perm = Function(xs, len(cods), len(xs)).factorise()
+        merges = list(map(cls.merge, cods, counts)) or [cls.id(cls.ob())]
+        return cls.permutation(perm.dagger(), [cods[i] for i in xs])\
+            >> merges[0].tensor(*merges[1:])
+
+    @classmethod
+    def from_cofunction(cls, cofunc: Sequence[int], cod: C0) -> C1:
+        """
+        The cofunction on the atomic objects of ``cod`` by
+        :meth:`cofunction`; a free category overrides it with a native box,
+        see :meth:`discopy.comarkov.Diagram.from_cofunction`.
+        """
+        return cls.cofunction(cofunc, [cod[i:i + 1] for i in range(len(cod))])
+
     @axiom
-    def merge_associativity(cls, x: C0) -> Equation[C1]:
+    def merge_associativity[X: Obj[C0]](
+            cls, x: Var[C0, X])\
+            -> Equation[Hom[C1, Tensor[X, X, X], X]]:
         """ Merging either of two merges gives the merge of three. """
         merge, identity = cls.merge(x), cls.id(x)
         return cls.equation_factory(
@@ -1105,20 +1210,25 @@ class ComarkovCategory[C0, C1](SymmetricCategory[C0, C1]):
             identity @ merge >> merge)
 
     @axiom
-    def merge_commutativity(cls, x: C0) -> Equation[C1]:
+    def merge_commutativity[X: Obj[C0]](
+            cls, x: Var[C0, X])\
+            -> Equation[Hom[C1, Tensor[X, X], X]]:
         """ The two copies merged into an object are interchangeable. """
         merge = cls.merge(x)
         return cls.equation_factory(cls.swap(x, x) >> merge, merge)
 
     @axiom
-    def merge_unitality(cls, x: C0) -> Equation[C1]:
+    def merge_unitality[X: Obj[C0]](
+            cls, x: Var[C0, X]) -> Equation[Hom[C1, X, X]]:
         """ Merging the object with noise on either side leaves it itself. """
         merge, noise, identity = cls.merge(x), cls.noise(x), cls.id(x)
         return cls.equation_factory(
             noise @ identity >> merge, identity, identity @ noise >> merge)
 
     @axiom
-    def merge_coherence(cls, x: C0, y: C0) -> Equation[C1]:
+    def merge_coherence[X: Obj[C0], Y: Obj[C0]](
+            cls, x: Var[C0, X], y: Var[C0, Y])\
+            -> Equation[Hom[C1, Tensor[X, Y, X, Y], Tensor[X, Y]]]:
         """
         Merging a tensor is swapping the inner factors so that the copies
         of each factor come together, then merging its factors.
@@ -1154,7 +1264,8 @@ class BalancedCategory[C0, C1](
         """
 
     @axiom
-    def yanking(cls, x: C0) -> Equation[C1]:
+    def yanking[X: Obj[C0]](
+            cls, x: Var[C0, X]) -> Equation[Hom[C1, X, X]]:
         """
         Tracing the braid of an object with itself gives its twist, the
         yanking axiom of a balanced traced category, see
@@ -1210,3 +1321,39 @@ class HypergraphCategory[C0, C1](
             n_legs_out : The number of legs out for each spider.
             typ : The type of the spiders.
         """
+
+    @classmethod
+    def cospan(cls, left: Sequence[int], right: Sequence[int],
+               apexes: Sequence[C0]) -> C1:
+        """
+        Merge the inputs into the ``apexes`` then copy them out, so that
+        input ``i`` goes to ``apexes[left[i]]`` and output ``j`` reads
+        ``apexes[right[j]]``, see :class:`discopy.python.finset.Cospan`: the
+        permutation that gathers the inputs of each object, one spider on
+        each object, then the permutation that scatters its outputs.
+
+        Parameters:
+            left : The object of ``apexes`` that each input goes to.
+            right : The object of ``apexes`` that each output reads.
+            apexes : The objects of the apex.
+        """
+        from discopy.python.finset import Function
+        apexes = list(apexes)
+        ins, gather = Function(left, len(apexes), len(left)).factorise()
+        outs, scatter = Function(right, len(apexes), len(right)).factorise()
+        spiders = list(map(cls.spiders, ins, outs, apexes))\
+            or [cls.id(cls.ob())]
+        return cls.permutation(gather.dagger(), [apexes[k] for k in left])\
+            >> spiders[0].tensor(*spiders[1:]) >> cls.permutation(
+                scatter, [x for x, n in zip(apexes, outs) for _ in range(n)])
+
+    @classmethod
+    def from_cospan(cls, apex: C0, left: Sequence[int], right: Sequence[int]
+                    ) -> C1:
+        """
+        The cospan on the atomic objects of ``apex`` by :meth:`cospan`; a
+        free category overrides it with a native box, see
+        :meth:`discopy.frobenius.Diagram.from_cospan`.
+        """
+        return cls.cospan(
+            left, right, [apex[i:i + 1] for i in range(len(apex))])

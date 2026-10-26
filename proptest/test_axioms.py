@@ -4,6 +4,7 @@ import pytest
 from hypothesis import given, note
 from hypothesis import strategies as st
 
+from discopy.axioms import inhabits
 from discopy.utils import factory_name
 
 from proptest.categories import CATEGORIES
@@ -37,13 +38,17 @@ def axiom_parameters():
 @given(data=st.data())
 def test_axiom(axiom, drawn, data):
     """
-    Check an axiom of a category against generated arguments, recording the
-    distinct terms it was checked on: a cell whose strategy draws the same
-    handful however long the search runs is green about those terms rather
-    than about the law, see :mod:`proptest.report`.
+    Check an axiom of a category against generated arguments, and the
+    equation it states against the type of its output, evaluated in the
+    scope its arguments were drawn in, recording the distinct terms it was
+    checked on: a cell whose strategy draws the same handful however long
+    the search runs is green about those terms rather than about the law,
+    see :mod:`proptest.report`.
     """
-    args = data.draw(axiom.strategy(), label=axiom.name)
-    drawn.add(repr(args))
-    verdict = axiom(*args)
+    scope, arguments = data.draw(
+        axiom.sequents(**axiom.params), label=axiom.name)
+    drawn.add(repr(arguments))
+    verdict = axiom(**arguments)
     note(verdict)
+    assert inhabits(verdict, axiom.output(scope))
     assert verdict

@@ -375,14 +375,25 @@ class Drawing(TracedCategory, RichDisplay):
 
     @backend.matplotlib_context()
     def draw(self, **params):
-        """ Call :meth:`add_box_corners` then :func:`backend.draw`. """
+        """
+        Call :meth:`add_box_corners` and :meth:`frame_dual_rail` on a copy,
+        then :func:`backend.draw`, so that drawing never changes the drawing
+        and draws it the same every time.
+
+        >>> from discopy import ribbon
+        >>> x = ribbon.Ty('x')
+        >>> drawing = ribbon.Braid(x, x).trace().to_ribbons().to_drawing()
+        >>> svg = drawing.to_svg()
+        >>> assert drawing.to_svg() == svg
+        """
         asymmetry = params.pop("asymmetry", 0.125 * any(
             box.is_conjugate or box.is_transpose or (
                 box.is_dagger and not box.draw_as_braid)
             for box in self.boxes))
-        self.add_box_corners()
-        self.frame_dual_rail()
-        return backend.draw(self, asymmetry=asymmetry, **params)
+        result = self.relabel_nodes()
+        result.add_box_corners()
+        result.frame_dual_rail()
+        return backend.draw(result, asymmetry=asymmetry, **params)
 
     def frame_dual_rail(self, margin=0.5):
         """
@@ -613,12 +624,23 @@ class Drawing(TracedCategory, RichDisplay):
 
     @classmethod
     def permutation(cls, xs: Sequence[int], doms) -> Drawing:
-        """ Draw a permutation of the wires in ``dom``. """
-        xs = finset.Permutation(xs)
+        """
+        Draw a permutation of blocks of wires, the ``i``-th block of its
+        codomain being the ``xs[i]``-th of ``doms``, as in
+        :meth:`discopy.abc.SymmetricCategory.permutation`.
+
+        >>> from discopy.monoidal import Ty
+        >>> x, y, z = map(Ty, "xyz")
+        >>> drawing = Drawing.permutation([1, 0], [x @ y, z])
+        >>> assert drawing.cod == (z @ x @ y).to_drawing()
+        """
+        doms = list(doms)
         dom = cls.ob().tensor(*doms)
-        if xs.is_identity:
+        wires = finset.Permutation(finset.Function.permutation(
+            xs, [len(block) for block in doms]).inside)
+        if wires.is_identity:
             return Drawing.id(dom)
-        return Drawing.from_box(Drawing.permutation_box(dom, xs))
+        return Drawing.from_box(Drawing.permutation_box(dom, wires))
 
     @staticmethod
     def permutation_box(dom: "monoidal.Ty", perm) -> "symmetric.Permutation":
@@ -804,6 +826,13 @@ class Drawing(TracedCategory, RichDisplay):
         This is done by calling :meth:`make_space` to align the output wires of
         `self` and the input wires of `other` while keeping them straight.
 
+        Parameters:
+            other : The drawing to compose with.
+            draw_step_by_step : Whether to return the list of drawings that
+                connect one wire at a time, e.g. for
+                :func:`discopy.drawing.to_gif`, rather than the composite,
+                for one ``other`` only.
+
         Example
         -------
         >>> from discopy.monoidal import Ty, Box, Diagram
@@ -824,10 +853,10 @@ class Drawing(TracedCategory, RichDisplay):
             :align: center
         """
         assert_iscomposable(self, other)
-        if self.is_identity and self.height <= 1:
-            return other
-        if other.is_identity and other.height <= 1:
-            return self
+        for side, rest in [(self, other), (other, self)]:
+            if side.is_identity and side.height <= 1:
+                result = rest.relabel_nodes()
+                return [result] if draw_step_by_step else result
         dom, cod = self.dom, other.cod
 
         tmp_cod = [Node("tmp_cod", i=i) for i, n in enumerate(self.cod_nodes)]
@@ -920,9 +949,9 @@ class Drawing(TracedCategory, RichDisplay):
             :align: center
         """
         if self.is_empty:
-            return other
+            return other.relabel_nodes()
         if other.is_empty:
-            return self
+            return self.relabel_nodes()
         mapping = {
             n: n.shift_j(len(self.boxes))
             for n in other.nodes if "box" in n.kind}
