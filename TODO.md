@@ -6,5 +6,8 @@ Prompt (toumix, 🌤️ Daylight 2026-10-22, verbatim), during which the bug was
 
 Fixes #278: `normal_form` raises on a term whose head is a constant.
 
-- [WIP] @session_01KbBG77r4dz5RennpDkce2y-2026-10-22 19:40 The constants of a term are free variables of its Böhm tree, in scope before its
+- [x] The constants of a term are free variables of its Böhm tree, in scope before its
   free variables, so that a constant can be the head of a spine
+- [WIP] @session_01TLABkoqqKvrHxjA3QkrnH9-2026-10-26 10:00 Tests over `closed` and `grammar.abstract` mixing constants, lambdas and
+  variables: idempotence, and the same semantics under a functor before and after
+- [ ] `BohmTree.variables` typed as variables or constants, one line in `CHANGELOG.md`
