@@ -58,6 +58,7 @@ from __future__ import annotations
 import itertools
 from dataclasses import dataclass, field
 from functools import cached_property
+from operator import index
 from typing import (
     Iterator, Callable, ClassVar, Mapping, Self, TYPE_CHECKING)
 from warnings import warn
@@ -273,7 +274,7 @@ class List(Monoid, NamedGeneric['generator_factory']):
             yield self[i:i + 1]
 
     def __pow__(self, n_times: int) -> List:
-        assert_isinstance(n_times, int)
+        n_times = index(n_times)
         return self.tensor(*(n_times - 1) * [self]) if n_times > 0\
             else type(self)()
 
@@ -402,7 +403,7 @@ class Ty(cat.Ob, cat.FreeCategory, ColouredMonoid):
     then = tensor
 
     def __pow__(self, n_times: int) -> Ty:
-        assert_isinstance(n_times, int)
+        n_times = index(n_times)
         if n_times <= 0:
             assert self.dom == self.cod
             return self.factory.id(self.dom)
@@ -656,7 +657,7 @@ class Nat(abc.Nat, Ty):
         return hash(repr(self))
 
     def __pow__(self, n_times):
-        return self.factory(n_times * self.n)
+        return self.factory(index(n_times) * self.n)
 
     def delay(self, n_steps: int = 1) -> Self:
         """
