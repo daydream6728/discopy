@@ -151,7 +151,7 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - `Matrix` is a `MarkovCategory` ([#535]).
 - Every level has a `Bubble`, which says its Markov flags and winds as a box
   does, and the dagger of a phased `frobenius.Spider` is marked, not negated,
-  while a ZX spider's still negates its phase ([next#31]).
+  while the dagger of a ZX spider still negates its phase ([next#31]).
 - `dtype` is `int` where it was `numpy.int64`, as for `float`, `complex` and
   `bool`, and `map` and `eval` infer it ([next#31], [next#88], [next#162]).
 - `hopf.Intertwiner[H]` holds a tensor network `inside` between
