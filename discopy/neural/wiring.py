@@ -282,11 +282,11 @@ def from_map(cmap: CMap, node_name: str = NODE
     >>> message, state = Ty("message"), Ty("state")
     >>> cell = Signature((Orbit(message, 3, Sym.PERM),
     ...                   Orbit(state, traced=True)))
-    >>> unit = Signature((Orbit(message, 4, Sym.PERM), ))
+    >>> factor = Signature((Orbit(message, 4, Sym.PERM), ))
     >>> incidence = tuple(
     ...     (i // 4, 4 + i % 4, 8 + 2 * (i // 8) + i % 4 // 2)
     ...     for i in range(16))
-    >>> sudoku = from_incidence(incidence, cell, unit)
+    >>> sudoku = from_incidence(incidence, cell, factor)
     >>> from_map(sudoku)[:5]
     ((0, 1, 2, 3), (4, 5, 6, 7), (8, 9, 10, 11), (12, 13, 14, 15), \
 (0, 4, 8, 12))

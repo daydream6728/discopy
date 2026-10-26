@@ -26,6 +26,7 @@ import cmath
 from fractions import Fraction
 from functools import reduce
 from math import pi
+from operator import index
 
 from discopy import cat, frobenius, rigid, tensor, quantum
 from discopy.cat import factory
@@ -236,12 +237,6 @@ class Diagram(tensor.Diagram[complex]):
                     @ Id(len(scan) - source - 1)
                 scan = scan[:target] + (scan[source],)\
                     + scan[target:source] + scan[source + 1:]
-            elif target > source:
-                swaps = Id(source)\
-                    @ Diagram.swap(1, target - source)\
-                    @ Id(len(scan) - target - 1)
-                scan = scan[:source] + scan[source + 1:target]\
-                    + (scan[source],) + scan[target:]
             else:
                 swaps = Id(len(scan))
             return scan, swaps
@@ -369,6 +364,7 @@ class Spider(tensor.Spider[complex], Box):
     basis = ((1, 0), (0, 1))
 
     def __init__(self, n_legs_in, n_legs_out, phase=0):
+        n_legs_in, n_legs_out = index(n_legs_in), index(n_legs_out)
         super().__init__(n_legs_in, n_legs_out, Nat(1), phase)
         factory_str = type(self).__name__
         phase_str = f", {self.phase}" if self.phase else ""
