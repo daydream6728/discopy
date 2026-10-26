@@ -14,6 +14,9 @@ def test_Discard_has_no_copies():
     assert Copy(x, 0) == Discard(x) == Discard(x, 0)
     with raises(ValueError):
         Discard(x, 2)
+    for box in (Copy, Discard):
+        with raises(ValueError):
+            box(x, -1)
 
 
 def test_spider_factory():

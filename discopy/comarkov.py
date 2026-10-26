@@ -421,6 +421,8 @@ class Merge(Cofunction):
     def __init__(self, x: monoidal.Ty, n: int = 2):
         assert_isatomic(x, monoidal.Ty)
         n = len(n) if isinstance(n, Sized) else index(n)
+        if n < 0:
+            raise ValueError(f"A merge count is non-negative, got n={n}.")
         name = f"Merge({x}" + ("" if n == 2 else f", {n}") + ")"
         Box.__init__(self, name, dom=x ** n, cod=x,
                      draw_as_spider=True, color="black", drawing_name="")

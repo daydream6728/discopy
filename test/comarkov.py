@@ -44,6 +44,9 @@ def test_Noise():
     assert Diagram.noise(x @ x) == Noise(x) @ Noise(x)
     with raises(ValueError):
         Noise(x, 2)
+    for box in (Merge, Noise):
+        with raises(ValueError):
+            box(x, -1)
     with raises(ValueError):
         Merge(x @ x)
 

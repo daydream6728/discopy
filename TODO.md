@@ -4,4 +4,4 @@
 
 (cubic-dev-ai, on comarkov.py:477 and markov.py:695)
 
-- [ ] `Copy`, `Discard`, `Merge` and `Noise` raise `ValueError` on a negative count, tested
+- [x] `Copy`, `Discard`, `Merge` and `Noise` raise `ValueError` on a negative count, tested

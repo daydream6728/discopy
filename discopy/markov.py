@@ -643,6 +643,8 @@ class Copy(Function):
     def __init__(self, x: monoidal.Ty, n: int = 2):
         assert_isatomic(x, monoidal.Ty)
         n = len(n) if isinstance(n, Sized) else index(n)
+        if n < 0:
+            raise ValueError(f"A copy count is non-negative, got n={n}.")
         name = f"Copy({x}" + ("" if n == 2 else f", {n}") + ")" if n\
             else f"Discard({x})"
         Box.__init__(self, name, dom=x, cod=x ** n,
