@@ -173,6 +173,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - The `quantum` extra pins pyzx 0.10.7 ([next#225]).
 - Faster tensor of `n` morphisms ([#623]), of Python functions, and
   `finset.Permutation.then` ([#763]).
+- Faster `to_map` and `to_hypergraph` of permutations, read from their `perm`;
+  `CMap.permutation` and so `to_map` take `Nat` ([next#31]).
 - A functor maps a layer with one `n`-ary `tensor` rather than a fold of
   `@`, with one `tensor` call per layer ([next#161]).
 - Biclosed types hold `biclosed.Wire` ([next#16]), their `**` is `<<`, and a
@@ -324,6 +326,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   and hashes ([next#31]).
 - Categorial `FC`, `BC`, `FX` and `BX` are boxes, so they compose and draw,
   and a nested `cfg.Tree` has a `dom`, so it applies ([next#31]).
+- A `cfg.Tree` reads back from its tree ([next#168]), and an ill-typed one
+  says which types do not compose ([next#31]).
 - Drawing: `Drawing.dagger` ([next#1]), regions through crossings ([#614]),
   `draw` leaves a drawing as it was ([#606]), TikZ colours ([next#31]) and a
   test restyling `H` ([next#99]).
