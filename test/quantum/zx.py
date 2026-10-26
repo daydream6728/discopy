@@ -1,4 +1,7 @@
 import random
+import tomllib
+from fractions import Fraction
+from pathlib import Path
 
 import pytest
 
@@ -9,6 +12,10 @@ from discopy.quantum.gates import CRz, CRx, CU1, Controlled, Rz, Rx
 from discopy.quantum.zx import *
 from discopy import frobenius, tensor
 from discopy.tensor import Dim, Tensor
+
+with open(Path(__file__).parents[2] / "pyproject.toml", "rb") as file:
+    QUANTUM = tomllib.load(file)["project"]["optional-dependencies"]["quantum"]
+PYZX = next(req.split("==")[1].strip() for req in QUANTUM if "pyzx" in req)
 
 
 @fixture
@@ -83,7 +90,7 @@ def test_to_hypergraph_keeps_colour_and_phase():
 
 
 def test_subs():
-    pytest.importorskip("pyzx")
+    pytest.importorskip("pyzx", minversion=PYZX)
     from sympy.abc import phi, psi
     assert Z(3, 2, phi).subs(phi, 1) == Z(3, 2, 1)
     assert scalar(phi).subs(phi, psi) == scalar(psi)
@@ -117,18 +124,18 @@ def test_grad_numeric():
 
 
 def test_to_pyzx_errors():
-    pytest.importorskip("pyzx")
+    pytest.importorskip("pyzx", minversion=PYZX)
     with raises(NotImplementedError):
         Box('f', Nat(1), Nat(1)).to_pyzx()
 
 
 def test_to_pyzx():
-    pytest.importorskip("pyzx")
-    assert Diagram.from_pyzx(Z(0, 2).to_pyzx()) == Z(0, 2) >> SWAP
+    pytest.importorskip("pyzx", minversion=PYZX)
+    assert Diagram.from_pyzx(Z(0, 2).to_pyzx()) == Z(0, 2)
 
 
 def test_to_pyzx_parallel_wires():
-    pytest.importorskip("pyzx")
+    pytest.importorskip("pyzx", minversion=PYZX)
     diagram = X(1, 2, .75) >> Z(2, 1, 1 / 3)
     graph = diagram.to_pyzx()
     assert graph.num_edges() == 2 and np.isclose(graph.scalar.to_number(), .5)
@@ -146,7 +153,7 @@ def test_to_pyzx_parallel_wires():
 
 
 def test_pyzx_scalars():
-    pytest.importorskip("pyzx")
+    pytest.importorskip("pyzx", minversion=PYZX)
     for diagram in [
             scalar(2) @ Nat(1), X(1, 2, .75) >> Z(2, 1, 1 / 3),
             Z(0, 0, .3), X(0, 2) >> Z(2, 0, .5), X(0, 2, .25) >> Z(2, 0, 1 / 3),
@@ -157,7 +164,7 @@ def test_pyzx_scalars():
 
 
 def test_to_pyzx_Y():
-    pytest.importorskip("pyzx")
+    pytest.importorskip("pyzx", minversion=PYZX)
     for diagram in [
             Y(1, 1, .5), Y(2, 1, 1 / 3), Y(0, 2, -.125), Y(1, 0) @ Nat(1),
             H >> Y(1, 2, .3) >> H @ Nat(1), Y(1, 2, .75) >> Y(2, 1, .3)]:
@@ -167,7 +174,7 @@ def test_to_pyzx_Y():
 
 
 def test_to_pyzx_scalar():
-    pytest.importorskip("pyzx")
+    pytest.importorskip("pyzx", minversion=PYZX)
     # Test that a scalar is translated to the corresponding pyzx object.
     k = np.exp(np.pi / 4 * 1j)
     m = (scalar(k) @ scalar(k) @ Nat(1)).to_pyzx().to_matrix()
@@ -175,8 +182,24 @@ def test_to_pyzx_scalar():
     assert np.isclose(m, 0)
 
 
+def test_from_pyzx_spider_with_several_outputs():
+    pyzx = pytest.importorskip("pyzx", minversion=PYZX)
+    graph = pyzx.Graph()
+    outputs = [graph.add_vertex(pyzx.VertexType.BOUNDARY, qubit=q, row=3)
+               for q in range(3)]
+    green = graph.add_vertex(pyzx.VertexType.Z, qubit=0, row=1)
+    red = graph.add_vertex(
+        pyzx.VertexType.X, qubit=1, row=1, phase=Fraction(1))
+    graph.set_inputs(())
+    graph.set_outputs(tuple(outputs))
+    for spider, output in [
+            (green, outputs[0]), (red, outputs[1]), (green, outputs[2])]:
+        graph.add_edge((spider, output), pyzx.EdgeType.SIMPLE)
+    assert proportional(matrix(Diagram.from_pyzx(graph)), graph.to_matrix())
+
+
 def test_from_pyzx_errors():
-    pytest.importorskip("pyzx")
+    pytest.importorskip("pyzx", minversion=PYZX)
     bialgebra = Z(1, 2) @ Z(1, 2) >> Nat(1) @ SWAP @ Nat(1) >> X(2, 1) @ X(2, 1)
     graph = bialgebra.to_pyzx()
     graph.set_inputs(())
@@ -190,7 +213,7 @@ def test_from_pyzx_errors():
 
 
 def test_backnforth_pyzx_1():
-    pytest.importorskip("pyzx")
+    pytest.importorskip("pyzx", minversion=PYZX)
     from pyzx import Graph
     path = 'test/fixtures/zx-graph.json'
     graph = Graph.from_json(open(path).read())
@@ -200,7 +223,7 @@ def test_backnforth_pyzx_1():
 
 
 def test_backnforth_pyzx_2(random_had_cnot_diagram):
-    pytest.importorskip("pyzx")
+    pytest.importorskip("pyzx", minversion=PYZX)
     from pyzx import compare_tensors
     backnforth = lambda diagram: Diagram.from_pyzx(diagram.to_pyzx())
     c = random_had_cnot_diagram(3, 25)
@@ -218,7 +241,7 @@ def _std_basis_v(*c):
 
 
 def test_circuit2zx():
-    pytest.importorskip("pyzx")
+    pytest.importorskip("pyzx", minversion=PYZX)
     circuit = Ket(0, 0) >> quantum.H @ Rx(0) >> CRz(0) >> CRx(0) >> CU1(0)
     gadget = [Z(1, 2), Z(1, 2), X(2, 1), Z(1, 0), scalar(2 ** 0.5)]
     assert circuit2zx(circuit) == Diagram.decode(
@@ -327,7 +350,7 @@ def random_diagram(n_wires, depth, phases=(0, .25, .5, .75, 1 / 3, -.125)):
 
 
 def test_eval_pyzx():
-    pytest.importorskip("pyzx")
+    pytest.importorskip("pyzx", minversion=PYZX)
     random.seed(0)
     for _ in range(50):
         diagram = random_diagram(random.randint(1, 3), random.randint(1, 8))

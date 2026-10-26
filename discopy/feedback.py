@@ -263,7 +263,9 @@ from discopy.utils import (
 )
 
 
-def str_delayed(time_step: int):
+def str_delayed(time_step: int | None):
+    if not time_step:
+        return ""
     return time_step * ".d" if time_step <= 3 else f".delay({time_step})"
 
 
@@ -349,10 +351,7 @@ class Wire(monoidal.Wire):
         return time_step + is_constant
 
     def __repr__(self):
-        colours = "" if self.dom == self.cod == monoidal.transparent\
-            else f", dom={self.dom!r}, cod={self.cod!r}"
-        return factory_name(type(self))\
-            + f"({self.name!r}{colours}{self.repr_time_step()})"
+        return monoidal.Wire.__repr__(self)[:-1] + self.repr_time_step() + ")"
 
     def __str__(self):
         return super().__str__() + str_delayed(self.time_step)
@@ -603,7 +602,7 @@ class Diagram(monoidal.Diagram, TracedCategory):
         return self.feedback(dom=dom, cod=cod, mem=mem, left=left)
 
     @property
-    def time_step(self) -> int:
+    def time_step(self) -> int | None:
         """
         The time step of a diagram is defined only if it is in fact a box.
 
@@ -647,11 +646,28 @@ class Box(monoidal.Box, Diagram):
         name (str) : The name of the box.
         dom (monoidal.Ty) : The domain of the box, i.e. its input.
         cod (monoidal.Ty) : The codomain of the box, i.e. its output.
-        time_step (int) : The number of times the box has been delayed.
+        time_step (int) : The number of times the box has been delayed, as
+            :attr:`time_step` reads it, ``None`` for a structural box.
     """
 
     _time_step, _args, _params = 0, (), {}
-    time_step = property(lambda self: self._time_step)
+
+    @property
+    def time_step(self) -> int | None:
+        """
+        The number of times a box has been delayed, ``None`` for a structural
+        box, e.g. a copy, a swap, a merge or a permutation: it has no time
+        step of its own, its wires carry it, see :meth:`delay`.
+
+        Example
+        -------
+        >>> from discopy.markov import Copy
+        >>> x = Ty('x')
+        >>> assert Box('f', x, x).delay(42).time_step == 42
+        >>> copy = Copy(x).delay(42)
+        >>> assert copy.time_step is None and copy.dom == x.delay(42)
+        """
+        return None if hasattr(self, "__getnewargs__") else self._time_step
 
     def __init__(self, *args, time_step: int = 0, **params):
         self._time_step, self._args, self._params = time_step, args[3:], params
@@ -689,13 +705,41 @@ class Box(monoidal.Box, Diagram):
             **self._params)
 
     def reset(self):
-        """ Reset a box to time step zero, used in :class:`Functor`. """
+        """
+        Reset a box to time step zero, used in :class:`Functor`: a structural
+        box has no time step of its own to reset, it stays as it is.
+
+        Example
+        -------
+        >>> from discopy.markov import Copy
+        >>> x = Ty('x')
+        >>> assert Box('f', x, x).delay(3).reset() == Box('f', x, x)
+        >>> assert Copy(x).delay(3).reset() == Copy(x.delay(3))
+        """
+        if self.time_step is None:
+            return self
         return self.delay(-self.time_step)
 
     def dagger(self):
         result = super().dagger()
         result._time_step = self.time_step  # pylint: disable=protected-access
         return result
+
+    def lambdify(self, *symbols, **kwargs):
+        """
+        Lambdify a feedback box, keeping its time step.
+
+        >>> from sympy.abc import phi  # doctest: +EXTRA
+        >>> f = Box('f', Ty('x'), Ty('y'), data=phi)
+        >>> assert f.delay().subs(phi, 1) == f.subs(phi, 1).delay()
+        """
+        function = super().lambdify(*symbols, **kwargs)
+
+        def delayed(*xs):
+            box = function(*xs)
+            box._time_step = self.time_step  # pylint: disable=protected-access
+            return box
+        return delayed
 
     def __str__(self):
         return super().__str__() + str_delayed(self.time_step)
@@ -780,6 +824,24 @@ class Feedback(Box, monoidal.Bubble):
     def delay(self, n_steps=1):
         return type(self)(self.arg.delay(n_steps), mem=self.mem.delay(n_steps),
                           left=self.left)
+
+    def lambdify(self, *symbols, **kwargs):
+        """
+        Lambdify the argument of a feedback.
+
+        >>> from sympy.abc import phi  # doctest: +EXTRA
+        >>> x, y = Ty('x'), Ty('y')
+        >>> f = Box('f', x @ y.delay(), x @ y, data=phi)
+        >>> assert f.feedback().subs(phi, 1) == f.subs(phi, 1).feedback()
+        >>> g = Box('g', x @ y, x @ y, data=phi)
+        >>> assert g.trace().subs(phi, 1) == g.subs(phi, 1).trace()
+        """
+        if not set(symbols) & self.free_symbols:
+            return lambda *xs: self
+        function = self.arg.lambdify(*symbols, **kwargs)
+        return lambda *xs: type(self)(
+            function(*xs), dom=self.dom, cod=self.cod, mem=self.mem,
+            left=self.left)
 
     def __str__(self):
         return self.name
@@ -874,6 +936,20 @@ class Head(monoidal.Bubble, Box):
         Box.__init__(self, f"({arg}).{self.part}", self.dom, self.cod,
                      time_step=time_step)
 
+    def lambdify(self, *symbols, **kwargs):
+        """
+        Lambdify the argument of a head or a tail.
+
+        >>> from sympy.abc import phi  # doctest: +EXTRA
+        >>> f = Box('f', Ty('x'), Ty('y'), data=phi)
+        >>> assert Head(f).subs(phi, 1) == Head(f.subs(phi, 1))
+        >>> assert Tail(f).delay().subs(phi, 1) == Tail(f.subs(phi, 1)).delay()
+        """
+        if not set(symbols) & self.free_symbols:
+            return lambda *xs: self
+        function = self.arg.lambdify(*symbols, **kwargs)
+        return lambda *xs: type(self)(function(*xs), self.time_step)
+
     delay, reset, __repr__ = HeadOb.delay, HeadOb.reset, HeadOb.__repr__
     to_tree, from_tree = HeadOb.to_tree, classmethod(HeadOb.from_tree.__func__)
     __str__ = Box.__str__
@@ -890,7 +966,7 @@ class Tail(monoidal.Bubble, Box):
     """
     part = "tail"
 
-    __init__ = Head.__init__
+    __init__, lambdify = Head.__init__, Head.lambdify
     delay, reset, __repr__ = HeadOb.delay, HeadOb.reset, HeadOb.__repr__
     to_tree, from_tree = HeadOb.to_tree, classmethod(HeadOb.from_tree.__func__)
     __str__ = Box.__str__
