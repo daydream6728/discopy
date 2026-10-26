@@ -585,7 +585,8 @@ def decode_numpy(tree: dict) -> Any:
     its scalar type is one that numpy names for booleans, integers, floats or
     complex numbers, and its entries are the Python scalars that type reads
     back as, in its range for an integer, so that an array allocates in
-    proportion to the file and no string is parsed as a number.
+    proportion to the file and no string is parsed as a number. A shape
+    that numpy refuses, e.g. one with a dimension too large, is left alone.
 
     Example
     -------
@@ -622,7 +623,10 @@ def decode_numpy(tree: dict) -> Any:
     if isinstance(shape, list)\
             and all(type(n) is int and n >= 0 for n in shape)\
             and prod(shape) == len(entries):
-        return numpy.array(entries, dtype=scalar).reshape(shape)
+        try:
+            return numpy.array(entries, dtype=scalar).reshape(shape)
+        except (ValueError, OverflowError):
+            return tree
     return tree
 
 
