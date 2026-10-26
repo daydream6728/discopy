@@ -766,6 +766,9 @@ class Bubble(symmetric.Bubble, Box):
     >>> assert noisy != sample.bubble() and noisy[::-1][::-1] == noisy
     >>> assert Functor.id(Diagram)(noisy) == noisy
     """
+    serialised_attrs = symmetric.Bubble.serialised_attrs + (
+        "is_deterministic", "is_affine")
+
     def __init__(self, *args: Diagram, is_deterministic=True, is_affine=True,
                  **kwargs):
         super().__init__(*args, **kwargs)
@@ -778,13 +781,6 @@ class Bubble(symmetric.Bubble, Box):
 
     def setoid(self):
         return super().setoid() + (self.deterministic, self.affine)
-
-    def dagger(self) -> Bubble:
-        return self.flagged(super().dagger())
-
-    def lambdify(self, *symbols, **kwargs) -> Callable:
-        function = super().lambdify(*symbols, **kwargs)
-        return lambda *xs: self.flagged(function(*xs))
 
     def to_tree(self) -> dict:
         return {**super().to_tree(), **self.flags()}

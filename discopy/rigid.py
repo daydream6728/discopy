@@ -807,7 +807,19 @@ class Bubble(biclosed.Bubble, Box):
     >>> assert bubble.r != f.r.bubble()
     >>> print(bubble.l)
     (f).bubble().l
+
+    Its winding number is one of its :attr:`serialised_attrs`, so that its
+    dagger, its substitutions and its rotations keep it, as a box's do.
+
+    >>> assert bubble.r[::-1] == bubble[::-1].r
+    >>> assert bubble.r[::-1][::-1] == bubble.r
+    >>> from sympy.abc import phi  # doctest: +EXTRA
+    >>> g = Box('g', x, y, data=phi).bubble()
+    >>> assert g.r.subs(phi, 1) == g.subs(phi, 1).r
+    >>> assert g.r.lambdify(phi)(1) == g.lambdify(phi)(1).r
     """
+    serialised_attrs = biclosed.Bubble.serialised_attrs + ("z", )
+
     def __init__(self, *args: Diagram, z: int = 0, **kwargs):
         self.z = z
         biclosed.Bubble.__init__(self, *args, **kwargs)
@@ -824,45 +836,6 @@ class Bubble(biclosed.Bubble, Box):
 
     def setoid(self):
         return super().setoid() + (self.z, )
-
-    def rotate(self, left=False) -> Bubble:
-        dom, cod = (
-            getattr(x, 'l' if left else 'r') for x in (self.cod, self.dom))
-        return type(self)(
-            *self.args, dom=dom, cod=cod, name=self.name, method=self.method,
-            data=self.data, is_dagger=self.is_dagger,
-            z=self.z + (-1 if left else 1), drawing_name=self.drawing_name,
-            draw_as_frame=self.draw_as_frame,
-            draw_as_square=self.draw_as_square,
-            draw_vertically=self.draw_vertically)
-
-    def dagger(self) -> Bubble:
-        """
-        The dagger of a rigid bubble keeps its winding number, as that of a
-        rigid box does, see :meth:`Box.dagger`.
-
-        >>> f = Box('f', Ty('x'), Ty('y')).bubble()
-        >>> assert f.r[::-1] == f[::-1].r and f.r[::-1][::-1] == f.r
-        """
-        result = super().dagger()
-        result.z = self.z
-        return result
-
-    def lambdify(self, *symbols, **kwargs) -> Callable:
-        """
-        Lambdify a rigid bubble, keeping its winding number.
-
-        >>> from sympy.abc import phi  # doctest: +EXTRA
-        >>> f = Box('f', Ty('x'), Ty('y'), data=phi).bubble()
-        >>> assert f.r.subs(phi, 1) == f.subs(phi, 1).r
-        """
-        function = super().lambdify(*symbols, **kwargs)
-
-        def wound(*xs):
-            bubble = function(*xs)
-            bubble.z = self.z
-            return bubble
-        return wound
 
     def to_tree(self) -> dict:
         """

@@ -804,8 +804,8 @@ class Bubble(compact.Bubble, markov.Bubble, comarkov.Bubble, Box):
     >>> noisy = Box('f', x, x).bubble(is_deterministic=False)
     >>> assert noisy.r.l == noisy and not noisy.r.l.is_deterministic
     """
-    def rotate(self, left=False) -> Bubble:
-        return self.flagged(super().rotate(left))
+    serialised_attrs = compact.Bubble.serialised_attrs + (
+        "is_deterministic", "is_affine")
 
 
 class Sum(compact.Sum, markov.Sum, comarkov.Sum, Box):

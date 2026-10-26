@@ -533,6 +533,8 @@ EXAMPLES = {  # a box of each constructor, from a class c, types x, y, data v
     "cat.Bubble": "c(box(c, x, y, v), dom=y, data=v)",
     "{monoidal,neural.network}.Box": 'c("f", x, y, data=v)',
     "monoidal.Bubble": 'c(box(c, x, y, v), name="b", drawing_name="B")',
+    "markov.Bubble": 'c(box(c, x, y, v), name="b", is_deterministic=False)',
+    "rigid.Bubble": 'c(box(c, x, y, v), name="b", z=1)',
     "monoidal.Layer":
     'c(x, sys.modules[c.__module__].Box("f", x, y, data=v), y)',
     "braided.Braid {balanced,ribbon}.DualRailBraid ribbon.DualRailC{u,a}p":
@@ -698,7 +700,8 @@ BROKEN = {
     },
     "rotation": {
         PIVOTALS + ".{Feedback,Trace,Head,Tail,FollowedBy} "
-        "{frobenius,tensor}.Bubble": "it has no stated rotation",
+        "{tensor,quantum.circuit,quantum.zx}.Bubble":
+        "it has no stated rotation",
         "{tensor,quantum.circuit,quantum.zx}.Sum": "it rotates as a box",
         "ribbon.DualRailC[ua]p": "its rotation drops is_dagger",
         "quantum.zx.Scalar": "it takes no dom, cod or z",
@@ -712,7 +715,8 @@ BROKEN = {
         "quantum.gates.C[RU]*": "its tree is that of a controlled gate",
         "grammar.categorial.TypeRaising": "its tree drops its cod",
         "neural.network.{Box,Feedback,Trace,Head,Tail}": "a module has none",
-        "tensor.Bubble": "its tree drops its func, which == compares",
+        "{tensor,quantum.circuit,quantum.zx}.Bubble":
+        "its tree drops its func, which == compares",
     },
 }
 
