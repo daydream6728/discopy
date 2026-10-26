@@ -75,8 +75,10 @@ def distributions(diagram: Diagram, settings: Sequence[int], backend=None
         raise ValueError(
             "The domain and codomain must be classical types of the same "
             f"length as {settings}, got {diagram.dom} and {diagram.cod}.")
-    if any(ob.name == "bit" and n > 2 for ob, n in zip(dom, settings)):
-        raise ValueError(f"A bit input has at most two settings: {settings}.")
+    if any(n < 1 or ob.name == "bit" and n > 2
+           for ob, n in zip(dom, settings)):
+        raise ValueError(f"Each party has at least one setting, at most two "
+                         f"for a bit input: {settings}.")
     return [{
         tuple(map(int, section)): float(probability)
         for section, probability in (Diagram.tensor(*(

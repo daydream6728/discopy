@@ -51,4 +51,6 @@ def test_from_diagram_errors():
     with raises(ValueError):
         Model.from_diagram(bell_test, settings=(3, 2))
     with raises(ValueError):
+        Model.from_diagram(bell_test, settings=(0, 2))
+    with raises(ValueError):
         Model.from_diagram(detector @ detector, settings=(3, 1), outcomes=2)

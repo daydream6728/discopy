@@ -109,7 +109,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   off `optyx.contextuality.distributions` (Apache-2.0) with
   `EvalResult.prob_dist(normalise=False)`, with `Model.deterministic`,
   `Scenario.bell` taking settings for each party and `Inequality.violation`
-  zero on non-contextual models ([optyx#87]).
+  zero when the inequality holds, rather than raising on the trivial one
+  ([optyx#87]).
 - `hopf.Intertwiner.chart` and `hopf.Algebra.symmetric(n)` ([#408]).
 - `copying`, a law of `Testable` beside `pickling` ([next#1]), and the
   generators of each level as typed class variables ([next#1]).
