@@ -241,3 +241,16 @@ def test_inflate_keeps_the_environment():
     distribution = lossy.inflate(2).eval().prob_dist()
     for key, value in expected.items():
         assert np.isclose(distribution[key], value)
+
+
+def test_from_callable_calls_a_channel_diagram():
+    from discopy.optyx.qubits import Z, Scalar
+    bell = Scalar(.5 ** .5) @ Z(0, 2)
+
+    @Channel.from_callable(dom=qubit, cod=qubit @ bit @ qubit)
+    def measure_beside_bell(c):
+        a, b = bell()
+        return a, Measure(qubit)(c), b
+
+    assert measure_beside_bell == (
+        bell @ Measure(qubit) >> qubit @ Diagram.swap(qubit, bit))
