@@ -261,6 +261,9 @@ class DualRailCup(Box):
         left : The ribbon (doubled type) on the outside left.
         right : The ribbon on the outside right.
     """
+    serialised_attrs = ("left", "right", "is_dagger")
+    z = 0
+
     def __init__(self, left, right, is_dagger=False):
         self.left, self.right = left, right
         name = type(self).__name__ + f"({left}, {right})"
@@ -286,6 +289,9 @@ class DualRailCap(Box):
     A cap joining two ribbons in the dual rail encoding, see
     :class:`DualRailCup`.
     """
+    serialised_attrs = ("left", "right", "is_dagger")
+    z = 0
+
     def __init__(self, left, right, is_dagger=False):
         self.left, self.right = left, right
         name = type(self).__name__ + f"({left}, {right})"
@@ -329,6 +335,12 @@ class Sum(rigid.Sum, Box):
     """
 
 
+class Bubble(pivotal.Bubble, balanced.Bubble, Box):
+    """
+    A ribbon bubble is a pivotal and balanced bubble and a ribbon box.
+    """
+
+
 class Functor(pivotal.Functor, balanced.Functor):
     """
     A ribbon functor is both a pivotal functor and a balanced functor.
@@ -369,7 +381,7 @@ class DualRail(balanced.DualRail, Functor):
             return DualRailCap(self(other.cod[:1]), self(other.cod[1:]))
         if isinstance(other, (Braid, Twist)):
             return super().__call__(other)  # A single dual rail box crossing.
-        if isinstance(other, Box) and not isinstance(other, Sum):
+        if isinstance(other, Box) and not isinstance(other, (Sum, Bubble)):
             # A generator is doubled into a box on the rails of its ribbons;
             # self doubles its domain and codomain per object.
             return Box(other.name, self(other.dom), self(other.cod),
@@ -383,6 +395,7 @@ Diagram.braid_factory, Diagram.functor_factory = Braid, Functor
 Diagram.cup_factory, Diagram.cap_factory = Cup, Cap
 Diagram.twist_factory = Twist
 Diagram.sum_factory = Sum
+Diagram.bubble_factory = Bubble
 Diagram.dual_rail_factory = DualRail
 
 Id = Diagram.id

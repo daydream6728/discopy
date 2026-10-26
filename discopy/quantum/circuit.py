@@ -18,6 +18,7 @@ Summary
     Circuit
     Box
     Sum
+    Bubble
     Swap
     Functor
 
@@ -901,6 +902,7 @@ class Box(tensor.Box[complex], Circuit):
         data : The array inside the box.
         is_mixed : Whether the box is mixed.
     """
+    serialised_attrs = tensor.Box.serialised_attrs + ("is_mixed", )
     eval = Circuit.eval
 
     def __init__(self, name: str, dom: Ty, cod: Ty,
@@ -948,19 +950,10 @@ class Box(tensor.Box[complex], Circuit):
         >>> assert not f.dagger().is_mixed and not f.rotate().is_mixed
         >>> assert f.dagger().eval() == f.eval().dagger()
         """
-        if self.is_dagger is None:
-            return self
-        return type(self)(
-            self.name, self.cod, self.dom, self.data, is_mixed=self.is_mixed,
-            is_dagger=not self.is_dagger, z=self.z, time_step=self.time_step)
+        return self if self.is_dagger is None else super().dagger()
 
     def rotate(self, left=False):
-        if self.z is None:
-            return self
-        return type(self)(
-            self.name, self.cod.r, self.dom.r, self.data,
-            is_mixed=self.is_mixed, is_dagger=self.is_dagger,
-            z=(self.z + 1) % 2, time_step=self.time_step)
+        return self if self.z is None else super().rotate(left)
 
 
 class Sum(tensor.Sum[complex], Box):
@@ -999,6 +992,26 @@ class Sum(tensor.Sum[complex], Box):
 
     def to_tk(self):
         return [circuit.to_tk() for circuit in self.terms]
+
+
+class Bubble(tensor.Bubble[complex], Box):
+    """
+    A circuit bubble is a tensor bubble in a circuit, mixed when its boundary
+    has both bits and qubits or its args are mixed. It differentiates as a
+    circuit box does.
+
+    >>> from discopy.quantum.gates import X, H, Measure
+    >>> assert (X.bubble() >> X).eval() == X.bubble().eval() >> X.eval()
+    >>> assert not X.bubble().is_mixed and (H >> Measure()).bubble().is_mixed
+    >>> assert X.bubble(cod=bit).is_mixed
+    """
+    grad = Box.grad
+
+    @property
+    def is_mixed(self):
+        boundary = self.dom @ self.cod
+        return bool(boundary.count(bit) and boundary.count(qubit))\
+            or any(arg.is_mixed for arg in self.args)
 
 
 class Permutation(tensor.Permutation[complex], Box):
@@ -1058,6 +1071,7 @@ def bitstring2index(bitstring):
 
 Circuit.box_factory = Box
 Circuit.swap_factory, Circuit.sum_factory = Swap, Sum
+Circuit.bubble_factory = Bubble
 Circuit.permutation_factory = Permutation
 bit, qubit = Ty(Digit(2)), Ty(Qudit(2))
 Id = Circuit.id

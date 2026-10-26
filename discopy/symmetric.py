@@ -22,6 +22,7 @@ Summary
     Head
     Tail
     Sum
+    Bubble
     Functor
 
 Axioms
@@ -593,6 +594,7 @@ class Permutation(Box):
     .. image:: /_static/symmetric/foliation.svg
         :align: center
     """
+    serialised_attrs = ("dom", "perm")
 
     def __new__(cls, dom: monoidal.Ty | None = None,
                 perm: Sequence[int] | None = None):
@@ -755,6 +757,8 @@ class Swap(Permutation, balanced.Braid, Box):
     :class:`Swap` is only defined for atomic types (i.e. of length 1).
     For complex types, use :meth:`Diagram.swap` instead.
     """
+    serialised_attrs = ("left", "right")
+
     def __setstate__(self, state):
         state.setdefault('perm', finset.Permutation([1, 0], 2))
         super().__setstate__(state)
@@ -800,6 +804,12 @@ class Sum(balanced.Sum, Box):
     """
 
 
+class Bubble(balanced.Bubble, Box):
+    """
+    A symmetric bubble is a balanced bubble and a symmetric box.
+    """
+
+
 class Functor(balanced.Functor):
     """
     A symmetric functor is a monoidal functor that preserves swaps.
@@ -820,9 +830,16 @@ class Functor(balanced.Functor):
     a codomain with neither, it is sent to the images of the swaps of
     :meth:`Permutation.to_swaps`, so that a whiskered swap maps like a swap.
 
+    A :class:`Swap` is a permutation of two wires and goes the same way, so
+    that a functor commutes with whiskering on the nose even when it sends an
+    atomic type to a longer one.
+
     >>> x, y, z = map(Ty, "xyz")
     >>> perm = Permutation(x @ y @ z, [1, 2, 0])
     >>> assert Functor.id(Diagram)(perm) == perm
+    >>> assert Functor.id(Diagram)(Swap(x, y)) == Swap(x, y)
+    >>> G = Functor(lambda ob: ob @ ob, lambda box: box)
+    >>> assert G(Swap(x, y) @ z) == G(Swap(x, y)) @ G(z)
     >>> F = Functor({x: x, y: y, z: z}, {}, cod=balanced.Diagram)
     >>> print(F(Swap(x, y) @ z))
     Braid(x, y) @ z
@@ -830,13 +847,13 @@ class Functor(balanced.Functor):
     dom = cod = Diagram
 
     def __call__(self, other):
-        if isinstance(other, Swap) and hasattr(self.cod.ar, "swap"):
-            return self.cod.ar.swap(self(other.dom[0]), self(other.dom[1]))
         if isinstance(other, Permutation) and hasattr(
                 self.cod.ar, "permutation_factory"):
             sizes = [len(self(x)) for x in other.dom]
             return self.cod.ar.from_permutation(finset.Function.permutation(
                 other.perm, sizes).inside, self(other.dom))
+        if isinstance(other, Swap) and hasattr(self.cod.ar, "swap"):
+            return self.cod.ar.swap(self(other.dom[0]), self(other.dom[1]))
         if isinstance(other, Permutation) and hasattr(
                 self.cod.ar, "permutation"):
             return self.cod.ar.permutation(
@@ -883,6 +900,7 @@ Hypergraph = hypergraph.Hypergraph[Diagram]
 Diagram.swap_factory = Swap
 Diagram.permutation_factory = Permutation
 Diagram.sum_factory = Sum
+Diagram.bubble_factory = Bubble
 Id = Diagram.id
 
 

@@ -120,6 +120,41 @@ def test_from_bosonic_op():
     assert np.allclose(sum_2, sum_1)
 
 
+def test_observables_agree_with_their_samples():
+    from discopy.optyx.channel import Observable, Discard, Diagram, qmode, qubit
+    from discopy.optyx import photonic, qubits
+    hom = photonic.Create(1, 1) >> photonic.BS
+    number = Observable(Diagram.from_bosonic_operator(
+        2, ((0, False), (0, True))))
+    counted = Observable(function=lambda n: n[0], dom=qmode @ qmode)
+    assert np.isclose(number.expectation(hom), counted.expectation(hom))
+    assert np.isclose(number.expectation(hom), 1)
+    samples = (hom >> photonic.NumberResolvingMeasurement(2)).sample(
+        burn_in=0, shots=500, seed=0)
+    assert abs(np.mean([counted.function(list(sample[0]))
+                        for sample in samples]) - 1) < .15
+    trace = Observable(function=lambda n: 1, dom=qmode @ qmode)
+    assert np.isclose(trace.expectation(hom), (hom >> Discard(
+        qmode @ qmode)).double().to_tensor().eval().array)
+    rotated = qubits.Ket("+") >> qubits.Z(1, 1, .1)
+    pauli_x = Observable(qubits.X(1, 1, .5))
+    assert np.isclose(pauli_x.expectation(rotated), np.cos(.2 * np.pi))
+
+
+def test_observable_errors():
+    from discopy.optyx.channel import Observable, Diagram, qmode, bit
+    from discopy.optyx import photonic
+    with pytest.raises(ValueError):
+        Observable()
+    with pytest.raises(ValueError):
+        Observable(photonic.Create(1))
+    with pytest.raises(ValueError):
+        Observable(Diagram.id(bit))
+    with pytest.raises(ValueError):
+        Observable(function=lambda n: n[0], dom=qmode).expectation(
+            photonic.Create(1, 1))
+
+
 def test_bosonic_operator_indices_are_modes():
     for index in (-1, 2):
         with pytest.raises(ValueError, match="out of bounds"):
@@ -177,3 +212,49 @@ def test_encode_inflate_mixed_types():
 def test_dual_rail_only_for_zx_channels():
     with pytest.raises(TypeError, match="Only ZX channels"):
         Channel("id", diagram.Id(diagram.mode)).dual_rail()
+
+
+def test_swap_dagger_swaps_back():
+    swap = Swap(qmode, qubit)
+    assert swap.dagger() == Swap(qubit, qmode)
+    assert swap.dagger().kraus == swap.kraus.dagger()
+
+
+def test_empty_sum_keeps_its_types():
+    zero = photonic.Phase(x).grad(y)
+    assert zero == Diagram.sum_factory((), qmode, qmode)
+    kraus, double = zero.get_kraus(), zero.double()
+    assert (kraus.dom, kraus.cod) == (diagram.mode, diagram.mode)
+    assert (double.dom, double.cod) == (diagram.mode @ diagram.mode, ) * 2
+    assert not double.terms
+    assert not np.any(zero.eval().tensor.array)
+    assert not np.any(double.to_tensor().eval().array)
+    with pytest.raises(AssertionError):
+        zero.get_kraus().to_tensor([2, 3])
+
+
+def test_inflate_keeps_the_environment():
+    lossy = (photonic.Create(1, 1, internal_states=([1, 0], [0, 1]))
+             >> photonic.BS >> qmode @ photonic.PhotonLoss(.5)
+             >> photonic.NumberResolvingMeasurement(2))
+    assert photonic.PhotonLoss(.5).inflate(2).env == diagram.mode ** 2
+    # distinguishable photons: each one exits on the left with probability
+    # 1/2, on the right 1/4 and is lost 1/4, independently of the other
+    expected = {(2, 0): 1 / 4, (1, 1): 1 / 4, (1, 0): 1 / 4,
+                (0, 2): 1 / 16, (0, 1): 1 / 8, (0, 0): 1 / 16}
+    distribution = lossy.inflate(2).eval().prob_dist()
+    for key, value in expected.items():
+        assert np.isclose(distribution[key], value)
+
+
+def test_from_callable_calls_a_channel_diagram():
+    from discopy.optyx.qubits import Z, Scalar
+    bell = Scalar(.5 ** .5) @ Z(0, 2)
+
+    @Channel.from_callable(dom=qubit, cod=qubit @ bit @ qubit)
+    def measure_beside_bell(c):
+        a, b = bell()
+        return a, Measure(qubit)(c), b
+
+    assert measure_beside_bell == (
+        bell @ Measure(qubit) >> qubit @ Diagram.swap(qubit, bit))

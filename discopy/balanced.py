@@ -21,6 +21,7 @@ Summary
     Head
     Tail
     Sum
+    Bubble
     Functor
 
 Axioms
@@ -228,6 +229,8 @@ class DualRailBraid(Box):
         right : The ribbon on the top right and bottom left.
         is_dagger (bool) : Which ribbon goes over the other.
     """
+    serialised_attrs = ("left", "right", "is_dagger")
+
     def __init__(self, left: monoidal.Ty, right: monoidal.Ty, is_dagger=False):
         self.left, self.right = left, right
         name = type(self).__name__ + f"({left}, {right})"
@@ -258,6 +261,8 @@ class DualRailTwist(Box):
         dom : The ribbon (doubled type) being twisted.
         is_dagger (bool) : Which way the rails twist.
     """
+    serialised_attrs = ("dom", "is_dagger")
+
     def __init__(self, dom: monoidal.Ty, is_dagger=False):
         name = type(self).__name__ + f"({dom})"
         Box.__init__(
@@ -290,6 +295,7 @@ class Twist(Box):
     :class:`Twist` is only defined for atomic types (i.e. of length 1).
     For complex types, use :meth:`Diagram.twist` instead.
     """
+    serialised_attrs = ("dom", "is_dagger")
     drawing_name = "Twist"
 
     def __init__(self, dom: monoidal.Ty, is_dagger=False):
@@ -336,6 +342,12 @@ class Sum(braided.Sum, Box):
         terms (tuple[Diagram, ...]) : The terms of the formal sum.
         dom (Ty) : The domain of the formal sum.
         cod (Ty) : The codomain of the formal sum.
+    """
+
+
+class Bubble(braided.Bubble, feedback.Bubble, Box):
+    """
+    A balanced bubble is a braided and feedback bubble and a balanced box.
     """
 
 
@@ -410,6 +422,7 @@ Hypergraph = hypergraph.Hypergraph[Diagram]
 Diagram.braid_factory = Braid
 Diagram.twist_factory = Twist
 Diagram.sum_factory = Sum
+Diagram.bubble_factory = Bubble
 Diagram.dual_rail_factory = DualRail
 Id = Diagram.id
 

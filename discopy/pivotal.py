@@ -68,7 +68,7 @@ from typing import ClassVar
 from discopy import cat, cmap, messages, rigid, feedback
 from discopy.abc import DaggerCategory, PivotalCategory, RigidCategory
 from discopy.cat import factory
-from discopy.utils import deprecated_alias, rsubs
+from discopy.utils import deprecated_alias
 
 
 class Wire(feedback.Wire, rigid.Wire):
@@ -260,6 +260,8 @@ class Box(rigid.Box, feedback.Box, Diagram):
         cod (Ty) : The codomain of the box, i.e. its output.
         time_step (int) : The number of times the box has been delayed.
     """
+    serialised_attrs = rigid.Box.serialised_attrs + ("time_step", )
+
     def __init__(self, name, dom, cod, *args, time_step: int = 0, **params):
         rigid.Box.__init__(self, name, dom, cod, *args, **params)
         self._time_step, self._args, self._params = time_step, args, params
@@ -275,23 +277,8 @@ class Box(rigid.Box, feedback.Box, Diagram):
 
     def rotate(self, left=False):
         del left
-        return type(self)(
-            self.name, dom=self.cod.r, cod=self.dom.r, data=self.data,
-            is_dagger=self.is_dagger, z=(self.z + 1) % 2,
-            time_step=self.time_step)
-
-    def dagger(self) -> Box:
-        return type(self)(
-            name=self.name, dom=self.cod, cod=self.dom, data=self.data,
-            is_dagger=not self.is_dagger, z=self.z, time_step=self.time_step)
-
-    def lambdify(self, *symbols, **kwargs):
-        if not self.free_symbols & set(symbols):
-            return lambda *xs: self
-        return lambda *xs: type(self)(
-            name=self.name, dom=self.dom, cod=self.cod,
-            data=rsubs(self.data, dict(zip(symbols, xs)), **kwargs),
-            is_dagger=self.is_dagger, z=self.z, time_step=self.time_step)
+        return self.rebuild(
+            dom=self.cod.r, cod=self.dom.r, z=(self.z + 1) % 2)
 
     @property
     def is_conjugate(self):
@@ -343,6 +330,23 @@ class Sum(rigid.Sum, feedback.Sum, Box):
     """
 
 
+class Bubble(rigid.Bubble, feedback.Bubble, Box):
+    """
+    A pivotal bubble is a rigid and feedback bubble and a pivotal box, whose
+    winding number is that of a pivotal box, i.e. a half-turn mod 2.
+
+    Example
+    -------
+    >>> x, y = Ty('x'), Ty('y')
+    >>> bubble = Box('f', x, y).bubble()
+    >>> assert bubble.r.r == bubble == bubble.l.l and bubble.r == bubble.l
+    """
+    def rotate(self, left=False) -> Bubble:
+        result = super().rotate(left)
+        result.z %= 2
+        return result
+
+
 class Functor(rigid.Functor, feedback.Functor):
     """
     A pivotal functor is a rigid functor on a pivotal category.
@@ -361,6 +365,7 @@ Diagram.box_factory = Box
 Diagram.functor_factory = Functor
 Diagram.cup_factory, Diagram.cap_factory = Cup, Cap
 Diagram.sum_factory = Sum
+Diagram.bubble_factory = Bubble
 CMap = cmap.CMap[Diagram]
 Id = Diagram.id
 

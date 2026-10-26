@@ -579,7 +579,7 @@ class Matrix[dtype](
         >>> assert Matrix.copy(2) >> Matrix.id(2) @ Matrix.discard(2)\\
         ...     == Matrix.id(2)
         """
-        dim = index(x)
+        dim, n = index(x), index(n)
         with backend() as np:
             array = np.array([
                 [j % dim == i for j in range(n * dim)] for i in range(dim)],

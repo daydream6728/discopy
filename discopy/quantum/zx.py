@@ -13,6 +13,7 @@ Summary
 
     Diagram
     Box
+    Bubble
     Swap
     Spider
     Z
@@ -25,6 +26,7 @@ import cmath
 from fractions import Fraction
 from functools import reduce
 from math import pi
+from operator import index
 from typing import ClassVar
 
 from discopy import cat, frobenius, rigid, tensor, quantum
@@ -240,12 +242,6 @@ class Diagram(tensor.Diagram[complex]):
                     @ Id(len(scan) - source - 1)
                 scan = scan[:target] + (scan[source],)\
                     + scan[target:source] + scan[source + 1:]
-            elif target > source:
-                swaps = Id(source)\
-                    @ Diagram.swap(1, target - source)\
-                    @ Id(len(scan) - target - 1)
-                scan = scan[:source] + scan[source + 1:target]\
-                    + (scan[source],) + scan[target:]
             else:
                 swaps = Id(len(scan))
             return scan, swaps
@@ -290,7 +286,7 @@ class Diagram(tensor.Diagram[complex]):
             node, = graph.neighbors(output)
             etype = graph.edge_type((node, output))
             hadamard = H if etype == EdgeType.HADAMARD else Id(1)
-            scan, swaps = move(scan, scan.index(node), target)
+            scan, swaps = move(scan, scan.index(node, target), target)
             diagram = diagram >> swaps\
                 >> Id(target) @ hadamard @ Id(len(scan) - target - 1)
         number = graph.scalar.to_number()
@@ -317,6 +313,17 @@ class Sum(tensor.Sum[complex], Box):
         dom (Dim) : The domain of the formal sum.
         cod (Dim) : The codomain of the formal sum.
     """
+
+
+class Bubble(tensor.Bubble[complex], Box):
+    """
+    A ZX bubble is a tensor bubble in a ZX diagram, which differentiates as
+    a ZX box does.
+
+    >>> bubble = Z(1, 1).bubble()
+    >>> assert (bubble >> Z(1, 1)).eval() == bubble.eval()
+    """
+    grad = Box.grad
 
 
 class Permutation(tensor.Permutation[complex], Box):
@@ -362,6 +369,7 @@ class Spider(tensor.Spider[complex], Box):
     basis = ((1, 0), (0, 1))
 
     def __init__(self, n_legs_in, n_legs_out, phase=0):
+        n_legs_in, n_legs_out = index(n_legs_in), index(n_legs_out)
         super().__init__(
             n_legs_in, n_legs_out,
             Nat(1), phase)  # ty: ignore[invalid-argument-type]
@@ -486,6 +494,8 @@ class X(Spider):
 
 class Scalar(Box):
     """ Scalar in a ZX diagram. """
+    serialised_attrs = ("data", )
+
     def __init__(self, data):
         super().__init__("scalar", Nat(0), Nat(0), data=data)
         self.drawing_name = format_number(data)
@@ -563,5 +573,6 @@ H.color, H.shape = "yellow", "rectangle"
 SWAP = Swap(Nat(1), Nat(1))  # ty: ignore[invalid-argument-type]
 Diagram.box_factory = Box
 Diagram.swap_factory, Diagram.sum_factory = Swap, Sum
+Diagram.bubble_factory = Bubble
 Diagram.permutation_factory = Permutation
 Id = Diagram.id

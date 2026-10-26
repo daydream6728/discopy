@@ -402,8 +402,40 @@ def test_reduce_strategy():
 
     with raises(NotImplementedError):
         Strategy().order((c, ))
-    with raises(TypeError):
-        Constant('e', X).reduce()
+    e, g = Constant('e', X), Constant('g', X >> X)
+    assert e.reduce().to_term() == e == e.normal_form()
+    lam, tagged = X(lambda x: g(x)), Constant('t', X, data=[1])
+    assert lam.reduce().to_term() == lam and lam.reduce().cod() == lam.cod
+    assert g(tagged).normal_form() == g(tagged)
+    assert X(lambda x: g(x))(e).normal_form() == g(e)
+    assert g(X(lambda x: x)(c)).normal_form() == g(c)
+
+
+def test_normal_form_constants():
+    from discopy.python import Function
+    X = Ty('X')
+    f, a = Constant('f', X >> (X >> X)), Constant('a', X)
+    c, twice = Variable('c', X), (X >> X)(lambda g: X(lambda x: g(g(x))))
+    shadow = Constant('x', X)
+    terms = [
+        f(a)(c),
+        X(lambda x: f(x)(a))(c),
+        twice(f(a))(X(lambda x: x)(c)),
+        (X >> X)(lambda g: g(shadow))(X(lambda x: f(x)(shadow))),
+        X(lambda y: twice(f(y)))(a)]
+    expected = [
+        f(a)(c), f(c)(a), f(a)(f(a)(c)), f(shadow)(shadow),
+        X(lambda x: f(a)(f(a)(x)))]
+    F = Functor({X: int}, {
+        f: Function(lambda: lambda m: lambda n: 2 * m - n, (),
+                    Function.exp(Function.exp((int, ), (int, )), (int, ))),
+        a: Function(lambda: 3, (), (int, )),
+        shadow: Function(lambda: 5, (), (int, ))}, cod=Function)
+    for term, normal in zip(terms, expected):
+        assert term.normal_form() == normal == normal.normal_form()
+        values = [F(t.eval(context=[c]))(7) for t in (term, normal)]
+        values = [v(1) if callable(v) else v for v in values]
+        assert values[0] == values[1]
 
 
 def test_bohm_tree_cod():
@@ -892,3 +924,11 @@ def test_delay_diagrams():
         == Diagram.ev(z, y).dagger().delay()
     assert f.curry().delay().cod == (z << y).delay() != z.d << y.d
     assert f.curry().delay().arg == f
+
+
+def test_Bubble_is_linear_and_has_no_term():
+    x = Ty('x')
+    f, g = Box('f', x, x), Box('g', x, x)
+    assert f.bubble().is_linear and Diagram.copy(x).bubble(cod=x).is_linear
+    with raises(AxiomError):
+        (f.bubble() >> g).to_term()

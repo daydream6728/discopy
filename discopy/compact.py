@@ -178,6 +178,12 @@ class Sum(symmetric.Sum, ribbon.Sum, Box):
     """
 
 
+class Bubble(symmetric.Bubble, ribbon.Bubble, Box):
+    """
+    A compact bubble is a symmetric and ribbon bubble and a compact box.
+    """
+
+
 class Functor(symmetric.Functor, ribbon.Functor):
     """
     A compact functor is both a symmetric functor and a ribbon functor.
@@ -223,6 +229,7 @@ Diagram.permutation_factory = Permutation
 Hypergraph = hypergraph.Hypergraph[Diagram]
 Diagram.cup_factory, Diagram.cap_factory = Cup, Cap
 Diagram.sum_factory = Sum
+Diagram.bubble_factory = Bubble
 
 
 class Equation(symmetric.Equation):

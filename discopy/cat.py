@@ -91,6 +91,7 @@ from discopy.utils import (  # noqa: F401
     factory,
     factory_name,
     from_tree,
+    resolve_factory,
     rsubs,
     unbiased,
     MappingOrCallable,
@@ -638,6 +639,18 @@ class Box(Arrow):
         data (any) : Extra data in the box, default is :code:`None`.
         is_dagger : Whether the box is dagger.
 
+    Note
+    ----
+    The :code:`serialised_attrs` of a box are the arguments of its
+    constructor, each an attribute of the box, as its signature lists them:
+    by position up to a star, :code:`*args` unpacked, by name after it.
+    :meth:`rebuild` reads them, and so :meth:`dagger`, :meth:`subs`,
+    :meth:`lambdify` and the rotations of a rigid box keep them. A subclass
+    whose constructor takes other arguments, or in another order, declares
+    its own. A subclass whose constructor takes those of this box but not
+    one that a level adds, e.g. :code:`time_step`, nor :code:`**params`, gets
+    it set on the new box once built.
+
     Example
     -------
 
@@ -645,6 +658,7 @@ class Box(Arrow):
     >>> f = Box('f', x, y, data=[42])
     >>> assert f.inside == (f, )
     """
+    serialised_attrs = ("name", "dom", "cod", "*", "is_dagger", "data")
 
     @classmethod
     def strategy(
@@ -696,14 +710,40 @@ class Box(Arrow):
     def lambdify(self, *symbols: "sympy.Symbol", **kwargs) -> Callable:
         if not self.free_symbols & set(symbols):
             return lambda *xs: self
-        return lambda *xs: type(self)(
-            self.name, self.dom, self.cod, is_dagger=self.is_dagger,
+        return lambda *xs: self.rebuild(
             data=rsubs(self.data, dict(zip(symbols, xs)), **kwargs))
 
-    def dagger(self) -> Self:
-        return type(self)(
-            self.name, self.cod, self.dom,
-            data=self.data, is_dagger=not self.is_dagger)
+    def rebuild(self, **changes) -> Box:
+        """
+        The box of the same type with the same :code:`serialised_attrs`, but
+        for some ``changes``.
+
+        Parameters:
+            changes : The arguments of the constructor that change, by name.
+
+        Example
+        -------
+        >>> f = Box('f', Ob('x'), Ob('y'), data=42)
+        >>> assert f.rebuild(data=43) == Box('f', Ob('x'), Ob('y'), data=43)
+        """
+        attrs = (*self.serialised_attrs, "*")
+        star = next(i for i, attr in enumerate(attrs) if attr[0] == "*")
+        fields = {name: getattr(self, name) for name in (
+            attr.removeprefix("*") for attr in attrs) if name} | changes
+        args = [fields.pop(name) for name in attrs[:star]]
+        args += fields.pop(attrs[star][1:], ())
+        names = utils.keywords(type(self).__init__)
+        later = {} if names is None else {
+            name: fields.pop(name) for name in attrs[star + 1:]
+            if name not in names and name not in Box.serialised_attrs}
+        box = type(self)(*args, **fields)
+        for name, value in later.items():
+            setattr(box, name, value)
+        return box
+
+    def dagger(self) -> Box:
+        return self.rebuild(
+            dom=self.cod, cod=self.dom, is_dagger=not self.is_dagger)
 
     def __getitem__(self, key):
         if key == slice(None, None, -1):
@@ -791,6 +831,8 @@ class Sum(Box):
     ----
     The sum is non-commutative, i.e. :code:`Sum([f, g]) != Sum([g, f])`.
     """
+    serialised_attrs = ("terms", "dom", "cod")
+
     def __init__(
             self, terms: Sequence[Arrow],
             dom: Ob | None = None, cod: Ob | None = None):
@@ -916,6 +958,9 @@ class Bubble(Box):
     ValueError: A bubble needs a dom given when its args do not all share \
 one, they have [cat.Ob('x'), cat.Ob('y')].
     """
+    serialised_attrs = (
+        "*args", "dom", "cod", "name", "method", "is_dagger", "data")
+
     def __init__(
             self, *args: Arrow, dom: Ob | None = None,
             cod: Ob | None = None, name="", method="bubble", **kwargs):
@@ -974,38 +1019,31 @@ one, they have [cat.Ob('x'), cat.Ob('y')].
         repr_kwargs += f", name={repr(self.name)}" if self.name else ""
         repr_kwargs += "" if self.method == "bubble"\
             else f", method={repr(self.method)}"
+        repr_kwargs += "" if self.data is None else f", data={self.data!r}"
+        repr_kwargs += ", is_dagger=True" if self.is_dagger else ""
         return factory_name(type(self)) + (f"({repr_args}{repr_kwargs})")
 
     @property
     def free_symbols(self):
         return super().free_symbols.union(*[f.free_symbols for f in self.args])
 
-    @property
-    def keywords(self) -> dict[str, Any]:
-        """
-        The keyword arguments the bubble is built with besides its
-        arguments, which :meth:`lambdify`, and so :meth:`subs`, and
-        :meth:`dagger` build it again with, a subclass adding its own, e.g.
-        the drawing options of a :class:`discopy.monoidal.Bubble`.
-        """
-        return dict(
-            dom=self.dom, cod=self.cod, name=self.name, method=self.method,
-            data=self.data, is_dagger=self.is_dagger)
-
     def lambdify(self, *symbols: "sympy.Symbol", **kwargs) -> Callable:
         if not set(symbols) & self.free_symbols:
             return lambda *xs: self
         args = [arg.lambdify(*symbols, **kwargs) for arg in self.args]
-        return lambda *xs: type(self)(
-            *(f(*xs) for f in args), **dict(
-                self.keywords,
-                data=rsubs(self.data, dict(zip(symbols, xs)), **kwargs)))
+
+        def function(*xs):
+            changes = {"args": tuple(f(*xs) for f in args)}
+            if self.data is not None:
+                changes["data"] = rsubs(
+                    self.data, dict(zip(symbols, xs)), **kwargs)
+            return self.rebuild(**changes)
+        return function
 
     def dagger(self) -> Bubble:
-        keywords = self.keywords
-        keywords.update(
+        return self.rebuild(
+            args=tuple(arg.dagger() for arg in self.args),
             dom=self.cod, cod=self.dom, is_dagger=not self.is_dagger)
-        return type(self)(*(arg.dagger() for arg in self.args), **keywords)
 
     def to_tree(self):
         tree = {
@@ -1073,6 +1111,27 @@ class Functor(Category[type, "Functor"]):
     >>> assert F(m) == m
     >>> m.data.append(False)
     >>> assert F(m) == m[::-1]
+
+    Note
+    ----
+    A daggered box is mapped as the dagger of the image of the box, when the
+    codomain has a dagger to take. When it has none, e.g. a functor into
+    :class:`discopy.stream.Stream` or :class:`discopy.python.Function`, the
+    image of a daggered box is read off :code:`ar_map` like that of any
+    other box. The dagger is the one the codomain has rather than the one it
+    declares, neither being read off the other:
+    :class:`discopy.drawing.Drawing` has a total dagger and declares no
+    :class:`~discopy.abc.DaggerCategory`, while
+    :class:`discopy.python.additive.Function` declares none either and has
+    only a partial one, defined on swaps.
+
+    >>> from discopy import python
+    >>> F = Functor(
+    ...     ob_map={x: int, y: int},
+    ...     ar_map=lambda f: (lambda n: n - 1) if f.is_dagger
+    ...                      else (lambda n: n + 1),
+    ...     cod=python.Function)
+    >>> assert F(f)(1) == 2 and F(f[::-1])(1) == 0
     """
     ob = type[Category]
     dom: type[Any] = Arrow
@@ -1150,6 +1209,64 @@ class Functor(Category[type, "Functor"]):
         return factory_name(type(self))\
             + f"(ob_map={self.ob_map}, ar_map={self.ar_map}{dom_cod_repr})"
 
+    def to_tree(self) -> dict:
+        """
+        Serialise a functor whose maps are dictionaries, each as the list of
+        its pairs, with the names of its domain and codomain, which are
+        classes of DisCoPy. A map that is a Python callable has no tree.
+
+        Example
+        -------
+        >>> from discopy.utils import dumps, loads
+        >>> x, y = Ob('x'), Ob('y')
+        >>> f = Box('f', x, y)
+        >>> F = Functor({x: y, y: x}, {f: f[::-1]})
+        >>> assert loads(dumps(F)) == F
+        >>> dumps(Functor(lambda x: x, {}))
+        Traceback (most recent call last):
+        ...
+        TypeError: A functor has no tree: its ob_map is a Python callable, \
+which JSON cannot hold.
+        """
+        for category in (self.dom, self.cod):
+            if not utils.is_discopy_class(category):
+                raise TypeError(messages.NOT_JSON_SERIALISABLE.format(
+                    type(category).__name__))
+        tree = {'factory': factory_name(type(self))}
+        for attr in ("ob_map", "ar_map"):
+            mapping = getattr(self, attr).mapping
+            if not isinstance(mapping, Mapping):
+                raise TypeError(messages.NO_TREE_CALLABLE.format(
+                    "A functor", attr))
+            for key in mapping:
+                if not hasattr(key, 'to_tree'):
+                    raise TypeError(messages.NOT_JSON_SERIALISABLE.format(
+                        type(key).__name__))
+            tree[attr] = [[key.to_tree(), value.to_tree()
+                           if hasattr(value, 'to_tree') else value]
+                          for key, value in mapping.items()]
+        return tree | {
+            'dom': factory_name(self.dom), 'cod': factory_name(self.cod)}
+
+    @classmethod
+    def from_tree(cls, tree: dict) -> Functor:
+        """
+        Decode a serialised functor, see :meth:`to_tree`, where a value that
+        is not a tree, i.e. has no factory, is the value itself, e.g. the
+        array of a box.
+        """
+        ob_map, ar_map = ({
+            from_tree(key): from_tree(value)
+            if isinstance(value, dict) and 'factory' in value
+            else value for key, value in tree[attr]}
+            for attr in ("ob_map", "ar_map"))
+        dom, cod = map(resolve_factory, (tree['dom'], tree['cod']))
+        for category in (dom, cod):
+            if not utils.is_discopy_class(category):
+                raise AttributeError(messages.NO_SUCH_CLASS.format(
+                    factory_name(category)))
+        return cls(ob_map, ar_map, dom=dom, cod=cod)
+
     def __call__(self, other):
         if isinstance(other, Ob):
             result = self.ob_map[other]
@@ -1170,7 +1287,8 @@ class Functor(Category[type, "Functor"]):
                     data=other.data, is_dagger=other.is_dagger)
             return getattr(self.cod, other.method)(
                 *map(self, other.args), dom=dom, cod=cod)
-        if isinstance(other, Box) and other.is_dagger:
+        if isinstance(other, Box) and other.is_dagger\
+                and hasattr(self.cod, "dagger"):
             return self(other.dagger()).dagger()
         if isinstance(other, Box):
             result = self.ar_map[other]
@@ -1310,6 +1428,43 @@ class Equation(AbstractEquation):
     >>> assert not Equation(f, f >> g >> g)
     >>> assert Equation(f, f >> g >> g, up_to=parity)
     """
+    def to_tree(self) -> dict:
+        """
+        Serialise an equation by its terms and symbols, which are strings,
+        unless it compares them up to a function given to it, which has no
+        tree.
+
+        Example
+        -------
+        >>> from discopy.utils import dumps, loads
+        >>> x = Ob('x')
+        >>> equation = loads(dumps(Equation(Box('f', x, x), Id(x))))
+        >>> assert equation.terms == (Box('f', x, x), Id(x))
+        >>> dumps(Equation(Id(x), up_to=len))
+        Traceback (most recent call last):
+        ...
+        TypeError: An equation has no tree: its up_to is a Python callable, \
+which JSON cannot hold.
+        >>> dumps(Equation(Id(x), Id(x), symbols=[1]))
+        Traceback (most recent call last):
+        ...
+        TypeError: Expected str, got int instead.
+        """
+        if 'up_to' in vars(self):
+            raise TypeError(messages.NO_TREE_CALLABLE.format(
+                "An equation", "up_to"))
+        for symbol in self.symbols:
+            assert_isinstance(symbol, str)
+        return {'factory': factory_name(type(self)),
+                'terms': [term.to_tree() for term in self.terms],
+                'symbols': list(self.symbols)}
+
+    @classmethod
+    def from_tree(cls, tree: dict) -> Equation:
+        """ Decode a serialised equation, see :meth:`to_tree`. """
+        for symbol in tree['symbols']:
+            assert_isinstance(symbol, str)
+        return cls(*map(from_tree, tree['terms']), symbols=tree['symbols'])
 
 
 Ob.equation_factory = Equation

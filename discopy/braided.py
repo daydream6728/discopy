@@ -16,6 +16,7 @@ Summary
     Box
     Braid
     Sum
+    Bubble
     Functor
 
 .. admonition:: Functions
@@ -221,6 +222,8 @@ class Braid(BinaryBoxConstructor, Box):
     :class:`Braid` is only defined for atomic types (i.e. of length 1).
     For complex types, use :meth:`Diagram.braid` instead.
     """
+    serialised_attrs = ("left", "right", "is_dagger")
+
     def __init__(self, left: monoidal.Ty, right: monoidal.Ty, is_dagger=False):
         assert_isatomic(left, monoidal.Ty)
         assert_isatomic(right, monoidal.Ty)
@@ -298,6 +301,12 @@ class Sum(monoidal.Sum, Box):
     """
 
 
+class Bubble(monoidal.Bubble, Box):
+    """
+    A braided bubble is a monoidal bubble and a braided box.
+    """
+
+
 class Functor(monoidal.Functor):
     """
     A braided functor is a monoidal functor that preserves braids.
@@ -321,6 +330,7 @@ class Functor(monoidal.Functor):
 Diagram.box_factory = Box
 Diagram.braid_factory, Diagram.functor_factory = Braid, Functor
 Diagram.sum_factory = Sum
+Diagram.bubble_factory = Bubble
 Id = Diagram.id
 
 

@@ -26,6 +26,7 @@ Summary
     Word
     ForwardCrossedComposition
     BackwardCrossedComposition
+    Bubble
     Functor
     CMap
 
@@ -175,8 +176,19 @@ class Curry(biclosed.Curry, Box):
     """
 
 
+class Bubble(biclosed.Bubble, Box):
+    """
+    A categorial bubble is a biclosed bubble and a categorial box.
+
+    >>> N = Ty('N')
+    >>> assert (Box('f', N, N).bubble() >> Box('g', N, N)).cod == N
+    """
+
+
 class ForwardCrossedComposition(BinaryBoxConstructor, Box):
     """ Forward crossed composition rule. """
+    serialised_attrs = ("left", "right")
+
     def __init__(self, left, right):
         assert left.is_over
         assert right.is_under
@@ -191,6 +203,8 @@ class ForwardCrossedComposition(BinaryBoxConstructor, Box):
 
 class BackwardCrossedComposition(BinaryBoxConstructor, Box):
     """ Backward crossed composition rule. """
+    serialised_attrs = ("left", "right")
+
     def __init__(self, left, right):
         assert left.is_over
         assert right.is_under
@@ -253,6 +267,8 @@ class TermBase(Box, biclosed.TermBase):
 
 
 class Constant(TermBase, biclosed.Constant):
+    serialised_attrs = ("name", "cod")
+
     def __init__(self, name: str, cod: Ty):
         biclosed.Constant.__init__(self, name, cod)
         TermBase.__init__(self, self.name, self.dom, self.cod)
@@ -262,11 +278,14 @@ class Constant(TermBase, biclosed.Constant):
 
 
 class Variable(TermBase, biclosed.Variable):
+    serialised_attrs = biclosed.Variable.serialised_attrs
+
     def simplify(self):
         return self
 
 
 class Abstraction(TermBase, biclosed.Abstraction):
+    serialised_attrs = biclosed.Abstraction.serialised_attrs
     var: Variable
     body: Term
     left: bool = False
@@ -281,6 +300,8 @@ class Abstraction(TermBase, biclosed.Abstraction):
 
 class FA(TermBase, biclosed.Application):
     "Application of type ``Y`` with subterms of type ``Y << X`` and ``X``."
+    serialised_attrs = ("func", "args")
+
     def __init__(self, func, args):
         biclosed.Application.__init__(self, func, args, left=False)
         TermBase.__init__(self, self.name, self.dom, self.cod)
@@ -295,6 +316,8 @@ class FA(TermBase, biclosed.Application):
 
 class BA(TermBase, biclosed.Application):
     "Application of type ``Y`` with subterms of type ``X`` and ``X >> Y``."
+    serialised_attrs = ("args", "func")
+
     def __init__(self, args, func):
         biclosed.Application.__init__(self, func, args, left=True)
         TermBase.__init__(self, self.name, self.dom, self.cod)
@@ -312,6 +335,7 @@ class BA(TermBase, biclosed.Application):
 
 class TypeRaising(TermBase):
     "Abstract superclass of :class:`FTR` and :class:`BTR`."
+    serialised_attrs = ("base", "child", "cod")
     base: Ty
     child: Term
 
@@ -352,6 +376,8 @@ class TypeRaising(TermBase):
 
 class FTR(TypeRaising):
     "Forward type raising ``Y << (X >> Y)`` with base ``Y`` and child ``X``."
+    serialised_attrs = ("base", "child")
+
     def __init__(self, base, child):
         super().__init__(base, child, base << (child.cod >> base))
 
@@ -364,6 +390,8 @@ class FTR(TypeRaising):
 
 class BTR(TypeRaising):
     "Backward type raising ``(Y << X) >> Y`` with base ``Y`` and child ``X``."
+    serialised_attrs = ("base", "child")
+
     def __init__(self, base, child):
         super().__init__(base, child, (base << child.cod) >> base)
 
@@ -376,6 +404,7 @@ class BTR(TypeRaising):
 
 class BinaryTerm(TermBase):
     "Abstract superclass of :class:`FC`, :class:`BC`, :class:`FX`, :class:`BX`"
+    serialised_attrs = ("left", "right")
     left: Term
     right: Term
 
@@ -676,6 +705,7 @@ def parse(sentence, k: int = 1, goal: Ty | None = None
 Id = Diagram.id
 Diagram.box_factory, Diagram.functor_factory = Box, Functor
 Diagram.curry_factory = Curry
+Diagram.bubble_factory = Bubble
 Diagram.eval_factory, Diagram.coeval_factory = Eval, Coeval
 
 Ty.variable_factory = Variable

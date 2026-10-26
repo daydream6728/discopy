@@ -53,6 +53,7 @@ dev = [
     "pytest-benchmark",
     "polars",
     "pytest-xdist",
+    "ruff == 0.14.0",
     "ty == 0.0.69",
 ]
 docs = ["discopy[docs]"]
@@ -102,6 +103,7 @@ optyx = [
     "pytket-qiskit[aer] >= 0.68.3",
     "pyzx == 0.10.7",
     "quimb",
+    "scipy",
     "sympy",
 ]
 test = [
@@ -119,6 +121,10 @@ notebooks = [
     "anywidget",
     "ipykernel == 6.23.*",
     "marimo",
+    # imported by the notebooks in docs/notebooks/optyx
+    "pandas",
+    "seaborn",
+    "tqdm",
 ]
 docs  = [
     "discopy[notebooks]",
@@ -171,6 +177,45 @@ per-file-ignores = [
     "__init__.py:F401"
 ]
 
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "B", "PLE", "PLW", "RUF"]
+# The first four are flake8's; the rest are rules `main` breaks today, each
+# removed from this list by the pull request that fixes its last instance.
+ignore = [
+    "E731",
+    "E741",
+    "E743",
+    "F811",
+    "B006",
+    "B007",
+    "B008",
+    "B023",
+    "B027",
+    "B028",
+    "B904",
+    "B905",
+    "E714",
+    "PLW0406",
+    "PLW0642",
+    "PLW1641",
+    "PLW2901",
+    "PLW3301",
+    "RUF001",
+    "RUF002",
+    "RUF005",
+    "RUF007",
+    "RUF010",
+    "RUF012",
+    "RUF013",
+    "RUF017",
+    "RUF021",
+    "RUF022",
+    "RUF100",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]
+
 # optyx moved in with its own history (#276) and is typed apart from the
 # rest of the package, which typechecks.
 [tool.ty.src]
@@ -186,6 +231,14 @@ python-version = "3.14"
 [tool.ty.rules]
 invalid-method-override = "ignore"
 unresolved-attribute = "ignore"
+# The rules `main` breaks today, each set back to "error" by the pull request
+# that fixes its last instance.
+invalid-argument-type = "warn"
+invalid-parameter-default = "warn"
+invalid-return-type = "warn"
+no-matching-overload = "warn"
+too-many-positional-arguments = "warn"
+unsupported-operator = "warn"
 
 [tool.pytest.ini_options]
 pythonpath = [

@@ -81,10 +81,10 @@ from discopy.cat import assert_iscomposable
 from discopy.python import finset
 from discopy.utils import (
     AxiomError, factory, classproperty, unbiased, assert_isinstance,
-    factory_name, get_origin)
+    factory_name, from_tree, get_origin, resolve_factory)
 
 
-@dataclass
+@dataclass(unsafe_hash=True)
 class Ty[natural](Pregroup, TestableGeneric):
     """
     An integer type is a pair of :attr:`natural` types.
@@ -114,6 +114,8 @@ class Ty[natural](Pregroup, TestableGeneric):
     >>> x, y = Ty(T("x"), T("x'")), Ty(T("y"), T("y'"))
     >>> assert x @ y == Ty(T("x") @ T("y"), T("y'") @ T("x'"))
     """
+    ob = type(None)
+
     @classmethod
     def checked_params(cls) -> tuple:
         """ The default :attr:`natural` types, for the class itself. """
@@ -162,6 +164,32 @@ class Ty[natural](Pregroup, TestableGeneric):
 
     def __bool__(self):
         return bool(self.positive) or bool(self.negative)
+
+    def to_tree(self) -> dict:
+        """
+        Serialise an integer type, with the name of its natural types, each
+        half as its tree or, when it has none, e.g. an integer, as itself.
+
+        >>> from discopy.utils import dumps, loads
+        >>> from discopy.ribbon import Ty as T
+        >>> for x in (Ty[T](T('x'), T('y')), Ty[int](1, 2)):
+        ...     assert loads(dumps(x)) == x
+        """
+        positive, negative = (
+            half.to_tree() if hasattr(half, 'to_tree') else half
+            for half in (self.positive, self.negative))
+        return {
+            'factory': factory_name(get_origin(type(self))),
+            'natural': factory_name(self.natural),
+            'positive': positive, 'negative': negative}
+
+    @classmethod
+    def from_tree(cls, tree: dict) -> Ty:
+        """ Decode a serialised integer type, see :meth:`to_tree`. """
+        factory = cls[resolve_factory(tree['natural'])]
+        return factory(*(
+            from_tree(half) if isinstance(half, dict) else half
+            for half in (tree['positive'], tree['negative'])))
 
     def __repr__(self):
         factory, natural = map(
@@ -246,7 +274,7 @@ class Ty[natural](Pregroup, TestableGeneric):
 
 
 @factory
-@dataclass
+@dataclass(unsafe_hash=True)
 class Diagram[natural](RibbonCategory, TestableGeneric):
     """
     An integer diagram from ``x`` to ``y`` is a :attr:`natural` diagram
@@ -344,6 +372,30 @@ class Diagram[natural](RibbonCategory, TestableGeneric):
             raise ValueError(messages.WRONG_COD.format(
                 cod.positive @ dom.negative, inside.cod))
         self.inside, self.dom, self.cod = inside, dom, cod
+
+    def to_tree(self) -> dict:
+        """
+        Serialise an integer diagram, with the name of its natural category.
+
+        >>> from discopy.utils import dumps, loads
+        >>> from discopy.ribbon import Ty as T, Box
+        >>> x, y = Ty[T]('x', 'u'), Ty[T]('y', 'v')
+        >>> f = Diagram(Box('f', T('x', 'v'), T('y', 'u')), x, y)
+        >>> assert loads(dumps(f)) == f
+        """
+        return {
+            'factory': factory_name(get_origin(type(self))),
+            'natural': factory_name(self.natural),
+            'inside': self.inside.to_tree(),
+            'dom': self.dom.to_tree(),
+            'cod': self.cod.to_tree()}
+
+    @classmethod
+    def from_tree(cls, tree: dict) -> Diagram:
+        """ Decode a serialised integer diagram, see :meth:`to_tree`. """
+        factory = cls[resolve_factory(tree['natural'])]
+        return factory(*map(from_tree, (
+            tree['inside'], tree['dom'], tree['cod'])))
 
     @classmethod
     def is_symmetric(cls) -> bool:

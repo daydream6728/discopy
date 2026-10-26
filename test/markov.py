@@ -14,6 +14,9 @@ def test_Discard_has_no_copies():
     assert Copy(x, 0) == Discard(x) == Discard(x, 0)
     with raises(ValueError):
         Discard(x, 2)
+    for box in (Copy, Discard):
+        with raises(ValueError):
+            box(x, -1)
 
 
 def test_spider_factory():
@@ -143,6 +146,17 @@ def test_copy_factory():
     assert isinstance(RecipeCopy(x, 0), RecipeDiscard)
     with raises(AxiomError, match="Recipe is not a dagger category"):
         RecipeCopy(x).dagger()
+
+
+def test_Copy_takes_index():
+    from numpy import int64
+    from discopy.abc import Nat
+    x = Ty('x')
+    assert Copy(x, int64(3)) == Copy(x, Nat(3)) == Copy(x, 3)
+    assert Function(x, int64([0, 0, 0])) == Copy(x, 3)
+    zero = type("Zero", (), {"__index__": lambda _: 0})()
+    for box in (Copy(x, zero), Function(x, int64([]))):
+        assert isinstance(box, Discard) and box == Discard(x)
 
 
 def test_Copy_pickle():
@@ -409,3 +423,32 @@ def test_Box_flags_subs():
     assert not any(diagram.is_deterministic for diagram in samples)
     assert not any(diagram.is_affine for diagram in conditions)
     assert condition.subs(phi, 1).flags() == {'is_affine': False}
+
+
+def test_Bubble_flags():
+    from discopy.ehypergraph import Markov
+    from discopy.utils import dumps, loads
+    x = Ty('x')
+    noisy = Box('sample', x, x, is_deterministic=False).bubble(
+        is_deterministic=False, is_affine=False)
+    assert noisy[::-1].affine is False
+    plain = Box('sample', x, x, is_deterministic=False).bubble(is_affine=False)
+    assert loads(dumps(plain)) == plain == eval(repr(plain))
+    assert eval(repr(plain[::-1])).is_dagger
+    assert plain != plain.arg.bubble()
+    minus, zero = Box('-', x @ x, x), Box('0', Ty(), x)
+    program = Diagram.copy(x) >> noisy @ noisy >> minus
+    graph = Markov.from_diagram(program)
+    *_, last = graph, *graph.saturate(
+        (Diagram.copy(x) >> minus, Diagram.discard(x) >> zero))
+    assert last.extract().to_diagram() == program.foliation()
+
+
+def test_Bubble_flags_subs():
+    importorskip("sympy")
+    from sympy.abc import phi
+    x = Ty('x')
+    sample = Box('sample', x, x, data=phi, is_deterministic=False)
+    noisy = sample.bubble(is_deterministic=False, is_affine=False)
+    assert not noisy.subs(phi, 1).is_deterministic
+    assert not noisy.lambdify(phi)(1).affine

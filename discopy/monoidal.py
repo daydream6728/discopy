@@ -58,8 +58,9 @@ from __future__ import annotations
 import itertools
 from dataclasses import dataclass, field
 from functools import cached_property
+from operator import index
 from typing import (
-    Any, Iterable, Iterator, Callable, Self, TYPE_CHECKING, ClassVar)
+    Iterable, Iterator, Callable, ClassVar, Mapping, Self, TYPE_CHECKING)
 from warnings import warn
 
 from discopy import abc, axioms, cat, drawing, hypergraph, cmap, messages
@@ -277,7 +278,7 @@ class List[generator_factory](Monoid["List"], TestableGeneric):
             yield self[i:i + 1]
 
     def __pow__(self, n_times: int) -> "List":
-        assert_isinstance(n_times, int)
+        n_times = index(n_times)
         return self.tensor(*(n_times - 1) * [self]) if n_times > 0\
             else type(self)()
 
@@ -458,7 +459,7 @@ class Ty(cat.Ob, cat.FreeCategory, ColouredMonoid):
     then = tensor
 
     def __pow__(self, n_times: int) -> Self:
-        assert_isinstance(n_times, int)
+        n_times = index(n_times)
         if n_times <= 0:
             assert self.dom == self.cod
             return self.factory.id(self.dom)
@@ -718,6 +719,9 @@ class Nat(abc.Nat, Ty):  # ty: ignore[invalid-generic-class]
     def __hash__(self):
         return hash(repr(self))
 
+    def __pow__(self, n_times):
+        return self.factory(index(n_times) * self.n)
+
     def delay(self, n_steps: int = 1) -> Self:
         """
         The identity: a type whose atoms are not wires has no time step, so
@@ -852,6 +856,54 @@ class Layer(cat.Box, ColouredMonoid):
         :meth:`whisker` and :meth:`tensor`.
         """
         raise ValueError(messages.LAYERS_MUST_HAVE_A_BOX)
+
+    def then(self, *others: cat.Arrow) -> cat.Arrow:
+        """
+        Layers do not compose with layers: a diagram is the sequence of its
+        layers, so it is diagrams that compose, e.g. ``f >> g`` and not
+        ``Layer(f) >> Layer(g)``. Identities compose as in :mod:`cat`.
+
+        Parameters:
+            others : The arrows to compose.
+
+        Raises:
+            AxiomError : When the composite would hold two layers, saying to
+                compose diagrams instead.
+
+        Example
+        -------
+        >>> x = Ty('x')
+        >>> f = Box('f', x, x)
+        >>> Layer(f) >> Layer(f)
+        Traceback (most recent call last):
+        ...
+        discopy.utils.AxiomError: Compose diagrams, not layers: f >> f.
+        >>> assert (Layer(f) >> cat.Arrow.id(x)).inside == (Layer(f), )
+        """
+        result = cat.Arrow.then(self, *others)
+        if sum(isinstance(box, Layer) for box in result.inside) > 1:
+            raise AxiomError(messages.LAYERS_DO_NOT_COMPOSE.format(
+                " >> ".join(map(str, result.inside))))
+        return result
+
+    def __rrshift__(self, other: cat.Arrow) -> cat.Arrow:
+        """
+        The composite ``other >> self``, called before ``other``'s own for an
+        arrow of :mod:`cat`, so that it cannot hold another layer either.
+
+        Example
+        -------
+        >>> x = Ty('x')
+        >>> f = Box('f', x, x)
+        >>> cat.Arrow.id(x) >> Layer(f) >> Layer(f)
+        Traceback (most recent call last):
+        ...
+        discopy.utils.AxiomError: Compose diagrams, not layers: f >> f.
+        """
+        return Layer.then(other, self) if isinstance(other, cat.Arrow)\
+            else NotImplemented
+
+    __lshift__ = __rrshift__
 
     @classmethod
     def whisker(cls, other: "Ty | Box | Layer") -> "Ty | Layer":
@@ -1973,6 +2025,8 @@ class Bubble(cat.Bubble, Box):
         :align: center
 
     """
+    serialised_attrs = cat.Bubble.serialised_attrs + (
+        "drawing_name", "draw_as_frame", "draw_as_square", "draw_vertically")
 
     def __init__(
             self, *args: Diagram,
@@ -1999,27 +2053,6 @@ class Bubble(cat.Bubble, Box):
         else:
             self.draw_as_frame = True
             self.draw_as_square = False
-
-    @property
-    def keywords(self) -> dict[str, Any]:
-        """
-        The keyword arguments of a :class:`discopy.cat.Bubble` with the
-        drawing options, so that substituting into a bubble draws it the
-        same way.
-
-        >>> from sympy.abc import phi  # doctest: +EXTRA
-        >>> x = Ty('x')
-        >>> f = Box('f', x, x, data=phi)
-        >>> bubble = f.bubble(drawing_name="g", draw_as_square=True)
-        >>> substituted = bubble.subs(phi, 1)
-        >>> assert substituted.keywords == bubble.keywords
-        >>> assert substituted.arg.data == 1
-        """
-        return dict(
-            super().keywords, drawing_name=self.drawing_name,
-            draw_as_frame=self.draw_as_frame,
-            draw_as_square=self.draw_as_square,
-            draw_vertically=self.draw_vertically)
 
     @property
     def size(self):
@@ -2125,6 +2158,32 @@ class Functor(cat.Functor):
         return result[:-len(suffix) if suffix else None] + (
             f", colour_map={self.colour_map!r}{suffix}")
 
+    def to_tree(self) -> dict:
+        """
+        Serialise a functor whose maps are dictionaries, its colour map
+        included, see :meth:`discopy.cat.Functor.to_tree`.
+
+        >>> from discopy.utils import dumps, loads
+        >>> x, y, red, blue = Ty('x'), Ty('y'), Colour('red'), Colour('blue')
+        >>> F = Functor({x: y @ y}, {}, colour_map={red: blue})
+        >>> assert loads(dumps(F)) == F
+        """
+        tree, colour_map = super().to_tree(), self.colour_map.mapping
+        if not isinstance(colour_map, Mapping):
+            raise TypeError(messages.NO_TREE_CALLABLE.format(
+                "A functor", "colour_map"))
+        return tree | ({'colour_map': [
+            [key.to_tree(), value.to_tree()]
+            for key, value in colour_map.items()]} if colour_map else {})
+
+    @classmethod
+    def from_tree(cls, tree: dict) -> Functor:
+        functor = super().from_tree(tree)
+        functor.colour_map = MappingOrCallable({
+            from_tree(key): from_tree(value)
+            for key, value in tree.get('colour_map', [])})
+        return functor
+
     def __call__(self, other):
         if isinstance(other, Colour):
             if not self.colour_map or (
@@ -2174,14 +2233,13 @@ class Functor(cat.Functor):
             return other.to_drawing()
         if isinstance(other, Bubble) and other.method == "bubble"\
                 and issubclass(self.cod, Diagram):
-            return self.cod.bubble_factory(
-                *map(self, other.args), dom=self(other.dom),
-                cod=self(other.cod), name=other.name,
-                data=other.data, is_dagger=other.is_dagger,
-                drawing_name=other.drawing_name,
-                draw_as_frame=other.draw_as_frame,
-                draw_as_square=other.draw_as_square,
-                draw_vertically=other.draw_vertically)
+            factory = self.cod.bubble_factory
+            kept = {
+                attr: getattr(other, attr) for attr in other.serialised_attrs
+                if attr in factory.serialised_attrs
+                and attr not in ("*args", "dom", "cod", "method")}
+            return factory(*map(self, other.args), dom=self(other.dom),
+                           cod=self(other.cod), **kept)
         return super().__call__(other)
 
 
@@ -2238,6 +2296,33 @@ class Equation(cat.Equation, RichDisplay):
                  up_to=None):
         super().__init__(*terms, symbol=symbol, symbols=symbols, up_to=up_to)
         self.space = space
+
+    def to_tree(self) -> dict:
+        """
+        Serialise an equation of diagrams, with the space between its terms,
+        see :meth:`discopy.cat.Equation.to_tree`.
+
+        >>> from discopy.utils import dumps, loads
+        >>> x = Ty('x')
+        >>> equation = Equation(Box('f', x, x), Id(x), symbol="->", space=2)
+        >>> loaded = loads(dumps(equation))
+        >>> assert (loaded.terms, loaded.symbols, loaded.space)\\
+        ...     == ((Box('f', x, x), Id(x)), ("->", ), 2)
+        >>> dumps(Equation(Id(x), Id(x), space="2"))
+        Traceback (most recent call last):
+        ...
+        TypeError: Expected int | float, got str instead.
+        """
+        assert_isinstance(self.space, (int, float))
+        return super().to_tree() | ({} if self.space == 1 else {
+            'space': self.space})
+
+    @classmethod
+    def from_tree(cls, tree: dict) -> Equation:
+        equation = super().from_tree(tree)
+        equation.space = tree.get('space', 1)
+        assert_isinstance(equation.space, (int, float))
+        return equation
 
     def to_drawing(self):
         result = self.terms[0].to_drawing()

@@ -525,6 +525,17 @@ def test_draw_permutation_in_diagram(tmp_path):
     assert (tmp_path / "permutation.svg").exists()
 
 
+def test_Drawing_permutation_of_blocks():
+    from discopy import symmetric
+    x, y, z = map(monoidal.Ty, "xyz")
+    assert Drawing.permutation([1, 0], [x @ y, z])\
+        == symmetric.Permutation(
+            symmetric.Ty(*"xyz"), [2, 0, 1]).to_drawing()
+    assert Drawing.permutation([1, 0], [monoidal.Ty(), z]) == Drawing.id(z)
+    with raises(ValueError):
+        Drawing.permutation([1, 0], [x, y, z])
+
+
 def test_readable_foreground():
     # White and light colours get black text, dark colours get white text.
     assert Backend.readable_foreground("white") == "black"
@@ -896,6 +907,14 @@ def test_Drawing_then_and_tensor_return_new_drawings():
         assert result == f and result is not f
 
 
+def test_Drawing_then_step_by_step_is_a_list():
+    x = monoidal.Ty('x')
+    f, g = (monoidal.Box(name, x, x).to_drawing() for name in "fg")
+    assert len(f.then(g, draw_step_by_step=True)) == 2
+    for top, bottom in [(Drawing.id(x), f), (f, Drawing.id(x))]:
+        assert top.then(bottom, draw_step_by_step=True) == [f]
+
+
 def test_draw_any_colour_a_box_draws_in(tmp_path):
     from matplotlib.colors import to_hex
     from discopy import ribbon
@@ -927,3 +946,10 @@ def test_draw_any_colour_a_box_draws_in(tmp_path):
             'f', x, x, draw_as_spider=True, color='#abc')):
         diagram.draw(path=str(tikz), to_tikz=True)
         assert TikZ.format_color('#aabbcc') in tikz.read_text()
+
+
+def test_no_tree():
+    from discopy.utils import dumps
+    with raises(TypeError, match="A drawing has no tree"):
+        dumps(Box('f', Ty('x'), Ty('y')).to_drawing())
+    assert "serialisation" not in Drawing.axioms

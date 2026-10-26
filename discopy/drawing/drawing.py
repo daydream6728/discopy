@@ -286,6 +286,21 @@ class Drawing(TracedCategory["monoidal.Ty", "Drawing"], RichDisplay):
     yanking = TracedCategory.yanking.inapplicable(
         messages.PLANAR_YANKING)
 
+    def to_tree(self) -> dict:
+        """
+        A drawing has no tree, see :func:`discopy.utils.dumps`: serialise the
+        diagram it is the drawing of instead.
+
+        >>> from discopy.monoidal import Box
+        >>> from discopy.utils import dumps
+        >>> dumps(Box('f', 'x', 'y').to_drawing())
+        Traceback (most recent call last):
+        ...
+        TypeError: A drawing has no tree: it is the layout of a diagram, \
+which to_drawing recomputes.
+        """
+        raise TypeError(messages.NO_TREE_DRAWING)
+
     def nodes_of_kind(self, kind):
         """
         The nodes of a kind, sorted by their :attr:`Node.index`: the order the
@@ -624,12 +639,23 @@ class Drawing(TracedCategory["monoidal.Ty", "Drawing"], RichDisplay):
 
     @classmethod
     def permutation(cls, xs: Sequence[int], doms) -> Drawing:
-        """ Draw a permutation of the wires in ``dom``. """
-        xs = finset.Permutation(xs)
+        """
+        Draw a permutation of blocks of wires, the ``i``-th block of its
+        codomain being the ``xs[i]``-th of ``doms``, as in
+        :meth:`discopy.abc.SymmetricCategory.permutation`.
+
+        >>> from discopy.monoidal import Ty
+        >>> x, y, z = map(Ty, "xyz")
+        >>> drawing = Drawing.permutation([1, 0], [x @ y, z])
+        >>> assert drawing.cod == (z @ x @ y).to_drawing()
+        """
+        doms = list(doms)
         dom = cls.ob().tensor(*doms)
-        if xs.is_identity:
+        wires = finset.Permutation(finset.Function.permutation(
+            xs, [len(block) for block in doms]).inside)
+        if wires.is_identity:
             return Drawing.id(dom)
-        return Drawing.from_box(Drawing.permutation_box(dom, xs))
+        return Drawing.from_box(Drawing.permutation_box(dom, wires))
 
     @staticmethod
     def permutation_box(dom: "monoidal.Ty", perm) -> "symmetric.Permutation":
@@ -816,6 +842,13 @@ class Drawing(TracedCategory["monoidal.Ty", "Drawing"], RichDisplay):
         This is done by calling :meth:`make_space` to align the output wires of
         `self` and the input wires of `other` while keeping them straight.
 
+        Parameters:
+            other : The drawing to compose with.
+            draw_step_by_step : Whether to return the list of drawings that
+                connect one wire at a time, e.g. for
+                :func:`discopy.drawing.to_gif`, rather than the composite,
+                for one ``other`` only.
+
         Example
         -------
         >>> from discopy.monoidal import Ty, Box, Diagram
@@ -836,10 +869,10 @@ class Drawing(TracedCategory["monoidal.Ty", "Drawing"], RichDisplay):
             :align: center
         """
         assert_iscomposable(self, other)
-        if self.is_identity and self.height <= 1:
-            return other.relabel_nodes()
-        if other.is_identity and other.height <= 1:
-            return self.relabel_nodes()
+        for side, rest in [(self, other), (other, self)]:
+            if side.is_identity and side.height <= 1:
+                result = rest.relabel_nodes()
+                return [result] if draw_step_by_step else result
         dom, cod = self.dom, other.cod
 
         tmp_cod = [Node("tmp_cod", i=i) for i, n in enumerate(self.cod_nodes)]

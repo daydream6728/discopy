@@ -776,9 +776,10 @@ class Box(frobenius.Box, Diagram):
             int(np.prod(dom_dims, dtype=int))
             * int(np.prod(cod_dims, dtype=int))
         )
-        if np.asarray(self.array).size != expected_size:
+        size = int(np.prod(np.shape(self.array), dtype=int))
+        if size != expected_size:
             raise ValueError(
-                f"{self.name}: array of size {np.asarray(self.array).size}"
+                f"{self.name}: array of size {size}"
                 f" does not match dom={Dim(*dom_dims)}, cod={Dim(*cod_dims)}."
             )
         return tensor.Box(
@@ -982,6 +983,17 @@ class Sum(symmetric.Sum, Box):
         )
 
     def to_tensor(self, input_dims=None):
+        if not self.terms:
+            input_dims = [2] * len(self.dom) if input_dims is None \
+                else input_dims
+            assert len(self.dom) == len(input_dims), (
+                "Input dims length does not match number of input wires"
+            )
+            dom = Dim(*input_dims)
+            cod = Dim(*[2] * len(self.cod))
+            return tensor.Box(
+                "0", dom, cod,
+                np.zeros((*dom.inside, *cod.inside), dtype=complex))
 
         terms = [t.to_tensor(input_dims) for t in self]
         cods = [list(t.cod.inside) for t in terms]
@@ -1399,6 +1411,7 @@ class Feedback(monoidal.Bubble, Box):
         :align: center
     """
     __ambiguous_inheritance__ = (monoidal.Bubble,)
+    serialised_attrs = ("*args", "dom", "cod", "mem", "state", "effect")
 
     @classmethod
     def default_state(cls, mem) -> Diagram:

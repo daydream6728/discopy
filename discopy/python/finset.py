@@ -22,6 +22,7 @@ from discopy.utils import assert_isinstance
 from typing import Iterable, Self, Any
 from itertools import accumulate
 from collections.abc import Sequence
+from operator import index
 
 from dataclasses import dataclass
 
@@ -29,7 +30,7 @@ from discopy import messages
 from discopy.abc import (
     Groupoid, HypergraphCategory, MarkovCategory, PROP, Nat)
 from discopy.axioms import Serialisable
-from discopy.utils import AxiomError, unbiased
+from discopy.utils import AxiomError, factory_name, unbiased
 
 
 @dataclass
@@ -165,7 +166,7 @@ class Function(MarkovCategory[Nat, "Function"], Sequence):
 
     @staticmethod
     def copy(x: int | Nat, n=2) -> Function:
-        k = int(x)
+        k, n = int(x), index(n)
         return Function([i % k for i in range(n * k)], Nat(k), Nat(n * k))
 
     def factorise(self) -> tuple[list[int], Permutation]:
@@ -177,7 +178,7 @@ class Function(MarkovCategory[Nat, "Function"], Sequence):
         >>> f = Function([1, 0, 1], 2, 3)
         >>> counts, perm = f.factorise()
         >>> counts, perm
-        ([1, 2], (1, 0, 2))
+        ([1, 2], python.finset.Permutation((1, 0, 2)))
         >>> copies = [Function.copy(1, n) for n in counts]
         >>> assert copies[0].tensor(*copies[1:]) >> perm == f
         """
@@ -206,7 +207,7 @@ class Permutation(Function, PROP, Groupoid):
     >>> Permutation((1, 0, 3, 2)).cycles()
     ((0, 1), (2, 3))
     >>> Permutation.from_cycles([(0, 1), (2, 3)], 4)
-    (1, 0, 3, 2)
+    python.finset.Permutation((1, 0, 3, 2))
     >>> Permutation((1, 0)).is_fixpoint_free_involution()
     True
     """
@@ -233,7 +234,10 @@ class Permutation(Function, PROP, Groupoid):
         return super().__getitem__(key)
 
     def __repr__(self) -> str:
-        return repr(tuple(self))
+        return factory_name(type(self)) + f"({tuple(self)!r})"
+
+    def __str__(self) -> str:
+        return str(tuple(self))
 
     def __eq__(self, other: Any) -> bool:
         if isinstance(other, Permutation):
@@ -303,7 +307,7 @@ class Permutation(Function, PROP, Groupoid):
         of each box at its offset.
 
         >>> Permutation.gather([3, 1], 5, offset=1)
-        (0, 3, 1, 2, 4)
+        python.finset.Permutation((0, 3, 1, 2, 4))
         >>> assert Permutation.gather([], 3) == Permutation.id(3)
         """
         if not 0 <= offset <= size - len(xs):
@@ -586,6 +590,7 @@ class Cospan(HypergraphCategory, Serialisable["Cospan"]):
         Cospan(left=[0, 1, 0, 1], right=[], apex=2)
         """
         k = int(typ)
+        n_legs_in, n_legs_out = index(n_legs_in), index(n_legs_out)
         return cls([i % k for i in range(n_legs_in * k)],
                    [j % k for j in range(n_legs_out * k)], k)
 

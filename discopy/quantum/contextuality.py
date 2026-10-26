@@ -56,7 +56,9 @@ inequality whose normalised violation by :math:`e` is exactly
 Quantum empirical models arise from local measurements on a state: the
 :class:`discopy.quantum.channel.Functor` sends the circuit
 ``state >> m_1 @ ... @ m_n`` of each context to the distribution
-``F(state) >> F(m_1) @ ... @ F(m_n)``.
+``F(state) >> F(m_1) @ ... @ F(m_n)``. They also arise from an optyx diagram
+with a classical input choosing the measurement of each party and a classical
+output giving its outcome, see :meth:`Model.from_diagram`.
 
 Example
 -------
@@ -228,20 +230,31 @@ class Scenario:
     __and__, __matmul__ = choice, tensor
 
     @classmethod
-    def bell(cls, parties: int, settings: int = 2, outcomes: int = 2
-             ) -> Scenario:
+    def bell(cls, parties: int, settings: int | Sequence[int] = 2,
+             outcomes: int = 2) -> Scenario:
         """
         The Bell scenario where each party, named ``a``, ``b``, ``c``, etc.,
         performs one of its measurements, numbered from ``1``.
 
         Parameters:
             parties : The number of parties.
-            settings : The number of measurements of each party.
+            settings : The number of measurements of each party, or one
+                number for every party.
             outcomes : The number of outcomes of each measurement.
+
+        Example
+        -------
+        >>> Scenario.bell(2, settings=(3, 1)).contexts
+        (('a1', 'b1'), ('a2', 'b1'), ('a3', 'b1'))
         """
+        settings = parties * (settings, ) if isinstance(settings, int)\
+            else tuple(settings)
+        if len(settings) != parties:
+            raise ValueError(f"{settings} are not the settings of {parties} "
+                             "parties.")
         return cls(product(*(  # ty: ignore[invalid-argument-type]
-            [f"{chr(ord('a') + i)}{j + 1}" for j in range(settings)]
-            for i in range(parties))), outcomes)
+            [f"{chr(ord('a') + i)}{j + 1}" for j in range(n)]
+            for i, n in enumerate(settings))), outcomes)
 
 
 class Table:
@@ -428,6 +441,21 @@ class Model(Table):
         return Inequality(
             self.scenario, rows)  # ty: ignore[invalid-argument-type]
 
+    @classmethod
+    def deterministic(cls, scenario: Scenario, assignment: Sequence[int]
+                      ) -> Model:
+        """
+        The non-contextual model where each measurement has the outcome of a
+        global ``assignment``, listed in the order of the measurements.
+
+        Example
+        -------
+        >>> Model.deterministic(Scenario([('x', 'y')]), (0, 1)).table
+        ((0.0, 1.0, 0.0, 0.0),)
+        """
+        index = scenario.assignments.index(tuple(assignment))
+        return cls(scenario, scenario.rows(scenario.incidence()[:, index]))
+
     def mix(self, other: Model, weight: float) -> Model:
         """
         The mixture :math:`\\lambda e + (1 - \\lambda) e'` of two models on
@@ -499,6 +527,47 @@ class Model(Table):
             for choice in product(range(len(measurements[0])),
                                   repeat=len(measurements))])
 
+    @classmethod
+    def from_diagram(cls, diagram, settings: int | Sequence[int] = 2,
+                     outcomes: int | None = None, backend=None) -> Model:
+        """
+        The empirical model on a Bell scenario of an optyx diagram with one
+        classical input and one classical output for each party, the input
+        choosing the measurement of the party and the output its outcome,
+        evaluated by :func:`discopy.optyx.contextuality.distributions`.
+
+        Parameters:
+            diagram : A :class:`discopy.optyx.channel.Diagram` with classical
+                domain and codomain of the same length.
+            settings : The number of measurements of each party, or one
+                number for every party.
+            outcomes : The number of outcomes of each measurement, by default
+                one more than the largest outcome of non-zero probability.
+            backend : The backend evaluating the diagram.
+
+        The probabilities are not normalised: a diagram that is not a channel,
+        e.g. a postselected one, does not give an empirical model.
+        """
+        # pylint: disable=import-outside-toplevel
+        # discopy.optyx is an optional dependency, in the optyx extra.
+        from discopy.optyx.contextuality import distributions
+        parties = len(diagram.dom.inside)
+        settings = parties * (settings, ) if isinstance(settings, int)\
+            else tuple(settings)
+        rows = distributions(diagram, settings, backend)
+        if outcomes is None:
+            outcomes = 1 + max(
+                max(section, default=0) for row in rows for section in row)
+        table = np.zeros((len(rows), outcomes ** parties))
+        for row, distribution in zip(table, rows):
+            for section, probability in distribution.items():
+                if max(section, default=0) >= outcomes:
+                    raise ValueError(
+                        f"The outcomes {section} are not in {outcomes}.")
+                row[np.ravel_multi_index(
+                    section, parties * (outcomes, ))] = probability
+        return cls(Scenario.bell(parties, settings, outcomes), table)
+
 
 class Inequality(Table):
     """
@@ -564,9 +633,21 @@ class Inequality(Table):
         """
         The normalised violation
         :math:`\\max\\{0, a \\cdot v^e - R\\} / (\\Vert a \\Vert - R)`
-        of the inequality by a model.
+        of the inequality by a model, zero when :math:`a \\cdot v^e \\leq R`
+        as for the trivial inequality, with :math:`\\Vert a \\Vert = R`,
+        that is the Bell inequality of a non-contextual model.
+
+        Example
+        -------
+        >>> local = Model.deterministic(Scenario.bell(2), (0, 0, 0, 0))
+        >>> local.bell_inequality().violation(local)  # doctest: +EXTRA
+        0.0
         """
-        if self.algebraic_bound <= self.bound:
-            raise ValueError(f"{self} cannot be violated.")
-        return max(0., self(model) - self.bound) / (
-            self.algebraic_bound - self.bound)
+        excess = self(model) - self.bound
+        room = self.algebraic_bound - self.bound
+        atol = 1e-9 * max(1., float(abs(self.vector).max(initial=0)))
+        if excess <= atol:
+            return 0.
+        if room <= atol:
+            raise ValueError(f"{model} exceeds the algebraic bound of {self}.")
+        return excess / room

@@ -23,6 +23,7 @@ Summary
     Spider
     Sum
     Bubble
+    Diff
 
 Tensor combinatorial maps
 -------------------------
@@ -43,8 +44,10 @@ indices. Swaps, cups and caps become wiring while spiders stay as boxes.
 
 from __future__ import annotations
 
+import math
+import numbers
 from itertools import count
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, Sequence, TypeVar
+from typing import TYPE_CHECKING, Callable, ClassVar, Sequence, TypeVar
 
 from discopy import (
     cat, monoidal, rigid, frobenius, cmap, config, messages)
@@ -532,6 +535,40 @@ class Functor(frobenius.Functor):
             + f"dom={factory_name(self.dom)}, "\
             + f"dtype={dtype}{optimize}{params})"
 
+    def to_tree(self) -> dict:
+        """
+        Serialise a tensor functor, its dtype in the name of its codomain,
+        see :meth:`discopy.cat.Functor.to_tree`, unless it has ``params``.
+
+        >>> from discopy.utils import dumps, loads
+        >>> x = frobenius.Ty('x')
+        >>> f = frobenius.Box('f', x, x)
+        >>> F = Functor({x: 2}, {f: [[0, 1], [1, 0]]}, dtype=int)
+        >>> assert loads(dumps(F)) == F and loads(dumps(F)).dtype is int
+        >>> dumps(Functor({x: 2}, {}, order='C'))
+        Traceback (most recent call last):
+        ...
+        TypeError: A tensor functor with params has no tree: they go to the \
+einsum of a backend verbatim, which a file should not reach.
+        """
+        if self.params:
+            raise TypeError(messages.NO_TREE_PARAMS)
+        return super().to_tree() | (
+            {} if self.optimize == "greedy" else {'optimize': self.optimize})
+
+    @classmethod
+    def from_tree(cls, tree: dict) -> Functor:
+        """
+        Decode a tensor functor, which takes its codomain's dtype, and an
+        ``optimize`` of the types its backend reads, a string, a boolean or
+        an explicit path.
+        """
+        functor = cat.Functor.from_tree(tree)
+        optimize = tree.get('optimize', "greedy")
+        assert_isinstance(optimize, (str, bool, list))
+        return cls(functor.ob_map, functor.ar_map, dom=functor.dom,
+                   dtype=functor.cod.dtype, optimize=optimize)
+
     def __call__(self, other):
         """
         The image of an object, a box or a diagram, see :meth:`contract`.
@@ -985,8 +1022,7 @@ class Box[dtype](frobenius.Box, Diagram[dtype]):
 
     def grad(self, var, **params):
         return self.bubble(
-            func=lambda x: getattr(x, "diff", lambda _: 0)(var),
-            drawing_name=f"$\\partial {var}$")
+            func=Diff(var), drawing_name=f"$\\partial {var}$")
 
     def setoid(self):
         """
@@ -994,13 +1030,31 @@ class Box[dtype](frobenius.Box, Diagram[dtype]):
         entries: a list as it is, an array of any backend through its
         ``tolist`` and a list of lists flattened.
 
+        Every nan entry becomes the one :data:`math.nan`, of any number type
+        and inside tuples too, and a complex one with a non-zero imaginary
+        part the pair of its parts, so that a box holding nan equals itself
+        and its hash is stable: the data labels a generator, it is not a
+        number being compared.
+
         >>> import numpy as np
         >>> f = Box('f', Dim(2), Dim(2), np.array([[0, 1], [1, 0]]))
         >>> assert f == Box('f', Dim(2), Dim(2), [[0, 1], [1, 0]])\\
         ...     == Box('f', Dim(2), Dim(2), [0, 1, 1, 0])
         >>> assert f != Box('f', Dim(2), Dim(2), [0, 1, 1, 1])
         >>> assert len({f, f.dagger().dagger()}) == 1
+        >>> g = Box('g', Dim(2), Dim(2), np.array([[np.nan, 1], [0, 1]]))
+        >>> assert g == g and len({g, g.dagger().dagger()}) == 1
         """
+        def canonical(x):
+            if isinstance(x, (list, tuple)):
+                return tuple(map(canonical, x))
+            # pylint: disable-next=comparison-with-itself  # false only for nan
+            if not isinstance(x, numbers.Complex) or x == x:
+                return x
+            if isinstance(x, numbers.Real) or x.imag == 0:
+                return math.nan
+            return canonical(x.real), canonical(x.imag)
+
         data = getattr(self.data, "tolist", lambda: self.data)()
         if isinstance(data, list) and any(isinstance(x, list) for x in data):
             with backend('numpy') as np:
@@ -1008,7 +1062,8 @@ class Box[dtype](frobenius.Box, Diagram[dtype]):
         entries = () if data is None\
             else tuple(data) if isinstance(data, list) else (data, )
         return (self.name, self.dom, self.cod, self.dtype, self.is_dagger,
-                self.deterministic, self.affine) + entries
+                self.deterministic, self.affine)\
+            + tuple(map(canonical, entries))
 
 
 class Cup(frobenius.Cup, Box):
@@ -1098,6 +1153,24 @@ class Sum[dtype](monoidal.Sum, Box[dtype]):
     """
 
 
+def func_repr(func: Callable) -> str:
+    """
+    The repr of a function in a tensor bubble or a derivative: a named
+    function prints as its import path, so that it reads back with
+    :func:`eval`, anything else, e.g. a lambda, as its own repr.
+
+    Example
+    -------
+    >>> import numpy
+    >>> assert func_repr(abs) == "abs"
+    >>> assert func_repr(numpy.sqrt) == "numpy.sqrt"
+    >>> assert func_repr(lambda x: x).startswith("<function")
+    """
+    name = getattr(func, "__qualname__", "<")
+    return repr(func) if "<" in name\
+        else f"{func.__module__}.{name}".removeprefix("builtins.")
+
+
 class Bubble(monoidal.Bubble, Box):
     """
     Bubble in a tensor diagram, applies a function elementwise.
@@ -1108,6 +1181,9 @@ class Bubble(monoidal.Bubble, Box):
         The diagram inside the bubble.
     func : callable
         The function to apply, default is :code:`lambda x: int(not x)`.
+        A named function prints as its import path, e.g. :code:`abs` or
+        :code:`numpy.sqrt`, so the bubble reads back from its repr, a
+        lambda does not.
 
     Examples
     --------
@@ -1140,18 +1216,27 @@ class Bubble(monoidal.Bubble, Box):
     .. image:: /_static/tensor/product-rule.svg
         :align: center
     """
+    serialised_attrs = monoidal.Bubble.serialised_attrs + ("func", )
+    func = staticmethod(lambda x: int(not x))
 
     def __new__(cls, *args, data=None, **kwargs):
         return super().__new__(cls, data=data)
 
-    def __init__(self, inside, func=lambda x: int(not x), **params):
-        self.func = func
+    def __init__(self, inside, func=None, **params):
+        if func is not None:
+            self.func = func
         super().__init__(inside, **params)
 
-    @property
-    def keywords(self) -> dict[str, Any]:
-        """ The keyword arguments of a bubble with its function. """
-        return dict(super().keywords, func=self.func)
+    def setoid(self):
+        """ Tensor bubbles are equal when their funcs and daggers are too. """
+        return super().setoid() + (self.func, self.is_dagger)
+
+    def __repr__(self):
+        if self.is_dagger:
+            return repr(self.dagger()) + ".dagger()"
+        if self.func is type(self).func:
+            return super().__repr__()
+        return super().__repr__()[:-1] + f", func={func_repr(self.func)})"
 
     def grad(self, var, **params):
         """
@@ -1169,13 +1254,60 @@ class Bubble(monoidal.Bubble, Box):
             :align: center
         """
         from sympy import Symbol
-        tmp = Symbol("tmp")
         name = "$\\frac{{\\partial {}}}{{\\partial {}}}$"
         return Spider(1, 2, self.dom)\
             >> self.arg.bubble(
-                func=lambda x: self.func(tmp).diff(tmp).subs(tmp, x),
+                func=Diff(Symbol("tmp"), self.func),
                 drawing_name=name.format(self.drawing_name, var))\
             @ self.arg.grad(var) >> Spider(2, 1, self.cod)
+
+
+class Diff:
+    """
+    The derivative with respect to a variable, applied to each entry of a
+    tensor by the bubble of :meth:`Box.grad`, an entry with no ``diff``, e.g.
+    a number, being a constant. Given a ``func``, it is the derivative of that
+    function instead, bound by the variable, as the chain rule of
+    :meth:`Bubble.grad` applies it.
+
+    Parameters:
+        var : The variable.
+        func : The function to differentiate, if any.
+
+    Example
+    -------
+    >>> from sympy.abc import x, y  # doctest: +EXTRA
+    >>> assert Diff(x)(x * y) == y and Diff(x)(42) == 0
+    >>> assert Diff(y, lambda z: z ** 3)(x) == 3 * x ** 2
+
+    Diffs are equal when their variables and functions are, so that gradients
+    are too, and they read back from their repr when their function is named,
+    see :func:`func_repr`.
+
+    >>> from discopy import tensor
+    >>> assert Diff(x) == eval(repr(Diff(x))) != Diff(y)
+    >>> assert eval(repr(Diff(x, abs))) == Diff(x, abs)
+    >>> f = Box('f', Dim(2), Dim(2), [x, 0, 0, y])
+    >>> assert f.grad(x) == f.grad(x) != f.grad(y)
+    """
+    def __init__(self, var, func=None):
+        self.var, self.func = var, func
+
+    def __call__(self, entry):
+        if self.func is None:
+            return getattr(entry, "diff", lambda _: 0)(self.var)
+        return self.func(self.var).diff(self.var).subs(self.var, entry)
+
+    def __eq__(self, other):
+        return isinstance(other, Diff)\
+            and (self.var, self.func) == (other.var, other.func)
+
+    def __hash__(self):
+        return hash((self.var, self.func))
+
+    def __repr__(self):
+        func = "" if self.func is None else f", {func_repr(self.func)}"
+        return f"{factory_name(type(self))}({self.var!r}{func})"
 
 
 Diagram.box_factory = Box

@@ -22,6 +22,7 @@ Summary
     Coeval
     Curry
     Sum
+    Bubble
     Functor
     CMap
     TermBase
@@ -131,7 +132,6 @@ class Ty(monoidal.Ty):
     abstraction_factory: ClassVar[type["Abstraction"]]
     over_factory: ClassVar[Callable[..., "Exp"]]
     under_factory: ClassVar[Callable[..., "Exp"]]
-    exp_factory: ClassVar[Callable[..., "Exp"]]
 
     def __pow__(self, other: "Ty | int") -> Self:
         return self.exp(other) if isinstance(other, Ty)\
@@ -139,13 +139,15 @@ class Ty(monoidal.Ty):
 
     def exp(self, other: "Ty") -> Self:
         """
-        The exponential of a type, which is the type itself when the
-        exponent is the unit, as is any exponential of the unit.
+        The exponential of a type, called with ``**``, is its :meth:`over`,
+        the default one of the two: the type itself when the exponent is the
+        unit, as is any exponential of the unit.
 
-        >>> x = Ty('x')
+        >>> x, y = Ty('x'), Ty('y')
+        >>> assert x ** y == x << y and str(x ** y) == "(x << y)"
         >>> assert x ** Ty() == x << Ty() == Ty() >> x == x
         """
-        return self.ar(self.exp_factory(self, other)) if other else self
+        return self.over(other)
 
     def over(self, other: Ty) -> Ty:
         return self.ar(self.over_factory(self, other)) if other else self
@@ -199,6 +201,30 @@ class Ty(monoidal.Ty):
     def __repr__(self):
         return factory_name(type(self))\
             + f"({', '.join(map(repr, self.inside))})"
+
+    def cast_wire(self, x: str | cat.Ob) -> cat.Ob:
+        """
+        Turn a constructor argument into an atom of the type: any monoidal
+        wire, as a rigid type is a biclosed type.
+
+        A name gives a :class:`Wire`, and so do a plain ``cat.Ob`` and a
+        :class:`monoidal.Wire` with one colour on both sides, colour kept, as
+        dumps, pickles and printed text from before hold them. A pickled
+        :class:`Exp` of no side becomes the ``over`` of its base.
+
+        >>> assert Ty(cat.Ob('x')) == Ty(monoidal.Wire('x')) == Ty(Wire('x'))
+        """
+        x = super().cast_wire(x)
+        # pylint: disable-next=unidiomatic-typecheck  # not their subclasses
+        if type(x) is monoidal.Wire and x.dom == x.cod:
+            return Wire(x.name, x.dom, x.cod)
+        # pylint: disable-next=unidiomatic-typecheck  # not its subclasses
+        return Exp(x.base, x.exponent) if type(x) is Exp else x
+
+    def __setstate__(self, state):
+        super().__setstate__(state)
+        if self.generator_factory is monoidal.Wire:
+            self.inside = tuple(map(self.cast_wire, self.inside))
 
     @property
     def is_exp(self):
@@ -261,14 +287,25 @@ class Wire(monoidal.Wire):
 
 class Exp(Wire):
     """
-    A :code:`base` type to an :code:`exponent` type, called with :code:`**`.
+    A :code:`base` type to an :code:`exponent` type, either :class:`Over` or
+    :class:`Under`: a biclosed exponential with no side is the ``over`` of
+    its base, the default one, as :meth:`Ty.exp` is.
 
     Parameters:
         base : The base type.
         exponent : The exponent type.
+
+    >>> x, y = Ty('x'), Ty('y')
+    >>> assert Exp(x, y) == Over(x, y) and Ty(Exp(x, y)) == x ** y
     """
 
     ob = Ty
+
+    # pylint: disable-next=unused-argument  # passed to __init__
+    def __new__(cls, *args, **kwargs):
+        base = args[0] if args else kwargs.get("base")
+        return super().__new__(
+            getattr(base, "over_factory", cls) if cls is Exp else cls)
 
     def __init__(self, base: Ty, exponent: Ty):
         assert_isinstance(base, self.ob)
@@ -459,6 +496,8 @@ class Eval(Box):
             An :class:`Over` is evaluated on the left only and an
             :class:`Under` on the right only.
     """
+    serialised_attrs = ("x", "left")
+
     def __init__(self, x: Exp, left=None):
         assert x.is_exp
         self.x = x
@@ -470,6 +509,11 @@ class Eval(Box):
         dom, cod = (x @ x.exponent, x.base) if self.left\
             else (x.exponent @ x, x.base)
         super().__init__("Eval" + str(x), dom, cod)
+
+    def __setstate__(self, state):
+        """ A pickle from before is named after ``x ** y``, renamed here. """
+        super().__setstate__(state)
+        self.name = "Eval" + str(self.x)
 
     def __repr__(self):
         return f"{factory_name(type(self))}({self.x!r}, left={self.left!r})"
@@ -507,6 +551,7 @@ class Coeval(Box):
     (2016) <https://arxiv.org/abs/1512.06751>`_. It is used by
     :meth:`Curry.to_drawing` and :meth:`Diagram.to_compact`.
     """
+    serialised_attrs = ("x", "left")
     drawing_name = "lambda"
 
     __repr__ = Eval.__repr__
@@ -524,6 +569,10 @@ class Coeval(Box):
         cod, dom = (x @ x.exponent, x.base) if self.left\
             else (x.exponent @ x, x.base)
         super().__init__("Coeval" + str(x), dom, cod)
+
+    def __setstate__(self, state):
+        super().__setstate__(state)
+        self.name = "Coeval" + str(self.x)
 
     def dagger(self) -> Eval:
         return self.eval_factory(self.x, self.left)
@@ -544,6 +593,8 @@ class Curry(monoidal.Bubble, Box):
     >>> print(Curry(Box('f', x @ y, z)))
     Curry(f, 1, True)
     """
+    serialised_attrs = ("*args", "n", "left")
+
     def __init__(self, arg: Diagram, n=1, left=True):
         if not 0 <= n <= len(arg.dom):
             raise AxiomError(messages.NOT_SPLITTABLE.format(n, arg.dom))
@@ -609,12 +660,19 @@ class Sum(monoidal.Sum, Box):
     """
 
 
+class Bubble(monoidal.Bubble, Box):
+    """
+    A biclosed bubble is a monoidal bubble and a biclosed box.
+    """
+
+
 Id = Diagram.id
 Diagram.box_factory = Box
 Diagram.curry_factory = Curry
 Diagram.eval_factory = Eval
 Diagram.coeval_factory = Coeval
 Diagram.sum_factory = Sum
+Diagram.bubble_factory = Bubble
 
 
 class Functor(monoidal.Functor):
@@ -645,6 +703,13 @@ class Functor(monoidal.Functor):
 
     >>> assert f(x).to_hypergraph() == f(x).eval().to_hypergraph()
 
+    A :class:`Drawing` has neither, but a term is drawn as the box it is,
+    labelled with its name, inside a diagram as well as on its own: only
+    :meth:`TermBase.draw` draws its evaluation.
+
+    >>> assert [str(box) for box in (f(x) @ X).to_drawing().boxes] == [
+    ...     str(f(x))]
+
     The image of a term is checked to have the image of its type:
 
     >>> Functor(ob_map={X: Ty("A"), Y: Ty("B")}, ar_map={f: Ty("A")("a")})(f)
@@ -655,7 +720,7 @@ class Functor(monoidal.Functor):
     dom = cod = Diagram
 
     def __call__(self, other):
-        if isinstance(other, TermBase):
+        if isinstance(other, TermBase) and self.cod is not Drawing:
             if issubclass(get_origin(self.cod), hypergraph.Hypergraph)\
                     and not isinstance(other, Constant):
                 return self(other.eval())
@@ -948,7 +1013,10 @@ class TermBase(Box, Equivalence):
         """
 
     def draw(self, **kwargs):
-        "Drawing a term by evaluating it in the free biclosed category."
+        """
+        Drawing a term by evaluating it in the free biclosed category, whereas
+        inside a diagram a term is drawn as one box, see :class:`Functor`.
+        """
         return self.eval().draw(**kwargs)
 
     def to_closed(self):
@@ -1209,6 +1277,8 @@ class Constant(TermBase):
         name (str): The name of the constant.
         cod (Ty): The type of the constant.
     """
+    serialised_attrs = ("name", "cod", "*", "is_dagger", "data")
+
     def __init__(self, name: str, cod: Ty, **kwargs):
         super().__init__(name, dom=self.ob(), cod=cod, **kwargs)
         self.freevars = []
@@ -1247,6 +1317,8 @@ class Variable(TermBase):
         name (str): The name of the variable
         cod (Ty): The type of the variable.
     """
+    serialised_attrs = ("name", "cod")
+
     def __init__(self, name: str, cod: Ty):
         super().__init__(name, dom=cod, cod=cod)
         self.freevars = [self]
@@ -1316,6 +1388,8 @@ class Application(TermBase):
         args (Term): The arguments to which the function is applied.
         left (bool): Whether the argument comes in from the left or right.
     """
+    serialised_attrs = ("func", "args", "left")
+
     def __init__(self, func: TermBase, args: TermBase, left: bool = False):
         assert_isinstance(func, TermBase)
         assert_isinstance(args, TermBase)
@@ -1395,6 +1469,7 @@ class Application(TermBase):
 
 
 class Abstraction(TermBase):
+    serialised_attrs = ("var", "body", "left")
     var: Variable
     body: TermBase
     left: bool = False
@@ -1706,7 +1781,7 @@ Ty.variable_factory = Variable
 Ty.constant_factory = Constant
 Ty.application_factory = Application
 Ty.abstraction_factory = Abstraction
-Ty.over_factory, Ty.under_factory, Ty.exp_factory = Over, Under, Exp
+Ty.over_factory, Ty.under_factory = Over, Under
 
 
 class Equation(monoidal.Equation):

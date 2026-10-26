@@ -46,6 +46,7 @@ Summary
     Head
     Tail
     Sum
+    Bubble
     Functor
     CMap
 
@@ -182,7 +183,10 @@ class Ty(biclosed.Ty, feedback.Ty):
 
 
 class Exp(Wire, biclosed.Exp):
-    "An exponential object in a markov category, with a time step."
+    """
+    An exponential object in a markov category, with a time step, called with
+    ``**``, ``<<`` or ``>>`` alike.
+    """
 
     ob = Ty
 
@@ -446,6 +450,8 @@ class Diagram(markov.Diagram, biclosed.Diagram, ClosedCategory):
     @classmethod
     def box_to_term(cls, box, args):
         "The application of a box as a constant to variables for its inputs."
+        if isinstance(box, Bubble):
+            raise AxiomError(f"{box} is a bubble, it has no term reading.")
         if not box.dom:
             return box.cod(box.name)
         factors = [box.dom[i:i + 1] for i in range(len(box.dom))]
@@ -487,6 +493,8 @@ class Timed(Box):
             monoidal.Box.__init__(self, self.name, self.dom.delay(time_step),
                                   self.cod.delay(time_step))
 
+    time_step = property(lambda self: self._time_step)
+
     def delay(self, n_steps=1):
         return type(self)(
             *self.__getnewargs__(), time_step=self.time_step + n_steps)
@@ -514,6 +522,7 @@ class Timed(Box):
 
 class Eval(Timed, biclosed.Eval, Box):
     "The evaluation of an exponential type."
+    serialised_attrs = biclosed.Eval.serialised_attrs + ("*", "time_step")
     drawing_name = "__call__"
 
     def __getnewargs__(self):
@@ -523,11 +532,13 @@ class Eval(Timed, biclosed.Eval, Box):
 
 class Coeval(Timed, biclosed.Coeval, Box):
     "The coevaluation of an exponential type, i.e. the dagger of an Eval."
+    serialised_attrs = biclosed.Coeval.serialised_attrs + ("*", "time_step")
     __getnewargs__ = Eval.__getnewargs__
 
 
 class Curry(Timed, biclosed.Curry, Box):
     "The currying of a closed diagram, linear when its argument is."
+    serialised_attrs = biclosed.Curry.serialised_attrs + ("time_step", )
 
     @property
     def is_linear(self):
@@ -672,6 +683,18 @@ class Sum(markov.Sum, biclosed.Sum, Box):
         return all(term.is_linear for term in self.terms)
 
 
+class Bubble(markov.Bubble, biclosed.Bubble, Box):
+    """
+    A closed bubble is a markov and biclosed bubble and a closed box, linear
+    as a closed box is, whatever its args. It has no term reading.
+
+    Example
+    -------
+    >>> x = Ty('x')
+    >>> assert Diagram.copy(x).bubble(cod=x).is_linear
+    """
+
+
 class Functor(biclosed.Functor, markov.Functor):
     """
     A closed functor is a markov functor that preserves evaluation, currying
@@ -730,7 +753,8 @@ Diagram.eval_factory = Eval
 Diagram.coeval_factory = Coeval
 Diagram.discard_factory = Discard
 Diagram.sum_factory = Sum
-Ty.exp_factory = Ty.under_factory = Ty.over_factory = staticmethod(Exp)
+Diagram.bubble_factory = Bubble
+Ty.under_factory = Ty.over_factory = staticmethod(Exp)
 
 Id = Diagram.id
 
@@ -972,9 +996,20 @@ class TermBase(Box, biclosed.TermBase, biclosed.Normalising):
         >>> assert tree.spine == (f(x), )
         >>> assert tree[0][0] == BohmTree(X, (f, x), 1, tree.strategy, ())
         >>> assert two(X(lambda x: x))(x).reduce(budget=1) is None
+
+        The constants of the term are in scope after its free variables, each
+        once, so that a constant can be the head of the tree.
+
+        >>> g, a = (X >> (X >> X))('g'), X('a')
+        >>> assert g(a)(x).reduce().variables == (x, g, a)
         """
+        constants = []
+        for constant in self.constants:
+            if constant not in constants:
+                constants.append(constant)
         return (strategy or self.strategy_factory)(budget)(
-            self, tuple(self.freevars))  # ty: ignore[invalid-argument-type]
+            self, tuple(self.freevars)  # ty: ignore[invalid-argument-type]
+            + tuple(constants))
 
     def normal_form(self, budget: int | None = None,
                     strategy: type[Strategy] | None = None) -> Term:
@@ -994,6 +1029,8 @@ class TermBase(Box, biclosed.TermBase, biclosed.Normalising):
         >>> x = Variable('x', X)
         >>> term = X(lambda x: x)(x)
         >>> assert term.normal_form() == x == x.normal_form()
+        >>> g = (X >> X)('g')
+        >>> assert X(lambda x: g(x))(x).normal_form() == g(x)
         >>> term.normal_form(budget=0)
         Traceback (most recent call last):
             ...
@@ -1019,6 +1056,8 @@ class Constant(TermBase, biclosed.Constant):
     calculus and ``eval(str(term)) == term`` under the obvious variable
     naming convention, e.g. ``query = (E >> E)("query")``.
     """
+    serialised_attrs = biclosed.Constant.serialised_attrs
+
     def __str__(self):
         return self.name
 
@@ -1047,6 +1086,8 @@ class Constant(TermBase, biclosed.Constant):
 
 class Variable(TermBase, biclosed.Variable):
     "A variable, evaluated in a context by discarding the other variables."
+    serialised_attrs = biclosed.Variable.serialised_attrs
+
     def eval(self, functor=None, context=None):
         return self.weaken(functor or self.functor, context)
 
@@ -1065,6 +1106,7 @@ class Application(TermBase, biclosed.Application):
         overlap : The variables free in both ``func`` and ``args``, which
             :meth:`eval` copies.
     """
+    serialised_attrs = biclosed.Application.serialised_attrs
     func: Term
     args: Term
 
@@ -1106,6 +1148,7 @@ class Abstraction(TermBase, biclosed.Abstraction):
     The abstraction ``var.cod(lambda var: body)`` of a variable in a term,
     which need not occur in it or may occur several times.
     """
+    serialised_attrs = biclosed.Abstraction.serialised_attrs
     var: Variable
     body: Term
 
@@ -1182,6 +1225,8 @@ class Tuple(Compound):
     >>> assert Tuple(x, Tuple(y, x)).cod == X * (Y * X)
     >>> assert Tuple().cod == Ty()
     """
+    serialised_attrs = ("*terms", )
+
     def __init__(self, *terms: Term):
         for term in terms:
             assert_isinstance(term, TermBase)
@@ -1277,6 +1322,8 @@ class Projection(Compound):
     >>> x, y = Variable("x", X), Variable("y", Y)
     >>> assert Projection(Tuple(x, y), 1).cod == Y
     """
+    serialised_attrs = ("arg", "index")
+
     def __init__(self, arg: Term, index: int):
         assert_isinstance(arg, TermBase)
         assert_isinstance(index, int)
@@ -1370,6 +1417,8 @@ class Let(Compound):
     let(f(x), lambda y: Tuple(y, y))
     >>> assert term.cod == Y * Y and not term.is_linear
     """
+    serialised_attrs = ("expression", "variables", "body")
+
     def __init__(self, expression: Term, variables: tuple[Variable, ...],
                  body: Term):
         assert_isinstance(expression, TermBase)
@@ -1588,8 +1637,10 @@ class BohmTree:
             i.e. of the tree without abstracting its own bound variables.
             Use :meth:`cod` for the type of the term it represents.
         variables : The variables in scope, those of the parent followed by
-            the ones bound at this node.
-        head : The index in ``variables`` of the head variable.
+            the ones bound at this node: the free variables and then the
+            constants of the term at the root.
+        head : The index in ``variables`` of the head variable, a constant
+            when the head of the term is one.
         strategy : The strategy used to reduce the arguments, shared with
             every node of the tree so that its budget is spent only once.
         spine : The unreduced terms of the arguments of the head variable,
@@ -1608,7 +1659,7 @@ class BohmTree:
     (X >> X)(lambda f: X(lambda x: f(x)))
     """
     head_cod: Ty
-    variables: tuple[Variable, ...]
+    variables: tuple[Variable | Constant, ...]
     head: int
     strategy: Strategy = field(compare=False)
     spine: tuple[Term, ...]
@@ -1641,15 +1692,16 @@ class BohmTree:
 
     def cod(self, n: int = 0) -> Ty:
         """
-        The type of the term of the tree, abstracting over ``variables[n:]``
-        for ``n`` the number of variables of the parent.
+        The type of the term of the tree, abstracting over the variables in
+        ``variables[n:]`` for ``n`` the number of variables of the parent,
+        never over a constant.
 
         Parameters:
             n : The number of variables bound by the parent.
         """
         result = self.head_cod
         for var in reversed(self.variables[n:]):
-            result = var.cod >> result
+            result = result if isinstance(var, Constant) else var.cod >> result
         return result
 
     def __getitem__(self, key: int) -> BohmTree:
@@ -1669,8 +1721,9 @@ class BohmTree:
 
     def to_term(self, n: int = 0) -> Term:
         """
-        The term of the tree in the standard syntax, abstracting over
-        ``variables[n:]`` for ``n`` the number of variables of the parent.
+        The term of the tree in the standard syntax, abstracting over the
+        variables in ``variables[n:]`` for ``n`` the number of variables of
+        the parent, never over a constant.
         Forces every argument, in the order chosen by ``strategy``, raising
         :class:`ValueError` if any of them is missing.
 
@@ -1683,7 +1736,8 @@ class BohmTree:
         for i in range(len(self.spine)):
             result = result(self[i].to_term(len(self.variables)))
         for var in reversed(self.variables[n:]):
-            result = var.cod.abstraction_factory(var, result)
+            if not isinstance(var, Constant):
+                result = var.cod.abstraction_factory(var, result)
         return result  # ty: ignore[invalid-return-type]
 
     def __repr__(self):
@@ -1710,8 +1764,10 @@ class Strategy:
     """
     budget: int | None = None
 
-    def __call__(self, term: Term, variables: tuple[Variable, ...] = ()
-                 ) -> BohmTree | None:
+    def __call__(
+            self, term: Term,
+            variables: tuple[Variable | Constant, ...] = ()
+    ) -> BohmTree | None:
         """
         The head normal form of a term in a scope of variables as a
         :class:`BohmTree` with its arguments left lazy, or ``None`` when the
@@ -1719,10 +1775,11 @@ class Strategy:
 
         Parameters:
             term : The term to reduce.
-            variables : The variables in scope, i.e. the free variables of
-                the term followed by the ones bound by its parents.
+            variables : The variables in scope, i.e. the free variables and
+                constants of the term followed by the ones bound by its
+                parents.
         """
-        scope: list[Variable] = list(variables)
+        scope: list[Variable | Constant] = list(variables)
         spine = []
         while isinstance(term, (Application, Abstraction)):
             if isinstance(term, Application):
@@ -1735,7 +1792,7 @@ class Strategy:
             else:
                 scope.append(term.var)
                 term = term.body
-        assert_isinstance(term, Variable)
+        assert_isinstance(term, (Variable, Constant))
         index = scope[::-1].index(term)  # ty: ignore[invalid-argument-type]
         head = len(scope) - 1 - index
         cod = term.cod

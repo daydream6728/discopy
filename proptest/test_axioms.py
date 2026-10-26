@@ -60,7 +60,7 @@ def test_axiom(law, drawn):
 def test_position(category):
     """
     Every ``C0`` and ``C1`` above an enrolled category stands for its
-    objects and its arrows, as :meth:`discopy.abc.Category.parameters` says,
+    objects and its arrows, as :meth:`discopy.abc.Category.typeparams` says,
     whichever class states it and however its bases pass it on, so that a
     sequent bound to the category reads as one of its own.
     """

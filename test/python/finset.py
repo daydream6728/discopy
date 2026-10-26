@@ -92,6 +92,19 @@ def test_gather():
         finset.Permutation.gather([1], 3, offset=3)
 
 
+def test_Permutation_repr():
+    from discopy import group, python  # noqa: F401, read by eval
+    from discopy.python import finset
+
+    p = finset.Permutation((2, 0, 1))
+    assert repr(p) == "python.finset.Permutation((2, 0, 1))"
+    assert str(p) == "(2, 0, 1)"
+    assert type(eval(repr(p))) is finset.Permutation and eval(repr(p)) == p
+    assert eval(repr(p)).dagger() == (1, 2, 0)
+    assert p == (2, 0, 1) and hash(p) == hash((2, 0, 1))
+    assert repr(group.Symmetric[3](p)) == "Symmetric[3]((2, 0, 1))"
+
+
 def test_Function_swap_is_symmetric():
     from itertools import product
     from discopy.python.finset import Function
@@ -115,6 +128,13 @@ def test_Function_permutation_moves_blocks():
     assert Function.permutation([1, 2, 0], [1, 1, 1])\
         == Function(list(Permutation([1, 2, 0])), 3, 3)
     assert Function.permutation([0, 1], [2, 3]) == Function.id(5)
+
+
+def test_counts_take_index():
+    from discopy.abc import Nat
+    from discopy.python.finset import Cospan, Function
+    assert Function.copy(2, Nat(3)) == Function.copy(2, 3)
+    assert Cospan.spiders(Nat(2), Nat(1), 2) == Cospan.spiders(2, 1, 2)
 
 
 def test_Cospan():

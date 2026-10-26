@@ -64,6 +64,8 @@ diagram as the copy boxes of :mod:`markov` they automatically satisfy the
 
 from __future__ import annotations
 
+from collections.abc import Sized
+from operator import index
 from typing import ClassVar
 
 from discopy import (
@@ -425,12 +427,15 @@ class Merge(Cofunction):
     """
     def __init__(self, x: monoidal.Ty, n: int = 2):
         assert_isatomic(x, monoidal.Ty)
-        n = n if isinstance(n, int) else len(n)
+        n = len(n) if isinstance(n, Sized) else index(n)
+        if n < 0:
+            raise ValueError(f"A merge count is non-negative, got n={n}.")
         name = f"Merge({x}" + ("" if n == 2 else f", {n}") + ")"
         Box.__init__(self, name, dom=x ** n, cod=x,
                      draw_as_spider=True, color="black", drawing_name="")
 
     def __new__(cls, x: monoidal.Ty, n: int = 2):
+        n = len(n) if isinstance(n, Sized) else index(n)
         return super().__new__(cls) if n else\
             cls.noise_factory.__new__(cls.noise_factory, x)
 
@@ -479,9 +484,9 @@ class Noise(Merge):
         x : The type of the noise.
     """
     def __init__(self, x: monoidal.Ty, n: int = 0):
-        if n:
-            raise ValueError(f"A noise has no copies, got n={n}.")
-        super().__init__(x, 0)
+        super().__init__(x, n)
+        if self.dom:
+            raise ValueError(f"A noise has no copies, got n={len(self.dom)}.")
 
 
 class Sum(symmetric.Sum, Box):
@@ -492,6 +497,12 @@ class Sum(symmetric.Sum, Box):
         terms (tuple[Diagram, ...]) : The terms of the formal sum.
         dom (Ty) : The domain of the formal sum.
         cod (Ty) : The codomain of the formal sum.
+    """
+
+
+class Bubble(symmetric.Bubble, Box):
+    """
+    A comarkov bubble is a symmetric bubble and a comarkov box.
     """
 
 
@@ -547,6 +558,7 @@ Diagram.swap_factory = Swap
 Diagram.permutation_factory = Permutation
 Diagram.noise_factory = Noise
 Diagram.sum_factory = Sum
+Diagram.bubble_factory = Bubble
 Id = Diagram.id
 
 

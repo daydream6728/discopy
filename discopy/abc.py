@@ -84,7 +84,7 @@ from typing import TYPE_CHECKING, ClassVar
 
 from discopy import messages
 from discopy.axioms import (
-    Atom, Count, Delay, Equation, Hom, L, Obj, Objs, Over, Perm, R, Repeat,
+    Atom, Delay, Equation, Hom, L, Obj, Objs, Over, Perm, R, Repeat,
     Tensor, Testable, Under, Unit, Var, axiom, rule)
 from discopy.utils import (  # noqa: F401  pylint: disable=unused-import
     AxiomError, NamedGeneric, classproperty, factory_name)
@@ -118,7 +118,7 @@ class Category[C0, C1: Category](Testable[C1], ABC):
     ar = classproperty(lambda cls: getattr(cls, "factory", cls))
 
     @classmethod
-    def parameters(cls) -> tuple[type, type]:
+    def typeparams(cls) -> tuple[type, type]:
         """
         What the type parameters of the category stand for, in order: its
         objects ``C0`` and its arrows ``C1``, so that a sequent stated with
@@ -126,9 +126,10 @@ class Category[C0, C1: Category](Testable[C1], ABC):
         :func:`discopy.axioms.position`.
 
         >>> from discopy.monoidal import Ty, Diagram
-        >>> assert Diagram.parameters() == (Ty, Diagram)
+        >>> assert Diagram.typeparams() == (Ty, Diagram)
+        >>> assert Nat.typeparams() == (NoneType, Nat)
         """
-        return getattr(cls, "ob", cls), cls.ar
+        return cls.ob, cls.ar
 
     @classmethod
     def equation_factory(cls, *terms) -> Equation:
@@ -380,6 +381,11 @@ class Nat(Monoid["Nat"]):
     :meth:`__len__` gives back the natural number itself and slicing reads
     it off as a sequence of ``1``'s, e.g. ``Nat(3)[:1] == Nat(1)``.
 
+    It is the sort of a law's number variable ``N: Nat`` too, see
+    :class:`discopy.axioms.Declaration`, and :meth:`__index__` lets it stand
+    wherever a number of copies or legs does, e.g. ``x ** Nat(2) == x @ x``
+    and ``spiders(Nat(2), 1, x)``.
+
     Parameters:
         n : The natural number.
     """
@@ -402,6 +408,9 @@ class Nat(Monoid["Nat"]):
 
     def __index__(self) -> int:
         return self.n
+
+    def __hash__(self) -> int:
+        return hash(self.n)
 
     def __str__(self) -> str:
         return str(self.n)
@@ -432,9 +441,9 @@ class Nat(Monoid["Nat"]):
     def strategy(cls, *, max_size=3, **_):
         """
         Generate natural numbers up to ``max_size``, so that a category
-        whose objects they are, e.g. :class:`discopy.matrix.Matrix`,
-        quantifies over them like any other :class:`discopy.axioms.Testable`,
-        a natural number having one colour for a boundary to ask for.
+        whose objects they are, e.g. :class:`discopy.matrix.Matrix`, and a
+        law with a number variable ``N: Nat`` quantify over them like any
+        other :class:`discopy.axioms.Testable`.
         """
         from hypothesis import strategies as st
 
@@ -446,6 +455,11 @@ class Nat(Monoid["Nat"]):
         from hypothesis import strategies as st
 
         return st.just(cls(1))
+
+
+Nat.canonical = Nat(2)
+""" The number of a law's :meth:`discopy.axioms.Declaration.canonical`
+instance, the least that is neither the unit nor a single wire. """
 
 
 class MonoidalCategory[C0: ColouredMonoid, C1: MonoidalCategory](
@@ -1481,7 +1495,7 @@ class SymmetricCategory[
         return cls.swap(left, right)
 
     @axiom
-    def permutation_identity[N: Count](
+    def permutation_identity[N: Nat](
             cls, doms: Objs[C0, N]) -> Equation[C1]:
         """ The permutation that leaves every object in place. """
         return cls.equation_factory(
@@ -1489,7 +1503,7 @@ class SymmetricCategory[
             cls.id(cls.ob().tensor(*doms)))
 
     @axiom
-    def permutation_composition[N: Count](
+    def permutation_composition[N: Nat](
             cls, xs: Perm[N], ys: Perm[N], doms: Objs[C0, N]
     ) -> Equation[C1]:
         """ Permuting by ``xs`` then ``ys`` permutes by their composite. """
@@ -1499,7 +1513,7 @@ class SymmetricCategory[
             cls.permutation([xs[y] for y in ys], doms))
 
     @axiom
-    def permutation_inverse[N: Count](
+    def permutation_inverse[N: Nat](
             cls, xs: Perm[N], doms: Objs[C0, N]) -> Equation[C1]:
         """ A permutation followed by its inverse is the identity. """
         moved = [doms[x] for x in xs]
@@ -1509,7 +1523,7 @@ class SymmetricCategory[
             cls.id(cls.ob().tensor(*doms)))
 
     @axiom
-    def permutation_swaps[N: Count](
+    def permutation_swaps[N: Nat](
             cls: type[C1], xs: Perm[N], doms: Objs[C0, N]
     ) -> Equation[C1]:
         """ A permutation is the composite of swaps, whatever overrides it. """
@@ -1653,7 +1667,7 @@ class MarkovCategory[
             >> cls.id(x) @ cls.swap(x, y) @ cls.id(y))
 
     @rule
-    def comultiplication[X: Atom[C0], N: Count](
+    def comultiplication[X: Atom[C0], N: Nat](
             cls, x: Var[C0, X], n: Var[int, N]
     ) -> Hom[C1, X, Repeat[X, N]]:
         """ The comultiplication of an atom, ``n`` copies ``X -> X ** n``. """
@@ -1763,7 +1777,7 @@ class ComarkovCategory[
             >> cls.merge(x) @ cls.merge(y))
 
     @rule
-    def multiplication[X: Atom[C0], N: Count](
+    def multiplication[X: Atom[C0], N: Nat](
             cls, x: Var[C0, X], n: Var[int, N]
     ) -> Hom[C1, Repeat[X, N], X]:
         """ The multiplication of an atom, ``n`` copies ``X ** n -> X``. """
@@ -1919,7 +1933,7 @@ class HypergraphCategory[C0: Pregroup, C1: HypergraphCategory](
         """
 
     @axiom
-    def spider_fusion[X: Atom[C0], M: Count, N: Count](
+    def spider_fusion[X: Atom[C0], M: Nat, N: Nat](
             cls, x: Var[C0, X], m: Var[int, M], n: Var[int, N]
     ) -> Equation[Hom[C1, Repeat[X, M], Repeat[X, N]]]:
         """ Two spiders connected by a leg fuse into one. """
@@ -1942,7 +1956,7 @@ class HypergraphCategory[C0: Pregroup, C1: HypergraphCategory](
         return cls.equation_factory(cls.swap(x, x) >> merge, merge)
 
     @rule
-    def spider[X: Atom[C0], M: Count, N: Count](
+    def spider[X: Atom[C0], M: Nat, N: Nat](
             cls, x: Var[C0, X], m: Var[int, M], n: Var[int, N]
     ) -> Hom[C1, Repeat[X, M], Repeat[X, N]]:
         """ The spider of an atom, ``X ** m -> X ** n``. """

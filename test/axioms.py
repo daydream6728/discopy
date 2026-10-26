@@ -8,11 +8,11 @@ from hypothesis.errors import NoSuchExample
 from pytest import raises
 
 from discopy import braided, cat, monoidal, rigid
-from discopy.abc import Category, ColouredMonoid, Group, MonoidalCategory
+from discopy.abc import Category, ColouredMonoid, Group, MonoidalCategory, Nat
 from discopy.axioms import (
-    L, R, Atom, Axiom, AxiomFailure, Count, Equation, Equivalence, Hom, Obj,
-    Over, Related, Repeat, Tensor, Testable, TestableGeneric, Under, Unit,
-    Var, axiom, inhabits, position, substitute)
+    L, R, Atom, Axiom, AxiomFailure, Equation, Equivalence, Hom, Obj, Over,
+    Related, Repeat, Tensor, Testable, TestableGeneric, Under, Unit, Var,
+    axiom, inhabits, position, substitute)
 from discopy.cat import Arrow, Box, Functor, Ob
 from discopy.monoidal import Ty
 
@@ -135,14 +135,15 @@ def test_string_annotations():
 
 def test_sequents():
     @axiom
-    def law[X: Atom[Ty], Y: Obj[Ty], N: Count](
+    def law[X: Atom[Ty], Y: Obj[Ty], N: Nat](
             cls, x: Var[Ty, X], f: Hom[Self, X, Y], term: Self,
-            n: Var[int, N]
+            n: Var[Nat, N]
     ) -> Equation[tuple[int, Var[Ty, X], bool, bool]]:
         """ Quantify over an atom, a morphism out of it, a term and a
         number. """
         return Equation(
-            (len(x), f.dom, isinstance(term, cls), n <= 3),
+            (len(x), f.dom, isinstance(term, cls),
+             isinstance(n, Nat) and n.n <= 3),
             (1, x, True, True))
 
     bound = law.bind(monoidal.Diagram)

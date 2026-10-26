@@ -40,7 +40,6 @@ Summary
     Axiom
     Rule
     AxiomFailure
-    Count
     Tensor
     Unit
     L
@@ -109,9 +108,6 @@ They are finitely many and shared, so a generated functor can name every one
 of them: composing two functors keeps only the keys of the left-hand map, so
 a functor that named just a few would compose to one defined nowhere else.
 """
-
-MAX_COUNT = 3
-""" The largest number a declaration quantifying over ``int`` is given. """
 
 FUEL = 3
 """ How deep the rules nest in a term of a free category, by default. """
@@ -284,7 +280,7 @@ type Var[Coarse, Value] = Annotated[Coarse, Value]
 """
 The premise standing for the value of an expression over the variables of a
 declaration, e.g. ``x: Var[C0, X]`` for ``X: Obj[C0]``, ``mem: Var[C0,
-Tensor[M, X]]`` or ``n: Var[int, N]`` for ``N: Count``. A typechecker reads
+Tensor[M, X]]`` or ``n: Var[Nat, N]`` for ``N: Nat``. A typechecker reads
 it as ``Coarse``.
 """
 
@@ -298,7 +294,7 @@ reads it as ``Coarse``.
 
 type Perm[N] = Annotated[tuple[int, ...], N]
 """
-The premise standing for a permutation of ``range(N)`` for ``N: Count``,
+The premise standing for a permutation of ``range(N)`` for ``N: Nat``,
 as the list of where each position comes from, e.g. ``xs: Perm[N]`` in
 ``permutation(xs, doms)``. A typechecker reads it as a tuple of integers.
 """
@@ -309,16 +305,6 @@ The premise standing for ``N`` atomic objects of type ``Coarse``, e.g.
 ``doms: Objs[C0, N]``, drawn as ``N`` generators of ``category.ob``. A
 typechecker reads it as a tuple of them.
 """
-
-
-class Count(int):
-    """
-    The sort of the numbers up to :data:`MAX_COUNT`, as the bound of a
-    variable ``N: Count`` of a declaration, e.g. the legs of a spider, two
-    in the canonical instance of a law, the least that is neither the unit
-    nor a single wire.
-    """
-    canonical = 2
 
 
 def is_open(annotation) -> bool:
@@ -472,10 +458,10 @@ class Repeat[Object, N](Constructor):
 
 def position(variable: TypeVar, category: type) -> int | None:
     """
-    Which parameter of :meth:`discopy.abc.Category.parameters` a type
+    Which parameter of :meth:`discopy.abc.Category.typeparams` a type
     parameter of a class above a category stands for.
 
-    The answer is read off the class that defines ``parameters``. A type
+    The answer is read off the class that defines ``typeparams``. A type
     parameter of a subclass gets there through the generic bases: e.g. a
     ``Monoid[C1]`` is a ``ColouredMonoid[NoneType, C1]``, which is a
     ``Category[NoneType, C1]``, so the ``C1`` of a monoid is the second
@@ -489,7 +475,7 @@ def position(variable: TypeVar, category: type) -> int | None:
     owner = next((
         klass for klass in category.__mro__
         if variable in getattr(klass, "__type_params__", ())), None)
-    while owner is not None and "parameters" not in vars(owner):
+    while owner is not None and "typeparams" not in vars(owner):
         base = next((
             base for base in vars(owner).get("__orig_bases__", ())
             if variable in get_args(base)
@@ -549,15 +535,16 @@ class Declaration[**P, T](classmethod):
     the category and the others are its arguments, sampled in order. Its
     signature is a sequent: each type parameter is a variable of the sort
     its bound states, ``A: Obj[C0]`` an object, ``X: Atom[C0]`` an atomic
-    one and ``N: Count`` a number, each parameter a premise, ``f: Hom[C1, A,
-    B]`` a morphism from ``A`` to ``B``, ``x: Var[C0, X]`` the value of an
+    one and ``N: Nat`` a number, see :class:`discopy.abc.Nat`, each
+    parameter a premise, ``f: Hom[C1, A, B]`` a morphism from ``A`` to
+    ``B``, ``x: Var[C0, X]`` the value of an
     object expression and :data:`typing.Self` a term, and the return
     annotation the type of its output, see :meth:`output`. Object
     expressions are built by :class:`Tensor`, :class:`Unit`, :class:`L`,
     :class:`R`, :class:`Delay`, :class:`Over`, :class:`Under` and
     :class:`Repeat`, which stay expressions until the variables are
     substituted, see :func:`substitute`. The type parameters of the class
-    stating it stand for what :meth:`discopy.abc.Category.parameters` says,
+    stating it stand for what :meth:`discopy.abc.Category.typeparams` says,
     see :func:`position`, and the annotations are read as objects, see
     :meth:`annotations`, so that a module stating a law may use ``from
     __future__ import annotations``.
@@ -690,7 +677,7 @@ class Declaration[**P, T](classmethod):
             for parameter in getattr(klass, "__type_params__", ()):
                 index = position(parameter, category)
                 if index is not None:
-                    scope[parameter] = category.parameters()[index]
+                    scope[parameter] = category.typeparams()[index]
         for parameter in inspect.unwrap(self.function).__type_params__:
             name = parameter.__name__
             scope[parameter] = given[name] if name in given\
@@ -722,10 +709,10 @@ class Declaration[**P, T](classmethod):
         """
         Generate the scope and the arguments of the bound declaration: a
         variable of sort ``Obj`` from the strategy of the objects
-        :meth:`discopy.abc.Category.parameters` names, :obj:`None` for the
+        :meth:`discopy.abc.Category.typeparams` names, :obj:`None` for the
         single object of a monoid, of sort ``Atom`` from their
-        ``generators`` and of sort :class:`Count` a number up to
-        :data:`MAX_COUNT`, then a premise
+        ``generators`` and of a testable sort, e.g. ``N: Nat``, from its own
+        strategy, see :meth:`discopy.abc.Nat.strategy`, then a premise
         ``Hom[C1, A, B]`` from the strategy of the category with its boundary
         and ``params``, a premise ``Var[T, x]`` the value ``x``, a premise
         ``Perm[N]`` a permutation, ``Objs[C0, N]`` that many atomic objects,
@@ -738,9 +725,9 @@ class Declaration[**P, T](classmethod):
         @st.composite
         def sequents(draw):
             def variable(name, sort):
-                if sort is Count:
-                    return draw(st.integers(0, MAX_COUNT), label=name)
-                ob = self.category.parameters()[0]
+                if isinstance(sort, type) and issubclass(sort, Testable):
+                    return draw(sort.strategy(), label=name)
+                ob = self.category.typeparams()[0]
                 if ob is NoneType:
                     return None
                 return draw(ob.generators() if get_origin(sort) is Atom
@@ -874,8 +861,8 @@ class Axiom[**P, T](Declaration[P, T]):
             return box if isinstance(box, self.category)\
                 else self.category.cast(box)
 
-        scope = self.scope(lambda name, sort: Count.canonical if sort is Count
-                           else self.category.ob(name))
+        scope = self.scope(lambda name, sort: getattr(
+            sort, "canonical", None) or self.category.ob(name))
         arguments = self.instantiate(scope, value)
         # pylint: disable-next=import-outside-toplevel  # off the package
         from hypothesis.errors import UnsatisfiedAssumption
@@ -1034,7 +1021,7 @@ def rule[**P, T](
     return Rule(function)
 
 
-class Testable[T](ABC):
+class Testable[T](ABC):  # noqa: B024  strategy is optional, see below
     """
     A testable class states axioms, which its subclasses inherit along with
     the structure they axiomatise, and says how to generate the terms those

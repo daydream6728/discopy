@@ -456,6 +456,27 @@ def test_Hypergraph_from_diagram_matches_naive_composition():
         assert diagram.to_hypergraph() == _naive_from_diagram(diagram)
 
 
+def test_Hypergraph_from_diagram_reads_the_perm_of_a_permutation(
+        monkeypatch):
+    """ The image of a permutation box is read from its ``perm`` rather than
+    by mapping it wire by wire with :meth:`Hypergraph.swap` or
+    :meth:`Hypergraph.permutation`, and is still the image of the functor.
+    """
+    from discopy.frobenius import Permutation, Swap
+    x, y, z = map(Ty, "xyz")
+    perm = Permutation(x @ y @ z, [2, 0, 1])
+    diagrams = [
+        perm, x @ perm @ y, perm >> Box('f', z @ x, y) @ y, perm.to_swaps(),
+        Swap(x, y), Spider(1, 2, x) @ y >> Permutation(x @ x @ y, [2, 0, 1])]
+    images = list(map(_naive_from_diagram, diagrams))
+
+    def wire_by_wire(*_):
+        raise AssertionError
+    monkeypatch.setattr(H, "swap", wire_by_wire)
+    monkeypatch.setattr(H, "permutation", wire_by_wire)
+    assert [diagram.to_hypergraph() for diagram in diagrams] == images
+
+
 def test_Hypergraph_from_diagram_pinned_category():
     """ Calling :meth:`from_diagram` on a :class:`Hypergraph` pinned to a
     category other than the diagram's own must still pick the functor of
@@ -929,3 +950,44 @@ def test_complements_are_lazy():
     f, g = (Box(name, x, x).to_hypergraph() for name in "fg")
     host = H.spiders(1, 40, x) >> f.tensor(*39 * [f])
     assert next(host.rewrite((H.id(x), f >> g))) is not None
+
+
+def test_decoder():
+    """ The one decoder of hypergraphs and maps (decision 8b of #56): boxes
+    side by side share a layer when it foliates, plumbing fuses when it fuses,
+    a state goes at the end of the scan by default, a layer with a diagram in
+    it is whiskered box by box, a box of a subcategory or a sum stays one box
+    of the category and a map over a concrete category, with no layers,
+    decodes too. """
+    from discopy import markov, symmetric
+    from discopy.cmap import CMap
+    from discopy.hypergraph import Decoder
+    from discopy.tensor import Dim, Tensor
+    x = markov.Ty('x')
+    f, g = markov.Box('f', x, x), markov.Box('g', x, x)
+    side_by_side = markov.Diagram((markov.Layer(f, g), ), x @ x, x @ x)
+    for foliate, expected in ((False, f @ g), (True, side_by_side)):
+        decoder = Decoder(markov.Diagram, x @ x, (0, 1), foliate=foliate)
+        decoder.place(f, (0, ), (2, ))
+        decoder.place(g, (1, ), (3, ))
+        assert decoder.close((2, 3)) == expected
+    for fuse in (False, True):
+        decoder = Decoder(markov.Diagram, x, (0, ), fuse=fuse)
+        decoder.place(markov.Copy(x), (0, ), (1, 2))
+        assert len(decoder.close((2, 1)).inside) == (1 if fuse else 2)
+    state, drop = markov.Box('s', markov.Ty(), x), markov.Function(x @ x, [0])
+    decoder = Decoder(markov.Diagram, x, (0, ))
+    decoder.place(state, (), (1, ))
+    assert decoder.close((0, 1)) == x @ state
+    assert drop.to_map().to_hypergraph().to_diagram() == drop
+    decoder = Decoder(markov.Diagram, x, (0, ))
+    assert decoder.beside((1, 2), (0, 1), ()) == 1
+    assert decoder.beside((1, 2), (), (2, 0)) == 0
+    assert decoder.beside((1, 2), (1, 0), (2, )) is None
+    for box in (f, symmetric.Box('h', x, x) + symmetric.Box('k', x, x)):
+        decoded = Hypergraph[symmetric.Diagram].from_box(box).to_diagram()
+        assert type(decoded) is symmetric.Diagram and decoded.boxes == [box]
+    t = Tensor([1, 2, 3, 4, 5, 6], Dim(2), Dim(3))
+    assert (CMap[Tensor].id(Dim(3)) @ CMap[Tensor].from_box(t)
+            >> CMap[Tensor].swap(Dim(3), Dim(3))).to_diagram()\
+        == Dim(3) @ t >> Tensor.swap(Dim(3), Dim(3))

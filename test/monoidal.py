@@ -159,6 +159,21 @@ def test_Ty_pow():
         Ty('x') ** Ty('y')
 
 
+def test_pow_takes_index():
+    from discopy import abc
+    two = abc.Nat(2)
+    assert Ty('x') ** two == Ty('x', 'x') and Nat(3) ** two == Nat(6)
+    assert List[int](2, 3) ** two == List[int](2, 3, 2, 3)
+    for power in (2.0, "2"):
+        with raises(TypeError):
+            Ty('x') ** power
+
+
+def test_abc_Nat_hash():
+    from discopy import abc
+    assert {abc.Nat(2), abc.Nat(2), abc.Nat(3)} == {abc.Nat(2), abc.Nat(3)}
+
+
 def test_Nat_init():
     assert list(Nat(0)) == []
     assert all(len(Nat(n)) == n for n in range(5))
@@ -292,6 +307,31 @@ def test_Layer_has_no_identity():
     assert Ty() @ Layer(f) == Layer(f) == Layer(f) @ Ty()
     assert not [t for t in (x @ Layer(f)).boxes_or_types
                 if isinstance(t, Ty) and not t]
+
+
+def test_Layer_does_not_compose():
+    x, y, z = map(Ty, "xyz")
+    f, g = Box('f', x, y), Box('g', y, z)
+
+    with raises(AxiomError, match="Compose diagrams, not layers: f >> g."):
+        Layer(f) >> Layer(g)
+    with raises(AxiomError, match="Compose diagrams, not layers"):
+        Layer(g) << Layer(f)
+    with raises(AxiomError, match="Compose diagrams, not layers"):
+        Layer(f) >> (cat.Arrow.id(y) >> Layer(g))
+    with raises(AxiomError, match="Compose diagrams, not layers"):
+        cat.Arrow.id(x) >> Layer(f) >> Layer(g)
+    with raises(AxiomError, match="Compose diagrams, not layers"):
+        Layer(g) << (cat.Arrow.id(x) >> Layer(f))
+    with raises(TypeError):
+        Layer(f) >> 1
+    with raises(TypeError):
+        Layer(f) >> g
+    assert cat.Box('h', x, x) >> Layer(f) == cat.Arrow(
+        (cat.Box('h', x, x), Layer(f)), x, y)
+    assert Diagram((Layer(f), Layer(g)), x, z) == f >> g
+    assert (Layer(f) >> cat.Arrow.id(y)) == cat.Arrow.id(x) >> Layer(f)
+    assert Layer(f).then().inside == (Layer(f), )
 
 
 def test_Layer_unit():
@@ -475,6 +515,24 @@ def test_Bubble_dagger():
     assert f.bubble().dagger().dagger() == f.bubble()
 
 
+def test_Bubble_every_level():
+    from discopy import (
+        spacial, feedback, braided, balanced, symmetric, markov, comarkov,
+        biclosed, closed, rigid, pivotal, ribbon, compact, frobenius)
+    from discopy.grammar import pregroup, categorial, abstract
+    for module in (
+            spacial, feedback, braided, balanced, symmetric, markov,
+            comarkov, biclosed, closed, rigid, pivotal, ribbon, compact,
+            frobenius, pregroup, categorial, abstract):
+        assert module.Diagram.bubble_factory is module.Bubble, module
+        x, y = module.Ty('x'), module.Ty('y')
+        bubble = module.Box('f', x, y).bubble(name="N")
+        diagram = bubble >> module.Box('h', y, y)
+        assert isinstance(diagram, module.Diagram) and diagram.cod == y
+        assert module.Functor.id(module.Diagram)(diagram) == diagram
+        assert loads(dumps(diagram)) == diagram
+
+
 def test_Bubble_data():
     f = Box('f', Ty('x'), Ty('y'))
     bubble = f.bubble(data=42, is_dagger=True)
@@ -485,6 +543,8 @@ def test_Bubble_data():
     for b in (from_tree(named.to_tree()), loads(dumps(named))):
         assert b == named and (b.name, b.method) == ("b", "frame")
     assert "method" not in bubble.to_tree() and "name" not in bubble.to_tree()
+    from discopy import monoidal
+    assert (eval(repr(bubble)).data, eval(repr(bubble)).is_dagger) == (42, True)
 
 
 def test_Bubble_identity_Functor():
@@ -955,3 +1015,22 @@ def test_tensor_of_sum_with_diagram():
     f, g = Box('f', x, x), Box('g', x, x)
     assert f.tensor(g + g, f) == (f @ g @ f) + (f @ g @ f)
     assert (f + f).tensor(g, f) == (f @ g @ f) + (f @ g @ f)
+
+
+def test_Functor_and_Equation_tree():
+    x, y = Ty('x'), Ty('y')
+    f = Box('f', x, y)
+    red, blue = Colour('red'), Colour('blue')
+    F = Functor({x: y, y: x @ x}, {f: f[::-1] @ x}, colour_map={red: blue})
+    assert loads(dumps(F)) == F and loads(dumps(F))(red) == blue
+    assert loads(dumps(Functor({x: y}, {}))) == Functor({x: y}, {})
+    with raises(TypeError, match="its colour_map is a Python callable"):
+        dumps(Functor({}, {}, colour_map=lambda colour: colour))
+    equation = Equation(f, f >> Id(y), space=3)
+    loaded = loads(dumps(equation))
+    assert type(loaded) is Equation and loaded.terms == equation.terms
+    assert loaded.space == 3 and loads(dumps(Equation(f))).space == 1
+    with raises(TypeError, match=r"Expected int \| float"):
+        Equation.from_tree(equation.to_tree() | {'space': 'x'})
+    with raises(TypeError, match=r"Expected int \| float"):
+        dumps(Equation(f, f, space="x"))
