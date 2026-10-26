@@ -771,6 +771,45 @@ def test_Bubble_name():
     assert frobenius.Functor.id(Diagram)(bubble) == bubble
 
 
+def test_Bubble_func_dagger():
+    f = Box('f', Dim(2), Dim(2), [1, 2, 3, 4])
+    bubble = f.bubble(func=abs, drawing_name="B")
+    assert bubble.dagger().func is abs and bubble.dagger().dagger() == bubble
+    assert bubble.dagger().drawing_name == "B"
+    assert bubble != f.bubble() != f.bubble().dagger()
+    assert repr(f.bubble().dagger()) == repr(f.bubble()) + ".dagger()"
+    from discopy import tensor
+    assert repr(bubble).endswith(", func=abs)") and eval(repr(bubble)) == bubble
+    F = frobenius.Functor.id(Diagram)
+    assert F(bubble) == bubble and F(bubble).func is abs
+    assert F(bubble.dagger()) == bubble.dagger()
+
+
+def test_grad_equal():
+    pytest.importorskip("sympy")
+    from sympy.abc import x, y
+    f = Box('f', Dim(2), Dim(2), [x, 0, 0, y])
+    square = f.bubble(func=lambda z: z ** 2)
+    for diagram in (f, square, f >> square):
+        assert diagram.grad(x) == diagram.grad(x) != diagram.grad(y)
+        assert len({diagram.grad(x), diagram.grad(x)}) == 1
+    assert square.grad(x) != f.bubble(func=lambda z: z ** 3).grad(x)
+
+
+def test_grad_of_named_bubble_reads_back():
+    pytest.importorskip("sympy")
+    from sympy import Symbol
+    from sympy.abc import x
+    from discopy import tensor
+    tmp = Symbol("tmp")
+    bubble = Box('f', Dim(2), Dim(2), [x, 0, 0, 1]).bubble(func=abs)
+    for diff in (tensor.Diff(x), tensor.Diff(tmp, abs)):
+        assert eval(repr(diff)) == diff
+    chain = next(box for box in bubble.grad(x).boxes
+                 if isinstance(box, Bubble) and box.func != Bubble.func)
+    assert repr(chain.func) == "tensor.Diff(tmp, abs)"
+
+
 def test_Functor_tree():
     from discopy.grammar.pregroup import Cup, Functor as Pregroup, Ty, Word
     s, n = Ty('s'), Ty('n')

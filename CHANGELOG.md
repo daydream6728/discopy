@@ -189,6 +189,9 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   term inside a diagram is drawn as one box ([next#31]).
 - `Functor.id` is built from `utils.identity`, and `then` drops an identity
   on either side, so that composing functors is unital ([next#142]).
+- `Box.rebuild` keeps the fields `==` compares, e.g. `tensor.Bubble.func`, a
+  `tensor.Diff` in `grad`, through `dagger`, `subs` and functors ([next#118],
+  [next#169]).
 - `discopy.optyx` keeps no private members in `channel` and `core.diagram`:
   `decomp`, `dual_rail`, `Ob.classical`, `Ob.quantum` and `Box.array` are
   public, and the imports that make no cycle are at the top ([optyx#29]).
@@ -589,6 +592,7 @@ for the changelog of `1.2.1` and earlier.
 [next#163]: https://github.com/rel-int/discopy-next/issues/163
 [next#164]: https://github.com/rel-int/discopy-next/issues/164
 [next#168]: https://github.com/rel-int/discopy-next/issues/168
+[next#169]: https://github.com/rel-int/discopy-next/issues/169
 [next#175]: https://github.com/rel-int/discopy-next/issues/175
 [next#176]: https://github.com/rel-int/discopy-next/issues/176
 [next#177]: https://github.com/rel-int/discopy-next/issues/177

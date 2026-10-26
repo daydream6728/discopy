@@ -333,6 +333,9 @@ class Box(compact.Box, markov.Box, comarkov.Box, Diagram):
     >>> assert f.r[::-1][::-1] == f.r and f.r.l == f
     >>> assert Box('g', x, x).is_cartesian and not Box('g', x, x).r.is_affine
     """
+    serialised_attrs = pivotal.Box.serialised_attrs + (
+        "is_deterministic", "is_affine")
+
     @property
     def is_deterministic(self) -> bool:
         return super().is_deterministic and not self.z
@@ -340,6 +343,14 @@ class Box(compact.Box, markov.Box, comarkov.Box, Diagram):
     @property
     def is_affine(self) -> bool:
         return super().is_affine and not self.z
+
+    @is_deterministic.setter
+    def is_deterministic(self, value: bool):
+        self.deterministic = value
+
+    @is_affine.setter
+    def is_affine(self, value: bool):
+        self.affine = value
 
     def rotate(self, left=False):
         return self.flagged(super().rotate(left))
@@ -793,8 +804,8 @@ class Bubble(compact.Bubble, markov.Bubble, comarkov.Bubble, Box):
     >>> noisy = Box('f', x, x).bubble(is_deterministic=False)
     >>> assert noisy.r.l == noisy and not noisy.r.l.is_deterministic
     """
-    def rotate(self, left=False) -> Bubble:
-        return self.flagged(super().rotate(left))
+    serialised_attrs = compact.Bubble.serialised_attrs + (
+        "is_deterministic", "is_affine")
 
 
 class Sum(compact.Sum, markov.Sum, comarkov.Sum, Box):
