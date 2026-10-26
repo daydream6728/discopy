@@ -404,7 +404,10 @@ def test_reduce_strategy():
     with raises(NotImplementedError):
         Strategy().order((c, ))
     e, g = Constant('e', X), Constant('g', X >> X)
-    assert e.reduce().to_term(1) == e == e.normal_form()
+    assert e.reduce().to_term() == e == e.normal_form()
+    lam, tagged = X(lambda x: g(x)), Constant('t', X, data=[1])
+    assert lam.reduce().to_term() == lam and lam.reduce().cod() == lam.cod
+    assert g(tagged).normal_form() == g(tagged)
     assert X(lambda x: g(x))(e).normal_form() == g(e)
     assert g(X(lambda x: x)(c)).normal_form() == g(c)
 

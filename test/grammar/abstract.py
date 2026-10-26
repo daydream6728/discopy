@@ -322,7 +322,7 @@ def test_normal_form_of_words():
     n, s = Ty("n"), Ty("s")
     f, a, g = (n >> s)("f"), n("a"), (n >> (n >> s))("g")
     x = Variable("x", n)
-    assert f(a).normal_form() == f(a) == f(a).reduce().to_term(2)
+    assert f(a).normal_form() == f(a) == f(a).reduce().to_term()
     assert n(lambda y: g(y)(x))(a).normal_form() == g(a)(x)
     term, B, lexicon = context_free_grammar()
     for _ in range(3):
