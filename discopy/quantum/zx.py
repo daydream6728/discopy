@@ -235,12 +235,6 @@ class Diagram(tensor.Diagram[complex]):
                     @ Id(len(scan) - source - 1)
                 scan = scan[:target] + (scan[source],)\
                     + scan[target:source] + scan[source + 1:]
-            elif target > source:
-                swaps = Id(source)\
-                    @ Diagram.swap(1, target - source)\
-                    @ Id(len(scan) - target - 1)
-                scan = scan[:source] + scan[source + 1:target]\
-                    + (scan[source],) + scan[target:]
             else:
                 swaps = Id(len(scan))
             return scan, swaps
