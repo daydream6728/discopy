@@ -157,7 +157,7 @@ class Diagram(symmetric.Diagram, MarkovCategory):
     layer_factory = Layer
 
     @classmethod
-    def sample(cls, *, dom=None, cod=None, fuel=FUEL):
+    def quotient_strategy(cls, *, dom=None, cod=None, fuel=FUEL):
         """
         Sample Markov diagrams through their quotient: a hypergraph drawn
         by :meth:`discopy.hypergraph.Hypergraph.strategy` with at most

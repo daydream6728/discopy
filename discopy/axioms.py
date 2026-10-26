@@ -77,7 +77,7 @@ from collections.abc import Callable
 from copy import deepcopy
 from dataclasses import KW_ONLY, dataclass, replace
 from functools import cached_property, reduce, wraps
-from operator import matmul
+from operator import index, matmul
 from types import GenericAlias, NoneType, UnionType
 from typing import (
     TYPE_CHECKING, Annotated, Any, ClassVar, Concatenate, ParamSpec, Self,
@@ -740,7 +740,7 @@ class Declaration[**P, T](classmethod):
                     n, = get_args(kind)
                     strategy = st.permutations(range(n)).map(tuple)
                 elif get_origin(kind) is Objs:
-                    n = get_args(kind)[1]
+                    n = index(get_args(kind)[1])
                     strategy = st.lists(
                         self.category.ob.generators(),
                         min_size=n, max_size=n).map(tuple)
