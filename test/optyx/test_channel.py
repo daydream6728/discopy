@@ -212,3 +212,49 @@ def test_encode_inflate_mixed_types():
 def test_dual_rail_only_for_zx_channels():
     with pytest.raises(TypeError, match="Only ZX channels"):
         Channel("id", diagram.Id(diagram.mode)).dual_rail()
+
+
+def test_swap_dagger_swaps_back():
+    swap = Swap(qmode, qubit)
+    assert swap.dagger() == Swap(qubit, qmode)
+    assert swap.dagger().kraus == swap.kraus.dagger()
+
+
+def test_empty_sum_keeps_its_types():
+    zero = photonic.Phase(x).grad(y)
+    assert zero == Diagram.sum_factory((), qmode, qmode)
+    kraus, double = zero.get_kraus(), zero.double()
+    assert (kraus.dom, kraus.cod) == (diagram.mode, diagram.mode)
+    assert (double.dom, double.cod) == (diagram.mode @ diagram.mode, ) * 2
+    assert not double.terms
+    assert not np.any(zero.eval().tensor.array)
+    assert not np.any(double.to_tensor().eval().array)
+    with pytest.raises(AssertionError):
+        zero.get_kraus().to_tensor([2, 3])
+
+
+def test_inflate_keeps_the_environment():
+    lossy = (photonic.Create(1, 1, internal_states=([1, 0], [0, 1]))
+             >> photonic.BS >> qmode @ photonic.PhotonLoss(.5)
+             >> photonic.NumberResolvingMeasurement(2))
+    assert photonic.PhotonLoss(.5).inflate(2).env == diagram.mode ** 2
+    # distinguishable photons: each one exits on the left with probability
+    # 1/2, on the right 1/4 and is lost 1/4, independently of the other
+    expected = {(2, 0): 1 / 4, (1, 1): 1 / 4, (1, 0): 1 / 4,
+                (0, 2): 1 / 16, (0, 1): 1 / 8, (0, 0): 1 / 16}
+    distribution = lossy.inflate(2).eval().prob_dist()
+    for key, value in expected.items():
+        assert np.isclose(distribution[key], value)
+
+
+def test_from_callable_calls_a_channel_diagram():
+    from discopy.optyx.qubits import Z, Scalar
+    bell = Scalar(.5 ** .5) @ Z(0, 2)
+
+    @Channel.from_callable(dom=qubit, cod=qubit @ bit @ qubit)
+    def measure_beside_bell(c):
+        a, b = bell()
+        return a, Measure(qubit)(c), b
+
+    assert measure_beside_bell == (
+        bell @ Measure(qubit) >> qubit @ Diagram.swap(qubit, bit))

@@ -104,6 +104,13 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - `optyx.interaction`, combinatorial maps of recurrent channels, each box
   with a private memory and a prediction, unrolled or run to an approximate
   fixed point ([optyx#16]).
+- `quantum.contextuality.Model.from_diagram`, the empirical model of an
+  optyx diagram with a classical setting and outcome for each party, read
+  off `optyx.contextuality.distributions` (Apache-2.0) with
+  `EvalResult.prob_dist(normalise=False)`, with `Model.deterministic`,
+  `Scenario.bell` taking settings for each party and `Inequality.violation`
+  zero when the inequality holds, rather than raising on the trivial one
+  ([optyx#87]).
 - `hopf.Intertwiner.chart` and `hopf.Algebra.symmetric(n)` ([#408]).
 - `copying`, a law of `Testable` beside `pickling` ([next#1]), and the
   generators of each level as typed class variables ([next#1]).
@@ -156,6 +163,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   ([next#145]).
 - A law is a sequent ([next#1]), and `Equation` has one symbol between each
   pair of terms ([next#1]).
+- `abc.Nat` hashes and is the sort of a law's number variable `N: Nat`, and
+  powers, spiders and copies take any `__index__` ([next#164]).
 - Properties are read with `isinstance` rather than `hasattr`, and a
   subscripted class is named by `factory_name` ([next#1]).
 - A box is plumbing by what it holds, `Layer.is_plumbing_component`, and
@@ -189,6 +198,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   and tqdm they import ([optyx#67]).
 - `Layer >> Layer` raises, plumbing has `time_step` `None`, a permutation
   reprs with its class, nan data equals itself ([next#31], [next#168]).
+- `dumps` writes tuples, numpy, sympy, `interaction`, `para`, `CQ`, `Equation`
+  and dict functors ([next#168]); `para` and `interaction` hash ([next#31]).
 
 ### Deprecated
 
@@ -223,6 +234,12 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - `optyx.core.zx.ZXBox` reads its equality and its hash off `cat.Box` like
   every other box, so a spider equals the one-layer diagram holding it and
   can go in a set ([next#359]).
+- `closed.TermBase.normal_form` and `reduce` take a constant as the head of a
+  spine, e.g. on the terms of `grammar.abstract` ([next#278]).
+- `optyx.channel.Swap.dagger` is the swap the other way round ([next#290]).
+- `optyx.channel.Sum` without terms keeps its types in `get_kraus` and
+  `double`, and evaluates to the zero tensor, so the gradient by an absent
+  variable doubles and evaluates ([next#291]).
 - `Hypergraph`: its hash, `simplify`, `rotate`, and `to_diagram` on
   non-self-dual, `Nat` and `Dim` types ([#324], [#387], [#393], [#622],
   [#719]).
@@ -368,6 +385,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   ([next#276]).
 - Coverage's 98% gate reads `discopy/` alone, new tests bring `ehypergraph` to
   100%, and pytest imports by path, so `test/abc.py` is collected ([next#31]).
+- `ruff check` and `ty check` lint beside `pylint`, each failing on every rule
+  `main` passes, the rules it breaks listed in `pyproject.toml` ([next#263]).
 
 ## [1.2.2] - 2025-12-19
 
@@ -563,6 +582,7 @@ for the changelog of `1.2.1` and earlier.
 [next#161]: https://github.com/rel-int/discopy-next/issues/161
 [next#162]: https://github.com/rel-int/discopy-next/issues/162
 [next#163]: https://github.com/rel-int/discopy-next/issues/163
+[next#164]: https://github.com/rel-int/discopy-next/issues/164
 [next#168]: https://github.com/rel-int/discopy-next/issues/168
 [next#169]: https://github.com/rel-int/discopy-next/issues/169
 [next#175]: https://github.com/rel-int/discopy-next/issues/175
@@ -572,8 +592,12 @@ for the changelog of `1.2.1` and earlier.
 [next#201]: https://github.com/rel-int/discopy-next/issues/201
 [next#214]: https://github.com/rel-int/discopy-next/pull/214
 [next#225]: https://github.com/rel-int/discopy-next/issues/225
+[next#263]: https://github.com/rel-int/discopy-next/pull/263
 [next#276]: https://github.com/rel-int/discopy-next/pull/276
+[next#278]: https://github.com/rel-int/discopy-next/issues/278
 [next#283]: https://github.com/rel-int/discopy-next/pull/283
+[next#290]: https://github.com/rel-int/discopy-next/issues/290
+[next#291]: https://github.com/rel-int/discopy-next/issues/291
 [next#292]: https://github.com/rel-int/discopy-next/issues/292
 [next#293]: https://github.com/rel-int/discopy-next/issues/293
 [next#301]: https://github.com/rel-int/discopy-next/issues/301
@@ -593,6 +617,7 @@ for the changelog of `1.2.1` and earlier.
 [optyx#76]: https://github.com/rel-int/optyx/pull/76
 [optyx#82]: https://github.com/rel-int/optyx/pull/82
 [optyx#84]: https://github.com/rel-int/optyx/pull/84
+[optyx#87]: https://github.com/rel-int/optyx/pull/87
 [lambek#2]: https://github.com/rel-int/lambek/pull/2
 [lambek#8]: https://github.com/rel-int/lambek/pull/8
 [lambek#12]: https://github.com/rel-int/lambek/pull/12

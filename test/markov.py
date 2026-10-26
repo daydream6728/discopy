@@ -14,6 +14,9 @@ def test_Discard_has_no_copies():
     assert Copy(x, 0) == Discard(x) == Discard(x, 0)
     with raises(ValueError):
         Discard(x, 2)
+    for box in (Copy, Discard):
+        with raises(ValueError):
+            box(x, -1)
 
 
 def test_spider_factory():
@@ -143,6 +146,17 @@ def test_copy_factory():
     assert isinstance(RecipeCopy(x, 0), RecipeDiscard)
     with raises(AxiomError, match="Recipe is not a dagger category"):
         RecipeCopy(x).dagger()
+
+
+def test_Copy_takes_index():
+    from numpy import int64
+    from discopy.abc import Nat
+    x = Ty('x')
+    assert Copy(x, int64(3)) == Copy(x, Nat(3)) == Copy(x, 3)
+    assert Function(x, int64([0, 0, 0])) == Copy(x, 3)
+    zero = type("Zero", (), {"__index__": lambda _: 0})()
+    for box in (Copy(x, zero), Function(x, int64([]))):
+        assert isinstance(box, Discard) and box == Discard(x)
 
 
 def test_Copy_pickle():

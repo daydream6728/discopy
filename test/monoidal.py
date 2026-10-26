@@ -159,6 +159,21 @@ def test_Ty_pow():
         Ty('x') ** Ty('y')
 
 
+def test_pow_takes_index():
+    from discopy import abc
+    two = abc.Nat(2)
+    assert Ty('x') ** two == Ty('x', 'x') and Nat(3) ** two == Nat(6)
+    assert List[int](2, 3) ** two == List[int](2, 3, 2, 3)
+    for power in (2.0, "2"):
+        with raises(TypeError):
+            Ty('x') ** power
+
+
+def test_abc_Nat_hash():
+    from discopy import abc
+    assert {abc.Nat(2), abc.Nat(2), abc.Nat(3)} == {abc.Nat(2), abc.Nat(3)}
+
+
 def test_Nat_init():
     assert list(Nat(0)) == []
     assert all(len(Nat(n)) == n for n in range(5))
@@ -972,3 +987,22 @@ def test_tensor_of_sum_with_diagram():
     f, g = Box('f', x, x), Box('g', x, x)
     assert f.tensor(g + g, f) == (f @ g @ f) + (f @ g @ f)
     assert (f + f).tensor(g, f) == (f @ g @ f) + (f @ g @ f)
+
+
+def test_Functor_and_Equation_tree():
+    x, y = Ty('x'), Ty('y')
+    f = Box('f', x, y)
+    red, blue = Colour('red'), Colour('blue')
+    F = Functor({x: y, y: x @ x}, {f: f[::-1] @ x}, colour_map={red: blue})
+    assert loads(dumps(F)) == F and loads(dumps(F))(red) == blue
+    assert loads(dumps(Functor({x: y}, {}))) == Functor({x: y}, {})
+    with raises(TypeError, match="its colour_map is a Python callable"):
+        dumps(Functor({}, {}, colour_map=lambda colour: colour))
+    equation = Equation(f, f >> Id(y), space=3)
+    loaded = loads(dumps(equation))
+    assert type(loaded) is Equation and loaded.terms == equation.terms
+    assert loaded.space == 3 and loads(dumps(Equation(f))).space == 1
+    with raises(TypeError, match=r"Expected int \| float"):
+        Equation.from_tree(equation.to_tree() | {'space': 'x'})
+    with raises(TypeError, match=r"Expected int \| float"):
+        dumps(Equation(f, f, space="x"))

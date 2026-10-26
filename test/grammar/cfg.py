@@ -75,6 +75,12 @@ def test_Tree_to_diagram():
         >> box('f', x @ x, x)
 
 
+def test_Algebra_no_tree():
+    from discopy.grammar.cfg import Algebra
+    with raises(TypeError, match="Object of type Operad is not JSON"):
+        dumps(Algebra({Ty('s'): Ty('s')}, {}))
+
+
 def test_to_tree():
     x, y = Ty('x'), Ty('y')
     f, g = Rule(x @ x, x, name='f'), Rule(x @ y, x, name='g')

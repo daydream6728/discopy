@@ -950,9 +950,19 @@ class TermBase(Box, biclosed.TermBase):
         >>> assert tree.spine == (f(x), )
         >>> assert tree[0][0] == BohmTree(X, (f, x), 1, tree.strategy, ())
         >>> assert two(X(lambda x: x))(x).reduce(budget=1) is None
+
+        The constants of the term are in scope after its free variables, each
+        once, so that a constant can be the head of the tree.
+
+        >>> g, a = (X >> (X >> X))('g'), X('a')
+        >>> assert g(a)(x).reduce().variables == (x, g, a)
         """
+        constants = []
+        for constant in self.constants:
+            if constant not in constants:
+                constants.append(constant)
         return (strategy or self.strategy_factory)(budget)(
-            self, tuple(self.freevars))
+            self, tuple(self.freevars) + tuple(constants))
 
     def normal_form(self, budget: int | None = None,
                     strategy: type[Strategy] | None = None) -> Term:
@@ -972,6 +982,8 @@ class TermBase(Box, biclosed.TermBase):
         >>> x = Variable('x', X)
         >>> term = X(lambda x: x)(x)
         >>> assert term.normal_form() == x == x.normal_form()
+        >>> g = (X >> X)('g')
+        >>> assert X(lambda x: g(x))(x).normal_form() == g(x)
         >>> term.normal_form(budget=0)
         Traceback (most recent call last):
             ...
@@ -1576,8 +1588,10 @@ class BohmTree:
             i.e. of the tree without abstracting its own bound variables.
             Use :meth:`cod` for the type of the term it represents.
         variables : The variables in scope, those of the parent followed by
-            the ones bound at this node.
-        head : The index in ``variables`` of the head variable.
+            the ones bound at this node: the free variables and then the
+            constants of the term at the root.
+        head : The index in ``variables`` of the head variable, a constant
+            when the head of the term is one.
         strategy : The strategy used to reduce the arguments, shared with
             every node of the tree so that its budget is spent only once.
         spine : The unreduced terms of the arguments of the head variable,
@@ -1596,7 +1610,7 @@ class BohmTree:
     (X >> X)(lambda f: X(lambda x: f(x)))
     """
     head_cod: Ty
-    variables: tuple[Variable, ...]
+    variables: tuple[Variable | Constant, ...]
     head: int
     strategy: Strategy = field(compare=False)
     spine: tuple[Term, ...]
@@ -1629,15 +1643,16 @@ class BohmTree:
 
     def cod(self, n: int = 0) -> Ty:
         """
-        The type of the term of the tree, abstracting over ``variables[n:]``
-        for ``n`` the number of variables of the parent.
+        The type of the term of the tree, abstracting over the variables in
+        ``variables[n:]`` for ``n`` the number of variables of the parent,
+        never over a constant.
 
         Parameters:
             n : The number of variables bound by the parent.
         """
         result = self.head_cod
         for var in reversed(self.variables[n:]):
-            result = var.cod >> result
+            result = result if isinstance(var, Constant) else var.cod >> result
         return result
 
     def __getitem__(self, key: int) -> BohmTree:
@@ -1657,8 +1672,9 @@ class BohmTree:
 
     def to_term(self, n: int = 0) -> Term:
         """
-        The term of the tree in the standard syntax, abstracting over
-        ``variables[n:]`` for ``n`` the number of variables of the parent.
+        The term of the tree in the standard syntax, abstracting over the
+        variables in ``variables[n:]`` for ``n`` the number of variables of
+        the parent, never over a constant.
         Forces every argument, in the order chosen by ``strategy``, raising
         :class:`ValueError` if any of them is missing.
 
@@ -1671,7 +1687,8 @@ class BohmTree:
         for i in range(len(self.spine)):
             result = result(self[i].to_term(len(self.variables)))
         for var in reversed(self.variables[n:]):
-            result = var.cod.abstraction_factory(var, result)
+            if not isinstance(var, Constant):
+                result = var.cod.abstraction_factory(var, result)
         return result
 
     def __repr__(self):
@@ -1707,8 +1724,9 @@ class Strategy:
 
         Parameters:
             term : The term to reduce.
-            variables : The variables in scope, i.e. the free variables of
-                the term followed by the ones bound by its parents.
+            variables : The variables in scope, i.e. the free variables and
+                constants of the term followed by the ones bound by its
+                parents.
         """
         variables, spine = list(variables), []
         while isinstance(term, (Application, Abstraction)):
@@ -1722,7 +1740,7 @@ class Strategy:
             else:
                 variables.append(term.var)
                 term = term.body
-        assert_isinstance(term, Variable)
+        assert_isinstance(term, (Variable, Constant))
         head = len(variables) - 1 - variables[::-1].index(term)
         cod = term.cod
         for _ in spine:
