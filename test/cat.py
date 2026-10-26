@@ -273,6 +273,19 @@ def test_Functor_call():
     assert F(f >> g) == f.dagger() >> f >> g
 
 
+def test_Functor_into_a_category_with_no_dagger():
+    """ A daggered box is read off `ar_map` when the codomain has no dagger,
+    and stays the dagger of the image when it has one. """
+    from discopy.python import multiplicative
+    x = Ob('x')
+    f = Box('f', x, x)
+    F = Functor(
+        {x: int}, lambda g: (lambda n: n - 1) if g.is_dagger
+        else (lambda n: n + 1), cod=multiplicative.Function)
+    assert F(f)(1) == 2 and F(f.dagger())(1) == 0
+    assert Functor({x: x}, {f: f})(f.dagger()) == f.dagger()
+
+
 def test_Transformation():
     x, y = Ob('x'), Ob('y')
     f = Box('f', x, y)

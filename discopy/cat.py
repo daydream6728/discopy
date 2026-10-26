@@ -1002,9 +1002,12 @@ class Functor(Category):
     ----
     A daggered box is mapped as the dagger of the image of the box, when the
     codomain has a dagger to take. When it has none, e.g. a functor into
-    :class:`discopy.python.Function` or :class:`discopy.stream.Stream`, the
+    :class:`discopy.stream.Stream` or :class:`discopy.python.Function`, the
     image of a daggered box is read off :code:`ar_map` like that of any
-    other box.
+    other box. The dagger is the one the codomain has rather than the one it
+    declares: :class:`discopy.drawing.Drawing` has a dagger and declares no
+    :class:`~discopy.abc.DaggerCategory`, and
+    :class:`discopy.python.additive.Function` the other way round.
 
     >>> from discopy import python
     >>> F = Functor(
