@@ -989,7 +989,7 @@ X(lambda x: x)(x).
                 f"The budget of {budget} beta redexes ran out "
                 f"reducing {self}.")
         return tree.to_term(
-            len(set(self.constants)) + len(self.freevars))
+            len(dict.fromkeys(self.constants)) + len(self.freevars))
 
 
 type Term = Constant | Variable | Application | Abstraction\
@@ -1570,7 +1570,8 @@ class BohmTree:
         variables : The variables in scope, those of the parent followed by
             the ones bound at this node, the constants and free variables of
             the term at the root.
-        head : The index in ``variables`` of the head variable.
+        head : The index in ``variables`` of the head variable, a constant
+            when the head of the term is one.
         strategy : The strategy used to reduce the arguments, shared with
             every node of the tree so that its budget is spent only once.
         spine : The unreduced terms of the arguments of the head variable,
@@ -1589,7 +1590,7 @@ class BohmTree:
     (X >> X)(lambda f: X(lambda x: f(x)))
     """
     head_cod: Ty
-    variables: tuple[Variable, ...]
+    variables: tuple[Variable | Constant, ...]
     head: int
     strategy: Strategy = field(compare=False)
     spine: tuple[Term, ...]
