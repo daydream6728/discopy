@@ -83,6 +83,19 @@ def test_gather():
         finset.Permutation.gather([1], 3, offset=3)
 
 
+def test_Permutation_repr():
+    from discopy import group, python  # noqa: F401, read by eval
+    from discopy.python import finset
+
+    p = finset.Permutation((2, 0, 1))
+    assert repr(p) == "python.finset.Permutation((2, 0, 1))"
+    assert str(p) == "(2, 0, 1)"
+    assert type(eval(repr(p))) is finset.Permutation and eval(repr(p)) == p
+    assert eval(repr(p)).dagger() == (1, 2, 0)
+    assert p == (2, 0, 1) and hash(p) == hash((2, 0, 1))
+    assert repr(group.Symmetric[3](p)) == "Symmetric[3]((2, 0, 1))"
+
+
 def test_Function_swap_is_symmetric():
     from itertools import product
     from discopy.python.finset import Function

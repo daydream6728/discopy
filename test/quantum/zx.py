@@ -1,5 +1,6 @@
 import random
 import tomllib
+from fractions import Fraction
 from pathlib import Path
 
 import pytest
@@ -132,7 +133,7 @@ def test_to_pyzx_errors():
 
 def test_to_pyzx():
     pytest.importorskip("pyzx", minversion=PYZX)
-    assert Diagram.from_pyzx(Z(0, 2).to_pyzx()) == Z(0, 2) >> SWAP
+    assert Diagram.from_pyzx(Z(0, 2).to_pyzx()) == Z(0, 2)
 
 
 def test_to_pyzx_parallel_wires():
@@ -181,6 +182,22 @@ def test_to_pyzx_scalar():
     m = (scalar(k) @ scalar(k) @ Nat(1)).to_pyzx().to_matrix()
     m = np.linalg.norm(m / 1j - np.eye(2))
     assert np.isclose(m, 0)
+
+
+def test_from_pyzx_spider_with_several_outputs():
+    pyzx = pytest.importorskip("pyzx", minversion=PYZX)
+    graph = pyzx.Graph()
+    outputs = [graph.add_vertex(pyzx.VertexType.BOUNDARY, qubit=q, row=3)
+               for q in range(3)]
+    green = graph.add_vertex(pyzx.VertexType.Z, qubit=0, row=1)
+    red = graph.add_vertex(
+        pyzx.VertexType.X, qubit=1, row=1, phase=Fraction(1))
+    graph.set_inputs(())
+    graph.set_outputs(tuple(outputs))
+    for spider, output in [
+            (green, outputs[0]), (red, outputs[1]), (green, outputs[2])]:
+        graph.add_edge((spider, output), pyzx.EdgeType.SIMPLE)
+    assert proportional(matrix(Diagram.from_pyzx(graph)), graph.to_matrix())
 
 
 def test_from_pyzx_errors():

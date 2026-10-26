@@ -17,8 +17,8 @@ def test_Over():
     assert not isinstance((x << y).inside[0], Ty)
     assert (x << y).inside == (Over(x, y), )
     assert repr(Over(x, y))\
-        == "biclosed.Over(biclosed.Ty(monoidal.Wire('x')), "\
-           "biclosed.Ty(monoidal.Wire('y')))"
+        == "biclosed.Over(biclosed.Ty(biclosed.Wire('x')), "\
+           "biclosed.Ty(biclosed.Wire('y')))"
     assert {Over(x, y): 42}[Over(x, y)] == 42
     assert Over(x, y) != Under(x, y)
 
@@ -32,8 +32,8 @@ def test_Under():
     assert not isinstance((x >> y).inside[0], Ty)
     assert (x >> y).inside == (Under(y, x), )
     assert repr(Under(x, y))\
-        == "biclosed.Under(biclosed.Ty(monoidal.Wire('x')), "\
-           "biclosed.Ty(monoidal.Wire('y')))"
+        == "biclosed.Under(biclosed.Ty(biclosed.Wire('x')), "\
+           "biclosed.Ty(biclosed.Wire('y')))"
     assert {Under(x, y): 42}[Under(x, y)] == 42
     assert Under(x, y) != Over(x, y)
 
@@ -346,6 +346,94 @@ def test_transparency():
         assert loads(dumps(box)) == box
 
 
+def test_Wire_reads_back_main():
+    """ The objects of a biclosed type are biclosed wires, and the plain
+    monoidal ones of dumps, pickles and printed text from before read back as
+    such, in categorial types too. """
+    import pickle
+    from discopy.grammar import categorial
+    x = Ty('x')
+    assert Ty(Wire('x')) == x == Ty(cat.Ob('x')) and type(x.inside[0]) is Wire
+    assert eval("biclosed.Ty(monoidal.Wire('x'))") == x
+    wire = '{"factory": "monoidal.Wire", "name": "x"}'
+    assert loads('{"factory": "biclosed.Ty", "inside": [' + wire + ']}') == x
+    assert loads('{"factory": "grammar.categorial.Ty", "inside": ['
+                 + wire + ']}') == categorial.Ty('x')
+    assert pickle.loads(
+        b'\x80\x04\x95\xab\x00\x00\x00\x00\x00\x00\x00\x8c\x10discopy.bicl'
+        b'osed\x94\x8c\x02Ty\x94\x93\x94)\x81\x94}\x94(\x8c\x03dom\x94\x8c'
+        b'\x10discopy.monoidal\x94\x8c\x06Colour\x94\x93\x94)\x81\x94}\x94'
+        b'(\x8c\x04name\x94\x8c\x04none\x94\x8c\x05label\x94Nub\x8c\x03cod'
+        b'\x94h\t\x8c\x06inside\x94h\x06\x8c\x04Wire\x94\x93\x94)\x81\x94}'
+        b'\x94(\x8c\tis_dagger\x94\x89h\x05h\th\x0eh\th\x0b\x8c\x01x\x94ub'
+        b'\x85\x94h\x0bh\x01ub.') == x
+    from discopy import closed, rigid
+    red, blue = monoidal.Colour('red'), monoidal.Colour('blue')
+    assert Ty(monoidal.Wire('x', red, red)) == Ty(Wire('x', red, red))
+    for atom in (monoidal.Wire('x', red, blue), rigid.Wire('x', z=1)):
+        assert Ty(atom).inside == (atom, )
+    with raises(TypeError):
+        closed.Ty(monoidal.Wire('x'))
+
+
+def test_rigid_type_is_biclosed():
+    """ A rigid type is a biclosed type, its atoms are rigid wires. """
+    from discopy import closed, rigid
+    x, y = rigid.Ty('x'), rigid.Ty('y')
+    f = rigid.Box('f', x, y)
+    assert f.to_rigid() == f and closed.Ty.from_biclosed(x) == closed.Ty('x')
+    assert Functor.id(Diagram)(x) == Ty(rigid.Wire('x'))
+
+
+def test_pow_is_over():
+    """ The exponential ``**`` is the default one, ``<<``, at every level with
+    exponentials, so that the identity functor is the identity on a diagram
+    written with it, built by hand or read back from a dump of main. """
+    import json
+    from discopy import rigid
+    from discopy.grammar import categorial, pregroup
+    for module in (biclosed, rigid, pregroup, categorial):
+        x, y = module.Ty('x'), module.Ty('y')
+        assert x ** y == x << y
+    x, y = Ty('x'), Ty('y')
+    assert str(x ** y) == "(x << y)" and Ty(Exp(x, y)) == x ** y
+
+    def atom(name):
+        return {"factory": "biclosed.Ty",
+                "inside": [{"factory": "monoidal.Wire", "name": name}]}
+    old = loads(json.dumps({"factory": "biclosed.Eval", "left": True, "x": {
+        "factory": "biclosed.Ty", "inside": [{
+            "factory": "biclosed.Exp", "base": atom("x"),
+            "exponent": atom("y")}]}}))
+    F, g = Functor.id(Diagram), Box('g', x, x ** y)
+    for diagram in (g @ y >> Eval(x ** y), g @ y >> old):
+        assert F(diagram) == diagram == g @ y >> Eval(x << y)
+
+
+def test_pow_reads_back_main_at_its_level():
+    """ An exponential of no side is the ``over`` of the level of its base,
+    built by hand or read back from a pickle of main, as is the name of its
+    evaluation. """
+    import base64
+    import pickle
+    import zlib
+    from discopy.grammar import categorial
+    x, y = categorial.Ty('x'), categorial.Ty('y')
+    assert categorial.Ty(Exp(x, y)) == x ** y == x << y
+    old = pickle.loads(zlib.decompress(base64.b64decode(
+        "eNqNUk1PwjAYBlZgKCB+oaIHjsCBP6HcDCcTj6Tb6tpkW5d9mO1AIgeIJr1Rf6T/"
+        "wpatSyZoXNIsed/nc90b+PyqVXYPG1gkNKmfTu0Aui4MpiaMkE0DAh3Omg8Eyvl2"
+        "vFqOmGZRl+MKqz2lfMvHK74c4SrrKQGXepRYkta4pw6Ng+0OwoAHXcTFi3qI1R1o"
+        "IGceG0wzqcVxgzWIFxJLAAohg5gODZHFtFni50YMGDBEHGu5LW5gXZwWrjPwTAKk"
+        "YC0SLixo2yjgHwWqyaoJj401buKacNZR4ossXnRArpsNeiVyWnDLC32UDCeTYToW"
+        "i4tNjtD3RY+yQRt38Bk+/4eGrFV/hCkKVK+uQRMULmiwiFIfhfIawOwVOrubwafS"
+        "s2R5rMoCB71E/F04tSVeuTFgwQjyeRYGCFZHsK7Xsml1X+1HvdLyJLcSy6us6I1I"
+        "J/4B9Ee+vvqgAxmtm4FVOHyb5+oI9KVA3/2SS1kfSNUvIsfGJjam3+Qw7yQ=")))
+    new = categorial.Eval(x ** y) >> categorial.Coeval(x ** y)
+    F = categorial.Functor.id(categorial.Diagram)
+    assert old == new == F(old)
+
+
 def test_Eval_on_the_wrong_side():
     x, y = Ty('x'), Ty('y')
     for box in (Eval, Coeval):
@@ -390,3 +478,14 @@ def test_Curry_to_drawing():
                 == (len(curry.dom), len(curry.cod))
     for left in (True, False):  # A curry of no wire, built explicitly.
         assert Curry(f, 0, left=left).to_drawing() == f.to_drawing()
+
+
+def test_term_inside_a_diagram_is_drawn_as_one_box():
+    from discopy import closed
+    for module in (biclosed, closed):
+        X, Y = module.Ty('X'), module.Ty('Y')
+        g = (Y << X)('g')
+        for term in (g(X('a')), X(lambda x: g(x))):
+            for diagram in (term @ X, term >> module.Id(term.cod)):
+                assert [box.name for box in diagram.to_drawing().boxes]\
+                    == [str(term)]

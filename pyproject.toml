@@ -118,6 +118,10 @@ notebooks = [
     "anywidget",
     "ipykernel == 6.23.*",
     "marimo",
+    # imported by the notebooks in docs/notebooks/optyx
+    "pandas",
+    "seaborn",
+    "tqdm",
 ]
 docs  = [
     "discopy[notebooks]",

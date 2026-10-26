@@ -30,7 +30,7 @@ from discopy import messages
 from discopy.abc import (
     Groupoid, HypergraphCategory, MarkovCategory, PROP, Nat)
 from discopy.axioms import Testable
-from discopy.utils import AxiomError, unbiased
+from discopy.utils import AxiomError, factory_name, unbiased
 
 
 @dataclass
@@ -176,7 +176,7 @@ class Function(MarkovCategory, Sequence):
         >>> f = Function([1, 0, 1], 2, 3)
         >>> counts, perm = f.factorise()
         >>> counts, perm
-        ([1, 2], (1, 0, 2))
+        ([1, 2], python.finset.Permutation((1, 0, 2)))
         >>> copies = [Function.copy(1, n) for n in counts]
         >>> assert copies[0].tensor(*copies[1:]) >> perm == f
         """
@@ -205,7 +205,7 @@ class Permutation(Function, PROP, Groupoid):
     >>> Permutation((1, 0, 3, 2)).cycles()
     ((0, 1), (2, 3))
     >>> Permutation.from_cycles([(0, 1), (2, 3)], 4)
-    (1, 0, 3, 2)
+    python.finset.Permutation((1, 0, 3, 2))
     >>> Permutation((1, 0)).is_fixpoint_free_involution()
     True
     """
@@ -232,7 +232,10 @@ class Permutation(Function, PROP, Groupoid):
         return super().__getitem__(key)
 
     def __repr__(self) -> str:
-        return repr(tuple(self))
+        return factory_name(type(self)) + f"({tuple(self)!r})"
+
+    def __str__(self) -> str:
+        return str(tuple(self))
 
     def __eq__(self, other: Any) -> bool:
         if isinstance(other, Permutation):
@@ -302,7 +305,7 @@ class Permutation(Function, PROP, Groupoid):
         of each box at its offset.
 
         >>> Permutation.gather([3, 1], 5, offset=1)
-        (0, 3, 1, 2, 4)
+        python.finset.Permutation((0, 3, 1, 2, 4))
         >>> assert Permutation.gather([], 3) == Permutation.id(3)
         """
         if not 0 <= offset <= size - len(xs):

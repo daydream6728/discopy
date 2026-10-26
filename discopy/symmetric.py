@@ -738,9 +738,16 @@ class Functor(balanced.Functor):
     a codomain with neither, it is sent to the images of the swaps of
     :meth:`Permutation.to_swaps`, so that a whiskered swap maps like a swap.
 
+    A :class:`Swap` is a permutation of two wires and goes the same way, so
+    that a functor commutes with whiskering on the nose even when it sends an
+    atomic type to a longer one.
+
     >>> x, y, z = map(Ty, "xyz")
     >>> perm = Permutation(x @ y @ z, [1, 2, 0])
     >>> assert Functor.id(Diagram)(perm) == perm
+    >>> assert Functor.id(Diagram)(Swap(x, y)) == Swap(x, y)
+    >>> G = Functor(lambda ob: ob @ ob, lambda box: box)
+    >>> assert G(Swap(x, y) @ z) == G(Swap(x, y)) @ G(z)
     >>> F = Functor({x: x, y: y, z: z}, {}, cod=balanced.Diagram)
     >>> print(F(Swap(x, y) @ z))
     Braid(x, y) @ z
@@ -748,13 +755,13 @@ class Functor(balanced.Functor):
     dom = cod = Diagram
 
     def __call__(self, other):
-        if isinstance(other, Swap) and hasattr(self.cod.ar, "swap"):
-            return self.cod.ar.swap(self(other.dom[0]), self(other.dom[1]))
         if isinstance(other, Permutation) and hasattr(
                 self.cod.ar, "permutation_factory"):
             sizes = [len(self(x)) for x in other.dom]
             return self.cod.ar.from_permutation(finset.Function.permutation(
                 other.perm, sizes).inside, self(other.dom))
+        if isinstance(other, Swap) and hasattr(self.cod.ar, "swap"):
+            return self.cod.ar.swap(self(other.dom[0]), self(other.dom[1]))
         if isinstance(other, Permutation) and hasattr(
                 self.cod.ar, "permutation"):
             return self.cod.ar.permutation(
