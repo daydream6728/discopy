@@ -343,6 +343,32 @@ def test_Box_with_array_data_compares_and_hashes():
     assert len({a, b, c, a @ b}) == 3
 
 
+def test_Box_with_nan_equals_itself():
+    import pickle
+    nan = float('nan')
+    for data in ([[nan, 1], [0, 1]], np.array([[nan, 1], [0, 1]])):
+        f = Box('f', Dim(2), Dim(2), data)
+        copy = pickle.loads(pickle.dumps(f))
+        assert f == f == f.dagger().dagger() == copy
+        assert hash(f) == hash(f.dagger().dagger()) == hash(copy)
+        assert f != Box('f', Dim(2), Dim(2), [[1., 1], [0, 1]])
+        image = Tensor[float]([[1, 0], [0, 1]], Dim(2), Dim(2))
+        F = Functor({Dim(2): Dim(2)}, {f: image}, dom=Diagram, dtype=float)
+        assert F(f) == image
+    g, h = (Box('g', Dim(2), Dim(1), [x, 0])
+            for x in (complex(nan, 1), complex(1, nan)))
+    assert g == Box('g', Dim(2), Dim(1), np.array([complex(nan, 1), 0]))
+    assert g != h and len({g, h}) == 2
+    B = lambda data: Box[complex]('k', Dim(2), Dim(1), data)
+    for x, y in [(nan, complex(nan, 0)), (np.float32(nan), float('nan')),
+                 (np.complex64(complex(nan, 1)), complex(nan, 1))]:
+        assert B([x, 0]) == B([y, 0]) and hash(B([x, 0])) == hash(B([y, 0]))
+    assert B((nan, 0)) == B((float('nan'), 0)) != B([complex(nan, 1), 0])
+    eps = np.finfo(np.longdouble).eps
+    assert B(np.array([np.clongdouble(complex(1, nan)), 0]))\
+        != B(np.array([np.clongdouble(complex(1, nan)) + eps, 0]))
+
+
 @pytest.mark.parametrize("module", ["torch", "jax.numpy"])
 def test_Box_with_backend_array_data_compares_and_hashes(module):
     array = pytest.importorskip(module).asarray

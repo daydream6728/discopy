@@ -235,12 +235,6 @@ class Diagram(tensor.Diagram[complex]):
                     @ Id(len(scan) - source - 1)
                 scan = scan[:target] + (scan[source],)\
                     + scan[target:source] + scan[source + 1:]
-            elif target > source:
-                swaps = Id(source)\
-                    @ Diagram.swap(1, target - source)\
-                    @ Id(len(scan) - target - 1)
-                scan = scan[:source] + scan[source + 1:target]\
-                    + (scan[source],) + scan[target:]
             else:
                 swaps = Id(len(scan))
             return scan, swaps
@@ -285,7 +279,7 @@ class Diagram(tensor.Diagram[complex]):
             node, = graph.neighbors(output)
             etype = graph.edge_type((node, output))
             hadamard = H if etype == EdgeType.HADAMARD else Id(1)
-            scan, swaps = move(scan, scan.index(node), target)
+            scan, swaps = move(scan, scan.index(node, target), target)
             diagram = diagram >> swaps\
                 >> Id(target) @ hadamard @ Id(len(scan) - target - 1)
         number = graph.scalar.to_number()

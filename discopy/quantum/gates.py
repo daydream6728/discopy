@@ -648,6 +648,8 @@ class Controlled(QuantumGate):
         """
         return self.controlled, self.distance
 
+    time_step = property(lambda self: self.controlled.time_step)
+
     def with_distance(self, distance) -> "Controlled":
         """
         The same controlled gate with the control at a given ``distance``.

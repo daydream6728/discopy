@@ -181,7 +181,10 @@ class Ty(biclosed.Ty, feedback.Ty):
 
 
 class Exp(Wire, biclosed.Exp):
-    "An exponential object in a markov category, with a time step."
+    """
+    An exponential object in a markov category, with a time step, called with
+    ``**``, ``<<`` or ``>>`` alike.
+    """
 
     ob = Ty
 
@@ -476,6 +479,8 @@ class Timed(Box):
             monoidal.Box.__init__(self, self.name, self.dom.delay(time_step),
                                   self.cod.delay(time_step))
 
+    time_step = property(lambda self: self._time_step)
+
     def delay(self, n_steps=1):
         return type(self)(
             *self.__getnewargs__(), time_step=self.time_step + n_steps)
@@ -722,7 +727,7 @@ Diagram.eval_factory = Eval
 Diagram.coeval_factory = Coeval
 Diagram.discard_factory = Discard
 Diagram.sum_factory = Sum
-Ty.exp_factory = Ty.under_factory = Ty.over_factory = staticmethod(Exp)
+Ty.under_factory = Ty.over_factory = staticmethod(Exp)
 
 Id = Diagram.id
 

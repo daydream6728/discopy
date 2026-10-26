@@ -8,7 +8,28 @@ from scipy.stats import unitary_group
 
 from discopy.optyx.sampling import (
     Interferometer, FockState, Sweep, Unravelling, Fock, Coherent, Thermal,
-    Source, levels, sector, position, givens, interfere, twomode)
+    Source, levels, sector, position, givens, interfere, Kernel, twomode,
+    binomials, rank, twomodes, turn)
+
+try:
+    import jax
+except ImportError:  # pragma: no cover
+    jax = None
+
+requires_jax = pytest.mark.skipif(jax is None, reason="JAX is not installed")
+
+
+@pytest.fixture(autouse=True, scope="module")
+def double_precision():
+    """ JAX in double precision for the tests of this module only: the rest
+    of the suite shares the process and expects JAX's single precision. """
+    if jax is None:  # pragma: no cover
+        yield
+        return
+    previous = jax.config.read("jax_enable_x64")
+    jax.config.update("jax_enable_x64", True)
+    yield
+    jax.config.update("jax_enable_x64", previous)
 
 
 def permanent(matrix):
@@ -345,6 +366,8 @@ def test_sources():
         thermal.distribution(1)
     with pytest.raises(NotImplementedError):
         Source((1., )).draw(None)
+    with pytest.raises(NotImplementedError):
+        Kernel(thermal, cap=2)
     for photons in ((-1, ), (1.5, )):
         with pytest.raises(ValueError):
             Fock(photons)
@@ -646,3 +669,150 @@ def test_stationary_distribution_matches_fix(name):
         tol=1e-3, max_chi=None).prob_dist()
     for outcome in set(exact) | set(fixed):
         assert np.isclose(exact.get(outcome, 0), fixed.get(outcome, 0))
+
+
+@requires_jax
+@pytest.mark.parametrize("modes, photons", [(1, 3), (3, 2), (4, 3), (0, 0)])
+def test_rank_is_the_position_in_the_sector(modes, photons):
+    occupations = sector(modes, photons)
+    assert rank(occupations, photons, binomials(modes, photons)).tolist() \
+        == list(range(len(occupations)))
+
+
+@requires_jax
+def test_twomodes_and_turn_match_numpy():
+    matrix = unitary_group.rvs(2, random_state=3)
+    tensor = twomodes(matrix, 3)
+    for total in range(4):
+        assert np.allclose(tensor[total, :total + 1, :total + 1],
+                           twomode(matrix, total))
+    unitary = unitary_group.rvs(3, random_state=4)
+    vector = np.random.default_rng(0).normal(size=len(sector(3, 3)))
+    phases, rotations = givens(unitary)
+    expected = vector * np.prod(phases ** sector(3, 3), axis=1)
+    for mode, matrix in reversed(rotations):
+        expected = turn(expected, sector(3, 3).astype(np.int32), 3, mode,
+                        twomodes(matrix, 3), binomials(3, 3))
+    assert np.allclose(expected, interfere(unitary, vector, 3))
+
+
+@requires_jax
+@pytest.mark.parametrize("loop, inputs, transmissivity, efficiency, ticks", [
+    (1, (2, ), .7, 1., 2),
+    (2, (1, 0), .6, 1., 2),
+    (2, (0, 1, 1), 1., 1., 1),
+    (2, (1, ), .9, .6, 2),
+])
+def test_kernel_distribution_matches_numpy(
+        loop, inputs, transmissivity, efficiency, ticks):
+    unitary = unitary_group.rvs(loop + len(inputs), random_state=loop + ticks)
+    network = Interferometer(
+        unitary, loop, inputs, transmissivity, efficiency=efficiency)
+    exact = network.distribution(ticks)
+    kernel = network.kernel(cap=ticks * sum(inputs))
+    assert_close({history: float(probability) for history, probability
+                  in kernel.distribution(ticks).items()}, exact)
+
+
+@requires_jax
+def test_kernel_gradients_match_finite_differences():
+    from jax import numpy as jnp
+    start = unitary_group.rvs(3, random_state=3)
+    hermitian = np.array([[0, 1, .5j], [1, 0, .2], [-.5j, .2, 1]])
+
+    def unitary(angle):
+        return jax.scipy.linalg.expm(1j * angle * jnp.asarray(hermitian)) \
+            @ start
+    kernel = Interferometer(start, 2, (1, ), .8, efficiency=.7).kernel(cap=2)
+    history = ((0, ), (1, ))
+
+    def probability(angle, transmissivity, efficiency):
+        return kernel.distribution(2, params=dict(
+            kernel.parameters(), unitary=unitary(angle),
+            transmissivity=transmissivity, efficiency=efficiency))[history]
+
+    def numpy(angle, transmissivity, efficiency):
+        return Interferometer(np.asarray(unitary(angle)), 2, (1, ),
+                              transmissivity, efficiency=efficiency
+                              ).distribution(2)[history]
+    point, step = np.array([0., .8, .7]), 1e-5
+    gradient = jax.grad(probability, argnums=(0, 1, 2))(*point)
+    for i, value in enumerate(gradient):
+        shift = step * np.eye(3)[i]
+        assert np.isclose(value, (numpy(*(point + shift))
+                                  - numpy(*(point - shift))) / 2 / step,
+                          atol=1e-6)
+
+
+@requires_jax
+def test_kernel_samples_partially_distinguishable_photons():
+    from collections import Counter
+    unitary = unitary_group.rvs(3, random_state=1)
+    network = Interferometer(unitary, 1, (1, 1), .9,
+                             indistinguishability=.5)
+    kernel = network.kernel()
+    result = kernel.trajectories(3, shots=500, seed=2)
+    logp, possible = kernel.log_prob(result["outcomes"])
+    assert np.allclose(logp, result["logp"].sum(axis=1)) and possible.all()
+    counts = Counter(tuple(map(tuple, row.tolist()))
+                     for row in kernel.sample(2, burn_in=1, shots=4000))
+    reference = Counter(tuple(network.sample(2, burn_in=1, seed=seed))
+                        for seed in range(4000))
+    for history in set(counts) | set(reference):
+        assert abs(counts[history] - reference[history]) / 4000 < .04
+
+
+@requires_jax
+def test_kernel_of_a_diagram_and_its_errors():
+    kernel = Interferometer.from_diagram(lossy_diagram()).kernel()
+    assert kernel.sample(2, shots=3).shape == (3, 2, 1)
+    assert isinstance(kernel, Kernel) and eval(repr(kernel)) == kernel
+    with pytest.raises(ValueError):
+        Interferometer([[0, 1], [1, 0]], 1, (1, )).kernel(cap=0).sample(3)
+    with pytest.raises(ValueError):
+        Interferometer([[0, 1], [1, 0]], 1, (1, )).kernel(
+            cap=1).distribution(2)
+    with pytest.raises(NotImplementedError):
+        Interferometer([[0, 1], [1, 0]], 1, (1, ), indistinguishability=.5
+                       ).kernel().distribution(1)
+
+
+@requires_jax
+def test_kernel_at_the_endpoints_of_its_parameters():
+    from jax import numpy as jnp
+    beam = np.array([[1, 1], [1, -1]]) / np.sqrt(2)
+    kernel = Interferometer(beam, 1, (1, ), efficiency=.5).kernel(cap=1)
+    for efficiency in (0., 1.):
+        assert_close({history: float(probability) for history, probability
+                      in kernel.distribution(1, params=dict(
+                          kernel.parameters(), efficiency=efficiency)
+                      ).items()}, Interferometer(
+                          beam, 1, (1, ), efficiency=efficiency
+                      ).distribution(1))
+    swap = Interferometer([[0, 1], [1, 0]], 1, (1, ), .5,
+                          indistinguishability=0.)
+    kernel = swap.kernel(cap=1, private=1)
+    outcomes = kernel.trajectories(4, shots=20, seed=3)["outcomes"]
+    for name, impossible in [
+            ("indistinguishability", outcomes["private"][:, :, 0]),
+            ("transmissivity", ~outcomes["survive"][:, :, -1])]:
+        _, possible = kernel.log_prob(
+            outcomes, dict(kernel.parameters(), **{name: jnp.asarray(1.)}))
+        assert np.array_equal(possible, ~np.any(impossible, axis=1))
+    kernel.trajectories(4, shots=2, batch_size=1)
+    assert set(kernel.compiled) == {(4, None), (4, 1)}
+    vacuum = Interferometer(beam, 1, (0, )).kernel(cap=1)
+    assert vacuum.sample(2).tolist() == [[[0], [0]]]
+
+
+@requires_jax
+def test_kernel_with_given_caps_of_a_loop_with_no_stationary_state():
+    stuck = Interferometer(np.eye(2), 1, (1, ))
+    with pytest.raises(np.linalg.LinAlgError):
+        stuck.occupation()
+    assert stuck.kernel(cap=1) == Kernel(stuck, 1)
+    assert stuck.kernel(cap=1).sample(2).tolist() == [[[1], [1]]]
+    mixed = Interferometer(np.eye(2), 1, (1, ), indistinguishability=.5)
+    assert mixed.kernel(cap=1, private=1) == Kernel(mixed, 1, 1)
+    with pytest.raises(np.linalg.LinAlgError):
+        mixed.kernel(cap=1)

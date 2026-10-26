@@ -34,7 +34,8 @@ def test_Circuit_to_tk():
         == "tk.Circuit(2, 2).CX(0, 1).Measure(1, 0).Measure(0, 1)"
     assert repr((Bits(0) >> Id(bit) @ Bits(0)).to_tk())\
         == "tk.Circuit(0, 2)"
-    assert "Swap" in repr((Bra(0) @ Bits(0) >> Bits(0) @ Id(bit)).to_tk())
+    assert repr((Bra(0) @ Bits(0) >> Bits(0) @ Id(bit)).to_tk())\
+        == "tk.Circuit(1, 3).Measure(0, 0).post_select({0: 0})"
 
 
 def test_Sum_from_tk():
@@ -76,10 +77,15 @@ def test_controlled_gates_to_tk():
         assert Circuit.from_tk(gate.to_tk()) == gate.init_and_discard()
     gates += [
         Controlled(CX, distance=-1),
-        Controlled(Controlled(X, distance=-1), distance=2)]
+        Controlled(Controlled(X, distance=-1), distance=2),
+        Controlled(X, distance=3)]
     for gate in gates:
         unitary = gate.to_tk().get_unitary()
         assert np.allclose(unitary, gate.eval().array.reshape(unitary.shape).T)
+        n = len(gate.dom)
+        assert np.allclose(
+            Circuit.from_tk(gate.to_tk())[n:-n].eval().array,
+            gate.eval().array)
     with raises(NotImplementedError):
         CCZ.to_tk()
 
@@ -90,7 +96,14 @@ def test_tk_round_trip_is_numerical():
         >> CU1(.6) >> H @ H >> Measure(2),
         Ket(0, 0, 0) >> Ry(.2) @ Rx(.7) @ H >> Circuit.permutation([2, 0, 1])
         >> Controlled(Ry(.4), distance=2) >> qubit @ CU1(.3, distance=-1)
-        >> H @ H @ H >> Measure(3)]
+        >> H @ H @ H >> Measure(3),
+        Ket(1) @ Ket(0) >> qubit @ Measure() >> Measure() @ bit,
+        Ket(1) >> Measure() >> Bits(0) @ bit,
+        Ket(1, 0) >> Measure(2) >> Discard(bit) @ bit >> Bits(0) @ bit,
+        Ket(1) >> Bra(1) >> Bits(0) >> Bits(0) @ bit >> Swap(bit, bit),
+        Ket(0) >> H >> Bra(0) >> Ket(0) @ Ket(1) >> Measure(2)
+        >> Swap(bit, bit),
+        Ket(0) @ Ket(1) >> Bra(0) @ Measure() >> bit @ Bits(0)]
     for circuit in circuits:
         assert np.allclose(
             Circuit.from_tk(circuit.to_tk()).eval().array,

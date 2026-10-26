@@ -263,7 +263,9 @@ from discopy.utils import (
 )
 
 
-def str_delayed(time_step: int):
+def str_delayed(time_step: int | None):
+    if not time_step:
+        return ""
     return time_step * ".d" if time_step <= 3 else f".delay({time_step})"
 
 
@@ -600,7 +602,7 @@ class Diagram(monoidal.Diagram, TracedCategory):
         return self.feedback(dom=dom, cod=cod, mem=mem, left=left)
 
     @property
-    def time_step(self) -> int:
+    def time_step(self) -> int | None:
         """
         The time step of a diagram is defined only if it is in fact a box.
 
@@ -644,12 +646,29 @@ class Box(monoidal.Box, Diagram):
         name (str) : The name of the box.
         dom (monoidal.Ty) : The domain of the box, i.e. its input.
         cod (monoidal.Ty) : The codomain of the box, i.e. its output.
-        time_step (int) : The number of times the box has been delayed.
+        time_step (int) : The number of times the box has been delayed, as
+            :attr:`time_step` reads it, ``None`` for a structural box.
     """
     serialised_attrs = monoidal.Box.serialised_attrs + ("time_step", )
 
     _time_step, _args, _params = 0, (), {}
-    time_step = property(lambda self: self._time_step)
+
+    @property
+    def time_step(self) -> int | None:
+        """
+        The number of times a box has been delayed, ``None`` for a structural
+        box, e.g. a copy, a swap, a merge or a permutation: it has no time
+        step of its own, its wires carry it, see :meth:`delay`.
+
+        Example
+        -------
+        >>> from discopy.markov import Copy
+        >>> x = Ty('x')
+        >>> assert Box('f', x, x).delay(42).time_step == 42
+        >>> copy = Copy(x).delay(42)
+        >>> assert copy.time_step is None and copy.dom == x.delay(42)
+        """
+        return None if hasattr(self, "__getnewargs__") else self._time_step
 
     def __init__(self, *args, time_step: int = 0, **params):
         self._time_step, self._args = time_step, args[3:]
@@ -693,7 +712,19 @@ class Box(monoidal.Box, Diagram):
             **self._params)
 
     def reset(self):
-        """ Reset a box to time step zero, used in :class:`Functor`. """
+        """
+        Reset a box to time step zero, used in :class:`Functor`: a structural
+        box has no time step of its own to reset, it stays as it is.
+
+        Example
+        -------
+        >>> from discopy.markov import Copy
+        >>> x = Ty('x')
+        >>> assert Box('f', x, x).delay(3).reset() == Box('f', x, x)
+        >>> assert Copy(x).delay(3).reset() == Copy(x.delay(3))
+        """
+        if self.time_step is None:
+            return self
         return self.delay(-self.time_step)
 
     def __str__(self):
