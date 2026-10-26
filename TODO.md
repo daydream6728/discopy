@@ -10,8 +10,8 @@
 
 (rel-int/discopy-next#361)
 
-- [ ] argue both callers give `target <= source`
-- [ ] delete the branch in `quantum.zx` and `optyx.core.zx`
-- [ ] fuzz the round trip before and after
-- [ ] test boundaries and spider inputs in odd orders, both copies
-- [ ] changelog line
+- [x] argue both callers give `target <= source`
+- [x] delete the branch in `quantum.zx` and `optyx.core.zx`
+- [x] fuzz the round trip before and after
+- [x] test boundaries and spider inputs in odd orders, both copies
+- [x] changelog line: none, behaviour unchanged
