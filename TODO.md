@@ -4,5 +4,5 @@
 - [x] #291: the empty channel `Sum` keeps its types in `get_kraus` and `double`
 - [ ] #244: no longer reproduces at the move (#276), pinned by `test_channel.py`: comment
 - [ ] #252: no longer reproduces at the move (#276): pin with a test, comment
-- [ ] #234: stopped at #332 (`3e6f3972`): pin with a test, comment
+- [x] #234: stopped at #332 (`3e6f3972`): pinned by a test, comment
 - [ ] #247: stopped at #331 (`a4c13265`): pin with a test, comment

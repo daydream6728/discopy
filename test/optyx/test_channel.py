@@ -227,3 +227,17 @@ def test_empty_sum_keeps_its_types():
     assert (kraus.dom, kraus.cod) == (diagram.mode, diagram.mode)
     assert (double.dom, double.cod) == (diagram.mode @ diagram.mode, ) * 2
     assert not double.terms
+
+
+def test_inflate_keeps_the_environment():
+    lossy = (photonic.Create(1, 1, internal_states=([1, 0], [0, 1]))
+             >> photonic.BS >> qmode @ photonic.PhotonLoss(.5)
+             >> photonic.NumberResolvingMeasurement(2))
+    assert photonic.PhotonLoss(.5).inflate(2).env == diagram.mode ** 2
+    # distinguishable photons: each one exits on the left with probability
+    # 1/2, on the right 1/4 and is lost 1/4, independently of the other
+    expected = {(2, 0): 1 / 4, (1, 1): 1 / 4, (1, 0): 1 / 4,
+                (0, 2): 1 / 16, (0, 1): 1 / 8, (0, 0): 1 / 16}
+    distribution = lossy.inflate(2).eval().prob_dist()
+    for key, value in expected.items():
+        assert np.isclose(distribution[key], value)
