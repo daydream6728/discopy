@@ -181,7 +181,10 @@ class Ty(biclosed.Ty, feedback.Ty):
 
 
 class Exp(Wire, biclosed.Exp):
-    "An exponential object in a markov category, with a time step."
+    """
+    An exponential object in a markov category, with a time step, called with
+    ``**``, ``<<`` or ``>>`` alike.
+    """
 
     ob = Ty
 
@@ -241,6 +244,10 @@ class Product(Wire):
         first = str(first) if len(first) == 1 else f"({first})"
         return f"{first}.product({', '.join(map(str, others))}){delayed}"
 
+    def atoms(self) -> list[Ty]:
+        """ The atoms of a product: those of its factors. """
+        return [atom for typ in self.factors for atom in typ.atoms()]
+
     def __repr__(self):
         args = ', '.join(map(repr, self.factors)) + self.repr_time_step()
         return factory_name(type(self)) + f"({args.removeprefix(', ')})"
@@ -292,6 +299,10 @@ class Unitype(Exp):
     def __str__(self):
         return "U" + feedback.str_delayed(self.time_step)
 
+    def atoms(self) -> list[Ty]:
+        """ The unitype names itself undelayed, i.e. its base. """
+        return [self.base]
+
     def __repr__(self):
         return f"Unitype({self.repr_time_step().removeprefix(', ')})"
 
@@ -316,6 +327,7 @@ class Diagram(markov.Diagram, biclosed.Diagram, ClosedCategory):
     box_factory: ClassVar[type["Box"]]
     functor_factory: ClassVar[type["Functor"]]
     copy_factory: ClassVar[type["Copy"]]
+    function_factory: ClassVar[type["Function"]]
     swap_factory: ClassVar[type["Swap"]]
     permutation_factory: ClassVar[type["Permutation"]]
     curry_factory: ClassVar[type["Curry"]]
@@ -467,6 +479,8 @@ class Timed(Box):
             monoidal.Box.__init__(self, self.name, self.dom.delay(time_step),
                                   self.cod.delay(time_step))
 
+    time_step = property(lambda self: self._time_step)
+
     def delay(self, n_steps=1):
         return type(self)(
             *self.__getnewargs__(), time_step=self.time_step + n_steps)
@@ -612,18 +626,25 @@ class Unpack(Timed):
     to_tree, from_tree = Pack.to_tree, classmethod(Pack.from_tree.__func__)
 
 
+class Function(markov.Function, Box):
+    "A markov function in a closed diagram, which copies or discards."
+
+    is_linear = False
+
+
 class Permutation(markov.Permutation, Box):
     "A permutation in a closed diagram."
+
+
+Function.register(Permutation)
 
 
 class Swap(Permutation, markov.Swap, Box):
     "Symmetric swap in a closed diagram."
 
 
-class Copy(markov.Copy, Box):
+class Copy(markov.Copy, Function):
     "A markov copy in a closed category"
-
-    is_linear = False
 
 
 class Discard(markov.Discard, Copy):
@@ -689,6 +710,7 @@ CMap = cmap.CMap[Diagram]
 Diagram.functor_factory = Functor
 Hypergraph = hypergraph.Hypergraph[Diagram]
 Diagram.copy_factory = Copy
+Diagram.function_factory = Function
 Diagram.swap_factory = Swap
 Diagram.permutation_factory = Permutation
 Feedback, Trace, FollowedBy, Head, Tail = feedback.generators(Diagram, Box)
@@ -702,7 +724,7 @@ Diagram.eval_factory = Eval
 Diagram.coeval_factory = Coeval
 Diagram.discard_factory = Discard
 Diagram.sum_factory = Sum
-Ty.exp_factory = Ty.under_factory = Ty.over_factory = staticmethod(Exp)
+Ty.under_factory = Ty.over_factory = staticmethod(Exp)
 
 Id = Diagram.id
 
@@ -976,7 +998,7 @@ type Term = Constant | Variable | Application | Abstraction\
 
 for law in ("copy_coassociativity", "copy_cocommutativity",
             "copy_counitality", "copy_coherence", "vanishing", "joining",
-            "strength", "tightening", "sliding", "yanking"):
+            "strength", "tightening", "sliding", "yanking", "scalar_sliding"):
     setattr(TermBase, law, getattr(Box, law).inapplicable(
         messages.TERM_IS_A_BOX))
 
@@ -990,6 +1012,10 @@ class Constant(TermBase, biclosed.Constant):
     """
     def __str__(self):
         return self.name
+
+    def atoms(self) -> list[Constant]:
+        """ A closed constant prints as its bare name, it is its own atom. """
+        return [self]
 
     def delay(self, n_steps=1):
         """

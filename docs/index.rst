@@ -16,6 +16,7 @@ DisCoPy documentation
     api/syntax
     api/semantics
     api/quantum
+    api/optyx
     api/grammar
     api/drawing
     api/axioms
@@ -37,7 +38,20 @@ DisCoPy documentation
     notebooks/categorical-deep-learning
     notebooks/neural-church
     notebooks/equivalence-hypergraphs
+    notebooks/contextual-fraction
+    notebooks/boolean-circuits
 
+.. toctree::
+    :caption: Optyx notebooks
+    :hidden:
+
+    notebooks/optyx/what_is_a_channel
+    notebooks/optyx/fixpoints
+    notebooks/optyx/feed_forward_example
+    notebooks/optyx/compile_to_semm
+    notebooks/optyx/optyx-vqe-experiment
+    notebooks/optyx/bosonic-vqe-2
+    notebooks/optyx/photon_distinguishability
 
 .. toctree::
     :caption: Extra
