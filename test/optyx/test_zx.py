@@ -78,13 +78,22 @@ def test_grad():
            + (Z(1, 1, phi / 2) >> scalar(pi) @ Bit(1) >> Z(1, 1, phi + 1.5))
 
 
+def test_ZXBox_equals_its_diagram():
+    for box in [Z(0, 2), X(2, 1), Z(1, 1, 0.25), And(2), Or(2), H]:
+        diagram = box >> Diagram.id(box.cod)
+        assert box == diagram and diagram == box
+        assert hash(box) == hash(diagram)
+    assert Z(1, 1, 0.25) != Z(1, 1, 0.5) and Z(1, 1) != X(1, 1)
+
+
 def test_to_pyzx_errors():
     with raises(NotImplementedError):
         Diagram.to_pyzx(quantum.H)
 
 
 def test_to_pyzx():
-    assert ZXDiagram.from_pyzx(Z(0, 2).to_pyzx()) == Z(0, 2) >> SWAP
+    assert ZXDiagram.from_pyzx(Z(0, 2).to_pyzx()) == Z(0, 2)
+    assert hash(ZXDiagram.from_pyzx(Z(0, 2).to_pyzx())) == hash(Z(0, 2))
 
 
 def test_to_pyzx_scalar():
@@ -178,3 +187,24 @@ def test_classical_gates_are_real():
     assert Or(3).conjugate() == Or(3)
     with raises(NotImplementedError):
         ZXBox("f", 1, 1).conjugate()
+
+
+def test_classical_gates_dagger():
+    for cls in (And, Or):
+        for n in (2, 3):
+            box, flipped = cls(n), cls(n).dagger()
+            assert (box.dom, box.cod) == (Bit(n), Bit(1))
+            assert flipped.is_dagger
+            assert (flipped.dom, flipped.cod) == (Bit(1), Bit(n))
+            assert flipped.dagger() == box
+            assert cls(n, is_dagger=True) == flipped
+            array = box.to_tensor(input_dims=[2] * n).eval().array
+            daggered = flipped.to_tensor(input_dims=[2]).eval().array
+            assert np.allclose(daggered.reshape(2, 2 ** n),
+                               array.reshape(2 ** n, 2).conj().T)
+
+
+def test_SWAP_evaluates():
+    assert np.allclose(
+        SWAP.to_tensor().eval().array.reshape(4, 4),
+        [[1, 0, 0, 0], [0, 0, 1, 0], [0, 1, 0, 0], [0, 0, 0, 1]])

@@ -74,11 +74,18 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `neural.signature` ([#739]), and `neural.wiring`, `cell`, `recursion`,
   `lattice`, `act` and `train`, the networks and trainers of Tiny Recursive
   Message Passing ([Recursive_GNNs#1]).
+- `neural.geometric`, the same networks run along the blocks of their
+  symmetry group, reductions in place of gathers ([Recursive_GNNs#1]).
 - `grammar.proofnet`, parses as proof nets read back to normal terms, and
   `grammar.neural`, a PyTorch parser into them ([lambek#8]).
 - `categorial.parse`, the `k` best terms of a sentence by CKY ([lambek#2]).
 - `grammar.neural.Parser.search`, parsing as search over the correct proof
   nets of the `k` best types of each word ([lambek#12]).
+- `grammar.proofnet.Sequent.linkings`, the `m` best linkings by Murty's
+  ranking of the `assignments` of each block, and `grammar.neural.Parser.search`'s
+  `depth` and `links`, its `width` counting only the sequents with a goal, so
+  that it searches past those with none and the linkings with no term
+  ([lambek#12]).
 - `quantum.reservoir`, quantum reservoir computing ([#519]), the `Rydberg`
   ansatz ([#586]), and `quantum.contextuality`, the contextual fraction
   ([next#283]).
@@ -91,6 +98,9 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   feedback loops tick by tick, closed or fed by a `source`, its burn-in
   certified when it is passive, and `channel.Observable` is the effect of a
   normal operator or of a function of the outcomes ([optyx#76]).
+- `discopy.optyx.sampling.Kernel`, one tick of an `Interferometer` in JAX
+  that compiles, maps over trajectories and differentiates in its
+  parameters, with `log_prob` and an exact `distribution` ([optyx#82]).
 - `optyx.interaction`, combinatorial maps of recurrent channels, each box
   with a private memory and a prediction, unrolled or run to an approximate
   fixed point ([optyx#16]).
@@ -110,6 +120,7 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Changed
 
+- `Category.parameters` is renamed `Category.typeparams` ([next#214]).
 - DisCoPy requires Python 3.12 and is packaged with uv ([#311]).
 - `closed` is the closed *symmetric* monoidal category; the planar one, with
   `Over` and `Under`, is `biclosed` ([#322]).
@@ -160,6 +171,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - The `quantum` extra pins pyzx 0.10.7 ([next#225]).
 - Faster tensor of `n` morphisms ([#623]), of Python functions, and
   `finset.Permutation.then` ([#763]).
+- Faster `to_map` and `to_hypergraph` of permutations, read from their `perm`;
+  `CMap.permutation` and so `to_map` take `Nat` ([next#31]).
 - A functor maps a layer with one `n`-ary `tensor` rather than a fold of
   `@`, with one `tensor` call per layer ([next#161]).
 - Biclosed types hold `biclosed.Wire` ([next#16]), their `**` is `<<`, and a
@@ -189,8 +202,26 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
-- `Category.parameters` reads `ob` with no fallback: a monoid's objects are
-  `NoneType`, so `Nat.parameters()` no longer gives `(Nat, Nat)` ([next#214]).
+- `Category.typeparams` reads `ob` with no fallback: a monoid's objects are
+  `NoneType`, so `Nat.typeparams()` no longer gives `(Nat, Nat)` ([next#214]).
+- `quantum.zx.Diagram.from_pyzx`, and its copy in `optyx.core.zx`, wires a
+  spider with several outputs to the outputs it is joined to: it used to move
+  the leg already placed at an earlier output, so the tensor differed from
+  PyZX's ([next#313]).
+- `quantum.graphlike.size` counts two spiders as joined when an odd number of
+  Hadamards lie between them, as `to_pyzx` does: a Hadamard self-loop is a
+  phase and two parallel Hadamards cancel ([next#349]).
+- `optyx.core.zx.And` and `Or`: the dagger keeps the number of bits instead of
+  passing the flag as it, and a daggered gate has the types it is evaluated
+  with, `bit -> bit ** n` ([next#292]); `optyx.core.zx.SWAP` evaluates, its
+  `truncation` no longer an unbound function set on the instance
+  ([next#293]).
+- `symmetric.Functor` sends a `Swap` to a native permutation like any other
+  permutation, so that it commutes with whiskering on the nose when it widens
+  an atomic type ([next#301]).
+- `optyx.core.zx.ZXBox` reads its equality and its hash off `cat.Box` like
+  every other box, so a spider equals the one-layer diagram holding it and
+  can go in a set ([next#359]).
 - `Hypergraph`: its hash, `simplify`, `rotate`, and `to_diagram` on
   non-self-dual, `Nat` and `Dim` types ([#324], [#387], [#393], [#622],
   [#719]).
@@ -269,6 +300,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   and `finset.Function.swap` and `permutation` ([next#147], [next#31]).
 - `discopy.quantum`: controlled gates under dagger and rotation, `to_tk`,
   `to_tn`, PennyLane adjoints and `Channel.then` types ([next#31]).
+- `quantum.tk`: `to_tk` keeps bits on their wire and post-selections on their
+  bit, `from_tk` reads gates on qubits and bits in any order ([next#31]).
 - `zx`: `eval` is the standard interpretation ([#587], [#625]),
   `spider_factory` ([next#149]), `grad` ([next#75]), and the pyzx round trip
   keeps scalars and parallel wires ([next#74], [next#82]).
@@ -291,6 +324,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   and hashes ([next#31]).
 - Categorial `FC`, `BC`, `FX` and `BX` are boxes, so they compose and draw,
   and a nested `cfg.Tree` has a `dom`, so it applies ([next#31]).
+- A `cfg.Tree` reads back from its tree ([next#168]), and an ill-typed one
+  says which types do not compose ([next#31]).
 - Drawing: `Drawing.dagger` ([next#1]), regions through crossings ([#614]),
   `draw` leaves a drawing as it was ([#606]), TikZ colours ([next#31]) and a
   test restyling `H` ([next#99]).
@@ -320,6 +355,9 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - The `docs` extra installs torch and jax for the notebooks ([next#201]);
   a fork's docs link their own source and canonical URL.
 - `no-todo-on-main.yml`'s guard says why it fails ([next#21]).
+- `CONTRIBUTING.md`'s benchmark command runs the `zx` suite, which needs PyZX,
+  and `test/pivotal.py` skips its sympy test instead of failing on it, so
+  `--skip-extra` holds there too ([next#323], [next#350]).
 - The tests keep the `--skip-extra` contract, those that could not fail can,
   `CONTRIBUTING.md` names `setuptools`, and `build.yml` drops credentials
   ([next#31]).
@@ -534,15 +572,24 @@ for the changelog of `1.2.1` and earlier.
 [next#225]: https://github.com/rel-int/discopy-next/issues/225
 [next#276]: https://github.com/rel-int/discopy-next/pull/276
 [next#283]: https://github.com/rel-int/discopy-next/pull/283
+[next#292]: https://github.com/rel-int/discopy-next/issues/292
+[next#293]: https://github.com/rel-int/discopy-next/issues/293
+[next#301]: https://github.com/rel-int/discopy-next/issues/301
 [next#302]: https://github.com/rel-int/discopy-next/pull/302
 [next#310]: https://github.com/rel-int/discopy-next/pull/310
+[next#313]: https://github.com/rel-int/discopy-next/issues/313
 [next#316]: https://github.com/rel-int/discopy-next/pull/316
 [next#320]: https://github.com/rel-int/discopy-next/pull/320
+[next#323]: https://github.com/rel-int/discopy-next/issues/323
+[next#349]: https://github.com/rel-int/discopy-next/issues/349
+[next#350]: https://github.com/rel-int/discopy-next/issues/350
+[next#359]: https://github.com/rel-int/discopy-next/issues/359
 [optyx#16]: https://github.com/rel-int/optyx/pull/16
 [optyx#29]: https://github.com/rel-int/optyx/pull/29
 [optyx#56]: https://github.com/rel-int/optyx/pull/56
 [optyx#67]: https://github.com/rel-int/optyx/pull/67
 [optyx#76]: https://github.com/rel-int/optyx/pull/76
+[optyx#82]: https://github.com/rel-int/optyx/pull/82
 [optyx#84]: https://github.com/rel-int/optyx/pull/84
 [lambek#2]: https://github.com/rel-int/lambek/pull/2
 [lambek#8]: https://github.com/rel-int/lambek/pull/8

@@ -216,18 +216,20 @@ def to_tk(circuit):
             + [i + len(box.cod) for i in qubits[offset:]]
 
     def prepare_bits(bits, box, offset):
-        renaming = dict()
-        start = tk_circ.n_bits if not bits else 0\
-            if not offset else bits[offset - 1] + 1
-        for i in range(start, tk_circ.n_bits):
-            old = Bit(i)
-            new = Bit(i + len(box.cod))
-            renaming.update({old: new})
-        tk_circ.rename_units(renaming)
-        for i in range(start, start + len(box.cod)):
-            tk_circ.add_bit(Bit(i), offset=offset + i - start)
+        if tk_circ.post_processing or offset == len(bits):
+            start = tk_circ.n_bits
+            for i in range(len(box.cod)):
+                tk_circ.add_bit(Bit(start + i), offset=offset + i)
+        else:
+            start = bits[offset]
+            tk_circ.rename_units({
+                Bit(i): Bit(i + len(box.cod))
+                for i in range(start, tk_circ.n_bits)})
+            tk_circ.post_processing @= Id(box.cod)
+            for i in range(start, start + len(box.cod)):
+                tk_circ.add_bit(Bit(i))
         return bits[:offset] + list(range(start, start + len(box.cod)))\
-            + [i + len(box.cod) for i in bits[offset:]]
+            + [i + len(box.cod) if i >= start else i for i in bits[offset:]]
 
     def measure_qubits(qubits, bits, box, bit_offset, qubit_offset):
         if isinstance(box, Measure) and box.override_bits:
@@ -238,7 +240,7 @@ def to_tk(circuit):
             return bits, qubits
         for j, _ in enumerate(box.dom):
             i_bit, i_qubit = len(tk_circ.bits), qubits[qubit_offset + j]
-            offset = len(bits) if isinstance(box, Measure) else None
+            offset = bit_offset + j if isinstance(box, Measure) else None
             tk_circ.add_bit(Bit(i_bit), offset=offset)
             tk_circ.Measure(i_qubit, i_bit)
             if isinstance(box, Bra):
@@ -252,11 +254,8 @@ def to_tk(circuit):
         return bits, qubits
 
     def swap(i, j, unit_factory=Qubit):
-        old, tmp, new =\
-            unit_factory(i), unit_factory('tmp', 0), unit_factory(j)
-        tk_circ.rename_units({old: tmp})
-        tk_circ.rename_units({new: old})
-        tk_circ.rename_units({tmp: new})
+        old, new = unit_factory(i), unit_factory(j)
+        tk_circ.rename_units({old: new, new: old})
 
     def permute(box, left, typ):
         positions = [i for i, x in enumerate(box.dom) if x == typ]
@@ -364,24 +363,25 @@ def from_tk(tk_circuit):
         raise NotImplementedError
 
     def make_units_adjacent(tk_gate):
+        indices = list(range(n_qubits))
         offset = tk_gate.qubits[0].index[0]
         swaps = Id(qubit ** n_qubits @ bit ** n_bits)
         for i, tk_qubit in enumerate(tk_gate.qubits[1:]):
-            source, target = tk_qubit.index[0], offset + i + 1
+            source = indices.index(tk_qubit.index[0])
+            target = offset + i + 1
             if source < target:
                 left, right = swaps.cod[:source], swaps.cod[target:]
                 swap = Diagram.swap(
                     swaps.cod[source:source + 1], swaps.cod[source + 1:target])
-                if source <= offset:
-                    offset -= 1
+                offset, target = offset - 1, target - 1
             elif source > target:
                 left, right = swaps.cod[:target], swaps.cod[source + 1:]
                 swap = Diagram.swap(
-                    swaps.cod[target: target + 1],
-                    swaps.cod[target + 1: source + 1])
+                    swaps.cod[target:source], swaps.cod[source:source + 1])
             else:  # pragma: no cover
                 continue  # units are adjacent already
             swaps = swaps >> Id(left) @ swap @ Id(right)
+            indices.insert(target, indices.pop(source))
         return offset, swaps
     circuit = Id().tensor(*(n_qubits * [Ket(0)] + n_bits * [Bits(0)]))
     bras = {}
@@ -392,6 +392,7 @@ def from_tk(tk_circuit):
             if bit_index in tk_circuit.post_selection:
                 bras[offset] = tk_circuit.post_selection[bit_index]
                 continue  # post selection happens at the end
+            bit_index -= sum(i < bit_index for i in tk_circuit.post_selection)
             box = Measure(destructive=False, override_bits=True)
             swaps = Id(circuit.cod[:offset + 1])
             swaps = swaps @ Diagram.swap(

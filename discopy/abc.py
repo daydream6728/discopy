@@ -116,7 +116,7 @@ class Category[C0, C1: Category](ABC):
     ar = classproperty(lambda cls: getattr(cls, "factory", cls))
 
     @classmethod
-    def parameters(cls) -> tuple[type, type]:
+    def typeparams(cls) -> tuple[type, type]:
         """
         What the type parameters of the category stand for, in order: its
         objects ``C0`` and its arrows ``C1``, so that a sequent stated with
@@ -124,8 +124,8 @@ class Category[C0, C1: Category](ABC):
         :func:`discopy.axioms.position`.
 
         >>> from discopy.monoidal import Ty, Diagram
-        >>> assert Diagram.parameters() == (Ty, Diagram)
-        >>> assert Nat.parameters() == (NoneType, Nat)
+        >>> assert Diagram.typeparams() == (Ty, Diagram)
+        >>> assert Nat.typeparams() == (NoneType, Nat)
         """
         return cls.ob, cls.ar
 

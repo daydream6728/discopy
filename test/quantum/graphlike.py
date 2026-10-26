@@ -165,6 +165,16 @@ def test_size_counts_hadamard_edges():
     assert G.size(graph) == (3, 1, 0)
 
 
+def test_size_hadamard_loops_and_parallel_edges():
+    loop = G.from_diagram(
+        Z(1, 3) >> Nat(1) @ H @ Nat(1) >> Nat(1) @ Z(2, 0))
+    parallel = G.from_diagram(Z(1, 2) >> H @ H >> Z(2, 1))
+    assert G.size(loop) == (1, 0, 0) and G.size(parallel) == (2, 0, 0)
+    pytest.importorskip("pyzx")
+    assert G.size(G.to_pyzx(loop)) == G.size(loop)
+    assert G.size(G.to_pyzx(parallel)) == G.size(parallel)
+
+
 def test_from_diagram_errors():
     from discopy.quantum.zx import Y
     with pytest.raises(ValueError):
