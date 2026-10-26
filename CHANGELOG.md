@@ -104,6 +104,13 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - `optyx.interaction`, combinatorial maps of recurrent channels, each box
   with a private memory and a prediction, unrolled or run to an approximate
   fixed point ([optyx#16]).
+- `quantum.contextuality.Model.from_diagram`, the empirical model of an
+  optyx diagram with a classical setting and outcome for each party, read
+  off `optyx.contextuality.distributions` (Apache-2.0) with
+  `EvalResult.prob_dist(normalise=False)`, with `Model.deterministic`,
+  `Scenario.bell` taking settings for each party and `Inequality.violation`
+  zero when the inequality holds, rather than raising on the trivial one
+  ([optyx#87]).
 - `hopf.Intertwiner.chart` and `hopf.Algebra.symmetric(n)` ([#408]).
 - `copying`, a law of `Testable` beside `pickling` ([next#1]), and the
   generators of each level as typed class variables ([next#1]).
@@ -227,6 +234,10 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   can go in a set ([next#359]).
 - `closed.TermBase.normal_form` and `reduce` take a constant as the head of a
   spine, e.g. on the terms of `grammar.abstract` ([next#278]).
+- `optyx.channel.Swap.dagger` is the swap the other way round ([next#290]).
+- `optyx.channel.Sum` without terms keeps its types in `get_kraus` and
+  `double`, and evaluates to the zero tensor, so the gradient by an absent
+  variable doubles and evaluates ([next#291]).
 - `Hypergraph`: its hash, `simplify`, `rotate`, and `to_diagram` on
   non-self-dual, `Nat` and `Dim` types ([#324], [#387], [#393], [#622],
   [#719]).
@@ -582,6 +593,8 @@ for the changelog of `1.2.1` and earlier.
 [next#276]: https://github.com/rel-int/discopy-next/pull/276
 [next#278]: https://github.com/rel-int/discopy-next/issues/278
 [next#283]: https://github.com/rel-int/discopy-next/pull/283
+[next#290]: https://github.com/rel-int/discopy-next/issues/290
+[next#291]: https://github.com/rel-int/discopy-next/issues/291
 [next#292]: https://github.com/rel-int/discopy-next/issues/292
 [next#293]: https://github.com/rel-int/discopy-next/issues/293
 [next#301]: https://github.com/rel-int/discopy-next/issues/301
@@ -601,6 +614,7 @@ for the changelog of `1.2.1` and earlier.
 [optyx#76]: https://github.com/rel-int/optyx/pull/76
 [optyx#82]: https://github.com/rel-int/optyx/pull/82
 [optyx#84]: https://github.com/rel-int/optyx/pull/84
+[optyx#87]: https://github.com/rel-int/optyx/pull/87
 [lambek#2]: https://github.com/rel-int/lambek/pull/2
 [lambek#8]: https://github.com/rel-int/lambek/pull/8
 [lambek#12]: https://github.com/rel-int/lambek/pull/12

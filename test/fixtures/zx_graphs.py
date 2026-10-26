@@ -1,13 +1,14 @@
 from fractions import Fraction
 
-import pyzx
-
 
 def boundaries_in_odd_orders():
     """
     Spiders whose inputs and outputs are listed out of the order of their
     nodes, so that :meth:`from_pyzx` has to move wires in both of its loops.
+    pyzx is imported here, not at the top: pytest's ``testpaths`` glob reaches
+    this file, and ``--skip-extra`` must collect it without pyzx installed.
     """
+    import pyzx  # pylint: disable=import-outside-toplevel
     graph = pyzx.Graph()
     green = graph.add_vertex(pyzx.VertexType.Z)
     red = graph.add_vertex(pyzx.VertexType.X, phase=Fraction(1, 2))
