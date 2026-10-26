@@ -52,6 +52,8 @@ def test_Spider():
     for spider in [Z, Y, X]:
         assert spider(1, 2, 3).phase == 3
         assert spider(1, 2, 3j).dagger() == spider(2, 1, -3j)
+        assert spider(Nat(2), 1, .5) == spider(2, 1, .5)
+        assert spider(Nat(2), 1, .5).dagger().dagger() == spider(2, 1, .5)
 
 
 def test_H():
@@ -195,6 +197,13 @@ def test_from_pyzx_spider_with_several_outputs():
     for spider, output in [
             (green, outputs[0]), (red, outputs[1]), (green, outputs[2])]:
         graph.add_edge((spider, output), pyzx.EdgeType.SIMPLE)
+    assert proportional(matrix(Diagram.from_pyzx(graph)), graph.to_matrix())
+
+
+def test_from_pyzx_boundaries_in_odd_orders():
+    pyzx = pytest.importorskip("pyzx", minversion=PYZX)
+    from fixtures.zx_graphs import boundaries_in_odd_orders
+    graph = boundaries_in_odd_orders()
     assert proportional(matrix(Diagram.from_pyzx(graph)), graph.to_matrix())
 
 

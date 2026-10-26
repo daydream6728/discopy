@@ -50,6 +50,7 @@ The array properties of Z and X spiders agree with PyZX.
 """
 
 from math import pi
+from operator import index
 from typing import List
 
 import numpy as np
@@ -113,19 +114,6 @@ class ZXDiagram(diagram.Diagram):
                     + (scan[source],)
                     + scan[target:source]
                     + scan[source + 1:]
-                )
-            elif target > source:
-                swaps = (
-                    Id(diagram.Bit(source))
-                    @ diagram.Diagram.swap(diagram.Bit(1),
-                                           diagram.Bit(target - source))
-                    @ Id(diagram.Bit(len(scan) - target - 1))
-                )
-                scan = (
-                    scan[:source]
-                    + scan[source + 1: target]
-                    + (scan[source],)
-                    + scan[target:]
                 )
             else:
                 swaps = Id(diagram.Bit(len(scan)))
@@ -322,6 +310,7 @@ class Spider(diagram.Spider, ZXBox):
     """
 
     def __init__(self, n_legs_in, n_legs_out, phase=0):
+        n_legs_in, n_legs_out = index(n_legs_in), index(n_legs_out)
         super().__init__(n_legs_in, n_legs_out, diagram.Bit(1), phase)
         factory_str = type(self).__name__
         phase_str = f", {self.phase}" if self.phase else ""

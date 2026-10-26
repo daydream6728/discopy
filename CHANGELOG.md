@@ -74,6 +74,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `neural.signature` ([#739]), and `neural.wiring`, `cell`, `recursion`,
   `lattice`, `act` and `train`, the networks and trainers of Tiny Recursive
   Message Passing ([Recursive_GNNs#1]).
+- `neural.geometric`, the same networks run along the blocks of their
+  symmetry group, reductions in place of gathers ([Recursive_GNNs#1]).
 - `grammar.proofnet`, parses as proof nets read back to normal terms, and
   `grammar.neural`, a PyTorch parser into them ([lambek#8]).
 - `categorial.parse`, the `k` best terms of a sentence by CKY ([lambek#2]).
@@ -154,6 +156,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   ([next#145]).
 - A law is a sequent ([next#1]), and `Equation` has one symbol between each
   pair of terms ([next#1]).
+- `abc.Nat` hashes and is the sort of a law's number variable `N: Nat`, and
+  powers, spiders and copies take any `__index__` ([next#164]).
 - Properties are read with `isinstance` rather than `hasattr`, and a
   subscripted class is named by `factory_name` ([next#1]).
 - A box is plumbing by what it holds, `Layer.is_plumbing_component`, and
@@ -167,6 +171,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - The `quantum` extra pins pyzx 0.10.7 ([next#225]).
 - Faster tensor of `n` morphisms ([#623]), of Python functions, and
   `finset.Permutation.then` ([#763]).
+- Faster `to_map` and `to_hypergraph` of permutations, read from their `perm`;
+  `CMap.permutation` and so `to_map` take `Nat` ([next#31]).
 - A functor maps a layer with one `n`-ary `tensor` rather than a fold of
   `@`, with one `tensor` call per layer ([next#161]).
 - Biclosed types hold `biclosed.Wire` ([next#16]), their `**` is `<<`, and a
@@ -216,6 +222,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - `optyx.core.zx.ZXBox` reads its equality and its hash off `cat.Box` like
   every other box, so a spider equals the one-layer diagram holding it and
   can go in a set ([next#359]).
+- `closed.TermBase.normal_form` and `reduce` take a constant as the head of a
+  spine, e.g. on the terms of `grammar.abstract` ([next#278]).
 - `optyx.channel.Swap.dagger` is the swap the other way round ([next#290]).
 - `optyx.channel.Sum` without terms keeps its types in `get_kraus` and
   `double`, and evaluates to the zero tensor, so the gradient by an absent
@@ -322,6 +330,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   and hashes ([next#31]).
 - Categorial `FC`, `BC`, `FX` and `BX` are boxes, so they compose and draw,
   and a nested `cfg.Tree` has a `dom`, so it applies ([next#31]).
+- A `cfg.Tree` reads back from its tree ([next#168]), and an ill-typed one
+  says which types do not compose ([next#31]).
 - Drawing: `Drawing.dagger` ([next#1]), regions through crossings ([#614]),
   `draw` leaves a drawing as it was ([#606]), TikZ colours ([next#31]) and a
   test restyling `H` ([next#99]).
@@ -363,6 +373,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   ([next#276]).
 - Coverage's 98% gate reads `discopy/` alone, new tests bring `ehypergraph` to
   100%, and pytest imports by path, so `test/abc.py` is collected ([next#31]).
+- `ruff check` and `ty check` lint beside `pylint`, each failing on every rule
+  `main` passes, the rules it breaks listed in `pyproject.toml` ([next#263]).
 
 ## [1.2.2] - 2025-12-19
 
@@ -558,6 +570,7 @@ for the changelog of `1.2.1` and earlier.
 [next#161]: https://github.com/rel-int/discopy-next/issues/161
 [next#162]: https://github.com/rel-int/discopy-next/issues/162
 [next#163]: https://github.com/rel-int/discopy-next/issues/163
+[next#164]: https://github.com/rel-int/discopy-next/issues/164
 [next#168]: https://github.com/rel-int/discopy-next/issues/168
 [next#175]: https://github.com/rel-int/discopy-next/issues/175
 [next#176]: https://github.com/rel-int/discopy-next/issues/176
@@ -566,7 +579,9 @@ for the changelog of `1.2.1` and earlier.
 [next#201]: https://github.com/rel-int/discopy-next/issues/201
 [next#214]: https://github.com/rel-int/discopy-next/pull/214
 [next#225]: https://github.com/rel-int/discopy-next/issues/225
+[next#263]: https://github.com/rel-int/discopy-next/pull/263
 [next#276]: https://github.com/rel-int/discopy-next/pull/276
+[next#278]: https://github.com/rel-int/discopy-next/issues/278
 [next#283]: https://github.com/rel-int/discopy-next/pull/283
 [next#290]: https://github.com/rel-int/discopy-next/issues/290
 [next#291]: https://github.com/rel-int/discopy-next/issues/291
