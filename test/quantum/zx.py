@@ -198,6 +198,13 @@ def test_from_pyzx_spider_with_several_outputs():
     assert proportional(matrix(Diagram.from_pyzx(graph)), graph.to_matrix())
 
 
+def test_from_pyzx_boundaries_in_odd_orders():
+    pyzx = pytest.importorskip("pyzx", minversion=PYZX)
+    from fixtures.zx_graphs import boundaries_in_odd_orders
+    graph = boundaries_in_odd_orders()
+    assert proportional(matrix(Diagram.from_pyzx(graph)), graph.to_matrix())
+
+
 def test_from_pyzx_errors():
     pytest.importorskip("pyzx", minversion=PYZX)
     bialgebra = Z(1, 2) @ Z(1, 2) >> Nat(1) @ SWAP @ Nat(1) >> X(2, 1) @ X(2, 1)
