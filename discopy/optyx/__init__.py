@@ -9,8 +9,10 @@ in, with qubits in :mod:`discopy.optyx.qubits`, photons in
 :mod:`discopy.optyx.photonic` and bits in :mod:`discopy.optyx.classical`, on
 top of the calculi of :mod:`discopy.optyx.core`.
 :mod:`discopy.optyx.contextuality` computes the contextual fraction of the
-empirical models they give, and :mod:`discopy.optyx.compiler` compiles
-measurement-based patterns to single-emitter photonic hardware.
+empirical models they give, :mod:`discopy.optyx.sampling` samples their
+outputs tick after tick, and
+:mod:`discopy.optyx.compiler` compiles measurement-based patterns to
+single-emitter photonic hardware.
 
 .. autosummary::
     :template: module.rst
@@ -21,7 +23,9 @@ measurement-based patterns to single-emitter photonic hardware.
     discopy.optyx.photonic
     discopy.optyx.classical
     discopy.optyx.contextuality
+    discopy.optyx.interaction
     discopy.optyx.core
+    discopy.optyx.sampling
     discopy.optyx.compiler
 
 Note

@@ -64,6 +64,9 @@ uv run coverage report -m
 
 Without the extras installed, run `uv run pytest --skip-extra` to skip what needs them.
 
+`coverage report` fails below the `fail_under` of `pyproject.toml`, measured on `discopy/`
+alone: without the extras the local number is lower, and CI's `Coverage` step is the gate.
+
 A sandboxed environment can block some of the extras outright (e.g. no network access to fetch
 the `torch`/`pytket` wheels, no `graphviz` binary), so `--skip-extra` may still leave a fixed set
 of environment-only failures that look identical to a real regression. Diff the failure set
@@ -195,10 +198,13 @@ compared against.
 
 `benchmark/test_composition.py` reproduces the scaling experiments of
 arXiv:2105.09257 for `Diagram` and `Hypergraph`, with analogous `CMap` cases;
-`benchmark/test_conversion.py` covers conversions between all three. They live
-outside `testpaths`, so run them explicitly. Results are keyed by suite
-(`composition` or `conversion`), family (representation or conversion), case
-(workload) and size `n`. Each data point is a declarative
+`benchmark/test_conversion.py` covers conversions between all three, and
+`benchmark/test_zx.py` races `quantum.graphlike.full_reduce` against PyZX's,
+skipped without PyZX: run it with `uv run --with "pyzx==0.10.7"`, as the
+workflow does. They live outside `testpaths`, so run them explicitly. Results
+are keyed by suite (`composition`, `conversion` or `zx`), family
+(representation, conversion or implementation), case (workload) and size
+`n`. Each data point is a declarative
 [`pytest-benchmark`](https://pytest-benchmark.readthedocs.io) test; the fixture
 owns timing (CPU clock and GC disabled) and automatically calibrates rounds
 and iterations for each workload.
@@ -206,7 +212,8 @@ and iterations for each workload.
 ```shell
 uv sync --group dev
 # small/medium sizes (the default); add BENCH_FLAGS=bench:full for the heavy tail
-uv run pytest benchmark/ -v --benchmark-json=benchmark-results/bench.json
+uv run --with "pyzx==0.10.7" pytest benchmark/ -v \
+    --benchmark-json=benchmark-results/bench.json
 # render the scaling tables + log-log plots (polars + matplotlib)
 uv run python benchmark/report.py benchmark-results/bench.json
 ```

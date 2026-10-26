@@ -196,7 +196,7 @@ class ZXDiagram(diagram.Diagram):
             (node,) = graph.neighbors(output)
             etype = graph.edge_type((node, output))
             hadamard = H if etype == EdgeType.HADAMARD else Id(diagram.Bit(1))
-            scan, swaps = move(scan, scan.index(node), target)
+            scan, swaps = move(scan, scan.index(node, target), target)
             dgrm = (
                 dgrm
                 >> swaps
@@ -311,14 +311,6 @@ class ZXBox(diagram.Box, ZXDiagram):
         in_dims = Dim(*[2 for i in range(len(self.dom))])
 
         return tensor.Box(self.name, in_dims, out_dims, self.array)
-
-    def __eq__(self, other):
-        return (
-            isinstance(other, type(self))
-            and self.name == other.name
-            and self.dom == other.dom
-            and np.all(self.data == other.data)
-        )
 
     def inflate(self, d):
         return self
@@ -444,14 +436,6 @@ H.color, H.shape = "yellow", "rectangle"
 H.conjugate = lambda: H
 
 SWAP = diagram.Swap(diagram.bit, diagram.bit)
-SWAP.array = np.array([[1, 0, 0, 0], [0, 0, 1, 0], [0, 1, 0, 0], [0, 0, 0, 1]])
-
-
-def swap_truncation(diagram, _, __):
-    return tensor.Box(diagram.name, Dim(2, 2), Dim(2, 2), diagram.array)
-
-
-SWAP.truncation = swap_truncation
 
 
 class And(ZXBox):
@@ -474,7 +458,11 @@ class And(ZXBox):
     """
 
     def __init__(self, n=2, is_dagger: bool = False):
-        super().__init__("And", diagram.Bit(n), diagram.Bit(1))
+        self.n = n
+        dom, cod = diagram.Bit(1), diagram.Bit(n)
+        if not is_dagger:
+            dom, cod = cod, dom
+        super().__init__("And", dom, cod)
         self.is_dagger = is_dagger
 
     def truncation(
@@ -499,15 +487,13 @@ class And(ZXBox):
         )
 
     def determine_output_dimensions(self, input_dims):
-        if self.is_dagger:
-            return [2]*len(input_dims)
-        return [2]
+        return [2] * self.n if self.is_dagger else [2]
 
     def dagger(self):
-        return And(not self.is_dagger)
+        return And(n=self.n, is_dagger=not self.is_dagger)
 
     def conjugate(self):
-        return And(n=self.dom.n, is_dagger=self.is_dagger)
+        return And(n=self.n, is_dagger=self.is_dagger)
 
 
 class Or(ZXBox):
@@ -530,7 +516,11 @@ class Or(ZXBox):
     """
 
     def __init__(self, n: int = 2, is_dagger: bool = False):
-        super().__init__("Or", diagram.Bit(n), diagram.Bit(1))
+        self.n = n
+        dom, cod = diagram.Bit(1), diagram.Bit(n)
+        if not is_dagger:
+            dom, cod = cod, dom
+        super().__init__("Or", dom, cod)
         self.is_dagger = is_dagger
 
     def truncation(
@@ -556,10 +546,10 @@ class Or(ZXBox):
         return box.dagger() if self.is_dagger else box
 
     def determine_output_dimensions(self, input_dims: List[int]) -> List[int]:
-        return [2] * len(input_dims) if self.is_dagger else [2]
+        return [2] * self.n if self.is_dagger else [2]
 
     def dagger(self):
-        return Or(n=self.dom.n, is_dagger=not self.is_dagger)
+        return Or(n=self.n, is_dagger=not self.is_dagger)
 
     def conjugate(self):
-        return Or(n=self.dom.n, is_dagger=self.is_dagger)
+        return Or(n=self.n, is_dagger=self.is_dagger)

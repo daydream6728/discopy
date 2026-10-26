@@ -37,6 +37,7 @@ MATRIX_REPEAT_ERROR = "The reflexive transitive closure is only defined for "\
 BOX_IS_MIXED = "Pure boxes can have only digits or only qudits as dom and cod."
 LAYERS_MUST_HAVE_A_BOX = "Layers must have at least one box."
 NOT_MERGEABLE = "Layers {} and {} cannot be merged."
+LAYERS_DO_NOT_COMPOSE = "Compose diagrams, not layers: {}."
 INTERCHANGER_ERROR = "Boxes {} and {} do not commute."
 WRONG_PERMUTATION = "Expected a permutation of length {}, got {}."
 NOT_A_PERMUTATION = "Expected a permutation of range({}), got {}."
@@ -104,6 +105,7 @@ NOT_A_HOLE = "Cannot plug {} into {}: its boundary is not the hole's."
 NOT_LEFT_LINEAR = (
     "{} is not left-linear: rewriting in place needs a left side with "
     "boxes and with its boundary wires on distinct spiders.")
+NOT_GRAPHLIKE = "{} is not a green or red spider, a Hadamard or a scalar."
 NOT_SHARING = (
     "{} is not a diagram with sharing, i.e. a left-monogamous acyclic "
     "hypergraph: a spider has no producer or several, or a box depends on "

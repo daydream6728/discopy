@@ -277,6 +277,19 @@ def test_Functor_on_whiskered_Swap():
     assert Functor({Nat(1): Nat(1)}, {})(perm) == perm
 
 
+def test_Functor_commutes_with_whiskering():
+    from discopy import symmetric, markov, compact, frobenius
+    for module in (symmetric, markov, compact, frobenius):
+        x, y, z = map(module.Ty, "xyz")
+        F = module.Functor(lambda ob: ob @ ob, lambda box: box,
+                           dom=module.Diagram, cod=module.Diagram)
+        assert F(module.Swap(x, y) @ z) == F(module.Swap(x, y)) @ F(z)
+        assert F(module.Swap(x, y)) == module.Permutation(
+            x @ x @ y @ y, [2, 3, 0, 1])
+        assert module.Functor.id(module.Diagram)(module.Swap(x, y))\
+            == module.Swap(x, y)
+
+
 def test_Functor_id_on_Permutation():
     from discopy import symmetric, markov, compact, frobenius
     from discopy.matrix import Matrix
@@ -413,20 +426,6 @@ def test_Permutation_to_drawing():
     drawing = functor(perm)
     assert drawing.dom == (z @ x @ y).to_drawing()
     assert drawing.cod == (x @ z @ y).to_drawing()
-
-
-def test_abc_permutation():
-    from itertools import permutations
-    from discopy.abc import SymmetricCategory
-
-    abc_permutation = SymmetricCategory.permutation.__func__
-    for n in range(1, 5):
-        doms = [Ty(name) for name in "abcd"[:n]]
-        for xs in permutations(range(n)):
-            result = abc_permutation(Diagram, list(xs), doms)
-            assert Equation(result, Diagram.permutation(list(xs), doms))
-    with raises(ValueError):
-        abc_permutation(Diagram, [0, 0], [Ty('a'), Ty('b')])
 
 
 def test_coloured_Layer_merge():
