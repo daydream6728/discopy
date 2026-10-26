@@ -84,11 +84,11 @@ def test_routing_padded():
 def test_from_map():
     units = sudoku()
     node = Signature((Orbit(MESSAGE, 3, Sym.PERM), Orbit(STATE, traced=True)))
-    unit = Signature((Orbit(MESSAGE, 4, Sym.PERM), ))
-    drawn = from_incidence(memberships(units), node, unit)
+    factor = Signature((Orbit(MESSAGE, 4, Sym.PERM), ))
+    drawn = from_incidence(memberships(units), node, factor)
     assert from_map(drawn) == units
     readout = from_incidence(
-        ((0, 1), (0, 1), (1, )), node, unit, "cell", ("unit", "readout"))
+        ((0, 1), (0, 1), (1, )), node, factor, "cell", ("factor", "readout"))
     assert from_map(readout) == ((0, 1), (0, 1, 2))
     clique = from_relation(primal(units), node)
     assert from_map(clique) == primal(units)
@@ -96,9 +96,9 @@ def test_from_map():
     assert from_map(renamed, "site") == primal(units)
     with raises(ValueError, match="not closed"):
         from_map(CMap.from_box(Box("cell", Ty(), MESSAGE)))
-    factor = Box("unit", Ty(), MESSAGE)
+    box = Box("factor", Ty(), MESSAGE)
     with raises(ValueError, match="box 0 is wired to a box that is not"):
-        from_map(CMap.from_wiring((factor, factor), [((0, 0), (1, 0))]))
+        from_map(CMap.from_wiring((box, box), [((0, 0), (1, 0))]))
 
 
 def test_blocks_of_a_group():
