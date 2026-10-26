@@ -2143,7 +2143,12 @@ class Equation(cat.Equation, RichDisplay):
         >>> loaded = loads(dumps(equation))
         >>> assert (loaded.terms, loaded.symbols, loaded.space)\\
         ...     == ((Box('f', x, x), Id(x)), ("->", ), 2)
+        >>> dumps(Equation(Id(x), Id(x), space="2"))
+        Traceback (most recent call last):
+        ...
+        TypeError: Expected int | float, got str instead.
         """
+        assert_isinstance(self.space, (int, float))
         return super().to_tree() | ({} if self.space == 1 else {
             'space': self.space})
 

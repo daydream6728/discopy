@@ -1004,3 +1004,5 @@ def test_Functor_and_Equation_tree():
     assert loaded.space == 3 and loads(dumps(Equation(f))).space == 1
     with raises(TypeError, match=r"Expected int \| float"):
         Equation.from_tree(equation.to_tree() | {'space': 'x'})
+    with raises(TypeError, match=r"Expected int \| float"):
+        dumps(Equation(f, f, space="x"))
