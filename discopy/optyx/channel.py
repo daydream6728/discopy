@@ -1848,8 +1848,7 @@ class Swap(Permutation, frobenius.Swap, Channel):
     def __init__(self, left, right):
         frobenius.Swap.__init__(self, left, right)
 
-    def dagger(self):
-        return self
+    dagger = frobenius.Swap.dagger
 
 
 class Feedback(monoidal.Bubble, Diagram, frobenius.Box):

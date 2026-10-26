@@ -212,3 +212,9 @@ def test_encode_inflate_mixed_types():
 def test_dual_rail_only_for_zx_channels():
     with pytest.raises(TypeError, match="Only ZX channels"):
         Channel("id", diagram.Id(diagram.mode)).dual_rail()
+
+
+def test_swap_dagger_swaps_back():
+    swap = Swap(qmode, qubit)
+    assert swap.dagger() == Swap(qubit, qmode)
+    assert swap.dagger().kraus == swap.kraus.dagger()
