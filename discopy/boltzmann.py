@@ -87,7 +87,7 @@ from discopy.axioms import (
     GENERATORS, Atom, Declaration, Delay, Hom, L, Obj, R, Repeat, Tensor,
     Unit, Var, substitute)
 from discopy.grammar import cfg
-from discopy.utils import AxiomError
+from discopy.utils import AxiomError, factory_name
 
 if TYPE_CHECKING:
     import numpy
@@ -101,6 +101,14 @@ SIZE = 4
 
 WIDTH = 2
 """ The most wires on either side of a morphism of a derivation, by default.
+"""
+
+MAX_WIDTH = 8
+"""
+The widest grammar compiled for a boundary: the instances of a rule grow
+with a power of the width, e.g. a mix with its fourth, so a boundary wider
+than that is met by a generator on either side, see
+:meth:`Specification.strategy`.
 """
 
 MISMATCH = (AxiomError, TypeError, ValueError, AttributeError, IndexError,
@@ -144,21 +152,20 @@ def wire(category: type):
     """
     The object of one wire the shapes of a category are drawn with: named
     after the first of :data:`discopy.axioms.GENERATORS` when its objects
-    take a name, the least of its generators otherwise, e.g. a dimension.
+    take a name, numbered two otherwise, e.g. a dimension.
 
     >>> from discopy.monoidal import Ty, Diagram
     >>> assert wire(Diagram) == Ty('a')
-    >>> from discopy.neural.network import Network
-    >>> assert len(wire(Network)) == 1
+    >>> from discopy.neural.network import Dims, Network
+    >>> assert wire(Network) == Dims(2)
     """
     ob = category.typeparams()[0]
-    try:
-        return ob(GENERATORS[0])
-    except MISMATCH:
-        # pylint: disable-next=import-outside-toplevel  # off the package
-        from hypothesis import find, settings
-        return find(generators(ob), lambda _: True,
-                    settings=settings(database=None))
+    for name in (GENERATORS[0], 2):
+        try:
+            return ob(name)
+        except MISMATCH:
+            continue
+    raise NotImplementedError(f"No wire of {factory_name(category)}.")
 
 
 def generators(ob: type) -> st.SearchStrategy:
@@ -256,7 +263,8 @@ def compile(  # pylint: disable=redefined-builtin  # compiles a grammar
     objects = shapes(category, width)
     names = ["box"] + sorted(
         name for name, rule in category.rules.items()
-        if rule.applicable and name in (within or category).rules)
+        if rule.applicable and rule.derivation is None
+        and name in (within or category).rules)
     z = sympy.Symbol("z", positive=True)
     marks = {name: sympy.Symbol(f"u_{name}", positive=True) for name in names}
     sorts: dict[tuple, monoidal.Ty] = {
@@ -438,20 +446,22 @@ class Specification:
         for production in self.productions:
             powers = production.data.as_powers_dict()
             exponents.append([powers.get(p, 0) for p in self.parameters])
-            coefficients.append(float(production.data.subs(
-                {p: 1 for p in self.parameters})))
+            coefficients.append(float(production.data.as_coeff_Mul()[0]))
         return coefficients, exponents
 
     def logarithms(self) -> tuple[tuple, tuple, list]:
         """
         The system in log-space, :math:`t_s \\geq \\log \\sum_r \\exp(\\theta
         \\cdot m_r + \\sum_p t_p)`: the logarithm of each parameter, that of
-        each sort and the right-hand side of each sort, a :func:`LogSumExp`.
+        each sort, ``t_i`` for the ``i``-th of the :attr:`sorts`, so that
+        :func:`sympy.lambdify` reads them as identifiers, and the right-hand
+        side of each sort, a :func:`LogSumExp`.
         """
         # pylint: disable-next=import-outside-toplevel
         import sympy
         thetas = tuple(sympy.Symbol(f"log_{p}") for p in self.parameters)
-        logs = {sort: sympy.Symbol(f"t[{sort}]") for sort in self.sorts}
+        logs = {sort: sympy.Symbol(f"t_{i}")
+                for i, sort in enumerate(self.sorts)}
         coefficients, exponents = self.monomials
         terms: dict = {sort: [] for sort in self.sorts}
         for production, coefficient, exponent in zip(
@@ -638,19 +648,24 @@ class Specification:
                       for wire in reversed(production.dom.inside)]
         return built[0]
 
-    def palette(self, *goal) -> tuple:
+    def palette(self, *goal, draw=None) -> tuple:
         """
         The atoms of the boundary asked for, from which the wires no boundary
-        determines are coloured, besides those drawn by
-        :meth:`strategy`.
+        determines are coloured, and with a hypothesis ``draw`` those of one
+        or two more wires drawn by the ``generators`` of the objects, so that
+        a wire may take a colour the boundary does not have.
         """
         ob = self.category.typeparams()[0]
         if ob is NoneType:
             return (None, )
-        return tuple(dict.fromkeys(
+        atoms = tuple(dict.fromkeys(
             obj[i:i + 1] if hasattr(obj, "__len__") else obj
             for obj in goal if obj is not None
             for i in range(length(obj))))
+        if draw is None:
+            return atoms
+        return atoms + tuple(draw(generators(ob), label="colour")
+                             for _ in range(2 - min(1, len(atoms))))
 
     def kinds(self, production: Production, dom, cod,
               colouring: Colouring) -> dict | None:
@@ -713,7 +728,9 @@ class Specification:
         any if ``None``, Boltzmann sampled at the parameters :meth:`tune`
         gives the root, of at most ``max_size`` nodes, ten times the expected
         size by default: a derivation of the shape of the boundary is drawn
-        and coloured, see :meth:`evaluate`, again until one is well-typed.
+        and coloured, see :meth:`evaluate`, again until one is well-typed. A
+        side wider than the grammar is met by a generator from or to its
+        first wires, those of the widest shape.
         The generators are drawn by the ``generators`` of the category, the
         colours of its wires from the atoms of the boundary and those of
         one or two wires drawn by the ``generators`` of its objects.
@@ -740,21 +757,21 @@ class Specification:
         from hypothesis import reject, strategies as st
         params = self.tune(size, **marks)
         max_size = max_size or int(10 * size)
+        widest = max(side for shape in self.shapes for side in shape
+                     if side is not None) if len(self.shapes) > 1 else None
+        inner = tuple(
+            side[:widest] if None not in (side, widest)
+            and length(side) > widest else side for side in (dom, cod))
         shape = tuple(None if side is None else length(side)
-                      for side in (dom, cod))
+                      for side in inner)
         sort = self.root if len(self.shapes) == 1 else self.shapes.get(shape)
         if sort is None:
             raise ValueError(f"No sort of shape {shape} in {self}.")
 
-        ob = self.category.typeparams()[0]
-
         @st.composite
         def terms(draw):
             random = draw(st.randoms(use_true_random=exact))
-            palette = self.palette(dom, cod)
-            if ob is not NoneType:
-                palette += tuple(draw(generators(ob), label="colour")
-                                 for _ in range(2 - min(1, len(palette))))
+            palette = self.palette(dom, cod, draw=draw)
             for _ in range(100):
                 tree = self.sample(random, params, sort, max_size)
                 if tree is None:
@@ -762,11 +779,15 @@ class Specification:
                 colouring = Colouring(random, palette, lambda x, y: draw(
                     self.category.generators(dom=x, cod=y)))
                 dom_, cod_ = (side if side is not None else colouring.colour(
-                    shadow) for side, shadow in zip(
-                        (dom, cod), self.sides(tree)))
+                    shadow) for side, shadow in zip(inner, self.sides(tree)))
                 term = self.evaluate(tree, dom_, cod_, colouring)
-                if term is not None:
-                    return term
+                if term is None:
+                    continue
+                if dom is not None and dom != dom_:
+                    term = colouring.generator(dom, dom_) >> term
+                if cod is not None and cod != cod_:
+                    term = term >> colouring.generator(cod_, cod)
+                return term
             return reject()
 
         return terms()

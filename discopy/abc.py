@@ -1186,6 +1186,13 @@ class RigidCategory[C0: Pregroup, C1: RigidCategory](BiclosedCategory[C0, C1]):
     A rigid category is a :class:`BiclosedCategory` with a :class:`Pregroup` as
     object type and methods for :code:`cups` and :code:`caps`.
     """
+    curry_left = BiclosedCategory.curry_left.admissible(
+        "A cap, a cut and a mix.")
+    curry_right = BiclosedCategory.curry_right.admissible(
+        "A cap, a cut and a mix.")
+    ev_left = BiclosedCategory.ev_left.admissible("A cup.")
+    ev_right = BiclosedCategory.ev_right.admissible("A cup.")
+
     @classmethod
     @abstractmethod
     def cups(cls, left: C0, right: C0) -> C1:
@@ -1353,6 +1360,10 @@ class PivotalCategory[
     """
     yanking = TracedCategory.yanking.inapplicable(
         messages.PLANAR_YANKING)
+    trace_left = TracedCategory.trace_left.admissible(
+        "A cap, a cut and a cup.")
+    trace_right = TracedCategory.trace_right.admissible(
+        "A cap, a cut and a cup.")
 
     @axiom
     def self_dual[X: Obj[C0]](
@@ -1546,6 +1557,9 @@ class SymmetricCategory[
     ) -> Hom[C1, Tensor[Y, X], Tensor[X, Y]]:
         """ The inverse of the braid of two atoms, the swap the other way. """
         return cls.swap(y, x)
+
+    inverse_braiding = inverse_braiding.admissible(
+        "The braiding of the atoms the other way round.")
 
     braid_then_inverse = BraidedCategory.braid_then_inverse.inapplicable(
         messages.SWAP_INVOLUTION)
@@ -1893,6 +1907,10 @@ class CompactCategory[C0: Pregroup, C1: CompactCategory](
     def twist(cls, dom: C0) -> C1:
         return cls.id(dom)
 
+    twisting = BalancedCategory.twisting.admissible("The identity.")
+    inverse_twisting = BalancedCategory.inverse_twisting.admissible(
+        "The identity.")
+
     @axiom
     def reidemeister_1_cap[X: Obj[C0]](
             cls, x: Var[C0, X]
@@ -1962,6 +1980,15 @@ class HypergraphCategory[C0: Pregroup, C1: HypergraphCategory](
     ) -> Hom[C1, Repeat[X, M], Repeat[X, N]]:
         """ The spider of an atom, ``X ** m -> X ** n``. """
         return cls.spiders(m, n, x)
+
+    unit = RigidCategory.unit.admissible(
+        "Spiders with no leg in and two out, mixed and braided.")
+    counit = RigidCategory.counit.admissible(
+        "Spiders with two legs in and none out, mixed and braided.")
+    comultiplication = MarkovCategory.comultiplication.admissible(
+        "A spider with one leg in.")
+    multiplication = ComarkovCategory.multiplication.admissible(
+        "A spider with one leg out.")
 
     @classmethod
     def cospan(cls, left: Sequence[int], right: Sequence[int],

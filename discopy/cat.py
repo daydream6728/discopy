@@ -276,7 +276,8 @@ class FreeCategory(Category):
 
         rules = [
             rule for name, rule in cls.rules.items()
-            if rule.applicable and name in (within or cls).rules
+            if rule.applicable and rule.derivation is None
+            and name in (within or cls).rules
             and (fuel > 0 or not rule.is_recursive)]
 
         @st.composite
@@ -430,6 +431,10 @@ class Arrow(FreeCategory, DaggerCategory, Serialisable["Arrow"]):
             within : The class whose rules a term is derived from, the
                 category itself if ``None``.
 
+        The grammar is as wide as the boundary asks, doubling from
+        :data:`discopy.boltzmann.WIDTH` up to
+        :data:`discopy.boltzmann.MAX_WIDTH`, so that a run compiles a few.
+
         Example
         -------
         >>> from hypothesis import find
@@ -438,11 +443,13 @@ class Arrow(FreeCategory, DaggerCategory, Serialisable["Arrow"]):
         >>> assert (term.dom, term.cod) == (x, y)
         """
         # pylint: disable-next=import-outside-toplevel  # boltzmann imports cat
-        from discopy.boltzmann import WIDTH, length
+        from discopy.boltzmann import MAX_WIDTH, WIDTH, length
 
         from hypothesis import strategies as st
 
-        width = max(WIDTH, *(length(side) for side in (dom, cod)))
+        width = WIDTH
+        while width < min(MAX_WIDTH, max(map(length, (dom, cod)))):
+            width *= 2
         return st.deferred(lambda: cls.boltzmann(
             within=within, width=width).strategy(dom, cod, size=fuel + 1))
 

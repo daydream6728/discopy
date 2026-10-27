@@ -523,7 +523,7 @@ def inhabits(value, kind) -> bool:
 
 
 @dataclass
-class Declaration[**P, T](classmethod):
+class Declaration[**P, T](classmethod):  # pylint: disable=too-many-instance-attributes  # noqa: E501
     """
     A declaration of a category, stated once on an abstract base class and
     inherited by every category below it: an :class:`Axiom` or a
@@ -562,6 +562,8 @@ class Declaration[**P, T](classmethod):
             :meth:`failing`.
         applicable : Whether the structure applies at all, ``False`` once
             declared :meth:`inapplicable`.
+        derivation : How the other rules derive what a rule concludes, once
+            declared :meth:`admissible`, :obj:`None` otherwise.
     """
 
     function: Callable[Concatenate[Any, P], T]
@@ -571,6 +573,7 @@ class Declaration[**P, T](classmethod):
     params: dict[str, Any] = None  # ty: ignore[invalid-assignment]
     broken: bool = False
     applicable: bool = True
+    derivation: str | None = None
 
     def __post_init__(self):
         classmethod.__init__(self, self.function)
@@ -608,6 +611,20 @@ class Declaration[**P, T](classmethod):
         law.__doc__ = reason
         return replace(
             self, function=law, params={}, broken=False, applicable=False)
+
+    def admissible(self, derivation: str) -> Self:
+        """
+        The same rule declared `admissible
+        <https://en.wikipedia.org/wiki/Admissible_rule>`_ in the category:
+        the other rules derive everything it concludes, as the
+        ``derivation`` says, so the terms of a free category are not
+        derived by it, see :meth:`discopy.cat.FreeCategory.boltzmann`,
+        while it still applies and is checked like any other, e.g.
+        ``trace_left = TracedCategory.trace_left.admissible("Caps, a cut and
+        cups.")``. A rule whose structure the category lacks is
+        :meth:`inapplicable` instead.
+        """
+        return replace(self, derivation=derivation)
 
     def __repr__(self):
         """

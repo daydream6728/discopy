@@ -303,6 +303,9 @@ class Diagram(balanced.Diagram, SymmetricCategory):
     braid_factory = classproperty(lambda cls: cls.swap_factory)
     layer_factory = Layer
     twist_factory = classmethod(lambda cls, dom: cls.id(dom))
+    twisting = BalancedCategory.twisting.admissible("The identity.")
+    inverse_twisting = BalancedCategory.inverse_twisting.admissible(
+        "The identity.")
 
     @classmethod
     def equation_factory(cls, *terms: Diagram) -> Equation:
