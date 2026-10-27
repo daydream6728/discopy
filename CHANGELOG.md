@@ -231,6 +231,9 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   with, `bit -> bit ** n` ([next#292]); `optyx.core.zx.SWAP` evaluates, its
   `truncation` no longer an unbound function set on the instance
   ([next#293]).
+- `docs/notebooks/optyx/channel_error.ipynb`, a 0-byte file that is not valid
+  JSON and so not a notebook, is removed: it was added empty by `0e6c24bd`
+  ([optyx#136]) and never had content to restore ([next#250]).
 - `cat.Functor` reads the image of a daggered box off `ar_map` when the
   codomain has no dagger to take, instead of daggering the image: a functor
   into `stream.Stream` or `python.Function` used to raise an `AttributeError`,
@@ -251,11 +254,18 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   codomain `qmode ** n_modes` ([next#258]).
 - `optyx.core.diagram.Scalar` and `optyx.photonic.Scalar` keep any expression
   with free symbols symbolic, e.g. `x ** 2` or `x + 1` ([next#297]).
+- `optyx.channel.Diagram.power_fix` contracts each depth with a fresh
+  optimiser and warns at the first depth `max_chi` truncates ([next#289]).
 - `python.finset.Function.then` raises `AxiomError` on functions that do not
   compose, instead of an `IndexError` or a wrong function ([next#167]).
 - `optyx.channel.Sum` without terms keeps its types in `get_kraus` and
   `double`, and evaluates to the zero tensor, so the gradient by an absent
   variable doubles and evaluates ([next#291]).
+- `optyx` and perceval: `PercevalBackend` evaluates a closed diagram to the
+  amplitude or probability of its selections ([next#294]);
+  `Diagram.from_perceval` reads a negative feed-forward offset `k` as `-k - 1`
+  modes in between ([next#295]) and keeps a detector with nothing after it
+  ([next#299]).
 - `Hypergraph`: its hash, `simplify`, `rotate`, and `to_diagram` on
   non-self-dual, `Nat` and `Dim` types ([#324], [#387], [#393], [#622],
   [#719]).
@@ -368,6 +378,9 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   identity, TikZ twists take xcolor names, hexcode styles drop `#` ([next#31]).
 - A law reads its type parameters when another class shares its name.
 - `discopy.grammar.neural` installs with the `grammar` extra ([next#52]).
+- `zx.H`, quantum gates that do not send basis states to basis states,
+  `gates.Bra`, `gates.Match` and `tensor.Sum` no longer claim to be cartesian
+  ([next#115]).
 - Docstrings of `para` and two others ([#494], [#683], [#693]), a citation
   in `kleisli.additive` ([#639]), and notebook titles in the docs ([#526]).
 
@@ -578,6 +591,7 @@ for the changelog of `1.2.1` and earlier.
 [next#112]: https://github.com/rel-int/discopy-next/issues/112
 [next#113]: https://github.com/rel-int/discopy-next/issues/113
 [next#114]: https://github.com/rel-int/discopy-next/issues/114
+[next#115]: https://github.com/rel-int/discopy-next/issues/115
 [next#116]: https://github.com/rel-int/discopy-next/issues/116
 [next#118]: https://github.com/rel-int/discopy-next/issues/118
 [next#119]: https://github.com/rel-int/discopy-next/issues/119
@@ -611,17 +625,22 @@ for the changelog of `1.2.1` and earlier.
 [next#214]: https://github.com/rel-int/discopy-next/pull/214
 [next#225]: https://github.com/rel-int/discopy-next/issues/225
 [next#236]: https://github.com/rel-int/discopy-next/issues/236
+[next#250]: https://github.com/rel-int/discopy-next/issues/250
 [next#254]: https://github.com/rel-int/discopy-next/issues/254
 [next#258]: https://github.com/rel-int/discopy-next/issues/258
 [next#263]: https://github.com/rel-int/discopy-next/pull/263
 [next#276]: https://github.com/rel-int/discopy-next/pull/276
 [next#278]: https://github.com/rel-int/discopy-next/issues/278
 [next#283]: https://github.com/rel-int/discopy-next/pull/283
+[next#289]: https://github.com/rel-int/discopy-next/issues/289
 [next#290]: https://github.com/rel-int/discopy-next/issues/290
 [next#291]: https://github.com/rel-int/discopy-next/issues/291
 [next#292]: https://github.com/rel-int/discopy-next/issues/292
 [next#293]: https://github.com/rel-int/discopy-next/issues/293
+[next#294]: https://github.com/rel-int/discopy-next/issues/294
+[next#295]: https://github.com/rel-int/discopy-next/issues/295
 [next#297]: https://github.com/rel-int/discopy-next/issues/297
+[next#299]: https://github.com/rel-int/discopy-next/issues/299
 [next#301]: https://github.com/rel-int/discopy-next/issues/301
 [next#302]: https://github.com/rel-int/discopy-next/pull/302
 [next#310]: https://github.com/rel-int/discopy-next/pull/310
@@ -641,6 +660,7 @@ for the changelog of `1.2.1` and earlier.
 [optyx#82]: https://github.com/rel-int/optyx/pull/82
 [optyx#84]: https://github.com/rel-int/optyx/pull/84
 [optyx#87]: https://github.com/rel-int/optyx/pull/87
+[optyx#136]: https://github.com/rel-int/optyx/pull/136
 [lambek#2]: https://github.com/rel-int/lambek/pull/2
 [lambek#8]: https://github.com/rel-int/lambek/pull/8
 [lambek#12]: https://github.com/rel-int/lambek/pull/12
