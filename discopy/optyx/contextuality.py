@@ -167,6 +167,8 @@ def distributions(diagram: Diagram, settings: Sequence[int], backend=None,
     """
     dom, cod = diagram.dom.inside, diagram.cod.inside
     outputs = [1] * len(settings) if outputs is None else list(outputs)
+    if not settings:
+        raise ValueError("There must be at least one party.")
     if len(dom) != len(settings) or len(cod) != sum(outputs) or not all(
             ob.is_classical for ob in dom + cod):
         raise ValueError(
@@ -260,8 +262,8 @@ class MessagePassingScenario:  # pylint: disable=too-many-instance-attributes
             the measurement, with as many output wires for every node. By
             default, :func:`local_measurement` for a qubit and
             :func:`dual_rail_measurement` for a pair of modes.
-        sizes : The number of angles of each measurement, four for the
-            defaults.
+        sizes : The number of angles of each measurement, required with
+            ``measurements`` and four for the defaults.
         settings : The number of measurements of each node, two for each
             by default, which is what a bit chooses between.
         normalise : Whether to condition the model on the success of a
@@ -289,7 +291,11 @@ class MessagePassingScenario:  # pylint: disable=too-many-instance-attributes
         if measurements is None:
             measurements = [self.default_measurement(box.prediction)
                             for box in self.nodes]
-            sizes = [4] * len(self.nodes)
+            sizes = [4] * len(self.nodes) if sizes is None else sizes
+        if sizes is None or len(sizes) != len(self.nodes)\
+                or len(measurements) != len(self.nodes):
+            raise ValueError(f"The {len(self.nodes)} nodes with a prediction "
+                             "need as many measurements and sizes.")
         if input_state is None:
             if cmap.dom:
                 raise ValueError(

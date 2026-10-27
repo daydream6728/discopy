@@ -120,9 +120,10 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `Scenario.bell` taking settings for each party and `Inequality.violation`
   zero when the inequality holds, rather than raising on the trivial one
   ([optyx#87]).
-- The contextual fraction is differentiable: `quantum.contextuality.Model.
-  gradient` is the solution of the dual program, the shadow prices of the
-  constraints that the solver returns with the value, and `ascend` is
+- The contextual fraction is piecewise linear in the table and
+  `quantum.contextuality.Model.gradient` is its gradient, a subgradient at
+  its kinks: the solution of the dual program, the shadow prices of the
+  constraints that the solver returns with the value. `ascend` is
   gradient ascent on the fraction of any parametrised model, with a step
   that doubles after an improvement and halves otherwise since the fraction
   is piecewise linear in the table. `Model.normalise` conditions a

@@ -75,6 +75,8 @@ def test_distributions_open_and_closed():
         Model.from_diagram(bell_test, outputs=(1, 2))
     with raises(ValueError):
         Model.from_diagram(bell_test, outputs=(1, ))
+    with raises(ValueError):
+        distributions(Diagram.id(), ())
 
 
 def test_local_measurement():
@@ -111,6 +113,15 @@ def test_MessagePassingScenario():
             Diagram.id())
     with raises(ValueError):
         MessagePassingScenario.default_measurement(mode)
+    custom = MessagePassingScenario(
+        bell_pair_map(), Ket(0) ** 3, n_steps=1,
+        measurements=[local_measurement] * 2, sizes=[4, 4])
+    assert custom.model(angles).is_close(scenario.model(angles))
+    for kwargs in [dict(measurements=[local_measurement] * 2),
+                   dict(sizes=[4]), dict(measurements=[local_measurement],
+                                         sizes=[4])]:
+        with raises(ValueError):
+            MessagePassingScenario(bell_pair_map(), Ket(0) ** 3, **kwargs)
 
 
 def test_learn():

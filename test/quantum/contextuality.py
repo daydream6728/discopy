@@ -266,3 +266,6 @@ def test_normalise():
         Model(bell, [[1 / 4, 0, 0, 1 / 4]] * 3 + [[0, 1, 1, 0]]).normalise()
     with raises(ValueError):
         Model(bell, [[0] * 4] * 4).normalise()
+    with raises(ValueError):
+        Model(bell, [[1 / 2, 0, 0, 0], [0, 0, 1 / 2, 0]]
+              + [[1 / 8] * 4] * 2).normalise()

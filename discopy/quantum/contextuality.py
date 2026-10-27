@@ -501,8 +501,8 @@ class Model(Table):
         """
         The model conditioned on the success of a postselection, each row
         divided by its sum, which must be the same in every context up to
-        ``atol`` for the result to be an empirical model, and raises
-        ``ValueError`` otherwise.
+        ``atol``, raising ``ValueError`` otherwise or when the result is
+        not an empirical model, e.g. when the postselection signals.
 
         Example
         -------
@@ -515,8 +515,10 @@ class Model(Table):
         if min(sums) <= atol or max(sums) - min(sums) > atol:
             raise ValueError(
                 f"The rows of {self} do not sum to the same probability.")
-        return Model(self.scenario, [
+        result = Model(self.scenario, [
             [x / total for x in row] for row, total in zip(self.table, sums)])
+        result.assert_compatible()
+        return result
 
     def decompose(self) -> tuple[float, Model | None, Model | None]:
         """
