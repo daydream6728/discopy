@@ -80,20 +80,24 @@ from discopy.abc import (
 STATUSES = {
     "bijection": ("producer", "consumer"),
     "matching": ("open", ),
-    "function": ("rooted", "unrooted"),
-    "cospan": ("open", ),
+    "function": ("copied", "unrooted", "rooted"),
+    "cospan": ("single", "spider"),
 }
 """
 The statuses of the wires left open by each kind of plumbing: a bijection
-leaves open a producer waiting for its consumer, or the converse, a function
-a wire with its producer waiting for more consumers, or one without.
+leaves open a producer waiting for its consumer, or the converse; a function
+a wire with its producer and at least one consumer, one with consumers but no
+producer yet, or one with its producer alone; a cospan a wire with one leg,
+or with two legs or more, a spider.
 """
 
-Move = tuple[int | None, int | None]
+Move = tuple[int | None, int | None, str | None]
 """
 What a point does, as the status of the open wire it joins, or ``None`` for
-a new wire, and the status the wire is left open with, or ``None`` when the
-point closes it.
+a new wire, the status the wire is left open with, or ``None`` when the
+point closes it, and the mark it pays, ``"feedback"`` for a wire fed back,
+``"legs"`` for a leg of a spider beyond the two of a plain wire, or the
+missing one of a spider with one leg.
 """
 
 
@@ -156,6 +160,10 @@ class Plumbing:
         acyclic : Whether a consumer may only join a wire opened before it.
         feedback : The weight of a wire a consumer opens, which feeds back
             into the line, in a bijection or a function.
+        legs : The weight of each leg of a spider in a cospan beyond the
+            two of a wire, or missing from them, i.e. of each comultiplication
+            and unit in a function: at ``legs = 0`` a cospan is a Brauer
+            diagram and a function a bijection.
 
     Example
     -------
@@ -171,6 +179,7 @@ class Plumbing:
     q: float = .5
     acyclic: bool = False
     feedback: float = 1.
+    legs: float = 1.
 
     @property
     def start(self) -> tuple[int, ...]:
@@ -181,30 +190,34 @@ class Plumbing:
         """
         The moves of a producer or a consumer, see :data:`Move`.
 
-        >>> Plumbing("cospan").moves(True)
-        ((None, None), (None, 0), (0, None), (0, 0))
+        >>> Plumbing("matching").moves(True)
+        ((None, 0, None), (0, None, None))
         """
         if self.kind == "matching":
-            return (None, 0), (0, None)
+            return (None, 0, None), (0, None, None)
         if self.kind == "cospan":
-            return (None, None), (None, 0), (0, None), (0, 0)
+            return ((None, None, "legs"), (None, 0, None), (0, None, None),
+                    (0, 1, None), (1, None, "legs"), (1, 1, "legs"))
         if self.kind == "bijection":
-            return ((None, 0), (1, None)) if producer else (
-                ((0, None), ) + ((None, 1), ) * (not self.acyclic))
+            return ((None, 0, None), (1, None, None)) if producer else (
+                ((0, None, None), )
+                + ((None, 1, "feedback"), ) * (not self.acyclic))
         if producer:
-            return (None, None), (None, 0), (1, None), (1, 0)
-        return (0, None), (0, 0), *((None, 1), (1, 1)) * (not self.acyclic)
+            return ((None, None, "legs"), (None, 2, None), (1, None, None),
+                    (1, 0, None))
+        return ((2, None, None), (2, 0, None), (0, None, "legs"),
+                (0, 0, "legs"), *((None, 1, "feedback"), (1, 1, "legs"))
+                * (not self.acyclic))
 
     def weight(self, move: Move, state: tuple[int, ...]) -> float:
         """ The weight of the choices of a move, see :func:`q_integer`. """
-        pool, status = move
-        if pool is not None:
-            return q_integer(state[pool], self.q)
-        return self.feedback if status == 1 else 1.
+        pool, _, mark = move
+        factor = 1. if mark is None else getattr(self, mark)
+        return factor * (1. if pool is None else q_integer(state[pool], self.q))
 
     def after(self, move: Move, state: tuple[int, ...]) -> tuple[int, ...]:
         """ The state after a move. """
-        pool, status = move
+        pool, status, _ = move
         return tuple(count - (i == pool) + (i == status)
                      for i, count in enumerate(state))
 
@@ -500,7 +513,7 @@ class Walk:  # pylint: disable=too-many-instance-attributes  # a walk's state
 
     def apply(self, move: Move):
         """ Join the point to a wire, an open one or a new one. """
-        plumbing, (pool, status) = self.sampler.plumbing, move
+        plumbing, (pool, status, _) = self.sampler.plumbing, move
         if pool is None:
             wire = len(self.wires)
             self.wires.append([])
@@ -599,13 +612,14 @@ def colour(  # pylint: disable=too-many-arguments,too-many-locals,too-many-posit
 
 def strategy(  # pylint: disable=too-many-arguments  # the knobs of a sampler
         category: type, dom=None, cod=None, *, q: float = .5,
-        feedback: float = .3, max_boxes: int = 6):
+        feedback: float = .3, legs: float = .3, max_boxes: int = 6):
     """
     The :mod:`hypothesis` strategy of the diagrams of a category with a kind
     of plumbing, see :func:`kind_of`, from ``dom`` to ``cod``: the
-    :class:`Sampler` with at most ``max_boxes`` boxes, ``q`` per crossing and
+    :class:`Sampler` with at most ``max_boxes`` boxes, ``q`` per crossing,
     ``feedback`` per wire fed back, which is none unless the category is
-    traced, see :meth:`Sampler.strategy`.
+    traced, and ``legs`` per spider leg beyond those of a wire, see
+    :meth:`Sampler.strategy`.
 
     >>> from hypothesis import find
     >>> from discopy.compact import Ty, Diagram
@@ -617,7 +631,7 @@ def strategy(  # pylint: disable=too-many-arguments  # the knobs of a sampler
     if kind is None:
         raise NotImplementedError(f"No plumbing for {category}.")
     plumbing = Plumbing(
-        kind, q=q, feedback=feedback,
+        kind, q=q, feedback=feedback, legs=legs,
         acyclic=not issubclass(category, TracedCategory))
     return sampler(plumbing, max_boxes).strategy(category, dom, cod)
 

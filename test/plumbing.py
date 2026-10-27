@@ -19,7 +19,7 @@ def scans(plumbing, points):
                 yield tuple(sorted(map(tuple, wires))), crossings
             return
         for move, _, after in plumbing.transitions(state, points[i]):
-            pool, status = move
+            pool, status, _ = move
             for j in range(1 if pool is None else state[pool]):
                 new_pools = [list(p) for p in pools]
                 new_wires = [list(w) for w in wires]
@@ -133,3 +133,23 @@ def test_strategy(module):
         diagram = data.draw(sampler.strategy(module.Diagram, x, x @ x))
         assert (diagram.dom, diagram.cod) == (x, x @ x)
     check()
+
+
+def test_no_legs_is_one_structure_less():
+    for points in LINES:
+        assert Plumbing("cospan", legs=0).count(points)\
+            == pytest.approx(Plumbing("matching").count(points))
+        for acyclic in (True, False):
+            assert Plumbing("function", legs=0, acyclic=acyclic).count(
+                points) == pytest.approx(Plumbing(
+                    "bijection", acyclic=acyclic).count(points))
+
+
+@pytest.mark.parametrize("kind", ["cospan", "function"])
+def test_legs_count_generators(kind):
+    def energy(wires):
+        return sum(abs(len(wire) - 2) for wire in wires)
+    for points in LINES:
+        assert Plumbing(kind, q=1, legs=.5).count(points)\
+            == pytest.approx(sum(.5 ** energy(wires) for wires, _ in scans(
+                Plumbing(kind, q=1), points)))
