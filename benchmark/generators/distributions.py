@@ -5,7 +5,10 @@ Usage: python distributions.py <generator> <out.jsonl> [samples|bugs], or
 run.sh for several jobs against a checkout.
 
 Generators: search, quotient, mixed (the default of #1, on its base
-commit), boltzmann, boltzmann_mixed (the default of this branch).
+commit), boltzmann, boltzmann_mixed (the default of proptest/boltzmann),
+plumbing (boxes then plumbing, see discopy.plumbing, where the category has
+a kind of plumbing, else boltzmann), boltzmann_plumbing (boltzmann mixed
+with plumbing rather than with the quotient).
 
 ``samples`` draws 300 diagrams per category and boundary through Hypothesis
 and records their size, structure and shape; ``bugs`` searches each law
@@ -27,7 +30,7 @@ from hypothesis import HealthCheck, Phase, find, given, settings
 from hypothesis import strategies as st
 from hypothesis.errors import NoSuchExample, UnsatisfiedAssumption
 
-from discopy import symmetric
+from discopy import plumbing, symmetric
 from discopy.axioms import AxiomFailure, FUEL, Testable
 from discopy.cat import Arrow, FreeCategory
 
@@ -46,6 +49,12 @@ def patch():
     """ Make every free diagram category draw from one generator only. """
     original = symmetric.Diagram.strategy.__func__
     arrow = Arrow.strategy.__func__
+    quotient = symmetric.Diagram.quotient_strategy.__func__
+
+    def plumbed(cls, *, dom=None, cod=None, fuel=FUEL):
+        if plumbing.kind_of(cls) is None:
+            return quotient(cls, dom=dom, cod=cod, fuel=fuel)
+        return plumbing.strategy(cls, dom, cod)
 
     def only(cls, *, dom=None, cod=None, fuel=FUEL, within=None):
         if GENERATOR == "search":
@@ -55,11 +64,16 @@ def patch():
             return cls.quotient_strategy(dom=dom, cod=cod, fuel=fuel)
         if GENERATOR == "quotient":
             return cls.search(dom=dom, cod=cod, fuel=fuel, within=within)
-        if GENERATOR == "boltzmann":
+        if GENERATOR == "boltzmann" or GENERATOR == "plumbing" and (
+                within is not None or plumbing.kind_of(cls) is None):
             return arrow(cls, dom=dom, cod=cod, fuel=fuel, within=within)
+        if GENERATOR == "plumbing":
+            return plumbing.strategy(cls, dom, cod)
         return original(cls, dom=dom, cod=cod, fuel=fuel, within=within)
 
-    if GENERATOR in ("search", "quotient", "boltzmann"):
+    if GENERATOR == "boltzmann_plumbing":
+        symmetric.Diagram.quotient_strategy = classmethod(plumbed)
+    if GENERATOR in ("search", "quotient", "boltzmann", "plumbing"):
         symmetric.Diagram.strategy = classmethod(only)
         if GENERATOR == "search":
             Arrow.strategy = classmethod(only)
