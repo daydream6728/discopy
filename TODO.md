@@ -62,9 +62,9 @@ with `LogSumExp` printed as `cvxpy.log_sum_exp`.
 - [x] `Specification.diagrams` and `draw`: the sampling diagram of each sort, as an `Equation` of `monoidal` diagrams with `sympy` data
 - [x] `FreeCategory.boltzmann(*, within, width)` compiles the rules of any free category into its `Specification`
 - [x] `Arrow.strategy` and `symmetric.Diagram.strategy` draw from it rather than `search`, honouring the boundary they are asked for
-- [ ] doctests, `test/boltzmann.py`, the strategies tests and the matrix under `fast`
+- [x] doctests, `test/boltzmann.py` and the strategies tests: `pytest --skip-extra` passes 2237 here, 2186 on the base, neither failing
 - [x] draw the sampling diagram of every free category to `docs/_static/boltzmann/`
 - [x] lint: `pflake8`, `pylint`, `ruff`, `ty` on what this branch touches
 - [x] admissible rules, as on #1 before `f5293a99`: a rule the others derive is checked but generates nothing, e.g. frobenius by spiders, swaps, cut and mix
-- [ ] the matrix under `pr` against the base `681c0a75`: 2227 passed there
+- [x] the matrix under `pr` against the base `681c0a75`: the same 2872 cells, skips and expected failures, all passing but `frobenius.Diagram.str_transparency`, which the base breaks too on the term the new strategy draws: `Spider(1, 0, a) @ f` prints as one layer but reads back as `Cospan(a @ b, [0, 1], [1]) >> f`, to file as an issue
 - [ ] open questions for the human: drop `search`? `sympy`/`cvxpy` as dependencies of `dev` (`uv.lock` not regenerated: no access to the PyTorch index here)? size by nodes or by boxes? feedback in frobenius, delayed or not? ~1000 lines, at the red line
