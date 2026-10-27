@@ -247,9 +247,16 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - `optyx.channel.Swap.dagger` is the swap the other way round ([next#290]).
 - `optyx.channel.Diagram.power_fix` contracts each depth with a fresh
   optimiser and warns at the first depth `max_chi` truncates ([next#289]).
+- `python.finset.Function.then` raises `AxiomError` on functions that do not
+  compose, instead of an `IndexError` or a wrong function ([next#167]).
 - `optyx.channel.Sum` without terms keeps its types in `get_kraus` and
   `double`, and evaluates to the zero tensor, so the gradient by an absent
   variable doubles and evaluates ([next#291]).
+- `optyx` and perceval: `PercevalBackend` evaluates a closed diagram to the
+  amplitude or probability of its selections ([next#294]);
+  `Diagram.from_perceval` reads a negative feed-forward offset `k` as `-k - 1`
+  modes in between ([next#295]) and keeps a detector with nothing after it
+  ([next#299]).
 - `Hypergraph`: its hash, `simplify`, `rotate`, and `to_diagram` on
   non-self-dual, `Nat` and `Dim` types ([#324], [#387], [#393], [#622],
   [#719]).
@@ -291,7 +298,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   tails and `FollowedBy` ([next#96]), `Twist`, `Spider` and inverse `Braid`
   ([next#1]), rotated rigid boxes ([next#113]) and `"is_dagger": false`
   ([#744]).
-- `utils.dumps` writes complex data ([#775]) and lists ([next#168]), and
+- `utils.dumps` writes complex data ([#775]), lists ([next#168]) and
+  fractions ([next#376]), and
   `tensor` and `matrix` round-trip through JSON ([#794], [next#175]).
 - `eval(repr(x)) == x` for `monoidal.List` ([#773]), phased spiders
   ([next#97]), delayed qudits ([next#130]), `Measure`, `Encode`, `CQ` and the
@@ -593,6 +601,7 @@ for the changelog of `1.2.1` and earlier.
 [next#162]: https://github.com/rel-int/discopy-next/issues/162
 [next#163]: https://github.com/rel-int/discopy-next/issues/163
 [next#164]: https://github.com/rel-int/discopy-next/issues/164
+[next#167]: https://github.com/rel-int/discopy-next/issues/167
 [next#168]: https://github.com/rel-int/discopy-next/issues/168
 [next#169]: https://github.com/rel-int/discopy-next/issues/169
 [next#175]: https://github.com/rel-int/discopy-next/issues/175
@@ -612,6 +621,9 @@ for the changelog of `1.2.1` and earlier.
 [next#291]: https://github.com/rel-int/discopy-next/issues/291
 [next#292]: https://github.com/rel-int/discopy-next/issues/292
 [next#293]: https://github.com/rel-int/discopy-next/issues/293
+[next#294]: https://github.com/rel-int/discopy-next/issues/294
+[next#295]: https://github.com/rel-int/discopy-next/issues/295
+[next#299]: https://github.com/rel-int/discopy-next/issues/299
 [next#301]: https://github.com/rel-int/discopy-next/issues/301
 [next#302]: https://github.com/rel-int/discopy-next/pull/302
 [next#310]: https://github.com/rel-int/discopy-next/pull/310
@@ -622,6 +634,7 @@ for the changelog of `1.2.1` and earlier.
 [next#349]: https://github.com/rel-int/discopy-next/issues/349
 [next#350]: https://github.com/rel-int/discopy-next/issues/350
 [next#359]: https://github.com/rel-int/discopy-next/issues/359
+[next#376]: https://github.com/rel-int/discopy-next/issues/376
 [optyx#16]: https://github.com/rel-int/optyx/pull/16
 [optyx#29]: https://github.com/rel-int/optyx/pull/29
 [optyx#56]: https://github.com/rel-int/optyx/pull/56
