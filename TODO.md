@@ -25,9 +25,10 @@ under the algebra applying each rule.
 grammar explode (441 sorts and 14,670 productions for symmetric diagrams
 `x → x` alone, a minute to tune, and one grammar per boundary asked for), so
 the sorts are the *shapes* `m → n`, the numbers of wires, and a derivation
-is coloured from the root down: the variables its conclusion determines are
-matched against the boundary, the others drawn uniformly from a palette, and
-a derivation that cannot meet its boundary is rejected. The terms are drawn
+is typed from the root down by unification: each object variable is a fresh
+object of placeholder wires, each conclusion is unified with its goal, the
+wires no rule determines are drawn uniformly from a palette, and a
+derivation that cannot meet its boundary is rejected. The terms are drawn
 from the Boltzmann distribution of the shapes, coloured uniformly,
 conditioned on being well-typed.
 
