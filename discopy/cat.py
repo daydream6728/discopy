@@ -419,15 +419,17 @@ class Arrow(FreeCategory, DaggerCategory, Serialisable["Arrow"]):
     def strategy(cls, *, dom=None, cod=None, fuel=FUEL, within=None):
         """
         The strategy the property matrix samples the terms of a free category
-        from: the Boltzmann sampler of its :meth:`boltzmann` grammar, with
-        an expected ``fuel + 1`` rules and generators per derivation, which a
-        category with a combinatorial representation mixes with a sample of
-        it, e.g. :meth:`discopy.symmetric.Diagram.strategy`.
+        from: the approximate-size Boltzmann sampler of its :meth:`boltzmann`
+        grammar, with a least size drawn up to ``4 * (fuel + 1)`` rules and
+        generators per derivation, which shrinks to a single one, see
+        :meth:`discopy.boltzmann.Specification.strategy`. A category with a
+        combinatorial representation mixes it with a sample of that, e.g.
+        :meth:`discopy.symmetric.Diagram.strategy`.
 
         Parameters:
             dom : The domain, sampled if ``None``.
             cod : The codomain, sampled if ``None``.
-            fuel : One less than the expected size of a derivation.
+            fuel : A quarter of the largest least size, less one.
             within : The class whose rules a term is derived from, the
                 category itself if ``None``.
 
@@ -450,8 +452,9 @@ class Arrow(FreeCategory, DaggerCategory, Serialisable["Arrow"]):
         width = WIDTH
         while width < min(MAX_WIDTH, max(map(length, (dom, cod)))):
             width *= 2
-        return st.deferred(lambda: cls.boltzmann(
-            within=within, width=width).strategy(dom, cod, size=fuel + 1))
+        return st.deferred(lambda: st.integers(0, 4 * (fuel + 1)).flatmap(
+            lambda size: cls.boltzmann(within=within, width=width).strategy(
+                dom, cod, size=size)))
 
     @classmethod
     def generators(cls, *, dom=None, cod=None):

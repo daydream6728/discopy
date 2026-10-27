@@ -35,14 +35,16 @@ with a state ``T_s`` for each sort, its symbol as data: the *sampling
 diagram* of the sort, see :meth:`Specification.diagrams`. Its parameters are
 tuned by a convex program in log-space, see :meth:`Specification.tune`.
 
-**Colours.** A derivation is then coloured from the root down, see
-:meth:`Specification.evaluate`: the variables of a rule that its conclusion
-determines are read off the boundary asked of it, see :func:`match`, and the
-others, e.g. the middle object of a cut, are drawn wire by wire from a
-palette, uniformly. A derivation whose conclusion cannot meet the boundary
-asked of it, e.g. a cup ``x @ x.r -> Ty()`` asked for ``x @ y -> Ty()``, is
-rejected, so that the terms are drawn from the Boltzmann distribution of the
-shapes, coloured uniformly, conditioned on being well-typed.
+**Colours.** A derivation is then typed from the root down, see
+:meth:`Specification.derive`: each object variable of a rule is a fresh
+object of placeholder wires, the conclusion of each rule is unified with the
+boundary asked of it, adjoints and delays being offsets of a wire, see
+:class:`Unifier`, and the wires no rule determines are coloured uniformly
+from a palette as the term is built. A derivation whose conclusion cannot
+meet the boundary asked of it, e.g. a cup ``x @ x.r -> Ty()`` asked for
+``x @ y -> Ty()``, is rejected, so that the terms are drawn from the
+Boltzmann distribution of the shapes, coloured uniformly, conditioned on
+being well-typed.
 
 Summary
 -------
@@ -54,7 +56,7 @@ Summary
 
     Production
     Specification
-    Colouring
+    Unifier
 
 .. admonition:: Functions
 
@@ -65,7 +67,6 @@ Summary
 
         wire
         shapes
-        match
         compile
 """
 
@@ -77,15 +78,13 @@ import random as std_random
 from dataclasses import dataclass, field
 from functools import cached_property, lru_cache
 from itertools import product
-from operator import index
 from types import NoneType
-from typing import TYPE_CHECKING, Any, TypeVar, get_args, get_origin
+from typing import TYPE_CHECKING, Any, get_args, get_origin
 
 from discopy import monoidal
 from discopy.abc import Nat
 from discopy.axioms import (
-    GENERATORS, Atom, Declaration, Delay, Hom, L, Obj, R, Repeat, Tensor,
-    Unit, Var, substitute)
+    GENERATORS, Atom, Declaration, Hom, Obj, Var, substitute)
 from discopy.grammar import cfg
 from discopy.utils import AxiomError, factory_name
 
@@ -97,7 +96,25 @@ NUMBERS = 3
 """ The numbers a variable ``N: Nat`` of a rule ranges over, from zero. """
 
 SIZE = 4
-""" The expected size of a derivation, by default. """
+""" The least size of a derivation drawn by default, see
+:meth:`Specification.strategy`. """
+
+BOXES = .4
+"""
+The share of generators among the nodes of a derivation, by default: a
+uniform derivation is mostly structure, e.g. the traces of a swap, which
+tuning the expected number of generators near the singularity redresses,
+see :meth:`Specification.strategy`.
+"""
+
+SINGULAR = 1000
+"""
+The expected size the parameters of a strategy are tuned to: close enough
+to the singularity of the generating function that the distribution is
+nearly uniform on the derivations of each size, so that conditioning on a
+window of sizes draws them nearly uniformly, see
+:meth:`Specification.strategy`.
+"""
 
 WIDTH = 2
 """ The most wires on either side of a morphism of a derivation, by default.
@@ -110,6 +127,10 @@ with a power of the width, e.g. a mix with its fourth, so a boundary wider
 than that is met by a generator on either side, see
 :meth:`Specification.strategy`.
 """
+
+PLACEHOLDERS = 10 ** 6
+""" The first number of a placeholder wire, for objects that take no name,
+e.g. a dimension, see :class:`Unifier`. """
 
 MISMATCH = (AxiomError, TypeError, ValueError, AttributeError, IndexError,
             NotImplementedError)
@@ -234,8 +255,20 @@ def instances(rule: Declaration, objects: tuple, width: int):
         if any(get_origin(kind) not in (Hom, Var) for kind in kinds):
             raise NotImplementedError(f"{rule} has a premise of no sort.")
         shape = [tuple(map(length, side)) for side in sides]
-        if max(map(max, shape)) <= width:
+        if max(map(max, shape)) <= width and not vanishes(kinds, shape):
             yield scope, shape[0], shape[1:]
+
+
+def vanishes(kinds: list, shape: list) -> bool:
+    """
+    Whether an instance of a rule wraps a premise of its own shape around
+    an empty object, e.g. the trace or the feedback of no wire: admissible
+    by vanishing, it would only nest the premise in a bubble.
+    """
+    empty = any(get_origin(kind) is Var and get_args(kind)[1] is not None
+                and not isinstance(get_args(kind)[1], int)
+                and length(get_args(kind)[1]) == 0 for kind in kinds)
+    return empty and shape[0] in shape[1:]
 
 
 def sort_name(category: type, shape: tuple) -> str:
@@ -311,44 +344,6 @@ def unions(category: type, sorts: dict) -> list[Production]:
             for given in known if all(
                 side in (None, value) for side, value in zip(shape, given))]
     return productions
-
-
-def match(pattern, obj, scope: dict, shadow: dict) -> None:
-    """
-    Bind the variables of a pattern, an object expression of a rule, so that
-    it substitutes to the object ``obj`` in the ``scope``, inverting each
-    former: a tensor splits by the number of wires its factors have in the
-    ``shadow`` scope, an adjoint is undone by the other adjoint and a delay
-    by a delay back. An expression with no inverse, e.g. an exponential,
-    binds nothing, the conclusion being checked against the goal once the
-    other variables are drawn.
-
-    >>> from discopy.rigid import Ty
-    >>> X = TypeVar("X")
-    >>> scope = {}
-    >>> match(Tensor[X, L[X]], Ty('x') @ Ty('x').l, scope,
-    ...       {X: Ty('a')})
-    >>> assert scope == {X: Ty('x')}
-    """
-    if isinstance(pattern, TypeVar):
-        scope.setdefault(pattern, obj)
-        return
-    origin, args = get_origin(pattern), get_args(pattern)
-    if origin is Tensor:
-        start = 0
-        for arg in args:
-            stop = start + length(substitute(arg, shadow))
-            match(arg, obj[start:stop], scope, shadow)
-            start = stop
-    elif origin in (L, R):
-        match(args[0], obj.r if origin is L else obj.l, scope, shadow)
-    elif origin is Delay:
-        match(args[1], obj.delay(-1), scope, shadow)
-    elif origin is Repeat and index(substitute(args[1], shadow)):
-        match(args[0], obj[:length(substitute(args[0], shadow))],
-              scope, shadow)
-    elif origin not in (Unit, Repeat):
-        return
 
 
 @dataclass(frozen=True, eq=False)
@@ -615,13 +610,16 @@ class Specification:
         self.cache[key] = choices
         return choices
 
-    def sample(self, random: std_random.Random, params: dict,
-               sort: monoidal.Ty | None = None,
-               max_size: int | None = None) -> cfg.Tree | None:
+    def sample(  # pylint: disable=too-many-arguments  # a window of sizes
+            self, random: std_random.Random, params: dict,
+            sort: monoidal.Ty | None = None, max_size: int | None = None,
+            min_size: int = 0) -> cfg.Tree | None:
         """
         A derivation of a sort, the root by default, drawn exactly from the
         Boltzmann distribution at the parameters given a source of uniform
-        randomness, or ``None`` as soon as it grows past ``max_size``.
+        randomness, or ``None`` as soon as it grows past ``max_size``, or
+        when it ends short of ``min_size``: anticipated rejection, which
+        conditions the distribution on that window of sizes.
         Each choice is that of the first production whose cumulative
         probability exceeds a uniform draw, the generators first, so that a
         draw that shrinks to zero shrinks the derivation to a single box.
@@ -650,11 +648,11 @@ class Specification:
             stack.append((sort_, production))
             stack += [(monoidal.Ty(wire), None)
                       for wire in reversed(production.dom.inside)]
-        return built[0]
+        return built[0] if size >= min_size else None
 
     def palette(self, *goal, draw=None) -> tuple:
         """
-        The atoms of the boundary asked for, from which the wires no boundary
+        The atoms of the boundary asked for, from which the wires no rule
         determines are coloured, and with a hypothesis ``draw`` those of one
         or two more wires drawn by the ``generators`` of the objects, so that
         a wire may take a colour the boundary does not have.
@@ -663,92 +661,82 @@ class Specification:
         if ob is NoneType:
             return (None, )
         atoms = tuple(dict.fromkeys(
-            obj[i:i + 1] if hasattr(obj, "__len__") else obj
-            for obj in goal if obj is not None
-            for i in range(length(obj))))
-        if draw is None:
-            return atoms
-        return atoms + tuple(draw(generators(ob), label="colour")
-                             for _ in range(2 - min(1, len(atoms))))
+            atom for obj in goal if obj is not None for atom in atoms_of(obj)))
+        if draw is not None:
+            atoms += tuple(draw(generators(ob), label="colour")
+                           for _ in range(2 - min(1, len(atoms))))
+        return atoms
 
-    def kinds(self, production: Production, dom, cod,
-              colouring: Colouring) -> dict | None:
+    def derive(self, tree: cfg.Tree, dom, cod, unifier: Unifier):
         """
-        The premises of the rule of a production concluding ``dom -> cod``,
-        by name, or ``None`` when it cannot: the variables its conclusion
-        determines are matched against the boundary, see :func:`match`, and
-        the others coloured by the ``colouring``.
-        """
-        rule = self.category.rules[production.name]
-        annotations = rule.annotations()
-        scope: dict = {}
-        try:
-            for pattern, side in zip(
-                    boundary(annotations["return"]), (dom, cod)):
-                match(pattern, side, scope, production.shadow)
-            scope = {**production.shadow, **{
-                variable: scope[variable] if variable in scope
-                else colouring.colour(production.shadow[variable])
-                for variable in inspect.unwrap(rule.function).__type_params__}}
-            if boundary(rule.output(scope)) != (dom, cod):
-                return None
-            return {parameter.name: substitute(
-                annotations[parameter.name], scope)
-                for parameter in rule.parameters}
-        except MISMATCH:
-            return None
-
-    def evaluate(self, tree: cfg.Tree, dom, cod, colouring: Colouring):
-        """
-        The term a derivation denotes from ``dom`` to ``cod``, coloured from
-        the root down, or ``None`` when it cannot meet that boundary: the
-        rule of its root is applied to its :meth:`kinds` of premises, a
-        morphism premise the term of the branch evaluated at the boundary
-        it asks for, and a generator is drawn by the ``colouring``.
+        Type a derivation from ``dom`` to ``cod``, from the root down, and
+        return how to build the term it denotes once every wire is coloured,
+        or ``None`` when it cannot meet that boundary: each object variable
+        of a rule is a fresh object of placeholders of the shape of its
+        shadow, its conclusion is unified with the boundary, see
+        :class:`Unifier`, and each morphism premise derived at the boundary
+        it asks for in turn.
         """
         production, branches = tree.root, iter(tree.branches)
         assert isinstance(production, Production)
         if production.name == "any":
-            return self.evaluate(next(branches), dom, cod, colouring)
+            return self.derive(next(branches), dom, cod, unifier)
         if production.name == "box":
-            return colouring.generator(dom, cod)
-        kinds = self.kinds(production, dom, cod, colouring)
-        if kinds is None:
+            return lambda: unifier.generator(
+                unifier.resolve(dom), unifier.resolve(cod))
+        rule = self.category.rules[production.name]
+        annotations = rule.annotations()
+        scope = {**production.shadow, **{
+            variable: unifier.fresh(production.shadow[variable])
+            for variable in inspect.unwrap(rule.function).__type_params__}}
+        try:
+            for side, goal in zip(boundary(rule.output(scope)), (dom, cod)):
+                unifier.unify(side, goal)
+            kinds = {parameter.name: substitute(
+                annotations[parameter.name], scope)
+                for parameter in rule.parameters}
+        except MISMATCH:
             return None
-        arguments = {}
+        builders = {}
         for name, kind in kinds.items():
-            arguments[name] = get_args(kind)[1] if get_origin(kind) is Var\
-                else self.evaluate(next(branches), *boundary(kind), colouring)
-            if arguments[name] is None:
+            builders[name] = (lambda value=get_args(kind)[1]:
+                              unifier.resolve(value))\
+                if get_origin(kind) is Var else self.derive(
+                    next(branches), *boundary(kind), unifier)
+            if builders[name] is None:
                 return None
-        return self.category.rules[production.name](**arguments)
+        return lambda: rule(**{
+            name: build() for name, build in builders.items()})
 
     def strategy(  # pylint: disable=too-many-arguments  # a boundary, bounds
-            self, dom=None, cod=None, *, size: float = SIZE,
-            max_size: int | None = None, exact: bool = True,
-            **marks) -> st.SearchStrategy:
+            self, dom=None, cod=None, *, size: int = SIZE, exact: bool = True,
+            attempts: int = 1000, **marks) -> st.SearchStrategy:
         """
         The :mod:`hypothesis` strategy of the terms from ``dom`` to ``cod``,
-        any if ``None``, Boltzmann sampled at the parameters :meth:`tune`
-        gives the root, of at most ``max_size`` nodes, ten times the expected
-        size by default: a derivation of the shape of the boundary is drawn
-        and coloured, see :meth:`evaluate`, again until one is well-typed. A
-        side wider than the grammar is met by a generator from or to its
-        first wires, those of the widest shape.
-        The generators are drawn by the ``generators`` of the category, the
-        colours of its wires from the atoms of the boundary and those of
-        one or two wires drawn by the ``generators`` of its objects.
+        any if ``None``, whose derivations have between ``size`` and
+        ``2 * size + 1`` nodes: the approximate-size Boltzmann sampler at the
+        parameters :meth:`tune` gives near the singularity, see
+        :data:`SINGULAR`, a derivation of the shape of the boundary drawn,
+        conditioned on that window by anticipated rejection, and typed, see
+        :meth:`derive`, again until one is well-typed. A side wider
+        than the grammar is met by a generator from or to its first wires,
+        those of the widest shape. The generators are drawn by the
+        ``generators`` of the category, the colours of the wires no rule
+        determines from the :meth:`palette`, uniformly.
 
         Parameters:
             dom : The domain, any if ``None``.
             cod : The codomain, any if ``None``.
-            size : The expected size of a derivation of the root.
-            max_size : The size past which a derivation is rejected.
+            size : The least size of a derivation, half the largest.
             exact : Whether to draw from :func:`hypothesis.strategies.randoms`
                 with ``use_true_random``, i.e. from the Boltzmann
                 distribution exactly, or from the choices of Hypothesis,
                 which shrink to the first production of each sort.
-            marks : The expected applications of the rules, by name.
+            attempts : How many derivations are drawn before the example
+                is rejected.
+            marks : The expected applications of the rules near the
+                singularity, by name, the generators a share :data:`BOXES`
+                of the nodes by default, when that tunes.
 
         >>> from hypothesis import find
         >>> from discopy.monoidal import Ty, Diagram
@@ -759,8 +747,11 @@ class Specification:
         """
         # pylint: disable-next=import-outside-toplevel
         from hypothesis import reject, strategies as st
-        params = self.tune(size, **marks)
-        max_size = max_size or int(10 * size)
+        try:
+            params = self.tune(SINGULAR, **{"box": BOXES * SINGULAR} | marks)
+        except ValueError:
+            params = self.tune(SINGULAR, **marks)
+        min_size, max_size = size, 2 * size + 1
         widest = max(side for shape in self.shapes for side in shape
                      if side is not None) if len(self.shapes) > 1 else None
         inner = tuple(
@@ -776,21 +767,22 @@ class Specification:
         def terms(draw):
             random = draw(st.randoms(use_true_random=exact))
             palette = self.palette(dom, cod, draw=draw)
-            for _ in range(100):
-                tree = self.sample(random, params, sort, max_size)
+            for _ in range(attempts):
+                tree = self.sample(random, params, sort, max_size, min_size)
                 if tree is None:
                     continue
-                colouring = Colouring(random, palette, lambda x, y: draw(
-                    self.category.generators(dom=x, cod=y)))
-                dom_, cod_ = (side if side is not None else colouring.colour(
+                unifier = Unifier(self.category, random, palette, lambda x, y:
+                                  draw(self.category.generators(dom=x, cod=y)))
+                dom_, cod_ = (side if side is not None else unifier.fresh(
                     shadow) for side, shadow in zip(inner, self.sides(tree)))
-                term = self.evaluate(tree, dom_, cod_, colouring)
-                if term is None:
+                build = self.derive(tree, dom_, cod_, unifier)
+                if build is None:
                     continue
-                if dom is not None and dom != dom_:
-                    term = colouring.generator(dom, dom_) >> term
-                if cod is not None and cod != cod_:
-                    term = term >> colouring.generator(cod_, cod)
+                term = build()
+                if dom is not None and dom != term.dom:
+                    term = unifier.generator(dom, term.dom) >> term
+                if cod is not None and cod != term.cod:
+                    term = term >> unifier.generator(term.cod, cod)
                 return term
             return reject()
 
@@ -825,26 +817,139 @@ def choose(productions: list, probabilities: list, draw: float):
     return productions[-1]
 
 
-@dataclass
-class Colouring:
-    """
-    How the wires and boxes of a derivation are drawn as it is evaluated:
-    each wire no boundary determines uniformly from a ``palette`` by a source
-    of randomness ``random``, each box by the ``generator`` of a boundary.
-    """
-    random: std_random.Random
-    palette: tuple
-    generator: Any
+def atoms_of(obj) -> list:
+    """ The objects of one wire of an object, itself if it has no tensor. """
+    if not hasattr(obj, "__len__"):
+        return [obj]
+    return [obj[i:i + 1] for i in range(len(obj))]
 
-    def colour(self, shadow):
-        """ An object of the shape of a shadow, its wires drawn uniformly. """
+
+def offset(atom) -> tuple[int, int]:
+    """ The winding and the time step of the wire of an atom. """
+    wire = atom.inside[0] if hasattr(atom, "inside") else atom
+    return getattr(wire, "z", 0) or 0, getattr(wire, "time_step", 0) or 0
+
+
+def shift(atom, winding: int, steps: int):
+    """ An atom wound right ``winding`` times and delayed ``steps``. """
+    for _ in range(abs(winding)):
+        atom = atom.r if winding > 0 else atom.l
+    return atom.delay(steps) if steps else atom
+
+
+class Unifier:
+    """
+    A substitution of the placeholder wires of a derivation being typed:
+    each object variable of a rule is first a fresh object of placeholders,
+    see :meth:`fresh`, the conclusion of a rule is unified with the goal it
+    meets, see :meth:`unify`, and a placeholder no rule determines is
+    coloured uniformly from the ``palette`` the first time a term is built
+    with it, see :meth:`resolve`. Adjoints and delays are offsets of a
+    wire, an exponential the pair of its base and exponent.
+
+    >>> from random import Random
+    >>> from discopy.rigid import Ty, Diagram
+    >>> x = Ty('x')
+    >>> unifier = Unifier(Diagram, Random(0), (x, ), None)
+    >>> left, right = unifier.fresh(x), unifier.fresh(x)
+    >>> unifier.unify(left @ left.l, right @ x.l)
+    >>> assert unifier.resolve(right) == x
+    """
+    def __init__(self, category: type, random: std_random.Random,
+                 palette: tuple, generator):
+        self.ob, self.random = category.typeparams()[0], random
+        self.palette, self.generator = palette, generator
+        self.bound: dict = {}
+
+    def placeholder(self, atom):
+        """ Whether an atom is a placeholder, by its name. """
+        wire = atom.inside[0] if hasattr(atom, "inside") else atom
+        name = getattr(wire, "name", None)
+        if hasattr(wire, "base") or not isinstance(name, (str, int)):
+            return None
+        is_placeholder = name.startswith("?") if isinstance(name, str)\
+            else name >= PLACEHOLDERS
+        return name if is_placeholder else None
+
+    def fresh(self, shadow):
+        """ An object of the shape of a shadow, each wire a placeholder. """
         if shadow is None or isinstance(shadow, Nat):
             return shadow
-        atoms = [self.random.choice(self.palette)
-                 for _ in range(length(shadow))]
-        if not hasattr(shadow, "tensor"):
-            return atoms[0]
-        return type(shadow)().tensor(*atoms)
+        atoms = []
+        for _ in range(length(shadow)):
+            name = f"?{len(self.bound)}"
+            try:
+                atom = self.ob(name)
+            except MISMATCH:
+                atom = self.ob(PLACEHOLDERS + len(self.bound))
+            self.bound[self.placeholder(atom)] = None
+            atoms.append(atom)
+        return atoms[0] if not hasattr(shadow, "tensor")\
+            else type(shadow)().tensor(*atoms)
+
+    def resolve(self, obj, colour: bool = True):
+        """
+        An object with each bound placeholder substituted, and each free one
+        coloured from the palette when ``colour``.
+        """
+        if obj is None or isinstance(obj, (Nat, int)):
+            return obj
+        atoms = [self.resolve_atom(atom, colour) for atom in atoms_of(obj)]
+        return atoms[0] if not hasattr(obj, "tensor")\
+            else type(obj)().tensor(*atoms)
+
+    def resolve_atom(self, atom, colour: bool):
+        """ An atom resolved, see :meth:`resolve`. """
+        wire = atom.inside[0] if hasattr(atom, "inside") else atom
+        name = self.placeholder(atom)
+        if hasattr(wire, "base"):
+            base, exponent = (self.resolve(side, colour)
+                              for side in (wire.base, wire.exponent))
+            exp = exponent >> base if type(wire).__name__ == "Under"\
+                else base << exponent
+            return shift(exp, 0, offset(atom)[1])
+        if name is None:
+            return atom
+        if self.bound[name] is None and colour:
+            self.bound[name] = self.random.choice(self.palette)
+        if self.bound[name] is None:
+            return atom
+        return shift(self.resolve(self.bound[name], colour), *offset(atom))
+
+    def unify(self, left, right) -> None:
+        """
+        Bind placeholders so that two objects resolve to the same, raising
+        :class:`discopy.utils.AxiomError` when they cannot.
+        """
+        left, right = (self.resolve(side, False) for side in (left, right))
+        if left == right:
+            return
+        if length(left) != length(right):
+            raise AxiomError(f"{left} and {right} do not unify.")
+        for one, other in zip(atoms_of(left), atoms_of(right)):
+            self.unify_atom(*(self.resolve(atom, False)
+                              for atom in (one, other)))
+
+    def unify_atom(self, one, other) -> None:
+        """ Unify two objects of one wire, see :meth:`unify`. """
+        if one == other:
+            return
+        for this, that in ((one, other), (other, one)):
+            name = self.placeholder(this)
+            if name is not None:
+                value = shift(that, *(-n for n in offset(this)))
+                if repr(name) in repr(value):
+                    raise AxiomError(f"{this} occurs in {that}.")
+                self.bound[name] = value
+                return
+        wires = [atom.inside[0] for atom in (one, other)]
+        if all(hasattr(wire, "base") for wire in wires)\
+                and type(wires[0]) is type(wires[1])\
+                and offset(one) == offset(other):
+            self.unify(wires[0].base, wires[1].base)
+            self.unify(wires[0].exponent, wires[1].exponent)
+            return
+        raise AxiomError(f"{one} and {other} do not unify.")
 
 
 @lru_cache(maxsize=None)

@@ -10,7 +10,7 @@ pytest.importorskip("cvxpy")
 pytest.importorskip("sympy")
 
 from discopy import monoidal
-from discopy.boltzmann import compile, match, shapes
+from discopy.boltzmann import compile, shapes
 from discopy.cat import Arrow
 from discopy.grammar import categorial
 
@@ -91,17 +91,34 @@ def test_max_size():
                for _ in range(100))
 
 
-def test_match():
-    """ Matching inverts the formers of a conclusion. """
-    from typing import TypeVar
-    from discopy.axioms import Delay, Tensor
+def test_unify():
+    """ Unification undoes the formers of a conclusion, delays included. """
+    from random import Random
+    from discopy.boltzmann import Unifier
     from discopy.feedback import Ty, Diagram
-    X, Y = TypeVar("X"), TypeVar("Y")
     x, y = Ty('x'), Ty('y')
-    scope = {}
-    match(Tensor[X, Delay[Diagram, Y]], x @ y.delay(), scope,
-          {X: Ty('a'), Y: Ty('a')})
-    assert scope == {X: x, Y: y}
+    unifier = Unifier(Diagram, Random(0), (x, ), None)
+    first, second = unifier.fresh(x), unifier.fresh(x)
+    unifier.unify(first @ second.delay(), x @ y.delay())
+    assert (unifier.resolve(first), unifier.resolve(second)) == (x, y)
+    with pytest.raises(Exception):
+        unifier.unify(first, y)
+
+
+def test_cups_are_drawn():
+    """ A rigid diagram from x to x has cups in some draws. """
+    from hypothesis import given, settings, strategies as st
+    from discopy import rigid
+    x, seen = rigid.Ty('x'), []
+
+    @settings(max_examples=50, deadline=None, database=None)
+    @given(st.data())
+    def check(data):
+        diagram = data.draw(rigid.Diagram.strategy(dom=x, cod=x))
+        seen.extend(type(box).__name__ for box in diagram.boxes)
+
+    check()
+    assert "Cup" in seen
 
 
 def test_shapes():
