@@ -1111,7 +1111,9 @@ class Diagram(frobenius.Diagram):
             max_steps : The depth at which it gives up and warns.
             max_chi : The largest bond dimension each contraction keeps,
                 as in :meth:`fix`; a bond past it is truncated down to
-                `max_chi` with a warning, once. `None` contracts exactly.
+                `max_chi` with a warning, once, at the first depth that
+                truncates. Each depth is contracted with a fresh optimiser.
+                `None` contracts exactly.
                 Note a truncated contraction biases the very distances
                 being watched, which is one more reason the criterion is
                 not a certificate.
@@ -1134,21 +1136,22 @@ class Diagram(frobenius.Diagram):
                     or value <= 0:
                 raise ValueError(f"{name} must be a positive integer.")
         backends = import_module("discopy.optyx.core.backends")
-        backend = backends.QuimbBackend(
-            hyperoptimiser=None if max_chi is None
-            else HyperCompressedOptimizer())
-        budgets = []
+        warned = False
 
         def state_at(depth):
+            nonlocal warned
             network = self.at_time(depth)
-            budgets.append(max(network.truncation_dimensions(), default=1))
-            if max_chi is not None and len(budgets) == 1 \
-                    and budgets[0] > max_chi:
+            needed = max(network.truncation_dimensions(), default=1)
+            if max_chi is not None and needed > max_chi and not warned:
+                warned = True
                 warnings.warn(
-                    f"the contraction needs dimension {budgets[0]} but "
+                    f"the contraction needs dimension {needed} but "
                     f"max_chi={max_chi}: the result is an approximation "
                     "with those bonds truncated down to max_chi.",
                     UserWarning, stacklevel=3)
+            backend = backends.QuimbBackend(
+                hyperoptimiser=None if max_chi is None
+                else HyperCompressedOptimizer())
             result = network.eval(backend, **(
                 {"max_bond": max_chi} if max_chi is not None else {}))
             state = np.asarray(result.density_matrix)
