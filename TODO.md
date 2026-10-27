@@ -84,3 +84,14 @@ with `LogSumExp` printed as `cvxpy.log_sum_exp`.
 - [ ] a Boltzmann sampler of the wirings of a hypergraph category, boxes then wires, to replace `Hypergraph.strategy` and `CMap.strategy`, whose spiders of many legs, loops and compact cycles derivations rarely reach
 - [ ] grammars that are not compiled from rules, for `TermBase`, the exponential types of `biclosed.Ty` and `ProofNet`
 - [ ] `trace_left` and `curry_left` admissible in a symmetric category, conjugates of their right versions by swaps
+
+## Wiring in normal form
+
+> its not an issue if we double count, we are interested in generating good *enough* distributions, not in devising precise generating functions. for example, braids and traces can remain un-interpreted, most of what we want to quotient out is simple wiring equations such as snakes and swaps
+
+— @joseph, in a session, 2026-10-27.
+
+- [x] measure the wiring the equations erase: little, because derivations barely drew wiring at all, one swap in a hundred symmetric diagrams
+- [x] draw wiring in blocks in normal form, `discopy.wiring`: permutations, Brauer and Temperley-Lieb diagrams, never composed with each other, braids, traces, feedback, spiders and curries left free
+- [x] tune shares of generators, wiring and structure, which a tree of cuts and mixes bounds to half the nodes for the leaves
+- [x] the matrix under `pr` passes every cell the base passes, in 26 minutes rather than 36; `pytest --skip-extra` passes 2253; 166 of the 176 broken laws found alone, 167 mixed with the quotient
