@@ -600,7 +600,7 @@ einsum of a backend verbatim, which a file should not reach.
         if isinstance(other, rigid.Box) and other.z and any(
                 x.r == x for x in other.dom @ other.cod):
             return self.contract(cmap.CMap.from_diagram(other))
-        if isinstance(other, (
+        if other is None or isinstance(other, (
                 cat.Ob, cat.Box, monoidal.Colour, monoidal.Ty)):
             return super().__call__(other)
         if isinstance(other, cmap.CMap):
@@ -1142,14 +1142,20 @@ class Spider[dtype](frobenius.Spider, Box[dtype]):
             self.typ).array  # ty: ignore[invalid-argument-type]
 
 
-class Sum[dtype](monoidal.Sum, Box[dtype]):
+class Sum[dtype](frobenius.Sum, Box[dtype]):
     """
-    A formal sum of tensor diagrams with the same domain and codomain.
+    A formal sum of tensor diagrams with the same domain and codomain, a
+    frobenius sum with the flags of a :class:`discopy.markov.Sum`.
 
     Parameters:
         terms (tuple[Diagram, ...]) : The terms of the formal sum.
         dom (Dim) : The domain of the formal sum.
         cod (Dim) : The codomain of the formal sum.
+
+    Example
+    -------
+    >>> f = Box('f', Dim(2), Dim(2), [1, 0, 0, 1])
+    >>> assert f.is_cartesian and not (f + f).is_deterministic
     """
 
 

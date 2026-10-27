@@ -19,7 +19,7 @@ This repo is the *next* repo of [discopy/discopy](https://github.com/discopy/dis
 - down: upstream `main` is merged into `main` every night, never rebased
 - up: an upstream pull request is opened only when a human asks, cut from upstream `main` and small enough to read; agents propose the slices on [#55](https://github.com/rel-int/discopy-next/issues/55)
 - drift is `git diff upstream/main...main -- . ':!.github'`, split `discopy/`, `test/` and `docs/`, and tended down by slicing: moving an open upstream pull request here raises the measured drift but adds nothing to read, it only moves where the work waits
-- experiments do not live on long branches: a big, speculative one gets a repository of its own, a small one lands in `main` as a notebook
+- experiments do not live on long branches: a big, speculative one goes to its author's folder on the [wiki](https://github.com/rel-int/wiki), `content/<author>/`, as a notebook with its code beside it (ruling: [toumix/desire#195](https://github.com/toumix/desire/issues/195)); a small one lands in `main` as a notebook
 - `#N` is this repo, `discopy/discopy#N` upstream
 
 Each human's agents move their own open work from upstream, never somebody else's; [#2](https://github.com/rel-int/discopy-next/issues/2) is the record of the first such move:
