@@ -34,12 +34,13 @@ def test_rule(rule, drawn):
     """
     Apply a rule to the premises it draws for a goal, a broken one up to
     its first counterexample, and check its conclusion against the type its
-    signature states, evaluated in the scope of the draw. The objects of a
-    monoid are its one object, ``None``.
+    signature states, evaluated in the scope of the draw. Its objects are
+    those of :meth:`discopy.abc.Category.typeparams`, e.g. the one object
+    ``None`` of a monoid.
     """
     phases = (Phase.explicit, Phase.reuse, Phase.generate)\
         if rule.broken else tuple(Phase)
-    ob = rule.category.ob
+    ob = rule.category.typeparams()[0]
     objects = st.none() if ob is type(None) else ob.strategy()
 
     @settings(phases=phases)

@@ -59,6 +59,7 @@ import itertools
 from dataclasses import dataclass, field
 from functools import cached_property
 from operator import index
+from types import NoneType
 from typing import (
     Iterable, Iterator, Callable, ClassVar, Mapping, Self, TYPE_CHECKING)
 from warnings import warn
@@ -107,10 +108,10 @@ class Colour(cat.Ob):
 
     @classmethod
     def strategy(cls):
-        """ Generate no colour, ``None``, the one generated types have. """
+        """ Generate the colours of a few regions, by their names. """
         from hypothesis import strategies as st
 
-        return st.none()
+        return st.sampled_from(("red", "green", "blue")).map(cls)
 
     def __post_init__(self):
         assert_isinstance(self.name, str)
@@ -403,6 +404,17 @@ class Ty(cat.Ob, cat.FreeCategory, ColouredMonoid):
     """
 
     @classmethod
+    def typeparams(cls) -> tuple[type, type]:
+        """
+        The objects of types as a category are their colours, which a law
+        quantifies over as ``None``, the colour of every type generated:
+        no coloured type is generated yet.
+
+        >>> assert Ty.typeparams() == (NoneType, Ty)
+        """
+        return NoneType, cls
+
+    @classmethod
     def strategy(cls, **params):
         """
         Generate types by the :meth:`search` of the free monoid, i.e. from
@@ -420,11 +432,11 @@ class Ty(cat.Ob, cat.FreeCategory, ColouredMonoid):
     @classmethod
     def generators(cls, *, dom=None, cod=None):
         """
-        Generate the types of one wire. Their colours are transparent, as
-        are those :meth:`Colour.strategy` draws: a coloured type is not
-        generated yet, so the boundary is not read.
+        Generate the types of one wire, with no colour, as those of
+        :meth:`typeparams` are: a coloured type is not generated yet, so
+        the boundary is not read.
         """
-        # pylint: disable=unused-argument  # every colour is transparent
+        # pylint: disable=unused-argument  # no type generated is coloured
         return cls.generator_factory.strategy().map(cls)
 
     def cast_wire(self, x: str | cat.Ob) -> cat.Ob:
