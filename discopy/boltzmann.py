@@ -574,9 +574,25 @@ class Specification:  # pylint: disable=too-many-instance-attributes,too-many-pu
         problem.solve(solver=cvxpy.CLARABEL)
         if theta.value is None:
             raise ValueError(f"No parameters tune {self} to {key[1:]}.")
-        self.cache[key] = dict(zip(self.parameters, map(
-            math.exp, theta.value)))
+        self.cache[key] = self.converge(dict(zip(self.parameters, map(
+            math.exp, theta.value))))
         return self.cache[key]
+
+    def converge(self, params: dict, backoff: float = 1e-7) -> dict:
+        """
+        The parameters with the size shrunk until the :meth:`oracle`
+        converges: the optimum of :meth:`tune` sits at the singularity up to
+        the tolerance of the solver, on either side of it.
+        """
+        for _ in range(100):
+            try:
+                self.oracle(params)
+                return params
+            except ValueError:
+                params = {**params, self.size: params[self.size] * (
+                    1 - backoff)}
+                backoff *= 2
+        raise ValueError(f"{self} diverges at {params}.")
 
     def arrays(self, params: dict) -> tuple:
         """
