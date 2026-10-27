@@ -45,6 +45,7 @@ dependencies = [
 [dependency-groups]
 dev = [
     "coverage",
+    "cvxpy",
     "hypothesis",
     "marimo",
     "pyproject-flake8",
@@ -54,6 +55,7 @@ dev = [
     "polars",
     "pytest-xdist",
     "ruff == 0.14.0",
+    "sympy",
     "ty == 0.0.69",
 ]
 docs = ["discopy[docs]"]

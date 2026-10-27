@@ -322,16 +322,15 @@ class Diagram(balanced.Diagram, SymmetricCategory):
     @classmethod
     def strategy(cls, *, dom=None, cod=None, fuel=FUEL, within=None):
         """
-        Draw a diagram by one of two ways: :meth:`search`, the derivation from
-        the rules of the category, or :meth:`quotient_strategy`, the downgrade
-        of its combinatorial representation, which draws larger diagrams in
-        one go.
-        A morphism premise of the search is drawn by this strategy in turn,
-        so a derived diagram can contain a sampled one. A search ``within``
-        the rules of a weaker structure is not mixed with the sample, which
-        has all the structure of the category.
+        Draw a diagram by one of two ways: the Boltzmann sampler of the
+        derivations from the rules of the category, see
+        :meth:`discopy.cat.Arrow.strategy`, or :meth:`quotient_strategy`, the
+        downgrade of its combinatorial representation, which draws larger
+        diagrams in one go. A derivation ``within`` the rules of a weaker
+        structure is not mixed with the sample, which has all the structure
+        of the category.
 
-        Parameters are those of :meth:`search`.
+        Parameters are those of :meth:`discopy.cat.Arrow.strategy`.
 
         >>> from hypothesis import find
         >>> x = Ty('x')
@@ -341,7 +340,8 @@ class Diagram(balanced.Diagram, SymmetricCategory):
         """
         from hypothesis import strategies as st
 
-        derivations = cls.search(dom=dom, cod=cod, fuel=fuel, within=within)
+        derivations = super().strategy(
+            dom=dom, cod=cod, fuel=fuel, within=within)
         if within is not None:
             return derivations
         return st.one_of(derivations, cls.quotient_strategy(

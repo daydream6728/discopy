@@ -9,6 +9,13 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Added
 
+- `boltzmann`, the Boltzmann sampling of the terms of a free category:
+  `FreeCategory.boltzmann` compiles its rules into a grammar of the shapes of
+  its derivations, whose `Specification.diagrams` are its sampling diagrams,
+  with `sympy` weights as data, `Specification.tune` the convex program of
+  its parameters, lambdified into `cvxpy`, and `Specification.strategy` the
+  terms drawn and coloured to a boundary, which `Arrow.strategy` and
+  `Ty.strategy` now draw from; `sympy` and `cvxpy` join the `dev` group.
 - `axioms.Rule` and `@rule`, inference rules stated like laws on each
   structure of `abc`, and `FreeCategory.search`, the terms of a free
   category derived from its rules, which the property matrix draws:

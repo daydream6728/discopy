@@ -8,3 +8,4 @@ Property-based testing of the axioms, and how to develop against it.
     :toctree: ../_api
 
     discopy.axioms
+    discopy.boltzmann

@@ -417,17 +417,25 @@ class Ty(cat.Ob, cat.FreeCategory, ColouredMonoid):
     @classmethod
     def strategy(cls, **params):
         """
-        Generate types by the :meth:`search` of the free monoid, i.e. from
-        the identity and the composition of its rules with a wire as the
-        generator, with less fuel than a diagram since its types are the
-        boundaries of one.
+        Generate types by the Boltzmann sampler of the free monoid, see
+        :meth:`discopy.cat.FreeCategory.boltzmann`, i.e. from the identity and
+        the composition of its rules with a wire as the generator, with an
+        expected two of them and at most ``2 * fuel + 1``, less than a
+        diagram since its types are the boundaries of one.
 
-        Parameters are those of :meth:`search`.
+        Parameters:
+            fuel : One less than the expected size of a derivation.
+            within : The class whose rules a type is derived from.
 
         >>> from hypothesis import find
         >>> assert len(find(Ty.strategy(), lambda x: len(x) > 1)) == 2
         """
-        return cls.search(**{"fuel": 1, **params})
+        from hypothesis import strategies as st
+
+        fuel = params.get("fuel", 1)
+        return st.deferred(lambda: cls.boltzmann(
+            within=params.get("within")).strategy(
+                size=fuel + 1, max_size=2 * fuel + 1))
 
     @classmethod
     def generators(cls, *, dom=None, cod=None):

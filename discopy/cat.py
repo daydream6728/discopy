@@ -295,6 +295,31 @@ class FreeCategory(Category):
         return terms()
 
     @classmethod
+    def boltzmann(cls, *, within=None, width=None):
+        """
+        The grammar of the shapes of the derivations of the free category,
+        from its :attr:`rules`, whose :meth:`Specification.diagrams` are its
+        sampling diagrams and whose :meth:`Specification.strategy` Boltzmann
+        samples its terms, see :mod:`discopy.boltzmann`.
+
+        Parameters:
+            within : The class whose rules a term is derived from, the
+                category itself if ``None``.
+            width : The most wires on either side of a morphism of a
+                derivation, :data:`discopy.boltzmann.WIDTH` if ``None``.
+
+        Example
+        -------
+        >>> print(Arrow.boltzmann().system())
+        {T[Hom]: T[Hom]**2*u_cut*z + u_ax*z + u_box*z}
+        """
+        # pylint: disable-next=import-outside-toplevel  # boltzmann imports cat
+        from discopy import boltzmann
+
+        return boltzmann.compile(
+            cls, within=within, width=width or boltzmann.WIDTH)
+
+    @classmethod
     def generators(cls, *, dom=None, cod=None):
         """
         Generate the generators of the free category as terms of it, from
@@ -390,16 +415,36 @@ class Arrow(FreeCategory, DaggerCategory, Serialisable["Arrow"]):
     ob = Ob
 
     @classmethod
-    def strategy(cls, **params):
+    def strategy(cls, *, dom=None, cod=None, fuel=FUEL, within=None):
         """
         The strategy the property matrix samples the terms of a free category
-        from: its :meth:`search`, which a category with a combinatorial
-        representation mixes with the :meth:`sample` of it, e.g.
-        :meth:`discopy.symmetric.Diagram.strategy`.
+        from: the Boltzmann sampler of its :meth:`boltzmann` grammar, with
+        an expected ``fuel + 1`` rules and generators per derivation, which a
+        category with a combinatorial representation mixes with a sample of
+        it, e.g. :meth:`discopy.symmetric.Diagram.strategy`.
 
-        Parameters are those of :meth:`search`.
+        Parameters:
+            dom : The domain, sampled if ``None``.
+            cod : The codomain, sampled if ``None``.
+            fuel : One less than the expected size of a derivation.
+            within : The class whose rules a term is derived from, the
+                category itself if ``None``.
+
+        Example
+        -------
+        >>> from hypothesis import find
+        >>> x, y = Ob('x'), Ob('y')
+        >>> term = find(Arrow.strategy(dom=x, cod=y), lambda f: len(f) > 2)
+        >>> assert (term.dom, term.cod) == (x, y)
         """
-        return cls.search(**params)
+        # pylint: disable-next=import-outside-toplevel  # boltzmann imports cat
+        from discopy.boltzmann import WIDTH, length
+
+        from hypothesis import strategies as st
+
+        width = max(WIDTH, *(length(side) for side in (dom, cod)))
+        return st.deferred(lambda: cls.boltzmann(
+            within=within, width=width).strategy(dom, cod, size=fuel + 1))
 
     @classmethod
     def generators(cls, *, dom=None, cod=None):
