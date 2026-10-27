@@ -68,3 +68,18 @@ with `LogSumExp` printed as `cvxpy.log_sum_exp`.
 - [x] admissible rules, as on #1 before `f5293a99`: a rule the others derive is checked but generates nothing, e.g. frobenius by spiders, swaps, cut and mix
 - [x] the matrix under `pr` against the base `681c0a75`: the same 2872 cells, skips and expected failures, all passing but `frobenius.Diagram.str_transparency`, which the base breaks too on the term the new strategy draws: `Spider(1, 0, a) @ f` prints as one layer but reads back as `Cospan(a @ b, [0, 1], [1]) >> f`, to file as an issue
 - [ ] open questions for the human: drop `search`? `sympy`/`cvxpy` as dependencies of `dev` (`uv.lock` not regenerated: no access to the PyTorch index here)? size by nodes or by boxes? feedback in frobenius, delayed or not? ~1000 lines, at the red line
+
+## Comparison with the generators of #1
+
+> compare the quality of the generated distributions of diagrams with the two from #1 and investigate whether we could make this boltzmann sampling the only way to generate diagrams for our property testing setup
+
+— @joseph, in a session, 2026-10-27. `benchmark/generators/` reproduces it.
+
+- [x] measure search, quotient and their mix on the base of #1, Boltzmann alone and mixed here: size, structure, diversity, speed, and the broken laws each finds
+- [x] free Boltzmann draws mostly one node: tune near the singularity and condition on a window of sizes drawn by hypothesis
+- [x] type derivations by unification rather than colour them top-down, so that a cut can meet a cup below it
+- [x] tune generators to two fifths of the nodes, and drop the instances that vanish over an empty object
+- [ ] drop `search`, which Boltzmann now subsumes
+- [ ] a Boltzmann sampler of the wirings of a hypergraph category, boxes then wires, to replace `Hypergraph.strategy` and `CMap.strategy`, whose spiders of many legs, loops and compact cycles derivations rarely reach
+- [ ] grammars that are not compiled from rules, for `TermBase`, the exponential types of `biclosed.Ty` and `ProofNet`
+- [ ] `trace_left` and `curry_left` admissible in a symmetric category, conjugates of their right versions by swaps
