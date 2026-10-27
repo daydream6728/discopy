@@ -213,7 +213,8 @@ class Plumbing:
         """ The weight of the choices of a move, see :func:`q_integer`. """
         pool, _, mark = move
         factor = 1. if mark is None else getattr(self, mark)
-        return factor * (1. if pool is None else q_integer(state[pool], self.q))
+        choices = 1. if pool is None else q_integer(state[pool], self.q)
+        return factor * choices
 
     def after(self, move: Move, state: tuple[int, ...]) -> tuple[int, ...]:
         """ The state after a move. """
