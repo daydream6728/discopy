@@ -894,7 +894,7 @@ CMap = cmap.CMap[Diagram]
 for level in (
         BiclosedCategory, RigidCategory, PivotalCategory, CompactCategory):
     for name, law in vars(level).items():
-        if isinstance(law, (Axiom, Rule)):
+        if isinstance(law, (Axiom, Rule)) and law.derivation is None:
             setattr(CMap, name, law.inapplicable(messages.MAP_HAS_NO_ADJOINTS))
 
 Feedback, Trace, FollowedBy, Head, Tail = feedback.generators(Diagram, Box)
