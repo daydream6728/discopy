@@ -554,6 +554,8 @@ class Specification:  # pylint: disable=too-many-instance-attributes,too-many-pu
         import sympy
         key = ("tune", size, tuple(sorted(marks.items())))
         if key in self.cache:
+            if self.cache[key] is None:
+                raise ValueError(f"No parameters tune {self} to {key[1:]}.")
             return self.cache[key]
         thetas, logs, rhs = self.logarithms()
         names = ["z"] + [str(mark).removeprefix("u_") for mark in self.marks]
@@ -573,6 +575,7 @@ class Specification:  # pylint: disable=too-many-instance-attributes,too-many-pu
                 if i not in targets])
         problem.solve(solver=cvxpy.CLARABEL)
         if theta.value is None:
+            self.cache[key] = None
             raise ValueError(f"No parameters tune {self} to {key[1:]}.")
         self.cache[key] = self.converge(dict(zip(self.parameters, map(
             math.exp, theta.value))))
@@ -666,8 +669,7 @@ class Specification:  # pylint: disable=too-many-instance-attributes,too-many-pu
         """
         # pylint: disable-next=import-outside-toplevel
         import numpy
-        key = ("probabilities", tuple(sorted(
-            (str(k), v) for k, v in params.items())))
+        key = ("probabilities", *(params[p] for p in self.parameters))
         if key in self.cache:
             return self.cache[key]
         values = numpy.append(self.oracle(params), 1)
@@ -802,6 +804,8 @@ class Specification:  # pylint: disable=too-many-instance-attributes,too-many-pu
         shares of the generators, the wiring and the structure, of the
         first two, and of none.
         """
+        if "shares" in self.cache:
+            return self.cache["shares"]
         names = [str(mark).removeprefix("u_") for mark in self.marks]
         structure = [name for name in names if name not in PLUMBING]
         base = {"box": BOXES} | ({"wiring": WIRINGS} if self.wiring else {})
@@ -813,6 +817,7 @@ class Specification:  # pylint: disable=too-many-instance-attributes,too-many-pu
                 self.tune(SINGULAR, **marks)
             except ValueError:
                 continue
+            self.cache["shares"] = marks
             return marks
         return {}
 
