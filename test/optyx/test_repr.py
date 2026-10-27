@@ -49,7 +49,8 @@ CHANNEL = [
 ]
 
 QUBITS = [
-    qubits.Z(1, 2), qubits.Z(1, 1, 0.25), qubits.X(2, 1), qubits.X(0, 1, 0.5),
+    qubits.Z(1, 2), qubits.Z(1, 1, 0.25), qubits.Z(1, 1, 0.0),
+    qubits.X(2, 1), qubits.X(0, 1, 0.5), qubits.X(1, 1, 0.0),
     qubits.H(), qubits.Scalar(2), qubits.Scalar(0.5j),
     qubits.Ket(0), qubits.Ket("+"), qubits.Bra(1), qubits.Bra("-"),
     qubits.Measure(2), qubits.Encode(3), qubits.Discard(1),
@@ -79,7 +80,8 @@ CLASSICAL = [
     classical.Not(), classical.Mod2(), classical.Divide(),
     classical.Multiply(), classical.Sub(), classical.H(),
     classical.SwapBit(), classical.SwapN(),
-    classical.Scalar(2), classical.Z(1, 2), classical.X(2, 1, 0.5),
+    classical.Scalar(2), classical.Z(1, 2), classical.Z(1, 1, 0.0),
+    classical.X(2, 1, 0.5), classical.X(1, 1, 0.0),
     classical.BinaryMatrix([[1, 0], [0, 1]]),
 ]
 
@@ -112,6 +114,7 @@ def test_what_equality_ignores(box, attribute):
         assert np.array_equal(other.density_matrix.matrix,
                               box.density_matrix.matrix)
     elif attribute == "internal_states":
+        assert len(other.internal_states) == len(box.internal_states)
         assert all(np.array_equal(x, y) for x, y in zip(
             other.internal_states, box.internal_states))
     else:

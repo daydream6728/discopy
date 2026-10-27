@@ -699,9 +699,8 @@ class Z(Channel):
         self.phase = phase
 
     def __repr__(self):
-        legs = f"{len(self.dom)}, {len(self.cod)}"
-        phase = "" if not self.phase else f", {self.phase!r}"
-        return f"{factory_name(type(self))}({legs}{phase})"
+        return f"{factory_name(type(self))}({len(self.dom)}, "\
+            f"{len(self.cod)}, {self.phase!r})"
 
     def lambdify(self, *symbols, **kwargs):
         return lambda *xs: type(self)(
@@ -805,9 +804,8 @@ class X(Channel):
         self.phase = phase
 
     def __repr__(self):
-        legs = f"{len(self.dom)}, {len(self.cod)}"
-        phase = "" if not self.phase else f", {self.phase!r}"
-        return f"{factory_name(type(self))}({legs}{phase})"
+        return f"{factory_name(type(self))}({len(self.dom)}, "\
+            f"{len(self.cod)}, {self.phase!r})"
 
     def lambdify(self, *symbols, **kwargs):
         return lambda *xs: type(self)(
