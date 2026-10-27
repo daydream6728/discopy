@@ -939,15 +939,25 @@ class Layer(cat.Box, ColouredMonoid):
 
     @classmethod
     def normalise(cls, inside):
-        """ The canonical word of boxes and non-empty plumbing: either we
-        append or we tensor with the last element. """
+        """
+        The canonical word of boxes and non-empty plumbing: either we
+        append or we tensor with the last element. Plumbing that tensors
+        into an identity, e.g. a spider with one leg on each side, leaves
+        its type behind, and any other diagram leaves the two apart.
+        """
         result = []
         for value in (x for x in inside if not isinstance(x, Ty) or x):
             if not result or not cls.is_plumbing_component(value)\
                     or not cls.is_plumbing_component(result[-1]):
                 result.append(value)
+                continue
+            merged = result[-1] @ value
+            if isinstance(merged, (Ty, Box)):
+                result[-1] = merged
+            elif not merged.inside:
+                result[-1] = merged.dom
             else:
-                result[-1] = result[-1] @ value
+                result.append(value)
         return tuple(result)
 
     def __iter__(self):
@@ -1089,6 +1099,9 @@ class Layer(cat.Box, ColouredMonoid):
                 staircases, normalize=Diagram.normalize)
         except NotImplementedError as exception:  # Eckmann-Hilton argument.
             diagram = exception.last_step
+        if not diagram.inside:  # The layers compose to the identity,
+            raise AxiomError(  # which is not a layer, see #599.
+                messages.NOT_MERGEABLE.format(self, other))
         boxes_or_types, offset = [self.dom[:0]], 0
         for layer, box, box_offset in zip(
                 diagram.inside, diagram.boxes, diagram.offsets):
