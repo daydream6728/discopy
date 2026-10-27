@@ -66,7 +66,8 @@ class Function(Category[Ty, "Function"]):
     ob = Ty
     type_checking = True
 
-    def __init__(self, inside: Callable, dom: Ty | type, cod: Ty | type):
+    def __init__(self, inside: Callable, dom: Ty | type | tuple[type, ...],
+                 cod: Ty | type | tuple[type, ...]):
         self.inside, self.dom, self.cod = (
             inside, self.ob.cast(dom), self.ob.cast(cod))
 
