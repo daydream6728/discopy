@@ -233,7 +233,7 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   ([next#293]).
 - `docs/notebooks/optyx/channel_error.ipynb`, a 0-byte file that is not valid
   JSON and so not a notebook, is removed: it was added empty by `0e6c24bd`
-  (optyx#136) and never had content to restore ([next#250]).
+  ([optyx#136]) and never had content to restore ([next#250]).
 - `cat.Functor` reads the image of a daggered box off `ar_map` when the
   codomain has no dagger to take, instead of daggering the image: a functor
   into `stream.Stream` or `python.Function` used to raise an `AttributeError`,
@@ -644,6 +644,7 @@ for the changelog of `1.2.1` and earlier.
 [optyx#82]: https://github.com/rel-int/optyx/pull/82
 [optyx#84]: https://github.com/rel-int/optyx/pull/84
 [optyx#87]: https://github.com/rel-int/optyx/pull/87
+[optyx#136]: https://github.com/rel-int/optyx/pull/136
 [lambek#2]: https://github.com/rel-int/lambek/pull/2
 [lambek#8]: https://github.com/rel-int/lambek/pull/8
 [lambek#12]: https://github.com/rel-int/lambek/pull/12
