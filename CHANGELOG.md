@@ -245,6 +245,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - `closed.TermBase.normal_form` and `reduce` take a constant as the head of a
   spine, e.g. on the terms of `grammar.abstract` ([next#278]).
 - `optyx.channel.Swap.dagger` is the swap the other way round ([next#290]).
+- `python.finset.Function.then` raises `AxiomError` on functions that do not
+  compose, instead of an `IndexError` or a wrong function ([next#167]).
 - `optyx.channel.Sum` without terms keeps its types in `get_kraus` and
   `double`, and evaluates to the zero tensor, so the gradient by an absent
   variable doubles and evaluates ([next#291]).
@@ -591,6 +593,7 @@ for the changelog of `1.2.1` and earlier.
 [next#162]: https://github.com/rel-int/discopy-next/issues/162
 [next#163]: https://github.com/rel-int/discopy-next/issues/163
 [next#164]: https://github.com/rel-int/discopy-next/issues/164
+[next#167]: https://github.com/rel-int/discopy-next/issues/167
 [next#168]: https://github.com/rel-int/discopy-next/issues/168
 [next#169]: https://github.com/rel-int/discopy-next/issues/169
 [next#175]: https://github.com/rel-int/discopy-next/issues/175
