@@ -9,5 +9,5 @@ Branched off `proptest/boltzmann`, local experiment.
 - [x] Sample boxes and plumbing jointly, `x` per box over `k!`, exactly, conditioned on the number of boxes, which Hypothesis draws
 - [x] Type the wires after the fact, one colour per spider, and build the diagram through `Hypergraph`
 - [x] Test the exact laws on small lines by enumeration
-- [ ] Compare with the derivation sampler and the graph sampler on `benchmark/generators`: samples and broken laws
-- [ ] Write up the energy of plumbing and the results
+- [x] Compare with the derivation sampler and the graph sampler on `benchmark/generators`: samples and broken laws
+- [x] Write up the energy of plumbing and the results
