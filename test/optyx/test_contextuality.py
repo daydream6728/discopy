@@ -70,6 +70,11 @@ def test_distributions_open_and_closed():
         assert all(closed[section] == approx(p) for section, p in row.items())
     with raises(ValueError):
         distributions(bell_test, (2, 2), outputs=(2, 2))
+    assert distributions(Diagram.id(bit), (2, )) == [{(0, ): 1}, {(1, ): 1}]
+    with raises(ValueError):
+        Model.from_diagram(bell_test, outputs=(1, 2))
+    with raises(ValueError):
+        Model.from_diagram(bell_test, outputs=(1, ))
 
 
 def test_local_measurement():
