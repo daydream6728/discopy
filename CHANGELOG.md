@@ -369,6 +369,9 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   identity, TikZ twists take xcolor names, hexcode styles drop `#` ([next#31]).
 - A law reads its type parameters when another class shares its name.
 - `discopy.grammar.neural` installs with the `grammar` extra ([next#52]).
+- `zx.H`, quantum gates that do not send basis states to basis states,
+  `gates.Bra`, `gates.Match` and `tensor.Sum` no longer claim to be cartesian
+  ([next#115]).
 - Docstrings of `para` and two others ([#494], [#683], [#693]), a citation
   in `kleisli.additive` ([#639]), and notebook titles in the docs ([#526]).
 
@@ -579,6 +582,7 @@ for the changelog of `1.2.1` and earlier.
 [next#112]: https://github.com/rel-int/discopy-next/issues/112
 [next#113]: https://github.com/rel-int/discopy-next/issues/113
 [next#114]: https://github.com/rel-int/discopy-next/issues/114
+[next#115]: https://github.com/rel-int/discopy-next/issues/115
 [next#116]: https://github.com/rel-int/discopy-next/issues/116
 [next#118]: https://github.com/rel-int/discopy-next/issues/118
 [next#119]: https://github.com/rel-int/discopy-next/issues/119
