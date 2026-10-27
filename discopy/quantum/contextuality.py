@@ -29,6 +29,8 @@ Summary
         maximise
         sensitivity
         ascend
+        attempt
+        derivative
 
 Note
 ----
@@ -155,13 +157,14 @@ def ascend(model: Callable[[np.ndarray], Model], params: Sequence[float],
     returning the parameters and the model it stops at.
 
     Parameters:
-        model : A function from an array of parameters to a model.
+        model : A function from an array of parameters to a model, raising
+            ``ValueError`` outside the parameters it is defined on.
         params : The starting parameters.
         steps : The number of gradients computed.
         learning_rate : The initial step size, doubled after a step that
             improves the fraction and halved, up to eight times, after one
-            that does not.
-        difference : The step of the forward differences approximating the
+            that does not or that leaves the empirical models.
+        difference : The step of the finite differences approximating the
             derivatives of the table with respect to the parameters.
 
     The gradient of the fraction with respect to the table is
@@ -175,31 +178,63 @@ def ascend(model: Callable[[np.ndarray], Model], params: Sequence[float],
     Example
     -------
     Mixing the Popescu-Rohrlich box with white noise, the ascent on the
-    weight of the box from a contextual start reaches the box itself.
+    weight of the box from a contextual start approaches the box itself:
+    the mixture is not defined beyond a weight of one, so every step past
+    it is halved until it lands below.
 
     >>> PR = Model(Scenario.bell(2), [[1/2, 0, 0, 1/2]] * 3 + [
     ...     [0, 1/2, 1/2, 0]])
     >>> noise = Model(Scenario.bell(2), [[1/4] * 4] * 4)
-    >>> isotropic = lambda params: PR.mix(noise, min(1., params[0]))
+    >>> isotropic = lambda params: PR.mix(noise, params[0])
     >>> weight, box = ascend(isotropic, [.75])  # doctest: +EXTRA
-    >>> assert box.is_close(PR) and weight[0] >= 1
+    >>> assert .99 < weight[0] <= 1 and box.contextual_fraction() > .98
     """
     params = np.array(params, dtype=float)
     current = model(params)
     for _ in range(steps):
         gradient = current.gradient().vector
         jacobian = np.array([
-            (model(params + difference * direction).vector - current.vector)
-            / difference for direction in np.eye(len(params))])
+            derivative(model, params, current, difference * direction)
+            for direction in np.eye(len(params))])
         direction = jacobian @ gradient
         for _ in range(8):
-            candidate = model(params + learning_rate * direction)
-            if candidate.contextual_fraction() > current.contextual_fraction():
+            candidate = attempt(model, params + learning_rate * direction)
+            if candidate is not None and candidate.contextual_fraction()\
+                    > current.contextual_fraction():
                 params, current = params + learning_rate * direction, candidate
                 learning_rate = 2 * learning_rate
                 break
             learning_rate = learning_rate / 2
     return params, current
+
+
+def attempt(model: Callable[[np.ndarray], Model], params: np.ndarray
+            ) -> Model | None:
+    """
+    The model at some parameters, or ``None`` where the setup raises
+    ``ValueError`` or its table is not an empirical model, which
+    :func:`ascend` steps over rather than stopping at.
+    """
+    try:
+        candidate = model(params)
+        candidate.assert_compatible()
+    except ValueError:
+        return None
+    return candidate
+
+
+def derivative(model: Callable[[np.ndarray], Model], params: np.ndarray,
+               current: Model, step: np.ndarray) -> np.ndarray:
+    """
+    The derivative of the table of a parametrised model along a step, by a
+    forward difference from the ``current`` model at ``params``, or a
+    backward one where the forward step leaves the setup.
+    """
+    forward = attempt(model, params + step)
+    if forward is not None:
+        return (forward.vector - current.vector) / np.linalg.norm(step)
+    backward = model(params - step)
+    return (current.vector - backward.vector) / np.linalg.norm(step)
 
 
 class Scenario:
@@ -512,7 +547,7 @@ class Model(Table):
         (0.5, 0.0, 0.0, 0.5)
         """
         sums = [sum(row) for row in self.table]
-        if min(sums) <= atol or max(sums) - min(sums) > atol:
+        if min(sums) <= 0 or max(sums) - min(sums) > atol:
             raise ValueError(
                 f"The rows of {self} do not sum to the same probability.")
         result = Model(self.scenario, [
