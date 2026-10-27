@@ -133,6 +133,7 @@ and feed the result into a controlled quantum gate.
 
 from typing import Callable, List
 import numpy as np
+from discopy.utils import factory_name
 from discopy.optyx import channel
 from discopy.optyx.core import (
     control,
@@ -276,12 +277,16 @@ class Scalar(ClassicalBox):
     """
 
     def __init__(self, value):
+        self.value = value
         super().__init__(
             f"{value}",
             diagram.Scalar(value),
             bit**0,
             bit**0
         )
+
+    def __repr__(self):
+        return f"{factory_name(type(self))}({self.value!r})"
 
 
 class Add(ClassicalBox):
@@ -297,6 +302,9 @@ class Add(ClassicalBox):
             mode**n,
             mode
         )
+
+    def __repr__(self):
+        return f"{factory_name(type(self))}({len(self.dom)})"
 
 
 class Sub(ClassicalBox):
@@ -318,6 +326,9 @@ class Sub(ClassicalBox):
             mode
         )
 
+    def __repr__(self):
+        return f"{factory_name(type(self))}()"
+
 
 class Multiply(ClassicalBox):
     """
@@ -332,6 +343,9 @@ class Multiply(ClassicalBox):
             mode**2,
             mode
         )
+
+    def __repr__(self):
+        return f"{factory_name(type(self))}()"
 
 
 class Divide(ClassicalBox):
@@ -349,6 +363,9 @@ class Divide(ClassicalBox):
             mode
         )
 
+    def __repr__(self):
+        return f"{factory_name(type(self))}()"
+
 
 class Mod2(ClassicalBox):
     """
@@ -364,6 +381,9 @@ class Mod2(ClassicalBox):
             mode,
             bit
         )
+
+    def __repr__(self):
+        return f"{factory_name(type(self))}()"
 
 
 class CopyN(ClassicalBox):
@@ -381,6 +401,9 @@ class CopyN(ClassicalBox):
             mode**n
         )
 
+    def __repr__(self):
+        return f"{factory_name(type(self))}({len(self.cod)})"
+
 
 class SwapN(ClassicalBox):
     """
@@ -397,6 +420,9 @@ class SwapN(ClassicalBox):
             mode**2
         )
 
+    def __repr__(self):
+        return f"{factory_name(type(self))}()"
+
 
 class PostselectBit(ClassicalBox):
     """
@@ -407,6 +433,7 @@ class PostselectBit(ClassicalBox):
 
         if not all(bit in (0, 1) for bit in bits):
             raise ValueError("Bits must be a list of 0s and 1s.")
+        self.bits = bits
         kraus = zx.X(1, 0, 0.5**bits[0])
         # pylint: disable=invalid-name
         for b in bits[1:]:
@@ -419,6 +446,10 @@ class PostselectBit(ClassicalBox):
             bit**0
         )
 
+    def __repr__(self):
+        bits = ", ".join(map(repr, self.bits))
+        return f"{factory_name(type(self))}({bits})"
+
 
 class PostselectDigit(ClassicalBox):
     """
@@ -428,12 +459,17 @@ class PostselectDigit(ClassicalBox):
     def __init__(self, *digits):
         if not all(isinstance(digit, int) for digit in digits):
             raise ValueError("Digits must be a list of integers.")
+        self.digits = digits
         super().__init__(
             f"PostselectDigit({digits})",
             zw.Select(*digits),
             mode**len(digits),
             mode**0
         )
+
+    def __repr__(self):
+        digits = ", ".join(map(repr, self.digits))
+        return f"{factory_name(type(self))}({digits})"
 
 
 class Not(ClassicalBox):
@@ -451,6 +487,9 @@ class Not(ClassicalBox):
             bit
         )
 
+    def __repr__(self):
+        return f"{factory_name(type(self))}()"
+
 
 class Xor(ClassicalBox):
     """
@@ -467,6 +506,10 @@ class Xor(ClassicalBox):
             bit
         )
 
+    def __repr__(self):
+        n = len(self.dom)
+        return f"{factory_name(type(self))}({'' if n == 2 else n})"
+
 
 class And(ClassicalBox):
     """
@@ -476,12 +519,16 @@ class And(ClassicalBox):
     The map will perform AND on the basis states.
     """
     def __init__(self, n=2):
+        self.n = n
         super().__init__(
             "AndBit",
             zx.And(n),
             bit**2,
             bit
         )
+
+    def __repr__(self):
+        return f"{factory_name(type(self))}({'' if self.n == 2 else self.n})"
 
 
 class CopyBit(ClassicalBox):
@@ -499,6 +546,10 @@ class CopyBit(ClassicalBox):
             bit**n
         )
 
+    def __repr__(self):
+        n = len(self.cod)
+        return f"{factory_name(type(self))}({'' if n == 2 else n})"
+
 
 class SwapBit(ClassicalBox):
     """
@@ -514,6 +565,9 @@ class SwapBit(ClassicalBox):
             bit**2,
             bit**2
         )
+
+    def __repr__(self):
+        return f"{factory_name(type(self))}()"
 
 
 class Or(ClassicalBox):
@@ -531,6 +585,10 @@ class Or(ClassicalBox):
             bit
         )
 
+    def __repr__(self):
+        n = len(self.dom)
+        return f"{factory_name(type(self))}({'' if n == 2 else n})"
+
 
 # pylint: disable=invalid-name
 class Z(ClassicalBox):
@@ -541,12 +599,18 @@ class Z(ClassicalBox):
 
     def __init__(self, n_legs_in, n_legs_out, phase=0):
         kraus = zx.Z(n_legs_in, n_legs_out, phase)
+        self.phase = phase
         super().__init__(
             f"Z({phase})",
             kraus,
             bit**n_legs_in,
             bit**n_legs_out,
         )
+
+    def __repr__(self):
+        legs = f"{len(self.dom)}, {len(self.cod)}"
+        phase = "" if not self.phase else f", {self.phase!r}"
+        return f"{factory_name(type(self))}({legs}{phase})"
 
 
 # pylint: disable=invalid-name
@@ -558,12 +622,18 @@ class X(ClassicalBox):
 
     def __init__(self, n_legs_in, n_legs_out, phase=0):
         kraus = zx.X(n_legs_in, n_legs_out, phase)
+        self.phase = phase
         super().__init__(
             f"X({phase})",
             kraus,
             bit**n_legs_in,
             bit**n_legs_out,
         )
+
+    def __repr__(self):
+        legs = f"{len(self.dom)}, {len(self.cod)}"
+        phase = "" if not self.phase else f", {self.phase!r}"
+        return f"{factory_name(type(self))}({legs}{phase})"
 
 
 # pylint: disable=invalid-name
@@ -581,6 +651,9 @@ class H(ClassicalBox):
             bit,
             bit,
         )
+
+    def __repr__(self):
+        return f"{factory_name(type(self))}()"
 
 
 class ControlChannel(ClassicalBox):
@@ -656,6 +729,10 @@ class BinaryMatrix(ControlChannel):
             ),
         )
 
+    def __repr__(self):
+        matrix = self.density_matrix.matrix.tolist()
+        return f"{factory_name(type(self))}({matrix})"
+
 
 class Digit(ClassicalBox):
     """
@@ -670,6 +747,10 @@ class Digit(ClassicalBox):
             mode**0,
             mode**len(photons)
         )
+
+    def __repr__(self):
+        photons = ", ".join(map(repr, self.photons))
+        return f"{factory_name(type(self))}({photons})"
 
 
 Bit = lambda *bits: PostselectBit(*bits).dagger()  # noqa: E731

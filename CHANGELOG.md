@@ -231,6 +231,12 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   with, `bit -> bit ** n` ([next#292]); `optyx.core.zx.SWAP` evaluates, its
   `truncation` no longer an unbound function set on the instance
   ([next#293]).
+- Every box of `discopy.optyx` prints the call that built it, so that
+  `eval(repr(x)) == x` holds for it as STYLE.md asks and `axioms.transparency`
+  states: the boxes of `channel`, `qubits`, `photonic` and `classical` narrow
+  `__init__` and used to print `cat.Box`'s `(name, dom, cod, data=...)`, which
+  their own constructor cannot take. `core.diagram.Mode` and `Bit` print their
+  count ([next#351]).
 - `cat.Functor` reads the image of a daggered box off `ar_map` when the
   codomain has no dagger to take, instead of daggering the image: a functor
   into `stream.Stream` or `python.Function` used to raise an `AttributeError`,
@@ -630,6 +636,7 @@ for the changelog of `1.2.1` and earlier.
 [next#323]: https://github.com/rel-int/discopy-next/issues/323
 [next#349]: https://github.com/rel-int/discopy-next/issues/349
 [next#350]: https://github.com/rel-int/discopy-next/issues/350
+[next#351]: https://github.com/rel-int/discopy-next/issues/351
 [next#359]: https://github.com/rel-int/discopy-next/issues/359
 [next#376]: https://github.com/rel-int/discopy-next/issues/376
 [optyx#16]: https://github.com/rel-int/optyx/pull/16

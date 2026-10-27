@@ -234,7 +234,7 @@ from discopy import tensor
 from discopy import monoidal, symmetric, frobenius, hypergraph
 from discopy.cat import factory
 from discopy.python import finset
-from discopy.utils import AxiomError
+from discopy.utils import AxiomError, factory_name
 from discopy.optyx.core import diagram, control, path, zw
 from discopy.optyx.sampling import Interferometer, Unravelling
 
@@ -1652,6 +1652,11 @@ class Channel(Diagram, frobenius.Box):
         self.env = env
         super().__init__(name, dom, cod)
 
+    def __repr__(self):
+        env = "" if not self.env else f", env={self.env!r}"
+        return f"{factory_name(type(self))}({self.name!r}, {self.kraus!r}, "\
+            f"{self.dom!r}, {self.cod!r}{env})"
+
     def double(self):
         """
         Returns the :class:`diagram.Diagram` representing
@@ -1789,6 +1794,10 @@ class CQMap(Diagram, frobenius.Box):
 
         self.density_matrix = density_matrix
         super().__init__(name, dom, cod)
+
+    def __repr__(self):
+        return f"{factory_name(type(self))}({self.name!r}, "\
+            f"{self.density_matrix!r}, {self.dom!r}, {self.cod!r})"
 
     def double(self):
         return self.density_matrix
@@ -1955,6 +1964,9 @@ class Measure(Channel):
         kraus = diagram.Id(dom.single())
         super().__init__(name="Measure", kraus=kraus, dom=dom, cod=cod)
 
+    def __repr__(self):
+        return f"{factory_name(type(self))}({self.dom!r})"
+
     def inflate(self, d):
         r""" A specific choice of inflation for the Measure channel.
         The diagram discards the internal states and measures
@@ -1993,6 +2005,11 @@ class Encode(Channel):
 
         super().__init__(name="Encode", kraus=kraus, dom=dom, cod=cod)
         self.internal_states = internal_states
+
+    def __repr__(self):
+        states = "" if self.internal_states is None else \
+            f", internal_states={self.internal_states!r}"
+        return f"{factory_name(type(self))}({self.dom!r}{states})"
 
     def inflate(self, d):
         r"""
@@ -2040,6 +2057,9 @@ class Discard(Channel):
         env = dom.single()
         kraus = diagram.Id(dom.single())
         super().__init__("Discard", kraus, dom=dom, cod=Ty(), env=env)
+
+    def __repr__(self):
+        return f"{factory_name(type(self))}({self.dom!r})"
 
     def inflate(self, d):
         """
@@ -2114,6 +2134,12 @@ class Observable(CQMap):
             density = merge >> control.Weight(function, dom.single())
         self.operator, self.function = operator, function
         super().__init__(name or "Observable", density, dom, Ty())
+
+    def __repr__(self):
+        given = f"operator={self.operator!r}" if self.function is None else \
+            f"function={self.function!r}, dom={self.dom!r}"
+        name = "" if self.name == "Observable" else f", name={self.name!r}"
+        return f"{factory_name(type(self))}({given}{name})"
 
     def expectation(self, state: Diagram) -> complex:
         """
