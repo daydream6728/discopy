@@ -289,7 +289,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   tails and `FollowedBy` ([next#96]), `Twist`, `Spider` and inverse `Braid`
   ([next#1]), rotated rigid boxes ([next#113]) and `"is_dagger": false`
   ([#744]).
-- `utils.dumps` writes complex data ([#775]) and lists ([next#168]), and
+- `utils.dumps` writes complex data ([#775]), lists ([next#168]) and
+  fractions ([next#376]), and
   `tensor` and `matrix` round-trip through JSON ([#794], [next#175]).
 - `eval(repr(x)) == x` for `monoidal.List` ([#773]), phased spiders
   ([next#97]), delayed qudits ([next#130]), `Measure`, `Encode`, `CQ` and the
@@ -619,6 +620,7 @@ for the changelog of `1.2.1` and earlier.
 [next#349]: https://github.com/rel-int/discopy-next/issues/349
 [next#350]: https://github.com/rel-int/discopy-next/issues/350
 [next#359]: https://github.com/rel-int/discopy-next/issues/359
+[next#376]: https://github.com/rel-int/discopy-next/issues/376
 [optyx#16]: https://github.com/rel-int/optyx/pull/16
 [optyx#29]: https://github.com/rel-int/optyx/pull/29
 [optyx#56]: https://github.com/rel-int/optyx/pull/56
