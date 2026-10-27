@@ -35,6 +35,15 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - `Sum` in `traced`, `pivotal`, `compact` and `frobenius` ([#812]).
 - Ribbon diagrams drawn as dual rails ([#358], [#360]).
 - Rich display of diagrams and drawings in Jupyter ([#445]).
+- The constructor arguments the optyx boxes were not keeping, as public
+  attributes, so that they can print themselves: `qubits.Ket.value`,
+  `qubits.Bra.value`, `qubits.BitFlipError.prob`, `qubits.DephasingError.prob`,
+  `photonic.Create.internal_states`, `photonic.DualRail.internal_states`,
+  `photonic.PhaseShiftDR.phase`, `classical.Scalar.value`,
+  `classical.PostselectBit.bits`, `classical.PostselectDigit.digits`,
+  `classical.And.n`, `classical.Z.phase`, `classical.X.phase`,
+  `classical.ClassicalFunction.function` and
+  `classical.BitControlledPhaseShift.function` ([next#351]).
 - `discopy.op`, the opposite of a category ([#646]), and `discopy.comarkov`,
   the free comarkov category, the dual of `markov` ([next#94]).
 - `discopy.spacial` and `abc.SpacialCategory`, whose scalars slide,
@@ -234,6 +243,15 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - `docs/notebooks/optyx/channel_error.ipynb`, a 0-byte file that is not valid
   JSON and so not a notebook, is removed: it was added empty by `0e6c24bd`
   ([optyx#136]) and never had content to restore ([next#250]).
+- Every box of `discopy.optyx` prints the call that built it, so that
+  `eval(repr(x)) == x` holds for it as STYLE.md asks and `axioms.transparency`
+  states: the boxes of `channel`, `qubits`, `photonic` and `classical` narrow
+  `__init__` and used to print `cat.Box`'s `(name, dom, cod, data=...)`, which
+  their own constructor cannot take. `core.diagram.Mode` and `Bit` print their
+  count. A box holding a Python function — `channel.Observable` of a
+  `function`, `classical.ClassicalFunction`, `classical.BitControlledPhaseShift`
+  — prints that function as Python does, so it reads back only if the
+  function's representation does, as for `python.Function` ([next#351]).
 - `cat.Functor` reads the image of a daggered box off `ar_map` when the
   codomain has no dagger to take, instead of daggering the image: a functor
   into `stream.Stream` or `python.Function` used to raise an `AttributeError`,
@@ -653,6 +671,7 @@ for the changelog of `1.2.1` and earlier.
 [next#323]: https://github.com/rel-int/discopy-next/issues/323
 [next#349]: https://github.com/rel-int/discopy-next/issues/349
 [next#350]: https://github.com/rel-int/discopy-next/issues/350
+[next#351]: https://github.com/rel-int/discopy-next/issues/351
 [next#359]: https://github.com/rel-int/discopy-next/issues/359
 [next#376]: https://github.com/rel-int/discopy-next/issues/376
 [optyx#16]: https://github.com/rel-int/optyx/pull/16
