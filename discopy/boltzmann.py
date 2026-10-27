@@ -137,14 +137,18 @@ class Production(cfg.Rule):
         cod : The sort of the conclusion.
         name : The name of the rule, ``"box"`` for a generator and
             ``"any"`` for the choice of a shape.
-        data : The weight, a monomial in the parameters.
         shadow : The value of each variable of the rule in the instance,
             an object of as many wires as it is given, all of one colour.
+        params : Those of :class:`discopy.grammar.cfg.Rule`, its ``data``
+            the weight, a monomial in the parameters.
+
+    The shadow is how the grammar instantiates the rule rather than a field
+    of the box: a production rebuilt from its fields, e.g. its dagger, has
+    none.
     """
-    # pylint: disable-next=too-many-arguments  # a rule and its shadow
     def __init__(self, dom: monoidal.Ty, cod: monoidal.Ty, name: str, *,
-                 data=None, shadow: dict | None = None):
-        super().__init__(dom, cod, name=name, data=data)
+                 shadow: dict | None = None, **params):
+        super().__init__(dom, cod, name=name, **params)
         self.shadow = dict(shadow or {})
 
 

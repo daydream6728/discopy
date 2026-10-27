@@ -599,6 +599,7 @@ EXAMPLES = {  # a box of each constructor, from a class c, types x, y, data v
     "grammar.thue.Rule": 'c(x @ y, x, "r", data=v)',
     "grammar.thue.Word": 'c("w", x @ y, y, data=v)',
     "grammar.cfg.Rule": 'c(x @ y, x, "r")',
+    "boltzmann.Production": 'c(x @ y, x, "cut", data=v)',
     "grammar.cfg.Word": 'c("w", x, y)',
     "grammar.pregroup.Word": 'c("w", x @ y, data=v)',
     "tensor.Bubble":
