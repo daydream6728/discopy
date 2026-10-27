@@ -128,11 +128,11 @@ received.
 
 ```python {.marimo}
 source = Box("source", Ty(), qubit,
-             Discard(qubit) @ qubit >> Scalar(.5 ** .5) @ Z(0, 2) @ qubit,
+             Discard(qubit) @ qubit >> Z(0, 2) @ qubit @ Scalar(.5 ** .5),
              memory=qubit, prediction=qubit)
 sink = Box("sink", qubit, Ty(), Ket(0) @ qubit, prediction=qubit)
 network = CMap([source, sink], [((0, 0), (1, 0))])
-network.draw(figsize=(5, 4), wire_labels=False)
+network.draw(figsize=(7, 5), wire_labels=False)
 ```
 
 At the first tick the predictions are independent; from the second on they
@@ -143,6 +143,16 @@ and `learn` finds them from the most contextual of a few random starts.
 first_tick = MessagePassingScenario(network, Ket(0) ** 3)
 second_tick = MessagePassingScenario(network, Ket(0) ** 3, n_steps=1)
 angles = [0, 0, .25, .25, .25, .125, 0, .25]
+second_tick.diagram(angles).draw(figsize=(8, 9), wire_labels=False)
+```
+
+The scenario's diagram is the network unrolled over two ticks, the first
+tick's predictions discarded, the second's each passed to its node's
+measurement, whose setting bit comes in from the left. Its domain is a bit
+per node and its codomain a bit per node, which is what `Model.from_diagram`
+reads.
+
+```python {.marimo}
 found, best = second_tick.learn(restarts=8, steps=3)
 mo.md(f"""
 | | fraction |
@@ -153,7 +163,75 @@ mo.md(f"""
 """)
 ```
 
-## 4. Experiment: two photons at a beam splitter
+## 4. Three nodes
+
+The scenario is the same for any number of nodes. A hub creates a GHZ state
+$(|000\rangle + |111\rangle) / \sqrt 2$ at every tick, sends one qubit down
+each of its two edges and keeps the third in its memory, to predict it a tick
+later, when the two leaves predict what they received.
+
+```python {.marimo}
+hub = Box("hub", Ty(), qubit ** 2,
+          Discard(qubit ** 2) @ qubit >> Z(0, 3) @ qubit @ Scalar(.5 ** .5),
+          memory=qubit, prediction=qubit)
+leaf = Box("leaf", qubit, Ty(), Ket(0) @ qubit, prediction=qubit)
+star = CMap([hub, leaf, leaf], [((0, 0), (1, 0)), ((0, 1), (2, 0))])
+star.draw(figsize=(8, 5), wire_labels=False)
+```
+
+Spelling the scenario out:
+
+- the **parties** are the three nodes, since each predicts a qubit, named
+  `a`, `b` and `c` in the order of the boxes;
+- the **measurements** are `a1, a2, b1, b2, c1, c2`, the two settings of
+  each node's `local_measurement`, chosen by its bit;
+- the **contexts** are the eight choices of one setting per node, since the
+  three predictions of a tick are written at once;
+- the **outcomes** are the bits the measurements return.
+
+The memory is the four paired ports and the hub's own qubit, started in
+$|0\rangle$.
+
+```python {.marimo}
+three_nodes = MessagePassingScenario(star, Ket(0) ** 5, n_steps=1)
+mermin = [0, .25, .25, .25] * 3
+strong = three_nodes.model(mermin)
+mo.md(f"""
+| | |
+|---|---|
+| measurements | `{strong.scenario.measurements}` |
+| contexts | `{strong.scenario.contexts}` |
+| outcomes per measurement | {strong.scenario.outcomes} |
+""")
+```
+
+```python {.marimo}
+three_nodes.diagram(mermin).draw(figsize=(9, 9), wire_labels=False)
+```
+
+The angles put each node's first setting on $Y$ and its second on $X$: a
+quarter turn about $X$ turns the computational readout into $Y$, and the
+second setting's further quarter turns about $Z$ then $X$ turn it into $X$.
+These are Mermin's settings, and the GHZ state answers them with parities
+that no global assignment can satisfy at once: the model is strongly
+contextual, its fraction is one, the largest there is.
+
+```python {.marimo}
+contexts = strong.scenario.contexts
+mo.md(f"""
+| | |
+|---|---|
+| fraction at the first tick | {MessagePassingScenario(star, Ket(0) ** 5).model(mermin).contextual_fraction():.3f} |
+| fraction at the second tick | {strong.contextual_fraction():.3f} |
+| `{' '.join(contexts[0])}` | `{tuple(round(p, 3) for p in strong.table[0])}` |
+| `{' '.join(contexts[-1])}` | `{tuple(round(p, 3) for p in strong.table[-1])}` |
+
+Tilting the second setting halfway, a1 = 0.125 rather than 0.25, leaves the
+model contextual but not strongly so: {three_nodes.model([0, .25, .125, .25] * 3).contextual_fraction():.3f}.
+""")
+```
+
+## 5. Experiment: two photons at a beam splitter
 
 Two single photons enter a beam splitter from opposite sides, with orthogonal
 polarisations encoded as two modes each: Alice holds modes $a_H, a_V$ and Bob
@@ -168,7 +246,7 @@ def splitter(bias=0):
         >> BBS(bias) @ BBS(bias) >> qmode @ Diagram.swap(qmode, qmode) @ qmode
 
 
-splitter().draw(figsize=(5, 3))
+splitter().draw(figsize=(6, 4))
 ```
 
 Each party measures its pair of modes with `dual_rail_measurement`: a phase
@@ -199,6 +277,13 @@ def coincidences(model):
 
 
 photonic = [0, 0, .25, 0, .125, 0, .25, 0]
+(bit ** 2 @ splitter() >> Diagram.permutation(
+    [0, 2, 3, 1, 4, 5], bit ** 2 @ qmode ** 4)
+    >> dual_rail_measurement(photonic[:4]) @ dual_rail_measurement(photonic[4:])
+).draw(figsize=(9, 9), wire_labels=False)
+```
+
+```python {.marimo}
 every_event = experiment(photonic)
 kept = coincidences(every_event)
 conditioned = kept.normalise()
