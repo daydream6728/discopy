@@ -266,6 +266,12 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - `closed.TermBase.normal_form` and `reduce` take a constant as the head of a
   spine, e.g. on the terms of `grammar.abstract` ([next#278]).
 - `optyx.channel.Swap.dagger` is the swap the other way round ([next#290]).
+- `optyx.core.zw.ZBox.conjugate` takes amplitudes given as a list, as
+  `dagger` does ([next#254]).
+- `optyx.classical.BitControlledPhaseShift` leaves its modes quantum, its
+  codomain `qmode ** n_modes` ([next#258]).
+- `optyx.core.diagram.Scalar` and `optyx.photonic.Scalar` keep any expression
+  with free symbols symbolic, e.g. `x ** 2` or `x + 1` ([next#297]).
 - `optyx.channel.Diagram.power_fix` contracts each depth with a fresh
   optimiser and warns at the first depth `max_chi` truncates ([next#289]).
 - `python.finset.Function.then` raises `AxiomError` on functions that do not
@@ -638,6 +644,8 @@ for the changelog of `1.2.1` and earlier.
 [next#225]: https://github.com/rel-int/discopy-next/issues/225
 [next#236]: https://github.com/rel-int/discopy-next/issues/236
 [next#250]: https://github.com/rel-int/discopy-next/issues/250
+[next#254]: https://github.com/rel-int/discopy-next/issues/254
+[next#258]: https://github.com/rel-int/discopy-next/issues/258
 [next#263]: https://github.com/rel-int/discopy-next/pull/263
 [next#276]: https://github.com/rel-int/discopy-next/pull/276
 [next#278]: https://github.com/rel-int/discopy-next/issues/278
@@ -649,6 +657,7 @@ for the changelog of `1.2.1` and earlier.
 [next#293]: https://github.com/rel-int/discopy-next/issues/293
 [next#294]: https://github.com/rel-int/discopy-next/issues/294
 [next#295]: https://github.com/rel-int/discopy-next/issues/295
+[next#297]: https://github.com/rel-int/discopy-next/issues/297
 [next#299]: https://github.com/rel-int/discopy-next/issues/299
 [next#301]: https://github.com/rel-int/discopy-next/issues/301
 [next#302]: https://github.com/rel-int/discopy-next/pull/302

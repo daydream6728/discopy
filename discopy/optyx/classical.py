@@ -258,7 +258,7 @@ class BitControlledPhaseShift(Channel):
             "BitControlledPhaseShift",
             kraus,
             qmode**n_modes @ mode**n_control_modes,
-            mode**n_modes,
+            qmode**n_modes,
         )
 
     def __repr__(self):
