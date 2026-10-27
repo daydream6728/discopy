@@ -64,5 +64,7 @@ with `LogSumExp` printed as `cvxpy.log_sum_exp`.
 - [x] `Arrow.strategy` and `symmetric.Diagram.strategy` draw from it rather than `search`, honouring the boundary they are asked for
 - [ ] doctests, `test/boltzmann.py`, the strategies tests and the matrix under `fast`
 - [x] draw the sampling diagram of every free category to `docs/_static/boltzmann/`
-- [ ] lint: `pflake8`, `pylint`, `ruff`, `ty`
-- [ ] open questions for the human: drop `search`? `sympy`/`cvxpy` as dependencies of `dev`? size by nodes or by boxes?
+- [x] lint: `pflake8`, `pylint`, `ruff`, `ty` on what this branch touches
+- [x] admissible rules, as on #1 before `f5293a99`: a rule the others derive is checked but generates nothing, e.g. frobenius by spiders, swaps, cut and mix
+- [ ] the matrix under `pr` against the base `681c0a75`: 2227 passed there
+- [ ] open questions for the human: drop `search`? `sympy`/`cvxpy` as dependencies of `dev` (`uv.lock` not regenerated: no access to the PyTorch index here)? size by nodes or by boxes? feedback in frobenius, delayed or not? ~1000 lines, at the red line
