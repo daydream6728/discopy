@@ -251,6 +251,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   codomain `qmode ** n_modes` ([next#258]).
 - `optyx.core.diagram.Scalar` and `optyx.photonic.Scalar` keep any expression
   with free symbols symbolic, e.g. `x ** 2` or `x + 1` ([next#297]).
+- `python.finset.Function.then` raises `AxiomError` on functions that do not
+  compose, instead of an `IndexError` or a wrong function ([next#167]).
 - `optyx.channel.Sum` without terms keeps its types in `get_kraus` and
   `double`, and evaluates to the zero tensor, so the gradient by an absent
   variable doubles and evaluates ([next#291]).
@@ -295,7 +297,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   tails and `FollowedBy` ([next#96]), `Twist`, `Spider` and inverse `Braid`
   ([next#1]), rotated rigid boxes ([next#113]) and `"is_dagger": false`
   ([#744]).
-- `utils.dumps` writes complex data ([#775]) and lists ([next#168]), and
+- `utils.dumps` writes complex data ([#775]), lists ([next#168]) and
+  fractions ([next#376]), and
   `tensor` and `matrix` round-trip through JSON ([#794], [next#175]).
 - `eval(repr(x)) == x` for `monoidal.List` ([#773]), phased spiders
   ([next#97]), delayed qudits ([next#130]), `Measure`, `Encode`, `CQ` and the
@@ -597,6 +600,7 @@ for the changelog of `1.2.1` and earlier.
 [next#162]: https://github.com/rel-int/discopy-next/issues/162
 [next#163]: https://github.com/rel-int/discopy-next/issues/163
 [next#164]: https://github.com/rel-int/discopy-next/issues/164
+[next#167]: https://github.com/rel-int/discopy-next/issues/167
 [next#168]: https://github.com/rel-int/discopy-next/issues/168
 [next#169]: https://github.com/rel-int/discopy-next/issues/169
 [next#175]: https://github.com/rel-int/discopy-next/issues/175
@@ -628,6 +632,7 @@ for the changelog of `1.2.1` and earlier.
 [next#349]: https://github.com/rel-int/discopy-next/issues/349
 [next#350]: https://github.com/rel-int/discopy-next/issues/350
 [next#359]: https://github.com/rel-int/discopy-next/issues/359
+[next#376]: https://github.com/rel-int/discopy-next/issues/376
 [optyx#16]: https://github.com/rel-int/optyx/pull/16
 [optyx#29]: https://github.com/rel-int/optyx/pull/29
 [optyx#56]: https://github.com/rel-int/optyx/pull/56
