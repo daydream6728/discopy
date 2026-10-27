@@ -1068,6 +1068,7 @@ class Permutation(frobenius.Permutation, Box):
     def conjugate(self):
         return self
 
+    # pylint: disable-next=unused-argument  # overrides Box.to_path
     def to_path(self, dtype: type = complex):
         size = len(self.dom)
         return path.Matrix([int(self.perm[j] == i)
@@ -1079,6 +1080,7 @@ class Permutation(frobenius.Permutation, Box):
         return [input_dims[i] for i in self.perm]
 
     def truncation(
+        # pylint: disable-next=unused-argument  # overrides Box.truncation
         self, input_dims: list[int] = None, output_dims: list[int] = None
     ) -> tensor.Box:
         return tensor.Permutation(

@@ -38,7 +38,7 @@ NO_TREE = messages.NO_TREE_CALLABLE.format("A function", "inside")
 
 @factory
 @dataclass(unsafe_hash=True)
-class Function(Category):
+class Function(Category[Ty, "Function"]):
     """
     Python function with sequential composition.
 
@@ -66,7 +66,7 @@ class Function(Category):
     ob = Ty
     type_checking = True
 
-    def __init__(self, inside: Callable, dom: Ty, cod: Ty):
+    def __init__(self, inside: Callable, dom: Ty | type, cod: Ty | type):
         self.inside, self.dom, self.cod = (
             inside, self.ob.cast(dom), self.ob.cast(cod))
 
