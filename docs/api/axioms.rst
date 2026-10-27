@@ -9,3 +9,5 @@ Property-based testing of the axioms, and how to develop against it.
 
     discopy.axioms
     discopy.boltzmann
+    discopy.unification
+    discopy.wiring

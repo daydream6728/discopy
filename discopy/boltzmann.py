@@ -81,12 +81,14 @@ from itertools import product
 from types import NoneType
 from typing import TYPE_CHECKING, Any, get_args, get_origin
 
-from discopy import monoidal
+from discopy import monoidal, wiring
+from discopy.unification import (
+    MISMATCH, Unifier, atoms_of, length)
 from discopy.abc import Nat
 from discopy.axioms import (
     GENERATORS, Atom, Declaration, Hom, Obj, Var, substitute)
 from discopy.grammar import cfg
-from discopy.utils import AxiomError, factory_name
+from discopy.utils import factory_name
 
 if TYPE_CHECKING:
     import numpy
@@ -99,13 +101,33 @@ SIZE = 4
 """ The least size of a derivation drawn by default, see
 :meth:`Specification.strategy`. """
 
-BOXES = .4
+BOXES = .3
 """
 The share of generators among the nodes of a derivation, by default: a
-uniform derivation is mostly structure, e.g. the traces of a swap, which
-tuning the expected number of generators near the singularity redresses,
-see :meth:`Specification.strategy`.
+uniform derivation is mostly cuts and mixes, which tuning the expected
+number of generators near the singularity redresses, see
+:meth:`Specification.strategy`. Every cut or mix has one more leaf below it
+than it has itself, so the generators and the blocks of wiring together
+take at most half the nodes.
 """
+
+WIRINGS = .08
+"""
+The share of blocks of wiring other than identities among the nodes of a
+derivation, by default, in a category that draws them, see
+:func:`discopy.wiring.kind_of`.
+"""
+
+STRUCTURE = .1
+"""
+The share of the nodes of a derivation that apply the rules of the
+structure of a category, e.g. its traces, feedbacks, spiders or curries,
+split equally between them, by default: left untuned, the generators and
+the wiring would crowd them out.
+"""
+
+PLUMBING = {"box", "identity", "wiring", "ax", "cut", "mix"}
+""" The productions that are not the structure of a category. """
 
 SINGULAR = 1000
 """
@@ -127,24 +149,6 @@ with a power of the width, e.g. a mix with its fourth, so a boundary wider
 than that is met by a generator on either side, see
 :meth:`Specification.strategy`.
 """
-
-PLACEHOLDERS = 10 ** 6
-""" The first number of a placeholder wire, for objects that take no name,
-e.g. a dimension, see :class:`Unifier`. """
-
-MISMATCH = (AxiomError, TypeError, ValueError, AttributeError, IndexError,
-            NotImplementedError)
-""" What a former raises on an object it does not apply to. """
-
-
-def length(obj) -> int:
-    """
-    The number of wires of an object: none for the single object of a
-    monoid, one for an object with no tensor.
-    """
-    if obj is None:
-        return 0
-    return len(obj) if hasattr(obj, "__len__") else 1
 
 
 class Production(cfg.Rule):
@@ -271,11 +275,16 @@ def vanishes(kinds: list, shape: list) -> bool:
     return empty and shape[0] in shape[1:]
 
 
-def sort_name(category: type, shape: tuple) -> str:
-    """ The name of the sort of the morphisms of a shape, ``?`` if unknown. """
+def sort_name(category: type, shape: tuple, arrow: str = "→") -> str:
+    """
+    The name of the sort of the morphisms of a shape, ``?`` if unknown: with
+    an ``arrow`` that says what they are, ``→`` derived from a box, ``~``
+    a block of wiring and ``⇒`` either, see :func:`compile`.
+    """
     if len(shapes(category)) == 1:
         return "Hom"
-    return " → ".join("?" if side is None else str(side) for side in shape)
+    return f" {arrow} ".join(
+        "?" if side is None else str(side) for side in shape)
 
 
 @lru_cache(maxsize=None)
@@ -298,30 +307,70 @@ def compile(  # pylint: disable=redefined-builtin  # compiles a grammar
     import sympy
 
     objects = shapes(category, width)
-    names = ["box"] + sorted(
+    names = sorted(
         name for name, rule in category.rules.items()
         if rule.applicable and rule.derivation is None
         and name in (within or category).rules)
+    kind = wiring.kind_of(category, names) if len(objects) > 1 else None
+    rules = [
+        name for name in names
+        if kind is None or name not in wiring.WIRES[kind]]
+    names = ["box", *rules] + (["identity", "wiring"] if kind else [])
     z = sympy.Symbol("z", positive=True)
     marks = {name: sympy.Symbol(f"u_{name}", positive=True) for name in names}
     sorts: dict[tuple, monoidal.Ty] = {
         shape: monoidal.Ty(sort_name(category, shape))
         for shape in product(*2 * [sorted(set(map(length, objects)))])}
+    wirings = {} if kind is None else {
+        shape: monoidal.Ty(sort_name(category, shape, "~"))
+        for shape in sorts if wiring.count(kind, *shape)}
     productions = [Production(
         monoidal.Ty(), sort, "box", data=z * marks["box"])
-                   for sort in sorts.values()]
-    for name in names[1:]:
+                   for sort in sorts.values()] + blocks(
+        kind, wirings, z, marks) + [
+        Production(monoidal.Ty().tensor(*choice), sorts[conclusion], name,
+                   data=z * marks[name], shadow=scope)
+        for name in rules
         for scope, conclusion, premises in instances(
-                category.rules[name], objects, width):
-            productions.append(Production(
-                monoidal.Ty().tensor(*(sorts[shape] for shape in premises)),
-                sorts[conclusion], name, data=z * marks[name], shadow=scope))
-    if len(sorts) > 1:
-        productions += unions(category, sorts)
-    root = sorts[(None, None)] if len(sorts) > 1 else next(
-        iter(sorts.values()))
+            category.rules[name], objects, width)
+        for choice in product(*(
+            [sorts[shape]] + ([wirings[shape]] if shape in wirings else [])
+            for shape in premises))
+        if not choice or any(sort in sorts.values() for sort in choice)]
+    top = dict(sorts)
+    if wirings:
+        top = {shape: monoidal.Ty(sort_name(category, shape, "⇒"))
+               for shape in sorts}
+        productions += [
+            Production(sort, top[shape], "any", data=sympy.Integer(1))
+            for kinds in (sorts, wirings) for shape, sort in kinds.items()]
+    if len(top) > 1:
+        productions += unions(category, top)
     return Specification(
-        category, root, tuple(productions), z, tuple(marks.values()), sorts)
+        category, top[(None, None)] if len(top) > 1
+        else next(iter(top.values())),
+        tuple(productions), z, tuple(marks.values()), top,
+        shape_of={sort: shape for kinds in (sorts, wirings, top)
+                  for shape, sort in kinds.items()}, wiring=kind)
+
+
+def blocks(kind: str | None, wirings: dict, z, marks: dict
+           ) -> list[Production]:
+    """
+    The productions of the sorts of wiring, one for the identity and one
+    for the other wirings in normal form, weighted by how many they are,
+    see :func:`discopy.wiring.count`. A rule applies to them only when one
+    of its premises is not one, so that blocks of wiring never compose
+    with each other, e.g. into a snake.
+    """
+    return [
+        Production(monoidal.Ty(), sort, name, shadow={"shape": shape},
+                   data=number * z * marks[name])
+        for shape, sort in wirings.items()
+        for name, number in (
+            ("identity", int(shape[0] == shape[1])),
+            ("wiring", wiring.count(kind, *shape) - (shape[0] == shape[1])))
+        if number]
 
 
 def unions(category: type, sorts: dict) -> list[Production]:
@@ -347,7 +396,7 @@ def unions(category: type, sorts: dict) -> list[Production]:
 
 
 @dataclass(frozen=True, eq=False)
-class Specification:
+class Specification:  # pylint: disable=too-many-instance-attributes,too-many-public-methods  # noqa: E501
     """
     The weighted grammar of the shapes of the derivations of a free
     category, see :func:`compile`, from which its terms are Boltzmann
@@ -360,6 +409,9 @@ class Specification:
         size : The symbol marking the size of a derivation.
         marks : The symbol marking each rule, ``u_box`` for the generators.
         shapes : The sort of each shape, ``None`` for an unknown side.
+        shape_of : The shape of each sort.
+        wiring : The kind of wiring drawn in blocks, see
+            :func:`discopy.wiring.kind_of`.
     """
     category: type
     root: monoidal.Ty
@@ -367,6 +419,8 @@ class Specification:
     size: Any
     marks: tuple = ()
     shapes: dict = field(default_factory=dict)
+    shape_of: dict = field(default_factory=dict)
+    wiring: str | None = None
     cache: dict = field(default_factory=dict, repr=False)
 
     def __str__(self):
@@ -705,6 +759,10 @@ class Specification:
         if production.name == "box":
             return lambda: unifier.generator(
                 unifier.resolve(dom), unifier.resolve(cod))
+        if production.name in ("identity", "wiring"):
+            return self.connect(
+                production.shadow["shape"], dom, cod, unifier,
+                identity=production.name == "identity")
         rule = self.category.rules[production.name]
         kinds = self.premises(production, dom, cod, unifier)
         if kinds is None:
@@ -719,6 +777,59 @@ class Specification:
                 return None
         return lambda: rule(**{
             name: build() for name, build in builders.items()})
+
+    def shares(self) -> dict[str, float]:
+        """
+        The expected applications of each production near the singularity
+        that :meth:`strategy` tunes to by default, see :data:`BOXES`,
+        :data:`WIRINGS` and :data:`STRUCTURE`, the first that tunes of the
+        shares of the generators, the wiring and the structure, of the
+        first two, and of none.
+        """
+        names = [str(mark).removeprefix("u_") for mark in self.marks]
+        structure = [name for name in names if name not in PLUMBING]
+        base = {"box": BOXES} | ({"wiring": WIRINGS} if self.wiring else {})
+        for shares in (base | {
+                name: STRUCTURE / len(structure) for name in structure},
+                base, {}):
+            marks = {name: share * SINGULAR for name, share in shares.items()}
+            try:
+                self.tune(SINGULAR, **marks)
+            except ValueError:
+                continue
+            return marks
+        return {}
+
+    def connect(  # pylint: disable=too-many-arguments  # a block of wiring
+            self, shape: tuple, dom, cod, unifier: Unifier, *,
+            identity: bool = False):
+        """
+        Type a block of wiring from ``dom`` to ``cod``, the identity or one
+        drawn uniformly from the others in normal form, see
+        :func:`matching`, and return how to build it: a through wire is one
+        placeholder, the two ends of a cup ``a`` and ``a.r``, those of a cap
+        ``a`` and ``a.l``; or ``None`` when it does not unify with the
+        boundary.
+        """
+        m, n = shape
+        assert self.wiring is not None
+        pairs = [(i, m + i) for i in range(m)] if identity\
+            else wiring.matching(self.wiring, m, n, unifier.random)
+        atoms: list = [None] * (m + n)
+        for p, q in pairs:
+            atom = unifier.fresh(wire(self.category))
+            atoms[p], atoms[q] = (atom, atom.r) if q < m\
+                else (atom, atom.l) if p >= m else (atom, atom)
+        ob = self.category.typeparams()[0]
+        try:
+            unifier.unify(dom, ob().tensor(*atoms[:m]))
+            unifier.unify(cod, ob().tensor(*atoms[m:]))
+        except MISMATCH:
+            return None
+        kind = self.wiring
+        return lambda: wiring.diagram(
+            self.category, kind, m, pairs,
+            [unifier.resolve(atom) for atom in atoms])
 
     def strategy(  # pylint: disable=too-many-arguments  # a boundary, bounds
             self, dom=None, cod=None, *, size: int = SIZE, exact: bool = True,
@@ -747,8 +858,7 @@ class Specification:
             attempts : How many derivations are drawn before the example
                 is rejected.
             marks : The expected applications of the rules near the
-                singularity, by name, the generators a share :data:`BOXES`
-                of the nodes by default, when that tunes.
+                singularity, by name, over those :meth:`shares` gives.
 
         >>> from hypothesis import find
         >>> from discopy.monoidal import Ty, Diagram
@@ -759,10 +869,7 @@ class Specification:
         """
         # pylint: disable-next=import-outside-toplevel
         from hypothesis import reject, strategies as st
-        try:
-            params = self.tune(SINGULAR, **{"box": BOXES * SINGULAR} | marks)
-        except ValueError:
-            params = self.tune(SINGULAR, **marks)
+        params = self.tune(SINGULAR, **self.shares() | marks)
         min_size, max_size = size, 2 * size + 1
         inner, sort = self.clip(dom, cod)
 
@@ -816,8 +923,9 @@ class Specification:
         """
         while tree.root.name == "any":
             tree = tree.branches[0]
-        shape = next(shape for shape, sort in self.shapes.items()
-                     if sort == tree.cod and None not in shape)
+        shape = self.shape_of.get(tree.cod) or next(
+            shape for shape, sort in self.shapes.items()
+            if sort == tree.cod and None not in shape)
         objects = shapes(self.category, max(shape))
         return tuple(objects[min(n, len(objects) - 1)] for n in shape)
 
@@ -836,153 +944,6 @@ def choose(productions: list, probabilities: list, draw: float, /):
         if draw < total:
             return production
     return productions[-1]
-
-
-def atoms_of(obj) -> list:
-    """ The objects of one cell of an object, itself if it has no tensor. """
-    if not hasattr(obj, "__len__"):
-        return [obj]
-    return [obj[i:i + 1] for i in range(len(obj))]
-
-
-def offset(atom) -> tuple[int, int]:
-    """ The winding and the time step of the cell of an atom. """
-    cell = atom.inside[0] if hasattr(atom, "inside") else atom
-    return getattr(cell, "z", 0) or 0, getattr(cell, "time_step", 0) or 0
-
-
-def shift(atom, winding: int, steps: int):
-    """ An atom wound right ``winding`` times and delayed ``steps``. """
-    for _ in range(abs(winding)):
-        atom = atom.r if winding > 0 else atom.l
-    return atom.delay(steps) if steps else atom
-
-
-class Unifier:
-    """
-    A substitution of the placeholder wires of a derivation being typed:
-    each object variable of a rule is first a fresh object of placeholders,
-    see :meth:`fresh`, the conclusion of a rule is unified with the goal it
-    meets, see :meth:`unify`, and a placeholder no rule determines is
-    coloured uniformly from the ``palette`` the first time a term is built
-    with it, see :meth:`resolve`. Adjoints and delays are offsets of a
-    cell, an exponential the pair of its base and exponent.
-
-    >>> from random import Random
-    >>> from discopy.rigid import Ty, Diagram
-    >>> x = Ty('x')
-    >>> unifier = Unifier(Diagram, Random(0), (x, ), None)
-    >>> left, right = unifier.fresh(x), unifier.fresh(x)
-    >>> unifier.unify(left @ left.l, right @ x.l)
-    >>> assert unifier.resolve(right) == x
-    """
-    def __init__(self, category: type, random: std_random.Random,
-                 palette: tuple, generator):
-        self.ob, self.random = category.typeparams()[0], random
-        self.palette, self.generator = palette, generator
-        self.bound: dict = {}
-
-    @staticmethod
-    def placeholder(atom):
-        """
-        The name of a placeholder atom, ``None`` for any other: its name if
-        it starts with ``?``, or its number if it is one of the
-        :data:`PLACEHOLDERS`, e.g. for a dimension.
-        """
-        cell = atom.inside[0] if hasattr(atom, "inside") else atom
-        name = getattr(cell, "name", None)
-        number = getattr(cell, "inside", (None, ))[:1]
-        if hasattr(cell, "base"):
-            return None
-        if isinstance(name, str) and name.startswith("?"):
-            return name
-        if number and isinstance(number[0], int)\
-                and number[0] >= PLACEHOLDERS:
-            return number[0]
-        return None
-
-    def fresh(self, shadow):
-        """ An object of the shape of a shadow, each cell a placeholder. """
-        if shadow is None or isinstance(shadow, Nat):
-            return shadow
-        atoms = []
-        for _ in range(length(shadow)):
-            count = len(self.bound)
-            try:
-                atom = self.ob(f"?{count}")
-            except MISMATCH:
-                atom = self.ob(PLACEHOLDERS + count)
-            name = self.placeholder(atom)
-            if name is None or name in self.bound:
-                raise ValueError(f"No placeholder for {atom}.")
-            self.bound[name] = None
-            atoms.append(atom)
-        return atoms[0] if not hasattr(shadow, "tensor")\
-            else type(shadow)().tensor(*atoms)
-
-    def resolve(self, obj, colour: bool = True):
-        """
-        An object with each bound placeholder substituted, and each free one
-        coloured from the palette when ``colour``.
-        """
-        if obj is None or isinstance(obj, (Nat, int)):
-            return obj
-        atoms = [self.resolve_atom(atom, colour) for atom in atoms_of(obj)]
-        return atoms[0] if not hasattr(obj, "tensor")\
-            else type(obj)().tensor(*atoms)
-
-    def resolve_atom(self, atom, colour: bool):
-        """ An atom resolved, see :meth:`resolve`. """
-        cell = atom.inside[0] if hasattr(atom, "inside") else atom
-        name = self.placeholder(atom)
-        if hasattr(cell, "base"):
-            base, exponent = (self.resolve(side, colour)
-                              for side in (cell.base, cell.exponent))
-            exp = exponent >> base if type(cell).__name__ == "Under"\
-                else base << exponent
-            return shift(exp, 0, offset(atom)[1])
-        if name is None:
-            return atom
-        if self.bound[name] is None and colour:
-            self.bound[name] = self.random.choice(self.palette)
-        if self.bound[name] is None:
-            return atom
-        return shift(self.resolve(self.bound[name], colour), *offset(atom))
-
-    def unify(self, left, right) -> None:
-        """
-        Bind placeholders so that two objects resolve to the same, raising
-        :class:`discopy.utils.AxiomError` when they cannot.
-        """
-        left, right = (self.resolve(side, False) for side in (left, right))
-        if left == right:
-            return
-        if length(left) != length(right):
-            raise AxiomError(f"{left} and {right} do not unify.")
-        for one, other in zip(atoms_of(left), atoms_of(right)):
-            self.unify_atom(*(self.resolve(atom, False)
-                              for atom in (one, other)))
-
-    def unify_atom(self, one, other) -> None:
-        """ Unify two objects of one cell, see :meth:`unify`. """
-        if one == other:
-            return
-        for this, that in ((one, other), (other, one)):
-            name = self.placeholder(this)
-            if name is not None:
-                value = shift(that, *(-n for n in offset(this)))
-                if repr(name) in repr(value):
-                    raise AxiomError(f"{this} occurs in {that}.")
-                self.bound[name] = value
-                return
-        cells = [atom.inside[0] for atom in (one, other)]
-        if all(hasattr(cell, "base") for cell in cells)\
-                and type(cells[0]) is type(cells[1])\
-                and offset(one) == offset(other):
-            self.unify(cells[0].base, cells[1].base)
-            self.unify(cells[0].exponent, cells[1].exponent)
-            return
-        raise AxiomError(f"{one} and {other} do not unify.")
 
 
 @lru_cache(maxsize=None)

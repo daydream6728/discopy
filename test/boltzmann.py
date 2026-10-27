@@ -91,22 +91,8 @@ def test_max_size():
                for _ in range(100))
 
 
-def test_unify():
-    """ Unification undoes the formers of a conclusion, delays included. """
-    from random import Random
-    from discopy.boltzmann import Unifier
-    from discopy.feedback import Ty, Diagram
-    x, y = Ty('x'), Ty('y')
-    unifier = Unifier(Diagram, Random(0), (x, ), None)
-    first, second = unifier.fresh(x), unifier.fresh(x)
-    unifier.unify(first @ second.delay(), x @ y.delay())
-    assert (unifier.resolve(first), unifier.resolve(second)) == (x, y)
-    with pytest.raises(Exception):
-        unifier.unify(first, y)
-
-
 def test_cups_are_drawn():
-    """ A rigid diagram from x to x has cups in some draws. """
+    """ A rigid diagram from x to x has cups in some draws, in blocks. """
     from hypothesis import given, settings, strategies as st
     from discopy import rigid
     x, seen = rigid.Ty('x'), []
