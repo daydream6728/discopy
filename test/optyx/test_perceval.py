@@ -329,7 +329,8 @@ def test_feed_forward_offset(n, offset, state):
 
 
 def test_trailing_detector():
-    """A detector with nothing after it is in ``p.detectors`` only."""
+    """A detector with nothing after it, which perceval keeps in
+    ``p.detectors`` only, is converted as the others are."""
     from discopy.optyx.photonic import NumberResolvingMeasurement
     p = pcvl.Processor("SLOS", 2)
     p.add(0, pcvl.BS())
