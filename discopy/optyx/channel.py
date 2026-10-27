@@ -1600,6 +1600,11 @@ class Diagram(frobenius.Diagram):
 
             circuit >>= (left @ box @ right)
 
+        for m, component in enumerate(p.detectors):
+            if component is not None and circuit.cod[m] == qmode:
+                box = perceval_conversion.detector(component, (m, ))
+                circuit >>= circuit.cod[:m] @ box @ circuit.cod[m + 1:]
+
         circuit >>= perceval_conversion.heralds_diagram(
             heralds, n_modes, circuit, "out"
         )

@@ -248,6 +248,11 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - `optyx.channel.Sum` without terms keeps its types in `get_kraus` and
   `double`, and evaluates to the zero tensor, so the gradient by an absent
   variable doubles and evaluates ([next#291]).
+- `optyx` and perceval: `PercevalBackend` evaluates a closed diagram to the
+  amplitude or probability of its selections ([next#294]);
+  `Diagram.from_perceval` reads a negative feed-forward offset `k` as `-k - 1`
+  modes in between ([next#295]) and keeps a detector with nothing after it
+  ([next#299]).
 - `Hypergraph`: its hash, `simplify`, `rotate`, and `to_diagram` on
   non-self-dual, `Nat` and `Dim` types ([#324], [#387], [#393], [#622],
   [#719]).
@@ -609,6 +614,9 @@ for the changelog of `1.2.1` and earlier.
 [next#291]: https://github.com/rel-int/discopy-next/issues/291
 [next#292]: https://github.com/rel-int/discopy-next/issues/292
 [next#293]: https://github.com/rel-int/discopy-next/issues/293
+[next#294]: https://github.com/rel-int/discopy-next/issues/294
+[next#295]: https://github.com/rel-int/discopy-next/issues/295
+[next#299]: https://github.com/rel-int/discopy-next/issues/299
 [next#301]: https://github.com/rel-int/discopy-next/issues/301
 [next#302]: https://github.com/rel-int/discopy-next/pull/302
 [next#310]: https://github.com/rel-int/discopy-next/pull/310
