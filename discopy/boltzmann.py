@@ -588,7 +588,8 @@ class Specification:
         return float(numpy.log(self.oracle(shifted)[-1] / self.oracle(
             params)[-1]) / math.log1p(epsilon))
 
-    def probabilities(self, params: dict) -> dict:
+    def probabilities(
+            self, params: dict) -> dict[monoidal.Ty, tuple[list, list]]:
         """
         The productions of each sort with the probability of drawing each,
         :math:`w_r \\prod_p T_p / T_s`, computed once for each parameters.
@@ -602,7 +603,8 @@ class Specification:
         values = numpy.append(self.oracle(params), 1)
         weights, conclusions, premises = self.arrays(params)
         terms = weights * numpy.prod(values[premises], axis=1)
-        choices: dict = {sort: ([], []) for sort in self.sorts}
+        choices: dict[monoidal.Ty, tuple[list, list]] = {
+            sort: ([], []) for sort in self.sorts}
         for production, term, sort in zip(
                 self.productions, terms, conclusions):
             choices[production.cod][0].append(production)
@@ -611,7 +613,7 @@ class Specification:
         return choices
 
     def sample(  # pylint: disable=too-many-arguments  # a window of sizes
-            self, random: std_random.Random, params: dict,
+            self, random: std_random.Random, params: dict, *,
             sort: monoidal.Ty | None = None, max_size: int | None = None,
             min_size: int = 0) -> cfg.Tree | None:
         """
@@ -636,18 +638,16 @@ class Specification:
             sort_, production = stack.pop()
             if production is not None:
                 arity = len(production.dom)
-                branches = built[len(built) - arity:]
-                del built[len(built) - arity:]
-                built.append(production(*branches) if arity else production)
+                built[len(built) - arity:] = [production(
+                    *built[len(built) - arity:]) if arity else production]
                 continue
             size += 1
             if max_size is not None and size > max_size:
                 return None
-            productions, probabilities = choices[sort_]
-            production = choose(productions, probabilities, random.random())
+            production = choose(*choices[sort_], random.random())
             stack.append((sort_, production))
-            stack += [(monoidal.Ty(wire), None)
-                      for wire in reversed(production.dom.inside)]
+            stack += [(monoidal.Ty(premise), None)
+                      for premise in reversed(production.dom.inside)]
         return built[0] if size >= min_size else None
 
     def palette(self, *goal, draw=None) -> tuple:
@@ -667,6 +667,27 @@ class Specification:
                            for _ in range(2 - min(1, len(atoms))))
         return atoms
 
+    def premises(self, production: Production, dom, cod,
+                 unifier: Unifier) -> dict | None:
+        """
+        The premises of the rule of a production concluding ``dom -> cod``,
+        by name, its variables fresh placeholders and its conclusion unified
+        with the boundary, or ``None`` when it does not unify.
+        """
+        rule = self.category.rules[production.name]
+        annotations = rule.annotations()
+        scope = {**production.shadow, **{
+            variable: unifier.fresh(production.shadow[variable])
+            for variable in inspect.unwrap(rule.function).__type_params__}}
+        try:
+            for side, goal in zip(boundary(rule.output(scope)), (dom, cod)):
+                unifier.unify(side, goal)
+            return {parameter.name: substitute(
+                annotations[parameter.name], scope)
+                for parameter in rule.parameters}
+        except MISMATCH:
+            return None
+
     def derive(self, tree: cfg.Tree, dom, cod, unifier: Unifier):
         """
         Type a derivation from ``dom`` to ``cod``, from the root down, and
@@ -685,17 +706,8 @@ class Specification:
             return lambda: unifier.generator(
                 unifier.resolve(dom), unifier.resolve(cod))
         rule = self.category.rules[production.name]
-        annotations = rule.annotations()
-        scope = {**production.shadow, **{
-            variable: unifier.fresh(production.shadow[variable])
-            for variable in inspect.unwrap(rule.function).__type_params__}}
-        try:
-            for side, goal in zip(boundary(rule.output(scope)), (dom, cod)):
-                unifier.unify(side, goal)
-            kinds = {parameter.name: substitute(
-                annotations[parameter.name], scope)
-                for parameter in rule.parameters}
-        except MISMATCH:
+        kinds = self.premises(production, dom, cod, unifier)
+        if kinds is None:
             return None
         builders = {}
         for name, kind in kinds.items():
@@ -752,23 +764,15 @@ class Specification:
         except ValueError:
             params = self.tune(SINGULAR, **marks)
         min_size, max_size = size, 2 * size + 1
-        widest = max(side for shape in self.shapes for side in shape
-                     if side is not None) if len(self.shapes) > 1 else None
-        inner = tuple(
-            side[:widest] if None not in (side, widest)
-            and length(side) > widest else side for side in (dom, cod))
-        shape = tuple(None if side is None else length(side)
-                      for side in inner)
-        sort = self.root if len(self.shapes) == 1 else self.shapes.get(shape)
-        if sort is None:
-            raise ValueError(f"No sort of shape {shape} in {self}.")
+        inner, sort = self.clip(dom, cod)
 
         @st.composite
         def terms(draw):
             random = draw(st.randoms(use_true_random=exact))
             palette = self.palette(dom, cod, draw=draw)
             for _ in range(attempts):
-                tree = self.sample(random, params, sort, max_size, min_size)
+                tree = self.sample(random, params, sort=sort,
+                                   max_size=max_size, min_size=min_size)
                 if tree is None:
                     continue
                 unifier = Unifier(self.category, random, palette, lambda x, y:
@@ -788,6 +792,23 @@ class Specification:
 
         return terms()
 
+    def clip(self, dom, cod) -> tuple[tuple, monoidal.Ty]:
+        """
+        A boundary clipped to the widest shape of the grammar, and the sort
+        of its shape, see :meth:`strategy`.
+        """
+        widest = max(side for shape in self.shapes for side in shape
+                     if side is not None) if len(self.shapes) > 1 else None
+        inner = tuple(
+            side[:widest] if widest is not None and side is not None
+            and length(side) > widest else side for side in (dom, cod))
+        shape = tuple(None if side is None else length(side)
+                      for side in inner)
+        sort = self.root if len(self.shapes) == 1 else self.shapes.get(shape)
+        if sort is None:
+            raise ValueError(f"No sort of shape {shape} in {self}.")
+        return inner, sort
+
     def sides(self, tree: cfg.Tree) -> tuple:
         """
         Objects of one colour of the shape of the conclusion of a derivation,
@@ -801,7 +822,7 @@ class Specification:
         return tuple(objects[min(n, len(objects) - 1)] for n in shape)
 
 
-def choose(productions: list, probabilities: list, draw: float):
+def choose(productions: list, probabilities: list, draw: float, /):
     """
     The first production whose cumulative probability exceeds a uniform
     draw, the last one if rounding leaves the draw past them all.
@@ -818,16 +839,16 @@ def choose(productions: list, probabilities: list, draw: float):
 
 
 def atoms_of(obj) -> list:
-    """ The objects of one wire of an object, itself if it has no tensor. """
+    """ The objects of one cell of an object, itself if it has no tensor. """
     if not hasattr(obj, "__len__"):
         return [obj]
     return [obj[i:i + 1] for i in range(len(obj))]
 
 
 def offset(atom) -> tuple[int, int]:
-    """ The winding and the time step of the wire of an atom. """
-    wire = atom.inside[0] if hasattr(atom, "inside") else atom
-    return getattr(wire, "z", 0) or 0, getattr(wire, "time_step", 0) or 0
+    """ The winding and the time step of the cell of an atom. """
+    cell = atom.inside[0] if hasattr(atom, "inside") else atom
+    return getattr(cell, "z", 0) or 0, getattr(cell, "time_step", 0) or 0
 
 
 def shift(atom, winding: int, steps: int):
@@ -845,7 +866,7 @@ class Unifier:
     meets, see :meth:`unify`, and a placeholder no rule determines is
     coloured uniformly from the ``palette`` the first time a term is built
     with it, see :meth:`resolve`. Adjoints and delays are offsets of a
-    wire, an exponential the pair of its base and exponent.
+    cell, an exponential the pair of its base and exponent.
 
     >>> from random import Random
     >>> from discopy.rigid import Ty, Diagram
@@ -861,28 +882,40 @@ class Unifier:
         self.palette, self.generator = palette, generator
         self.bound: dict = {}
 
-    def placeholder(self, atom):
-        """ Whether an atom is a placeholder, by its name. """
-        wire = atom.inside[0] if hasattr(atom, "inside") else atom
-        name = getattr(wire, "name", None)
-        if hasattr(wire, "base") or not isinstance(name, (str, int)):
+    @staticmethod
+    def placeholder(atom):
+        """
+        The name of a placeholder atom, ``None`` for any other: its name if
+        it starts with ``?``, or its number if it is one of the
+        :data:`PLACEHOLDERS`, e.g. for a dimension.
+        """
+        cell = atom.inside[0] if hasattr(atom, "inside") else atom
+        name = getattr(cell, "name", None)
+        number = getattr(cell, "inside", (None, ))[:1]
+        if hasattr(cell, "base"):
             return None
-        is_placeholder = name.startswith("?") if isinstance(name, str)\
-            else name >= PLACEHOLDERS
-        return name if is_placeholder else None
+        if isinstance(name, str) and name.startswith("?"):
+            return name
+        if number and isinstance(number[0], int)\
+                and number[0] >= PLACEHOLDERS:
+            return number[0]
+        return None
 
     def fresh(self, shadow):
-        """ An object of the shape of a shadow, each wire a placeholder. """
+        """ An object of the shape of a shadow, each cell a placeholder. """
         if shadow is None or isinstance(shadow, Nat):
             return shadow
         atoms = []
         for _ in range(length(shadow)):
-            name = f"?{len(self.bound)}"
+            count = len(self.bound)
             try:
-                atom = self.ob(name)
+                atom = self.ob(f"?{count}")
             except MISMATCH:
-                atom = self.ob(PLACEHOLDERS + len(self.bound))
-            self.bound[self.placeholder(atom)] = None
+                atom = self.ob(PLACEHOLDERS + count)
+            name = self.placeholder(atom)
+            if name is None or name in self.bound:
+                raise ValueError(f"No placeholder for {atom}.")
+            self.bound[name] = None
             atoms.append(atom)
         return atoms[0] if not hasattr(shadow, "tensor")\
             else type(shadow)().tensor(*atoms)
@@ -900,12 +933,12 @@ class Unifier:
 
     def resolve_atom(self, atom, colour: bool):
         """ An atom resolved, see :meth:`resolve`. """
-        wire = atom.inside[0] if hasattr(atom, "inside") else atom
+        cell = atom.inside[0] if hasattr(atom, "inside") else atom
         name = self.placeholder(atom)
-        if hasattr(wire, "base"):
+        if hasattr(cell, "base"):
             base, exponent = (self.resolve(side, colour)
-                              for side in (wire.base, wire.exponent))
-            exp = exponent >> base if type(wire).__name__ == "Under"\
+                              for side in (cell.base, cell.exponent))
+            exp = exponent >> base if type(cell).__name__ == "Under"\
                 else base << exponent
             return shift(exp, 0, offset(atom)[1])
         if name is None:
@@ -931,7 +964,7 @@ class Unifier:
                               for atom in (one, other)))
 
     def unify_atom(self, one, other) -> None:
-        """ Unify two objects of one wire, see :meth:`unify`. """
+        """ Unify two objects of one cell, see :meth:`unify`. """
         if one == other:
             return
         for this, that in ((one, other), (other, one)):
@@ -942,12 +975,12 @@ class Unifier:
                     raise AxiomError(f"{this} occurs in {that}.")
                 self.bound[name] = value
                 return
-        wires = [atom.inside[0] for atom in (one, other)]
-        if all(hasattr(wire, "base") for wire in wires)\
-                and type(wires[0]) is type(wires[1])\
+        cells = [atom.inside[0] for atom in (one, other)]
+        if all(hasattr(cell, "base") for cell in cells)\
+                and type(cells[0]) is type(cells[1])\
                 and offset(one) == offset(other):
-            self.unify(wires[0].base, wires[1].base)
-            self.unify(wires[0].exponent, wires[1].exponent)
+            self.unify(cells[0].base, cells[1].base)
+            self.unify(cells[0].exponent, cells[1].exponent)
             return
         raise AxiomError(f"{one} and {other} do not unify.")
 
