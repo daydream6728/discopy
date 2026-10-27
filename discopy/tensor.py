@@ -590,7 +590,7 @@ einsum of a backend verbatim, which a file should not reach.
         if isinstance(other, rigid.Box) and other.z and any(
                 x.r == x for x in other.dom @ other.cod):
             return self.contract(cmap.CMap.from_diagram(other))
-        if isinstance(other, (
+        if other is None or isinstance(other, (
                 cat.Ob, cat.Box, monoidal.Colour, monoidal.Ty)):
             return super().__call__(other)
         if isinstance(other, cmap.CMap):
