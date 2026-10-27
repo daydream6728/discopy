@@ -2,14 +2,23 @@
 The transparency law of STYLE.md, i.e. :meth:`discopy.axioms.transparency`,
 on every box of :mod:`discopy.optyx`.
 
-A cell is only as strong as the equality it is checked by: the boxes whose
-semantics live outside ``setoid`` — ``BBS``, ``TBS``, ``MZI``, ``Create``,
-``DualRail`` and every ``CQMap`` — would pass a representation that dropped
-a flag, see rel-int/discopy-next#386.
+A cell of :func:`test_transparency` is only as strong as the equality it is
+checked by, and the boxes whose semantics live outside ``setoid`` —
+``BBS``, ``TBS``, ``MZI``, ``Create``, ``DualRail`` and every ``CQMap`` —
+would pass a representation that dropped one, see
+rel-int/discopy-next#386. :func:`test_what_equality_ignores` is their cell:
+it reads back what ``==`` does not.
+
+A box holding a Python function — ``channel.Observable`` with a
+``function``, ``classical.ClassicalFunction``,
+``classical.BitControlledPhaseShift`` — prints that function as Python
+does, so its representation reads back only if the function's does, as for
+``python.Function``. They are not quantified over here.
 """
 
 import sys
 
+import numpy as np
 import pytest
 
 import discopy
@@ -80,6 +89,34 @@ CLASSICAL = [
 def test_transparency(box):
     module = sys.modules[type(box).__module__]
     assert eval(repr(box), environment(module)) == box
+
+
+IGNORED = [
+    (photonic.BBS(0.5, is_conj=True), "is_conj"),
+    (photonic.TBS(0.25, is_gate_dagger=True), "is_gate_dagger"),
+    (photonic.MZI(0.25, 0.5, is_conj=True), "is_conj"),
+    (photonic.Create(1, 1, internal_states=(np.array([1, 0]), [0, 1])),
+     "internal_states"),
+    (photonic.DualRail(1, internal_states=([1, 0],)), "internal_states"),
+    (classical.BinaryMatrix([[0, 1], [1, 0]]), "density_matrix"),
+]
+
+
+@pytest.mark.parametrize("box, attribute", IGNORED,
+                         ids=lambda x: x if isinstance(x, str) else "")
+def test_what_equality_ignores(box, attribute):
+    module = sys.modules[type(box).__module__]
+    other = eval(repr(box), environment(module))
+    assert other == box
+    if attribute == "density_matrix":
+        assert np.array_equal(other.density_matrix.matrix,
+                              box.density_matrix.matrix)
+    elif attribute == "internal_states":
+        assert all(np.array_equal(x, y) for x, y in zip(
+            other.internal_states, box.internal_states))
+    else:
+        assert getattr(other, attribute) == getattr(box, attribute)
+        assert np.allclose(other.array, box.array)
 
 
 DIAGRAMS = [

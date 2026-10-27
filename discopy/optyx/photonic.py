@@ -276,6 +276,20 @@ from discopy.optyx.channel import (
 )
 
 
+def listed(internal_states):
+    """
+    The internal states as lists of numbers, which is what their
+    representation reads back: they are declared as lists and used as
+    arrays, and `STYLE.md` reads a representation holding an array up to
+    elision.
+
+    >>> listed((np.array([1, 0]), [0, 1]))
+    '([1, 0], [0, 1])'
+    """
+    states = ", ".join(repr(np.asarray(s).tolist()) for s in internal_states)
+    return f"({states},)" if len(internal_states) == 1 else f"({states})"
+
+
 class Select(Channel):
     """
     Post-select on an occupation number.
@@ -402,7 +416,7 @@ class Create(Channel):
     def __repr__(self):
         args = ", ".join(map(repr, self.photons))
         if self.internal_states is not None:
-            args += f", internal_states={self.internal_states!r}"
+            args += f", internal_states={listed(self.internal_states)}"
         return f"{factory_name(type(self))}({args})"
 
 
@@ -958,7 +972,7 @@ class DualRail(Channel):
     def __repr__(self):
         args = str(len(self.dom))
         if self.internal_states is not None:
-            args += f", internal_states={self.internal_states!r}"
+            args += f", internal_states={listed(self.internal_states)}"
         return f"{factory_name(type(self))}({args})"
 
 

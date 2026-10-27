@@ -250,6 +250,7 @@ class BitControlledPhaseShift(Channel):
                  function: Callable[[List[int]], List[int]],
                  n_modes: int = 1,
                  n_control_modes: int = 1):
+        self.function = function
         kraus = control.ControlledPhaseShift(function,
                                              n_modes,
                                              n_control_modes)
@@ -259,6 +260,12 @@ class BitControlledPhaseShift(Channel):
             qmode**n_modes @ mode**n_control_modes,
             mode**n_modes,
         )
+
+    def __repr__(self):
+        n_modes = len(self.cod)
+        n_control = len(self.dom) - n_modes
+        return f"{factory_name(type(self))}({self.function!r}, "\
+            f"{n_modes}, {n_control})"
 
 
 DiscardBit = lambda n: Discard(bit**n)  # noqa: E731
@@ -684,6 +691,7 @@ class ClassicalFunction(ControlChannel):
     """
 
     def __init__(self, function, dom, cod):
+        self.function = function
         box = control.ClassicalFunctionBox(
             function,
             dom.single(),
@@ -699,6 +707,10 @@ class ClassicalFunction(ControlChannel):
                 *[channel.Ob.classical[ob.name] for ob in box.cod.inside]
             ),
         )
+
+    def __repr__(self):
+        return f"{factory_name(type(self))}({self.function!r}, "\
+            f"{self.dom!r}, {self.cod!r})"
 
 
 class BinaryMatrix(ControlChannel):
