@@ -231,6 +231,9 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   with, `bit -> bit ** n` ([next#292]); `optyx.core.zx.SWAP` evaluates, its
   `truncation` no longer an unbound function set on the instance
   ([next#293]).
+- `docs/notebooks/optyx/channel_error.ipynb`, a 0-byte file that is not valid
+  JSON and so not a notebook, is removed: it was added empty by `0e6c24bd`
+  (optyx#136) and never had content to restore ([next#250]).
 - `cat.Functor` reads the image of a daggered box off `ar_map` when the
   codomain has no dagger to take, instead of daggering the image: a functor
   into `stream.Stream` or `python.Function` used to raise an `AttributeError`,
@@ -610,6 +613,7 @@ for the changelog of `1.2.1` and earlier.
 [next#214]: https://github.com/rel-int/discopy-next/pull/214
 [next#225]: https://github.com/rel-int/discopy-next/issues/225
 [next#236]: https://github.com/rel-int/discopy-next/issues/236
+[next#250]: https://github.com/rel-int/discopy-next/issues/250
 [next#263]: https://github.com/rel-int/discopy-next/pull/263
 [next#276]: https://github.com/rel-int/discopy-next/pull/276
 [next#278]: https://github.com/rel-int/discopy-next/issues/278
