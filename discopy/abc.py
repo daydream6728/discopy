@@ -12,12 +12,12 @@ the characteristic generator of its categorical structure as an
 Software dependencies between modules go top-to-bottom, left-to-right and
 forgetful functors between categories go the other way.
 
-Each class also declares its :func:`discopy.axioms.axiom` equations, which
+Each class also declares its :func:`discopy.testable.axiom` equations, which
 every free category inherits along with the structure they axiomatise:
 :class:`Category` states the unitality and associativity of composition; a
 law quantifies over the type parameters of its signature, objects of the
 category, and over morphisms between them, see
-:class:`discopy.axioms.Declaration`; a :class:`DaggerCategory`
+:class:`discopy.testable.Declaration`; a :class:`DaggerCategory`
 adds the involution and contravariance of its dagger; a
 :class:`ColouredMonoid` inherits the first two as the unitality and
 associativity of its product, its composition; a :class:`Groupoid` is a
@@ -83,7 +83,7 @@ from types import NoneType
 from typing import TYPE_CHECKING, ClassVar
 
 from discopy import messages
-from discopy.axioms import (
+from discopy.testable import (
     Delay, Equation, Hom, Obj, Tensor, Testable, Unit, Var, axiom)
 from discopy.utils import (  # noqa: F401  pylint: disable=unused-import
     AxiomError, NamedGeneric, classproperty, factory_name)
@@ -122,7 +122,7 @@ class Category[C0, C1: Category](ABC):
         What the type parameters of the category stand for, in order: its
         objects ``C0`` and its arrows ``C1``, so that a sequent stated with
         them reads as one of the category it is bound to, see
-        :func:`discopy.axioms.position`.
+        :func:`discopy.testable.position`.
 
         >>> from discopy.monoidal import Ty, Diagram
         >>> assert Diagram.typeparams() == (Ty, Diagram)
@@ -138,7 +138,7 @@ class Category[C0, C1: Category](ABC):
         A class that quotients its equations overrides this, e.g. by
         hypergraph isomorphism from symmetric categories on, so an axiom
         built with it is checked up to whatever quotient the category
-        defines — and :meth:`discopy.axioms.Axiom.modulo` weakens it
+        defines — and :meth:`discopy.testable.Axiom.modulo` weakens it
         further.
         """
         return Equation(*terms)
@@ -360,7 +360,7 @@ class Nat(Testable["Nat"], Monoid["Nat"]):
     it off as a sequence of ``1``'s, e.g. ``Nat(3)[:1] == Nat(1)``.
 
     It is the sort of a law's number variable ``N: Nat`` too, see
-    :class:`discopy.axioms.Declaration`, and :meth:`__index__` lets it stand
+    :class:`discopy.testable.Declaration`, and :meth:`__index__` lets it stand
     wherever a number of copies or legs does, e.g. ``x ** Nat(2) == x @ x``
     and ``spiders(Nat(2), 1, x)``.
 
@@ -414,7 +414,7 @@ class Nat(Testable["Nat"], Monoid["Nat"]):
         Generate natural numbers up to ``max_size``, so that a category
         whose objects they are, e.g. :class:`discopy.matrix.Matrix`, and a
         law with a number variable ``N: Nat`` quantify over them like any
-        other :class:`discopy.axioms.Testable`.
+        other :class:`discopy.testable.Testable`.
         """
         from hypothesis import strategies as st
 

@@ -11,8 +11,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 - `discopy.abc`, the abstract base classes of the hierarchy, from `Category`
   to `PROP`, `Monoid` and `Pregroup` ([#326], [#331], [#727]).
-- `discopy.axioms`, laws stated once on `abc` and checked by the Hypothesis
-  matrix in `proptest/`, so far on `cat.Arrow` ([#658]).
+- `discopy.testable`, laws stated once on `abc` and checked by the Hypothesis
+  matrix in `proptest/`, so far on `cat.Arrow` ([#658], [#829]).
 - `discopy.cmap`, combinatorial maps for diagrams in compact categories, with
   `genus`, `is_planar` and `to_compact` ([#338], [#532], [#690]).
 - `discopy.para`, parametric and coparametric maps over any symmetric
@@ -283,7 +283,7 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   JSON and so not a notebook, is removed: it was added empty by `0e6c24bd`
   ([optyx#136]) and never had content to restore ([next#250]).
 - Every box of `discopy.optyx` prints the call that built it, so that
-  `eval(repr(x)) == x` holds for it as STYLE.md asks and `axioms.transparency`
+  `eval(repr(x)) == x` holds for it as STYLE.md asks and `testable.transparency`
   states: the boxes of `channel`, `qubits`, `photonic` and `classical` narrow
   `__init__` and used to print `cat.Box`'s `(name, dom, cod, data=...)`, which
   their own constructor cannot take. `core.diagram.Mode` and `Bit` print their
@@ -647,6 +647,7 @@ for the changelog of `1.2.1` and earlier.
 [#812]: https://github.com/discopy/discopy/pull/812
 [#824]: https://github.com/discopy/discopy/pull/824
 [#825]: https://github.com/discopy/discopy/pull/825
+[#829]: https://github.com/discopy/discopy/pull/829
 [#830]: https://github.com/discopy/discopy/pull/830
 [next#1]: https://github.com/rel-int/discopy-next/pull/1
 [next#9]: https://github.com/rel-int/discopy-next/issues/9

@@ -22,7 +22,7 @@ from contextlib import contextmanager
 
 from discopy import messages
 from discopy.abc import Category
-from discopy.axioms import Testable
+from discopy.testable import Testable
 from discopy.cat import Functor
 from discopy.monoidal import List
 from discopy.utils import (

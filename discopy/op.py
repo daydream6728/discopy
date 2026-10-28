@@ -56,7 +56,7 @@ from discopy import abc, cat, monoidal, symmetric
 from discopy.abc import (
     ComarkovCategory, MarkovCategory, MonoidalCategory, NamedGeneric,
     SymmetricCategory)
-from discopy.axioms import Testable
+from discopy.testable import Testable
 from discopy.python import finset
 from discopy.utils import (
     assert_isinstance, classproperty, factory_name, get_origin, unbiased)
