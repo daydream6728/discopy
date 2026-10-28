@@ -237,8 +237,8 @@ def distribute(diagram: monoidal.Diagram) -> markov.Sum:
         else markov.Sum((result, ))
 
 
-class EHypergraph(
-        MonoidalCategory, NamedGeneric['category'], Testable):
+class EHypergraph[category](
+        MonoidalCategory, NamedGeneric, Testable):
     """
     An e-hypergraph over a copy-discard ``category``, equal to another up to
     renaming its spiders, see :mod:`discopy.ehypergraph`.

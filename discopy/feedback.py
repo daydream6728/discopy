@@ -522,6 +522,8 @@ class Diagram(monoidal.Diagram, TracedCategory):
     ob = Ty
     layer_factory = Layer
 
+    box_factory: ClassVar[type["Box"]]
+    functor_factory: ClassVar[type["Functor"]]
     feedback_factory: ClassVar[type["Feedback"]]
     trace_factory: ClassVar[type["Trace"]]
     head_factory: ClassVar[type["Head"]]
@@ -673,8 +675,9 @@ class Box(monoidal.Box, Diagram):
 
     def __init__(self, *args, time_step: int = 0, **params):
         self._time_step, self._args = time_step, args[3:]
-        self._params = {key: value for key, value in params.items()
-                        if key not in ("name", "dom", "cod")}
+        self._params = {
+            key: value for key, value in params.items()
+            if key not in ("name", "dom", "cod")}
         super().__init__(*args, **params)
 
     @time_step.setter
@@ -766,7 +769,7 @@ class Box(monoidal.Box, Diagram):
         result = super().from_tree(tree)
         result._time_step = tree.get(  # pylint: disable=protected-access
             'time_step', 0)
-        return result
+        return result  # ty: ignore[invalid-return-type]
 
     def setoid(self):
         return super().setoid() + (self.time_step, )
@@ -854,7 +857,9 @@ class Feedback(Box, monoidal.Bubble):
         arg, dom, cod, mem = (
             from_tree(tree[key]) if key in tree else None
             for key in ('arg', 'dom', 'cod', 'mem'))
-        return cls(arg, dom=dom, cod=cod, mem=mem, left='left' in tree)
+        return cls(
+            arg,  # ty: ignore[invalid-argument-type]
+            dom=dom, cod=cod, mem=mem, left='left' in tree)
 
     def dagger(self):
         """
@@ -1159,10 +1164,10 @@ def subclass(name: str, bases: list[type], module: str, doc: str) -> type:
     base subclasses, so that it prints, pickles and reads back from its tree
     as a class written in that module would.
     """
-    bases = tuple(dict.fromkeys(
+    bases = tuple(dict.fromkeys(  # ty: ignore[invalid-assignment]
         base for base in bases if not any(
             other is not base and issubclass(other, base) for other in bases)))
-    return type(name, bases, {
+    return type(name, bases, {  # ty: ignore[invalid-argument-type]
         "__module__": module, "__qualname__": name, "__doc__": doc})
 
 

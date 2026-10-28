@@ -184,8 +184,8 @@ def test_string_annotations():
 def test_inapplicable():
     law = Arrow.unitality.inapplicable("No identities to cancel.")
     assert law.name == "unitality"
-    assert law.__doc__ == "No identities to cancel."
     assert law() is NotImplemented
+    assert law.__doc__ == "No identities to cancel."
 
 
 def test_modulo():
@@ -269,6 +269,8 @@ def test_axioms_of_category():
         unitality = None
 
     assert "unitality" not in Hidden.axioms
+
+
 
 
 def test_copying():
