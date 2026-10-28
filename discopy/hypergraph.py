@@ -1069,6 +1069,12 @@ class Hypergraph(
         path leaves its image and comes back to it, see
         :cite:t:`BonchiEtAl22b`, Definition 25.
 
+        Coming back to the image means writing into one of its spiders, so
+        when the boxes of the host are topologically ordered the walk stops
+        at the last box that does: no box after it can reach one. Where they
+        are not, as in a :class:`Rewriter`, every box downstream of the image
+        is walked.
+
         Example
         -------
         >>> from discopy.symmetric import Ty, Box
@@ -1082,9 +1088,13 @@ class Hypergraph(
         if len(set(spiders)) < len(spiders) or len(set(boxes)) < len(boxes):
             return False
         image, inside = set(spiders), set(boxes)
+        last = max((box for spider in image
+                    for box, side, _ in self.incidence[spider] if side == 1),
+                   default=-1) if self.is_topologically_ordered\
+            else len(self.boxes)
         outside = [box for spider in image
                    for box, side, _ in self.incidence[spider]
-                   if side == 0 and box not in inside]
+                   if side == 0 and box not in inside and box <= last]
         seen = set()
         while outside:
             box = outside.pop()
@@ -1095,7 +1105,8 @@ class Hypergraph(
                 return False
             outside += [next_box for spider in self.box_wires[box][1]
                         for next_box, side, _ in self.incidence[spider]
-                        if side == 0 and next_box not in inside]
+                        if side == 0 and next_box not in inside
+                        and next_box <= last]
         return True
 
     def assert_isrewritable(self) -> None:
@@ -1969,10 +1980,12 @@ class Hypergraph(
                     ready.append(j)
         return seen == len(self.boxes)
 
-    @property
+    @cached_property
     def is_topologically_ordered(self) -> bool:
         """
-        Checks that causal wires point forward in the current port order.
+        Checks that causal wires point forward in the current port order,
+        hence that a box of a larger index is never in the past of a smaller
+        one: :meth:`is_convex` reads it on every match.
         """
         return all(all(
             u < v for u in input_wires for v in output_wires)
@@ -3516,6 +3529,10 @@ class Rewriter:
     candidates = Hypergraph.candidates
     extend_spiders = Hypergraph.extend_spiders
     is_convex = Hypergraph.is_convex
+
+    #: A rewrite can give a box a spider written by a later one, so the ids
+    #: are no topological order and :meth:`is_convex` walks the whole cone.
+    is_topologically_ordered = False
 
     def __init__(self, graph: Hypergraph):
         self.factory, self.dom, self.cod = type(graph), graph.dom, graph.cod
