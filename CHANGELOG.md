@@ -435,6 +435,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - `zx.H`, quantum gates that do not send basis states to basis states,
   `gates.Bra`, `gates.Match` and `tensor.Sum` no longer claim to be cartesian
   ([next#115]).
+- `markov.Box` and boxes inheriting its constructor show `name`, `dom`, `cod`
+  and their keywords in their signature, not `*args` ([next#114]).
 - optyx: `photonic.Swap(left, right)` swaps any numbers of modes
   ([next#300]), `prob_dist` of a closed diagram is the probability of the
   empty outcome ([next#382]), `classical.And(n)` takes `n` bits
