@@ -442,6 +442,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   empty outcome ([next#382]), `classical.And(n)` takes `n` bits
   ([next#387]), and `BBS.dagger` and `BBS.lambdify` keep `is_conj`
   ([next#386]).
+- A doctest image of another size than its baseline raises "Drawing differs"
+  like any other mismatch ([next#399]).
 - Docstrings of `para` and two others ([#494], [#683], [#693]), a citation
   in `kleisli.additive` ([#639]), and notebook titles in the docs ([#526]).
 - optyx's docstrings draw with `doctest=`, so their images are checked against
@@ -724,6 +726,7 @@ for the changelog of `1.2.1` and earlier.
 [next#386]: https://github.com/rel-int/discopy-next/issues/386
 [next#387]: https://github.com/rel-int/discopy-next/issues/387
 [next#388]: https://github.com/rel-int/discopy-next/issues/388
+[next#399]: https://github.com/rel-int/discopy-next/issues/399
 [optyx#16]: https://github.com/rel-int/optyx/pull/16
 [optyx#29]: https://github.com/rel-int/optyx/pull/29
 [optyx#56]: https://github.com/rel-int/optyx/pull/56
