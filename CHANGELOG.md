@@ -437,6 +437,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   ([next#115]).
 - Docstrings of `para` and two others ([#494], [#683], [#693]), a citation
   in `kleisli.additive` ([#639]), and notebook titles in the docs ([#526]).
+- optyx's docstrings draw with `doctest=`, so their images are checked against
+  the committed ones ([next#388]).
 
 ### Project
 
@@ -710,6 +712,7 @@ for the changelog of `1.2.1` and earlier.
 [next#351]: https://github.com/rel-int/discopy-next/issues/351
 [next#359]: https://github.com/rel-int/discopy-next/issues/359
 [next#376]: https://github.com/rel-int/discopy-next/issues/376
+[next#388]: https://github.com/rel-int/discopy-next/issues/388
 [optyx#16]: https://github.com/rel-int/optyx/pull/16
 [optyx#29]: https://github.com/rel-int/optyx/pull/29
 [optyx#56]: https://github.com/rel-int/optyx/pull/56
