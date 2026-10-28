@@ -256,7 +256,7 @@ class Plumbing:
 
 
 @dataclass
-class Sampler:
+class Sampler:  # pylint: disable=too-many-instance-attributes  # its knobs
     """
     The Boltzmann sampler of boxes and their plumbing: a diagram with ``k``
     boxes, each of a shape ``m -> n`` among ``shapes``, and ``c`` crossings
@@ -640,14 +640,14 @@ class Walk:  # pylint: disable=too-many-instance-attributes  # a walk's state
         Draw a free side port by port, the domain if ``producers`` else the
         codomain, until it stops, see :meth:`Sampler.free`.
         """
-        sampler, plumbing = self.sampler, self.sampler.plumbing
-        table = sampler.free(True, self.cod) if producers\
-            else sampler.free(False)
+        plumbing, y = self.sampler.plumbing, self.sampler.boundary
+        table = self.sampler.free(True, self.cod) if producers\
+            else self.sampler.free(False)
         while True:
             stop = sum(self.ways().values()) if producers\
                 else float(self.state == plumbing.start)
             weights = {None: stop} | {
-                move: sampler.boundary * weight * table.get(after, 0.)
+                move: y * weight * table.get(after, 0.)
                 for move, weight, after in plumbing.transitions(
                     self.state, producers)}
             move = self.choose(weights)
