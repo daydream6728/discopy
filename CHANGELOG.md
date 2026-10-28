@@ -445,6 +445,23 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   empty outcome ([next#382]), `classical.And(n)` takes `n` bits
   ([next#387]), and `BBS.dagger` and `BBS.lambdify` keep `is_conj`
   ([next#386]).
+- `Hypergraph.is_convex` stops at the last box that writes into the image
+  instead of walking every box downstream of the match, wherever the boxes of
+  the host are topologically ordered, which `is_topologically_ordered` now
+  caches and a `Rewriter` declares false: matching a pattern over a host used
+  to cost the size of the host on every homomorphism ([next#286]).
+- The SEMM compiler of `discopy.optyx` on a path cover of more than one path,
+  which used to recurse forever: `compiler.mbqc.add_fusion_order` closes the
+  past of a node without recursion, so a node fused to something in its own
+  past comes back; `GFlow.partial_order` leaves two nodes of one layer
+  incomparable, as a foliation does, rather than each in the other's past;
+  `compile_to_semm` extends the order to the breaks that join the paths,
+  which are nodes of the resource state and not of the graph; and
+  `get_creation_times` and `get_measurement_times` are keyed by node ID
+  rather than by position in the path, counting no measurement photon for an
+  output, so that the fusion photons pair up. What the instructions should
+  say about a break, so that a decompile reads the graph back, is open
+  ([next#298]).
 - A doctest image of another size than its baseline raises "Drawing differs"
   like any other mismatch ([next#399]).
 - Docstrings of `para` and two others ([#494], [#683], [#693]), a citation
@@ -703,6 +720,7 @@ for the changelog of `1.2.1` and earlier.
 [next#276]: https://github.com/rel-int/discopy-next/pull/276
 [next#278]: https://github.com/rel-int/discopy-next/issues/278
 [next#283]: https://github.com/rel-int/discopy-next/pull/283
+[next#286]: https://github.com/rel-int/discopy-next/issues/286
 [next#289]: https://github.com/rel-int/discopy-next/issues/289
 [next#290]: https://github.com/rel-int/discopy-next/issues/290
 [next#291]: https://github.com/rel-int/discopy-next/issues/291
@@ -711,6 +729,7 @@ for the changelog of `1.2.1` and earlier.
 [next#294]: https://github.com/rel-int/discopy-next/issues/294
 [next#295]: https://github.com/rel-int/discopy-next/issues/295
 [next#297]: https://github.com/rel-int/discopy-next/issues/297
+[next#298]: https://github.com/rel-int/discopy-next/issues/298
 [next#299]: https://github.com/rel-int/discopy-next/issues/299
 [next#300]: https://github.com/rel-int/discopy-next/issues/300
 [next#301]: https://github.com/rel-int/discopy-next/issues/301
