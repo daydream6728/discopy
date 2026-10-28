@@ -7286,6 +7286,1265 @@
      "7": 10
     }
    }
+  },
+  "catalytic": {
+   "monoidal|x->x": {
+    "n": 300,
+    "mean_boxes": 2.933333333333333,
+    "median_boxes": 3.0,
+    "p90_boxes": 6,
+    "max_boxes": 6,
+    "identity": 0.14,
+    "one_box": 0.15666666666666668,
+    "mean_layers": 2.933333333333333,
+    "mean_wires": 2,
+    "structured": 0.0,
+    "kinds": {},
+    "shapes": 0.55,
+    "classes": 0.6166666666666667,
+    "ms": 6.844143072764079,
+    "histogram": {
+     "5": 40,
+     "3": 49,
+     "4": 41,
+     "6": 40,
+     "2": 41,
+     "0": 42,
+     "1": 47
+    }
+   },
+   "monoidal|free": {
+    "n": 300,
+    "mean_boxes": 2.9366666666666665,
+    "median_boxes": 3.0,
+    "p90_boxes": 6,
+    "max_boxes": 6,
+    "identity": 0.14666666666666667,
+    "one_box": 0.16333333333333333,
+    "mean_layers": 2.9366666666666665,
+    "mean_wires": 2.69,
+    "structured": 0.0,
+    "kinds": {},
+    "shapes": 0.67,
+    "classes": 0.7533333333333333,
+    "ms": 3.0654319127400713,
+    "histogram": {
+     "2": 43,
+     "1": 49,
+     "5": 41,
+     "0": 44,
+     "6": 42,
+     "3": 35,
+     "4": 46
+    }
+   },
+   "braided|x->x": {
+    "n": 300,
+    "mean_boxes": 2.8033333333333332,
+    "median_boxes": 3.0,
+    "p90_boxes": 5,
+    "max_boxes": 6,
+    "identity": 0.14,
+    "one_box": 0.15666666666666668,
+    "mean_layers": 2.933333333333333,
+    "mean_wires": 2,
+    "structured": 0.11,
+    "kinds": {
+     "Braid": 0.11
+    },
+    "shapes": 0.5466666666666666,
+    "classes": 0.6233333333333333,
+    "ms": 7.0139869054158535,
+    "histogram": {
+     "5": 41,
+     "3": 55,
+     "4": 39,
+     "6": 29,
+     "2": 47,
+     "0": 42,
+     "1": 47
+    }
+   },
+   "braided|free": {
+    "n": 300,
+    "mean_boxes": 2.7533333333333334,
+    "median_boxes": 3.0,
+    "p90_boxes": 5,
+    "max_boxes": 6,
+    "identity": 0.14666666666666667,
+    "one_box": 0.16,
+    "mean_layers": 2.9366666666666665,
+    "mean_wires": 2.64,
+    "structured": 0.15333333333333332,
+    "kinds": {
+     "Braid": 0.15333333333333332
+    },
+    "shapes": 0.6733333333333333,
+    "classes": 0.7633333333333333,
+    "ms": 3.064729372660319,
+    "histogram": {
+     "2": 48,
+     "0": 45,
+     "5": 45,
+     "6": 23,
+     "1": 50,
+     "3": 39,
+     "4": 50
+    }
+   },
+   "rigid|x->x": {
+    "n": 300,
+    "mean_boxes": 2.6366666666666667,
+    "median_boxes": 3.0,
+    "p90_boxes": 5,
+    "max_boxes": 6,
+    "identity": 0.18,
+    "one_box": 0.13333333333333333,
+    "mean_layers": 2.96,
+    "mean_wires": 2,
+    "structured": 0.23,
+    "kinds": {
+     "Cup": 0.16333333333333333,
+     "Cap": 0.15
+    },
+    "shapes": 0.5933333333333334,
+    "classes": 0.6366666666666667,
+    "ms": 8.643041451772055,
+    "histogram": {
+     "2": 37,
+     "5": 40,
+     "0": 57,
+     "6": 23,
+     "4": 48,
+     "1": 49,
+     "3": 46
+    }
+   },
+   "rigid|free": {
+    "n": 300,
+    "mean_boxes": 2.7,
+    "median_boxes": 3.0,
+    "p90_boxes": 5,
+    "max_boxes": 6,
+    "identity": 0.13,
+    "one_box": 0.16,
+    "mean_layers": 3.0166666666666666,
+    "mean_wires": 2.9133333333333336,
+    "structured": 0.23,
+    "kinds": {
+     "Cap": 0.15666666666666668,
+     "Cup": 0.14666666666666667
+    },
+    "shapes": 0.74,
+    "classes": 0.82,
+    "ms": 4.55743948618571,
+    "histogram": {
+     "6": 18,
+     "3": 56,
+     "2": 46,
+     "5": 53,
+     "0": 40,
+     "4": 30,
+     "1": 57
+    }
+   },
+   "pivotal|x->x": {
+    "n": 300,
+    "mean_boxes": 2.7266666666666666,
+    "median_boxes": 3.0,
+    "p90_boxes": 5,
+    "max_boxes": 6,
+    "identity": 0.15,
+    "one_box": 0.14666666666666667,
+    "mean_layers": 3.08,
+    "mean_wires": 2,
+    "structured": 0.23666666666666666,
+    "kinds": {
+     "Cup": 0.18666666666666668,
+     "Cap": 0.14
+    },
+    "shapes": 0.6233333333333333,
+    "classes": 0.6666666666666666,
+    "ms": 8.337240219116211,
+    "histogram": {
+     "0": 46,
+     "1": 55,
+     "4": 63,
+     "5": 37,
+     "2": 31,
+     "3": 48,
+     "6": 20
+    }
+   },
+   "pivotal|free": {
+    "n": 300,
+    "mean_boxes": 2.7133333333333334,
+    "median_boxes": 3.0,
+    "p90_boxes": 5,
+    "max_boxes": 6,
+    "identity": 0.12,
+    "one_box": 0.13666666666666666,
+    "mean_layers": 3.1066666666666665,
+    "mean_wires": 2.74,
+    "structured": 0.26,
+    "kinds": {
+     "Cap": 0.18333333333333332,
+     "Cup": 0.17666666666666667
+    },
+    "shapes": 0.7466666666666667,
+    "classes": 0.8433333333333334,
+    "ms": 5.087920029958089,
+    "histogram": {
+     "4": 45,
+     "1": 52,
+     "5": 40,
+     "2": 53,
+     "0": 36,
+     "3": 56,
+     "6": 18
+    }
+   },
+   "symmetric|x->x": {
+    "n": 300,
+    "mean_boxes": 3.0033333333333334,
+    "median_boxes": 3.0,
+    "p90_boxes": 6,
+    "max_boxes": 6,
+    "identity": 0.13666666666666666,
+    "one_box": 0.043333333333333335,
+    "mean_layers": 0.9066666666666666,
+    "mean_wires": 2,
+    "structured": 0.82,
+    "kinds": {
+     "Trace": 0.8033333333333333,
+     "Permutation": 0.7433333333333333,
+     "Swap": 0.05333333333333334
+    },
+    "shapes": 0.7966666666666666,
+    "classes": 0.8,
+    "ms": 17.26056496302287,
+    "histogram": {
+     "1": 42,
+     "5": 47,
+     "3": 42,
+     "2": 39,
+     "0": 43,
+     "4": 51,
+     "6": 36
+    }
+   },
+   "symmetric|free": {
+    "n": 300,
+    "mean_boxes": 3.03,
+    "median_boxes": 3.0,
+    "p90_boxes": 6,
+    "max_boxes": 6,
+    "identity": 0.10666666666666667,
+    "one_box": 0.04666666666666667,
+    "mean_layers": 0.9566666666666667,
+    "mean_wires": 2.7466666666666666,
+    "structured": 0.8366666666666667,
+    "kinds": {
+     "Trace": 0.8066666666666666,
+     "Permutation": 0.77,
+     "Swap": 0.06
+    },
+    "shapes": 0.8433333333333334,
+    "classes": 0.87,
+    "ms": 10.529006322224935,
+    "histogram": {
+     "3": 55,
+     "2": 43,
+     "0": 37,
+     "1": 40,
+     "5": 48,
+     "6": 35,
+     "4": 42
+    }
+   },
+   "feedback|x->x": {
+    "n": 300,
+    "mean_boxes": 3.0033333333333334,
+    "median_boxes": 3.0,
+    "p90_boxes": 6,
+    "max_boxes": 6,
+    "identity": 0.14333333333333334,
+    "one_box": 0.14,
+    "mean_layers": 3.0033333333333334,
+    "mean_wires": 2,
+    "structured": 0.0,
+    "kinds": {},
+    "shapes": 0.5633333333333334,
+    "classes": 0.67,
+    "ms": 6.213330427805583,
+    "histogram": {
+     "1": 42,
+     "5": 47,
+     "3": 42,
+     "2": 39,
+     "0": 43,
+     "4": 51,
+     "6": 36
+    }
+   },
+   "feedback|free": {
+    "n": 300,
+    "mean_boxes": 3.03,
+    "median_boxes": 3.0,
+    "p90_boxes": 6,
+    "max_boxes": 6,
+    "identity": 0.12333333333333334,
+    "one_box": 0.13333333333333333,
+    "mean_layers": 3.03,
+    "mean_wires": 2.6233333333333335,
+    "structured": 0.0,
+    "kinds": {},
+    "shapes": 0.7133333333333334,
+    "classes": 0.8066666666666666,
+    "ms": 3.1290642420450845,
+    "histogram": {
+     "3": 55,
+     "2": 43,
+     "0": 37,
+     "1": 40,
+     "5": 48,
+     "6": 35,
+     "4": 42
+    }
+   },
+   "compact|x->x": {
+    "n": 300,
+    "mean_boxes": 3.0233333333333334,
+    "median_boxes": 3.0,
+    "p90_boxes": 6,
+    "max_boxes": 6,
+    "identity": 0.14,
+    "one_box": 0.006666666666666667,
+    "mean_layers": 14.04,
+    "mean_wires": 2,
+    "structured": 0.8533333333333334,
+    "kinds": {
+     "Cup": 0.85,
+     "Cap": 0.8366666666666667,
+     "Permutation": 0.7933333333333333
+    },
+    "shapes": 0.8533333333333334,
+    "classes": 0.85,
+    "ms": 20.58617432912191,
+    "histogram": {
+     "0": 45,
+     "1": 44,
+     "4": 59,
+     "6": 41,
+     "2": 32,
+     "3": 39,
+     "5": 40
+    }
+   },
+   "compact|free": {
+    "n": 300,
+    "mean_boxes": 3.033333333333333,
+    "median_boxes": 3.0,
+    "p90_boxes": 6,
+    "max_boxes": 6,
+    "identity": 0.07333333333333333,
+    "one_box": 0.0,
+    "mean_layers": 14.236666666666666,
+    "mean_wires": 2.5566666666666666,
+    "structured": 0.9266666666666666,
+    "kinds": {
+     "Cap": 0.9066666666666666,
+     "Cup": 0.8966666666666666,
+     "Permutation": 0.81,
+     "Swap": 0.056666666666666664
+    },
+    "shapes": 0.9233333333333333,
+    "classes": 0.9133333333333333,
+    "ms": 20.772887070973713,
+    "histogram": {
+     "4": 43,
+     "2": 46,
+     "6": 37,
+     "3": 51,
+     "5": 46,
+     "0": 36,
+     "1": 41
+    }
+   },
+   "markov|x->x": {
+    "n": 300,
+    "mean_boxes": 3.0033333333333334,
+    "median_boxes": 3.0,
+    "p90_boxes": 6,
+    "max_boxes": 6,
+    "identity": 0.13666666666666666,
+    "one_box": 0.01,
+    "mean_layers": 0.9233333333333333,
+    "mean_wires": 2,
+    "structured": 0.8533333333333334,
+    "kinds": {
+     "Trace": 0.82,
+     "Function": 0.78,
+     "Permutation": 0.55,
+     "Copy": 0.056666666666666664,
+     "Discard": 0.04666666666666667,
+     "Swap": 0.03
+    },
+    "shapes": 0.8566666666666667,
+    "classes": 0.85,
+    "ms": 136.25858068466187,
+    "histogram": {
+     "1": 42,
+     "5": 47,
+     "3": 42,
+     "2": 39,
+     "0": 43,
+     "4": 51,
+     "6": 36
+    }
+   },
+   "markov|free": {
+    "n": 300,
+    "mean_boxes": 3.03,
+    "median_boxes": 3.0,
+    "p90_boxes": 6,
+    "max_boxes": 6,
+    "identity": 0.1,
+    "one_box": 0.0033333333333333335,
+    "mean_layers": 0.9666666666666667,
+    "mean_wires": 2.9266666666666667,
+    "structured": 0.8966666666666666,
+    "kinds": {
+     "Trace": 0.8333333333333334,
+     "Function": 0.8066666666666666,
+     "Permutation": 0.54,
+     "Copy": 0.03666666666666667,
+     "Discard": 0.03666666666666667,
+     "Swap": 0.02
+    },
+    "shapes": 0.89,
+    "classes": 0.88,
+    "ms": 44.14168437321981,
+    "histogram": {
+     "3": 55,
+     "2": 43,
+     "0": 37,
+     "1": 40,
+     "5": 48,
+     "6": 35,
+     "4": 42
+    }
+   },
+   "closed|x->x": {
+    "n": 300,
+    "mean_boxes": 2.9266666666666667,
+    "median_boxes": 3.0,
+    "p90_boxes": 6,
+    "max_boxes": 6,
+    "identity": 0.13,
+    "one_box": 0.013333333333333334,
+    "mean_layers": 0.97,
+    "mean_wires": 2,
+    "structured": 0.8566666666666667,
+    "kinds": {
+     "Trace": 0.8,
+     "Function": 0.7566666666666667,
+     "Permutation": 0.5733333333333334,
+     "Copy": 0.10333333333333333,
+     "Discard": 0.04666666666666667,
+     "Swap": 0.04666666666666667
+    },
+    "shapes": 0.85,
+    "classes": 0.8366666666666667,
+    "ms": 15.567623774210611,
+    "histogram": {
+     "2": 37,
+     "5": 45,
+     "0": 44,
+     "1": 53,
+     "3": 44,
+     "6": 43,
+     "4": 34
+    }
+   },
+   "closed|free": {
+    "n": 300,
+    "mean_boxes": 3.066666666666667,
+    "median_boxes": 3.0,
+    "p90_boxes": 6,
+    "max_boxes": 6,
+    "identity": 0.14,
+    "one_box": 0.0,
+    "mean_layers": 0.96,
+    "mean_wires": 3.006666666666667,
+    "structured": 0.86,
+    "kinds": {
+     "Trace": 0.8033333333333333,
+     "Function": 0.7966666666666666,
+     "Permutation": 0.57,
+     "Copy": 0.04,
+     "Swap": 0.02,
+     "Discard": 0.013333333333333334
+    },
+    "shapes": 0.8666666666666667,
+    "classes": 0.85,
+    "ms": 16.64623498916626,
+    "histogram": {
+     "2": 39,
+     "0": 51,
+     "5": 45,
+     "3": 44,
+     "6": 47,
+     "4": 43,
+     "1": 31
+    }
+   },
+   "frobenius|x->x": {
+    "n": 300,
+    "mean_boxes": 2.81,
+    "median_boxes": 3.0,
+    "p90_boxes": 6,
+    "max_boxes": 6,
+    "identity": 0.14,
+    "one_box": 0.0,
+    "mean_layers": 6.24,
+    "mean_wires": 2,
+    "structured": 0.86,
+    "kinds": {
+     "Cospan": 0.86,
+     "Permutation": 0.25666666666666665,
+     "Cap": 0.01,
+     "Spider": 0.006666666666666667
+    },
+    "shapes": 0.8433333333333334,
+    "classes": 0.8333333333333334,
+    "ms": 79.7446592648824,
+    "histogram": {
+     "6": 34,
+     "2": 35,
+     "3": 57,
+     "0": 52,
+     "4": 48,
+     "1": 41,
+     "5": 33
+    }
+   },
+   "frobenius|free": {
+    "n": 300,
+    "mean_boxes": 3.0233333333333334,
+    "median_boxes": 3.0,
+    "p90_boxes": 6,
+    "max_boxes": 6,
+    "identity": 0.08666666666666667,
+    "one_box": 0.0,
+    "mean_layers": 6.696666666666666,
+    "mean_wires": 2.9566666666666666,
+    "structured": 0.9133333333333333,
+    "kinds": {
+     "Cospan": 0.88,
+     "Permutation": 0.2733333333333333,
+     "Spider": 0.043333333333333335,
+     "Cap": 0.03666666666666667,
+     "Cup": 0.01
+    },
+    "shapes": 0.91,
+    "classes": 0.9,
+    "ms": 62.16943105061849,
+    "histogram": {
+     "5": 44,
+     "1": 39,
+     "2": 50,
+     "3": 46,
+     "0": 38,
+     "4": 44,
+     "6": 39
+    }
+   }
+  },
+  "boltzmann_catalytic": {
+   "monoidal|x->x": {
+    "n": 300,
+    "mean_boxes": 3.5733333333333333,
+    "median_boxes": 3.0,
+    "p90_boxes": 6,
+    "max_boxes": 12,
+    "identity": 0.12,
+    "one_box": 0.12666666666666668,
+    "mean_layers": 3.5733333333333333,
+    "mean_wires": 2,
+    "structured": 0.0,
+    "kinds": {},
+    "shapes": 0.5266666666666666,
+    "classes": 0.5933333333333334,
+    "ms": 14.950786431630453,
+    "histogram": {
+     "0": 36,
+     "5": 50,
+     "1": 38,
+     "3": 47,
+     "2": 34,
+     "6": 37,
+     "7": 10,
+     "4": 29,
+     "8": 12,
+     "11": 2,
+     "10": 1,
+     "9": 3,
+     "12": 1
+    }
+   },
+   "monoidal|free": {
+    "n": 300,
+    "mean_boxes": 3.236666666666667,
+    "median_boxes": 3.0,
+    "p90_boxes": 6,
+    "max_boxes": 11,
+    "identity": 0.12,
+    "one_box": 0.18666666666666668,
+    "mean_layers": 3.236666666666667,
+    "mean_wires": 2.4433333333333334,
+    "structured": 0.0,
+    "kinds": {},
+    "shapes": 0.6266666666666667,
+    "classes": 0.7366666666666667,
+    "ms": 6.2345075607299805,
+    "histogram": {
+     "2": 37,
+     "3": 31,
+     "5": 32,
+     "4": 46,
+     "6": 47,
+     "1": 56,
+     "0": 36,
+     "11": 4,
+     "7": 10,
+     "8": 1
+    }
+   },
+   "braided|x->x": {
+    "n": 300,
+    "mean_boxes": 3.7333333333333334,
+    "median_boxes": 4.0,
+    "p90_boxes": 7,
+    "max_boxes": 14,
+    "identity": 0.11,
+    "one_box": 0.10666666666666667,
+    "mean_layers": 4.1466666666666665,
+    "mean_wires": 2,
+    "structured": 0.26666666666666666,
+    "kinds": {
+     "Braid": 0.26666666666666666
+    },
+    "shapes": 0.5933333333333334,
+    "classes": 0.6533333333333333,
+    "ms": 13.101159731547037,
+    "histogram": {
+     "0": 33,
+     "5": 42,
+     "1": 32,
+     "3": 36,
+     "2": 44,
+     "8": 7,
+     "7": 9,
+     "6": 28,
+     "4": 50,
+     "10": 4,
+     "9": 9,
+     "12": 4,
+     "11": 2
+    }
+   },
+   "braided|free": {
+    "n": 300,
+    "mean_boxes": 3.433333333333333,
+    "median_boxes": 3.5,
+    "p90_boxes": 6,
+    "max_boxes": 9,
+    "identity": 0.05,
+    "one_box": 0.11666666666666667,
+    "mean_layers": 4.0633333333333335,
+    "mean_wires": 2.65,
+    "structured": 0.3566666666666667,
+    "kinds": {
+     "Braid": 0.3566666666666667
+    },
+    "shapes": 0.7133333333333334,
+    "classes": 0.7966666666666666,
+    "ms": 8.398955663045246,
+    "histogram": {
+     "2": 39,
+     "7": 15,
+     "5": 53,
+     "8": 6,
+     "3": 37,
+     "1": 49,
+     "6": 25,
+     "9": 4,
+     "4": 47,
+     "0": 25
+    }
+   },
+   "rigid|x->x": {
+    "n": 300,
+    "mean_boxes": 3.37,
+    "median_boxes": 3.0,
+    "p90_boxes": 6,
+    "max_boxes": 9,
+    "identity": 0.07,
+    "one_box": 0.14333333333333334,
+    "mean_layers": 3.86,
+    "mean_wires": 2,
+    "structured": 0.31,
+    "kinds": {
+     "Cap": 0.22333333333333333,
+     "Cup": 0.19
+    },
+    "shapes": 0.5133333333333333,
+    "classes": 0.5333333333333333,
+    "ms": 18.612159093221027,
+    "histogram": {
+     "2": 48,
+     "3": 42,
+     "0": 22,
+     "4": 53,
+     "5": 45,
+     "9": 6,
+     "6": 31,
+     "1": 44,
+     "7": 4,
+     "8": 5
+    }
+   },
+   "rigid|free": {
+    "n": 300,
+    "mean_boxes": 3.0733333333333333,
+    "median_boxes": 3.0,
+    "p90_boxes": 6,
+    "max_boxes": 10,
+    "identity": 0.10666666666666667,
+    "one_box": 0.12666666666666668,
+    "mean_layers": 3.6233333333333335,
+    "mean_wires": 2.5733333333333333,
+    "structured": 0.35333333333333333,
+    "kinds": {
+     "Cup": 0.25,
+     "Cap": 0.24333333333333335
+    },
+    "shapes": 0.6733333333333333,
+    "classes": 0.7666666666666667,
+    "ms": 8.939092953999836,
+    "histogram": {
+     "6": 23,
+     "0": 36,
+     "1": 51,
+     "3": 52,
+     "5": 38,
+     "2": 50,
+     "4": 26,
+     "10": 2,
+     "7": 15,
+     "8": 5,
+     "9": 2
+    }
+   },
+   "pivotal|x->x": {
+    "n": 300,
+    "mean_boxes": 3.473333333333333,
+    "median_boxes": 3.0,
+    "p90_boxes": 7,
+    "max_boxes": 11,
+    "identity": 0.056666666666666664,
+    "one_box": 0.15,
+    "mean_layers": 3.6066666666666665,
+    "mean_wires": 2,
+    "structured": 0.4666666666666667,
+    "kinds": {
+     "Feedback": 0.24666666666666667,
+     "Cap": 0.22,
+     "Cup": 0.22
+    },
+    "shapes": 0.5033333333333333,
+    "classes": 0.5433333333333333,
+    "ms": 23.568438688913982,
+    "histogram": {
+     "0": 17,
+     "5": 28,
+     "1": 56,
+     "4": 41,
+     "3": 52,
+     "7": 10,
+     "2": 46,
+     "6": 28,
+     "9": 8,
+     "11": 4,
+     "8": 10
+    }
+   },
+   "pivotal|free": {
+    "n": 300,
+    "mean_boxes": 3.42,
+    "median_boxes": 3.0,
+    "p90_boxes": 6,
+    "max_boxes": 11,
+    "identity": 0.04,
+    "one_box": 0.11666666666666667,
+    "mean_layers": 3.95,
+    "mean_wires": 2.6666666666666665,
+    "structured": 0.5133333333333333,
+    "kinds": {
+     "Cap": 0.32,
+     "Cup": 0.31666666666666665,
+     "Feedback": 0.2
+    },
+    "shapes": 0.7433333333333333,
+    "classes": 0.8133333333333334,
+    "ms": 11.402758757273356,
+    "histogram": {
+     "4": 57,
+     "1": 44,
+     "6": 29,
+     "5": 27,
+     "3": 50,
+     "0": 17,
+     "8": 7,
+     "2": 52,
+     "7": 11,
+     "11": 1,
+     "9": 3,
+     "10": 2
+    }
+   },
+   "symmetric|x->x": {
+    "n": 300,
+    "mean_boxes": 3.35,
+    "median_boxes": 3.0,
+    "p90_boxes": 6,
+    "max_boxes": 10,
+    "identity": 0.10333333333333333,
+    "one_box": 0.07333333333333333,
+    "mean_layers": 1.97,
+    "mean_wires": 2,
+    "structured": 0.7066666666666667,
+    "kinds": {
+     "Trace": 0.6,
+     "Permutation": 0.31,
+     "Swap": 0.21666666666666667,
+     "Feedback": 0.12333333333333334
+    },
+    "shapes": 0.7266666666666667,
+    "classes": 0.7366666666666667,
+    "ms": 24.430612723032635,
+    "histogram": {
+     "1": 38,
+     "3": 58,
+     "7": 11,
+     "6": 34,
+     "5": 32,
+     "0": 33,
+     "2": 49,
+     "8": 8,
+     "4": 29,
+     "10": 2,
+     "9": 6
+    }
+   },
+   "symmetric|free": {
+    "n": 300,
+    "mean_boxes": 3.32,
+    "median_boxes": 3.0,
+    "p90_boxes": 6,
+    "max_boxes": 10,
+    "identity": 0.10666666666666667,
+    "one_box": 0.06666666666666667,
+    "mean_layers": 2.41,
+    "mean_wires": 2.59,
+    "structured": 0.7466666666666667,
+    "kinds": {
+     "Trace": 0.51,
+     "Permutation": 0.37666666666666665,
+     "Swap": 0.31,
+     "Feedback": 0.10666666666666667
+    },
+    "shapes": 0.7533333333333333,
+    "classes": 0.8066666666666666,
+    "ms": 14.592753251393637,
+    "histogram": {
+     "3": 44,
+     "0": 43,
+     "10": 4,
+     "6": 35,
+     "2": 34,
+     "5": 30,
+     "8": 6,
+     "7": 18,
+     "1": 44,
+     "4": 40,
+     "9": 2
+    }
+   },
+   "feedback|x->x": {
+    "n": 300,
+    "mean_boxes": 3.3266666666666667,
+    "median_boxes": 3.0,
+    "p90_boxes": 6,
+    "max_boxes": 13,
+    "identity": 0.09,
+    "one_box": 0.13666666666666666,
+    "mean_layers": 3.0033333333333334,
+    "mean_wires": 2,
+    "structured": 0.32,
+    "kinds": {
+     "Trace": 0.2733333333333333,
+     "Feedback": 0.07666666666666666
+    },
+    "shapes": 0.5933333333333334,
+    "classes": 0.64,
+    "ms": 13.28385591506958,
+    "histogram": {
+     "0": 29,
+     "1": 49,
+     "3": 52,
+     "4": 42,
+     "5": 34,
+     "7": 11,
+     "2": 38,
+     "6": 35,
+     "8": 5,
+     "10": 1,
+     "9": 2,
+     "12": 1,
+     "11": 1
+    }
+   },
+   "feedback|free": {
+    "n": 300,
+    "mean_boxes": 3.55,
+    "median_boxes": 3.0,
+    "p90_boxes": 6,
+    "max_boxes": 11,
+    "identity": 0.11,
+    "one_box": 0.10666666666666667,
+    "mean_layers": 3.1866666666666665,
+    "mean_wires": 2.4966666666666666,
+    "structured": 0.24,
+    "kinds": {
+     "Trace": 0.2,
+     "Feedback": 0.09
+    },
+    "shapes": 0.71,
+    "classes": 0.79,
+    "ms": 8.548524379730225,
+    "histogram": {
+     "3": 45,
+     "0": 35,
+     "1": 36,
+     "4": 36,
+     "8": 10,
+     "6": 39,
+     "2": 41,
+     "7": 10,
+     "5": 39,
+     "11": 4,
+     "9": 5
+    }
+   },
+   "compact|x->x": {
+    "n": 300,
+    "mean_boxes": 3.3133333333333335,
+    "median_boxes": 3.0,
+    "p90_boxes": 6,
+    "max_boxes": 10,
+    "identity": 0.08,
+    "one_box": 0.10333333333333333,
+    "mean_layers": 6.8133333333333335,
+    "mean_wires": 2,
+    "structured": 0.65,
+    "kinds": {
+     "Cap": 0.45,
+     "Cup": 0.4033333333333333,
+     "Permutation": 0.30333333333333334,
+     "Feedback": 0.2833333333333333,
+     "Swap": 0.02666666666666667
+    },
+    "shapes": 0.61,
+    "classes": 0.62,
+    "ms": 26.363833745320637,
+    "histogram": {
+     "0": 24,
+     "6": 39,
+     "1": 56,
+     "2": 33,
+     "5": 27,
+     "3": 54,
+     "4": 48,
+     "8": 5,
+     "7": 10,
+     "10": 3,
+     "9": 1
+    }
+   },
+   "compact|free": {
+    "n": 300,
+    "mean_boxes": 3.3733333333333335,
+    "median_boxes": 3.0,
+    "p90_boxes": 6,
+    "max_boxes": 10,
+    "identity": 0.05,
+    "one_box": 0.09333333333333334,
+    "mean_layers": 8.586666666666666,
+    "mean_wires": 2.31,
+    "structured": 0.7266666666666667,
+    "kinds": {
+     "Cup": 0.5566666666666666,
+     "Cap": 0.5533333333333333,
+     "Permutation": 0.3466666666666667,
+     "Feedback": 0.15666666666666668,
+     "Swap": 0.08666666666666667
+    },
+    "shapes": 0.6966666666666667,
+    "classes": 0.76,
+    "ms": 19.669178326924644,
+    "histogram": {
+     "4": 54,
+     "6": 35,
+     "2": 43,
+     "5": 45,
+     "1": 49,
+     "0": 21,
+     "7": 1,
+     "9": 2,
+     "3": 41,
+     "8": 6,
+     "10": 3
+    }
+   },
+   "markov|x->x": {
+    "n": 300,
+    "mean_boxes": 3.486666666666667,
+    "median_boxes": 3.0,
+    "p90_boxes": 6,
+    "max_boxes": 11,
+    "identity": 0.06666666666666667,
+    "one_box": 0.04666666666666667,
+    "mean_layers": 2.3066666666666666,
+    "mean_wires": 2,
+    "structured": 0.7533333333333333,
+    "kinds": {
+     "Trace": 0.5933333333333334,
+     "Function": 0.33666666666666667,
+     "Permutation": 0.25666666666666665,
+     "Swap": 0.21666666666666667,
+     "Feedback": 0.10333333333333333,
+     "Copy": 0.04666666666666667,
+     "Discard": 0.04666666666666667
+    },
+    "shapes": 0.7666666666666667,
+    "classes": 0.77,
+    "ms": 145.26218175888062,
+    "histogram": {
+     "1": 40,
+     "3": 41,
+     "4": 44,
+     "5": 49,
+     "8": 5,
+     "0": 22,
+     "2": 50,
+     "6": 33,
+     "9": 1,
+     "7": 12,
+     "11": 1,
+     "10": 2
+    }
+   },
+   "markov|free": {
+    "n": 300,
+    "mean_boxes": 3.1333333333333333,
+    "median_boxes": 3.0,
+    "p90_boxes": 6,
+    "max_boxes": 10,
+    "identity": 0.07666666666666666,
+    "one_box": 0.08666666666666667,
+    "mean_layers": 2.46,
+    "mean_wires": 2.8466666666666667,
+    "structured": 0.75,
+    "kinds": {
+     "Trace": 0.54,
+     "Function": 0.33666666666666667,
+     "Swap": 0.2866666666666667,
+     "Permutation": 0.23,
+     "Feedback": 0.07333333333333333,
+     "Copy": 0.02,
+     "Discard": 0.013333333333333334
+    },
+    "shapes": 0.7633333333333333,
+    "classes": 0.8033333333333333,
+    "ms": 43.63405307133993,
+    "histogram": {
+     "3": 41,
+     "0": 38,
+     "5": 35,
+     "8": 8,
+     "2": 41,
+     "6": 33,
+     "10": 4,
+     "1": 54,
+     "4": 40,
+     "7": 5,
+     "9": 1
+    }
+   },
+   "closed|x->x": {
+    "n": 300,
+    "mean_boxes": 3.86,
+    "median_boxes": 4.0,
+    "p90_boxes": 7,
+    "max_boxes": 14,
+    "identity": 0.09,
+    "one_box": 0.06333333333333334,
+    "mean_layers": 2.486666666666667,
+    "mean_wires": 2,
+    "structured": 0.7533333333333333,
+    "kinds": {
+     "Trace": 0.5566666666666666,
+     "Function": 0.37333333333333335,
+     "Permutation": 0.29,
+     "Swap": 0.20333333333333334,
+     "Curry": 0.09333333333333334,
+     "Feedback": 0.08666666666666667,
+     "Copy": 0.06666666666666667,
+     "Eval": 0.06333333333333334,
+     "Discard": 0.03333333333333333
+    },
+    "shapes": 0.76,
+    "classes": 0.76,
+    "ms": 22.28358348210653,
+    "histogram": {
+     "2": 42,
+     "3": 34,
+     "0": 29,
+     "1": 38,
+     "6": 51,
+     "4": 31,
+     "5": 38,
+     "12": 1,
+     "10": 5,
+     "9": 7,
+     "7": 14,
+     "8": 7,
+     "11": 3
+    }
+   },
+   "closed|free": {
+    "n": 300,
+    "mean_boxes": 3.33,
+    "median_boxes": 3.0,
+    "p90_boxes": 6,
+    "max_boxes": 9,
+    "identity": 0.056666666666666664,
+    "one_box": 0.09333333333333334,
+    "mean_layers": 2.89,
+    "mean_wires": 2.79,
+    "structured": 0.7766666666666666,
+    "kinds": {
+     "Trace": 0.43,
+     "Function": 0.35,
+     "Swap": 0.2966666666666667,
+     "Permutation": 0.29,
+     "Curry": 0.07666666666666666,
+     "Eval": 0.07666666666666666,
+     "Copy": 0.05,
+     "Discard": 0.04,
+     "Feedback": 0.04
+    },
+    "shapes": 0.7566666666666667,
+    "classes": 0.7966666666666666,
+    "ms": 15.360021591186523,
+    "histogram": {
+     "2": 41,
+     "1": 54,
+     "3": 34,
+     "4": 42,
+     "5": 42,
+     "6": 38,
+     "0": 29,
+     "9": 5,
+     "7": 10,
+     "8": 5
+    }
+   },
+   "frobenius|x->x": {
+    "n": 300,
+    "mean_boxes": 3.7866666666666666,
+    "median_boxes": 4.0,
+    "p90_boxes": 6,
+    "max_boxes": 10,
+    "identity": 0.05333333333333334,
+    "one_box": 0.04,
+    "mean_layers": 4.93,
+    "mean_wires": 2,
+    "structured": 0.7566666666666667,
+    "kinds": {
+     "Cospan": 0.39,
+     "Feedback": 0.24666666666666667,
+     "Swap": 0.18,
+     "Permutation": 0.16333333333333333,
+     "Spider": 0.15333333333333332,
+     "Cap": 0.016666666666666666
+    },
+    "shapes": 0.6166666666666667,
+    "classes": 0.6233333333333333,
+    "ms": 65.34461100896199,
+    "histogram": {
+     "6": 40,
+     "4": 55,
+     "0": 19,
+     "5": 39,
+     "1": 32,
+     "3": 34,
+     "10": 7,
+     "7": 9,
+     "2": 52,
+     "8": 7,
+     "9": 6
+    }
+   },
+   "frobenius|free": {
+    "n": 300,
+    "mean_boxes": 3.2066666666666666,
+    "median_boxes": 3.0,
+    "p90_boxes": 6,
+    "max_boxes": 13,
+    "identity": 0.03666666666666667,
+    "one_box": 0.08666666666666667,
+    "mean_layers": 5.306666666666667,
+    "mean_wires": 2.88,
+    "structured": 0.7866666666666666,
+    "kinds": {
+     "Cospan": 0.4666666666666667,
+     "Swap": 0.2633333333333333,
+     "Permutation": 0.13666666666666666,
+     "Spider": 0.11666666666666667,
+     "Feedback": 0.07333333333333333,
+     "Cap": 0.02,
+     "Cup": 0.013333333333333334
+    },
+    "shapes": 0.7366666666666667,
+    "classes": 0.78,
+    "ms": 39.486966133117676,
+    "histogram": {
+     "5": 39,
+     "4": 29,
+     "3": 41,
+     "1": 55,
+     "0": 35,
+     "2": 46,
+     "8": 9,
+     "6": 29,
+     "9": 5,
+     "12": 1,
+     "7": 11
+    }
+   }
   }
  },
  "bugs": {
@@ -16809,6 +18068,2122 @@
     "found": true,
     "calls": 9,
     "seconds": 0.5916030406951904
+   }
+  },
+  "catalytic": {
+   "balanced.Diagram.bifunctoriality": {
+    "law": "balanced.Diagram.bifunctoriality",
+    "found": true,
+    "calls": 4,
+    "seconds": 1.3649029731750488
+   },
+   "balanced.Diagram.strength": {
+    "law": "balanced.Diagram.strength",
+    "found": true,
+    "calls": 4,
+    "seconds": 0.10701179504394531
+   },
+   "balanced.Diagram.tightening": {
+    "law": "balanced.Diagram.tightening",
+    "found": true,
+    "calls": 16,
+    "seconds": 0.3483750820159912
+   },
+   "balanced.Diagram.sliding": {
+    "law": "balanced.Diagram.sliding",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.024187803268432617
+   },
+   "balanced.Diagram.yanking": {
+    "law": "balanced.Diagram.yanking",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.006003618240356445
+   },
+   "balanced.Diagram.trace_superposing_left": {
+    "law": "balanced.Diagram.trace_superposing_left",
+    "found": true,
+    "calls": 4,
+    "seconds": 0.03464150428771973
+   },
+   "balanced.Diagram.trace_superposing_right": {
+    "law": "balanced.Diagram.trace_superposing_right",
+    "found": true,
+    "calls": 4,
+    "seconds": 0.039404869079589844
+   },
+   "balanced.Diagram.trace_naturality_left": {
+    "law": "balanced.Diagram.trace_naturality_left",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.024414539337158203
+   },
+   "balanced.Diagram.trace_naturality_right": {
+    "law": "balanced.Diagram.trace_naturality_right",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.024905681610107422
+   },
+   "balanced.Diagram.trace_dinaturality_left": {
+    "law": "balanced.Diagram.trace_dinaturality_left",
+    "found": true,
+    "calls": 3,
+    "seconds": 0.03832268714904785
+   },
+   "balanced.Diagram.trace_dinaturality_right": {
+    "law": "balanced.Diagram.trace_dinaturality_right",
+    "found": true,
+    "calls": 3,
+    "seconds": 0.0383906364440918
+   },
+   "balanced.Diagram.scalar_sliding": {
+    "law": "balanced.Diagram.scalar_sliding",
+    "found": true,
+    "calls": 3,
+    "seconds": 0.029148578643798828
+   },
+   "balanced.Diagram.braid_then_inverse": {
+    "law": "balanced.Diagram.braid_then_inverse",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.005139589309692383
+   },
+   "balanced.Diagram.inverse_then_braid": {
+    "law": "balanced.Diagram.inverse_then_braid",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.0060405731201171875
+   },
+   "balanced.Diagram.braid_naturality": {
+    "law": "balanced.Diagram.braid_naturality",
+    "found": true,
+    "calls": 3,
+    "seconds": 0.03728675842285156
+   },
+   "balanced.Diagram.twist_naturality": {
+    "law": "balanced.Diagram.twist_naturality",
+    "found": true,
+    "calls": 3,
+    "seconds": 0.020087480545043945
+   },
+   "balanced.Diagram.dagger_involution": {
+    "law": "balanced.Diagram.dagger_involution",
+    "found": false,
+    "calls": 100,
+    "seconds": 0.8186216354370117
+   },
+   "balanced.Diagram.dagger_contravariance": {
+    "law": "balanced.Diagram.dagger_contravariance",
+    "found": false,
+    "calls": 100,
+    "seconds": 1.109961986541748
+   },
+   "balanced.Diagram.dagger_monoidality": {
+    "law": "balanced.Diagram.dagger_monoidality",
+    "found": true,
+    "calls": 3,
+    "seconds": 0.03868865966796875
+   },
+   "balanced.Diagram.hypergraph_section": {
+    "law": "balanced.Diagram.hypergraph_section",
+    "found": false,
+    "calls": 100,
+    "seconds": 1.0251827239990234
+   },
+   "biclosed.Diagram.bifunctoriality": {
+    "law": "biclosed.Diagram.bifunctoriality",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.07901334762573242
+   },
+   "biclosed.Diagram.currying_left": {
+    "law": "biclosed.Diagram.currying_left",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.012737512588500977
+   },
+   "biclosed.Diagram.currying_right": {
+    "law": "biclosed.Diagram.currying_right",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.012425661087036133
+   },
+   "biclosed.Diagram.currying_eta_left": {
+    "law": "biclosed.Diagram.currying_eta_left",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.012453079223632812
+   },
+   "biclosed.Diagram.currying_eta_right": {
+    "law": "biclosed.Diagram.currying_eta_right",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.012575626373291016
+   },
+   "biclosed.Diagram.currying_naturality_left": {
+    "law": "biclosed.Diagram.currying_naturality_left",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.028234243392944336
+   },
+   "biclosed.Diagram.currying_naturality_right": {
+    "law": "biclosed.Diagram.currying_naturality_right",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.027216434478759766
+   },
+   "biclosed.Diagram.dagger_involution": {
+    "law": "biclosed.Diagram.dagger_involution",
+    "found": false,
+    "calls": 100,
+    "seconds": 1.831968069076538
+   },
+   "biclosed.Diagram.dagger_contravariance": {
+    "law": "biclosed.Diagram.dagger_contravariance",
+    "found": false,
+    "calls": 100,
+    "seconds": 2.631838083267212
+   },
+   "biclosed.Diagram.dagger_monoidality": {
+    "law": "biclosed.Diagram.dagger_monoidality",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.023430347442626953
+   },
+   "biclosed.Diagram.map_agreement": {
+    "law": "biclosed.Diagram.map_agreement",
+    "found": false,
+    "calls": 100,
+    "seconds": 1.9919509887695312
+   },
+   "biclosed.Diagram.dagger_monoidality_monoidal": {
+    "law": "biclosed.Diagram.dagger_monoidality_monoidal",
+    "found": true,
+    "calls": 4,
+    "seconds": 0.4723179340362549
+   },
+   "biclosed.TermBase.serialisation": {
+    "law": "biclosed.TermBase.serialisation",
+    "found": false,
+    "calls": 100,
+    "seconds": 0.6058270931243896
+   },
+   "braided.Diagram.bifunctoriality": {
+    "law": "braided.Diagram.bifunctoriality",
+    "found": true,
+    "calls": 4,
+    "seconds": 0.45362305641174316
+   },
+   "braided.Diagram.scalar_sliding": {
+    "law": "braided.Diagram.scalar_sliding",
+    "found": true,
+    "calls": 3,
+    "seconds": 0.024077177047729492
+   },
+   "braided.Diagram.braid_then_inverse": {
+    "law": "braided.Diagram.braid_then_inverse",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.005822420120239258
+   },
+   "braided.Diagram.inverse_then_braid": {
+    "law": "braided.Diagram.inverse_then_braid",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.005408048629760742
+   },
+   "braided.Diagram.braid_naturality": {
+    "law": "braided.Diagram.braid_naturality",
+    "found": true,
+    "calls": 3,
+    "seconds": 0.030539274215698242
+   },
+   "braided.Diagram.dagger_monoidality": {
+    "law": "braided.Diagram.dagger_monoidality",
+    "found": true,
+    "calls": 3,
+    "seconds": 0.032158613204956055
+   },
+   "braided.Diagram.hypergraph_section": {
+    "law": "braided.Diagram.hypergraph_section",
+    "found": false,
+    "calls": 100,
+    "seconds": 0.8490915298461914
+   },
+   "closed.Diagram.str_transparency": {
+    "law": "closed.Diagram.str_transparency",
+    "found": true,
+    "calls": 6,
+    "seconds": 6.550654411315918
+   },
+   "closed.Diagram.strength": {
+    "law": "closed.Diagram.strength",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.08594894409179688
+   },
+   "closed.Diagram.tightening": {
+    "law": "closed.Diagram.tightening",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.07852697372436523
+   },
+   "closed.Diagram.sliding": {
+    "law": "closed.Diagram.sliding",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.040906667709350586
+   },
+   "closed.Diagram.currying_left": {
+    "law": "closed.Diagram.currying_left",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.03365063667297363
+   },
+   "closed.Diagram.currying_right": {
+    "law": "closed.Diagram.currying_right",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.028652429580688477
+   },
+   "closed.Diagram.currying_eta_left": {
+    "law": "closed.Diagram.currying_eta_left",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.013870000839233398
+   },
+   "closed.Diagram.currying_eta_right": {
+    "law": "closed.Diagram.currying_eta_right",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.015871286392211914
+   },
+   "closed.Diagram.currying_naturality_left": {
+    "law": "closed.Diagram.currying_naturality_left",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.056705474853515625
+   },
+   "closed.Diagram.currying_naturality_right": {
+    "law": "closed.Diagram.currying_naturality_right",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.05202174186706543
+   },
+   "closed.Diagram.currying_symmetry": {
+    "law": "closed.Diagram.currying_symmetry",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.027431964874267578
+   },
+   "closed.Diagram.dagger_involution": {
+    "law": "closed.Diagram.dagger_involution",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.03181815147399902
+   },
+   "closed.Diagram.dagger_contravariance": {
+    "law": "closed.Diagram.dagger_contravariance",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.046973466873168945
+   },
+   "closed.Diagram.dagger_monoidality": {
+    "law": "closed.Diagram.dagger_monoidality",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.048409461975097656
+   },
+   "closed.Diagram.map_agreement": {
+    "law": "closed.Diagram.map_agreement",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.04582929611206055
+   },
+   "closed.TermBase.serialisation": {
+    "law": "closed.TermBase.serialisation",
+    "found": false,
+    "calls": 100,
+    "seconds": 0.6821272373199463
+   },
+   "comarkov.Diagram.strength": {
+    "law": "comarkov.Diagram.strength",
+    "found": true,
+    "calls": 4,
+    "seconds": 0.35967326164245605
+   },
+   "comarkov.Diagram.tightening": {
+    "law": "comarkov.Diagram.tightening",
+    "found": true,
+    "calls": 16,
+    "seconds": 1.0450327396392822
+   },
+   "comarkov.Diagram.sliding": {
+    "law": "comarkov.Diagram.sliding",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.06424427032470703
+   },
+   "comarkov.Diagram.dagger_involution": {
+    "law": "comarkov.Diagram.dagger_involution",
+    "found": false,
+    "calls": 100,
+    "seconds": 2.079918622970581
+   },
+   "comarkov.Diagram.dagger_contravariance": {
+    "law": "comarkov.Diagram.dagger_contravariance",
+    "found": false,
+    "calls": 100,
+    "seconds": 3.919414758682251
+   },
+   "comarkov.Diagram.dagger_monoidality": {
+    "law": "comarkov.Diagram.dagger_monoidality",
+    "found": false,
+    "calls": 100,
+    "seconds": 4.37736964225769
+   },
+   "comarkov.Diagram.map_agreement": {
+    "law": "comarkov.Diagram.map_agreement",
+    "found": false,
+    "calls": 100,
+    "seconds": 1.9366581439971924
+   },
+   "compact.Diagram.strength": {
+    "law": "compact.Diagram.strength",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.16529536247253418
+   },
+   "compact.Diagram.tightening": {
+    "law": "compact.Diagram.tightening",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.1379988193511963
+   },
+   "compact.Diagram.sliding": {
+    "law": "compact.Diagram.sliding",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.09981226921081543
+   },
+   "compact.Diagram.rotate_contravariance": {
+    "law": "compact.Diagram.rotate_contravariance",
+    "found": false,
+    "calls": 100,
+    "seconds": 13.253761291503906
+   },
+   "compact.Diagram.adjunction": {
+    "law": "compact.Diagram.adjunction",
+    "found": false,
+    "calls": 100,
+    "seconds": 6.207127094268799
+   },
+   "compact.Diagram.dagger_involution": {
+    "law": "compact.Diagram.dagger_involution",
+    "found": false,
+    "calls": 100,
+    "seconds": 4.407614231109619
+   },
+   "compact.Diagram.dagger_contravariance": {
+    "law": "compact.Diagram.dagger_contravariance",
+    "found": false,
+    "calls": 100,
+    "seconds": 9.19778299331665
+   },
+   "compact.Diagram.dagger_monoidality": {
+    "law": "compact.Diagram.dagger_monoidality",
+    "found": false,
+    "calls": 100,
+    "seconds": 10.083027124404907
+   },
+   "feedback.Diagram.bifunctoriality": {
+    "law": "feedback.Diagram.bifunctoriality",
+    "found": true,
+    "calls": 4,
+    "seconds": 0.08695363998413086
+   },
+   "feedback.Diagram.strength": {
+    "law": "feedback.Diagram.strength",
+    "found": true,
+    "calls": 4,
+    "seconds": 0.10773396492004395
+   },
+   "feedback.Diagram.tightening": {
+    "law": "feedback.Diagram.tightening",
+    "found": true,
+    "calls": 16,
+    "seconds": 0.4885702133178711
+   },
+   "feedback.Diagram.sliding": {
+    "law": "feedback.Diagram.sliding",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.022486209869384766
+   },
+   "feedback.Diagram.trace_superposing_left": {
+    "law": "feedback.Diagram.trace_superposing_left",
+    "found": true,
+    "calls": 4,
+    "seconds": 0.03120279312133789
+   },
+   "feedback.Diagram.trace_superposing_right": {
+    "law": "feedback.Diagram.trace_superposing_right",
+    "found": true,
+    "calls": 4,
+    "seconds": 0.032268524169921875
+   },
+   "feedback.Diagram.trace_naturality_left": {
+    "law": "feedback.Diagram.trace_naturality_left",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.022481203079223633
+   },
+   "feedback.Diagram.trace_naturality_right": {
+    "law": "feedback.Diagram.trace_naturality_right",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.021979093551635742
+   },
+   "feedback.Diagram.trace_dinaturality_left": {
+    "law": "feedback.Diagram.trace_dinaturality_left",
+    "found": true,
+    "calls": 3,
+    "seconds": 0.03442668914794922
+   },
+   "feedback.Diagram.trace_dinaturality_right": {
+    "law": "feedback.Diagram.trace_dinaturality_right",
+    "found": true,
+    "calls": 3,
+    "seconds": 0.032164812088012695
+   },
+   "feedback.Diagram.dagger_involution": {
+    "law": "feedback.Diagram.dagger_involution",
+    "found": false,
+    "calls": 100,
+    "seconds": 0.6990399360656738
+   },
+   "feedback.Diagram.dagger_contravariance": {
+    "law": "feedback.Diagram.dagger_contravariance",
+    "found": false,
+    "calls": 100,
+    "seconds": 1.0401623249053955
+   },
+   "feedback.Diagram.dagger_monoidality": {
+    "law": "feedback.Diagram.dagger_monoidality",
+    "found": true,
+    "calls": 3,
+    "seconds": 0.03369307518005371
+   },
+   "feedback.Diagram.hypergraph_section": {
+    "law": "feedback.Diagram.hypergraph_section",
+    "found": false,
+    "calls": 100,
+    "seconds": 0.9075539112091064
+   },
+   "frobenius.Diagram.strength": {
+    "law": "frobenius.Diagram.strength",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.6818006038665771
+   },
+   "frobenius.Diagram.tightening": {
+    "law": "frobenius.Diagram.tightening",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.740497350692749
+   },
+   "frobenius.Diagram.sliding": {
+    "law": "frobenius.Diagram.sliding",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.3700838088989258
+   },
+   "frobenius.Diagram.rotate_contravariance": {
+    "law": "frobenius.Diagram.rotate_contravariance",
+    "found": false,
+    "calls": 100,
+    "seconds": 24.034738063812256
+   },
+   "frobenius.Diagram.adjunction": {
+    "law": "frobenius.Diagram.adjunction",
+    "found": false,
+    "calls": 100,
+    "seconds": 14.2378511428833
+   },
+   "frobenius.Diagram.dagger_involution": {
+    "law": "frobenius.Diagram.dagger_involution",
+    "found": false,
+    "calls": 100,
+    "seconds": 10.65703797340393
+   },
+   "frobenius.Diagram.dagger_contravariance": {
+    "law": "frobenius.Diagram.dagger_contravariance",
+    "found": false,
+    "calls": 100,
+    "seconds": 19.804856300354004
+   },
+   "frobenius.Diagram.dagger_monoidality": {
+    "law": "frobenius.Diagram.dagger_monoidality",
+    "found": false,
+    "calls": 100,
+    "seconds": 23.496641874313354
+   },
+   "frobenius.Diagram.map_agreement": {
+    "law": "frobenius.Diagram.map_agreement",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.357985258102417
+   },
+   "markov.Diagram.str_transparency": {
+    "law": "markov.Diagram.str_transparency",
+    "found": true,
+    "calls": 5,
+    "seconds": 0.718449592590332
+   },
+   "markov.Diagram.strength": {
+    "law": "markov.Diagram.strength",
+    "found": true,
+    "calls": 4,
+    "seconds": 1.8147776126861572
+   },
+   "markov.Diagram.tightening": {
+    "law": "markov.Diagram.tightening",
+    "found": true,
+    "calls": 4,
+    "seconds": 0.962730884552002
+   },
+   "markov.Diagram.sliding": {
+    "law": "markov.Diagram.sliding",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.09562253952026367
+   },
+   "markov.Diagram.dagger_involution": {
+    "law": "markov.Diagram.dagger_involution",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.026125431060791016
+   },
+   "markov.Diagram.dagger_contravariance": {
+    "law": "markov.Diagram.dagger_contravariance",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.0424959659576416
+   },
+   "markov.Diagram.dagger_monoidality": {
+    "law": "markov.Diagram.dagger_monoidality",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.04473280906677246
+   },
+   "markov.Diagram.map_agreement": {
+    "law": "markov.Diagram.map_agreement",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.05924820899963379
+   },
+   "monoidal.Diagram.bifunctoriality": {
+    "law": "monoidal.Diagram.bifunctoriality",
+    "found": true,
+    "calls": 4,
+    "seconds": 0.13746166229248047
+   },
+   "monoidal.Diagram.dagger_monoidality": {
+    "law": "monoidal.Diagram.dagger_monoidality",
+    "found": true,
+    "calls": 3,
+    "seconds": 0.033736467361450195
+   },
+   "pivotal.Diagram.bifunctoriality": {
+    "law": "pivotal.Diagram.bifunctoriality",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.07669329643249512
+   },
+   "pivotal.Diagram.strength": {
+    "law": "pivotal.Diagram.strength",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.04842209815979004
+   },
+   "pivotal.Diagram.tightening": {
+    "law": "pivotal.Diagram.tightening",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.05402040481567383
+   },
+   "pivotal.Diagram.sliding": {
+    "law": "pivotal.Diagram.sliding",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.045600175857543945
+   },
+   "pivotal.Diagram.trace_naturality_left": {
+    "law": "pivotal.Diagram.trace_naturality_left",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.035344839096069336
+   },
+   "pivotal.Diagram.trace_naturality_right": {
+    "law": "pivotal.Diagram.trace_naturality_right",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.03649711608886719
+   },
+   "pivotal.Diagram.trace_dinaturality_left": {
+    "law": "pivotal.Diagram.trace_dinaturality_left",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.20310068130493164
+   },
+   "pivotal.Diagram.trace_dinaturality_right": {
+    "law": "pivotal.Diagram.trace_dinaturality_right",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.0400087833404541
+   },
+   "pivotal.Diagram.currying_left": {
+    "law": "pivotal.Diagram.currying_left",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.017200946807861328
+   },
+   "pivotal.Diagram.currying_right": {
+    "law": "pivotal.Diagram.currying_right",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.0181734561920166
+   },
+   "pivotal.Diagram.currying_eta_left": {
+    "law": "pivotal.Diagram.currying_eta_left",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.01381540298461914
+   },
+   "pivotal.Diagram.currying_eta_right": {
+    "law": "pivotal.Diagram.currying_eta_right",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.014099359512329102
+   },
+   "pivotal.Diagram.currying_naturality_left": {
+    "law": "pivotal.Diagram.currying_naturality_left",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.036826372146606445
+   },
+   "pivotal.Diagram.currying_naturality_right": {
+    "law": "pivotal.Diagram.currying_naturality_right",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.035738229751586914
+   },
+   "pivotal.Diagram.snake_equations": {
+    "law": "pivotal.Diagram.snake_equations",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.010035991668701172
+   },
+   "pivotal.Diagram.transpose_contravariance": {
+    "law": "pivotal.Diagram.transpose_contravariance",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.03200817108154297
+   },
+   "pivotal.Diagram.rotate_contravariance": {
+    "law": "pivotal.Diagram.rotate_contravariance",
+    "found": false,
+    "calls": 100,
+    "seconds": 2.9729175567626953
+   },
+   "pivotal.Diagram.adjunction": {
+    "law": "pivotal.Diagram.adjunction",
+    "found": false,
+    "calls": 100,
+    "seconds": 1.7841787338256836
+   },
+   "pivotal.Diagram.pivotality": {
+    "law": "pivotal.Diagram.pivotality",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.02146434783935547
+   },
+   "pivotal.Diagram.dagger_involution": {
+    "law": "pivotal.Diagram.dagger_involution",
+    "found": false,
+    "calls": 100,
+    "seconds": 1.4231846332550049
+   },
+   "pivotal.Diagram.dagger_contravariance": {
+    "law": "pivotal.Diagram.dagger_contravariance",
+    "found": false,
+    "calls": 100,
+    "seconds": 2.6324081420898438
+   },
+   "pivotal.Diagram.dagger_monoidality": {
+    "law": "pivotal.Diagram.dagger_monoidality",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.03467154502868652
+   },
+   "pivotal.Diagram.hypergraph_section": {
+    "law": "pivotal.Diagram.hypergraph_section",
+    "found": false,
+    "calls": 100,
+    "seconds": 2.0365657806396484
+   },
+   "ribbon.Diagram.bifunctoriality": {
+    "law": "ribbon.Diagram.bifunctoriality",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.09084844589233398
+   },
+   "ribbon.Diagram.strength": {
+    "law": "ribbon.Diagram.strength",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.04147672653198242
+   },
+   "ribbon.Diagram.tightening": {
+    "law": "ribbon.Diagram.tightening",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.05321788787841797
+   },
+   "ribbon.Diagram.sliding": {
+    "law": "ribbon.Diagram.sliding",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.04600191116333008
+   },
+   "ribbon.Diagram.yanking": {
+    "law": "ribbon.Diagram.yanking",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.008068323135375977
+   },
+   "ribbon.Diagram.trace_naturality_left": {
+    "law": "ribbon.Diagram.trace_naturality_left",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.04124307632446289
+   },
+   "ribbon.Diagram.trace_naturality_right": {
+    "law": "ribbon.Diagram.trace_naturality_right",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.03820228576660156
+   },
+   "ribbon.Diagram.trace_dinaturality_left": {
+    "law": "ribbon.Diagram.trace_dinaturality_left",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.04579973220825195
+   },
+   "ribbon.Diagram.trace_dinaturality_right": {
+    "law": "ribbon.Diagram.trace_dinaturality_right",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.04339122772216797
+   },
+   "ribbon.Diagram.scalar_sliding": {
+    "law": "ribbon.Diagram.scalar_sliding",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.028267621994018555
+   },
+   "ribbon.Diagram.braid_then_inverse": {
+    "law": "ribbon.Diagram.braid_then_inverse",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.0072820186614990234
+   },
+   "ribbon.Diagram.inverse_then_braid": {
+    "law": "ribbon.Diagram.inverse_then_braid",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.007481098175048828
+   },
+   "ribbon.Diagram.braid_naturality": {
+    "law": "ribbon.Diagram.braid_naturality",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.0396425724029541
+   },
+   "ribbon.Diagram.twist_naturality": {
+    "law": "ribbon.Diagram.twist_naturality",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.022131919860839844
+   },
+   "ribbon.Diagram.currying_left": {
+    "law": "ribbon.Diagram.currying_left",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.022060871124267578
+   },
+   "ribbon.Diagram.currying_right": {
+    "law": "ribbon.Diagram.currying_right",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.019283771514892578
+   },
+   "ribbon.Diagram.currying_eta_left": {
+    "law": "ribbon.Diagram.currying_eta_left",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.015065431594848633
+   },
+   "ribbon.Diagram.currying_eta_right": {
+    "law": "ribbon.Diagram.currying_eta_right",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.015131235122680664
+   },
+   "ribbon.Diagram.currying_naturality_left": {
+    "law": "ribbon.Diagram.currying_naturality_left",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.038968801498413086
+   },
+   "ribbon.Diagram.currying_naturality_right": {
+    "law": "ribbon.Diagram.currying_naturality_right",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.04143834114074707
+   },
+   "ribbon.Diagram.snake_equations": {
+    "law": "ribbon.Diagram.snake_equations",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.011039972305297852
+   },
+   "ribbon.Diagram.transpose_contravariance": {
+    "law": "ribbon.Diagram.transpose_contravariance",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.03789472579956055
+   },
+   "ribbon.Diagram.rotate_contravariance": {
+    "law": "ribbon.Diagram.rotate_contravariance",
+    "found": false,
+    "calls": 100,
+    "seconds": 3.2518627643585205
+   },
+   "ribbon.Diagram.adjunction": {
+    "law": "ribbon.Diagram.adjunction",
+    "found": false,
+    "calls": 100,
+    "seconds": 1.6066813468933105
+   },
+   "ribbon.Diagram.pivotality": {
+    "law": "ribbon.Diagram.pivotality",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.02407383918762207
+   },
+   "ribbon.Diagram.dagger_involution": {
+    "law": "ribbon.Diagram.dagger_involution",
+    "found": false,
+    "calls": 100,
+    "seconds": 1.5042271614074707
+   },
+   "ribbon.Diagram.dagger_contravariance": {
+    "law": "ribbon.Diagram.dagger_contravariance",
+    "found": false,
+    "calls": 100,
+    "seconds": 3.1988365650177
+   },
+   "ribbon.Diagram.dagger_monoidality": {
+    "law": "ribbon.Diagram.dagger_monoidality",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.04118061065673828
+   },
+   "ribbon.Diagram.hypergraph_section": {
+    "law": "ribbon.Diagram.hypergraph_section",
+    "found": false,
+    "calls": 100,
+    "seconds": 2.0084095001220703
+   },
+   "rigid.Diagram.bifunctoriality": {
+    "law": "rigid.Diagram.bifunctoriality",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.08239507675170898
+   },
+   "rigid.Diagram.currying_left": {
+    "law": "rigid.Diagram.currying_left",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.019678354263305664
+   },
+   "rigid.Diagram.currying_right": {
+    "law": "rigid.Diagram.currying_right",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.020579099655151367
+   },
+   "rigid.Diagram.currying_eta_left": {
+    "law": "rigid.Diagram.currying_eta_left",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.013394832611083984
+   },
+   "rigid.Diagram.currying_eta_right": {
+    "law": "rigid.Diagram.currying_eta_right",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.01456904411315918
+   },
+   "rigid.Diagram.currying_naturality_left": {
+    "law": "rigid.Diagram.currying_naturality_left",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.040556907653808594
+   },
+   "rigid.Diagram.currying_naturality_right": {
+    "law": "rigid.Diagram.currying_naturality_right",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.04036879539489746
+   },
+   "rigid.Diagram.snake_equations": {
+    "law": "rigid.Diagram.snake_equations",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.010310649871826172
+   },
+   "rigid.Diagram.transpose_contravariance": {
+    "law": "rigid.Diagram.transpose_contravariance",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.03764986991882324
+   },
+   "rigid.Diagram.dagger_involution": {
+    "law": "rigid.Diagram.dagger_involution",
+    "found": true,
+    "calls": 3,
+    "seconds": 0.0341639518737793
+   },
+   "rigid.Diagram.dagger_contravariance": {
+    "law": "rigid.Diagram.dagger_contravariance",
+    "found": true,
+    "calls": 3,
+    "seconds": 0.050789594650268555
+   },
+   "rigid.Diagram.dagger_monoidality": {
+    "law": "rigid.Diagram.dagger_monoidality",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.2025773525238037
+   },
+   "rigid.Diagram.hypergraph_section": {
+    "law": "rigid.Diagram.hypergraph_section",
+    "found": false,
+    "calls": 100,
+    "seconds": 1.5040264129638672
+   },
+   "rigid.Diagram.dagger_monoidality_monoidal": {
+    "law": "rigid.Diagram.dagger_monoidality_monoidal",
+    "found": true,
+    "calls": 4,
+    "seconds": 1.2044341564178467
+   },
+   "symmetric.Diagram.strength": {
+    "law": "symmetric.Diagram.strength",
+    "found": true,
+    "calls": 4,
+    "seconds": 0.18892908096313477
+   },
+   "symmetric.Diagram.tightening": {
+    "law": "symmetric.Diagram.tightening",
+    "found": true,
+    "calls": 16,
+    "seconds": 0.8255162239074707
+   },
+   "symmetric.Diagram.sliding": {
+    "law": "symmetric.Diagram.sliding",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.0572972297668457
+   },
+   "symmetric.Diagram.dagger_involution": {
+    "law": "symmetric.Diagram.dagger_involution",
+    "found": false,
+    "calls": 100,
+    "seconds": 2.235311985015869
+   },
+   "symmetric.Diagram.dagger_contravariance": {
+    "law": "symmetric.Diagram.dagger_contravariance",
+    "found": false,
+    "calls": 100,
+    "seconds": 3.889857053756714
+   },
+   "symmetric.Diagram.dagger_monoidality": {
+    "law": "symmetric.Diagram.dagger_monoidality",
+    "found": false,
+    "calls": 100,
+    "seconds": 4.381592273712158
+   }
+  },
+  "boltzmann_catalytic": {
+   "balanced.Diagram.bifunctoriality": {
+    "law": "balanced.Diagram.bifunctoriality",
+    "found": true,
+    "calls": 4,
+    "seconds": 1.6238186359405518
+   },
+   "balanced.Diagram.strength": {
+    "law": "balanced.Diagram.strength",
+    "found": true,
+    "calls": 6,
+    "seconds": 0.0926811695098877
+   },
+   "balanced.Diagram.tightening": {
+    "law": "balanced.Diagram.tightening",
+    "found": true,
+    "calls": 6,
+    "seconds": 0.10557150840759277
+   },
+   "balanced.Diagram.sliding": {
+    "law": "balanced.Diagram.sliding",
+    "found": true,
+    "calls": 4,
+    "seconds": 0.10844159126281738
+   },
+   "balanced.Diagram.yanking": {
+    "law": "balanced.Diagram.yanking",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.006376028060913086
+   },
+   "balanced.Diagram.trace_superposing_left": {
+    "law": "balanced.Diagram.trace_superposing_left",
+    "found": true,
+    "calls": 4,
+    "seconds": 0.039721012115478516
+   },
+   "balanced.Diagram.trace_superposing_right": {
+    "law": "balanced.Diagram.trace_superposing_right",
+    "found": true,
+    "calls": 4,
+    "seconds": 0.03876328468322754
+   },
+   "balanced.Diagram.trace_naturality_left": {
+    "law": "balanced.Diagram.trace_naturality_left",
+    "found": true,
+    "calls": 4,
+    "seconds": 0.06431102752685547
+   },
+   "balanced.Diagram.trace_naturality_right": {
+    "law": "balanced.Diagram.trace_naturality_right",
+    "found": true,
+    "calls": 4,
+    "seconds": 0.13270854949951172
+   },
+   "balanced.Diagram.trace_dinaturality_left": {
+    "law": "balanced.Diagram.trace_dinaturality_left",
+    "found": true,
+    "calls": 3,
+    "seconds": 0.05396294593811035
+   },
+   "balanced.Diagram.trace_dinaturality_right": {
+    "law": "balanced.Diagram.trace_dinaturality_right",
+    "found": true,
+    "calls": 3,
+    "seconds": 0.05283474922180176
+   },
+   "balanced.Diagram.scalar_sliding": {
+    "law": "balanced.Diagram.scalar_sliding",
+    "found": true,
+    "calls": 6,
+    "seconds": 0.08384871482849121
+   },
+   "balanced.Diagram.braid_then_inverse": {
+    "law": "balanced.Diagram.braid_then_inverse",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.0054225921630859375
+   },
+   "balanced.Diagram.inverse_then_braid": {
+    "law": "balanced.Diagram.inverse_then_braid",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.005861520767211914
+   },
+   "balanced.Diagram.braid_naturality": {
+    "law": "balanced.Diagram.braid_naturality",
+    "found": true,
+    "calls": 4,
+    "seconds": 0.0684974193572998
+   },
+   "balanced.Diagram.twist_naturality": {
+    "law": "balanced.Diagram.twist_naturality",
+    "found": true,
+    "calls": 3,
+    "seconds": 0.019869327545166016
+   },
+   "balanced.Diagram.dagger_involution": {
+    "law": "balanced.Diagram.dagger_involution",
+    "found": true,
+    "calls": 74,
+    "seconds": 0.8021681308746338
+   },
+   "balanced.Diagram.dagger_contravariance": {
+    "law": "balanced.Diagram.dagger_contravariance",
+    "found": true,
+    "calls": 41,
+    "seconds": 0.651261568069458
+   },
+   "balanced.Diagram.dagger_monoidality": {
+    "law": "balanced.Diagram.dagger_monoidality",
+    "found": true,
+    "calls": 4,
+    "seconds": 0.06508064270019531
+   },
+   "balanced.Diagram.hypergraph_section": {
+    "law": "balanced.Diagram.hypergraph_section",
+    "found": false,
+    "calls": 100,
+    "seconds": 1.190873146057129
+   },
+   "biclosed.Diagram.bifunctoriality": {
+    "law": "biclosed.Diagram.bifunctoriality",
+    "found": true,
+    "calls": 4,
+    "seconds": 0.6575372219085693
+   },
+   "biclosed.Diagram.currying_left": {
+    "law": "biclosed.Diagram.currying_left",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.016057729721069336
+   },
+   "biclosed.Diagram.currying_right": {
+    "law": "biclosed.Diagram.currying_right",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.016200542449951172
+   },
+   "biclosed.Diagram.currying_eta_left": {
+    "law": "biclosed.Diagram.currying_eta_left",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.012005805969238281
+   },
+   "biclosed.Diagram.currying_eta_right": {
+    "law": "biclosed.Diagram.currying_eta_right",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.011560678482055664
+   },
+   "biclosed.Diagram.currying_naturality_left": {
+    "law": "biclosed.Diagram.currying_naturality_left",
+    "found": true,
+    "calls": 3,
+    "seconds": 0.05311417579650879
+   },
+   "biclosed.Diagram.currying_naturality_right": {
+    "law": "biclosed.Diagram.currying_naturality_right",
+    "found": true,
+    "calls": 3,
+    "seconds": 0.14158344268798828
+   },
+   "biclosed.Diagram.dagger_involution": {
+    "law": "biclosed.Diagram.dagger_involution",
+    "found": true,
+    "calls": 8,
+    "seconds": 0.10736846923828125
+   },
+   "biclosed.Diagram.dagger_contravariance": {
+    "law": "biclosed.Diagram.dagger_contravariance",
+    "found": true,
+    "calls": 6,
+    "seconds": 0.12250351905822754
+   },
+   "biclosed.Diagram.dagger_monoidality": {
+    "law": "biclosed.Diagram.dagger_monoidality",
+    "found": true,
+    "calls": 4,
+    "seconds": 0.08350491523742676
+   },
+   "biclosed.Diagram.map_agreement": {
+    "law": "biclosed.Diagram.map_agreement",
+    "found": true,
+    "calls": 52,
+    "seconds": 0.8061411380767822
+   },
+   "biclosed.Diagram.dagger_monoidality_monoidal": {
+    "law": "biclosed.Diagram.dagger_monoidality_monoidal",
+    "found": true,
+    "calls": 4,
+    "seconds": 0.4673624038696289
+   },
+   "biclosed.TermBase.serialisation": {
+    "law": "biclosed.TermBase.serialisation",
+    "found": false,
+    "calls": 100,
+    "seconds": 0.6551203727722168
+   },
+   "braided.Diagram.bifunctoriality": {
+    "law": "braided.Diagram.bifunctoriality",
+    "found": true,
+    "calls": 4,
+    "seconds": 0.8922915458679199
+   },
+   "braided.Diagram.scalar_sliding": {
+    "law": "braided.Diagram.scalar_sliding",
+    "found": true,
+    "calls": 6,
+    "seconds": 0.08442044258117676
+   },
+   "braided.Diagram.braid_then_inverse": {
+    "law": "braided.Diagram.braid_then_inverse",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.0052144527435302734
+   },
+   "braided.Diagram.inverse_then_braid": {
+    "law": "braided.Diagram.inverse_then_braid",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.005187273025512695
+   },
+   "braided.Diagram.braid_naturality": {
+    "law": "braided.Diagram.braid_naturality",
+    "found": true,
+    "calls": 4,
+    "seconds": 0.0635218620300293
+   },
+   "braided.Diagram.dagger_monoidality": {
+    "law": "braided.Diagram.dagger_monoidality",
+    "found": true,
+    "calls": 4,
+    "seconds": 0.06791329383850098
+   },
+   "braided.Diagram.hypergraph_section": {
+    "law": "braided.Diagram.hypergraph_section",
+    "found": false,
+    "calls": 100,
+    "seconds": 1.075148105621338
+   },
+   "closed.Diagram.str_transparency": {
+    "law": "closed.Diagram.str_transparency",
+    "found": true,
+    "calls": 15,
+    "seconds": 2.730013370513916
+   },
+   "closed.Diagram.strength": {
+    "law": "closed.Diagram.strength",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.37409448623657227
+   },
+   "closed.Diagram.tightening": {
+    "law": "closed.Diagram.tightening",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.3619863986968994
+   },
+   "closed.Diagram.sliding": {
+    "law": "closed.Diagram.sliding",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.3844468593597412
+   },
+   "closed.Diagram.currying_left": {
+    "law": "closed.Diagram.currying_left",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.2212989330291748
+   },
+   "closed.Diagram.currying_right": {
+    "law": "closed.Diagram.currying_right",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.22841763496398926
+   },
+   "closed.Diagram.currying_eta_left": {
+    "law": "closed.Diagram.currying_eta_left",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.013551950454711914
+   },
+   "closed.Diagram.currying_eta_right": {
+    "law": "closed.Diagram.currying_eta_right",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.0113677978515625
+   },
+   "closed.Diagram.currying_naturality_left": {
+    "law": "closed.Diagram.currying_naturality_left",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.37241625785827637
+   },
+   "closed.Diagram.currying_naturality_right": {
+    "law": "closed.Diagram.currying_naturality_right",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.4691193103790283
+   },
+   "closed.Diagram.currying_symmetry": {
+    "law": "closed.Diagram.currying_symmetry",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.6844325065612793
+   },
+   "closed.Diagram.dagger_involution": {
+    "law": "closed.Diagram.dagger_involution",
+    "found": true,
+    "calls": 3,
+    "seconds": 0.40117740631103516
+   },
+   "closed.Diagram.dagger_contravariance": {
+    "law": "closed.Diagram.dagger_contravariance",
+    "found": true,
+    "calls": 2,
+    "seconds": 1.146106243133545
+   },
+   "closed.Diagram.dagger_monoidality": {
+    "law": "closed.Diagram.dagger_monoidality",
+    "found": true,
+    "calls": 3,
+    "seconds": 0.45499539375305176
+   },
+   "closed.Diagram.map_agreement": {
+    "law": "closed.Diagram.map_agreement",
+    "found": true,
+    "calls": 3,
+    "seconds": 0.37209630012512207
+   },
+   "closed.TermBase.serialisation": {
+    "law": "closed.TermBase.serialisation",
+    "found": false,
+    "calls": 100,
+    "seconds": 0.5787012577056885
+   },
+   "comarkov.Diagram.strength": {
+    "law": "comarkov.Diagram.strength",
+    "found": true,
+    "calls": 4,
+    "seconds": 2.616807460784912
+   },
+   "comarkov.Diagram.tightening": {
+    "law": "comarkov.Diagram.tightening",
+    "found": true,
+    "calls": 3,
+    "seconds": 0.5239965915679932
+   },
+   "comarkov.Diagram.sliding": {
+    "law": "comarkov.Diagram.sliding",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.34415531158447266
+   },
+   "comarkov.Diagram.dagger_involution": {
+    "law": "comarkov.Diagram.dagger_involution",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.23743867874145508
+   },
+   "comarkov.Diagram.dagger_contravariance": {
+    "law": "comarkov.Diagram.dagger_contravariance",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.2593717575073242
+   },
+   "comarkov.Diagram.dagger_monoidality": {
+    "law": "comarkov.Diagram.dagger_monoidality",
+    "found": true,
+    "calls": 7,
+    "seconds": 0.5974559783935547
+   },
+   "comarkov.Diagram.map_agreement": {
+    "law": "comarkov.Diagram.map_agreement",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.25132298469543457
+   },
+   "compact.Diagram.strength": {
+    "law": "compact.Diagram.strength",
+    "found": true,
+    "calls": 2,
+    "seconds": 12.583787202835083
+   },
+   "compact.Diagram.tightening": {
+    "law": "compact.Diagram.tightening",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.8675282001495361
+   },
+   "compact.Diagram.sliding": {
+    "law": "compact.Diagram.sliding",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.4117274284362793
+   },
+   "compact.Diagram.rotate_contravariance": {
+    "law": "compact.Diagram.rotate_contravariance",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.5216853618621826
+   },
+   "compact.Diagram.adjunction": {
+    "law": "compact.Diagram.adjunction",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.27014756202697754
+   },
+   "compact.Diagram.dagger_involution": {
+    "law": "compact.Diagram.dagger_involution",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.2850973606109619
+   },
+   "compact.Diagram.dagger_contravariance": {
+    "law": "compact.Diagram.dagger_contravariance",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.5056283473968506
+   },
+   "compact.Diagram.dagger_monoidality": {
+    "law": "compact.Diagram.dagger_monoidality",
+    "found": true,
+    "calls": 4,
+    "seconds": 0.597630500793457
+   },
+   "feedback.Diagram.bifunctoriality": {
+    "law": "feedback.Diagram.bifunctoriality",
+    "found": true,
+    "calls": 4,
+    "seconds": 0.5984542369842529
+   },
+   "feedback.Diagram.strength": {
+    "law": "feedback.Diagram.strength",
+    "found": true,
+    "calls": 6,
+    "seconds": 0.08899378776550293
+   },
+   "feedback.Diagram.tightening": {
+    "law": "feedback.Diagram.tightening",
+    "found": true,
+    "calls": 6,
+    "seconds": 0.10689592361450195
+   },
+   "feedback.Diagram.sliding": {
+    "law": "feedback.Diagram.sliding",
+    "found": true,
+    "calls": 4,
+    "seconds": 0.12944626808166504
+   },
+   "feedback.Diagram.trace_superposing_left": {
+    "law": "feedback.Diagram.trace_superposing_left",
+    "found": true,
+    "calls": 4,
+    "seconds": 0.050382375717163086
+   },
+   "feedback.Diagram.trace_superposing_right": {
+    "law": "feedback.Diagram.trace_superposing_right",
+    "found": true,
+    "calls": 4,
+    "seconds": 0.06054353713989258
+   },
+   "feedback.Diagram.trace_naturality_left": {
+    "law": "feedback.Diagram.trace_naturality_left",
+    "found": true,
+    "calls": 4,
+    "seconds": 0.057159423828125
+   },
+   "feedback.Diagram.trace_naturality_right": {
+    "law": "feedback.Diagram.trace_naturality_right",
+    "found": true,
+    "calls": 4,
+    "seconds": 0.1436774730682373
+   },
+   "feedback.Diagram.trace_dinaturality_left": {
+    "law": "feedback.Diagram.trace_dinaturality_left",
+    "found": true,
+    "calls": 3,
+    "seconds": 0.07056021690368652
+   },
+   "feedback.Diagram.trace_dinaturality_right": {
+    "law": "feedback.Diagram.trace_dinaturality_right",
+    "found": true,
+    "calls": 3,
+    "seconds": 0.05074048042297363
+   },
+   "feedback.Diagram.dagger_involution": {
+    "law": "feedback.Diagram.dagger_involution",
+    "found": true,
+    "calls": 28,
+    "seconds": 0.4297647476196289
+   },
+   "feedback.Diagram.dagger_contravariance": {
+    "law": "feedback.Diagram.dagger_contravariance",
+    "found": true,
+    "calls": 15,
+    "seconds": 0.28132081031799316
+   },
+   "feedback.Diagram.dagger_monoidality": {
+    "law": "feedback.Diagram.dagger_monoidality",
+    "found": true,
+    "calls": 4,
+    "seconds": 0.07109951972961426
+   },
+   "feedback.Diagram.hypergraph_section": {
+    "law": "feedback.Diagram.hypergraph_section",
+    "found": false,
+    "calls": 100,
+    "seconds": 1.0852298736572266
+   },
+   "frobenius.Diagram.strength": {
+    "law": "frobenius.Diagram.strength",
+    "found": true,
+    "calls": 2,
+    "seconds": 2.3456852436065674
+   },
+   "frobenius.Diagram.tightening": {
+    "law": "frobenius.Diagram.tightening",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.5697968006134033
+   },
+   "frobenius.Diagram.sliding": {
+    "law": "frobenius.Diagram.sliding",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.6188399791717529
+   },
+   "frobenius.Diagram.rotate_contravariance": {
+    "law": "frobenius.Diagram.rotate_contravariance",
+    "found": true,
+    "calls": 7,
+    "seconds": 2.12837290763855
+   },
+   "frobenius.Diagram.adjunction": {
+    "law": "frobenius.Diagram.adjunction",
+    "found": true,
+    "calls": 13,
+    "seconds": 0.8760170936584473
+   },
+   "frobenius.Diagram.dagger_involution": {
+    "law": "frobenius.Diagram.dagger_involution",
+    "found": true,
+    "calls": 13,
+    "seconds": 0.7137970924377441
+   },
+   "frobenius.Diagram.dagger_contravariance": {
+    "law": "frobenius.Diagram.dagger_contravariance",
+    "found": true,
+    "calls": 7,
+    "seconds": 1.3237171173095703
+   },
+   "frobenius.Diagram.dagger_monoidality": {
+    "law": "frobenius.Diagram.dagger_monoidality",
+    "found": true,
+    "calls": 27,
+    "seconds": 4.831087112426758
+   },
+   "frobenius.Diagram.map_agreement": {
+    "law": "frobenius.Diagram.map_agreement",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.2872123718261719
+   },
+   "markov.Diagram.str_transparency": {
+    "law": "markov.Diagram.str_transparency",
+    "found": true,
+    "calls": 14,
+    "seconds": 5.243122339248657
+   },
+   "markov.Diagram.strength": {
+    "law": "markov.Diagram.strength",
+    "found": true,
+    "calls": 4,
+    "seconds": 2.277446746826172
+   },
+   "markov.Diagram.tightening": {
+    "law": "markov.Diagram.tightening",
+    "found": true,
+    "calls": 3,
+    "seconds": 0.7645688056945801
+   },
+   "markov.Diagram.sliding": {
+    "law": "markov.Diagram.sliding",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.2886223793029785
+   },
+   "markov.Diagram.dagger_involution": {
+    "law": "markov.Diagram.dagger_involution",
+    "found": true,
+    "calls": 4,
+    "seconds": 0.2697458267211914
+   },
+   "markov.Diagram.dagger_contravariance": {
+    "law": "markov.Diagram.dagger_contravariance",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.25356459617614746
+   },
+   "markov.Diagram.dagger_monoidality": {
+    "law": "markov.Diagram.dagger_monoidality",
+    "found": true,
+    "calls": 3,
+    "seconds": 0.6512861251831055
+   },
+   "markov.Diagram.map_agreement": {
+    "law": "markov.Diagram.map_agreement",
+    "found": true,
+    "calls": 6,
+    "seconds": 0.2949817180633545
+   },
+   "monoidal.Diagram.bifunctoriality": {
+    "law": "monoidal.Diagram.bifunctoriality",
+    "found": true,
+    "calls": 4,
+    "seconds": 0.5180454254150391
+   },
+   "monoidal.Diagram.dagger_monoidality": {
+    "law": "monoidal.Diagram.dagger_monoidality",
+    "found": true,
+    "calls": 4,
+    "seconds": 0.06300711631774902
+   },
+   "pivotal.Diagram.bifunctoriality": {
+    "law": "pivotal.Diagram.bifunctoriality",
+    "found": true,
+    "calls": 2,
+    "seconds": 1.298987865447998
+   },
+   "pivotal.Diagram.strength": {
+    "law": "pivotal.Diagram.strength",
+    "found": true,
+    "calls": 2,
+    "seconds": 8.107253789901733
+   },
+   "pivotal.Diagram.tightening": {
+    "law": "pivotal.Diagram.tightening",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.9131438732147217
+   },
+   "pivotal.Diagram.sliding": {
+    "law": "pivotal.Diagram.sliding",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.35937070846557617
+   },
+   "pivotal.Diagram.trace_naturality_left": {
+    "law": "pivotal.Diagram.trace_naturality_left",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.4120914936065674
+   },
+   "pivotal.Diagram.trace_naturality_right": {
+    "law": "pivotal.Diagram.trace_naturality_right",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.4069812297821045
+   },
+   "pivotal.Diagram.trace_dinaturality_left": {
+    "law": "pivotal.Diagram.trace_dinaturality_left",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.3792433738708496
+   },
+   "pivotal.Diagram.trace_dinaturality_right": {
+    "law": "pivotal.Diagram.trace_dinaturality_right",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.4001016616821289
+   },
+   "pivotal.Diagram.currying_left": {
+    "law": "pivotal.Diagram.currying_left",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.23019194602966309
+   },
+   "pivotal.Diagram.currying_right": {
+    "law": "pivotal.Diagram.currying_right",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.2338399887084961
+   },
+   "pivotal.Diagram.currying_eta_left": {
+    "law": "pivotal.Diagram.currying_eta_left",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.013601303100585938
+   },
+   "pivotal.Diagram.currying_eta_right": {
+    "law": "pivotal.Diagram.currying_eta_right",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.013278007507324219
+   },
+   "pivotal.Diagram.currying_naturality_left": {
+    "law": "pivotal.Diagram.currying_naturality_left",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.3407104015350342
+   },
+   "pivotal.Diagram.currying_naturality_right": {
+    "law": "pivotal.Diagram.currying_naturality_right",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.3397681713104248
+   },
+   "pivotal.Diagram.snake_equations": {
+    "law": "pivotal.Diagram.snake_equations",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.010459661483764648
+   },
+   "pivotal.Diagram.transpose_contravariance": {
+    "law": "pivotal.Diagram.transpose_contravariance",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.4360201358795166
+   },
+   "pivotal.Diagram.rotate_contravariance": {
+    "law": "pivotal.Diagram.rotate_contravariance",
+    "found": true,
+    "calls": 9,
+    "seconds": 0.8895740509033203
+   },
+   "pivotal.Diagram.adjunction": {
+    "law": "pivotal.Diagram.adjunction",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.5389688014984131
+   },
+   "pivotal.Diagram.pivotality": {
+    "law": "pivotal.Diagram.pivotality",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.26886963844299316
+   },
+   "pivotal.Diagram.dagger_involution": {
+    "law": "pivotal.Diagram.dagger_involution",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.2658829689025879
+   },
+   "pivotal.Diagram.dagger_contravariance": {
+    "law": "pivotal.Diagram.dagger_contravariance",
+    "found": true,
+    "calls": 9,
+    "seconds": 0.8334121704101562
+   },
+   "pivotal.Diagram.dagger_monoidality": {
+    "law": "pivotal.Diagram.dagger_monoidality",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.32716941833496094
+   },
+   "pivotal.Diagram.hypergraph_section": {
+    "law": "pivotal.Diagram.hypergraph_section",
+    "found": false,
+    "calls": 100,
+    "seconds": 2.8193886280059814
+   },
+   "ribbon.Diagram.bifunctoriality": {
+    "law": "ribbon.Diagram.bifunctoriality",
+    "found": true,
+    "calls": 2,
+    "seconds": 1.3807458877563477
+   },
+   "ribbon.Diagram.strength": {
+    "law": "ribbon.Diagram.strength",
+    "found": true,
+    "calls": 2,
+    "seconds": 9.97192120552063
+   },
+   "ribbon.Diagram.tightening": {
+    "law": "ribbon.Diagram.tightening",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.7092173099517822
+   },
+   "ribbon.Diagram.sliding": {
+    "law": "ribbon.Diagram.sliding",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.37017178535461426
+   },
+   "ribbon.Diagram.yanking": {
+    "law": "ribbon.Diagram.yanking",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.008600711822509766
+   },
+   "ribbon.Diagram.trace_naturality_left": {
+    "law": "ribbon.Diagram.trace_naturality_left",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.5226099491119385
+   },
+   "ribbon.Diagram.trace_naturality_right": {
+    "law": "ribbon.Diagram.trace_naturality_right",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.49616408348083496
+   },
+   "ribbon.Diagram.trace_dinaturality_left": {
+    "law": "ribbon.Diagram.trace_dinaturality_left",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.3929412364959717
+   },
+   "ribbon.Diagram.trace_dinaturality_right": {
+    "law": "ribbon.Diagram.trace_dinaturality_right",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.3906223773956299
+   },
+   "ribbon.Diagram.scalar_sliding": {
+    "law": "ribbon.Diagram.scalar_sliding",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.288043737411499
+   },
+   "ribbon.Diagram.braid_then_inverse": {
+    "law": "ribbon.Diagram.braid_then_inverse",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.0068318843841552734
+   },
+   "ribbon.Diagram.inverse_then_braid": {
+    "law": "ribbon.Diagram.inverse_then_braid",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.007106304168701172
+   },
+   "ribbon.Diagram.braid_naturality": {
+    "law": "ribbon.Diagram.braid_naturality",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.3526766300201416
+   },
+   "ribbon.Diagram.twist_naturality": {
+    "law": "ribbon.Diagram.twist_naturality",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.26262378692626953
+   },
+   "ribbon.Diagram.currying_left": {
+    "law": "ribbon.Diagram.currying_left",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.21932530403137207
+   },
+   "ribbon.Diagram.currying_right": {
+    "law": "ribbon.Diagram.currying_right",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.231126070022583
+   },
+   "ribbon.Diagram.currying_eta_left": {
+    "law": "ribbon.Diagram.currying_eta_left",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.015230417251586914
+   },
+   "ribbon.Diagram.currying_eta_right": {
+    "law": "ribbon.Diagram.currying_eta_right",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.014874935150146484
+   },
+   "ribbon.Diagram.currying_naturality_left": {
+    "law": "ribbon.Diagram.currying_naturality_left",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.3658270835876465
+   },
+   "ribbon.Diagram.currying_naturality_right": {
+    "law": "ribbon.Diagram.currying_naturality_right",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.3649733066558838
+   },
+   "ribbon.Diagram.snake_equations": {
+    "law": "ribbon.Diagram.snake_equations",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.011538267135620117
+   },
+   "ribbon.Diagram.transpose_contravariance": {
+    "law": "ribbon.Diagram.transpose_contravariance",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.4258871078491211
+   },
+   "ribbon.Diagram.rotate_contravariance": {
+    "law": "ribbon.Diagram.rotate_contravariance",
+    "found": true,
+    "calls": 48,
+    "seconds": 2.88240647315979
+   },
+   "ribbon.Diagram.adjunction": {
+    "law": "ribbon.Diagram.adjunction",
+    "found": true,
+    "calls": 36,
+    "seconds": 0.8705346584320068
+   },
+   "ribbon.Diagram.pivotality": {
+    "law": "ribbon.Diagram.pivotality",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.27381348609924316
+   },
+   "ribbon.Diagram.dagger_involution": {
+    "law": "ribbon.Diagram.dagger_involution",
+    "found": true,
+    "calls": 36,
+    "seconds": 0.8373081684112549
+   },
+   "ribbon.Diagram.dagger_contravariance": {
+    "law": "ribbon.Diagram.dagger_contravariance",
+    "found": true,
+    "calls": 48,
+    "seconds": 2.4273416996002197
+   },
+   "ribbon.Diagram.dagger_monoidality": {
+    "law": "ribbon.Diagram.dagger_monoidality",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.3753852844238281
+   },
+   "ribbon.Diagram.hypergraph_section": {
+    "law": "ribbon.Diagram.hypergraph_section",
+    "found": false,
+    "calls": 100,
+    "seconds": 2.2901666164398193
+   },
+   "rigid.Diagram.bifunctoriality": {
+    "law": "rigid.Diagram.bifunctoriality",
+    "found": true,
+    "calls": 2,
+    "seconds": 1.1257803440093994
+   },
+   "rigid.Diagram.currying_left": {
+    "law": "rigid.Diagram.currying_left",
+    "found": true,
+    "calls": 2,
+    "seconds": 1.8765158653259277
+   },
+   "rigid.Diagram.currying_right": {
+    "law": "rigid.Diagram.currying_right",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.2059340476989746
+   },
+   "rigid.Diagram.currying_eta_left": {
+    "law": "rigid.Diagram.currying_eta_left",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.013195514678955078
+   },
+   "rigid.Diagram.currying_eta_right": {
+    "law": "rigid.Diagram.currying_eta_right",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.013541698455810547
+   },
+   "rigid.Diagram.currying_naturality_left": {
+    "law": "rigid.Diagram.currying_naturality_left",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.320112943649292
+   },
+   "rigid.Diagram.currying_naturality_right": {
+    "law": "rigid.Diagram.currying_naturality_right",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.3471865653991699
+   },
+   "rigid.Diagram.snake_equations": {
+    "law": "rigid.Diagram.snake_equations",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.010601282119750977
+   },
+   "rigid.Diagram.transpose_contravariance": {
+    "law": "rigid.Diagram.transpose_contravariance",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.37587952613830566
+   },
+   "rigid.Diagram.dagger_involution": {
+    "law": "rigid.Diagram.dagger_involution",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.26233887672424316
+   },
+   "rigid.Diagram.dagger_contravariance": {
+    "law": "rigid.Diagram.dagger_contravariance",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.3701958656311035
+   },
+   "rigid.Diagram.dagger_monoidality": {
+    "law": "rigid.Diagram.dagger_monoidality",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.3388407230377197
+   },
+   "rigid.Diagram.hypergraph_section": {
+    "law": "rigid.Diagram.hypergraph_section",
+    "found": false,
+    "calls": 100,
+    "seconds": 2.0653083324432373
+   },
+   "rigid.Diagram.dagger_monoidality_monoidal": {
+    "law": "rigid.Diagram.dagger_monoidality_monoidal",
+    "found": true,
+    "calls": 4,
+    "seconds": 1.205672025680542
+   },
+   "symmetric.Diagram.strength": {
+    "law": "symmetric.Diagram.strength",
+    "found": true,
+    "calls": 4,
+    "seconds": 2.2944233417510986
+   },
+   "symmetric.Diagram.tightening": {
+    "law": "symmetric.Diagram.tightening",
+    "found": true,
+    "calls": 3,
+    "seconds": 0.3782517910003662
+   },
+   "symmetric.Diagram.sliding": {
+    "law": "symmetric.Diagram.sliding",
+    "found": true,
+    "calls": 2,
+    "seconds": 0.2739827632904053
+   },
+   "symmetric.Diagram.dagger_involution": {
+    "law": "symmetric.Diagram.dagger_involution",
+    "found": true,
+    "calls": 3,
+    "seconds": 0.24587392807006836
+   },
+   "symmetric.Diagram.dagger_contravariance": {
+    "law": "symmetric.Diagram.dagger_contravariance",
+    "found": true,
+    "calls": 5,
+    "seconds": 0.5961418151855469
+   },
+   "symmetric.Diagram.dagger_monoidality": {
+    "law": "symmetric.Diagram.dagger_monoidality",
+    "found": true,
+    "calls": 6,
+    "seconds": 0.4613606929779053
    }
   }
  }
