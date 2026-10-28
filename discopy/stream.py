@@ -167,7 +167,6 @@ from dataclasses import dataclass
 
 from discopy import messages, symmetric
 from discopy.abc import FeedbackCategory, NamedGeneric
-from discopy.axioms import Testable
 from discopy.python import finset
 from discopy.utils import (
     AxiomError,
@@ -382,7 +381,6 @@ class Stream[category](FeedbackCategory, NamedGeneric):
     later, is_constant = Ty.later, Ty.is_constant
     head, tail = Ty.head, Ty.tail
     sliding = FeedbackCategory.sliding.failing(messages.STREAM_SLIDING)
-    serialisation = Testable.serialisation.inapplicable(NO_TREE)
 
     def __init__(
             self, now: category,

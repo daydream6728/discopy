@@ -104,7 +104,7 @@ from networkx.algorithms.isomorphism import is_isomorphic
 from discopy import markov, messages, monoidal
 from discopy.abc import HypergraphCategory, MonoidalCategory, Nat
 from discopy.axioms import (
-    GENERATORS, Equation, Hom, Obj, Testable, Var, axiom)
+    GENERATORS, Equation, Hom, Obj, Serialisable, Var, axiom)
 from discopy.drawing import Node
 from discopy.hypergraph import Hypergraph
 from discopy.monoidal import Ty
@@ -238,7 +238,7 @@ def distribute(diagram: monoidal.Diagram) -> markov.Sum:
 
 
 class EHypergraph[category](
-        MonoidalCategory, NamedGeneric, Testable):
+        MonoidalCategory, NamedGeneric, Serialisable):
     """
     An e-hypergraph over a copy-discard ``category``, equal to another up to
     renaming its spiders, see :mod:`discopy.ehypergraph`.

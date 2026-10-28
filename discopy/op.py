@@ -56,17 +56,18 @@ from discopy import abc, cat, monoidal, symmetric
 from discopy.abc import (
     ComarkovCategory, MarkovCategory, MonoidalCategory, NamedGeneric,
     SymmetricCategory)
-from discopy.axioms import Testable
 from discopy.python import finset
 from discopy.utils import (
     assert_isinstance, classproperty, factory_name, get_origin, unbiased)
+from discopy.axioms import Serialisable
 
 NO_TREE = "The opposite of a category has no tree: it reads back from the "\
     "class of its arrow, which a tree does not name."
 
 
 @dataclass
-class Category[category](abc.Category, Testable["Category"], NamedGeneric):
+class Category[category](
+        abc.Category, Serialisable["Category"], NamedGeneric):
     """
     An arrow of the opposite of ``category``, i.e. an arrow ``inside`` of the
     category read from its codomain to its domain.
@@ -142,7 +143,7 @@ class Category[category](abc.Category, Testable["Category"], NamedGeneric):
         return dict(super().environment(), **getattr(
             cls.category, "environment", dict)())
 
-    serialisation = Testable.serialisation.inapplicable(NO_TREE)
+    serialisation = Serialisable.serialisation.inapplicable(NO_TREE)
 
 
 class Monoidal(Category, MonoidalCategory):

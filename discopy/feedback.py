@@ -640,6 +640,13 @@ class Diagram(monoidal.Diagram, TracedCategory):
 
     d = Wire.d
 
+    tightening = FeedbackCategory.tightening.failing(
+        messages.FREE_FEEDBACK)
+    sliding = FeedbackCategory.sliding.failing(
+        messages.FREE_FEEDBACK)
+    strength = FeedbackCategory.strength.failing(
+        messages.FREE_FEEDBACK)
+
 
 class Box(monoidal.Box, Diagram):
     """
