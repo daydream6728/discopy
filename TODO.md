@@ -5,5 +5,5 @@ Branched off `proptest/plumbing`, local experiment, after the derivation of a Bo
 - [x] Symmetric levels: draw an unbounded domain and codomain port by port with `y` per port, the completion of the open wires a fixed point
 - [x] Planar levels: the walk of the leaves of the grammar of a category in normal form, its state the wires left of and from the last outputs, its completion the catalytic equation solved as a sparse linear system below its singularity
 - [x] Type the walk by unification of placeholders, each leaf derived by `discopy.boltzmann`
-- [x] Test the normal form against `monoidal.Diagram.normal_form` and the sampler against exact probabilities
+- [x] Test the normal form against the orbits of drawings under interchange and the sampler against exact probabilities
 - [ ] One strategy for every level, and compare on `benchmark/generators`

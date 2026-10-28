@@ -8,7 +8,10 @@ Generators: search, quotient, mixed (the default of #1, on its base
 commit), boltzmann, boltzmann_mixed (the default of proptest/boltzmann),
 plumbing (boxes then plumbing, see discopy.plumbing, where the category has
 a kind of plumbing, else boltzmann), boltzmann_plumbing (boltzmann mixed
-with plumbing rather than with the quotient).
+with plumbing rather than with the quotient), catalytic (the catalytic
+walks of discopy.catalytic with unbounded boundaries, at every level of the
+hierarchy where they apply, else boltzmann), boltzmann_catalytic (boltzmann
+mixed with them at every level).
 
 ``samples`` draws 300 diagrams per category and boundary through Hypothesis
 and records their size, structure and shape; ``bugs`` searches each law
@@ -30,7 +33,7 @@ from hypothesis import HealthCheck, Phase, find, given, settings
 from hypothesis import strategies as st
 from hypothesis.errors import NoSuchExample, UnsatisfiedAssumption
 
-from discopy import markov, plumbing, symmetric
+from discopy import catalytic, markov, plumbing, symmetric
 from discopy.axioms import AxiomFailure, FUEL, Testable
 from discopy.cat import Arrow, FreeCategory
 
@@ -74,7 +77,30 @@ def patch():
             return plumbing.strategy(cls, dom, cod)
         return original(cls, dom=dom, cod=cod, fuel=fuel, within=within)
 
-    if GENERATOR == "boltzmann_plumbing":
+    def walks(cls, dom, cod):
+        try:
+            return catalytic.strategy(cls, dom, cod)
+        except NotImplementedError:
+            return None
+
+    def catalytic_only(cls, *, dom=None, cod=None, fuel=FUEL, within=None):
+        walk = None if within is not None else walks(cls, dom, cod)
+        return arrow(cls, dom=dom, cod=cod, fuel=fuel, within=within)\
+            if walk is None else walk
+
+    def catalytic_mixed(cls, *, dom=None, cod=None, fuel=FUEL, within=None):
+        derivations = arrow(cls, dom=dom, cod=cod, fuel=fuel, within=within)
+        if within is not None or issubclass(cls, symmetric.Diagram):
+            return derivations
+        walk = walks(cls, dom, cod)
+        return derivations if walk is None else st.one_of(derivations, walk)
+
+    if GENERATOR == "catalytic":
+        symmetric.Diagram.strategy = classmethod(catalytic_only)
+        Arrow.strategy = classmethod(catalytic_only)
+    if GENERATOR == "boltzmann_catalytic":
+        Arrow.strategy = classmethod(catalytic_mixed)
+    if GENERATOR in ("boltzmann_plumbing", "boltzmann_catalytic"):
         for base in quotients:
             base.quotient_strategy = plumbed(base)
     if GENERATOR in ("search", "quotient", "boltzmann", "plumbing"):

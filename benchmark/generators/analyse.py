@@ -7,7 +7,7 @@ from collections import Counter, defaultdict
 from pathlib import Path
 
 EXP = Path(sys.argv[1])
-GENERATORS = ["search", "quotient", "mixed", "boltzmann_free", "boltzmann_topdown", "boltzmann", "boltzmann_mixed", "plumbing", "boltzmann_plumbing", "plumbing_flat", "boltzmann_plumbing_flat", "plumbing_legs", "boltzmann_plumbing_legs"]
+GENERATORS = ["search", "quotient", "mixed", "boltzmann_free", "boltzmann_topdown", "boltzmann", "boltzmann_mixed", "plumbing", "boltzmann_plumbing", "plumbing_flat", "boltzmann_plumbing_flat", "plumbing_legs", "boltzmann_plumbing_legs", "catalytic", "boltzmann_catalytic"]
 
 
 def load(kind, generator):
