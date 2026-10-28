@@ -435,6 +435,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - `zx.H`, quantum gates that do not send basis states to basis states,
   `gates.Bra`, `gates.Match` and `tensor.Sum` no longer claim to be cartesian
   ([next#115]).
+- `markov.Box` and the boxes below it show `name`, `dom`, `cod` and their
+  keywords in their signature, not `*args` ([next#114]).
 - Docstrings of `para` and two others ([#494], [#683], [#693]), a citation
   in `kleisli.additive` ([#639]), and notebook titles in the docs ([#526]).
 
