@@ -187,16 +187,19 @@ def fn_to_semm(fn: FusionNetwork, order: PartialOrder) -> list[Instruction]:
 # per fusion of a node and then one to measure it, which an output has not.
 def _get_fusion_photons(fn: FusionNetwork) -> dict[int, int]:
     photon = 0
-    photons: dict[tuple[int, int], int] = {}
+    photons: dict[tuple[int, int], list[int]] = {}
 
     for node in fn.path:
         for nbr in get_fused_neighbours(fn.fusions, node):
             photon += 1
-            photons[node, nbr] = photon
+            photons.setdefault((node, nbr), []).append(photon)
         photon += node in fn.measurements
 
-    return {photons[node, nbr]: photons[nbr, node]
-            for node, nbr in photons}
+    # Two nodes may be fused more than once, so the photons of a pair are
+    # paired up by occurrence: both sides list them in the order of `fusions`.
+    return {one: other
+            for (node, nbr), ones in photons.items()
+            for one, other in zip(ones, photons[nbr, node])}
 
 
 # Returns the number of fusion edges a node has

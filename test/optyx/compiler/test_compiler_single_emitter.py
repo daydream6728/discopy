@@ -152,3 +152,18 @@ def test_fusion_photons_of_a_path_that_is_not_its_ids():
         NextNodeOp(2),
         NextNodeOp(4), MeasureOp(0, Measurement(0, "XY")),
         NextNodeOp(3), FusionOp(0, "X")]
+
+
+def test_fusion_photons_of_parallel_fusions():
+    # Two fusions between the same pair of nodes are two photons on each, so
+    # the photons are paired by occurrence and not by the pair itself.
+    measurements = create_unique_measurements(2)
+    fn = FusionNetwork([0, 1], measurements,
+                       [Fusion(0, 1, "X"), Fusion(0, 1, "X")])
+
+    assert get_creation_times(fn) == {0: 3, 1: 6}
+    assert fn_to_semm(fn, lambda n: [n]) == [
+        NextNodeOp(0), FusionOp(3, "X"), FusionOp(3, "X"),
+        MeasureOp(0, measurements[0]),
+        NextNodeOp(1), FusionOp(0, "X"), FusionOp(0, "X"),
+        MeasureOp(0, measurements[1])]
