@@ -84,7 +84,7 @@ from typing import (
 
 from discopy import messages, utils
 from discopy.abc import Category, DaggerCategory, Nat
-from discopy.axioms import GENERATORS, Equation as AbstractEquation, Testable
+from discopy.testable import GENERATORS, Equation as AbstractEquation, Testable
 from discopy.utils import (  # noqa: F401
     factory,
     factory_name,
@@ -1367,8 +1367,8 @@ class Transformation(Category[Functor, "Transformation"]):
 
 class Equation(AbstractEquation[Arrow]):
     """
-    An :class:`.axioms.Equation` between arrows, see its docstring for the
-    parameters and :meth:`.axioms.Equation.modulo` for quotients.
+    An :class:`.testable.Equation` between arrows, see its docstring for the
+    parameters and :meth:`.testable.Equation.modulo` for quotients.
 
     Example
     -------

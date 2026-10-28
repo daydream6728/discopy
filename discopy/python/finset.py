@@ -29,7 +29,7 @@ from dataclasses import dataclass
 from discopy import messages
 from discopy.abc import (
     Groupoid, HypergraphCategory, MarkovCategory, PROP, Nat)
-from discopy.axioms import Testable
+from discopy.testable import Testable
 from discopy.utils import AxiomError, factory_name, unbiased
 
 

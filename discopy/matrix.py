@@ -45,7 +45,7 @@ from typing import Callable, TYPE_CHECKING, Literal
 from discopy import config, messages
 from discopy.abc import (
     ComarkovCategory, DaggerCategory, MarkovCategory, NamedGeneric, Nat)
-from discopy.axioms import Testable
+from discopy.testable import Testable
 from discopy.cat import (
     factory,
     assert_iscomposable,

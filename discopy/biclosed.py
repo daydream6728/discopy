@@ -95,7 +95,7 @@ from typing import (
 
 from discopy import cat, monoidal, cmap, hypergraph, messages
 from discopy.abc import BiclosedCategory
-from discopy.axioms import (
+from discopy.testable import (
     GENERATORS, Equation as AbstractEquation, Equivalence, Testable, axiom)
 from discopy.drawing import Drawing
 from discopy.cat import factory
@@ -775,7 +775,7 @@ Diagram.functor_factory = Functor
 class TermBase(Box, Equivalence):
     """
     A term in the internal language of biclosed categories, an
-    :class:`discopy.axioms.Equivalence` up to the names of its bound
+    :class:`discopy.testable.Equivalence` up to the names of its bound
     variables, see :meth:`alpha_eq`.
 
     Attributes:
