@@ -430,12 +430,20 @@ class Sampler:
         """
         The :mod:`hypothesis` strategy of the diagrams of ``category`` from
         ``dom`` to ``cod``, of width at most ``widths`` when not given: a
-        number of boxes drawn by Hypothesis between :attr:`min_boxes` and
-        :attr:`max_boxes`, so that it shrinks, then a sample conditioned on
-        it, see :meth:`exactly`, built through
+        number of boxes drawn uniformly between :attr:`min_boxes` and
+        :attr:`max_boxes`, then a sample conditioned on it, see
+        :meth:`exactly`, built through
         :class:`discopy.hypergraph.Hypergraph`, its wires coloured from the
-        :meth:`discopy.boltzmann.Specification.palette` and its boxes drawn
-        by the ``generators`` of the category.
+        :meth:`discopy.boltzmann.Specification.palette` and its boxes named
+        by a fresh identifier, as :meth:`discopy.cat.Box.strategy` does.
+
+        The sample is drawn from a generator seeded by every draw Hypothesis
+        makes, a seed and the palette, and only those. Hypothesis mutates an
+        example by copying one of its draws over another drawn alike, e.g. a
+        box over another box, and replays the rest, so that a seed drawn on
+        its own replays the same plumbing for up to five examples in a row;
+        and it draws an integer at its least most of the time, a third of
+        the numbers of boxes from 0 to 6, where a boundary has few diagrams.
         """
         # pylint: disable=import-outside-toplevel  # they import this
         from hypothesis import reject, strategies as st
@@ -444,9 +452,10 @@ class Sampler:
 
         @st.composite
         def diagrams(draw):
-            boxes = draw(st.integers(self.min_boxes, self.max_boxes))
-            random = draw(st.randoms(use_true_random=True))
+            seed = draw(st.integers(0, 2 ** 64 - 1))
             palette = boltzmann.compile(category).palette(dom, cod, draw=draw)
+            random = Random(repr((seed, palette)))
+            boxes = random.randint(self.min_boxes, self.max_boxes)
             for _ in range(attempts):
                 sides = tuple(len(side) if side is not None
                               else random.randint(0, widths)
@@ -459,8 +468,9 @@ class Sampler:
                 if arguments is None:
                     continue
                 inputs, outputs, box_types, wiring, spider_types = arguments
-                generators = tuple(draw(category.generators(dom=x, cod=y))
-                                   for x, y in box_types)
+                generators = tuple(
+                    category.box_factory(f"f_{random.getrandbits(128):032x}",
+                                         x, y) for x, y in box_types)
                 return Hypergraph[category](
                     inputs, outputs, generators, wiring,
                     spider_types).to_diagram()
