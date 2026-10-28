@@ -153,3 +153,20 @@ def test_legs_count_generators(kind):
         assert Plumbing(kind, q=1, legs=.5).count(points)\
             == pytest.approx(sum(.5 ** energy(wires) for wires, _ in scans(
                 Plumbing(kind, q=1), points)))
+
+
+@pytest.mark.parametrize("kind", ["bijection", "matching", "cospan"])
+def test_free_boundaries_are_exact(kind):
+    sampler = Sampler(Plumbing(kind, q=.5, legs=.3), max_boxes=1,
+                      shapes=((1, 1), (0, 2)), loops=0, boundary=.15)
+    total = sampler.total(None, None)
+    exact = {(m, n): sampler.boundary ** (m + n) * sampler.total(m, n)
+             for m in range(sampler.width) for n in range(sampler.width)}
+    assert sum(exact.values()) == pytest.approx(total, rel=1e-3)
+    rng, draws = random.Random(0), Counter()
+    for _ in range(20000):
+        walk = sampler.walk(rng, None, None)
+        draws[tuple(walk.widths)] += 1
+    distance = sum(abs(draws[key] / 20000 - weight / total)
+                   for key, weight in exact.items()) / 2
+    assert distance < .02

@@ -1,13 +1,9 @@
-> ok back into experiment mode for the open questions:
-> using permutations, temperley-lieb, brauer, and double finite functions for frobenius, investigate whether we can separate the boxes from plumbing and devise a more structure-aware sampler.
-> what would be the analog of size/energy when sampling plumbing?
+> experiment with this in a new branch. add a new sampler that uses catalytic variables to sample diagrams with unbounded boundaries for each level of the hierarchy
 
-Branched off `proptest/boltzmann`, local experiment.
+Branched off `proptest/plumbing`, local experiment, after the derivation of a Boltzmann sampler for monoidal diagrams with the width as a catalytic variable.
 
-- [x] State the decomposition: a diagram of a traced symmetric, compact, Markov or hypergraph category is a set of boxes and one plumbing morphism of the free such category on objects alone, a bijection, a Brauer diagram, a finite function or a cospan
-- [x] Sample plumbing on the line of ports, weighted by `q` per crossing, by a transfer matrix on the number of open wires: exact, linear in the ports times the open wires
-- [x] Sample boxes and plumbing jointly, `x` per box over `k!`, exactly, conditioned on the number of boxes, which Hypothesis draws
-- [x] Type the wires after the fact, one colour per spider, and build the diagram through `Hypergraph`
-- [x] Test the exact laws on small lines by enumeration
-- [x] Compare with the derivation sampler and the graph sampler on `benchmark/generators`: samples and broken laws
-- [x] Write up the energy of plumbing and the results
+- [ ] Symmetric levels: draw an unbounded domain and codomain port by port with `y` per port, the completion of the open wires a fixed point
+- [ ] Planar levels: the walk of the leaves of the grammar of a category in normal form, its state the wires left of and from the last outputs, its completion the catalytic equation solved as a sparse linear system below its singularity
+- [ ] Type the walk by unification of placeholders, each leaf derived by `discopy.boltzmann`
+- [ ] Test the normal form against `monoidal.Diagram.normal_form` and the sampler against exact probabilities
+- [ ] One strategy for every level, and compare on `benchmark/generators`

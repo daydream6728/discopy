@@ -276,6 +276,10 @@ class Sampler:
         max_boxes : The largest number of boxes.
         loops : The probability of each further closed loop, i.e. a spider
             with no port, of which there are geometrically many.
+        boundary : The weight ``y`` of a port of a domain or a codomain that
+            is not given, drawn port by port, see :meth:`free`.
+        width : The most wires a free boundary is drawn with, a numerical
+            truncation of the fixed point :meth:`free` solves.
 
     Example
     -------
@@ -293,16 +297,20 @@ class Sampler:
     min_boxes: int = 0
     max_boxes: int = 8
     loops: float = .1
+    boundary: float = .2
+    width: int = 10
     cache: dict = field(default_factory=dict, repr=False, compare=False)
 
-    def node(self, boxes: int, state: tuple, cod: tuple) -> dict:
+    def node(self, boxes: int, state: tuple, cod: tuple | None) -> dict:
         """
         The weight of each way on after ``boxes`` boxes: the codomain,
-        ``None``, or one more box of each shape.
+        ``None``, or one more box of each shape. A codomain that is
+        ``None`` is free, see :meth:`free`.
         """
         ways = {}
         if boxes >= self.min_boxes:
-            ways[None] = self.completion(boxes, cod, state, cod, True)
+            ways[None] = self.free(False).get(state, 0.) if cod is None\
+                else self.completion(boxes, cod, state, cod, True)
         if boxes < self.max_boxes:
             for m, n in self.shapes:
                 ways[m, n] = self.x / (boxes + 1) * self.completion(
@@ -337,10 +345,71 @@ class Sampler:
             return float(state == self.plumbing.start)
         return sum(self.node(boxes, state, cod).values())
 
-    def total(self, dom: int, cod: int) -> float:
-        """ The total weight of the diagrams from ``dom`` to ``cod`` ports. """
+    def total(self, dom: int | None, cod: int | None) -> float:
+        """
+        The total weight of the diagrams from ``dom`` to ``cod`` ports, free
+        when ``None``, see :meth:`free`.
+        """
+        points = None if cod is None else cod * (False, )
+        if dom is None:
+            return self.free(True, points)[self.plumbing.start]
         return self.completion(
-            0, dom * (True, ), self.plumbing.start, cod * (False, ), False)
+            0, dom * (True, ), self.plumbing.start, points, False)
+
+    def states(self) -> list[tuple[int, ...]]:
+        """ The states with at most :attr:`width` wires open. """
+        result = [self.plumbing.start]
+        for state in result:
+            for producer in (True, False):
+                result += [
+                    after for _, _, after in self.plumbing.transitions(
+                        state, producer)
+                    if sum(after) <= self.width and after not in result]
+        return result
+
+    def free(self, producers: bool, cod: tuple | None = None) -> dict:
+        """
+        The completion of each state with a free side, the catalytic
+        equation of the open wires solved by iteration: a free codomain
+        either ends with no wire open or takes one more consumer, with weight
+        :attr:`boundary`; a free domain either goes on with the boxes or
+        takes one more producer.
+
+        .. math::
+            F(s) = [s = 0] + y \\sum_{s \\to s'} w(s \\to s') F(s')
+
+        It is linear in the completions, convergent for ``y`` below the
+        reciprocal of the total weight of the moves of a point.
+
+        >>> sampler = Sampler(Plumbing("bijection", acyclic=True),
+        ...                   boundary=.3, max_boxes=0)
+        >>> round(sampler.total(None, None), 6)  # sum of .09 ** n [n]_q!
+        1.104455
+        """
+        key = "free", producers, cod
+        if key in self.cache:
+            return self.cache[key]
+        states = self.states()
+        base = {state: float(state == self.plumbing.start)
+                if not producers else sum(self.node(0, state, cod).values())
+                for state in states}
+        values = dict(base)
+        for _ in range(10000):
+            new = {state: base[state] + self.boundary * sum(
+                weight * values.get(after, 0.)
+                for _, weight, after in self.plumbing.transitions(
+                    state, producers)) for state in states}
+            done = max(abs(new[k] - values[k]) for k in states)\
+                <= 1e-12 * max(new.values())
+            values = new
+            if done:
+                break
+            if max(values.values()) > 1e100:
+                raise ValueError(f"No fixed point at y = {self.boundary}.")
+        else:
+            raise ValueError(f"No fixed point at y = {self.boundary}.")
+        self.cache[key] = values
+        return values
 
     def coefficients(self, dom: int, cod: int) -> list[float]:
         """
@@ -390,24 +459,67 @@ class Sampler:
                 high = middle
         return replace(self, x=math.exp((low + high) / 2), cache={})
 
-    def sample(self, random, dom: int, cod: int) -> tuple[list, list]:
+    def ports(self) -> float:
+        """
+        The expected number of ports of two free sides, the derivative of
+        the logarithm of :meth:`total` in that of :attr:`boundary`.
+        """
+        step = 1e-4
+        up, down = (replace(
+            self, boundary=self.boundary * math.exp(sign * step),
+            cache={}).total(None, None) for sign in (1, -1))
+        return (math.log(up) - math.log(down)) / (2 * step)
+
+    def tuned_boundary(self, ports: float, steps: int = 30) -> Sampler:
+        """
+        The sampler whose free sides have ``ports`` ports on average, by
+        bisection on :attr:`boundary` below the singularity, where
+        :meth:`free` has no fixed point.
+
+        >>> sampler = Sampler(Plumbing("cospan"), max_boxes=1)
+        >>> round(sampler.tuned_boundary(2.).ports(), 2)
+        2.0
+        """
+        low, high = 0., 1.
+        for _ in range(steps):
+            middle = (low + high) / 2
+            try:
+                too_many = replace(
+                    self, boundary=middle, cache={}).ports() > ports
+            except ValueError:
+                too_many = True
+            low, high = (low, middle) if too_many else (middle, high)
+        return replace(self, boundary=low, cache={})
+
+    def sample(self, random, dom: int | None,
+               cod: int | None) -> tuple[list, list]:
         """
         A shape for each box and the wires of the plumbing, as lists of the
         points they join, numbered along the line: the domain, the inputs then
         the outputs of each box, the codomain, see :func:`line` for their
-        ports. Closed loops are empty wires.
+        ports. Closed loops are empty wires. A side that is ``None`` is
+        free, see :meth:`free`, and :meth:`walk` says how wide it is.
         """
         walk = self.walk(random, dom, cod)
         return walk.shapes, walk.wires
 
-    def walk(self, random, dom: int, cod: int) -> Walk:
+    def walk(self, random, dom: int | None, cod: int | None) -> Walk:
         """ The walk along the line of a sample, see :meth:`sample`. """
-        walk = Walk(self, random, cod * (False, ))
-        walk.plumb(dom * (True, ), final=False)
+        walk = Walk(self, random, None if cod is None else cod * (False, ))
+        if dom is None:
+            walk.extend(True)
+        else:
+            walk.plumb(dom * (True, ), final=False)
+        walk.widths[0] = walk.points
         while (shape := walk.choose(walk.ways())) is not None:
             walk.shapes.append(shape)
             walk.plumb(shape[0] * (False, ) + shape[1] * (True, ), final=False)
-        walk.plumb(cod * (False, ), final=True)
+        start = walk.points
+        if cod is None:
+            walk.extend(False)
+        else:
+            walk.plumb(cod * (False, ), final=True)
+        walk.widths[1] = walk.points - start
         while random.random() < self.loops:
             walk.wires.append([])
         return walk
@@ -426,13 +538,13 @@ class Sampler:
 
     def strategy(  # pylint: disable=too-many-arguments  # bounds
             self, category: type, dom=None, cod=None, *,
-            widths: int = 2, attempts: int = 100):
+            attempts: int = 100):
         """
         The :mod:`hypothesis` strategy of the diagrams of ``category`` from
-        ``dom`` to ``cod``, of width at most ``widths`` when not given: a
-        number of boxes drawn uniformly between :attr:`min_boxes` and
-        :attr:`max_boxes`, then a sample conditioned on it, see
-        :meth:`exactly`, built through
+        ``dom`` to ``cod``, a side not given drawn port by port, see
+        :meth:`free`: a number of boxes drawn uniformly between
+        :attr:`min_boxes` and :attr:`max_boxes`, then a sample conditioned
+        on it, see :meth:`exactly`, built through
         :class:`discopy.hypergraph.Hypergraph`, its wires coloured from the
         :meth:`discopy.boltzmann.Specification.palette` and its boxes named
         by a fresh identifier, as :meth:`discopy.cat.Box.strategy` does.
@@ -457,14 +569,14 @@ class Sampler:
             random = Random(repr((seed, palette)))
             boxes = random.randint(self.min_boxes, self.max_boxes)
             for _ in range(attempts):
-                sides = tuple(len(side) if side is not None
-                              else random.randint(0, widths)
+                sides = tuple(None if side is None else len(side)
                               for side in (dom, cod))
                 if not self.exactly(boxes).total(*sides):
                     continue
-                shapes, wires = self.exactly(boxes).sample(random, *sides)
-                arguments = colour(category, shapes, wires, (dom, cod),
-                                   sides, palette, random)
+                walk = self.exactly(boxes).walk(random, *sides)
+                arguments = colour(category, walk.shapes, walk.wires,
+                                   (dom, cod), tuple(walk.widths), palette,
+                                   random)
                 if arguments is None:
                     continue
                 inputs, outputs, box_types, wiring, spider_types = arguments
@@ -488,8 +600,9 @@ class Walk:  # pylint: disable=too-many-instance-attributes  # a walk's state
     """
     sampler: Sampler
     random: Random
-    cod: tuple
+    cod: tuple | None
     shapes: list = field(default_factory=list)
+    widths: list = field(default_factory=lambda: [0, 0])
     wires: list = field(default_factory=list)
     points: int = 0
     crossings: int = 0
@@ -521,6 +634,26 @@ class Walk:  # pylint: disable=too-many-instance-attributes  # a walk's state
                 for move, weight, after in plumbing.transitions(
                     self.state, producer)}
             self.apply(self.choose(weights))
+
+    def extend(self, producers: bool):
+        """
+        Draw a free side port by port, the domain if ``producers`` else the
+        codomain, until it stops, see :meth:`Sampler.free`.
+        """
+        sampler, plumbing = self.sampler, self.sampler.plumbing
+        table = sampler.free(True, self.cod) if producers\
+            else sampler.free(False)
+        while True:
+            stop = sum(self.ways().values()) if producers\
+                else float(self.state == plumbing.start)
+            weights = {None: stop} | {
+                move: sampler.boundary * weight * table.get(after, 0.)
+                for move, weight, after in plumbing.transitions(
+                    self.state, producers)}
+            move = self.choose(weights)
+            if move is None:
+                return
+            self.apply(move)
 
     def apply(self, move: Move):
         """ Join the point to a wire, an open one or a new one. """
@@ -648,6 +781,12 @@ def strategy(  # pylint: disable=too-many-arguments  # the knobs of a sampler
 
 
 @lru_cache(maxsize=None)
-def sampler(plumbing: Plumbing, max_boxes: int) -> Sampler:
-    """ The :class:`Sampler` of a plumbing, once, so that it caches. """
-    return Sampler(plumbing, max_boxes=max_boxes)
+def sampler(plumbing: Plumbing, max_boxes: int,
+            ports: float = 3.) -> Sampler:
+    """
+    The :class:`Sampler` of a plumbing, once, so that it caches, its free
+    sides tuned to ``ports`` ports together with half its boxes.
+    """
+    middle = Sampler(plumbing, max_boxes=max_boxes).exactly(max_boxes // 2)
+    boundary = middle.tuned_boundary(ports).boundary
+    return Sampler(plumbing, max_boxes=max_boxes, boundary=boundary)
