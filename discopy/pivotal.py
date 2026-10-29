@@ -62,8 +62,8 @@ We also have its dagger and its transpose:
 
 from __future__ import annotations
 
-from typing import ClassVar
 from copy import copy
+from typing import ClassVar
 
 from discopy import cat, cmap, rigid, feedback
 from discopy.abc import PivotalCategory
@@ -100,6 +100,7 @@ class Wire(feedback.Wire, rigid.Wire):
 
     def __repr__(self):
         return rigid.Wire.__repr__(self)[:-1] + self.repr_time_step() + ")"
+    windings = (0, 1)
 
     def dagger(self) -> Wire:
         """

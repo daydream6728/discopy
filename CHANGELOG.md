@@ -9,6 +9,14 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Added
 
+- `testable.Rule` and `@rule`, inference rules stated like laws on each
+  structure of `abc`, and `FreeCategory.search`, the terms of a free
+  category derived from its rules, which the property matrix draws:
+  `Testable.enrolled` and `Testable.matrix` say what it checks,
+  `proptest/test_rules.py` types every rule and the `fast` profile checks
+  each law once ([next#1]).
+- `testable.Serialisable`, the roundtrips of a term as laws, and the sorts
+  `Atom`, `Perm` and `Objs` ([next#1]).
 - `discopy.abc`, the abstract base classes of the hierarchy, from `Category`
   to `PROP`, `Monoid` and `Pregroup` ([#326], [#331], [#727]).
 - `discopy.testable`, laws stated once on `abc` and checked by the Hypothesis
