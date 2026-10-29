@@ -305,6 +305,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - `closed.TermBase.normal_form` and `reduce` take a constant as the head of a
   spine, e.g. on the terms of `grammar.abstract` ([next#278]).
 - `optyx.channel.Swap.dagger` is the swap the other way round ([next#290]).
+- `optyx.channel.Diagram.eval` evaluates a diagram of classical boxes, which
+  `is_pure` called pure though a `CQMap` has no Kraus map ([next#260]).
 - `optyx.core.zw.ZBox.conjugate` takes amplitudes given as a list, as
   `dagger` does ([next#254]).
 - `optyx.classical.BitControlledPhaseShift` leaves its modes quantum, its
@@ -717,6 +719,7 @@ for the changelog of `1.2.1` and earlier.
 [next#250]: https://github.com/rel-int/discopy-next/issues/250
 [next#254]: https://github.com/rel-int/discopy-next/issues/254
 [next#258]: https://github.com/rel-int/discopy-next/issues/258
+[next#260]: https://github.com/rel-int/discopy-next/issues/260
 [next#263]: https://github.com/rel-int/discopy-next/pull/263
 [next#276]: https://github.com/rel-int/discopy-next/pull/276
 [next#278]: https://github.com/rel-int/discopy-next/issues/278

@@ -157,3 +157,9 @@ def test_bit_controlled_phase_shift_keeps_its_modes_quantum():
     gate = BitControlledPhaseShift(lambda bits: [0.5 * bits[0]])
     assert gate.cod == qmode
     assert (gate >> Phase(0.25)).cod == qmode
+
+
+def test_classical_diagram_eval():
+    diagram = Digit(2) >> Mod2()
+    assert not diagram.is_pure
+    assert diagram.eval().prob_dist() == {(0, ): 1.0}
