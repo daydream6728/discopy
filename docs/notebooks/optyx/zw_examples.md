@@ -91,12 +91,13 @@ circ.draw()
 circ.get_kraus().draw()
 ```
 
-The three methods give the same distribution over the output occupations:
+The four methods give the same distribution over the output occupations:
 
 ```python {.marimo}
 distributions = [
     circ.eval(backend).prob_dist()
-    for backend in (PercevalBackend(), PermanentBackend(), QuimbBackend())]
+    for backend in (
+        PercevalBackend(), PermanentBackend(), DiscopyBackend(), QuimbBackend())]
 occupations = set().union(*distributions)
 
 assert all(
