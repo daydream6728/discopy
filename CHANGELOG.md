@@ -282,6 +282,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - `docs/notebooks/optyx/channel_error.ipynb`, a 0-byte file that is not valid
   JSON and so not a notebook, is removed: it was added empty by `0e6c24bd`
   ([optyx#136]) and never had content to restore ([next#250]).
+- `docs/notebooks/optyx/zw_examples.md` runs on the current `photonic` API
+  instead of the removed `qpath` and `circuit` modules (part of [next#249]).
 - Every box of `discopy.optyx` prints the call that built it, so that
   `eval(repr(x)) == x` holds for it as STYLE.md asks and `testable.transparency`
   states: the boxes of `channel`, `qubits`, `photonic` and `classical` narrow
@@ -714,6 +716,7 @@ for the changelog of `1.2.1` and earlier.
 [next#214]: https://github.com/rel-int/discopy-next/pull/214
 [next#225]: https://github.com/rel-int/discopy-next/issues/225
 [next#236]: https://github.com/rel-int/discopy-next/issues/236
+[next#249]: https://github.com/rel-int/discopy-next/issues/249
 [next#250]: https://github.com/rel-int/discopy-next/issues/250
 [next#254]: https://github.com/rel-int/discopy-next/issues/254
 [next#258]: https://github.com/rel-int/discopy-next/issues/258
