@@ -1353,9 +1353,7 @@ class Diagram(frobenius.Diagram):
         """
         are_layers_pure = []
         are_layers_classical = []
-        for layer in self:
-            generator, _ = layer.inside[0].boxes_and_offsets[0]
-
+        for generator in self.boxes:
             if isinstance(generator, CQMap):
                 return False
 

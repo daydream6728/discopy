@@ -163,3 +163,9 @@ def test_classical_diagram_eval():
     diagram = Digit(2) >> Mod2()
     assert not diagram.is_pure
     assert diagram.eval().prob_dist() == {(0, ): 1.0}
+
+
+def test_classical_box_in_parallel_layer_is_not_pure():
+    layer = (qubits.H() @ Digit(2)).foliation()
+    assert len(layer.inside) == 1
+    assert not layer.is_pure
