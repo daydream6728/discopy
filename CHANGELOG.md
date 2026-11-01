@@ -574,10 +574,14 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `cannot reshape array of size 2 into shape ()` rather than evaluating
   ([next#421]).
 - `optyx.core.zx.Spider.grad` is `1j * pi * phase'` times the difference
-  between the spider and the spider shifted by half a turn, which is what
-  `quantum.zx.Spider.grad` next door already was: it returned the shifted
-  spider alone, so every spider's gradient carried a spurious value on the
-  all-zero entry of its array, where the derivative has none ([next#426]).
+  between the spider and the spider shifted by half a turn, which is the
+  formula `quantum.zx.Spider.grad` next door already had. The optyx copy
+  returned the shifted spider alone, so a spider with legs had a spurious
+  value on the all-zero entry of its gradient, where the derivative has none,
+  and a legless one had the wrong value outright. `optyx.core.zx.ZBox`
+  overrides it: its parameter is an amplitude rather than an angle, its array
+  is linear in it, and its gradient is the difference between the box at one
+  and the box at zero ([next#426]).
 - `optyx.core.zw.ZBox(0, 0, amplitudes)` reads the first of its amplitudes,
   as its truncation already did for an infinite amplitude list and as `zw`'s
   own axioms write a scalar: the list branch was missing that index, and a

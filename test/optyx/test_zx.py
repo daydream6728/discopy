@@ -7,7 +7,7 @@ from pytest import mark, raises, fixture
 from discopy.quantum.gates import CRz, CRx, CU1, Ket, Rx, H
 from discopy import abc, quantum
 from discopy.optyx.core.zx import *
-from discopy.optyx.core.zx import And, H, Or, Spider, X, Z, ZXBox
+from discopy.optyx.core.zx import And, H, Or, Spider, X, Z, ZBox, ZXBox
 from discopy.optyx.core import diagram
 from discopy.optyx import qubits
 from discopy.optyx.core.diagram import Diagram, Bit
@@ -234,14 +234,16 @@ def test_legless_spider_is_the_sum_of_its_amplitudes(spider, phase):
         spider(0, 1, phase) >> spider(1, 0)).to_tensor().eval().array)
 
 
-@mark.parametrize("spider", [Z, X])
+@mark.parametrize("spider", [Z, X, ZBox])
 @mark.parametrize("legs", [(1, 1), (1, 0), (0, 1), (2, 1), (0, 0)])
 def test_grad_matches_central_differences(spider, legs):
     """A structural assertion cannot tell a right gradient formula from a
     wrong one, so the gradient is checked against the difference quotient of
     the spider's own array, as `test/optyx/grad.py` checks the photonic
-    gates. `grad` used to return the half-turn shift alone, which carries a
-    spurious value on the all-zero entry at every arity."""
+    gates. `Spider.grad` used to return the half-turn shift alone, which
+    carries a spurious value on the all-zero entry of a spider with legs, and
+    a `ZBox`'s parameter is an amplitude rather than an angle, so the two
+    gradients are not the same formula."""
     from sympy.abc import phi
     n_legs_in, n_legs_out = legs
     step, dims = 1e-6, [2] * n_legs_in
