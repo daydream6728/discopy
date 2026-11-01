@@ -15,22 +15,22 @@ The offending box is `core.zw.ZBox(0, 0, [1, exp(2πiθ)])`, built by
 `core.zx.Z.truncation`, so the two halves below are two readings of a legless
 spider and each is settled by its own calculus rather than by the other's.
 
-- [WIP] @session_01C7YfAR-2026-11-01 02:10 `core.zx.Z(0, 0, θ)` is the scalar
+- [x] `core.zx.Z(0, 0, θ)` is the scalar
       `1 + exp(2πiθ)`, the sum its own spider definition gives, rather than a
       legless `zw.ZBox` carrying both amplitudes. Checked against pyzx, which
       the module's own docstring names as the oracle for the array of a `Z` or
       an `X`, and against the fused `Z(0, 1, θ) >> Z(1, 0)`. `X(0, 0, θ)` goes
       through `Z`'s truncation, so it comes with it.
-- [WIP] @session_01C7YfAR-2026-11-01 02:10 `core.zw.ZBox(0, 0, amps)` reads
+- [x] `core.zw.ZBox(0, 0, amps)` reads
       its first amplitude, which is what the indexable branch of that same
       `truncation` already does and what all four of `test_zw.py`'s legless
       boxes state: the list branch was missing the index, `np.array([amps])`
       being a one-entry array only when `amps` is a bare number. It is also
       the only reading total on an infinite amplitude list.
-- [WIP] @session_01C7YfAR-2026-11-01 02:10 Tests: the three symptoms of the
+- [x] Tests: the three symptoms of the
       issue in `test_qubit.py`, the pyzx and fusion oracles in `test_zx.py`,
       and the legless `ZBox` in `test_zw.py`. Docstrings saying what a legless
       spider is in each calculus.
-- [WIP] @session_01C7YfAR-2026-11-01 02:10 Run `test/optyx`, the wide suite,
+- [x] Run `test/optyx`, the wide suite,
       `pflake8`, `pylint`, `ruff`, the changed modules' doctests, and
       `CHANGELOG.md`.
