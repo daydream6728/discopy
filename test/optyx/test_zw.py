@@ -590,12 +590,15 @@ def test_zbox_equality_rejects_nan_amplitudes():
     """`compare_arrays_of_different_sizes` reads `abs(x - y) <= tol`, which is
     False whenever the difference is NaN, so a NaN amplitude is unequal to
     everything, itself included, as it is for `np.allclose`."""
-    nan = float("nan")
+    inf, nan = float("inf"), float("nan")
     assert not compare_arrays_of_different_sizes([1, nan], [1, 2])
     assert not compare_arrays_of_different_sizes([1, nan], [1, nan])
     assert ZBox(1, 1, [1, nan]) != ZBox(1, 1, [1, nan])
     assert ZBox(1, 1, [1, nan]) != ZBox(1, 1, [1, 2])
     assert ZBox(1, 1, [1, 2]) != ZBox(1, 1, [1, nan])
+    assert compare_arrays_of_different_sizes([1, inf], [1, inf])
+    assert not compare_arrays_of_different_sizes([1, inf], [1, -inf])
+    assert ZBox(1, 1, [1, inf]) == ZBox(1, 1, [1, inf])
 
 
 def test_functor_with_a_dict_ar_map_on_w():

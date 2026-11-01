@@ -307,9 +307,10 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   difference, as `np.allclose` does with its default `equal_nan=False`: it
   read `abs(x - y) > tol`, False whenever the difference is a NaN, so a NaN
   amplitude compared equal to anything with a matching prefix and an
-  `optyx.core.zw` axiom stated with the helper could not fail on one. It reads
-  `abs(x - y) <= tol` instead, which makes the `zw.has_nan` guard on
-  `ZBox.__eq__` redundant and both go ([next#422]).
+  `optyx.core.zw` axiom stated with the helper could not fail on one. It is
+  `np.allclose` with an absolute tolerance only instead, so two matching
+  infinities stay equal, which makes the `zw.has_nan` guard on `ZBox.__eq__`
+  redundant and both go ([next#422]).
 - `optyx.core.zw.W` has a `__hash__` of its own: Python used to set it to
   `None`, as it does on any class overriding `__eq__`, so `hash(W(2))` raised
   and a `Functor` could not look the box up in a dict `ar_map`. `ZBox` stays
