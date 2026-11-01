@@ -573,6 +573,11 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   amplitudes, so `qubits.Z(0, 0)`, `qubits.X(0, 0)` and `Z(0, 0, .25)` raised
   `cannot reshape array of size 2 into shape ()` rather than evaluating
   ([next#421]).
+- `optyx.core.zx.Spider.grad` is `1j * pi * phase'` times the difference
+  between the spider and the spider shifted by half a turn, which is what
+  `quantum.zx.Spider.grad` next door already was: it returned the shifted
+  spider alone, so every spider's gradient carried a spurious value on the
+  all-zero entry of its array, where the derivative has none ([next#426]).
 - `optyx.core.zw.ZBox(0, 0, amplitudes)` reads the first of its amplitudes,
   as its truncation already did for an infinite amplitude list and as `zw`'s
   own axioms write a scalar: the list branch was missing that index, and a
@@ -864,6 +869,7 @@ for the changelog of `1.2.1` and earlier.
 [next#388]: https://github.com/rel-int/discopy-next/issues/388
 [next#399]: https://github.com/rel-int/discopy-next/issues/399
 [next#421]: https://github.com/rel-int/discopy-next/issues/421
+[next#426]: https://github.com/rel-int/discopy-next/issues/426
 [optyx#16]: https://github.com/rel-int/optyx/pull/16
 [optyx#29]: https://github.com/rel-int/optyx/pull/29
 [optyx#56]: https://github.com/rel-int/optyx/pull/56

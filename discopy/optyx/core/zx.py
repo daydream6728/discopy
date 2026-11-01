@@ -330,16 +330,25 @@ class Spider(diagram.Spider, ZXBox):
         return type(self)(len(self.dom), len(self.cod), phase=phase)
 
     def grad(self, var, **params):
-        """Gradient with respect to a variable."""
+        """
+        The gradient of a spider is a formal sum, see arXiv:2103.07960: the
+        all-zero entry of its array is constant and the derivative of the
+        all-one entry is :code:`2j * pi * phase'` times itself, i.e.
+        :code:`1j * pi * phase'` times the difference between the spider and
+        the spider shifted by half a turn, which negates that entry and fixes
+        the other. This is :code:`discopy.quantum.zx.Spider.grad`.
+        """
         # pylint: disable=unused-argument  # the signature of Diagram.grad
 
         if var not in self.free_symbols:
             return diagram.Sum((), self.dom, self.cod)
         gradient = self.phase.diff(var)
         gradient = complex(gradient) if not gradient.free_symbols else gradient
-        return diagram.Scalar(pi * gradient) @ type(self)(
-            len(self.dom), len(self.cod), self.phase + 0.5
-        )
+        n_legs_in, n_legs_out = len(self.dom), len(self.cod)
+        return diagram.Scalar(1j * pi * gradient) \
+            @ type(self)(n_legs_in, n_legs_out, self.phase) \
+            + diagram.Scalar(-1j * pi * gradient) \
+            @ type(self)(n_legs_in, n_legs_out, self.phase + .5)
 
     def dagger(self):
         return type(self)(len(self.cod), len(self.dom), -self.phase)

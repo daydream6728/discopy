@@ -14,16 +14,16 @@ same formula written correctly, as `1j·π·θ′` times the *difference* betwee
 the spider and the half-turn shift, and it reproduces the numerical
 derivative exactly. Cut on top of #425, both being in `core/zx.py`.
 
-- [WIP] @session_01C7YfAR-2026-11-01 02:35 Port the sibling module's two-term
+- [x] Port the sibling module's two-term
       form, docstring included, so that the two copies of this class say and
       do the same thing.
-- [WIP] @session_01C7YfAR-2026-11-01 02:35 `test_zx.py::test_grad` pins the
+- [x] `test_zx.py::test_grad` pins the
       old formula structurally, in its own assertion and in its chain-rule
       case: both move to the corrected form.
-- [WIP] @session_01C7YfAR-2026-11-01 02:35 Add the difference-quotient oracle
+- [x] Add the difference-quotient oracle
       `test/optyx/grad.py` already uses for the photonic gates, over `Z` and
       `X` at several arities and phases, the legless spider included, since a
       structural assertion cannot tell a right formula from a wrong one.
-- [WIP] @session_01C7YfAR-2026-11-01 02:35 Run `test/optyx`, the wide suite,
+- [x] Run `test/optyx`, the wide suite,
       `pflake8`, `pylint`, `ruff`, the changed module's doctests, and
       `CHANGELOG.md`.
