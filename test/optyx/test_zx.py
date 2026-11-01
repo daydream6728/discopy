@@ -2,7 +2,7 @@ import random
 
 import numpy as np
 from pyzx import VertexType
-from pytest import raises, fixture
+from pytest import mark, raises, fixture
 
 from discopy.quantum.gates import CRz, CRx, CU1, Ket, Rx, H
 from discopy import abc, quantum
@@ -216,3 +216,19 @@ def test_SWAP_evaluates():
     assert np.allclose(
         SWAP.to_tensor().eval().array.reshape(4, 4),
         [[1, 0, 0, 0], [0, 0, 1, 0], [0, 1, 0, 0], [0, 0, 0, 1]])
+
+
+@mark.parametrize("spider", [Z, X])
+@mark.parametrize("phase", [0, .25, .5])
+def test_legless_spider_is_the_sum_of_its_amplitudes(spider, phase):
+    """A spider with no legs has no index left to carry its amplitudes, so it
+    is their sum `1 + exp(2i pi phase)`. pyzx is the oracle this module's
+    docstring names for the array of a `Z` or an `X`; spider fusion is the
+    other, and both agree."""
+    box = spider(0, 0, phase)
+    value = box.to_tensor().eval().array
+    assert value.shape == ()
+    assert np.allclose(value, 1 + np.exp(2j * np.pi * phase))
+    assert np.allclose(value, box.to_pyzx().to_tensor())
+    assert np.allclose(value, (
+        spider(0, 1, phase) >> spider(1, 0)).to_tensor().eval().array)

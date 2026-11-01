@@ -372,14 +372,28 @@ class ZBox(Spider):
 
 
 class Z(Spider):
-    """Z spider."""
+    """Z spider.
+
+    A spider with no legs is the scalar :math:`1 + e^{2i\\pi\\theta}`, i.e.
+    the sum of its amplitudes, which is what the spider's own definition
+    gives: it has no index left to carry them. A legless :class:`zw.ZBox`
+    reads its first amplitude instead, so this one is not one.
+
+    >>> for phase in [0, .25, .5]:
+    ...     assert np.allclose(
+    ...         Z(0, 0, phase).to_tensor().eval().array,
+    ...         Z(0, 0, phase).to_pyzx().to_tensor())
+    """
 
     tikzstyle_name = "Z"
 
     def truncation(self, input_dims=None, output_dims=None) -> tensor.Box:
+        amplitudes = [1, np.exp(1j * self.phase * 2 * np.pi)]
+        if not self.n_legs_in and not self.n_legs_out:
+            return tensor.Box(
+                self.name, Dim(1), Dim(1), [sum(amplitudes)])
         return zw.ZBox(
-            self.n_legs_in, self.n_legs_out,
-            [1, np.exp(1j * self.phase * 2 * np.pi)]
+            self.n_legs_in, self.n_legs_out, amplitudes
         ).truncation([2] * self.n_legs_in)
 
 

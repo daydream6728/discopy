@@ -612,3 +612,19 @@ def test_functor_with_a_dict_ar_map_on_w():
     assert compare_arrays_of_different_sizes(
         functor(W(2)).to_tensor().eval().array,
         W(2).to_tensor().eval().array)
+
+
+def test_legless_zbox_reads_its_first_amplitude():
+    """A `ZBox` with no legs has no index to carry its amplitudes, so it is
+    the first of them, which is how `zw`'s axioms write a scalar — see
+    `test_scalar` and `test_lemma_B6` — and the only reading total on an
+    infinite amplitude list. The list branch of the truncation was missing
+    that index, `np.array([amplitudes])` holding one entry only when the
+    amplitudes are a bare number, so `ZBox(0, 0, [1, 1])` raised `cannot
+    reshape array of size 2 into shape ()`."""
+    for amplitudes, value in [(5, 5), ([2], 2), ([1, 1], 1), ([0, 2], 0)]:
+        array = ZBox(0, 0, amplitudes).to_tensor().eval().array
+        assert array.shape == ()
+        assert np.allclose(array, value)
+    assert np.allclose(
+        ZBox(0, 0, lambda i: i + 1).to_tensor().eval().array, 1)
