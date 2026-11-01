@@ -302,9 +302,15 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - `optyx.core.zw.ZBox` compares two amplitude lists of different lengths
   instead of raising on the broadcast, with
   `misc.compare_arrays_of_different_sizes`, which is what equality of two
-  truncations of the same infinite list is in this module. NaN amplitudes are
-  unequal: that comparison reads `abs(x - y) > tol`, which is False for a NaN
-  difference, so `zw.has_nan` rejects them first ([next#314]).
+  truncations of the same infinite list is in this module ([next#314]).
+- `optyx.utils.misc.compare_arrays_of_different_sizes` counts a NaN as a
+  difference, as `np.allclose` does with its default `equal_nan=False`: it
+  read `abs(x - y) > tol`, False whenever the difference is a NaN, so a NaN
+  amplitude compared equal to anything with a matching prefix and an
+  `optyx.core.zw` axiom stated with the helper could not fail on one. It is
+  `np.allclose` with an absolute tolerance only instead, so two matching
+  infinities stay equal, which makes the `zw.has_nan` guard on `ZBox.__eq__`
+  redundant and both go ([next#422]).
 - `optyx.core.zw.W` has a `__hash__` of its own: Python used to set it to
   `None`, as it does on any class overriding `__eq__`, so `hash(W(2))` raised
   and a `Functor` could not look the box up in a dict `ar_map`. `ZBox` stays
@@ -864,6 +870,7 @@ for the changelog of `1.2.1` and earlier.
 [next#388]: https://github.com/rel-int/discopy-next/issues/388
 [next#399]: https://github.com/rel-int/discopy-next/issues/399
 [next#421]: https://github.com/rel-int/discopy-next/issues/421
+[next#422]: https://github.com/rel-int/discopy-next/issues/422
 [optyx#16]: https://github.com/rel-int/optyx/pull/16
 [optyx#29]: https://github.com/rel-int/optyx/pull/29
 [optyx#56]: https://github.com/rel-int/optyx/pull/56
