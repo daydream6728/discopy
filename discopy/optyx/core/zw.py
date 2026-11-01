@@ -272,20 +272,6 @@ class W(ZWBox):
         return hash((W, self.n_legs, self.is_dagger))
 
 
-def has_nan(amplitudes: list | np.ndarray) -> bool:
-    """Whether any amplitude is a NaN, which is unequal to itself.
-
-    :code:`misc.compare_arrays_of_different_sizes` reads a NaN as equal to
-    anything, its :code:`abs(x - y) > tol` being False whenever the
-    difference is NaN, so :class:`ZBox` rejects NaN amplitudes before it
-    compares two truncations.
-
-    >>> has_nan([1, 2]), has_nan([1, float("nan")])
-    (False, True)
-    """
-    return any(a != a for a in np.asarray(amplitudes).flatten())
-
-
 class ZBox(diagram.Spider, ZWBox):
     """
     Z spider from the ZW calculus.
@@ -420,8 +406,6 @@ class ZBox(diagram.Spider, ZWBox):
             return False
         if isinstance(self.amplitudes, IndexableAmplitudes):
             return self.amplitudes == other.amplitudes
-        if has_nan(self.amplitudes) or has_nan(other.amplitudes):
-            return False
         return compare_arrays_of_different_sizes(
             self.amplitudes, other.amplitudes
         )
