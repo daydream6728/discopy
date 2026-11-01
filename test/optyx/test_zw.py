@@ -587,12 +587,12 @@ def test_zbox_is_unhashable():
 
 
 def test_zbox_equality_rejects_nan_amplitudes():
-    """`compare_arrays_of_different_sizes` reads `abs(x - y) > tol`, which is
-    False whenever the difference is NaN, so a NaN amplitude would compare
-    equal to anything. `ZBox.__eq__` rejects one first."""
+    """`compare_arrays_of_different_sizes` reads `abs(x - y) <= tol`, which is
+    False whenever the difference is NaN, so a NaN amplitude is unequal to
+    everything, itself included, as it is for `np.allclose`."""
     nan = float("nan")
-    assert compare_arrays_of_different_sizes([1, nan], [1, 2])
-    assert has_nan([1, nan]) and not has_nan([1, 2])
+    assert not compare_arrays_of_different_sizes([1, nan], [1, 2])
+    assert not compare_arrays_of_different_sizes([1, nan], [1, nan])
     assert ZBox(1, 1, [1, nan]) != ZBox(1, 1, [1, nan])
     assert ZBox(1, 1, [1, nan]) != ZBox(1, 1, [1, 2])
     assert ZBox(1, 1, [1, 2]) != ZBox(1, 1, [1, nan])
