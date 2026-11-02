@@ -255,6 +255,13 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
+- A feed-forward component converted from perceval applies its default
+  circuit **once**, when the measured state is in none of its configurations,
+  where each configuration that did not match used to apply it: with a
+  `PERM([1, 0])` default and two configurations, one of which matched, the
+  swap was applied anyway. An odd number of non-matching entries composes a
+  swap default into the identity, which is why a single configuration and
+  three of them both read right ([next#314]).
 - `optyx.utils.perceval_conversion.ff_configurator` gives each symbol of a
   configurator's controlled circuit the value its own name is given in the
   configuration: it used to zip `U.free_symbols`, a set, with the values of
