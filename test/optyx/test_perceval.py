@@ -404,9 +404,10 @@ def test_feed_forward_default_applies_once(configurations):
     """A configuration that does not match does not act: the default
     circuit applies once, when no configuration matches, as in perceval.
     The number of configurations is what is varied because a swap default
-    applied once per non-matching entry is the identity whenever that
-    number is odd, so a single configuration and three of them both read
-    right while two of them do not."""
+    applied once per non-matching entry composes to the identity whenever
+    the number of those entries is even, so a single configuration and
+    three of them — none and two non-matching entries — both read right
+    while two of them do not."""
     state = [1, 1, 0]
     p = pcvl.Processor("SLOS", 3)
     p.add(0, pcvl.Detector.pnr())
