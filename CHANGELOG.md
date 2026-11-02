@@ -316,6 +316,10 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   and a `Functor` could not look the box up in a dict `ar_map`. `ZBox` stays
   unhashable: comparing amplitudes by prefix is not transitive, so no hash
   keeps equal boxes hashing equal ([next#314]).
+- Docs: the architecture diagram shows the new syntax modules, the menu names
+  `spacial`, `kleisli` and `monad` without their prefix, `feedback` states each
+  law once with its trace under it, and the notebooks link the API docs
+  relatively ([next#411]).
 - `optyx.compiler`: a `Fusion` compared to anything but a fusion is unequal
   rather than an `AttributeError`; `path_cover.find_min_path_cover` covers a
   graph with one node, an edgeless graph and the empty graph, searching up to
@@ -881,6 +885,7 @@ for the changelog of `1.2.1` and earlier.
 [next#421]: https://github.com/rel-int/discopy-next/issues/421
 [next#422]: https://github.com/rel-int/discopy-next/issues/422
 [next#426]: https://github.com/rel-int/discopy-next/issues/426
+[next#411]: https://github.com/rel-int/discopy-next/pull/411
 [optyx#16]: https://github.com/rel-int/optyx/pull/16
 [optyx#29]: https://github.com/rel-int/optyx/pull/29
 [optyx#56]: https://github.com/rel-int/optyx/pull/56
