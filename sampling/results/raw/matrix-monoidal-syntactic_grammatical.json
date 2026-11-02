@@ -1,0 +1,97 @@
+{
+  "monoidal.Diagram.associativity": {
+    "budget": 20,
+    "distinct": 17,
+    "outcome": "passed"
+  },
+  "monoidal.Diagram.bifunctoriality": {
+    "budget": 20,
+    "distinct": 1,
+    "outcome": "xfailed"
+  },
+  "monoidal.Diagram.copying": {
+    "budget": 20,
+    "distinct": 17,
+    "outcome": "passed"
+  },
+  "monoidal.Diagram.dagger_contravariance": {
+    "budget": 20,
+    "distinct": 19,
+    "outcome": "passed"
+  },
+  "monoidal.Diagram.dagger_involution": {
+    "budget": 20,
+    "distinct": 15,
+    "outcome": "passed"
+  },
+  "monoidal.Diagram.dagger_monoidality": {
+    "budget": 20,
+    "distinct": 1,
+    "outcome": "xfailed"
+  },
+  "monoidal.Diagram.drawing_dagger_involution": {
+    "budget": 20,
+    "distinct": 15,
+    "outcome": "passed"
+  },
+  "monoidal.Diagram.foliation_idempotence": {
+    "budget": 20,
+    "distinct": 15,
+    "outcome": "passed"
+  },
+  "monoidal.Diagram.hypergraph_composition": {
+    "budget": 20,
+    "distinct": 19,
+    "outcome": "passed"
+  },
+  "monoidal.Diagram.hypergraph_identity": {
+    "budget": 20,
+    "distinct": 11,
+    "outcome": "passed"
+  },
+  "monoidal.Diagram.hypergraph_section": {
+    "budget": 20,
+    "distinct": 15,
+    "outcome": "passed"
+  },
+  "monoidal.Diagram.hypergraph_tensor": {
+    "budget": 20,
+    "distinct": 19,
+    "outcome": "passed"
+  },
+  "monoidal.Diagram.map_agreement": {
+    "budget": 20,
+    "distinct": 15,
+    "outcome": "passed"
+  },
+  "monoidal.Diagram.pickling": {
+    "budget": 20,
+    "distinct": 17,
+    "outcome": "passed"
+  },
+  "monoidal.Diagram.repr_transparency": {
+    "budget": 20,
+    "distinct": 17,
+    "outcome": "passed"
+  },
+  "monoidal.Diagram.serialisation": {
+    "budget": 20,
+    "distinct": 17,
+    "outcome": "passed"
+  },
+  "monoidal.Diagram.str_transparency": {
+    "budget": 20,
+    "distinct": 17,
+    "outcome": "passed"
+  },
+  "monoidal.Diagram.tensor_unitality": {
+    "budget": 20,
+    "distinct": 12,
+    "outcome": "passed"
+  },
+  "monoidal.Diagram.unitality": {
+    "budget": 20,
+    "distinct": 15,
+    "outcome": "passed"
+  }
+}

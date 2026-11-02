@@ -39,10 +39,14 @@ session with the human; the decisions are below, the explanations in
 
 ## Found on the way
 
-- [ ] `str_transparency` on symmetric diagrams is green by blind spot
-      (`retrospective.md`): decide between a law up to interchange, a
-      transparent `str` for layers of several boxes, or a sampler per law
-      (`frobenius.Diagram.str_transparency` already fails under `fast`)
+- [ ] `str_transparency` on symmetric and compact diagrams is green by
+      blind spot (`retrospective.md`): decide between a law up to
+      interchange, a transparent `str` for layers of several boxes, or a
+      sampler per law (`frobenius.Diagram.str_transparency` already fails
+      under `fast`)
+- [ ] `str_transparency` on compact diagrams fails on a lone rotated box
+      `Box('f', a, a).r` under 1a: the law documents it as off its domain
+      but does not assume it away
 - [ ] unrelated, also on unchanged code: `pytest --doctest-modules
       discopy/monoidal.py discopy/symmetric.py discopy/hypergraph.py` fails 4
       doctests of `symmetric` with `AxiomError: Expected Wire, got Ty`, while
@@ -50,30 +54,45 @@ session with the human; the decisions are below, the explanations in
 
 ## Milestone 2
 
-- [ ] 2b `syntactic_admissible`: mark admissible rules, sample without them
-- [ ] 2c `syntactic_grammatical`: bound the width, instantiate the rules as a
-      grammar, Boltzmann sampler with numpy bisection tuning
-- [ ] 3a for markov (non-monogamous: functions) and compact (Brauer)
-- [ ] `structural_perturbed`: normal form, then random rewrites in context;
-      pairs of equal diagrams for `to_hypergraph`, `normal_form`, `==`
-- [ ] profile why every sampler is under 100 diagrams per second
-- [ ] distinct draws up to coherence, not only up to box names
+- [x] 2b `syntactic_admissible`: `Arrow.admissible`, `search(without=...)`
+- [x] 2c `syntactic_grammatical`: `discopy/boltzmann.py`, rules instantiated
+      at bounded width, Newton iteration for the generating functions,
+      bisection for `rho` and for the size; `testable.SIZE`, inf = critical
+- [x] 3a for markov (`draw_typed(monogamous=False)`: functions) and compact
+      (`draw_typed_bijective`: Brauer)
+- [x] `structural_perturbed`: a 3a normal form, then random rewrites
+- [x] profile: Hypothesis compiles every `@st.composite` defined per call;
+      `search` and `Rule.strategy` are memoised, 2.5 times faster
+- [x] distinct draws up to coherence (Weisfeiler-Lehman hash of hypergraphs)
 
 ## Milestone 3
 
-- [ ] `mutants.py` and a `mutants` experiment: kill rate per sampler,
-      shrunk size against a hand-found minimum; mention the einsum
-      52-index limit (discopy/discopy#447) as the historical numeric bug
-- [ ] semantic sampling: fixed signature, functor into `Matrix[int]`;
-      support table sampler × semantic category
-- [ ] convex multi-parameter tuning with `cvxpy`, beyond 2c if possible
-- [ ] critical sampling: size histograms, overruns, distinct draws
+- [x] `mutants.py` and a `mutants` experiment; hand-found minima in
+      `analysis.md`; the einsum limit (discopy/discopy#447) as the
+      historical numeric bug
+- [x] semantic sampling: fixed signature, functor into `Tensor`
+      (`Matrix[int]` draws its arrays directly, it has no free diagrams)
+- [x] convex multi-parameter tuning with `cvxpy` for 2c
+- [x] critical sampling: the `boltzmann` experiment at `size=inf`, by
+      Hypothesis's choices and exactly from a seed (`grammar_exact`)
+- [x] Hypothesis's bias: the `uniforms` experiment
+- [x] `analysis.md`, separate from the slides
 - [ ] round two doctrines: braided, balanced, traced, rigid, pivotal,
       frobenius, feedback, closed (stubs in `DOCTRINES`)
+- [ ] pre-existing, not from this work: `pytest --doctest-modules` on
+      `discopy/hypergraph.py` alone fails 4 doctests, on
+      `discopy/testable.py` 2, already at d97e2cda3
+
+## Before the full run
+
+- [ ] `--full` budgets are 10 times the quick ones; run the experiments one
+      after another on an idle machine, since `throughput` measures speed:
+      `uv run --with cvxpy python sampling/experiments.py --full`
+- [ ] the hand-found minima in `analysis.md` assume the quick results; check
+      the shrunk sizes again after the full run
 
 ## After the experiments
 
 - [ ] choose the default sampler of each data structure from the results
 - [ ] `Axiom.examples`: counterexamples as regression tests run once per cell
       with `@example` (proposal only)
-- [ ] `--full` run in the background

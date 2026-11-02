@@ -1,0 +1,267 @@
+{
+  "symmetric.Diagram.associativity": {
+    "budget": 20,
+    "distinct": 19,
+    "outcome": "passed"
+  },
+  "symmetric.Diagram.balanced_twist": {
+    "budget": 20,
+    "distinct": 20,
+    "outcome": "passed"
+  },
+  "symmetric.Diagram.bifunctoriality": {
+    "budget": 20,
+    "distinct": 19,
+    "outcome": "passed"
+  },
+  "symmetric.Diagram.braid_naturality": {
+    "budget": 20,
+    "distinct": 19,
+    "outcome": "passed"
+  },
+  "symmetric.Diagram.braid_then_inverse": {
+    "budget": null,
+    "distinct": null,
+    "outcome": "skipped"
+  },
+  "symmetric.Diagram.copying": {
+    "budget": 20,
+    "distinct": 20,
+    "outcome": "passed"
+  },
+  "symmetric.Diagram.dagger_contravariance": {
+    "budget": 20,
+    "distinct": 1,
+    "outcome": "xfailed"
+  },
+  "symmetric.Diagram.dagger_contravariance_traced": {
+    "budget": 20,
+    "distinct": 20,
+    "outcome": "passed"
+  },
+  "symmetric.Diagram.dagger_involution": {
+    "budget": 20,
+    "distinct": 1,
+    "outcome": "xfailed"
+  },
+  "symmetric.Diagram.dagger_involution_traced": {
+    "budget": 20,
+    "distinct": 20,
+    "outcome": "passed"
+  },
+  "symmetric.Diagram.dagger_monoidality": {
+    "budget": 20,
+    "distinct": 1,
+    "outcome": "xfailed"
+  },
+  "symmetric.Diagram.dagger_monoidality_symmetric": {
+    "budget": 20,
+    "distinct": 20,
+    "outcome": "passed"
+  },
+  "symmetric.Diagram.delay_composition": {
+    "budget": 20,
+    "distinct": 19,
+    "outcome": "passed"
+  },
+  "symmetric.Diagram.delay_unit": {
+    "budget": 20,
+    "distinct": 19,
+    "outcome": "passed"
+  },
+  "symmetric.Diagram.drawing_dagger_involution": {
+    "budget": 20,
+    "distinct": 19,
+    "outcome": "passed"
+  },
+  "symmetric.Diagram.foliation_idempotence": {
+    "budget": 20,
+    "distinct": 19,
+    "outcome": "passed"
+  },
+  "symmetric.Diagram.hexagon_left": {
+    "budget": 20,
+    "distinct": 20,
+    "outcome": "passed"
+  },
+  "symmetric.Diagram.hexagon_right": {
+    "budget": 20,
+    "distinct": 20,
+    "outcome": "passed"
+  },
+  "symmetric.Diagram.hypergraph_composition": {
+    "budget": 20,
+    "distinct": 20,
+    "outcome": "passed"
+  },
+  "symmetric.Diagram.hypergraph_identity": {
+    "budget": 20,
+    "distinct": 11,
+    "outcome": "passed"
+  },
+  "symmetric.Diagram.hypergraph_section": {
+    "budget": 20,
+    "distinct": 19,
+    "outcome": "passed"
+  },
+  "symmetric.Diagram.hypergraph_tensor": {
+    "budget": 20,
+    "distinct": 19,
+    "outcome": "passed"
+  },
+  "symmetric.Diagram.inverse_then_braid": {
+    "budget": null,
+    "distinct": null,
+    "outcome": "skipped"
+  },
+  "symmetric.Diagram.joining": {
+    "budget": 20,
+    "distinct": 19,
+    "outcome": "passed"
+  },
+  "symmetric.Diagram.map_agreement": {
+    "budget": 20,
+    "distinct": 19,
+    "outcome": "passed"
+  },
+  "symmetric.Diagram.permutation_composition": {
+    "budget": 20,
+    "distinct": 20,
+    "outcome": "passed"
+  },
+  "symmetric.Diagram.permutation_identity": {
+    "budget": 20,
+    "distinct": 20,
+    "outcome": "passed"
+  },
+  "symmetric.Diagram.permutation_inverse": {
+    "budget": 20,
+    "distinct": 20,
+    "outcome": "passed"
+  },
+  "symmetric.Diagram.permutation_swaps": {
+    "budget": 20,
+    "distinct": 20,
+    "outcome": "passed"
+  },
+  "symmetric.Diagram.pickling": {
+    "budget": 20,
+    "distinct": 20,
+    "outcome": "passed"
+  },
+  "symmetric.Diagram.repr_transparency": {
+    "budget": 20,
+    "distinct": 20,
+    "outcome": "passed"
+  },
+  "symmetric.Diagram.scalar_sliding": {
+    "budget": 20,
+    "distinct": 20,
+    "outcome": "passed"
+  },
+  "symmetric.Diagram.serialisation": {
+    "budget": 20,
+    "distinct": 20,
+    "outcome": "passed"
+  },
+  "symmetric.Diagram.sliding": {
+    "budget": 20,
+    "distinct": 1,
+    "outcome": "xfailed"
+  },
+  "symmetric.Diagram.str_transparency": {
+    "budget": 20,
+    "distinct": 20,
+    "outcome": "passed"
+  },
+  "symmetric.Diagram.strength": {
+    "budget": 20,
+    "distinct": 1,
+    "outcome": "xfailed"
+  },
+  "symmetric.Diagram.swap_inverse": {
+    "budget": 20,
+    "distinct": 12,
+    "outcome": "passed"
+  },
+  "symmetric.Diagram.tensor_unitality": {
+    "budget": 20,
+    "distinct": 12,
+    "outcome": "passed"
+  },
+  "symmetric.Diagram.tightening": {
+    "budget": 20,
+    "distinct": 1,
+    "outcome": "xfailed"
+  },
+  "symmetric.Diagram.trace_dinaturality_left": {
+    "budget": 20,
+    "distinct": 20,
+    "outcome": "passed"
+  },
+  "symmetric.Diagram.trace_dinaturality_right": {
+    "budget": 20,
+    "distinct": 20,
+    "outcome": "passed"
+  },
+  "symmetric.Diagram.trace_iteration_left": {
+    "budget": 20,
+    "distinct": 20,
+    "outcome": "passed"
+  },
+  "symmetric.Diagram.trace_iteration_right": {
+    "budget": 20,
+    "distinct": 20,
+    "outcome": "passed"
+  },
+  "symmetric.Diagram.trace_naturality_left": {
+    "budget": 20,
+    "distinct": 20,
+    "outcome": "passed"
+  },
+  "symmetric.Diagram.trace_naturality_right": {
+    "budget": 20,
+    "distinct": 20,
+    "outcome": "passed"
+  },
+  "symmetric.Diagram.trace_superposing_left": {
+    "budget": 20,
+    "distinct": 20,
+    "outcome": "passed"
+  },
+  "symmetric.Diagram.trace_superposing_right": {
+    "budget": 20,
+    "distinct": 20,
+    "outcome": "passed"
+  },
+  "symmetric.Diagram.trace_vanishing": {
+    "budget": 20,
+    "distinct": 19,
+    "outcome": "passed"
+  },
+  "symmetric.Diagram.twist_naturality": {
+    "budget": 20,
+    "distinct": 19,
+    "outcome": "passed"
+  },
+  "symmetric.Diagram.twist_unit": {
+    "budget": 20,
+    "distinct": 1,
+    "outcome": "passed"
+  },
+  "symmetric.Diagram.unitality": {
+    "budget": 20,
+    "distinct": 19,
+    "outcome": "passed"
+  },
+  "symmetric.Diagram.vanishing": {
+    "budget": 20,
+    "distinct": 19,
+    "outcome": "passed"
+  },
+  "symmetric.Diagram.yanking": {
+    "budget": 20,
+    "distinct": 5,
+    "outcome": "passed"
+  }
+}

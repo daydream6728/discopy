@@ -1,0 +1,53 @@
+{
+ "mode": "quick",
+ "seconds": 10.986378333996981,
+ "rows": [
+  {
+   "status": "optimal",
+   "seconds": 3.0880571249872446,
+   "z": 0.037253189137922346,
+   "rho": 0.054930292878979436,
+   "bias": {
+    "generator": 3.9397436517682496,
+    "braiding": 34.46736886599383,
+    "trace_right": 0.33421720864873816
+   },
+   "targets": {
+    "node": 12.0,
+    "generator": 4.0,
+    "braiding": 1.0,
+    "trace_right": 0.5
+   },
+   "tuned": {
+    "node": 13.156,
+    "generator": 4.357666666666667,
+    "mix": 2.048,
+    "trace_left": 1.6576666666666666,
+    "cut": 2.654333333333333,
+    "braiding": 1.071,
+    "ax": 0.17266666666666666,
+    "feedback_right": 0.5003333333333333,
+    "trace_right": 0.5473333333333333,
+    "inverse_braiding": 0.03266666666666666,
+    "delaying": 0.046,
+    "inverse_twisting": 0.035,
+    "twisting": 0.03333333333333333
+   },
+   "plain": {
+    "node": 12.092666666666666,
+    "generator": 3.1533333333333333,
+    "trace_left": 1.8603333333333334,
+    "mix": 2.0873333333333335,
+    "ax": 0.717,
+    "feedback_right": 0.6696666666666666,
+    "trace_right": 1.7856666666666667,
+    "cut": 1.2556666666666667,
+    "inverse_braiding": 0.107,
+    "delaying": 0.091,
+    "twisting": 0.12433333333333334,
+    "inverse_twisting": 0.128,
+    "braiding": 0.11333333333333333
+   }
+  }
+ ]
+}

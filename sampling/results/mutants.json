@@ -1,0 +1,694 @@
+{
+ "mode": "quick",
+ "seconds": 794.873172749998,
+ "rows": [
+  {
+   "mutant": null,
+   "sampler": "representational_goal_directed",
+   "fails": []
+  },
+  {
+   "mutant": "layer_offsets",
+   "sampler": "representational_goal_directed",
+   "kill": {
+    "crash": null,
+    "examples": 26,
+    "shrunk": [
+     {
+      "boxes": 4,
+      "layers": 4,
+      "width": 3,
+      "crossings": 0,
+      "structural": 0
+     }
+    ],
+    "arguments": {
+     "f": "a @ f >> a @ f @ a >> f @ a @ a >> f"
+    },
+    "law": "hypergraph_section"
+   },
+   "examples": 1166,
+   "seconds": 8.203207375001512
+  },
+  {
+   "mutant": "permutation_convention",
+   "sampler": "representational_goal_directed",
+   "kill": null,
+   "examples": 1350,
+   "seconds": 7.503555291987141
+  },
+  {
+   "mutant": "layer_overlap",
+   "sampler": "representational_goal_directed",
+   "kill": {
+    "crash": null,
+    "examples": 13,
+    "shrunk": [
+     {
+      "boxes": 2,
+      "layers": 2,
+      "width": 2,
+      "crossings": 0,
+      "structural": 0
+     }
+    ],
+    "arguments": {
+     "f": "f @ a >> f"
+    },
+    "law": "foliation_idempotence"
+   },
+   "examples": 1243,
+   "seconds": 10.689598875003867
+  },
+  {
+   "mutant": "left_trace",
+   "sampler": "representational_goal_directed",
+   "kill": {
+    "crash": null,
+    "examples": 1,
+    "shrunk": [],
+    "arguments": {
+     "x": "a"
+    },
+    "law": "yanking"
+   },
+   "examples": 391,
+   "seconds": 2.4473054580012104
+  },
+  {
+   "mutant": "identity_string",
+   "sampler": "representational_goal_directed",
+   "kill": {
+    "crash": null,
+    "examples": 1,
+    "shrunk": [
+     {
+      "boxes": 0,
+      "layers": 0,
+      "width": 1,
+      "crossings": 0,
+      "structural": 0
+     }
+    ],
+    "arguments": {
+     "term": ""
+    },
+    "law": "str_transparency"
+   },
+   "examples": 31,
+   "seconds": 0.26950362499337643
+  },
+  {
+   "mutant": null,
+   "sampler": "syntactic_baseline",
+   "fails": []
+  },
+  {
+   "mutant": "layer_offsets",
+   "sampler": "syntactic_baseline",
+   "kill": {
+    "crash": null,
+    "examples": 10,
+    "shrunk": [
+     {
+      "boxes": 3,
+      "layers": 3,
+      "width": 2,
+      "crossings": 0,
+      "structural": 0
+     }
+    ],
+    "arguments": {
+     "f": "f >> f @ a >> f"
+    },
+    "law": "hypergraph_section"
+   },
+   "examples": 1150,
+   "seconds": 13.908738416997949
+  },
+  {
+   "mutant": "permutation_convention",
+   "sampler": "syntactic_baseline",
+   "kill": null,
+   "examples": 1350,
+   "seconds": 11.31723487500858
+  },
+  {
+   "mutant": "layer_overlap",
+   "sampler": "syntactic_baseline",
+   "kill": {
+    "crash": null,
+    "examples": 7,
+    "shrunk": [
+     {
+      "boxes": 2,
+      "layers": 2,
+      "width": 1,
+      "crossings": 0,
+      "structural": 0
+     }
+    ],
+    "arguments": {
+     "f": "f >> f"
+    },
+    "law": "hypergraph_section"
+   },
+   "examples": 1147,
+   "seconds": 7.217114750004839
+  },
+  {
+   "mutant": "left_trace",
+   "sampler": "syntactic_baseline",
+   "kill": {
+    "crash": null,
+    "examples": 9,
+    "shrunk": [
+     {
+      "boxes": 1,
+      "layers": 1,
+      "width": 1,
+      "crossings": 0,
+      "structural": 1
+     }
+    ],
+    "arguments": {
+     "f": "Trace(f, left=True)"
+    },
+    "law": "unitality"
+   },
+   "examples": 159,
+   "seconds": 2.1291433750011493
+  },
+  {
+   "mutant": "identity_string",
+   "sampler": "syntactic_baseline",
+   "kill": {
+    "crash": null,
+    "examples": 11,
+    "shrunk": [
+     {
+      "boxes": 0,
+      "layers": 0,
+      "width": 1,
+      "crossings": 0,
+      "structural": 0
+     }
+    ],
+    "arguments": {
+     "term": ""
+    },
+    "law": "str_transparency"
+   },
+   "examples": 41,
+   "seconds": 0.11273737499141134
+  },
+  {
+   "mutant": null,
+   "sampler": "syntactic_admissible",
+   "fails": []
+  },
+  {
+   "mutant": "layer_offsets",
+   "sampler": "syntactic_admissible",
+   "kill": {
+    "crash": null,
+    "examples": 7,
+    "shrunk": [
+     {
+      "boxes": 4,
+      "layers": 4,
+      "width": 2,
+      "crossings": 0,
+      "structural": 0
+     }
+    ],
+    "arguments": {
+     "f": "f >> f @ a >> f >> f"
+    },
+    "law": "foliation_idempotence"
+   },
+   "examples": 1237,
+   "seconds": 19.22210654200171
+  },
+  {
+   "mutant": "permutation_convention",
+   "sampler": "syntactic_admissible",
+   "kill": {
+    "crash": null,
+    "examples": 7,
+    "shrunk": [
+     {
+      "boxes": 8,
+      "layers": 9,
+      "width": 3,
+      "crossings": 1,
+      "structural": 0
+     }
+    ],
+    "arguments": {
+     "f": "f >> f >> f.d >> f.d >> Swap(a.d, b.d) >> f.d >> a.d @ a.d @ f.d >> f.d >> f"
+    },
+    "law": "hypergraph_section"
+   },
+   "examples": 1147,
+   "seconds": 25.018007958002272
+  },
+  {
+   "mutant": "layer_overlap",
+   "sampler": "syntactic_admissible",
+   "kill": {
+    "crash": null,
+    "examples": 8,
+    "shrunk": [
+     {
+      "boxes": 2,
+      "layers": 2,
+      "width": 1,
+      "crossings": 0,
+      "structural": 0
+     }
+    ],
+    "arguments": {
+     "f": "f >> f"
+    },
+    "law": "hypergraph_section"
+   },
+   "examples": 1148,
+   "seconds": 17.31263695799862
+  },
+  {
+   "mutant": "left_trace",
+   "sampler": "syntactic_admissible",
+   "kill": {
+    "crash": null,
+    "examples": 1,
+    "shrunk": [],
+    "arguments": {
+     "x": "a"
+    },
+    "law": "yanking"
+   },
+   "examples": 391,
+   "seconds": 4.161490750004305
+  },
+  {
+   "mutant": "identity_string",
+   "sampler": "syntactic_admissible",
+   "kill": {
+    "crash": null,
+    "examples": 4,
+    "shrunk": [
+     {
+      "boxes": 0,
+      "layers": 0,
+      "width": 1,
+      "crossings": 0,
+      "structural": 0
+     }
+    ],
+    "arguments": {
+     "term": ""
+    },
+    "law": "str_transparency"
+   },
+   "examples": 34,
+   "seconds": 0.24135766699328087
+  },
+  {
+   "mutant": null,
+   "sampler": "syntactic_grammatical",
+   "fails": []
+  },
+  {
+   "mutant": "layer_offsets",
+   "sampler": "syntactic_grammatical",
+   "kill": {
+    "crash": null,
+    "examples": 10,
+    "shrunk": [
+     {
+      "boxes": 6,
+      "layers": 5,
+      "width": 4,
+      "crossings": 0,
+      "structural": 2
+     }
+    ],
+    "arguments": {
+     "f": "f >> Trace(Trace(f >> f)) @ b @ b @ a >> f @ b @ a >> b @ a @ f >> f"
+    },
+    "law": "foliation_idempotence"
+   },
+   "examples": 1240,
+   "seconds": 60.12350000000151
+  },
+  {
+   "mutant": "permutation_convention",
+   "sampler": "syntactic_grammatical",
+   "kill": null,
+   "examples": 1350,
+   "seconds": 82.79004916700069
+  },
+  {
+   "mutant": "layer_overlap",
+   "sampler": "syntactic_grammatical",
+   "kill": {
+    "crash": null,
+    "examples": 9,
+    "shrunk": [
+     {
+      "boxes": 2,
+      "layers": 2,
+      "width": 1,
+      "crossings": 0,
+      "structural": 0
+     }
+    ],
+    "arguments": {
+     "f": "f >> f"
+    },
+    "law": "hypergraph_section"
+   },
+   "examples": 1149,
+   "seconds": 49.5994003329979
+  },
+  {
+   "mutant": "left_trace",
+   "sampler": "syntactic_grammatical",
+   "kill": {
+    "crash": null,
+    "examples": 6,
+    "shrunk": [
+     {
+      "boxes": 1,
+      "layers": 1,
+      "width": 1,
+      "crossings": 0,
+      "structural": 2
+     }
+    ],
+    "arguments": {
+     "f": "Trace(Trace(f, left=True), left=True)"
+    },
+    "law": "unitality"
+   },
+   "examples": 156,
+   "seconds": 13.923942667010124
+  },
+  {
+   "mutant": "identity_string",
+   "sampler": "syntactic_grammatical",
+   "kill": {
+    "crash": null,
+    "examples": 1,
+    "shrunk": [
+     {
+      "boxes": 0,
+      "layers": 0,
+      "width": 0,
+      "crossings": 0,
+      "structural": 0
+     }
+    ],
+    "arguments": {
+     "term": ""
+    },
+    "law": "str_transparency"
+   },
+   "examples": 31,
+   "seconds": 1.1628326659993036
+  },
+  {
+   "mutant": null,
+   "sampler": "structural_typed",
+   "fails": [
+    "str_transparency"
+   ]
+  },
+  {
+   "mutant": "layer_offsets",
+   "sampler": "structural_typed",
+   "kill": {
+    "crash": null,
+    "examples": 4,
+    "shrunk": [
+     {
+      "boxes": 2,
+      "layers": 1,
+      "width": 1,
+      "crossings": 0,
+      "structural": 0
+     }
+    ],
+    "arguments": {
+     "f": "f @ f"
+    },
+    "law": "unitality"
+   },
+   "examples": 124,
+   "seconds": 1.3237674999982119
+  },
+  {
+   "mutant": "permutation_convention",
+   "sampler": "structural_typed",
+   "kill": {
+    "crash": null,
+    "examples": 7,
+    "shrunk": [
+     {
+      "boxes": 2,
+      "layers": 3,
+      "width": 3,
+      "crossings": 2,
+      "structural": 0
+     }
+    ],
+    "arguments": {
+     "f": "f @ a >> Permutation(a @ b @ a, [2, 0, 1]) >> f"
+    },
+    "law": "unitality"
+   },
+   "examples": 127,
+   "seconds": 2.7006006659939885
+  },
+  {
+   "mutant": "layer_overlap",
+   "sampler": "structural_typed",
+   "kill": {
+    "crash": "AxiomError",
+    "examples": 7,
+    "law": "repr_transparency"
+   },
+   "examples": 7,
+   "seconds": 1.8943898330035154
+  },
+  {
+   "mutant": "left_trace",
+   "sampler": "structural_typed",
+   "kill": {
+    "crash": null,
+    "examples": 1,
+    "shrunk": [],
+    "arguments": {
+     "x": "a"
+    },
+    "law": "yanking"
+   },
+   "examples": 361,
+   "seconds": 2.8984623750002356
+  },
+  {
+   "mutant": "identity_string",
+   "sampler": "structural_typed",
+   "kill": null,
+   "examples": 1320,
+   "seconds": 16.255805499997223
+  },
+  {
+   "mutant": null,
+   "sampler": "structural_implicit",
+   "fails": []
+  },
+  {
+   "mutant": "layer_offsets",
+   "sampler": "structural_implicit",
+   "kill": {
+    "crash": null,
+    "examples": 3,
+    "shrunk": [
+     {
+      "boxes": 3,
+      "layers": 3,
+      "width": 2,
+      "crossings": 0,
+      "structural": 0
+     }
+    ],
+    "arguments": {
+     "f": "f >> a @ f >> a @ f"
+    },
+    "law": "foliation_idempotence"
+   },
+   "examples": 1233,
+   "seconds": 11.743213624999044
+  },
+  {
+   "mutant": "permutation_convention",
+   "sampler": "structural_implicit",
+   "kill": {
+    "crash": null,
+    "examples": 20,
+    "shrunk": [
+     {
+      "boxes": 3,
+      "layers": 4,
+      "width": 3,
+      "crossings": 2,
+      "structural": 0
+     }
+    ],
+    "arguments": {
+     "f": "a @ f @ b >> Permutation(a @ a @ b, [2, 0, 1]) >> f >> f"
+    },
+    "law": "unitality"
+   },
+   "examples": 170,
+   "seconds": 4.992951209002058
+  },
+  {
+   "mutant": "layer_overlap",
+   "sampler": "structural_implicit",
+   "kill": {
+    "crash": null,
+    "examples": 7,
+    "shrunk": [
+     {
+      "boxes": 2,
+      "layers": 2,
+      "width": 1,
+      "crossings": 0,
+      "structural": 0
+     }
+    ],
+    "arguments": {
+     "f": "f >> f"
+    },
+    "law": "hypergraph_section"
+   },
+   "examples": 1147,
+   "seconds": 11.114216834001127
+  },
+  {
+   "mutant": "left_trace",
+   "sampler": "structural_implicit",
+   "kill": {
+    "crash": null,
+    "examples": 1,
+    "shrunk": [],
+    "arguments": {
+     "x": "a"
+    },
+    "law": "yanking"
+   },
+   "examples": 391,
+   "seconds": 2.4980904999974882
+  },
+  {
+   "mutant": "identity_string",
+   "sampler": "structural_implicit",
+   "kill": {
+    "crash": null,
+    "examples": 1,
+    "shrunk": [
+     {
+      "boxes": 0,
+      "layers": 0,
+      "width": 1,
+      "crossings": 0,
+      "structural": 0
+     }
+    ],
+    "arguments": {
+     "term": ""
+    },
+    "law": "str_transparency"
+   },
+   "examples": 31,
+   "seconds": 0.22476949999690987
+  },
+  {
+   "mutant": null,
+   "sampler": "structural_perturbed",
+   "fails": [
+    "str_transparency"
+   ]
+  },
+  {
+   "mutant": "layer_offsets",
+   "sampler": "structural_perturbed",
+   "kill": {
+    "crash": "AxiomError",
+    "examples": 123,
+    "law": "repr_transparency"
+   },
+   "examples": 123,
+   "seconds": 10.980789624998579
+  },
+  {
+   "mutant": "permutation_convention",
+   "sampler": "structural_perturbed",
+   "kill": {
+    "crash": null,
+    "examples": 5,
+    "shrunk": [
+     {
+      "boxes": 3,
+      "layers": 4,
+      "width": 3,
+      "crossings": 2,
+      "structural": 0
+     }
+    ],
+    "arguments": {
+     "f": "f @ a >> f @ a @ a >> Permutation(b @ a @ a, [1, 2, 0]) >> a @ f"
+    },
+    "law": "unitality"
+   },
+   "examples": 125,
+   "seconds": 4.59240266699635
+  },
+  {
+   "mutant": "layer_overlap",
+   "sampler": "structural_perturbed",
+   "kill": {
+    "crash": "AxiomError",
+    "examples": 13,
+    "law": "repr_transparency"
+   },
+   "examples": 13,
+   "seconds": 1.6118900409928756
+  },
+  {
+   "mutant": "left_trace",
+   "sampler": "structural_perturbed",
+   "kill": {
+    "crash": null,
+    "examples": 1,
+    "shrunk": [],
+    "arguments": {
+     "x": "a"
+    },
+    "law": "yanking"
+   },
+   "examples": 361,
+   "seconds": 5.756342417007545
+  },
+  {
+   "mutant": "identity_string",
+   "sampler": "structural_perturbed",
+   "kill": null,
+   "examples": 1320,
+   "seconds": 21.978851249994477
+  }
+ ]
+}

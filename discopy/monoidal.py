@@ -1289,6 +1289,13 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
     grammar_width: ClassVar[int] = 3
     """ The width of the grammar of :meth:`strategy_syntactic_grammatical`. """
 
+    grammar_exact: ClassVar[bool] = False
+    """
+    Whether :meth:`strategy_syntactic_grammatical` draws its choices from one
+    random seed, exactly as the Boltzmann distribution says but with no
+    shrinking, see :meth:`discopy.boltzmann.Grammar.strategy`.
+    """
+
     grammar_signature: ClassVar[tuple | None] = None
     """
     The pairs of objects of the generators of the grammar of
@@ -1312,7 +1319,8 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
             cls, cls.grammar_atoms, cls.grammar_width, within,
             cls.grammar_signature)
         return grammar.strategy(
-            dom=dom, cod=cod, size=testable.SIZE if size is None else size)
+            dom=dom, cod=cod, size=testable.SIZE if size is None else size,
+            exact=cls.grammar_exact)
 
     @classmethod
     def layer_box_strategy(cls, *, dom=None, within=None):

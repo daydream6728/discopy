@@ -14,7 +14,9 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   `representational_baseline` and `representational_goal_directed` on
   monoidal diagrams, `syntactic_admissible`, i.e. `search` without the
   `Arrow.admissible` rules, `syntactic_grammatical`, the Boltzmann sampler
-  of `discopy.boltzmann.Grammar` tuned by `testable.SIZE`, and on symmetric
+  of `discopy.boltzmann.Grammar` tuned by `testable.SIZE`, exactly from a
+  seed if `grammar_exact`, over a fixed signature if `grammar_signature`,
+  and on symmetric
   ones `structural_typed` (`Hypergraph.draw_typed` and
   `draw_typed_bijective`), `structural_implicit`, formerly
   `quotient_strategy`, and `structural_perturbed`; `sampling/` compares

@@ -1,0 +1,41 @@
+{
+ "mode": "quick",
+ "seconds": 3.2701285840012133,
+ "rows": [
+  {
+   "strategy": "integers(0, 2**20)",
+   "draws": 2000,
+   "below 0.01": 0.5695,
+   "below 0.1": 0.821,
+   "below 0.5": 0.9405
+  },
+  {
+   "strategy": "a byte among 20",
+   "draws": 2000,
+   "below 0.01": 0.024,
+   "below 0.1": 0.092,
+   "below 0.5": 0.4245
+  },
+  {
+   "strategy": "floats(0, 1)",
+   "draws": 2000,
+   "below 0.01": 0.136,
+   "below 0.1": 0.2155,
+   "below 0.5": 0.5635
+  },
+  {
+   "strategy": "randoms()",
+   "draws": 2000,
+   "below 0.01": 0.1515,
+   "below 0.1": 0.235,
+   "below 0.5": 0.5825
+  },
+  {
+   "strategy": "randoms(true)",
+   "draws": 2000,
+   "below 0.01": 0.01,
+   "below 0.1": 0.112,
+   "below 0.5": 0.5295
+  }
+ ]
+}

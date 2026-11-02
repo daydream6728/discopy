@@ -4,289 +4,367 @@ marimo-version: 0.23.16
 layout_file: layouts/presentation.slides.json
 ---
 
-```python {.marimo}
+```python {.marimo hide_code="true"}
 import json
 import statistics
 
 import marimo as mo
 import matplotlib.pyplot as plt
+import numpy as np
 
 RESULTS = mo.notebook_dir() / "results"
 
+SHORT = {
+    "representational_baseline": "1a",
+    "representational_goal_directed": "1b",
+    "syntactic_baseline": "2a",
+    "syntactic_admissible": "2b",
+    "syntactic_grammatical": "2c",
+    "structural_typed": "3a",
+    "structural_implicit": "3b",
+    "structural_perturbed": "3p",
+}
 
-def load(name):
+
+def rows(name, **where):
     path = RESULTS / f"{name}.json"
-    return json.loads(path.read_text())["rows"] if path.exists() else []
+    data = json.loads(path.read_text())["rows"] if path.exists() else []
+    return [r for r in data if all(r.get(k) == v for k, v in where.items())]
+
+
+def mean(row, key):
+    return statistics.mean(s[key] for s in row["sizes"])\
+        if row["sizes"] else 0.
+
+
+def percent(x):
+    return f"{100 * x:.0f}%"
 ```
 
 # Sampling string diagrams
 
 *How should the property matrix of DisCoPy draw its terms?*
 
-Internal seminar, work in progress: every number here is read from
-`sampling/results/*.json`, written by `sampling/experiments.py --quick`.
+Internal seminar. Every number is read from `sampling/results/*.json`; the
+detailed record is `sampling/analysis.md`.
 
 <!---->
 
-## Property testing in one slide
+## Property testing in DisCoPy
 
-- A **law** is a sequent, e.g. `unitality(f: Hom[A, B]) -> Equation[Hom[A, B]]`:
-  draw `A`, `B`, then `f`, then check the equation.
+- A **law** is a sequent, e.g.
+  `unitality(f: Hom[A, B]) -> Equation[Hom[A, B]]`: draw `A`, `B`, then `f`,
+  then check the equation.
 - [Hypothesis](https://hypothesis.readthedocs.io) draws every value from a
-  **choice sequence** (integers, booleans) and **shrinks** a counterexample by
-  shrinking that sequence: whatever the sampler, shrinking comes for free as
-  long as the smallest choices build the simplest terms.
-- The matrix: 106 categories × their laws ≈ 2,500 cells, see
-  `discopy/testable.py`.
-- A green cell says the law held **on what was drawn**: the sampler is the
-  prior on where bugs live.
+  **choice sequence** and **shrinks** a counterexample by shrinking the
+  sequence: shrinking comes with any sampler, as long as the smallest
+  choices build the simplest terms.
+- The matrix: about a hundred categories × their laws, 2,500 cells.
+- A green cell says the law held **on what was drawn**: the sampler is our
+  prior on where the bugs are.
 
 <!---->
 
-## What property testing has found so far
+## What it found so far
 
-From `sampling/retrospective.md`, compiled from the git history:
+From `retrospective.md`, compiled from the history of both repositories:
 
 - **35** bugs found by the matrix and fixed, **15** more filed and ruled on,
-  **82** laws declared broken (mostly the checker's own incompleteness).
-- Largest classes: factory / dispatch bindings (14), serialisation (9),
-  wrong normal-form assumptions, coherence.
-- Never found: **numeric limits**, e.g. the 52-index limit of `einsum`
-  (discopy/discopy#447), because every strategy draws small diagrams.
+  **82** laws declared broken, mostly where the checker is incomplete.
+- The commonest: factory and dispatch bindings, serialisation, wrong
+  assumptions about normal forms, coherence.
+- Never found: **numeric limits**, e.g. the 52 indices of `einsum`
+  (discopy/discopy#447): every sampler draws small diagrams.
 
 <!---->
 
-## Combinatorics background
+## Combinatorics in one slide
 
-- A **combinatorial class** $\mathcal{C}$ is a set with a size, finitely many
-  objects of each size $n$: $c_n$.
-- Its **generating function** $C(z) = \sum_n c_n z^n$ turns constructions
-  into equations: disjoint union is $+$, pairs are $\times$, sequences are
-  $\frac{1}{1 - A(z)}$.
-- E.g. binary trees $B = 1 + z B^2$, so $b_n$ is the Catalan number.
-  Permutations grow too fast, $\sum n! z^n$ diverges: labelled objects take
-  the exponential generating function $\sum n! \frac{z^n}{n!} = \frac{1}{1-z}$.
-- Flajolet, Sedgewick, *Analytic Combinatorics* (2009).
+- A **combinatorial class** is a set with a size and finitely many objects
+  of each size $n$, counted by its **generating function**
+  $C(z) = \sum_n c_n z^n$.
+- Constructions become equations: union is $+$, pairs are $\times$, e.g.
+  binary trees $B = 1 + z B^2$, counted by the Catalan numbers.
+- Labelled objects, e.g. permutations, take the exponential one,
+  $\sum_n n! \frac{z^n}{n!} = \frac{1}{1 - z}$.
+- Flajolet and Sedgewick, *Analytic Combinatorics* (2009).
 
 <!---->
 
 ## Boltzmann sampling
 
-Duchon, Flajolet, Louchard, Schaeffer (2004): draw $\gamma \in \mathcal{C}$
-with probability
+Duchon, Flajolet, Louchard and Schaeffer (2004): draw $\gamma$ with
+probability $\mathbb{P}_z(\gamma) = z^{|\gamma|} / C(z)$.
 
-$$\mathbb{P}_x(\gamma) = \frac{x^{|\gamma|}}{C(x)}$$
+- **uniform at each size**;
+- read off the specification: a union picks a branch with probability
+  $A(z)/C(z)$, a product draws both sides independently;
+- $z$ **tunes the expected size** $z C'(z)/C(z)$, up to the singularity
+  $\rho$ of $C$;
+- at $z = \rho$, **critical**, sizes follow a power law.
 
-- **uniform at each size**: two objects of the same size are equally likely;
-- the sampler is read off the specification: a union picks a branch with
-  probability $A(x)/C(x)$, a product draws both sides independently;
-- the parameter $x < \rho$ (the singularity of $C$) **tunes the expected
-  size** $\mathbb{E}_x|\gamma| = x C'(x) / C(x)$;
-- at $x = \rho$ (**critical**), sizes are heavy-tailed, e.g.
-  $\mathbb{P}(|\gamma| = n) \sim n^{-3/2}$ for trees.
-
-<!---->
-
-## Tuning as convex optimisation
-
-Bendkowski, Bodini, Dovgal (2018): with several parameters $x_1, \dots, x_k$,
-one per kind of atom (boxes, swaps, spiders…), choosing the $x_i$ so that
-each expected count hits a target is a **convex** problem in $\log x_i$.
-
-- It applies to any class given by an algebraic or rational specification,
-  i.e. a grammar.
-- Open: does it apply beyond the grammar (2c)? (later slide)
+Bendkowski, Bodini and Dovgal (2018): one parameter per kind of node, and
+tuning them all to expected counts is a **convex problem**.
 
 <!---->
 
 ## Eight samplers
 
-Each is a method `strategy_<sampler>` on the classes where it makes sense:
-`Arrow.strategy` calls the one named by `Arrow.sampler`, and
-`PROPTEST_SAMPLER=<sampler>` switches the whole matrix to it.
+Each is a method `strategy_<sampler>` of the classes it makes sense for;
+`PROPTEST_SAMPLER=<sampler>` runs the whole matrix under it.
 
-| | sampler | idea | status |
-|---|---|---|---|
-| 1a | `representational_baseline` | independent layers, rejected unless they compose | done |
-| 1b | `representational_goal_directed` | each layer from the codomain of the last | done |
-| 2a | `syntactic_baseline` | derivation trees of every rule (`search`) | existing |
-| 2b | `syntactic_admissible` | the same without admissible rules | planned |
-| 2c | `syntactic_grammatical` | rules instantiated at bounded width, a grammar | planned |
-| 3a | `structural_typed` | typed boxes, then a matching of equal types | done |
-| 3b | `structural_implicit` | the wiring, then the boxes it implies | existing |
-| 3+ | `structural_perturbed` | a normal form, then random structural rewrites | planned |
-
-<!---->
-
-## 1. Representational
-
-A diagram is how it is encoded: a list of layers `left @ box @ right`.
-
-- **1a** draws each layer independently, then rejects the list unless
-  consecutive layers compose and the boundaries are the ones asked for.
-- **1b** splits the codomain so far as `left @ dom @ right` and draws a
-  box (or a permutation) from `dom`, so every layer composes; a final box
-  closes the codomain if asked for.
-- Both are the encoding itself: whatever they draw, the encoding can hold,
-  including non-normal forms such as an identity permutation split over two
-  layers.
-
-<!---->
-
-## 2. Syntactic
-
-A diagram is a **derivation tree** of the rules of its category, e.g.
-`cut`, `mix`, `braiding`, `trace_left`: `FreeCategory.search` picks a rule
-uniformly, binds its conclusion to the boundary asked for, draws its premises
-with one less unit of `fuel`, and glues a fresh box to any side it misses.
-
-- **2b** drops the admissible rules (derivable from the others), so the
-  same diagram has fewer derivations.
-- **2c** bounds the width of every boundary: then each rule has finitely
-  many instances and the whole is a **context-free grammar**, which a
-  Boltzmann sampler draws from with no rejection, tuned by convex
-  optimisation.
-
-<!---->
-
-## 3. Structural
-
-A diagram is its **normal form** up to the coherence theorem of its
-doctrine: what remains is boxes and a combinatorial description of the
-plumbing.
-
-| doctrine | plumbing | combinatorial class |
+| | sampler | a diagram is… |
 |---|---|---|
-| symmetric | wires between ports of equal type | bijections (matchings) |
-| braided | strands | braid group words |
-| markov | each input reads one output | functions |
-| compact | each port pairs with one other | perfect matchings (Brauer) |
-| pivotal / planar | non-crossing pairings | Temperley–Lieb / Catalan |
-| hypergraph | ports in spiders | cospans of finite sets, i.e. partitions |
-
-- **3a** draws typed boxes, then a random matching of equal types.
-- **3b** draws the wiring port by port and lets it imply the domain of
-  each box: the existing `Hypergraph.strategy`.
+| 1a | `representational_baseline` | independent layers, rejected unless they compose |
+| 1b | `representational_goal_directed` | each layer from the codomain of the last |
+| 2a | `syntactic_baseline` | a derivation tree of the rules, `fuel` deep |
+| 2b | `syntactic_admissible` | the same without the admissible rules |
+| 2c | `syntactic_grammatical` | a Boltzmann derivation of the rules at bounded width |
+| 3a | `structural_typed` | typed boxes, then a wiring of equal types |
+| 3b | `structural_implicit` | a wiring, which implies the boxes |
+| 3p | `structural_perturbed` | a 3a normal form, rewritten up to coherence |
 
 <!---->
 
-## Metrics
+## Syntactic: rules as a grammar
 
-- **size**: generators, layers, widest boundary, crossings (inversions of
-  each permutation), other structural boxes;
-- **rejection**: test cases Hypothesis gave up on, by reason: a failed
-  `assume` is the sampler's rejection, an *overrun* is Hypothesis's own budget
-  (about 10% even for `lists(integers())`);
-- **speed**: valid diagrams per second;
-- **distinct shapes**: diagrams up to the names of their fresh boxes;
-- **the matrix**: each cell of a doctrine run under each sampler, seed 0;
-- later: shrinking, planted bugs, semantic categories.
+- A rule is a sequent, e.g. `cut(f: Hom[A, B], g: Hom[B, C]) -> Hom[A, C]`.
+- **2c** instantiates every rule at every type of width ≤ 3 over two atoms:
+  a context-free grammar, one nonterminal per pair of types, 225 of them,
+  about seven thousand productions.
+- Its generating function solves a polynomial system: Newton's method from
+  zero, bisection for $\rho$ and for the expected size.
+- **No rejection by construction**, and a fixed signature is just a grammar
+  with fewer generators.
 
 <!---->
 
-```python {.marimo}
-throughput = load("throughput")
+## Structural: plumbing as a combinatorial class
+
+| doctrine | plumbing | class | status |
+|---|---|---|---|
+| symmetric | each output feeds one input | matchings | 3a |
+| markov | each input reads one output | functions | 3a |
+| compact | each port pairs with another | Brauer diagrams | 3a |
+| braided | strands | braid words | round two |
+| pivotal | non-crossing pairings | Temperley–Lieb | round two |
+| hypergraph | ports in spiders | cospans, partitions | round two |
+
+<!---->
+
+```python {.marimo hide_code="true"}
+def validity_figure():
+    data = rows("throughput", doctrine="symmetric")
+    names = list(dict.fromkeys(r["sampler"] for r in data))
+    figure, (left, right) = plt.subplots(1, 2, figsize=(9, 2.6))
+    for offset, boundary in ((-0.2, "free"), (0.2, "fixed")):
+        chosen = [next(r for r in data if r["sampler"] == n
+                       and r["boundary"] == boundary) for n in names]
+        x = np.arange(len(names)) + offset
+        left.bar(x, [r["valid"] / r["cases"] for r in chosen], 0.4,
+                 label=boundary)
+        right.bar(x, [r["valid"] / r["seconds"] for r in chosen], 0.4)
+    for ax, title in ((left, "valid share of test cases"),
+                      (right, "valid diagrams per second")):
+        ax.set_xticks(range(len(names)), [SHORT[n] for n in names])
+        ax.set_title(title, fontsize=9)
+    left.legend(fontsize=8)
+    figure.tight_layout()
+    return figure
 
 
-def mean(row, key):
-    sizes = row["sizes"]
-    return statistics.mean(s[key] for s in sizes) if sizes else float("nan")
-
-
-def rejected(row):
-    return sum(v for k, v in row["gave_up"].items() if "assume" in k)
-
-
+fixed_1a = rows("throughput", sampler="representational_baseline",
+                boundary="fixed")
 mo.vstack([
-    mo.md("## Throughput: 200 examples per cell"),
-    mo.ui.table([{
-        "doctrine": row["doctrine"],
-        "sampler": row["sampler"],
-        "boundary": row["boundary"],
-        "valid": f"{row['valid']}/{row['cases']}",
-        "rejected": rejected(row),
-        "per second": round(row["valid"] / row["seconds"]),
-        "boxes": round(mean(row, "boxes"), 1),
-        "max boxes": max((s["boxes"] for s in row["sizes"]), default=0),
-        "crossings": round(mean(row, "crossings"), 2),
-        "distinct": row["distinct"],
-    } for row in throughput], page_size=12, selection=None),
+    mo.md("## Finding 1: rejection is the baseline's only problem"),
+    validity_figure() if rows("throughput") else mo.md("no results"),
+    mo.md(f"""
+- **1a never meets a fixed boundary**: {sum(r['valid'] for r in fixed_1a)}
+  valid in {sum(r['cases'] for r in fixed_1a)} test cases, and under it the
+  matrix is green on one to three distinct terms per law: **vacuous**.
+- Every other sampler meets its boundary by construction; what Hypothesis
+  still drops is its own **overruns**, as for any strategy.
+- Building each strategy once made sampling **2.5 times faster** (200
+  diagrams of 2a: 2.2s, then 0.9s): Hypothesis compiles every
+  `@st.composite` defined inside a call.
+"""),
 ])
 ```
 
-```python {.marimo}
-def histograms(doctrine, boundary):
-    rows = [r for r in throughput
-            if r["doctrine"] == doctrine and r["boundary"] == boundary]
+```python {.marimo hide_code="true"}
+def histograms():
+    data = rows("throughput", doctrine="symmetric", boundary="fixed")
     figure, axes = plt.subplots(
-        1, len(rows), figsize=(3 * len(rows), 2.4), sharey=True)
-    for ax, row in zip(axes, rows):
-        ax.hist([s["boxes"] for s in row["sizes"]],
-                bins=range(0, 18), color="#4c72b0")
-        ax.set_title(row["sampler"].replace("_", "\n"), fontsize=8)
-        ax.set_xlabel("boxes")
+        1, len(data), figsize=(1.3 * len(data), 2.2), sharey=True)
+    for ax, row in zip(axes, data):
+        ax.hist([s["boxes"] for s in row["sizes"]], bins=range(0, 16))
+        ax.set_title(SHORT[row["sampler"]], fontsize=9)
+    figure.supxlabel("boxes", fontsize=9)
+    figure.tight_layout()
+    return figure
+
+
+compact_3a = rows("throughput", doctrine="compact",
+                  sampler="structural_typed", boundary="fixed")
+merged = max((1 - r["coherent"] / r["distinct"]
+              for r in rows("throughput", boundary="fixed")
+              if r["sampler"].startswith("syntactic") and r["distinct"]),
+             default=0)
+mo.vstack([
+    mo.md("## Finding 2: each family draws its own diagrams"),
+    histograms() if rows("throughput") else mo.md("no results"),
+    mo.md(f"""
+- **Syntactic** samplers have a tail of large diagrams, and write the same
+  diagram in several ways: coherence merges up to
+  {percent(merged)} of their distinct draws.
+- **Structural** samplers draw normal forms with many crossings, e.g.
+  {mean(compact_3a[0], 'crossings') if compact_3a else 0:.0f} per compact
+  diagram under 3a, and only they put two boxes in one layer.
+- **Representational** samplers draw at most one swap per layer.
+"""),
+])
+```
+
+```python {.marimo hide_code="true"}
+symmetric_boltzmann = rows("boltzmann", doctrine="symmetric")
+uniforms = {r["strategy"]: r for r in rows("uniforms")}
+
+
+def boltzmann_figure():
+    finite = [r for r in symmetric_boltzmann if np.isfinite(r["size"])]
+    sizes = sorted({r["size"] for r in finite})
+    figure, ax = plt.subplots(figsize=(4.5, 2.6))
+    ax.plot(sizes, [next(r["generators"] for r in finite if r["size"] == s)
+                    for s in sizes], "k--", label="theory")
+    for exact, label in ((True, "exact seed"), (False, "Hypothesis choices")):
+        ax.plot(sizes, [mean(next(r for r in finite if r["size"] == s
+                                  and r["exact"] == exact), "boxes")
+                        for s in sizes], "o-", label=label)
+    ax.set_xscale("log", base=2)
+    ax.set_xlabel("expected nodes", fontsize=9)
+    ax.set_ylabel("mean generators", fontsize=9)
+    ax.legend(fontsize=8)
+    figure.tight_layout()
+    return figure
+
+
+low = uniforms.get("integers(0, 2**20)", {}).get("below 0.01", 0)
+mo.vstack([
+    mo.md("## Finding 3: Hypothesis is not a Boltzmann sampler"),
+    mo.hstack([
+        boltzmann_figure() if symmetric_boltzmann else mo.md("no results"),
+        mo.md(f"""
+- Tuning works: drawn from a seed, the mean follows the theory, up to the
+  cap on derivation size.
+- Hypothesis puts **{percent(low)}** of `integers(0, 2**20)` in the lowest
+  1%: it favours the first production, the identity.
+- It also **cuts the tail**: it bounds the length of every example, and of
+  the first ones much more.
+- Exact sampling means **no shrinking**: its choices are a seed.
+"""),
+    ]),
+])
+```
+
+```python {.marimo hide_code="true"}
+convex = rows("convex")
+convex_table = [{
+    "kind": kind, "target": convex[0]["targets"][kind],
+    "tuned": round(convex[0]["tuned"][kind], 2),
+    "size alone": round(convex[0]["plain"][kind], 2)}
+    for kind in ("node", "generator", "braiding", "trace_right")]\
+    if convex else []
+mo.vstack([
+    mo.md("## Finding 4: convex tuning controls each kind of node"),
+    mo.ui.table(convex_table, selection=None, show_column_summaries=False)
+    if convex else mo.md("no results"),
+    mo.md(f"""
+- `cvxpy` tunes four parameters of the whole symmetric grammar in
+  {convex[0]['seconds'] if convex else 0:.1f}s; counted on derivations drawn
+  outside Hypothesis.
+- It needs a specification: 2c has one, 3a could (matchings have an
+  exponential generating function), the others are defined by their code.
+"""),
+])
+```
+
+```python {.marimo hide_code="true"}
+mutants = rows("mutants")
+mutant_names = list(dict.fromkeys(r["mutant"] for r in mutants if r["mutant"]))
+mutant_samplers = list(dict.fromkeys(r["sampler"] for r in mutants))
+
+
+def killed(mutant):
+    return [SHORT[r["sampler"]] for r in mutants
+            if r["mutant"] == mutant and r["kill"]]
+
+
+def missed(mutant):
+    return [SHORT[r["sampler"]] for r in mutants
+            if r["mutant"] == mutant and not r["kill"]]
+
+
+def kill_figure():
+    grid = np.array([[next((1. if r["kill"] else 0.) for r in mutants
+                           if r["mutant"] == m and r["sampler"] == s)
+                      for s in mutant_samplers] for m in mutant_names])
+    figure, ax = plt.subplots(figsize=(6, 2.4))
+    ax.imshow(grid, cmap="Greens", vmin=0, vmax=1.4, aspect="auto")
+    ax.set_xticks(range(len(mutant_samplers)),
+                  [SHORT[s] for s in mutant_samplers])
+    ax.set_yticks(range(len(mutant_names)), mutant_names, fontsize=8)
+    for i, m in enumerate(mutant_names):
+        for j, s in enumerate(mutant_samplers):
+            row = next(r for r in mutants
+                       if r["mutant"] == m and r["sampler"] == s)
+            ax.text(j, i, row["kill"]["examples"] if row["kill"] else "—",
+                    ha="center", va="center", fontsize=7)
+    ax.set_title("examples until the first failing law", fontsize=9)
     figure.tight_layout()
     return figure
 
 
 mo.vstack([
-    mo.md("## Sizes: symmetric diagrams from `a @ b` to `b @ c`"),
-    histograms("symmetric", "fixed") if throughput else mo.md("no results"),
+    mo.md("## Finding 5: planted bugs"),
+    kill_figure() if mutants else mo.md("not run yet"),
+    mo.md(f"""
+- One line of DisCoPy rewritten per mutant; smallest counterexamples by
+  hand in the analysis.
+- **A permutation read as its inverse** is only found by
+  {", ".join(killed("permutation_convention"))}: {", ".join(missed(
+  "permutation_convention"))} never draw a cycle of three wires.
+- Some bugs are found whatever is drawn: the law of yanking builds the
+  left trace it checks.
+- **One bug hides another**: under {", ".join(missed("identity_string"))},
+  `str_transparency` already fails, so the empty string of the identity goes
+  unseen.
+- **A bug in the code a sampler runs crashes the sampler**, e.g. reading a
+  hypergraph back under 3a and 3p.
+"""),
 ])
 ```
 
-## Throughput: what we read
-
-- **1a is unusable with a boundary**: 0 valid of 459 test cases in every
-  doctrine, and with free boundaries it only keeps lists of 0–2 layers:
-  a longer list of independent layers almost never composes.
-- **1b** never rejects and is among the fastest, but draws almost no
-  crossings: one permutation per layer, chosen with no regard to types.
-- **2a** is the slowest that works (about 20–30 per second) and the only one
-  with a tail: up to 16 boxes from `fuel = 3`.
-- **3a** draws the most crossings, by far on compact diagrams: matching
-  typed ports over wide boundaries permutes a lot.
-- **3b** is the fastest with structure, about 50 per second.
-- Every sampler is **slow**: under 100 diagrams per second, and 10–35% of
-  draws repeat a shape. Where the time goes is the next thing to profile.
-
-<!---->
-
-```python {.marimo}
-matrix = load("matrix")
-
-
-def outcomes(row):
-    counts = {}
-    for cell in row["cells"].values():
-        counts[cell["outcome"]] = counts.get(cell["outcome"], 0) + 1
-    return counts
-
-
-def unsatisfiable(row):
-    return sum("Unsatisfiable" in (cell["message"] or "")
-               for cell in row["cells"].values())
-
-
+```python {.marimo hide_code="true"}
+semantic = rows("semantic", boundary="fixed")
 mo.vstack([
-    mo.md("## The matrix of symmetric diagrams under each sampler"),
+    mo.md("## Finding 6: a fixed signature needs a grammar"),
     mo.ui.table([{
-        "sampler": row["sampler"],
-        "seconds": round(row["seconds"]),
-        **outcomes(row),
-        "unsatisfiable": unsatisfiable(row),
-    } for row in matrix], selection=None) if matrix
-    else mo.md("*not run yet*"),
+        "sampler": SHORT[r["sampler"]],
+        "test cases per valid diagram": round(r["cases"] / max(r["valid"], 1)),
+        "distinct tensors": r["tensors"]} for r in semantic],
+        selection=None, show_column_summaries=False, page_size=8)
+    if semantic else mo.md("not run yet"),
+    mo.md("""
+Five boxes over two atoms, evaluated as integer tensors, from `a` to
+`a @ a`: the samplers that invent a box to close a boundary reject most of
+what they draw; the grammar of 2c only has the boxes of the signature.
+"""),
 ])
 ```
 
-## The matrix: what we read
+## Finding 7: a green cell can be a blind spot
 
-- **A green cell can be vacuous.** Under 1a, all 45 laws pass, but on 1 to 3
-  distinct terms: Hypothesis only raises `Unsatisfiable` when *no* example is
-  valid. The distinct count of the report is what tells.
-- **A green cell can be a blind spot.** Under 3a, `str_transparency` fails
-  on symmetric diagrams:
+Under 3a, `str_transparency` fails on symmetric diagrams:
 
 ```python
 f, g = Box('f', x, x), Box('g', y, y)
@@ -294,33 +372,31 @@ d = Diagram(inside=(Layer(f, g), ), dom=x @ y, cod=x @ y)
 assert str(d) == "f @ g" and eval(str(d)) != d   # two layers, not one
 ```
 
-  A known limitation (`STR_SPLITS_LAYERS`), declared broken on markov only:
-  the default samplers of symmetric diagrams never put two boxes in a layer.
-  It cannot simply be declared broken there, since a broken law is a
-  *strict* xfail: the default sampler would not find it and the cell would
-  fail. Which sampler a law runs under is part of what the law claims.
+- A known limitation, declared broken on markov only: the default samplers
+  of symmetric diagrams never put two boxes in a layer.
+- It cannot just be declared broken there: a broken law is a strict xfail,
+  so a sampler that misses it fails the cell. **Which sampler a law runs
+  under is part of what the law claims.**
 
 <!---->
 
-## Open questions
+## Open questions, where they stand
 
-| question | experiment | current answer |
-|---|---|---|
-| What does Boltzmann sampling buy us? | size control, coverage of distinct shapes per budget, against 2a | open: needs 2c |
-| Can we tune by convex optimisation beyond the grammar? | multi-parameter tuning of 3a with `cvxpy`: boxes, crossings | open |
-| Critical or size-bounded? | heavy-tailed sizes on the `explore` profile, overruns as a metric | **critical** for `explore`, bounded for `pr` |
-| Which class for each doctrine's plumbing? | table of the structural slide, one sampler per row | symmetric and compact done |
-| Which samplers work on semantic categories? | sampling over a fixed signature, then a functor into `Matrix[int]` | open |
-| Normal or non-normal forms? | per law: which sampler finds which planted bug | open |
-| Pairs of equal diagrams? | `structural_perturbed`: random rewrites in context | open |
+| question | answer so far |
+|---|---|
+| What does Boltzmann sampling buy us? | control of the size and of each kind of node, no rejection over a fixed signature; not uniformity over diagrams |
+| Convex tuning beyond the grammar? | wherever there is a specification: 3a in principle |
+| Critical sampling for `explore`? | only drawn from a seed: through Hypothesis the tail is cut |
+| A class for each doctrine's plumbing? | matchings, functions, Brauer done; braids, Temperley–Lieb, cospans next |
+| Semantic categories? | the grammar, alone without rejection |
+| Normal or non-normal forms? | both: cycles of wires need structural samplers, which crash on the code they run; a mixture per law |
 
 <!---->
 
 ## Next
 
-1. **2b, 2c** with Boltzmann tuning, **3a** for markov and compact,
-   `structural_perturbed`.
-2. Planted bugs: for each sampler, a law and a mutation of DisCoPy it
-   hardly finds, and the smallest counterexample, found by hand.
-3. Semantic sampling on `Matrix[int]`, convex tuning, critical sampling.
-4. Then choose the default sampler of each doctrine from the results.
+1. The `--full` run, then a default sampler per doctrine, maybe a mixture.
+2. `str_transparency` on symmetric diagrams: up to interchange, or a
+   transparent `str` for layers of several boxes.
+3. Counterexamples as regression tests: `Axiom.examples`, once per cell.
+4. Round two: braided, pivotal, frobenius, and the tuning of 3a.

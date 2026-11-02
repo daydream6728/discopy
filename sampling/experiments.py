@@ -14,6 +14,7 @@ one a long background run uses.
 
 import argparse
 import json
+import math
 import os
 import pathlib
 import re
@@ -78,6 +79,7 @@ BUDGETS = {
     "boltzmann": {"quick": 300, "full": 3000},
     "mutants": {"quick": 30, "full": 300},
     "semantic": {"quick": 200, "full": 2000},
+    "uniforms": {"quick": 2000, "full": 20000},
 }
 """ Examples per cell of each experiment. """
 
@@ -137,7 +139,7 @@ class Size:
         permutation, and the other structural boxes, e.g. copies, cups or
         traces.
         """
-        boxes = diagram.boxes
+        boxes = list(flatten(diagram))
         perms = [box for box in boxes if hasattr(box, "perm")]
         generators = [
             box for box in boxes if type(box) is type(diagram).box_factory]
@@ -148,6 +150,16 @@ class Size:
                 len(layer.dom) for layer in diagram.inside]),
             crossings=sum(inversions(list(box.perm)) for box in perms),
             structural=len(boxes) - len(generators) - len(perms))
+
+
+def flatten(diagram):
+    """ The boxes of a diagram, those inside a trace or a bubble included. """
+    for box in diagram.boxes:
+        if hasattr(box, "arg"):
+            yield box
+            yield from flatten(box.arg)
+        else:
+            yield box
 
 
 def inversions(xs):
@@ -164,10 +176,14 @@ def coherent_shape(diagram):
     """
     A diagram up to the names of its fresh boxes and up to coherence: the
     Weisfeiler-Lehman hash of its hypergraph for a symmetric category,
-    which isomorphic hypergraphs share, else its planar normal form.
+    which isomorphic hypergraphs share, else its planar normal form, when
+    it is boundary-connected and has one.
     """
     if not isinstance(diagram, SymmetricCategory):
-        return shape(diagram.normal_form())
+        try:
+            return shape(diagram.normal_form())
+        except NotImplementedError:
+            return shape(diagram)
     graph = diagram.to_hypergraph().to_graph()
     for node, data in graph.nodes(data=True):
         kind = repr(node).split("'")[1]
@@ -305,8 +321,9 @@ SIZES = (2., 4., 8., 16., 32., float("inf"))
 def boltzmann(mode):
     """
     For each doctrine, the grammar of the Boltzmann sampler: its size and
-    singularity, then for each expected size, the parameter it is tuned to
-    and what it draws, at the critical parameter included.
+    singularity, then for each expected size, the parameter it is tuned to,
+    the expected number of generators and what it draws, at the critical
+    parameter included, by choices Hypothesis shrinks or exactly.
     """
     rows = []
     for doctrine in round_one():
@@ -319,18 +336,32 @@ def boltzmann(mode):
         kinds = {}
         for production in grammar.productions:
             kinds[production.kind] = kinds.get(production.kind, 0) + 1
-        for size in SIZES:
-            z = grammar.tune(size, root)
-            result = sample(diagram.strategy_syntactic_grammatical(
-                size=size), BUDGETS["boltzmann"][mode])
-            rows.append({
-                "doctrine": doctrine, "size": size, "z": z, "rho": rho,
-                "expected": grammar.expected_size(z, root),
-                "nonterminals": len(grammar.nonterminals),
-                "productions": kinds, "compile_seconds": compiled,
-                **describe(*result)})
-            log(doctrine, size, rows[-1])
+        for exact in (False, True):
+            for size in SIZES:
+                z = grammar.tune(size, root)
+                result = sample(grammar.strategy(size=size, exact=exact),
+                                BUDGETS["boltzmann"][mode])
+                rows.append({
+                    "doctrine": doctrine, "size": size, "exact": exact,
+                    "z": z, "rho": rho,
+                    "expected": grammar.expected_size(z, root),
+                    "generators": expected_generators(grammar, z, root),
+                    "nonterminals": len(grammar.nonterminals),
+                    "productions": kinds, "compile_seconds": compiled,
+                    **describe(*result)})
+                log(doctrine, size, exact, rows[-1])
     return rows
+
+
+def expected_generators(grammar, z, root):
+    """
+    The expected number of generators of a derivation, the logarithmic
+    derivative of the generating function in the bias of generators.
+    """
+    step = 1e-5
+    low, high = (math.log(root @ grammar.values(z, {"generator": u}))
+                 for u in (1 - step, 1 + step))
+    return (high - low) / (2 * step)
 
 
 TARGETS = {"node": 12., "generator": 4., "braiding": 1., "trace_right": .5}
@@ -344,8 +375,8 @@ def convex(mode):
     """
     Tune the Boltzmann sampler of symmetric diagrams to the expected count
     of each kind in :data:`TARGETS` at once, as a convex problem (Bendkowski,
-    Bodini, Dovgal 2018), then count what it draws, against the sampler
-    tuned to the expected number of nodes alone.
+    Bodini, Dovgal 2018), then count what it derives, outside Hypothesis,
+    against the sampler tuned to the expected number of nodes alone.
     """
     import cvxpy as cp  # pylint: disable=import-outside-toplevel
     from scipy import sparse  # pylint: disable=import-outside-toplevel
@@ -357,7 +388,7 @@ def convex(mode):
     n, k = len(grammar.nonterminals), len(kinds)
     entries = [
         (i, j) for i, p in enumerate(grammar.productions)
-        for j in [0] + [1 + kinds.index(p.kind)] * (p.kind in kinds)
+        for j in [0] + [1 + kinds.index(p.kind) for _ in [p] if p.kind in kinds]
         + [1 + k + c for c in p.children]]
     rows, cols = zip(*entries)
     exponents = sparse.csr_matrix(
@@ -380,21 +411,47 @@ def convex(mode):
     z = float(np.exp(x.value[0]))
     bias = {kind: float(np.exp(x.value[1 + i])) for i, kind in enumerate(kinds)}
 
-    def counts(diagrams):
-        return {
-            "generator": np.mean([Size.of(d).boxes for d in diagrams]),
-            "braiding": np.mean([sum(
-                hasattr(b, "perm") for b in d.boxes) for d in diagrams]),
-            "trace_right": np.mean([sum(
-                type(b).__name__ == "Trace" for b in d.boxes)
-                for d in diagrams])}
-
-    budget = BUDGETS["boltzmann"][mode]
-    tuned, *_ = sample(grammar.strategy(z=z, bias=bias), budget)
-    plain, *_ = sample(grammar.strategy(size=TARGETS["node"]), budget)
+    budget = 10 * BUDGETS["boltzmann"][mode]
+    plain = grammar.tune(TARGETS["node"], grammar.root())
     return [{"status": problem.status, "seconds": seconds, "z": z,
              "rho": grammar.singularity(), "bias": bias, "targets": TARGETS,
-             "tuned": counts(tuned), "plain": counts(plain)}]
+             "tuned": simulate(grammar, z, bias, budget),
+             "plain": simulate(grammar, plain, None, budget)}]
+
+
+def simulate(grammar, z, bias, budget, max_nodes=10_000):
+    """
+    The mean count of each kind of production in ``budget`` derivations
+    drawn by the Boltzmann sampler of the grammar with true randomness,
+    outside Hypothesis, those larger than ``max_nodes`` left out.
+    """
+    rng = np.random.default_rng(0)
+    values = grammar.values(z, bias)
+    n = len(values)
+    extended = np.append(values, 1.)
+    terms = grammar.weights(z, bias) * extended[np.array([
+        p.children + (n, ) * (2 - len(p.children))
+        for p in grammar.productions])].prod(axis=1)
+    by_lhs = [[] for _ in range(n)]
+    for i, production in enumerate(grammar.productions):
+        by_lhs[production.lhs].append(i)
+    totals, kept = {}, 0
+    for _ in range(budget):
+        counts, stack = {"node": 0}, [rng.choice(
+            n, p=grammar.root() * values / (grammar.root() @ values))]
+        while stack and counts["node"] <= max_nodes:
+            candidates = by_lhs[stack.pop()]
+            weights = terms[candidates]
+            production = grammar.productions[candidates[rng.choice(
+                len(candidates), p=weights / weights.sum())]]
+            counts["node"] += 1
+            counts[production.kind] = counts.get(production.kind, 0) + 1
+            stack.extend(production.children)
+        if counts["node"] <= max_nodes:
+            kept += 1
+            for kind, count in counts.items():
+                totals[kind] = totals.get(kind, 0) + count
+    return {kind: count / kept for kind, count in totals.items()}
 
 
 LAWS = "symmetric"
@@ -534,11 +591,22 @@ def fixed_signature(boxes):
         symmetric.Diagram.grammar_signature = old_signature
 
 
+def evaluate(functor, diagram):
+    """
+    The tensor of a diagram, or :obj:`None` if it has a box the functor does
+    not map, e.g. a delayed box.
+    """
+    try:
+        return functor(diagram).array
+    except KeyError:
+        return None
+
+
 def semantic(mode):
     """
     For each sampler of symmetric diagrams over a fixed signature, the valid
-    diagrams, the time to sample and evaluate them as tensors, and how many
-    distinct tensors they denote.
+    diagrams, the time to sample and evaluate them as tensors, how many the
+    functor cannot evaluate and how many distinct tensors they denote.
     """
     boxes, functor = signature()
     a = symmetric.Ty("a")
@@ -551,12 +619,15 @@ def semantic(mode):
                 diagrams, cases, gave_up, seconds = sample(
                     method(**bounds), BUDGETS["semantic"][mode])
                 start = time.perf_counter()
-                arrays = [functor(d).array for d in diagrams]
+                arrays = [evaluate(functor, d) for d in diagrams]
                 evaluated = time.perf_counter() - start
+                unevaluable = sum(x is None for x in arrays)
+                arrays = [x for x in arrays if x is not None]
                 rows.append({
                     "sampler": name, "boundary": boundary, "cases": cases,
                     "valid": len(diagrams), "gave_up": gave_up,
                     "seconds": seconds, "evaluation_seconds": evaluated,
+                    "unevaluable": unevaluable,
                     "tensors": len({(x.shape, x.tobytes()) for x in arrays}),
                     "zero": sum(not x.any() for x in arrays),
                     "sizes": [asdict(Size.of(d)) for d in diagrams]})
@@ -564,7 +635,43 @@ def semantic(mode):
     return rows
 
 
+UNIFORMS = {
+    "integers(0, 2**20)": st.integers(0, 2 ** 20 - 1).map(lambda i: i / 2 ** 20),
+    "a byte among 20": st.lists(st.integers(0, 255), min_size=20,
+                                max_size=20).map(lambda xs: xs[10] / 256),
+    "floats(0, 1)": st.floats(0, 1, exclude_max=True),
+    "randoms()": st.randoms().map(lambda r: r.random()),
+    "randoms(true)": st.randoms(use_true_random=True).map(
+        lambda r: r.random()),
+}
+""" Ways of drawing a number in ``[0, 1)`` with Hypothesis. """
+
+
+def uniforms(mode):
+    """
+    How far each way of drawing a number in ``[0, 1)`` is from uniform:
+    the share of draws below 0.01, 0.1 and 0.5, against 1%, 10% and 50%.
+    """
+    rows = []
+    for name, strategy in UNIFORMS.items():
+        draws = []
+
+        @settings(max_examples=BUDGETS["uniforms"][mode], database=None,
+                  phases=[Phase.generate],
+                  suppress_health_check=list(HealthCheck))
+        @given(strategy)
+        def run(x):
+            draws.append(x)  # pylint: disable=cell-var-from-loop
+
+        run()
+        rows.append({"strategy": name, "draws": len(draws), **{
+            f"below {q}": float(np.mean(np.array(draws) < q))
+            for q in (.01, .1, .5)}})
+    return rows
+
+
 EXPERIMENTS = {
+    "uniforms": uniforms,
     "throughput": throughput, "boltzmann": boltzmann, "convex": convex,
     "semantic": semantic, "mutants": mutants, "matrix": matrix}
 

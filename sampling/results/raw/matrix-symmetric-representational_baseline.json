@@ -16,7 +16,7 @@
   },
   "symmetric.Diagram.braid_naturality": {
     "budget": 20,
-    "distinct": 4,
+    "distinct": 3,
     "outcome": "passed"
   },
   "symmetric.Diagram.braid_then_inverse": {
@@ -36,7 +36,7 @@
   },
   "symmetric.Diagram.dagger_contravariance_traced": {
     "budget": 20,
-    "distinct": 3,
+    "distinct": 2,
     "outcome": "passed"
   },
   "symmetric.Diagram.dagger_involution": {
@@ -46,7 +46,7 @@
   },
   "symmetric.Diagram.dagger_involution_traced": {
     "budget": 20,
-    "distinct": 7,
+    "distinct": 10,
     "outcome": "passed"
   },
   "symmetric.Diagram.dagger_monoidality": {
@@ -56,7 +56,7 @@
   },
   "symmetric.Diagram.dagger_monoidality_symmetric": {
     "budget": 20,
-    "distinct": 4,
+    "distinct": 3,
     "outcome": "passed"
   },
   "symmetric.Diagram.delay_composition": {
@@ -106,7 +106,7 @@
   },
   "symmetric.Diagram.hypergraph_tensor": {
     "budget": 20,
-    "distinct": 4,
+    "distinct": 3,
     "outcome": "passed"
   },
   "symmetric.Diagram.inverse_then_braid": {
@@ -116,7 +116,7 @@
   },
   "symmetric.Diagram.joining": {
     "budget": 20,
-    "distinct": 2,
+    "distinct": 6,
     "outcome": "passed"
   },
   "symmetric.Diagram.map_agreement": {
@@ -156,7 +156,7 @@
   },
   "symmetric.Diagram.scalar_sliding": {
     "budget": 20,
-    "distinct": 8,
+    "distinct": 7,
     "outcome": "passed"
   },
   "symmetric.Diagram.serialisation": {
@@ -196,12 +196,12 @@
   },
   "symmetric.Diagram.trace_dinaturality_left": {
     "budget": 20,
-    "distinct": 1,
+    "distinct": 2,
     "outcome": "passed"
   },
   "symmetric.Diagram.trace_dinaturality_right": {
     "budget": 20,
-    "distinct": 1,
+    "distinct": 2,
     "outcome": "passed"
   },
   "symmetric.Diagram.trace_iteration_left": {
@@ -216,12 +216,12 @@
   },
   "symmetric.Diagram.trace_naturality_left": {
     "budget": 20,
-    "distinct": 15,
+    "distinct": 16,
     "outcome": "passed"
   },
   "symmetric.Diagram.trace_naturality_right": {
     "budget": 20,
-    "distinct": 15,
+    "distinct": 16,
     "outcome": "passed"
   },
   "symmetric.Diagram.trace_superposing_left": {

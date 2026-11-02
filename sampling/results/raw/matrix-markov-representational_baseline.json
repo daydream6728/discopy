@@ -1,0 +1,577 @@
+{
+  "comarkov.Diagram.associativity": {
+    "budget": 20,
+    "distinct": 2,
+    "outcome": "passed"
+  },
+  "comarkov.Diagram.balanced_twist": {
+    "budget": 20,
+    "distinct": 20,
+    "outcome": "passed"
+  },
+  "comarkov.Diagram.bifunctoriality": {
+    "budget": 20,
+    "distinct": 1,
+    "outcome": "passed"
+  },
+  "comarkov.Diagram.braid_naturality": {
+    "budget": 20,
+    "distinct": 3,
+    "outcome": "passed"
+  },
+  "comarkov.Diagram.braid_then_inverse": {
+    "budget": null,
+    "distinct": null,
+    "outcome": "skipped"
+  },
+  "comarkov.Diagram.copying": {
+    "budget": 20,
+    "distinct": 20,
+    "outcome": "passed"
+  },
+  "comarkov.Diagram.dagger_contravariance": {
+    "budget": 20,
+    "distinct": 1,
+    "outcome": "xfailed"
+  },
+  "comarkov.Diagram.dagger_contravariance_traced": {
+    "budget": 20,
+    "distinct": 2,
+    "outcome": "passed"
+  },
+  "comarkov.Diagram.dagger_involution": {
+    "budget": 20,
+    "distinct": 1,
+    "outcome": "xfailed"
+  },
+  "comarkov.Diagram.dagger_involution_traced": {
+    "budget": 20,
+    "distinct": 10,
+    "outcome": "passed"
+  },
+  "comarkov.Diagram.dagger_monoidality": {
+    "budget": 20,
+    "distinct": 1,
+    "outcome": "xfailed"
+  },
+  "comarkov.Diagram.dagger_monoidality_symmetric": {
+    "budget": 20,
+    "distinct": 3,
+    "outcome": "passed"
+  },
+  "comarkov.Diagram.delay_composition": {
+    "budget": 20,
+    "distinct": 8,
+    "outcome": "passed"
+  },
+  "comarkov.Diagram.delay_unit": {
+    "budget": 20,
+    "distinct": 8,
+    "outcome": "passed"
+  },
+  "comarkov.Diagram.drawing_dagger_involution": {
+    "budget": 20,
+    "distinct": 8,
+    "outcome": "passed"
+  },
+  "comarkov.Diagram.foliation_idempotence": {
+    "budget": 20,
+    "distinct": 8,
+    "outcome": "passed"
+  },
+  "comarkov.Diagram.hexagon_left": {
+    "budget": 20,
+    "distinct": 20,
+    "outcome": "passed"
+  },
+  "comarkov.Diagram.hexagon_right": {
+    "budget": 20,
+    "distinct": 20,
+    "outcome": "passed"
+  },
+  "comarkov.Diagram.hypergraph_composition": {
+    "budget": 20,
+    "distinct": 2,
+    "outcome": "passed"
+  },
+  "comarkov.Diagram.hypergraph_identity": {
+    "budget": 20,
+    "distinct": 11,
+    "outcome": "passed"
+  },
+  "comarkov.Diagram.hypergraph_section": {
+    "budget": 20,
+    "distinct": 8,
+    "outcome": "passed"
+  },
+  "comarkov.Diagram.hypergraph_tensor": {
+    "budget": 20,
+    "distinct": 3,
+    "outcome": "passed"
+  },
+  "comarkov.Diagram.inverse_then_braid": {
+    "budget": null,
+    "distinct": null,
+    "outcome": "skipped"
+  },
+  "comarkov.Diagram.joining": {
+    "budget": 20,
+    "distinct": 6,
+    "outcome": "passed"
+  },
+  "comarkov.Diagram.map_agreement": {
+    "budget": 20,
+    "distinct": 1,
+    "outcome": "xfailed"
+  },
+  "comarkov.Diagram.merge_associativity": {
+    "budget": 20,
+    "distinct": 11,
+    "outcome": "passed"
+  },
+  "comarkov.Diagram.merge_coherence": {
+    "budget": 20,
+    "distinct": 12,
+    "outcome": "passed"
+  },
+  "comarkov.Diagram.merge_commutativity": {
+    "budget": 20,
+    "distinct": 11,
+    "outcome": "passed"
+  },
+  "comarkov.Diagram.merge_unitality": {
+    "budget": 20,
+    "distinct": 11,
+    "outcome": "passed"
+  },
+  "comarkov.Diagram.permutation_composition": {
+    "budget": 20,
+    "distinct": 20,
+    "outcome": "passed"
+  },
+  "comarkov.Diagram.permutation_identity": {
+    "budget": 20,
+    "distinct": 20,
+    "outcome": "passed"
+  },
+  "comarkov.Diagram.permutation_inverse": {
+    "budget": 20,
+    "distinct": 20,
+    "outcome": "passed"
+  },
+  "comarkov.Diagram.permutation_swaps": {
+    "budget": 20,
+    "distinct": 20,
+    "outcome": "passed"
+  },
+  "comarkov.Diagram.pickling": {
+    "budget": 20,
+    "distinct": 20,
+    "outcome": "passed"
+  },
+  "comarkov.Diagram.repr_transparency": {
+    "budget": 20,
+    "distinct": 20,
+    "outcome": "passed"
+  },
+  "comarkov.Diagram.scalar_sliding": {
+    "budget": 20,
+    "distinct": 7,
+    "outcome": "passed"
+  },
+  "comarkov.Diagram.serialisation": {
+    "budget": 20,
+    "distinct": 20,
+    "outcome": "passed"
+  },
+  "comarkov.Diagram.sliding": {
+    "budget": 20,
+    "distinct": 1,
+    "outcome": "xfailed"
+  },
+  "comarkov.Diagram.str_transparency": {
+    "budget": 20,
+    "distinct": 20,
+    "outcome": "passed"
+  },
+  "comarkov.Diagram.strength": {
+    "budget": 20,
+    "distinct": 1,
+    "outcome": "xfailed"
+  },
+  "comarkov.Diagram.swap_inverse": {
+    "budget": 20,
+    "distinct": 12,
+    "outcome": "passed"
+  },
+  "comarkov.Diagram.tensor_unitality": {
+    "budget": 20,
+    "distinct": 12,
+    "outcome": "passed"
+  },
+  "comarkov.Diagram.tightening": {
+    "budget": 20,
+    "distinct": 0,
+    "outcome": "xfailed"
+  },
+  "comarkov.Diagram.trace_dinaturality_left": {
+    "budget": 20,
+    "distinct": 2,
+    "outcome": "passed"
+  },
+  "comarkov.Diagram.trace_dinaturality_right": {
+    "budget": 20,
+    "distinct": 2,
+    "outcome": "passed"
+  },
+  "comarkov.Diagram.trace_iteration_left": {
+    "budget": 20,
+    "distinct": 15,
+    "outcome": "passed"
+  },
+  "comarkov.Diagram.trace_iteration_right": {
+    "budget": 20,
+    "distinct": 15,
+    "outcome": "passed"
+  },
+  "comarkov.Diagram.trace_naturality_left": {
+    "budget": 20,
+    "distinct": 16,
+    "outcome": "passed"
+  },
+  "comarkov.Diagram.trace_naturality_right": {
+    "budget": 20,
+    "distinct": 16,
+    "outcome": "passed"
+  },
+  "comarkov.Diagram.trace_superposing_left": {
+    "budget": 20,
+    "distinct": 17,
+    "outcome": "passed"
+  },
+  "comarkov.Diagram.trace_superposing_right": {
+    "budget": 20,
+    "distinct": 17,
+    "outcome": "passed"
+  },
+  "comarkov.Diagram.trace_vanishing": {
+    "budget": 20,
+    "distinct": 8,
+    "outcome": "passed"
+  },
+  "comarkov.Diagram.twist_naturality": {
+    "budget": 20,
+    "distinct": 8,
+    "outcome": "passed"
+  },
+  "comarkov.Diagram.twist_unit": {
+    "budget": 20,
+    "distinct": 1,
+    "outcome": "passed"
+  },
+  "comarkov.Diagram.unitality": {
+    "budget": 20,
+    "distinct": 8,
+    "outcome": "passed"
+  },
+  "comarkov.Diagram.vanishing": {
+    "budget": 20,
+    "distinct": 8,
+    "outcome": "passed"
+  },
+  "comarkov.Diagram.yanking": {
+    "budget": 20,
+    "distinct": 5,
+    "outcome": "passed"
+  },
+  "markov.Diagram.associativity": {
+    "budget": 20,
+    "distinct": 2,
+    "outcome": "passed"
+  },
+  "markov.Diagram.balanced_twist": {
+    "budget": 20,
+    "distinct": 20,
+    "outcome": "passed"
+  },
+  "markov.Diagram.bifunctoriality": {
+    "budget": 20,
+    "distinct": 1,
+    "outcome": "passed"
+  },
+  "markov.Diagram.braid_naturality": {
+    "budget": 20,
+    "distinct": 3,
+    "outcome": "passed"
+  },
+  "markov.Diagram.braid_then_inverse": {
+    "budget": null,
+    "distinct": null,
+    "outcome": "skipped"
+  },
+  "markov.Diagram.copy_coassociativity": {
+    "budget": 20,
+    "distinct": 11,
+    "outcome": "passed"
+  },
+  "markov.Diagram.copy_cocommutativity": {
+    "budget": 20,
+    "distinct": 11,
+    "outcome": "passed"
+  },
+  "markov.Diagram.copy_coherence": {
+    "budget": 20,
+    "distinct": 12,
+    "outcome": "passed"
+  },
+  "markov.Diagram.copy_counitality": {
+    "budget": 20,
+    "distinct": 11,
+    "outcome": "passed"
+  },
+  "markov.Diagram.copying": {
+    "budget": 20,
+    "distinct": 20,
+    "outcome": "passed"
+  },
+  "markov.Diagram.dagger_contravariance": {
+    "budget": 20,
+    "distinct": 1,
+    "outcome": "xfailed"
+  },
+  "markov.Diagram.dagger_contravariance_traced": {
+    "budget": 20,
+    "distinct": 2,
+    "outcome": "passed"
+  },
+  "markov.Diagram.dagger_involution": {
+    "budget": 20,
+    "distinct": 1,
+    "outcome": "xfailed"
+  },
+  "markov.Diagram.dagger_involution_traced": {
+    "budget": 20,
+    "distinct": 10,
+    "outcome": "passed"
+  },
+  "markov.Diagram.dagger_monoidality": {
+    "budget": 20,
+    "distinct": 1,
+    "outcome": "xfailed"
+  },
+  "markov.Diagram.dagger_monoidality_symmetric": {
+    "budget": 20,
+    "distinct": 3,
+    "outcome": "passed"
+  },
+  "markov.Diagram.delay_composition": {
+    "budget": 20,
+    "distinct": 8,
+    "outcome": "passed"
+  },
+  "markov.Diagram.delay_unit": {
+    "budget": 20,
+    "distinct": 8,
+    "outcome": "passed"
+  },
+  "markov.Diagram.discard_coherence": {
+    "budget": 20,
+    "distinct": 12,
+    "outcome": "passed"
+  },
+  "markov.Diagram.drawing_dagger_involution": {
+    "budget": 20,
+    "distinct": 8,
+    "outcome": "passed"
+  },
+  "markov.Diagram.foliation_idempotence": {
+    "budget": 20,
+    "distinct": 8,
+    "outcome": "passed"
+  },
+  "markov.Diagram.hexagon_left": {
+    "budget": 20,
+    "distinct": 20,
+    "outcome": "passed"
+  },
+  "markov.Diagram.hexagon_right": {
+    "budget": 20,
+    "distinct": 20,
+    "outcome": "passed"
+  },
+  "markov.Diagram.hypergraph_composition": {
+    "budget": 20,
+    "distinct": 2,
+    "outcome": "passed"
+  },
+  "markov.Diagram.hypergraph_identity": {
+    "budget": 20,
+    "distinct": 11,
+    "outcome": "passed"
+  },
+  "markov.Diagram.hypergraph_section": {
+    "budget": 20,
+    "distinct": 8,
+    "outcome": "passed"
+  },
+  "markov.Diagram.hypergraph_tensor": {
+    "budget": 20,
+    "distinct": 3,
+    "outcome": "passed"
+  },
+  "markov.Diagram.inverse_then_braid": {
+    "budget": null,
+    "distinct": null,
+    "outcome": "skipped"
+  },
+  "markov.Diagram.joining": {
+    "budget": 20,
+    "distinct": 6,
+    "outcome": "passed"
+  },
+  "markov.Diagram.map_agreement": {
+    "budget": 20,
+    "distinct": 1,
+    "outcome": "xfailed"
+  },
+  "markov.Diagram.permutation_composition": {
+    "budget": 20,
+    "distinct": 20,
+    "outcome": "passed"
+  },
+  "markov.Diagram.permutation_identity": {
+    "budget": 20,
+    "distinct": 20,
+    "outcome": "passed"
+  },
+  "markov.Diagram.permutation_inverse": {
+    "budget": 20,
+    "distinct": 20,
+    "outcome": "passed"
+  },
+  "markov.Diagram.permutation_swaps": {
+    "budget": 20,
+    "distinct": 20,
+    "outcome": "passed"
+  },
+  "markov.Diagram.pickling": {
+    "budget": 20,
+    "distinct": 20,
+    "outcome": "passed"
+  },
+  "markov.Diagram.repr_transparency": {
+    "budget": 20,
+    "distinct": 20,
+    "outcome": "passed"
+  },
+  "markov.Diagram.scalar_sliding": {
+    "budget": 20,
+    "distinct": 7,
+    "outcome": "passed"
+  },
+  "markov.Diagram.serialisation": {
+    "budget": 20,
+    "distinct": 20,
+    "outcome": "passed"
+  },
+  "markov.Diagram.sliding": {
+    "budget": 20,
+    "distinct": 1,
+    "outcome": "xfailed"
+  },
+  "markov.Diagram.str_transparency": {
+    "budget": 20,
+    "distinct": 1,
+    "outcome": "xfailed"
+  },
+  "markov.Diagram.strength": {
+    "budget": 20,
+    "distinct": 1,
+    "outcome": "xfailed"
+  },
+  "markov.Diagram.swap_inverse": {
+    "budget": 20,
+    "distinct": 12,
+    "outcome": "passed"
+  },
+  "markov.Diagram.tensor_unitality": {
+    "budget": 20,
+    "distinct": 12,
+    "outcome": "passed"
+  },
+  "markov.Diagram.tightening": {
+    "budget": 20,
+    "distinct": 0,
+    "outcome": "xfailed"
+  },
+  "markov.Diagram.trace_dinaturality_left": {
+    "budget": 20,
+    "distinct": 2,
+    "outcome": "passed"
+  },
+  "markov.Diagram.trace_dinaturality_right": {
+    "budget": 20,
+    "distinct": 2,
+    "outcome": "passed"
+  },
+  "markov.Diagram.trace_iteration_left": {
+    "budget": 20,
+    "distinct": 15,
+    "outcome": "passed"
+  },
+  "markov.Diagram.trace_iteration_right": {
+    "budget": 20,
+    "distinct": 15,
+    "outcome": "passed"
+  },
+  "markov.Diagram.trace_naturality_left": {
+    "budget": 20,
+    "distinct": 16,
+    "outcome": "passed"
+  },
+  "markov.Diagram.trace_naturality_right": {
+    "budget": 20,
+    "distinct": 16,
+    "outcome": "passed"
+  },
+  "markov.Diagram.trace_superposing_left": {
+    "budget": 20,
+    "distinct": 17,
+    "outcome": "passed"
+  },
+  "markov.Diagram.trace_superposing_right": {
+    "budget": 20,
+    "distinct": 17,
+    "outcome": "passed"
+  },
+  "markov.Diagram.trace_vanishing": {
+    "budget": 20,
+    "distinct": 8,
+    "outcome": "passed"
+  },
+  "markov.Diagram.twist_naturality": {
+    "budget": 20,
+    "distinct": 8,
+    "outcome": "passed"
+  },
+  "markov.Diagram.twist_unit": {
+    "budget": 20,
+    "distinct": 1,
+    "outcome": "passed"
+  },
+  "markov.Diagram.unitality": {
+    "budget": 20,
+    "distinct": 8,
+    "outcome": "passed"
+  },
+  "markov.Diagram.vanishing": {
+    "budget": 20,
+    "distinct": 8,
+    "outcome": "passed"
+  },
+  "markov.Diagram.yanking": {
+    "budget": 20,
+    "distinct": 5,
+    "outcome": "passed"
+  }
+}

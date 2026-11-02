@@ -83,6 +83,8 @@ class Grammar:
     category: type
     types: tuple
     productions: tuple[Production, ...]
+    tuned: dict = field(default_factory=dict, repr=False, compare=False)
+    """ The parameter tuned to each size, root and bias, see :meth:`tune`. """
 
     @staticmethod
     @cache
@@ -177,11 +179,13 @@ class Grammar:
         return np.array([z * bias.get(p.kind, 1.) for p in self.productions])
 
     def values(self, z: float, bias: dict[str, float] | None = None,
-               iterations: int = 100_000) -> np.ndarray | None:
+               iterations: int = 100) -> np.ndarray | None:
         """
-        The generating function of each nonterminal at ``z``, by fixed-point
-        iteration from zero, or :obj:`None` if it diverges, i.e. if ``z`` is
-        beyond the singularity.
+        The generating function of each nonterminal at ``z``, the least
+        solution of the system of the grammar by Newton's method from zero,
+        which converges monotonically below the singularity for a system of
+        polynomials with positive coefficients (Esparza, Kiefer, Luttenberger
+        2010), or :obj:`None` if it diverges, i.e. beyond the singularity.
         """
         n, weights = len(self.nonterminals), self.weights(z, bias)
         lhs = np.array([p.lhs for p in self.productions])
@@ -191,13 +195,24 @@ class Grammar:
         current = np.zeros(n)
         for _ in range(iterations):
             extended = np.append(current, 1.)
-            terms = weights * extended[children].prod(axis=1)
-            new = np.bincount(lhs, terms, minlength=n)
-            if not np.all(np.isfinite(new)) or new.max() > 1e8:
+            image = np.bincount(
+                lhs, weights * extended[children].prod(axis=1), minlength=n)
+            residual = image - current
+            if np.abs(residual).max() <= 1e-12 * (1 + image.max()):
+                return image
+            jacobian = np.zeros((n, n + 1))
+            for side, other in ((0, 1), (1, 0)):
+                np.add.at(jacobian, (lhs, children[:, side]),
+                          weights * extended[children[:, other]])
+            try:
+                step = np.linalg.solve(
+                    np.eye(n) - jacobian[:, :n], residual)
+            except np.linalg.LinAlgError:
                 return None
-            if np.abs(new - current).max() <= 1e-12 * (1 + new.max()):
-                return new
-            current = new
+            current = current + step
+            if not np.all(np.isfinite(current)) or current.min() < 0\
+                    or current.max() > 1e8:
+                return None
         return None
 
     def singularity(self, bias: dict[str, float] | None = None) -> float:
@@ -206,7 +221,7 @@ class Grammar:
         for _ in range(50):
             middle = (low + high) / 2
             low, high = (middle, high) if self.values(
-                middle, bias, iterations=5_000) is not None else (low, middle)
+                middle, bias) is not None else (low, middle)
         return low
 
     def expected_size(self, z: float, root: np.ndarray,
@@ -229,17 +244,20 @@ class Grammar:
         """
         The parameter whose expected size from ``root`` is ``size``, by
         bisection below the singularity, or just below it if ``size`` is
-        infinite, i.e. critical sampling.
+        infinite, i.e. critical sampling, computed once for each size, root
+        and bias.
         """
+        key = (size, root.tobytes(), tuple(sorted((bias or {}).items())))
+        if key in self.tuned:
+            return self.tuned[key]
         rho = self.singularity(bias)
-        if math.isinf(size):
-            return rho * (1 - 1e-4)
         low, high = 0., rho * (1 - 1e-4)
-        for _ in range(40):
+        for _ in range(0 if math.isinf(size) else 40):
             middle = (low + high) / 2
             low, high = (middle, high) if self.expected_size(
                 middle, root, bias) < size else (low, middle)
-        return low
+        self.tuned[key] = high if math.isinf(size) else low
+        return self.tuned[key]
 
     def root(self, dom=None, cod=None) -> np.ndarray:
         """
@@ -255,21 +273,29 @@ class Grammar:
     def strategy(  # pylint: disable=too-many-locals  # the sampler's tables
             self, dom=None, cod=None, size: float = 8.,
             max_nodes: int = 200, z: float | None = None,
-            bias: dict[str, float] | None = None) -> st.SearchStrategy:
+            bias: dict[str, float] | None = None, exact: bool = False
+            ) -> st.SearchStrategy:
         """
         Generate a term from ``dom`` to ``cod`` by the Boltzmann sampler of
         the grammar at ``z`` with the ``bias`` of each kind of production,
-        ``z`` tuned to an expected ``size`` if not given, rejecting a
-        derivation of more than ``max_nodes`` nodes. Each choice is a
-        production drawn by an integer whose zero is the simplest, so that a
-        term shrinks to the identity or a generator.
+        ``z`` tuned to an expected ``size`` from any boundary if not given,
+        once for the grammar rather than for each boundary, rejecting a
+        derivation of more than ``max_nodes`` nodes.
+
+        Each choice is a production drawn by a byte whose zero is the
+        simplest, so that a term shrinks to the identity or a generator.
+        Hypothesis draws neither bytes uniformly nor long sequences of them
+        whole, so that the large terms the expected size counts are cut
+        off: if ``exact``, the choices are drawn instead from a single
+        random seed, as the Boltzmann distribution says, which no longer
+        shrinks.
         """
         from hypothesis import strategies as st
 
         root = self.root(dom, cod)
         if root @ self.values(1e-3, bias) == 0:
             return st.nothing()
-        z = self.tune(size, root, bias) if z is None else z
+        z = self.tune(size, self.root(), bias) if z is None else z
         values = self.values(z, bias)
         extended = np.append(values, 1.)
         n = len(values)
@@ -279,10 +305,11 @@ class Grammar:
         by_lhs = [[] for _ in range(n)]
         for i, p in enumerate(self.productions):
             by_lhs[p.lhs].append(i)
-        resolution = 2 ** 20
+        resolution = 2 ** 8
 
-        def pick(draw, weights):
-            x = draw(st.integers(0, resolution - 1)) / resolution
+        def pick(draw, weights, seed):
+            x = seed.random() if exact\
+                else draw(st.integers(0, resolution - 1)) / resolution
             cumulative = np.cumsum(weights)
             return int(np.searchsorted(
                 cumulative, x * cumulative[-1], side="right"))
@@ -290,6 +317,7 @@ class Grammar:
         @st.composite
         def terms_(draw):
             count = [0]
+            seed = draw(st.randoms(use_true_random=True)) if exact else None
 
             def build(nonterminal):
                 count[0] += 1
@@ -299,7 +327,7 @@ class Grammar:
                     reject()
                 candidates = by_lhs[nonterminal]
                 production = self.productions[
-                    candidates[pick(draw, terms[candidates])]]
+                    candidates[pick(draw, terms[candidates], seed)]]
                 children = [build(child) for child in production.children]
                 if production.kind == GENERATOR:
                     x, y = self.nonterminals[nonterminal]
@@ -308,7 +336,7 @@ class Grammar:
                 return rule(**production.values,
                             **dict(zip(production.premises, children)))
 
-            term = build(pick(draw, root * values))
+            term = build(pick(draw, root * values, seed))
             if dom is not None and term.dom != dom:
                 term = draw(self.category.generators(
                     dom=dom, cod=term.dom)) >> term

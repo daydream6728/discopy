@@ -206,12 +206,12 @@
   },
   "symmetric.Diagram.trace_iteration_left": {
     "budget": 20,
-    "distinct": 18,
+    "distinct": 20,
     "outcome": "passed"
   },
   "symmetric.Diagram.trace_iteration_right": {
     "budget": 20,
-    "distinct": 18,
+    "distinct": 20,
     "outcome": "passed"
   },
   "symmetric.Diagram.trace_naturality_left": {
