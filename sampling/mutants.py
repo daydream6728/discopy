@@ -15,6 +15,10 @@ from dataclasses import dataclass
 from discopy import abc, cat, hypergraph, monoidal
 
 
+ORIGINALS = {}
+""" The original method of each mutant applied, by mutant. """
+
+
 @dataclass(frozen=True)
 class Mutant:
     """
@@ -49,12 +53,27 @@ class Mutant:
             "exec", flags=__future__.annotations.compiler_flag,
             dont_inherit=True), function.__globals__, namespace)
         mutated = namespace[self.method]
+        ORIGINALS[self] = raw
         setattr(self.owner, self.method,
                 mutated if self.wrap is None else self.wrap(mutated))
         try:
             yield self
         finally:
             setattr(self.owner, self.method, raw)
+            del ORIGINALS[self]
+
+    @contextmanager
+    def reverted(self):
+        """
+        Restore the original method in a block inside :meth:`applied`, so
+        that a counterexample is checked against the code without the bug.
+        """
+        mutated = self.owner.__dict__[self.method]
+        setattr(self.owner, self.method, ORIGINALS[self])
+        try:
+            yield self
+        finally:
+            setattr(self.owner, self.method, mutated)
 
 
 MUTANTS = (

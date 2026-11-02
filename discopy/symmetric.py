@@ -392,6 +392,25 @@ class Diagram(balanced.Diagram, SymmetricCategory):
                 lambda graph: graph.to_diagram())
 
     @classmethod
+    def strategy_portfolio(
+            cls, *, dom=None, cod=None, fuel=FUEL, within=None):
+        """
+        Draw a diagram by one of :meth:`strategy_syntactic_grammatical`,
+        whose sizes have a tail, :meth:`strategy_structural_typed`, whose
+        wirings have cycles of wires, and :meth:`strategy_structural_implicit`,
+        a third each, shrinking towards the first. A term ``within`` the
+        rules of a weaker structure is derived by :meth:`search` instead.
+        """
+        from hypothesis import strategies as st
+
+        if within is not None:
+            return cls.search(dom=dom, cod=cod, fuel=fuel, within=within)
+        return st.one_of(
+            cls.strategy_syntactic_grammatical(dom=dom, cod=cod),
+            cls.strategy_structural_typed(dom=dom, cod=cod, fuel=fuel),
+            cls.strategy_structural_implicit(dom=dom, cod=cod, fuel=fuel))
+
+    @classmethod
     def strategy_structural_perturbed(
             cls, *, dom=None, cod=None, fuel=FUEL, within=None):
         """

@@ -18,10 +18,11 @@ def _():
 
     from discopy.boltzmann import Grammar
     from experiments import (
-        DOCTRINES, SAMPLERS, Size, coherent_shape, diagram_class, round_one,
-        sample, shape)
-    return (DOCTRINES, Grammar, SAMPLERS, Size, coherent_shape, diagram_class,
-            io, mo, plt, random, round_one, sample, shape, statistics)
+        DOCTRINES, SAMPLERS, Size, alphabet, coherent_shape, diagram_class,
+        round_one, sample, shape)
+    return (DOCTRINES, Grammar, SAMPLERS, Size, alphabet, coherent_shape,
+            diagram_class, io, mo, plt, random, round_one, sample, shape,
+            statistics)
 
 
 @app.cell(hide_code=True)
@@ -56,12 +57,13 @@ def _(SAMPLERS, diagram_class, doctrine, mo):
     boundary = mo.ui.radio(
         ["free", "fixed"], value="free", label="boundary", inline=True)
     dom = mo.ui.text(value="a @ b", label="dom")
-    cod = mo.ui.text(value="b @ c", label="cod")
+    cod = mo.ui.text(value="b @ a", label="cod")
+    atoms = mo.ui.text(value="a b", label="atoms")
     fuel = mo.ui.slider(0, 6, value=3, label="fuel", show_value=True)
     size = mo.ui.dropdown(
         ["2", "4", "8", "16", "32", "critical"], value="8",
-        label="expected nodes (2c)")
-    exact = mo.ui.checkbox(label="exact, from one seed (2c)")
+        label="expected nodes (2c, 2bc)")
+    exact = mo.ui.checkbox(label="exact, from one seed (2c, 2bc)")
     count = mo.ui.slider(
         10, 1000, step=10, value=200, label="diagrams", show_value=True)
     seed = mo.ui.number(0, 10 ** 6, value=0, label="seed")
@@ -70,18 +72,18 @@ def _(SAMPLERS, diagram_class, doctrine, mo):
     drawn = mo.ui.slider(0, 24, value=8, label="drawings", show_value=True)
     run = mo.ui.run_button(label="sample")
     mo.vstack([
-        mo.hstack([sampler, boundary, dom, cod], justify="start"),
+        mo.hstack([sampler, boundary, dom, cod, atoms], justify="start"),
         mo.hstack([fuel, size, exact], justify="start"),
         mo.hstack([count, seed, gallery, drawn, run], justify="start"),
     ])
-    return (boundary, category, cod, count, dom, drawn, exact, fuel, gallery,
-            run, sampler, seed, size)
+    return (atoms, boundary, category, cod, count, dom, drawn, exact, fuel,
+            gallery, run, sampler, seed, size)
 
 
 @app.cell(hide_code=True)
 def _(
-    Grammar, boundary, category, cod, count, dom, exact, fuel, mo, run,
-    sample, sampler, seed, size,
+    Grammar, alphabet, atoms, boundary, category, cod, count, dom, exact,
+    fuel, mo, run, sample, sampler, seed, size,
 ):
     mo.stop(not run.value, mo.md("*Press **sample** to draw.*"))
 
@@ -91,17 +93,20 @@ def _(
 
     bounds = {} if boundary.value == "free" else {
         "dom": parse(dom.value), "cod": parse(cod.value)}
-    if sampler.value == "syntactic_grammatical":
+    if sampler.value.startswith("syntactic_grammatical"):
         grammar = Grammar.compile(
-            category, category.grammar_atoms, category.grammar_width)
+            category, category.grammar_atoms, category.grammar_width,
+            without=category.admissible
+            if sampler.value.endswith("admissible") else ())
         strategy = grammar.strategy(
             **bounds, exact=exact.value, size=float(
                 "inf" if size.value == "critical" else size.value))
     else:
         strategy = getattr(category, f"strategy_{sampler.value}")(
             fuel=fuel.value, **bounds)
-    diagrams, cases, gave_up, seconds = sample(
-        strategy, count.value, seed=int(seed.value))
+    with alphabet(tuple(atoms.value.split()) or ("a", "b")):
+        diagrams, cases, gave_up, seconds = sample(
+            strategy, count.value, seed=int(seed.value))
     return cases, diagrams, gave_up, seconds
 
 

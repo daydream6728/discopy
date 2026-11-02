@@ -13,13 +13,16 @@ one a long background run uses.
 """
 
 import argparse
+import concurrent.futures
 import json
 import math
 import os
 import pathlib
+import random
 import re
 import subprocess
 import sys
+import statistics
 import time
 import xml.etree.ElementTree as ET
 from contextlib import contextmanager
@@ -53,8 +56,23 @@ SAMPLERS = (
     "structural_typed",
     "structural_implicit",
     "structural_perturbed",
+    "syntactic_grammatical_admissible",
+    "portfolio",
 )
 """ The samplers, by the name of their method ``strategy_<sampler>``. """
+
+ALPHABET = ("a", "b")
+"""
+The atoms every sampler draws its types from in the experiments run here,
+those of the grammar of :meth:`strategy_syntactic_grammatical`, so that the
+samplers compete on the same types; the matrix runs on the default atoms.
+"""
+
+MATCHED = (3., 6.)
+""" The mean numbers of boxes the samplers are calibrated to. """
+
+SEEDS = {"quick": 3, "full": 10}
+""" The seeds each mutant is searched for under each sampler. """
 
 DOCTRINES = {
     "monoidal": (monoidal, 1),
@@ -81,6 +99,7 @@ BUDGETS = {
     "mutants": {"quick": 30, "full": 300},
     "semantic": {"quick": 200, "full": 2000},
     "uniforms": {"quick": 2000, "full": 20000},
+    "calibration": {"quick": 100, "full": 1000},
 }
 """ Examples per cell of each experiment. """
 
@@ -120,6 +139,42 @@ def sampler(diagram, name):
             del diagram.sampler
         else:
             diagram.sampler = old
+
+
+@contextmanager
+def alphabet(atoms=ALPHABET):
+    """ Draw the types of the free categories from ``atoms``, in a block. """
+    old = cat.GENERATORS
+    cat.GENERATORS = atoms
+    try:
+        yield
+    finally:
+        cat.GENERATORS = old
+
+
+@contextmanager
+def calibrated(diagram, name, params):
+    """
+    Sample the diagrams of a class by the given sampler with the given
+    default parameters, e.g. ``{"fuel": 2}``, in a block: a caller that
+    passes its own, as a rule passes its fuel down, overrides them.
+    """
+    def strategy(cls, **given):
+        return getattr(cls, f"strategy_{name}")(**params | given)
+
+    diagram.strategy_calibrated = classmethod(strategy)
+    try:
+        with sampler(diagram, "calibrated"):
+            yield
+    finally:
+        del diagram.strategy_calibrated
+
+
+def knob(name):
+    """ The parameter that sets the size of a sampler, and its values. """
+    if name.startswith("syntactic_grammatical"):
+        return "size", (1., 2., 4., 8., 16., 32., 64.)
+    return "fuel", tuple(range(0, 9))
 
 
 @dataclass
@@ -198,15 +253,18 @@ def coherent_shape(diagram):
     return nx.weisfeiler_lehman_graph_hash(graph, node_attr="label")
 
 
-def sample(strategy, budget, seed=None):
+def sample(strategy, budget, seed=None, warmup=True):
     """
     Run ``strategy`` for ``budget`` examples in the generate phase only,
-    from a ``seed`` if given so that the draws are reproducible, and
-    return each valid diagram with the time it took and the count of test
-    cases Hypothesis gave up on, by reason: ``rejected`` by the sampler, a
-    failed ``assume`` or ``reject``, or an ``overrun`` of Hypothesis's own
-    budget of choices.
+    from a ``seed`` if given so that the draws are reproducible, after a few
+    examples drawn and thrown away if ``warmup``, so that what the strategy
+    computes once, e.g. a grammar, is not timed, and return each valid
+    diagram with the time it took and the count of test cases Hypothesis
+    gave up on, by reason: ``rejected`` by the sampler, a failed ``assume``
+    or ``reject``, or an ``overrun`` of Hypothesis's own budget of choices.
     """
+    if warmup:
+        sample(strategy, 3, seed, warmup=False)
     diagrams, observations = [], []
 
     @settings(
@@ -237,7 +295,7 @@ def sample(strategy, budget, seed=None):
 
 BOUNDARIES = {
     "free": lambda Ty: {},
-    "fixed": lambda Ty: {"dom": Ty("a", "b"), "cod": Ty("b", "c")},
+    "fixed": lambda Ty: {"dom": Ty("a", "b"), "cod": Ty("b", "a")},
 }
 """ The boundaries a sampler is asked for: none, or a fixed pair. """
 
@@ -259,23 +317,76 @@ def log(*args):
           f"{row['seconds']:.1f}s", file=sys.stderr)
 
 
-def throughput(mode):
+def calibration(mode):
     """
-    For each doctrine, sampler and boundary, the valid diagrams and why the
-    others were rejected, the valid diagrams per second, their sizes and
-    how many are distinct, syntactically and up to coherence.
+    For each doctrine, sampler and target of :data:`MATCHED`, the value of
+    the parameter that sets its size, see :func:`knob`, whose mean number
+    of boxes with free boundaries is the nearest to the target, from a
+    sample of the calibration budget for each value.
     """
     rows = []
     for doctrine in round_one():
         diagram = diagram_class(doctrine)
         for name in implemented(doctrine):
-            for boundary, bounds in BOUNDARIES.items():
-                method = getattr(diagram, f"strategy_{name}")
-                result = sample(method(**bounds(diagram.ob)),
-                                BUDGETS["throughput"][mode])
+            key, values = knob(name)
+            means = {}
+            for value in values:
+                diagrams, *_ = sample(
+                    getattr(diagram, f"strategy_{name}")(**{key: value}),
+                    BUDGETS["calibration"][mode], seed=0)
+                means[value] = statistics.mean(
+                    Size.of(d).boxes for d in diagrams) if diagrams else 0.
+            for target in MATCHED:
+                value = min(values, key=lambda v: abs(means[v] - target))
                 rows.append({"doctrine": doctrine, "sampler": name,
-                             "boundary": boundary, **describe(*result)})
-                log(doctrine, name, boundary, rows[-1])
+                             "target": target, "params": {key: value},
+                             "mean": means[value], "means": means})
+            print(doctrine, name, means, file=sys.stderr)
+    return rows
+
+
+def regimes(doctrine, name):
+    """
+    The parameters a sampler is run with: its own defaults, then those
+    calibrated to each target of :data:`MATCHED`, if calibrated.
+    """
+    found = {r["target"]: r["params"]
+             for r in load("calibration") if r["doctrine"] == doctrine
+             and r["sampler"] == name}
+    return [("natural", {})] + [
+        (f"matched {target:g}", found[target])
+        for target in MATCHED if target in found]
+
+
+def load(name):
+    """ The rows of an experiment already run, or none. """
+    path = RESULTS / f"{name}.json"
+    return json.loads(path.read_text())["rows"] if path.exists() else []
+
+
+def throughput(mode):
+    """
+    For each doctrine, sampler and boundary, the valid diagrams and why the
+    others were rejected, the valid diagrams per second, their sizes and
+    how many are distinct, syntactically and up to coherence: with its own
+    parameters, and with those calibrated to each mean size, free boundaries
+    only, since that is what the calibration matches.
+    """
+    rows = []
+    for doctrine in round_one():
+        diagram = diagram_class(doctrine)
+        for name in implemented(doctrine):
+            for regime, params in regimes(doctrine, name):
+                for boundary, bounds in BOUNDARIES.items():
+                    if regime != "natural" and boundary != "free":
+                        continue
+                    method = getattr(diagram, f"strategy_{name}")
+                    result = sample(method(**params, **bounds(diagram.ob)),
+                                    BUDGETS["throughput"][mode], seed=0)
+                    rows.append({"doctrine": doctrine, "sampler": name,
+                                 "regime": regime, "params": params,
+                                 "boundary": boundary, **describe(*result)})
+                    log(doctrine, name, regime, boundary, rows[-1])
     return rows
 
 
@@ -462,38 +573,53 @@ LAWS = "symmetric"
 """ The doctrine whose laws the mutants are checked against. """
 
 
-def falsify(law, budget):
+def falsify(law, budget, seed=0, mutant=None):
     """
     Search for a counterexample to a law, as ``Axiom.falsify`` does, within
-    ``budget`` examples, counting those drawn before the first one: its
-    shrunk arguments, the count and whether it was a crash in the sampler,
-    or :obj:`None` if none was found.
+    ``budget`` examples from a ``seed``: arguments on which the law fails,
+    with the code of a ``mutant`` if given, and holds without it, so that
+    only a failure the mutant causes counts. Return the shrunk arguments,
+    the examples drawn before the first one, and the calls and seconds
+    spent shrinking it; or the exception that stopped the search, which is
+    the sampler crashing on the mutated code; or :obj:`None` if none.
     """
-    calls, first = [0], [None]
+    calls, first, start = [0], [None], [None]
+
+    def holds(arguments):
+        try:
+            return bool(law(**arguments))
+        except Exception:  # pylint: disable=broad-exception-caught
+            return False
 
     def fails(sequent):
         calls[0] += 1
-        try:
-            holds = bool(law(**sequent[1]))
-        except Exception:  # pylint: disable=broad-exception-caught
-            holds = False
-        if not holds and first[0] is None:
-            first[0] = calls[0]
-        return not holds
+        if holds(sequent[1]):
+            return False
+        if mutant is not None:
+            with mutant.reverted():
+                if not holds(sequent[1]):
+                    return False
+        if first[0] is None:
+            first[0], start[0] = calls[0], time.perf_counter()
+        return True
 
     try:
-        _, arguments = find(law.sequents(**law.params), fails, settings=(
-            settings(max_examples=budget, database=None, deadline=None,
-                     suppress_health_check=list(HealthCheck))))
+        _, arguments = find(
+            law.sequents(**law.params), fails, random=random.Random(seed),
+            settings=settings(
+                max_examples=budget, database=None, deadline=None,
+                suppress_health_check=list(HealthCheck)))
     except (NoSuchExample, Unsatisfiable):
         return None
     except Exception as error:  # pylint: disable=broad-exception-caught
         return {"crash": type(error).__name__, "examples": calls[0]}
     terms = [v for v in arguments.values() if isinstance(v, cat.Arrow)]
-    return {"crash": None, "examples": first[0], "shrunk": [
-        asdict(Size.of(t)) for t in terms], "arguments": {
-            key: FRESH.sub("f", str(value))
-            for key, value in arguments.items()}}
+    return {"crash": None, "examples": first[0],
+            "shrink_calls": calls[0] - first[0],
+            "shrink_seconds": time.perf_counter() - start[0],
+            "shrunk": [asdict(Size.of(t)) for t in terms],
+            "arguments": {key: FRESH.sub("f", str(value))
+                          for key, value in arguments.items()}}
 
 
 def checked_laws(diagram):
@@ -502,39 +628,81 @@ def checked_laws(diagram):
             and law.applicable and not law.broken]
 
 
+@contextmanager
+def glue_counter(counts):
+    """
+    Count the boundaries the grammar is asked for, and those it does not
+    derive, which a generator glues, in a block.
+    """
+    old = Grammar.strategy
+
+    def strategy(self, dom=None, cod=None, **params):
+        counts["asked"] += 1
+        counts["glued"] += any(
+            x is not None and x not in self.types for x in (dom, cod))
+        return old(self, dom=dom, cod=cod, **params)
+
+    Grammar.strategy = strategy
+    try:
+        yield
+    finally:
+        Grammar.strategy = old
+
+
+def hunt(task):
+    """
+    One run of the mutants experiment: under a sampler, with the given
+    parameters and seed, for each mutant, the first law of :data:`LAWS`
+    that it makes fail, the examples drawn until then, and the shrinking.
+    """
+    name, regime, params, seed, budget = task
+    diagram, rows = diagram_class(LAWS), []
+    laws = checked_laws(diagram)
+    with alphabet(), calibrated(diagram, name, params):
+        for mutant in MUTANTS:
+            counts = {"asked": 0, "glued": 0}
+            start, drawn, kill, crash = time.perf_counter(), 0, None, None
+            with mutant.applied(), glue_counter(counts):
+                for law in laws:
+                    found = falsify(law, budget, seed, mutant)
+                    if found is not None and found["crash"]:
+                        crash, drawn = dict(found, law=law.name),\
+                            drawn + found["examples"]
+                        break
+                    if found is not None:
+                        kill, drawn = dict(found, law=law.name),\
+                            drawn + found["examples"]
+                        break
+                    drawn += budget
+            rows.append({
+                "mutant": mutant.name, "sampler": name, "regime": regime,
+                "params": params, "seed": seed, "kill": kill, "crash": crash,
+                "examples": drawn, "glue": counts,
+                "seconds": time.perf_counter() - start})
+    return rows
+
+
 def mutants(mode):
     """
-    For each sampler of :data:`LAWS` but the rejecting baseline, the laws
-    that fail with no mutant, then for each mutant the first law that fails
-    besides those, the examples drawn until then and the shrunk
-    counterexample.
+    For each sampler of :data:`LAWS` but the rejecting baseline, with its
+    own parameters and calibrated to the first of :data:`MATCHED`, and for
+    each of :data:`SEEDS` seeds: the first law each mutant makes fail, see
+    :func:`hunt`, in parallel, one process for each run.
     """
-    diagram, budget = diagram_class(LAWS), BUDGETS["mutants"][mode]
-    laws, rows = checked_laws(diagram), []
-    names = [s for s in implemented(LAWS) if s != "representational_baseline"]
-    for name in names:
-        with sampler(diagram, name):
-            natural = [law.name for law in laws if falsify(law, budget)]
-            rows.append({"mutant": None, "sampler": name, "fails": natural})
-            print("baseline", name, natural, file=sys.stderr)
-            for mutant in MUTANTS:
-                start, drawn, kill = time.perf_counter(), 0, None
-                with mutant.applied():
-                    for law in laws:
-                        if law.name in natural:
-                            continue
-                        found = falsify(law, budget)
-                        if found is not None:
-                            kill = dict(found, law=law.name)
-                            drawn += found["examples"]
-                            break
-                        drawn += budget
-                rows.append({
-                    "mutant": mutant.name, "sampler": name, "kill": kill,
-                    "examples": drawn,
-                    "seconds": time.perf_counter() - start})
-                print(mutant.name, name, kill and kill["law"],
-                      file=sys.stderr)
+    budget, tasks = BUDGETS["mutants"][mode], []
+    for name in implemented(LAWS):
+        if name == "representational_baseline":
+            continue
+        for regime, params in regimes(LAWS, name)[:2]:
+            tasks += [(name, regime, params, seed, budget)
+                      for seed in range(SEEDS[mode])]
+    rows = []
+    with concurrent.futures.ProcessPoolExecutor() as pool:
+        for found in pool.map(hunt, tasks):
+            rows += found
+            print(found[0]["sampler"], found[0]["regime"], found[0]["seed"],
+                  [r["kill"] and r["kill"]["law"] for r in found],
+                  file=sys.stderr)
     return rows
 
 
@@ -675,6 +843,7 @@ def uniforms(mode):
 
 
 EXPERIMENTS = {
+    "calibration": calibration,
     "uniforms": uniforms,
     "throughput": throughput, "boltzmann": boltzmann, "convex": convex,
     "semantic": semantic, "mutants": mutants, "matrix": matrix}
@@ -693,7 +862,8 @@ def main():
     (RESULTS / "raw").mkdir(parents=True, exist_ok=True)
     for name in args.experiments:
         start = time.perf_counter()
-        rows = EXPERIMENTS[name](args.mode)
+        with alphabet():
+            rows = EXPERIMENTS[name](args.mode)
         path = RESULTS / f"{name}.json"
         path.write_text(json.dumps({
             "mode": args.mode, "seconds": time.perf_counter() - start,

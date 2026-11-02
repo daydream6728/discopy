@@ -23,6 +23,8 @@ SHORT = {
     "structural_typed": "3a",
     "structural_implicit": "3b",
     "structural_perturbed": "3p",
+    "syntactic_grammatical_admissible": "2bc",
+    "portfolio": "mix",
 }
 
 
@@ -154,7 +156,7 @@ Each is a method `strategy_<sampler>` of the classes it makes sense for;
 
 ```python {.marimo hide_code="true"}
 def validity_figure():
-    data = rows("throughput", doctrine="symmetric")
+    data = rows("throughput", regime="natural", doctrine="symmetric")
     names = list(dict.fromkeys(r["sampler"] for r in data))
     figure, (left, right) = plt.subplots(1, 2, figsize=(9, 2.6))
     for offset, boundary in ((-0.2, "free"), (0.2, "fixed")):
@@ -173,14 +175,15 @@ def validity_figure():
     return figure
 
 
-fixed_1a = rows("throughput", sampler="representational_baseline",
+fixed_1a = rows("throughput", regime="natural", sampler="representational_baseline",
                 boundary="fixed")
 mo.vstack([
     mo.md("## Finding 1: rejection is the baseline's only problem"),
-    validity_figure() if rows("throughput") else mo.md("no results"),
+    validity_figure() if rows("throughput", regime="natural") else mo.md("no results"),
     mo.md(f"""
-- **1a never meets a fixed boundary**: {sum(r['valid'] for r in fixed_1a)}
-  valid in {sum(r['cases'] for r in fixed_1a)} test cases, and under it the
+- **1a almost never meets a fixed boundary**:
+  {sum(r['valid'] for r in fixed_1a)} valid in
+  {sum(r['cases'] for r in fixed_1a)} test cases, and under it the
   matrix is green on one to three distinct terms per law: **vacuous**.
 - Every other sampler meets its boundary by construction; what Hypothesis
   still drops is its own **overruns**, as for any strategy.
@@ -193,7 +196,7 @@ mo.vstack([
 
 ```python {.marimo hide_code="true"}
 def histograms():
-    data = rows("throughput", doctrine="symmetric", boundary="fixed")
+    data = rows("throughput", regime="natural", doctrine="symmetric", boundary="fixed")
     figure, axes = plt.subplots(
         1, len(data), figsize=(1.3 * len(data), 2.2), sharey=True)
     for ax, row in zip(axes, data):
@@ -204,15 +207,18 @@ def histograms():
     return figure
 
 
-compact_3a = rows("throughput", doctrine="compact",
+compact_3a = rows("throughput", regime="natural", doctrine="compact",
                   sampler="structural_typed", boundary="fixed")
+capped = [SHORT[r["sampler"]] for r in rows("calibration")
+          if r["doctrine"] == "symmetric" and r["target"] == 3.
+          and max(r["means"].values()) < 2.5]
 merged = max((1 - r["coherent"] / r["distinct"]
-              for r in rows("throughput", boundary="fixed")
+              for r in rows("throughput", regime="natural", boundary="fixed")
               if r["sampler"].startswith("syntactic") and r["distinct"]),
              default=0)
 mo.vstack([
     mo.md("## Finding 2: each family draws its own diagrams"),
-    histograms() if rows("throughput") else mo.md("no results"),
+    histograms() if rows("throughput", regime="natural") else mo.md("no results"),
     mo.md(f"""
 - **Syntactic** samplers have a tail of large diagrams, and write the same
   diagram in several ways: coherence merges up to
@@ -221,6 +227,8 @@ mo.vstack([
   {mean(compact_3a[0], 'crossings') if compact_3a else 0:.0f} per compact
   diagram under 3a, and only they put two boxes in one layer.
 - **Representational** samplers draw at most one swap per layer.
+- **Size knobs have a short range**: no value of `fuel` or of the expected
+  size takes {", ".join(capped) or "none"} to a mean of 3 boxes.
 """),
 ])
 ```
@@ -290,56 +298,55 @@ mo.vstack([
 
 ```python {.marimo hide_code="true"}
 mutants = rows("mutants")
-mutant_names = list(dict.fromkeys(r["mutant"] for r in mutants if r["mutant"]))
+mutant_names = list(dict.fromkeys(r["mutant"] for r in mutants))
 mutant_samplers = list(dict.fromkeys(r["sampler"] for r in mutants))
 
 
-def killed(mutant):
-    return [SHORT[r["sampler"]] for r in mutants
-            if r["mutant"] == mutant and r["kill"]]
+def kill_rate(mutant, sampler, regime="natural"):
+    found = [r for r in mutants if r["mutant"] == mutant
+             and r["sampler"] == sampler and r["regime"] == regime]
+    return sum(bool(r["kill"]) for r in found) / max(len(found), 1)
 
 
-def missed(mutant):
-    return [SHORT[r["sampler"]] for r in mutants
-            if r["mutant"] == mutant and not r["kill"]]
+def never(mutant):
+    return [SHORT[s] for s in mutant_samplers if kill_rate(mutant, s) == 0]
 
 
 def kill_figure():
-    grid = np.array([[next((1. if r["kill"] else 0.) for r in mutants
-                           if r["mutant"] == m and r["sampler"] == s)
-                      for s in mutant_samplers] for m in mutant_names])
-    figure, ax = plt.subplots(figsize=(6, 2.4))
+    grid = np.array([[kill_rate(m, s) for s in mutant_samplers]
+                     for m in mutant_names])
+    figure, ax = plt.subplots(figsize=(7, 2.4))
     ax.imshow(grid, cmap="Greens", vmin=0, vmax=1.4, aspect="auto")
     ax.set_xticks(range(len(mutant_samplers)),
                   [SHORT[s] for s in mutant_samplers])
     ax.set_yticks(range(len(mutant_names)), mutant_names, fontsize=8)
-    for i, m in enumerate(mutant_names):
-        for j, s in enumerate(mutant_samplers):
-            row = next(r for r in mutants
-                       if r["mutant"] == m and r["sampler"] == s)
-            ax.text(j, i, row["kill"]["examples"] if row["kill"] else "—",
-                    ha="center", va="center", fontsize=7)
-    ax.set_title("examples until the first failing law", fontsize=9)
+    for i, row in enumerate(grid):
+        for j, value in enumerate(row):
+            ax.text(j, i, f"{value:.0%}", ha="center", va="center",
+                    fontsize=7)
+    ax.set_title("share of seeds that kill the mutant", fontsize=9)
     figure.tight_layout()
     return figure
 
 
+crashing = sorted({SHORT[r["sampler"]] for r in mutants if r["crash"]})
 mo.vstack([
     mo.md("## Finding 5: planted bugs"),
     kill_figure() if mutants else mo.md("not run yet"),
     mo.md(f"""
-- One line of DisCoPy rewritten per mutant; smallest counterexamples by
-  hand in the analysis.
-- **A permutation read as its inverse** is only found by
-  {", ".join(killed("permutation_convention"))}: {", ".join(missed(
-  "permutation_convention"))} never draw a cycle of three wires.
-- Some bugs are found whatever is drawn: the law of yanking builds the
-  left trace it checks.
-- **One bug hides another**: under {", ".join(missed("identity_string"))},
-  `str_transparency` already fails, so the empty string of the identity goes
-  unseen.
-- **A bug in the code a sampler runs crashes the sampler**, e.g. reading a
-  hypergraph back under 3a and 3p.
+- One line of DisCoPy rewritten per mutant; a kill is a law that fails with
+  it and holds without it; smallest counterexamples by hand in the analysis.
+- **A permutation read as its inverse** is never found by
+  {", ".join(never("permutation_convention")) or "none"}: no cycle of three
+  wires there.
+- Some bugs are found whatever is drawn: the law of yanking builds the left
+  trace it checks.
+- **A bug in the code a sampler runs crashes the sampler**:
+  {", ".join(crashing) or "none"} read hypergraphs back while drawing, so
+  the bug is reported but with no counterexample to a law.
+- **The portfolio** (2c, 3a and 3b, a third each) kills
+  {", ".join(m for m in mutant_names if kill_rate(m, "portfolio") == 1)
+  or "none"} at every seed.
 """),
 ])
 ```
@@ -395,7 +402,8 @@ assert str(d) == "f @ g" and eval(str(d)) != d   # two layers, not one
 
 ## Next
 
-1. The `--full` run, then a default sampler per doctrine, maybe a mixture.
+1. The `--full` run, then a default sampler per doctrine: the portfolio of
+   2c, 3a and 3b is the one to beat.
 2. `str_transparency` on symmetric diagrams: up to interchange, or a
    transparent `str` for layers of several boxes.
 3. Counterexamples as regression tests: `Axiom.examples`, once per cell.

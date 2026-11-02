@@ -87,6 +87,19 @@ session with the human; the decisions are below, the explanations in
 
 ## Before the full run
 
+- [x] planted bugs over several seeds (`SEEDS`), in parallel, a kill only
+      when the law holds without the mutant, sampler crashes apart,
+      shrinking calls and seconds
+- [x] matched sizes: `calibration` sets `fuel` or the size of each sampler
+      to a mean of 3 and 6 boxes; `throughput` and `mutants` run at them
+- [x] one alphabet, `a` and `b`, for every sampler in the experiments, and
+      the share of boundaries the grammar glues
+- [x] a warm-up before every timed sample
+- [x] `portfolio`, a third each of 2c, 3a and 3b, and
+      `syntactic_grammatical_admissible`, 2c without the admissible rules
+- [ ] decide the `explore` profile: exact critical sampling, or shrinkable
+      at a finite size
+
 - [ ] `--full` budgets are 10 times the quick ones; run the experiments one
       after another on an idle machine, since `throughput` measures speed:
       `uv run --with cvxpy python sampling/experiments.py --full`

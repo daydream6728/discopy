@@ -1,0 +1,1414 @@
+{
+ "mode": "quick",
+ "seconds": 714.3144538750057,
+ "rows": [
+  {
+   "doctrine": "monoidal",
+   "sampler": "representational_baseline",
+   "target": 3.0,
+   "params": {
+    "fuel": 2
+   },
+   "mean": 0.99,
+   "means": {
+    "0": 0.88,
+    "1": 0.94,
+    "2": 0.99,
+    "3": 0.94,
+    "4": 0.96,
+    "5": 0.96,
+    "6": 0.99,
+    "7": 0.94,
+    "8": 0.93
+   }
+  },
+  {
+   "doctrine": "monoidal",
+   "sampler": "representational_baseline",
+   "target": 6.0,
+   "params": {
+    "fuel": 2
+   },
+   "mean": 0.99,
+   "means": {
+    "0": 0.88,
+    "1": 0.94,
+    "2": 0.99,
+    "3": 0.94,
+    "4": 0.96,
+    "5": 0.96,
+    "6": 0.99,
+    "7": 0.94,
+    "8": 0.93
+   }
+  },
+  {
+   "doctrine": "monoidal",
+   "sampler": "representational_goal_directed",
+   "target": 3.0,
+   "params": {
+    "fuel": 4
+   },
+   "mean": 2.95,
+   "means": {
+    "0": 0.9,
+    "1": 1.5,
+    "2": 2,
+    "3": 2.08,
+    "4": 2.95,
+    "5": 3.99,
+    "6": 3.87,
+    "7": 4.23,
+    "8": 4.79
+   }
+  },
+  {
+   "doctrine": "monoidal",
+   "sampler": "representational_goal_directed",
+   "target": 6.0,
+   "params": {
+    "fuel": 8
+   },
+   "mean": 4.79,
+   "means": {
+    "0": 0.9,
+    "1": 1.5,
+    "2": 2,
+    "3": 2.08,
+    "4": 2.95,
+    "5": 3.99,
+    "6": 3.87,
+    "7": 4.23,
+    "8": 4.79
+   }
+  },
+  {
+   "doctrine": "monoidal",
+   "sampler": "syntactic_baseline",
+   "target": 3.0,
+   "params": {
+    "fuel": 3
+   },
+   "mean": 3.44,
+   "means": {
+    "0": 0.88,
+    "1": 1.3,
+    "2": 1.83,
+    "3": 3.44,
+    "4": 3.79,
+    "5": 2.44,
+    "6": 3.44,
+    "7": 7.61,
+    "8": 8.75
+   }
+  },
+  {
+   "doctrine": "monoidal",
+   "sampler": "syntactic_baseline",
+   "target": 6.0,
+   "params": {
+    "fuel": 7
+   },
+   "mean": 7.61,
+   "means": {
+    "0": 0.88,
+    "1": 1.3,
+    "2": 1.83,
+    "3": 3.44,
+    "4": 3.79,
+    "5": 2.44,
+    "6": 3.44,
+    "7": 7.61,
+    "8": 8.75
+   }
+  },
+  {
+   "doctrine": "monoidal",
+   "sampler": "syntactic_admissible",
+   "target": 3.0,
+   "params": {
+    "fuel": 3
+   },
+   "mean": 3.44,
+   "means": {
+    "0": 0.88,
+    "1": 1.3,
+    "2": 1.83,
+    "3": 3.44,
+    "4": 3.79,
+    "5": 2.44,
+    "6": 3.44,
+    "7": 7.61,
+    "8": 8.75
+   }
+  },
+  {
+   "doctrine": "monoidal",
+   "sampler": "syntactic_admissible",
+   "target": 6.0,
+   "params": {
+    "fuel": 7
+   },
+   "mean": 7.61,
+   "means": {
+    "0": 0.88,
+    "1": 1.3,
+    "2": 1.83,
+    "3": 3.44,
+    "4": 3.79,
+    "5": 2.44,
+    "6": 3.44,
+    "7": 7.61,
+    "8": 8.75
+   }
+  },
+  {
+   "doctrine": "monoidal",
+   "sampler": "syntactic_grammatical",
+   "target": 3.0,
+   "params": {
+    "size": 16.0
+   },
+   "mean": 2.94,
+   "means": {
+    "1.0": 0.92,
+    "2.0": 1.43,
+    "4.0": 2.33,
+    "8.0": 2.67,
+    "16.0": 2.94,
+    "32.0": 4.66,
+    "64.0": 3.38
+   }
+  },
+  {
+   "doctrine": "monoidal",
+   "sampler": "syntactic_grammatical",
+   "target": 6.0,
+   "params": {
+    "size": 32.0
+   },
+   "mean": 4.66,
+   "means": {
+    "1.0": 0.92,
+    "2.0": 1.43,
+    "4.0": 2.33,
+    "8.0": 2.67,
+    "16.0": 2.94,
+    "32.0": 4.66,
+    "64.0": 3.38
+   }
+  },
+  {
+   "doctrine": "monoidal",
+   "sampler": "syntactic_grammatical_admissible",
+   "target": 3.0,
+   "params": {
+    "size": 16.0
+   },
+   "mean": 2.94,
+   "means": {
+    "1.0": 0.92,
+    "2.0": 1.43,
+    "4.0": 2.33,
+    "8.0": 2.67,
+    "16.0": 2.94,
+    "32.0": 4.66,
+    "64.0": 3.38
+   }
+  },
+  {
+   "doctrine": "monoidal",
+   "sampler": "syntactic_grammatical_admissible",
+   "target": 6.0,
+   "params": {
+    "size": 32.0
+   },
+   "mean": 4.66,
+   "means": {
+    "1.0": 0.92,
+    "2.0": 1.43,
+    "4.0": 2.33,
+    "8.0": 2.67,
+    "16.0": 2.94,
+    "32.0": 4.66,
+    "64.0": 3.38
+   }
+  },
+  {
+   "doctrine": "symmetric",
+   "sampler": "representational_baseline",
+   "target": 3.0,
+   "params": {
+    "fuel": 8
+   },
+   "mean": 0.95,
+   "means": {
+    "0": 0.79,
+    "1": 0.89,
+    "2": 0.89,
+    "3": 0.92,
+    "4": 0.88,
+    "5": 0.9,
+    "6": 0.89,
+    "7": 0.92,
+    "8": 0.95
+   }
+  },
+  {
+   "doctrine": "symmetric",
+   "sampler": "representational_baseline",
+   "target": 6.0,
+   "params": {
+    "fuel": 8
+   },
+   "mean": 0.95,
+   "means": {
+    "0": 0.79,
+    "1": 0.89,
+    "2": 0.89,
+    "3": 0.92,
+    "4": 0.88,
+    "5": 0.9,
+    "6": 0.89,
+    "7": 0.92,
+    "8": 0.95
+   }
+  },
+  {
+   "doctrine": "symmetric",
+   "sampler": "representational_goal_directed",
+   "target": 3.0,
+   "params": {
+    "fuel": 4
+   },
+   "mean": 3.12,
+   "means": {
+    "0": 0.88,
+    "1": 1.43,
+    "2": 1.98,
+    "3": 2.75,
+    "4": 3.12,
+    "5": 3.85,
+    "6": 3.96,
+    "7": 5.81,
+    "8": 4.15
+   }
+  },
+  {
+   "doctrine": "symmetric",
+   "sampler": "representational_goal_directed",
+   "target": 6.0,
+   "params": {
+    "fuel": 7
+   },
+   "mean": 5.81,
+   "means": {
+    "0": 0.88,
+    "1": 1.43,
+    "2": 1.98,
+    "3": 2.75,
+    "4": 3.12,
+    "5": 3.85,
+    "6": 3.96,
+    "7": 5.81,
+    "8": 4.15
+   }
+  },
+  {
+   "doctrine": "symmetric",
+   "sampler": "syntactic_baseline",
+   "target": 3.0,
+   "params": {
+    "fuel": 6
+   },
+   "mean": 3.04,
+   "means": {
+    "0": 0.76,
+    "1": 1.24,
+    "2": 1.52,
+    "3": 1.69,
+    "4": 2.07,
+    "5": 2.14,
+    "6": 3.04,
+    "7": 2.08,
+    "8": 1.97
+   }
+  },
+  {
+   "doctrine": "symmetric",
+   "sampler": "syntactic_baseline",
+   "target": 6.0,
+   "params": {
+    "fuel": 6
+   },
+   "mean": 3.04,
+   "means": {
+    "0": 0.76,
+    "1": 1.24,
+    "2": 1.52,
+    "3": 1.69,
+    "4": 2.07,
+    "5": 2.14,
+    "6": 3.04,
+    "7": 2.08,
+    "8": 1.97
+   }
+  },
+  {
+   "doctrine": "symmetric",
+   "sampler": "syntactic_admissible",
+   "target": 3.0,
+   "params": {
+    "fuel": 7
+   },
+   "mean": 2.98,
+   "means": {
+    "0": 0.84,
+    "1": 1.37,
+    "2": 1.52,
+    "3": 1.91,
+    "4": 1.84,
+    "5": 1.82,
+    "6": 3.69,
+    "7": 2.98,
+    "8": 3.22
+   }
+  },
+  {
+   "doctrine": "symmetric",
+   "sampler": "syntactic_admissible",
+   "target": 6.0,
+   "params": {
+    "fuel": 6
+   },
+   "mean": 3.69,
+   "means": {
+    "0": 0.84,
+    "1": 1.37,
+    "2": 1.52,
+    "3": 1.91,
+    "4": 1.84,
+    "5": 1.82,
+    "6": 3.69,
+    "7": 2.98,
+    "8": 3.22
+   }
+  },
+  {
+   "doctrine": "symmetric",
+   "sampler": "syntactic_grammatical",
+   "target": 3.0,
+   "params": {
+    "size": 32.0
+   },
+   "mean": 2.23,
+   "means": {
+    "1.0": 0.82,
+    "2.0": 1.11,
+    "4.0": 1.11,
+    "8.0": 1.49,
+    "16.0": 1.36,
+    "32.0": 2.23,
+    "64.0": 2.19
+   }
+  },
+  {
+   "doctrine": "symmetric",
+   "sampler": "syntactic_grammatical",
+   "target": 6.0,
+   "params": {
+    "size": 32.0
+   },
+   "mean": 2.23,
+   "means": {
+    "1.0": 0.82,
+    "2.0": 1.11,
+    "4.0": 1.11,
+    "8.0": 1.49,
+    "16.0": 1.36,
+    "32.0": 2.23,
+    "64.0": 2.19
+   }
+  },
+  {
+   "doctrine": "symmetric",
+   "sampler": "structural_typed",
+   "target": 3.0,
+   "params": {
+    "fuel": 4
+   },
+   "mean": 2.58,
+   "means": {
+    "0": 0.71,
+    "1": 1.73,
+    "2": 2.26,
+    "3": 2.39,
+    "4": 2.58,
+    "5": 2.33,
+    "6": 3.43,
+    "7": 5.03,
+    "8": 4.89
+   }
+  },
+  {
+   "doctrine": "symmetric",
+   "sampler": "structural_typed",
+   "target": 6.0,
+   "params": {
+    "fuel": 7
+   },
+   "mean": 5.03,
+   "means": {
+    "0": 0.71,
+    "1": 1.73,
+    "2": 2.26,
+    "3": 2.39,
+    "4": 2.58,
+    "5": 2.33,
+    "6": 3.43,
+    "7": 5.03,
+    "8": 4.89
+   }
+  },
+  {
+   "doctrine": "symmetric",
+   "sampler": "structural_implicit",
+   "target": 3.0,
+   "params": {
+    "fuel": 5
+   },
+   "mean": 3.01,
+   "means": {
+    "0": 0.64,
+    "1": 0.88,
+    "2": 1.65,
+    "3": 1.77,
+    "4": 2.47,
+    "5": 3.01,
+    "6": 3.98,
+    "7": 3.61,
+    "8": 4.67
+   }
+  },
+  {
+   "doctrine": "symmetric",
+   "sampler": "structural_implicit",
+   "target": 6.0,
+   "params": {
+    "fuel": 8
+   },
+   "mean": 4.67,
+   "means": {
+    "0": 0.64,
+    "1": 0.88,
+    "2": 1.65,
+    "3": 1.77,
+    "4": 2.47,
+    "5": 3.01,
+    "6": 3.98,
+    "7": 3.61,
+    "8": 4.67
+   }
+  },
+  {
+   "doctrine": "symmetric",
+   "sampler": "structural_perturbed",
+   "target": 3.0,
+   "params": {
+    "fuel": 4
+   },
+   "mean": 2.63,
+   "means": {
+    "0": 0.86,
+    "1": 1.16,
+    "2": 2.28,
+    "3": 1.91,
+    "4": 2.63,
+    "5": 3.49,
+    "6": 3.37,
+    "7": 3.73,
+    "8": 5.5
+   }
+  },
+  {
+   "doctrine": "symmetric",
+   "sampler": "structural_perturbed",
+   "target": 6.0,
+   "params": {
+    "fuel": 8
+   },
+   "mean": 5.5,
+   "means": {
+    "0": 0.86,
+    "1": 1.16,
+    "2": 2.28,
+    "3": 1.91,
+    "4": 2.63,
+    "5": 3.49,
+    "6": 3.37,
+    "7": 3.73,
+    "8": 5.5
+   }
+  },
+  {
+   "doctrine": "symmetric",
+   "sampler": "syntactic_grammatical_admissible",
+   "target": 3.0,
+   "params": {
+    "size": 16.0
+   },
+   "mean": 3.05,
+   "means": {
+    "1.0": 0.91,
+    "2.0": 1.08,
+    "4.0": 1.62,
+    "8.0": 1.24,
+    "16.0": 3.05,
+    "32.0": 2.46,
+    "64.0": 3.07
+   }
+  },
+  {
+   "doctrine": "symmetric",
+   "sampler": "syntactic_grammatical_admissible",
+   "target": 6.0,
+   "params": {
+    "size": 64.0
+   },
+   "mean": 3.07,
+   "means": {
+    "1.0": 0.91,
+    "2.0": 1.08,
+    "4.0": 1.62,
+    "8.0": 1.24,
+    "16.0": 3.05,
+    "32.0": 2.46,
+    "64.0": 3.07
+   }
+  },
+  {
+   "doctrine": "symmetric",
+   "sampler": "portfolio",
+   "target": 3.0,
+   "params": {
+    "fuel": 7
+   },
+   "mean": 3.39,
+   "means": {
+    "0": 0.87,
+    "1": 1.27,
+    "2": 1.23,
+    "3": 1.8,
+    "4": 2.06,
+    "5": 3.41,
+    "6": 3.45,
+    "7": 3.39,
+    "8": 3.71
+   }
+  },
+  {
+   "doctrine": "symmetric",
+   "sampler": "portfolio",
+   "target": 6.0,
+   "params": {
+    "fuel": 8
+   },
+   "mean": 3.71,
+   "means": {
+    "0": 0.87,
+    "1": 1.27,
+    "2": 1.23,
+    "3": 1.8,
+    "4": 2.06,
+    "5": 3.41,
+    "6": 3.45,
+    "7": 3.39,
+    "8": 3.71
+   }
+  },
+  {
+   "doctrine": "markov",
+   "sampler": "representational_baseline",
+   "target": 3.0,
+   "params": {
+    "fuel": 8
+   },
+   "mean": 0.95,
+   "means": {
+    "0": 0.79,
+    "1": 0.89,
+    "2": 0.89,
+    "3": 0.92,
+    "4": 0.88,
+    "5": 0.9,
+    "6": 0.89,
+    "7": 0.92,
+    "8": 0.95
+   }
+  },
+  {
+   "doctrine": "markov",
+   "sampler": "representational_baseline",
+   "target": 6.0,
+   "params": {
+    "fuel": 8
+   },
+   "mean": 0.95,
+   "means": {
+    "0": 0.79,
+    "1": 0.89,
+    "2": 0.89,
+    "3": 0.92,
+    "4": 0.88,
+    "5": 0.9,
+    "6": 0.89,
+    "7": 0.92,
+    "8": 0.95
+   }
+  },
+  {
+   "doctrine": "markov",
+   "sampler": "representational_goal_directed",
+   "target": 3.0,
+   "params": {
+    "fuel": 4
+   },
+   "mean": 3.12,
+   "means": {
+    "0": 0.88,
+    "1": 1.43,
+    "2": 1.98,
+    "3": 2.75,
+    "4": 3.12,
+    "5": 3.85,
+    "6": 3.96,
+    "7": 5.81,
+    "8": 4.15
+   }
+  },
+  {
+   "doctrine": "markov",
+   "sampler": "representational_goal_directed",
+   "target": 6.0,
+   "params": {
+    "fuel": 7
+   },
+   "mean": 5.81,
+   "means": {
+    "0": 0.88,
+    "1": 1.43,
+    "2": 1.98,
+    "3": 2.75,
+    "4": 3.12,
+    "5": 3.85,
+    "6": 3.96,
+    "7": 5.81,
+    "8": 4.15
+   }
+  },
+  {
+   "doctrine": "markov",
+   "sampler": "syntactic_baseline",
+   "target": 3.0,
+   "params": {
+    "fuel": 7
+   },
+   "mean": 2.22,
+   "means": {
+    "0": 0.68,
+    "1": 1.04,
+    "2": 1.54,
+    "3": 1.41,
+    "4": 1.85,
+    "5": 1.72,
+    "6": 1.27,
+    "7": 2.22,
+    "8": 2.2
+   }
+  },
+  {
+   "doctrine": "markov",
+   "sampler": "syntactic_baseline",
+   "target": 6.0,
+   "params": {
+    "fuel": 7
+   },
+   "mean": 2.22,
+   "means": {
+    "0": 0.68,
+    "1": 1.04,
+    "2": 1.54,
+    "3": 1.41,
+    "4": 1.85,
+    "5": 1.72,
+    "6": 1.27,
+    "7": 2.22,
+    "8": 2.2
+   }
+  },
+  {
+   "doctrine": "markov",
+   "sampler": "syntactic_admissible",
+   "target": 3.0,
+   "params": {
+    "fuel": 8
+   },
+   "mean": 2.79,
+   "means": {
+    "0": 0.76,
+    "1": 1.26,
+    "2": 1.52,
+    "3": 1.78,
+    "4": 1.79,
+    "5": 2.01,
+    "6": 1.57,
+    "7": 1.87,
+    "8": 2.79
+   }
+  },
+  {
+   "doctrine": "markov",
+   "sampler": "syntactic_admissible",
+   "target": 6.0,
+   "params": {
+    "fuel": 8
+   },
+   "mean": 2.79,
+   "means": {
+    "0": 0.76,
+    "1": 1.26,
+    "2": 1.52,
+    "3": 1.78,
+    "4": 1.79,
+    "5": 2.01,
+    "6": 1.57,
+    "7": 1.87,
+    "8": 2.79
+   }
+  },
+  {
+   "doctrine": "markov",
+   "sampler": "syntactic_grammatical",
+   "target": 3.0,
+   "params": {
+    "size": 32.0
+   },
+   "mean": 2.25,
+   "means": {
+    "1.0": 0.78,
+    "2.0": 0.89,
+    "4.0": 1.1,
+    "8.0": 1.6,
+    "16.0": 1.75,
+    "32.0": 2.25,
+    "64.0": 2.07
+   }
+  },
+  {
+   "doctrine": "markov",
+   "sampler": "syntactic_grammatical",
+   "target": 6.0,
+   "params": {
+    "size": 32.0
+   },
+   "mean": 2.25,
+   "means": {
+    "1.0": 0.78,
+    "2.0": 0.89,
+    "4.0": 1.1,
+    "8.0": 1.6,
+    "16.0": 1.75,
+    "32.0": 2.25,
+    "64.0": 2.07
+   }
+  },
+  {
+   "doctrine": "markov",
+   "sampler": "structural_typed",
+   "target": 3.0,
+   "params": {
+    "fuel": 3
+   },
+   "mean": 2.96,
+   "means": {
+    "0": 0.91,
+    "1": 1.23,
+    "2": 2.4,
+    "3": 2.96,
+    "4": 3.21,
+    "5": 2.6,
+    "6": 4.09,
+    "7": 4.9,
+    "8": 5.73
+   }
+  },
+  {
+   "doctrine": "markov",
+   "sampler": "structural_typed",
+   "target": 6.0,
+   "params": {
+    "fuel": 8
+   },
+   "mean": 5.73,
+   "means": {
+    "0": 0.91,
+    "1": 1.23,
+    "2": 2.4,
+    "3": 2.96,
+    "4": 3.21,
+    "5": 2.6,
+    "6": 4.09,
+    "7": 4.9,
+    "8": 5.73
+   }
+  },
+  {
+   "doctrine": "markov",
+   "sampler": "structural_implicit",
+   "target": 3.0,
+   "params": {
+    "fuel": 5
+   },
+   "mean": 2.58,
+   "means": {
+    "0": 0.5,
+    "1": 0.84,
+    "2": 1.52,
+    "3": 2.22,
+    "4": 2.08,
+    "5": 2.58,
+    "6": 3.55,
+    "7": 3.49,
+    "8": 5.06
+   }
+  },
+  {
+   "doctrine": "markov",
+   "sampler": "structural_implicit",
+   "target": 6.0,
+   "params": {
+    "fuel": 8
+   },
+   "mean": 5.06,
+   "means": {
+    "0": 0.5,
+    "1": 0.84,
+    "2": 1.52,
+    "3": 2.22,
+    "4": 2.08,
+    "5": 2.58,
+    "6": 3.55,
+    "7": 3.49,
+    "8": 5.06
+   }
+  },
+  {
+   "doctrine": "markov",
+   "sampler": "structural_perturbed",
+   "target": 3.0,
+   "params": {
+    "fuel": 3
+   },
+   "mean": 3.15,
+   "means": {
+    "0": 0.7,
+    "1": 1.19,
+    "2": 1.81,
+    "3": 3.15,
+    "4": 3.4,
+    "5": 3.45,
+    "6": 4.22,
+    "7": 5.77,
+    "8": 4.98
+   }
+  },
+  {
+   "doctrine": "markov",
+   "sampler": "structural_perturbed",
+   "target": 6.0,
+   "params": {
+    "fuel": 7
+   },
+   "mean": 5.77,
+   "means": {
+    "0": 0.7,
+    "1": 1.19,
+    "2": 1.81,
+    "3": 3.15,
+    "4": 3.4,
+    "5": 3.45,
+    "6": 4.22,
+    "7": 5.77,
+    "8": 4.98
+   }
+  },
+  {
+   "doctrine": "markov",
+   "sampler": "syntactic_grammatical_admissible",
+   "target": 3.0,
+   "params": {
+    "size": 64.0
+   },
+   "mean": 2.58,
+   "means": {
+    "1.0": 0.93,
+    "2.0": 0.98,
+    "4.0": 1.2,
+    "8.0": 2,
+    "16.0": 1.83,
+    "32.0": 2.04,
+    "64.0": 2.58
+   }
+  },
+  {
+   "doctrine": "markov",
+   "sampler": "syntactic_grammatical_admissible",
+   "target": 6.0,
+   "params": {
+    "size": 64.0
+   },
+   "mean": 2.58,
+   "means": {
+    "1.0": 0.93,
+    "2.0": 0.98,
+    "4.0": 1.2,
+    "8.0": 2,
+    "16.0": 1.83,
+    "32.0": 2.04,
+    "64.0": 2.58
+   }
+  },
+  {
+   "doctrine": "markov",
+   "sampler": "portfolio",
+   "target": 3.0,
+   "params": {
+    "fuel": 7
+   },
+   "mean": 3.19,
+   "means": {
+    "0": 0.76,
+    "1": 1.23,
+    "2": 2.03,
+    "3": 2.23,
+    "4": 2.25,
+    "5": 3.49,
+    "6": 3.43,
+    "7": 3.19,
+    "8": 3.78
+   }
+  },
+  {
+   "doctrine": "markov",
+   "sampler": "portfolio",
+   "target": 6.0,
+   "params": {
+    "fuel": 8
+   },
+   "mean": 3.78,
+   "means": {
+    "0": 0.76,
+    "1": 1.23,
+    "2": 2.03,
+    "3": 2.23,
+    "4": 2.25,
+    "5": 3.49,
+    "6": 3.43,
+    "7": 3.19,
+    "8": 3.78
+   }
+  },
+  {
+   "doctrine": "compact",
+   "sampler": "representational_baseline",
+   "target": 3.0,
+   "params": {
+    "fuel": 2
+   },
+   "mean": 0.65,
+   "means": {
+    "0": 0.43,
+    "1": 0.49,
+    "2": 0.65,
+    "3": 0.47,
+    "4": 0.54,
+    "5": 0.58,
+    "6": 0.57,
+    "7": 0.47,
+    "8": 0.41
+   }
+  },
+  {
+   "doctrine": "compact",
+   "sampler": "representational_baseline",
+   "target": 6.0,
+   "params": {
+    "fuel": 2
+   },
+   "mean": 0.65,
+   "means": {
+    "0": 0.43,
+    "1": 0.49,
+    "2": 0.65,
+    "3": 0.47,
+    "4": 0.54,
+    "5": 0.58,
+    "6": 0.57,
+    "7": 0.47,
+    "8": 0.41
+   }
+  },
+  {
+   "doctrine": "compact",
+   "sampler": "representational_goal_directed",
+   "target": 3.0,
+   "params": {
+    "fuel": 8
+   },
+   "mean": 3.37,
+   "means": {
+    "0": 0.55,
+    "1": 0.73,
+    "2": 1.24,
+    "3": 1.71,
+    "4": 1.72,
+    "5": 2.29,
+    "6": 2.4,
+    "7": 2.16,
+    "8": 3.37
+   }
+  },
+  {
+   "doctrine": "compact",
+   "sampler": "representational_goal_directed",
+   "target": 6.0,
+   "params": {
+    "fuel": 8
+   },
+   "mean": 3.37,
+   "means": {
+    "0": 0.55,
+    "1": 0.73,
+    "2": 1.24,
+    "3": 1.71,
+    "4": 1.72,
+    "5": 2.29,
+    "6": 2.4,
+    "7": 2.16,
+    "8": 3.37
+   }
+  },
+  {
+   "doctrine": "compact",
+   "sampler": "syntactic_baseline",
+   "target": 3.0,
+   "params": {
+    "fuel": 8
+   },
+   "mean": 2.65,
+   "means": {
+    "0": 0.09,
+    "1": 0.72,
+    "2": 1.51,
+    "3": 1.34,
+    "4": 1.59,
+    "5": 2.46,
+    "6": 2.48,
+    "7": 2.28,
+    "8": 2.65
+   }
+  },
+  {
+   "doctrine": "compact",
+   "sampler": "syntactic_baseline",
+   "target": 6.0,
+   "params": {
+    "fuel": 8
+   },
+   "mean": 2.65,
+   "means": {
+    "0": 0.09,
+    "1": 0.72,
+    "2": 1.51,
+    "3": 1.34,
+    "4": 1.59,
+    "5": 2.46,
+    "6": 2.48,
+    "7": 2.28,
+    "8": 2.65
+   }
+  },
+  {
+   "doctrine": "compact",
+   "sampler": "syntactic_admissible",
+   "target": 3.0,
+   "params": {
+    "fuel": 7
+   },
+   "mean": 2.63,
+   "means": {
+    "0": 0.16,
+    "1": 0.64,
+    "2": 1.53,
+    "3": 1.52,
+    "4": 1.43,
+    "5": 2.07,
+    "6": 1.51,
+    "7": 2.63,
+    "8": 2.55
+   }
+  },
+  {
+   "doctrine": "compact",
+   "sampler": "syntactic_admissible",
+   "target": 6.0,
+   "params": {
+    "fuel": 7
+   },
+   "mean": 2.63,
+   "means": {
+    "0": 0.16,
+    "1": 0.64,
+    "2": 1.53,
+    "3": 1.52,
+    "4": 1.43,
+    "5": 2.07,
+    "6": 1.51,
+    "7": 2.63,
+    "8": 2.55
+   }
+  },
+  {
+   "doctrine": "compact",
+   "sampler": "syntactic_grammatical",
+   "target": 3.0,
+   "params": {
+    "size": 8.0
+   },
+   "mean": 0.88,
+   "means": {
+    "1.0": 0.45,
+    "2.0": 0.49,
+    "4.0": 0.65,
+    "8.0": 0.88,
+    "16.0": 0.86,
+    "32.0": 0.69,
+    "64.0": 0.73
+   }
+  },
+  {
+   "doctrine": "compact",
+   "sampler": "syntactic_grammatical",
+   "target": 6.0,
+   "params": {
+    "size": 8.0
+   },
+   "mean": 0.88,
+   "means": {
+    "1.0": 0.45,
+    "2.0": 0.49,
+    "4.0": 0.65,
+    "8.0": 0.88,
+    "16.0": 0.86,
+    "32.0": 0.69,
+    "64.0": 0.73
+   }
+  },
+  {
+   "doctrine": "compact",
+   "sampler": "structural_typed",
+   "target": 3.0,
+   "params": {
+    "fuel": 4
+   },
+   "mean": 2.7,
+   "means": {
+    "0": 0.46,
+    "1": 1.11,
+    "2": 1.25,
+    "3": 1.5,
+    "4": 2.7,
+    "5": 3.43,
+    "6": 3.44,
+    "7": 4.33,
+    "8": 5.52
+   }
+  },
+  {
+   "doctrine": "compact",
+   "sampler": "structural_typed",
+   "target": 6.0,
+   "params": {
+    "fuel": 8
+   },
+   "mean": 5.52,
+   "means": {
+    "0": 0.46,
+    "1": 1.11,
+    "2": 1.25,
+    "3": 1.5,
+    "4": 2.7,
+    "5": 3.43,
+    "6": 3.44,
+    "7": 4.33,
+    "8": 5.52
+   }
+  },
+  {
+   "doctrine": "compact",
+   "sampler": "structural_implicit",
+   "target": 3.0,
+   "params": {
+    "fuel": 7
+   },
+   "mean": 3.13,
+   "means": {
+    "0": 0.4,
+    "1": 1,
+    "2": 1.41,
+    "3": 2,
+    "4": 3.17,
+    "5": 3.9,
+    "6": 3.63,
+    "7": 3.13,
+    "8": 5.51
+   }
+  },
+  {
+   "doctrine": "compact",
+   "sampler": "structural_implicit",
+   "target": 6.0,
+   "params": {
+    "fuel": 8
+   },
+   "mean": 5.51,
+   "means": {
+    "0": 0.4,
+    "1": 1,
+    "2": 1.41,
+    "3": 2,
+    "4": 3.17,
+    "5": 3.9,
+    "6": 3.63,
+    "7": 3.13,
+    "8": 5.51
+   }
+  },
+  {
+   "doctrine": "compact",
+   "sampler": "structural_perturbed",
+   "target": 3.0,
+   "params": {
+    "fuel": 4
+   },
+   "mean": 3.17,
+   "means": {
+    "0": 0.53,
+    "1": 1.17,
+    "2": 1.62,
+    "3": 1.79,
+    "4": 3.17,
+    "5": 2.38,
+    "6": 3.22,
+    "7": 4.01,
+    "8": 3.43
+   }
+  },
+  {
+   "doctrine": "compact",
+   "sampler": "structural_perturbed",
+   "target": 6.0,
+   "params": {
+    "fuel": 7
+   },
+   "mean": 4.01,
+   "means": {
+    "0": 0.53,
+    "1": 1.17,
+    "2": 1.62,
+    "3": 1.79,
+    "4": 3.17,
+    "5": 2.38,
+    "6": 3.22,
+    "7": 4.01,
+    "8": 3.43
+   }
+  },
+  {
+   "doctrine": "compact",
+   "sampler": "syntactic_grammatical_admissible",
+   "target": 3.0,
+   "params": {
+    "size": 8.0
+   },
+   "mean": 1.18,
+   "means": {
+    "1.0": 0.74,
+    "2.0": 0.89,
+    "4.0": 1.14,
+    "8.0": 1.18,
+    "16.0": 1.15,
+    "32.0": 1.15,
+    "64.0": 1.15
+   }
+  },
+  {
+   "doctrine": "compact",
+   "sampler": "syntactic_grammatical_admissible",
+   "target": 6.0,
+   "params": {
+    "size": 8.0
+   },
+   "mean": 1.18,
+   "means": {
+    "1.0": 0.74,
+    "2.0": 0.89,
+    "4.0": 1.14,
+    "8.0": 1.18,
+    "16.0": 1.15,
+    "32.0": 1.15,
+    "64.0": 1.15
+   }
+  },
+  {
+   "doctrine": "compact",
+   "sampler": "portfolio",
+   "target": 3.0,
+   "params": {
+    "fuel": 7
+   },
+   "mean": 3.22,
+   "means": {
+    "0": 0.44,
+    "1": 1.08,
+    "2": 1.22,
+    "3": 1.88,
+    "4": 1.72,
+    "5": 2.66,
+    "6": 2.71,
+    "7": 3.22,
+    "8": 3.28
+   }
+  },
+  {
+   "doctrine": "compact",
+   "sampler": "portfolio",
+   "target": 6.0,
+   "params": {
+    "fuel": 8
+   },
+   "mean": 3.28,
+   "means": {
+    "0": 0.44,
+    "1": 1.08,
+    "2": 1.22,
+    "3": 1.88,
+    "4": 1.72,
+    "5": 2.66,
+    "6": 2.71,
+    "7": 3.22,
+    "8": 3.28
+   }
+  }
+ ]
+}

@@ -19,7 +19,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   and on symmetric
   ones `structural_typed` (`Hypergraph.draw_typed` and
   `draw_typed_bijective`), `structural_implicit`, formerly
-  `quotient_strategy`, and `structural_perturbed`; `sampling/` compares
+  `quotient_strategy`, `structural_perturbed` and `portfolio`, and
+  `syntactic_grammatical_admissible` everywhere; `sampling/` compares
   them. `search` and `Rule.strategy` build each strategy once, which
   samples 2.5 times faster.
 - `testable.Rule` and `@rule`, inference rules stated like laws on each

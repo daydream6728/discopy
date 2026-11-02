@@ -1305,22 +1305,33 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
 
     @classmethod
     def strategy_syntactic_grammatical(  # pylint: disable=too-many-arguments
-            # those of search, and a size
-            cls, *, dom=None, cod=None, fuel=None, within=None, size=None):
+            # those of search, a size and the rules left out
+            cls, *, dom=None, cod=None, fuel=None, within=None, size=None,
+            without=()):
         """
         Sample terms by the Boltzmann sampler of the grammar of their
         derivations of width at most :attr:`grammar_width` over
         :attr:`grammar_atoms`, tuned to an expected ``size``, by default
-        :data:`discopy.testable.SIZE`, see :class:`discopy.boltzmann.Grammar`.
-        The ``fuel`` is ignored: the size is tuned instead.
+        :data:`discopy.testable.SIZE`, see :class:`discopy.boltzmann.Grammar`,
+        the rules named ``without`` left out. The ``fuel`` is ignored: the
+        size is tuned instead.
         """
         # pylint: disable=unused-argument  # the size bounds terms, not fuel
         grammar = boltzmann.Grammar.compile(
             cls, cls.grammar_atoms, cls.grammar_width, within,
-            cls.grammar_signature)
+            cls.grammar_signature, tuple(without))
         return grammar.strategy(
             dom=dom, cod=cod, size=testable.SIZE if size is None else size,
             exact=cls.grammar_exact)
+
+    @classmethod
+    def strategy_syntactic_grammatical_admissible(cls, **params):
+        """
+        Sample terms by :meth:`strategy_syntactic_grammatical` without the
+        :attr:`admissible` rules, so that fewer derivations draw one term.
+        """
+        return cls.strategy_syntactic_grammatical(
+            without=cls.admissible, **params)
 
     @classmethod
     def layer_box_strategy(cls, *, dom=None, within=None):

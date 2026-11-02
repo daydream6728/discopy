@@ -22,6 +22,8 @@ SHORT = {
     "structural_typed": "3a",
     "structural_implicit": "3b",
     "structural_perturbed": "3p",
+    "syntactic_grammatical_admissible": "2bc",
+    "portfolio": "mix",
 }
 
 
@@ -84,7 +86,7 @@ for each class of plumbing: none, permutations, functions and pairings.
 
 ```python {.marimo hide_code="true"}
 def throughput_figure(doctrine):
-    data = rows("throughput", doctrine=doctrine)
+    data = rows("throughput", regime="natural", doctrine=doctrine)
     names = [r["sampler"] for r in data if r["boundary"] == "free"]
     figure, (left, right) = plt.subplots(1, 2, figsize=(9, 2.6))
     for offset, boundary in ((-0.2, "free"), (0.2, "fixed")):
@@ -104,19 +106,19 @@ def throughput_figure(doctrine):
     return figure
 
 
-symmetric_rows = rows("throughput", doctrine="symmetric")
-fixed_1a = [r for r in rows("throughput", sampler="representational_baseline",
+symmetric_rows = rows("throughput", regime="natural", doctrine="symmetric")
+fixed_1a = [r for r in rows("throughput", regime="natural", sampler="representational_baseline",
                             boundary="fixed")]
 overruns = [r["gave_up"].get("overrun", 0) / r["cases"]
-            for r in load("throughput")["rows"]
+            for r in rows("throughput", regime="natural")
             if r["sampler"] != "representational_baseline"]
 mo.vstack([
     mo.md("## 2. Validity and speed"),
     throughput_figure("symmetric") if symmetric_rows else mo.md("no results"),
     mo.md(f"""
-- **1a never meets a fixed boundary**: {sum(r['valid'] for r in fixed_1a)}
-  valid diagrams in {sum(r['cases'] for r in fixed_1a)} test cases over the
-  four doctrines. With free boundaries it keeps only lists of 0 to 2 layers.
+- **1a almost never meets a fixed boundary**:
+  {sum(r['valid'] for r in fixed_1a)} valid diagrams in
+  {sum(r['cases'] for r in fixed_1a)} test cases over the four doctrines. With free boundaries it keeps only lists of 0 to 2 layers.
 - Every other sampler meets its boundary by construction, gluing a box when
   it must; what Hypothesis still gives up on is mostly its own **overruns**,
   {percent(min(overruns, default=0))} to {percent(max(overruns, default=0))}
@@ -137,7 +139,7 @@ def size_table(doctrine, boundary):
         "other structure": round(mean(r, "structural"), 1),
         "distinct": percent(r["distinct"] / max(r["valid"], 1)),
         "up to coherence": percent(r["coherent"] / max(r["valid"], 1)),
-    } for r in rows("throughput", doctrine=doctrine, boundary=boundary)]
+    } for r in rows("throughput", regime="natural", doctrine=doctrine, boundary=boundary)]
 
 
 mo.vstack([
@@ -158,14 +160,14 @@ their hypergraphs (a Weisfeiler-Lehman hash).
 
 ```python {.marimo hide_code="true"}
 def row(doctrine, sampler, boundary="fixed"):
-    found = rows("throughput", doctrine=doctrine, sampler=sampler,
+    found = rows("throughput", regime="natural", doctrine=doctrine, sampler=sampler,
                  boundary=boundary)
     return found[0] if found else {"sizes": [], "valid": 1, "coherent": 0,
                                    "distinct": 0}
 
 
 compact_3a = row("compact", "structural_typed")
-fixed = rows("throughput", boundary="fixed")
+fixed = rows("throughput", regime="natural", boundary="fixed")
 
 
 def merged(sampler):
@@ -174,7 +176,7 @@ def merged(sampler):
 
 
 def tail(sampler):
-    return max((s["boxes"] for r in rows("throughput", sampler=sampler)
+    return max((s["boxes"] for r in rows("throughput", regime="natural", sampler=sampler)
                 for s in r["sizes"]), default=0)
 
 
@@ -200,6 +202,70 @@ mo.md(f"""
   of its draws repeat another, since a Boltzmann distribution puts most of
   its mass on the smallest terms, see section 4.
 """)
+```
+
+<!---->
+
+```python {.marimo hide_code="true"}
+calibration = load("calibration")["rows"]
+
+
+def reached(sampler, target, doctrine="symmetric"):
+    found = [r for r in calibration if r["sampler"] == sampler
+             and r["target"] == target and r["doctrine"] == doctrine]
+    return found[0] if found else None
+
+
+def matched_row(sampler, regime, doctrine="symmetric"):
+    found = rows("throughput", doctrine=doctrine, sampler=sampler,
+                 regime=regime, boundary="free")
+    return found[0] if found else None
+
+
+def matched_table():
+    table = []
+    for sampler in dict.fromkeys(r["sampler"] for r in calibration):
+        three, six = reached(sampler, 3.), reached(sampler, 6.)
+        natural = matched_row(sampler, "natural")
+        at_three = matched_row(sampler, "matched 3")
+        if not (three and natural and at_three):
+            continue
+        table.append({
+            "sampler": SHORT[sampler],
+            "own mean": round(mean(natural, "boxes"), 1),
+            "largest mean": round(max(three["means"].values()), 1),
+            "for 3 boxes": ", ".join(f"{k} = {v:g}"
+                                     for k, v in three["params"].items()),
+            "mean there": round(mean(at_three, "boxes"), 1),
+            "up to coherence there": percent(
+                at_three["coherent"] / max(at_three["valid"], 1)),
+        })
+    return table
+
+
+short_of = [SHORT[r["sampler"]] for r in calibration
+            if r["doctrine"] == "symmetric" and r["target"] == 3.
+            and abs(r["mean"] - 3.) > .5]
+mo.vstack([
+    mo.md("## Matched sizes: symmetric diagrams with free boundaries"),
+    mo.ui.table(matched_table(), selection=None,
+                show_column_summaries=False) if calibration
+    else mo.md("not run yet"),
+    mo.md(f"""
+Each sampler has one knob for its size, `fuel`, or the expected number of
+nodes for 2c and 2bc; the calibration tries each value on free boundaries
+and keeps the one whose mean number of boxes is nearest the target.
+
+- **The knobs have a short range**: a derivation stops at a generator with a
+  fixed probability at every node, so `fuel` deepens the tree without
+  growing it much, and Hypothesis cuts the tail of 2c whatever its size, so
+  {listed(short_of)} cannot reach a mean of 3 boxes and no sampler but the
+  layered and structural ones comes near 6.
+- **Matching sizes is therefore a control, not a regime**: it tells whether
+  a sampler finds a bug because of what it draws or because it draws more,
+  see the planted bugs.
+"""),
+])
 ```
 
 <!---->
@@ -411,32 +477,49 @@ mo.md(f"""
 
 ```python {.marimo hide_code="true"}
 mutant_rows = load("mutants")["rows"]
-names = [m for m in dict.fromkeys(
-    r["mutant"] for r in mutant_rows if r["mutant"])]
+names = list(dict.fromkeys(r["mutant"] for r in mutant_rows))
 samplers = list(dict.fromkeys(r["sampler"] for r in mutant_rows))
+seeds = len({r["seed"] for r in mutant_rows})
+
+
+def runs(mutant, sampler, regime="natural"):
+    return [r for r in mutant_rows if r["mutant"] == mutant
+            and r["sampler"] == sampler and r["regime"] == regime]
+
+
+def rate(mutant, sampler, regime="natural", outcome="kill"):
+    found = runs(mutant, sampler, regime)
+    return sum(bool(r[outcome]) for r in found) / len(found)\
+        if found else float("nan")
 
 
 def cell(mutant, sampler):
-    found = [r for r in mutant_rows
-             if r["mutant"] == mutant and r["sampler"] == sampler]
-    if not found or not found[0]["kill"]:
-        return "—"
-    kill = found[0]["kill"]
-    return f"{kill['examples']} ({kill['law']})" if not kill["crash"]\
-        else f"crash: {kill['crash']}"
+    found = runs(mutant, sampler)
+    kills = [r["examples"] for r in found if r["kill"]]
+    crashes = sum(bool(r["crash"]) for r in found)
+    text = f"{len(kills)}/{len(found)}"
+    if kills:
+        text += f" · {statistics.median(kills):g} ex."
+    if crashes:
+        text += f" · {crashes} crash"
+    return text
 
 
 mo.vstack([
-    mo.md("## 7. Planted bugs: examples drawn until the first failing law"),
+    mo.md("## 7. Planted bugs: kills over seeds, examples until the first"),
     mo.ui.table([{"mutant": m, **{SHORT[s]: cell(m, s) for s in samplers}}
                  for m in names], selection=None,
                 show_column_summaries=False)
     if mutant_rows else mo.md("not run yet"),
-    mo.md("""
-Each mutant rewrites one line of DisCoPy (`mutants.py`). For each sampler,
-the laws of symmetric diagrams are checked in order, 30 examples each, and
-the first that fails kills the mutant; a law that fails without any mutant
-under that sampler is left out. — means no law failed.
+    mo.md(f"""
+Each mutant rewrites one line of DisCoPy (`mutants.py`). Under each sampler
+and each of {seeds} seeds, the laws of symmetric diagrams are searched in
+order, {load("mutants")["mode"] == "quick" and 30 or 300} examples each, for
+arguments on which a law **fails with the mutant and holds without it**: the
+first such law kills the mutant. *k/n* is the share of seeds that killed it,
+then the median number of examples drawn until then; a *crash* is the
+sampler itself failing on the mutated code, which counts as no kill. All
+samplers draw their types over the atoms `a` and `b`.
 """),
 ])
 ```
@@ -452,89 +535,116 @@ under that sampler is left out. — means no law failed.
 | `identity_string` | missing edge case | the identity prints as the empty string | `Id(x)` |
 
 ```python {.marimo hide_code="true"}
-def shrunk(mutant):
-    out = []
-    for r in mutant_rows:
-        if r["mutant"] == mutant and r["kill"] and not r["kill"]["crash"]:
-            terms = r["kill"]["shrunk"]
-            out.append((SHORT[r["sampler"]],
-                        sum(t["boxes"] + t["structural"] for t in terms),
-                        sum(t["layers"] for t in terms)))
-    return out
+def killed(sampler, regime="natural"):
+    rates = [rate(m, sampler, regime) for m in names]
+    return sum(rates) / len(rates) if rates else float("nan")
 
 
-mo.md("Shrunk by Hypothesis, as (sampler, boxes, layers) summed over the "
-      "terms of the failing law: " + "; ".join(
-          f"**{m}** " + ", ".join(f"{s} {b}/{l}" for s, b, l in shrunk(m))
-          for m in names) if mutant_rows else "not run yet")
+def detected(sampler, regime="natural"):
+    rates = [rate(m, sampler, regime) + rate(m, sampler, regime, "crash")
+             for m in names]
+    return sum(rates) / len(rates) if rates else float("nan")
+
+
+def shrinking(sampler):
+    kills = [r["kill"] for r in mutant_rows if r["sampler"] == sampler
+             and r["regime"] == "natural" and r["kill"]]
+    if not kills:
+        return {}
+    return {
+        "shrunk terms": statistics.median(
+            sum(t["boxes"] + t["structural"] + t["layers"]
+                for t in k["shrunk"]) for k in kills),
+        "shrinking calls": statistics.median(
+            k["shrink_calls"] for k in kills),
+        "shrinking seconds": round(statistics.median(
+            k["shrink_seconds"] for k in kills), 2)}
+
+
+def glue(sampler):
+    asked = sum(r["glue"]["asked"] for r in mutant_rows
+                if r["sampler"] == sampler)
+    glued = sum(r["glue"]["glued"] for r in mutant_rows
+                if r["sampler"] == sampler)
+    return glued / asked if asked else None
+
+
+mo.vstack([
+    mo.md("### Per sampler: bugs killed, at its own size and at 3 boxes"),
+    mo.ui.table([{
+        "sampler": SHORT[s],
+        "killed": percent(killed(s)),
+        "detected": percent(detected(s)),
+        "killed at 3 boxes": percent(killed(s, "matched 3")),
+        **shrinking(s),
+        **({"boundaries glued": percent(glue(s))}
+           if glue(s) is not None else {}),
+    } for s in samplers], selection=None, show_column_summaries=False)
+    if mutant_rows else mo.md("not run yet"),
+    mo.md("""
+*Killed* is the mean kill rate over the mutants, *detected* counts the
+crashes of the sampler too, which a run of the matrix would report without a
+counterexample to the law; *shrunk terms* counts the
+boxes, structural boxes and layers of the shrunk arguments, *shrinking
+calls* the evaluations of the law Hypothesis spent shrinking them, both
+medians over kills. *Boundaries glued* is, for the samplers with a grammar,
+the share of the boundaries the laws asked for that it does not derive.
+"""),
+])
 ```
 
 ```python {.marimo hide_code="true"}
-def killers(mutant, crash=None):
-    return [SHORT[r["sampler"]] for r in mutant_rows
-            if r["mutant"] == mutant and r["kill"]
-            and (crash is None or bool(r["kill"]["crash"]) == crash)]
-
-
-def survivors(mutant):
-    return [SHORT[r["sampler"]] for r in mutant_rows
-            if r["mutant"] == mutant and not r["kill"]]
-
-
-def natural(sampler):
-    return next((r["fails"] for r in mutant_rows if r["mutant"] is None
-                 and r["sampler"] == sampler), [])
-
-
 def listed(xs):
     return ", ".join(xs) or "none"
 
 
-def sizes(mutant):
-    return {s: (b, l) for s, b, l in shrunk(mutant)}
+def always(mutant):
+    return [SHORT[s] for s in samplers if rate(mutant, s) == 1]
 
 
-def largest(mutant):
-    found = sizes(mutant)
-    if not found:
-        return "none"
-    sampler = max(found, key=lambda s: sum(found[s]))
-    boxes, layers = found[sampler]
-    return f"{boxes} boxes over {layers} layers under {sampler}"
+def never(mutant):
+    return [SHORT[s] for s in samplers if rate(mutant, s) == 0]
 
 
+def crashing():
+    return sorted({SHORT[r["sampler"]] for r in mutant_rows if r["crash"]})
+
+
+best = max(samplers, key=killed) if samplers else None
 mo.md(f"""
 ## Planted bugs: what we read
 
-- **Two boxes in a row** (`layer_overlap`) are found by
-  {listed(killers('layer_overlap'))}; Hypothesis shrinks it to `f >> f`, the
-  hand minimum, wherever the law fails rather than the sampler.
+- **Two boxes in a row** (`layer_overlap`) are killed every time by
+  {listed(always('layer_overlap'))}: the commonest shape there is.
 - **A permutation that is not an involution** (`permutation_convention`) is
-  found by {listed(killers('permutation_convention'))} and missed by
-  {listed(survivors('permutation_convention'))}, which never draw a cycle of
-  three wires: their swaps are transpositions. The structural samplers shrink
-  it to a cycle between two or three boxes; the largest shrunk counterexample,
-  {largest('permutation_convention')}, is far from the lone `Permutation` by
-  hand.
-- **A layer of two boxes** (`layer_offsets`) is found by
-  {listed(killers('layer_offsets'))}; only 3a shrinks it to the hand minimum,
-  one layer `f @ f`, since only 3a draws such a layer itself: the others reach
-  it through the foliation inside a law, the largest at
-  {largest('layer_offsets')}.
-- **A trace on the left** (`left_trace`) is found by
-  {listed(killers('left_trace'))}, mostly through the law of yanking, which
-  builds a left trace itself: whatever the sampler draws, the law checks it.
-- **One bug hides another**: `identity_string` is missed by
-  {listed(survivors('identity_string'))}, under which `str_transparency`
-  already fails, so the only law that would catch it is out of the race.
-- **A bug in the code a sampler runs crashes the sampler**: under
-  {listed(sorted(set(sum((killers(m, True) for m in names), []))))}, reading
-  a hypergraph back is part of drawing, so a mutant there is found as a crash
-  of the sampler, with no law and no shrinking.
+  never killed by {listed(never('permutation_convention'))}, which never
+  draw a cycle of three wires: their swaps are transpositions.
+- **A layer of two boxes** (`layer_offsets`) is killed every time by
+  {listed(always('layer_offsets'))} and never by
+  {listed(never('layer_offsets'))}.
+- **A trace on the left** (`left_trace`) is killed every time by
+  {listed(always('left_trace'))}: the law of yanking builds a left trace
+  itself, whatever the sampler draws.
+- **The identity printed as the empty string** (`identity_string`) is
+  killed every time by {listed(always('identity_string'))}; counting a
+  failure only when the code without the mutant passes no longer lets a law
+  that already fails hide it.
+- **A bug in the code a sampler runs crashes the sampler**, under
+  {listed(crashing())}: reading a hypergraph back is part of drawing, so the
+  mutant breaks the sampler before any law sees a term.
+- **The portfolio** kills {percent(killed('portfolio'))} of the mutants on
+  average and detects {percent(detected('portfolio'))}, the best single
+  sampler {SHORT.get(best, best)} kills {percent(killed(best)) if best else ''}:
+  a third of its draws from 3a is enough to inherit both its cycles of wires
+  and its crashes.
+- **The grammar is the weakest on the layer bugs**: 2c kills
+  {percent(killed('syntactic_grammatical'))} of the mutants and 2bc
+  {percent(killed('syntactic_grammatical_admissible'))}, since most of their
+  draws are one or two boxes, and matching sizes helps little, since their
+  tail is what Hypothesis cuts.
 - **A first attempt at interlocked traces was an equivalent mutant**:
   feeding back a trace of two wires crossed changes nothing, since a trace
-  of a symmetric diagram reaches the hypergraph one wire at a time. No
-  sampler and no law can find a bug that cannot happen.
+  of a symmetric diagram reaches the hypergraph one wire at a time.
 - **The historical numeric bug** (discopy/discopy#447, the 52 indices of
   `einsum`) needs a tensor of 52 wires: no sampler here draws one, and none
   should by default. A size limit is a law of its own, with its own sampler.
@@ -589,8 +699,12 @@ mo.md(f"""
 - **2c does not**: its grammar only has the generators of the signature, so a
   boundary it can reach is reached, in
   {per_valid('syntactic_grammatical'):.1f} test cases per valid diagram, and
-  one it cannot is known before any draw; it also finds the most distinct
-  tensors there, {semantic_row('syntactic_grammatical')['tensors']}.
+  one it cannot is known before any draw. The grammars find the most
+  distinct tensors there: {semantic_row('syntactic_grammatical')['tensors']}
+  under 2c and {semantic_row('syntactic_grammatical_admissible')['tensors']}
+  under 2bc, against at most {max((r['tensors'] for r in semantic
+  if r['boundary'] == 'fixed' and not r['sampler'].startswith(
+  'syntactic_grammatical')), default=0)} for the others.
 - **A semantic category has a smaller space** than its free one: the
   distinct tensors are fewer than the distinct diagrams, and diagrams with a
   delayed box, which 2a derives, have no tensor at all.
@@ -615,11 +729,13 @@ mo.md(f"""
 
 ## 10. What to do next
 
-1. The `--full` run, then choose the default sampler of each doctrine,
-   possibly a mixture, from these numbers.
-2. Decide `str_transparency` on symmetric diagrams: compare up to
+1. The `--full` run, then choose the default sampler of each doctrine from
+   these numbers: the portfolio of 2c, 3a and 3b is the candidate to beat.
+2. Decide what the `explore` profile draws: exact critical sampling, which
+   does not shrink, or shrinkable sampling at a finite size.
+3. Decide `str_transparency` on symmetric diagrams: compare up to
    interchange, print a layer of several boxes transparently, or choose the
    sampler per law.
-3. Regression examples: `Axiom.examples`, run once per cell with
+4. Regression examples: `Axiom.examples`, run once per cell with
    `@example`, for every counterexample found so far.
-4. Round two: braided, pivotal, frobenius, and the tuning of 3a.
+5. Round two: braided, pivotal, frobenius, and the tuning of 3a.

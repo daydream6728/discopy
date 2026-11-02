@@ -1,11 +1,11 @@
 {
  "mode": "quick",
- "seconds": 377.44804137499887,
+ "seconds": 472.6913080410013,
  "rows": [
   {
    "doctrine": "monoidal",
    "sampler": "representational_baseline",
-   "seconds": 11.108757833004347,
+   "seconds": 9.963143166998634,
    "cells": {
     "monoidal.Diagram.associativity": {
      "budget": 20,
@@ -126,7 +126,7 @@
   {
    "doctrine": "monoidal",
    "sampler": "representational_goal_directed",
-   "seconds": 4.97449391700502,
+   "seconds": 4.60442695900565,
    "cells": {
     "monoidal.Diagram.associativity": {
      "budget": 20,
@@ -247,7 +247,7 @@
   {
    "doctrine": "monoidal",
    "sampler": "syntactic_baseline",
-   "seconds": 5.631546792006702,
+   "seconds": 5.072267458002898,
    "cells": {
     "monoidal.Diagram.associativity": {
      "budget": 20,
@@ -368,7 +368,7 @@
   {
    "doctrine": "monoidal",
    "sampler": "syntactic_admissible",
-   "seconds": 5.646916833007708,
+   "seconds": 5.351716042001499,
    "cells": {
     "monoidal.Diagram.associativity": {
      "budget": 20,
@@ -489,7 +489,128 @@
   {
    "doctrine": "monoidal",
    "sampler": "syntactic_grammatical",
-   "seconds": 9.777027208998334,
+   "seconds": 8.711748708010418,
+   "cells": {
+    "monoidal.Diagram.associativity": {
+     "budget": 20,
+     "distinct": 17,
+     "outcome": "passed",
+     "message": null
+    },
+    "monoidal.Diagram.bifunctoriality": {
+     "budget": 20,
+     "distinct": 1,
+     "outcome": "xfailed",
+     "message": null
+    },
+    "monoidal.Diagram.copying": {
+     "budget": 20,
+     "distinct": 17,
+     "outcome": "passed",
+     "message": null
+    },
+    "monoidal.Diagram.dagger_contravariance": {
+     "budget": 20,
+     "distinct": 19,
+     "outcome": "passed",
+     "message": null
+    },
+    "monoidal.Diagram.dagger_involution": {
+     "budget": 20,
+     "distinct": 15,
+     "outcome": "passed",
+     "message": null
+    },
+    "monoidal.Diagram.dagger_monoidality": {
+     "budget": 20,
+     "distinct": 1,
+     "outcome": "xfailed",
+     "message": null
+    },
+    "monoidal.Diagram.drawing_dagger_involution": {
+     "budget": 20,
+     "distinct": 15,
+     "outcome": "passed",
+     "message": null
+    },
+    "monoidal.Diagram.foliation_idempotence": {
+     "budget": 20,
+     "distinct": 15,
+     "outcome": "passed",
+     "message": null
+    },
+    "monoidal.Diagram.hypergraph_composition": {
+     "budget": 20,
+     "distinct": 19,
+     "outcome": "passed",
+     "message": null
+    },
+    "monoidal.Diagram.hypergraph_identity": {
+     "budget": 20,
+     "distinct": 11,
+     "outcome": "passed",
+     "message": null
+    },
+    "monoidal.Diagram.hypergraph_section": {
+     "budget": 20,
+     "distinct": 15,
+     "outcome": "passed",
+     "message": null
+    },
+    "monoidal.Diagram.hypergraph_tensor": {
+     "budget": 20,
+     "distinct": 19,
+     "outcome": "passed",
+     "message": null
+    },
+    "monoidal.Diagram.map_agreement": {
+     "budget": 20,
+     "distinct": 15,
+     "outcome": "passed",
+     "message": null
+    },
+    "monoidal.Diagram.pickling": {
+     "budget": 20,
+     "distinct": 17,
+     "outcome": "passed",
+     "message": null
+    },
+    "monoidal.Diagram.repr_transparency": {
+     "budget": 20,
+     "distinct": 17,
+     "outcome": "passed",
+     "message": null
+    },
+    "monoidal.Diagram.serialisation": {
+     "budget": 20,
+     "distinct": 17,
+     "outcome": "passed",
+     "message": null
+    },
+    "monoidal.Diagram.str_transparency": {
+     "budget": 20,
+     "distinct": 17,
+     "outcome": "passed",
+     "message": null
+    },
+    "monoidal.Diagram.tensor_unitality": {
+     "budget": 20,
+     "distinct": 12,
+     "outcome": "passed",
+     "message": null
+    },
+    "monoidal.Diagram.unitality": {
+     "budget": 20,
+     "distinct": 15,
+     "outcome": "passed",
+     "message": null
+    }
+   }
+  },
+  {
+   "doctrine": "monoidal",
+   "sampler": "syntactic_grammatical_admissible",
+   "seconds": 8.764833124994766,
    "cells": {
     "monoidal.Diagram.associativity": {
      "budget": 20,
@@ -610,7 +731,7 @@
   {
    "doctrine": "symmetric",
    "sampler": "representational_baseline",
-   "seconds": 20.41192066698568,
+   "seconds": 17.531358792009996,
    "cells": {
     "symmetric.Diagram.associativity": {
      "budget": 20,
@@ -935,7 +1056,7 @@
   {
    "doctrine": "symmetric",
    "sampler": "representational_goal_directed",
-   "seconds": 5.90358045900939,
+   "seconds": 5.004947124994942,
    "cells": {
     "symmetric.Diagram.associativity": {
      "budget": 20,
@@ -1260,7 +1381,7 @@
   {
    "doctrine": "symmetric",
    "sampler": "syntactic_baseline",
-   "seconds": 6.3499788339977385,
+   "seconds": 4.834499125005095,
    "cells": {
     "symmetric.Diagram.associativity": {
      "budget": 20,
@@ -1585,7 +1706,7 @@
   {
    "doctrine": "symmetric",
    "sampler": "syntactic_admissible",
-   "seconds": 5.996998667003936,
+   "seconds": 5.605062207992887,
    "cells": {
     "symmetric.Diagram.associativity": {
      "budget": 20,
@@ -1910,7 +2031,7 @@
   {
    "doctrine": "symmetric",
    "sampler": "syntactic_grammatical",
-   "seconds": 14.512958249993972,
+   "seconds": 13.618017790999147,
    "cells": {
     "symmetric.Diagram.associativity": {
      "budget": 20,
@@ -2235,7 +2356,7 @@
   {
    "doctrine": "symmetric",
    "sampler": "structural_typed",
-   "seconds": 6.585947624989785,
+   "seconds": 5.970945833003498,
    "cells": {
     "symmetric.Diagram.associativity": {
      "budget": 20,
@@ -2560,7 +2681,7 @@
   {
    "doctrine": "symmetric",
    "sampler": "structural_implicit",
-   "seconds": 6.588544917001855,
+   "seconds": 4.885632082994562,
    "cells": {
     "symmetric.Diagram.associativity": {
      "budget": 20,
@@ -2885,7 +3006,7 @@
   {
    "doctrine": "symmetric",
    "sampler": "structural_perturbed",
-   "seconds": 6.9648465829959605,
+   "seconds": 5.490644666002481,
    "cells": {
     "symmetric.Diagram.associativity": {
      "budget": 20,
@@ -3208,9 +3329,659 @@
    }
   },
   {
+   "doctrine": "symmetric",
+   "sampler": "syntactic_grammatical_admissible",
+   "seconds": 12.388096875001793,
+   "cells": {
+    "symmetric.Diagram.associativity": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.balanced_twist": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.bifunctoriality": {
+     "budget": 20,
+     "distinct": 18,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.braid_naturality": {
+     "budget": 20,
+     "distinct": 18,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.braid_then_inverse": {
+     "budget": null,
+     "distinct": null,
+     "outcome": "skipped",
+     "message": null
+    },
+    "symmetric.Diagram.copying": {
+     "budget": 20,
+     "distinct": 18,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.dagger_contravariance": {
+     "budget": 20,
+     "distinct": 1,
+     "outcome": "xfailed",
+     "message": null
+    },
+    "symmetric.Diagram.dagger_contravariance_traced": {
+     "budget": 20,
+     "distinct": 19,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.dagger_involution": {
+     "budget": 20,
+     "distinct": 1,
+     "outcome": "xfailed",
+     "message": null
+    },
+    "symmetric.Diagram.dagger_involution_traced": {
+     "budget": 20,
+     "distinct": 15,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.dagger_monoidality": {
+     "budget": 20,
+     "distinct": 1,
+     "outcome": "xfailed",
+     "message": null
+    },
+    "symmetric.Diagram.dagger_monoidality_symmetric": {
+     "budget": 20,
+     "distinct": 17,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.delay_composition": {
+     "budget": 20,
+     "distinct": 18,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.delay_unit": {
+     "budget": 20,
+     "distinct": 18,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.drawing_dagger_involution": {
+     "budget": 20,
+     "distinct": 18,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.foliation_idempotence": {
+     "budget": 20,
+     "distinct": 18,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.hexagon_left": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.hexagon_right": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.hypergraph_composition": {
+     "budget": 20,
+     "distinct": 19,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.hypergraph_identity": {
+     "budget": 20,
+     "distinct": 11,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.hypergraph_section": {
+     "budget": 20,
+     "distinct": 18,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.hypergraph_tensor": {
+     "budget": 20,
+     "distinct": 18,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.inverse_then_braid": {
+     "budget": null,
+     "distinct": null,
+     "outcome": "skipped",
+     "message": null
+    },
+    "symmetric.Diagram.joining": {
+     "budget": 20,
+     "distinct": 18,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.map_agreement": {
+     "budget": 20,
+     "distinct": 18,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.permutation_composition": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.permutation_identity": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.permutation_inverse": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.permutation_swaps": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.pickling": {
+     "budget": 20,
+     "distinct": 18,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.repr_transparency": {
+     "budget": 20,
+     "distinct": 18,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.scalar_sliding": {
+     "budget": 20,
+     "distinct": 17,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.serialisation": {
+     "budget": 20,
+     "distinct": 18,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.sliding": {
+     "budget": 20,
+     "distinct": 1,
+     "outcome": "xfailed",
+     "message": null
+    },
+    "symmetric.Diagram.str_transparency": {
+     "budget": 20,
+     "distinct": 18,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.strength": {
+     "budget": 20,
+     "distinct": 1,
+     "outcome": "xfailed",
+     "message": null
+    },
+    "symmetric.Diagram.swap_inverse": {
+     "budget": 20,
+     "distinct": 12,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.tensor_unitality": {
+     "budget": 20,
+     "distinct": 12,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.tightening": {
+     "budget": 20,
+     "distinct": 1,
+     "outcome": "xfailed",
+     "message": null
+    },
+    "symmetric.Diagram.trace_dinaturality_left": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.trace_dinaturality_right": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.trace_iteration_left": {
+     "budget": 20,
+     "distinct": 18,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.trace_iteration_right": {
+     "budget": 20,
+     "distinct": 18,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.trace_naturality_left": {
+     "budget": 20,
+     "distinct": 18,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.trace_naturality_right": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.trace_superposing_left": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.trace_superposing_right": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.trace_vanishing": {
+     "budget": 20,
+     "distinct": 18,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.twist_naturality": {
+     "budget": 20,
+     "distinct": 18,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.twist_unit": {
+     "budget": 20,
+     "distinct": 1,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.unitality": {
+     "budget": 20,
+     "distinct": 18,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.vanishing": {
+     "budget": 20,
+     "distinct": 18,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.yanking": {
+     "budget": 20,
+     "distinct": 5,
+     "outcome": "passed",
+     "message": null
+    }
+   }
+  },
+  {
+   "doctrine": "symmetric",
+   "sampler": "portfolio",
+   "seconds": 15.506893207988469,
+   "cells": {
+    "symmetric.Diagram.associativity": {
+     "budget": 20,
+     "distinct": 18,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.balanced_twist": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.bifunctoriality": {
+     "budget": 20,
+     "distinct": 18,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.braid_naturality": {
+     "budget": 20,
+     "distinct": 19,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.braid_then_inverse": {
+     "budget": null,
+     "distinct": null,
+     "outcome": "skipped",
+     "message": null
+    },
+    "symmetric.Diagram.copying": {
+     "budget": 20,
+     "distinct": 18,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.dagger_contravariance": {
+     "budget": 20,
+     "distinct": 1,
+     "outcome": "xfailed",
+     "message": null
+    },
+    "symmetric.Diagram.dagger_contravariance_traced": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.dagger_involution": {
+     "budget": 20,
+     "distinct": 1,
+     "outcome": "xfailed",
+     "message": null
+    },
+    "symmetric.Diagram.dagger_involution_traced": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.dagger_monoidality": {
+     "budget": 20,
+     "distinct": 1,
+     "outcome": "xfailed",
+     "message": null
+    },
+    "symmetric.Diagram.dagger_monoidality_symmetric": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.delay_composition": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.delay_unit": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.drawing_dagger_involution": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.foliation_idempotence": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.hexagon_left": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.hexagon_right": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.hypergraph_composition": {
+     "budget": 20,
+     "distinct": 19,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.hypergraph_identity": {
+     "budget": 20,
+     "distinct": 11,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.hypergraph_section": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.hypergraph_tensor": {
+     "budget": 20,
+     "distinct": 19,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.inverse_then_braid": {
+     "budget": null,
+     "distinct": null,
+     "outcome": "skipped",
+     "message": null
+    },
+    "symmetric.Diagram.joining": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.map_agreement": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.permutation_composition": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.permutation_identity": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.permutation_inverse": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.permutation_swaps": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.pickling": {
+     "budget": 20,
+     "distinct": 18,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.repr_transparency": {
+     "budget": 20,
+     "distinct": 18,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.scalar_sliding": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.serialisation": {
+     "budget": 20,
+     "distinct": 18,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.sliding": {
+     "budget": 20,
+     "distinct": 1,
+     "outcome": "xfailed",
+     "message": null
+    },
+    "symmetric.Diagram.str_transparency": {
+     "budget": 20,
+     "distinct": 144,
+     "outcome": "failed",
+     "message": "AssertionError: assert testable.Equation(symmetric.Diagram(inside=(symmetric.Layer(symmetric.Box('f_e3e70682c2094cac629f6fbed82c07cd', feedba...(feedback.Wire('a'))))), dom=feedback.Ty(feedback.Wire('a')), cod=feedback.Ty(feedback.Wire('a'), feedback.Wire('a'))))"
+    },
+    "symmetric.Diagram.strength": {
+     "budget": 20,
+     "distinct": 1,
+     "outcome": "xfailed",
+     "message": null
+    },
+    "symmetric.Diagram.swap_inverse": {
+     "budget": 20,
+     "distinct": 12,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.tensor_unitality": {
+     "budget": 20,
+     "distinct": 12,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.tightening": {
+     "budget": 20,
+     "distinct": 1,
+     "outcome": "xfailed",
+     "message": null
+    },
+    "symmetric.Diagram.trace_dinaturality_left": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.trace_dinaturality_right": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.trace_iteration_left": {
+     "budget": 20,
+     "distinct": 18,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.trace_iteration_right": {
+     "budget": 20,
+     "distinct": 18,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.trace_naturality_left": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.trace_naturality_right": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.trace_superposing_left": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.trace_superposing_right": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.trace_vanishing": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.twist_naturality": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.twist_unit": {
+     "budget": 20,
+     "distinct": 1,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.unitality": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.vanishing": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "symmetric.Diagram.yanking": {
+     "budget": 20,
+     "distinct": 5,
+     "outcome": "passed",
+     "message": null
+    }
+   }
+  },
+  {
    "doctrine": "markov",
    "sampler": "representational_baseline",
-   "seconds": 37.06741691700881,
+   "seconds": 30.463329291989794,
    "cells": {
     "markov.Diagram.associativity": {
      "budget": 20,
@@ -3565,7 +4336,7 @@
   {
    "doctrine": "markov",
    "sampler": "representational_goal_directed",
-   "seconds": 6.586592500010738,
+   "seconds": 5.752688082997338,
    "cells": {
     "markov.Diagram.associativity": {
      "budget": 20,
@@ -3920,7 +4691,7 @@
   {
    "doctrine": "markov",
    "sampler": "syntactic_baseline",
-   "seconds": 7.03108654099924,
+   "seconds": 6.267405332997441,
    "cells": {
     "markov.Diagram.associativity": {
      "budget": 20,
@@ -4275,7 +5046,7 @@
   {
    "doctrine": "markov",
    "sampler": "syntactic_admissible",
-   "seconds": 7.530847417001496,
+   "seconds": 6.651791708005476,
    "cells": {
     "markov.Diagram.associativity": {
      "budget": 20,
@@ -4630,7 +5401,7 @@
   {
    "doctrine": "markov",
    "sampler": "syntactic_grammatical",
-   "seconds": 28.0685004160041,
+   "seconds": 28.633605207985966,
    "cells": {
     "markov.Diagram.associativity": {
      "budget": 20,
@@ -4985,7 +5756,7 @@
   {
    "doctrine": "markov",
    "sampler": "structural_typed",
-   "seconds": 7.724268792007933,
+   "seconds": 6.761207082992769,
    "cells": {
     "markov.Diagram.associativity": {
      "budget": 20,
@@ -5340,7 +6111,7 @@
   {
    "doctrine": "markov",
    "sampler": "structural_implicit",
-   "seconds": 6.956860749996849,
+   "seconds": 6.421545792007237,
    "cells": {
     "markov.Diagram.associativity": {
      "budget": 20,
@@ -5695,7 +6466,7 @@
   {
    "doctrine": "markov",
    "sampler": "structural_perturbed",
-   "seconds": 7.54915708299086,
+   "seconds": 7.27509170799749,
    "cells": {
     "markov.Diagram.associativity": {
      "budget": 20,
@@ -6048,9 +6819,719 @@
    }
   },
   {
+   "doctrine": "markov",
+   "sampler": "syntactic_grammatical_admissible",
+   "seconds": 56.170883041006164,
+   "cells": {
+    "markov.Diagram.associativity": {
+     "budget": 20,
+     "distinct": 19,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.balanced_twist": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.bifunctoriality": {
+     "budget": 20,
+     "distinct": 18,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.braid_naturality": {
+     "budget": 20,
+     "distinct": 17,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.braid_then_inverse": {
+     "budget": null,
+     "distinct": null,
+     "outcome": "skipped",
+     "message": null
+    },
+    "markov.Diagram.copy_coassociativity": {
+     "budget": 20,
+     "distinct": 11,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.copy_cocommutativity": {
+     "budget": 20,
+     "distinct": 11,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.copy_coherence": {
+     "budget": 20,
+     "distinct": 12,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.copy_counitality": {
+     "budget": 20,
+     "distinct": 11,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.copying": {
+     "budget": 20,
+     "distinct": 17,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.dagger_contravariance": {
+     "budget": 20,
+     "distinct": 1,
+     "outcome": "xfailed",
+     "message": null
+    },
+    "markov.Diagram.dagger_contravariance_traced": {
+     "budget": 20,
+     "distinct": 19,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.dagger_involution": {
+     "budget": 20,
+     "distinct": 1,
+     "outcome": "xfailed",
+     "message": null
+    },
+    "markov.Diagram.dagger_involution_traced": {
+     "budget": 20,
+     "distinct": 15,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.dagger_monoidality": {
+     "budget": 20,
+     "distinct": 1,
+     "outcome": "xfailed",
+     "message": null
+    },
+    "markov.Diagram.dagger_monoidality_symmetric": {
+     "budget": 20,
+     "distinct": 17,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.delay_composition": {
+     "budget": 20,
+     "distinct": 16,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.delay_unit": {
+     "budget": 20,
+     "distinct": 16,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.discard_coherence": {
+     "budget": 20,
+     "distinct": 12,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.drawing_dagger_involution": {
+     "budget": 20,
+     "distinct": 16,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.foliation_idempotence": {
+     "budget": 20,
+     "distinct": 16,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.hexagon_left": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.hexagon_right": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.hypergraph_composition": {
+     "budget": 20,
+     "distinct": 19,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.hypergraph_identity": {
+     "budget": 20,
+     "distinct": 11,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.hypergraph_section": {
+     "budget": 20,
+     "distinct": 16,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.hypergraph_tensor": {
+     "budget": 20,
+     "distinct": 17,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.inverse_then_braid": {
+     "budget": null,
+     "distinct": null,
+     "outcome": "skipped",
+     "message": null
+    },
+    "markov.Diagram.joining": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.map_agreement": {
+     "budget": 20,
+     "distinct": 1,
+     "outcome": "xfailed",
+     "message": null
+    },
+    "markov.Diagram.permutation_composition": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.permutation_identity": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.permutation_inverse": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.permutation_swaps": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.pickling": {
+     "budget": 20,
+     "distinct": 17,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.repr_transparency": {
+     "budget": 20,
+     "distinct": 17,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.scalar_sliding": {
+     "budget": 20,
+     "distinct": 18,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.serialisation": {
+     "budget": 20,
+     "distinct": 17,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.sliding": {
+     "budget": 20,
+     "distinct": 1,
+     "outcome": "xfailed",
+     "message": null
+    },
+    "markov.Diagram.str_transparency": {
+     "budget": 20,
+     "distinct": 1,
+     "outcome": "xfailed",
+     "message": null
+    },
+    "markov.Diagram.strength": {
+     "budget": 20,
+     "distinct": 1,
+     "outcome": "xfailed",
+     "message": null
+    },
+    "markov.Diagram.swap_inverse": {
+     "budget": 20,
+     "distinct": 12,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.tensor_unitality": {
+     "budget": 20,
+     "distinct": 12,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.tightening": {
+     "budget": 20,
+     "distinct": 1,
+     "outcome": "xfailed",
+     "message": null
+    },
+    "markov.Diagram.trace_dinaturality_left": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.trace_dinaturality_right": {
+     "budget": 20,
+     "distinct": 17,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.trace_iteration_left": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.trace_iteration_right": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.trace_naturality_left": {
+     "budget": 20,
+     "distinct": 18,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.trace_naturality_right": {
+     "budget": 20,
+     "distinct": 18,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.trace_superposing_left": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.trace_superposing_right": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.trace_vanishing": {
+     "budget": 20,
+     "distinct": 16,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.twist_naturality": {
+     "budget": 20,
+     "distinct": 16,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.twist_unit": {
+     "budget": 20,
+     "distinct": 1,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.unitality": {
+     "budget": 20,
+     "distinct": 16,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.vanishing": {
+     "budget": 20,
+     "distinct": 16,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.yanking": {
+     "budget": 20,
+     "distinct": 5,
+     "outcome": "passed",
+     "message": null
+    }
+   }
+  },
+  {
+   "doctrine": "markov",
+   "sampler": "portfolio",
+   "seconds": 17.30925429200579,
+   "cells": {
+    "markov.Diagram.associativity": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.balanced_twist": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.bifunctoriality": {
+     "budget": 20,
+     "distinct": 18,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.braid_naturality": {
+     "budget": 20,
+     "distinct": 18,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.braid_then_inverse": {
+     "budget": null,
+     "distinct": null,
+     "outcome": "skipped",
+     "message": null
+    },
+    "markov.Diagram.copy_coassociativity": {
+     "budget": 20,
+     "distinct": 11,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.copy_cocommutativity": {
+     "budget": 20,
+     "distinct": 11,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.copy_coherence": {
+     "budget": 20,
+     "distinct": 12,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.copy_counitality": {
+     "budget": 20,
+     "distinct": 11,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.copying": {
+     "budget": 20,
+     "distinct": 14,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.dagger_contravariance": {
+     "budget": 20,
+     "distinct": 1,
+     "outcome": "xfailed",
+     "message": null
+    },
+    "markov.Diagram.dagger_contravariance_traced": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.dagger_involution": {
+     "budget": 20,
+     "distinct": 1,
+     "outcome": "xfailed",
+     "message": null
+    },
+    "markov.Diagram.dagger_involution_traced": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.dagger_monoidality": {
+     "budget": 20,
+     "distinct": 1,
+     "outcome": "xfailed",
+     "message": null
+    },
+    "markov.Diagram.dagger_monoidality_symmetric": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.delay_composition": {
+     "budget": 20,
+     "distinct": 17,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.delay_unit": {
+     "budget": 20,
+     "distinct": 17,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.discard_coherence": {
+     "budget": 20,
+     "distinct": 12,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.drawing_dagger_involution": {
+     "budget": 20,
+     "distinct": 17,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.foliation_idempotence": {
+     "budget": 20,
+     "distinct": 17,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.hexagon_left": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.hexagon_right": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.hypergraph_composition": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.hypergraph_identity": {
+     "budget": 20,
+     "distinct": 11,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.hypergraph_section": {
+     "budget": 20,
+     "distinct": 17,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.hypergraph_tensor": {
+     "budget": 20,
+     "distinct": 18,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.inverse_then_braid": {
+     "budget": null,
+     "distinct": null,
+     "outcome": "skipped",
+     "message": null
+    },
+    "markov.Diagram.joining": {
+     "budget": 20,
+     "distinct": 19,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.map_agreement": {
+     "budget": 20,
+     "distinct": 1,
+     "outcome": "xfailed",
+     "message": null
+    },
+    "markov.Diagram.permutation_composition": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.permutation_identity": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.permutation_inverse": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.permutation_swaps": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.pickling": {
+     "budget": 20,
+     "distinct": 14,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.repr_transparency": {
+     "budget": 20,
+     "distinct": 14,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.scalar_sliding": {
+     "budget": 20,
+     "distinct": 19,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.serialisation": {
+     "budget": 20,
+     "distinct": 14,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.sliding": {
+     "budget": 20,
+     "distinct": 1,
+     "outcome": "xfailed",
+     "message": null
+    },
+    "markov.Diagram.str_transparency": {
+     "budget": 20,
+     "distinct": 1,
+     "outcome": "xfailed",
+     "message": null
+    },
+    "markov.Diagram.strength": {
+     "budget": 20,
+     "distinct": 1,
+     "outcome": "xfailed",
+     "message": null
+    },
+    "markov.Diagram.swap_inverse": {
+     "budget": 20,
+     "distinct": 12,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.tensor_unitality": {
+     "budget": 20,
+     "distinct": 12,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.tightening": {
+     "budget": 20,
+     "distinct": 1,
+     "outcome": "xfailed",
+     "message": null
+    },
+    "markov.Diagram.trace_dinaturality_left": {
+     "budget": 20,
+     "distinct": 18,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.trace_dinaturality_right": {
+     "budget": 20,
+     "distinct": 18,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.trace_iteration_left": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.trace_iteration_right": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.trace_naturality_left": {
+     "budget": 20,
+     "distinct": 17,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.trace_naturality_right": {
+     "budget": 20,
+     "distinct": 17,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.trace_superposing_left": {
+     "budget": 20,
+     "distinct": 19,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.trace_superposing_right": {
+     "budget": 20,
+     "distinct": 19,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.trace_vanishing": {
+     "budget": 20,
+     "distinct": 17,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.twist_naturality": {
+     "budget": 20,
+     "distinct": 17,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.twist_unit": {
+     "budget": 20,
+     "distinct": 1,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.unitality": {
+     "budget": 20,
+     "distinct": 17,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.vanishing": {
+     "budget": 20,
+     "distinct": 17,
+     "outcome": "passed",
+     "message": null
+    },
+    "markov.Diagram.yanking": {
+     "budget": 20,
+     "distinct": 5,
+     "outcome": "passed",
+     "message": null
+    }
+   }
+  },
+  {
    "doctrine": "compact",
    "sampler": "representational_baseline",
-   "seconds": 82.93299412500346,
+   "seconds": 68.55403349999688,
    "cells": {
     "compact.Diagram.adjunction": {
      "budget": 20,
@@ -6372,7 +7853,7 @@
     },
     "compact.Diagram.str_transparency": {
      "budget": 20,
-     "distinct": 159,
+     "distinct": 157,
      "outcome": "failed",
      "message": "NameError: name 'f_e3e70682c2094cac629f6fbed82c07cd' is not defined"
     },
@@ -6495,7 +7976,7 @@
   {
    "doctrine": "compact",
    "sampler": "representational_goal_directed",
-   "seconds": 6.870649499993306,
+   "seconds": 6.4258982080064015,
    "cells": {
     "compact.Diagram.adjunction": {
      "budget": 20,
@@ -6940,7 +8421,7 @@
   {
    "doctrine": "compact",
    "sampler": "syntactic_baseline",
-   "seconds": 8.316993499989621,
+   "seconds": 7.266535749993636,
    "cells": {
     "compact.Diagram.adjunction": {
      "budget": 20,
@@ -7385,7 +8866,7 @@
   {
    "doctrine": "compact",
    "sampler": "syntactic_admissible",
-   "seconds": 9.203726541003562,
+   "seconds": 7.419516665991978,
    "cells": {
     "compact.Diagram.adjunction": {
      "budget": 20,
@@ -7830,7 +9311,7 @@
   {
    "doctrine": "compact",
    "sampler": "syntactic_grammatical",
-   "seconds": 13.060880249991897,
+   "seconds": 13.0626189159957,
    "cells": {
     "compact.Diagram.adjunction": {
      "budget": 20,
@@ -8275,7 +9756,7 @@
   {
    "doctrine": "compact",
    "sampler": "structural_typed",
-   "seconds": 11.305177583999466,
+   "seconds": 10.116078958002618,
    "cells": {
     "compact.Diagram.adjunction": {
      "budget": 20,
@@ -8720,7 +10201,7 @@
   {
    "doctrine": "compact",
    "sampler": "structural_implicit",
-   "seconds": 7.393314500004635,
+   "seconds": 6.919777832998079,
    "cells": {
     "compact.Diagram.adjunction": {
      "budget": 20,
@@ -9165,7 +10646,7 @@
   {
    "doctrine": "compact",
    "sampler": "structural_perturbed",
-   "seconds": 19.37135624999064,
+   "seconds": 17.852107458005776,
    "cells": {
     "compact.Diagram.adjunction": {
      "budget": 20,
@@ -9596,6 +11077,896 @@
     "compact.Diagram.vanishing": {
      "budget": 20,
      "distinct": 18,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.yanking": {
+     "budget": 20,
+     "distinct": 10,
+     "outcome": "passed",
+     "message": null
+    }
+   }
+  },
+  {
+   "doctrine": "compact",
+   "sampler": "syntactic_grammatical_admissible",
+   "seconds": 12.138597583005321,
+   "cells": {
+    "compact.Diagram.adjunction": {
+     "budget": 20,
+     "distinct": 1,
+     "outcome": "xfailed",
+     "message": null
+    },
+    "compact.Diagram.adjunction_rigid": {
+     "budget": 20,
+     "distinct": 18,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.associativity": {
+     "budget": 20,
+     "distinct": 19,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.balanced_twist": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.bifunctoriality": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.braid_naturality": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.braid_then_inverse": {
+     "budget": null,
+     "distinct": null,
+     "outcome": "skipped",
+     "message": null
+    },
+    "compact.Diagram.caps_coherence": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.copying": {
+     "budget": 20,
+     "distinct": 18,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.cups_coherence": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.currying_eta_left": {
+     "budget": 20,
+     "distinct": 19,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.currying_eta_right": {
+     "budget": 20,
+     "distinct": 19,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.currying_left": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.currying_naturality_left": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.currying_naturality_right": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.currying_right": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.dagger_contravariance": {
+     "budget": 20,
+     "distinct": 1,
+     "outcome": "xfailed",
+     "message": null
+    },
+    "compact.Diagram.dagger_contravariance_rigid": {
+     "budget": 20,
+     "distinct": 17,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.dagger_contravariance_traced": {
+     "budget": 20,
+     "distinct": 19,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.dagger_involution": {
+     "budget": 20,
+     "distinct": 1,
+     "outcome": "xfailed",
+     "message": null
+    },
+    "compact.Diagram.dagger_involution_rigid": {
+     "budget": 20,
+     "distinct": 18,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.dagger_involution_traced": {
+     "budget": 20,
+     "distinct": 19,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.dagger_monoidality": {
+     "budget": 20,
+     "distinct": 1,
+     "outcome": "xfailed",
+     "message": null
+    },
+    "compact.Diagram.dagger_monoidality_symmetric": {
+     "budget": 20,
+     "distinct": 18,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.delay_composition": {
+     "budget": 20,
+     "distinct": 19,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.delay_unit": {
+     "budget": 20,
+     "distinct": 19,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.drawing_dagger_involution": {
+     "budget": 20,
+     "distinct": 19,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.foliation_idempotence": {
+     "budget": 20,
+     "distinct": 19,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.hexagon_left": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.hexagon_right": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.hypergraph_composition": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.hypergraph_identity": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.hypergraph_section": {
+     "budget": 20,
+     "distinct": 19,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.hypergraph_tensor": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.inverse_then_braid": {
+     "budget": null,
+     "distinct": null,
+     "outcome": "skipped",
+     "message": null
+    },
+    "compact.Diagram.joining": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.map_agreement": {
+     "budget": 20,
+     "distinct": 19,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.permutation_composition": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.permutation_identity": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.permutation_inverse": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.permutation_swaps": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.pickling": {
+     "budget": 20,
+     "distinct": 18,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.pivotality": {
+     "budget": 20,
+     "distinct": 19,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.reidemeister_1_cap": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.reidemeister_1_cup": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.repr_transparency": {
+     "budget": 20,
+     "distinct": 18,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.rotate_contravariance": {
+     "budget": 20,
+     "distinct": 1,
+     "outcome": "xfailed",
+     "message": null
+    },
+    "compact.Diagram.rotate_contravariance_rigid": {
+     "budget": 20,
+     "distinct": 17,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.scalar_sliding": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.self_dual": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.serialisation": {
+     "budget": 20,
+     "distinct": 18,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.sliding": {
+     "budget": 20,
+     "distinct": 1,
+     "outcome": "xfailed",
+     "message": null
+    },
+    "compact.Diagram.snake_equations": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.str_transparency": {
+     "budget": 20,
+     "distinct": 18,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.strength": {
+     "budget": 20,
+     "distinct": 1,
+     "outcome": "xfailed",
+     "message": null
+    },
+    "compact.Diagram.swap_inverse": {
+     "budget": 20,
+     "distinct": 19,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.tensor_unitality": {
+     "budget": 20,
+     "distinct": 19,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.tightening": {
+     "budget": 20,
+     "distinct": 1,
+     "outcome": "xfailed",
+     "message": null
+    },
+    "compact.Diagram.trace_dinaturality_left": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.trace_dinaturality_right": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.trace_iteration_left": {
+     "budget": 20,
+     "distinct": 19,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.trace_iteration_right": {
+     "budget": 20,
+     "distinct": 19,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.trace_naturality_left": {
+     "budget": 20,
+     "distinct": 19,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.trace_naturality_right": {
+     "budget": 20,
+     "distinct": 19,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.trace_superposing_left": {
+     "budget": 20,
+     "distinct": 19,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.trace_superposing_right": {
+     "budget": 20,
+     "distinct": 19,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.trace_vanishing": {
+     "budget": 20,
+     "distinct": 19,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.transpose_contravariance": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.twist_naturality": {
+     "budget": 20,
+     "distinct": 19,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.twist_unit": {
+     "budget": 20,
+     "distinct": 1,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.unitality": {
+     "budget": 20,
+     "distinct": 19,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.vanishing": {
+     "budget": 20,
+     "distinct": 19,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.yanking": {
+     "budget": 20,
+     "distinct": 10,
+     "outcome": "passed",
+     "message": null
+    }
+   }
+  },
+  {
+   "doctrine": "compact",
+   "sampler": "portfolio",
+   "seconds": 17.884256042001653,
+   "cells": {
+    "compact.Diagram.adjunction": {
+     "budget": 20,
+     "distinct": 1,
+     "outcome": "xfailed",
+     "message": null
+    },
+    "compact.Diagram.adjunction_rigid": {
+     "budget": 20,
+     "distinct": 19,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.associativity": {
+     "budget": 20,
+     "distinct": 19,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.balanced_twist": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.bifunctoriality": {
+     "budget": 20,
+     "distinct": 18,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.braid_naturality": {
+     "budget": 20,
+     "distinct": 19,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.braid_then_inverse": {
+     "budget": null,
+     "distinct": null,
+     "outcome": "skipped",
+     "message": null
+    },
+    "compact.Diagram.caps_coherence": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.copying": {
+     "budget": 20,
+     "distinct": 18,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.cups_coherence": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.currying_eta_left": {
+     "budget": 20,
+     "distinct": 19,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.currying_eta_right": {
+     "budget": 20,
+     "distinct": 19,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.currying_left": {
+     "budget": 20,
+     "distinct": 19,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.currying_naturality_left": {
+     "budget": 20,
+     "distinct": 19,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.currying_naturality_right": {
+     "budget": 20,
+     "distinct": 19,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.currying_right": {
+     "budget": 20,
+     "distinct": 19,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.dagger_contravariance": {
+     "budget": 20,
+     "distinct": 1,
+     "outcome": "xfailed",
+     "message": null
+    },
+    "compact.Diagram.dagger_contravariance_rigid": {
+     "budget": 20,
+     "distinct": 19,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.dagger_contravariance_traced": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.dagger_involution": {
+     "budget": 20,
+     "distinct": 1,
+     "outcome": "xfailed",
+     "message": null
+    },
+    "compact.Diagram.dagger_involution_rigid": {
+     "budget": 20,
+     "distinct": 19,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.dagger_involution_traced": {
+     "budget": 20,
+     "distinct": 17,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.dagger_monoidality": {
+     "budget": 20,
+     "distinct": 1,
+     "outcome": "xfailed",
+     "message": null
+    },
+    "compact.Diagram.dagger_monoidality_symmetric": {
+     "budget": 20,
+     "distinct": 18,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.delay_composition": {
+     "budget": 20,
+     "distinct": 16,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.delay_unit": {
+     "budget": 20,
+     "distinct": 16,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.drawing_dagger_involution": {
+     "budget": 20,
+     "distinct": 16,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.foliation_idempotence": {
+     "budget": 20,
+     "distinct": 16,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.hexagon_left": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.hexagon_right": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.hypergraph_composition": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.hypergraph_identity": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.hypergraph_section": {
+     "budget": 20,
+     "distinct": 16,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.hypergraph_tensor": {
+     "budget": 20,
+     "distinct": 19,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.inverse_then_braid": {
+     "budget": null,
+     "distinct": null,
+     "outcome": "skipped",
+     "message": null
+    },
+    "compact.Diagram.joining": {
+     "budget": 20,
+     "distinct": 19,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.map_agreement": {
+     "budget": 20,
+     "distinct": 16,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.permutation_composition": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.permutation_identity": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.permutation_inverse": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.permutation_swaps": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.pickling": {
+     "budget": 20,
+     "distinct": 18,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.pivotality": {
+     "budget": 20,
+     "distinct": 16,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.reidemeister_1_cap": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.reidemeister_1_cup": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.repr_transparency": {
+     "budget": 20,
+     "distinct": 18,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.rotate_contravariance": {
+     "budget": 20,
+     "distinct": 1,
+     "outcome": "xfailed",
+     "message": null
+    },
+    "compact.Diagram.rotate_contravariance_rigid": {
+     "budget": 20,
+     "distinct": 19,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.scalar_sliding": {
+     "budget": 20,
+     "distinct": 19,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.self_dual": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.serialisation": {
+     "budget": 20,
+     "distinct": 18,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.sliding": {
+     "budget": 20,
+     "distinct": 1,
+     "outcome": "xfailed",
+     "message": null
+    },
+    "compact.Diagram.snake_equations": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.str_transparency": {
+     "budget": 20,
+     "distinct": 266,
+     "outcome": "failed",
+     "message": "AssertionError: assert testable.Equation(compact.Diagram(inside=(compact.Layer(pivotal.Ty(pivotal.Wire('a')), compact.Cap(pivotal.Ty(pivotal....d=pivotal.Ty(pivotal.Wire('a'), pivotal.Wire('a', z=1), pivotal.Wire('a'), pivotal.Wire('a', z=1), pivotal.Wire('a'))))"
+    },
+    "compact.Diagram.strength": {
+     "budget": 20,
+     "distinct": 1,
+     "outcome": "xfailed",
+     "message": null
+    },
+    "compact.Diagram.swap_inverse": {
+     "budget": 20,
+     "distinct": 19,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.tensor_unitality": {
+     "budget": 20,
+     "distinct": 19,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.tightening": {
+     "budget": 20,
+     "distinct": 1,
+     "outcome": "xfailed",
+     "message": null
+    },
+    "compact.Diagram.trace_dinaturality_left": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.trace_dinaturality_right": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.trace_iteration_left": {
+     "budget": 20,
+     "distinct": 18,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.trace_iteration_right": {
+     "budget": 20,
+     "distinct": 18,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.trace_naturality_left": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.trace_naturality_right": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.trace_superposing_left": {
+     "budget": 20,
+     "distinct": 16,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.trace_superposing_right": {
+     "budget": 20,
+     "distinct": 16,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.trace_vanishing": {
+     "budget": 20,
+     "distinct": 16,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.transpose_contravariance": {
+     "budget": 20,
+     "distinct": 20,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.twist_naturality": {
+     "budget": 20,
+     "distinct": 16,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.twist_unit": {
+     "budget": 20,
+     "distinct": 1,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.unitality": {
+     "budget": 20,
+     "distinct": 16,
+     "outcome": "passed",
+     "message": null
+    },
+    "compact.Diagram.vanishing": {
+     "budget": 20,
+     "distinct": 16,
      "outcome": "passed",
      "message": null
     },

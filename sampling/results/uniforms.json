@@ -1,41 +1,41 @@
 {
  "mode": "quick",
- "seconds": 3.2701285840012133,
+ "seconds": 3.6863773340010084,
  "rows": [
   {
    "strategy": "integers(0, 2**20)",
    "draws": 2000,
-   "below 0.01": 0.5695,
-   "below 0.1": 0.821,
-   "below 0.5": 0.9405
+   "below 0.01": 0.5595,
+   "below 0.1": 0.802,
+   "below 0.5": 0.9395
   },
   {
    "strategy": "a byte among 20",
    "draws": 2000,
-   "below 0.01": 0.024,
-   "below 0.1": 0.092,
-   "below 0.5": 0.4245
+   "below 0.01": 0.0315,
+   "below 0.1": 0.109,
+   "below 0.5": 0.525
   },
   {
    "strategy": "floats(0, 1)",
    "draws": 2000,
-   "below 0.01": 0.136,
-   "below 0.1": 0.2155,
-   "below 0.5": 0.5635
+   "below 0.01": 0.1375,
+   "below 0.1": 0.21,
+   "below 0.5": 0.5585
   },
   {
    "strategy": "randoms()",
    "draws": 2000,
-   "below 0.01": 0.1515,
-   "below 0.1": 0.235,
-   "below 0.5": 0.5825
+   "below 0.01": 0.127,
+   "below 0.1": 0.195,
+   "below 0.5": 0.5615
   },
   {
    "strategy": "randoms(true)",
    "draws": 2000,
-   "below 0.01": 0.01,
-   "below 0.1": 0.112,
-   "below 0.5": 0.5295
+   "below 0.01": 0.011,
+   "below 0.1": 0.1125,
+   "below 0.5": 0.531
   }
  ]
 }

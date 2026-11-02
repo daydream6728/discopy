@@ -91,15 +91,17 @@ class Grammar:
     def compile(  # pylint: disable=too-many-locals  # one per part of a rule
             category: type, atoms: tuple, width: int,
             within: type | None = None,
-            signature: tuple[tuple, ...] | None = None) -> Grammar:
+            signature: tuple[tuple, ...] | None = None,
+            without: tuple[str, ...] = ()) -> Grammar:
         """
         Instantiate the applicable rules of ``category``, or those of
         ``within`` if given, at every object of width at most ``width`` over
         ``atoms``, each atomic variable at every atom and each number at
         every width. A rule with a premise that is neither a morphism nor a
         value, or an instance with an object of larger width, e.g. a delay,
-        is left out. Given a ``signature``, i.e. the pairs of objects of the
-        generators, the grammar only has generators of those types.
+        is left out, and so are the rules named ``without``. Given a
+        ``signature``, i.e. the pairs of objects of the generators, the
+        grammar only has generators of those types.
 
         >>> from discopy.monoidal import Diagram
         >>> grammar = Grammar.compile(Diagram, ("a", ), 1)
@@ -136,7 +138,7 @@ class Grammar:
             if signature is None or (x, y) in signature]
         rules = (within or category).rules
         for name, rule in category.rules.items():
-            if name not in rules or not rule.applicable:
+            if name not in rules or name in without or not rule.applicable:
                 continue
             annotations, parameters = rule.annotations(), rule.parameters
             if any(get_origin(annotations[p.name]) not in (Hom, Var)
