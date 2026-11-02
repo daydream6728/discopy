@@ -28,6 +28,7 @@ from dataclasses import asdict, dataclass
 import networkx as nx
 import numpy as np
 from hypothesis import HealthCheck, Phase, find, given, settings
+from hypothesis import seed as hypothesis_seed
 from hypothesis import strategies as st
 from hypothesis.errors import NoSuchExample, Unsatisfiable
 from hypothesis.internal.observability import with_observability_callback
@@ -197,9 +198,10 @@ def coherent_shape(diagram):
     return nx.weisfeiler_lehman_graph_hash(graph, node_attr="label")
 
 
-def sample(strategy, budget):
+def sample(strategy, budget, seed=None):
     """
-    Run ``strategy`` for ``budget`` examples in the generate phase only, and
+    Run ``strategy`` for ``budget`` examples in the generate phase only,
+    from a ``seed`` if given so that the draws are reproducible, and
     return each valid diagram with the time it took and the count of test
     cases Hypothesis gave up on, by reason: ``rejected`` by the sampler, a
     failed ``assume`` or ``reject``, or an ``overrun`` of Hypothesis's own
@@ -214,6 +216,8 @@ def sample(strategy, budget):
     def run(diagram):
         diagrams.append(diagram)
 
+    if seed is not None:
+        run = hypothesis_seed(seed)(run)
     start = time.perf_counter()
     with with_observability_callback(observations.append):
         try:

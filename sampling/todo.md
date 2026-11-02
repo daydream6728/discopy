@@ -77,6 +77,8 @@ session with the human; the decisions are below, the explanations in
       Hypothesis's choices and exactly from a seed (`grammar_exact`)
 - [x] Hypothesis's bias: the `uniforms` experiment
 - [x] `analysis.md`, separate from the slides
+- [x] `playground.py`: choose a doctrine, a sampler and its parameters, see
+      the histograms of what it draws and a gallery of drawings
 - [ ] round two doctrines: braided, balanced, traced, rigid, pivotal,
       frobenius, feedback, closed (stubs in `DOCTRINES`)
 - [ ] pre-existing, not from this work: `pytest --doctest-modules` on

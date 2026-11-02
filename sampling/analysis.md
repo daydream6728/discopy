@@ -55,6 +55,8 @@ uv run --with cvxpy python sampling/experiments.py --quick
 
 and the notebook never runs an experiment. The planted bugs are in
 `mutants.py`, the bugs property testing found so far in `retrospective.md`.
+To look at the draws of one sampler, run the playground:
+`uv run marimo edit sampling/playground.py`.
 
 <!---->
 
