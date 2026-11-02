@@ -831,3 +831,52 @@ def test_perceval_backend_closed_diagram(task):
     expected = amp if "amp" in task else abs(amp) ** 2
     result = hom.eval(PercevalBackend(), config=PercevalEvalConfig(task=task))
     assert np.isclose(np.ravel(result.tensor.array)[0], expected)
+
+
+@pytest.mark.parametrize("scalar", [1j, 2, -1])
+def test_perceval_backend_carries_the_scalar(scalar):
+    """A `path.Matrix` keeps a global scalar outside its array, where the
+    circuit the simulator is given cannot carry it."""
+    state = photonic.Create(1) @ photonic.Scalar(scalar)
+    result = state.eval(
+        PercevalBackend(), config=PercevalEvalConfig(task="amps"))
+    for oracle in (state.eval(), state.eval(PermanentBackend())):
+        assert np.allclose(
+            np.ravel(result.tensor.array), np.ravel(oracle.tensor.array))
+    assert np.isclose(np.ravel(result.tensor.array)[1], scalar)
+
+
+@pytest.mark.parametrize("n_photons", [1, 2, 3])
+def test_perceval_backend_carries_the_dilation_normalisation(n_photons):
+    """`path.Matrix.dilate` divides a non-unitary matrix by its largest
+    singular value and keeps the factor in `normalisation`, so the number
+    operator on `n` photons is `n` and not the unit the simulator returns."""
+    diagram = photonic.Create(n_photons) >> photonic.NumOp()
+    result = diagram.eval(
+        PercevalBackend(), config=PercevalEvalConfig(task="amps"))
+    assert np.allclose(
+        np.ravel(result.tensor.array), np.ravel(diagram.eval().tensor.array))
+    for oracle in (diagram.eval(), diagram.eval(PermanentBackend())):
+        assert np.isclose(
+            np.ravel(oracle.tensor.array)[n_photons], n_photons)
+    assert np.isclose(np.ravel(result.tensor.array)[n_photons], n_photons)
+
+
+@pytest.mark.parametrize("task", ["amps", "probs"])
+def test_perceval_backend_sums_amplitudes_not_probabilities(task):
+    """A sum of diagrams is a sum of amplitudes, so two terms that cancel
+    have probability zero where summing their probabilities gives two."""
+    cancels = photonic.Create(1) + photonic.Create(1) @ photonic.Scalar(-1)
+    adds = photonic.Create(1) + photonic.Create(1)
+    for diagram in (cancels, adds):
+        expected = np.ravel(diagram.eval().tensor.array)
+        if task == "probs":
+            expected = np.abs(expected) ** 2
+        result = diagram.eval(
+            PercevalBackend(), config=PercevalEvalConfig(task=task))
+        assert np.allclose(np.ravel(result.tensor.array), expected)
+    assert np.allclose(
+        np.ravel(cancels.eval(PermanentBackend()).tensor.array), 0)
+    assert np.allclose(np.ravel(cancels.eval(PercevalBackend()).tensor.array), 0)
+    assert np.isclose(
+        np.ravel(adds.eval(PercevalBackend()).tensor.array)[1], 4)
