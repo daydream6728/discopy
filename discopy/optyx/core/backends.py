@@ -904,20 +904,33 @@ class PercevalBackend(AbstractBackend):
         import perceval as pcvl
 
         if task in ("single_amp", "single_prob"):
-            return complex(
-                sim.prob_amplitude(perceval_state, perceval_effect)
-            )
+            return self._amplitude(sim, perceval_state, perceval_effect)
 
         result = {tuple(k): complex(v) for k, v in sim.evolve(perceval_state)}
         if not result:
             return result
 
         witness = max(result, key=lambda key: abs(result[key]))
-        bare = complex(sim.prob_amplitude(
-            perceval_state, pcvl.BasicState(list(witness))
-        ))
-        factor = bare / result[witness]
+        if not result[witness]:
+            return {key: 0j for key in result}
+
+        factor = self._amplitude(
+            sim, perceval_state, pcvl.BasicState(list(witness))
+        ) / result[witness]
         return {key: value * factor for key, value in result.items()}
+
+    @staticmethod
+    def _amplitude(sim, perceval_state, perceval_effect):
+        """One amplitude of the simulated circuit, not renormalised.
+
+        A circuit of linear optics conserves the number of photons, so an
+        effect that counts a different number from the state has amplitude
+        zero: the Fock space the backend enumerates is the state's, and
+        asking it for an effect outside that space is asking for nothing.
+        """
+        if perceval_effect.n != perceval_state.n:
+            return 0j
+        return complex(sim.prob_amplitude(perceval_state, perceval_effect))
 
     def _get_output_params(
         self,

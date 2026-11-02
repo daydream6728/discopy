@@ -880,3 +880,18 @@ def test_perceval_backend_sums_amplitudes_not_probabilities(task):
     assert np.allclose(np.ravel(cancels.eval(PercevalBackend()).tensor.array), 0)
     assert np.isclose(
         np.ravel(adds.eval(PercevalBackend()).tensor.array)[1], 4)
+
+
+@pytest.mark.parametrize("task", ["probs", "amps", "single_prob", "single_amp"])
+@pytest.mark.parametrize("diagram", [
+    photonic.Create(1) >> photonic.Select(2),
+    photonic.Create(1, 0) >> photonic.BS >> photonic.Select(2, 0)])
+def test_perceval_backend_impossible_selection(diagram, task):
+    """A selection no photon number can satisfy is an amplitude of zero, and
+    not an effect outside the Fock space the SLOS backend enumerates: that
+    index used to raise, and the probability tasks used to report the
+    conditional probability of a postselection that never succeeds."""
+    assert np.isclose(complex(diagram.eval().tensor.array), 0)
+    result = diagram.eval(
+        PercevalBackend(), config=PercevalEvalConfig(task=task))
+    assert np.allclose(np.ravel(result.tensor.array), 0)
