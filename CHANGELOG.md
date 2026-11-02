@@ -255,6 +255,20 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
+- `optyx.core.backends.PercevalBackend` evaluates a term as amplitudes and
+  applies the Born rule once, to their sum, so a sum of diagrams interferes:
+  `Create(1) + Create(1) @ Scalar(-1)` is zero where the probabilities of the
+  two terms added to two. It also carries the two factors that a `path.Matrix`
+  keeps outside its array and the simulator's circuit therefore cannot: the
+  global `scalar`, so that the amplitude of `Create(1) @ Scalar(1j)` is `1j`
+  and not `1`, and the `normalisation` that `dilate` raises to the number of
+  photons, so that the number operator on two photons is `2` and not the unit
+  a renormalised state vector reports ([next#314]).
+- A selection that no photon number can satisfy is an amplitude of zero, where
+  `PercevalBackend` used to raise `TypeError` from the SLOS backend for an
+  effect outside the Fock space it enumerates: `Create(1) >> Select(2)` and
+  `Create(1, 0) >> BS >> Select(2, 0)` are zero, as every other backend says,
+  rather than a crash on `amps` and `1.0` and `0.5` on `probs` ([next#314]).
 - A feed-forward component converted from perceval applies its default
   circuit **once**, when the measured state is in none of its configurations,
   where each configuration that did not match used to apply it: with a
