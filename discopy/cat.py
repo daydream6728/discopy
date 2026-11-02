@@ -393,25 +393,25 @@ class Arrow(FreeCategory, DaggerCategory, Serialisable["Arrow"]):
     bubble_factory: ClassVar[type["Bubble"]]
     ob = Ob
 
-    sampler: ClassVar[str] = "syntactic_baseline"
+    default_strategy: ClassVar[str] = "syntactic_baseline"
     """
     The name of the default strategy, i.e. :meth:`strategy` calls the method
-    ``strategy_<sampler>``, which an experiment or a profile of the property
-    matrix overrides by setting this attribute.
+    ``strategy_<default_strategy>``, which an experiment or a profile of the
+    property matrix overrides by setting this attribute.
     """
 
     @classmethod
     def strategy(cls, **params):
         """
         The strategy the property matrix samples the terms of a free category
-        from: the method ``strategy_<sampler>`` named by :attr:`sampler`, e.g.
-        :meth:`strategy_syntactic_baseline`.
+        from: the method ``strategy_<default_strategy>`` named by
+        :attr:`default_strategy`, e.g. :meth:`strategy_syntactic_baseline`.
 
         Parameters are those of :meth:`search`.
 
-        >>> assert Arrow.sampler == "syntactic_baseline"
+        >>> assert Arrow.default_strategy == "syntactic_baseline"
         """
-        return getattr(cls, f"strategy_{cls.sampler}")(**params)
+        return getattr(cls, f"strategy_{cls.default_strategy}")(**params)
 
     admissible: ClassVar[tuple[str, ...]] = ()
     """

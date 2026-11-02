@@ -28,7 +28,7 @@ session with the human; the decisions are below, the explanations in
 
 ## Milestone 1
 
-- [x] dispatch: `Arrow.sampler`, `strategy_<sampler>`, `PROPTEST_SAMPLER`
+- [x] dispatch: `Arrow.default_strategy`, `strategy_<sampler>`, `PROPTEST_SAMPLER`
 - [x] 1a `representational_baseline`, 1b `representational_goal_directed`
       on `monoidal.Diagram`, with permutations on `symmetric.Diagram`
 - [x] 2a `syntactic_baseline` (the existing `search`)
@@ -79,8 +79,9 @@ session with the human; the decisions are below, the explanations in
 - [x] `analysis.md`, separate from the slides
 - [x] `playground.py`: choose a doctrine, a sampler and its parameters, see
       the histograms of what it draws and a gallery of drawings
-- [ ] round two doctrines: braided, balanced, traced, rigid, pivotal,
-      frobenius, feedback, closed (stubs in `DOCTRINES`)
+- [x] every doctrine in `DOCTRINES`, from `cat` to `biclosed`
+- [ ] structural samplers for planar doctrines: braid words (braided,
+      balanced, ribbon), Temperley–Lieb (pivotal)
 - [ ] pre-existing, not from this work: `pytest --doctest-modules` on
       `discopy/hypergraph.py` alone fails 4 doctests, on
       `discopy/testable.py` 2, already at d97e2cda3
@@ -97,14 +98,41 @@ session with the human; the decisions are below, the explanations in
 - [x] a warm-up before every timed sample
 - [x] `portfolio`, a third each of 2c, 3a and 3b, and
       `syntactic_grammatical_admissible`, 2c without the admissible rules
-- [ ] decide the `explore` profile: exact critical sampling, or shrinkable
-      at a finite size
+- [x] the `explore` profile samples shrinkable terms at a finite size,
+      `testable.SIZE`; critical sampling is left for later (decided)
+- [x] `str_transparency` compared up to interchange (decided by the agent);
+      following it found and fixed three bugs, see `retrospective.md`
+- [x] every level of the hierarchy in the experiments: 16 free categories
+- [x] `--smoke` mode, results in `results/smoke`
 
 - [ ] `--full` budgets are 10 times the quick ones; run the experiments one
       after another on an idle machine, since `throughput` measures speed:
       `uv run --with cvxpy python sampling/experiments.py --full`
 - [ ] the hand-found minima in `analysis.md` assume the quick results; check
       the shrunk sizes again after the full run
+
+## The full run, in three shards
+
+`--full` is about three times `--quick`, sized to what each experiment has to
+answer: throughput 300 a cell, calibration 50 a value tried coarse to fine,
+mutants 5 seeds and 100 examples a law, the matrix under `pr`, Boltzmann at
+full budget on monoidal, symmetric, markov and compact only; convex,
+semantic and uniforms have no full run, their quick results are conclusive.
+Calibration, throughput and mutants run one process for each cell.
+
+Estimated on a 4-core runner (`SAMPLING_WORKERS=4`), from full runs on two
+doctrines timed on 2026-11-03 and extrapolated to the 116 doctrine x sampler
+cells of the hierarchy:
+
+| shard | command | estimate |
+|---|---|---|
+| `throughput` | `--full calibration throughput --out throughput` | ~20 min (calibration ~5, throughput ~12) |
+| `mutants` | `--full mutants --out mutants` | ~35-40 min (90 runs of ~80 s, those with a grammar ~200 s) |
+| `boltzmann-matrix` | `--full boltzmann matrix --out boltzmann-matrix` | ~50 min (Boltzmann ~20 in one process, matrix ~28) |
+
+That is about 50 minutes with the three in parallel, 1 h 50 one after the
+other, each preceded by its `--smoke` (5 to 10 minutes). The shards merge
+with `--merge throughput mutants boltzmann-matrix`.
 
 ## After the experiments
 

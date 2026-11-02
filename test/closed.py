@@ -932,3 +932,13 @@ def test_Bubble_is_linear_and_has_no_term():
     assert f.bubble().is_linear and Diagram.copy(x).bubble(cod=x).is_linear
     with raises(AxiomError):
         (f.bubble() >> g).to_term()
+
+
+def test_Eval_side_reads_back():
+    x = Ty('x') >> Ty('y')
+    for factory in (Eval, Coeval):
+        for left in (True, False):
+            for time_step in (0, 1):
+                box = factory(x, left=left).delay(time_step)
+                environment = Diagram.str_environment(box)
+                assert eval(str(box), environment) == box

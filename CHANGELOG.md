@@ -10,7 +10,7 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 ### Added
 
 - Samplers of string diagrams as methods `strategy_<sampler>`, chosen by
-  `Arrow.sampler` or `PROPTEST_SAMPLER` for the whole property matrix:
+  `Arrow.default_strategy` or `PROPTEST_SAMPLER` for the whole property matrix:
   `representational_baseline` and `representational_goal_directed` on
   monoidal diagrams, `syntactic_admissible`, i.e. `search` without the
   `Arrow.admissible` rules, `syntactic_grammatical`, the Boltzmann sampler
@@ -305,6 +305,15 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Fixed
 
+- What the samplers of `sampling/` found, each with its test:
+  `str_transparency` compares a diagram up to interchange, the staircase
+  its string writes, and up to the hypergraph on frobenius diagrams and
+  neural networks, so it is no longer declared broken on markov; the atoms
+  of a rotated rigid box are those of the box it rotates, so `f.r` reads
+  back; a right closed `Eval` or `Coeval` prints `left=False`, as a closed
+  exponential reads the same on both sides; `Diagram.tensor` leaves out a
+  layer whose plumbing merges into the wires around it, e.g. a whiskered
+  `Spider(1, 1, x)`.
 - What the property matrix of [next#1] found, each with its test:
   `Feedback.dagger` and `rotate` raise `AxiomError`, as either would feed
   the memory back in time; `para.Compact.curry` keeps the coparameters and

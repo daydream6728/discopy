@@ -8,12 +8,22 @@ experiment.
     uv run --with cvxpy python sampling/experiments.py --quick
     uv run --with cvxpy python sampling/experiments.py --quick boltzmann
 
-``--quick`` is the budget the notebooks are regenerated with, ``--full`` the
-one a long background run uses.
+``--quick`` is the budget the notebooks are regenerated with, ``--full``
+about three times it, ``--smoke`` a few examples of everything, to check
+that it runs, written to ``results/smoke``. A full run is split in shards,
+one cloud session each, e.g.
+
+    uv run --with cvxpy python sampling/experiments.py --full \\
+        calibration throughput --out throughput
+    uv run python sampling/experiments.py --merge throughput mutants matrix
+
+``--doctrines monoidal,symmetric`` restricts any experiment to some
+doctrines, ``--reuse-calibration`` copies ``results/calibration.json``.
 """
 
 import argparse
 import concurrent.futures
+import itertools
 import json
 import math
 import os
@@ -36,13 +46,28 @@ from hypothesis import strategies as st
 from hypothesis.errors import NoSuchExample, Unsatisfiable
 from hypothesis.internal.observability import with_observability_callback
 
-from discopy import cat, compact, markov, monoidal, symmetric, tensor
+from discopy import (
+    balanced, biclosed, braided, cat, closed, comarkov, compact, feedback,
+    frobenius, markov, monoidal, pivotal, ribbon, rigid, spacial, symmetric,
+    tensor)
 from discopy.abc import SymmetricCategory
 from discopy.boltzmann import Grammar
 from discopy.testable import Testable
+from discopy.utils import factory_name
 
 HERE = pathlib.Path(__file__).parent
 RESULTS = HERE / "results"
+OUT = RESULTS
+""" Where the experiments write, ``results/<shard>`` for a shard. """
+
+SELECTED = None
+""" The doctrines to run on, all of them if ``None``, see ``--doctrines``. """
+
+WORKERS = int(os.environ.get("SAMPLING_WORKERS", 0)) or None
+"""
+The processes of a parallel experiment, ``SAMPLING_WORKERS`` or one for
+each core.
+"""
 sys.path.insert(0, str(HERE))
 
 from mutants import MUTANTS  # noqa: E402  pylint: disable=wrong-import-position
@@ -71,49 +96,71 @@ samplers compete on the same types; the matrix runs on the default atoms.
 MATCHED = (3., 6.)
 """ The mean numbers of boxes the samplers are calibrated to. """
 
-SEEDS = {"quick": 3, "full": 10}
+SEEDS = {"smoke": 1, "quick": 3, "full": 5}
 """ The seeds each mutant is searched for under each sampler. """
 
 DOCTRINES = {
-    "monoidal": (monoidal, 1),
-    "symmetric": (symmetric, 1),
-    "markov": (markov, 1),
-    "compact": (compact, 1),
-    "braided": ("braided", 2),
-    "balanced": ("balanced", 2),
-    "traced": ("traced", 2),
-    "rigid": ("rigid", 2),
-    "pivotal": ("pivotal", 2),
-    "frobenius": ("frobenius", 2),
-    "feedback": ("feedback", 2),
-    "closed": ("closed", 2),
+    "cat": cat,
+    "monoidal": monoidal,
+    "spacial": spacial,
+    "braided": braided,
+    "balanced": balanced,
+    "ribbon": ribbon,
+    "rigid": rigid,
+    "pivotal": pivotal,
+    "symmetric": symmetric,
+    "feedback": feedback,
+    "markov": markov,
+    "comarkov": comarkov,
+    "frobenius": frobenius,
+    "compact": compact,
+    "closed": closed,
+    "biclosed": biclosed,
 }
 """
-Every doctrine, with the round it is studied in: a round-two doctrine is
-named, not imported, so that it reads as a stub until its turn.
+Every level of the hierarchy of free categories, by module: the arrows of
+:mod:`discopy.cat`, then the diagrams of each other module. A traced
+category has no diagrams of its own: its traces are those of
+:mod:`discopy.feedback` and below.
 """
 
 BUDGETS = {
-    "throughput": {"quick": 200, "full": 2000},
-    "boltzmann": {"quick": 300, "full": 3000},
-    "mutants": {"quick": 30, "full": 300},
-    "semantic": {"quick": 200, "full": 2000},
-    "uniforms": {"quick": 2000, "full": 20000},
-    "calibration": {"quick": 100, "full": 1000},
+    "throughput": {"smoke": 10, "quick": 200, "full": 300},
+    "boltzmann": {"smoke": 10, "quick": 300, "full": 1000},
+    "mutants": {"smoke": 3, "quick": 30, "full": 100},
+    "semantic": {"smoke": 10, "quick": 200},
+    "uniforms": {"smoke": 100, "quick": 2000},
+    "calibration": {"smoke": 10, "quick": 100, "full": 50},
 }
-""" Examples per cell of each experiment. """
+"""
+Examples per cell of each experiment, by mode: ``smoke`` only checks that
+everything runs, and writes to ``results/smoke`` instead.
+"""
 
-PROFILES = {"quick": "pr", "full": "explore"}
-""" The Hypothesis profile the property matrix is run under. """
+PROFILES = {"smoke": "pr", "quick": "pr", "full": "pr"}
+"""
+The Hypothesis profile the property matrix is run under: ``pr`` for a full
+run too, since the matrix only shows that no law fails under any sampler,
+and finding bugs is what the planted ones measure.
+"""
+
+QUICK_ONLY = ("convex", "semantic", "uniforms")
+""" The experiments whose quick results are conclusive, with no full run. """
+
+ORIGINAL = ("monoidal", "symmetric", "markov", "compact")
+"""
+The doctrines the Boltzmann experiment runs at its full budget, one for
+each class of plumbing; the others run at the quick budget.
+"""
 
 FRESH = re.compile(r"f_[0-9a-f]{32}")
 """ The name of a fresh box, see :meth:`discopy.cat.Box.strategy`. """
 
 
 def diagram_class(doctrine):
-    """ The diagrams of a doctrine studied in this round, else ``None``. """
-    module, _ = DOCTRINES[doctrine]
-    return None if isinstance(module, str) else module.Diagram
+    """ The free category of a doctrine: arrows for cat, else diagrams. """
+    module = DOCTRINES[doctrine]
+    return module.Arrow if module is cat else module.Diagram
 
 
 def implemented(doctrine):
@@ -122,23 +169,35 @@ def implemented(doctrine):
     return [s for s in SAMPLERS if hasattr(diagram, f"strategy_{s}")]
 
 
-def round_one():
-    """ The doctrines of this round. """
-    return [d for d, (_, round_) in DOCTRINES.items() if round_ == 1]
+def doctrines():
+    """ The doctrines selected, every one by default, see :data:`DOCTRINES`. """
+    return [d for d in DOCTRINES if SELECTED is None or d in SELECTED]
+
+
+def parallel(function, tasks):
+    """
+    Map ``function`` over ``tasks`` in a pool of processes, one task each,
+    and concatenate the rows they return, in the order of the tasks.
+    """
+    rows = []
+    with concurrent.futures.ProcessPoolExecutor(WORKERS) as pool:
+        for found in pool.map(function, tasks):
+            rows += found
+    return rows
 
 
 @contextmanager
 def sampler(diagram, name):
     """ Sample the diagrams of a class by the given sampler, in a block. """
-    old = diagram.__dict__.get("sampler")
-    diagram.sampler = name
+    old = diagram.__dict__.get("default_strategy")
+    diagram.default_strategy = name
     try:
         yield
     finally:
         if old is None:
-            del diagram.sampler
+            del diagram.default_strategy
         else:
-            diagram.sampler = old
+            diagram.default_strategy = old
 
 
 @contextmanager
@@ -202,15 +261,20 @@ class Size:
         return Size(
             boxes=len(generators),
             layers=len(diagram),
-            width=max([len(diagram.dom), len(diagram.cod)] + [
-                len(layer.dom) for layer in diagram.inside]),
+            width=max([width(diagram.dom), width(diagram.cod)] + [
+                width(layer.dom) for layer in diagram.inside]),
             crossings=sum(inversions(list(box.perm)) for box in perms),
             structural=len(boxes) - len(generators) - len(perms))
 
 
+def width(obj):
+    """ The number of wires of a type, one for an object of a category. """
+    return len(obj) if hasattr(obj, "__len__") else 1
+
+
 def flatten(diagram):
     """ The boxes of a diagram, those inside a trace or a bubble included. """
-    for box in diagram.boxes:
+    for box in getattr(diagram, "boxes", diagram.inside):
         if hasattr(box, "arg"):
             yield box
             yield from flatten(box.arg)
@@ -228,17 +292,25 @@ def shape(diagram):
     return FRESH.sub("f", repr(diagram))
 
 
+STEPS = 500
+""" The rewrites a planar normal form is computed with, at most. """
+
+
 def coherent_shape(diagram):
     """
     A diagram up to the names of its fresh boxes and up to coherence: the
     Weisfeiler-Lehman hash of its hypergraph for a symmetric category,
     which isomorphic hypergraphs share, else its planar normal form, when
-    it is boundary-connected and has one.
+    it is boundary-connected and has one, after at most :data:`STEPS`
+    rewrites: a diagram with several scalars takes exponentially many to
+    be found to have none, see ``retrospective.md``.
     """
     if not isinstance(diagram, SymmetricCategory):
+        def capped(term, **params):
+            return itertools.islice(type(term).normalize(term, **params), STEPS)
         try:
-            return shape(diagram.normal_form())
-        except NotImplementedError:
+            return shape(diagram.normal_form(normalize=capped))
+        except (AttributeError, NotImplementedError):
             return shape(diagram)
     graph = diagram.to_hypergraph().to_graph()
     for node, data in graph.nodes(data=True):
@@ -295,7 +367,8 @@ def sample(strategy, budget, seed=None, warmup=True):
 
 BOUNDARIES = {
     "free": lambda Ty: {},
-    "fixed": lambda Ty: {"dom": Ty("a", "b"), "cod": Ty("b", "a")},
+    "fixed": lambda Ty: {"dom": Ty("a", "b"), "cod": Ty("b", "a")}
+    if issubclass(Ty, monoidal.Ty) else {"dom": Ty("a"), "cod": Ty("b")},
 }
 """ The boundaries a sampler is asked for: none, or a fixed pair. """
 
@@ -317,51 +390,118 @@ def log(*args):
           f"{row['seconds']:.1f}s", file=sys.stderr)
 
 
+def bracket(values, mean, target):
+    """
+    The value whose ``mean`` is the nearest to ``target``, trying ``values``
+    coarse to fine: every other one from the smallest up, until the mean
+    reaches the target, then those between the last two tried.
+    """
+    coarse = list(values[::2]) + list(values[-1:]) * (len(values) % 2 == 0)
+    tried, above = [], None
+    for value in coarse:
+        tried.append(value)
+        if mean(value) >= target:
+            above = value
+            break
+    if above is not None and len(tried) > 1:
+        low, high = values.index(tried[-2]), values.index(above)
+        tried += values[low + 1:high]
+    return min(tried, key=lambda v: abs(mean(v) - target))
+
+
+def calibrate(task):
+    """
+    One cell of :func:`calibration`: for a doctrine and a sampler, the
+    value of its knob nearest each target of :data:`MATCHED`.
+    """
+    doctrine, name, budget = task
+    diagram, (key, values), means = diagram_class(doctrine), knob(name), {}
+
+    def mean(value):
+        if value not in means:
+            diagrams, *_ = sample(
+                getattr(diagram, f"strategy_{name}")(**{key: value}),
+                budget, seed=0)
+            means[value] = statistics.mean(
+                Size.of(d).boxes for d in diagrams) if diagrams else 0.
+        return means[value]
+
+    rows = []
+    with alphabet():
+        for target in MATCHED:
+            value = bracket(values, mean, target)
+            rows.append({"doctrine": doctrine, "sampler": name,
+                         "target": target, "params": {key: value},
+                         "mean": means[value], "means": dict(means)})
+    print(doctrine, name, means, file=sys.stderr)
+    return rows
+
+
+REUSE = None
+"""
+The calibration to reuse rather than compute, ``results/calibration.json``
+with ``--reuse-calibration``.
+"""
+
+
 def calibration(mode):
     """
     For each doctrine, sampler and target of :data:`MATCHED`, the value of
     the parameter that sets its size, see :func:`knob`, whose mean number
     of boxes with free boundaries is the nearest to the target, from a
-    sample of the calibration budget for each value.
+    sample of the calibration budget for each value tried, see
+    :func:`bracket`, in parallel; or those of :data:`REUSE` if set.
     """
-    rows = []
-    for doctrine in round_one():
-        diagram = diagram_class(doctrine)
-        for name in implemented(doctrine):
-            key, values = knob(name)
-            means = {}
-            for value in values:
-                diagrams, *_ = sample(
-                    getattr(diagram, f"strategy_{name}")(**{key: value}),
-                    BUDGETS["calibration"][mode], seed=0)
-                means[value] = statistics.mean(
-                    Size.of(d).boxes for d in diagrams) if diagrams else 0.
-            for target in MATCHED:
-                value = min(values, key=lambda v: abs(means[v] - target))
-                rows.append({"doctrine": doctrine, "sampler": name,
-                             "target": target, "params": {key: value},
-                             "mean": means[value], "means": means})
-            print(doctrine, name, means, file=sys.stderr)
-    return rows
+    if REUSE is not None:
+        return [r for r in json.loads(REUSE.read_text())["rows"]
+                if r["doctrine"] in doctrines()]
+    return parallel(calibrate, [
+        (doctrine, name, BUDGETS["calibration"][mode])
+        for doctrine in doctrines() for name in implemented(doctrine)])
 
 
 def regimes(doctrine, name):
     """
     The parameters a sampler is run with: its own defaults, then those
-    calibrated to each target of :data:`MATCHED`, if calibrated.
+    calibrated to each target of :data:`MATCHED`, if calibrated, read from
+    the output of this run or else from ``results/calibration.json``.
     """
-    found = {r["target"]: r["params"]
-             for r in load("calibration") if r["doctrine"] == doctrine
-             and r["sampler"] == name}
+    rows = load("calibration")
+    if not rows and (RESULTS / "calibration.json").exists():
+        rows = json.loads((RESULTS / "calibration.json").read_text())["rows"]
+    found = {r["target"]: r["params"] for r in rows
+             if r["doctrine"] == doctrine and r["sampler"] == name}
     return [("natural", {})] + [
         (f"matched {target:g}", found[target])
         for target in MATCHED if target in found]
 
 
 def load(name):
-    """ The rows of an experiment already run, or none. """
-    path = RESULTS / f"{name}.json"
+    """ The rows of an experiment already run in this output, or none. """
+    path = OUT / f"{name}.json"
     return json.loads(path.read_text())["rows"] if path.exists() else []
+
+
+def measure(task):
+    """
+    One cell of :func:`throughput`: a doctrine and a sampler, under each
+    of its regimes and boundaries.
+    """
+    doctrine, name, runs, budget = task
+    diagram, rows = diagram_class(doctrine), []
+    method = getattr(diagram, f"strategy_{name}")
+    with alphabet():
+        for regime, params in runs:
+            for boundary, bounds in BOUNDARIES.items():
+                if regime != "natural" and boundary != "free":
+                    continue
+                result = sample(method(**params, **bounds(diagram.ob)),
+                                budget, seed=0)
+                rows.append({"doctrine": doctrine, "sampler": name,
+                             "regime": regime, "params": params,
+                             "boundary": boundary, **describe(*result)})
+                log(doctrine, name, regime, boundary, rows[-1])
+    return rows
 
 
 def throughput(mode):
@@ -370,37 +510,27 @@ def throughput(mode):
     others were rejected, the valid diagrams per second, their sizes and
     how many are distinct, syntactically and up to coherence: with its own
     parameters, and with those calibrated to each mean size, free boundaries
-    only, since that is what the calibration matches.
+    only, since that is what the calibration matches; one process for each
+    doctrine and sampler, so that speeds are those of one core each.
     """
-    rows = []
-    for doctrine in round_one():
-        diagram = diagram_class(doctrine)
-        for name in implemented(doctrine):
-            for regime, params in regimes(doctrine, name):
-                for boundary, bounds in BOUNDARIES.items():
-                    if regime != "natural" and boundary != "free":
-                        continue
-                    method = getattr(diagram, f"strategy_{name}")
-                    result = sample(method(**params, **bounds(diagram.ob)),
-                                    BUDGETS["throughput"][mode], seed=0)
-                    rows.append({"doctrine": doctrine, "sampler": name,
-                                 "regime": regime, "params": params,
-                                 "boundary": boundary, **describe(*result)})
-                    log(doctrine, name, regime, boundary, rows[-1])
-    return rows
+    return parallel(measure, [
+        (doctrine, name, regimes(doctrine, name),
+         BUDGETS["throughput"][mode])
+        for doctrine in doctrines() for name in implemented(doctrine)])
 
 
 def matrix(mode):
     """
     Run the cells of the property matrix of each doctrine under each of
     its samplers, with a fixed seed, and collect the outcome of each cell,
-    its distinct draws and, for a failure, the first line of its message.
+    its distinct draws and, for a failure, the first line of its message;
+    on the first two doctrines only for a smoke run.
     """
     rows = []
-    for doctrine in round_one():
-        prefix = f"{doctrine}.Diagram."
+    for doctrine in doctrines()[:2] if mode == "smoke" else doctrines():
+        prefix = factory_name(diagram_class(doctrine)) + "."
         for name in implemented(doctrine):
-            report = RESULTS / "raw" / f"matrix-{doctrine}-{name}.json"
+            report = OUT / "raw" / f"matrix-{doctrine}-{name}.json"
             junit = report.with_suffix(".xml")
             start = time.perf_counter()
             subprocess.run([
@@ -441,8 +571,10 @@ def boltzmann(mode):
     parameter included, by choices Hypothesis shrinks or exactly.
     """
     rows = []
-    for doctrine in round_one():
+    for doctrine in doctrines():
         diagram = diagram_class(doctrine)
+        if not hasattr(diagram, "grammar_atoms"):
+            continue
         start = time.perf_counter()
         grammar = Grammar.compile(
             diagram, diagram.grammar_atoms, diagram.grammar_width)
@@ -454,8 +586,11 @@ def boltzmann(mode):
         for exact in (False, True):
             for size in SIZES:
                 z = grammar.tune(size, root)
-                result = sample(grammar.strategy(size=size, exact=exact),
-                                BUDGETS["boltzmann"][mode])
+                result = sample(
+                    grammar.strategy(size=size, exact=exact),
+                    BUDGETS["boltzmann"][
+                        mode if doctrine in ORIGINAL or mode != "full"
+                        else "quick"])
                 rows.append({
                     "doctrine": doctrine, "size": size, "exact": exact,
                     "z": z, "rho": rho,
@@ -697,7 +832,7 @@ def mutants(mode):
             tasks += [(name, regime, params, seed, budget)
                       for seed in range(SEEDS[mode])]
     rows = []
-    with concurrent.futures.ProcessPoolExecutor() as pool:
+    with concurrent.futures.ProcessPoolExecutor(WORKERS) as pool:
         for found in pool.map(hunt, tasks):
             rows += found
             print(found[0]["sampler"], found[0]["regime"], found[0]["seed"],
@@ -849,26 +984,83 @@ EXPERIMENTS = {
     "semantic": semantic, "mutants": mutants, "matrix": matrix}
 
 
+def merge(shards):
+    """
+    Concatenate the rows of each experiment over the given shards, i.e.
+    ``results/<shard>/<experiment>.json``, into ``results/<experiment>.json``,
+    and copy their raw reports into ``results/raw``.
+    """
+    names = sorted({path.stem for shard in shards
+                    for path in (RESULTS / shard).glob("*.json")})
+    for name in names:
+        found = [json.loads(path.read_text()) for shard in shards
+                 for path in [RESULTS / shard / f"{name}.json"]
+                 if path.exists()]
+        path = RESULTS / f"{name}.json"
+        path.write_text(json.dumps({
+            "mode": found[0]["mode"],
+            "seconds": sum(f["seconds"] for f in found),
+            "rows": [row for f in found for row in f["rows"]]},
+            indent=1, default=float))
+        print(f"wrote {path} from {len(found)} shard(s)", file=sys.stderr)
+    (RESULTS / "raw").mkdir(parents=True, exist_ok=True)
+    for shard in shards:
+        for raw in (RESULTS / shard / "raw").glob("*"):
+            (RESULTS / "raw" / raw.name).write_bytes(raw.read_bytes())
+
+
 def main():
     """ Run the experiments asked for and write their results. """
-    parser = argparse.ArgumentParser(description=__doc__)
+    global OUT, SELECTED, REUSE  # pylint: disable=global-statement
+    parser = argparse.ArgumentParser(
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter)
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument("--quick", action="store_const", const="quick",
                       dest="mode", default="quick")
     mode.add_argument("--full", action="store_const", const="full",
                       dest="mode")
-    parser.add_argument("experiments", nargs="*", default=list(EXPERIMENTS))
+    mode.add_argument("--smoke", action="store_const", const="smoke",
+                      dest="mode")
+    parser.add_argument(
+        "experiments", nargs="*",
+        help="the experiments to run, by default all of them, but those of "
+             "QUICK_ONLY for a full run")
+    parser.add_argument(
+        "--doctrines", type=lambda text: text.split(","),
+        help="the doctrines to run on, separated by commas, e.g. "
+             "monoidal,symmetric")
+    parser.add_argument(
+        "--out", metavar="NAME",
+        help="write to results/NAME/<experiment>.json, a shard")
+    parser.add_argument(
+        "--reuse-calibration", action="store_true",
+        help="copy results/calibration.json rather than calibrate again")
+    parser.add_argument(
+        "--merge", nargs="+", metavar="NAME",
+        help="concatenate the shards NAME into results/<experiment>.json")
     args = parser.parse_args()
-    (RESULTS / "raw").mkdir(parents=True, exist_ok=True)
-    for name in args.experiments:
+    if args.merge:
+        merge(args.merge)
+        return
+    SELECTED = args.doctrines
+    REUSE = RESULTS / "calibration.json" if args.reuse_calibration else None
+    OUT = RESULTS / "smoke" if args.mode == "smoke" else RESULTS
+    OUT = OUT / args.out if args.out else OUT
+    (OUT / "raw").mkdir(parents=True, exist_ok=True)
+    names = args.experiments or [
+        name for name in EXPERIMENTS
+        if args.mode != "full" or name not in QUICK_ONLY]
+    for name in names:
         start = time.perf_counter()
         with alphabet():
             rows = EXPERIMENTS[name](args.mode)
-        path = RESULTS / f"{name}.json"
+        path = OUT / f"{name}.json"
         path.write_text(json.dumps({
             "mode": args.mode, "seconds": time.perf_counter() - start,
             "rows": rows}, indent=1, default=float))
-        print(f"wrote {path}", file=sys.stderr)
+        print(f"wrote {path} in {time.perf_counter() - start:.0f}s",
+              file=sys.stderr)
 
 
 if __name__ == "__main__":

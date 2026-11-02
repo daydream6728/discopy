@@ -148,11 +148,38 @@ Each is a method `strategy_<sampler>` of the classes it makes sense for;
 | symmetric | each output feeds one input | matchings | 3a |
 | markov | each input reads one output | functions | 3a |
 | compact | each port pairs with another | Brauer diagrams | 3a |
-| braided | strands | braid words | round two |
-| pivotal | non-crossing pairings | Temperley–Lieb | round two |
-| hypergraph | ports in spiders | cospans, partitions | round two |
+| braided | strands | braid words | next |
+| pivotal | non-crossing pairings | Temperley–Lieb | next |
+| frobenius | ports in spiders | cospans, partitions | through markov's |
 
 <!---->
+
+```python {.marimo hide_code="true"}
+def coverage_figure():
+    data = rows("throughput", regime="natural", boundary="free")
+    doctrine_names = list(dict.fromkeys(r["doctrine"] for r in data))
+    sampler_names = list(SHORT)
+    grid = np.full((len(doctrine_names), len(sampler_names)), np.nan)
+    for r in data:
+        grid[doctrine_names.index(r["doctrine"]),
+             sampler_names.index(r["sampler"])] = 1.
+    figure, ax = plt.subplots(figsize=(6, 0.28 * len(doctrine_names) + 1))
+    ax.imshow(grid, cmap="Greens", vmin=0, vmax=1.4, aspect="auto")
+    ax.set_xticks(range(len(sampler_names)),
+                  [SHORT[n] for n in sampler_names], fontsize=8)
+    ax.set_yticks(range(len(doctrine_names)), doctrine_names, fontsize=8)
+    figure.tight_layout()
+    return figure
+
+
+mo.vstack([
+    mo.md("## Every level of the hierarchy"),
+    coverage_figure() if rows("throughput", regime="natural")
+    else mo.md("not run yet"),
+    mo.md("Syntactic samplers everywhere, layered and grammatical ones from "
+          "monoidal down, structural ones from symmetric down."),
+])
+```
 
 ```python {.marimo hide_code="true"}
 def validity_figure():
@@ -371,7 +398,7 @@ what they draw; the grammar of 2c only has the boxes of the signature.
 
 ## Finding 7: a green cell can be a blind spot
 
-Under 3a, `str_transparency` fails on symmetric diagrams:
+Under 3a, `str_transparency` failed on symmetric diagrams:
 
 ```python
 f, g = Box('f', x, x), Box('g', y, y)
@@ -379,11 +406,13 @@ d = Diagram(inside=(Layer(f, g), ), dom=x @ y, cod=x @ y)
 assert str(d) == "f @ g" and eval(str(d)) != d   # two layers, not one
 ```
 
-- A known limitation, declared broken on markov only: the default samplers
-  of symmetric diagrams never put two boxes in a layer.
-- It cannot just be declared broken there: a broken law is a strict xfail,
-  so a sampler that misses it fails the cell. **Which sampler a law runs
-  under is part of what the law claims.**
+- Declared broken on markov only: the default samplers of symmetric
+  diagrams never put two boxes in a layer. **Which sampler a law runs under
+  is part of what the law claims.**
+- Now compared up to interchange. Following it up across every level found
+  three more bugs the default never drew: a rotated box `f.r`, a right
+  closed `Eval` printed as a left one, and `a @ (Spider(1, 1, b) >> h)`
+  leaving a layer with no box. All fixed.
 
 <!---->
 
@@ -393,8 +422,8 @@ assert str(d) == "f @ g" and eval(str(d)) != d   # two layers, not one
 |---|---|
 | What does Boltzmann sampling buy us? | control of the size and of each kind of node, no rejection over a fixed signature; not uniformity over diagrams |
 | Convex tuning beyond the grammar? | wherever there is a specification: 3a in principle |
-| Critical sampling for `explore`? | only drawn from a seed: through Hypothesis the tail is cut |
-| A class for each doctrine's plumbing? | matchings, functions, Brauer done; braids, Temperley–Lieb, cospans next |
+| Critical sampling for `explore`? | decided: finite size, shrinkable; critical sampling later |
+| A class for each doctrine's plumbing? | matchings, functions, Brauer done; braids and Temperley–Lieb next |
 | Semantic categories? | the grammar, alone without rejection |
 | Normal or non-normal forms? | both: cycles of wires need structural samplers, which crash on the code they run; a mixture per law |
 
@@ -404,7 +433,5 @@ assert str(d) == "f @ g" and eval(str(d)) != d   # two layers, not one
 
 1. The `--full` run, then a default sampler per doctrine: the portfolio of
    2c, 3a and 3b is the one to beat.
-2. `str_transparency` on symmetric diagrams: up to interchange, or a
-   transparent `str` for layers of several boxes.
-3. Counterexamples as regression tests: `Axiom.examples`, once per cell.
-4. Round two: braided, pivotal, frobenius, and the tuning of 3a.
+2. Counterexamples as regression tests: `Axiom.examples`, once per cell.
+3. Structural samplers for braided and pivotal diagrams; tuning 3a.

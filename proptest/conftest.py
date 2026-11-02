@@ -56,21 +56,25 @@ SAMPLER = os.environ.get("PROPTEST_SAMPLER")
 """
 The strategy every free category that implements it samples from, e.g.
 ``structural_typed`` for ``strategy_structural_typed``, see
-:attr:`discopy.cat.Arrow.sampler`; each keeps its own default if unset.
+:attr:`discopy.cat.Arrow.default_strategy`; each keeps its own default if
+unset.
 """
 
 
 def pytest_collection_finish(session):
     """
     Set the :data:`SAMPLER` once every module is imported, on each free
-    category that implements it, before any strategy is built.
+    category that implements it and draws its terms by the strategy it
+    names, before any strategy is built: a category with a strategy of its
+    own, e.g. lambda terms, keeps it.
     """
     # pylint: disable=unused-argument  # the hook's signature
     if SAMPLER is None:
         return
     for category in Arrow.subclasses():
-        if hasattr(category, f"strategy_{SAMPLER}"):
-            category.sampler = SAMPLER
+        if hasattr(category, f"strategy_{SAMPLER}")\
+                and category.strategy.__func__ is Arrow.strategy.__func__:
+            category.default_strategy = SAMPLER
 
 
 def pytest_configure(config):

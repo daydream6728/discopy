@@ -754,6 +754,19 @@ class Box(biclosed.Box, Diagram):
         return biclosed.Box.__repr__(self)[:-1] + (
             f', z={self.z})' if self.z else ')')
 
+    def atoms(self) -> list:
+        """
+        The atoms of the box with no winding, which the string of a rotation
+        rotates, e.g. ``f.r``, as the atoms of an adjoint wire are.
+
+        >>> f = Box('f', Ty('a'), Ty('b'))
+        >>> assert f.r.atoms() == f.l.l.atoms() == f.atoms()
+        """
+        unwound = self
+        for _ in range(abs(self.z)):
+            unwound = unwound.rotate(left=self.z > 0)
+        return super().atoms() if unwound is self else unwound.atoms()
+
     def setoid(self):
         """
         Rigid boxes are equal when they are equal as :class:`cat.Box` and their

@@ -251,3 +251,11 @@ def test_str_transparency_of_a_spider():
     spider = Spider(0, 0, x)
     assert spider.atoms() == [x]
     assert eval(str(spider), Diagram.str_environment(spider)) == spider
+
+
+def test_tensor_drops_identity_spider_layer():
+    a, b = Ty('a'), Ty('b')
+    h = Box('h', b, b)
+    for diagram in (a @ (Spider(1, 1, b) >> h), (Spider(1, 1, b) >> h) @ a):
+        assert len(diagram) == 1 and all(
+            layer.boxes for layer in diagram.inside)

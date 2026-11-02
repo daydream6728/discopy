@@ -76,7 +76,7 @@ from typing import ClassVar, Self
 
 from discopy import (
     monoidal, rigid, markov, comarkov, compact, pivotal, feedback, cmap,
-    hypergraph, symmetric)
+    hypergraph, symmetric, testable)
 from discopy.abc import HypergraphCategory
 from discopy.cat import factory
 from discopy.python import finset
@@ -220,7 +220,16 @@ class Diagram(
 
     ob = Ty
     layer_factory = Layer
-    str_transparency = compact.Diagram.str_transparency
+    str_transparency = testable.Serialisable.str_transparency.modulo(
+        lambda diagram: diagram.to_hypergraph())
+    """
+    The string of a diagram reads back to it up to its hypergraph: a cap
+    whiskered by a spider reads back as one spider, the plumbing a layer
+    coalesces.
+    """
+    grammar_atoms = ("a", "b")
+    """ Two atoms, each its own adjoint, for the Boltzmann sampler. """
+    grammar_width = 3
 
     @classmethod
     def from_cospan(cls, apex: Ty, left, right) -> Diagram:

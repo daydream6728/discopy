@@ -19,9 +19,9 @@ def _():
     from discopy.boltzmann import Grammar
     from experiments import (
         DOCTRINES, SAMPLERS, Size, alphabet, coherent_shape, diagram_class,
-        round_one, sample, shape)
+        doctrines, sample, shape)
     return (DOCTRINES, Grammar, SAMPLERS, Size, alphabet, coherent_shape,
-            diagram_class, io, mo, plt, random, round_one, sample, shape,
+            diagram_class, io, mo, plt, random, doctrines, sample, shape,
             statistics)
 
 
@@ -40,9 +40,9 @@ def _(mo):
 
 
 @app.cell(hide_code=True)
-def _(mo, round_one):
+def _(mo, doctrines):
     doctrine = mo.ui.dropdown(
-        round_one(), value="symmetric", label="doctrine")
+        doctrines(), value="symmetric", label="doctrine")
     doctrine
     return (doctrine,)
 

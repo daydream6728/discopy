@@ -131,10 +131,6 @@ MAP_OF_A_CURRY = (
 MAP_HAS_NO_SPIDERS = (
     "A map has no spiders: it keeps a copy or a merge as a box where a "
     "hypergraph merges its wires.")
-STR_SPLITS_LAYERS = (
-    "A string tensors the boxes of a layer one after the other, so that a "
-    "layer of several boxes, as a hypergraph decodes to, reads back as "
-    "several layers, equal to it only up to interchange.")
 NO_TYPE_PARAMETER = (
     "{} has no type parameter to subscript, declare one as in class C[name].")
 NOT_PROGRESSIVE = "No line sweeps the map down meeting each box with its "\

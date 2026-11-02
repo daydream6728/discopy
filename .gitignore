@@ -39,3 +39,6 @@ docs/_static/*/_*.svg
 benchmark-results/
 plans/
 .style-review/
+
+# Smoke runs of sampling/experiments.py, never committed
+sampling/results/smoke/

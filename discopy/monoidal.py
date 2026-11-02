@@ -1245,6 +1245,13 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
         messages.NO_PLANAR_NORMAL_FORM)
     dagger_monoidality = DaggerCategory.dagger_monoidality.failing(
         messages.NO_PLANAR_NORMAL_FORM)
+    str_transparency = testable.Serialisable.str_transparency.modulo(
+        lambda diagram: diagram.functor_factory.id(diagram.ar)(diagram))
+    """
+    The string of a diagram reads back to it up to interchange: a layer of
+    several boxes is written as their tensor, i.e. a staircase with one box
+    per layer, from left to right, which the identity functor also gives.
+    """
 
     box_factory: ClassVar[type["Box"]]
     sum_factory: ClassVar[type["Sum"]]
@@ -1459,7 +1466,9 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
             self @ other == self @ other.dom >> self.cod @ other
 
         Each layer of the ``i``-th diagram is whiskered by the codomains of
-        the diagrams before it and the domains of those after it.
+        the diagrams before it and the domains of those after it, and left
+        out when its plumbing merges into the types around it, e.g. a spider
+        with one leg on each side, since a layer has at least one box.
 
         Example
         -------
@@ -1488,13 +1497,16 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
         for diagram in (self, ) + others:
             suffix = suffixes.pop() if suffixes else None
             if prefix and suffix:
-                inside += [prefix @ layer @ suffix for layer in diagram.inside]
+                whiskered = [
+                    prefix @ layer @ suffix for layer in diagram.inside]
             elif prefix:
-                inside += [prefix @ layer for layer in diagram.inside]
+                whiskered = [prefix @ layer for layer in diagram.inside]
             elif suffix:
-                inside += [layer @ suffix for layer in diagram.inside]
+                whiskered = [layer @ suffix for layer in diagram.inside]
             else:
-                inside += diagram.inside
+                whiskered = list(diagram.inside)
+            inside += [layer for layer in whiskered if any(
+                not isinstance(x, self.ob) for x in layer)]
             prefix = diagram.cod if prefix is None else prefix @ diagram.cod
         return self.ar(tuple(inside), dom, prefix, _scan=False)
 

@@ -69,6 +69,7 @@ from __future__ import annotations
 
 from discopy import comarkov, feedback, markov, messages, monoidal, python
 from discopy.cat import factory
+from discopy.testable import Serialisable
 from discopy.monoidal import Dim
 from discopy.utils import (
     AxiomError, assert_isinstance, factory_name, tuplify, untuplify)
@@ -169,6 +170,15 @@ class Network(markov.Diagram, comarkov.Diagram):
     >>> assert residual == Network.copy(x) >> layer @ x >> add
     """
     ob = Dims
+    grammar_atoms = (Dims(Dim(2)), Dims(Dim(3)))
+    """ The atoms of the grammar of its Boltzmann sampler, two dimensions. """
+    str_transparency = Serialisable.str_transparency.modulo(
+        lambda network: network.to_hypergraph())
+    """
+    The string of a network reads back to it up to its hypergraph: a merge
+    whiskered by a wire reads back as one cofunction, the plumbing a layer
+    coalesces.
+    """
 
     @classmethod
     def spider_factory(cls, n_legs_in, n_legs_out, typ, phase=None):

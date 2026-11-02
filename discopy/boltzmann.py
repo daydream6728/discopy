@@ -39,6 +39,7 @@ from typing import TYPE_CHECKING, Any, get_args, get_origin
 import numpy as np
 
 from discopy.testable import Atom, Hom, Obj, Var, substitute
+from discopy.utils import AxiomError
 
 if TYPE_CHECKING:
     from hypothesis import strategies as st
@@ -99,9 +100,10 @@ class Grammar:
         ``atoms``, each atomic variable at every atom and each number at
         every width. A rule with a premise that is neither a morphism nor a
         value, or an instance with an object of larger width, e.g. a delay,
-        is left out, and so are the rules named ``without``. Given a
-        ``signature``, i.e. the pairs of objects of the generators, the
-        grammar only has generators of those types.
+        is left out, as is an instance whose objects do not exist, e.g. the
+        adjoint of a type with none, and so are the rules named ``without``.
+        Given a ``signature``, i.e. the pairs of objects of the generators,
+        the grammar only has generators of those types.
 
         >>> from discopy.monoidal import Diagram
         >>> grammar = Grammar.compile(Diagram, ("a", ), 1)
@@ -148,11 +150,16 @@ class Grammar:
             outer = rule.scope(None, {v.__name__: None for v in variables})
             for values in product(*map(domain, variables)):
                 scope = outer | dict(zip(variables, values))
-                lhs = nonterminal(substitute(annotations["return"], scope))
+                try:
+                    lhs = nonterminal(
+                        substitute(annotations["return"], scope))
+                    premises = {
+                        p.name: substitute(annotations[p.name], scope)
+                        for p in parameters}
+                except (AttributeError, TypeError, ValueError, AxiomError):
+                    continue
                 if lhs is None:
                     continue
-                premises = {p.name: substitute(annotations[p.name], scope)
-                            for p in parameters}
                 homs = [p.name for p in parameters
                         if get_origin(premises[p.name]) is Hom]
                 children = tuple(nonterminal(premises[p]) for p in homs)
@@ -295,10 +302,10 @@ class Grammar:
         from hypothesis import strategies as st
 
         root = self.root(dom, cod)
-        if root @ self.values(1e-3, bias) == 0:
-            return st.nothing()
         z = self.tune(size, self.root(), bias) if z is None else z
         values = self.values(z, bias)
+        if root @ values == 0:
+            return st.nothing()
         extended = np.append(values, 1.)
         n = len(values)
         terms = self.weights(z, bias) * extended[np.array([

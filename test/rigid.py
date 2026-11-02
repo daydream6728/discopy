@@ -266,3 +266,11 @@ def test_Bubble_rotate_subs():
     x, y = Ty('x'), Ty('y')
     symbolic = Box('f', x, y, data=phi).bubble()
     assert symbolic.r.subs(phi, 1) == symbolic.subs(phi, 1).r
+
+
+def test_rotated_box_reads_back():
+    a, b = Ty('a'), Ty('b')
+    f = Box('f', a, b)
+    for rotated in (f.r, f.l.l, f.r[::-1]):
+        environment = Diagram.str_environment(rotated)
+        assert eval(str(rotated), environment) == rotated

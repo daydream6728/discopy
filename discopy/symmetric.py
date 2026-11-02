@@ -325,7 +325,7 @@ class Diagram(balanced.Diagram, SymmetricCategory):
         """
         return Equation(*terms)
 
-    sampler = "mixed"
+    default_strategy = "mixed"
 
     @classmethod
     def strategy_mixed(cls, *, dom=None, cod=None, fuel=FUEL, within=None):

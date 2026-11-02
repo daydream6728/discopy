@@ -65,7 +65,7 @@ To look at the draws of one sampler, run the playground:
 ## 1. What is compared
 
 Eight samplers, each a method `strategy_<sampler>` of the classes it makes
-sense for; `Arrow.sampler` names the default and `PROPTEST_SAMPLER` switches
+sense for; `Arrow.default_strategy` names the default and `PROPTEST_SAMPLER` switches
 the whole property matrix.
 
 | | sampler | a diagram is… | defined on |
@@ -79,10 +79,48 @@ the whole property matrix.
 | 3b | `structural_implicit` | a random wiring, which implies the boxes | symmetric and below |
 | 3p | `structural_perturbed` | a 3a normal form, rewritten up to coherence | symmetric and below |
 
-The doctrines of round one are monoidal, symmetric, markov and compact, one
-for each class of plumbing: none, permutations, functions and pairings.
+Every level of the hierarchy of free categories is covered: the arrows of
+`cat`, then the diagrams of monoidal, spacial, braided, balanced, ribbon,
+rigid, pivotal, symmetric, feedback, markov, comarkov, frobenius, compact,
+closed and biclosed. A sampler runs on every class it is a method of: the
+syntactic ones everywhere, the representational and grammatical ones from
+monoidal down, the structural ones from symmetric down. The planted bugs are
+searched with the laws of symmetric diagrams, the convex tuning and the
+fixed signature on symmetric diagrams too.
 
 <!---->
+
+```python {.marimo hide_code="true"}
+def coverage_figure():
+    data = rows("throughput", regime="natural", boundary="free")
+    doctrine_names = list(dict.fromkeys(r["doctrine"] for r in data))
+    sampler_names = list(SHORT)
+    grid = np.full((len(doctrine_names), len(sampler_names)), np.nan)
+    for r in data:
+        grid[doctrine_names.index(r["doctrine"]),
+             sampler_names.index(r["sampler"])] = r["valid"] / r["cases"]
+    figure, ax = plt.subplots(figsize=(7, 0.32 * len(doctrine_names) + 1))
+    ax.imshow(grid, cmap="Greens", vmin=0, vmax=1.2, aspect="auto")
+    ax.set_xticks(range(len(sampler_names)),
+                  [SHORT[n] for n in sampler_names], fontsize=8)
+    ax.set_yticks(range(len(doctrine_names)), doctrine_names, fontsize=8)
+    for i, row in enumerate(grid):
+        for j, value in enumerate(row):
+            if not np.isnan(value):
+                ax.text(j, i, f"{value:.0%}", ha="center", va="center",
+                        fontsize=6)
+    ax.set_title("valid share of test cases, free boundaries; blank: the "
+                 "sampler does not apply", fontsize=8)
+    figure.tight_layout()
+    return figure
+
+
+mo.vstack([
+    mo.md("## Coverage: every level of the hierarchy"),
+    coverage_figure() if rows("throughput", regime="natural")
+    else mo.md("not run yet"),
+])
+```
 
 ```python {.marimo hide_code="true"}
 def throughput_figure(doctrine):
@@ -123,8 +161,9 @@ mo.vstack([
   it must; what Hypothesis still gives up on is mostly its own **overruns**,
   {percent(min(overruns, default=0))} to {percent(max(overruns, default=0))}
   of test cases, a share `lists(integers())` has too.
-- Speeds are for the quick budget, on one machine, with other experiments
-  running: compare them within a column only.
+- Speeds are those of one core: each doctrine and sampler runs in its own
+  process, as many at once as the machine has cores, so compare them
+  within a run only, not across machines.
 """),
 ])
 ```
@@ -460,16 +499,15 @@ mo.md(f"""
   against {vacuous('representational_goal_directed')} under 1b: `twist_unit`
   in each doctrine with a twist, a law with nothing to draw. The distinct
   count of the report is what tells them apart.
-- **A green cell can be a blind spot**: `str_transparency` fails
-  ({"; ".join(failing("str_transparency"))}). On symmetric and compact
-  diagrams a layer of two boxes prints as `f @ g`, which reads back as two
-  layers, and only the structural samplers draw such layers; on compact ones
-  under 1a, a lone rotated box `f.r` reads back only if `f` is defined,
-  which the law documents as off its domain but does not assume away. Both
-  are in `retrospective.md`. Neither can just be declared broken: a broken
-  law is a strict xfail, so a sampler that misses it fails the cell.
-- **Every other law holds under every sampler**: no new bug of DisCoPy was
-  found in this run, which is what the planted bugs are for.
+- **A green cell can be a blind spot.** In the first runs
+  `str_transparency` failed only under the structural samplers: a layer of
+  two boxes prints as `f @ g`, which reads back as two layers, and only they
+  draw such layers. The law now compares up to interchange, and following
+  it up found three bugs that the default sampler never drew, a rotated box,
+  a right closed evaluation and an identity spider whiskered into an empty
+  layer: all fixed, see `retrospective.md`.
+- **Cells that fail in this run**:
+  {"; ".join(f"`{d}.{law}` under {s}" for d, law, s in failures) or "none"}.
 """)
 ```
 
@@ -719,8 +757,8 @@ mo.md(f"""
 |---|---|---|
 | What does Boltzmann sampling buy us? | control of the mean size and of each kind of node, and a sampler with no rejection over a fixed signature; not uniformity over diagrams, since derivations are ambiguous | medium |
 | Tuning as convex optimisation beyond 2c? | yes wherever there is a specification: 3a in principle; not for the samplers defined by their code | medium |
-| Critical sampling for `explore`? | yes for the exact sampler, whose tail is real; through Hypothesis's choices the tail is cut, so critical sampling buys little there | medium |
-| A combinatorial class for each doctrine? | symmetric: matchings; markov: functions; compact: Brauer pairings, all implemented in 3a; braided (braid words), pivotal (Temperley–Lieb) and frobenius (cospans) are round two | high |
+| Critical sampling for `explore`? | decided: no, `explore` samples shrinkable terms at a finite size; critical sampling only pays drawn from a seed, which does not shrink, so it is left for later | decided |
+| A combinatorial class for each doctrine? | symmetric: matchings; markov: functions; compact: Brauer pairings, all implemented in 3a; braided (braid words) and pivotal (Temperley–Lieb) have no structural sampler yet, frobenius draws spiders through markov's | high |
 | Semantic categories? | only the grammar respects a fixed signature without rejection | high |
 | Normal or non-normal forms? | both: cycles of wires need the structural samplers, which draw normal forms, but those crash on bugs in the code they run themselves and hide bugs behind laws they break; a mixture per law covers both | medium |
 | Pairs of equal diagrams? | 3p draws a rewritten normal form, which the laws already compare with its quotient; a law over pairs is a next step | low |
@@ -731,11 +769,9 @@ mo.md(f"""
 
 1. The `--full` run, then choose the default sampler of each doctrine from
    these numbers: the portfolio of 2c, 3a and 3b is the candidate to beat.
-2. Decide what the `explore` profile draws: exact critical sampling, which
-   does not shrink, or shrinkable sampling at a finite size.
-3. Decide `str_transparency` on symmetric diagrams: compare up to
-   interchange, print a layer of several boxes transparently, or choose the
-   sampler per law.
-4. Regression examples: `Axiom.examples`, run once per cell with
+2. Regression examples: `Axiom.examples`, run once per cell with
    `@example`, for every counterexample found so far.
-5. Round two: braided, pivotal, frobenius, and the tuning of 3a.
+3. Structural samplers below monoidal: braid words for braided and
+   balanced diagrams, Temperley–Lieb for pivotal ones, and the tuning of 3a.
+4. Critical sampling for `explore`, drawn from a seed, once a shrinkable
+   form of it exists.
