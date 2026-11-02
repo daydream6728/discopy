@@ -269,6 +269,14 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   effect outside the Fock space it enumerates: `Create(1) >> Select(2)` and
   `Create(1, 0) >> BS >> Select(2, 0)` are zero, as every other backend says,
   rather than a crash on `amps` and `1.0` and `0.5` on `probs` ([next#314]).
+- A feed-forward component converted from perceval applies its default
+  circuit **once**, when the measured state is in none of its configurations,
+  where each configuration that did not match used to apply it: with a
+  `PERM([1, 0])` default and two configurations, one of which matched, the
+  swap was applied anyway. An even number of non-matching entries composes a
+  swap default into the identity, which is why a single configuration and
+  three of them — none and two non-matching entries — both read right
+  ([next#314]).
 - `optyx.utils.perceval_conversion.ff_configurator` gives each symbol of a
   configurator's controlled circuit the value its own name is given in the
   configuration: it used to zip `U.free_symbols`, a set, with the values of

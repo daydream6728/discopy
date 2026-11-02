@@ -396,3 +396,44 @@ def test_configurator_rejects_missing_symbol():
         pcvl.BasicState([1]): {"alpha": CONFIGURATOR_VALUES["alpha"]}}
     with pytest.raises(ValueError, match="no value for the symbols beta"):
         Channel.from_perceval(p)
+
+
+@pytest.mark.parametrize("configurations", [
+    [1], [1, 2], [1, 2, 3], [2], [2, 3], [2, 3, 4]])
+def test_feed_forward_default_applies_once(configurations):
+    """A configuration that does not match does not act: the default
+    circuit applies once, when no configuration matches, as in perceval.
+    The number of configurations is what is varied because a swap default
+    applied once per non-matching entry composes to the identity whenever
+    the number of those entries is even, so a single configuration and
+    three of them — none and two non-matching entries — both read right
+    while two of them do not."""
+    state = [1, 1, 0]
+    p = pcvl.Processor("SLOS", 3)
+    p.add(0, pcvl.Detector.pnr())
+    provider = pcvl.FFCircuitProvider(1, 0, pcvl.PERM([1, 0]))
+    for measured in configurations:
+        provider.add_configuration([measured], pcvl.Circuit(2))
+    p.add(0, provider)
+    for m in range(3):
+        if p.detectors[m] is None:
+            p.add(m, pcvl.Detector.pnr())
+    p.with_input(pcvl.BasicState(state))
+    expected = {tuple(k): v for k, v in p.probs()["results"].items()}
+    check_dict_agreement(expected, (
+        Create_(*state) >> Channel.from_perceval(p)).eval().prob_dist())
+
+
+def test_configurator_default_applies_once():
+    """A configurator too applies its default values only when the measured
+    state is in none of its configurations, so a second configuration that
+    does not match leaves the first one's circuit as it is."""
+    state = [1, 1, 0]
+    p = configurator_processor(("alpha", "beta"))
+    configurator, = [component for _, component in p.components
+                     if isinstance(component, pcvl.FFConfigurator)]
+    configurator.add_configuration([2], dict(CONFIGURATOR_VALUES))
+    p.with_input(pcvl.BasicState(state))
+    expected = {tuple(k): v for k, v in p.probs()["results"].items()}
+    check_dict_agreement(expected, (
+        Create_(*state) >> Channel.from_perceval(p)).eval().prob_dist())
