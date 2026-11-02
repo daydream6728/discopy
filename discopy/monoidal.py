@@ -1283,6 +1283,89 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
         return self.inside[0].generator if self.is_generator else None
 
     @classmethod
+    def layer_box_strategy(cls, *, dom=None, within=None):
+        """
+        Generate what a layer holds besides its wires: a generator, from
+        ``dom`` when given. A symmetric diagram adds its permutations, see
+        :meth:`discopy.symmetric.Diagram.layer_box_strategy`.
+        """
+        # pylint: disable=unused-argument  # a planar layer has no plumbing
+        return cls.generators(dom=dom)
+
+    @classmethod
+    def layer_strategy(cls, *, dom=None, within=None):
+        """
+        Generate a layer ``left @ box @ right``, from ``dom`` when given by
+        splitting it in three, with the box from :meth:`layer_box_strategy`.
+        """
+        from hypothesis import strategies as st
+
+        @st.composite
+        def layers(draw):
+            if dom is None:
+                left, right = draw(cls.ob.strategy()), draw(cls.ob.strategy())
+                box = draw(cls.layer_box_strategy(within=within))
+            else:
+                i = draw(st.integers(0, len(dom)))
+                j = draw(st.integers(i, len(dom)))
+                left, right = dom[:i], dom[j:]
+                box = draw(cls.layer_box_strategy(dom=dom[i:j], within=within))
+            layer = cls.layer_factory(left, box, right)
+            return cls(inside=(layer, ), dom=layer.dom, cod=layer.cod)
+
+        return layers()
+
+    @classmethod
+    def strategy_representational_baseline(
+            cls, *, dom=None, cod=None, fuel=testable.FUEL, within=None):
+        """
+        Sample diagrams as they are encoded, a list of at most ``fuel + 1``
+        independent layers from :meth:`layer_strategy`, rejected unless they
+        compose with each other and with ``dom`` and ``cod``.
+        """
+        from hypothesis import strategies as st
+
+        @st.composite
+        def diagrams(draw):
+            layers = draw(st.lists(
+                cls.layer_strategy(within=within), max_size=fuel + 1))
+            source = dom if dom is not None else layers[0].dom if layers\
+                else cod if cod is not None else draw(cls.ob.strategy())
+            target = layers[-1].cod if layers else source
+            boundaries = [source, *(x for f in layers for x in (f.dom, f.cod)),
+                          target if cod is None else cod]
+            if any(x != y for x, y in zip(boundaries[::2], boundaries[1::2])):
+                # pylint: disable-next=import-outside-toplevel  # rejection
+                from hypothesis import reject
+                return reject()
+            return cls.id(source).then(*layers)
+
+        return diagrams()
+
+    @classmethod
+    def strategy_representational_goal_directed(
+            cls, *, dom=None, cod=None, fuel=testable.FUEL, within=None):
+        """
+        Sample diagrams as they are encoded, at most ``fuel + 1`` layers from
+        :meth:`layer_strategy`, each from the codomain of the last, and a
+        generator to ``cod`` if the last layer misses it, with no rejection.
+        """
+        from hypothesis import strategies as st
+
+        @st.composite
+        def diagrams(draw):
+            diagram = cls.id(draw(cls.ob.strategy()) if dom is None else dom)
+            for _ in range(draw(st.integers(0, fuel + 1))):
+                diagram = diagram >> draw(
+                    cls.layer_strategy(dom=diagram.cod, within=within))
+            if cod is not None and diagram.cod != cod:
+                diagram = diagram >> draw(
+                    cls.generators(dom=diagram.cod, cod=cod))
+            return diagram
+
+        return diagrams()
+
+    @classmethod
     def from_callable(
             cls, dom: Ty, cod: Ty) -> "Callable[[Callable], Diagram]":
         """

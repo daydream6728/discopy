@@ -9,6 +9,12 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 
 ### Added
 
+- Samplers of string diagrams as methods `strategy_<sampler>`, chosen by
+  `Arrow.sampler` or `PROPTEST_SAMPLER` for the whole property matrix:
+  `representational_baseline` and `representational_goal_directed` on
+  monoidal diagrams, `structural_typed` (`Hypergraph.draw_typed`) and
+  `structural_implicit`, formerly `quotient_strategy`, on symmetric ones;
+  `sampling/` compares them.
 - `testable.Rule` and `@rule`, inference rules stated like laws on each
   structure of `abc`, and `FreeCategory.search`, the terms of a free
   category derived from its rules, which the property matrix draws:

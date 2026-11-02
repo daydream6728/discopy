@@ -387,15 +387,31 @@ class Arrow(FreeCategory, DaggerCategory, Serialisable["Arrow"]):
     bubble_factory: ClassVar[type["Bubble"]]
     ob = Ob
 
+    sampler: ClassVar[str] = "syntactic_baseline"
+    """
+    The name of the default strategy, i.e. :meth:`strategy` calls the method
+    ``strategy_<sampler>``, which an experiment or a profile of the property
+    matrix overrides by setting this attribute.
+    """
+
     @classmethod
     def strategy(cls, **params):
         """
         The strategy the property matrix samples the terms of a free category
-        from: its :meth:`search`, which a category with a combinatorial
-        representation mixes with the :meth:`quotient_strategy` of it, e.g.
-        :meth:`discopy.symmetric.Diagram.strategy`.
+        from: the method ``strategy_<sampler>`` named by :attr:`sampler`, e.g.
+        :meth:`strategy_syntactic_baseline`.
 
         Parameters are those of :meth:`search`.
+
+        >>> assert Arrow.sampler == "syntactic_baseline"
+        """
+        return getattr(cls, f"strategy_{cls.sampler}")(**params)
+
+    @classmethod
+    def strategy_syntactic_baseline(cls, **params):
+        """
+        Sample terms as derivation trees of the :attr:`rules` of the free
+        category, every rule inherited, see :meth:`search`.
         """
         return cls.search(**params)
 

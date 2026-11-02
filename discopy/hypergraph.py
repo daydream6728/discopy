@@ -2588,7 +2588,7 @@ class Hypergraph[category](
     def strategy(  # pylint: disable=arguments-differ,too-many-arguments
             # a terminal strategy declares exactly its keyword-only bounds
             cls, *, types=None, dom=None, cod=None, min_leaves=None,
-            max_leaves=4, acyclic=None, max_scalars=None):
+            max_leaves=4, acyclic=None, max_scalars=None, typed=False):
         """
         Generate hypergraphs of :attr:`category` by drawing their wiring,
         then a box of the category for each box of the wiring.
@@ -2628,6 +2628,9 @@ class Hypergraph[category](
             max_scalars : The maximum number of spiders with no port, by
                 default one in a traced category unless ``acyclic``. A
                 scalar is sampled for about one hypergraph in four.
+            typed : Whether to draw the types of the boxes before their
+                wiring, see :meth:`draw_typed`, rather than letting the wiring
+                imply the domain of each box.
 
         Example
         -------
@@ -2659,7 +2662,9 @@ class Hypergraph[category](
             is_acyclic = not is_traced or draw(st.integers(0, 2)) < 2\
                 if acyclic is None else acyclic
             bounds = {"dom": dom, "cod": cod, "n_boxes": n_boxes}
-            if issubclass(category, HypergraphCategory):
+            if typed:
+                wiring = cls.draw_typed(draw, types, **bounds)
+            elif issubclass(category, HypergraphCategory):
                 wiring = cls.draw_any(draw, types, **bounds)
             elif issubclass(category, MarkovCategory):
                 wiring = cls.draw_directed(
@@ -2725,6 +2730,62 @@ class Hypergraph[category](
         box_wires = tuple(
             (tuple(map(merge, x)), tuple(map(merge, y))) for x, y in box_types)
         wires = dom_wires, box_wires, tuple(map(merge, cod))
+        return dom, cod, box_types, wires, opened
+
+    @classmethod
+    def draw_typed(  # pylint: disable=too-many-arguments,too-many-locals
+            # one per bound, one per kind of port
+            cls, draw: Callable, types: st.SearchStrategy[Ty], *,
+            dom: Ty | None, cod: Ty | None, n_boxes: int) -> tuple:
+        """
+        Draw the types of the boundary and the boxes, then match each
+        consumer (box inputs and outputs) with an earlier producer (inputs
+        and box outputs) of the same type or with none, i.e. a random partial
+        bijection between equal types, the wiring of a symmetric category.
+        A balancing box at the start feeds the consumers left unmatched, one
+        at the end takes the producers left over, unless there is no ``cod``,
+        in which case they are the outputs in a random order. It is drawn as
+        in :meth:`draw_any`.
+        """
+        from hypothesis import strategies as st
+
+        opened, available, missing = [], [], []
+
+        def produce(obj):
+            opened.append(obj)
+            available.append(len(opened) - 1)
+            return len(opened) - 1
+
+        def consume(obj):
+            candidates = [s for s in available if opened[s] == obj]
+            k = draw(st.integers(0, len(candidates)))
+            if k:
+                available.remove(candidates[k - 1])
+                return candidates[k - 1]
+            opened.append(obj)
+            missing.append(len(opened) - 1)
+            return len(opened) - 1
+
+        dom = draw(types) if dom is None else dom
+        box_types = [(draw(types), draw(types)) for _ in range(n_boxes)]
+        dom_wires = [produce(obj) for obj in dom]
+        box_wires = [
+            ([consume(obj) for obj in x], [produce(obj) for obj in y])
+            for x, y in box_types]
+        if cod is None:
+            cod_wires, available = draw(st.permutations(available)), []
+        else:
+            cod_wires = [consume(obj) for obj in cod]
+        ob = type(dom)
+        source = ([], missing) if missing else None
+        sink = (available, []) if available else None
+        box_wires = [w for w in (source, *box_wires, sink) if w is not None]
+        box_types = tuple(
+            tuple(ob().tensor(*(opened[s] for s in side)) for side in pair)
+            for pair in box_wires)
+        wires = (tuple(dom_wires), tuple(
+            (tuple(x), tuple(y)) for x, y in box_wires), tuple(cod_wires))
+        cod = ob().tensor(*(opened[s] for s in cod_wires))
         return dom, cod, box_types, wires, opened
 
     @classmethod

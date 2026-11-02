@@ -20,6 +20,8 @@ from hypothesis.database import (
     DirectoryBasedExampleDatabase, GitHubArtifactDatabase,
     MultiplexedDatabase, ReadOnlyDatabase)
 
+from discopy.cat import Arrow
+
 from proptest.report import (
     PASSED, UNSETTLED, Cell, classify, dumps, loads, render)
 
@@ -49,6 +51,26 @@ settings.register_profile("fast", max_examples=100, **dict(
     COMMON, derandomize=True, database=None))
 if PROFILE != "shared":
     settings.load_profile(PROFILE)
+
+SAMPLER = os.environ.get("PROPTEST_SAMPLER")
+"""
+The strategy every free category that implements it samples from, e.g.
+``structural_typed`` for ``strategy_structural_typed``, see
+:attr:`discopy.cat.Arrow.sampler`; each keeps its own default if unset.
+"""
+
+
+def pytest_collection_finish(session):
+    """
+    Set the :data:`SAMPLER` once every module is imported, on each free
+    category that implements it, before any strategy is built.
+    """
+    # pylint: disable=unused-argument  # the hook's signature
+    if SAMPLER is None:
+        return
+    for category in Arrow.subclasses():
+        if hasattr(category, f"strategy_{SAMPLER}"):
+            category.sampler = SAMPLER
 
 
 def pytest_configure(config):

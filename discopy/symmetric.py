@@ -319,13 +319,15 @@ class Diagram(balanced.Diagram, SymmetricCategory):
         """
         return Equation(*terms)
 
+    sampler = "mixed"
+
     @classmethod
-    def strategy(cls, *, dom=None, cod=None, fuel=FUEL, within=None):
+    def strategy_mixed(cls, *, dom=None, cod=None, fuel=FUEL, within=None):
         """
         Draw a diagram by one of two ways: :meth:`search`, the derivation from
-        the rules of the category, or :meth:`quotient_strategy`, the downgrade
-        of its combinatorial representation, which draws larger diagrams in
-        one go.
+        the rules of the category, or :meth:`strategy_structural_implicit`,
+        the downgrade of its combinatorial representation, which draws larger
+        diagrams in one go.
         A morphism premise of the search is drawn by this strategy in turn,
         so a derived diagram can contain a sampled one. A search ``within``
         the rules of a weaker structure is not mixed with the sample, which
@@ -344,21 +346,64 @@ class Diagram(balanced.Diagram, SymmetricCategory):
         derivations = cls.search(dom=dom, cod=cod, fuel=fuel, within=within)
         if within is not None:
             return derivations
-        return st.one_of(derivations, cls.quotient_strategy(
+        return st.one_of(derivations, cls.strategy_structural_implicit(
             dom=dom, cod=cod, fuel=fuel))
 
     @classmethod
-    def quotient_strategy(cls, *, dom=None, cod=None, fuel=FUEL):
+    def strategy_structural_implicit(
+            cls, *, dom=None, cod=None, fuel=FUEL, within=None):
         """
         Sample symmetric diagrams through their quotient: a combinatorial map
         drawn by :meth:`discopy.cmap.CMap.strategy` with at most ``fuel + 1``
         boxes, monogamous unless the category has cups and caps, downgraded
         with :meth:`discopy.cmap.CMap.to_diagram`, which makes its cycles
-        explicit as traces and its crossings as swaps.
+        explicit as traces and its crossings as swaps. The wiring is drawn
+        first and implies the domain of each box. A term ``within`` the rules
+        of a weaker structure is derived by :meth:`search` instead.
         """
+        if within is not None:
+            return cls.search(dom=dom, cod=cod, fuel=fuel, within=within)
         return cmap.CMap[cls].strategy(  # ty: ignore[invalid-type-form]
             dom=dom, cod=cod, max_leaves=fuel + 1).map(
                 lambda graph: graph.to_diagram())
+
+    @classmethod
+    def strategy_structural_typed(
+            cls, *, dom=None, cod=None, fuel=FUEL, within=None):
+        """
+        Sample symmetric diagrams through their quotient: at most ``fuel + 1``
+        boxes with their types drawn first, then a matching of their wires of
+        equal types, see :meth:`discopy.hypergraph.Hypergraph.draw_typed`,
+        downgraded with :meth:`discopy.hypergraph.Hypergraph.to_diagram`. A
+        term ``within`` the rules of a weaker structure is derived by
+        :meth:`search` instead.
+        """
+        if within is not None:
+            return cls.search(dom=dom, cod=cod, fuel=fuel, within=within)
+        category = hypergraph.Hypergraph[cls]  # ty: ignore[invalid-type-form]
+        return category.strategy(
+            dom=dom, cod=cod, max_leaves=fuel + 1, typed=True).map(
+                lambda graph: graph.to_diagram())
+
+    @classmethod
+    def layer_box_strategy(cls, *, dom=None, within=None):
+        """
+        Generate a generator or, unless ``within`` a category with no
+        symmetry, a permutation of at least two wires that is not the
+        identity, i.e. the plumbing of a symmetric layer.
+        """
+        from hypothesis import strategies as st
+
+        boxes = super().layer_box_strategy(dom=dom, within=within)
+        if within is not None and not issubclass(within, SymmetricCategory)\
+                or dom is not None and len(dom) < 2:
+            return boxes
+        doms = cls.ob.strategy() if dom is None else st.just(dom)
+        permutations = doms.filter(lambda x: len(x) > 1).flatmap(
+            lambda x: st.permutations(range(len(x))).filter(
+                lambda xs: xs != sorted(xs)).map(
+                    lambda xs: cls.permutation_factory(x, xs)))
+        return st.one_of(boxes, permutations)
 
     @classmethod
     def wait(cls, dom: Ty) -> Diagram:

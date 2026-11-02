@@ -159,15 +159,20 @@ class Diagram(symmetric.Diagram, MarkovCategory):
     layer_factory = Layer
 
     @classmethod
-    def quotient_strategy(cls, *, dom=None, cod=None, fuel=FUEL):
+    def strategy_structural_implicit(
+            cls, *, dom=None, cod=None, fuel=FUEL, within=None):
         """
         Sample Markov diagrams through their quotient: a hypergraph drawn
         by :meth:`discopy.hypergraph.Hypergraph.strategy` with at most
         ``fuel + 1`` boxes, besides the one balancing box that may close its
         boundary, and the spiders that the category supports, i.e.
         copies and discards here and every spider in a hypergraph category,
-        downgraded with :meth:`discopy.hypergraph.Hypergraph.to_diagram`.
+        downgraded with :meth:`discopy.hypergraph.Hypergraph.to_diagram`. A
+        term ``within`` the rules of a weaker structure is derived by
+        :meth:`search` instead.
         """
+        if within is not None:
+            return cls.search(dom=dom, cod=cod, fuel=fuel, within=within)
         category = hypergraph.Hypergraph[cls]  # ty: ignore[invalid-type-form]
         return category.strategy(
             dom=dom, cod=cod, max_leaves=fuel + 1).map(
