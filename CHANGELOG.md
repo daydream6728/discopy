@@ -12,9 +12,14 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
 - Samplers of string diagrams as methods `strategy_<sampler>`, chosen by
   `Arrow.sampler` or `PROPTEST_SAMPLER` for the whole property matrix:
   `representational_baseline` and `representational_goal_directed` on
-  monoidal diagrams, `structural_typed` (`Hypergraph.draw_typed`) and
-  `structural_implicit`, formerly `quotient_strategy`, on symmetric ones;
-  `sampling/` compares them.
+  monoidal diagrams, `syntactic_admissible`, i.e. `search` without the
+  `Arrow.admissible` rules, `syntactic_grammatical`, the Boltzmann sampler
+  of `discopy.boltzmann.Grammar` tuned by `testable.SIZE`, and on symmetric
+  ones `structural_typed` (`Hypergraph.draw_typed` and
+  `draw_typed_bijective`), `structural_implicit`, formerly
+  `quotient_strategy`, and `structural_perturbed`; `sampling/` compares
+  them. `search` and `Rule.strategy` build each strategy once, which
+  samples 2.5 times faster.
 - `testable.Rule` and `@rule`, inference rules stated like laws on each
   structure of `abc`, and `FreeCategory.search`, the terms of a free
   category derived from its rules, which the property matrix draws:

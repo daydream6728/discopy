@@ -303,6 +303,12 @@ class Diagram(balanced.Diagram, SymmetricCategory):
     braid_factory = classproperty(lambda cls: cls.swap_factory)
     layer_factory = Layer
     twist_factory = classmethod(lambda cls, dom: cls.id(dom))
+    admissible = (
+        "inverse_braiding", "twisting", "inverse_twisting", "trace_left")
+    """
+    The inverse of a symmetry is itself, a twist is the identity and a trace
+    on the left is a trace on the right conjugated by symmetries.
+    """
 
     @classmethod
     def equation_factory(cls, *terms: Diagram) -> Equation:
@@ -381,9 +387,54 @@ class Diagram(balanced.Diagram, SymmetricCategory):
         if within is not None:
             return cls.search(dom=dom, cod=cod, fuel=fuel, within=within)
         category = hypergraph.Hypergraph[cls]  # ty: ignore[invalid-type-form]
-        return category.strategy(
+        return category.strategy(  # pylint: disable=no-member  # a strategy
             dom=dom, cod=cod, max_leaves=fuel + 1, typed=True).map(
                 lambda graph: graph.to_diagram())
+
+    @classmethod
+    def strategy_structural_perturbed(
+            cls, *, dom=None, cod=None, fuel=FUEL, within=None):
+        """
+        Sample a normal form by :meth:`strategy_structural_typed`, then apply
+        up to ``fuel + 1`` rewrites drawn by :meth:`perturbations`, so that
+        the term is equal to a normal form up to the coherence of symmetric
+        categories but not written as one. A term ``within`` the rules of a
+        weaker structure is derived by :meth:`search` instead.
+        """
+        from hypothesis import strategies as st
+
+        if within is not None:
+            return cls.search(dom=dom, cod=cod, fuel=fuel, within=within)
+
+        @st.composite
+        def diagrams(draw):
+            diagram = draw(cls.strategy_structural_typed(
+                dom=dom, cod=cod, fuel=fuel))
+            for _ in range(draw(st.integers(0, fuel + 1))):
+                diagram = draw(cls.perturbations(diagram))
+            return diagram
+
+        return diagrams()
+
+    @classmethod
+    def perturbations(cls, diagram: Diagram):
+        """
+        Generate the diagram rewritten once up to coherence: a permutation
+        written as swaps and its inverse inserted between two of its layers,
+        or its :meth:`foliation`, which merges layers.
+        """
+        from hypothesis import strategies as st
+
+        @st.composite
+        def inserted(draw):
+            i = draw(st.integers(0, len(diagram)))
+            typ = diagram[:i].cod
+            xs = draw(st.permutations(range(len(typ))))
+            swaps = cls.permutation(xs, list(typ))
+            return diagram[:i] >> swaps >> swaps.dagger() >> diagram[i:]
+
+        return st.one_of(inserted(), st.just(diagram).map(
+            lambda d: d.foliation()))
 
     @classmethod
     def layer_box_strategy(cls, *, dom=None, within=None):

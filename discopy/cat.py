@@ -77,7 +77,7 @@ Functors are bubble-preserving.
 
 from __future__ import annotations
 
-from functools import total_ordering, cached_property
+from functools import cache, total_ordering, cached_property
 from typing import (
     Any, Callable, ClassVar, Mapping, Iterable, Self, TYPE_CHECKING)
 
@@ -242,7 +242,9 @@ class FreeCategory(Category):
         return self.ar(inside=inside, dom=dom, cod=cod, _scan=False)
 
     @classmethod
-    def search(cls, *, dom=None, cod=None, fuel=FUEL, within=None):
+    @cache
+    def search(  # pylint: disable=too-many-arguments  # keyword-only bounds
+            cls, *, dom=None, cod=None, fuel=FUEL, within=None, without=()):
         """
         Derive the terms of a free category from its rules: a generator, or the
         conclusion of one of its :attr:`rules` chosen at random, its morphism
@@ -253,6 +255,8 @@ class FreeCategory(Category):
         from or to it, so that both are honoured, with no filtering, whenever
         the :meth:`generators` read them: those of a type do not, since every
         generated colour is transparent. Every choice shrinks to a generator.
+        The strategy is built once for each set of parameters: building one
+        defines a composite strategy, which Hypothesis compiles.
 
         Parameters:
             dom : The domain, sampled if ``None``.
@@ -262,6 +266,7 @@ class FreeCategory(Category):
                 :class:`discopy.abc.MonoidalCategory` for the terms of the
                 underlying monoidal category, the category itself if
                 ``None``.
+            without : The names of the rules left out.
 
         Example
         -------
@@ -275,6 +280,7 @@ class FreeCategory(Category):
         rules = [
             rule for name, rule in cls.rules.items()
             if rule.applicable and name in (within or cls).rules
+            and name not in without
             and (fuel > 0 or not rule.is_recursive)]
 
         @st.composite
@@ -407,6 +413,13 @@ class Arrow(FreeCategory, DaggerCategory, Serialisable["Arrow"]):
         """
         return getattr(cls, f"strategy_{cls.sampler}")(**params)
 
+    admissible: ClassVar[tuple[str, ...]] = ()
+    """
+    The names of the rules that are admissible, i.e. whose conclusion is
+    also derived without them, e.g. the inverse of a symmetry, see
+    :meth:`strategy_syntactic_admissible`.
+    """
+
     @classmethod
     def strategy_syntactic_baseline(cls, **params):
         """
@@ -414,6 +427,15 @@ class Arrow(FreeCategory, DaggerCategory, Serialisable["Arrow"]):
         category, every rule inherited, see :meth:`search`.
         """
         return cls.search(**params)
+
+    @classmethod
+    def strategy_syntactic_admissible(cls, **params):
+        """
+        Sample terms as derivation trees of the :attr:`rules` of the free
+        category but the :attr:`admissible` ones, so that a term has fewer
+        derivations, see :meth:`search`.
+        """
+        return cls.search(without=cls.admissible, **params)
 
     @classmethod
     def generators(cls, *, dom=None, cod=None):

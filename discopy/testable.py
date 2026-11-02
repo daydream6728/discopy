@@ -76,7 +76,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable
 from copy import deepcopy
 from dataclasses import KW_ONLY, dataclass, replace
-from functools import cached_property, reduce, wraps
+from functools import cache, cached_property, reduce, wraps
 from operator import index, matmul
 from types import GenericAlias, NoneType, UnionType
 from typing import (
@@ -111,6 +111,12 @@ a functor that named just a few would compose to one defined nowhere else.
 
 FUEL = 3
 """ How deep the rules nest in a term of a free category, by default. """
+
+SIZE = 8.
+"""
+The expected number of nodes of a derivation drawn by a Boltzmann sampler,
+by default, see :mod:`discopy.boltzmann`: infinite for critical sampling.
+"""
 
 
 class Equation[T]:
@@ -991,13 +997,15 @@ class Rule[**P, T](Declaration[P, T]):
             and (get_origin(variables[name].__bound__) is not Atom
                  or side.is_atomic)}
 
+    @cache  # noqa: B019  a rule lives as long as its category
     def strategy(
             self, dom=None, cod=None, **params) -> "st.SearchStrategy[dict]":
         """
         Generate the premises of the rule for a conclusion from ``dom`` to
         ``cod``, see :meth:`Declaration.arguments`, the variables it binds
         :meth:`given` and the others sampled. The conclusion need not meet the
-        goal on a side that is not a variable.
+        goal on a side that is not a variable. The strategy is built once for
+        each conclusion and parameters, see :meth:`discopy.cat.Arrow.search`.
         """
         return self.arguments(self.given(dom, cod), **params)
 

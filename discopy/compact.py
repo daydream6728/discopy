@@ -103,6 +103,15 @@ class Diagram(symmetric.Diagram, ribbon.Diagram, CompactCategory):
     permutation_factory: ClassVar[type["Permutation"]]
     ob = Ty
     layer_factory = Layer
+    admissible = symmetric.Diagram.admissible + (
+        "trace_right", "curry_left", "curry_right", "ev_left", "ev_right")
+    """
+    Besides those of a symmetric category, traces, currying and evaluation
+    are derived from cups and caps.
+    """
+    grammar_atoms = (Ty('a'), Ty('a').l, Ty('a').r)
+    """ An atom and its adjoints, so that the grammar has cups and caps. """
+    grammar_width = 2
     trace_factory = classmethod(pivotal.Diagram.trace_factory.__func__)
 
 

@@ -64,7 +64,8 @@ from typing import (
     Iterable, Iterator, Callable, ClassVar, Mapping, Self, TYPE_CHECKING)
 from warnings import warn
 
-from discopy import abc, cat, drawing, hypergraph, cmap, messages, testable
+from discopy import (
+    abc, boltzmann, cat, drawing, hypergraph, cmap, messages, testable)
 from discopy.abc import (
     ColouredMonoid, DaggerCategory, Monoid, MonoidalCategory)
 from discopy.testable import Hom, Obj, TestableGeneric, Var, axiom
@@ -1281,6 +1282,37 @@ class Diagram(cat.Arrow, MonoidalCategory, RichDisplay):
     def generator(self):
         """ The single box in a generator `Diagram`. """
         return self.inside[0].generator if self.is_generator else None
+
+    grammar_atoms: ClassVar[tuple] = ("a", "b")
+    """ The atoms of the grammar of :meth:`strategy_syntactic_grammatical`. """
+
+    grammar_width: ClassVar[int] = 3
+    """ The width of the grammar of :meth:`strategy_syntactic_grammatical`. """
+
+    grammar_signature: ClassVar[tuple | None] = None
+    """
+    The pairs of objects of the generators of the grammar of
+    :meth:`strategy_syntactic_grammatical`, every pair if ``None``, so that
+    it samples over a fixed signature, e.g. that of a semantic category.
+    """
+
+    @classmethod
+    def strategy_syntactic_grammatical(  # pylint: disable=too-many-arguments
+            # those of search, and a size
+            cls, *, dom=None, cod=None, fuel=None, within=None, size=None):
+        """
+        Sample terms by the Boltzmann sampler of the grammar of their
+        derivations of width at most :attr:`grammar_width` over
+        :attr:`grammar_atoms`, tuned to an expected ``size``, by default
+        :data:`discopy.testable.SIZE`, see :class:`discopy.boltzmann.Grammar`.
+        The ``fuel`` is ignored: the size is tuned instead.
+        """
+        # pylint: disable=unused-argument  # the size bounds terms, not fuel
+        grammar = boltzmann.Grammar.compile(
+            cls, cls.grammar_atoms, cls.grammar_width, within,
+            cls.grammar_signature)
+        return grammar.strategy(
+            dom=dom, cod=cod, size=testable.SIZE if size is None else size)
 
     @classmethod
     def layer_box_strategy(cls, *, dom=None, within=None):
