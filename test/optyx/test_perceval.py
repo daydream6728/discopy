@@ -44,9 +44,38 @@ non_unitary_circuits = [
 @pytest.mark.parametrize("circuit", unitary_circuits + non_unitary_circuits)
 @pytest.mark.parametrize("n_photons", range(1,2))
 def test_perceval_probs_equivalence(circuit: Diagram, n_photons: int):
-	qpath_probs = circuit.to_path().prob(n_photons).normalise()
+	"""The two branches of :meth:`prob` compute the same quantity, so they
+	agree as they are: normalising one of them hid both the renormalisation
+	perceval's post-selection applies and the dilation factor that used to be
+	dropped, each of which is a global factor on a row."""
+	qpath_probs = circuit.to_path().prob(n_photons)
 	perceval_probs = circuit.to_path().prob(n_photons, with_perceval=True)
 	assert np.isclose(qpath_probs.array, perceval_probs.array).all()
+
+
+selected_circuits = [
+	(Create(1, 1) >> BBS(0) >> Select(2, 0), 0.5),
+	(Create(1, 1) >> BBS(0) >> Select(0, 2), 0.5),
+	(Create(1, 1) >> BBS(0) >> Select(1, 1), 0),
+	(Create(1, 1) >> BBS(0.3) >> Select(2, 0), None),
+	(Create(2, 0) >> BBS(0) >> Select(1, 1), 0.5),
+	(Create(1) >> Endo(0.5) >> Select(1), 0.25),
+]
+
+
+@pytest.mark.parametrize("circuit, expected", selected_circuits)
+def test_perceval_probs_are_not_conditional(circuit: Diagram, expected):
+	"""A selection gets the probability of what it selects, not that
+	probability given that the selection happened. Perceval's own
+	post-selection renormalises over the outcomes that survive it, which reads
+	right exactly when they carry all of the mass or none of it -- as both
+	doctests of :meth:`prob_with_perceval` used to, and as the Hong-Ou-Mandel
+	cell below still does."""
+	qpath_probs = circuit.to_path().prob()
+	perceval_probs = circuit.to_path().prob(with_perceval=True)
+	assert np.isclose(qpath_probs.array, perceval_probs.array).all()
+	if expected is not None:
+		assert np.isclose(perceval_probs.array, expected).all()
 
 @pytest.mark.skip(reason="Helper function for testing")
 def dict_allclose(d1: dict, d2: dict, *, rel_tol=1e-05, abs_tol=1e-10) -> bool:
