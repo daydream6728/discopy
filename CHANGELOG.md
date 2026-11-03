@@ -241,6 +241,8 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   reprs with its class, nan data equals itself ([next#31], [next#168]).
 - `dumps` writes tuples, numpy, sympy, `interaction`, `para`, `CQ`, `Equation`
   and dict functors ([next#168]); `para` and `interaction` hash ([next#31]).
+- A `Matrix` with no dtype reads it off its array without copying it, so it
+  copies once, as a `Matrix[dtype]` does ([next#8]).
 
 ### Deprecated
 
@@ -849,6 +851,7 @@ for the changelog of `1.2.1` and earlier.
 [next#145]: https://github.com/rel-int/discopy-next/issues/145
 [next#147]: https://github.com/rel-int/discopy-next/issues/147
 [next#149]: https://github.com/rel-int/discopy-next/issues/149
+[next#8]: https://github.com/rel-int/discopy-next/issues/8
 [next#156]: https://github.com/rel-int/discopy-next/issues/156
 [next#161]: https://github.com/rel-int/discopy-next/issues/161
 [next#162]: https://github.com/rel-int/discopy-next/issues/162
