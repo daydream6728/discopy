@@ -453,40 +453,36 @@ class Matrix(underlying.Matrix):
             self = self.dilate()
 
         circ = self._umatrix_to_perceval_circuit()
-        post = self._to_perceval_post_select()
 
         proc = pcvl.Processor(simulator)
         proc.set_circuit(circ)
 
         input_occ = occupation_numbers(n_photons, index(self.dom))
         output_occ = occupation_numbers(
-            sum(self.creations) + n_photons,
-            len(self.creations) + index(self.dom),
+            n_photons + sum(self.creations) - sum(self.selections),
+            index(self.cod),
         )
 
         states = [pcvl.BasicState(o + self.creations) for o in input_occ]
-        selections = [
-            pcvl.BasicState(o)
-            for o in output_occ
-            if post(pcvl.BasicState(o))
-        ]
+        selected = [
+            pcvl.BasicState(o + self.selections) for o in output_occ]
 
         born = abs(
             self.scalar
             * self.normalisation ** (n_photons + sum(self.creations))
         ) ** 2
 
-        result = np.zeros((len(states), len(selections)))
+        result = np.zeros((len(states), len(selected)))
         for i, state in enumerate(states):
             proc.with_input(state)
             distribution = proc.probs()["results"]
-            result[i] = [born * distribution[o] for o in selections]
+            result[i] = [born * distribution[o] for o in selected]
         if as_tensor:
             return amplitudes_2_tensor(result, input_occ, output_occ)
         return Probabilities[self.dtype](
             result,
             dom=len(states),
-            cod=len(selections),
+            cod=len(selected),
         )
 
     def _umatrix_to_perceval_circuit(self) -> pcvl.components.Unitary:
@@ -497,16 +493,6 @@ class Matrix(underlying.Matrix):
 
         # pylint: disable-next=abstract-class-instantiated  # perceval's
         return pcvl.components.Unitary(pcvl.Matrix(self.array.T.conj()))
-
-    def _to_perceval_post_select(self) -> pcvl.PostSelect:
-        # pylint: disable=import-outside-toplevel
-        import perceval as pcvl
-
-        post_str = [
-            f"[{index(self.cod) + i}] == {p}"
-            for i, p in enumerate(self.selections)
-        ]
-        return pcvl.PostSelect(" & ".join(post_str))
 
     def _umatrix_is_unitary(self) -> bool:
         m = self.umatrix.array

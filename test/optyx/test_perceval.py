@@ -77,6 +77,22 @@ def test_perceval_probs_are_not_conditional(circuit: Diagram, expected):
 	if expected is not None:
 		assert np.isclose(perceval_probs.array, expected).all()
 
+
+@pytest.mark.parametrize("circuit, _", selected_circuits)
+@pytest.mark.parametrize("n_photons", [0])
+def test_perceval_probs_as_a_tensor_of_the_open_modes(
+		circuit: Diagram, _, n_photons: int):
+	"""As a tensor the two branches agree on their dimensions as well as
+	their entries. The codomain is the occupations of the modes a selection
+	leaves open, which is what `eval` builds: it used to be the occupations of
+	every mode, one per column of a matrix that had one column per *selected*
+	outcome, so every selected diagram raised `IndexError` here."""
+	qpath = circuit.to_path().prob(n_photons, as_tensor=True)
+	perceval = circuit.to_path().prob(
+		n_photons, with_perceval=True, as_tensor=True)
+	assert (qpath.dom, qpath.cod) == (perceval.dom, perceval.cod)
+	assert np.isclose(qpath.array, perceval.array).all()
+
 @pytest.mark.skip(reason="Helper function for testing")
 def dict_allclose(d1: dict, d2: dict, *, rel_tol=1e-05, abs_tol=1e-10) -> bool:
     all_keys = set(d1.keys()) | set(d2.keys())

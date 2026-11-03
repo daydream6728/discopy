@@ -10,8 +10,8 @@ Valid, and it predates the head: `prob(as_tensor=True, with_perceval=True)` rais
 `main` too for any diagram with a selection. The oracle is the same method's other branch, whose
 `eval(as_tensor=True)` builds the codomain from `occupation_numbers(n_photons_out, index(cod))`.
 
-- [ ] Build the surviving output states from the open-mode occupations instead of filtering, so
+- [x] Build the surviving output states from the open-mode occupations instead of filtering, so
       the column order is a construction rather than a coincidence of `occupation_numbers`
-- [ ] Hand `amplitudes_2_tensor` those open-mode occupations
-- [ ] A test that the two branches agree as tensors on a selected diagram
-- [ ] `CHANGELOG.md`: the crash is user-facing
+- [x] Hand `amplitudes_2_tensor` those open-mode occupations
+- [x] A test that the two branches agree as tensors on a selected diagram
+- [x] `CHANGELOG.md`: the crash is user-facing
