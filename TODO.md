@@ -12,5 +12,5 @@ Measured on this head — `Select(2) @ Id(2)` at `n_photons=1` returns a `(3, 0)
 `prob()` raises, and `Select(2)` alone raises perceval's *"Can't put -2 photons in zero modes!"*
 rather than the library's own error. Two backends for one quantity agree on what is impossible too.
 
-- [ ] Raise `eval`'s own `ValueError` on a negative photon count out
-- [ ] A test that both branches reject the same diagram
+- [x] Raise `eval`'s own `ValueError` on a negative photon count out
+- [x] A test that both branches reject the same diagram

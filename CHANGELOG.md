@@ -269,7 +269,9 @@ Changes since [`1.2.2`](https://github.com/discopy/discopy/releases/tag/1.2.2).
   raised `IndexError` for every diagram with a selection, giving
   `amplitudes_2_tensor` one basis state per mode of the circuit where the
   matrix has one column per *selected* outcome; the codomain is now the
-  occupations of the modes the selections leave open, as `eval` builds it
+  occupations of the modes the selections leave open, as `eval` builds it, and
+  a selection of more photons than there are raises the same
+  `ValueError` as `eval` where it used to enumerate a negative photon count
   ([next#229]).
 - `optyx.core.backends.PercevalBackend` evaluates a term as amplitudes and
   applies the Born rule once, to their sum, so a sum of diagrams interferes:

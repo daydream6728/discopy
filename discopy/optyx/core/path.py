@@ -458,10 +458,11 @@ class Matrix(underlying.Matrix):
         proc.set_circuit(circ)
 
         input_occ = occupation_numbers(n_photons, index(self.dom))
-        output_occ = occupation_numbers(
-            n_photons + sum(self.creations) - sum(self.selections),
-            index(self.cod),
-        )
+        n_photons_out = (
+            n_photons + sum(self.creations) - sum(self.selections))
+        if n_photons_out < 0:
+            raise ValueError("Expected a positive number of photons out.")
+        output_occ = occupation_numbers(n_photons_out, index(self.cod))
 
         states = [pcvl.BasicState(o + self.creations) for o in input_occ]
         selected = [

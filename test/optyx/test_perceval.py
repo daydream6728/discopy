@@ -93,6 +93,21 @@ def test_perceval_probs_as_a_tensor_of_the_open_modes(
 	assert (qpath.dom, qpath.cod) == (perceval.dom, perceval.cod)
 	assert np.isclose(qpath.array, perceval.array).all()
 
+
+@pytest.mark.parametrize("circuit", [
+	Select(2), Select(2) @ Id(2), Select(3) @ Id(1)])
+def test_both_branches_reject_an_impossible_photon_count(circuit: Diagram):
+	"""Two backends for one quantity agree on what is impossible too. The
+	perceval branch used to enumerate a negative photon count instead, and
+	how that read depended on how many modes the selections leave open:
+	`occupation_numbers(-2, 2)` is empty, so a matrix with no columns;
+	`occupation_numbers(-2, 1)` is `[(-2, )]`, a negative occupation; and with
+	none open it reached perceval's own "Can't put -2 photons in zero modes!"
+	rather than the library's error."""
+	for with_perceval in (False, True):
+		with pytest.raises(ValueError, match="positive number of photons"):
+			circuit.to_path().prob(1, with_perceval=with_perceval)
+
 @pytest.mark.skip(reason="Helper function for testing")
 def dict_allclose(d1: dict, d2: dict, *, rel_tol=1e-05, abs_tol=1e-10) -> bool:
     all_keys = set(d1.keys()) | set(d2.keys())
