@@ -21,7 +21,7 @@ import pathlib
 import pytest
 from _pytest.doctest import DoctestItem
 
-ROOT = pathlib.Path(__file__).parents[1]
+ROOT = pathlib.Path(__file__).resolve().parents[1]
 
 
 UNIMPORTABLE = (
@@ -72,8 +72,8 @@ def pytest_collect_file(file_path, parent):
     if name is not None:
         try:
             importlib.import_module(name)
-        except ImportError:
-            pass
+        except Exception:  # pylint: disable=broad-exception-caught
+            pass  # pytest's own import of the file reports it
     collectors = yield
     if collectors and parent.config.getoption("--skip-extra") and any(
             package in file_path.as_posix()
