@@ -51,6 +51,13 @@ NOT_FROBENIUS = \
     "{} has no spiders, cups or caps to downgrade this hypergraph."
 NOT_RIGID = "{} has no cups or caps for the wiring of this map."
 NOT_TRACED = "{} has no traces for the cycles of this map."
+NO_PLANAR_NORMAL_FORM = (
+    "A planar law is compared on the nose: a hypergraph is faithful only "
+    "from symmetric categories on, and there is no normal form for this "
+    "doctrine yet.")
+NOT_BOUNDARY_CONNECTED = (
+    "A rigid law is compared on the nose: its sides have a normal form only "
+    "when they are boundary-connected, which they need not be.")
 COLOURED_QUOTIENT = (
     "{} is coloured: a hypergraph or a map is symmetric, and a swap is "
     "ill-typed across 0-cells, so it would lose its colours.")
@@ -68,7 +75,12 @@ NOT_A_DAGGER = "{} has no dagger: {} is not a dagger category."
 NO_SUCH_SPIDER = "The only spiders of {} are its {}."
 NOT_ACYCLIC = "{} has a directed cycle, its boxes cannot be ordered."
 
+FREE_FEEDBACK = (
+    "A free feedback is a bubble, which a hypergraph keeps as a box: nothing "
+    "slides into it.")
 RIGID_TYPE_HAS_NO_DAGGER = "Rigid types have no dagger, use pivotal instead."
+RIGID_HAS_NO_DAGGER = (
+    "Rigid cups and caps have no dagger, use pivotal instead.")
 FEEDBACK_HAS_NO_DAGGER = (
     "Feedback has no dagger and no rotation, "
     "either would feed its memory back in time.")
@@ -92,7 +104,7 @@ WRONG_NUMBER_OF_WIRES = "Expected {} wires for {}, got {} instead."
 WRONG_NUMBER_OF_BOUNDARIES = \
     "Expected one boundary of wires for each of {} boxes, got {} instead."
 TERM_IS_A_BOX = \
-    "A term is a box: the laws of its category are the diagram's."
+    "A term is a box: the laws and rules of its category are the diagram's."
 MISSING_BOXES_AND_OFFSETS = (
     "Decoding needs either boxes and offsets, or the two of them zipped.")
 CURRY_HAS_NO_DAGGER = "A curry has no dagger."

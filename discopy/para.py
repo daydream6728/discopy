@@ -158,8 +158,8 @@ Parametric maps compose like layers of a neural network, e.g. over
 
 from __future__ import annotations
 
-from typing import Self
 from dataclasses import dataclass
+from typing import Self
 
 from discopy import (
     symmetric, markov, comarkov, closed, compact, frobenius, messages)

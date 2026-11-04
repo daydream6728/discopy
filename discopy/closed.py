@@ -93,6 +93,7 @@ from discopy.cat import factory
 from discopy.drawing import Drawing
 from discopy.utils import (
     AxiomError, assert_isinstance, factory_name, from_tree)
+from discopy.testable import Serialisable
 
 
 class Wire(feedback.Wire, biclosed.Wire):
@@ -1026,13 +1027,6 @@ type Term = Constant | Variable | Application | Abstraction\
     | Tuple | Projection | Let
 
 
-for law in ("copy_coassociativity", "copy_cocommutativity",
-            "copy_counitality", "copy_coherence", "vanishing", "joining",
-            "strength", "tightening", "sliding", "yanking", "scalar_sliding"):
-    setattr(TermBase, law, getattr(Box, law).inapplicable(
-        messages.TERM_IS_A_BOX))
-
-
 class Constant(TermBase, biclosed.Constant):
     """
     A constant term, evaluated in a context by discarding it. It prints as
@@ -1856,6 +1850,10 @@ Ty.application_factory = Application
 Ty.abstraction_factory = Abstraction
 Ty.product_factory = Product
 TermBase.strategy_factory = LeftmostOutermost
+for law in sorted(
+        set(Box.axioms) - set(Serialisable.axioms) | set(Box.rules)):
+    setattr(TermBase, law, getattr(Box, law).inapplicable(
+        messages.TERM_IS_A_BOX))
 
 
 class Equation(markov.Equation):

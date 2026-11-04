@@ -78,9 +78,9 @@ from dataclasses import dataclass
 from typing import ClassVar, Self
 
 from discopy import abc
-from discopy.testable import Testable
 from discopy.python.finset import Permutation
 from discopy.utils import NamedGeneric, assert_ismember, factory_name
+from discopy.testable import Serialisable
 
 
 NO_TREE = "A group has no tree: utils.resolve_factory reads one class "\
@@ -108,7 +108,7 @@ def kronecker(left: Permutation, right: Permutation) -> Permutation:
         len(left) * m)
 
 
-class FiniteGroup(Testable, abc.Group):
+class FiniteGroup(Serialisable, abc.Group):
     """
     A finite group whose elements are normal forms.
 
@@ -185,7 +185,7 @@ class FiniteGroup(Testable, abc.Group):
     def __hash__(self):
         return hash(self.inside)
 
-    serialisation = Testable.serialisation.inapplicable(NO_TREE)
+    serialisation = Serialisable.serialisation.inapplicable(NO_TREE)
 
 
 class Cyclic[n](NamedGeneric, FiniteGroup):

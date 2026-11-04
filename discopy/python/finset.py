@@ -29,7 +29,7 @@ from dataclasses import dataclass
 from discopy import messages
 from discopy.abc import (
     Groupoid, HypergraphCategory, MarkovCategory, PROP, Nat)
-from discopy.testable import Testable
+from discopy.testable import Serialisable
 from discopy.utils import AxiomError, factory_name, unbiased
 
 
@@ -465,7 +465,7 @@ class Permutation(Function, PROP, Groupoid):
 
 
 @dataclass
-class Cospan(HypergraphCategory, Testable["Cospan"]):
+class Cospan(HypergraphCategory, Serialisable["Cospan"]):
     """
     A cospan of finite sets ``dom -> apex <- cod``, i.e. an arrow of the free
     hypergraph category on one object, the PROP of special commutative
@@ -670,5 +670,5 @@ class Cospan(HypergraphCategory, Testable["Cospan"]):
                        draw(st.lists(points, min_size=n, max_size=n)), apex)
         return cospans()
 
-    serialisation = Testable.serialisation.inapplicable(
+    serialisation = Serialisable.serialisation.inapplicable(
         "A cospan of finite sets has no tree.")

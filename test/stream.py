@@ -127,7 +127,7 @@ def test_no_tree():
                    Stream(symmetric.Box('f', x.now, x.now))):
         with raises(TypeError, match="A stream has no tree"):
             dumps(stream)
-    assert Stream.serialisation() is NotImplemented
+    assert "serialisation" not in Stream.axioms
 
 
 def test_no_hash():

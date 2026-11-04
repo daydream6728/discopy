@@ -58,16 +58,9 @@ from typing import TYPE_CHECKING, Literal, Self
 
 from discopy import hypergraph, messages
 from discopy.abc import (
-    BalancedCategory,
-    BraidedCategory,
-    CompactCategory,
-    DaggerCategory,
-    Pregroup,
-    RigidCategory,
-    SpacialCategory,
-    SymmetricCategory,
-    TracedCategory,
-)
+    BalancedCategory, BraidedCategory, CompactCategory, DaggerCategory,
+    Pregroup, RigidCategory, SpacialCategory, SymmetricCategory,
+    TracedCategory)
 from discopy.cat import Ob, Sum
 from discopy.python.finset import Permutation
 from discopy.utils import (
